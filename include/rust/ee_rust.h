@@ -457,6 +457,142 @@ struct EeDx7LockOutcome {
   bool locked;
 };
 
+/// `GE2DPoint` (sizeof 8).
+struct EeGe2DPoint {
+  float x;
+  float y;
+};
+
+/// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
+using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
+
+/// `GE3DPoint` (sizeof 0xc).
+struct EeGe3DPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// Receives one point of a 3D interpolation.
+using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
+
+/// `GEVector` (sizeof 0xc).
+struct EeGeVector {
+  float x;
+  float y;
+  float z;
+};
+
+/// `GE3DLine` (sizeof 0x18): start, direction.
+struct EeGe3DLine {
+  EeGe3DPoint start;
+  EeGeVector direction;
+};
+
+/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+struct EeGe3DPlane {
+  EeGe3DPoint point;
+  EeGeVector normal;
+};
+
+/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+struct EeGeTransformation {
+  float m[4][4];
+};
+
+/// `GEOrientation` (sizeof 0xc).
+struct EeGeOrientation {
+  float yaw;
+  float pitch;
+  float roll;
+};
+
+/// `GEQuaternion` (sizeof 0x10).
+struct EeGeQuaternion {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
+struct EeGeBoundingBox {
+  EeGe3DPoint bottom_left_front;
+  EeGe3DPoint top_right_back;
+  float width;
+  float height;
+  float depth;
+};
+
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// Receives one rectangle of a split.
+using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
+
+/// `GETerrainMesh::GETMPointRow` and `GETMTileRow`: the first map column, the count, the items.
+struct EeGeTmRow {
+  unsigned long start;
+  unsigned long count;
+  const uint8_t *items;
+};
+
+/// What the queries read of a `GETerrainMesh`: its rows and its four map-edge planes (`mFrontPlane`, `mBackPlane`,
+/// `mLeftPlane`, `mRightPlane`, contiguous in the class).
+struct EeGeTerrainView {
+  const EeGeTmRow *point_rows;
+  const EeGeTmRow *tile_rows;
+  unsigned long tile_row_count;
+  const EeGe3DPlane *planes;
+};
+
+/// What `UpdateFogOfWar` reads and writes besides the tile rows: the visible area and its point arrays
+/// (`[side][side]`, indexed `[x - bottom left x][y - bottom left y]`), the render vertices reached through a pointer
+/// to the first one's `mVisibility` and the vertex size.
+struct EeGeTerrainFog {
+  size_t visible_row_count;
+  unsigned long bottom_left_x;
+  unsigned long bottom_left_y;
+  unsigned long tile_width;
+  unsigned long tile_height;
+  unsigned long num_visible_tiles;
+  size_t side;
+  const uint8_t *terrain_point_visible;
+  const uint8_t *water_point_visible;
+  float *terrain_visibility;
+  float *water_visibility;
+  size_t vertex_stride;
+  bool all_visible;
+};
+
+/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
+struct EeGeFieldIo {
+  void *file;
+  long (*read_u8)(void *file, uint8_t *out);
+  long (*read_u16)(void *file, uint16_t *out);
+  long (*read_u32)(void *file, uint32_t *out);
+  long (*read_f32)(void *file, float *out);
+  long (*write_u8)(void *file, uint8_t value);
+  long (*write_u16)(void *file, uint16_t value);
+  long (*write_u32)(void *file, uint32_t value);
+  long (*write_f32)(void *file, float value);
+};
+
+/// The mesh's members `load_body` updates.
+struct EeGeTerrainLoad {
+  unsigned long space_tile_count;
+  float minimum_z;
+  float maximum_z;
+  unsigned long fractal_seed;
+  /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
+  bool compute_fractal;
+};
+
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
 
@@ -721,100 +857,6 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
-/// `GE2DPoint` (sizeof 8).
-struct EeGe2DPoint {
-  float x;
-  float y;
-};
-
-/// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
-using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
-
-/// `GE3DPoint` (sizeof 0xc).
-struct EeGe3DPoint {
-  float x;
-  float y;
-  float z;
-};
-
-/// Receives one point of a 3D interpolation.
-using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
-
-/// `GEVector` (sizeof 0xc).
-struct EeGeVector {
-  float x;
-  float y;
-  float z;
-};
-
-/// `GE3DLine` (sizeof 0x18): start, direction.
-struct EeGe3DLine {
-  EeGe3DPoint start;
-  EeGeVector direction;
-};
-
-/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
-struct EeGe3DPlane {
-  EeGe3DPoint point;
-  EeGeVector normal;
-};
-
-/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
-struct EeGeTransformation {
-  float m[4][4];
-};
-
-/// `GEOrientation` (sizeof 0xc).
-struct EeGeOrientation {
-  float yaw;
-  float pitch;
-  float roll;
-};
-
-/// `GEQuaternion` (sizeof 0x10).
-struct EeGeQuaternion {
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
-/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
-struct EeGeBoundingBox {
-  EeGe3DPoint bottom_left_front;
-  EeGe3DPoint top_right_back;
-  float width;
-  float height;
-  float depth;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
-/// Receives one rectangle of a split.
-using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
-
-/// `GETerrainMesh::GETMPointRow` and `GETMTileRow`: the first map column, the count, the items.
-struct EeGeTmRow {
-  unsigned long start;
-  unsigned long count;
-  const uint8_t *items;
-};
-
-/// What the queries read of a `GETerrainMesh`: its rows and its four map-edge planes (`mFrontPlane`, `mBackPlane`,
-/// `mLeftPlane`, `mRightPlane`, contiguous in the class).
-struct EeGeTerrainView {
-  const EeGeTmRow *point_rows;
-  const EeGeTmRow *tile_rows;
-  unsigned long tile_row_count;
-  const EeGe3DPlane *planes;
-};
-
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
 /// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
 struct EeFsFileOps {
@@ -968,6 +1010,13 @@ struct EeGeTmPoint {
   float z;
   const EeGeVector *normal;
   uint8_t color_table_index;
+};
+
+/// `GETerrainMesh::GETMTile` (sizeof 4).
+struct EeGeTmTile {
+  uint16_t reference_count;
+  uint8_t texture_set_id;
+  uint8_t water_info;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -1764,64 +1813,6 @@ int32_t ee_dx7s_text_lock(bool *locked);
 
 int32_t ee_dx7s_text_unlock(bool *locked);
 
-/// `EEFLine`'s constructor: `count` column offsets into `out`.
-///
-/// # Safety
-/// `out` must be valid for `count` writes.
-void ee_formation_line_offsets(float spacing, int32_t count, float *out);
-
-/// `EEFWedge`'s constructor.
-EeFormationWedge ee_formation_wedge_geometry(float spacing, float angle, uint32_t count);
-
-/// `EEFLine::Place` over `count` units' collision radii; returns the slots written to `out`.
-///
-/// # Safety
-/// `frame` and `line` must be valid; `offsets` valid for `line.count` reads; `radii` for `count` reads and `out` for
-/// `count` writes.
-uint32_t ee_formation_line_place(const EeFormationFrame *frame,
-                                 const EeFormationLine *line,
-                                 const float *offsets,
-                                 const float *radii,
-                                 uint32_t count,
-                                 EeFormationSlot *out);
-
-/// `EEFWedge::Place`, as `ee_formation_line_place`.
-///
-/// # Safety
-/// `frame` and `wedge` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
-uint32_t ee_formation_wedge_place(const EeFormationFrame *frame,
-                                  const EeFormationWedge *wedge,
-                                  const float *radii,
-                                  uint32_t count,
-                                  EeFormationSlot *out);
-
-/// `EEFCircle::Place`, as `ee_formation_line_place` (0 slots for no units).
-///
-/// # Safety
-/// `frame` and `circle` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
-uint32_t ee_formation_circle_place(const EeFormationFrame *frame,
-                                   const EeFormationCircle *circle,
-                                   const float *radii,
-                                   uint32_t count,
-                                   EeFormationSlot *out);
-
-/// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
-/// 5 filter, 6 shallows, 7 resources, 8 trees) on `input`, fills `output` and returns the handle that owns `output`'s
-/// arrays; null for an unknown step.
-///
-/// # Safety
-/// `input` must point to a state whose pointers hold the stated lengths; `output` must be writable. Free the handle
-/// with `ee_rmap_free`.
-EeRmapResult *ee_rmap_run(int32_t step,
-                          const EeRmapState *input,
-                          EeRmapState *output);
-
-/// Frees a result from `ee_rmap_run` (null: nothing).
-///
-/// # Safety
-/// `result` must be null or a handle from `ee_rmap_run`, freed once.
-void ee_rmap_free(EeRmapResult *result);
-
 /// `UMCos`.
 float ee_ge_um_cos(float angle);
 
@@ -2249,6 +2240,143 @@ void ee_ge_terrain_closest_tile_line(const EeGeTerrainView *view,
 bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
                               const EeGe3DLine *line,
                               float *distance);
+
+/// `GETerrainMesh::ComputeVertexNormal` before the quantization (the C++ stores `GetQuantizedVersion()` of `out`).
+///
+/// # Safety
+/// `point_rows` holds `point_row_count` live rows, the point exists and `out` is valid.
+void ee_ge_terrain_vertex_normal(const EeGeTmRow *point_rows,
+                                 unsigned long point_row_count,
+                                 unsigned long x,
+                                 unsigned long y,
+                                 EeGeVector *out);
+
+/// `GETerrainMesh::ComputeShorelines`: the tile's new shoreline bits for `SetWaterInfo`, or -1 to leave it alone.
+///
+/// # Safety
+/// `view` describes a live mesh and the tile exists.
+int32_t ee_ge_terrain_shoreline(const EeGeTerrainView *view,
+                                bool space_map,
+                                unsigned long x,
+                                unsigned long y);
+
+/// `GETerrainMesh::UpdateFogOfWar`: writes the visible points' visibility and the two shares; false (nothing
+/// written) when no tile row is visible.
+///
+/// # Safety
+/// `view` and `fog` describe a live mesh; the out pointers are valid.
+bool ee_ge_terrain_fog(const EeGeTerrainView *view,
+                       const EeGeTerrainFog *fog,
+                       float *out_water,
+                       float *out_space);
+
+/// `GETerrainMesh::Save`.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live mesh.
+long ee_ge_terrain_save(const EeGeFieldIo *io,
+                        const EeGeTerrainView *view,
+                        unsigned long point_row_count,
+                        long width,
+                        long height,
+                        unsigned long fractal_seed);
+
+/// `GETerrainMesh::Load`'s map size (each read through the member's old value).
+///
+/// # Safety
+/// `io` is a live field stream; the pointers are valid.
+long ee_ge_terrain_load_size(const EeGeFieldIo *io, long *width, long *height);
+
+/// `GETerrainMesh::Load` after `CreateFlatMesh`: the tiles, the points and the fractal seed. `valid_sets[id]` is
+/// nonzero for a registered texture set.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live, writable mesh; `valid_sets` holds 256
+/// bytes; `state` is valid.
+long ee_ge_terrain_load_body(const EeGeFieldIo *io,
+                             const EeGeTerrainView *view,
+                             unsigned long point_row_count,
+                             const uint8_t *valid_sets,
+                             EeGeTerrainLoad *state);
+
+/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
+/// the C++ wrote it (the triangle's plane was not parallel to the line).
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_physical_line_triangle(const EeGe3DLine *line,
+                                  const EeGe3DPoint *p1,
+                                  const EeGe3DPoint *p2,
+                                  const EeGe3DPoint *p3,
+                                  bool exact,
+                                  float *distance);
+
+/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
+                                 const EeGe3DPoint *p2,
+                                 const EeGe3DPoint *p3,
+                                 EeGeBoundingBox *out);
+
+/// `EEFLine`'s constructor: `count` column offsets into `out`.
+///
+/// # Safety
+/// `out` must be valid for `count` writes.
+void ee_formation_line_offsets(float spacing, int32_t count, float *out);
+
+/// `EEFWedge`'s constructor.
+EeFormationWedge ee_formation_wedge_geometry(float spacing, float angle, uint32_t count);
+
+/// `EEFLine::Place` over `count` units' collision radii; returns the slots written to `out`.
+///
+/// # Safety
+/// `frame` and `line` must be valid; `offsets` valid for `line.count` reads; `radii` for `count` reads and `out` for
+/// `count` writes.
+uint32_t ee_formation_line_place(const EeFormationFrame *frame,
+                                 const EeFormationLine *line,
+                                 const float *offsets,
+                                 const float *radii,
+                                 uint32_t count,
+                                 EeFormationSlot *out);
+
+/// `EEFWedge::Place`, as `ee_formation_line_place`.
+///
+/// # Safety
+/// `frame` and `wedge` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
+uint32_t ee_formation_wedge_place(const EeFormationFrame *frame,
+                                  const EeFormationWedge *wedge,
+                                  const float *radii,
+                                  uint32_t count,
+                                  EeFormationSlot *out);
+
+/// `EEFCircle::Place`, as `ee_formation_line_place` (0 slots for no units).
+///
+/// # Safety
+/// `frame` and `circle` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
+uint32_t ee_formation_circle_place(const EeFormationFrame *frame,
+                                   const EeFormationCircle *circle,
+                                   const float *radii,
+                                   uint32_t count,
+                                   EeFormationSlot *out);
+
+/// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
+/// 5 filter, 6 shallows, 7 resources, 8 trees) on `input`, fills `output` and returns the handle that owns `output`'s
+/// arrays; null for an unknown step.
+///
+/// # Safety
+/// `input` must point to a state whose pointers hold the stated lengths; `output` must be writable. Free the handle
+/// with `ee_rmap_free`.
+EeRmapResult *ee_rmap_run(int32_t step,
+                          const EeRmapState *input,
+                          EeRmapState *output);
+
+/// Frees a result from `ee_rmap_run` (null: nothing).
+///
+/// # Safety
+/// `result` must be null or a handle from `ee_rmap_run`, freed once.
+void ee_rmap_free(EeRmapResult *result);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);

@@ -281,6 +281,7 @@
 #include "lle/GETerrainMesh.h"
 #include "GERustMath.h"
 #include "GERustTerrain.h"
+#include "GERustIO.h"
 
 const UString GETerrainMesh::sPlayableWidthID("GETerrainMesh-PlayableWidth");
 const UString GETerrainMesh::sPlayableHeightID("GETerrainMesh-PlayableHeight");
@@ -290,17 +291,7 @@ const UString GETerrainMesh::sZID("GETerrainMesh-Z-ID");
 const UString GETerrainMesh::sFractalSeedID("GETerrainMesh-FractalSeed");
 const UString GETerrainMesh::sColorLookupID("GETerrainMesh-ColorLookup");
 
-// The eight neighbours of a tile and the shoreline bits a non-water (non-space) neighbour sets (0x10097b98)
-// (provisional names).
-struct GETMNeighbour {
-    long mDX;
-    long mDY;
-    unsigned long mShoreline;
-};
-
-static const GETMNeighbour sNeighbours[8] = {
-    { -1, 1, 4 }, { 1, 1, 8 }, { -1, -1, 2 }, { 1, -1, 16 }, { 0, 1, 12 }, { 1, 0, 24 }, { 0, -1, 18 }, { -1, 0, 6 }
-};
+// (sNeighbours, ComputeShorelines' eight neighbours and their shoreline bits (0x10097b98), is in Rust: ee_ge terrain_mesh.rs)
 
 // FUNCTION: LLE 0x100272f5
 // Frees the point row's points and resets it to empty
@@ -394,34 +385,10 @@ GETerrainMesh::~GETerrainMesh()
 // neighbours (non-space tiles get 0), else from a water tile's land neighbours (land tiles are left alone)
 void GETerrainMesh::ComputeShorelines(unsigned long inX, unsigned long inY)
 {
-    long i;
-    unsigned long theShoreline;
-    unsigned long theX;
-    unsigned long theY;
-    if (this->GetIsSpaceMap()) {
-        if (!this->GetIsSpaceTile(inX, inY)) {
-            this->SetWaterInfo(inX, inY, 0);
-            return;
-        }
-        theShoreline = 0;
-        for (i = 0; i < 8; i++) {
-            theX = sNeighbours[i].mDX + inX;
-            theY = sNeighbours[i].mDY + inY;
-            if (this->GetIsValidTile(theX, theY) && !this->GetIsSpaceTile(theX, theY))
-                theShoreline |= sNeighbours[i].mShoreline;
-        }
-    } else {
-        if (!this->GetIsWaterTile(inX, inY))
-            return;
-        theShoreline = 1;
-        for (i = 0; i < 8; i++) {
-            theX = sNeighbours[i].mDX + inX;
-            theY = sNeighbours[i].mDY + inY;
-            if (this->GetIsValidTile(theX, theY) && !this->GetIsWaterTile(theX, theY))
-                theShoreline |= sNeighbours[i].mShoreline;
-        }
-    }
-    this->SetWaterInfo(inX, inY, (unsigned char)theShoreline);
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    int theShoreline = ee_ge_terrain_shoreline(&theView, this->GetIsSpaceMap(), inX, inY);
+    if (theShoreline >= 0)
+        this->SetWaterInfo(inX, inY, (unsigned char)theShoreline);
 }
 
 // FUNCTION: LLE 0x10027aa4
@@ -429,68 +396,9 @@ void GETerrainMesh::ComputeShorelines(unsigned long inX, unsigned long inY)
 void GETerrainMesh::ComputeVertexNormal(unsigned long inX, unsigned long inY)
 {
     GEVector theNormal;
+    ee_ge_terrain_vertex_normal(reinterpret_cast<const EeGeTmRow*>(this->mPointRows), this->mPointRowCount, inX, inY,
+                                GERust(theNormal));
     GETMPointRow& theRow = this->mPointRows[inY];
-    GETMPointRow& theNextRow = this->mPointRows[inY + 1];
-    unsigned long theOther;
-    float theZ = theRow.mPoints[inX - theRow.mStart].mZ;
-    float theNW;
-    float theN;
-    float theNE;
-    float theW;
-    float theD;
-    if (inY + 1 < this->mPointRowCount) {
-        theOther = inX - theNextRow.mStart;
-        if (theOther - 1 < theNextRow.mCount)
-            theNW = theNextRow.mPoints[theOther - 1].mZ;
-        else
-            theNW = theZ;
-        if (theOther < theNextRow.mCount)
-            theN = theNextRow.mPoints[theOther].mZ;
-        else
-            theN = theZ;
-        if (theOther + 1 < theNextRow.mCount)
-            theNE = theNextRow.mPoints[theOther + 1].mZ;
-        else
-            theNE = theZ;
-    } else {
-        theNW = theZ;
-        theN = theZ;
-        theNE = theZ;
-    }
-    // the north heights become the differences in place (NE: SW - NE, N: S - N, NW: NW - SE)
-    if (inY - 1 < this->mPointRowCount) {
-        GETMPointRow& thePreviousRow = this->mPointRows[inY - 1];
-        theOther = inX - thePreviousRow.mStart;
-        if (theOther - 1 < thePreviousRow.mCount)
-            theNE = thePreviousRow.mPoints[theOther - 1].mZ - theNE;
-        else
-            theNE = theZ - theNE;
-        if (theOther < thePreviousRow.mCount)
-            theN = thePreviousRow.mPoints[theOther].mZ - theN;
-        else
-            theN = theZ - theN;
-        if (theOther + 1 < thePreviousRow.mCount)
-            theNW = theNW - thePreviousRow.mPoints[theOther + 1].mZ;
-        else
-            theNW = theNW - theZ;
-    } else {
-        theNW = theNW - theZ;
-        theN = theZ - theN;
-        theNE = theZ - theNE;
-    }
-    if ((inX - theRow.mStart) - 1 < theRow.mCount)
-        theW = theRow.mPoints[inX - theRow.mStart - 1].mZ;
-    else
-        theW = theZ;
-    if ((inX - theRow.mStart) + 1 < theRow.mCount)
-        theD = theW - theRow.mPoints[inX - theRow.mStart + 1].mZ;
-    else
-        theD = theW - theZ;
-    theNW = theNW * 0.70710677f;
-    theNE = theNE * 0.70710677f;
-    theNormal.SetX(theD + theNE + theNW);
-    theNormal.SetY(theNE + theN - theNW);
-    theNormal.SetZ(5.0f);
     theRow.mPoints[inX - theRow.mStart].mNormal = theNormal.GetQuantizedVersion();
 }
 
@@ -1577,94 +1485,9 @@ void GETerrainMesh::SetGlobalWaterState(unsigned long inWaterSetID, unsigned lon
 // inAllVisible) and recomputes the visible water and space shares
 void GETerrainMesh::UpdateFogOfWar(bool inAllVisible)
 {
-    float theWaterTotal = 0.0f;
-    float theSpaceTotal = 0.0f;
-    unsigned long theEndX = this->mVisibleTileWidth + 2 + this->mVisibleBottomLeftX;
-    unsigned long theEndY = this->mVisibleTileHeight + 2 + this->mVisibleBottomLeftY;
-    unsigned long theX;
-    unsigned long theY;
-    unsigned long i;
-    unsigned long j;
-    float theValue;
-    long theCount;
-    GETMTile* theRow;
-    GETMTile* thePreviousRow;
-    if (this->mVisibleTileRows.size() == 0)
-        return;
-    if (!inAllVisible) {
-        for (theY = this->mVisibleBottomLeftY, j = 0; theY < theEndY; theY++, j++) {
-            // port: the loop runs a row past the view on each side, so at the map's bottom and top edges theY - 1
-            // and theY leave mTileRows (row -1, row mTileRowCount + 1). The original read those row headers past
-            // its array, harmless on 32-bit Windows; only rows that exist are looked up now (every tile read below is
-            // behind GetIsValidTile, which rejects the others)
-            thePreviousRow = theY - 1 < this->mTileRowCount
-                ? this->mTileRows[theY - 1].mTiles - this->mTileRows[theY - 1].mStart : NULL;
-            theRow = theY < this->mTileRowCount ? this->mTileRows[theY].mTiles - this->mTileRows[theY].mStart : NULL;
-            for (theX = this->mVisibleBottomLeftX, i = 0; theX < theEndX; theX++, i++) {
-                if (!this->mTerrainPointVisibility[i][j])
-                    continue;
-                if (this->GetIsValidTile(theX - 1, theY)) {
-                    theCount = theRow[theX - 1].mReferenceCount;
-                    if (theCount > 1)
-                        theValue = 0.25f;
-                    else if (theCount == 1)
-                        theValue = 0.125f;
-                    else
-                        theValue = 0.0f;
-                } else
-                    theValue = 0.0f;
-                if (this->GetIsValidTile(theX, theY)) {
-                    theCount = theRow[theX].mReferenceCount;
-                    if (theCount > 1)
-                        theValue += 0.25f;
-                    else if (theCount == 1)
-                        theValue += 0.125f;
-                }
-                if (this->GetIsValidTile(theX - 1, theY - 1)) {
-                    theCount = thePreviousRow[theX - 1].mReferenceCount;
-                    if (theCount > 1)
-                        theValue += 0.25f;
-                    else if (theCount == 1)
-                        theValue += 0.125f;
-                }
-                if (this->GetIsValidTile(theX, theY - 1)) {
-                    theCount = thePreviousRow[theX].mReferenceCount;
-                    if (theCount > 1)
-                        theValue += 0.25f;
-                    else if (theCount == 1)
-                        theValue += 0.125f;
-                }
-                this->mTerrainRenderVertices[i][j].mVisibility = theValue;
-                if (this->mWaterPointVisibility[i][j]) {
-                    this->mWaterRenderVertices[i][j].mVisibility = theValue;
-                    theWaterTotal += theValue;
-                }
-                if (this->GetIsSpaceTile(theX, theY))
-                    theSpaceTotal += theValue;
-            }
-        }
-    } else {
-        for (theY = this->mVisibleBottomLeftY, j = 0; theY < theEndY; theY++, j++) {
-            for (theX = this->mVisibleBottomLeftX, i = 0; theX < theEndX; theX++, i++) {
-                if (!this->mTerrainPointVisibility[i][j])
-                    continue;
-                this->mTerrainRenderVertices[i][j].mVisibility = 1.0f;
-                if (this->mWaterPointVisibility[i][j]) {
-                    this->mWaterRenderVertices[i][j].mVisibility = 1.0f;
-                    theWaterTotal += 1.0f;
-                }
-                if (this->GetIsSpaceTile(theX, theY))
-                    theSpaceTotal += 1.0f;
-            }
-        }
-    }
-    if (this->mNumVisibleTiles != 0) {
-        this->mVisibleWaterTilePercentage = theWaterTotal / (float)this->mNumVisibleTiles;
-        this->mVisibleSpaceTilePercentage = theSpaceTotal / (float)this->mNumVisibleTiles;
-    } else {
-        this->mVisibleWaterTilePercentage = 0.0f;
-        this->mVisibleSpaceTilePercentage = 0.0f;
-    }
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    EeGeTerrainFog theFog = GERustTerrainLayout::Fog(*this, inAllVisible);
+    ee_ge_terrain_fog(&theView, &theFog, &this->mVisibleWaterTilePercentage, &this->mVisibleSpaceTilePercentage);
 }
 
 static unsigned long sWaterElapsedTime;   // 0x1010fed0
@@ -2450,57 +2273,31 @@ void GETerrainMesh::SetIsSpace(unsigned long inX, unsigned long inY, bool inIsSp
 // and the fractal seed, then recomputes every normal; returns the first read error
 long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    unsigned long i;
-    unsigned long j;
-    unsigned long k;
-    unsigned char theTextureSetID;
-    float theZ;
-    theResult = inFile.Read(this->mPlayableWidth);
-    if (theResult == 0) {
-        theResult = inFile.Read(this->mPlayableHeight);
-        if (theResult == 0) {
-            this->CreateFlatMesh(this->mPlayableWidth, this->mPlayableHeight);
-            // Stop at the first failed read and report it (later reads used to go on and hide the error).
-            for (j = 0; j < this->mTileRowCount && theResult == 0; j++) {
-                for (i = 0; i < this->mTileRows[j].mCount; i++) {
-                    theResult = inFile.Read(theTextureSetID);
-                    if (theResult != 0)
-                        break;
-                    if (theTextureSetID < this->mRegisteredTextureSets.size() &&
-                        this->mRegisteredTextureSets[theTextureSetID] != NULL)
-                        this->mTileRows[j].mTiles[i].mTextureSetID = theTextureSetID;
-                    else
-                        this->mTileRows[j].mTiles[i].mTextureSetID = 0;
-                    theResult = inFile.Read(this->mTileRows[j].mTiles[i].mWaterInfo);
-                    if (theResult != 0)
-                        break;
-                    if ((this->mTileRows[j].mTiles[i].mWaterInfo & kWaterInfoSpace) != 0)
-                        this->mSpaceTileCount++;
-                }
-            }
-            for (j = 0; j < this->mPointRowCount && theResult == 0; j++) {
-                for (k = 0; k < this->mPointRows[j].mCount; k++) {
-                    theResult = inFile.Read(theZ);
-                    if (theResult != 0)
-                        break;
-                    this->mPointRows[j].mPoints[k].mZ = theZ;
-                    this->mMinimumZ = min(this->mMinimumZ, theZ);
-                    this->mMaximumZ = max(this->mMaximumZ, theZ);
-                    theResult = inFile.Read(this->mPointRows[j].mPoints[k].mColorTableIndex);
-                    if (theResult != 0)
-                        break;
-                }
-            }
-            if (theResult == 0) {
-                theResult = inFile.Read(this->mFractalSeed);
-                this->mFractal->ComputeFractal(0.0f, 10.5f, this->mFractalSeed);
-            }
-            for (j = 0; j < this->mPointRowCount; j++) {
-                for (i = 0; i < this->mPointRows[j].mCount; i++)
-                    this->ComputeVertexNormal(this->mPointRows[j].mStart + i, j);
-            }
-        }
+    EeGeFieldIo theIO = GERustFieldIO(inFile);
+    long theResult = ee_ge_terrain_load_size(&theIO, &this->mPlayableWidth, &this->mPlayableHeight);
+    if (theResult != 0)
+        return theResult;
+    this->CreateFlatMesh(this->mPlayableWidth, this->mPlayableHeight);
+    unsigned char theValidSets[256];
+    for (unsigned long i = 0; i < 256; i++)
+        theValidSets[i] = i < this->mRegisteredTextureSets.size() && this->mRegisteredTextureSets[i] != NULL;
+    EeGeTerrainLoad theState;
+    theState.space_tile_count = this->mSpaceTileCount;
+    theState.minimum_z = this->mMinimumZ;
+    theState.maximum_z = this->mMaximumZ;
+    theState.fractal_seed = this->mFractalSeed;
+    theState.compute_fractal = false;
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    theResult = ee_ge_terrain_load_body(&theIO, &theView, this->mPointRowCount, theValidSets, &theState);
+    this->mSpaceTileCount = theState.space_tile_count;
+    this->mMinimumZ = theState.minimum_z;
+    this->mMaximumZ = theState.maximum_z;
+    this->mFractalSeed = theState.fractal_seed;
+    if (theState.compute_fractal)
+        this->mFractal->ComputeFractal(0.0f, 10.5f, this->mFractalSeed);
+    for (unsigned long j = 0; j < this->mPointRowCount; j++) {
+        for (unsigned long i = 0; i < this->mPointRows[j].mCount; i++)
+            this->ComputeVertexNormal(this->mPointRows[j].mStart + i, j);
     }
     return theResult;
 }
@@ -2510,34 +2307,8 @@ long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVers
 // returns the first write error
 long GETerrainMesh::Save(FSFile& inFile) const
 {
-    long theResult;
-    unsigned long i;
-    unsigned long j;
-    unsigned long k;
-    theResult = inFile.Write(this->mPlayableWidth);
-    if (theResult != 0 || (theResult = inFile.Write(this->mPlayableHeight)) != 0)
-        return theResult;
-    for (j = 0; j < this->mTileRowCount; j++) {
-        for (i = 0; i < this->mTileRows[j].mCount; i++) {
-            if ((theResult = inFile.Write(this->mTileRows[j].mTiles[i].mTextureSetID)) != 0 ||
-                (theResult = inFile.Write(this->mTileRows[j].mTiles[i].mWaterInfo)) != 0)
-                break;
-        }
-        if (theResult != 0)
-            break;
-    }
-    // A failed tile write ends the save (the point writes used to replace its error).
-    for (j = 0; j < this->mPointRowCount && theResult == 0; j++) {
-        for (k = 0; k < this->mPointRows[j].mCount; k++) {
-            if ((theResult = inFile.Write(this->mPointRows[j].mPoints[k].mZ)) != 0)
-                break;
-            if ((theResult = inFile.Write(this->mPointRows[j].mPoints[k].mColorTableIndex)) != 0)
-                break;
-        }
-        if (theResult != 0)
-            break;
-    }
-    if (theResult == 0)
-        theResult = inFile.Write(this->mFractalSeed);
-    return theResult;
+    EeGeFieldIo theIO = GERustFieldIO(inFile);
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    return ee_ge_terrain_save(&theIO, &theView, this->mPointRowCount, this->mPlayableWidth, this->mPlayableHeight,
+                              this->mFractalSeed);
 }

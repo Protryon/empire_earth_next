@@ -30,6 +30,7 @@
 #include "lle/GEPolygonArray.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
+#include "GERustMath.h"
 
 static const float kLODFraction = 0.2f;   // 0x10097b78 (unit-local) (provisional name)
 // defined after its user (0x1002179e) in address order
@@ -77,21 +78,12 @@ GEPhysicalModel& GEPhysicalModel::operator=(const GEPhysicalModel& inModel)
 bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEModel* inModel, unsigned long inFrame,
                                  const GE3DLine& inLine, unsigned long inLOD, float& outDistance, bool inExact) const
 {
-    GE3DLine theEdge2;
-    GE3DLine theEdge1;
-    GE3DPlane thePlane;
     GE3DPoint thePoint;
     GE3DPoint thePoint1;
     GE3DPoint thePoint2;
     GE3DPoint thePoint3;
-    GE3DPoint theHit;
     GEBoundingBox theBox;
-    GEVector theSide1;
-    GEVector theSide2;
-    GEVector theNormal;
     GETransformation theTransform(false);
-    float theT1;
-    float theT2;
     bool theResult = false;
     if (this->mScale < -0.0001f || this->mScale > 0.0001f) {
         if (inModel) {
@@ -132,27 +124,10 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                             inModel->mVertexArrays[inFrame]->GetPoint(thePoint,
                                 inModel->mPolygonArrays[0]->GetVertexIndex3(j) + theVertexStart);
                             theTransform.Apply(thePoint, thePoint3);
-                            theSide1.mX = thePoint2.mX - thePoint1.mX;
-                            theSide1.SetY(thePoint2.GetY() - thePoint1.GetY());
-                            theSide1.SetZ(thePoint2.GetZ() - thePoint1.GetZ());
-                            theSide2.mX = thePoint3.mX - thePoint1.mX;
-                            theSide2.SetY(thePoint3.GetY() - thePoint1.GetY());
-                            theSide2.SetZ(thePoint3.GetZ() - thePoint1.GetZ());
-                            theSide1.CrossProduct(theSide2, theNormal);
-                            thePlane.Define(thePoint1, theNormal);
-                            theResult = inLine.Intersects(thePlane, outDistance);
-                            if (!theResult)
-                                continue;
-                            inLine.GetPointAt(outDistance, theHit);
-                            if (theHit != thePoint1) {
-                                theEdge1.Define(thePoint1, theHit);
-                                theEdge2.Define(thePoint2, thePoint3);
-                                theResult = theEdge1.Intersects(theEdge2, theT1, theT2);
-                                if (theResult)
-                                    theResult = theT1 >= 1.0f && theT2 >= 0.0f && theT2 <= 1.0f;
-                            }
-                            if (inExact)
-                                theResult = theResult && outDistance >= 0.0f && outDistance <= 1.0f;
+                            // the triangle's plane, the crossing, the opposite edge (ee_ge physical.rs)
+                            theResult = ee_ge_physical_line_triangle(GERust(inLine), GERust(thePoint1),
+                                                                     GERust(thePoint2), GERust(thePoint3), inExact,
+                                                                     &outDistance);
                         }
                     }
                 }
@@ -361,33 +336,7 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
 static void ComputeTriangleBox(const GE3DPoint& inPoint1, const GE3DPoint& inPoint2, const GE3DPoint& inPoint3,
                                GEBoundingBox& outBox)
 {
-    GE3DPoint theMinimum = inPoint1;
-    GE3DPoint theMaximum = inPoint1;
-    if (inPoint2.GetX() < theMinimum.GetX())
-        theMinimum.SetX(inPoint2.GetX());
-    else if (inPoint2.mX > theMaximum.mX)
-        theMaximum.SetX(inPoint2.GetX());
-    if (inPoint2.GetY() < theMinimum.GetY())
-        theMinimum.SetY(inPoint2.GetY());
-    else if (inPoint2.GetY() > theMaximum.GetY())
-        theMaximum.SetY(inPoint2.GetY());
-    if (inPoint2.GetZ() < theMinimum.GetZ())
-        theMinimum.SetZ(inPoint2.GetZ());
-    else if (inPoint2.GetZ() > theMaximum.GetZ())
-        theMaximum.SetZ(inPoint2.GetZ());
-    if (inPoint3.mX < theMinimum.mX)
-        theMinimum.SetX(inPoint3.GetX());
-    else if (inPoint3.mX > theMaximum.mX)
-        theMaximum.SetX(inPoint3.GetX());
-    if (inPoint3.GetY() < theMinimum.GetY())
-        theMinimum.SetY(inPoint3.GetY());
-    else if (inPoint3.GetY() > theMaximum.GetY())
-        theMaximum.SetY(inPoint3.GetY());
-    if (inPoint3.GetZ() < theMinimum.GetZ())
-        theMinimum.SetZ(inPoint3.GetZ());
-    else if (inPoint3.GetZ() > theMaximum.GetZ())
-        theMaximum.SetZ(inPoint3.GetZ());
-    outBox.Define(theMinimum, theMaximum);
+    ee_ge_physical_triangle_box(GERust(inPoint1), GERust(inPoint2), GERust(inPoint3), GERust(outBox));
 }
 
 // FUNCTION: LLE 0x10021fc0

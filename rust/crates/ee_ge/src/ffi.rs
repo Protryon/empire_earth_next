@@ -6,7 +6,10 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use crate::io::{CppIo, EeGeFieldIo};
+use crate::physical;
 use crate::terrain::{edge_planes, GeTerrainView, GeTmRow};
+use crate::terrain_mesh::{self, GeTerrainFog, GeTerrainLoad};
 use crate::transform::{make_inverse_raw, RotationOrder};
 use crate::types::{
     Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeOrientation, GeQuaternion, GeRectangle,
@@ -918,4 +921,158 @@ pub unsafe extern "C" fn ee_ge_terrain_intersects(
         put(distance, d);
         hit
     }
+}
+
+// ---- GETerrainMesh's edits, fog of war and file codec ----
+
+/// `GETerrainMesh::ComputeVertexNormal` before the quantization (the C++ stores `GetQuantizedVersion()` of `out`).
+///
+/// # Safety
+/// `point_rows` holds `point_row_count` live rows, the point exists and `out` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_vertex_normal(
+    point_rows: *const GeTmRow,
+    point_row_count: c_ulong,
+    x: c_ulong,
+    y: c_ulong,
+    out: *mut GeVector,
+) {
+    // SAFETY: the function's contract
+    unsafe { *out = terrain_mesh::vertex_normal(point_rows, point_row_count, x, y) };
+}
+
+/// `GETerrainMesh::ComputeShorelines`: the tile's new shoreline bits for `SetWaterInfo`, or -1 to leave it alone.
+///
+/// # Safety
+/// `view` describes a live mesh and the tile exists.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_shoreline(
+    view: *const GeTerrainView,
+    space_map: bool,
+    x: c_ulong,
+    y: c_ulong,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { (*view).shoreline(space_map, x, y).map_or(-1, i32::from) }
+}
+
+/// `GETerrainMesh::UpdateFogOfWar`: writes the visible points' visibility and the two shares; false (nothing
+/// written) when no tile row is visible.
+///
+/// # Safety
+/// `view` and `fog` describe a live mesh; the out pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_fog(
+    view: *const GeTerrainView,
+    fog: *const GeTerrainFog,
+    out_water: *mut f32,
+    out_space: *mut f32,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        match terrain_mesh::fog_of_war(&*view, &*fog) {
+            Some((water, space)) => {
+                *out_water = water;
+                *out_space = space;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// `GETerrainMesh::Save`.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live mesh.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_save(
+    io: *const EeGeFieldIo,
+    view: *const GeTerrainView,
+    point_row_count: c_ulong,
+    width: c_long,
+    height: c_long,
+    fractal_seed: c_ulong,
+) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { terrain_mesh::save(&mut CppIo(*io), &*view, point_row_count, width, height, fractal_seed) }
+}
+
+/// `GETerrainMesh::Load`'s map size (each read through the member's old value).
+///
+/// # Safety
+/// `io` is a live field stream; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_load_size(
+    io: *const EeGeFieldIo,
+    width: *mut c_long,
+    height: *mut c_long,
+) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { terrain_mesh::load_size(&mut CppIo(*io), &mut *width, &mut *height) }
+}
+
+/// `GETerrainMesh::Load` after `CreateFlatMesh`: the tiles, the points and the fractal seed. `valid_sets[id]` is
+/// nonzero for a registered texture set.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live, writable mesh; `valid_sets` holds 256
+/// bytes; `state` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_load_body(
+    io: *const EeGeFieldIo,
+    view: *const GeTerrainView,
+    point_row_count: c_ulong,
+    valid_sets: *const u8,
+    state: *mut GeTerrainLoad,
+) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        terrain_mesh::load_body(
+            &mut CppIo(*io),
+            &*view,
+            point_row_count,
+            &*(valid_sets as *const [u8; 256]),
+            &mut *state,
+        )
+    }
+}
+
+// ---- GEPhysicalModel's per-triangle tests ----
+
+/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
+/// the C++ wrote it (the triangle's plane was not parallel to the line).
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_physical_line_triangle(
+    line: *const Ge3DLine,
+    p1: *const Ge3DPoint,
+    p2: *const Ge3DPoint,
+    p3: *const Ge3DPoint,
+    exact: bool,
+    distance: *mut f32,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let (hit, d) = physical::line_hits_triangle(&*line, *p1, *p2, *p3, exact);
+        put(distance, d);
+        hit
+    }
+}
+
+/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_physical_triangle_box(
+    p1: *const Ge3DPoint,
+    p2: *const Ge3DPoint,
+    p3: *const Ge3DPoint,
+    out: *mut GeBoundingBox,
+) {
+    // SAFETY: the function's contract
+    unsafe { *out = physical::triangle_box(*p1, *p2, *p3) };
 }
