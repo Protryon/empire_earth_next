@@ -5,8 +5,14 @@
 //! While `ee_astar_start` / `ee_astar_expand` run, the callbacks must not call any `ee_astar_*` function on the same
 //! storage: what the goals read of the storage during a search comes in the callbacks' arguments.
 
+use crate::area_goals::{
+    self, AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaFill, EeAStarPathAreaInfo,
+    EeAStarPathSectorFill,
+};
 use crate::goals::{self, EeAStarChokeFill, EeAStarContinentFill, EeAStarHillFill, View};
 use crate::machine::{self, Host, MachineState};
+use crate::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
+use crate::path_goals::{self, EeAStarPathGoal, PathView};
 use crate::storage::{AStarRect, GridKind, List, Storage, StorageKind, NIL};
 use std::ffi::c_void;
 
@@ -363,6 +369,54 @@ pub struct EeAStarViewCallbacks {
     pub continent_id: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> u16,
     /// a choke tile at `index` (`*serial` its area serial)
     pub choke_tile: extern "C" fn(ctx: *mut c_void, index: i32, serial: *mut u32) -> bool,
+    // the modifiers' queries (`modifiers::ModView`)
+    pub ai_value: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub tile_flag: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub can_move_on: extern "C" fn(ctx: *mut c_void, walker: Unit, terrain: i32) -> bool,
+    pub are_passable: extern "C" fn(ctx: *mut c_void, walker: Unit, x: i32, y: i32, skip: Skip) -> bool,
+    pub formation_rank: extern "C" fn(ctx: *mut c_void, walker: Unit) -> i32,
+    pub step_blocker: extern "C" fn(ctx: *mut c_void, walker: Unit, sea: bool, x: i32, y: i32) -> bool,
+    pub unit_region_state: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub epoch: extern "C" fn(ctx: *mut c_void, walker: Unit) -> i32,
+    pub is_alone: extern "C" fn(ctx: *mut c_void, walker: Unit) -> bool,
+    pub water_state: extern "C" fn(ctx: *mut c_void, walker: Unit) -> i32,
+    pub is_sea_going: extern "C" fn(ctx: *mut c_void, walker: Unit) -> bool,
+    pub has_hill: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub random_at_most: extern "C" fn(ctx: *mut c_void, chance: f32) -> bool,
+    // the path goals' queries (`path_goals::PathView`)
+    pub crowd_cost: extern "C" fn(ctx: *mut c_void, walker: Unit, x: i32, y: i32) -> i32,
+    pub is_wide: extern "C" fn(ctx: *mut c_void, walker: Unit) -> bool,
+    pub ignores_formation: extern "C" fn(ctx: *mut c_void, walker: Unit) -> bool,
+    pub rank_probe_blocked: extern "C" fn(ctx: *mut c_void, walker: Unit, continent_id: u16, x: i32, y: i32) -> bool,
+    pub can_enter: extern "C" fn(ctx: *mut c_void, modifier: *mut c_void, x: i32, y: i32, at_goal: bool) -> bool,
+    #[allow(clippy::type_complexity)]
+    pub modifier_cost: extern "C" fn(
+        ctx: *mut c_void,
+        modifier: *mut c_void,
+        from_x: i32,
+        from_y: i32,
+        x: i32,
+        y: i32,
+        parent_x: i32,
+        parent_y: i32,
+    ) -> i32,
+    // the area fills' queries (`area_goals::AreaView`)
+    pub has_units: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub continent_at: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, out: *mut EeAStarContinentInfo),
+    pub tile_value: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub path_area_at: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, out: *mut EeAStarPathAreaInfo),
+    pub path_area: extern "C" fn(ctx: *mut c_void, id: u16, out: *mut EeAStarPathAreaInfo),
+    pub stored_path_area_id: extern "C" fn(ctx: *mut c_void, storage: *const c_void, x: i32, y: i32) -> u16,
+    pub resource_kind: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub has_blocker: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub first_blocker_id: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub first_blocker: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, out: *mut EeAStarBlocker),
+    pub first_obstacle_id: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub own_wall_first: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, player_id: i32) -> bool,
+    pub area_gate_owner: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, player_id: i32) -> i32,
+    pub sector_gate_owner: extern "C" fn(ctx: *mut c_void, x: i32, y: i32, player_id: i32) -> i32,
+    pub live_dock: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub live_space_dock: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
 }
 
 struct CView<'a>(&'a EeAStarViewCallbacks);
@@ -386,6 +440,137 @@ impl View for CView<'_> {
     fn choke_tile(&mut self, index: i32) -> Option<u32> {
         let mut serial = 0u32;
         (self.0.choke_tile)(self.0.ctx, index, &mut serial).then_some(serial)
+    }
+}
+
+impl ModView for CView<'_> {
+    fn ai_value(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.ai_value)(self.0.ctx, x, y)
+    }
+    fn tile_flag(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.tile_flag)(self.0.ctx, x, y)
+    }
+    fn can_move_on(&mut self, walker: Unit, terrain: i32) -> bool {
+        (self.0.can_move_on)(self.0.ctx, walker, terrain)
+    }
+    fn are_passable(&mut self, walker: Unit, x: i32, y: i32, skip: Skip) -> bool {
+        (self.0.are_passable)(self.0.ctx, walker, x, y, skip)
+    }
+    fn formation_rank(&mut self, walker: Unit) -> i32 {
+        (self.0.formation_rank)(self.0.ctx, walker)
+    }
+    fn step_blocker(&mut self, walker: Unit, sea: bool, x: i32, y: i32) -> bool {
+        (self.0.step_blocker)(self.0.ctx, walker, sea, x, y)
+    }
+    fn unit_region_state(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.unit_region_state)(self.0.ctx, x, y)
+    }
+    fn epoch(&mut self, walker: Unit) -> i32 {
+        (self.0.epoch)(self.0.ctx, walker)
+    }
+    fn is_alone(&mut self, walker: Unit) -> bool {
+        (self.0.is_alone)(self.0.ctx, walker)
+    }
+    fn water_state(&mut self, walker: Unit) -> i32 {
+        (self.0.water_state)(self.0.ctx, walker)
+    }
+    fn is_sea_going(&mut self, walker: Unit) -> bool {
+        (self.0.is_sea_going)(self.0.ctx, walker)
+    }
+    fn has_hill(&mut self, x: i32, y: i32) -> bool {
+        (self.0.has_hill)(self.0.ctx, x, y)
+    }
+    fn random_at_most(&mut self, chance: f32) -> bool {
+        (self.0.random_at_most)(self.0.ctx, chance)
+    }
+}
+
+impl AreaView for CView<'_> {
+    fn has_units(&mut self, x: i32, y: i32) -> bool {
+        (self.0.has_units)(self.0.ctx, x, y)
+    }
+    fn continent_at(&mut self, x: i32, y: i32) -> EeAStarContinentInfo {
+        let mut out = EeAStarContinentInfo::default();
+        (self.0.continent_at)(self.0.ctx, x, y, &mut out);
+        out
+    }
+    fn tile_value(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.tile_value)(self.0.ctx, x, y)
+    }
+    fn path_area_at(&mut self, x: i32, y: i32) -> EeAStarPathAreaInfo {
+        let mut out = EeAStarPathAreaInfo::default();
+        (self.0.path_area_at)(self.0.ctx, x, y, &mut out);
+        out
+    }
+    fn path_area(&mut self, id: u16) -> EeAStarPathAreaInfo {
+        let mut out = EeAStarPathAreaInfo::default();
+        (self.0.path_area)(self.0.ctx, id, &mut out);
+        out
+    }
+    fn stored_path_area_id(&mut self, storage: *const c_void, x: i32, y: i32) -> u16 {
+        (self.0.stored_path_area_id)(self.0.ctx, storage, x, y)
+    }
+    fn resource_kind(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.resource_kind)(self.0.ctx, x, y)
+    }
+    fn has_blocker(&mut self, x: i32, y: i32) -> bool {
+        (self.0.has_blocker)(self.0.ctx, x, y)
+    }
+    fn first_blocker_id(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.first_blocker_id)(self.0.ctx, x, y)
+    }
+    fn first_blocker(&mut self, x: i32, y: i32) -> EeAStarBlocker {
+        let mut out = EeAStarBlocker::default();
+        (self.0.first_blocker)(self.0.ctx, x, y, &mut out);
+        out
+    }
+    fn first_obstacle_id(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.first_obstacle_id)(self.0.ctx, x, y)
+    }
+    fn own_wall_first(&mut self, x: i32, y: i32, player_id: i32) -> bool {
+        (self.0.own_wall_first)(self.0.ctx, x, y, player_id)
+    }
+    fn area_gate_owner(&mut self, x: i32, y: i32, player_id: i32) -> i32 {
+        (self.0.area_gate_owner)(self.0.ctx, x, y, player_id)
+    }
+    fn sector_gate_owner(&mut self, x: i32, y: i32, player_id: i32) -> i32 {
+        (self.0.sector_gate_owner)(self.0.ctx, x, y, player_id)
+    }
+    fn live_dock(&mut self, x: i32, y: i32) -> bool {
+        (self.0.live_dock)(self.0.ctx, x, y)
+    }
+    fn live_space_dock(&mut self, x: i32, y: i32) -> bool {
+        (self.0.live_space_dock)(self.0.ctx, x, y)
+    }
+}
+
+impl PathView for CView<'_> {
+    fn crowd_cost(&mut self, walker: Unit, x: i32, y: i32) -> i32 {
+        (self.0.crowd_cost)(self.0.ctx, walker, x, y)
+    }
+    fn is_wide(&mut self, walker: Unit) -> bool {
+        (self.0.is_wide)(self.0.ctx, walker)
+    }
+    fn ignores_formation(&mut self, walker: Unit) -> bool {
+        (self.0.ignores_formation)(self.0.ctx, walker)
+    }
+    fn rank_probe_blocked(&mut self, walker: Unit, continent_id: u16, x: i32, y: i32) -> bool {
+        (self.0.rank_probe_blocked)(self.0.ctx, walker, continent_id, x, y)
+    }
+    fn can_enter(&mut self, modifier: *mut c_void, x: i32, y: i32, at_goal: bool) -> bool {
+        (self.0.can_enter)(self.0.ctx, modifier, x, y, at_goal)
+    }
+    fn modifier_cost(
+        &mut self,
+        modifier: *mut c_void,
+        from_x: i32,
+        from_y: i32,
+        x: i32,
+        y: i32,
+        px: i32,
+        py: i32,
+    ) -> i32 {
+        (self.0.modifier_cost)(self.0.ctx, modifier, from_x, from_y, x, y, px, py)
     }
 }
 
@@ -445,4 +630,215 @@ pub unsafe extern "C" fn ee_astar_choke_accept(
         }
         None => false,
     }
+}
+
+/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
+///
+/// # Safety
+/// `view` valid, its functions callable; `goal` readable.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_astar_mod_step_cost(
+    view: *const EeAStarViewCallbacks,
+    goal: *const EeAStarStepGoal,
+    sea: bool,
+    from_x: i32,
+    from_y: i32,
+    x: i32,
+    y: i32,
+    parent_x: i32,
+    parent_y: i32,
+) -> i32 {
+    let goal = unsafe { *goal };
+    modifiers::step_cost(&mut CView(unsafe { &*view }), &goal, sea, from_x, from_y, x, y, parent_x, parent_y)
+}
+
+/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
+///
+/// # Safety
+/// `view` valid, its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_is_passable(
+    view: *const EeAStarViewCallbacks,
+    walker: Unit,
+    x: i32,
+    y: i32,
+) -> bool {
+    modifiers::is_passable(&mut CView(unsafe { &*view }), walker, x, y)
+}
+
+/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_attacker_can_enter(
+    view: *const EeAStarViewCallbacks,
+    walker: Unit,
+    x: i32,
+    y: i32,
+) -> bool {
+    modifiers::attacker_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
+}
+
+/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_walls_can_enter(
+    view: *const EeAStarViewCallbacks,
+    walker: Unit,
+    x: i32,
+    y: i32,
+) -> bool {
+    modifiers::walls_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
+}
+
+/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_wall_pather_can_enter(
+    view: *const EeAStarViewCallbacks,
+    walker: Unit,
+    x: i32,
+    y: i32,
+) -> bool {
+    modifiers::wall_pather_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
+}
+
+/// `EEAIBPGModifierStormShaper::GetCost`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`; `storm` readable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_storm_cost(
+    view: *const EeAStarViewCallbacks,
+    storm: *const EeAStarStorm,
+    x: i32,
+    y: i32,
+) -> i32 {
+    modifiers::storm_cost(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
+}
+
+/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
+///
+/// # Safety
+/// As `ee_astar_mod_storm_cost`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_mod_storm_can_enter(
+    view: *const EeAStarViewCallbacks,
+    storm: *const EeAStarStorm,
+    x: i32,
+    y: i32,
+) -> bool {
+    modifiers::storm_can_enter(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
+}
+
+/// The path goals' `AcceptTile`.
+///
+/// # Safety
+/// `goal` readable; `view` valid, its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_accept(
+    goal: *const EeAStarPathGoal,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+    at_goal: bool,
+) -> bool {
+    let goal = unsafe { *goal };
+    path_goals::accept_tile(&goal, &mut CView(unsafe { &*view }), x, y, at_goal)
+}
+
+/// The path goals' `GetCost` (`has_parent`: the current node has a parent at (`parent_x`, `parent_y`)).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_astar_path_cost(
+    goal: *const EeAStarPathGoal,
+    view: *const EeAStarViewCallbacks,
+    from_x: i32,
+    from_y: i32,
+    x: i32,
+    y: i32,
+    has_parent: bool,
+    parent_x: i32,
+    parent_y: i32,
+) -> i32 {
+    let goal = unsafe { *goal };
+    let parent = has_parent.then_some((parent_x, parent_y));
+    path_goals::get_cost(&goal, &mut CView(unsafe { &*view }), from_x, from_y, x, y, parent)
+}
+
+/// The path goals' `IsGoalNode` (without the bounded goal's `CheckNode`).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_is_goal_node(
+    goal: *const EeAStarPathGoal,
+    view: *const EeAStarViewCallbacks,
+    has_node: bool,
+    x: i32,
+    y: i32,
+) -> bool {
+    let goal = unsafe { *goal };
+    path_goals::is_goal_node(&goal, &mut CView(unsafe { &*view }), has_node.then_some((x, y)))
+}
+
+/// The path goals' `SearchDone`: updates `goal`'s `search_failed` and `took_nearest`.
+///
+/// # Safety
+/// `goal` readable and writable; `view` as `ee_astar_path_accept`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_search_done(
+    goal: *mut EeAStarPathGoal,
+    view: *const EeAStarViewCallbacks,
+    has_current: bool,
+    x: i32,
+    y: i32,
+    has_open: bool,
+) {
+    let mut g = unsafe { *goal };
+    path_goals::search_done(&mut g, &mut CView(unsafe { &*view }), has_current.then_some((x, y)), has_open);
+    unsafe { *goal = g };
+}
+
+/// `EEAIAStarPathAreaGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_area_accept(
+    fill: *mut EeAStarPathAreaFill,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+) -> bool {
+    let mut f = unsafe { *fill };
+    let r = area_goals::path_area_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
+    unsafe { *fill = f };
+    r
+}
+
+/// `EEAIAStarPathSectorGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_path_area_accept`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_sector_accept(
+    fill: *mut EeAStarPathSectorFill,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+) -> bool {
+    let mut f = unsafe { *fill };
+    let r = area_goals::path_sector_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
+    unsafe { *fill = f };
+    r
 }

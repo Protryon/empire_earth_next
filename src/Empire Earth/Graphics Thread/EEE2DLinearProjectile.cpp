@@ -42,6 +42,7 @@
 #include "lle/GE3DLine.h"
 #include "ee/EEE2DLinearProjectile.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e2edd
 // SYNTHETIC: EXE 0x4e2ee7
@@ -255,7 +256,7 @@ long EEE2DLinearProjectile::Load(unsigned long inMajorVersion, unsigned long inM
 // Draws the projectile as an additive fog-lit sprite at its snapshotted position; returns the draw result
 long EEE2DLinearProjectile::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     GEModel* theModel = this->mModel;
     GEMaterial* theMaterial = theModel->GetMaterial(0);
     unsigned long theScreen = gScreenIndex;

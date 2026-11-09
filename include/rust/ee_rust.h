@@ -166,6 +166,13 @@ enum class EeAStarList {
   ClosedTable = 4,
 };
 
+/// `EEAIAStarView::ArePassableExcept`'s skip (`kSkipNone`, `kSkipWalls`, `kSkipTrees`).
+enum class EeAStarSkip {
+  None = 0,
+  Walls = 1,
+  Trees = 2,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -333,6 +340,32 @@ struct EeAStarContinentFill {
   int32_t tile_count;
 };
 
+/// A unit as the view names it (`EEComplexUnit*`, opaque here).
+using EeAStarUnit = void*;
+
+/// A continent at a tile (`EEAIAStarContinentInfo`).
+struct EeAStarContinentInfo {
+  uint16_t id;
+  uint8_t category;
+};
+
+/// A path area at a tile or by id (`EEAIAStarPathAreaInfo`).
+struct EeAStarPathAreaInfo {
+  bool found;
+  uint16_t id;
+  uint16_t continent_id;
+  int32_t kind;
+};
+
+/// The first blocking unit of a tile (`EEAIAStarBlocker`).
+struct EeAStarBlocker {
+  bool found;
+  int32_t unit_id;
+  int32_t player_id;
+  bool is_gate;
+  bool is_wall;
+};
+
 /// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
 struct EeAStarViewCallbacks {
   void *ctx;
@@ -343,6 +376,52 @@ struct EeAStarViewCallbacks {
   uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
   /// a choke tile at `index` (`*serial` its area serial)
   bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+  int32_t (*ai_value)(void *ctx, int32_t x, int32_t y);
+  int32_t (*tile_flag)(void *ctx, int32_t x, int32_t y);
+  bool (*can_move_on)(void *ctx, EeAStarUnit walker, int32_t terrain);
+  bool (*are_passable)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y, EeAStarSkip skip);
+  int32_t (*formation_rank)(void *ctx, EeAStarUnit walker);
+  bool (*step_blocker)(void *ctx, EeAStarUnit walker, bool sea, int32_t x, int32_t y);
+  int32_t (*unit_region_state)(void *ctx, int32_t x, int32_t y);
+  int32_t (*epoch)(void *ctx, EeAStarUnit walker);
+  bool (*is_alone)(void *ctx, EeAStarUnit walker);
+  int32_t (*water_state)(void *ctx, EeAStarUnit walker);
+  bool (*is_sea_going)(void *ctx, EeAStarUnit walker);
+  bool (*has_hill)(void *ctx, int32_t x, int32_t y);
+  bool (*random_at_most)(void *ctx, float chance);
+  int32_t (*crowd_cost)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y);
+  bool (*is_wide)(void *ctx, EeAStarUnit walker);
+  bool (*ignores_formation)(void *ctx, EeAStarUnit walker);
+  bool (*rank_probe_blocked)(void *ctx,
+                             EeAStarUnit walker,
+                             uint16_t continent_id,
+                             int32_t x,
+                             int32_t y);
+  bool (*can_enter)(void *ctx, void *modifier, int32_t x, int32_t y, bool at_goal);
+  int32_t (*modifier_cost)(void *ctx,
+                           void *modifier,
+                           int32_t from_x,
+                           int32_t from_y,
+                           int32_t x,
+                           int32_t y,
+                           int32_t parent_x,
+                           int32_t parent_y);
+  bool (*has_units)(void *ctx, int32_t x, int32_t y);
+  void (*continent_at)(void *ctx, int32_t x, int32_t y, EeAStarContinentInfo *out);
+  int32_t (*tile_value)(void *ctx, int32_t x, int32_t y);
+  void (*path_area_at)(void *ctx, int32_t x, int32_t y, EeAStarPathAreaInfo *out);
+  void (*path_area)(void *ctx, uint16_t id, EeAStarPathAreaInfo *out);
+  uint16_t (*stored_path_area_id)(void *ctx, const void *storage, int32_t x, int32_t y);
+  int32_t (*resource_kind)(void *ctx, int32_t x, int32_t y);
+  bool (*has_blocker)(void *ctx, int32_t x, int32_t y);
+  int32_t (*first_blocker_id)(void *ctx, int32_t x, int32_t y);
+  void (*first_blocker)(void *ctx, int32_t x, int32_t y, EeAStarBlocker *out);
+  int32_t (*first_obstacle_id)(void *ctx, int32_t x, int32_t y);
+  bool (*own_wall_first)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*area_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*sector_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  bool (*live_dock)(void *ctx, int32_t x, int32_t y);
+  bool (*live_space_dock)(void *ctx, int32_t x, int32_t y);
 };
 
 /// `EEAIAStarHillGoal`'s fill state.
@@ -362,6 +441,112 @@ struct EeAStarChokeFill {
   int32_t height;
   /// `mTileCount`
   int32_t tile_count;
+};
+
+/// The goal's state the step cost reads (`EEAIAStarPathfindingGoalBase`).
+struct EeAStarStepGoal {
+  /// `mUnit`
+  EeAStarUnit walker;
+  /// `mAvoidUnits`
+  bool avoid_units;
+  /// `mIsBounded`
+  bool is_bounded;
+  /// `mGoalBounds`
+  EeAStarRect goal_bounds;
+};
+
+/// `EEAIBPGModifierStormShaper`'s state.
+struct EeAStarStorm {
+  /// `mInner`, `mOuter`
+  EeAStarRect inner;
+  EeAStarRect outer;
+  /// `mDistanceSquared`
+  int32_t distance_squared;
+  /// `mSnow`, `mRain`
+  bool snow;
+  bool rain;
+  /// the bounded goal's `mStartTile`
+  int32_t start_x;
+  int32_t start_y;
+};
+
+/// A path goal's state (`EEAIAStarGoalBase` and `EEAIAStarPathfindingGoalBase` members, the bounded goal's
+/// window, the machine's members its hooks read).
+struct EeAStarPathGoal {
+  /// `EEAIAStarBoundedPathGoal`: tiles outside `bounds` are refused
+  bool bounded;
+  /// `mBounds` (the bounded goal's)
+  EeAStarRect bounds;
+  /// `mGoalTile`
+  int32_t goal_x;
+  int32_t goal_y;
+  /// `mUnit`
+  EeAStarUnit walker;
+  /// `mModifier` (null: the default tests and costs)
+  void *modifier;
+  /// `mContinentID`
+  uint16_t continent_id;
+  /// the machine's `mCheckCorners`
+  bool check_corners;
+  /// `mAcceptNearest`, `mSearchFailed`, `mTookNearest`
+  bool accept_nearest;
+  bool search_failed;
+  bool took_nearest;
+  /// the machine's `mRevs` and `GetMaxRevs()` (the goal's `mMaxRevs`)
+  int32_t revs;
+  int32_t max_revs;
+};
+
+/// `EEAIAStarPathAreaGoal`'s fill state.
+struct EeAStarPathAreaFill {
+  /// `mMode` (`EEAIPathKind`: 0 the path area pass, 1..4 a kind pass)
+  int32_t mode;
+  /// `mContinentID`, `mContinentKind` (the first tile's continent; 0 between areas)
+  uint16_t continent_id;
+  uint8_t continent_kind;
+  /// `mKind` (`EEAITileKind`)
+  int32_t kind;
+  /// `mOwnerID`, `mPlayerID` (the first tile's blocking unit)
+  int32_t owner_id;
+  int32_t player_id;
+  /// `mTileCount`
+  int32_t tile_count;
+  /// `mResources1..3`
+  int32_t resources[3];
+  /// `mForestID`, `mNextForestID`
+  uint16_t forest_id;
+  uint16_t next_forest_id;
+  /// `mTileBounds`
+  EeAStarRect tile_bounds;
+  /// out: the machine's `mCheckCorners` as the fill left it (-1: not written)
+  int32_t check_corners;
+};
+
+/// `EEAIAStarPathSectorGoal`'s fill state.
+struct EeAStarPathSectorFill {
+  /// `mPathAreaStorage` (the path area fill's storage, whose id grid the fill reads)
+  const void *path_area_storage;
+  /// `mClassifyTiles`
+  bool classify_tiles;
+  /// `mTileCount`, `mTileBounds`, `mSectorBounds`
+  int32_t tile_count;
+  EeAStarRect tile_bounds;
+  EeAStarRect sector_bounds;
+  /// `mPathAreaID`, `mPathAreaKind`, `mContinentID`, `mCategory`, `mKind`
+  uint16_t path_area_id;
+  int32_t path_area_kind;
+  uint16_t continent_id;
+  uint8_t category;
+  int32_t kind;
+  /// `mUnitID`, `mPlayerID`, `mWA0`, `mWA2`
+  int32_t unit_id;
+  int32_t player_id;
+  uint16_t wa0;
+  uint16_t wa2;
+  /// out: the machine's `mCheckCorners` as the fill left it (-1: not written)
+  int32_t check_corners;
+  /// out: the tile goes to `mStaleTiles` (classified, but not in a path area of the sub-sector's kind)
+  bool stale;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -1432,6 +1617,34 @@ struct EeWonCdKeyDecoded {
   uint8_t raw[8];
 };
 
+/// Receives one local address: its name (`length` bytes) and the host-order address.
+using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
+
+/// WON's socket state, embedded in the C++ `AsyncSocket` (`mCore`).
+struct EeWonSocket {
+  /// The platform socket (`PLAT_SOCKET_INVALID` when closed).
+  ptrdiff_t handle;
+  /// [`KIND_STREAM`] or [`KIND_DATAGRAM`].
+  int32_t kind;
+  /// Connected (a stream connect was started or accepted; a datagram socket's peer was set).
+  bool connected;
+  /// Opened since the last close.
+  bool open;
+  /// The last socket error recorded (`WS_None` after an open).
+  long status;
+  /// When data last arrived (seconds since 1970; the original's 32-bit `time(NULL)`).
+  int64_t last_recv_time;
+  /// When the first of the current run of blocked sends failed (0: the last send went out).
+  int64_t first_blocked_send_time;
+};
+
+/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
+struct EeWonOpTiming {
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+};
+
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
   uint32_t material_count;
@@ -1792,6 +2005,137 @@ bool ee_astar_choke_accept(EeAStarChokeFill *fill,
                            int32_t x,
                            int32_t y,
                            uint32_t *serial);
+
+/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
+///
+/// # Safety
+/// `view` valid, its functions callable; `goal` readable.
+int32_t ee_astar_mod_step_cost(const EeAStarViewCallbacks *view,
+                               const EeAStarStepGoal *goal,
+                               bool sea,
+                               int32_t from_x,
+                               int32_t from_y,
+                               int32_t x,
+                               int32_t y,
+                               int32_t parent_x,
+                               int32_t parent_y);
+
+/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
+///
+/// # Safety
+/// `view` valid, its functions callable.
+bool ee_astar_mod_is_passable(const EeAStarViewCallbacks *view,
+                              EeAStarUnit walker,
+                              int32_t x,
+                              int32_t y);
+
+/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_attacker_can_enter(const EeAStarViewCallbacks *view,
+                                     EeAStarUnit walker,
+                                     int32_t x,
+                                     int32_t y);
+
+/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_walls_can_enter(const EeAStarViewCallbacks *view,
+                                  EeAStarUnit walker,
+                                  int32_t x,
+                                  int32_t y);
+
+/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_wall_pather_can_enter(const EeAStarViewCallbacks *view,
+                                        EeAStarUnit walker,
+                                        int32_t x,
+                                        int32_t y);
+
+/// `EEAIBPGModifierStormShaper::GetCost`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`; `storm` readable.
+int32_t ee_astar_mod_storm_cost(const EeAStarViewCallbacks *view,
+                                const EeAStarStorm *storm,
+                                int32_t x,
+                                int32_t y);
+
+/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
+///
+/// # Safety
+/// As `ee_astar_mod_storm_cost`.
+bool ee_astar_mod_storm_can_enter(const EeAStarViewCallbacks *view,
+                                  const EeAStarStorm *storm,
+                                  int32_t x,
+                                  int32_t y);
+
+/// The path goals' `AcceptTile`.
+///
+/// # Safety
+/// `goal` readable; `view` valid, its functions callable.
+bool ee_astar_path_accept(const EeAStarPathGoal *goal,
+                          const EeAStarViewCallbacks *view,
+                          int32_t x,
+                          int32_t y,
+                          bool at_goal);
+
+/// The path goals' `GetCost` (`has_parent`: the current node has a parent at (`parent_x`, `parent_y`)).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+int32_t ee_astar_path_cost(const EeAStarPathGoal *goal,
+                           const EeAStarViewCallbacks *view,
+                           int32_t from_x,
+                           int32_t from_y,
+                           int32_t x,
+                           int32_t y,
+                           bool has_parent,
+                           int32_t parent_x,
+                           int32_t parent_y);
+
+/// The path goals' `IsGoalNode` (without the bounded goal's `CheckNode`).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+bool ee_astar_path_is_goal_node(const EeAStarPathGoal *goal,
+                                const EeAStarViewCallbacks *view,
+                                bool has_node,
+                                int32_t x,
+                                int32_t y);
+
+/// The path goals' `SearchDone`: updates `goal`'s `search_failed` and `took_nearest`.
+///
+/// # Safety
+/// `goal` readable and writable; `view` as `ee_astar_path_accept`.
+void ee_astar_path_search_done(EeAStarPathGoal *goal,
+                               const EeAStarViewCallbacks *view,
+                               bool has_current,
+                               int32_t x,
+                               int32_t y,
+                               bool has_open);
+
+/// `EEAIAStarPathAreaGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+bool ee_astar_path_area_accept(EeAStarPathAreaFill *fill,
+                               const EeAStarViewCallbacks *view,
+                               int32_t x,
+                               int32_t y);
+
+/// `EEAIAStarPathSectorGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_path_area_accept`.
+bool ee_astar_path_sector_accept(EeAStarPathSectorFill *fill,
+                                 const EeAStarViewCallbacks *view,
+                                 int32_t x,
+                                 int32_t y);
 
 /// `UDataCompression::Compress`.
 ///
@@ -4613,6 +4957,278 @@ void ee_won_cdkey_decrypt(const uint8_t *product,
 /// # Safety
 /// `raw` holds `length` bytes.
 bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
+
+/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
+/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
+///
+/// # Safety
+/// `buffer` has `size` bytes.
+const char *ee_won_status_name(long s,
+                               char *buffer,
+                               size_t size);
+
+void ee_won_netstats_enable(bool on);
+
+/// Adds to counter `counter` (0 constructed sockets, 1 open sockets, 2 bytes sent, 3 bytes received, 4 messages
+/// sent, 5 messages received) while counting is on.
+void ee_won_netstats_add(uint32_t counter,
+                         int64_t amount);
+
+int64_t ee_won_netstats_get(uint32_t counter);
+
+/// `Fn2B2660`: a dotted address or a host name (looked up) and a host-order port -> the address; false when it does
+/// not resolve.
+///
+/// # Safety
+/// `host` holds `length` bytes; the out-parameters are valid.
+bool ee_won_ipaddr_resolve(const uint8_t *host,
+                           size_t length,
+                           uint16_t port,
+                           uint32_t *address,
+                           uint16_t *port_out);
+
+/// `Fn2B2890`'s port: the text after the colon as `atoi` reads it, cut to 16 bits (host order).
+///
+/// # Safety
+/// `text_in` holds `length` bytes.
+uint16_t ee_won_ipaddr_port_of(const uint8_t *text_in, size_t length);
+
+/// `SetWithDefaultPortNoDNS`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_resolve`.
+bool ee_won_ipaddr_parse_no_dns(const uint8_t *text_in,
+                                size_t length,
+                                uint16_t default_port,
+                                uint32_t *address,
+                                uint16_t *port);
+
+/// The dotted form of a network-order address into `out` (16 bytes).
+///
+/// # Safety
+/// `out` has 16 bytes.
+void ee_won_ipaddr_dotted(uint32_t address, char *out);
+
+/// `GetHostAndPortString`: "host:port" (at most 49 bytes) into `out` (50 bytes); returns its length.
+///
+/// # Safety
+/// `host` holds `length` bytes; `out` has 50 bytes.
+size_t ee_won_ipaddr_host_and_port(const uint8_t *host,
+                                   size_t length,
+                                   uint16_t port,
+                                   char *out);
+
+/// The order of two addresses' 6-byte wire forms (`operator<`, `==`): negative, 0 or positive.
+///
+/// # Safety
+/// `a` and `b` point at 6 bytes each (a `PlatSockAddrIn`'s port and address).
+int32_t ee_won_ipaddr_compare_six(const uint8_t *a, const uint8_t *b);
+
+/// `StringCompare` (network-order addresses and ports).
+int32_t ee_won_ipaddr_string_compare(uint32_t a_address,
+                                     uint16_t a_port,
+                                     uint32_t b_address,
+                                     uint16_t b_port);
+
+/// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
+///
+/// # Safety
+/// The sink is called during the call only.
+void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
+
+/// Whether a host-order address is one of this machine's (`SetLocalHost`'s test: the host name's addresses).
+bool ee_won_ipaddr_is_local(uint32_t host);
+
+/// This machine's name into `out` (`size` bytes); false when the system gives none.
+///
+/// # Safety
+/// `out` has `size` bytes.
+bool ee_won_ipaddr_host_name(char *out, size_t size);
+
+/// `AsyncSocket::HasInternetConnection`.
+bool ee_won_has_internet_connection();
+
+/// The constructor: a closed socket of `kind` (0 stream, 1 datagram) into `core`.
+///
+/// # Safety
+/// `core` points at an `EeWonSocket` (uninitialised is fine).
+void ee_won_socket_init(EeWonSocket *core, int32_t kind);
+
+/// The destructor's count (after the C++ closed the socket).
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_destroyed(EeWonSocket *core);
+
+/// `StartWinsock`.
+long ee_won_socket_start();
+
+/// `StopWinsock`.
+long ee_won_socket_stop();
+
+/// `GetLastSocketError`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_last_error(EeWonSocket *core);
+
+/// `Open`'s handle (after the C++ closed a valid socket; the C++ runs the open hook on 0).
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_open(EeWonSocket *core);
+
+/// `Bind` on an open socket.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_bind(EeWonSocket *core, uint32_t address, uint16_t port, bool reuse);
+
+/// The connect of `Fn2B0E60` on an open socket.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_connect(EeWonSocket *core, uint32_t address, uint16_t port);
+
+/// `Listen`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_listen(EeWonSocket *core, int32_t backlog);
+
+/// `Accept`'s system part: the accepted handle and the peer, or the error.
+///
+/// # Safety
+/// `core` is a socket; the out-parameters are valid.
+long ee_won_socket_accept(EeWonSocket *core, ptrdiff_t *handle, uint32_t *address, uint16_t *port);
+
+/// The accepted handle into the new socket's core (open, connected).
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_adopt(EeWonSocket *core, ptrdiff_t handle);
+
+/// A wait on a handle without the lock (`WaitForRead` 1, `WaitForWrite` 2).
+void ee_won_socket_wait(ptrdiff_t handle, uint32_t mask, uint32_t timeout);
+
+/// `WaitForConnect`'s wait on a handle, without the lock.
+long ee_won_socket_wait_for_connect(ptrdiff_t handle, uint32_t timeout);
+
+/// `Send`; `*sent` (when not null) is set when the send did not fail.
+///
+/// # Safety
+/// `core` is a socket; `data` holds `length` bytes.
+long ee_won_socket_send(EeWonSocket *core, const void *data, int32_t length, int32_t *sent);
+
+/// `Recv`; `*received` (when not null) is set when bytes came.
+///
+/// # Safety
+/// `core` is a socket; `data` has room for `length` bytes.
+long ee_won_socket_recv(EeWonSocket *core, void *data, int32_t length, int32_t *received);
+
+/// `SendTo` / `RecvFrom`'s test of the socket's kind.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_datagram_only(const EeWonSocket *core);
+
+/// `SendTo` on an open datagram socket.
+///
+/// # Safety
+/// `core` is a socket; `data` holds `length` bytes.
+long ee_won_socket_send_to(EeWonSocket *core,
+                           const void *data,
+                           int32_t length,
+                           uint32_t address,
+                           uint16_t port);
+
+/// `RecvFrom`: on success the sender in `*address` / `*port` and `*from` true, `*received` (when not null) set.
+///
+/// # Safety
+/// `core` is a socket; `data` has room for `length` bytes; the out-parameters are valid.
+long ee_won_socket_recv_from(EeWonSocket *core,
+                             void *data,
+                             int32_t length,
+                             uint32_t *address,
+                             uint16_t *port,
+                             bool *from,
+                             int32_t *received);
+
+/// `ClosePrv`.
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_close(EeWonSocket *core);
+
+/// `Disconnect` of a datagram socket: false when dissolving the peer failed.
+///
+/// # Safety
+/// `core` is a socket.
+bool ee_won_socket_dissolve_peer(EeWonSocket *core);
+
+/// `GetLocalPort`.
+///
+/// # Safety
+/// `core` is a socket.
+uint16_t ee_won_socket_local_port(const EeWonSocket *core);
+
+/// `SetBroadcast`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_set_broadcast(EeWonSocket *core, bool on);
+
+/// `SetNagling`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
+
+/// WON's millisecond tick (`WONTickCount`).
+uint32_t ee_won_tick();
+
+/// `AsyncOp::TimeLeft` now.
+uint32_t ee_won_op_time_left(EeWonOpTiming timing);
+
+/// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
+uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
+
+/// `RecvMsgOp`'s length prefix: 0 and the body's length in `*body`, 1 for the 2-byte escape (a 4-byte prefix
+/// follows), 2 for an invalid length.
+///
+/// # Safety
+/// `prefix` holds `length` bytes; `body` is valid.
+int32_t ee_won_op_length_step(const uint8_t *prefix,
+                              size_t length,
+                              uint32_t *body);
+
+/// `RecvMsgOp::Start`'s length field test.
+bool ee_won_op_valid_length_field(uint32_t size);
+
+/// `RecvBytesOp`'s chunk read size.
+int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
+
+/// `SendBytesOp::Continue`: sends `data[*pos..length]`; `*pos` follows.
+///
+/// # Safety
+/// `core` is the socket and `lock` its `PlatMutex`, both alive during the call; `data` holds `length` bytes.
+long ee_won_op_send_all(EeWonSocket *core,
+                        void *lock,
+                        const uint8_t *data,
+                        size_t length,
+                        uint32_t *pos,
+                        EeWonOpTiming timing);
+
+/// `RecvCRMsgOp::Continue`: each byte to `sink` until a CR-LF; `last` is the line so far's last byte (-1 for none).
+///
+/// # Safety
+/// As `ee_won_op_send_all`; the sink is called during the call only.
+long ee_won_op_recv_line(EeWonSocket *core,
+                         void *lock,
+                         int32_t last,
+                         EeWonOpTiming timing,
+                         EeWonByteSink sink,
+                         void *context);
 
 }  // extern "C"
 

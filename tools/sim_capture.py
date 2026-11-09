@@ -17,6 +17,9 @@ the count and FNV-1a digest of everything the machine asked its goal and the goa
 answers), and the run's outputs (the machine's members, the goal's flags, a digest of every storage node in list
 order). Its golden lines come from the C++ machine (R5b.1 step 2). EE_SIM_CAPTURE_ASTAR_EVENTS=1 also writes the
 events themselves (about 25 bytes each, some 35 million in the six games): for finding where two builds part.
+ASGR is the graph searches' record (EEAIAStarGraphMachine::Run: the sub sector paths and the continental chains), in
+the same shape: inputs, the digest of the machine's questions to its goal, the outputs and the storage's lists. Its
+golden lines come from the C++ graph machine, storage and goals.
 `replay` covers the formations only.
 """
 import argparse

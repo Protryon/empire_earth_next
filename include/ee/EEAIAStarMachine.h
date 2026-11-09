@@ -13,6 +13,7 @@
 #define EE_EEAIASTARMACHINE_H
 
 #include "rust/ee_rust.h"   // EeAStarCallbacks (the Rust search steps)
+#include "ee/EEAIAStarCapture.h"   // TEST ONLY: the graph machine's capture notes
 
 struct EEAIAStarGraphNode;               // ee/EEAIAStarGraphStorage.h
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
@@ -147,6 +148,9 @@ public:
     bool Restart();                         // 0x28a34: the nearest remaining node, else a new start node
     EEAIAStarGraphNode* NextNode();         // 0x2945f: the nearer of the nearest open and closed nodes
     void AddNode(EEAIAStarGraphNode* inParent, M* inObject);   // 0x28aa7: a new open node unless known cheaper
+    // New (port), TEST ONLY: Run's record in the A* capture (ee/EEAIAStarCapture.h, tag ASGR)
+    void CaptureInputs(EEAIAStarCaptureRun& ioRun);
+    void CaptureOutputs(EEAIAStarCaptureRun& ioRun);
 
     G mGoal;                                // +0x64
 };
@@ -230,6 +234,9 @@ void EEAIAStarGraphMachine<S, G, M>::Reset()
 template <class S, class G, class M>
 void EEAIAStarGraphMachine<S, G, M>::Run()
 {
+    EEAIAStarCaptureRun theCapture;         // TEST ONLY (EE_SIM_CAPTURE): this run's record
+    if (theCapture.IsOn())
+        this->CaptureInputs(theCapture);
     if (!this->mFound) {
         this->mNumRuns = 0;
         this->mRevs = 0;
@@ -240,6 +247,46 @@ void EEAIAStarGraphMachine<S, G, M>::Run()
         this->Expand();
     } else
         this->Expand();
+    if (theCapture.IsOn()) {
+        this->CaptureOutputs(theCapture);
+        theCapture.Commit(kAStarCaptureGraphRun);
+    }
+}
+
+// New (port), TEST ONLY: the search's inputs as Run finds them
+template <class S, class G, class M>
+void EEAIAStarGraphMachine<S, G, M>::CaptureInputs(EEAIAStarCaptureRun& ioRun)
+{
+    ioRun.I32(this->mType);
+    ioRun.U8(this->mFound);
+    ioRun.U8(this->mGoal.mAcceptNearest);
+    ioRun.I32(this->mGoal.mStartTile.mX);
+    ioRun.I32(this->mGoal.mStartTile.mY);
+    ioRun.I32(this->mGoal.mGoalTile.mX);
+    ioRun.I32(this->mGoal.mGoalTile.mY);
+    ioRun.I32(this->mGoal.mStartSector);
+    ioRun.I32(this->mGoal.mGoalSector);
+    ioRun.I32(this->mGoal.mPlayerID);
+    ioRun.I32(this->mGoal.mRevLimit);
+    ioRun.I32(this->mGoal.mMaxRevs);
+    ioRun.I32(this->mNodeCount);
+}
+
+// New (port), TEST ONLY: the search's outputs: the machine's members, the goal's flags, the storage's nodes
+template <class S, class G, class M>
+void EEAIAStarGraphMachine<S, G, M>::CaptureOutputs(EEAIAStarCaptureRun& ioRun)
+{
+    ioRun.U8(this->mFound);
+    ioRun.I32(this->mRevs);
+    ioRun.I32(this->mSteps);
+    ioRun.I32(this->mNumRuns);
+    ioRun.I32(this->mTile.mX);
+    ioRun.I32(this->mTile.mY);
+    ioRun.I32(this->mSector);
+    ioRun.U8(this->mGoal.mSearchFailed);
+    ioRun.U8(this->mGoal.mTookNearest);
+    S* theStorage = this;
+    theStorage->CaptureNodes(ioRun);
 }
 
 template <class S, class G, class M>
@@ -249,9 +296,12 @@ bool EEAIAStarGraphMachine<S, G, M>::Start()
     this->mTile.mY = this->mGoal.mGoalTile.mY;
     this->mSector = this->mGoal.GetGoalID();
     M* theStart = this->mGoal.GetStartObject();
+    EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
     mCurrentNode = NewNode(this->mGoal.mStartTile, theStart, theStart->mID);
     mCurrentNode->mPathCost = 0;
-    mCurrentNode->mEstimate = this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile);
+    mCurrentNode->mEstimate = EEAIAStarNote(kAStarEventGraphEstimate, this->mGoal.mStartTile.mX, this->mGoal.mStartTile.mY,
+                                            this->mTile.mX, this->mTile.mY, 0,
+                                            this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile));
     mCurrentNode->mCost = mCurrentNode->mEstimate + mCurrentNode->mPathCost;
     AddOpen(mCurrentNode);
     return true;
@@ -265,7 +315,9 @@ void EEAIAStarGraphMachine<S, G, M>::Expand()
     this->mSteps = 0;
     for (;;) {
         mCurrentNode = RemoveBestOpen();
-        if (this->mGoal.IsGoalNode(mCurrentNode)) {
+        bool theIsGoal = this->mGoal.IsGoalNode(mCurrentNode);
+        EEAIAStarNote(kAStarEventGraphGoalNode, mCurrentNode ? mCurrentNode->mIndex : -1, 0, 0, 0, 0, theIsGoal);
+        if (theIsGoal) {
             this->mFound = false;
             break;
         }
@@ -273,7 +325,9 @@ void EEAIAStarGraphMachine<S, G, M>::Expand()
         if (theObject->GetNumNeighbors() > 0) {
             for (long i = theObject->mNeighbors.size() - 1; i >= 0; i--) {
                 AStarGraphableObjectBase* theNeighbor = theObject->mNeighbors[i];
-                if (theObject->mID != -1 && this->mGoal.CanEnter(static_cast<M*>(theNeighbor), theObject))
+                if (theObject->mID != -1 &&
+                    EEAIAStarNote(kAStarEventGraphEnter, static_cast<M*>(theNeighbor)->mID, theObject->mID, 0, 0, 0,
+                                  this->mGoal.CanEnter(static_cast<M*>(theNeighbor), theObject)) != 0)
                     this->AddNode(mCurrentNode, theObject->mNeighbors[i]);
             }
         }
@@ -291,8 +345,10 @@ void EEAIAStarGraphMachine<S, G, M>::Expand()
         this->mSteps++;
         this->mRevs++;
     }
-    if (!this->mFound)
+    if (!this->mFound) {
         this->mGoal.SearchDone(this);
+        EEAIAStarNote(kAStarEventGraphSearchDone, this->mGoal.mSearchFailed, this->mGoal.mTookNearest, 0, 0, 0, 0);
+    }
     if (this->mGoal.mSearchFailed) {
         if (mCurrentNode) {
             AddClosed(mCurrentNode);
@@ -317,7 +373,9 @@ bool EEAIAStarGraphMachine<S, G, M>::Restart()
         mCurrentNode = theNode;
         this->mSector = theNode->mIndex;
     } else {
-        mCurrentNode = NewNode(this->mGoal.mStartTile, this->mGoal.GetStartObject(), -1);
+        M* theStart = this->mGoal.GetStartObject();
+        EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
+        mCurrentNode = NewNode(this->mGoal.mStartTile, theStart, -1);
         mCurrentNode->mPathCost = 0;
         mCurrentNode->mEstimate = 1;
         mCurrentNode->mCost = 1;
@@ -349,7 +407,9 @@ EEAIAStarGraphNode* EEAIAStarGraphMachine<S, G, M>::NextNode()
 template <class S, class G, class M>
 void EEAIAStarGraphMachine<S, G, M>::AddNode(EEAIAStarGraphNode* inParent, M* inObject)
 {
-    unsigned long theCost = inParent->mPathCost + this->mGoal.GetStepCost(inParent, inObject);
+    auto theStep = this->mGoal.GetStepCost(inParent, inObject);
+    EEAIAStarNote(kAStarEventGraphCost, inParent->mIndex, inObject->mID, 0, 0, 0, (long)theStep);
+    unsigned long theCost = inParent->mPathCost + theStep;
     U2DPoint<long> theTile = inObject->GetGraphLocation();
     long theIndex = inObject->mID;
     EEAIAStarGraphNode* theOpen = GetOpenNode(theIndex);
@@ -366,7 +426,8 @@ void EEAIAStarGraphMachine<S, G, M>::AddNode(EEAIAStarGraphNode* inParent, M* in
         EEAIAStarGraphNode* theNode = NewNode(theTile, inObject, theIndex);
         theNode->mPathCost = theCost;
         theNode->mParent = inParent;
-        theNode->mEstimate = this->mGoal.Estimate(theNode->mTile, this->mTile);  // the goal's heuristic (0xab6c1: Manhattan * 10)
+        theNode->mEstimate = EEAIAStarNote(kAStarEventGraphEstimate, theNode->mTile.mX, theNode->mTile.mY, this->mTile.mX,
+                                           this->mTile.mY, 0, this->mGoal.Estimate(theNode->mTile, this->mTile));  // the goal's heuristic (0xab6c1: Manhattan * 10)
         theNode->mCost = theNode->mEstimate + theCost;
         AddOpen(theNode);
     } else {

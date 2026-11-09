@@ -96,9 +96,9 @@ void EEAIAStarCaptureRun::Nodes(const std::vector<EEAIAStarNodeView>& inNodes)
     theSaved.swap(this->mData);
 }
 
-void EEAIAStarCaptureRun::Commit()
+void EEAIAStarCaptureRun::Commit(unsigned long inTag)
 {
-    EESimCaptureRecord theRecord(0x4e525341);   // "ASRN"
+    EESimCaptureRecord theRecord(inTag);
     theRecord.Bytes(this->mData.data(), (unsigned int)this->mData.size());
     unsigned int theCount = (unsigned int)this->mEventCount;
     theRecord.U32(theCount);

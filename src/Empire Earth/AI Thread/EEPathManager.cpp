@@ -350,7 +350,7 @@ public:
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(this->mGoal, NULL, inTile, inX, inY, inGoal);
+        return this->IsPassable(this->mGoal, NULL, inX, inY, inGoal);
     }
 };
 
@@ -363,7 +363,7 @@ public:
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(this->mGoal, NULL, inTile, inX, inY, inGoal);
+        return this->IsPassable(this->mGoal, NULL, inX, inY, inGoal);
     }
 };
 

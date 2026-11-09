@@ -36,6 +36,8 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "List" = "EeAStarList"
 "AStarRect" = "EeAStarRect"
 "MachineState" = "EeAStarMachineState"
+"Skip" = "EeAStarSkip"
+"Unit" = "EeAStarUnit"
 # ee_fs
 "Archive" = "EeFsArchive"
 # ee_dx7
@@ -107,3 +109,5 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "Blowfish" = "EeWonBlowfish"
 "ElGamal" = "EeWonElGamal"
 "AuthBlock" = "EeWonAuth"
+"Socket" = "EeWonSocket"
+"OpTiming" = "EeWonOpTiming"

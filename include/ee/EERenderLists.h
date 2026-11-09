@@ -68,6 +68,9 @@ struct EERenderUnit {
     bool mIsTinted;                         // +0x146
 
     bool mHasSubModelOffset;                // +0x147 (sub model 0 is offset against its internal transform)
+    // port (R5a.3; past the original record): a robotic farm's second model is drawn opaque (its unit gone or at
+    // 1 hp). FillRenderLists takes it under the world's lock; EEROUnits::DrawUnitModel read the live unit for it
+    bool mSecondFullOpacity;
 
 };
 
@@ -136,7 +139,8 @@ struct EERenderLists {
 // names)
 class EEUnit;
 struct EERenderFrameInfo {
-    EEUnit* mPickedUnit;                    // +0x00 (the unit under the mouse: EEUnitPicker::PickUnit, referenced)
+    EEUnit* mPickedUnit;                    // +0x00 (the unit under the mouse: EEUnitPicker::PickUnitUnreferenced; port
+                                            // R5a.3: the original took a reference, the world's lock is held throughout)
     float mYaw;                             // +0x04 (the camera's yaw minus pi/2: the objects' orientation)
     float mNumFightingUnits;                // +0x08 (a sum FillRenderLists divides by its unit count for the music)
     unsigned long mFrame;                   // +0x0c (the frame counter)

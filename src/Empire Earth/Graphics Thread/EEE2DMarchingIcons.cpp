@@ -43,6 +43,7 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DMarchingIcons.h"
+#include "ee/EERenderSnapshot.h"
 
 const UString EEE2DMarchingIcons::sUnitIDStringID("MarchingIconsUnitIDStringID");
 const UString EEE2DMarchingIcons::sAngularOffsetStringID("MarchingIconsAngularOffsetStringID");
@@ -263,7 +264,7 @@ long EEE2DMarchingIcons::DrawPass6()
     SetWhiteLighting();
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     for (std::vector<GE3DPoint>::iterator theIterator = this->mShown.begin(); theIterator != this->mShown.end(); ++theIterator) {
-        theTransformation.SetOrientationYPR(gWorld.GetCameraYaw() * 0.5f, 0.0f, 0.0f);
+        theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw * 0.5f, 0.0f, 0.0f);
         theLocation = this->mLocation;
         GE3DPoint theOffset = *theIterator;
         theLocation += theOffset;

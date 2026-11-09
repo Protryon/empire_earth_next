@@ -45,6 +45,7 @@
 #include "ee/EEE2DExplosion.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEGamePreferences.h"
+#include "ee/EERenderSnapshot.h"
 
 // unit-local .rdata before the vtable (0x43fb24), loaded from memory: a named const
 const float kExplosionHeightOffset = 0.4f;
@@ -148,7 +149,7 @@ long EEE2DExplosion::SetUp()
 // Draws each part as an additive sprite lit by the fog at its position, restoring the fog; returns the first draw error
 long EEE2DExplosion::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     GEModel* theModel = this->mModel;
     GEMaterial* theMaterial = theModel->GetMaterial(0);
     long theResult = 0;
