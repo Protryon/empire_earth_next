@@ -1745,3 +1745,27 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## R2: the data layer in Rust (ee_data, 2026-11-08)
+
+- **`std::from_chars` and `f32::from_str` agree.** The text compiler's floats moved to `f32::from_str` (correctly
+  rounded); `cppgate` compared C++ and Rust on a 12,074-string sweep (tables' float cells, subnormals, 7e-46 / 7.1e-46
+  halfway cases, exact-tie decimals) with identical bits and messages; from_chars' `result_out_of_range` and Rust's
+  inf/0 land in the same message through the C++'s own post-checks.
+- **`strchr` matches the NUL.** The C++ YAML subset's `strchr(" [,:-", s[i - 1])` and the plain-scalar check treat a
+  NUL byte as "in the set" (the terminator). The port keeps that (`strchr_set`), byte-level parity needs it.
+- **cbindgen writes a dependency's functions only from loose sources.** `parse_deps` follows the crate tree but
+  functions from any crate other than the binding crate are skipped ("not used"); xtask adds
+  `rust/crates/ee_data/src/ffi.rs` with `with_src` to get them into `include/rust/ee_rust.h`.
+- **A shared `CARGO_TARGET_DIR` hides worktrees' `cargo run` binaries.** Cargo's uplifted `target/debug/xtask.exe` is
+  whichever worktree linked it last; `env!("CARGO_MANIFEST_DIR")` then pointed at another worktree (`cbindgen` wrote the
+  r1-core header once from the r2-data worktree). Touch the crate or run with a private target dir before relying on it.
+- **Generated headers next to a staged unit must end in `.h`.** `verify.stage_source` copies a unit's sibling `*.h`
+  to `C:\EEX\` (or `EE_ORIG_SRC_ROOT`); a generated `.inl` was not found. Hence `EERulesGenDecode.h`.
+- **Rules live in Rust; the game keeps a C++ copy.** `EERules` holds a Rust handle (`ee_data_rules_*`); every rules
+  field, default and dump key is generated from `tools/eedata/rules_schema.json` (`rulesgen.py`); C++ reads a binary
+  snapshot after each change (`Refresh`). The dump formats `(long)float_bits` as signed like the Windows 32-bit `long`
+  (gate pins it); Rust's `RuleNumber::constant` truncates as x86's `cvttss2si` does (INT_MIN out of range).
+- **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
+  recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
+  recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.

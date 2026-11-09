@@ -7,7 +7,7 @@
 // The text tables reference each other's rows by id: one EEDataText::Content serves every table, reading the other
 // tables' texts through the same path when a reference needs their ids (each text is parsed once).
 // EE_DUMP_CONTENT=<file> (tests): every db table served, text or .dat, is appended to <file> as the content dump
-// (EEDataDump.cpp; docs/MODDING_PLAN.md gate G1).
+// (docs/MODDING_PLAN.md gate G1).
 #include <windows.h>
 #include <set>
 #include <string>
@@ -26,7 +26,6 @@
 #include "ee/EETechTreeRecord.h"
 #include "ee/EEUnitClassRecord.h"
 
-#include "EEDataDump.h"
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
 

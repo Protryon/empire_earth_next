@@ -1,19 +1,21 @@
 // ee/EERules.h (new, not in the original game): the game rules that were literals in the code, as data
-// (docs/DATA_FORMATS.md 8.8). Four rules documents next to the db tables, db\combat.yaml, db\gameoptions.yaml,
-// db\civbuilder.yaml and db\civpowers.yaml, plus each epoch's media in db\epochs.yaml (music, citizen). Every member
-// starts at the original game's value; a document on the data path sets every value it holds (references by id,
-// resolved by the db tables' Content). Without the documents (the binary db tree) the game plays with these
-// defaults, which equal the vanilla documents tools/eedata writes (eedata.py cppgate: the content dumps match).
-// Portable C++17 (no engine headers): src/Empire Earth/Database/EERules.cpp, also built into the converter's gate.
+// (docs/DATA_FORMATS.md 8.8). Rules documents next to the db tables, db\combat.yaml, db\gameoptions.yaml,
+// db\civbuilder.yaml, db\civpowers.yaml, db\aipersonalities.yaml, plus each epoch's media in db\epochs.yaml. The
+// fields and their defaults are generated from tools/eedata/rules_schema.json (ee/EERulesGen.h); the reader is Rust
+// (rust/crates/ee_data/src/rules.rs). Every member starts at the original game's value; a document on the data path
+// sets every value it holds (references by id, resolved by the db tables' Content). Without the documents (the binary
+// db tree) the game plays with these defaults, which equal the vanilla documents tools/eedata writes (eedata.py
+// cppgate: the content dumps match). Portable C++17 (no engine headers): src/Empire Earth/Database/EERules.cpp, also
+// built into the converter's gate.
 #ifndef EE_EERULES_H
 #define EE_EERULES_H
 
 #include <string>
 #include <vector>
 
+struct EeDataRules;
 namespace EEDataText {
 class Content;
-struct Node;
 }
 
 // A number that is a constant or one of dbworld's values: `fanaticism.F2` (the constant's id, then F, F2, L or L2:
@@ -30,8 +32,6 @@ struct EERuleNumber {
     static EERuleNumber World(long inRow, int inValue);
 };
 
-// ------------------------------------------------------------------------------------------------ combat.yaml
-
 // How a hit's damage is formed (EEUnitClass::ComputeDamage)
 enum EEDamageForm {
     kDamageDirect,                          // a unit's or projectile's hit (EEUnitClass::ApplyHit)
@@ -39,278 +39,9 @@ enum EEDamageForm {
     kDamageTrample                          // a moving unit pushing a stopped enemy (EEPhysicsModel)
 };
 
-struct EECombatRules {
-    // damage (one function for the three forms)
-    long mMinimumDamage = 1;                // the least damage of a direct or splash hit that gets through
-    EERuleNumber mFanaticFactor = EERuleNumber::World(88, 1);   // attack factor of a fanatic attacker (direct hits)
-    float mElevationStep = 1.0f;            // the elevation factor moves damage by at least this much
-    float mAllyFactor = 0.0f;               // a direct hit on an own or allied unit: ceil(damage x this) ...
-    float mHerdAllyFactor = 0.1f;           // ... by a herd animal: ceil(damage x this)
-    float mDeadFoodShare = 0.25f;           // a land food source a non-citizen kills keeps this share of its food
-    long mTrampleDamage = 1;                // the trample's damage, when hit x (attack - armour) > mTrampleThreshold
-    float mTrampleThreshold = 1.0f;
-    // elevation (EEUnitClass::GetElevationFactor): unit categories
-    std::vector<long> mElevationAttackers;  // attackers the height difference scales
-    std::vector<long> mElevationLaunchers;  // projectiles that count as their launcher's category
-    std::vector<long> mElevationTargets;    // targets it applies to
-    // morale (EEComplexUnit::ApplyMorale)
-    float mPositiveMorale = 0.8f;           // positive morale takes this share off a time
-    float mNegativeMorale = 0.6f;           // negative morale adds this share
-    std::vector<long> mMoraleBuildings;     // the unit types morale from buildings counts (dbobjects rows)
-    // ticks, ms
-    long mRegenerationInterval = 1000;      // hit point regeneration and garrison heals
-    long mPowerRegenerationInterval = 5000; // power regeneration
+#include "ee/EERulesGen.h"
 
-    EECombatRules();
-    bool IsElevationAttacker(long inCategory) const;
-    bool IsElevationLauncher(long inCategory) const;
-    bool IsElevationTarget(long inCategory) const;
-    bool IsMoraleBuilding(long inUnitType) const;
-};
-
-// ------------------------------------------------------------------------------------------------ gameoptions.yaml
-
-struct EEMapSizeRule {
-    std::string mID;
-    long mNameID;                           // the lobby's text (Language.rc string)
-    long mTiles;                            // width and height in tiles
-    long mScriptSize;                       // the random map scripts' size class (0 tiny .. 5 gigantic)
-};
-
-struct EESpeedRule {
-    std::string mID;
-    long mNameID;
-    EERuleNumber mFactor;                   // the game speed
-};
-
-// The computer players' cheats a difficulty keeps (EEDifficultyRule::mAICheats; gameoptions.yaml `ai_cheats`, a list
-// of these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty; here none is kept by default.
-enum EEAICheat {
-    kAICheatCost = 1 << 0,      // cost: the difficulty's unit cost modifier (dbcpbehavior rows 67/96; stock 1%)
-    kAICheatReveal = 1 << 1,    // reveal: the whole map explored at the start
-    kAICheatEpochs = 1 << 2,    // epochs: epoch advances are free and always affordable
-    kAICheatExtra = 1 << 3,     // extra: computer_player_extra_resources (row 101) gold and iron at the start
-    kAICheatPopBand = 1 << 4,   // popband: the pop cap pulled toward the largest human population (rows 92/93)
-    kAICheatCatchUp = 1 << 5,   // catchup: the epoch rubber band (pulled forward when behind, held back when ahead of every human)
-    kAICheatRetire = 1 << 6,    // retire: obsolete units no human sees are deleted
-    kAICheatAll = (1 << 7) - 1,
-};
-extern const char* const kEEAICheatNames[];   // by bit position
-extern const unsigned long kEEAICheatCount;
 long EEAICheatBit(const std::string& inName);  // 0: not a cheat name
-
-struct EEDifficultyRule {
-    std::string mID;
-    long mNameID;
-    long mAILevel;                          // the computer players' level: 0 easy, 1 medium, 2 hard (their records)
-    // the damage table scale when exactly one side is "human" (EEPlayer::IsHuman, not player 0; provisional name):
-    EERuleNumber mScaleHumanTarget;         // ... the target
-    EERuleNumber mScaleHumanAttacker;       // ... the attacker
-    long mAICheats = 0;                     // the computer players' cheats (EEAICheat bits); none by default (the original: all)
-};
-
-struct EEGameOptionRules {
-    std::vector<EEMapSizeRule> mMapSizes;   // the option is the position
-    long mMapSizeDefault = 1;
-    std::vector<EESpeedRule> mSpeeds;
-    long mSpeedDefault = 1;
-    std::vector<EEDifficultyRule> mDifficulties;
-    EERuleNumber mUnitLimitMinimum = EERuleNumber::World(26, 2);
-    EERuleNumber mUnitLimitMaximum = EERuleNumber::World(26, 3);
-    long mUnitLimitStep = 50;
-    EERuleNumber mUnitLimitDefault = EERuleNumber::World(27, 2);
-    EERuleNumber mWondersMaximum = EERuleNumber::World(77, 2);
-    long mWondersDefault = 3;
-    // new: a player with no citizens, no other units, and no built town centre or capitol with a citizen's cost in
-    // stock is defeated (it cannot come back; random maps); false: the original rule, every vital unit and building
-    // gone (EEWorld::CheckGameOver)
-    bool mDefeatWithoutRecovery = true;
-
-    EEGameOptionRules();
-};
-
-// ------------------------------------------------------------------------------------------------ civbuilder.yaml
-
-// What a civilization builder attribute raises (EECivilizationManager::ApplyUpgradeLevel). The stat and the mode are
-// C++ primitives; the data picks and combines them.
-enum EECivStat {
-    kCivStatAttack, kCivStatHitPoints, kCivStatReloadTime, kCivStatArmor, kCivStatRange, kCivStatLineOfSight,
-    kCivStatSpeed, kCivStatFlightTime, kCivStatAreaEffect, kCivStatGatherTime, kCivStatBuildTime,
-    kCivStatConversion, kCivStatRepairRate, kCivStatAreaEffectScale, kCivStatHighGround, kCivStatPopulation,
-    kCivStatCost, kCivStatPower, kCivStatCount
-};
-enum EECivMode {
-    kCivModeShare,                          // the stat's own rule: a share of the class's base value (the original)
-    kCivModeAdd,                            // + the value
-    kCivModeMultiply,                       // x (1 + the value)
-    kCivModeCount
-};
-struct EECivApply {
-    long mStat;                             // EECivStat
-    long mMode = kCivModeShare;             // EECivMode
-    long mSlot = -1;                        // gather_time: the gather time slot
-    long mOnlyCategory = -1;                // apply only to classes of this unit category ...
-    long mExceptCategory = -1;              // ... or to every class but this one
-    long mPower = -1;                       // power: the civ power (dbcivpowers row)
-};
-struct EECivAttribute {
-    std::string mID;
-    long mLevel;                            // its level in every category (dbcivilization levels; the upgrade id's
-                                            // low 16 bits)
-    long mNameID;                           // its name in the builder (Language.rc; the original: IDS_CIV_BONUS_BASE
-                                            // + level, a power IDS_CIV_POWER_BASE + level)
-    std::vector<EECivApply> mApplies;
-};
-// a civilization builder category's levels from dbcivilization.yaml (any number: the record holds the first 60)
-struct EECivCategoryText {
-    long mRow;                              // its dbcivilization row
-    std::string mID;
-    std::vector<float> mValues, mBonuses;   // by level - 1
-};
-struct EECivBuilderRules {
-    std::vector<EECivAttribute> mAttributes;
-    // the special powers category EECivilizationManager::Load appends (one level per civ power)
-    std::string mPowersID = "special_powers";   // its id (the keyed .civ files name its upgrades by it)
-    long mPowersNameID = 32850;             // IDS_SPECIAL_POWERS
-    long mPowersUnitSet = 0x66;             // dbunitset row
-    EERuleNumber mPowersCost = EERuleNumber::World(86, 2);
-    float mPowersLevelValue = 0.01f;
-    // dbcivilization.yaml's categories (ids and levels by attribute); empty without the text (the binary records)
-    std::vector<EECivCategoryText> mCategories;
-
-    EECivBuilderRules();
-    const EECivAttribute* Find(long inLevel) const;
-    const EECivAttribute* FindID(const std::string& inID) const;
-    const EECivCategoryText* FindCategory(long inRow) const;
-};
-
-// ------------------------------------------------------------------------------------------------ civpowers.yaml
-
-// What granting a civ power does after researching its technology (EECivPowersManager::ApplyPower). C++ primitives.
-enum EECivPowerAction {
-    kPowerResearchIfResearched,             // research mTech when mIfTech is researched (flaming/crusader upgrades)
-    kPowerLoadSound,                        // load mSound's media for the player
-    kPowerLoadEffect,                       // load mEffect's media for the player
-    kPowerPulseSight,                       // a sight pulse of the power's mAmount around every mUnitType
-    kPowerSetMiningLimit,                   // the player's gatherers per resource: the power's mMiningLimit
-    kPowerEnableCamouflage,                 // EEPlayer::EnableCamouflagePower
-    kPowerAllowTech,                        // mTech becomes allowed
-    kPowerDisallowTech,                     // mTech becomes disallowed and obsolete
-    kPowerActionCount
-};
-struct EECivPowerEffect {
-    long mAction;                           // EECivPowerAction
-    long mTech = -1, mIfTech = -1;          // dbtechtree ids
-    long mSound = -1;                       // dbsounds row
-    long mEffect = -1;                      // dbgfxeffects row
-    long mUnitType = -1;                    // dbobjects row
-};
-struct EECivPowerRule {
-    long mPower;                            // dbcivpowers row
-    std::vector<EECivPowerEffect> mEffects;
-};
-struct EECivPowerRules {
-    std::vector<EECivPowerRule> mPowers;
-    EECivPowerRules();
-    const EECivPowerRule* Find(long inRow) const;
-};
-
-// ------------------------------------------------------------------------------------------------ epochs.yaml media
-
-struct EEEpochMedia {
-    // music: the songs of the epoch (dbmusic rows). Without epochs.yaml the songs come from dbmusic's per-epoch
-    // flags (EEMusicObject::LoadTable fills this; the space age plays the nano age's songs, as the original did)
-    std::vector<long> mMusic;
-    // the citizen of the epoch
-    bool mHighTechTools = false;            // beams: the mining beam, the shot effect (EEUGGather, EEUnitClass)
-    // a unit removed by a research (EEPlayUnitEffect): effects and a sound at its place, a thunder every n-th unit
-    std::vector<long> mRemovalEffects;      // dbgfxeffects rows
-    long mRemovalSound = 0x176;             // dbsounds row (Lightning)
-    float mRemovalPitchOffset = 0.0f;       // added to the sound's pitch (not below -1)
-    long mRemovalThunder = 0x1ba;           // dbsounds row (Thunder 2)
-    long mRemovalThunderEvery = 0;          // a thunder when the unit id is a multiple of this (0: never)
-};
-
-// ------------------------------------------------------------------------------------------------ aipersonalities.yaml
-
-// A computer player's personality (docs/AI_RESEARCH.md §8.8): the tuning of its decisions that is not in dbcpbehavior.
-// The defaults are "balanced", the tuning the benchmarks of §8.10-8.11 settled on.
-struct EEAIPersonalityRule {
-    std::string mID;
-    // the next engine's strategy (docs/AI_LUA_PLAN.md §3): the Lua module a computer seat with the next engine runs,
-    // Data/ai/<name, dots as folders>.lua; the classic engine ignores it. Until stage S3's boom script, the S1 test
-    // opening ported to Lua
-    std::string mNextScript = "test_opening";
-    // epoch pressure (the elapsed share of the epoch timer's span): a paid advance is asked for from mEpochPressureStart;
-    // its reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide.
-    float mEpochPressureStart = 0.3f;
-    float mEpochPressureFull = 0.8f;
-    // the Prehistoric's pressure instead: the game time over this many minutes, so the Stone Age is asked for and
-    // reserved on that schedule (docs/AI_RESEARCH.md §8.27; 30: the Stone Age at about 25 minutes); 0: the epoch timer
-    float mStoneSpan = 30.0f;
-    // from the Stone Age, while no stronger enemy army is near the town, the epoch pressure is this much higher: the
-    // advance is asked for sooner and its reserve fills faster; a threat drops it back (docs/AI_RESEARCH.md §8.29)
-    float mSafeBonus = 0.25f;
-    // the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing
-    long mSurplus = 1000;                   // a resource with more in stock ...
-    float mSurplusCut = 0.5f;               // ... gets this share of its gatherers
-    long mLowStock = 150;                   // a resource with less in stock ...
-    float mFloor[5] = {0.10f, 0.25f, 0.05f, 0.05f, 0.05f};   // ... at least this share (food, wood, stone, gold, iron)
-    float mMaxCitizenShare = 0.7f;          // the citizen target is at most this share of the pop cap
-    long mWoodSlots = 15;                   // wood's gatherer capacity (trees are not resource-center units)
-    long mMovesPerCycle = 3;                // busy gatherers moved to a short resource per 10 s
-    // the gatherer split: by the tiered demand less the stock (EECPResourceManager.cpp EECPRMSplitByDemand; docs/AI_RESEARCH.md
-    // §8.21), or false: the original's needs ledger with the stock correction above
-    bool mDemandSplit = true;
-    // fishing off any coast from the Stone Age (EECPResourceManager.cpp EECPRMCoastBoatsWanted; docs/AI_RESEARCH.md
-    // §8.26): a dock, up to 8 boats, at most 2 docks from the build lists; the original fished only on island maps
-    bool mCoastFishing = true;
-    // forage patches (docs/AI_RESEARCH.md §8.27): about mining_limit gatherers a patch (the food capacity no longer
-    // counts the bush gatherers), a settlement on a patch with no drop site within 4 tiles, hunting slots by the game
-    // near home, 3 patches kept claimed in the Prehistoric and 5 later, up to 16 fishing boats
-    bool mForagePatches = true;
-    // a centre claimed for the next epoch's missing stone, gold or iron, and no epoch reserve while an advance cannot
-    // be reached (docs/AI_RESEARCH.md §8.27)
-    bool mClaimNeeded = true;
-    // before the Bronze Age a settlement becomes a town centre only while the player has fewer than this many, and no
-    // town centre becomes a capitol (the owner: "upgrading a settlement to a capitol early game is mostly a waste of
-    // food"; docs/AI_RESEARCH.md §8.29); 0: the original's timers
-    long mEarlyTownCenters = 2;
-    // before the Copper Age at most this many barracks and this many archery ranges (dbcpbehavior asks for 7 and 6;
-    // the owner: "no more than 2 barracks and 2 archery ranges pre-copper"); 0: no cap
-    long mEarlyTrainers = 2;
-    // before the Copper Age (no farms yet) the claim range grows when no forage patch is left in it (a playtest AI had
-    // no food gatherer for 45 minutes and 1399 of the Copper Age's 1584 food; docs/AI_RESEARCH.md §8.29)
-    bool mPatchExpand = true;
-    // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
-    // original's military share of the pop cap
-    float mStandingArmy = 0.25f;
-    // while the standing army is short of its target, the floor share of the gatherers on what its unit costs rises by
-    // up to this much (by the shortfall, split by the unit's cost): more army, less economy
-    float mArmyFloor = 0.1f;
-    // the town's answer to an attack group on its citizens (EECPResourceManager.cpp EECPRMMilitia; docs/AI_RESEARCH.md
-    // §8.25): the nearby soldiers and as many of the nearest citizens as the odds need fight, or the citizens run
-    bool mMilitia = true;
-    // the militia counts the built towers near the attack, and citizens that cannot fight run to the nearest tower
-    // (docs/AI_RESEARCH.md §8.26)
-    bool mMilitiaTowers = true;
-    // the Prehistoric army is a mobile defence force of at most this many soldiers, unless enemy soldiers near the town
-    // are stronger than it (EEComputerPlayer.cpp CanAfford; docs/AI_RESEARCH.md §8.26); 0: no cap (the rush)
-    long mPrehistoricArmy = 4;
-    // attack groups against an enemy in the Prehistoric (false: none, the defence still forms; docs/AI_RESEARCH.md §8.27)
-    bool mPrehistoricAttacks = false;
-    // attack groups against an enemy in the Stone Age (false: none, the defence still forms; docs/AI_RESEARCH.md §8.29)
-    bool mStoneAttacks = false;
-    // units hit by a warship they cannot answer leave (boats to the farthest dock, citizens and melee inland)
-    bool mNavalFlee = true;
-};
-struct EEAIPersonalityRules {
-    std::vector<EEAIPersonalityRule> mPersonalities;
-    std::vector<long> mAssign;              // positions in mPersonalities; computer player n takes mAssign[(n - 1) % size]
-    EEAIPersonalityRules();
-    const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;
-    long Find(const std::string& inID) const;   // the position, -1 when none
-};
 
 // ------------------------------------------------------------------------------------------------ all of them
 
@@ -324,20 +55,27 @@ struct EERules {
     bool mEpochMusicFromText = false;       // the songs came from epochs.yaml (else dbmusic's flags)
 
     EERules();
+    ~EERules();
+    EERules(const EERules&) = delete;
+    EERules& operator=(const EERules&) = delete;
+
     // reads the rules documents and epochs.yaml's media from the Content (references by id); a document the Content
     // has no text for keeps its defaults. False with a message ("combat line 12: ...") on the first problem.
     bool Load(EEDataText::Content& inContent, std::string& outError);
     // the songs from dbmusic's per-epoch flags (the binary load): a song row's flag k -> epoch k (k < 14), the 15th
     // epoch plays the 14th's songs
     void SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount);
+    // the same from a whole dbmusic.dat (the gate's and tools' path); false on a short file
+    bool SetMusicFromDbmusicFile(const unsigned char* inData, size_t inSize);
     // the content dump of the rules (docs/MODDING_PLAN.md gate G1): `"rules.<doc>":{...}` lines, values resolved
     void Dump(std::string& outJson) const;
     // the media of an epoch position (past the list: the last epoch's)
     const EEEpochMedia& Epoch(long inEpoch) const;
-};
 
-// The default epoch media of an epoch position (the original's per-epoch rules)
-EEEpochMedia EEDefaultEpochMedia(long inEpoch);
+private:
+    void Refresh();                         // the C++ structs from the Rust rules' snapshot
+    EeDataRules* mRust;                     // the rules' owner (rust/crates/ee_data)
+};
 
 // The game's rules (constructed on first use; filled by EELoadRules at database load, EEDataTextFile.cpp)
 EERules& EEGetRules();
@@ -346,10 +84,6 @@ EERules& EEGetRules();
 long EEDifficultyAILevel(unsigned long inDifficulty);
 // the computer players' cheats (EEAICheat bits) of a game option difficulty
 long EEDifficultyAICheats(unsigned long inDifficulty);
-
-// unit category names (the data's category ids): kUnitCategory* by value
-extern const char* const kEERuleCategoryNames[];
-extern const unsigned long kEERuleCategoryCount;
 
 // TEST ONLY (EE-SIM.exe --set, the headless simulation): a rules document's value changed as the document is read,
 // "doc.key.key=value". A key may name a list entry by its id: "aipersonalities.balanced.military.army_floor=0.2" is

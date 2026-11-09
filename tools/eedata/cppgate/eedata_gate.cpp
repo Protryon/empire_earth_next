@@ -1,6 +1,6 @@
-// The C++ text-loader gate (tools/eedata/eedata.py cppgate builds and runs it): compiles every db table's text
-// form with the game's loader code (src/Empire Earth/Database/EEDataText.cpp) and compares the result with the
-// expected db file bytes.
+// The text-compiler gate through the game's C++ seam (tools/eedata/eedata.py cppgate builds and runs it): compiles
+// every db table's text form with the Rust compiler (rust/crates/ee_data, reached through EEDataText.h) and compares
+// the result with the expected db file bytes.
 //   eedata_gate <text dir> <expected .dat dir>
 // Prints one line per table; exits 0 when every table present compiles to identical bytes.
 //   eedata_gate --batch <dir> <text dir>
@@ -16,9 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "EEDataDump.h"
 #include "EEDataText.h"
-#include "EEDataTextSpecs.h"
 #include "ee/EERules.h"
 
 static bool ReadFile(const std::string& inPath, std::string& outData)
@@ -43,51 +41,31 @@ static EEDataText::Content::Reader TextReader(const std::string& inDir)
     };
 }
 
-// the binary load's songs per epoch: dbmusic's per-epoch flags (EEMusicObject::LoadTable)
-static bool MusicFromFlags(const std::string& inData, EERules& ioRules)
-{
-    const EEDTTable* t = nullptr;
-    for (unsigned long i = 0; i < kEEDTTableCount; i++)
-        if (strcmp(kEEDTTables[i].mName, "dbmusic") == 0)
-            t = &kEEDTTables[i];
-    const EEDTField* f = nullptr;
-    for (unsigned long i = 0; t && i < t->mRecord->mFieldCount; i++)
-        if (strcmp(t->mRecord->mFields[i].mName, "mInEpoch") == 0)
-            f = &t->mRecord->mFields[i];
-    if (!f || inData.size() < 4)
-        return false;
-    const unsigned char* p = reinterpret_cast<const unsigned char*>(inData.data());
-    unsigned long n = p[0] | p[1] << 8 | p[2] << 16 | (unsigned long)p[3] << 24;
-    if (inData.size() < 4 + (size_t)n * t->mRecord->mSize)
-        return false;
-    for (unsigned long r = 0; r < n; r++) {
-        bool flags[64] = {};
-        for (unsigned long k = 0; k < f->mCount && k < 64; k++)
-            flags[k] = p[4 + r * t->mRecord->mSize + f->mOffset + k] != 0;
-        ioRules.SetMusicFromFlags((long)r, flags, f->mCount);
-    }
-    return true;
-}
+static const char* const kTables[] = {
+    "dbaiunittargeting", "dbambientsounds", "dbanimals", "dbareaeffect", "dbbuttons", "dbcalamity", "dbcivilization",
+    "dbcivpowers", "dbcliffterrain", "dbcolortable", "dbcpbehavior", "dbeffects", "dbevents", "dbfamily",
+    "dbgamevariant", "dbgfxeffects", "dbgraphics", "dbmusic", "dbobjects", "dbpremadecivs", "dbsounds",
+    "dbstartingresources", "dbtechtree", "dbterrain", "dbterraintype", "dbuiback", "dbuicontrolevents",
+    "dbuicontrols", "dbuifonts", "dbuiformevents", "dbuiforms", "dbuihotkey", "dbunitbehavior", "dbunitset",
+    "dbupgrade", "dbweapontohit", "dbworld", nullptr};
 
 static int Dump(bool inText, const char* inDir, const char* inOut)
 {
     EEDataText::Content c(TextReader(inDir));
     std::string json = "{";
     bool first = true;
-    for (unsigned long i = 0; i < kEEDTTableCount; i++) {
-        const EEDTTable& t = kEEDTTables[i];
-        if (t.mTextOnly)
-            continue;   // epochs: compiles into dbtechtree
+    for (const char* const* theTable = kTables; *theTable; theTable++) {
+        const std::string theName = *theTable;
         std::vector<unsigned char> data;
         std::string err, raw;
         if (inText) {
-            if (!c.Compile(t.mName, data, err)) {
+            if (!c.Compile(theName.c_str(), data, err)) {
                 fprintf(stderr, "%s\n", err.c_str());
                 return 1;
             }
         } else {
-            if (!ReadFile(std::string(inDir) + "/" + t.mName + ".dat", raw)) {
-                fprintf(stderr, "%s.dat: cannot be read\n", t.mName);
+            if (!ReadFile(std::string(inDir) + "/" + theName + ".dat", raw)) {
+                fprintf(stderr, "%s.dat: cannot be read\n", theName.c_str());
                 return 1;
             }
             data.assign(raw.begin(), raw.end());
@@ -95,7 +73,7 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
         if (!first)
             json += ",\n";
         first = false;
-        if (!EEDataText::DumpTable(t.mName, data.empty() ? nullptr : &data[0], data.size(), json, err)) {
+        if (!EEDataText::DumpTable(theName.c_str(), data.empty() ? nullptr : &data[0], data.size(), json, err)) {
             fprintf(stderr, "%s\n", err.c_str());
             return 1;
         }
@@ -110,7 +88,8 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
         }
     } else {
         std::string raw;
-        if (!ReadFile(std::string(inDir) + "/dbmusic.dat", raw) || !MusicFromFlags(raw, theRules)) {
+        if (!ReadFile(std::string(inDir) + "/dbmusic.dat", raw) ||
+            !theRules.SetMusicFromDbmusicFile(reinterpret_cast<const unsigned char*>(raw.data()), raw.size())) {
             fprintf(stderr, "dbmusic.dat: cannot be read\n");
             return 1;
         }
@@ -128,8 +107,8 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
     fwrite(json.data(), 1, json.size(), f);
     fclose(f);
     unsigned long theDumped = 0;
-    for (unsigned long i = 0; i < kEEDTTableCount; i++)
-        theDumped += kEEDTTables[i].mTextOnly ? 0 : 1;
+    for (const char* const* theTable = kTables; *theTable; theTable++)
+        theDumped++;
     printf("%lu tables -> %s (%zu bytes)\n", theDumped, inOut, json.size());
     return 0;
 }
@@ -155,10 +134,7 @@ static int Batch(const char* inDir, const char* inTextDir)
             }
             return others(inTable, outText);
         });
-        bool textOnly = false;
-        for (unsigned long i = 0; i < kEEDTTableCount; i++)
-            textOnly = textOnly || (table == kEEDTTables[i].mName && kEEDTTables[i].mTextOnly);
-        bool ok = c.Compile(textOnly ? "dbtechtree" : table.c_str(), got, err);   // epochs compiles into dbtechtree
+        bool ok = c.Compile(table == "epochs" ? "dbtechtree" : table.c_str(), got, err);   // epochs compiles into dbtechtree
         std::string out = (std::filesystem::path(inDir) / (name + (ok ? ".out" : ".err"))).string();
         FILE* f = fopen(out.c_str(), "wb");
         if (!f)
@@ -212,48 +188,12 @@ static int RulesBatch(const char* inDir, const char* inTextDir)
     return 0;
 }
 
-// One decimal per line -> its bits as `XXXXXXXX`, or `E <message>`
-static int Floats(const char* inFile, const char* inOut)
-{
-    std::string data;
-    if (!ReadFile(inFile, data))
-        return 2;
-    FILE* f = fopen(inOut, "wb");
-    if (!f)
-        return 2;
-    size_t p = 0;
-    while (true) {
-        size_t e = data.find('\n', p);
-        std::string line = data.substr(p, e == std::string::npos ? std::string::npos : e - p);
-        EEDataText::Node n;
-        n.mKind = EEDataText::Node::kScalar;
-        n.mText = line;
-        try {
-            float v = EEDataText::NodeFloat(&n, "", "");
-            unsigned bits;
-            memcpy(&bits, &v, 4);
-            fprintf(f, "%08x\n", bits);
-        } catch (EEDataText::Failure& x) {
-            // NodeFloat's message starts ": : " (empty place and field); the same text as the Rust gate writes
-            std::string m = x.mText.substr(x.mText.compare(0, 4, ": : ") == 0 ? 4 : 0);
-            fprintf(f, "E %s\n", m.c_str());
-        }
-        if (e == std::string::npos)
-            break;
-        p = e + 1;
-    }
-    fclose(f);
-    return 0;
-}
-
 int main(int argc, char** argv)
 {
     if (argc == 4 && strcmp(argv[1], "--batch") == 0)
         return Batch(argv[2], argv[3]);
     if (argc == 4 && strcmp(argv[1], "--rules-batch") == 0)
         return RulesBatch(argv[2], argv[3]);
-    if (argc == 4 && strcmp(argv[1], "--floats") == 0)
-        return Floats(argv[2], argv[3]);
     if (argc == 4 && (strcmp(argv[1], "--dump-text") == 0 || strcmp(argv[1], "--dump-dat") == 0))
         return Dump(strcmp(argv[1], "--dump-text") == 0, argv[2], argv[3]);
     if (argc != 3) {
@@ -264,35 +204,33 @@ int main(int argc, char** argv)
     double total = 0;
     EEDataText::Content c(TextReader(argv[1]));
     unsigned long theTables = 0;
-    for (unsigned long i = 0; i < kEEDTTableCount; i++) {
-        const EEDTTable& t = kEEDTTables[i];
-        if (t.mTextOnly)
-            continue;   // epochs: compiled with dbtechtree
+    for (const char* const* theTable = kTables; *theTable; theTable++) {
+        const char* theName = *theTable;
         theTables++;
         std::string text, want;
-        std::string tp = std::string(argv[1]) + "/" + t.mName + EEDataText::TextExtension(t.mName);
-        if (!ReadFile(tp, text) || !ReadFile(std::string(argv[2]) + "/" + t.mName + ".dat", want)) {
-            printf("  %-24s MISSING\n", t.mName);
+        std::string tp = std::string(argv[1]) + "/" + theName + EEDataText::TextExtension(theName);
+        if (!ReadFile(tp, text) || !ReadFile(std::string(argv[2]) + "/" + theName + ".dat", want)) {
+            printf("  %-24s MISSING\n", theName);
             missing++;
             continue;
         }
         std::vector<unsigned char> got;
         std::string err;
         auto t0 = std::chrono::steady_clock::now();
-        bool ok = c.Compile(t.mName, got, err);
+        bool ok = c.Compile(theName, got, err);
         double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         total += ms;
         if (!ok) {
-            printf("  %-24s ERROR %s\n", t.mName, err.c_str());
+            printf("  %-24s ERROR %s\n", theName, err.c_str());
             bad++;
         } else if (got.size() != want.size() || (!got.empty() && memcmp(&got[0], want.data(), got.size()))) {
             size_t k = 0;
             while (k < got.size() && k < want.size() && got[k] == (unsigned char)want[k])
                 k++;
-            printf("  %-24s DIFF %zu bytes for %zu, first difference at %zu\n", t.mName, got.size(), want.size(), k);
+            printf("  %-24s DIFF %zu bytes for %zu, first difference at %zu\n", theName, got.size(), want.size(), k);
             bad++;
         } else {
-            printf("  %-24s %9zu B identical (%.0f ms)\n", t.mName, got.size(), ms);
+            printf("  %-24s %9zu B identical (%.0f ms)\n", theName, got.size(), ms);
             same++;
         }
     }

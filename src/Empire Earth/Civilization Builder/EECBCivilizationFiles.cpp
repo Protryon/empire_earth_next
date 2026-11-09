@@ -448,30 +448,20 @@ static bool EEKeyedCivilization(const std::string& inName, const std::vector<EEC
 static long EEReadKeyedCivilization(const std::string& inText, const UString& inFile, UWideString& outName,
                                     std::vector<EECivUpgrade>& outUpgrades)
 {
-    EEDataText::Node theDoc;
-    std::string theError;
+    std::string theError, theName;
+    std::vector<EEDataText::CivKey> theKeys;
     std::string theWhere = std::string((const char*)inFile);
-    if (EEDataText::ParseDocument(inText, theDoc, theError) && theDoc.mKind == EEDataText::Node::kMap) {
-        std::string theText;
-        if (EEDataText::TryNodeText(theDoc.Find("name"), theWhere, "name", theText))
-            outName = theText.c_str();
-        else
-            theError = theText;
-        const EEDataText::Node* theList = theDoc.Find("upgrades");
-        if (theError.empty() && theList != NULL && theList->mKind == EEDataText::Node::kList) {
-            for (const EEDataText::Node& theItem : theList->mItems) {
-                std::string theKey = theItem.mKind == EEDataText::Node::kScalar ? theItem.mText : std::string();
-                EECivUpgrade theUpgrade;
-                if (!gCivilizationManager.FindUpgradeKey(theKey, theUpgrade)) {
-                    theError = theWhere + " line " + std::to_string(theItem.mLine) + ": '" + theKey +
-                               "' is not an upgrade (<dbcivilization id>.<civbuilder attribute id>)";
-                    break;
-                }
-                outUpgrades.push_back(theUpgrade);
+    if (EEDataText::ReadCivilization(inText, theWhere.c_str(), theName, theKeys, theError)) {
+        outName = theName.c_str();
+        for (const EEDataText::CivKey& theItem : theKeys) {
+            EECivUpgrade theUpgrade;
+            if (!gCivilizationManager.FindUpgradeKey(theItem.mKey, theUpgrade)) {
+                theError = theWhere + " line " + std::to_string(theItem.mLine) + ": '" + theItem.mKey +
+                           "' is not an upgrade (<dbcivilization id>.<civbuilder attribute id>)";
+                break;
             }
+            outUpgrades.push_back(theUpgrade);
         }
-    } else if (theError.empty()) {
-        theError = theWhere + ": not a civilization";
     }
     if (theError.empty())
         return 0;

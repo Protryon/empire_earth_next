@@ -1,6 +1,6 @@
 """Generate both languages' rules code from tools/eedata/rules_schema.json (docs/RUST_PLAN.md R2.1): the rules documents'
 enums, structs, defaults, the snapshot the C++ reads and the content dump. Output: include/ee/EERulesGen.h and
-src/Empire Earth/Database/EERulesGenDecode.inl (C++), rust/crates/ee_data/src/generated/rules_gen.rs (Rust).
+src/Empire Earth/Database/EERulesGenDecode.h (C++), rust/crates/ee_data/src/generated/rules_gen.rs (Rust).
 
   python -I tools/eedata/eedata.py rulesgen [--check]
 
@@ -16,7 +16,7 @@ ROOT = HERE.parent.parent
 SCHEMA = HERE / 'rules_schema.json'
 INC = ROOT / 'include' / 'ee'
 CPP_TYPES = INC / 'EERulesGen.h'
-CPP_DECODE = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EERulesGenDecode.inl'
+CPP_DECODE = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EERulesGenDecode.h'
 RUST_OUT = ROOT / 'rust' / 'crates' / 'ee_data' / 'src' / 'generated' / 'rules_gen.rs'
 HEADERS = [('EEUnitClassIDs.h', 'kUnitCategory'), ('EEUnitClassIDs.h', 'kUnitType'), ('EEStringIDs.h', 'IDS_'),
            ('EETechTreeTechID.h', 'kTech'), ('EECivPowerIDs.h', 'kCivPower')]
