@@ -16,6 +16,7 @@
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEAIKindIDs.h"
+#include "ee/EEAIAStarCapture.h"
 
 // the free nodes (0x4e5c40) (provisional name)
 static EEAIAStarNode* sFreeNodes;
@@ -606,6 +607,7 @@ void EEAIAStarStorage::PrepareGrid(long inWidth, long inHeight)
 // Flags an on-grid tile as accepted or rejected in advance and grows the search bounds to include it
 void EEAIAStarStorage::MarkTile(unsigned long inX, unsigned long inY, bool inFlag)
 {
+    EEAIAStarNote(kAStarEventMarkTile, inX, inY, inFlag, 0, 0, 0);
     if (!(inX < this->mWidth) || !(inY < this->mHeight))
         return;
     unsigned char* theFlags = this->mTileFlags + this->mWidth * inX + inY;
@@ -666,5 +668,52 @@ void EEAIAStarStorage::ExtendBounds(long inX, long inY)
         theTile.mX = inX;
         theTile.mY = inY;
         this->mBounds.Extend(theTile);
+    }
+}
+
+// New (port): a node as the capture sees it
+static void EEAIAStarViewOf(const EEAIAStarNode* inNode, EEAIAStarNodeView& outNode)
+{
+    outNode.mX = inNode->mX;
+    outNode.mY = inNode->mY;
+    outNode.mCost = inNode->mCost;
+    outNode.mPathCost = inNode->mPathCost;
+    outNode.mEstimate = inNode->mEstimate;
+    outNode.mHasParent = inNode->mParent != NULL;
+    outNode.mParentX = inNode->mParent ? inNode->mParent->mX : 0;
+    outNode.mParentY = inNode->mParent ? inNode->mParent->mY : 0;
+}
+
+// New (port): the current node (inWhich 0) or the found path's (1); false when there is none
+bool EEAIAStarStorage::GetNodeView(long inWhich, EEAIAStarNodeView& outNode)
+{
+    EEAIAStarNode* theNode = inWhich == 0 ? this->mCurrentNode : this->mPath;
+    if (theNode == NULL)
+        return false;
+    EEAIAStarViewOf(theNode, outNode);
+    return true;
+}
+
+// New (port): a list's nodes in its order (EEAIAStarList; the tables bucket by bucket, the last bucket first)
+void EEAIAStarStorage::ListNodes(long inList, std::vector<EEAIAStarNodeView>& outNodes)
+{
+    EEAIAStarNodeView theView;
+    EEAIAStarNode* theNode;
+    if (inList == kAStarListOpenTable || inList == kAStarListClosedTable) {
+        EEAIAStarNode** theTable = inList == kAStarListOpenTable ? this->mOpenTable : this->mClosedTable;
+        if (theTable == NULL)
+            return;
+        for (long i = this->mBucketCount - 1; i >= 0; i--) {
+            for (theNode = theTable[i]; theNode; theNode = theNode->mNext) {
+                EEAIAStarViewOf(theNode, theView);
+                outNodes.push_back(theView);
+            }
+        }
+        return;
+    }
+    theNode = inList == kAStarListSortedOpen ? this->mSortedOpen : inList == kAStarListFastOpen ? this->mFastOpenList : this->mFastClosedList;
+    for (; theNode; theNode = theNode->mNext) {
+        EEAIAStarViewOf(theNode, theView);
+        outNodes.push_back(theView);
     }
 }

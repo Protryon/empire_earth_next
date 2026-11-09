@@ -13,6 +13,7 @@
 #define EE_EEAIASTARMACHINE_H
 
 struct EEAIAStarGraphNode;               // ee/EEAIAStarGraphStorage.h
+class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
 
 class EEAIAStarMachineBase {
@@ -108,6 +109,9 @@ public:
     bool TestTile(unsigned long inX, unsigned long inY);   // 0x1d63b: the goal's AcceptTile, cached in mTileFlags (1/2)
     EEAIAStarNode* NextNode();              // 0x1d6b1: the nearer of the nearest open and closed nodes
     void AddNode(EEAIAStarNode* inParent, long inX, long inY);   // 0x28fc9 (ICF): a new open node unless known
+    // New (port), TEST ONLY: Run's record in the A* capture (ee/EEAIAStarCapture.h)
+    void CaptureInputs(EEAIAStarCaptureRun& ioRun);
+    void CaptureOutputs(EEAIAStarCaptureRun& ioRun);
 
     G mGoal;                                // +0x6c / +0x80
     M* mMap;                                // +0x110 / +0x13c

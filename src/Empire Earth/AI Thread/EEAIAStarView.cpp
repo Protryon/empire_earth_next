@@ -47,12 +47,35 @@
 #include "ee/EEAIChokePoint.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarView.h"
+#include "ee/EEAIAStarCapture.h"
 
 // EEAIContinentManager.cpp's (out of line at 0x29ced): non-zero when a resource unit stands on inTile
 long EEAIHasResourceUnit(EETile* inTile);
 
 // the path goals' full hit point fraction (.rdata 0x439ff4 / 0x439b5c)
 static const float kEEAStarViewFull = 1.0f;
+
+// The capture's note of a query (ee/EEAIAStarCapture.h; a no-op unless a search is being captured): the query's
+// number, the tile, up to two more arguments, the answer
+enum {
+    kViewHasTile = 1, kViewTerrain, kViewEdge, kViewHasUnits, kViewAIValue, kViewHeightLevel, kViewContinentID,
+    kViewContinentAt, kViewTileFlag, kViewTileValue, kViewPathAreaAt, kViewPathArea, kViewStoredPathAreaID,
+    kViewChokeTile, kViewResourceKind, kViewHasBlocker, kViewFirstBlockerID, kViewFirstBlocker, kViewFirstObstacleID,
+    kViewOwnWallFirst, kViewAreaGateOwner, kViewSectorGateOwner, kViewLiveDock, kViewLiveSpaceDock, kViewCanMoveOn,
+    kViewArePassable, kViewCrowdCost, kViewIsWide, kViewFormationRank, kViewIgnoresFormation, kViewRankProbe,
+    kViewCanEnter, kViewModifierCost
+};
+
+static inline long Note(long inQuery, long inX, long inY, long inAnswer, long inArg = 0, long inArg2 = 0)
+{
+    return EEAIAStarNote(kAStarEventView, inQuery, inX, inY, inArg, inArg2, inAnswer);
+}
+
+// the walker as the capture names it (its unit id)
+static inline long WalkerID(EEComplexUnit* inWalker)
+{
+    return (long)inWalker->GetUnitID();
+}
 
 // the area fills' blocker test (EEAIAStarPathAreaGoal / EEAIAStarPathSectorGoal wrote it out in every case)
 static inline bool EEAStarIsBlocker(EEUnit* inUnit)
@@ -64,38 +87,38 @@ static inline bool EEAStarIsBlocker(EEUnit* inUnit)
 
 bool EEAIAStarView::HasTile(long inX, long inY)
 {
-    return this->mMap->GetTile(inX, inY) != NULL;
+    return Note(kViewHasTile, inX, inY, this->mMap->GetTile(inX, inY) != NULL);
 }
 
 long EEAIAStarView::GetTerrain(long inX, long inY)
 {
-    return this->mMap->GetTile(inX, inY)->mTerrainType;
+    return Note(kViewTerrain, inX, inY, this->mMap->GetTile(inX, inY)->mTerrainType);
 }
 
 bool EEAIAStarView::IsEdgeTile(long inX, long inY)
 {
-    return this->mMap->IsEdgeTile(inX, inY);
+    return Note(kViewEdge, inX, inY, this->mMap->IsEdgeTile(inX, inY));
 }
 
 bool EEAIAStarView::HasUnits(long inX, long inY)
 {
-    return this->mMap->GetTile(inX, inY)->mUnits != NULL;
+    return Note(kViewHasUnits, inX, inY, this->mMap->GetTile(inX, inY)->mUnits != NULL);
 }
 
 long EEAIAStarView::GetAIValue(long inX, long inY)
 {
-    return this->mMap->GetTile(inX, inY)->mAIValue;
+    return Note(kViewAIValue, inX, inY, this->mMap->GetTile(inX, inY)->mAIValue);
 }
 
 long EEAIAStarView::GetHeightLevel(long inX, long inY)
 {
     EEMapTile* theTile = this->mMap->GetTile(inX, inY);
-    return UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f);
+    return Note(kViewHeightLevel, inX, inY, UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f));
 }
 
 unsigned short EEAIAStarView::GetContinentID(long inX, long inY)
 {
-    return gContinentManager.GetContinentID(inX, inY);
+    return (unsigned short)Note(kViewContinentID, inX, inY, gContinentManager.GetContinentID(inX, inY));
 }
 
 EEAIAStarContinentInfo EEAIAStarView::GetContinentAt(long inX, long inY)
@@ -104,19 +127,20 @@ EEAIAStarContinentInfo EEAIAStarView::GetContinentAt(long inX, long inY)
     EEAIAStarContinentInfo theInfo;
     theInfo.mID = theContinent->mID;
     theInfo.mCategory = theContinent->mCategory;
+    Note(kViewContinentAt, inX, inY, theInfo.mID, theInfo.mCategory);
     return theInfo;
 }
 
 long EEAIAStarView::GetTileFlag(long inX, long inY)
 {
-    return gContinentManager.GetTileFlag(inX, inY);
+    return Note(kViewTileFlag, inX, inY, gContinentManager.GetTileFlag(inX, inY));
 }
 
 long EEAIAStarView::GetTileValue(long inX, long inY)
 {
     if (gContinentManager.mTileValues)
-        return gContinentManager.mTileValues[gContinentManager.mWidth * inX + inY];
-    return gContinentManager.GetTileFlag(inX, inY);
+        return Note(kViewTileValue, inX, inY, gContinentManager.mTileValues[gContinentManager.mWidth * inX + inY]);
+    return Note(kViewTileValue, inX, inY, gContinentManager.GetTileFlag(inX, inY));
 }
 
 EEAIAStarPathAreaInfo EEAIAStarView::GetPathAreaAt(long inX, long inY)
@@ -128,6 +152,8 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathAreaAt(long inX, long inY)
     theInfo.mID = theArea ? theArea->mID : 0;
     theInfo.mContinentID = theArea ? theArea->GetContinentID() : 0;
     theInfo.mKind = theArea ? theArea->mKind : 0;
+    Note(kViewPathAreaAt, inX, inY, theInfo.mFound, theInfo.mID, theInfo.mContinentID);
+    Note(kViewPathAreaAt, inX, inY, theInfo.mKind);
     return theInfo;
 }
 
@@ -139,45 +165,46 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathArea(unsigned short inID)
     theInfo.mID = theArea->mID;
     theInfo.mContinentID = theArea->GetContinentID();
     theInfo.mKind = theArea->GetKind();
+    Note(kViewPathArea, inID, 0, theInfo.mID, theInfo.mContinentID, theInfo.mKind);
     return theInfo;
 }
 
 unsigned short EEAIAStarView::GetStoredPathAreaID(const EEAIAStarPathAreaStorage* inStorage, long inX, long inY)
 {
-    return inStorage->mPathAreaIDs[inStorage->GetHeight() * inX + inY];
+    return (unsigned short)Note(kViewStoredPathAreaID, inX, inY, inStorage->mPathAreaIDs[inStorage->GetHeight() * inX + inY]);
 }
 
 bool EEAIAStarView::IsChokeTile(long inIndex, unsigned long* outSerial)
 {
     if (gEEAIChokeTileFlags[inIndex] && gEEAIChokeTileKinds[inIndex] != 0x36) {
         *outSerial = gEEAIChokeTileSerials[inIndex];
-        return true;
+        return Note(kViewChokeTile, inIndex, 0, true, (long)*outSerial);
     }
     *outSerial = 0;
-    return false;
+    return Note(kViewChokeTile, inIndex, 0, false);
 }
 
 long EEAIAStarView::GetResourceKind(long inX, long inY)
 {
-    return EEAIHasResourceUnit(this->mMap->GetTile(inX, inY));
+    return Note(kViewResourceKind, inX, inY, EEAIHasResourceUnit(this->mMap->GetTile(inX, inY)));
 }
 
 bool EEAIAStarView::HasBlocker(long inX, long inY)
 {
     for (RTSTileUnitNode* theNode = this->mMap->GetTile(inX, inY)->mUnits; theNode; theNode = theNode->mNext) {
         if (EEAStarIsBlocker(theNode->mUnit))
-            return true;
+            return Note(kViewHasBlocker, inX, inY, true);
     }
-    return false;
+    return Note(kViewHasBlocker, inX, inY, false);
 }
 
 long EEAIAStarView::GetFirstBlockerID(long inX, long inY)
 {
     for (RTSTileUnitNode* theNode = this->mMap->GetTile(inX, inY)->mUnits; theNode; theNode = theNode->mNext) {
         if (EEAStarIsBlocker(theNode->mUnit))
-            return theNode->mUnit->GetUnitID();
+            return Note(kViewFirstBlockerID, inX, inY, theNode->mUnit->GetUnitID());
     }
-    return -1;
+    return Note(kViewFirstBlockerID, inX, inY, -1);
 }
 
 EEAIAStarBlocker EEAIAStarView::GetFirstBlocker(long inX, long inY)
@@ -199,6 +226,8 @@ EEAIAStarBlocker EEAIAStarView::GetFirstBlocker(long inX, long inY)
         theBlocker.mIsWall = theUnit->GetUnitClass()->mIsWall;
         break;
     }
+    Note(kViewFirstBlocker, inX, inY, theBlocker.mFound, theBlocker.mUnitID, theBlocker.mPlayerID);
+    Note(kViewFirstBlocker, inX, inY, theBlocker.mIsGate, theBlocker.mIsWall);
     return theBlocker;
 }
 
@@ -209,9 +238,9 @@ long EEAIAStarView::GetFirstObstacleID(long inX, long inY)
         if ((theUnit->GetHitPoints() > 0 || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource) &&
             ((theUnit->GetUnitClass()->mBlocksTile && !theUnit->IsFoundation()) ||
              theUnit->GetUnitClass()->GetCategory() == kUnitCategoryGate))
-            return theUnit->GetUnitID();
+            return Note(kViewFirstObstacleID, inX, inY, theUnit->GetUnitID());
     }
-    return -1;
+    return Note(kViewFirstObstacleID, inX, inY, -1);
 }
 
 bool EEAIAStarView::HasOwnWallFirst(long inX, long inY, long inPlayerID)
@@ -221,11 +250,11 @@ bool EEAIAStarView::HasOwnWallFirst(long inX, long inY, long inPlayerID)
         if (theUnit->GetUnitClass()->mIsWall && theUnit->GetHitPoints() > 0 &&
             theUnit->GetUnitClass()->GetCategory() != kUnitCategoryGate &&
             theUnit->GetPlayer()->GetPlayerID() == inPlayerID && !theUnit->IsFoundation())
-            return true;
+            return Note(kViewOwnWallFirst, inX, inY, true, inPlayerID);
         if (EEAStarIsBlocker(theUnit))
-            return false;
+            return Note(kViewOwnWallFirst, inX, inY, false, inPlayerID);
     }
-    return false;
+    return Note(kViewOwnWallFirst, inX, inY, false, inPlayerID);
 }
 
 long EEAIAStarView::GetAreaGateOwner(long inX, long inY, long inPlayerID)
@@ -235,12 +264,12 @@ long EEAIAStarView::GetAreaGateOwner(long inX, long inY, long inPlayerID)
         if (!(theUnit->GetHitPoints() > 0) && theUnit->GetUnitClass()->GetCategory() != kUnitCategoryResource)
             continue;
         if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryGate && theUnit->GetPlayer()->GetPlayerID() == inPlayerID)
-            return theUnit->GetUnitID();
+            return Note(kViewAreaGateOwner, inX, inY, theUnit->GetUnitID(), inPlayerID);
         if ((theUnit->GetUnitClass()->mBlocksTile || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryGate) &&
             !theUnit->IsFoundation())
-            return theUnit->GetUnitID();
+            return Note(kViewAreaGateOwner, inX, inY, theUnit->GetUnitID(), inPlayerID);
     }
-    return -1;
+    return Note(kViewAreaGateOwner, inX, inY, -1, inPlayerID);
 }
 
 long EEAIAStarView::GetSectorGateOwner(long inX, long inY, long inPlayerID)
@@ -250,9 +279,9 @@ long EEAIAStarView::GetSectorGateOwner(long inX, long inY, long inPlayerID)
         if ((theUnit->GetUnitClass()->GetCategory() == kUnitCategoryGate && theUnit->GetHitPoints() > 0 &&
              theUnit->mPlayer->mPlayerID == inPlayerID) ||
             EEAStarIsBlocker(theUnit))
-            return theUnit->GetUnitID();
+            return Note(kViewSectorGateOwner, inX, inY, theUnit->GetUnitID(), inPlayerID);
     }
-    return -1;
+    return Note(kViewSectorGateOwner, inX, inY, -1, inPlayerID);
 }
 
 bool EEAIAStarView::HasLiveDock(long inX, long inY)
@@ -263,7 +292,7 @@ bool EEAIAStarView::HasLiveDock(long inX, long inY)
         theResult = (theUnit->mUnitClass->mUnitType == kUnitTypeDock || theUnit->mUnitClass->mUnitType == kUnitTypeNavyYard) &&
                     theUnit->mHitPoints > 0 && !theUnit->IsFoundation();
     }
-    return theResult;
+    return Note(kViewLiveDock, inX, inY, theResult);
 }
 
 bool EEAIAStarView::HasLiveSpaceDock(long inX, long inY)
@@ -275,21 +304,21 @@ bool EEAIAStarView::HasLiveSpaceDock(long inX, long inY)
         theResult = (theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation) &&
                     theUnit->mHitPoints > 0 && !theUnit->IsFoundation();
     }
-    return theResult;
+    return Note(kViewLiveSpaceDock, inX, inY, theResult);
 }
 
 bool EEAIAStarView::CanMoveOn(EEComplexUnit* inWalker, long inTerrain)
 {
-    return inWalker->GetUnitClass()->CanMoveOnTerrain(inWalker, inTerrain);
+    return Note(kViewCanMoveOn, inTerrain, 0, inWalker->GetUnitClass()->CanMoveOnTerrain(inWalker, inTerrain), WalkerID(inWalker));
 }
 
 bool EEAIAStarView::ArePassable(EEComplexUnit* inWalker, long inX, long inY)
 {
     for (RTSTileUnitNode* theNode = this->mMap->GetTile(inX, inY)->mUnits; theNode; theNode = theNode->mNext) {
         if (!theNode->mUnit->IsPassableBy(inWalker))
-            return false;
+            return Note(kViewArePassable, inX, inY, false, WalkerID(inWalker));
     }
-    return true;
+    return Note(kViewArePassable, inX, inY, true, WalkerID(inWalker));
 }
 
 long EEAIAStarView::GetCrowdCost(EEComplexUnit* inWalker, long inX, long inY)
@@ -309,38 +338,42 @@ long EEAIAStarView::GetCrowdCost(EEComplexUnit* inWalker, long inX, long inY)
         else
             theCost += 50;
     }
-    return theCost;
+    return Note(kViewCrowdCost, inX, inY, theCost, WalkerID(inWalker));
 }
 
 bool EEAIAStarView::IsWide(EEComplexUnit* inWalker)
 {
-    return inWalker->GetUnitClass()->mInnerCollisionSphere >= kEEAStarViewFull;
+    return Note(kViewIsWide, 0, 0, inWalker->GetUnitClass()->mInnerCollisionSphere >= kEEAStarViewFull, WalkerID(inWalker));
 }
 
 long EEAIAStarView::GetFormationRank(EEComplexUnit* inWalker)
 {
-    return inWalker->mFormationRank;
+    return Note(kViewFormationRank, 0, 0, inWalker->mFormationRank, WalkerID(inWalker));
 }
 
 bool EEAIAStarView::IgnoresFormation(EEComplexUnit* inWalker)
 {
-    return (bool)((inWalker->mStats->mTerrainMask >> 14) & 1);
+    return Note(kViewIgnoresFormation, 0, 0, (bool)((inWalker->mStats->mTerrainMask >> 14) & 1), WalkerID(inWalker));
 }
 
 bool EEAIAStarView::IsRankProbeBlocked(EEComplexUnit* inWalker, unsigned short inContinentID, long inX, long inY)
 {
     EEMapTile* theNeighbor = gWorld.mMap->GetTile(inX, inY);
-    return theNeighbor && (theNeighbor->mAIValue || !inWalker->GetUnitClass()->CanMoveOnTerrain(inWalker, theNeighbor->GetTerrainType())
-                           || inContinentID != gContinentManager.GetContinentID(inX, inY));
+    return Note(kViewRankProbe, inX, inY,
+                theNeighbor && (theNeighbor->mAIValue || !inWalker->GetUnitClass()->CanMoveOnTerrain(inWalker, theNeighbor->GetTerrainType())
+                                || inContinentID != gContinentManager.GetContinentID(inX, inY)),
+                WalkerID(inWalker), inContinentID);
 }
 
 bool EEAIAStarView::CanEnter(EEAIPathGoalModifierBase* inModifier, long inX, long inY, bool inGoal)
 {
-    return inModifier->CanEnter(this->mMap->GetTile(inX, inY), inX, inY, inGoal);
+    return Note(kViewCanEnter, inX, inY, inModifier->CanEnter(this->mMap->GetTile(inX, inY), inX, inY, inGoal), inGoal);
 }
 
 long EEAIAStarView::GetModifierCost(EEAIPathGoalModifierBase* inModifier, long inFromX, long inFromY, long inX, long inY,
                                     long inParentX, long inParentY)
 {
-    return inModifier->GetCost(inFromX, inFromY, inX, inY, inParentX, inParentY);
+    long theCost = inModifier->GetCost(inFromX, inFromY, inX, inY, inParentX, inParentY);
+    Note(kViewModifierCost, inX, inY, theCost, inFromX, inFromY);
+    return Note(kViewModifierCost, inX, inY, theCost, inParentX, inParentY);
 }

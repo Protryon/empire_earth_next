@@ -29,6 +29,8 @@ struct EEAIAStarNode {
 // The storages' Virtual10 clears only these tiles, grown by a margin, when they are valid.
 typedef U2DRectangle<long> EEAIAStarBounds;
 
+struct EEAIAStarNodeView;               // ee/EEAIAStarCapture.h
+
 class EEAIAStarStorage {
 public:
     EEAIAStarStorage();                     // 0x1b9b7
@@ -66,6 +68,12 @@ public:
     void InsertSorted(EEAIAStarNode* inNode);   // 0x1c5bd
     void ExtendBounds(long inX, long inY);  // 0x1c617
     unsigned char* GetTileFlags(unsigned long inX, unsigned long inY) { return this->mTileFlags + this->mWidth * inX + inY; }
+    // New (port): the storage as the capture reads it (ee/EEAIAStarCapture.h): the current node (0) and the found
+    // path's (1), a list's nodes in its order (EEAIAStarList), the search bounds
+    bool GetNodeView(long inWhich, EEAIAStarNodeView& outNode);
+    void ListNodes(long inList, std::vector<EEAIAStarNodeView>& outNodes);
+    EEAIAStarBounds GetSearchBounds() const { return this->mBounds; }
+    bool GetHasBounds() const { return this->mHasBounds; }
 
     EEAIAStarBounds mBounds;                // +0x04
     EEAIAStarNode** mClosedTable;           // +0x14 (mL44 buckets; delete[] in the dtor)

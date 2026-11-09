@@ -5,9 +5,13 @@
 #ifndef EE_EEAIASTARMACHINESTEPS_H
 #define EE_EEAIASTARMACHINESTEPS_H
 #include "ee/EEAIKindIDs.h"
+#include "ee/EEAIAStarCapture.h"
 template <class S, class G, class M>
 void EEAIAStarMachine<S, G, M>::Run()
 {
+    EEAIAStarCaptureRun theCapture;         // TEST ONLY (EE_SIM_CAPTURE): this run's record
+    if (theCapture.IsOn())
+        this->CaptureInputs(theCapture);
     if (!this->mFound) {
         this->mNumRuns = 0;
         this->mMapWidth = this->mMap->mSize;
@@ -20,6 +24,66 @@ void EEAIAStarMachine<S, G, M>::Run()
         this->Expand();
     } else
         this->Expand();
+    if (theCapture.IsOn()) {
+        this->CaptureOutputs(theCapture);
+        theCapture.Commit();
+    }
+}
+
+// New (port), TEST ONLY: the search's inputs as Run finds them
+template <class S, class G, class M>
+void EEAIAStarMachine<S, G, M>::CaptureInputs(EEAIAStarCaptureRun& ioRun)
+{
+    ioRun.I32(this->mType);
+    ioRun.U8(this->mFound);
+    ioRun.U8(this->mCheckCorners);
+    ioRun.U8(this->mGoal.mAcceptNearest);
+    ioRun.I32(this->mGoal.mStartTile.mX);
+    ioRun.I32(this->mGoal.mStartTile.mY);
+    ioRun.I32(this->mGoal.mGoalTile.mX);
+    ioRun.I32(this->mGoal.mGoalTile.mY);
+    ioRun.I32(this->mGoal.mRevLimit);
+    ioRun.I32(this->mGoal.mMaxRevs);
+    ioRun.I32(this->mMap->mSize);
+}
+
+// New (port), TEST ONLY: the search's outputs: the machine's members, the goal's flags, the storage's nodes
+template <class S, class G, class M>
+void EEAIAStarMachine<S, G, M>::CaptureOutputs(EEAIAStarCaptureRun& ioRun)
+{
+    ioRun.U8(this->mFound);
+    ioRun.U8(this->mCheckCorners);
+    ioRun.I32(this->mRevs);
+    ioRun.I32(this->mSteps);
+    ioRun.I32(this->mNumRuns);
+    ioRun.I32(this->mTile.mX);
+    ioRun.I32(this->mTile.mY);
+    ioRun.U8(this->mGoal.mSearchFailed);
+    ioRun.U8(this->mGoal.mTookNearest);
+    ioRun.I32(this->mGoal.mStartTile.mX);
+    ioRun.I32(this->mGoal.mStartTile.mY);
+    ioRun.I32(this->mGoal.mGoalTile.mX);
+    ioRun.I32(this->mGoal.mGoalTile.mY);
+    EEAIAStarStorage* theStorage = this;
+    EEAIAStarNodeView theNode;
+    for (long i = 0; i < 2; i++) {
+        bool theHas = theStorage->GetNodeView(i, theNode);
+        ioRun.U8(theHas);
+        if (theHas)
+            ioRun.Node(theNode);
+    }
+    EEAIAStarBounds theBounds = theStorage->GetSearchBounds();
+    ioRun.I32(theBounds.mBottom);
+    ioRun.I32(theBounds.mLeft);
+    ioRun.I32(theBounds.mRight);
+    ioRun.I32(theBounds.mTop);
+    ioRun.U8(theStorage->GetHasBounds());
+    std::vector<EEAIAStarNodeView> theNodes;
+    for (long theList = kAStarListSortedOpen; theList <= kAStarListClosedTable; theList++) {
+        theNodes.clear();
+        theStorage->ListNodes(theList, theNodes);
+        ioRun.Nodes(theNodes);
+    }
 }
 
 template <class S, class G, class M>
@@ -30,7 +94,9 @@ bool EEAIAStarMachine<S, G, M>::Start()
     this->mTile = theGoal;
     mCurrentNode = NewNode(this->mGoal.mStartTile.GetX(), this->mGoal.mStartTile.GetY());
     mCurrentNode->mPathCost = 0;
-    mCurrentNode->mEstimate = this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile);
+    mCurrentNode->mEstimate = EEAIAStarNote(kAStarEventEstimate, this->mGoal.mStartTile.mX, this->mGoal.mStartTile.mY,
+                                            this->mTile.mX, this->mTile.mY, 0,
+                                            this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile));
     mCurrentNode->mCost = mCurrentNode->mEstimate + mCurrentNode->mPathCost;
     AddOpen(mCurrentNode);
     return theResult;
@@ -44,7 +110,8 @@ void EEAIAStarMachine<S, G, M>::Expand()
     this->mRevs++;
     for (;;) {
         mCurrentNode = RemoveBestOpen();
-        if (this->mGoal.IsGoalNode(mCurrentNode)) {
+        if (EEAIAStarNote(kAStarEventGoalNode, mCurrentNode != NULL, mCurrentNode ? mCurrentNode->mX : 0,
+                          mCurrentNode ? mCurrentNode->mY : 0, 0, 0, this->mGoal.IsGoalNode(mCurrentNode))) {
             this->mFound = false;
             break;
         }
@@ -112,8 +179,10 @@ void EEAIAStarMachine<S, G, M>::Expand()
         this->mSteps++;
         this->mRevs++;
     }
-    if (!this->mFound)
+    if (!this->mFound) {
         this->mGoal.SearchDone(this);
+        EEAIAStarNote(kAStarEventSearchDone, this->mGoal.mSearchFailed, this->mGoal.mTookNearest, 0, 0, 0, 0);
+    }
     if (this->mGoal.mSearchFailed) {
         if (mCurrentNode) {
             AddClosed(mCurrentNode);
@@ -152,7 +221,8 @@ bool EEAIAStarMachine<S, G, M>::Restart()
     while (!theDone) {
         EEAIAStarNode* theNode = this->NextNode();
         if (theNode) {
-            theDone = this->mGoal.AcceptTile(theNode->mX, theNode->mY, true);
+            theDone = EEAIAStarNote(kAStarEventAccept, theNode->mX, theNode->mY, 1, 0, 0,
+                                    this->mGoal.AcceptTile(theNode->mX, theNode->mY, true));
             if (theDone) {
                 mPath = theNode;
                 mCurrentNode = theNode;
@@ -183,7 +253,7 @@ bool EEAIAStarMachine<S, G, M>::TestTile(unsigned long inX, unsigned long inY)
         if (*theFlag & kAStarTileAccepted || *theFlag & kAStarTileRejected)
             theResult = *theFlag & kAStarTileAccepted;
         else {
-            theResult = this->mGoal.AcceptTile(inX, inY, false);
+            theResult = EEAIAStarNote(kAStarEventAccept, inX, inY, 0, 0, 0, this->mGoal.AcceptTile(inX, inY, false));
             if (!theResult)
                 *theFlag |= kAStarTileRejected;
             else
@@ -216,7 +286,8 @@ EEAIAStarNode* EEAIAStarMachine<S, G, M>::NextNode()
 template <class S, class G, class M>
 void EEAIAStarMachine<S, G, M>::AddNode(EEAIAStarNode* inParent, long inX, long inY)
 {
-    unsigned long theCost = this->mGoal.GetCost(inParent->mX, inParent->mY, inX, inY) + inParent->mPathCost;
+    unsigned long theCost = EEAIAStarNote(kAStarEventCost, inParent->mX, inParent->mY, inX, inY, 0,
+                                          this->mGoal.GetCost(inParent->mX, inParent->mY, inX, inY)) + inParent->mPathCost;
     EEAIAStarNode* theOpen = FindOpen(inX, inY);
     EEAIAStarNode* theClosed = FindClosed(inX, inY);
     if (theOpen && !this->mGoal.IsCheaper(theCost, theOpen->mPathCost))
@@ -231,7 +302,8 @@ void EEAIAStarMachine<S, G, M>::AddNode(EEAIAStarNode* inParent, long inX, long 
         EEAIAStarNode* theNode = NewNode(inX, inY);
         theNode->mParent = inParent;
         theNode->mPathCost = theCost;
-        theNode->mEstimate = this->mGoal.Estimate(U2DPoint<long>(theNode->mX, theNode->mY), this->mTile);
+        theNode->mEstimate = EEAIAStarNote(kAStarEventEstimate, theNode->mX, theNode->mY, this->mTile.mX, this->mTile.mY, 0,
+                                           this->mGoal.Estimate(U2DPoint<long>(theNode->mX, theNode->mY), this->mTile));
         theNode->mCost = theNode->mEstimate + theCost;
         AddOpen(theNode);
     } else {
