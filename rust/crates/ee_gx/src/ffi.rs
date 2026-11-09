@@ -4,7 +4,7 @@
 
 use std::cell::RefCell;
 use std::ffi::{c_char, c_long, c_ulong, c_void};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
@@ -13,7 +13,6 @@ use crate::device::{self, Device, VertexBuffer};
 use crate::directdraw::{self, DirectDraw};
 use crate::gpu::WgpuBackend;
 use crate::gx::*;
-use crate::keys;
 use crate::modes;
 use crate::plat::RealPlatform;
 use crate::surface::SurfaceId;
@@ -26,9 +25,21 @@ struct Shared(RefCell<GxCore>);
 unsafe impl Send for Shared {}
 
 static GX: OnceLock<ReentrantMutex<Shared>> = OnceLock::new();
+static SETTINGS: OnceLock<Arc<DisplaySettings>> = OnceLock::new();
+
+fn settings() -> &'static Arc<DisplaySettings> {
+    SETTINGS.get_or_init(Arc::default)
+}
 
 fn lock() -> ReentrantMutexGuard<'static, Shared> {
-    GX.get_or_init(|| ReentrantMutex::new(Shared(RefCell::new(Gx::new(WgpuBackend::default(), RealPlatform))))).lock()
+    GX.get_or_init(|| {
+        ReentrantMutex::new(Shared(RefCell::new(Gx::with_settings(
+            WgpuBackend::default(),
+            RealPlatform,
+            settings().clone(),
+        ))))
+    })
+    .lock()
 }
 
 fn with<R>(f: impl FnOnce(&mut GxCore) -> R) -> R {
@@ -112,7 +123,7 @@ pub unsafe extern "C" fn gx_direct_draw_enum_display_modes(
     context: *mut c_void,
     callback: EnumModesCallback,
 ) -> GxResult {
-    let info = with(|gx| gx.plat.display_info());
+    let info = RealPlatform.display_info(); // no lock: as the C++
     let sizes = modes::display_mode_sizes(&info);
     for bits in [16, 32] {
         for &(w, h) in &sizes {
@@ -453,7 +464,10 @@ pub unsafe extern "C" fn gx_device_get_caps(out: *mut GxDeviceDesc) -> GxResult 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_device_enum_texture_formats(callback: EnumFormatsCallback, context: *mut c_void) -> GxResult {
+pub unsafe extern "C" fn gx_device_enum_texture_formats(
+    callback: EnumFormatsCallback,
+    context: *mut c_void,
+) -> GxResult {
     for mut format in directdraw::texture_formats() {
         if callback(&mut format, context) == GXENUMRET_CANCEL {
             break;
@@ -551,7 +565,7 @@ pub unsafe extern "C" fn gx_device_get_transform(device: *mut c_void, state: u32
 #[no_mangle]
 pub unsafe extern "C" fn gx_device_set_render_state(device: *mut c_void, state: u32, value: c_ulong) -> GxResult {
     let _guard = lock();
-    device_mut(device).set_render_state(state, u64::from(value))
+    device_mut(device).set_render_state(state, value as u64)
 }
 
 #[no_mangle]
@@ -574,7 +588,7 @@ pub unsafe extern "C" fn gx_device_set_stage_state(
     value: c_ulong,
 ) -> GxResult {
     let _guard = lock();
-    device_mut(device).set_stage_state(stage as u32, state, u64::from(value))
+    device_mut(device).set_stage_state(stage as u32, state, value as u64)
 }
 
 #[no_mangle]
@@ -663,22 +677,22 @@ pub unsafe extern "C" fn gx_device_draw_indexed_primitive_vb(
 
 #[no_mangle]
 pub extern "C" fn gx_set_render_percent(percent: c_ulong) {
-    with(|gx| gx.set_render_percent(percent as u32));
+    settings().set_render_percent(percent as u32);
 }
 
 #[no_mangle]
 pub extern "C" fn gx_set_frame_limit(frames_per_second: c_long) {
-    with(|gx| gx.set_frame_limit(frames_per_second as i64));
+    settings().set_frame_limit(frames_per_second as i64);
 }
 
 #[no_mangle]
 pub extern "C" fn gx_set_texture_filtering(mode: c_ulong) {
-    with(|gx| gx.set_texture_filtering(mode as u32));
+    settings().set_texture_filtering(mode as u32);
 }
 
 #[no_mangle]
 pub extern "C" fn gx_set_brightness(gamma: f32) {
-    with(|gx| gx.set_brightness(gamma));
+    settings().set_brightness(gamma);
 }
 
 #[no_mangle]
@@ -688,7 +702,7 @@ pub unsafe extern "C" fn gx_game_size(
     out_width: *mut c_ulong,
     out_height: *mut c_ulong,
 ) {
-    let info = with(|gx| gx.plat.display_info());
+    let info = RealPlatform.display_info(); // no lock: as the C++
     let (width, height) = modes::game_size(&info, percent as u32, windowed);
     *out_width = width as c_ulong;
     *out_height = height as c_ulong;
@@ -696,7 +710,7 @@ pub unsafe extern "C" fn gx_game_size(
 
 #[no_mangle]
 pub extern "C" fn gx_auto_ui_scale() -> c_ulong {
-    let info = with(|gx| gx.plat.display_info());
+    let info = RealPlatform.display_info(); // no lock: as the C++
     modes::auto_ui_scale(&info) as c_ulong
 }
 
@@ -729,8 +743,3 @@ pub unsafe extern "C" fn GXTestReadFrame(
     let (result, _, _) = gx.test_read_frame(identifier, out, capacity as u32);
     result as c_long
 }
-
-/// Compile-time check that this file names every key input the shim needs.
-const _: fn() = || {
-    let _ = keys::BlitMode::Copy;
-};

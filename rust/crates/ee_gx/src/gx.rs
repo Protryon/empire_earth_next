@@ -3,6 +3,8 @@
 //! in `cargo test`; the real backend is thin (`gpu.rs`).
 
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicI64, AtomicU32, Ordering};
+use std::sync::Arc;
 
 use crate::abi::*;
 use crate::format::Format;
@@ -208,6 +210,61 @@ impl PendingText {
     }
 }
 
+/// The display settings (`GXSetRenderPercent` and the others): the game's settings code writes them, without GX's lock.
+#[derive(Debug)]
+pub struct DisplaySettings {
+    render_percent: AtomicU32,
+    frame_limit: AtomicI64,
+    texture_filtering: AtomicU32,
+    brightness_bits: AtomicU32,
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        DisplaySettings {
+            render_percent: AtomicU32::new(100),
+            frame_limit: AtomicI64::new(0),
+            texture_filtering: AtomicU32::new(0),
+            brightness_bits: AtomicU32::new(1.0f32.to_bits()),
+        }
+    }
+}
+
+impl DisplaySettings {
+    pub fn set_render_percent(&self, percent: u32) {
+        self.render_percent.store(percent.clamp(50, 100), Ordering::Relaxed);
+    }
+
+    pub fn render_percent(&self) -> u32 {
+        self.render_percent.load(Ordering::Relaxed)
+    }
+
+    pub fn set_frame_limit(&self, frames_per_second: i64) {
+        self.frame_limit.store(frames_per_second, Ordering::Relaxed);
+    }
+
+    pub fn frame_limit(&self) -> i64 {
+        self.frame_limit.load(Ordering::Relaxed)
+    }
+
+    pub fn set_texture_filtering(&self, mode: u32) {
+        self.texture_filtering.store(mode.min(2), Ordering::Relaxed);
+    }
+
+    pub fn texture_filtering(&self) -> u32 {
+        self.texture_filtering.load(Ordering::Relaxed)
+    }
+
+    pub fn set_brightness(&self, gamma: f32) {
+        let gamma = if gamma > 0.25 && gamma < 4.0 { gamma } else { 1.0 };
+        self.brightness_bits.store(gamma.to_bits(), Ordering::Relaxed);
+    }
+
+    pub fn brightness(&self) -> f32 {
+        f32::from_bits(self.brightness_bits.load(Ordering::Relaxed))
+    }
+}
+
 /// What a `GXSurface*` points at: the slot of the surface in [`Gx`].
 pub struct SurfaceHandle {
     pub id: SurfaceId,
@@ -237,10 +294,7 @@ pub struct Gx<B: Backend, P: Platform> {
     pub serial: u64,
     pub ring_offsets: [u64; 3],
     // the display settings
-    render_percent: u32,
-    frame_limit: i64,
-    pub texture_filtering: u32,
-    brightness: f32,
+    pub settings: Arc<DisplaySettings>,
     // diagnostics and caches of the environment
     pub stats: DrawStats,
     pub stats_every: i64,
@@ -265,6 +319,11 @@ fn ring_index(ring: RingKind) -> usize {
 
 impl<B: Backend, P: Platform> Gx<B, P> {
     pub fn new(backend: B, plat: P) -> Self {
+        Self::with_settings(backend, plat, Arc::default())
+    }
+
+    /// A GX sharing `settings`, which are set without its lock (the C++'s setters took none).
+    pub fn with_settings(backend: B, plat: P, settings: Arc<DisplaySettings>) -> Self {
         Gx {
             backend,
             plat,
@@ -278,10 +337,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
             pass_depth: None,
             serial: 1,
             ring_offsets: [0; 3],
-            render_percent: 100,
-            frame_limit: 0,
-            texture_filtering: 0,
-            brightness: 1.0,
+            settings,
             stats: DrawStats::default(),
             stats_every: -2,
             null3d_ms: -2,
@@ -495,25 +551,25 @@ impl<B: Backend, P: Platform> Gx<B, P> {
     }
 
     pub fn sampler_key(&self, address: u32, min: u32, mag: u32, mip: u32) -> u32 {
-        keys::sampler_key(address, min, mag, mip, self.texture_filtering)
+        keys::sampler_key(address, min, mag, mip, self.settings.texture_filtering())
     }
 
     // ---- the display settings
 
     pub fn set_render_percent(&mut self, percent: u32) {
-        self.render_percent = percent.clamp(50, 100);
+        self.settings.set_render_percent(percent);
     }
 
     pub fn set_frame_limit(&mut self, frames_per_second: i64) {
-        self.frame_limit = frames_per_second;
+        self.settings.set_frame_limit(frames_per_second);
     }
 
     pub fn set_texture_filtering(&mut self, mode: u32) {
-        self.texture_filtering = mode.min(2);
+        self.settings.set_texture_filtering(mode);
     }
 
     pub fn set_brightness(&mut self, gamma: f32) {
-        self.brightness = if gamma > 0.25 && gamma < 4.0 { gamma } else { 1.0 };
+        self.settings.set_brightness(gamma);
     }
 
     /// `GXRenderScale`.
@@ -526,7 +582,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
         modes::render_scale(
             mode_height,
             display_height,
-            self.render_percent,
+            self.settings.render_percent(),
             self.render_scale_override.as_ref().unwrap().as_deref(),
         )
     }
@@ -698,7 +754,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
         };
         u.misc[0] = depth;
         u.mode[1] = u32::from(opaque);
-        u.misc[1] = if opaque { self.brightness } else { 0.0 };
+        u.misc[1] = if opaque { self.settings.brightness() } else { 0.0 };
         self.ring(RingKind::Uniform, UNIFORM_RING_SIZE - UNIFORM_BINDING, uniform::as_bytes(&u), 256) as u32
     }
 
@@ -926,7 +982,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
             self.m(primary).swap_created = true;
         }
         let mut mode = wgpu::PresentMode::Fifo;
-        if !wait || self.frame_limit != 0 || self.plat.env("EE_GX_NOVSYNC").is_some() {
+        if !wait || self.settings.frame_limit() != 0 || self.plat.env("EE_GX_NOVSYNC").is_some() {
             // port: the frame rate setting (not v-sync)
             let caps = self.backend.swap_caps(primary);
             mode = select_present_mode(&caps);
@@ -978,14 +1034,14 @@ impl<B: Backend, P: Platform> Gx<B, P> {
         self.m(top).used_serial = serial;
         self.submit();
         self.backend.swap_present(primary);
-        if self.frame_limit > 0 {
+        if self.settings.frame_limit() > 0 {
             self.wait_for_frame_limit();
         }
     }
 
     /// At most `frame_limit` frames a second (the std::chrono code of `Present`).
     fn wait_for_frame_limit(&mut self) {
-        let period = 1_000_000 / self.frame_limit as u64;
+        let period = 1_000_000 / self.settings.frame_limit() as u64;
         let now = self.plat.now_us();
         if self.next_frame_us > now && self.next_frame_us - now < period * 2 {
             self.plat.sleep_us(self.next_frame_us - now);

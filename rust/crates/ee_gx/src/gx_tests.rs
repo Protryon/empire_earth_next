@@ -1274,7 +1274,7 @@ fn settings_clamp_like_the_setters() {
     g.set_render_percent(200);
     assert_eq!(g.render_scale(540), 2.0, "clamped to 100%");
     g.set_texture_filtering(9);
-    assert_eq!(g.texture_filtering, 2);
+    assert_eq!(g.settings.texture_filtering(), 2);
 }
 
 #[test]
