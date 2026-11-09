@@ -1280,9 +1280,18 @@ mod tests {
     #[test]
     fn personalities_validation() {
         for (doc, want) in [
-            ("personalities:\n  - id: a\n    epoch_pressure:\n      start: 0.5\n      full: 0.2\n", "aipersonalities line 4: epoch_pressure: 0 <= start < full"),
-            ("personalities:\n  - id: a\n    economy:\n      early_trainers: -1\n", "aipersonalities line 4: economy: early_town_centers and early_trainers must be 0 or more"),
-            ("personalities:\n  - id: a\n    military:\n      prehistoric_army: -1\n", "aipersonalities line 4: military: prehistoric_army must be 0 or more"),
+            (
+                "personalities:\n  - id: a\n    epoch_pressure:\n      start: 0.5\n      full: 0.2\n",
+                "aipersonalities line 4: epoch_pressure: 0 <= start < full",
+            ),
+            (
+                "personalities:\n  - id: a\n    economy:\n      early_trainers: -1\n",
+                "aipersonalities line 4: economy: early_town_centers and early_trainers must be 0 or more",
+            ),
+            (
+                "personalities:\n  - id: a\n    military:\n      prehistoric_army: -1\n",
+                "aipersonalities line 4: military: prehistoric_army must be 0 or more",
+            ),
             ("assign: [nope]\n", "aipersonalities line 1: assign: 'nope' is not a personality"),
         ] {
             let mut c = content(&[("aipersonalities", doc.to_string())]);
