@@ -187,7 +187,7 @@ void EEUCSpaceship::Update(EEComplexUnit* inUnit)
     }
     if (inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

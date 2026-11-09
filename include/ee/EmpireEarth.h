@@ -165,7 +165,7 @@ extern UWideString gU530BC8;               // 0x530bc8 (Empire Earth.cpp; EEUIES
 
 // 0x4e8708: a float table indexed [unit class +0x1c8][other unit class +0x1cc] (19 readers, e.g. the AI Hero unit;
 // two stores). Name is provisional
-extern float** gU4E8708;
+extern float** gDamageTable;
 
 // (provisional name for the window; the font names are Empire Earth.cpp's assert strings, e.g. "gFontTahoma12"): the
 // game window (EEUIFError: GetWidth +0xc, GetHeight +0x10 scale its layout) and the Tahoma fonts

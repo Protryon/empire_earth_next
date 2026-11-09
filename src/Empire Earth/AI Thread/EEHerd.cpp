@@ -103,7 +103,7 @@ struct EEHerdOtherHerdFilter {
 const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
 // (EEWorld.cpp). Owner by placement only (EECalamity's statics start at 0x4e5e48): PROVISIONAL
-long gL4E5E40 = 0;
+long gHerdUnreadValue = 0;
 // SYNTHETIC: EXE 0x4a191a   (wrapper)
 // SYNTHETIC: EXE 0x4a192b   (registrar)
 
@@ -194,7 +194,7 @@ void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
         if (theAttacker && inUnit->mUnitClass->mAttack > 0) {
             long theTarget = inUnit->mUnitClass->mAmmoType;
             long theSource = theAttacker->mUnitClass->mFamily;
-            if (theAttacker->mUnitClass->CanBeAttacked() && gU4E8708[theSource][theTarget] > 0.0f)
+            if (theAttacker->mUnitClass->CanBeAttacked() && gDamageTable[theSource][theTarget] > 0.0f)
                 this->Attack(theAttacker, theUnits);
         }
     } else
@@ -254,7 +254,7 @@ bool EEHerd::Chase()
         EEHerdUnitFilter theFilter(this->mContinent, false, true);
         EEGetUnitsInRectangle(theContinent->mHull.GetBounds(), theTargets, theFilter, false);
         if (theTargets.size() > 0) {
-            this->mTarget = theTargets[gPhysics->Fn82D66(theTargets)];
+            this->mTarget = theTargets[gPhysics->GetRandomElementIndex(theTargets)];
             this->mTarget->mReferenceCount++;
             this->mCenter = U2DPoint<long>(this->mTarget->GetTileX(), this->mTarget->GetTileY());
         }
@@ -355,7 +355,7 @@ bool EEHerd::Hunt()
     this->GetPrey(this->mContinent, theUnits);
     if (theUnits.size() <= 0)
         return theResult;
-    this->mTarget = theUnits[gPhysics->Fn82D66(theUnits)];
+    this->mTarget = theUnits[gPhysics->GetRandomElementIndex(theUnits)];
     this->mTarget->mReferenceCount++;
     this->mCenter = this->mTarget->GetTile();
     U2DPoint<long> theTile(this->mTarget->GetTile());
@@ -629,7 +629,7 @@ void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
         return;
     long theTarget = inUnit->mUnitClass->mAmmoType;
     long theSource = theAttacker->mUnitClass->mFamily;
-    if (!theAttacker->mUnitClass->CanBeAttacked() || !(gU4E8708[theSource][theTarget] > 0.0f))
+    if (!theAttacker->mUnitClass->CanBeAttacked() || !(gDamageTable[theSource][theTarget] > 0.0f))
         return;
     if (inAll)
         theUnits = this->mUnits;
@@ -1211,7 +1211,7 @@ unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
                 delete theGoal;
         }
     } else {
-        this->ResetGrazeTimes(gPhysics->Fn82D66(this->mUnits), true);
+        this->ResetGrazeTimes(gPhysics->GetRandomElementIndex(this->mUnits), true);
         this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinRestInterval(), this->mAnimal->GetMaxRestInterval()) + inTime;
         this->mState = 0;
     }

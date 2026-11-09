@@ -212,7 +212,7 @@ void EEUCSubmergedNaval::Update(EEComplexUnit* inUnit)
         break;
     }
     }
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61884e

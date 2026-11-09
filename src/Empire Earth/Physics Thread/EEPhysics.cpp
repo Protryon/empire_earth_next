@@ -90,10 +90,8 @@
 UString gPhysicsDataKey("EEPhysics Data");
 
 // the unit's other data (provisional names): the area effects' update period (0x4422f8, a unit-local .rdata float)
-// and the physics totals (0x531cf0: Init clears it)
+// (the physics totals 0x531cf0 / 0x531cf4 are EEPhysics::mInputMessagesProcessed / mLastOutOfSynchChecksum)
 static const float kAreaEffectInterval = 2000.0f;
-long gU531CF0;
-unsigned long gU531CF4;                     // 0x531cf4 (GetOutOfSynchChecksum: the last out-of-synch checksum)
 static unsigned long sReportedFirst;        // 0x531cf8
 static unsigned long sReportedSecond;       // 0x531cfc
 static unsigned long sReportPeriod;         // 0x531d00
@@ -113,7 +111,7 @@ extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollis
 // FUNCTION: EXE 0x551c5a
 // Creates the physics simulation: makes its save-game lock, resets its clocks and starts the thread's main loop
 EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
-    : RTSPhysics(inGraphics, inTimer, 1, 0xf)
+    : RTSPhysics(inGraphics, inTimer, 1, 0xf), mInputMessagesProcessed(0), mLastOutOfSynchChecksum(0)
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mSaveGameLock) == keseOK, 281);
     this->Init();
@@ -315,7 +313,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* this->mRandomNumberGenerator.GetSeed(): %ld *******\n",
                 this->mRandom.GetSeed());
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of user-input messages processed: %ld *******\n",
-                gU531CF0);
+                this->mInputMessagesProcessed);
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of Messages in Server Queue: %zu *******\n",
                 gPhysics->mServerMessages.size());
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of CT Physics Ticks To Process: %ld *******\n",
@@ -341,7 +339,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         theChecksum += thePlayer->mAirTraffic[2]->GetChecksum();
         theChecksum += thePlayer->mAirTraffic[3]->GetChecksum();
     }
-    theChecksum += this->mCurrentTick + this->mRandom.GetSeed() + gU531CF0;
+    theChecksum += this->mCurrentTick + this->mRandom.GetSeed() + this->mInputMessagesProcessed;
     theChecksum += EECPOutOfSynchChecksum();   // new: the players' resources and the AI's state (ee/EECPTrace.h)
     if (inFlags & 4)
         theChecksum += gWorld.mMap->ComputeChecksum();
@@ -350,7 +348,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
     if (inFlags & 0x10)
         theChecksum += EECalamityManager::GetInstance()->GetOutOfSynchChecksum();
     TMGetTime();
-    gU531CF4 = theChecksum;
+    this->mLastOutOfSynchChecksum = theChecksum;
     return theChecksum;
 }
 
@@ -475,7 +473,7 @@ void EEPhysics::Init()
         this->mLoadSaveRequests[i]->Dereference();
     this->mLoadSaveRequests.clear();
     this->mSaveGameLock->Leave();
-    gU531CF0 = 0;
+    this->mInputMessagesProcessed = 0;
     this->SetSpeed(this->mSpeed);
 }
 
@@ -908,7 +906,7 @@ void EEPhysics::DrainInput()
             this->mServerMessages.pop_front();
             theInput->GetMessageLabel();
             if (theInput->GetForSpecificSlot() == kSlotNone)
-                gU531CF0++;
+                this->mInputMessagesProcessed++;
             switch (theInput->GetType()) {
             case kNetMessageRemovePlayer: {
                 NEMRemovePlayer* theRemove = static_cast<NEMRemovePlayer*>(theInput);

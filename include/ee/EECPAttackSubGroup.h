@@ -131,7 +131,7 @@ public:
     // +0x20 0x5bbc5 (`mov ecx, dword ptr [esp + 4]; call 0x465c2f`)
     virtual void DropTargetOf(EECPAttackSubGroupUnit* inUnit);
     virtual void SetOutOfFight(bool inIsOutOfFight);  // +0x24 0x5bbd1
-    virtual EETileLocation ComputeCenterPoint(long inMustBeInList);  // +0x28 0x5bc18 (hidden result: EEFn08282 of the units' tiles)
+    virtual EETileLocation ComputeCenterPoint(long inMustBeInList);  // +0x28 0x5bc18 (hidden result: EEComputeTileCenterPoint of the units' tiles)
     virtual bool RandomizeTaskLocation();   // +0x2c 0x5bcd0
     virtual void Shutdown();                // +0x30 0x5bd63
     virtual void CancelPath();              // +0x34 0x5be5a

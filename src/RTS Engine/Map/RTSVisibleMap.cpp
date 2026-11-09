@@ -54,7 +54,7 @@ const UString RTSVisibleMap::sNumTilesSaved("RTSVisibleMap-NumTilesSaved");
 // 0x52988c: written by RTSMap's ctor, read by EETile::Virtual14 (code xrefs 0x121522, 0x121e17). Placed here by the .bss layout: RTSTile's
 // .bss is 0x529850..0x529888 (three UStrings + guard, 8-aligned), this unit's statics run 0x529890..0x5298f8 in reverse
 // definition order, so 0x529888/0x52988c are this unit's last definitions (0x529888 has no reader) (provisional name)
-float gF52988C;
+float gMapTileSize;
 // SYNTHETIC: EXE 0x524a45   (wrapper)
 // SYNTHETIC: EXE 0x524a4f   (ctor)
 // SYNTHETIC: EXE 0x524a60   (registrar)

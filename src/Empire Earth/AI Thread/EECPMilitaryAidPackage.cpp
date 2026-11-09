@@ -172,7 +172,7 @@ void EECPMilitaryAidPackage::Gather()
 }
 // FUNCTION: EXE 0x485006
 // Puts the package in state 3
-void EECPMilitaryAidPackage::Fn85006()
+void EECPMilitaryAidPackage::EnterState3()
 {
     this->mState = 3;
 }
@@ -233,10 +233,10 @@ void EECPMilitaryAidPackage::SetState(long inState)
         this->Gather();
         break;
     case 2:
-        this->Fn8588A();
+        this->EnterState2();
         break;
     case 3:
-        this->Fn85006();
+        this->EnterState3();
         break;
     }
 }
@@ -259,10 +259,10 @@ unsigned long EECPMilitaryAidPackage::Update(unsigned long inTime)
                 theDelay = this->UpdateGathering(theTown);
                 break;
             case 2:
-                theDelay = this->Fn859D7(theTown);
+                theDelay = this->UpdateState2(theTown);
                 break;
             case 3:
-                theDelay = this->Fn85922(theTown);
+                theDelay = this->UpdateState3(theTown);
                 break;
             }
         } else {
@@ -493,7 +493,7 @@ long EECPMilitaryAidPackage::Save(unsigned long inMajorVersion, unsigned long in
 
 // FUNCTION: EXE 0x48588a
 // Puts the package in state 2
-void EECPMilitaryAidPackage::Fn8588A()
+void EECPMilitaryAidPackage::EnterState2()
 {
     this->mState = 2;
 }
@@ -522,7 +522,7 @@ unsigned long EECPMilitaryAidPackage::UpdateGathering(EETown* inTown)
 // FUNCTION: EXE 0x485922
 // State 3 update: reads the town's threat; recalls the package if it fell to the aid threshold, otherwise
 // gathers again; returns the next update delay
-unsigned long EECPMilitaryAidPackage::Fn85922(EETown* inTown)
+unsigned long EECPMilitaryAidPackage::UpdateState3(EETown* inTown)
 {
     EECPDefenseCommander* theCommander = this->mPlayer->mCombatManager->mDefenseCommander;
     long thePlayerID = 0;
@@ -556,7 +556,7 @@ unsigned long EECPMilitaryAidPackage::UpdateRecalled(EETown* inTown)
 // FUNCTION: EXE 0x4859d7
 // State 2 update: reads the town's threat; recalls the package if it fell to the aid threshold, otherwise
 // gathers again; returns the next update delay
-unsigned long EECPMilitaryAidPackage::Fn859D7(EETown* inTown)
+unsigned long EECPMilitaryAidPackage::UpdateState2(EETown* inTown)
 {
     EECPDefenseCommander* theCommander = this->mPlayer->mCombatManager->mDefenseCommander;
     long thePlayerID = 0;

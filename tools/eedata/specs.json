@@ -3973,7 +3973,7 @@
      "type": "s32",
      "count": 68,
      "cls": "named",
-     "comment": "+0x6c (scaled by kHeightEpsilon into gU4E8708's row)"
+     "comment": "+0x6c (scaled by kHeightEpsilon into gDamageTable's row)"
     }
    ],
    "defaults": {}

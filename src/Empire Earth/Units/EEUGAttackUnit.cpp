@@ -298,7 +298,7 @@ void EEUGAttackUnit::Step(EEComplexUnit* inUnit)
             if (theFrame == inUnit->mPhysicalModel.GetFrame())
                 inUnit->mUnitClass->FireShot(inUnit);
             else
-                inUnit->Fn1FEA22(inUnit->mStats->mReloadTime);
+                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
             inUnit->SetTargetSearchTimer(0);
             inUnit->DropPath();
             this->SetPathAttempts(0);
@@ -576,7 +576,7 @@ bool EEUGAttackUnit::Suits(EEUnit* inUnit)
         if (theKind >= 0) {
             EEUnitClass* theClass = this->mTarget->mUnitClass;
             long theTargetKind = theClass->mFamily;
-            if (theClass->CanBeAttacked() && gU4E8708[theTargetKind][theKind] > 0.0f)
+            if (theClass->CanBeAttacked() && gDamageTable[theTargetKind][theKind] > 0.0f)
                 theResult = true;
             else
                 theResult = false;

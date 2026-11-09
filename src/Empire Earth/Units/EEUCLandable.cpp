@@ -1275,7 +1275,7 @@ void EEUCLandable::Update(EEComplexUnit* inUnit)
             inUnit->SetOpacityChain(1.0f - thePosition.GetZ() * -0.16666667f);
         break;
     }
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
 }
 
 // FUNCTION: EXE 0x616c22

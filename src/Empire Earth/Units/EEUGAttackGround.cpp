@@ -122,7 +122,7 @@ void EEUGAttackGround::Step(EEComplexUnit* inUnit)
             if (theFrame == inUnit->mPhysicalModel.GetFrame())
                 inUnit->mUnitClass->FireShot(inUnit);
             else
-                inUnit->Fn1FEA22(inUnit->mStats->mReloadTime);
+                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
             inUnit->SetTargetSearchTimer(0);
             inUnit->DropPath();
             this->SetPathAttempts(0);

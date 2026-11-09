@@ -157,7 +157,7 @@ public:
     long mPowerRegeneration;                // +0x12c
     long mFlightTime;                       // +0x130
     long mWorkRate;                         // +0x134
-    long mReloadTime;                       // +0x138 (EEUGAttackGround::Step passes it to Fn1FEA22)
+    long mReloadTime;                       // +0x138 (EEUGAttackGround::Step passes it to SetRandomReloadTimer)
     long mMaxObjectCarry;                   // +0x13c
     long mRepairRate;                       // +0x140
     long mMaxHitPoints;                     // +0x144 provisional name (aircraft selection)
@@ -548,7 +548,7 @@ public:
     // EEUGAttackGround.cpp's callees (provisional names; types inferred)
     bool CanReachTile(long inTileX, long inTileY);  // 0x1ff18a (can the unit act on that tile)
     void SetAnimation(long inArg1, long inArg2, bool inIsAnimationPaused);  // 0x1fe02a
-    void Fn1FEA22(long inReloadTime);       // 0x1fea22
+    void SetRandomReloadTimer(long inReloadTime);       // 0x1fea22
     // inline setters (`if (m != v) m = v`; EEUGAttackGround::Step)
     void SetCurrentPhysicsAction(unsigned long inValue) { if (this->mCurrentPhysicsAction != inValue) this->mCurrentPhysicsAction = inValue; }
     // inline (EEUCPlanetSpaceship::ActionChanged 0x218e34, EEUCProjectile::ActionChanged 0x219388) (provisional name)
@@ -627,7 +627,7 @@ public:
     // 0x229314: a free tile near inUnit for this unit (EEMPathTo; returns a distance; provisional name)
 
     // 0xc7486 (EEMessage.cpp's range; EEActiveGroup::SpreadAroundUnit/SpreadAroundResource call it): stats +0xd8 > 0 and the table
-    // gU4E8708 [inClass +0x1c8][class +0x1cc] > 0 for a class whose MarkInvalid holds (can attack it) (provisional name)
+    // gDamageTable [inClass +0x1c8][class +0x1cc] > 0 for a class whose MarkInvalid holds (can attack it) (provisional name)
     bool CanAttackClass(EEUnitClass* inClass);
     EETown* FindNearestTown();              // 0x1fa856 (the owner's town (EEPlayer +0x7d0) nearest the unit that contains it: EEMPatrol, EECPUnitManager, EECPCombatManager) (provisional name)
     float DistanceSquaredToTileXY(long inTileX, long inTileY);  // 0x4211d (squared distance from the transformation (+0x13c/+0x14c) to a tile; EEPPatrolGroup::GetNearest; provisional name)
@@ -721,7 +721,7 @@ public:
     // provisional name)
     float DistanceSquared3D(const GE3DPoint& inPoint);
     void ClearTint();                       // 0x1fa979 (provisional name)
-    void Fn1FA98C();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
+    void UpdateFanaticismColor();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
     EEComplexUnit* FindWaypointMarker(long inArg1, long inArg2);  // 0x1f9c12 (provisional name)
     void RemoveWaypointMarker(long inX, long inY);        // 0x1fdc39 (provisional name)
     EEUnitGoal* RefreshGoals();             // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
@@ -789,7 +789,7 @@ public:
     void LinkPart(EEComplexUnit* inUnit);   // 0x1fe7d9: mPreviousPart = inUnit, which links back through its mAIKind (provisional name)
     // 0x1fed98: turns the unit to face (inX, inY) (inZ unread; ret 0xc) provisional name; types inferred
     void FaceToward(GE3DPoint inPoint);     // 0x1fed98 (point by value; ret12)
-    void SetReloadTimer(long inValue) { if (this->mReloadTimer != inValue) this->mReloadTimer = inValue; }  // inline (Fn1FEA22) (provisional name)
+    void SetReloadTimer(long inValue) { if (this->mReloadTimer != inValue) this->mReloadTimer = inValue; }  // inline (SetRandomReloadTimer) (provisional name)
     // inline setters (EEUnitClass::UnitCreated 0x23511e) (provisional name)
     void SetHealSearchTimer(float inValue) { if (this->mHealSearchTimer != inValue) this->mHealSearchTimer = inValue; }
     void SetLastHitPoints(long inValue) { if (this->mLastHitPoints != inValue) this->mLastHitPoints = inValue; }
@@ -1297,7 +1297,7 @@ public:
     void LaunchStoredMissile(EEComplexUnit* inUnit);  // 0x20e50c (in EEUCBomb.cpp's range; FireShot: the carrier drops its first bomb) (provisional name)
     void LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo);  // 0x2340a7 (LaunchStoredMissile) (provisional name)
     void FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame);  // 0x2386cf (the spaceship's attack commands)
-    void Fn157269(EEComplexUnit* inUnit);   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
+    void UpdateDone(EEComplexUnit* inUnit);   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
     // 0x23525a: moves inUnit from inFrom towards inTo (EEUCPlanetSpaceship::ActionChanged's landing) (provisional name)
     void PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint& inTo, bool inSnapToMap);
     // +0x78..+0xdc: arguments by `ret N` (inferred types)

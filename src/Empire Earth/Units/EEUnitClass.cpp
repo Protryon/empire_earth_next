@@ -160,15 +160,15 @@ static float sCloakFadeRate = 1.0f / kCloakFadeTime;  // 0x5636a8: the cloak fad
 
 // SYNTHETIC: EXE 0x62f286
 // SYNTHETIC: EXE 0x62f28b
-static float gF5636A4 = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
+static float sCloakFadeOpacityRange = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
 
 // SYNTHETIC: EXE 0x62f29e
 // SYNTHETIC: EXE 0x62f2a3
-static float gF5636A0 = k447ADC * 0.5f;          // 0x5636a0 (provisional name)
+static float sUnusedHalfInverseSqrt6 = k447ADC * 0.5f;          // 0x5636a0 (provisional name)
 
 // SYNTHETIC: EXE 0x62f2b6
 // SYNTHETIC: EXE 0x62f2bb
-static float gF56369C = k447ADC * 4.0f;          // 0x56369c (provisional name)
+static float sUnusedFourInverseSqrt6 = k447ADC * 4.0f;          // 0x56369c (provisional name)
 
 // the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
 // (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
@@ -1029,9 +1029,9 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
         return;
     }
     if (inUnit->mReloadTimer == 0)
-        inUnit->Fn1FEA22(inUnit->mStats->mReloadTime);
+        inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
     if (inUnit->mStats->mCanFireOverWalls && inUnit->mIsFiringHigh)
-        inUnit->Fn1FEA22(UMFloatToLong(inUnit->mReloadTimer * 1.5f));
+        inUnit->SetRandomReloadTimer(UMFloatToLong(inUnit->mReloadTimer * 1.5f));
     EEUnit* theTarget;
     EEFindDropLocation(inUnit, &theTarget, &thePoint, NULL);
     if (this->mProjectileClass == NULL) {
@@ -4543,7 +4543,7 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
         break;
     }
     }
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
 }
 
 // FUNCTION: EXE 0x63978b
@@ -4606,12 +4606,12 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
     if (!theCloaked) {
         if (theOpacity < kCloakFadeMaxOpacity)
-            theOpacity = gPhysics->GetTickTime() * gF5636A4 * sCloakFadeRate + theOpacity;
+            theOpacity = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOpacity;
         if (theOpacity > kCloakFadeMaxOpacity)
             theOpacity = kCloakFadeMaxOpacity;
     } else {
         if (theOpacity > kCloakFadeMinOpacity)
-            theOpacity = theOpacity - gPhysics->GetTickTime() * gF5636A4 * sCloakFadeRate;
+            theOpacity = theOpacity - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
         if (theOpacity < kCloakFadeMinOpacity)
             theOpacity = kCloakFadeMinOpacity;
     }
@@ -4837,7 +4837,7 @@ bool EEUnitClass::FliesOver()
 
 // ICF-FOLDED: EXE 0x557269
 // (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
-void EEUnitClass::Fn157269(class EEComplexUnit *)
+void EEUnitClass::UpdateDone(class EEComplexUnit *)
 {
 }
 

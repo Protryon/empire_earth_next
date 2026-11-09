@@ -675,7 +675,7 @@ void EECPDefenseCommander::BuildUp()
         for (it = theClasses.begin(); it != theClasses.end(); ++it)
             theAll.insert(theAll.end(), (*it).second->begin(), (*it).second->end());
         if (theAll.size() > 0) {
-            long theClass = theAll[gPhysics->Fn82D66(theAll)];
+            long theClass = theAll[gPhysics->GetRandomElementIndex(theAll)];
             long theCount = this->GetUnitAllowance();
             if (theCount >= 20)
                 theCount = 20;

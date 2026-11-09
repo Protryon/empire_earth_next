@@ -300,7 +300,7 @@ void EEUCBuildingPriest::PriestVirtualB8(EEComplexUnit* inUnit)
     }
     if (inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
     this->RegeneratePower(inUnit);
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:

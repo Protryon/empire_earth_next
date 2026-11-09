@@ -563,7 +563,7 @@ EEPlayer* EECPIntelligence::GetRandomEnemy(EEPlayer* inPlayer)
         thePlayer = NULL;
     }
     if (theCandidates.size() > 0)
-        thePlayer = theCandidates[gPhysics->Fn82D66(theCandidates)];
+        thePlayer = theCandidates[gPhysics->GetRandomElementIndex(theCandidates)];
     if (thePlayer == NULL)
         thePlayer = gWorld.mPlayers[0];
     return thePlayer;

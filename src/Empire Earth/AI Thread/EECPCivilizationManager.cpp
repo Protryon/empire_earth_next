@@ -1385,7 +1385,7 @@ void EECPCivilizationManager::ChooseGarrison()
     }
     if (theCandidates.size() <= 0)
         return;
-    EEComplexUnit* theCenter = theCandidates[gPhysics->Fn82D66(theCandidates)];
+    EEComplexUnit* theCenter = theCandidates[gPhysics->GetRandomElementIndex(theCandidates)];
     if (theCenter == NULL)
         return;
     unsigned long theRoom = theCenter->mUnitClass->mGarrisonCapacity - theCenter->mGarrisonCount;
@@ -1422,7 +1422,7 @@ void EECPCivilizationManager::ChooseFortress()
     }
     if (theCandidates.size() <= 0)
         return;
-    EEComplexUnit* theCenter = theCandidates[gPhysics->Fn82D66(theCandidates)];
+    EEComplexUnit* theCenter = theCandidates[gPhysics->GetRandomElementIndex(theCandidates)];
     if (theCenter == NULL)
         return;
     unsigned long theRoom = theCenter->mUnitClass->mGarrisonCapacity - theCenter->mGarrisonCount;

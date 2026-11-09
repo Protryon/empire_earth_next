@@ -202,7 +202,7 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
         theStats->mConversionRate <= 0.0f || (inTarget->mIsDisabled && !inTarget->IsProtected()))
         return theResult;
     if ((theTargetStats->mConversionResistance < 1.0f || (theClass->mUnitType == kUnitTypeTownCenter && thePower)) && inTarget->mHitPoints > 0 &&
-        theClass->CanBeAttacked() && gU4E8708[theClass->mFamily][inPriest->mUnitClass->mAmmoType] != 0.0f &&
+        theClass->CanBeAttacked() && gDamageTable[theClass->mFamily][inPriest->mUnitClass->mAmmoType] != 0.0f &&
         (theClass->mCategory != inPriest->mUnitClass->mCategory || theStats->mConvertsPriests) && inPriest->GetPower() >= theCost &&
         (inPriest->mUnitClass->mCategory != kUnitCategoryBuildingPriest || theClass->mCategory != kUnitCategoryLandPriest || theStats->mConvertsPriests))
         theResult = true;
@@ -326,7 +326,7 @@ void EEUCBasicPriest::Update(EEComplexUnit* inUnit)
     }
     if (inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);
-    this->Fn157269(inUnit);
+    this->UpdateDone(inUnit);
     this->RegeneratePower(inUnit);
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:
