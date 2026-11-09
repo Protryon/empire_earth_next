@@ -102,6 +102,9 @@ function M.step(view, memory, plan, orders, opts)
         if opts ~= nil and opts.reserve ~= nil then
             reserve[r] = reserve[r] + (opts.reserve[r] or 0)
         end
+        if opts ~= nil and opts.reserve_less ~= nil then
+            reserve[r] = math.max(reserve[r] - (opts.reserve_less[r] or 0), 0)   -- the army short of its floor comes first
+        end
         differs = differs or reserve[r] ~= view.reserve[r]
     end
     if differs then

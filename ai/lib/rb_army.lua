@@ -15,6 +15,7 @@
 --   home_keep               soldiers a wave leaves at home (default 0)
 --   raid_size, raid_every   a raid's soldiers, and the least time between raids (nil: no raids)
 --   raid_ok(view, memory, e)  whether a raid may go now (default: always)
+--   raid_reserve            a raid leaves at least this many soldiers in the home guard (default 6): only a surplus raids
 --   retreat_ratio           a group out retreats when the seen enemy near it is this many times stronger (x100)
 --   recall_ratio            the groups out come home when the threat at the town is this many times the home guard
 --   punish_epoch            a wave when the target reaches a new epoch (its resources went into the advance)
@@ -66,6 +67,24 @@ local function train(view, memory, cfg, order, eco)
             end
         end
     end
+end
+
+-- what the soldiers missing up to half the army wanted cost (the economy leaves it out of the epoch's reserve: the army
+-- floor comes before the advance)
+function M.floor_cost(view, memory, cfg)
+    local missing = cfg.army(view, memory) // 2 - view.army_count - A.coming(view)
+    local less = {}
+    local best = nil
+    for _, producer in ipairs(cfg.producers[E.age(view)] or {}) do
+        local b = V.buildings(view, producer)
+        if best == nil and b ~= nil and b.finished > 0 then
+            best = A.classes_of(view, producer)[1]
+        end
+    end
+    for _, r in ipairs(V.resources) do
+        less[r] = (missing > 0 and best ~= nil) and best.cost[r] * missing or 0
+    end
+    return less
 end
 
 local function far(view, g)
@@ -121,8 +140,9 @@ function M.step(view, memory, cfg, orders, eco)
     if scout ~= nil and scout.state == "done" then
         order({verb = "disband", group = scout.id})
     end
-    local stale = target == nil or now - target.last_seen > (cfg.rescout_ms or 600000)
-    if scout == nil and now >= (cfg.scout_at or 120000) and stale and now - (mem.scout_time or -1000000) >= 120000 then
+    local stale = target == nil or target.town_x < 0 or now - target.last_seen > (cfg.rescout_ms or 600000)
+    if scout == nil and now >= (cfg.scout_at or 120000) and stale
+            and now - (mem.scout_time or -1000000) >= ((target == nil or target.town_x < 0) and 30000 or 120000) then
         if view.free_soldiers > 0 then
             order({verb = "scout", n = 1})
             A.track(memory, orders, "scout")
@@ -180,13 +200,20 @@ function M.step(view, memory, cfg, orders, eco)
     local ready = home.units + view.free_soldiers
 
     -- a wave at the target's town: not while the town itself is threatened
-    if target ~= nil and target.town_x >= 0 and threat == 0 then
+    if target ~= nil and (target.town_x >= 0 or target.citizen_x >= 0) and threat == 0 then
         if main == nil then
             local need = cfg.wave(view, memory, target)
+            if need ~= nil and need <= target.seen_army then
+                need = target.seen_army + 1   -- never a wave smaller than the army seen there
+            end
             local punish = mem.punish ~= nil and now - mem.punish < 120000
             local keep = cfg.home_keep or 0
             if ((need ~= nil and ready >= need) or (punish and ready >= 4 + keep)) and ready > keep then
-                order({verb = "attack", n = ready - keep, from = home.id, player = target.player})
+                local wave = {verb = "attack", n = ready - keep, from = home.id, player = target.player}
+                if target.town_x < 0 then
+                    wave.x, wave.y = target.citizen_x, target.citizen_y   -- (its town not seen yet: its gatherers)
+                end
+                order(wave)
                 A.track(memory, orders, "main")
                 mem.waves = (mem.waves or 0) + 1
                 mem.punish = nil
@@ -203,7 +230,8 @@ function M.step(view, memory, cfg, orders, eco)
     -- raids on the target's gatherers
     if cfg.raid_size ~= nil and target ~= nil and raid == nil and target.citizen_x >= 0 and threat == 0
             and now - (mem.raid_time or -10000000) >= (cfg.raid_every or 300000)
-            and (cfg.raid_ok == nil or cfg.raid_ok(view, memory, target)) and ready >= cfg.raid_size then
+            and (cfg.raid_ok == nil or cfg.raid_ok(view, memory, target))
+            and ready - cfg.raid_size >= math.max(cfg.raid_reserve or 6, cfg.home_keep or 0) then   -- (only a surplus raids)
         order({verb = "raid", n = cfg.raid_size, from = home.id, player = target.player})
         A.track(memory, orders, "raid")
         mem.raid_time = now
