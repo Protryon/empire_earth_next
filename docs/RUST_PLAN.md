@@ -493,21 +493,19 @@ Pre-work, whichever way D8 goes:
 - **D4. Window and font backends in R1:** keep SDL3 (proven on three systems) or move to winit. Proposed: keep
   SDL3 through `sdl3-sys` until R7.
 - **D5. Renderer in R4:** a faithful port of the DX7 plug-in, or a redesign from the GX contract.
-- **D6. Text encoding:** UTF-8 everywhere is easiest in Rust, but it is a game change (CJK, fonts, saved names).
-  Decide before R6.
+- **D6. Text encoding: decided (owner, 2026-11-09): UTF-8 all the way.** Game text becomes UTF-8 in memory, in
+  files and in saves; Windows-1252 survives only as an import conversion for old inputs. It is a game change, done as
+  its own track, not mixed into a port: the data converters write UTF-8, `UString` holds UTF-8, PlatFont and the
+  text layout work in code points, saves get a version gate (older saves converted on load), and WON's UTF-16 wire
+  strings convert at the wire. Until that track lands, ported Rust keeps game text as bytes behind one text module,
+  so that the switch is a change in one place.
 - **D7. Lockstep across systems:** with `-ffp-contract` unset, arm64 may already disagree with x86-64. Decide
   whether cross-system multiplayer is a goal; if so, set `-ffp-contract=off` now and add a Mac-vs-Windows sim trace
   comparison.
-- **D8. The WON lobby.** Its online services no longer exist, so what still works is LAN and Direct Connect, and
-  neither has been tested as a full game through it. Options:
-  - (a) port all 131k faithfully;
-  - (b) strip the online services in C++ first, then port what LAN and Direct Connect use;
-  - (c) keep the C++ until R6, then replace it with a small Rust lobby (LAN and Direct Connect only) on the game's
-    own UI toolkit, which also retires WONGUI, its crypto and its second text model. No retail compatibility holds
-    this back.
-
-  Proposed: (c), once the two-instance test (R6 pre-work) exists to gate it. (b) would pay sooner but costs merge
-  conflicts on every upstream sync of WON's sources, so stripping waits until upstream sync no longer matters.
+- **D8. The WON lobby: decided (owner, 2026-11-09): port all of it for now (option a), except the HTML rendering**
+  (the WONLobbyHTML* segments and parsers, HTMLParser2, ~6k lines), which is not ported: where the lobby shows HTML
+  (news, help, messages) it shows plain text instead. The online services are ported with the rest even though their
+  servers are gone.
 
 ## 7. First steps
 
