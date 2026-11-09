@@ -9,7 +9,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyHTMLDisplayGen.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 namespace WONAPI {
@@ -25,7 +24,6 @@ void LobbyContainer::InitComponent(ComponentInit& inInit)
 {
     if(inInit.mType!=2) return;
     ComponentConfig* config=static_cast<ComponentConfigInit&>(inInit).mConfig;
-    HTMLDisplayGen::SetGlobalDefaultFontFace(this->GetDefaultFont()->mDescriptor.mFace);
     SafeGetComponent(config,this->mLoginScreen,"LoginScreen",__FILE__,37);
     SafeGetComponent(config,this->mInternetScreen,"InternetScreen",__FILE__,38);
     SafeGetComponent(config,this->mLanScreen,"LanScreen",__FILE__,39);

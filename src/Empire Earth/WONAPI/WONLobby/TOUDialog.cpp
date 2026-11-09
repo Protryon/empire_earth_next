@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "ee/wonapi/WONLobbyTextAreaConfig.h"
 namespace WONAPI {
 
 TOUDialog::TOUDialog() : mNeedGenHTML(false) {}
@@ -39,11 +40,8 @@ void TOUDialog::Reset()
 {
     if(this->mNeedGenHTML) {
         this->mNeedGenHTML=false;
-        HTMLDocumentGen aGenerator(NULL);
-        aGenerator.AddDocParam(GUIString(LobbyGetSysTOUPath()),6);
-        aGenerator.AddDocParam(GUIString(LobbyGetGameTOUPath()),6);
-        aGenerator.printf(GUIString(new GUIStringData("<body>%1%<br><br>%2%</body>")));
-        this->mBrowser->Go(aGenerator.GetDocument());
+        // as text (WON's HTML rendering is not ported)
+        this->mBrowser->ShowFiles(LobbyGetSysTOUPath(),LobbyGetGameTOUPath(),false);
     }
     this->mBrowser->GetHTMLView()->SetOffsets(0,0);
     this->mAgreeCheck->SetCheck(false,false);

@@ -733,6 +733,25 @@ pub unsafe extern "C" fn ee_won_auth_cert2_user_data(
     }
 }
 
+// ---- the lobby's pages as plain text
+
+/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
+/// character) as UTF-16 units to the sink.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_page_text(
+    data: *const u8,
+    length: usize,
+    skip_first_if_text: bool,
+    sink: EeWonUnitSink,
+    context: *mut c_void,
+) {
+    let page = crate::plaintext::page_text(unsafe { bytes(data, length) }, skip_first_if_text);
+    unsafe { give_units(sink, context, &text::from_utf8(&page)) }
+}
+
 // ---- CD keys
 
 unsafe fn raw8(raw: *const u8) -> [u8; 8] {
@@ -1035,6 +1054,14 @@ mod tests {
             ee_won_elgamal_free(std::ptr::null_mut());
             ee_won_auth_free(std::ptr::null_mut());
         }
+    }
+
+    #[test]
+    fn page_text_call() {
+        let mut u = Vec::<u16>::new();
+        let page = b"<p>Hi &amp; \x93bye\x94</p>";
+        unsafe { ee_won_page_text(page.as_ptr(), page.len(), true, collect_units, (&mut u as *mut Vec<u16>).cast()) };
+        assert_eq!(text::to_display(&u), "Hi & \u{201c}bye\u{201d}");
     }
 
     #[test]

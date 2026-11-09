@@ -48,28 +48,10 @@ WrappedText::WrappedText()
 ///////////////////////////////////////////////////////////////////////////////
 // FUNCTION: WON 0x0074a9b0
 // Recomputes the line breaks and the text's width and height for the font and maximum width
-// (rich text without wrapping grows its maximum width by 10 on every call)
 void WrappedText::CalcWrap()
 {
 	if(this->mFont.get()==NULL)
 		return;
-
-	if(this->mRichText.get()!=NULL)
-	{
-		if(this->mWrap)
-		{
-			if(this->mMaxWidth==0)
-				return;
-
-			this->mRichText->SetMaxWidth(this->mMaxWidth);
-		}
-		else
-			this->mRichText->SetMaxWidth(this->mRichText->GetMaxWidth()+10);
-
-		this->mWidth = this->mRichText->GetWidth();
-		this->mHeight = this->mRichText->GetHeight();
-		return;
-	}
 
 	if(!this->mWrap)
 	{
@@ -215,7 +197,7 @@ void WrappedText::SetMaxWidth(int theMaxWidth)
 	if(!this->mWrap)
 		return;
 
-	bool needCalc = this->mRichText.get() || anOldMax==0 || !this->mBreakList.empty() || this->mMaxWidth<anOldMax;
+	bool needCalc = anOldMax==0 || !this->mBreakList.empty() || this->mMaxWidth<anOldMax;
 	if(needCalc)
 		this->CalcWrap();
 }
@@ -223,21 +205,9 @@ void WrappedText::SetMaxWidth(int theMaxWidth)
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // FUNCTION: WON 0x0074adf0
-// Draws the rich text, or each wrapped line of plain text (centred if set) from the given top-left point
+// Draws each wrapped line of the text (centred if set) from the given top-left point
 void WrappedText::Paint(Graphics &g, int x, int y)
 {
-	if(this->mRichText.get()!=NULL)
-	{
-		ElementPaintInfo anInfo;
-		anInfo.mClipX = x;
-		anInfo.mClipY = y;
-		anInfo.mClipWidth = this->GetWidth();
-		anInfo.mClipHeight = this->mHeight==0 ? this->mFont->GetHeight() : this->mHeight;
-		anInfo.mStartSelSegment = anInfo.mEndSelSegment = -1;
-		this->mRichText->Paint(g,x,y,anInfo);
-		return;
-	}
-
 	if(this->mFont.get()==NULL)
 		return;
 

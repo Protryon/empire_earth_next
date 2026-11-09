@@ -2624,6 +2624,17 @@ bool ee_won_auth_cert2_user_data(const EeWonAuth *block,
                                  EeWonByteSink sink,
                                  void *context);
 
+/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
+/// character) as UTF-16 units to the sink.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+void ee_won_page_text(const uint8_t *data,
+                      size_t length,
+                      bool skip_first_if_text,
+                      EeWonUnitSink sink,
+                      void *context);
+
 /// `CalcKeyFromBuffer`'s test of 8 raw bytes for a product.
 ///
 /// # Safety

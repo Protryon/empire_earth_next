@@ -1,4 +1,4 @@
-// Constructors of text segments and table elements, and the text line destructor
+// The text segment constructor and the text line destructor
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,8 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbyLineLayout.h"
-#include "ee/wonapi/WONLobbyTableElement.h"
 namespace WONAPI {
 // TextSegmentBase() and TextLine() live in TextAreaInstructions.cpp / TextAreaLines.cpp (the original object
 // defines them before TextArea's `new` sites).
@@ -22,18 +20,6 @@ TextSegment::TextSegment()
     this->mColor=0;
 }
 
-// Creates an empty table with 2-pixel cell spacing, 1-pixel padding, no border and no background colour
-// (emitted at 0x0070d7f0)
-TableElement::TableElement()
-{
-    this->mCurCell=NULL;
-    this->mCellSpacing=2;
-    this->mCellPadding=1;
-    this->mBorder=0;
-    this->mBGColor=-1;
-    this->mMinWidth=this->mMaxWidth=0;
-    this->mWidthSpec=0;
-}
 }
 
 namespace WONAPI {

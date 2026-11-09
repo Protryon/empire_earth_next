@@ -18,16 +18,14 @@ MOTDCtrl::MOTDCtrl() : mNeedGenHTML(false) {}
 // Destroys the MOTD control, releasing both MOTD paths and the browser
 MOTDCtrl::~MOTDCtrl() {}
 // FUNCTION: WON 0x007c0cd0
-// Finds the MOTD browser in the layout, makes its links open the web browser and listens to broadcasts
+// Finds the MOTD page view in the layout and listens to broadcasts
 void MOTDCtrl::InitComponent(ComponentInit& inInit)
 {
     if(inInit.mType!=2)
         return;
     SafeGetComponent(static_cast<ComponentConfigInit&>(inInit).mConfig,this->mBrowser,"Browser",__FILE__,36);
-    this->mBrowser->SetLaunchBrowserOnLink(true);
     this->SubscribeToBroadcast(1);
 }
-// The document parameter flags (14) are a full int
 // FUNCTION: WON 0x007c0d20
 // Builds and shows the MOTD page (system MOTD, then game MOTD) once both documents have arrived
 void MOTDCtrl::Paint(Graphics& inGraphics)
@@ -35,13 +33,10 @@ void MOTDCtrl::Paint(Graphics& inGraphics)
     if(this->mNeedGenHTML) {
         this->mNeedGenHTML=false;
         if(!this->mSysMOTDPath.empty() && !this->mGameMOTDPath.empty()) {
-            HTMLDocumentGen generator(NULL);
-            generator.AddDocParam(GUIString(this->mSysMOTDPath),14);
-            generator.AddDocParam(GUIString(this->mGameMOTDPath),14);
+            // as text (WON's HTML rendering is not ported); a text MOTD's first character is its "is new" flag
+            this->mBrowser->ShowFiles(this->mSysMOTDPath,this->mGameMOTDPath,true);
             this->mSysMOTDPath.erase();
             this->mGameMOTDPath.erase();
-            generator.printf(GUIString("<body>%1%<br><br>%2%</body>"));
-            this->mBrowser->Go(generator.GetDocument());
         }
     }
     Container::Paint(inGraphics);
