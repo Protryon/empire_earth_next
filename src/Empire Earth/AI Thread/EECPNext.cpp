@@ -74,13 +74,15 @@ const char* EECPNextReasonName(long inReason)
     case kNextReasonNoUnits: return "no_units";
     case kNextReasonRequirements: return "requirements";
     case kNextReasonBusy: return "busy";
+    case kNextReasonNoTarget: return "no_target";
     default: return "-";
     }
 }
 
 EECPNextState::EECPNextState()
     : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mEpoch(-1), mEpochStart(0),
-      mNextRepairTime(0), mIncomeSteps(0), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0), mShadow(NULL)
+      mNextRepairTime(0), mIncomeSteps(0), mNextGroup(1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
+      mShadow(NULL)
 {
     memset(this->mReserve, 0, sizeof(this->mReserve));
     memset(this->mIncomeTotal, 0, sizeof(this->mIncomeTotal));
@@ -89,7 +91,8 @@ EECPNextState::EECPNextState()
     memset(this->mSeenStrength, 0, sizeof(this->mSeenStrength));
     memset(this->mLastSeen, 0, sizeof(this->mLastSeen));
     for (long i = 0; i < 64; i++)
-        this->mSeenTownX[i] = this->mSeenTownY[i] = -1;
+        this->mSeenTownX[i] = this->mSeenTownY[i] = this->mArmyX[i] = this->mArmyY[i] = -1;
+    memset(this->mSeenCitizens, 0, sizeof(this->mSeenCitizens));
     memset(&this->mTest, 0, sizeof(this->mTest));
 }
 
@@ -233,6 +236,10 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
     if (inPlayer->mCombatManager != NULL) {
         EECPTraceScope theScope("combat");
         inPlayer->mCombatManager->mAttackCommander->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("next");
+        EECPNextArmyStep(inPlayer);   // the next engine's groups (EECPNextArmy.cpp)
     }
     // one strategy step on a fresh view
     EECPTraceScope theScope("next");
