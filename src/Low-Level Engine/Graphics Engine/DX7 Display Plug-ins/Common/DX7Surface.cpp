@@ -13,6 +13,29 @@
 #include "dx7/DX7Surface.h"
 #include "rust/ee_rust.h"
 
+// The surface algorithms are in Rust (rust/crates/ee_dx7/src/surface.rs); this class keeps the fields (the harness reads
+// mSurface), the attached-surface vector and the reference counts. Each method forwards to its ee_dx7s_* function.
+
+// The logical-size members and pixel size Rust converts a rectangle with
+static EeDx7LogicalMetrics DX7Metrics(const GESurface* inSurface)
+{
+    EeDx7LogicalMetrics theMetrics;
+    theMetrics.logical_width = inSurface->GetLogicalWidthSet();
+    theMetrics.logical_height = inSurface->GetLogicalHeightSet();
+    theMetrics.pixel_width = inSurface->GetPixelWidth();
+    theMetrics.pixel_height = inSurface->GetPixelHeight();
+    theMetrics.logical_shift = inSurface->GetLogicalShift();
+    return theMetrics;
+}
+
+static void DX7RectFloats(const GERectangle& inRectangle, float outRect[4])
+{
+    outRect[0] = inRectangle.GetLeft();
+    outRect[1] = inRectangle.GetTop();
+    outRect[2] = inRectangle.GetRight();
+    outRect[3] = inRectangle.GetBottom();
+}
+
 // FUNCTION: DX7HR 0x1000eced
 // Wraps a DirectDraw surface with its description and parent screen, unlocked and with no attachments
 DX7Surface::DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescription,
@@ -40,15 +63,11 @@ DX7Surface::~DX7Surface()
 // Attaches another surface (e.g. a Z buffer) and keeps a reference to it; native error on failure
 long DX7Surface::AttachSurface(GESurface* inSurface)
 {
-    long theResult = kErrorOK;
     DX7Surface* theSurface = static_cast<DX7Surface*>(inSurface);
-    HRESULT theError = this->mSurface->AddAttachedSurface(theSurface->mSurface);
-    if (theError == GX_OK) {
+    long theResult = ee_dx7s_attach(this->mSurface, theSurface->mSurface);
+    if (theResult == kErrorOK) {
         theSurface->Reference();
         this->mAttachedSurfaces.push_back(theSurface);
-    } else {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
     }
     return theResult;
 }
@@ -57,74 +76,17 @@ long DX7Surface::AttachSurface(GESurface* inSurface)
 // Fills the whole surface with a colour and alpha, retrying while the blitter is busy; 0xd when the surface is lost
 long DX7Surface::Clear(GEColor& inColor, float inAlpha)
 {
-    long theResult = kErrorOK;
-    GXBLTFX theEffects;
-    memset(&theEffects, 0, sizeof(theEffects));
-    theEffects.dwSize = sizeof(theEffects);
-    theEffects.dwFillColor = GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha);
-    HRESULT theError;
-    do {
-        theError = this->mSurface->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theEffects);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST)
-            theResult = 0xd;
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
-}
-
-// port: a logical rectangle (GESurface::GetLogicalShift, SetLogicalSize) -> the surface's pixels
-static GERectangle DX7PixelRectangle(const GERectangle& inRectangle, const GESurface* inSurface)
-{
-    if (inSurface != NULL && inSurface->GetLogicalWidthSet() != 0 && inSurface->GetLogicalHeightSet() != 0) {
-        float theX = (float)inSurface->GetPixelWidth() / (float)inSurface->GetLogicalWidthSet();
-        float theY = (float)inSurface->GetPixelHeight() / (float)inSurface->GetLogicalHeightSet();
-        return GERectangle(inRectangle.GetLeft() * theX, inRectangle.GetTop() * theY, inRectangle.GetRight() * theX,
-                           inRectangle.GetBottom() * theY);
-    }
-    if (inSurface == NULL || inSurface->GetLogicalShift() == 0)
-        return inRectangle;
-    float theScale = (float)(1u << inSurface->GetLogicalShift());
-    return GERectangle(inRectangle.GetLeft() * theScale, inRectangle.GetTop() * theScale,
-                       inRectangle.GetRight() * theScale, inRectangle.GetBottom() * theScale);
+    return ee_dx7s_clear(this->mSurface, GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha));
 }
 
 // FUNCTION: DX7HR 0x1000ee8c
 // Fills a rectangle of the surface with a colour and alpha, retrying while the blitter is busy; 0xd when lost
 long DX7Surface::Clear(GERectangle& inLogicalRectangle, GEColor& inColor, float inAlpha)
 {
-    long theResult = kErrorOK;
-    GERectangle inRectangle = DX7PixelRectangle(inLogicalRectangle, this);   // port
-    RECT theRect;
-    theRect.left = (long)inRectangle.GetLeft();
-    theRect.right = (long)inRectangle.GetRight();
-    theRect.top = (long)inRectangle.GetTop();
-    theRect.bottom = (long)inRectangle.GetBottom();
-    GXBLTFX theEffects;
-    memset(&theEffects, 0, sizeof(theEffects));
-    theEffects.dwSize = sizeof(theEffects);
-    theEffects.dwFillColor = GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha);
-    HRESULT theError;
-    do {
-        theError = this->mSurface->Blt(&theRect, NULL, NULL, GXBLT_COLORFILL, &theEffects);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST)
-            theResult = 0xd;
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+    float theRect[4];
+    DX7RectFloats(inLogicalRectangle, theRect);
+    EeDx7LogicalMetrics theMetrics = DX7Metrics(this);
+    return ee_dx7s_clear_rect(this->mSurface, theRect, &theMetrics, GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha));
 }
 
 // FUNCTION: DX7HR 0x1000ef4b
@@ -132,36 +94,14 @@ long DX7Surface::Clear(GERectangle& inLogicalRectangle, GEColor& inColor, float 
 long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inLogicalSource, GERectangle& inLogicalDestination,
                         bool inTransparent)
 {
-    long theResult = kErrorOK;
-    // port: logical rectangles -> each surface's pixels (a texture pack's surface is stretched onto a plain one)
-    GERectangle inSource = DX7PixelRectangle(inLogicalSource, this);
-    GERectangle inDestination = DX7PixelRectangle(inLogicalDestination, inTarget);
-    RECT theSource;
-    theSource.left = (long)inSource.GetLeft();
-    theSource.right = (long)inSource.GetRight();
-    theSource.top = (long)inSource.GetTop();
-    theSource.bottom = (long)inSource.GetBottom();
-    RECT theDestination;
-    theDestination.left = (long)inDestination.GetLeft();
-    theDestination.right = (long)inDestination.GetRight();
-    theDestination.top = (long)inDestination.GetTop();
-    theDestination.bottom = (long)inDestination.GetBottom();
-    unsigned long theFlags = inTransparent ? GXBLT_DONOTWAIT | GXBLT_KEYSRC : GXBLT_DONOTWAIT;
-    HRESULT theError;
-    do {
-        theError = static_cast<DX7Surface*>(inTarget)->mSurface->Blt(&theDestination, this->mSurface, &theSource, theFlags, NULL);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST || theError == GXERR_SURFACEBUSY)
-            theResult = 0xd;
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+    float theSource[4];
+    float theDestination[4];
+    DX7RectFloats(inLogicalSource, theSource);
+    DX7RectFloats(inLogicalDestination, theDestination);
+    EeDx7LogicalMetrics theSourceMetrics = DX7Metrics(this);
+    EeDx7LogicalMetrics theTargetMetrics = DX7Metrics(inTarget);
+    return ee_dx7s_copy_to(this->mSurface, static_cast<DX7Surface*>(inTarget)->mSurface, theSource, &theSourceMetrics,
+                           theDestination, &theTargetMetrics, inTransparent);
 }
 
 // FUNCTION: DX7HR 0x1000f01d
@@ -169,8 +109,16 @@ long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inLogicalSource, GERec
 long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inLogicalSource, GERectangle& inLogicalDestination)
 {
     // port: logical rectangles -> each surface's pixels
-    GERectangle inSource = DX7PixelRectangle(inLogicalSource, this);
-    GERectangle inDestination = DX7PixelRectangle(inLogicalDestination, inTarget);
+    float theLogical[4];
+    float thePixels[4];
+    DX7RectFloats(inLogicalSource, theLogical);
+    EeDx7LogicalMetrics theMetrics = DX7Metrics(this);
+    ee_dx7s_pixel_rect(theLogical, &theMetrics, thePixels);
+    GERectangle inSource(thePixels[0], thePixels[1], thePixels[2], thePixels[3]);
+    DX7RectFloats(inLogicalDestination, theLogical);
+    theMetrics = DX7Metrics(inTarget);
+    ee_dx7s_pixel_rect(theLogical, &theMetrics, thePixels);
+    GERectangle inDestination(thePixels[0], thePixels[1], thePixels[2], thePixels[3]);
     if (this->mDescription.mPixelDepth == 32)
         return this->Copy32BitWithFilter(static_cast<DX7Surface*>(inTarget), inSource, inDestination);
     return this->Copy16BitWithFilter(static_cast<DX7Surface*>(inTarget), inSource, inDestination);
@@ -179,8 +127,6 @@ long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inLogicalSourc
 // FUNCTION: DX7HR 0x1000f03f
 // Copies a rectangle to the target with bilinear scaling, 16-bit pixels; returns this surface's Unlock result,
 // so a failed target lock is not reported
-// Pixels go through GEUnpack*/GEPackColor. NEAR: the remaining differences are -G6 scheduling only (the pushes of the
-// forward-substituted GEUnpackAlpha calls, the destination pointer step at the loop end).
 long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
     long theResult = this->Lock();
@@ -202,7 +148,6 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
 
 // FUNCTION: DX7HR 0x1000f4d0
 // Copies a rectangle to the target with bilinear scaling, 32-bit pixels (as the 16-bit copy)
-// NEAR: the same -G6 scheduling differences as Copy16BitWithFilter.
 long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
     long theResult = this->Lock();
@@ -226,15 +171,11 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
 // Detaches the attached surface at an index and drops its reference; native error on failure
 long DX7Surface::DetachSurface(unsigned long inIndex)
 {
-    long theResult = kErrorOK;
     GESurface* theSurface = this->mAttachedSurfaces[inIndex];
-    HRESULT theError = this->mSurface->DeleteAttachedSurface(0, static_cast<DX7Surface*>(theSurface)->mSurface);
-    if (theError == GX_OK) {
+    long theResult = ee_dx7s_detach(this->mSurface, static_cast<DX7Surface*>(theSurface)->mSurface);
+    if (theResult == kErrorOK) {
         this->mAttachedSurfaces.erase(this->mAttachedSurfaces.begin() + inIndex);
         theSurface->Dereference();
-    } else {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
     }
     return theResult;
 }
@@ -243,30 +184,14 @@ long DX7Surface::DetachSurface(unsigned long inIndex)
 // Flips the flipping chain, waiting for vertical sync only when asked; 0xd when the surface is lost
 long DX7Surface::Flip(bool inWait)
 {
-    long theResult = kErrorOK;
-    unsigned long theFlags = inWait ? GXFLIP_DONOTWAIT : GXFLIP_DONOTWAIT | GXFLIP_NOVSYNC;
-    HRESULT theError;
-    do {
-        theError = this->mSurface->Flip(NULL, theFlags);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST)
-            theResult = 0xd;
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+    return ee_dx7s_flip(this->mSurface, inWait);
 }
 
 // FUNCTION: DX7HR 0x1000fa2e
 // Returns the memory size of the surface plus every attached surface, in bytes
 unsigned long DX7Surface::GetAllocatedSize()
 {
-    unsigned long theSize = this->mDescription.mPixelDepth / 8 * this->mDescription.mHeight * this->mDescription.mWidth;
+    unsigned long theSize = ee_dx7s_own_size(this->mDescription.mPixelDepth, this->mDescription.mHeight, this->mDescription.mWidth);
     for (unsigned long i = 0; i < this->mAttachedSurfaces.size(); i++)
         theSize += this->mAttachedSurfaces[i]->GetAllocatedSize();
     return theSize;
@@ -276,40 +201,21 @@ unsigned long DX7Surface::GetAllocatedSize()
 // Locks the whole surface and records its memory address and row pitch; 0xd when the surface is lost
 long DX7Surface::Lock()
 {
-    long theResult = kErrorOK;
-    GXSURFACEDESC theDescription;
-    memset(&theDescription, 0, sizeof(theDescription));
-    theDescription.dwSize = sizeof(theDescription);
-    HRESULT theError;
-    do {
-        theError = this->mSurface->Lock(NULL, &theDescription, 0, NULL);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError == GX_OK) {
-        this->mMemoryAddress = (unsigned char*)theDescription.lpSurface;
+    EeDx7LockOutcome theOutcome;
+    ee_dx7s_lock(this->mSurface, &theOutcome);
+    if (theOutcome.locked) {
+        this->mMemoryAddress = (unsigned char*)theOutcome.memory;
         this->mIsLocked = true;
-        this->mBytesPerRow = theDescription.lPitch;
-    } else if (theError == GXERR_SURFACELOST)
-        theResult = 0xd;
-    else {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
+        this->mBytesPerRow = theOutcome.pitch;
     }
-    return theResult;
+    return theOutcome.result;
 }
 
 // FUNCTION: DX7HR 0x1000faed
 // Restores a lost surface's memory; native error on failure
 long DX7Surface::RestoreSurface()
 {
-    long theResult = kErrorOK;
-    HRESULT theError = this->mSurface->Restore();
-    if (theError != GX_OK) {
-        ESRecordNativeError(theError);
-        theResult = kErrorNativeError;
-    }
-    return theResult;
+    return ee_dx7s_restore(this->mSurface);
 }
 
 // FUNCTION: DX7HR 0x1000fb0c
@@ -317,11 +223,7 @@ long DX7Surface::RestoreSurface()
 void DX7Surface::SetTransparencyColor(GEColor& inColor)
 {
     this->mTransparencyColor = inColor;
-    GXCOLORKEY theKey;
-    unsigned long theColor = GEPackColor(this->mDescription.mPixelFormat, inColor, 1.0f);
-    theKey.dwColorSpaceLowValue = theColor;
-    theKey.dwColorSpaceHighValue = theColor;
-    this->mSurface->SetColorKey(GXCKEY_SRCBLT, &theKey);
+    ee_dx7s_set_transparency_color(this->mSurface, GEPackColor(this->mDescription.mPixelFormat, inColor, 1.0f));
 }
 
 // FUNCTION: DX7HR 0x1000fb55
@@ -329,33 +231,23 @@ void DX7Surface::SetTransparencyColor(GEColor& inColor)
 // GXSurface::DrawText into its CPU copy while it is text-locked); already-exists error when it is
 long DX7Surface::TextLock()
 {
-    if (this->mIsTextLocked == true)
-        return kErrorAlreadyExists;
-    this->mIsTextLocked = true;
-    return kErrorOK;
+    return ee_dx7s_text_lock(&this->mIsTextLocked);
 }
 
 // FUNCTION: DX7HR 0x1000fba9
 // Ends a text lock; already-exists error when there is none
 long DX7Surface::TextUnlock()
 {
-    if (this->mIsTextLocked) {
-        this->mIsTextLocked = false;
-        return kErrorOK;
-    }
-    return kErrorAlreadyExists;
+    return ee_dx7s_text_unlock(&this->mIsTextLocked);
 }
 
 // FUNCTION: DX7HR 0x1000fbd8
 // Unlocks the surface (an unlocked surface is not an error) and clears the locked flag
 long DX7Surface::Unlock()
 {
-    long theResult = kErrorOK;
-    HRESULT theError = this->mSurface->Unlock(NULL);
-    if (theError != GX_OK && theError != GXERR_NOTLOCKED) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    } else
+    bool theCleared = false;
+    long theResult = ee_dx7s_unlock(this->mSurface, &theCleared);
+    if (theCleared)
         this->mIsLocked = false;
     return theResult;
 }

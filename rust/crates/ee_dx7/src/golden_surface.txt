@@ -1,0 +1,77 @@
+# clear_whole_retry
+surface_blt 1 dst=- src=0 srcr=- flags=400 fill=11223344
+sleep 0
+surface_blt 1 dst=- src=0 srcr=- flags=400 fill=11223344
+sleep 0
+surface_blt 1 dst=- src=0 srcr=- flags=400 fill=11223344
+= 0
+# clear_rect_lost
+surface_blt 1 dst=1,2,10,12 src=0 srcr=- flags=400 fill=aa
+= 13
+# clear_rect_err
+surface_blt 1 dst=1,2,10,12 src=0 srcr=- flags=400 fill=7
+native_error 123
+= 1
+# copy_ok
+surface_blt 2 dst=3,5,21,25 src=1 srcr=1,2,10,12 flags=8000000 fill=-
+= 0
+# copy_key_busy
+surface_blt 2 dst=3,5,21,25 src=1 srcr=1,2,10,12 flags=8008000 fill=-
+= 13
+# copy_lost
+surface_blt 2 dst=3,5,21,25 src=1 srcr=1,2,10,12 flags=8000000 fill=-
+= 13
+# copy_err
+surface_blt 2 dst=3,5,21,25 src=1 srcr=1,2,10,12 flags=8000000 fill=-
+native_error 77
+= 1
+# flip_wait_retry
+surface_flip 1 20
+sleep 0
+surface_flip 1 20
+= 0
+# flip_novsync_lost
+surface_flip 1 28
+= 13
+# lock_retry
+surface_lock 1
+sleep 0
+surface_lock 1
+= 0
+# lock_lost
+surface_lock 1
+= 13
+# lock_err
+surface_lock 1
+native_error 55
+= 1
+# unlock_ok
+surface_unlock 1
+= 0
+# unlock_notlocked
+surface_unlock 1
+= 0
+# unlock_err
+surface_unlock 1
+native_error 56
+= 1
+# attach_ok
+surface_add_attached 1 2
+= 0
+# attach_err
+surface_add_attached 1 2
+native_error 10
+= 1
+# detach_ok
+surface_delete_attached 1 2
+= 0
+# detach_err
+surface_delete_attached 1 2
+native_error 11
+= 1
+# restore_ok
+surface_restore 1
+= 0
+# colorkey
+surface_set_color_key 1 f81f
+= 0

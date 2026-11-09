@@ -273,8 +273,11 @@ DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMagFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipMapBias);
 
+static_assert(sizeof(EeDx7LogicalMetrics) == 5 * sizeof(uint32_t), "ee_dx7/src/surface.rs LogicalMetrics");
+
 // --- the pixel format helpers the Rust filter copy needs (the Graphics Engine's tables, R4.3) ----------------------------
 extern "C" {
+void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
 unsigned char ee_dx7cpp_unpack_red(unsigned long inFormat, unsigned long inColor) { return GEUnpackRed(inFormat, inColor); }
 unsigned char ee_dx7cpp_unpack_green(unsigned long inFormat, unsigned long inColor) { return GEUnpackGreen(inFormat, inColor); }
 unsigned char ee_dx7cpp_unpack_blue(unsigned long inFormat, unsigned long inColor) { return GEUnpackBlue(inFormat, inColor); }

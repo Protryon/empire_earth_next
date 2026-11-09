@@ -197,6 +197,23 @@ struct EeDx7StageView {
   float mMipMapBias;
 };
 
+/// `GESurface`'s logical-size members and the surface's pixel size (`GetLogicalShift`, `SetLogicalSize`).
+struct EeDx7LogicalMetrics {
+  uint32_t logical_width;
+  uint32_t logical_height;
+  uint32_t pixel_width;
+  uint32_t pixel_height;
+  uint32_t logical_shift;
+};
+
+/// The result of `DX7Surface::Lock` (the C++ stores the rest in its fields when `locked`).
+struct EeDx7LockOutcome {
+  int32_t result;
+  void *memory;
+  int32_t pitch;
+  bool locked;
+};
+
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
 /// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
 struct EeFsFileOps {
@@ -906,6 +923,44 @@ void ee_dx7r_clear_texture(EeDx7ScreenState *state);
 
 /// `SetTexture`'s stage-0 diff and stage 1 off (after the C++ reference counting).
 void ee_dx7r_apply_texture_stage(EeDx7ScreenState *state, const EeDx7StageView *view);
+
+int32_t ee_dx7s_clear(void *s, uint32_t fill);
+
+int32_t ee_dx7s_clear_rect(void *s,
+                           const float *r,
+                           const EeDx7LogicalMetrics *metrics,
+                           uint32_t fill);
+
+int32_t ee_dx7s_copy_to(void *source,
+                        void *target,
+                        const float *source_rect,
+                        const EeDx7LogicalMetrics *source_metrics,
+                        const float *destination_rect,
+                        const EeDx7LogicalMetrics *target_metrics,
+                        bool transparent);
+
+/// `DX7PixelRectangle` for `CopyWithFilter`: `out` is 4 floats.
+void ee_dx7s_pixel_rect(const float *r, const EeDx7LogicalMetrics *metrics, float *out);
+
+int32_t ee_dx7s_flip(void *s, bool wait);
+
+void ee_dx7s_lock(void *s, EeDx7LockOutcome *out);
+
+int32_t ee_dx7s_unlock(void *s, bool *cleared);
+
+int32_t ee_dx7s_restore(void *s);
+
+int32_t ee_dx7s_attach(void *s, void *other);
+
+int32_t ee_dx7s_detach(void *s, void *other);
+
+void ee_dx7s_set_transparency_color(void *s, uint32_t color);
+
+uint32_t ee_dx7s_own_size(uint32_t pixel_depth, uint32_t height, uint32_t width);
+
+int32_t ee_dx7s_text_lock(bool *locked);
+
+int32_t ee_dx7s_text_unlock(bool *locked);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
