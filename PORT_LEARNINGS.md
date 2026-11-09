@@ -3104,7 +3104,6 @@ and the 15 s discovery timer (`RunAsTimer`). It does not reach: TCP between two 
 connect, accept, `SendMsgOp` / `RecvMsgOp` with 2-byte fields), peer auth, GetLocalAddr's join reply, the gone
 servers' ops (directory, routing, DB, HTTP's `RecvCRMsgOp`, FTP). Those are covered only by won_ops_test over loopback
 in one process.
-||||||| 5ffeba22
 
 ## R5b.1, continued: the path goals, their modifiers and the area fills in Rust (ee_astar, branch rust-r5b-astar2, 2026-11-09)
 
@@ -3299,4 +3298,3 @@ events and refreshing the interface in the C++'s order.
   the sim oracle identical.
 - **Not ported (no oracle):** `CanCastAt` (only prophets and the interface ask it, and no captured game casts through
   it), the calamity classes themselves (their `Update`s are world code), `GetUnitClassMediaMask`/`IsLatestEffect`.
-||||||| 5ffeba22
