@@ -24,6 +24,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEPhysicsModel.h"
+#include "ee/EECombatFormulas.h"
 
 // NEAR: frame/float slot order; the original calls vector<long>::operator[] out of line (0x11e2a5) for the first lookup
 // FUNCTION: EXE 0x55d015
@@ -39,26 +40,23 @@ void EEPMProjectile::Step0(EEComplexUnit* inUnit)
     GEVector theMove(0.0f, 0.0f, 0.0f);
     long theTileX;
     long theTileY;
-    float theTime = inUnit->mFlightTime * 0.001f;
-    float theGravity = inUnit->mUnitClass->mAcceleration;
-    float thePitch = inUnit->mOrientation.mPitch;
     float theYaw = inUnit->mOrientation.mYaw;
-    float theCos = UMCos(thePitch);
-    float theSin = UMCos(1.5707964f - thePitch);
     inUnit->mInitialContactLocation = thePosition;
-    float theSpeed;
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeMeteor) {
-        theSpeed = inUnit->GetMaxVelocity();
-        theGravity = 0.0f;
+    EeCombatArcIn theIn = {};
+    theIn.flight_time_ms = (int32_t)inUnit->mFlightTime;
+    theIn.gravity = inUnit->mUnitClass->mAcceleration;
+    theIn.pitch = inUnit->mOrientation.mPitch;
+    theIn.meteor = inUnit->mUnitClass->mUnitType == kUnitTypeMeteor;
+    if (theIn.meteor) {
+        theIn.max_velocity = inUnit->GetMaxVelocity();
     } else {
-        theSpeed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mLauncherClass->mUnitType]->mLaunchSpeed;
-        if (!(theSpeed > 0.001f))
-            theSpeed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mUnitClass->mUnitType]->mLaunchSpeed;
+        theIn.launcher_speed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mLauncherClass->mUnitType]->mLaunchSpeed;
+        if (!(theIn.launcher_speed > 0.001f))   // read only for the fallback
+            theIn.own_speed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mUnitClass->mUnitType]->mLaunchSpeed;
     }
-    float theHorizontal = theSpeed * theCos;
-    theDirection.mY = theHorizontal * theTime;
-    float theVertical = theSpeed * theSin;
-    theDirection.mZ = theVertical * theTime - (theTime * theTime) * theGravity * 0.5f;
+    EeCombatArcOut theArc = EECombatArc(theIn);
+    theDirection.mY = theArc.move_y;
+    theDirection.mZ = theArc.move_z;
     GETransformation theTransformation(false);
     theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
     theTransformation.SetPosition(0.0f, 0.0f, 0.0f);
@@ -69,10 +67,7 @@ void EEPMProjectile::Step0(EEComplexUnit* inUnit)
     theTransformation.Apply(theDirection, theMove);
     theStart += theMove;
     theTransformation.SetPosition(theStart.GetX(), theStart.GetY(), theStart.GetZ());
-    theDirection.mY = theHorizontal;
-    theDirection.mZ = theVertical - theTime * theGravity;
-    theDirection.Normalize();
-    theTransformation.SetOrientationYPR(theYaw, UMArcCos(-theDirection.mZ) - 1.5707964f, 0.0f);
+    theTransformation.SetOrientationYPR(theYaw, theArc.pitch, 0.0f);
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 

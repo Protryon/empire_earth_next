@@ -16,6 +16,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
@@ -134,7 +135,7 @@ bool EEUGHealUnit::IsInRange(EEComplexUnit* inHealer, EEComplexUnit* inTarget)
     float theRange = inHealer->mUnitClass->mHealRange;
     inHealer->GetPosition(theHealerPosition);
     inTarget->GetPosition(theTargetPosition);
-    return theHealerPosition.DistanceToSquared(theTargetPosition) <= UMSquare(theRange);
+    return EECombatWithinRange(theHealerPosition.DistanceToSquared(theTargetPosition), theRange) != 0;
 }
 
 // FUNCTION: EXE 0x625534
@@ -250,17 +251,17 @@ bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
 // to the target's maximum hit points
 void EEUGHealUnit::Work(EEComplexUnit* inUnit)
 {
-    unsigned long theElapsed = gPhysics->mTickTimeMs;
-    if (theElapsed == 0)
-        theElapsed = 1;
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionHealUnit || this->mTarget == NULL || ::gWorld.mInCinematic
         || !(this->mTarget->mHitPoints > 0)
         || (inUnit->mPlayer != this->mTarget->mPlayer && this->mTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] != 0))
         return;
-    this->mElapsedTime += theElapsed;
-    if (this->mElapsedTime > 1000) {
-        this->mTarget->SetHitPoints(min(inUnit->mStats->mHealingPoints + this->mTarget->mHitPoints, this->mTarget->mStats->mMaxHitPoints));
-        this->mElapsedTime -= 1000;
+    EeCombatHealStepIn theStep = {(uint32_t)this->mElapsedTime, (int32_t)gPhysics->mTickTimeMs};
+    EeCombatHealStepOut theStepOut = EECombatHealStep(theStep);
+    this->mElapsedTime = theStepOut.elapsed;
+    if (theStepOut.due) {
+        EeCombatHealIn theHeal = {(int32_t)this->mTarget->mHitPoints, (int32_t)inUnit->mStats->mHealingPoints,
+                                  (int32_t)this->mTarget->mStats->mMaxHitPoints};
+        this->mTarget->SetHitPoints(EECombatHeal(theHeal).hit_points);
     }
 }
 

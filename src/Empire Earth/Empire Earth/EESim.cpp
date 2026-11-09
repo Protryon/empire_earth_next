@@ -159,9 +159,106 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
+
+// TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
+// games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
+// those formulas (and the reach and damage effect tests) over each player's newest 64 living units and their
+// neighbours: real stats, distances and timers, plus fixed variations. It reads the world and writes nothing back.
+static void EECombatCaptureSweep()
+{
+    const EECombatRules& theRules = EEGetRules().mCombat;
+    int32_t theTick = (int32_t)gPhysics->mTickTimeMs;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<EEComplexUnit*> theAll;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL)
+                theAll.push_back(theUnit->mComplexUnit);
+        size_t theFirst = theAll.size() > 64 ? theAll.size() - 64 : 0;
+        for (size_t i = theFirst; i + 1 < theAll.size(); i++) {
+            EEComplexUnit* a = theAll[i];
+            EEComplexUnit* b = theAll[i + 1];
+            EEUnitClassUpgrade* s = a->mStats;
+            EEUnitClassUpgrade* t = b->mStats;
+            int32_t theHitPoints = (int32_t)a->mHitPoints;
+            int32_t theMax = (int32_t)s->mMaxHitPoints;
+            const int32_t kTimers[] = {(int32_t)a->mRegenerationTimer, 0, theTick, 1000};
+            const int32_t kHits[] = {theHitPoints, 0, theMax, theMax / 3 + 1};
+            for (int32_t theTimer : kTimers) {
+                EeCombatTimerIn theT = {theTimer, theTick, (int32_t)theRules.mRegenerationInterval};
+                EECombatTimer(theT);
+                for (int32_t theHp : kHits) {
+                    EeCombatRegenerateIn theR = {theTimer, theTick, theHp, (int32_t)s->mRegeneration, theMax,
+                                                 (int32_t)theRules.mRegenerationInterval};
+                    EECombatRegenerate(theR);
+                    theR.regeneration = 3;
+                    EECombatRegenerate(theR);
+                }
+            }
+            for (int32_t theHp : kHits) {
+                EeCombatHealIn theH = {theHp, (int32_t)t->mHealingPoints, theMax};
+                EECombatHeal(theH);
+                theH.healing = 7;
+                EECombatHeal(theH);
+                EeCombatDamageEffectIn theE = {theHp, theHp - (int32_t)t->mMaxHitPoints / 4, theMax, 0.5f};
+                EECombatDamageEffect(theE);
+            }
+            const uint32_t kElapsed[] = {0, 900, 999, 1000};
+            for (uint32_t theElapsed : kElapsed) {
+                EeCombatHealStepIn theS = {theElapsed, theTick};
+                EECombatHealStep(theS);
+                theS.tick_ms = 0;
+                EECombatHealStep(theS);
+            }
+            EeCombatConversionCostIn theC = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost), (int32_t)s->mPower};
+            EECombatConversionCost(theC);
+            const int32_t kWork[] = {(int32_t)a->mWorkTimer, 950, 999, -5};
+            for (int32_t theWork : kWork) {
+                for (int theAdaptation = 0; theAdaptation < 2; theAdaptation++) {
+                    EeCombatConversionIn theV = {theWork, gPhysics->mTickSeconds, t->mConversionResistance, theAdaptation,
+                                                 s->mConversionRate, b->mPlayer->mConversionFactor};
+                    EECombatConversion(theV);
+                    theV.resistance = 1.0f;
+                    theV.rate = 0.4f;
+                    EECombatConversion(theV);
+                }
+            }
+            float theDistance = a->DistanceSquaredTo(b);
+            EECombatWithinRange(theDistance, a->mUnitClass->mHealRange);
+            EECombatWithinRange(theDistance, s->mRange);
+            for (int theCrusader = 0; theCrusader < 2; theCrusader++) {
+                EeCombatRangeIn theG = {s->mRange, a->mUnitClass->mHealRange, theCrusader, theDistance,
+                                        b->mUnitClass->IsLandBuilding(), b->mUnitClass->mInnerCollisionSphere};
+                EECombatRange(theG);
+            }
+            for (int theFlags = 0; theFlags < 4; theFlags++) {
+                EeCombatReachIn theQ = {theDistance, a->mUnitClass->mInnerCollisionSphere,
+                                        b->mUnitClass->mInnerCollisionSphere, 0.0f, theFlags & 1, theFlags >> 1};
+                EECombatWorkReach(theQ);
+                EECombatGatherReach(theQ);
+            }
+            if (s->mUnitClass->mProjectileClass != NULL) {
+                GE3DPoint theFrom;
+                GE3DPoint theTo;
+                a->GetPosition(theFrom);
+                b->GetPosition(theTo);
+                for (int theHigh = 0; theHigh < 2; theHigh++) {
+                    EeCombatBallisticIn theB = {theFrom.GetX(), theFrom.GetY(), theFrom.GetZ(), theTo.GetX(), theTo.GetY(),
+                                                theTo.GetZ(), s->mLaunchSpeed,
+                                                s->mUnitClass->mProjectileClass->GetAcceleration(), theHigh};
+                    EECombatBallistic(theB);
+                }
+            }
+        }
+    }
+}
 
 
 namespace {
@@ -581,11 +678,13 @@ void AfterTick()
                  theResult == 1 ? "victorious" : theResult == 2 ? "defeated" : "?", theTime, gPhysics->mNumTicksDone);
         }
     }
-    // TEST ONLY: the formation sweep of the simulation capture (ee/EEFormation.h), every five game minutes
+    // TEST ONLY: the formation and combat sweeps of the simulation capture (ee/EEFormation.h, above), every five game
+    // minutes
     static long sNextSweepMs = 300000;
     if (EESimCaptureRecord::Active() && theTime >= sNextSweepMs) {
         sNextSweepMs += 300000;
         EEFormationCaptureSweep();
+        EECombatCaptureSweep();
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();

@@ -29,6 +29,7 @@
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -2749,11 +2750,9 @@ bool EEComplexUnit::IsRepairable()
 // morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 {
-    outValue = inValue;
-    if (this->mPositiveMorale > 0)
-        outValue -= UMFloatToLong(inValue * EEGetRules().mCombat.mPositiveMorale);
-    if (this->mNegativeMorale > 0)
-        outValue += UMFloatToLong(inValue * EEGetRules().mCombat.mNegativeMorale);
+    EeCombatMoraleIn theIn = {(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
+                              EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
+    outValue = EECombatMorale(theIn);
 }
 
 // FUNCTION: EXE 0x5fbdd1
