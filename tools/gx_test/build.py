@@ -24,7 +24,7 @@ from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
 PLATFORM = ROOT / "src" / "Platform"
 SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp", PLATFORM / "SDL" / "PlatWindow.cpp",
-           *[PLATFORM / "Win32" / f for f in ("PlatMessage.cpp", "PlatString.cpp", "PlatThread.cpp", "PlatTime.cpp")],
+           *[PLATFORM / "Win32" / f for f in ("PlatMessage.cpp", "PlatString.cpp", "PlatTime.cpp")],   # PlatThread: in ee_rust
            PLATFORM / "Common" / "PlatFont.cpp", PLATFORM / "Common" / "PlatFontData.c", PLATFORM / "Common" / "PlatSim.cpp"]
 # what SDL3 (static) imports besides LIBS
 SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]

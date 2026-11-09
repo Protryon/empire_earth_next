@@ -1,0 +1,32 @@
+[package]
+name = "ee_plat_sys"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The platform layer's OS part: PlatFile, PlatThread, PlatSocket (include/platform/Plat*.h). One implementation per
+# function; what differs between systems is cfg(windows) / cfg(unix).
+[lib]
+crate-type = ["rlib"]
+
+# windows-sys 0.60, not the 0.59 of the wgpu tree: a second version with its own feature set. Features added to 0.59
+# would recompile naga, wgpu-core and wgpu-hal (they depend on it through termcolor/winapi-util).
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.60"
+features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Environment",
+    "Win32_System_IO",
+    "Win32_System_Kernel",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+]
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

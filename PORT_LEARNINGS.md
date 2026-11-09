@@ -1745,3 +1745,30 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## R1.3: PlatFile, PlatThread and PlatSocket in Rust (rust/crates/ee_plat_sys, 2026-11-08)
+
+- **One crate, one function, cfg per OS**: `file.rs` / `thread.rs` / `socket.rs` hold the shared tests and pick
+  `*_win32.rs` or `*_posix.rs` with `#[path]`. `src/Platform/{Win32,Posix}/Plat{File,Thread,Socket}.cpp` are gone;
+  `tools/units.py` and `xbuild.py` link them from `ee_rust` (`xbuild.rust_libs`). `tests/platform`, `tests/won` and
+  `tools/tcp_test` are unchanged and link against Rust.
+- **The harness sees the same imports.** windows-sys's `link!` is an ordinary import through the final link's
+  `kernel32.lib`, so `plat_test.exe` shows `WaitForSingleObject` / `WaitForMultipleObjects` / `EnterCriticalSection` /
+  `CreateFileA` under `KERNEL32.dll` (the time shim patches by DLL and name; checked with `llvm-readobj --coff-imports`).
+  `PlatMutex` stays a heap `CRITICAL_SECTION` at offset 0 (the harness casts the pointer), a `PlatEvent*`/`PlatThread*`/
+  `PlatFile*` stays the HANDLE, `FIONBIO` the Winsock number.
+- **windows-sys is a second version, on purpose.** The wgpu tree has 0.59 (through winapi-util/termcolor into naga);
+  adding Win32 features to 0.59 recompiles naga, wgpu-core and wgpu-hal in both profiles. `ee_plat_sys` uses 0.60 with
+  its own feature list: two small crates, no rebuild of the graphics stack.
+- **The POSIX C++ that remains reaches the last error through Rust.** `PlatGetLastError` is Rust; `PlatPosix.h` wraps
+  `PlatPosixSetLastError` / `PlatPosixErrorFromErrno` (exported by `last_error.rs`) so `PlatPath.cpp` and `PlatTime.cpp`
+  keep their `PlatPosix::Fail` calls. Rust reaches the other way through `PlatPathToNative` / `PlatPathFromNative` only
+  (`native_path.rs`), the extern seam with a `cfg(test)` stand-in, so `cargo test` needs no PlatPath.
+- **windows-sys's `SOMAXCONN` is Winsock 1's 5**, not winsock2.h's `0x7fffffff`. `PLAT_SOCKET_MAX_BACKLOG` (`0x7fffffff`)
+  is passed through unchanged as the C++ did; do not compare against that constant.
+- **`cargo test` of Windows timing:** a 60 ms `WaitForSingleObject` can return a timer tick (15.6 ms) early, so timed
+  checks allow 40 ms, as `plat_test` does.
+- **A target directory shared between worktrees** gives every worktree the same `xtask` fingerprint (the package id is
+  relative to the workspace), so `CARGO_MANIFEST_DIR` is baked from whichever worktree compiled it last and
+  `xtask cbindgen` then reads that worktree. The Rust gate's header step needs its own target directory or a single
+  worktree per target dir.

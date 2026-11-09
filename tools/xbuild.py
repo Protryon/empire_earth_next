@@ -51,10 +51,9 @@ IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
 PLATFORM_HEADERS = ROOT / "include"
-POSIX_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
-              "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-WIN32_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
-              "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
+# PlatFile, PlatThread and PlatSocket are Rust (rust/crates/ee_plat_sys, in ee_rust: rust_libs below)
+POSIX_IMPL = ["PlatTime.cpp", "PlatPath.cpp", "PlatString.cpp", "PlatMessage.cpp"]
+WIN32_IMPL = ["PlatTime.cpp", "PlatPath.cpp", "PlatString.cpp", "PlatMessage.cpp"]
 COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp", "PlatSim.cpp"]   # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
@@ -219,6 +218,16 @@ def build_program(target, name, sources, includes=(), defines=(), libs=(), extra
     return exe
 
 
+def rust_libs(target):
+    """The Rust library (PlatFile/PlatThread/PlatSocket live in it) and what its objects need from the system."""
+    lib = str(rust_build.ensure(target.name))
+    if target.os == "windows":
+        return [lib]
+    if target.os == "linux":
+        return [lib, "-lpthread", "-ldl", "-lm"]
+    return [lib, "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
+
+
 def platform_sources(target):
     impl = ROOT / "src" / "Platform" / ("Win32" if target.os == "windows" else "Posix")
     names = WIN32_IMPL if target.os == "windows" else POSIX_IMPL
@@ -244,7 +253,7 @@ def cmd_test(a):
     if why:
         sys.exit(f"{t.name}: {why}")
     srcs = [*platform_sources(t), ROOT / "tests" / "platform" / "plat_test.cpp"]
-    libs = [] if t.os == "windows" else (["-ldl"] if t.os == "linux" else [])
+    libs = rust_libs(t)
     exe = build_program(t, "plat_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
                         libs=libs)
     print(f"built {exe}")
@@ -262,7 +271,7 @@ def cmd_luatest(a):
         sys.exit(f"{t.name}: {why}")
     srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
             ROOT / "tests" / "platform" / "lua_test.cpp"]
-    libs = [] if t.os == "windows" else (["-ldl"] if t.os == "linux" else [])
+    libs = rust_libs(t)
     exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
                         libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
     print(f"built {exe}")
@@ -327,7 +336,7 @@ def cmd_tcptest(a):
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
-        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
     else:
         base = t.base_flags()
@@ -343,7 +352,7 @@ def cmd_tcptest(a):
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
-        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl"] if t.os == "linux" else [])])
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *rust_libs(t), *(["-ldl"] if t.os == "linux" else [])])
     print(f"built {exe}")
     if a.no_run:
         return 0
@@ -382,7 +391,7 @@ def build_won_test(t, name, units):
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in defs], f"/Fo{obj}", src],
                 env=env)
             objs.append(obj)
-        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
     else:
         base = t.base_flags()
@@ -396,7 +405,8 @@ def build_won_test(t, name, units):
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
-        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl", "-lpthread"] if t.os == "linux" else [])])
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *rust_libs(t),
+             *(["-ldl", "-lpthread"] if t.os == "linux" else [])])
     return exe
 
 
@@ -552,7 +562,9 @@ def cmd_sdltest(a):
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatSim.cpp",   # gPlatSimMode, PlatDebugGetHandler (PlatWindow uses them)
-            *[s for s in platform_sources(t) if s.name in ("PlatMessage.cpp", "PlatThread.cpp", "PlatTime.cpp")]]
+            # PlatThread is in ee_rust (wlib); on POSIX the Rust code resolves paths through PlatPath.cpp
+            *[s for s in platform_sources(t) if s.name in ("PlatMessage.cpp", "PlatTime.cpp")
+              or (t.os != "windows" and s.name == "PlatPath.cpp")]]
     libs = [*sdl_libs(t), wlib]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]

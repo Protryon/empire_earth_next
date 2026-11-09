@@ -21,9 +21,9 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that
 # have no address in the original (the db text loader, ...)
-PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
-                  "Platform/Common/PlatConfig.cpp", "Platform/Win32/PlatFile.cpp", "Platform/Win32/PlatPath.cpp",
-                  "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp",
+# (PlatFile, PlatThread and PlatSocket are Rust: rust/crates/ee_plat_sys, linked through ee_rust)
+PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatString.cpp",
+                  "Platform/Common/PlatConfig.cpp", "Platform/Win32/PlatPath.cpp", "Platform/Win32/PlatMessage.cpp",
                   # the window, its events and input (SDL3; PORT.md step 4.3)
                   "Platform/SDL/PlatWindow.cpp",
                   # text (stb_truetype) with the fonts built in (PORT.md step 4.5)

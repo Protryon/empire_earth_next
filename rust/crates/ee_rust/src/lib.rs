@@ -6,6 +6,9 @@ use std::ffi::c_char;
 // wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
 use wgpu_native as _;
 
+// The platform layer's PlatFile, PlatThread and PlatSocket: `#[no_mangle]` exports, as above.
+use ee_plat_sys as _;
+
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
 
