@@ -16,7 +16,7 @@ mod png;
 
 pub use ffi::*;
 pub use import::{gltf_to_cem, Resolver};
-pub use png::png_to_sst;
+pub use png::{png_to_picture, png_to_sst, Picture};
 
 /// Why a conversion failed: the message (bytes, as names in it may not be UTF-8).
 #[derive(Debug, PartialEq, Eq)]

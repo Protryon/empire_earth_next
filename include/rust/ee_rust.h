@@ -1291,6 +1291,15 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// A decoded picture (`png_to_picture`): `width` x `height` pixels, top row first, B, G, R, A each; `depth` 24 or 32
+/// (whether the PNG has alpha). `bgra` is freed with `ee_of_bytes_free`.
+struct EeOfPicture {
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+  EeOfBytes bgra;
+};
+
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
   float bottom;
@@ -3994,6 +4003,12 @@ bool ee_of_png_to_sst(const EeOfSlice *frames,
                       size_t count,
                       EeOfBytes *out,
                       EeOfBytes *err);
+
+/// `GESurface::LoadPNG`: a PNG file -> its pixels in `*out`, or false with the message in `*err`.
+///
+/// # Safety
+/// `data` is valid for `len` bytes, `out` and `err` for writing.
+bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
 
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
