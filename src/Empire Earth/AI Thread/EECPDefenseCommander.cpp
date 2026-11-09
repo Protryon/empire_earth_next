@@ -1411,7 +1411,9 @@ long EECPDefenseCommander::Save(unsigned long inMajorVersion, unsigned long inMi
     long theResult = outFile.Write(this->mNextUpdateTime);
     if (theResult == 0)
         theResult = outFile.Write(this->mEnabled);
-    this->mLoadedSubGroupIDs.clear();
+    // port: the original collected these in mLoadedSubGroupIDs (a Load/Restore member), which a save left filled;
+    // a local list leaves the commander as it was
+    std::vector<unsigned long> theLooseIDs;
     theCount = this->mPackages.size();
     if (theResult == 0)
         theResult = outFile.Write(theCount);
@@ -1428,17 +1430,17 @@ long EECPDefenseCommander::Save(unsigned long inMajorVersion, unsigned long inMi
             it->second->Save(inMajorVersion, inMinorVersion, outFile);
         else {
             const EECPMilitaryAidPackage* thePackage = it->second;
-            this->mLoadedSubGroupIDs.insert(this->mLoadedSubGroupIDs.end(), thePackage->mSubGroupIDs.begin(), thePackage->mSubGroupIDs.end());
+            theLooseIDs.insert(theLooseIDs.end(), thePackage->mSubGroupIDs.begin(), thePackage->mSubGroupIDs.end());
         }
     }
     if (theResult == 0)
         theResult = outFile.Write(this->mNextAidTime);
-    theCount = this->mLoadedSubGroupIDs.size();
+    theCount = theLooseIDs.size();
     if (theResult == 0)
         theResult = outFile.Write(theCount);
     for (unsigned long i = 0; i < theCount; i++)
         if (theResult == 0)
-            theResult = outFile.Write(this->mLoadedSubGroupIDs[i]);
+            theResult = outFile.Write(theLooseIDs[i]);
     if (theResult == 0) {
         theResult = outFile.Write(this->mNextNavalTime);
         if (theResult == 0) {
