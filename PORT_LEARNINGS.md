@@ -5731,3 +5731,32 @@ checkout's. `tools/rust_build.py` always uses this checkout's `build/rust`.
 The gate's PT at the time cap is timing, not game state: `main` (9cc83d51) gave PT 13,986 and 17,633 in two runs on one
 machine. The seeded EE-SIM trace is the check that a change left the simulation alone.
 
+## R4.2: the DX7 plug-in in Rust, first steps (ee_dx7, 2026-11-09)
+
+The plug-in moves file by file behind trampolines (`Common/DX7Trampolines.cpp`, `tools/units.py` `DX7_TRAMPOLINES`).
+So far: the vertex arrays and polygon array (whole files), the rasterizer's redundant-state setters and SetTexture's
+stage diff, the Copy16/32BitWithFilter loops. Everything else stays C++ for now (rasterizer activation and the
+scene/VB/clear loops, the Draw* units, DX7Screen, the rest of DX7Surface, DX7Movie, DX7TnLRasterizer, the plug-in
+entry).
+
+- **`ee_dx7` does not depend on `ee_gx`.** It declares the GX functions it uses `extern "C"` (`src/gx.rs`, `mod sys`,
+  gated out of `cargo test`), so `cargo test -p ee_dx7` needs no wgpu build (3 GB of disk; the crate tests in seconds).
+  Logic is tested through a `Device` trait with a recorder; the raw handle `GXDevice*` is the same opaque pointer as the
+  C++ `GX.h` shim's `this`.
+- **DX7RScreenState is a pinned record.** The C++ draw code (DrawModel, DrawTerrain, Draw2D) still reads
+  `mVertexBuffer`, `mVertexBufferPosition`, `mViewportChanged`, ... off it, so the record stays C++'s; the setters write
+  through a `#[repr(C)]` mirror whose offsets the trampolines `static_assert` (field by field, `c_ulong` for
+  `unsigned long`). Only the DX7-side caches go to Rust. The GE-side caches (GERScreenState) stay C++ and arrive as
+  arguments (`current`); a setter returns whether the C++ base class must record.
+- **Which side reads or writes a C++ object** decides the seam. GETexture, GELight, GESurface stay C++: SetTexture's
+  reference counting, `Promote` and `ValidateChanges` are C++, the stage diff gets a plain `StageView`. The pixel
+  format helpers (GEUnpack*/GEPackColor) stay in the Graphics Engine and are reached through the `PixelOps` seam
+  (`ee_dx7cpp_*`), not re-implemented.
+- **`float_to_long` is `UMFloatToLong`** (`lrintf`, ties to even), not `as i32`; a NaN or out-of-range float gives
+  `i32::MIN` as the x87 did. Golden values and the filter loop's output come from scratch C++ generators compiled with
+  clang-cl (the same scratch loop as the shipped C++).
+- **cbindgen:** an `extern "C"` block inside `/// cbindgen:ignore` must be in a `mod sys` (a doc comment on the `extern`
+  block itself draws `unused_doc_comments`, and without it the imports appear in `ee_rust.h`). A `pub const` in an
+  included crate is exported too: internal constants are `pub(crate)` (a `GX_OK` export collided with `GX.h`'s macro).
+- **Line endings:** this repository stores files byte for byte (`* -text`); Windows Python text mode (`open` without
+  `newline=''`) turned LF files to CRLF and produced whole-file diffs. Patch scripts open with `newline=''`.

@@ -366,7 +366,7 @@ Ordered by isolation:
    CPU/GPU copies, colour keys, the fixed-function WGSL shader. C++ keeps `GX.h` as shim classes. The webgpu.h C
    API and the wgpu-native pin go.
    - Gates: `gx_test`, the tour's screenshots, `EE_GX_STATS` summaries.
-2. **The DX7 renderer plug-in** (9.7k) behind `GERasterizer`/`GEScreen`/`GESurface`/`GEVertexArray`
+2. **The DX7 renderer plug-in** (9.7k; in progress on `ee_dx7`, PORT_LEARNINGS "R4.2") behind `GERasterizer`/`GEScreen`/`GESurface`/`GEVertexArray`
    trampolines. Then a choice: port it faithfully, or redesign the renderer in Rust from the GX contract
    (PORT_LEARNINGS "GX"). Either way the lobby's path stays: a system-memory surface with a 1024x768 logical size over
    the frame's pixels (`GESurface::SetLogicalSize`), letterboxed onto the back buffer by `RTSGraphics::RenderLobby`.
