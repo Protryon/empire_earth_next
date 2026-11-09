@@ -523,7 +523,7 @@ function M.step(view, memory)
                 if best ~= nil then
                     order("tower_site", {verb = "build", type = tower, near = "site", site = best.index},
                           "t" .. spot_of(best))
-                elseif towers < 3 then
+                else   -- (the classic tower placement: the worked centres nearest the town)
                     order("tower_town", {verb = "build", type = tower, near = "town"})
                 end
             end
