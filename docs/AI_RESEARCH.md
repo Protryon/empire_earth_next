@@ -1945,6 +1945,122 @@ Growing the claim while the patch places are short of the food want: Copper 12/1
 - The `cp sites` trace line and the classic `EECPRMSettlePatches`/claim_needed still skip worked mines (hit points
   0), for both engines; changing them changes the classic.
 
+### 8.35 The fifth playtest: builders under towers, crowded patches, far docks (2026-11-09, owner playtest and EE-SIM)
+
+**The playtest** (`build/playtest_logs/4c115bc4-game-20261109-090006.log`; the owner against one boom AI, Continental
+Small, difficulty 1). The AI reached the Stone Age at 24.8 minutes (the owner at 21.3), never the Copper Age, and
+fell apart from about 49 minutes. The owner's chat lines and what the log shows:
+
+- **"There are AI citizens 9 to one patch, waiting. Strictly no more than 6 to a patch."** From 12 minutes 16
+  citizens were on two forage patches and the food income was 30-60 a 30 s (1-2 a second). The finders tested
+  `gWorld.GetResourceUsers` against the mining limit (6 a bush): it counts the gatherers working a resource, not
+  the ones sent there, so the walkers and the waiting were never counted. The 9 hunters' game ran out at 12
+  minutes and they walked to the nearest bushes on their own. The 8 food gatherers the patches could not take went
+  to wood (12 on wood against a want of 5, wood piled to 1200, iron to 600).
+- **"Please get the settlements directly adjacent to all resource mines, not just randomly 3 tiles away."** The
+  settlement took the first free tile in the rings 2..5 round the resource. A mine 8-10 tiles from the town centre
+  counted the town centre as its drop site.
+- **"He's pathfinding citizens into my base", "they built a settlement in my town", "it's like I'm being raided by
+  citizens".** 119 citizens died: 78 were on a build job when first hit, 91 died to the owner's towers, 65 more
+  than 40 tiles from home. A far iron mine (d52, never explored, by the owner's town) was claimed and released every
+  10 s; in one of its claimed passes a settlement was queued there (x=85 y=67). The build queue kept it, and
+  `EECPBuildManager::BuilderLost` sent a new builder for every one lost: up to 22 citizens at a time walked through
+  the owner's town to it (`build.start` at 46, 65 and 76 minutes).
+- **"A dock really, really far away from home", "they have fish at home! no dock at home".** The first dock stood
+  59 tiles out: the SOL took the cheapest building that counts (a dock), and `FindShoreSite` takes the shore of
+  the largest water body nearest the town, not the water by the town.
+- **"Hunting really really far away from home".** The far hunting pass took game up to six drop-off distances out.
+- **"They shouldn't respond to naval bombardment with melee units, only ranged".** The defend group's units not
+  fighting closed in on the first target the group saw, a warship: 9 of 13 spearmen died on the shore in 20 s.
+- **"Upgrading tower range is worth it for the AI".** No improvement could be bought at all on 64-bit Windows (below).
+- **"No defence"** (46 min): the Stone Age army peaked at 13 of the 20 wanted; the food stock stayed under 50 for
+  most of the Stone Age.
+
+**The changes** (next engine and boom only; the classic engine is unchanged but for the improvement fix):
+- **Build safety** (`EECPNextBuildUnsafe`, EECPNextView.cpp): a tile is unsafe when a seen enemy tower (remembered,
+  or an armed building in sight) covers it (range + half + 3) or the straight way to it from the town centre (range
+  + half + 1, every 2 tiles), or, more than 20 tiles from the town, enemy soldiers were seen within 9 tiles in the
+  last 20 s or it is a danger zone. The build verb refuses `unsafe`; a queued building at an unsafe tile is
+  dropped (`no_site` event); `BuilderLost` sends no new builder there; `AssignBuilders` sends none, takes its
+  builders off, and gives up and refunds a foundation under a tower. The view's `blocked` is also `tower` when the
+  way to a site crosses a tower's reach.
+- **The town's side** (boom.lua `our_side`): a site is taken only when it is at most 85% as far from the town as
+  from any enemy town seen, never within 25 tiles of one, and while no enemy town has been seen at most 38 tiles
+  out (home sites always). Minerals are looked for to 45 tiles (was 60: on a Small map that is the other town).
+- **Capacity** (the owner: "if there are only 12 spots for a resource, use only those 12"): the gatherers sent
+  to a resource are counted by their gather goal (`EECPNextAssigned`), at most the mining limit a unit and 6 a
+  forage patch in all (`EECPNextHasRoom`, used by FindFarm, FindResourceTarget and AssignGatherers; a unit of the
+  centre with room is taken, not only the first). The extras (the game's own retargeting) are shed back to the
+  idle list each assignment pass. `sites[].capacity`, `workers` (sent there) and `room`. Boom wants food only up to
+  its places: the open patches kept (6 each), the game near the town (`view.hunt`, 3 hunters an animal, 6 hunters
+  at most in the Prehistoric, 8 later) and the farms; the rest goes to the mines' places, then wood (to the plan's
+  cap). In the Prehistoric no more citizens are trained than have work.
+- **Hunting** within the claim range of the town centre (at least 24 tiles), 3 hunters an animal.
+- **Drop sites by their resource** (`EECPNextAdjacentSite`): a settlement (or granary) at a site goes on the free
+  tile nearest the centre's units (CanBuildAt keeps a one-tile margin, the gatherers' side), ties to the tile
+  nearest the town. A drop site is "at hand" only within about 3 tiles (`kNextDropReach`), so the home mines 7-10
+  tiles out get their own settlement. `view.wood` (the forest edge the wood gatherers go to): boom builds a
+  settlement there when no site needs one and 4 or more are wanted on wood. Plan settlements 4/8/9 (were 3/6/7).
+  In the bench 35 of 69 settlements stood at a gap of 1 tile, 7 at 2.
+- **Docks by the home fish** (`EECPNextDockByFish`): the fish verb and `build(dock, near=town)` put a dock on the
+  shore by the nearest fish within 30 tiles of the town that no dock of the player's serves (12 tiles), or none.
+  The fish need not have been seen: they are the start's food as the home mines are (§8.34), and the AI never
+  explores the water. Boom no longer builds a dock for the SOL.
+- **Ships**: a group closes in on a land target, never a ship; with only ships to fight, its units not fighting
+  walk to the group's place, or 12 tiles from the ship when the place is within 10 (`EECPNextAvoidShips`). Not
+  measured: the sim's classic navy reaches the boom's town too seldom.
+- **Tower range**: a new verb `improve(type, what)` (one level, paid and applied at once as the classic
+  `GiveImprovements`, refused `cannot_afford` below the reserve, `requirements` with no level left). Boom buys its
+  towers' range from the Stone Age once three towers stand; the data allows one level (+15%) a tower class.
+- **Unit improvements on 64-bit Windows** (PORT_LEARNINGS): `EEUnitClassImprovementTable` read EEUCUpgradeTable 4
+  bytes off (a 4-byte `long` for the 8-byte vtable pointer), so the maximum level was 0 and `CanBuy` refused every
+  level for everyone, human or computer. macOS/Linux were right.
+
+**Bench** (EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats, 2 hours; boom against the classic engine,
+seeds 26-41 in both seat orders, 32 games; the tree-rel data; before: this branch's base 66c3eb9):
+
+| | Before | After |
+|---|---|---|
+| Stone Age (median min, reached) | 23.5 (32/32) | 24.5 (32/32) |
+| Copper Age (median min, reached) | 56.5 (24/32) | 58.3 (26/32) |
+| Prehistoric food gatherers / food a minute (after 5 min) | 17.8 / 96.6 | 14.8 / 91.9 |
+| Citizens at the Stone Age | 33.8 | 32.5 |
+| Stone Age food a minute | 121.9 | 128.5 |
+| Citizens lost a game | 82.8 | 78.5 |
+| ... on a build job when first hit | 4.2 | 2.4 |
+| ... killed by towers | 5.8 | 1.1 |
+| ... more than 30 tiles from the town | 5.6 | 1.3 |
+| Fishing boats lost a game | 20.4 | 22.2 |
+| Army at 30 / 40 min | 6.0 / 14.3 | 5.2 / 10.8 |
+| Docks: distance from the town (median / most) | 11 / 66 | 10 / 29 |
+| Tower range levels bought | 0 | 29 |
+
+The sim's classic AI does not leave its far mines unguarded and towered the way the owner does, so the build and
+tower losses are small in both columns; the playtest's 78 builder deaths came from one site the boom now never
+claims (x=85 y=67, in the other town). Fewer Prehistoric food gatherers bring in about the same food (6.2 a
+minute each, was 5.4): the citizens no longer wait at full patches, and the Stone Age comes about a minute later.
+The Stone Age army is smaller at 40 minutes (10.8 against 14.3): the stock of wood rose (the food the patches could
+not take went to wood first; sending it to the mines first is in the After column, 9.8 before that). Checks: the
+same boom game twice gives the same trace (seeds 26 and 27, 3600 s: 4616 and 5043 lines); rush and balanced run
+without script errors (seeds 26-27); the classic engine's traces (seeds 2-5, 1800 s, classic against classic)
+are identical for seeds 2-4 and differ in seed 5 from 16 minutes, where a classic attack group buys improvements
+(`GiveImprovements`, possible again on Windows; food 521 to 319, gold 220 to 18 at its creation).
+
+Tried and dropped (16 games each, the same image): the sites anywhere out to 60 tiles again (Copper 58.5, 13/16,
+the same within the noise; kept the owner's rule); no food cap in the script (the C++ capacity alone: Stone 24.0,
+Copper 60.0, 15/16, 95 citizens lost a game).
+
+**Left:**
+- The Stone Age army (item 5): 20 spearmen are wanted from the Stone Age's first minute, but the citizens take the
+  food after 5 minutes; the army is at 5 at 30 minutes in the bench and was 13 in the playtest.
+- The explore-and-fish mode for fishing boats: `FindFish` already takes the nearest fish with some left, seen or
+  not, so drained boats sail on to far fish; a deliberate exploring boat (and keeping them off seen warships farther
+  out) is not built.
+- Far wood: `view.wood` is the forest point nearest the town centre (FindForestTarget), which moves as the edge is
+  cut; the settlement follows only when it has no drop within 3 tiles.
+- The improvement cost is taken at once; a human pays and waits at the building (queued improvements). The classic
+  attack groups now buy improvements on Windows, as they did in the original.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

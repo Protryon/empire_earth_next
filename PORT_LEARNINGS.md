@@ -1797,3 +1797,23 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   suggest. Build the before image with the trace commit alone and keep it apart (`build/trace_exe`). An edit
   made while build.py runs can mix two header versions in one image, so stash or patch the work aside while it
   builds.
+
+## Unit improvements and the next computer player's fifth playtest (2026-11-09, docs/AI_RESEARCH.md §8.35)
+
+- **No unit improvement could be bought on 64-bit Windows.** `EEUnitClass` takes its improvement table by
+  `reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[i])`. EEUCUpgradeTable has a virtual
+  destructor, so its data starts after the vtable pointer (8 bytes on x64); the reading struct began with a `long`
+  (4 bytes on Windows). Every entry was read 4 bytes off (a cost factor from the previous step, a step from the
+  cost) and the maximum level came from a step factor, 0, so `EEPlayer::CanBuy` refused every level (the
+  next engine's new `improve` verb found it: `level=1 max=0`). On LP64 macOS/Linux `long` is 8 bytes and the layout
+  happened to match. The first member is now `void*`, and a `static_assert` in EEUnitClass.cpp pins the shared
+  offsets. The classic AI's attack groups (`GiveImprovements`) buy improvements again on Windows, so its traces
+  differ from the images before.
+- **`gWorld.GetResourceUsers` counts the gatherers working a resource, not those sent to it.** The finders tested
+  it against the mining limit, so a patch of 6 drew 9 or more citizens: the walkers and those waiting were never
+  counted, and hunters whose game ran out walked to the nearest bushes on their own. Count the gather goals that
+  name the unit (`EECPNextAssigned`) and shed the extras.
+- **A tree's tile is on no land continent.** A placement search round a forest tile that asks the tile's own
+  continent (`GetContinent(x, y, kAIPathLandMass)`) refuses every site: take the town's continent.
+- **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
+  while the town's own fish lie in other water by it.
