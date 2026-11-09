@@ -783,10 +783,42 @@ Code:
 foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`, `train`, `research`, `stance`,
 `stop`, `explore`, `delete`, `take`, `release`, `reflex`; `micro(info, memory)` every 250 game ms with 300k.
 
+**Added after stage 1 (2026-11-09, the Age of AI port's first needs):**
+- **The threat layer** (§4.4), per player, in 4-tile cells, rebuilt every game second after the enemy memory. Each
+  remembered enemy unit with an attack adds that attack (its owner's class with improvements) over its range + 1
+  tiles, a building over range + 2. A mobile unit's share falls linearly to 0 at `memory_ms`. Each own citizen or
+  boat hurt by a player in the last 2 minutes adds 5 within 6 tiles. `ai.mark(x, y, r, value, ms)` adds the script's
+  own (at most 64). The hurt spots and the marks are in the save (`EENU` version 2). The lost layer and the influence
+  layer are not built.
+- **The queries:** `ai.danger(x, y)` and `ai.danger_box(x1, y1, x2, y2)` -> the highest and the sum.
+- **`ai.route(x1, y1, x2, y2, {avoid = 4, sea = false})`** -> at most 16 waypoints `{x, y}` (the last is the goal)
+  and the cost; nil when the goal is not on the start's land mass (or water body).
+  - It is an A* over the 4-tile cells: 10 a straight step, 14 a diagonal, plus `avoid` times the threat of the cell
+    entered.
+  - A cell is open when one of five of its tiles is on the area.
+  - A start or goal tile on no area (a tree, a building) takes the nearest area within 3 tiles; `ai.reach` does the
+    same.
+  - `lib.units.move_route(ids, x, y, opts)` gives the waypoints as queued moves.
+- **`ai.find_site(type, x, y, {min = 0, max = 12, safe = false})`** -> the nearest explored tile, ring by ring, where
+  `EECanPlaceOnTile` takes the class. With `safe`, only a tile where the threat is 0.
+- **Commands:** `heal`, `rally` (a tile or a unit), `cancel`, `improve(unit, n)`, `formation`, `pack`, `dropoff`,
+  `farm` and `cast`, each through its human message.
+- **`ai/lib/units.lua`:** `STANCE`, `d2`, `alive`, `centre`, `nearest`, `move_route`.
+- **The helpers test** (`tests/ai_units/helpers.lua`, seeds 2-5):
+  - a mark of 50 twelve tiles out, between the town and a point 24 tiles out: the straight route (`avoid = 0`, cost
+    60) crosses it, and the `avoid = 8` route goes round it (cost 68-76). In 3 seeds the highest danger on the
+    straight legs between its waypoints is 0. In the fourth, one leg cuts a corner of the marked area: the A* avoids
+    whole cells, and the legs between the corners are straight lines;
+  - `ai.find_site` and `ai.build` with 3 held citizens put up a barracks, and its `built` event arrived 32-48 s
+    later in all 4 seeds;
+  - two runs of each seed give identical traces.
+- **Boom after the batch:** seeds 2-9 as above. The traces are identical to main's but for one line: the AI folder
+  hash (`EE-AI engine ... folder hash`) changed, because `ai/lib/units.lua` is new.
+
 **Not built yet:**
-- `find_site`, `route` and `path_len`, the danger layers, `drop_site`, `shore`, `unexplored`;
-- `patrol`, `heal`, `wall` / `gate`, `rally`, `cancel`, `improve`, `formation`, `pack`, `cast`, `tribute` / `trade` /
-  `diplomacy`, `dropoff`, `farm`;
+- `path_len`, `drop_site`, `shore`, `unexplored`, the lost and influence layers;
+- the engine pathfinder overlay (§4.3, step 2);
+- `patrol`, `wall` / `gate`, `tribute` / `trade` / `diplomacy` (their messages write chat lines);
 - the per-step command limits are counted per game ms, so a step and a micro in the same tick share them.
 
 **Gates:**
