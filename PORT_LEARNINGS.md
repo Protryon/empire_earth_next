@@ -2397,6 +2397,9 @@ costs 30-80 microseconds instead of ~50 ns, and the Rust text compiler (R2.3) di
   | after | 56,552 | 1,962 | 125 MB | 0.45-0.8 s | 5.2-6.2 s (rules 0.3 s) |
 
   Release times are noisy on a shared machine; the debug-heap time is the number the harness sees.
+- **The whole game under the debug heap** (EE-SIM.exe started with `DEBUG_ONLY_THIS_PROCESS`, the open tree, seed 2):
+  the main menu at 90.0 s before (the main checkout's EE-SIM.exe of 2026-11-09 10:11) and at 19.9 s after; with
+  `_NO_DEBUG_HEAP=1` the whole 1-game-second run takes 9.7 s. The ~15 s left before the menu are outside ee_data.
 - **Where they went:** (1) the YAML parser copied every line, key and scalar (`Vec<u8>` each, a `Rc<Node>` per node,
   keys/items grown by push); (2) `find_table` lowercased its argument into a new `Vec` on every reference cell
   (`resolve` calls `table(r.table)` per cell: 190,000 allocations for dbobjects alone); (3) `parse_f32` lowercased
