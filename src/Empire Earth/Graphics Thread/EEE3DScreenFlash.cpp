@@ -42,6 +42,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DScreenFlash.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4f8ceb
 // SYNTHETIC: EXE 0x4f8cf5
@@ -111,7 +112,7 @@ long EEE3DScreenFlash::Queue(EEEffectQueue* inQueues)
 // address before the opacity store; ours does not
 long EEE3DScreenFlash::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     GE3DPoint theLocation;
     float theValue;
     GEModel* theModel = gEffect2DModel;

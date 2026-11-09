@@ -43,6 +43,7 @@
 #include "lle/SESoundManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEE2DImpact.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e0ffa
 // SYNTHETIC: EXE 0x4e1004
@@ -161,7 +162,7 @@ long EEE2DImpact::SetUp()
 // Draws the impact as an additive fog-lit sprite (randomly spun when the effect asks); returns the draw result
 long EEE2DImpact::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     unsigned long theScreen = gScreenIndex;
     GEModel* theModel = this->mModel;
     GEMaterial* theMaterial = theModel->GetMaterial(0);

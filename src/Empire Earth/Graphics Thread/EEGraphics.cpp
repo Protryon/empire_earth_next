@@ -42,6 +42,7 @@
 #include "ee/RTSMousePointer.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"
+#include "ee/EERenderSnapshot.h"
 // chain at 0x50972b (wrapper, no dtor): an object whose inline ctor clears one bool (provisional type and name)
 struct EEGraphicsU8E8EB4 {
     EEGraphicsU8E8EB4() : mB00(false) {}
@@ -113,6 +114,7 @@ void EEGraphics::FrameStarting()
     }
     gB529066 = false;
     gB529068 = false;
+    EETakeRenderSnapshot();   // port: the render phase reads the snapshot, not the live world (ee/EERenderSnapshot.h)
     RTSGraphics::FrameStarting();
     if (this->mLockMode == 0) {
         gWorld.mLock->ReadUnlock();
