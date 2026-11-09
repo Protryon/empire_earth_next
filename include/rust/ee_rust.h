@@ -2299,6 +2299,27 @@ long ee_ge_terrain_load_body(const EeGeFieldIo *io,
                              const uint8_t *valid_sets,
                              EeGeTerrainLoad *state);
 
+/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
+/// the C++ wrote it (the triangle's plane was not parallel to the line).
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_physical_line_triangle(const EeGe3DLine *line,
+                                  const EeGe3DPoint *p1,
+                                  const EeGe3DPoint *p2,
+                                  const EeGe3DPoint *p3,
+                                  bool exact,
+                                  float *distance);
+
+/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
+                                 const EeGe3DPoint *p2,
+                                 const EeGe3DPoint *p3,
+                                 EeGeBoundingBox *out);
+
 /// `EEFLine`'s constructor: `count` column offsets into `out`.
 ///
 /// # Safety
