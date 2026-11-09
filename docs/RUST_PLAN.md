@@ -39,6 +39,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R6 WON HTML (D8) | Removed: the HTML parser, documents and the segment layout engine; the lobby's pages (MOTD, terms of use, help, news) are plain text in a `TextArea` (`ee_won` plaintext) |
 | **R6 WON, the rest** | **Open.** The socket layer and async ops (WONSocket), the services (auth ops, directory, routing, DB, HTTP, misc), the lobby logic (WONLobby) and the GUI toolkit (WONGUI) |
 | **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
+| **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Open: the AI's 17 containers (address order), the UI/editor/camera holders (the registry needs a lock first), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
 
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
@@ -125,9 +126,12 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
   - AI <-> Units (181/81 include edges);
   - Graphics Thread <-> Units (89/18) and Graphics Thread <-> Physics (64/8);
   - Physics <-> Units (47/72);
-  - RTS -> Graphics Thread (146): the base layer includes the game.
-- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; ~30 are still
-  address-named (`gU4E8708`). The ones touched most:
+  - RTS -> Graphics Thread (146): the base layer includes the game. Measured by symbols (R5a.6), the RTS objects
+    import one Graphics Thread symbol, the RTS class's own `RTSMouse::EndFrame`; the edges were the RTS classes
+    declared in game headers.
+- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; the
+  simulation's address-named ones are named since R5a.5 (`gU4E8708` is `gDamageTable`); the UI's, the editor's and the
+  renderer's are not yet. The ones touched most:
   - `gWorld`: 310 files in 23 modules;
   - `gPhysics`: 174;
   - `gUIManager`: 123;

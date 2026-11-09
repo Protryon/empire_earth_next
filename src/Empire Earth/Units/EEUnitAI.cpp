@@ -402,7 +402,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         EEUnitClass* theClass = inUnit->mLastAttacker->mUnitClass;
         long theColumn = inUnit->mUnitClass->mAmmoType;
         unsigned long theRow = theClass->mFamily;
-        theFlag = theClass->CanBeAttacked() && gU4E8708[theRow][theColumn] != 0.0f;
+        theFlag = theClass->CanBeAttacked() && gDamageTable[theRow][theColumn] != 0.0f;
         break;
     }
     case kTriggerCanFlee:
@@ -479,7 +479,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
                 long theColumn = theTarget->mUnitClass->mAmmoType;
                 unsigned long theRow = theClass->mFamily;
                 if (theClass->CanBeAttacked()) {
-                    theFlag = gU4E8708[theRow][theColumn] == 0.0f;
+                    theFlag = gDamageTable[theRow][theColumn] == 0.0f;
                     break;
                 }
             }
@@ -674,7 +674,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         EEUnitClass* theAttackerClass = theAttacker->mUnitClass;
         long theColumn = inUnit->mUnitClass->mAmmoType;
         unsigned long theRow = theAttackerClass->mFamily;
-        if (!theAttackerClass->CanBeAttacked() || gU4E8708[theRow][theColumn] == 0.0f)
+        if (!theAttackerClass->CanBeAttacked() || gDamageTable[theRow][theColumn] == 0.0f)
             break;
         if (theGoal != NULL) {
             if (theGoal->mKind != kGoalAttackUnit)
@@ -686,7 +686,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
                 EEUnitClass* theClass = inUnit->mUnitClass;
                 long theTargetColumn = theTarget->mUnitClass->mAmmoType;
                 unsigned long theOwnRow = theClass->mFamily;
-                if (theClass->CanBeAttacked() && gU4E8708[theOwnRow][theTargetColumn] != 0.0f)
+                if (theClass->CanBeAttacked() && gDamageTable[theOwnRow][theTargetColumn] != 0.0f)
                     break;
             }
         }

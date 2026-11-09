@@ -858,7 +858,7 @@ long EECPCivilizationManager::Load(unsigned long inMajorVersion, unsigned long i
         theResult = inFile.Read(this->mBuildingCountsEnabled);
     if (theResult == kErrorOK) {
         theResult = inFile.Read(theID);
-        this->mGarrison = reinterpret_cast<EEComplexUnit*>(theID);
+        this->mGarrison = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
     }
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mNextGarrisonTime);
@@ -868,7 +868,7 @@ long EECPCivilizationManager::Load(unsigned long inMajorVersion, unsigned long i
         theResult = this->mWallManager->Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult == kErrorOK) {
         theResult = inFile.Read(theID);
-        this->mFortress = reinterpret_cast<EEComplexUnit*>(theID);
+        this->mFortress = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
     }
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mNextFortressTime);
@@ -1009,7 +1009,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
             this->mScheduleEpochAdvance = true;
         } else
             this->mNextEpochAdvanceTime += gPhysics->mGameTime;
-        unsigned long theID = USavedID(this->mGarrison);
+        unsigned long theID = this->mGarrison.GetSavedID();
         this->mGarrison = NULL;
         if (!UIsNone32(theID)) {
             EEComplexUnit* theGarrison = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
@@ -1018,7 +1018,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
                 theGarrison->Reference();
             }
         }
-        theID = USavedID(this->mFortress);
+        theID = this->mFortress.GetSavedID();
         this->mFortress = NULL;
         if (!UIsNone32(theID)) {
             EEComplexUnit* theFortress = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
@@ -1385,7 +1385,7 @@ void EECPCivilizationManager::ChooseGarrison()
     }
     if (theCandidates.size() <= 0)
         return;
-    EEComplexUnit* theCenter = theCandidates[gPhysics->Fn82D66(theCandidates)];
+    EEComplexUnit* theCenter = theCandidates[gPhysics->GetRandomElementIndex(theCandidates)];
     if (theCenter == NULL)
         return;
     unsigned long theRoom = theCenter->mUnitClass->mGarrisonCapacity - theCenter->mGarrisonCount;
@@ -1422,7 +1422,7 @@ void EECPCivilizationManager::ChooseFortress()
     }
     if (theCandidates.size() <= 0)
         return;
-    EEComplexUnit* theCenter = theCandidates[gPhysics->Fn82D66(theCandidates)];
+    EEComplexUnit* theCenter = theCandidates[gPhysics->GetRandomElementIndex(theCandidates)];
     if (theCenter == NULL)
         return;
     unsigned long theRoom = theCenter->mUnitClass->mGarrisonCapacity - theCenter->mGarrisonCount;

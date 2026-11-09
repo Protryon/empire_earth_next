@@ -2706,3 +2706,160 @@ path graph and continental chain goals) are untouched C++ and not captured.
   `ee_plat_sys`'s `suspended_thread_runs_only_after_resume` failed once under load, then passed); the sim oracle
   identical on seeds 2-7; `sim_capture.py check` PASS from step 2 on. Not run: the test-profile build, `gates.sh`,
   `eedata check`/`cppgate` (no data change), any macOS or Linux build.
+
+## R5a.4-R5a.6: unit handles, named globals, the RTS layer's real surface (branch rust-r5a-handles, 2026-11-09)
+
+### R5a.4 measured: who holds `EEComplexUnit*`/`EEUnit*`/`RTSUnit*`
+
+Counted by regexes over comment-stripped source (a header belongs to the module of the `.cpp` of the same name;
+the WON library left out). *member*: a class member pointer; *container*: a member container of them; *param*: a
+parameter of a function definition; *local* / *local cont.*: a local pointer / local container.
+
+| Module | member | container | param | local | local cont. |
+|---|---|---|---|---|---|
+| AI Thread | 24 (+5 in headers of no unit) | 17 | 312 | 408 | 193 |
+| User Interface Thread | 4 (+2) | 1 | 25 | 169 | 29 |
+| Graphics Thread | 5 (+1) | 1 | 84 | 75 | 3 |
+| Communications | 0 | 0 | 0 | 95 | 14 |
+| Scenario Editor Actions | 3 | 0 | 2 | 17 | 3 |
+| Scenario Editor | 0 | 2 | 5 | 11 | 0 |
+| UI Events | 1 | 0 | 0 | 15 | 1 |
+| Actions | 1 | 0 | 2 | 16 | 1 |
+| Empire Earth (EEWorld, the camera) | 2 | 5 | 14 | 32 | 0 |
+| *for scale:* Units | 29 | 3 | 742 | 347 | 62 |
+| *for scale:* Physics Thread | 5 | 1 | 166 | 39 | 1 |
+| *for scale:* Player | 5 | 6 | 42 | 50 | 4 |
+
+Outside Units/Physics, the members that live across ticks (where a freed pool slot can come back as another unit):
+
+- AI Thread, 14, all referenced (`Reference`/`Dereference`): `EECPASTargetUnit::mUnit`, `EECPAttackSubGroupUnit::mUnit`/`mTarget`,
+  `EECPAGTask::mUnit`, `EECPCivilizationManager::mGarrison`/`mFortress`, `EECPPersonnelRequest::Unit::mUnit`,
+  `EECPResourceCenter::mUnit`, `EECPWMWall::mUnit`, `EECPWallManager::mFrom`/`mTo`, `EEHerd::mLeader`/`mTarget`,
+  `EEPathManagerNode::mUnit`; plus the A* goals' `mUnit` (`EEAIAStarPathfindingGoalBase`, `EEAIAStarPathGraphGoal`,
+  `EEAIPathGoalModifiers`: the A* branch's files). The 17 containers (`EECPUnitManager`, `EECPResourceManager::mMines`/`mFish`,
+  `EECPWallManager::mGates`, `EEHerd::mUnits`, `EECPPersonnel::mUnits` (a multimap by id), ...) are the larger part.
+- User Interface Thread: `EEUICPortrait::mUnit` (referenced). UI Events: none (the hot keys' entry is a local).
+- Scenario Editor Actions: `EESEAMoveUnit::mUnit`/`mContainer`, `EESEAPlaceUnit`'s `mContainer` (undo records, referenced).
+  Scenario Editor: `EEUIFScenarioEditor::mSelectedUnits`, `EESEUnit`'s `mCargo` (containers).
+- Actions: `EEAUpgradeImprovement::mUnit`. Empire Earth: `EECameraControl::mUnitA`/`mUnitB` (referenced).
+- Graphics Thread (left to rust-r5a-snap): `EEE3DMarchingLine::mFromUnit`/`mToUnit`, `EEE3DTracerBeam::mTarget`,
+  `EEEffect::mUnit`, `EEUnitPicker::mUnit`, `mCarriers`.
+- Communications holds none: its 95 locals live inside one message's Execute.
+
+The other members are function objects built and dropped inside one call (`EECPBMBuildsTarget`, `EECPWMRunLess`,
+`EECPAILoadGroup`, the `EEFO*` target finders). Parameters and locals stay pointers.
+
+### The handle (`ee/EEUnitHandle.h`)
+
+- **The id is the handle; no generation counter is needed.** A unit id is the player id in the top byte and a
+  per-player counter (`RTSPlayer::AddUnit`: `mNextUniqueID`, 24 bits) below; ids are never reused within a game
+  (a converted unit is a new unit with a new id, `EEConvertUnit`; a swapped unit too, `EEPhysics::SwapUnit` passes
+  both ids to the scenario manager). So a freed pool slot reborn as another unit has another id, and a handle to the
+  freed unit resolves to NULL.
+- **The registry maps the id to the object for the object's life**, not for its player membership:
+  `RTSRegisterUnit` at `RTSPlayer::InsertUnit` (every new, loaded or kept id passes there), `RTSUnregisterUnit` at
+  `RTSUnit::FreeNode` (the last reference, the complex units' pool return, the destructor), and only if the entry is
+  still that object. A killed unit that a holder still references resolves to itself, as the pointer did; that is
+  what makes the conversion behaviour-neutral for the referencing holders (all the converted ones). Resolving through
+  `RTSWorld::GetUnit` instead (the player's hash buckets) would have changed behaviour: a dead unit leaves the
+  buckets at `RemoveKilledUnits` while its referencing holders still read it.
+- `std::unordered_map<uint32_t, RTSUnit*>`, looked up only, never iterated: it orders nothing and draws no random
+  number. It is touched by the same threads, under the same world lock, as the pool and the reference counts.
+- `EEUnitHandle<T>` (T = `RTSUnit`, `EEUnit`, `EEComplexUnit`): 4 bytes, converts to and from `T*`, so a member's
+  type changes and its uses read the same (`mUnit->X`, `if (mUnit)`, `mUnit = p`, comparisons). The compiler finds
+  the places that need a decision: `USavedID(handle)` does not deduce, `a ? handle : ptr` is ambiguous,
+  `dynamic_cast<X*>(handle)` is refused.
+- **Saves are unchanged:** the save code writes `mUnit ? mUnit->GetUnitID() : -1` as before. The Load/Restore swizzle
+  that kept the raw id in the pointer field keeps it in the handle (`EEUnitHandle::FromSavedID`, `GetSavedID`),
+  and Restore resolves it through `gWorld.GetUnit` as before. **Trap:** a getter returning `T*` (`GetUnit()`,
+  `GetLeader()`, `GetTarget()`) compiles inside `USavedID(...)` and silently resolves; three Restore passes read the
+  saved id that way (`EECPAttackSubGroupUnit`, `EECPResourceCenter`, `EEHerd`) and were changed by hand (grep
+  `USavedID([^)]*Get` after any further conversion). Between Load and Restore a handle resolves its saved id to the
+  live unit of that id, where the pointer held a garbage address. A reader in that window (none in the converted
+  classes' own Load/Restore; other classes not audited) would now see a real unit, and a destructor run after a
+  failed load would dereference one where the original crashed. No saved game was loaded on this branch.
+- A unit without an id (pending until `RTSPlayer::AddPendingUnits` at the tick's flush) has no handle: storing one
+  prints `EE-HANDLE` once on stderr. None appeared in the six oracle games' logs.
+- **Threads.** Only the physics thread (the AI runs inside its tick, under the write lock) resolves handles today, so
+  the map has no lock. A unit's last `Dereference` can run on the UI thread under the read lock (`FreeNode` erases
+  there), so before a UI, editor or graphics holder resolves handles the registry needs a lock, or the frees must
+  move to the physics thread. That is why the UI's `EEUICPortrait::mUnit`, the editor's undo records and the camera
+  stayed pointers here.
+- **Converted:** the AI's 14 stored members listed above. Their classes shrink on x64 (an 8-byte pointer becomes a
+  4-byte id); none is read by the harness (`game_state_probe.py` reads EEWorld, EEPlayer, EEPhysics and
+  NESynchronousCommunications; `hbuild.py`/`exe_boot.c` hook no AI symbol).
+- **Containers are next, and harder:** a `std::set<EEComplexUnit*>` or a map keyed by unit pointer iterates in
+  address order; as handles it would iterate in id order. Each needs its order kept (a vector of handles where it
+  was a vector) or proven irrelevant, as "R5b.1" did for the A* set.
+- The handle holds no reference: a holder that referenced the unit still calls `Reference`/`Dereference` through it.
+  Dropping those (weak handles, so that Rust can own units) changes when units return to the pool, which moves pool
+  addresses and so any address-ordered container: a rebaseline of its own, after the address-keyed containers are
+  gone.
+
+### R5a.5: the address-named globals in the simulation modules
+
+Named from what they do, the address kept in each comment (the R5a.5 commit message has the list): the damage
+tables `gDamageTable`/`gDamageTableScaled1`/`gDamageTableRowCount`/`gDamageTableColumnCount` (`gU4E8708`/`870C`/
+`8714`/`8718`), `gMapTileSize` (`gF52988C`), `UpdateFanaticismColor`, `SetRandomReloadTimer`, `EEUnitClass::UpdateDone`
+(the empty hook every unit class's Update ends with), the AI's `RunsEveryManager`, `GetRandomElementIndex`, the
+military aid package's `EnterState2/3` and `UpdateState2/3` (states nothing enters in a game; their meaning is not
+known, so they keep numbers), `EEComputeTileCenterPoint`, `gHerdUnreadValue` (only cleared). Folded, a pure move:
+`gU531CF0`/`gU531CF4` became `EEPhysics::mInputMessagesProcessed`/`mLastOutOfSynchChecksum` (appended, so the
+harness's EEPhysics offsets are unchanged; gPhysics is made once and Init clears the count as before).
+
+- A renamed record comment is a data-gate change: `EEDamageTableRecord`'s comment named `gU4E8708` and is copied
+  into `tools/eedata/specs.json`, so `eedata.py specs` had to run (`check` reports it stale otherwise).
+- Left: the names in Graphics Thread files (`Fn23CEE2`, the cloak opacity; `EEUnit::Fn27C0B4`;
+  `EEComplexUnit::FnE123D`; `gB529065/66/68`), for the renderer branch; the UI, editor, WON and lobby ones
+  (`gU5654E4`, the `gU531930..38` fonts, `EEWonNet::FnCFFDD`, ...), which are not simulation. `tools/datafmt` and
+  DATA_FORMATS.md, generated once from old headers, still say `gU4E8708`. The x86-only differential harness looked
+  up `?gU531CF0@@3JA` by symbol; its other 32-bit names do not resolve on x64 either.
+
+### R5a.6: what the RTS layer really uses of the game
+
+`llvm-nm --undefined-only` on the 11 RTS Engine objects, each symbol attributed to the module whose object defines
+it: 146 into the LLE, 115 external (CRT, platform, Rust), and 26 into the game:
+
+| Into | Symbols | What |
+|---|---|---|
+| Empire Earth | 12 | globals: `gWorld`, `gContinentManager`, `gDoppelgangerManager` (RTSMap); `gMouse`, `gUserInterface`, `gSoundManager`, `gConductor`, the thread names (RTSGraphics, RTSMousePointer, RTSPhysics); `gCommunications` (RTSPhysics) |
+| WON lobby glue | 7 | `EELobby*` (RTSGraphics::RenderLobby) |
+| AI Thread | 3 | `EEAIContinentManager::GetContinent`; `RTSMapTileRun`'s ctor and `kHeightEpsilon`, both defined in AI objects by the original's placement |
+| Graphics Thread | 1 (2 refs) | `RTSMouse::EndFrame`: the RTS class's own method, placed in EEGraphics.cpp by its address |
+| User Interface Thread | 1 | `EEUserInterface::PostMovieDone` (RTSGraphics) |
+| Units | 1 | `EEDoppelgangerManager::UnregisterPlayer` (RTSMap) |
+
+So "RTS -> Graphics Thread" is headers, not code: the RTS classes were declared in the game's headers (`RTSMouse`
+in EEMouse.h; `RTSUnit` in EEUnit.h, which pulls EEEffectManager.h, EEGraphicalGoalManager.h and EEEffect.h).
+Done here, each unit disassembled before and after (identical where no code was meant to change):
+
+- `RTSMouse` (with `RTSMouseSaveUnder`) moved to `ee/RTSMouse.h`, `RTSUnit` (with `RTSUnitLink`) to `ee/RTSUnit.h`;
+  EEMouse.h and EEUnit.h include them where the classes were. RTSMouse.cpp, RTSWorld.cpp and RTSUnit.cpp include the
+  RTS headers instead. The handle's EEUnit/EEComplexUnit halves moved from RTSUnit.cpp to EEUnit.cpp. The
+  differential harness's header parser (`UNIT_CLASSES`) reads RTSUnit from the new header.
+- RTSMousePointer's thread read `gMouse` (an `EEMouse*`) three times per pass; it now calls `RTSGetInputMouse()`,
+  declared by the RTS header and defined in Empire Earth.cpp (`return gMouse;`), read at each call as before.
+- RTSMap.cpp dropped two includes it did not use (EEAreaUtilities.h, EETileLocation.h).
+- Measured by a text include closure (quoted includes; a header belongs to the module of the `.cpp` of its name):
+  RTS -> Graphics Thread went from 3 direct / 12 transitive edges to 1 / 4, RTS -> Units from 4 / 10 to 2 / 4.
+  RTSGraphics.cpp still needs `gMouse` and so EEMouse.h; RTSPlayer.cpp still includes EEUnit.h, because EEPlayer.h
+  types its unit lists `EEUnit*`. The plan's "146" was another count; it is not reproducible from the includes as
+  they are now.
+- Left: RTSGraphics.cpp (its lobby, movie and mouse uses; the renderer branch rust-r5a-snap works there), RTSMap's
+  world, AI and doppelganger globals, `RTSMouse::EndFrame`'s placement in EEGraphics.cpp, RTSPlayer's `EEUnit*`
+  lists.
+
+### Builds and gates on this branch
+
+- `build.py` recompiles every unit: about 25 minutes at `-j 3` with four other agents building. Between commits a
+  scratch wrapper (not committed) skipped the units whose object was newer than the source and every quoted header
+  it reaches; the per-commit EE-SIM link and sim oracle ran on that, the full `build.py` at the start and the end.
+- A killed `build.py` leaves objects compiled from a mix of staged (old) sources and live (new) headers: `include/`
+  is read in place, only `src/` is staged. Do not edit headers while a build of the same worktree runs, and delete
+  the objects of a killed build.
+- Gates run: per commit, EE-SIM linked 0/0 and the sim oracle (seeds 2-7, 2700 s) identical to the main checkout's
+  `ref`; `eedata check` PASS after R5a.5; at the end the full `build.py --sim` (EE-AOC and EE-SIM 0/0, its EE-SIM
+  identical on seeds 2-7 again) and `--test-profile windowed-software` (0/0; the harness's hooked symbols in its map).
+  The records `game_state_probe.py` reads (EEWorld, EEPlayer, NESynchronousCommunications, EEPhysics up to its old
+  end) and UIManager/UIForm/EEMouse/RTSMouse have the same layout.json offsets as before.
+  Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.

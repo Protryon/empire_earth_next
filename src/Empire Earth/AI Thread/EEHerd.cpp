@@ -103,7 +103,7 @@ struct EEHerdOtherHerdFilter {
 const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
 // (EEWorld.cpp). Owner by placement only (EECalamity's statics start at 0x4e5e48): PROVISIONAL
-long gL4E5E40 = 0;
+long gHerdUnreadValue = 0;
 // SYNTHETIC: EXE 0x4a191a   (wrapper)
 // SYNTHETIC: EXE 0x4a192b   (registrar)
 
@@ -194,7 +194,7 @@ void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
         if (theAttacker && inUnit->mUnitClass->mAttack > 0) {
             long theTarget = inUnit->mUnitClass->mAmmoType;
             long theSource = theAttacker->mUnitClass->mFamily;
-            if (theAttacker->mUnitClass->CanBeAttacked() && gU4E8708[theSource][theTarget] > 0.0f)
+            if (theAttacker->mUnitClass->CanBeAttacked() && gDamageTable[theSource][theTarget] > 0.0f)
                 this->Attack(theAttacker, theUnits);
         }
     } else
@@ -254,7 +254,7 @@ bool EEHerd::Chase()
         EEHerdUnitFilter theFilter(this->mContinent, false, true);
         EEGetUnitsInRectangle(theContinent->mHull.GetBounds(), theTargets, theFilter, false);
         if (theTargets.size() > 0) {
-            this->mTarget = theTargets[gPhysics->Fn82D66(theTargets)];
+            this->mTarget = theTargets[gPhysics->GetRandomElementIndex(theTargets)];
             this->mTarget->mReferenceCount++;
             this->mCenter = U2DPoint<long>(this->mTarget->GetTileX(), this->mTarget->GetTileY());
         }
@@ -355,7 +355,7 @@ bool EEHerd::Hunt()
     this->GetPrey(this->mContinent, theUnits);
     if (theUnits.size() <= 0)
         return theResult;
-    this->mTarget = theUnits[gPhysics->Fn82D66(theUnits)];
+    this->mTarget = theUnits[gPhysics->GetRandomElementIndex(theUnits)];
     this->mTarget->mReferenceCount++;
     this->mCenter = this->mTarget->GetTile();
     U2DPoint<long> theTile(this->mTarget->GetTile());
@@ -629,7 +629,7 @@ void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
         return;
     long theTarget = inUnit->mUnitClass->mAmmoType;
     long theSource = theAttacker->mUnitClass->mFamily;
-    if (!theAttacker->mUnitClass->CanBeAttacked() || !(gU4E8708[theSource][theTarget] > 0.0f))
+    if (!theAttacker->mUnitClass->CanBeAttacked() || !(gDamageTable[theSource][theTarget] > 0.0f))
         return;
     if (inAll)
         theUnits = this->mUnits;
@@ -664,7 +664,7 @@ void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 bool EEHerd::FollowNearestHerd()
 {
     std::vector<EEHerd*> theHerds;
-    EEComplexUnit* theLeader = this->mLeader ? this->mLeader : this->mUnits[0];
+    EEComplexUnit* theLeader = this->mLeader ? this->mLeader.Get() : this->mUnits[0];
     float theBest = 0.0f;
     EEHerd* theBestHerd = NULL;
     this->mPlayer->GetHerds(EEHerdOtherHerdFilter(this), theHerds);
@@ -760,12 +760,12 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mLeader = USavedPointer<EEComplexUnit>(theValue);
+        this->mLeader = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
     }
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mTarget = USavedPointer<EEComplexUnit>(theValue);
+        this->mTarget = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
         if (theResult == 0)
             theResult = this->mBounds2.Load(inFile);
         if (theResult == 0)
@@ -920,8 +920,8 @@ long EEHerd::RepairPointers(long, long)
         if (!this->GetAnimal() || this->GetAnimal()->GetAnimalID() != this->mUnits[0]->GetUnitClass()->GetAnimalID())
             this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->GetAnimalID());
     }
-    if (this->GetLeader() != (EEComplexUnit*)-1) {
-        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetLeader()))));
+    if (this->mLeader.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
+        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mLeader.GetSavedID())));
         if (this->GetLeader())
             this->GetLeader()->mReferenceCount++;
     } else
@@ -935,8 +935,8 @@ long EEHerd::RepairPointers(long, long)
         if (!this->GetLeader() && this->GetAnimal()->GetHasLeader())
             this->PickLeader();
     }
-    if (this->GetTarget() != (EEComplexUnit*)-1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetTarget()))));
+    if (this->mTarget.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
+        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mTarget.GetSavedID())));
         if (this->GetTarget())
             this->GetTarget()->mReferenceCount++;
     } else
@@ -1211,7 +1211,7 @@ unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
                 delete theGoal;
         }
     } else {
-        this->ResetGrazeTimes(gPhysics->Fn82D66(this->mUnits), true);
+        this->ResetGrazeTimes(gPhysics->GetRandomElementIndex(this->mUnits), true);
         this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinRestInterval(), this->mAnimal->GetMaxRestInterval()) + inTime;
         this->mState = 0;
     }

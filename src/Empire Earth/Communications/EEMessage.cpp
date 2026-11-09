@@ -7450,7 +7450,7 @@ void EEMSetAirportCommand::Execute()
         if (thePlayer != theTarget->mPlayer && theTarget->mPlayer->mEnemies[thePlayer->mPlayerID] != 0
             && EEIsSeenBy(theTarget, thePlayer, true)) {
             unsigned long theClass = theTarget->mUnitClass->mFamily;
-            if ((theTarget->mUnitClass->CanBeAttacked() && gU4E8708[theClass][theDamageIndex] > 0.0f) || this->mCommand == 0xf) {
+            if ((theTarget->mUnitClass->CanBeAttacked() && gDamageTable[theClass][theDamageIndex] > 0.0f) || this->mCommand == 0xf) {
                 theGoal = new EEUGAttackUnit(theFirstUnit != NULL ? theFirstUnit : theTarget->mComplexUnit, theTarget,
                                              true, false);
                 theAttack = true;
@@ -7665,7 +7665,7 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
     long theTarget;
     unsigned long theAttacker;
     return this->mStats->mAttack > 0.0f && (theTarget = this->mUnitClass->mAmmoType, theAttacker = inClass->mFamily, inClass->CanBeAttacked())
-           && gU4E8708[theAttacker][theTarget] > 0.0f;
+           && gDamageTable[theAttacker][theTarget] > 0.0f;
 }
 
 #include "ee/EEUGBuildRepair.h"

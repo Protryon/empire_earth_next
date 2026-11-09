@@ -9,7 +9,7 @@ class GE2DPoint;
 class GE3DPoint;
 class EEUnit;
 class EEUnitClass;
-#include <algorithm>                  // U2DComputeCenterPoint (EEFn08282) uses std::find
+#include <algorithm>                  // U2DComputeCenterPoint (EEComputeTileCenterPoint) uses std::find
 #include "lle/U2DPoint.h"           // EETileArea::Extend/GetCenter use U2DPoint<long> (orchestrator fix)
 #include "lle/U2DRectangle.h"       // EETileArea, EEAIAStarBounds (exe view: no statics)
 
@@ -71,7 +71,7 @@ bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inU
 bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x2475a0
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
 // 0x8282 (cdecl, hidden result): a tile picked from inTiles by inArg (EECPAttackSubGroup::Virtual28) (provisional name)
-inline U2DPoint<long> EEFn08282(std::vector<EETileCoordinate>& inTiles, long inMustBeInList)
+inline U2DPoint<long> EEComputeTileCenterPoint(std::vector<EETileCoordinate>& inTiles, long inMustBeInList)
     { return U2DComputeCenterPoint(inTiles, (unsigned char)inMustBeInList != 0); }
 class GERectangle;
 // 0x241743 (cdecl): the bounds of inUnits into outBounds (EECPAttackSubGroup::GetUnitsCenter) (provisional name)

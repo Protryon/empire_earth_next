@@ -5,6 +5,8 @@
 #ifndef EE_EECPWALLMANAGER_H
 #define EE_EECPWALLMANAGER_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEAutoPathRequest;
 class EEComplexUnit;
 class EEPlayer;
@@ -14,7 +16,7 @@ class EEPlayer;
 struct EECPWMWall {
     EECPWMWall() {}
     EECPWMWall(EEComplexUnit* inUnit, EEPlayer* inEnemy) : mUnit(inUnit), mEnemy(inEnemy) {}
-    EEComplexUnit* mUnit;                  // +0x00 (referenced)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x00 (referenced; a handle since R5a.4)
     EEPlayer* mEnemy;                       // +0x04
 };
 
@@ -68,8 +70,8 @@ public:
     EEComputerPlayer* mPlayer;              // +0x50 (the manager's +0x4c)
     EEAutoPathRequest* mRequest;            // +0x54 (referenced)
     EEComplexUnit* GetFrom() const { return this->mFrom; }
-    EEComplexUnit* mFrom;                   // +0x58 (referenced)
-    EEComplexUnit* mTo;                     // +0x5c (referenced)
+    EEUnitHandle<EEComplexUnit> mFrom;      // +0x58 (referenced; a handle since R5a.4)
+    EEUnitHandle<EEComplexUnit> mTo;        // +0x5c (referenced; a handle since R5a.4)
     U2DPoint<long> mWallStart;              // +0x60 (saved)
     U2DPoint<long> mWallEnd;                // +0x68 (saved)
     float mF70;                             // +0x70 (saved)

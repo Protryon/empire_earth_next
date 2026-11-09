@@ -132,7 +132,7 @@ void EEUCLand::Update(EEComplexUnit* inUnit)
         long theAttack = this->Animate(inUnit);
         this->RefreshSound(inUnit);
         this->RegeneratePower(inUnit);
-        inUnit->Fn1FA98C();
+        inUnit->UpdateFanaticismColor();
         unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
         switch (theCommand) {
         case kActionAttackEnemyUnit:
@@ -156,7 +156,7 @@ void EEUCLand::Update(EEComplexUnit* inUnit)
         }
         if (inUnit->mStats->mRegeneration > 0)
             this->Regenerate(inUnit);
-        this->Fn157269(inUnit);
+        this->UpdateDone(inUnit);
         return;
     }
     this->UpdateAnimal(inUnit);

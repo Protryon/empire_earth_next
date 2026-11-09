@@ -8,6 +8,7 @@
 
 #include <vector>
 #include "ee/EETileCoordinate.h"
+#include "ee/EEUnitHandle.h"
 
 class EEComputerPlayer;
 class EEUnit;
@@ -41,7 +42,7 @@ public:
     EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEUnit*> mUnits;            // +0x04 (Load reads the ids, Restore turns them into referenced units)
     EEComplexUnit* GetUnit() const { return this->mUnit; }
-    EEComplexUnit* mUnit;                   // +0x14 the centre's main unit (referenced)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x14 the centre's main unit (referenced; a handle since R5a.4)
     bool mIsActive;                         // +0x18 (saved from version 0x8d)
 };
 

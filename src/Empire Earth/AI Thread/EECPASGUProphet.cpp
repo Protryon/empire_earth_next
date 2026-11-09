@@ -1340,14 +1340,14 @@ bool EECPASGUProphet::ShouldRetreat()
             EEUnitClass* theClass = this->GetUnit()->GetUnitClass();
             long theDefense = theUnit->GetUnitClass()->mAmmoType;
             long theAttack = theClass->mFamily;
-            if (theClass->CanBeAttacked() && gU4E8708[theAttack][theDefense] != 0.0f) {
+            if (theClass->CanBeAttacked() && gDamageTable[theAttack][theDefense] != 0.0f) {
                 float theDistance = this->GetUnit()->DistanceSquaredTo(theUnit);
                 if (theDistance <= 36.0f || theDistance <= theUnit->GetStats()->mRange * theUnit->GetStats()->mRange) {   // squared (was range + range)
                     theClass = theUnit->GetUnitClass();
                     theDefense = this->GetUnit()->GetUnitClass()->mAmmoType;
                     theAttack = theClass->mFamily;
                     theResult = true;
-                    if (theClass->CanBeAttacked() && gU4E8708[theAttack][theDefense] != 0.0f)
+                    if (theClass->CanBeAttacked() && gDamageTable[theAttack][theDefense] != 0.0f)
                         goto CheckHealth;
                     theHasWeapon = false;
                 }
@@ -1364,7 +1364,7 @@ CheckHealth:
                     EEUnitClass* theClass = this->GetUnit()->GetUnitClass();
                     long theDefense = theUnit->GetUnitClass()->mAmmoType;
                     long theAttack = theClass->mFamily;
-                    if (theClass->CanBeAttacked() && gU4E8708[theAttack][theDefense] != 0.0f &&
+                    if (theClass->CanBeAttacked() && gDamageTable[theAttack][theDefense] != 0.0f &&
                         theUnit->GetGoal() != NULL && theUnit->GetGoal()->mKind == kGoalAttackUnit &&
                         static_cast<EEUGAttackUnit*>(theUnit->GetGoal())->mTarget == this->GetUnit()) {
                         if (this->GetUnit()->GetUnitClass()->IsCounteredBy(theUnit->GetUnitClass()->GetUnitType()) ||

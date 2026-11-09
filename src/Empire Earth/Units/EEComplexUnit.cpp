@@ -109,7 +109,7 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 // 0x963234: when set, DropPath moves the unit through its waypoints instead of dropping them (only this unit
 // reads it) (provisional name)
 static bool sB563234;
-// 0x963238: the time of the last fanaticism colour update (Fn1FA98C; only this unit) (provisional name)
+// 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 static unsigned long sU563238;
 // 0x963abc: gUnitClassTable[0x104], the unit class whose units mark the waypoints while sB563234 is set
 // (only AddWaypoint reads it; the address is a gUnitClassTable slot, filled by CreateUnitClasses like every
@@ -2216,7 +2216,7 @@ void EEComplexUnit::ClearTint()
 
 // FUNCTION: EXE 0x5fa98c
 // Pulses a fanatic unit's colour between the fanaticism effect's two colours; ends it when time runs out
-void EEComplexUnit::Fn1FA98C()
+void EEComplexUnit::UpdateFanaticismColor()
 {
     static GEColor sCloakedColor(0.9f, 0.0f, 0.0f);
     static GEColor sBaseColor(0.6f, 0.5f, 0.5f);
@@ -2252,13 +2252,13 @@ void EEComplexUnit::Fn1FA98C()
 }
 
 // FUNCTION: EXE 0x5fab53
-// Destroys Fn1FA98C's third static colour at exit (an empty destructor)
+// Destroys UpdateFanaticismColor's third static colour at exit (an empty destructor)
 
 // FUNCTION: EXE 0x5fab54
-// Destroys Fn1FA98C's second static colour at exit (an empty destructor)
+// Destroys UpdateFanaticismColor's second static colour at exit (an empty destructor)
 
 // FUNCTION: EXE 0x5fab55
-// Destroys Fn1FA98C's first static colour at exit (an empty destructor)
+// Destroys UpdateFanaticismColor's first static colour at exit (an empty destructor)
 
 // FUNCTION: EXE 0x5fab56
 // Returns whether a tile is the unit's tile or one of the side or corner tiles around its footprint
@@ -3915,7 +3915,7 @@ void EEComplexUnit::SetHomeBase(EEComplexUnit* inBase)
 
 // FUNCTION: EXE 0x5fea22
 // Sets the reload timer to a reload time scaled by a random factor from world table entry 87
-void EEComplexUnit::Fn1FEA22(long inReloadTime)
+void EEComplexUnit::SetRandomReloadTimer(long inReloadTime)
 {
     static bool sInitialized;
     static float sMinimum;

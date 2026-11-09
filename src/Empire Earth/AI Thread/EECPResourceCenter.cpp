@@ -651,7 +651,7 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theID);
             if (theResult == kErrorOK) {
-                this->mUnit = reinterpret_cast<EEComplexUnit*>(theID);
+                this->mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
                 if (inMinorVersion >= 0x8d)
                     theResult = inFile.Read(this->mIsActive);
             }
@@ -680,8 +680,8 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
         if (theUnit != NULL && !this->Contains(theUnit))
             this->AddUnit(theUnit);
     }
-    if ((int32_t)USavedID(this->GetUnit()) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->GetUnit())));
+    if ((int32_t)this->mUnit.GetSavedID() != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnit.GetSavedID()));
         if (this->GetUnit() != NULL)
             this->GetUnit()->Reference();
         else

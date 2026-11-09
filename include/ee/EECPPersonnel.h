@@ -10,6 +10,7 @@
 #include <set>
 #include <vector>
 #include "lle/U2DPoint.h"
+#include "ee/EEUnitHandle.h"
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EEUnit;
@@ -48,7 +49,7 @@ public:
 
     // the ctor 0x85ace(inPersonnel, inID) stores these (provisional names)
     struct Unit {                           // 0x10 bytes (0x9f869 is the vector's size(), 0x7fffc its back())
-        EEComplexUnit* mUnit;               // +0x00
+        EEUnitHandle<EEComplexUnit> mUnit;  // +0x00 (referenced; a handle since R5a.4)
         unsigned long mClass;               // +0x04 a gUnitClassTable index
         unsigned long mUnitID;              // (Save: Write(unsigned long); Load: 0 becomes -1)
         bool mB0C;                          // +0x0c (Restore sets it for a unit it found)

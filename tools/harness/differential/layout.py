@@ -24,7 +24,7 @@ MEMBER = re.compile(r'^\s+((?:const\s+)?(?:class\s+)?[A-Za-z_][\w:<>, *]*?[\w>*]
 COMMENT_OFF = re.compile(r'^\s*//\s*\+0x([0-9a-fA-F]+)\b')
 
 # (header, class, end offset of the class's own members or None = next class's first member)
-UNIT_CLASSES = [('EEUnit.h', 'RTSUnit'), ('EEUnit.h', 'EEUnit'), ('EEUnit.h', 'EEComplexUnit')]
+UNIT_CLASSES = [('RTSUnit.h', 'RTSUnit'), ('EEUnit.h', 'EEUnit'), ('EEUnit.h', 'EEComplexUnit')]
 PLAYER_CLASSES = [('EEPlayer.h', 'RTSPlayer'), ('EEPlayer.h', 'EEPlayer')]
 EEUNIT_SIZE = 0x48            # RTSUnit 0x2c + EEUnit members to +0x44 (byte) -> 0x48
 COMPLEX_SIZE = 0x364          # EEComplexUnit: last member mF360 +0x360

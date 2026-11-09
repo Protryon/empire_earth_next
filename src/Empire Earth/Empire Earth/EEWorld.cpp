@@ -130,7 +130,7 @@ extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec
 extern bool& gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
 extern bool& gDisplayWeatherEffects;         // 0x5308e6
-extern long gL4E5E40;                       // 0x4e5e40 (only use: cleared with `and dword ptr, 0`: an integer)
+extern long gHerdUnreadValue;                       // 0x4e5e40 (only use: cleared with `and dword ptr, 0`: an integer)
 extern float gViewportHalfWidth;            // 0x530b5c
 extern float gViewportXCenter;              // 0x530b64
 extern float gViewportYCenter;              // 0x530b68
@@ -919,7 +919,7 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     this->mMaxPlayers = inState->mNumPlayersMade;
     this->mTownIDCounter = inState->mTownIDCounter;
     this->mHerdIDCounter = inState->mHerdIDCounter;
-    gL4E5E40 = 0;
+    gHerdUnreadValue = 0;
     this->CreateInfluenceTable(this->mMap);
     gUserInterface->SetLoadProgress(kWorldLoadProgress17);
     if (gCommunications->GetNumHumanPlayers() > 1) {

@@ -1157,7 +1157,7 @@ bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
     long theKind = this->GetUnit()->mUnitClass->mAmmoType;
     long theArmor = theClass->mFamily;
     bool theResult = false;
-    // New: an attacker without an ammo type (only the projectile classes have -1) indexed gU4E8708's row at -1 (an ASan
+    // New: an attacker without an ammo type (only the projectile classes have -1) indexed gDamageTable's row at -1 (an ASan
     // heap-buffer-overflow 74 minutes into a playtest, 2026-11-07). A sub group's unit is referenced, so it should not
     // be another object; the line names it, and the unit cannot attack anything anyway.
     if (theKind < 0) {
@@ -1168,7 +1168,7 @@ bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
         return false;
     }
     if (theClass->CanBeAttacked()) {
-        if (gU4E8708[theArmor][theKind] != 0.0f) {
+        if (gDamageTable[theArmor][theKind] != 0.0f) {
             EEComplexUnit* theTarget = inTarget->mUnit;
             theResult = !this->GetUnit()->IsTargetIgnored(theTarget, true);
         }
@@ -1243,11 +1243,11 @@ long EECPAttackSubGroupUnit::Load(unsigned long inMajorVersion, unsigned long in
     theID = 0;
     if (theResult == kErrorOK)
         theResult = inFile.Read(theID);
-    this->mUnit = reinterpret_cast<EEComplexUnit*>(theID);
+    this->mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
     theID = 0;
     if (theResult == kErrorOK)
         theResult = inFile.Read(theID);
-    this->mTarget = reinterpret_cast<EEComplexUnit*>(theID);
+    this->mTarget = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
     if (theResult != kErrorOK)
         return theResult;
     theResult = inFile.Read(this->mNextRetargetTime);
@@ -1331,14 +1331,14 @@ void EECPAttackSubGroupUnit::ReleaseTarget()
 long EECPAttackSubGroupUnit::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     this->mLocation.Restore(inMajorVersion, inMinorVersion);
-    if ((int32_t)USavedID(this->GetUnit()) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetUnit()))));
+    if ((int32_t)this->mUnit.GetSavedID() != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mUnit.GetSavedID())));
         if (this->GetUnit() != NULL)
             this->GetUnit()->Reference();
     } else
         this->mUnit = NULL;
-    if ((int32_t)USavedID(this->mTarget) != -1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget))));
+    if ((int32_t)this->mTarget.GetSavedID() != -1) {
+        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mTarget.GetSavedID())));
         if (this->mTarget != NULL)
             this->mTarget->Reference();
     } else

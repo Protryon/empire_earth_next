@@ -637,7 +637,7 @@ void EEUCBasicCitizen::UpdateCitizen(EEComplexUnit* inUnit)
             break;
         }
     }
-    inUnit->Fn1FA98C();
+    inUnit->UpdateFanaticismColor();
     if (inUnit->mCurrentResearch == kTechNone)
         return;
     long theFrame = gPhysics->mTickTimeMs;

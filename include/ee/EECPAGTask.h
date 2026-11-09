@@ -5,6 +5,8 @@
 #ifndef EE_EECPAGTASK_H
 #define EE_EECPAGTASK_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEComplexUnit;
 class EEPlayer;
 
@@ -25,7 +27,7 @@ public:
 
     EECPILocation mLocation;                // +0x04
     EEComplexUnit* GetUnit() const { return this->mUnit; }
-    EEComplexUnit* mUnit;                   // +0x1c (referenced; saved as its unit id)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x1c (referenced; saved as its unit id; a handle since R5a.4)
     EEPlayer* mPlayer;                      // +0x20 (saved as its player id)
     float mAggression;                      // +0x24
     long mType;                             // +0x28

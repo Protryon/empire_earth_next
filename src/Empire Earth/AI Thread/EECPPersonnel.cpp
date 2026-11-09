@@ -332,7 +332,7 @@ long EECPPersonnelRequest::Load(unsigned long inMajorVersion, unsigned long inMi
         this->mUnits.resize(theCount);
         for (i = 0; i < theCount; i++) {
             if (theResult == 0 && (theResult = inFile.Read(theID)) == 0) {
-                this->mUnits[i].mUnit = reinterpret_cast<EEComplexUnit*>(theID);
+                this->mUnits[i].mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
                 if ((theResult = inFile.Read(this->mUnits[i].mClass)) == 0)
                     theResult = inFile.Read(this->mUnits[i].mUnitID);
             }
@@ -360,7 +360,7 @@ long EECPPersonnelRequest::Load(unsigned long inMajorVersion, unsigned long inMi
         this->mUnits.resize(theCount);
         for (i = 0; i < theCount; i++) {
             if (theResult == 0 && (theResult = inFile.Read(theID)) == 0) {
-                this->mUnits[i].mUnit = reinterpret_cast<EEComplexUnit*>(theID);
+                this->mUnits[i].mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
                 if ((theResult = inFile.Read(this->mUnits[i].mClass)) == 0)
                     theResult = inFile.Read(this->mUnits[i].mUnitID);
             }
@@ -430,8 +430,8 @@ long EECPPersonnelRequest::Restore(unsigned long inMajorVersion, unsigned long i
     this->mNumFilled = 0;
     std::vector<Unit>::iterator it = this->mUnits.begin();
     while (it != this->mUnits.end()) {
-        if (USavedID(it->mUnit) != 0xffffffff) {
-            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(it->mUnit)));
+        if (it->mUnit.GetSavedID() != 0xffffffff) {
+            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(it->mUnit.GetSavedID()));
             if (theUnit != NULL && EECPCombatManager::IsMilitaryTypeUnit(theUnit)) {
                 it->mUnit = theUnit;
                 theUnit->Reference();

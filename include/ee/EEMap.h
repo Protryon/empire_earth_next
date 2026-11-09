@@ -214,7 +214,7 @@ public:
     // inline (the volcano's Virtual4C 0xb523e; bool return: push 1; pop edx; fourth test reuses +0x195610)
     bool IsEdgeTile(long inX, long inY) const
         { return inX + inY == this->mL195608 || inY - inX == this->mL195610 || inX + inY == this->mL19560C || inX - inY == this->mL195610; }
-    // inline: the ctor copies mF1955F4 to gF52988C through the FPU (fld/fstp: an accessor value) (provisional name)
+    // inline: the ctor copies mF1955F4 to gMapTileSize through the FPU (fld/fstp: an accessor value) (provisional name)
     float GetF1955F4() const { return this->mF1955F4; }
     // inline (RTSMap.cpp expands it: 0x1225fa, 0x122c9b, ...; the out-of-line COMDAT is 0x2f85, EEAMiniMap.cpp): 0
     // off the map
@@ -264,7 +264,7 @@ public:
     std::vector<RTSMapTileRun> mU1955DC;
     long mL1955EC;                          // +0x1955ec
     EEMapTile** mTiles;                     // +0x1955f0 row-major, mSize x mSize
-    float mF1955F4;                         // +0x1955f4 (the ctor's argument; copied to gF52988C)
+    float mF1955F4;                         // +0x1955f4 (the ctor's argument; copied to gMapTileSize)
     float mF1955F8;                         // +0x1955f8 (84 after Create)
     float mF1955FC;                         // +0x1955fc (42 after Create)
     long mL195600;                          // +0x195600
@@ -285,7 +285,7 @@ public:
 // 0x52988c: set from RTSMap::mF1955F4 by RTSMap's ctor, read by EETile::Virtual14 0x1214bf (in RTSTile.cpp's .bss
 // range, after its three keys). An extern here (a static data member would cost every includer a `$E` number);
 // (provisional name and owner)
-extern float gF52988C;
+extern float gMapTileSize;
 
 // The game map: RTTI EEMap > RTSMap, with an FSPersistent base at +0x195624 (secondary vtable 0x441c9c, tag 4).
 // Ctors 0x11b844 / 0x11b8d9 (both out of line), sizeof 0x195664 (new sites).

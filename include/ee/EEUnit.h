@@ -157,7 +157,7 @@ public:
     long mPowerRegeneration;                // +0x12c
     long mFlightTime;                       // +0x130
     long mWorkRate;                         // +0x134
-    long mReloadTime;                       // +0x138 (EEUGAttackGround::Step passes it to Fn1FEA22)
+    long mReloadTime;                       // +0x138 (EEUGAttackGround::Step passes it to SetRandomReloadTimer)
     long mMaxObjectCarry;                   // +0x13c
     long mRepairRate;                       // +0x140
     long mMaxHitPoints;                     // +0x144 provisional name (aircraft selection)
@@ -186,81 +186,7 @@ typedef EEUnitClassUpgrade EEUnitStats;
 // are EEMedia's, its +0x244 part is mModels[0]). EEModel was its provisional name here (merged into
 // EEGraphicObject.h; the typedef is at the top of this header)
 
-// C:\EEX\RTS Engine\Units\RTSUnit.h (RECONSTRUCTION; file name inferred). The engine-side unit (vtable 0x449b10;
-// RTSUnit.cpp 0x23d7c0..0x23dd54, its asserts name mIsValid). Slot signatures from RTSUnit.cpp's bodies
-// (names provisional unless stated).
-class EEMap;
-class FSFile;
-class RTSTile;
-class RTSUnit;
-
-// What RTSUnit+0x08 points to: the unit's links in a second list whose head can be an RTSDummyUnit
-// (0x23dae5/0x23dbda dynamic_cast the previous element to it). new'd by 0x23da54 (8 bytes, both zeroed inline).
-// Name is provisional.
-struct RTSUnitLink {
-    RTSUnitLink() : mNext(NULL), mPrev(NULL) {}
-    RTSUnit* mNext;                         // +0x00
-    RTSUnit* mPrev;                         // +0x04 (an RTSUnit, or the list's RTSDummyUnit head)
-};
-
-class RTSUnit : public UReferenceCounter {
-public:
-    // inline (COMDAT 0x1db4 in EEACalamity.cpp's range, after its first user: count above 1 ->
-    // UReferenceCounter::Dereference, else the virtual at +0x34); every caller still calls it out of line
-    void Dereference() { if (this->GetReferenceCount() > 1) UReferenceCounter::Dereference(); else this->LastDereference(); }
-
-    virtual ~RTSUnit();                     // +0x00 (??_G 0x23d8ed; dtor 0x23d909: asserts !mIsValid)
-    virtual void Invalidate();              // +0x04 0x23d93f (asserts mIsValid; unlinks; mIsValid = false)
-    // +0x08 (the shared empty `ret 4` 0x157269): copies from inUnit (EEUnit::CopyFrom 0x228ef5 calls it last with
-    // its argument; provisional name)
-    virtual void CopyFrom(RTSUnit* inUnit);
-    virtual void SightOnHere() = 0;         // +0x0c
-    virtual void Describe(UWideString& ioString);   // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
-    virtual void DescribeLong(UWideString& ioString);  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
-    virtual unsigned long HashValue();      // +0x18 0x23da44 ((id << 4 + y) << 4 + x)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x23db4f
-    virtual void Clear();                   // +0x20 0x23dd46 (Reset, mIsValid = false)
-    virtual void SightOffHere() = 0;        // +0x24
-    virtual long RepairPointers(unsigned long, unsigned long);  // +0x28
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x23dc3a
-    virtual void FreeNode();                // +0x30 0x23d977 (asserts !mIsValid; deletes the link)
-    virtual void LastDereference();         // +0x34 0x23db49 (RTSUnit::Dereference calls it at the last reference)
-
-    // 0x23d8cc (out of line): the count = 1 (UReferenceCounter's inline ctor), the vptr, Reset(), then +0x2b = 0,
-    // +0x2a = 1
-    RTSUnit();
-    void Initialize(long inLinked);         // 0x23da54: Reset, mIsValid, a new RTSUnitLink unless inLinked == 0
-    void Reset();                           // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
-    void InsertAfter(RTSUnit* inUnit);      // 0x23dabb (the mNext/mL10 list)
-    void Link(RTSUnit* inUnit);             // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
-    void RemoveFromList();                  // 0x23dbb7 (the mNext/mL10 list)
-    void Unlink();                          // 0x23dbda (the mL08 list)
-    void UpdateTile(EEMap* inMap);          // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
-    unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
-
-    // the save keys (RTSUnit.cpp's four `$E` chains; one guard byte; unguarded: a class static only
-    // renumbers an includer's `$E` symbols, never its bytes)
-    static const UString sUnitID;
-    static const UString sTileX;
-    static const UString sTileY;
-    static const UString sSpecificData;
-
-    // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
-    RTSUnitLink* mTileNode;                 // +0x08 (0: not a valid target; the unit calamities' Virtual4C)
-    RTSUnit* GetNext() const { return this->mNext; }
-    RTSUnit* mNext;                         // +0x0c the owner's next unit (EEPlayer::mFirstUnit)
-    RTSUnit* mPrevious;                     // +0x10 the previous unit of that list (0x23dabb)
-    RTSTile* mTile;                         // +0x14 its tile (0x23dcf3; 0: not selectable by the hot keys; provisional name)
-    EEPlayer* mPlayer;                      // +0x18 (its owner)
-    long mTileX;                            // +0x1c provisional name (the cast-calamity goal's x; = -10000)
-    long mTileY;                            // +0x20 provisional name (= -10000)
-    unsigned long mUnitID;                  // +0x24 (EECalamity keeps its target's and caster's; -1 for none)
-    bool mIsQueuedForDelete;                // +0x28 (saved)
-    bool mIsEditorSelected;                 // +0x29 (saved as false; Load clears it)
-    bool mIsNodeFreed;                      // +0x2a (= true after the ctor)
-    bool GetIsValid() const { return this->mIsValid; }
-    bool mIsValid;                          // +0x2b (named by the asserts "this->mIsValid == true")
-};
+#include "ee/RTSUnit.h"                // RTSUnitLink, RTSUnit (the RTS layer's header since R5a.6)
 
 class EEUnit : public RTSUnit {
 public:
@@ -548,7 +474,7 @@ public:
     // EEUGAttackGround.cpp's callees (provisional names; types inferred)
     bool CanReachTile(long inTileX, long inTileY);  // 0x1ff18a (can the unit act on that tile)
     void SetAnimation(long inArg1, long inArg2, bool inIsAnimationPaused);  // 0x1fe02a
-    void Fn1FEA22(long inReloadTime);       // 0x1fea22
+    void SetRandomReloadTimer(long inReloadTime);       // 0x1fea22
     // inline setters (`if (m != v) m = v`; EEUGAttackGround::Step)
     void SetCurrentPhysicsAction(unsigned long inValue) { if (this->mCurrentPhysicsAction != inValue) this->mCurrentPhysicsAction = inValue; }
     // inline (EEUCPlanetSpaceship::ActionChanged 0x218e34, EEUCProjectile::ActionChanged 0x219388) (provisional name)
@@ -627,7 +553,7 @@ public:
     // 0x229314: a free tile near inUnit for this unit (EEMPathTo; returns a distance; provisional name)
 
     // 0xc7486 (EEMessage.cpp's range; EEActiveGroup::SpreadAroundUnit/SpreadAroundResource call it): stats +0xd8 > 0 and the table
-    // gU4E8708 [inClass +0x1c8][class +0x1cc] > 0 for a class whose MarkInvalid holds (can attack it) (provisional name)
+    // gDamageTable [inClass +0x1c8][class +0x1cc] > 0 for a class whose MarkInvalid holds (can attack it) (provisional name)
     bool CanAttackClass(EEUnitClass* inClass);
     EETown* FindNearestTown();              // 0x1fa856 (the owner's town (EEPlayer +0x7d0) nearest the unit that contains it: EEMPatrol, EECPUnitManager, EECPCombatManager) (provisional name)
     float DistanceSquaredToTileXY(long inTileX, long inTileY);  // 0x4211d (squared distance from the transformation (+0x13c/+0x14c) to a tile; EEPPatrolGroup::GetNearest; provisional name)
@@ -721,7 +647,7 @@ public:
     // provisional name)
     float DistanceSquared3D(const GE3DPoint& inPoint);
     void ClearTint();                       // 0x1fa979 (provisional name)
-    void Fn1FA98C();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
+    void UpdateFanaticismColor();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
     EEComplexUnit* FindWaypointMarker(long inArg1, long inArg2);  // 0x1f9c12 (provisional name)
     void RemoveWaypointMarker(long inX, long inY);        // 0x1fdc39 (provisional name)
     EEUnitGoal* RefreshGoals();             // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
@@ -789,7 +715,7 @@ public:
     void LinkPart(EEComplexUnit* inUnit);   // 0x1fe7d9: mPreviousPart = inUnit, which links back through its mAIKind (provisional name)
     // 0x1fed98: turns the unit to face (inX, inY) (inZ unread; ret 0xc) provisional name; types inferred
     void FaceToward(GE3DPoint inPoint);     // 0x1fed98 (point by value; ret12)
-    void SetReloadTimer(long inValue) { if (this->mReloadTimer != inValue) this->mReloadTimer = inValue; }  // inline (Fn1FEA22) (provisional name)
+    void SetReloadTimer(long inValue) { if (this->mReloadTimer != inValue) this->mReloadTimer = inValue; }  // inline (SetRandomReloadTimer) (provisional name)
     // inline setters (EEUnitClass::UnitCreated 0x23511e) (provisional name)
     void SetHealSearchTimer(float inValue) { if (this->mHealSearchTimer != inValue) this->mHealSearchTimer = inValue; }
     void SetLastHitPoints(long inValue) { if (this->mLastHitPoints != inValue) this->mLastHitPoints = inValue; }
@@ -1297,7 +1223,7 @@ public:
     void LaunchStoredMissile(EEComplexUnit* inUnit);  // 0x20e50c (in EEUCBomb.cpp's range; FireShot: the carrier drops its first bomb) (provisional name)
     void LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo);  // 0x2340a7 (LaunchStoredMissile) (provisional name)
     void FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame);  // 0x2386cf (the spaceship's attack commands)
-    void Fn157269(EEComplexUnit* inUnit);   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
+    void UpdateDone(EEComplexUnit* inUnit);   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
     // 0x23525a: moves inUnit from inFrom towards inTo (EEUCPlanetSpaceship::ActionChanged's landing) (provisional name)
     void PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint& inTo, bool inSnapToMap);
     // +0x78..+0xdc: arguments by `ret N` (inferred types)
