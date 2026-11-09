@@ -185,16 +185,25 @@ local function stock_targets(view, plan, reserve, towers, soldiers_wanted)
     if plan.farms ~= nil then
         add("b_farm", math.min(plan.farms - V.total(V.buildings(view, "b_farm")), 3))
     end
-    -- the soldiers still wanted, at the cost of the cheapest barracks soldier
-    local best = nil
-    for _, c in ipairs(view.costs) do
-        if not c.building and c.military and c.producer == "b_barracks"
-                and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
-            best = c
+    -- the soldiers still wanted, at the cost of the soldiers trained (the cheapest of each trainer built, in turn)
+    if soldiers_wanted > view.army_count then
+        local kinds = {}
+        for _, k in ipairs(TRAINERS) do
+            local best = nil
+            for _, c in ipairs(view.costs) do
+                if not c.building and c.military and c.producer == k and c.producers > 0
+                        and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
+                    best = c
+                end
+            end
+            if best ~= nil then
+                kinds[#kinds + 1] = best.type
+            end
         end
-    end
-    if best ~= nil and soldiers_wanted > view.army_count then
-        add(best.type, soldiers_wanted - view.army_count)
+        local n = soldiers_wanted - view.army_count
+        for i, k in ipairs(kinds) do
+            add(k, (n + #kinds - i) // #kinds)
+        end
     end
     return t
 end
@@ -349,7 +358,9 @@ function M.step(view, memory)
         soldiers_wanted = plan.soldiers_max
     end
     local army_short = view.army_count < soldiers_wanted
-    local scramble = threatened and short_strength > 0   -- the reserve gives way to the army
+    -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
+    -- stand in for an empty army: they cover only the land round them)
+    local scramble = threatened and (short_strength > 0 or view.army_count < plan.soldiers)
 
     -- saving for the next epoch: once the town has its citizens (or the epoch has run long) the reserve holds the
     -- advance's cost, and the advance is asked for only when it is paid. From the Stone Age the gold and iron are kept
@@ -372,8 +383,11 @@ function M.step(view, memory)
         local want = 0
         if not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron"))) then
             want = cost[r]
-            if missing > 0 and soldier_cost ~= nil then
-                want = math.max(want - missing * soldier_cost[r], 0)
+            if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 then
+                -- the missing light army is never locked out by the reserve: at most the stock less what it costs
+                -- (in steps of 100, so the reserve changes seldom)
+                local cap = (view.stock[r] - missing * soldier_cost[r]) // 100 * 100
+                want = math.max(math.min(want - missing * soldier_cost[r], cap), 0)
             end
         end
         if scramble and r ~= "stone" then
