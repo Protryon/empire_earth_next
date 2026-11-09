@@ -11654,3 +11654,71 @@ screen.rs). `DX7HRTnLDisplay.cpp` is the plug-in entry (the PIM table, a validit
 - **The DX7Movie thread stays a C++ `TSThread`**, with the trampolines as the seam and the pl_mpeg, event and critical
   section objects C++; Rust owns the sound ring, which the mixer's device thread and the decoder share under C++'s
   `mSoundAccess`.
+
+## R6: WON's leaves in Rust, and the lobby without HTML (ee_won, 2026-11-09)
+
+Decision D8 ports the WON library to Rust, leaves first. Crate `ee_won` (pure code, `cargo test` without a game) now
+holds the message buffers' format (`wire.rs`), WON's text conversions (`text.rs`, the one place: D6), CRC-16, MD5,
+the random generator, Blowfish, the big integers, ElGamal, the key encoding, the auth blocks and the CD key logic.
+The C++ classes stay where C++ holds them (ByteBuffer, ReadBuffer/WriteBuffer, CRC16, MD5, MD5Digest, Blowfish,
+ElGamal, AuthBase and the certificates, CDKey) as forwarders; BigInteger, Random and IntegerExtractor/Inserter are
+gone (nothing outside WONCrypt used them).
+
+- **Golden vectors needed AddressSanitizer.** The generator links the real WON units (clang-cl, like the game) and
+  prints synthetic cases; it was built twice, plain and with `/fsanitize=address` (`/MD`, the dynamic ASan runtime,
+  `/NODEFAULTLIB:stl_asan.lib`, `_DISABLE_STRING_ANNOTATION`/`_DISABLE_VECTOR_ANNOTATION`, `ASAN_OPTIONS=replace_intrin=0`
+  past BigInteger's overlapping `memcpy` in an in-place shift). Only cases that ran clean and printed the same in both
+  builds became goldens: several big-integer cases gave different answers with different heap contents.
+- **The clang-built `MD5Digest` returned MD5's initial state for every input.** Its rounds rotate with
+  `(unsigned)a >> -s` (Java's `>>>`): a negative shift count is undefined behaviour, the original compiler masked it to
+  `32 - s`, and clang dropped the rounds. So in the C++ game `Random` repeated the same 16 bytes, every ElGamal
+  signature was over the same constant, and the golden program's `Verify` accepted a signature for a different
+  message. WONCommon's `MD5` (macros, unsigned) was right. The Rust MD5 is RFC 1321 (tested on its vectors), and ElGamal and Random are
+  checked against a Python model with exact integers and real MD5 (`py*` lines of `golden_won.txt`), not against the
+  broken C++.
+- **`st_kmul`'s Karatsuba was wrong for odd word counts above 16** (`a[N-1]*b[N-1]` multiplied in 32 bits, operand
+  words read past their length, writes past the work buffer that ASan reported as heap-buffer-overflow). WON's real
+  keys (1024 and 2048-bit moduli, tiny top words in the reduction constants) mostly avoided it. `ee_won` multiplies
+  exactly; the other algorithms (shift-and-subtract division and modulo with their sign rules, Barrett reduction with
+  at most three corrections, binary gcd, extended Euclid) are ported as they were, with the C++'s "target keeps its
+  sign" rule of the shifts. `gcd` with a negative operand never returned in C++ (not ported as a case).
+- **Other C++ faults the port does not keep:** `WriteBuffer::ToByteBuffer` on a buffer never written wrote the prefix
+  before NULL (it now reserves first); Blowfish left the second block of a 4-byte input uninitialised (zero now); an
+  ElGamal block whose plain text starts with zero bytes read before its buffer (the zeros are restored); a key whose
+  modulus has no reciprocal let `ArithmeticException` escape `SetPublicKey` (now false); `IntegerInserter` writes a
+  two-byte length low byte first, which its own reader takes big-endian: kept, and tested (keys over 255 bytes per
+  integer do not round-trip).
+- **On LP64 the C++ crypto was broken anyway:** `MD5`'s and `BigInteger`'s `unsigned long` words were 64 bits on
+  Linux and macOS. The Rust is the same on every system.
+- **Seams:** fixed-size state is a `#[repr(C)]` struct embedded by value (`EeWonMd5`, `EeWonBlowfish`: Blowfish is
+  copied by value, e.g. into `AuthSession`); keys and auth blocks are boxed Rust objects behind opaque pointers
+  (`EeWonElGamal`: the C++ `ElGamal` deep-copies through `ee_won_elgamal_clone`, as `std::list<ElGamal>` needs);
+  results of variable length go to a sink (`WonByteBufferSink` makes the `ByteBuffer`, `WonWideSink` the
+  `std::wstring`; WONBuffer.h). `WONBuffer.h` includes `rust/ee_rust.h`, so every WON unit sees the C ABI.
+  cbindgen renames the generic Rust names (`Md5`, `Blowfish`, `ElGamal`, `AuthBlock`): a global `Blowfish` next to
+  `WONAPI::Blowfish` is ambiguous under `using namespace WONAPI`.
+- **The auth blocks** unpack in Rust in one call per block (`ee_won_auth_unpack`); `AuthBase::Unpack` asks the
+  subclass for its kind (`UnpackKind`) instead of passing a `ReadBuffer` down the `UnpackHook` chain, and the
+  certificate getters ask the unpacked block. Header fields read before a failure stay set, as before.
+- **Tests:** `cargo test -p ee_won` (unit tests and the goldens); `xbuild.py wontest` gains `won_crypto_test` (the C++ API
+  over the forwarders: CRC16, MD5, MD5Digest, Blowfish copies, ElGamal copies, signing, a key block).
+- **build.py has no incremental compile:** every build stages and compiles all ~1,400 units (an hour at `-j 3` on a
+  shared machine). To check a change, compile only the units that include the changed headers (transitively) into the
+  last build's object folder and relink with `build.link_exe` (a scratch script); run the full builds once at the end.
+
+### The lobby without HTML (D8)
+
+WON's HTML rendering is gone: the parser and documents (`HTMLParser*`, `HTMLDocument*`, `HTMLTag`, `HTMLFromText`,
+`HTMLDisplay*`), the line-segment layout engine that only HTML used (`LineSegment`, `MultiLineElement`,
+`MultiLineBuilder`, `TextLineSegment`, `Table`, `TableElement`, links and image maps) and the browser's downloads.
+The chat window never used it (`TextArea` has its own lines).
+
+- **`BrowserComponent` stays as the layout type** the lobby's .cfg files name (MOTD, login help, terms of use, the
+  Help and News tabs; their keys `FontSize`, `Transparent`, `Scroller` and the child `HTMLVIEW` still parse). It is a
+  `TextArea` in a scroller now: a page file's text, HTML pages with their tags dropped, block tags as line breaks and
+  entities decoded (`ee_won/src/plaintext.rs`, from Windows-1252 bytes). Back, forward and stop stay disabled (no
+  links, no history), find finds nothing, and a web address (the News tab's community URL) is shown as text: the WON
+  servers are gone and nothing fetched pages but the browser.
+- `MOTDCtrl` and `TOUDialog` built an HTML document of two files (`HTMLDocumentGen`, flags IsOptionalHTML and, for the
+  MOTD, SkipFirstCharIfNotHTML: a text MOTD's first character is WON's "is new" flag); `ShowFiles` keeps that rule.
+- `WrappedText::mRichText` was never set; its branches went with the segment engine.

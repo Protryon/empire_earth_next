@@ -30,6 +30,9 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
 | **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+| R6 WON leaves (D8) | Done (`ee_won`, branch `rust-r6-won`): the message buffers' format and WON's text conversions, CRC-16, MD5, the random generator, Blowfish, big integers, ElGamal, the auth blocks and the CD key logic, behind C++ forwarders (BigInteger, Random, IntegerExtractor deleted). The clang-built C++ MD5Digest and Karatsuba were wrong (PORT_LEARNINGS "R6") |
+| R6 WON HTML (D8) | Removed: the HTML parser, documents and the segment layout engine; the lobby's pages (MOTD, terms of use, help, news) are plain text in a `TextArea` (`ee_won` plaintext) |
+| **R6 WON, the rest** | **Open.** The socket layer and async ops (WONSocket), the services (auth ops, directory, routing, DB, HTTP, misc), the lobby logic (WONLobby) and the GUI toolkit (WONGUI) |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
@@ -249,7 +252,7 @@ or give the fixture a real way in.
 | `tests/platform` (plat_test, font_test), `tools/gx_test`, `tools/sdl_test`, `tools/tcp_test` | Self-checks of a C API, exit code = failures | Run unchanged against the Rust implementation (link swap) |
 | `tools/record_sizes.py`, the `static_assert` pins | Record sizes | Mirror each assert in Rust (`const _: () = assert!(size_of::<T>() == N)`) |
 | `tools/harness/posix_game.py` + `EETestFixture.cpp` | Live game through the UI fixture | The layout-independent live harness; port its Windows half before R5 |
-| `tests/won` (`xbuild.py wontest`: `won_wire_test`, `won_socket_test`) | WON's wire format byte for byte, its socket layer over loopback | Gates R1's PlatSocket and any Rust WON codec. Not part of `gates.sh` today. `won_gui_test.cpp` (the GUI backend's GDI rules, offscreen) is in the tree, but `wontest` does not build it |
+| `tests/won` (`xbuild.py wontest`: `won_wire_test`, `won_crypto_test`, `won_socket_test`) | WON's wire format byte for byte, its socket layer over loopback | Gates R1's PlatSocket and any Rust WON codec. Not part of `gates.sh` today. `won_gui_test.cpp` (the GUI backend's GDI rules, offscreen) is in the tree, but `wontest` does not build it |
 | Harness `--exercise lobby` (`--refuse-autodial`) | Main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer -> the LAN screen | Smoke test of a lobby replacement. **It plays no game:** a LAN or Direct Connect game between two instances through the lobby is still untested (`mp_game.py` bypasses the lobby), and that test must exist before the lobby moves |
 | wgpu-native in the exe (`tools/build.py:127`) | | **Precedent:** a Rust staticlib already links with lld-link and `/MT`, with the system libraries Rust std needs |
 | MODDING_PLAN / AI_RESEARCH choices | | JSON-shaped canonical data "read by C++ and Rust alike"; strict YAML; `f32::from_str` float parsing; Lua through mlua; deferred caps (16 players, 6 armour kinds, 7 resources) planned for Rust |
