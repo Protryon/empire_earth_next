@@ -41,6 +41,7 @@
 #include "ee/EEEffect.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEROGroundShadows.h"
+#include "ee/EERenderSnapshot.h"
 
 // the shadows' named consts (.rdata 0x4413e4/0x4413e8, reloaded per use) (provisional names)
 const float kShadowHeight = 0.01f;
@@ -219,13 +220,14 @@ void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
 // Returns whether a point is over space on a space map (a space tile, or off the mesh) (inferred)
 static bool GetIsOverSpace(const GE3DPoint& inLocation)
 {
-    if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap())
+    // port: the frame's snapshot (ee/EERenderSnapshot.h); the tiles' water info is the terrain's, set at load
+    if (!gRenderSnapshot.mIsSpaceMap)
         return false;
     unsigned long theX = UMFloorUnsigned(inLocation.GetX());
     unsigned long theY = UMFloorUnsigned(inLocation.GetY());
-    EEMap* theMap = gWorld.mMap;
-    if (theMap->mTerrainMesh.GetIsValidTile(theX, theY))
-        return theMap->mTerrainMesh.GetWaterInfo(theX, theY) == 0x80;
+    GETerrainMesh* theMesh = gRenderSnapshot.mTerrainMesh;
+    if (theMesh->GetIsValidTile(theX, theY))
+        return theMesh->GetWaterInfo(theX, theY) == 0x80;
     return true;
 }
 

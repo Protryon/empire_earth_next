@@ -68,6 +68,10 @@ public:
     bool mHasCrops;                         // +0xb6 (the complex unit's mHasLeftGame)
     bool mDrawCrops;                        // +0xb7 (Virtual24: the doppelganger's, else mHasCrops)
     bool mDoppelganger;                     // +0xb8 (Virtual24: drawn as a doppelganger)
+    // port (R5a.3; past the original object): what DrawPass2 read from the live farm unit, taken by Queue under the
+    // world's lock: the unit's draw opacity (Fn23CEE2) and whether the field is drawn (alive or in a game, on the map)
+    float mDrawOpacity;
+    bool mDrawShown;
 };
 
 #endif

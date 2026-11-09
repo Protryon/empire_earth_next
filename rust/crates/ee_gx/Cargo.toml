@@ -17,7 +17,7 @@ raw-window-handle = "0.6"
 git = "https://github.com/gfx-rs/wgpu"
 tag = "v24.0.3"
 default-features = false
-features = ["wgsl", "dx12", "metal"]
+features = ["wgsl", "dx12", "metal", "counters"]
 
 [dev-dependencies]
 naga = { workspace = true, features = ["wgsl-in"] }

@@ -1533,11 +1533,10 @@ void EERenderObject::FillRenderLists()
         theInfo.mYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY()) - 0.78539819f;
         sL52908C = (gB529065 ? sL52908C : gPhysics->mTicksRun) + 1;
         theInfo.mFrame = sL52908C;
-        theInfo.mPickedUnit = !gFreeCamera ? gUnitPicker.PickUnit(gMouse->mPosition, 1) : NULL;
-        if (theInfo.mPickedUnit != NULL && theInfo.mPickedUnit->GetHitPoints() <= 0) {
-            theInfo.mPickedUnit->Dereference();
+        // port (R5a.3): no reference: the unit is only compared and read while the world's lock is held
+        theInfo.mPickedUnit = !gFreeCamera ? gUnitPicker.PickUnitUnreferenced(gMouse->mPosition, 1) : NULL;
+        if (theInfo.mPickedUnit != NULL && theInfo.mPickedUnit->GetHitPoints() <= 0)
             theInfo.mPickedUnit = NULL;
-        }
         gUnitPicker.GetLock()->Enter();
         gUnitPicker.Reset();
         unsigned long theRows = theMap->mTerrainMesh.GetNumVisibleTileRows();
@@ -1614,6 +1613,16 @@ void EERenderObject::FillRenderLists()
         }
         gUnitPicker.GetLock()->Leave();
         this->FillGhostRecords();
+        // port (R5a.3): what EEROUnits::DrawUnitModel read from the live unit after the lock was released, read here
+        // with the same lookup (a pure one: the player's id table); the doppelgangers' render units keep the id their
+        // pool slot had, as before
+        for (unsigned long i = 0; i < EERenderLists::sInstance.mRenderUnitCount; i++) {
+            EERenderUnit& theRenderUnit = EERenderLists::sInstance.mRenderUnits[i];
+            EEUnit* theLive;
+            theRenderUnit.mSecondFullOpacity = theRenderUnit.mUnitClassIndex == kUnitTypeRoboticFarm
+                && ((theLive = static_cast<EEUnit*>(gWorld.GetUnit(theRenderUnit.mUnitId))) == NULL
+                    || theLive->mHitPoints == 1);
+        }
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;
@@ -1647,8 +1656,6 @@ void EERenderObject::FillRenderLists()
         }
         if (theInfo.mAmbient)
             gAmbientSoundManager.Update();
-        if (theInfo.mPickedUnit != NULL)
-            theInfo.mPickedUnit->Dereference();
     }
 }
 

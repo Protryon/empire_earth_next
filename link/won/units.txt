@@ -31,7 +31,6 @@
 2b0340 2b1bcc WONSocket/AsyncSocket.cpp
 2b09a0 2b0a27 WONSocket/AsyncSocketInternet.cpp
 2b2350 2b38d3 WONSocket/IPAddr.cpp
-2b38e0 2b3930 WONSocket/NetStats.cpp
 2b3930 2b4dd9 WONSocket/QueueSocket.cpp
 2b5970 2b5afa WONSocket/RecvCRMsgOp.cpp
 2b6070 2b60b4 WONSocket/SocketRunHooks.cpp

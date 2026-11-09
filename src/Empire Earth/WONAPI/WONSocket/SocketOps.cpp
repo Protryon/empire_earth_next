@@ -25,22 +25,16 @@ WONStatus SendBytesOp::Start()
 }
 
 // FUNCTION: WON 0x006b5e70
-// Sends the remaining bytes as the socket accepts them; returns WS_TimedOut when time runs out or the send error
+// Sends the remaining bytes as the socket accepts them; returns WS_TimedOut when time runs out or the send error.
+// The loop is Rust's (ee_won ops::send_all), under the socket's lock as AsyncSocket::Send took it
 WONStatus SendBytesOp::Continue()
 {
-    while (this->mReadBuffer.pos() < this->mReadBuffer.length()) {
-        this->mSocket->WaitForWrite(this->TimeLeft());
-        int aSent = 0;
-        WONStatus aStatus = this->mSocket->Send(this->mReadBuffer.data()+this->mReadBuffer.pos(),
-            this->mReadBuffer.length()-this->mReadBuffer.pos(), &aSent);
-        if (aSent > 0)
-            this->mReadBuffer.ReadBytes(aSent);
-        if (aStatus != WS_TimedOut)
-            return aStatus;
-        if (this->TimeLeft() == 0)
-            return WS_TimedOut;
-    }
-    return WS_Success;
+    uint32_t aPos = static_cast<uint32_t>(this->mReadBuffer.pos());
+    WONStatus aStatus = ee_won_op_send_all(&this->mSocket->mCore, this->mSocket->mDataCrit.mCrit,
+        reinterpret_cast<const uint8_t*>(this->mReadBuffer.data()), this->mReadBuffer.length(), &aPos,
+        this->GetTiming());
+    this->mReadBuffer.SetPos(static_cast<int>(aPos));
+    return aStatus;
 }
 
 // FUNCTION: WON 0x006b5f10
@@ -127,12 +121,8 @@ WONStatus RecvBytesOp::ContinueRecv()
         }
         else {
             char aBuffer[1024];
-            int aLength = 1024;
-            if (this->mLength > 0) {
-                aLength = this->mLength - this->mBytesRead;
-                if (aLength > 1024) aLength = 1024;
-                else if (aLength < 0) aLength = 0;
-            }
+            int aLength = ee_won_op_chunk_length(static_cast<uint32_t>(this->mLength),
+                                                 static_cast<uint32_t>(this->mBytesRead));
             aStatus = this->mSocket->Recv(aBuffer, aLength, &aRead);
             if (aRead > 0 && !this->mSkipBytes) {
                 if (this->mFile != NULL) {
@@ -186,7 +176,7 @@ WONStatus RecvMsgOp::Start()
 {
     this->mState = 1;
     this->mLength = this->mSocket->GetLengthFieldSize();
-    if (this->mLength != 1 && this->mLength != 2 && this->mLength != 4)
+    if (!ee_won_op_valid_length_field(static_cast<uint32_t>(this->mLength)))
         return WS_RecvMsg_InvalidLengthFieldSize;
     WONStatus aStatus = this->StartRecv();
     return aStatus == WS_Success ? this->StartRecvBody() : aStatus;
@@ -194,39 +184,30 @@ WONStatus RecvMsgOp::Start()
 
 // FUNCTION: WON 0x006b5b50
 // Reads the length prefix and starts receiving the body (a 2-byte 0xffff switches to a 4-byte prefix);
-// rejects lengths not above the prefix size or of 256000 and more
+// rejects lengths not above the prefix size or of 256000 and more (the prefix's rules: ee_won ops::length_step)
 WONStatus RecvMsgOp::StartRecvBody()
 {
     this->mState = 2;
     ByteBufferPtr aBuffer = this->GetBytes();
-    ReadBuffer aMessage(aBuffer->data(), aBuffer->length());
-    unsigned long aLength;
-    switch (aMessage.length()) {
-    case 1: aLength = aMessage.ReadByte(); break;
-    case 2: aLength = (unsigned short)aMessage.ReadShort(); break;
-    case 4: aLength = aMessage.ReadLong(); break;
-    default: goto aBadLength;
+    uint32_t aBody = 0;
+    switch (ee_won_op_length_step(reinterpret_cast<const uint8_t*>(aBuffer->data()), aBuffer->length(), &aBody)) {
+    case 1: {
+        this->mLength = 4;
+        this->mState = 1;
+        WONStatus aStatus = this->StartRecv();
+        if (aStatus != WS_Success)
+            return aStatus;
+        return this->StartRecvBody();
     }
-    if (aLength > aMessage.length() && aLength < 256000) {
-        if (aLength == 65535 && aMessage.length() == 2) {
-            this->mLength = 4;
-            this->mState = 1;
-            WONStatus aStatus = this->StartRecv();
-            if (aStatus != WS_Success)
-                return aStatus;
-            else
-                return this->StartRecvBody();
-        }
+    case 0: {
         this->mState = 2;
-        this->mLength = aLength - aMessage.length();
+        this->mLength = aBody;
         WONStatus aStatus = this->StartRecv();
         if (aStatus == WS_Success)
             return this->FinishRecvMsg();
-        else
-            return aStatus;
+        return aStatus;
     }
-    else {
-aBadLength:
+    default:
         return WS_RecvMsg_InvalidMessageLength;
     }
 }

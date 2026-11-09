@@ -140,6 +140,24 @@ pub trait Backend {
     fn swap_acquire(&mut self, primary: SurfaceId) -> bool;
     fn swap_begin_pass(&mut self, primary: SurfaceId);
     fn swap_present(&mut self, primary: SurfaceId);
+    /// The live GPU objects (`EE_GX_STATS`'s "GX live" line); a fake has none.
+    fn live(&self) -> LiveCounts {
+        LiveCounts::default()
+    }
+}
+
+/// The GPU objects alive now: `cached_groups` are the bind groups GX holds (per texture and the white texture's), the
+/// rest wgpu-hal's counters (raw objects not yet destroyed, including those kept by submissions in flight).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LiveCounts {
+    pub cached_groups: usize,
+    pub bind_groups: isize,
+    pub textures: isize,
+    pub texture_views: isize,
+    pub samplers: isize,
+    pub buffers: isize,
+    /// submissions the GPU has not finished
+    pub in_flight: usize,
 }
 
 /// The platform layer and the environment.
@@ -307,6 +325,9 @@ pub struct Gx<B: Backend, P: Platform> {
     last_present_size: (u32, u32),
     next_frame_us: u64,
     pub hook: Option<PresentHook>,
+    /// frames presented, and presents dropped because no swap chain image was acquired (`EE_GX_STATS`'s "GX live")
+    pub presents: u64,
+    pub acquire_failures: u64,
 }
 
 fn ring_index(ring: RingKind) -> usize {
@@ -349,6 +370,8 @@ impl<B: Backend, P: Platform> Gx<B, P> {
             last_present_size: (0, 0),
             next_frame_us: 0,
             hook: None,
+            presents: 0,
+            acquire_failures: 0,
         }
     }
 
@@ -1007,6 +1030,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
             surface.swap_mode = mode;
         }
         if !self.backend.swap_acquire(primary) {
+            self.acquire_failures += 1;
             self.m(primary).swap_width = 0; // reconfigure next time
             return;
         }
@@ -1034,6 +1058,7 @@ impl<B: Backend, P: Platform> Gx<B, P> {
         self.m(top).used_serial = serial;
         self.submit();
         self.backend.swap_present(primary);
+        self.presents += 1;
         if self.settings.frame_limit() > 0 {
             self.wait_for_frame_limit();
         }

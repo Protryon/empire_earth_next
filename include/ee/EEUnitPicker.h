@@ -17,11 +17,13 @@ class GE3DPlane;
 class TSCriticalSection;
 
 #ifdef LLE_GEVIEWPORT_H
-// one drawn unit: its model where it was drawn and the unit (referenced) (0x50 bytes; `new[]` in the ctor runs
-// GEPhysicalModel's inline ctor per element; its vector deleting dtor 0x118dd7 calls ~GEPhysicalModel) (provisional
-// name)
+// one drawn unit: its model where it was drawn and the unit (0x50 bytes; `new[]` in the ctor runs GEPhysicalModel's
+// inline ctor per element; its vector deleting dtor 0x118dd7 calls ~GEPhysicalModel) (provisional name)
 struct EEUnitPickerEntry : public GEPhysicalModel {
-    EEUnit* mUnit;                          // +0x4c
+    // +0x4c: port (R5a.3): the unit's id, resolved by the pickers under the world's lock (gWorld.GetUnit). The
+    // original held the unit itself, referenced: the graphics thread took a reference on every drawn unit and its
+    // carriers each frame, and the last one could free a unit there
+    unsigned long mUnitID;
 };
 
 // a hit of PickUnit's ray (0x14 bytes; its vector's members are ICF-folded with vector<GEVideoMode>'s) (provisional
@@ -41,13 +43,15 @@ public:
     EEUnitPicker(unsigned long inCapacity); // 0x118cf8
     virtual ~EEUnitPicker();                // +0x00 (??_G 0x118dbb; dtor 0x118e35)
     bool Contains(EEUnit* inUnit);          // 0x118e74 (provisional name)
-    // 0x119540: the unit under inPoint (referenced; 0 if none) (provisional name)
+    // 0x119540: the unit under inPoint (referenced; 0 if none) (provisional name). The caller holds the world's lock
     EEUnit* PickUnit(const GE2DPoint& inPoint, long inPreferResources);
+    // port (R5a.3): PickUnit without the reference, for the frame's capture (the world's lock is held throughout)
+    EEUnit* PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources);
     // 0x119ea2: the ids of inPlayer's units inside inRectangle (EEMSelectUnits' ctor; provisional name)
     void PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inMode, std::vector<unsigned long>& outUnitIDs);
     // 0x119d63: the ids of the units inside inRectangle (the editor's lasso) (provisional name)
     void PickUnitsInRectangle(const GERectangle& inRectangle, long inArg2, std::vector<unsigned long>& outUnitIDs);
-    void Clear();                           // 0x119f08: drops the entries and mCarriers (provisional name)
+    void Clear();                           // 0x119f08: drops the entries (provisional name)
     void Reset();                           // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
     // 0x119ffb: one drawn unit (EEROUnits) (provisional name)
     void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize);
@@ -59,9 +63,11 @@ private:
     // 0x118eaf: PickUnits' worker for one unit type (provisional name)
     void PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
                          std::vector<unsigned long>& outUnitIDs);
-    void ReferenceCarriers(EEComplexUnit* inUnit);   // 0x119faa (provisional name)
+    // port (R5a.3): ReferenceCarriers 0x119faa is gone with the references
+    EEUnit* FindUnit(const GE2DPoint& inPoint, long inPreferResources);   // PickUnit's search (mLock held)
+    EEUnit* GetEntryUnit(unsigned long inIndex);   // an entry's unit, or NULL once it has left the world
 #ifdef LLE_GEVIEWPORT_H
-    std::vector<EEComplexUnit*> mCarriers;  // +0x04 (each referenced; Clear drops them)
+    std::vector<EEComplexUnit*> mCarriers;  // +0x04 (the original's referenced carriers; unused since R5a.3)
     GEViewport mViewport;                   // +0x14 (Reset copies the main viewport 0x4e8f08)
     TSCriticalSection* mLock;               // +0x29c (named by the ctor's assert)
     EEUnitPickerEntry* mEntries;            // +0x2a0

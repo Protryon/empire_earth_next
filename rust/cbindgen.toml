@@ -106,3 +106,5 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "Blowfish" = "EeWonBlowfish"
 "ElGamal" = "EeWonElGamal"
 "AuthBlock" = "EeWonAuth"
+"Socket" = "EeWonSocket"
+"OpTiming" = "EeWonOpTiming"
