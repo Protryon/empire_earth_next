@@ -2,14 +2,20 @@
 #ifndef PLATFORM_POSIX_PLATPOSIX_H
 #define PLATFORM_POSIX_PLATPOSIX_H
 
+#include <errno.h>
 #include <stdint.h>
 #include <string>
 
-// ---- the last error (PlatGetLastError): one value per thread, set by every platform function that fails.
+// ---- the last error (PlatGetLastError): one value per thread, set by every platform function that fails. It lives
+// in Rust (rust/crates/ee_plat_sys, last_error.rs) with PlatFile, PlatThread and PlatSocket; the C++ that remains
+// reaches it through these two functions.
 // The values are the Win32 error codes the engine already records and a few callers compare against
 // (ERROR_FILE_NOT_FOUND 2, ERROR_PATH_NOT_FOUND 3, ERROR_ACCESS_DENIED 5, ERROR_ALREADY_EXISTS 183, ...), so a
 // trace reads the same on every system. An errno without a Win32 twin is 0x20000000 | errno (the Win32
 // "customer" bit: never a system code).
+extern "C" void PlatPosixSetLastError(uint32_t inError);
+extern "C" uint32_t PlatPosixErrorFromErrno(int inErrno);
+
 namespace PlatPosix {
 
 enum : uint32_t {
@@ -35,11 +41,28 @@ enum : uint32_t {
     kErrorTimeout = 1460,
 };
 
-void SetLastError(uint32_t inError);
-uint32_t ErrorFromErrno(int inErrno);
+inline void SetLastError(uint32_t inError)
+{
+    PlatPosixSetLastError(inError);
+}
+
+inline uint32_t ErrorFromErrno(int inErrno)
+{
+    return PlatPosixErrorFromErrno(inErrno);
+}
+
 // SetLastError(ErrorFromErrno(errno)) -> 0, so a failing function can `return FailErrno();`
-int FailErrno();
-int Fail(uint32_t inError);
+inline int FailErrno()
+{
+    PlatPosixSetLastError(PlatPosixErrorFromErrno(errno));
+    return 0;
+}
+
+inline int Fail(uint32_t inError)
+{
+    PlatPosixSetLastError(inError);
+    return 0;
+}
 
 // ---- paths (PlatPath.cpp): the game's Windows-form paths ("C:\Dir\File.ext", "Data\x.dat", any case) onto the
 // native file system. Volumes map to native directories (every letter to "/" unless PlatPathSetVolumeRoot says

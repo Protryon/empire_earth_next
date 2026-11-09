@@ -20,7 +20,7 @@ import rust_build   # noqa: E402
 TARGETS = {"x86_64": ("x86_64-pc-windows-msvc", "x64", "X64")}
 # the static runtime, then what the Rust standard library and wgpu's DX12/Vulkan/GL backends link against
 LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "oldnames.lib", "kernel32.lib", "user32.lib", "gdi32.lib",
-        "advapi32.lib", "ws2_32.lib", "userenv.lib", "ntdll.lib", "bcrypt.lib", "ole32.lib", "oleaut32.lib",
+        "advapi32.lib", "ws2_32.lib", "iphlpapi.lib", "userenv.lib", "ntdll.lib", "bcrypt.lib", "ole32.lib", "oleaut32.lib",
         "d3d12.lib", "dxgi.lib", "d3dcompiler.lib", "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib",
         "synchronization.lib", "shell32.lib", "dwmapi.lib", "winmm.lib"]
 
