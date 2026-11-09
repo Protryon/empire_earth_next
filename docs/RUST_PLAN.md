@@ -33,6 +33,8 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R5b.1 formations | Done (`ee_formations`): the C++ classes keep their members and call Rust for the geometry. 14,068 `Place` calls captured from the C++ in the six oracle games (`tools/sim_capture.py`: real games plus a sweep of every formation type over real units) equal bit for bit |
 | **R5b.1 A* pathfinding, continents, choke points** | **Open.** No plain-data seam yet: the goals read the live world tile by tile, lazily and with side effects, and walk the storage's lists (PORT_LEARNINGS "R5b.1"). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
 
+| **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) `UMath`'s table trigonometry and `GETerrainMesh`'s height, normal, closest-tile and line queries, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: the rest of `GETerrainMesh` (visible-terrain build, fog, water, load/save), `GEModel` load/save/LOD/caching, the managers, fonts, textures, the viewport |
+
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
 played on. Linux: the game cross-compiles and links, but has not been run. macOS: Rust type-checks only; nothing was

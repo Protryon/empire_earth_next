@@ -6,6 +6,7 @@
 // GEPolygonArray, GEVertex, GEModel, GELOD*, GEModelManager, GEMovie, GEPhysicalModel, GEPoint, GEQuaternion, the
 // U2D key statics 0x10011ec3, GERhombus, GETextureSet, U2DFractal, GETerrainMesh, GEText; 0x10010550..0x10013501),
 // then its own code (0x10013501) and the template COMDATs (vectors, UList memory pools; 0x10013b27..).
+// GEBoundingBox's members forward to Rust (rust/crates/ee_ge bbox.rs; GERustMath.h), except the file I/O.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -55,6 +56,7 @@
 #include "lle/U2DFractal.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEText.h"
+#include "GERustMath.h"
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // TEMPLATE: LLE 0x10013f5b
 // TEMPLATE: LLE 0x10013fa5
@@ -256,116 +258,36 @@
 // FUNCTION: LLE 0x10011e5e
 // FUNCTION: LLE 0x10011e96
 
-static const float kTolerance = 0.00001f;   // 0x10097b20 (a unit-local constant next to the -1.0f at 0x10097b24)
-
 // ---- GEBoundingBox (0x10013501..)
 
 // FUNCTION: LLE 0x10013501
 // Orders each axis so the first corner holds the minimum, then recomputes width (X), height (Z) and depth (Y)
 void GEBoundingBox::ComputeDimensions()
 {
-    float theTemp;
-    if (this->mBottomLeftFront.GetX() > this->mTopRightBack.GetX()) {
-        theTemp = this->mBottomLeftFront.GetX();
-        this->mBottomLeftFront.SetX(this->mTopRightBack.GetX());
-        this->mTopRightBack.SetX(theTemp);
-    }
-    if (this->mBottomLeftFront.GetY() > this->mTopRightBack.GetY()) {
-        theTemp = this->mBottomLeftFront.GetY();
-        this->mBottomLeftFront.SetY(this->mTopRightBack.GetY());
-        this->mTopRightBack.SetY(theTemp);
-    }
-    if (this->mBottomLeftFront.GetZ() > this->mTopRightBack.GetZ()) {
-        theTemp = this->mBottomLeftFront.GetZ();
-        this->mBottomLeftFront.SetZ(this->mTopRightBack.GetZ());
-        this->mTopRightBack.SetZ(theTemp);
-    }
-    this->mWidth = this->mTopRightBack.GetX() - this->mBottomLeftFront.GetX();
-    this->mHeight = this->mTopRightBack.GetZ() - this->mBottomLeftFront.GetZ();
-    this->mDepth = this->mTopRightBack.GetY() - this->mBottomLeftFront.GetY();
+    ee_ge_bbox_compute_dimensions(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1001356a
 // Returns whether the point lies inside the box, with a 0.00001 tolerance on every face
 bool GEBoundingBox::Contains(const GE3DPoint& inPoint) const
 {
-    if (inPoint.GetX() < this->mBottomLeftFront.GetX() - kTolerance ||
-        inPoint.GetY() < this->mBottomLeftFront.GetY() - kTolerance ||
-        inPoint.GetZ() < this->mBottomLeftFront.GetZ() - kTolerance ||
-        inPoint.GetX() > this->mTopRightBack.GetX() + kTolerance ||
-        inPoint.GetY() > this->mTopRightBack.GetY() + kTolerance ||
-        inPoint.GetZ() > this->mTopRightBack.GetZ() + kTolerance)
-        return false;
-    return true;
+    return ee_ge_bbox_contains(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x100135d8
 // Returns whether the two boxes overlap (touching faces count)
 bool GEBoundingBox::Intersects(const GEBoundingBox& inBox) const
 {
-    if (this->mBottomLeftFront.GetX() > inBox.mTopRightBack.GetX() ||
-        this->mBottomLeftFront.GetY() > inBox.mTopRightBack.GetY() ||
-        this->mBottomLeftFront.GetZ() > inBox.mTopRightBack.GetZ() ||
-        this->mTopRightBack.GetX() < inBox.mBottomLeftFront.GetX() ||
-        this->mTopRightBack.GetY() < inBox.mBottomLeftFront.GetY() ||
-        this->mTopRightBack.GetZ() < inBox.mBottomLeftFront.GetZ())
-        return false;
-    return true;
+    return ee_ge_bbox_intersects(GERust(*this), GERust(inBox));
 }
 // FUNCTION: LLE 0x10013631
 // Tests the line against the box's six faces; returns whether it hits any and the nearest hit distance
 bool GEBoundingBox::Intersects(const GE3DLine& inLine, float& outDistance) const
 {
-    GE3DPlane thePlane;
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDown(0.0f, -1.0f, 0.0f);
-    GEVector theBack(0.0f, 0.0f, -1.0f);
-    GEVector theFront(0.0f, 0.0f, 1.0f);
-    GEVector theRight(1.0f, 0.0f, 0.0f);
-    GEVector theLeft(-1.0f, 0.0f, 0.0f);
-    float theDistance = 0.0f;
-    bool theResult;
-    thePlane.Define(this->mBottomLeftFront, theUp);
-    theResult = this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, true);
-    thePlane.Define(this->mTopRightBack, theDown);
-    if (this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, !theResult))
-        theResult = true;
-    thePlane.Define(this->mTopRightBack, theBack);
-    if (this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, !theResult))
-        theResult = true;
-    thePlane.Define(this->mBottomLeftFront, theFront);
-    if (this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, !theResult))
-        theResult = true;
-    thePlane.Define(this->mBottomLeftFront, theRight);
-    if (this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, !theResult))
-        theResult = true;
-    thePlane.Define(this->mTopRightBack, theLeft);
-    if (this->LineToPlaneIntersection(inLine, thePlane, theDistance, theDistance, !theResult))
-        theResult = true;
-    outDistance = theDistance;
-    return theResult;
+    return ee_ge_bbox_intersects_line(GERust(*this), GERust(inLine), &outDistance);
 }
 
-// FUNCTION: LLE 0x10013808
-// Returns whether the line crosses the plane inside the box; outDistance gets the hit or inBest, whichever is closer
-bool GEBoundingBox::LineToPlaneIntersection(const GE3DLine& inLine, const GE3DPlane& inPlane, float inBest,
-                                            float& outDistance, bool inFirst) const
-{
-    GE3DPoint thePoint;
-    float theDistance;
-    bool theResult = inLine.Intersects(inPlane, theDistance);
-    if (theResult) {
-        inLine.GetPointAt(theDistance, thePoint);
-        theResult = this->Contains(thePoint);
-        if (theResult) {
-            if (inFirst || (theDistance < 0.0f ? -theDistance : theDistance) < (inBest < 0.0f ? -inBest : inBest))
-                outDistance = theDistance;
-            else
-                outDistance = inBest;
-        }
-    }
-    return theResult;
-}
+// (0x10013808 LineToPlaneIntersection: Intersects(line)'s helper, in Rust)
 
 // FUNCTION: LLE 0x100138a6
 // Reads the box's two corners from the file and recomputes its size; returns the first read error
@@ -387,66 +309,10 @@ long GEBoundingBox::Load(FSFileSpec& inFile)
 // Transforms all eight corners and sets outBox to the axis-aligned box around them
 void GEBoundingBox::Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const
 {
-    GE3DPoint theMinimum;
-    GE3DPoint theMaximum;
-    GE3DPoint theCorner(this->mBottomLeftFront.GetX(), this->mBottomLeftFront.GetY(), this->mBottomLeftFront.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, true);
-    theCorner.SetX(this->mTopRightBack.GetX());
-    theCorner.SetY(this->mBottomLeftFront.GetY());
-    theCorner.SetZ(this->mBottomLeftFront.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mBottomLeftFront.GetX());
-    theCorner.SetY(this->mTopRightBack.GetY());
-    theCorner.SetZ(this->mBottomLeftFront.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mBottomLeftFront.GetX());
-    theCorner.SetY(this->mBottomLeftFront.GetY());
-    theCorner.SetZ(this->mTopRightBack.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mTopRightBack.GetX());
-    theCorner.SetY(this->mTopRightBack.GetY());
-    theCorner.SetZ(this->mTopRightBack.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mBottomLeftFront.GetX());
-    theCorner.SetY(this->mTopRightBack.GetY());
-    theCorner.SetZ(this->mTopRightBack.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mTopRightBack.GetX());
-    theCorner.SetY(this->mBottomLeftFront.GetY());
-    theCorner.SetZ(this->mTopRightBack.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    theCorner.SetX(this->mTopRightBack.GetX());
-    theCorner.SetY(this->mTopRightBack.GetY());
-    theCorner.SetZ(this->mBottomLeftFront.GetZ());
-    this->TransformPoint(inTransformation, theCorner, theMinimum, theMaximum, false);
-    outBox.Define(theMinimum, theMaximum);
+    ee_ge_bbox_transform(GERust(*this), GERust(inTransformation), GERust(outBox));
 }
 
-// FUNCTION: LLE 0x10013a65
-// Transforms one corner and widens the running minimum/maximum by it (inFirst starts them at the point)
-void GEBoundingBox::TransformPoint(const GETransformation& inTransformation, const GE3DPoint& inPoint,
-                                   GE3DPoint& ioMinimum, GE3DPoint& ioMaximum, bool inFirst) const
-{
-    GE3DPoint thePoint;
-    inTransformation.Apply(inPoint, thePoint);
-    if (!inFirst) {
-        if (ioMinimum.mX > thePoint.mX)
-            ioMinimum.SetX(thePoint.GetX());
-        else if (ioMaximum.mX < thePoint.mX)
-            ioMaximum.SetX(thePoint.GetX());
-        if (thePoint.GetY() < ioMinimum.GetY())
-            ioMinimum.SetY(thePoint.GetY());
-        else if (thePoint.GetY() > ioMaximum.GetY())
-            ioMaximum.SetY(thePoint.GetY());
-        if (thePoint.GetZ() < ioMinimum.GetZ())
-            ioMinimum.SetZ(thePoint.GetZ());
-        else if (thePoint.GetZ() > ioMaximum.GetZ())
-            ioMaximum.SetZ(thePoint.GetZ());
-    } else {
-        ioMinimum = thePoint;
-        ioMaximum = thePoint;
-    }
-}
+// (0x10013a65 TransformPoint: Transform's helper, in Rust)
 
 // U2DPoint/U2DRectangle key init chains (wrapper, ctor, atexit registration, dtor per key)
 // SYNTHETIC: LLE 0x10011ec3

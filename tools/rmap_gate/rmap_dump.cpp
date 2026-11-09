@@ -26,9 +26,6 @@
 #include "ee/EERandomMap.h"
 #include "ee/EERandomMapIDs.h"
 
-// the engine's lookup tables, for --tables (the Rust generator recomputes them: ee_rmap math.rs)
-#include "../../src/Low-Level Engine/Utilities/UMTables.h"
-
 extern "C" {
 long EERMPIMCreateFlatMap(EERandomMap* ioMap);
 long EERMPIMCreateHeightMap(EERandomMap* ioMap);
@@ -1075,22 +1072,6 @@ static std::vector<std::string> ListScripts(const std::string& inDir)
 
 int main(int argc, char** argv)
 {
-    if (argc == 2 && strcmp(argv[1], "--tables") == 0) {
-        uint64_t theHash = 0xcbf29ce484222325ull;
-        auto theAdd = [&](const float* inTable, size_t inCount) {
-            for (size_t i = 0; i < inCount; i++) {
-                uint32_t theBits = *(const uint32_t*)&inTable[i];
-                for (int k = 0; k < 4; k++) {
-                    theHash ^= (theBits >> (8 * k)) & 0xff;
-                    theHash *= 0x100000001b3ull;
-                }
-            }
-        };
-        theAdd(sCosTable, 16385);
-        theAdd(sArcCosTable, 32769);
-        printf("%016llx\n", (unsigned long long)theHash);
-        return 0;
-    }
     if (argc == 2 && strcmp(argv[1], "--synthetic") == 0) {
         RunSynthetic();
         return 0;

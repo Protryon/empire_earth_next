@@ -25,6 +25,7 @@ public:
     long Load(FSFile& inFile);
     long Save(FSFile& inFile);
 private:
+    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     GE3DPoint mPoint;                       // +0x00
     GEVector mNormal;                       // +0x0c
 };

@@ -4,6 +4,7 @@
 // 0x100246a7..0x10024ea0: the four static UString IDs (one shared guard byte, bits 1/2/4/8), And x2, Load,
 // RemoveIntersectingRectangle, Save, then the vector<GERectangle> template COMDATs. The rest of GERectangle is
 // header-inline (GEBitmap.cpp emits it first). No U2D keys: the unit includes no U2D header.
+// And and RemoveIntersectingRectangle forward to Rust (rust/crates/ee_ge bbox.rs; GERustMath.h); the file I/O stays.
 #include <windows.h>
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include "lle/GE2DPoint.h"
 #include "lle/FSFile.h"
 #include "lle/GERectangle.h"
+#include "GERustMath.h"
 
 const UString GERectangle::sLeftID("GERectangle-Left");
 const UString GERectangle::sTopID("GERectangle-Top");
@@ -22,46 +24,14 @@ const UString GERectangle::sBottomID("GERectangle-Bottom");
 // Clips the rectangle to another one; returns false and leaves it unchanged when they do not overlap
 bool GERectangle::And(const GERectangle& inRectangle)
 {
-    bool theResult = !(this->mLeft > inRectangle.mRight || this->mRight < inRectangle.mLeft || this->mTop > inRectangle.mBottom ||
-                       this->mBottom < inRectangle.mTop);
-    if (theResult) {
-        if (this->mLeft < inRectangle.mLeft)
-            this->mLeft = inRectangle.mLeft;
-        if (this->mRight > inRectangle.mRight)
-            this->mRight = inRectangle.mRight;
-        if (this->mTop < inRectangle.mTop)
-            this->mTop = inRectangle.mTop;
-        if (this->mBottom > inRectangle.mBottom)
-            this->mBottom = inRectangle.mBottom;
-    }
-    return theResult;
+    return ee_ge_rect_and_in_place(GERust(*this), GERust(inRectangle));
 }
 
 // FUNCTION: LLE 0x10024826
 // Writes the overlap of two rectangles to outRectangle; returns false (output untouched) when they do not overlap
 bool GERectangle::And(const GERectangle& inRectangle, GERectangle& outRectangle) const
 {
-    bool theResult = !(this->mLeft > inRectangle.mRight || this->mRight < inRectangle.mLeft || this->mTop > inRectangle.mBottom ||
-                       this->mBottom < inRectangle.mTop);
-    if (theResult) {
-        if (this->mLeft < inRectangle.mLeft)
-            outRectangle.mLeft = inRectangle.mLeft;
-        else
-            outRectangle.mLeft = this->mLeft;
-        if (this->mRight > inRectangle.mRight)
-            outRectangle.mRight = inRectangle.mRight;
-        else
-            outRectangle.mRight = this->mRight;
-        if (this->mTop < inRectangle.mTop)
-            outRectangle.mTop = inRectangle.mTop;
-        else
-            outRectangle.mTop = this->mTop;
-        if (this->mBottom > inRectangle.mBottom)
-            outRectangle.mBottom = inRectangle.mBottom;
-        else
-            outRectangle.mBottom = this->mBottom;
-    }
-    return theResult;
+    return ee_ge_rect_and(GERust(*this), GERust(inRectangle), GERust(outRectangle));
 }
 
 // FUNCTION: LLE 0x100248ba
@@ -89,25 +59,11 @@ long GERectangle::Load(FSFile& inFile)
 void GERectangle::RemoveIntersectingRectangle(const GERectangle& inRectangle,
                                               std::vector<GERectangle>& outRectangles) const
 {
-    bool theLeftSplit = false;
-    bool theRightSplit = false;
-    if (inRectangle.mLeft >= this->mLeft && inRectangle.mLeft <= this->mRight) {
-        outRectangles.push_back(GERectangle(this->mLeft, this->mTop, inRectangle.mLeft, this->mBottom));
-        theLeftSplit = true;
-    }
-    if (inRectangle.mRight >= this->mLeft && inRectangle.mRight <= this->mRight) {
-        outRectangles.push_back(GERectangle(inRectangle.mRight, this->mTop, this->mRight, this->mBottom));
-        theRightSplit = true;
-    }
-    if (inRectangle.mTop >= this->mTop && inRectangle.mTop <= this->mBottom)
-        outRectangles.push_back(GERectangle(theLeftSplit == true ? inRectangle.mLeft : this->mLeft, this->mTop,
-                                            theRightSplit == true ? inRectangle.mRight : this->mRight, inRectangle.mTop));
-    if (inRectangle.mBottom >= this->mTop && inRectangle.mBottom <= this->mBottom)
-        outRectangles.push_back(GERectangle(theLeftSplit == true ? inRectangle.mLeft : this->mLeft, inRectangle.mBottom,
-                                            theRightSplit == true ? inRectangle.mRight : this->mRight, this->mBottom));
-    if (outRectangles.size() == 0 && (this->mLeft < inRectangle.mLeft || this->mRight > inRectangle.mRight ||
-                                      this->mTop < inRectangle.mTop || this->mBottom > inRectangle.mBottom))
-        outRectangles.push_back(*this);
+    // the whole rectangle is added only to an empty vector (the C++ tested its size, not its own pieces)
+    GERectangle theThis(*this);
+    GERectangle theOther(inRectangle);   // copies: either may be an element of outRectangles
+    ee_ge_rect_remove_intersecting(GERust(theThis), GERust(theOther), outRectangles.size(), GERustPushRectangle,
+                                   &outRectangles);
 }
 
 // FUNCTION: LLE 0x10024a82

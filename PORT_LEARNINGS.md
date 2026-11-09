@@ -2257,3 +2257,74 @@ opaque handles through a `Host` trait (C++ trampolines `ee_soundcpp_*` in `SESou
 - **Covered only by the goldens** (the harness cannot hear): which channel a sound gets, voice stealing by priority
   and time left, category limits, paused looping sounds and their restart order, the random start offsets, one-shot
   unloading, `SetMaxChannels`, the destructor's cleanup.
+
+## R4.3: the Graphics Engine's math in Rust (ee_ge, 2026-11-09)
+
+The value classes `GE2DPoint`, `GE3DPoint`, `GEVector`, `GE3DLine`, `GE3DPlane`, `GETransformation`, `GEOrientation`,
+`GEQuaternion`, `GEBoundingBox`, `GERectangle` stay C++ (every caller holds them by value); their algorithms forward to
+`rust/crates/ee_ge` with the objects themselves as arguments (`#[repr(C)]` mirrors `EeGe*`, layouts pinned in
+`Graphics Engine/GERustMath.h`). `UMath.cpp`'s table trigonometry (`UMCos`, `UMArcCos`, `UMArcTan`, `UMArcTan2`, `UMTan`,
+`UMQuadraticEquation`) moved with them, and `UMTables.h` is gone: the tables are rebuilt the way R3.4 found (`um.rs`).
+
+- **This is simulation code.** Units, physics, the AI, formations and the map call the distances, `SetOrientationYPR`,
+  `GetYaw`, `ConvertToOrientation`, `UMCos`/`UMArcTan2` and the solvers every tick, so RUST_PLAN 2.1 applies to all of it:
+  the C++'s operand order (`DotProduct` sums z first; `Apply` sums z, y, x, then the translation), `f32` throughout,
+  `f64` exactly where the C++ is `double` (`Slerp`, `UMQuadraticEquation`), `lrintf` with the "indefinite" value. The
+  C++ `(float)sqrt(float)` and a float square root give the same bits (correct rounding), so `sqrt` goes through `f64`
+  as `UMFastMath::Sqrt` does.
+- **The header inlines stay C++**: `GEVector::Normalize`/`DotProduct`/`Scale`, `GETransformation::Apply(point, vector,
+  2D point)`, `SetPosition`, `Translate`, the getters, `GE3DLine::GetPointAt` (inline in the exe's view), `UMSin`,
+  `UMFastMath::Sqrt`, `UMFloatToLong`. The game inlines them into simulation code; moving them would turn inlined
+  float code into calls for nothing. Rust re-states the ones its own algorithms need, in the same order, and the goldens
+  cover them through those algorithms. Trivial out-of-line members (component-wise operators, constructors, setters,
+  comparisons, `MakeIdentity`, `ZeroOrientation`, `SetScale`) and the `FSFile` I/O stay too. `GERhombus` (vertex-array
+  virtuals; its rotation is `RotatePoint`, now Rust), `GEColor` and `GETextureCoordinate` (only `Load`/`Save`) stay.
+- **Golden values from the build's own objects.** A scratch driver linked the original `.obj` files of the units (the
+  game build's, before the change) and printed per function the first cases and an FNV-1a digest of every output over
+  inputs from an LCG (27 sections, 1.27 M cases; `ee_ge/src/golden_math.txt`). Three snags:
+  - MSVC mangles access: `#define private public` renames `?f@C@@AEAA...` to `QEAA`, so the driver reads private
+    members through the public getters or `memcpy`.
+  - `GEBoundingBox.obj` emits the header-inline block of half the engine with static objects that need the engine at
+    start-up (the scratch exe died before `main`); the driver compiled the unit's own function text alone.
+  - C++ argument evaluation order is unspecified (`GE3DPoint(V(), V(), V())`): every random draw is its own
+    statement, in the driver and in the Rust test alike.
+- **Then end to end:** the same driver relinked against the new forwarders plus a Rust staticlib (`ee_rmap_gatelib`,
+  which now links `ee_ge`) printed a byte-identical file. That checks the C++ glue (argument order, the `SetOrientation`
+  codes, the axis numbers), which the Rust tests cannot see.
+- **Aliasing is behaviour.** `CrossProduct(in, out)` and `MakeInverse(out)` store component by component, and an output
+  that is also an input changes the later components (`v.CrossProduct(w, v)`; `t.MakeInverse(t)` transposes through its
+  own stores). The Rust repeats the loads and stores through raw pointers (`cross_product_raw`, `make_inverse_raw`);
+  every other function loads everything first, so value semantics are exact. The goldens have the aliased calls as cases.
+- **Uninitialized reads in the C++** become 0: `InterpolateTo` for two points within 0.0001 of each other but not equal
+  (the normalized direction is zero, no solver succeeds, the end parameter is stack garbage: the scratch driver itself
+  died there, filling a vector without end), and `GE3DPlane::Intersects` for degenerate normals. A step of 0 or below
+  never ends the loop, in both languages. The generator draws neither case.
+- **`RemoveIntersectingRectangle` tests the output vector's size, not its own pieces**: the whole rectangle is added only
+  when the caller's vector was empty, so the C ABI takes the size before the call.
+- **cbindgen exports public constants and associated constants** of every included module (`PI`, `QUANT_COUNT`, a
+  `constexpr EeGeTransformation_IDENTITY`): the algorithm modules are `/// cbindgen:ignore`, only `ffi` and `types`
+  are read.
+- **`offsetof` on private members**: the four classes with private data (`GE3DLine`, `GE3DPlane`, `GEQuaternion`,
+  `GEBoundingBox`) declare `friend struct GERustLayout`, whose `static_assert`s pin size and offsets.
+- `tools/rmap_gate`: `rmap_dump --tables` printed `UMTables.h`'s digest; the tables are gone, the digest stays pinned in
+  `um.rs`'s test. The tool's `UMath.cpp` and GE units forward to `ee_ge`, so `ee_rmap_gatelib` links it.
+
+### R4.3: GETerrainMesh's queries
+
+`GetMeshZ`, `GetMeshNormal`, both `GetClosestTile`s, `InitializePlanes` and `Intersects(line)` (with its helper
+`DoesLineIntersectTile`) are Rust (`ee_ge` terrain.rs). Units and the AI ask them for heights and tiles every tick.
+
+- **The mesh stays C++; the queries read it in place.** `EeGeTerrainView` is built per call from the class (the point
+  and tile rows, their count, a pointer to `mFrontPlane`: the four map-edge planes are contiguous members, which
+  `GERustTerrain.h` pins along with the row layouts; a separate friend, `GERustTerrainLayout`, because only
+  `GETerrainMesh.cpp` includes the mesh header).
+- **`unsigned long` and `long` stay `c_ulong`/`c_long`**: `mPoints[x - mStart]` wraps on each data model as the C++'s
+  does, and `UMFloorUnsigned`/`UMFloor` round through a `long` (`lrintf` 32 bits on Windows, 64 on LP64).
+- **A point is read only where the C++ reads it.** `GetMeshZ` reads the (x, y + 1) height only in its upper triangle and
+  `DoesLineIntersectTile` the (x + 1, y + 1) height only in its second pass; at the diamond's edge the other point may
+  not exist, and an eager read would index before the row.
+- **`Intersects(line)` writes its distance whenever a triangle's plane is met, hit or not**, through the reference it
+  shares with `DoesLineIntersectTile`; the C ABI writes the last value, or nothing.
+- The goldens (`golden_terrain.txt`) come from the original function text compiled alone (the unit drags in the
+  renderer) over diamond meshes built as `CreateFlatMesh` builds them, 44,004 cases; the same driver linked against the
+  forwarders and Rust printed the same file.

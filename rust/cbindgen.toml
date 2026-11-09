@@ -7,13 +7,13 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint"]
 
 # ee_rmap's generic names, kept unique in the shared header
 [export.rename]
@@ -67,3 +67,17 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields"]
 "FrameStats" = "EeDx7FrameStats"
 # ee_sound
 "NodeFields" = "EeSoundNodeFields"
+# ee_ge (the C++ classes GE2DPoint, GEVector, ... keep their names; the Rust mirrors are EeGe*)
+"Ge2DPoint" = "EeGe2DPoint"
+"Ge3DPoint" = "EeGe3DPoint"
+"GeVector" = "EeGeVector"
+"Ge3DLine" = "EeGe3DLine"
+"Ge3DPlane" = "EeGe3DPlane"
+"GeTransformation" = "EeGeTransformation"
+"GeOrientation" = "EeGeOrientation"
+"GeQuaternion" = "EeGeQuaternion"
+"GeBoundingBox" = "EeGeBoundingBox"
+"GeRectangle" = "EeGeRectangle"
+"GeTmPoint" = "EeGeTmPoint"
+"GeTmRow" = "EeGeTmRow"
+"GeTerrainView" = "EeGeTerrainView"

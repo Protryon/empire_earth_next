@@ -20,6 +20,7 @@ ee_rmap = { path = "../ee_rmap" }
 ee_formations = { path = "../ee_formations" }
 ee_codec = { path = "../ee_codec" }
 ee_fs = { path = "../ee_fs" }
+ee_ge = { path = "../ee_ge" }
 ee_gx = { path = "../ee_gx" }
 ee_dx7 = { path = "../ee_dx7" }
 ee_sound = { path = "../ee_sound" }

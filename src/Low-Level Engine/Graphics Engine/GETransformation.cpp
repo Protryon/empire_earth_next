@@ -9,6 +9,9 @@
 // SYNTHETIC: LLE 0x100349ad
 // SYNTHETIC: LLE 0x100349bd
 // SYNTHETIC: LLE 0x100349c9
+// The composition, the inverse, the look-at, Normalize, the rotations and the orientations forward to Rust
+// (rust/crates/ee_ge transform.rs; GERustMath.h); the constructors, the comparisons, the identity/zero setters and
+// the file I/O stay here.
 #include <windows.h>
 #include <math.h>
 #include <string.h>
@@ -23,6 +26,7 @@
 #include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 #include "lle/FSFile.h"
+#include "GERustMath.h"
 
 const UString GETransformation::sTransformationStringID("GETransformation-TransformationData");
 
@@ -138,63 +142,26 @@ bool GETransformation::operator==(const GE3DPoint& inPoint) const
 // the bottom row is copied from the other
 void GETransformation::Apply(const GETransformation& inTransformation, GETransformation& outTransformation) const
 {
-    float a00 = this->mMatrix[0][0], a01 = this->mMatrix[0][1], a02 = this->mMatrix[0][2], a03 = this->mMatrix[0][3];
-    float a10 = this->mMatrix[1][0], a11 = this->mMatrix[1][1], a12 = this->mMatrix[1][2], a13 = this->mMatrix[1][3];
-    float a20 = this->mMatrix[2][0], a21 = this->mMatrix[2][1], a22 = this->mMatrix[2][2], a23 = this->mMatrix[2][3];
-    float b00 = inTransformation.mMatrix[0][0], b01 = inTransformation.mMatrix[0][1];
-    float b02 = inTransformation.mMatrix[0][2], b03 = inTransformation.mMatrix[0][3];
-    float b10 = inTransformation.mMatrix[1][0], b11 = inTransformation.mMatrix[1][1];
-    float b12 = inTransformation.mMatrix[1][2], b13 = inTransformation.mMatrix[1][3];
-    float b20 = inTransformation.mMatrix[2][0], b21 = inTransformation.mMatrix[2][1];
-    float b22 = inTransformation.mMatrix[2][2], b23 = inTransformation.mMatrix[2][3];
-    outTransformation.mMatrix[0][0] = a00 * b00 + a01 * b10 + a02 * b20;
-    outTransformation.mMatrix[0][1] = a00 * b01 + a01 * b11 + a02 * b21;
-    outTransformation.mMatrix[0][2] = a00 * b02 + a01 * b12 + a02 * b22;
-    outTransformation.mMatrix[0][3] = a00 * b03 + a01 * b13 + a02 * b23 + a03;
-    outTransformation.mMatrix[1][0] = a10 * b00 + a11 * b10 + a12 * b20;
-    outTransformation.mMatrix[1][1] = a10 * b01 + a11 * b11 + a12 * b21;
-    outTransformation.mMatrix[1][2] = a10 * b02 + a11 * b12 + a12 * b22;
-    outTransformation.mMatrix[1][3] = a10 * b03 + a11 * b13 + a12 * b23 + a13;
-    outTransformation.mMatrix[2][0] = a20 * b00 + a21 * b10 + a22 * b20;
-    outTransformation.mMatrix[2][1] = a20 * b01 + a21 * b11 + a22 * b21;
-    outTransformation.mMatrix[2][2] = a20 * b02 + a21 * b12 + a22 * b22;
-    outTransformation.mMatrix[2][3] = a20 * b03 + a21 * b13 + a22 * b23 + a23;
-    outTransformation.mMatrix[3][0] = inTransformation.mMatrix[3][0];
-    outTransformation.mMatrix[3][1] = inTransformation.mMatrix[3][1];
-    outTransformation.mMatrix[3][2] = inTransformation.mMatrix[3][2];
-    outTransformation.mMatrix[3][3] = inTransformation.mMatrix[3][3];
+    ee_ge_t_compose(GERust(*this), GERust(inTransformation), GERust(outTransformation));
 }
 
 void GETransformation::Apply(const GE3DLine& inLine, GE3DLine& outLine) const
 {
-    GE3DPoint theStart;
-    GEVector theDirection;
-    this->Apply(inLine.GetStart(), theStart);
-    this->Apply(inLine.GetDirection(), theDirection);
-    outLine.Define(theStart, theDirection);
+    ee_ge_t_apply_line(GERust(*this), GERust(inLine), GERust(outLine));
 }
 
 // FUNCTION: LLE 0x10034d9e
 // Transforms a plane (its point and normal) into outPlane
 void GETransformation::Apply(const GE3DPlane& inPlane, GE3DPlane& outPlane) const
 {
-    GE3DPoint thePoint;
-    GEVector theNormal;
-    this->Apply(inPlane.GetPoint(), thePoint);
-    this->Apply(inPlane.GetNormal(), theNormal);
-    outPlane.Define(thePoint, theNormal);
+    ee_ge_t_apply_plane(GERust(*this), GERust(inPlane), GERust(outPlane));
 }
 
 // FUNCTION: LLE 0x10034df8
 // Extracts yaw, pitch and roll angles from the rotation part into an orientation
 void GETransformation::ConvertToOrientation(GEOrientation& outOrientation) const
 {
-    float theYaw = UMArcTan2(this->mMatrix[1][0], this->mMatrix[0][0]);
-    outOrientation.mYaw = theYaw;
-    float thePitch = UMArcCos(-this->mMatrix[2][1]) - 1.5707964f;
-    outOrientation.mPitch = thePitch;
-    float theRoll = UMArcTan2(this->mMatrix[2][0], this->mMatrix[0][0]);
-    outOrientation.mRoll = theRoll;
+    ee_ge_t_orientation(GERust(*this), GERust(outOrientation));
 }
 
 // FUNCTION: LLE 0x10034e48
@@ -236,26 +203,8 @@ void GETransformation::MakeIdentity()
 // Computes the inverse of a rigid transformation (transposed rotation, negated rotated position)
 void GETransformation::MakeInverse(GETransformation& outInverse) const
 {
-    GE3DPoint thePosition;
-    GE3DPoint theNegative(-this->mMatrix[0][3], -this->mMatrix[1][3], -this->mMatrix[2][3]);
-    outInverse.mMatrix[0][0] = this->mMatrix[0][0];
-    outInverse.mMatrix[0][1] = this->mMatrix[1][0];
-    outInverse.mMatrix[0][2] = this->mMatrix[2][0];
-    outInverse.mMatrix[0][3] = 0.0f;
-    outInverse.mMatrix[1][0] = this->mMatrix[0][1];
-    outInverse.mMatrix[1][1] = this->mMatrix[1][1];
-    outInverse.mMatrix[1][2] = this->mMatrix[2][1];
-    outInverse.mMatrix[1][3] = 0.0f;
-    outInverse.mMatrix[2][0] = this->mMatrix[0][2];
-    outInverse.mMatrix[2][1] = this->mMatrix[1][2];
-    outInverse.mMatrix[2][2] = this->mMatrix[2][2];
-    outInverse.mMatrix[2][3] = 0.0f;
-    outInverse.mMatrix[3][0] = 0.0f;
-    outInverse.mMatrix[3][1] = 0.0f;
-    outInverse.mMatrix[3][2] = 0.0f;
-    outInverse.mMatrix[3][3] = 1.0f;
-    outInverse.Apply(theNegative, thePosition);
-    outInverse.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
+    // element by element, as the C++ stored them (an output equal to this transposes through its own stores)
+    ee_ge_t_make_inverse(GERust(*this), GERust(outInverse));
 }
 
 // NEAR: only the sqrt argument differs (the original keeps x and y on the FPU stack); tried float/double sums,
@@ -264,107 +213,35 @@ void GETransformation::MakeInverse(GETransformation& outInverse) const
 // Builds a camera transformation at the eye looking toward the target (special case for straight up or down)
 void GETransformation::MakeLookAtTransform(GE3DPoint& inEye, GE3DPoint& inTarget)
 {
-    static const float kLookDown[4][4] = {
-        {1.0f, 0.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, -1.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, 0.0f, 1.0f}
-    };
-    GEVector theDirection(inTarget.GetX() - inEye.GetX(), inTarget.GetY() - inEye.GetY(), inTarget.GetZ() - inEye.GetZ());
-    theDirection.Normalize();
-    if (theDirection.mX >= -0.0001f && theDirection.mX <= 0.0001f &&
-        theDirection.mY >= -0.0001f && theDirection.mY <= 0.0001f) {
-        memcpy(this->mMatrix, kLookDown, sizeof(this->mMatrix));
-        if (theDirection.mZ < 0.0f) {
-            this->mMatrix[1][2] = 1.0f;
-            this->mMatrix[2][1] = -1.0f;
-        }
-    } else {
-        float theLength = theDirection.GetX() * theDirection.GetX() + theDirection.GetY() * theDirection.GetY();
-        theLength = (float)sqrt(theLength);
-        GEVector theRight(theDirection.GetY() / theLength, -(theDirection.GetX() / theLength), 0.0f);
-        GEVector theUp;
-        theRight.CrossProduct(theDirection, theUp);
-        theUp.Normalize();
-        this->mMatrix[0][0] = theRight.GetX();
-        this->mMatrix[1][0] = theRight.GetY();
-        this->mMatrix[2][0] = theRight.GetZ();
-        this->mMatrix[3][0] = 0.0f;
-        this->mMatrix[0][1] = theDirection.GetX();
-        this->mMatrix[1][1] = theDirection.GetY();
-        this->mMatrix[2][1] = theDirection.GetZ();
-        this->mMatrix[3][1] = 0.0f;
-        this->mMatrix[0][2] = theUp.GetX();
-        this->mMatrix[1][2] = theUp.GetY();
-        this->mMatrix[2][2] = theUp.GetZ();
-        this->mMatrix[3][2] = 0.0f;
-        this->mMatrix[0][3] = 0.0f;
-        this->mMatrix[1][3] = 0.0f;
-        this->mMatrix[2][3] = 0.0f;
-        this->mMatrix[3][3] = 1.0f;
-    }
+    ee_ge_t_make_look_at(GERust(*this), GERust(inEye), GERust(inTarget));
 }
 
 // FUNCTION: LLE 0x100350e5
 // Rescales the three rotation columns to unit length
 void GETransformation::Normalize()
 {
-    unsigned long i;
-    float theScale;
-    for (i = 0; i < 3; i++) {
-        theScale = this->mMatrix[0][i] * this->mMatrix[0][i] + this->mMatrix[1][i] * this->mMatrix[1][i] + this->mMatrix[2][i] * this->mMatrix[2][i];
-        theScale = 1.0f / (float)sqrt(theScale);
-        this->mMatrix[0][i] *= theScale;
-        this->mMatrix[1][i] *= theScale;
-        this->mMatrix[2][i] *= theScale;
-    }
+    ee_ge_t_normalize(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1003513a
 // Rotates the transformation by yaw, pitch and roll applied after it (about its own axes)
 void GETransformation::Revolve(float inYaw, float inPitch, float inRoll)
 {
-    GETransformation theCopy(*this);
-    GETransformation theRotation(false);
-    theRotation.mMatrix[0][3] = 0.0f;
-    theRotation.mMatrix[1][3] = 0.0f;
-    theRotation.mMatrix[2][3] = 0.0f;
-    theRotation.mMatrix[3][0] = 0.0f;
-    theRotation.mMatrix[3][1] = 0.0f;
-    theRotation.mMatrix[3][2] = 0.0f;
-    theRotation.mMatrix[3][3] = 1.0f;
-    theRotation.SetOrientationYPR(inYaw, inPitch, inRoll);
-    theCopy.Apply(theRotation, *this);
+    ee_ge_t_revolve(GERust(*this), inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x100351a1
 // Rotates the transformation by yaw, pitch and roll applied before it (about the parent axes)
 void GETransformation::Rotate(float inYaw, float inPitch, float inRoll)
 {
-    GETransformation theCopy(*this);
-    GETransformation theRotation(false);
-    theRotation.mMatrix[0][3] = 0.0f;
-    theRotation.mMatrix[1][3] = 0.0f;
-    theRotation.mMatrix[2][3] = 0.0f;
-    theRotation.mMatrix[3][0] = 0.0f;
-    theRotation.mMatrix[3][1] = 0.0f;
-    theRotation.mMatrix[3][2] = 0.0f;
-    theRotation.mMatrix[3][3] = 1.0f;
-    theRotation.SetOrientationYPR(inYaw, inPitch, inRoll);
-    theRotation.Apply(theCopy, *this);
+    ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x10035208
 // Scales the transformation by x, y and z (scale applied before it)
 void GETransformation::Scale(float inX, float inY, float inZ)
 {
-    GETransformation theCopy(*this);
-    GETransformation theScale(false);
-    theScale.SetScale(inX, inY, inZ);
-    theScale.mMatrix[0][3] = 0.0f;
-    theScale.mMatrix[1][3] = 0.0f;
-    theScale.mMatrix[2][3] = 0.0f;
-    theScale.Apply(theCopy, *this);
+    ee_ge_t_scale(GERust(*this), inX, inY, inZ);
 }
 
 // FUNCTION: LLE 0x1003525b
@@ -384,60 +261,14 @@ long GETransformation::Save(FSFile& inFile) const
 // Sets the rotation from yaw, pitch and roll in pitch-roll-yaw order (position kept)
 void GETransformation::SetOrientationPRY(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float thePR10, thePR12, thePR20, thePR22;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    thePR10 = theNegSinPitch * theSinRoll;
-    thePR12 = theNegSinPitch * theCosRoll;
-    thePR20 = theCosPitch * theSinRoll;
-    thePR22 = theCosPitch * theCosRoll;
-    this->mMatrix[0][0] = theCosRoll * theCosYaw;
-    this->mMatrix[0][1] = theCosRoll * theNegSinYaw;
-    this->mMatrix[0][2] = theNegSinRoll;
-    this->mMatrix[1][0] = thePR10 * theCosYaw + theCosPitch * theSinYaw;
-    this->mMatrix[1][1] = thePR10 * theNegSinYaw + theCosPitch * theCosYaw;
-    this->mMatrix[1][2] = thePR12;
-    this->mMatrix[2][0] = thePR20 * theCosYaw + theSinPitch * theSinYaw;
-    this->mMatrix[2][1] = thePR20 * theNegSinYaw + theSinPitch * theCosYaw;
-    this->mMatrix[2][2] = thePR22;
+    ee_ge_t_set_orientation(GERust(*this), 0, inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x10035395
 // Sets the rotation from yaw, pitch and roll in pitch-yaw-roll order (position kept)
 void GETransformation::SetOrientationPYR(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float thePY10, thePY11, thePY20, thePY21;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    thePY10 = theCosPitch * theSinYaw;
-    thePY11 = theCosPitch * theCosYaw;
-    thePY20 = theSinPitch * theSinYaw;
-    thePY21 = theSinPitch * theCosYaw;
-    this->mMatrix[0][0] = theCosYaw * theCosRoll;
-    this->mMatrix[0][1] = theNegSinYaw;
-    this->mMatrix[0][2] = theCosYaw * theNegSinRoll;
-    this->mMatrix[1][0] = thePY10 * theCosRoll + theNegSinPitch * theSinRoll;
-    this->mMatrix[1][1] = thePY11;
-    this->mMatrix[1][2] = thePY10 * theNegSinRoll + theNegSinPitch * theCosRoll;
-    this->mMatrix[2][0] = thePY20 * theCosRoll + theCosPitch * theSinRoll;
-    this->mMatrix[2][1] = thePY21;
-    this->mMatrix[2][2] = thePY20 * theNegSinRoll + theCosPitch * theCosRoll;
+    ee_ge_t_set_orientation(GERust(*this), 1, inYaw, inPitch, inRoll);
 }
 
 // 95.18: register lifetimes of theRP01/theSinRoll differ (the other five orders are exact with the same shape);
@@ -446,120 +277,28 @@ void GETransformation::SetOrientationPYR(float inYaw, float inPitch, float inRol
 // Sets the rotation from yaw, pitch and roll in roll-pitch-yaw order (position kept)
 void GETransformation::SetOrientationRPY(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float theRP01, theRP02, theRP21, theRP22;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    theRP02 = theNegSinRoll * theCosPitch;
-    theRP22 = theCosRoll * theCosPitch;
-    theRP01 = theNegSinRoll * theSinPitch;
-    theRP21 = theCosRoll * theSinPitch;
-    this->mMatrix[0][0] = theCosRoll * theCosYaw + theRP01 * theSinYaw;
-    this->mMatrix[0][1] = theCosRoll * theNegSinYaw + theRP01 * theCosYaw;
-    this->mMatrix[0][2] = theRP02;
-    this->mMatrix[1][0] = theCosPitch * theSinYaw;
-    this->mMatrix[1][1] = theCosPitch * theCosYaw;
-    this->mMatrix[1][2] = theNegSinPitch;
-    this->mMatrix[2][0] = theSinRoll * theCosYaw + theRP21 * theSinYaw;
-    this->mMatrix[2][1] = theSinRoll * theNegSinYaw + theRP21 * theCosYaw;
-    this->mMatrix[2][2] = theRP22;
+    ee_ge_t_set_orientation(GERust(*this), 2, inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x10035580
 // Sets the rotation from yaw, pitch and roll in roll-yaw-pitch order (position kept)
 void GETransformation::SetOrientationRYP(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float theRY00, theRY01, theRY20, theRY21;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    theRY00 = theCosRoll * theCosYaw;
-    theRY01 = theCosRoll * theNegSinYaw;
-    theRY20 = theSinRoll * theCosYaw;
-    theRY21 = theSinRoll * theNegSinYaw;
-    this->mMatrix[0][0] = theRY00;
-    this->mMatrix[0][1] = theRY01 * theCosPitch + theNegSinRoll * theSinPitch;
-    this->mMatrix[0][2] = theRY01 * theNegSinPitch + theNegSinRoll * theCosPitch;
-    this->mMatrix[1][0] = theSinYaw;
-    this->mMatrix[1][1] = theCosYaw * theCosPitch;
-    this->mMatrix[1][2] = theCosYaw * theNegSinPitch;
-    this->mMatrix[2][0] = theRY20;
-    this->mMatrix[2][1] = theRY21 * theCosPitch + theCosRoll * theSinPitch;
-    this->mMatrix[2][2] = theRY21 * theNegSinPitch + theCosRoll * theCosPitch;
+    ee_ge_t_set_orientation(GERust(*this), 3, inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x10035675
 // Sets the rotation from yaw, pitch and roll in yaw-pitch-roll order (position kept)
 void GETransformation::SetOrientationYPR(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float theYP01, theYP02, theYP11, theYP12;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    theYP01 = theNegSinYaw * theCosPitch;
-    theYP02 = theNegSinYaw * theNegSinPitch;
-    theYP11 = theCosYaw * theCosPitch;
-    theYP12 = theCosYaw * theNegSinPitch;
-    this->mMatrix[0][0] = theCosYaw * theCosRoll + theYP02 * theSinRoll;
-    this->mMatrix[0][1] = theYP01;
-    this->mMatrix[0][2] = theCosYaw * theNegSinRoll + theYP02 * theCosRoll;
-    this->mMatrix[1][0] = theSinYaw * theCosRoll + theYP12 * theSinRoll;
-    this->mMatrix[1][1] = theYP11;
-    this->mMatrix[1][2] = theSinYaw * theNegSinRoll + theYP12 * theCosRoll;
-    this->mMatrix[2][0] = theCosPitch * theSinRoll;
-    this->mMatrix[2][1] = theSinPitch;
-    this->mMatrix[2][2] = theCosPitch * theCosRoll;
+    ee_ge_t_set_orientation(GERust(*this), 4, inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x10035769
 // Sets the rotation from yaw, pitch and roll in yaw-roll-pitch order (position kept)
 void GETransformation::SetOrientationYRP(float inYaw, float inPitch, float inRoll)
 {
-    float theCosYaw, theSinYaw, theNegSinYaw, theCosPitch, theSinPitch, theNegSinPitch, theCosRoll, theSinRoll, theNegSinRoll;
-    float theYR00, theYR02, theYR10, theYR12;
-    theCosYaw = UMCos(inYaw);
-    theSinYaw = UMSin(inYaw);
-    theNegSinYaw = -theSinYaw;
-    theCosPitch = UMCos(inPitch);
-    theSinPitch = UMSin(inPitch);
-    theNegSinPitch = -theSinPitch;
-    theCosRoll = UMCos(inRoll);
-    theSinRoll = UMSin(inRoll);
-    theNegSinRoll = -theSinRoll;
-    theYR00 = theCosYaw * theCosRoll;
-    theYR02 = theCosYaw * theNegSinRoll;
-    theYR10 = theSinYaw * theCosRoll;
-    theYR12 = theSinYaw * theNegSinRoll;
-    this->mMatrix[0][0] = theYR00;
-    this->mMatrix[0][1] = theNegSinYaw * theCosPitch + theYR02 * theSinPitch;
-    this->mMatrix[0][2] = theNegSinYaw * theNegSinPitch + theYR02 * theCosPitch;
-    this->mMatrix[1][0] = theYR10;
-    this->mMatrix[1][1] = theCosYaw * theCosPitch + theYR12 * theSinPitch;
-    this->mMatrix[1][2] = theCosYaw * theNegSinPitch + theYR12 * theCosPitch;
-    this->mMatrix[2][0] = theSinRoll;
-    this->mMatrix[2][1] = theCosRoll * theSinPitch;
-    this->mMatrix[2][2] = theCosRoll * theCosPitch;
+    ee_ge_t_set_orientation(GERust(*this), 5, inYaw, inPitch, inRoll);
 }
 
 // FUNCTION: LLE 0x1003585b

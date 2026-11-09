@@ -1,0 +1,12 @@
+[package]
+name = "ee_ge"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The Graphics Engine (docs/RUST_PLAN.md R4.3) behind its C++ classes: the math and geometry first. No
+# dependencies: the random map generator (ee_rmap) uses its table trigonometry too.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]

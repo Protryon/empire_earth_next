@@ -205,6 +205,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_ge"
+version = "0.1.0"
+
+[[package]]
 name = "ee_gx"
 version = "0.1.0"
 dependencies = [
@@ -270,6 +274,7 @@ version = "0.1.0"
 name = "ee_rmap"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
  "ee_random",
 ]
 
@@ -277,6 +282,7 @@ dependencies = [
 name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
  "ee_rmap",
 ]
 
@@ -289,6 +295,7 @@ dependencies = [
  "ee_dx7",
  "ee_formations",
  "ee_fs",
+ "ee_ge",
  "ee_gx",
  "ee_mixer",
  "ee_net_tcp",

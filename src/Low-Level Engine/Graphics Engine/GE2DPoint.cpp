@@ -4,6 +4,8 @@
 // 0x1000c129..0x1000c74b: the basic GE operations, in header include order (UMFastMath, GE2DPoint, GEVector,
 // GE3DPoint, GE3DLine). Their emission order looks like dllexport header COMDATs, but the plug-ins import several
 // of them (see lle/GE2DPoint.h), so they are defined here; the bytes are the same either way.
+// The distances, the side test, the cross product, the magnitudes, RotatePoint and InterpolateTo forward to Rust
+// (rust/crates/ee_ge: point.rs, vector.rs; GERustMath.h); the component-wise operators and the file I/O stay here.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -16,6 +18,7 @@
 #include "lle/GE3DPoint.h"
 #include "lle/GE3DLine.h"
 #include "lle/GE3DPlane.h"
+#include "GERustMath.h"
 // FUNCTION: LLE 0x1000c146
 // Creates a 2D point from integer coordinates
 GE2DPoint::GE2DPoint(long inX, long inY)
@@ -37,23 +40,21 @@ GE2DPoint::GE2DPoint(long inX, long inY)
 // Returns the 2D cross product that tells which side of the line inFrom-inTo this point lies on
 float GE2DPoint::GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const
 {
-    return (inTo.GetY() - this->mY) * (inFrom.mX - inTo.GetX()) - (inFrom.mY - inTo.GetY()) * (inTo.GetX() - this->mX);
+    return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo));
 }
 
 // FUNCTION: LLE 0x1000c1f6
 // Returns the distance to another 2D point (fast square root)
 float GE2DPoint::DistanceTo(const GE2DPoint& inPoint) const
 {
-    return UMFastMath::Sqrt((this->mX - inPoint.mX) * (this->mX - inPoint.mX) + (this->mY - inPoint.mY) * (this->mY - inPoint.mY));
+    return ee_ge_2d_distance(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000c221
 // Returns the squared distance to another 2D point
 float GE2DPoint::DistanceToSquared(const GE2DPoint& inPoint) const
 {
-    float theY = this->mY - inPoint.mY;
-    float theX = this->mX - inPoint.mX;
-    return theX * theX + theY * theY;
+    return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000c251
@@ -94,9 +95,8 @@ void GEVector::Add(const GEVector& inVector, GEVector& outVector) const
 // Writes the cross product of this vector and another to outVector
 void GEVector::CrossProduct(const GEVector& inVector, GEVector& outVector) const
 {
-    outVector.mX = this->mY * inVector.mZ - inVector.mY * this->mZ;
-    outVector.mY = inVector.mX * this->mZ - this->mX * inVector.mZ;
-    outVector.mZ = inVector.mY * this->mX - inVector.mX * this->mY;
+    // component by component, as the C++ stored them: an output that is an input changes the later components
+    ee_ge_vector_cross(GERust(*this), GERust(inVector), GERust(outVector));
 }
 
 // FUNCTION: LLE 0x1000c328
@@ -105,14 +105,14 @@ void GEVector::CrossProduct(const GEVector& inVector, GEVector& outVector) const
 // Returns the vector's length (fast square root)
 float GEVector::GetMagnitude() const
 {
-    return UMFastMath::Sqrt(this->mX * this->mX + this->mY * this->mY + this->mZ * this->mZ);
+    return ee_ge_vector_magnitude(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000c36e
 // Returns the vector's squared length
 float GEVector::GetMagnitudeSquared() const
 {
-    return this->mX * this->mX + this->mY * this->mY + this->mZ * this->mZ;
+    return ee_ge_vector_magnitude_squared(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000c3f7
@@ -176,18 +176,14 @@ void GE3DPoint::ComputeVectorTo(const GE3DPoint& inPoint, GEVector& outVector) c
 // Returns the distance to another 3D point (fast square root)
 float GE3DPoint::DistanceTo(const GE3DPoint& inPoint) const
 {
-    return UMFastMath::Sqrt((this->mX - inPoint.mX) * (this->mX - inPoint.mX) + (this->mY - inPoint.mY) * (this->mY - inPoint.mY) +
-                            (this->mZ - inPoint.mZ) * (this->mZ - inPoint.mZ));
+    return ee_ge_3d_distance(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000c516
 // Returns the squared distance to another 3D point
 float GE3DPoint::DistanceToSquared(const GE3DPoint& inPoint) const
 {
-    float theZ = this->mZ - inPoint.mZ;
-    float theY = this->mY - inPoint.mY;
-    float theX = this->mX - inPoint.mX;
-    return theX * theX + theY * theY + theZ * theZ;
+    return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000c543
@@ -292,34 +288,11 @@ const UString GE2DPoint::sPointCoordZStringID("GE2DPoint-Z");
 // Fills outPoints with points every inStep along the segment to inPoint, always ending with inPoint itself
 void GE2DPoint::InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const
 {
-    GE2DPoint thePoint;
-    GE3DPoint theStart(this->mX, this->mY, 0.0f);
-    GE3DPoint theEnd(inPoint.mX, inPoint.mY, 0.0f);
-    GE3DPoint theCurrent;
-    GE3DLine theLine;
-    GEVector theDirection;
-    float theT = 0.0f;
-    float theEndT;
+    // (points within 0.0001 of each other but not equal: the C++ read an uninitialized end, Rust takes 0)
+    GE2DPoint theFrom(*this);
+    GE2DPoint theTo(inPoint);   // copies: either may be an element of outPoints
     outPoints.clear();
-    if (*this != inPoint) {
-        theDirection.SetX(inPoint.mX - this->mX);
-        theDirection.SetY(inPoint.mY - this->mY);
-        theDirection.Normalize();
-        theDirection.mX *= inStep;
-        theDirection.mY *= inStep;
-        theLine.SetStart(theStart);
-        theLine.SetDirection(theDirection);
-        if (!theLine.SolveForX(theEnd.GetX(), theEndT))
-            theLine.SolveForY(theEnd.GetY(), theEndT);
-        while (theT < theEndT) {
-            theLine.GetPointAt(theT, theCurrent);
-            thePoint.SetX(theCurrent.GetX());
-            thePoint.SetY(theCurrent.GetY());
-            outPoints.push_back(thePoint);
-            theT += inStep;
-        }
-    }
-    outPoints.push_back(inPoint);
+    ee_ge_2d_interpolate(GERust(theFrom), GERust(theTo), inStep, GERustPush2D, &outPoints);
 }
 
 // FUNCTION: LLE 0x1000c946
@@ -340,24 +313,14 @@ long GE2DPoint::Load(FSFile& inFile)
 // Rotates the point by an angle (radians) around a centre
 void GE2DPoint::RotatePoint(float inAngle, const GE2DPoint& inCenter)
 {
-    GE2DPoint theOrigin;
-    GE2DPoint theDelta(this->mX - inCenter.mX, this->mY - inCenter.mY);
-    float theDistance = theDelta.DistanceTo(theOrigin);
-    float theAngle = UMArcTan2(theDelta.mY, theDelta.mX) + inAngle;
-    this->mX = UMCos(theAngle) * theDistance + inCenter.mX;
-    this->mY = UMCos(1.5707964f - theAngle) * theDistance + inCenter.mY;
+    ee_ge_2d_rotate(GERust(*this), inAngle, GERust(inCenter), GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000c9fc
 // Writes the point rotated by an angle (radians) around a centre to outPoint
 void GE2DPoint::RotatePoint(float inAngle, const GE2DPoint& inCenter, GE2DPoint& outPoint) const
 {
-    GE2DPoint theOrigin;
-    GE2DPoint theDelta(this->mX - inCenter.mX, this->mY - inCenter.mY);
-    float theDistance = theDelta.DistanceTo(theOrigin);
-    float theAngle = UMArcTan2(theDelta.mY, theDelta.mX) + inAngle;
-    outPoint.mX = UMCos(theAngle) * theDistance + inCenter.mX;
-    outPoint.mY = UMCos(1.5707964f - theAngle) * theDistance + inCenter.mY;
+    ee_ge_2d_rotate(GERust(*this), inAngle, GERust(inCenter), GERust(outPoint));
 }
 
 // FUNCTION: LLE 0x1000ca7f

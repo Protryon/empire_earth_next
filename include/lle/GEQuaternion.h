@@ -44,6 +44,7 @@ public:
     void Normalize();
     void Slerp(const GEQuaternion& inTarget, float inT, GEQuaternion& outQuaternion) const;
 private:
+    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     float mX;                               // +0x00
     float mY;                               // +0x04
     float mZ;                               // +0x08

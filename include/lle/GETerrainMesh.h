@@ -269,6 +269,7 @@ public:
     };
 
 private:
+    friend struct GERustTerrainLayout;      // the Rust view of the rows (Graphics Engine/GERustTerrain.h)
     void AddCliffPolys(GETMPolygon*& ioPolygon, int inX, int inY, const float* inHeights, unsigned long inMaterial);
     void AddDenormalizedPointToList(const GEViewport& inViewport, GE3DPoint& inPoint,
                                     std::vector<U2DPoint<float> >& outPoints, bool inOrthographic);
@@ -277,8 +278,7 @@ private:
     void CreateNewEdgeVertex(long inX, long inY, float inZ);
     void DefineNewEdgePolygon(unsigned long inBase, unsigned long inVertex0, unsigned long inVertex1, unsigned long inVertex2,
                               GETMPolygon*& ioPolygon);
-    bool DoesLineIntersectTile(const GE3DLine& inLine, unsigned long inX, unsigned long inY,
-                               float& outDistance) const;
+    // (DoesLineIntersectTile, Intersects(line)'s helper, is Rust: ee_ge terrain.rs)
     void GenerateBackEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
                                   GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
     void GenerateCornerBackLeftPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2], bool inHasEdgeA,
