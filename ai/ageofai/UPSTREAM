@@ -1,0 +1,46 @@
+Age of AI: a Lua port of Grille's "Empire Earth: Age of AI" (https://github.com/Grille/Empire-Earth-Age-of-AI),
+GPL-3.0, Copyright (C) 2025-2026 Grille and the Age of AI contributors. Ported with the author's permission; the
+port is GPL-3.0 as well (see LICENSE in this folder).
+
+Upstream commit the port matches:
+  0ac649541fca5b7a80bb724a308229fa4cfb2574   2026-11-09T22:18:40+01:00
+
+How to port forward: diff the upstream files below against that commit (git diff 0ac6495..HEAD -- dll/ai/<file>)
+and carry the changed decisions into the Lua module named. The port keeps the decisions (budgets, targets, timings,
+the force's rules), not the engine patches: what upstream patches into the original exe (danger routes, honest
+vision, the group move, the unload retries) is a C++ helper of this engine (docs/AI_LUA_UNITS.md §4, §11).
+
+Per-file map (upstream dll/ai/<file> -> this folder):
+  econ.c        budget_reserve / spend_reserve (the epoch reserve), hook_add_resource (the military account and its
+                income shares), econ_targets (the worker plan by shortfall and rate), citizens_home (not ported:
+                the engine's finders keep citizens on safe sites), gather_research, early_requirements, the copper
+                plan's epoch attempt, substitute_soldier (the strongest affordable soldier), hoard caps
+                                                                        -> econ.lua (budget, workers, epoch), army.lua (choice)
+  early.c       early_towers (two towers by the town centre: the front and the citizens' side), the builders
+                                                                        -> econ.lua (towers); tower_bait, early_militia: the
+                                                                           engine's reflexes (ai.reflex on) stand in
+  food.c        food_plan_needs (the citizens' food, the real wood need), the hunters       -> econ.lua (workers)
+  mines.c       mine_drops / wood_drops (a settlement at the unworked mine or forest edge nearest a drop site)
+                                                                        -> econ.lua (settlements)
+  citizens.c    cz_targets (the citizens wanted from the mines' places, FEED)                -> econ.lua (citizens)
+  defence.c     def_refresh (the fronts: towards the nearest enemy buildings known), defence_tick (towers at the
+                fronts and the outposts), home_guard, muster                            -> econ.lua (towers), army.lua
+  armies.c      the force (one land army ordered as one: home at the station, the push at the attack time when it
+                beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home under AR_BACK_PCT
+                twice running, the next building, the raid answered, the way home as a convoy)   -> army.lua
+  stage.c       the staging point (the last point of the way out of the enemy's reach)       -> army.lua
+  intel.c       honest vision's memory (buildings until seen gone, soldiers remembered 3 minutes)
+                                                                        -> C++: the enemy memory (ai.memory)
+  danger.c      the threat map (defences at range, soldiers, hurt citizens)           -> C++: ai.danger "threat"
+  cover.c       DANGER_LOST (where own units traded badly, 20 minutes)                 -> C++: ai.danger "lost"
+  shiproute.c   danger-aware routes                                                     -> C++: ai.route (cells)
+  army.c        army_plan BUILD (one more production building of the kind trained when the producers are busy)
+                                                                        -> econ.lua (buildings)
+  Not ported yet (in order of value): landing.c, fleet.c, navy.c, transports.c (the navy and landings), expand.c,
+  towns.c (other islands, resource towns, forward bases), attack.c (siege, weak spots, the commander's patches),
+  bunker.c, garrison.c (garrison upgrades), counterfire.c, airstrike.c, diplo.c, spoils.c, skirmish.c, metal.c,
+  mass.c, fronts.c, sites.c, packing.c, priority.c, forces.c, stats.c.
+
+Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at that commit, with the deviations
+noted there (epoch pacing: the port advances as soon as the epoch is paid, upstream's "independent" timer of 50-70
+minutes an epoch is for games of 200-400 population a player).

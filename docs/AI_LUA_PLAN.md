@@ -50,6 +50,8 @@ EEComputerPlayer::Update (1 Hz per computer player, inside the physics tick, on 
 **How long.** Weeks, in stages that each stand on their own (§5). The first playable result is the boom opening
 from the Prehistoric to the Copper Age (stage 3). Until a stage gate passes, the classic engine stays the default.
 
+**Next:** per-unit queries and human-level commands for Lua, with today's verbs moved into `ai/lib`: docs/AI_LUA_UNITS.md.
+
 ## 1. Goals and non-goals
 
 Goals:

@@ -6,6 +6,13 @@
       "script": "boom",
       "random": true,
       "description": "Builds its economy first: food, many citizens, towers at the town and its sites, a small defence that grows with the threat it sees, no attacks; advances an epoch once it is paid for."
+    },
+    {
+      "id": "ageofai",
+      "name": "Age of AI",
+      "script": "ageofai.main",
+      "random": false,
+      "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing. The navy, landings and diplomacy are not ported yet."
     }
   ]
 }

@@ -1818,6 +1818,41 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
   while the town's own fish lie in other water by it.
 
+## The next computer player's per-unit Lua interface (2026-11-09, docs/AI_LUA_UNITS.md §11)
+
+- **Computer players have no slot of their own.** `RTSPlayer::mSlot` is `0xff` (`kSlotNone`) for every computer
+  player, and `EEWorld::GetPlayerBySlot` returns the first player with the slot asked for. A human's message run for
+  a computer player (`EEM*::Execute` finds its sender through the originating slot) has to give the player a slot
+  that no peer uses (`0xfd`) while it runs, and put `0xff` back.
+- **A building may start as a capitol.** The start town is not always a town centre (`b_capitol` in the open tree's
+  Small Hard games). Code looking for "the town" asks for both classes.
+- **`ai.tile` shows a continent only where the player has explored.** A test that places a fight towards the enemy
+  cannot check the far tiles' land mass (they are unexplored): it takes them on trust.
+- **The Python edits of a `-text` file must keep its line ends.** The repository's code is LF with `attr/-text`.
+  Python's text mode on Windows writes CR LF, and git then shows the whole file as changed: open with
+  `newline=''` both ways.
+
+## The next computer player's army in Lua and the Age of AI port (2026-11-09, docs/AI_LUA_UNITS.md §11)
+
+- **Projectiles are units of their owner.** A hunter's spear (`citizen_projectile`), a bomb, a missile or a torpedo
+  in flight is an `EEUnit` in the player's unit list (category 9, 11, 12, 20) with hit points 1 and a speed.
+  `ai.units{category = "soldier"}` listed them (the category fell through to "soldier"), boom's home guard took
+  them and lost them a second later. The interface skips them everywhere now (`EECPUnitsIsProjectile`).
+- **A library's memory keys must not clash with the script's.** `lib.groups` kept the enemies' gather spots in
+  `mem.spots`, which boom already used for its own site spots (strings): `ai.keys` raised on the first step. A
+  library's state lives under its own prefix (`mem.gspots`).
+- **Only upstream's unit training was budgeted.** Age of AI's budget hook wraps the unit manager's training call;
+  its buildings spend from the stockpile as the game's build manager always did. The port's first draft hid the
+  military account from the citizens *and* the buildings, so no barracks was ever paid (the account held the wood).
+  The military account is a ledger of what the army may spend; the civil side sees the stock above the epoch
+  reserve.
+- **Mineral worker targets by raw shortfall swing.** With need = reserve - stock, a mine's target drops to 0 the
+  moment the stock crosses the reserve and the gatherers walk to the next mine, then back. A standing margin (half
+  `mineral_worker_margin`) and a hysteresis of 3 a pass stop the swing.
+- **The view's `sites[].resource` is a name,** not an index: `V.resources[s.resource + 1]` is an error.
+- **A bash heredoc over about 140 lines fails in the harness shell** ("unexpected EOF while looking for matching
+  `''`"); long patch scripts go into a file first.
+
 ## The next computer player's settlement-first rule and the binary tree (2026-11-09, docs/AI_RESEARCH.md §8.36)
 
 - **A binary data tree has no row ids.** The Lua AIs name classes and techs by the text tables' `id`; on the binary

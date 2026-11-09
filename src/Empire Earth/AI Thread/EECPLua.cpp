@@ -945,6 +945,7 @@ void Setup(lua_State* L, Job& j)
     lua_setfield(L, -2, "random");
     lua_pushcfunction(L, LuaKeys);
     lua_setfield(L, -2, "keys");
+    EECPLuaState::From(L)->OpenExtension(L);
     lua_setfield(L, 1, "ai");
     lua_getfield(L, 1, LUA_STRLIBNAME);   // 2 (also the strings' __index)
     for (const char* n : kStringRemoved) {
@@ -1147,6 +1148,25 @@ void EECPLuaState::OnHook(lua_State* inL)
     }
 }
 
+void EECPLuaState::Charge(lua_State* inL, int64_t inAmount)
+{
+    if (inAmount > 0)
+        this->mUsed += inAmount;
+    if (this->mOverBudget || this->mUsed > this->mConfig.mBudget) {
+        if (!this->mOverBudget) {
+            this->mOverBudget = true;
+            lua_sethook(inL, LuaHook, LUA_MASKCOUNT, 1);
+        }
+        luaL_error(inL, "instruction budget exceeded (%I instructions)", (lua_Integer)this->mConfig.mBudget);
+    }
+}
+
+void EECPLuaState::OpenExtension(lua_State* inL)
+{
+    if (this->mConfig.mOpen != nullptr)
+        this->mConfig.mOpen(inL, this->mConfig.mOpenContext);
+}
+
 EECPLuaState::EECPLuaState(const EECPLuaConfig& inConfig) : mConfig(inConfig), mRng(inConfig.mSeed)
 {
     this->mPersonality = LUA_NOREF;
@@ -1257,6 +1277,33 @@ bool EECPLuaState::CallEntry(const char* inName, bool inOptional, const EECPLuaV
         return false;
     if (!j.mFound)
         outOrders = EECPLuaValue();
+    return !this->mConfig.mCheckMemory || this->CheckMemory();
+}
+
+bool EECPLuaState::CallOptional(const char* inName, const EECPLuaValue& inArg, EECPLuaValue& outResult, int64_t inBudget,
+    bool& outFound)
+{
+    outResult = EECPLuaValue();
+    outFound = false;
+    if (!this->mL)
+        return this->Fail(kEECPLuaNoState, "no Lua state");
+    if (this->mPersonality == LUA_NOREF || this->mPersonality == LUA_REFNIL)
+        return this->Fail(kEECPLuaNotLoaded, "no personality loaded");
+    Job j = NewJob(kJobEntry, &this->mPersonality, &this->mMemory);
+    j.mText = inName;
+    j.mOptional = true;
+    j.mValue = &inArg;
+    std::string theWhat = this->mModule + "." + inName;
+    int64_t theBudget = this->mConfig.mBudget;
+    if (inBudget > 0)
+        this->mConfig.mBudget = inBudget;
+    bool theOK = this->Call((void*)&j, &outResult, theWhat.c_str());
+    this->mConfig.mBudget = theBudget;
+    if (!theOK)
+        return false;
+    outFound = j.mFound;
+    if (!j.mFound)
+        outResult = EECPLuaValue();
     return !this->mConfig.mCheckMemory || this->CheckMemory();
 }
 
