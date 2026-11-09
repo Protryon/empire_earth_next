@@ -46,6 +46,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEE3DCommandConfirmation.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e9bee
 // SYNTHETIC: EXE 0x4e9bf8
@@ -296,7 +297,7 @@ long EEE3DCommandConfirmation::DrawPass4()
         gRasterizer->SetShadingColorSource(0, theScreen);
         SetWhiteLighting();
         theTransformation.SetPosition(this->mPosition.GetX(), this->mPosition.GetY(), this->mPosition.GetZ());
-        theTransformation.SetOrientationYPR(gWorld.GetCameraYaw() - 0.7853982f, 0.0f, 0.0f);
+        theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw - 0.7853982f, 0.0f, 0.0f);
         theTransformation.SetElement(3, 0, 0.0f);
         theTransformation.SetElement(3, 1, 0.0f);
         theTransformation.SetElement(3, 2, 0.0f);

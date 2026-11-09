@@ -52,6 +52,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
+#include "ee/EERenderSnapshot.h"
 
 // the unit's named float constants (.rdata 0x440da4..0x440dc0, in this order; reloaded at each use) (provisional names)
 static const float kSnowFadeTime = 500.0f;          // 0x440da4 (ms to full strength)
@@ -279,8 +280,8 @@ long EEE3DSnow::DrawPass6()
         theTransformation.SetX(theDraw->mPosition.GetX());
         theTransformation.SetY(theDraw->mPosition.GetY());
         theTransformation.SetZ(theDraw->mPosition.GetZ());
-        theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, theDraw->mAngle);
-        double theDistance = sqrt(gWorld.mTransformation.DistanceSquaredTo(theTransformation));
+        theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, theDraw->mAngle);
+        double theDistance = sqrt(gRenderSnapshot.mCamera.DistanceSquaredTo(theTransformation));
         float theOpacity;
         if ((float)theDistance < kSnowFadeDistance)
             theOpacity = theDistance / kSnowFadeDistance;

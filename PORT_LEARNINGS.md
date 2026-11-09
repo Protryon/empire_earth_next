@@ -2917,6 +2917,144 @@ original; `oos` is compared less it) are left out.
   update); a herd's path request and the path manager's pending requests; the wall request is asked again at the
   first Update, not where it was in the queue. In-game times far off the default (game speed) are untested.
 
+## GX on WARP: "Not enough memory left" in create_bind_group, the submissions in flight (2026-11-09)
+
+Game sessions on WARP logged thousands of `wgpu error 2: ... In Device::create_bind_group ... Not enough memory left`,
+then `BindGroup with '' label is invalid` in `set_bind_group`, and the view stopped presenting.
+
+- **The cause was not a leak of GX's objects.** GX drops a texture's bind groups with its slot, as the C++ released
+  them (`GXSurfaceData` destruction). The new "GX live" line shows GX's cached groups staying flat. The problem is
+  that every submission keeps what it used until the GPU has finished it: bind groups and textures destroyed since,
+  and the staging buffers of `write_texture`/`write_buffer`. GX never waited for the GPU. On WARP the CPU outran it,
+  and the destroyed objects piled up: DrawText's temporaries, the window image and uploads. `Queue::submit` already
+  runs a non-blocking maintain (wgpu-core 24 `queue.rs`), so it freed only the work already finished.
+- **The limit is DX12's shader-visible sampler heap**: wgpu-hal 24 gives it 2048 descriptors
+  (`dx12/device.rs` `capacity_samplers`), and every bind group with a sampler takes one, so "live bind groups"
+  includes those waiting for submissions in flight. The view heap (1,000,000) is not the limit. wgpu-native 24 had
+  the same heap and the C++ GX had the same lack of waiting, so the bug probably dates from before R4.1. It showed
+  only when the harness's per-second `GXTestReadFrame` was absent: that read-back waits for its copy, which comes
+  after all earlier work, so it brought the GPU up to date once a second.
+- **The fix** (`ee_gx` `gpu.rs`): each submission gets an `on_submitted_work_done` flag. `submit` waits while more
+  than 8 are unfinished, and a present waits for the work of the frame before the previous one (2 frames in flight,
+  as DXGI's frame latency). The wait polls as the read-back does (`poll_until`, no blocking `Maintain::Wait`). If it
+  times out after 10 s, GX logs that once and stops waiting.
+- **The reproducer** `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` makes, draws with and destroys 24
+  textures per frame on a 1024x1024 target. Without the bound, the live bind groups reach 2049 (the heap is full) at
+  138-143 submissions in flight and wgpu panics. With the bound, the peak is 194 and the submissions in flight peak
+  at 8. A non-blocking `device.poll` after each submit alone also reached 2049, so polling once per frame is not
+  enough.
+- **`EE_GX_STATS=<n>`** now adds `GX live: surfaces, cached bind groups; wgpu bind groups, textures, views, samplers,
+  buffers; submissions in flight; presents (no image acquired)` (wgpu-hal's counters: the `wgpu` crate's `counters`
+  feature, on in ee_gx). The first 8 `get_current_texture` errors are logged as `GX: no swap chain image`. These are
+  the first things to read when a resource error appears or the view stops changing.
+- **The live check** used `fixture_game.py --exercise random-game --play-seconds 300` with `EE_GX_STATS`, on the
+  test-profile exe started directly (no debugger) on `tree-binary`. Over 300 s of gameplay it logged no wgpu error and
+  no GPU wait timeout. The live counts stayed flat (wgpu bind groups 60-64, textures 57-61, buffers about 650,
+  submissions in flight 2), presents rose about 10 a second, and no swap chain image failed to be acquired. With the
+  bound switched off (a temporary switch, not committed), the same exe logged 730 "Not enough memory left" errors
+  within about 20 s of gameplay.
+- **Still open, a separate bug:** in these fixture runs, the window capture (PrintWindow) keeps the first gameplay
+  frame, even after a camera zoom. This happens with and without the bound and with no wgpu error, while GX keeps
+  presenting. `fixture_game.py`'s play check ("the window shows the same picture as gameplay") fails on it.
+
+## Window captures on Windows: PrintWindow is not proof of presenting (2026-11-09)
+
+The fixture driver (tools/harness/fixture_driver.py capture_frame) captured Windows frames with PrintWindow because
+GX's read-back timed out on WARP. Both symptoms were the same bug: GX's unbounded GPU backlog (the section "GX on
+WARP" above) made a read-back wait behind seconds of queued work, and PrintWindow on the flip-model swap chain kept
+returning the first gameplay frame while GX presented ~10 frames a second. With the backlog bounded, the read-back
+(frame.request -> frame.bmp) works on WARP, and the driver uses it on every system; the window capture is only the
+fallback. A fixture tour on the binary tree then passed with gameplay and play frames differing and no GX errors.
+
+## R5a.3: the renderer reads a snapshot, not the live world (2026-11-09)
+
+RUST_PLAN R5a.3, a C++ refactor with no change to the simulation. `ee/EERenderSnapshot.h`,
+`src/Empire Earth/Graphics Thread/EERenderSnapshot.cpp` (units.EXTRA_UNITS), branch `rust-r5a-snap`.
+
+- **The original renderer already had a capture phase.** A frame (`RTSGraphics::Render`) is `FrameStarting` under the
+  world's read lock and the UI copy lock (`EEGraphics::FrameStarting`, lock mode 0: the only mode the game uses;
+  message 0x502 goes to the physics thread, not here), then `SceneStarting`, `RenderScene` and `FrameDone` with no lock
+  while the physics tick runs. Each render object's `FrameStarting` copies what it draws: `EERenderObject::FillRenderLists`
+  the render units and objects (`EERenderLists`, 0x200 units, 0x600 objects), `QueueEffects` each visible effect's draw
+  state (`Queue`: `mDrawPhase`, `mDrawPosition`, the farm's ground copies), `UIManager::CopyData` the UI, and the terrain
+  mesh its visible tiles, fog of war and water animation (`UpdateVisibleTerrain`, `UpdateFogOfWar`, `UpdateWaterAnimation`:
+  buffers only the graphics thread writes). R5a.3 completes that design: the snapshot is taken under the existing lock
+  at frame start, so the physics tick, its order and its random draws are untouched.
+- **Measured, not guessed.** `build/snap/ast_reads.py` (scratch, not checked in) runs clang's JSON AST over each of the
+  77 units (`Graphics Thread/*.cpp`, `RTSGraphics.cpp`, the build's own flags, `-fsyntax-only`) and keeps every member
+  expression written in the unit's own file, with its enclosing function; the base's object (`EEUnit`, `EEPlayer`, ...)
+  names the module. `llvm-nm` alone does not do: member reads are not symbols, and most accessors are inline. A trap in
+  the JSON: the file of a location is printed only when it changes, in print order over `loc`, `range.begin`,
+  `range.end` and their `spellingLoc`/`expansionLoc`, and an `includedFrom` object names the includer, not the
+  location's file. The functions are then sorted by the thread and lock they run under:
+
+  | Phase (thread, lock) | Simulation records read (members) |
+  |---|---|
+  | **render** (graphics, no lock), before R5a.3: 44 members | the terrain mesh (`RTSWorld::mMap`, `RTSMap::mTerrainMesh`) in EEROTerrain/EEROWater/EEROGroundShadows; the map's coloured rectangles, their lock and erase (`RTSMap::mColoredRectangles`, `mCriticalSectionForColoredRectangles`); the camera (`RTSWorld::mTransformation`, `mCameraYaw`, `mCameraPitch`) in 17 effects' draw passes and `AddGlowSprite`/`AddBlendedSprite`; `EEWorld::mInCinematic`; the live unit through `gWorld.GetUnit(id)` and `EEUnit::mHitPoints` (EEROUnits::DrawUnitModel, a robotic farm's second model); `EEUnit::mComplexUnit`, `EEComplexUnit::mIsCloakable/mIsCloaked`, `RTSUnit::mPlayer`, `EEPlayer::mEnemies`, `RTSPlayer::mPlayerID`, `EEWorld::GetCurrentPlayer` (EEE3DEnergyWave::DrawPass6); `EEUnit::GetTileX/GetTileY/mHitPoints/mComplexUnit`, `EEComplexUnit::mIsBuilt` and the unit's opacity (EEE3DFarm::DrawPass2, which also rebuilt a moved field in free camera); `EEMap::GetTile/GetGroundPoint` (EEE2DMarchingIcons::DrawPass6); `EEPhysics::GetMinutesAndSeconds` (EEE3DGoal::DrawPass3, a pure function of its argument). Static class data and media: `EEUnitClass::mDomains/IsLandBuilding/GetScale/GetInnerCollisionSphere`, `EEGraphicObject` models, textures, alpha references, `mBar`, `mIsDrawn`, `EEOrbital::mModel` |
+  | **capture** (graphics, read lock): 177 members | everything FillRenderLists, IsUnitDrawn, GetUnitOpacity, FillUnit/FillObject/FillDoppelganger*, FillGhostRecords, QueueEffects, the effects' Queue and IsTileVisible, Fn10C036 (lights, wind, sun and moon, time of day) read: positions (`mPhysicalModel`), animation frames (`mNextFrame`, `mAnimationFraction`, `GetAnimation`), turret/orbital/wheel angles, hit points, power, cargo, selection (`EEPlayer::mSelectedGroup`, `mSelectedViewedUnit`, `RTSUnit::mIsEditorSelected`), owner colours (`RTSPlayer::mColor`), visibility (`EETile::IsSeenBy/IsVisibleTo`, doppelgangers), area effects, scaffolding upgrades, the tile unit lists, ghost units under `mGhostUnitsLock` |
+  | **pick** (UI thread under the world's read or write lock; also the capture): 21 members | `EEUnitPicker`'s entries' units: owner, class, resource, hit points, tile, `mPreviousPart`, `IsAlly`, the selected group's size |
+  | **physics** (the effects' `Step`, `SetUp`, `Load`, `RepairPointers`: run by `gEffectManager->Update()` inside the tick, `EEPhysics.cpp:754`): 145 members | not the renderer's: the effects live in the Graphics Thread folder but are stepped by the simulation |
+
+- **What moved (four commits, one area each):**
+  - *terrain and world flags* (`EETakeRenderSnapshot` from EEGraphics::FrameStarting; `EETakeTerrainSnapshot` from
+    EEROTerrain::FrameStarting): the camera, `mInCinematic`, the terrain mesh pointer and its space flag, the coloured
+    rectangles (copied back to front, the drawing order; the opacity-0 erase markers are erased there under the map's
+    lock, where RenderScene erased them a moment later) and the editor's brush highlight. EEROTerrain, EEROWater,
+    EEROGroundShadows and EEROUnits read the snapshot.
+  - *units*: `EERenderUnit::mSecondFullOpacity`, set at the end of FillRenderLists with DrawUnitModel's own lookup.
+    The doppelgangers' render units keep their pool slot's stale `mUnitId` (FillDoppelgangerUnit never set it), so
+    the lookup is the same expression on the same id, only earlier.
+  - *effects*: 17 effects' draw passes and the two sprite helpers read `gRenderSnapshot`'s camera (checked: the helpers are
+    called only from draw passes; no `Step` was touched). EEE3DEnergyWave (`mDrawHidden`) and EEE3DFarm
+    (`mDrawOpacity`, `mDrawShown`, and the free camera's rebuild of a moved field, kept after the ground copies as
+    before) take their unit reads in `Queue`.
+  - *picker*: `EEUnitPickerEntry` holds the unit's id; the pickers resolve it with `gWorld.GetUnit` (the player's
+    id buckets) under the caller's world lock. FillRenderLists picks with `PickUnitUnreferenced`.
+- **Reference counts.** Before: every frame the graphics thread `Reference`d every drawn unit and the other parts of
+  its chain (`AddUnit`, `ReferenceCarriers`), released last frame's (`Clear`), and referenced the unit under the mouse;
+  the UI thread did the same in PickUnit, both under the read lock, so two threads changed the same non-atomic counts,
+  and the last release could free a unit on the graphics thread. After: the renderer's own code takes no unit
+  reference. Still shared: `EEUIFMainGame::CopyData` (the UI's copy, run on the graphics thread) calls PickUnit, which
+  references and releases a unit; the effects' own reference counts (QueueEffects references each queued effect under
+  the lock, so an effect the tick releases stays alive while it is drawn); the media counts `EEGraphicObject::LoadMedia/
+  UnloadMedia` (FillRenderLists under the lock; `EEReleaseScene`'s `UnloadRenderUnits` outside it, unchanged).
+- **One UI difference (picking only).** An entry whose unit has left the world since the frame is skipped
+  (`GetUnit` gives NULL); the reference used to keep it pickable until the next frame. A remembered building
+  (doppelganger) whose unit is gone from the player's id table is no longer picked. Ids are unique, so a reused pool
+  slot can never be picked as the old unit. Units are also freed sooner (no frame's reference): the slot reuse order
+  can differ in the windowed game; the sim cannot see it (EE-SIM draws nothing, so it never held these references), and
+  lockstep games already depended on it being harmless, since the old references depended on the frame rate.
+- **Still read live after FrameStarting, and why:**
+  - *the effects' own state.* The tick steps every effect (`Step`) while the render phase draws it (`DrawPass*`):
+    particle arrays, positions, ages written by physics, read by the draw. Queue copies some (`mDrawPhase`,
+    `mDrawPosition`, `mDrawAge`), most effects draw from their live members. Moving it needs a draw record per effect
+    class (~60 classes); a race of the original game, not new.
+  - *the terrain mesh.* Its render buffers are the graphics thread's own, but heights and water info are the map's:
+    an elevation change (calamities, editor) under the write lock can meet a draw. `GETerrainMesh` is a GE class
+    (rust-r4-ge2's files), so it is drawn through the snapshot's pointer, not copied. `EEE2DMarchingIcons::DrawPass6`
+    reads ground heights the same way.
+  - *static data*: `EEUnitClass` (db tables, unchanged during a game), `EEGraphicObject` models and textures (media,
+    loaded and unloaded under the lock), `gUnitClassTable`. `EEE3DGoal::DrawPass3` calls `gPhysics->GetMinutesAndSeconds`
+    with its own time (no state read).
+  - *the see-through flags.* `GetUnitOpacity` (capture, read lock) calls `EEUnit::UpdateHidden`, which writes
+    `mHiddenFlags` on the units and on the obstacles beside them: presentation state stored on simulation objects,
+    also written by `EEUnit::SetTile`. Nothing in the simulation reads the flags but UpdateHidden itself. Moving it
+    needs a renderer-side table keyed by unit id.
+  - *the UI's CopyData* (UI module; R5a.4's handles branch works there): run in FrameStarting under the lock, it
+    reads units, players and the picker for the panels, the cursor and the gate preview.
+  - *the minimap* is not the renderer's: the simulation draws it on the CPU into a surface (`EEMiniMap::MoveUnit`,
+    `TellTile`, ...) and the UI draws that surface.
+- **After R5a.3** the same measurement over the render phase leaves 23 members: the static class and media data above,
+  the terrain mesh through the snapshot's pointer, `EEMap::GetTile/GetGroundPoint` (EEE2DMarchingIcons::DrawPass6) and
+  `EEPhysics::GetMinutesAndSeconds` (pure); no unit, player or physics state. No unit `Reference`/`Dereference` is left
+  in the renderer's units (before: `EEUnitPicker::AddUnit`, `ReferenceCarriers`, `Clear`, `FillRenderLists`); `PickUnit`
+  still references for its UI callers.
+- **Gates run.** At the last commit: `build.py -j 3 --sim` (EE-AOC and EE-SIM) and `--test-profile windowed-software`
+  link 0/0; the sim oracle, seeds 2-7 over 2700 game s, identical to `ref` (the unmodified branch's EE-SIM matched `ref`
+  as well). At each intermediate commit only its changed units were compiled alone (`clang_build.py --only`); the first
+  commit's full build found a missing include in the new unit (fixed in that commit). No tour was run: the harness was
+  in use by another session, and a comparison needs a tour of the unmodified branch too. Visual equality is unchecked.
+
 ## R5b.1, continued: the path goals, their modifiers and the area fills in Rust (ee_astar, branch rust-r5b-astar2, 2026-11-09)
 
 The order of "R5b.1: the tile A* searches in Rust" held: every tile goal's hooks are Rust now. `ee_astar` gained
@@ -2966,3 +3104,4 @@ The order of "R5b.1: the tile A* searches in Rust" held: every tile goal's hooks
   incremental wrapper (objects newer than their include closure kept), then the full build after the merge of
   `rust`; the sim oracle identical on seeds 2-7 and `sim_capture.py check` PASS at every step; the ee_astar tests
   (37: 15 new for the modifiers, path goals and area fills, each pinning the order of the view queries).
+||||||| 5ffeba22

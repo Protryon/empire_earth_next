@@ -313,8 +313,17 @@ def window_frame(g, name, settle=1.0):
 
 
 def capture_frame(g, name):
-    """The frame for a milestone: the window capture on Windows, the fixture's presented frame elsewhere."""
-    return window_frame(g, name) if WINDOWS else frame(g, name)
+    """The frame for a milestone: the fixture's presented frame (GX's read-back). On Windows a window capture only
+    when the read-back fails: PrintWindow can return a flip-model swap chain's old content, so a stale window picture
+    is not proof that the game stopped presenting. (The read-back's WARP time-outs were GX's unbounded backlog,
+    PORT_LEARNINGS "GX on WARP".)"""
+    if not WINDOWS:
+        return frame(g, name)
+    try:
+        return frame(g, name)
+    except RuntimeError as e:
+        g.note(f'FRAME {name}: read-back failed ({e}); the window capture instead')
+        return window_frame(g, name)
 
 
 def window_state(g):

@@ -44,6 +44,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DIcon.h"
 #include "ee/EEGamePreferences.h"
+#include "ee/EERenderSnapshot.h"
 
 // FUNCTION: EXE 0x4f2046
 // Creates a 3D icon that follows a unit, or stays at a location when one is given
@@ -272,7 +273,7 @@ long EEE3DIcon::DrawPass6()
         float theValue;
         GetFogFactor(theFogPoint, theFog, theValue);
         gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
-        theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, 0.0f);
+        theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
         gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     }
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);

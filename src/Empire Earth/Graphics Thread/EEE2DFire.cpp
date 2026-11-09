@@ -44,6 +44,7 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEE2DFire.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e0389
 // SYNTHETIC: EXE 0x4e0393
@@ -173,7 +174,7 @@ long EEE2DFire::DrawPass6()
     else
         gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     unsigned long theFog = gRasterizer->GetFog(theScreen);
-    theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, 0.0f);
+    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
