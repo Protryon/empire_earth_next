@@ -166,6 +166,13 @@ enum class EeAStarList {
   ClosedTable = 4,
 };
 
+/// `EEAIAStarView::ArePassableExcept`'s skip (`kSkipNone`, `kSkipWalls`, `kSkipTrees`).
+enum class EeAStarSkip {
+  None = 0,
+  Walls = 1,
+  Trees = 2,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -330,6 +337,32 @@ struct EeAStarContinentFill {
   int32_t tile_count;
 };
 
+/// A unit as the view names it (`EEComplexUnit*`, opaque here).
+using EeAStarUnit = void*;
+
+/// A continent at a tile (`EEAIAStarContinentInfo`).
+struct EeAStarContinentInfo {
+  uint16_t id;
+  uint8_t category;
+};
+
+/// A path area at a tile or by id (`EEAIAStarPathAreaInfo`).
+struct EeAStarPathAreaInfo {
+  bool found;
+  uint16_t id;
+  uint16_t continent_id;
+  int32_t kind;
+};
+
+/// The first blocking unit of a tile (`EEAIAStarBlocker`).
+struct EeAStarBlocker {
+  bool found;
+  int32_t unit_id;
+  int32_t player_id;
+  bool is_gate;
+  bool is_wall;
+};
+
 /// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
 struct EeAStarViewCallbacks {
   void *ctx;
@@ -340,6 +373,52 @@ struct EeAStarViewCallbacks {
   uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
   /// a choke tile at `index` (`*serial` its area serial)
   bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+  int32_t (*ai_value)(void *ctx, int32_t x, int32_t y);
+  int32_t (*tile_flag)(void *ctx, int32_t x, int32_t y);
+  bool (*can_move_on)(void *ctx, EeAStarUnit walker, int32_t terrain);
+  bool (*are_passable)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y, EeAStarSkip skip);
+  int32_t (*formation_rank)(void *ctx, EeAStarUnit walker);
+  bool (*step_blocker)(void *ctx, EeAStarUnit walker, bool sea, int32_t x, int32_t y);
+  int32_t (*unit_region_state)(void *ctx, int32_t x, int32_t y);
+  int32_t (*epoch)(void *ctx, EeAStarUnit walker);
+  bool (*is_alone)(void *ctx, EeAStarUnit walker);
+  int32_t (*water_state)(void *ctx, EeAStarUnit walker);
+  bool (*is_sea_going)(void *ctx, EeAStarUnit walker);
+  bool (*has_hill)(void *ctx, int32_t x, int32_t y);
+  bool (*random_at_most)(void *ctx, float chance);
+  int32_t (*crowd_cost)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y);
+  bool (*is_wide)(void *ctx, EeAStarUnit walker);
+  bool (*ignores_formation)(void *ctx, EeAStarUnit walker);
+  bool (*rank_probe_blocked)(void *ctx,
+                             EeAStarUnit walker,
+                             uint16_t continent_id,
+                             int32_t x,
+                             int32_t y);
+  bool (*can_enter)(void *ctx, void *modifier, int32_t x, int32_t y, bool at_goal);
+  int32_t (*modifier_cost)(void *ctx,
+                           void *modifier,
+                           int32_t from_x,
+                           int32_t from_y,
+                           int32_t x,
+                           int32_t y,
+                           int32_t parent_x,
+                           int32_t parent_y);
+  bool (*has_units)(void *ctx, int32_t x, int32_t y);
+  void (*continent_at)(void *ctx, int32_t x, int32_t y, EeAStarContinentInfo *out);
+  int32_t (*tile_value)(void *ctx, int32_t x, int32_t y);
+  void (*path_area_at)(void *ctx, int32_t x, int32_t y, EeAStarPathAreaInfo *out);
+  void (*path_area)(void *ctx, uint16_t id, EeAStarPathAreaInfo *out);
+  uint16_t (*stored_path_area_id)(void *ctx, const void *storage, int32_t x, int32_t y);
+  int32_t (*resource_kind)(void *ctx, int32_t x, int32_t y);
+  bool (*has_blocker)(void *ctx, int32_t x, int32_t y);
+  int32_t (*first_blocker_id)(void *ctx, int32_t x, int32_t y);
+  void (*first_blocker)(void *ctx, int32_t x, int32_t y, EeAStarBlocker *out);
+  int32_t (*first_obstacle_id)(void *ctx, int32_t x, int32_t y);
+  bool (*own_wall_first)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*area_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*sector_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  bool (*live_dock)(void *ctx, int32_t x, int32_t y);
+  bool (*live_space_dock)(void *ctx, int32_t x, int32_t y);
 };
 
 /// `EEAIAStarHillGoal`'s fill state.
@@ -359,6 +438,112 @@ struct EeAStarChokeFill {
   int32_t height;
   /// `mTileCount`
   int32_t tile_count;
+};
+
+/// The goal's state the step cost reads (`EEAIAStarPathfindingGoalBase`).
+struct EeAStarStepGoal {
+  /// `mUnit`
+  EeAStarUnit walker;
+  /// `mAvoidUnits`
+  bool avoid_units;
+  /// `mIsBounded`
+  bool is_bounded;
+  /// `mGoalBounds`
+  EeAStarRect goal_bounds;
+};
+
+/// `EEAIBPGModifierStormShaper`'s state.
+struct EeAStarStorm {
+  /// `mInner`, `mOuter`
+  EeAStarRect inner;
+  EeAStarRect outer;
+  /// `mDistanceSquared`
+  int32_t distance_squared;
+  /// `mSnow`, `mRain`
+  bool snow;
+  bool rain;
+  /// the bounded goal's `mStartTile`
+  int32_t start_x;
+  int32_t start_y;
+};
+
+/// A path goal's state (`EEAIAStarGoalBase` and `EEAIAStarPathfindingGoalBase` members, the bounded goal's
+/// window, the machine's members its hooks read).
+struct EeAStarPathGoal {
+  /// `EEAIAStarBoundedPathGoal`: tiles outside `bounds` are refused
+  bool bounded;
+  /// `mBounds` (the bounded goal's)
+  EeAStarRect bounds;
+  /// `mGoalTile`
+  int32_t goal_x;
+  int32_t goal_y;
+  /// `mUnit`
+  EeAStarUnit walker;
+  /// `mModifier` (null: the default tests and costs)
+  void *modifier;
+  /// `mContinentID`
+  uint16_t continent_id;
+  /// the machine's `mCheckCorners`
+  bool check_corners;
+  /// `mAcceptNearest`, `mSearchFailed`, `mTookNearest`
+  bool accept_nearest;
+  bool search_failed;
+  bool took_nearest;
+  /// the machine's `mRevs` and `GetMaxRevs()` (the goal's `mMaxRevs`)
+  int32_t revs;
+  int32_t max_revs;
+};
+
+/// `EEAIAStarPathAreaGoal`'s fill state.
+struct EeAStarPathAreaFill {
+  /// `mMode` (`EEAIPathKind`: 0 the path area pass, 1..4 a kind pass)
+  int32_t mode;
+  /// `mContinentID`, `mContinentKind` (the first tile's continent; 0 between areas)
+  uint16_t continent_id;
+  uint8_t continent_kind;
+  /// `mKind` (`EEAITileKind`)
+  int32_t kind;
+  /// `mOwnerID`, `mPlayerID` (the first tile's blocking unit)
+  int32_t owner_id;
+  int32_t player_id;
+  /// `mTileCount`
+  int32_t tile_count;
+  /// `mResources1..3`
+  int32_t resources[3];
+  /// `mForestID`, `mNextForestID`
+  uint16_t forest_id;
+  uint16_t next_forest_id;
+  /// `mTileBounds`
+  EeAStarRect tile_bounds;
+  /// out: the machine's `mCheckCorners` as the fill left it (-1: not written)
+  int32_t check_corners;
+};
+
+/// `EEAIAStarPathSectorGoal`'s fill state.
+struct EeAStarPathSectorFill {
+  /// `mPathAreaStorage` (the path area fill's storage, whose id grid the fill reads)
+  const void *path_area_storage;
+  /// `mClassifyTiles`
+  bool classify_tiles;
+  /// `mTileCount`, `mTileBounds`, `mSectorBounds`
+  int32_t tile_count;
+  EeAStarRect tile_bounds;
+  EeAStarRect sector_bounds;
+  /// `mPathAreaID`, `mPathAreaKind`, `mContinentID`, `mCategory`, `mKind`
+  uint16_t path_area_id;
+  int32_t path_area_kind;
+  uint16_t continent_id;
+  uint8_t category;
+  int32_t kind;
+  /// `mUnitID`, `mPlayerID`, `mWA0`, `mWA2`
+  int32_t unit_id;
+  int32_t player_id;
+  uint16_t wa0;
+  uint16_t wa2;
+  /// out: the machine's `mCheckCorners` as the fill left it (-1: not written)
+  int32_t check_corners;
+  /// out: the tile goes to `mStaleTiles` (classified, but not in a path area of the sub-sector's kind)
+  bool stale;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -1660,6 +1845,137 @@ bool ee_astar_choke_accept(EeAStarChokeFill *fill,
                            int32_t x,
                            int32_t y,
                            uint32_t *serial);
+
+/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
+///
+/// # Safety
+/// `view` valid, its functions callable; `goal` readable.
+int32_t ee_astar_mod_step_cost(const EeAStarViewCallbacks *view,
+                               const EeAStarStepGoal *goal,
+                               bool sea,
+                               int32_t from_x,
+                               int32_t from_y,
+                               int32_t x,
+                               int32_t y,
+                               int32_t parent_x,
+                               int32_t parent_y);
+
+/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
+///
+/// # Safety
+/// `view` valid, its functions callable.
+bool ee_astar_mod_is_passable(const EeAStarViewCallbacks *view,
+                              EeAStarUnit walker,
+                              int32_t x,
+                              int32_t y);
+
+/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_attacker_can_enter(const EeAStarViewCallbacks *view,
+                                     EeAStarUnit walker,
+                                     int32_t x,
+                                     int32_t y);
+
+/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_walls_can_enter(const EeAStarViewCallbacks *view,
+                                  EeAStarUnit walker,
+                                  int32_t x,
+                                  int32_t y);
+
+/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`.
+bool ee_astar_mod_wall_pather_can_enter(const EeAStarViewCallbacks *view,
+                                        EeAStarUnit walker,
+                                        int32_t x,
+                                        int32_t y);
+
+/// `EEAIBPGModifierStormShaper::GetCost`.
+///
+/// # Safety
+/// As `ee_astar_mod_is_passable`; `storm` readable.
+int32_t ee_astar_mod_storm_cost(const EeAStarViewCallbacks *view,
+                                const EeAStarStorm *storm,
+                                int32_t x,
+                                int32_t y);
+
+/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
+///
+/// # Safety
+/// As `ee_astar_mod_storm_cost`.
+bool ee_astar_mod_storm_can_enter(const EeAStarViewCallbacks *view,
+                                  const EeAStarStorm *storm,
+                                  int32_t x,
+                                  int32_t y);
+
+/// The path goals' `AcceptTile`.
+///
+/// # Safety
+/// `goal` readable; `view` valid, its functions callable.
+bool ee_astar_path_accept(const EeAStarPathGoal *goal,
+                          const EeAStarViewCallbacks *view,
+                          int32_t x,
+                          int32_t y,
+                          bool at_goal);
+
+/// The path goals' `GetCost` (`has_parent`: the current node has a parent at (`parent_x`, `parent_y`)).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+int32_t ee_astar_path_cost(const EeAStarPathGoal *goal,
+                           const EeAStarViewCallbacks *view,
+                           int32_t from_x,
+                           int32_t from_y,
+                           int32_t x,
+                           int32_t y,
+                           bool has_parent,
+                           int32_t parent_x,
+                           int32_t parent_y);
+
+/// The path goals' `IsGoalNode` (without the bounded goal's `CheckNode`).
+///
+/// # Safety
+/// As `ee_astar_path_accept`.
+bool ee_astar_path_is_goal_node(const EeAStarPathGoal *goal,
+                                const EeAStarViewCallbacks *view,
+                                bool has_node,
+                                int32_t x,
+                                int32_t y);
+
+/// The path goals' `SearchDone`: updates `goal`'s `search_failed` and `took_nearest`.
+///
+/// # Safety
+/// `goal` readable and writable; `view` as `ee_astar_path_accept`.
+void ee_astar_path_search_done(EeAStarPathGoal *goal,
+                               const EeAStarViewCallbacks *view,
+                               bool has_current,
+                               int32_t x,
+                               int32_t y,
+                               bool has_open);
+
+/// `EEAIAStarPathAreaGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+bool ee_astar_path_area_accept(EeAStarPathAreaFill *fill,
+                               const EeAStarViewCallbacks *view,
+                               int32_t x,
+                               int32_t y);
+
+/// `EEAIAStarPathSectorGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_path_area_accept`.
+bool ee_astar_path_sector_accept(EeAStarPathSectorFill *fill,
+                                 const EeAStarViewCallbacks *view,
+                                 int32_t x,
+                                 int32_t y);
 
 /// `UDataCompression::Compress`.
 ///

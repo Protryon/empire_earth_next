@@ -512,6 +512,204 @@ static bool EEAStarViewChokeTile(void* inView, int32_t inIndex, uint32_t* outSer
     return theResult;
 }
 
+#define EEASTAR_VIEW(inView) ((EEAIAStarView*)(inView))
+#define EEASTAR_UNIT(inUnit) ((EEComplexUnit*)(inUnit))
+
+static int32_t EEAStarViewAIValue(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetAIValue(inX, inY);
+}
+
+static int32_t EEAStarViewTileFlag(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetTileFlag(inX, inY);
+}
+
+static bool EEAStarViewCanMoveOn(void* inView, void* inWalker, int32_t inTerrain)
+{
+    return EEASTAR_VIEW(inView)->CanMoveOn(EEASTAR_UNIT(inWalker), inTerrain);
+}
+
+static bool EEAStarViewArePassable(void* inView, void* inWalker, int32_t inX, int32_t inY, EeAStarSkip inSkip)
+{
+    long theSkip = (long)inSkip;
+    if (theSkip == EEAIAStarView::kSkipNone)
+        return EEASTAR_VIEW(inView)->ArePassable(EEASTAR_UNIT(inWalker), inX, inY);
+    return EEASTAR_VIEW(inView)->ArePassableExcept(EEASTAR_UNIT(inWalker), inX, inY, theSkip);
+}
+
+static int32_t EEAStarViewFormationRank(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->GetFormationRank(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewStepBlocker(void* inView, void* inWalker, bool inSea, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasStepBlocker(EEASTAR_UNIT(inWalker), inSea, inX, inY);
+}
+
+static int32_t EEAStarViewUnitRegionState(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetUnitRegionState(inX, inY);
+}
+
+static int32_t EEAStarViewEpoch(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->GetEpoch(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewIsAlone(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->IsAlone(EEASTAR_UNIT(inWalker));
+}
+
+static int32_t EEAStarViewWaterState(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->GetWaterState(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewIsSeaGoing(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->IsSeaGoing(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewHasHill(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasHill(inX, inY);
+}
+
+static bool EEAStarViewRandomAtMost(void* inView, float inChance)
+{
+    return EEASTAR_VIEW(inView)->RandomAtMost(inChance);
+}
+
+static int32_t EEAStarViewCrowdCost(void* inView, void* inWalker, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetCrowdCost(EEASTAR_UNIT(inWalker), inX, inY);
+}
+
+static bool EEAStarViewIsWide(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->IsWide(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewIgnoresFormation(void* inView, void* inWalker)
+{
+    return EEASTAR_VIEW(inView)->IgnoresFormation(EEASTAR_UNIT(inWalker));
+}
+
+static bool EEAStarViewRankProbeBlocked(void* inView, void* inWalker, uint16_t inContinentID, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->IsRankProbeBlocked(EEASTAR_UNIT(inWalker), inContinentID, inX, inY);
+}
+
+static bool EEAStarViewCanEnter(void* inView, void* inModifier, int32_t inX, int32_t inY, bool inGoal)
+{
+    return EEASTAR_VIEW(inView)->CanEnter((EEAIPathGoalModifierBase*)inModifier, inX, inY, inGoal);
+}
+
+static int32_t EEAStarViewModifierCost(void* inView, void* inModifier, int32_t inFromX, int32_t inFromY, int32_t inX,
+                                       int32_t inY, int32_t inParentX, int32_t inParentY)
+{
+    return EEASTAR_VIEW(inView)->GetModifierCost((EEAIPathGoalModifierBase*)inModifier, inFromX, inFromY, inX, inY,
+                                                 inParentX, inParentY);
+}
+
+static bool EEAStarViewHasUnits(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasUnits(inX, inY);
+}
+
+static void EEAStarViewContinentAt(void* inView, int32_t inX, int32_t inY, EeAStarContinentInfo* outInfo)
+{
+    EEAIAStarContinentInfo theInfo = EEASTAR_VIEW(inView)->GetContinentAt(inX, inY);
+    outInfo->id = theInfo.mID;
+    outInfo->category = theInfo.mCategory;
+}
+
+static int32_t EEAStarViewTileValue(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetTileValue(inX, inY);
+}
+
+static void EEAStarViewAreaInfo(const EEAIAStarPathAreaInfo& inInfo, EeAStarPathAreaInfo* outInfo)
+{
+    outInfo->found = inInfo.mFound;
+    outInfo->id = inInfo.mID;
+    outInfo->continent_id = inInfo.mContinentID;
+    outInfo->kind = inInfo.mKind;
+}
+
+static void EEAStarViewPathAreaAt(void* inView, int32_t inX, int32_t inY, EeAStarPathAreaInfo* outInfo)
+{
+    EEAStarViewAreaInfo(EEASTAR_VIEW(inView)->GetPathAreaAt(inX, inY), outInfo);
+}
+
+static void EEAStarViewPathArea(void* inView, uint16_t inID, EeAStarPathAreaInfo* outInfo)
+{
+    EEAStarViewAreaInfo(EEASTAR_VIEW(inView)->GetPathArea(inID), outInfo);
+}
+
+static uint16_t EEAStarViewStoredPathAreaID(void* inView, const void* inStorage, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetStoredPathAreaID((const EEAIAStarPathAreaStorage*)inStorage, inX, inY);
+}
+
+static int32_t EEAStarViewResourceKind(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetResourceKind(inX, inY);
+}
+
+static bool EEAStarViewHasBlocker(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasBlocker(inX, inY);
+}
+
+static int32_t EEAStarViewFirstBlockerID(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetFirstBlockerID(inX, inY);
+}
+
+static void EEAStarViewFirstBlocker(void* inView, int32_t inX, int32_t inY, EeAStarBlocker* outBlocker)
+{
+    EEAIAStarBlocker theBlocker = EEASTAR_VIEW(inView)->GetFirstBlocker(inX, inY);
+    outBlocker->found = theBlocker.mFound;
+    outBlocker->unit_id = theBlocker.mUnitID;
+    outBlocker->player_id = theBlocker.mPlayerID;
+    outBlocker->is_gate = theBlocker.mIsGate;
+    outBlocker->is_wall = theBlocker.mIsWall;
+}
+
+static int32_t EEAStarViewFirstObstacleID(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->GetFirstObstacleID(inX, inY);
+}
+
+static bool EEAStarViewOwnWallFirst(void* inView, int32_t inX, int32_t inY, int32_t inPlayerID)
+{
+    return EEASTAR_VIEW(inView)->HasOwnWallFirst(inX, inY, inPlayerID);
+}
+
+static int32_t EEAStarViewAreaGateOwner(void* inView, int32_t inX, int32_t inY, int32_t inPlayerID)
+{
+    return EEASTAR_VIEW(inView)->GetAreaGateOwner(inX, inY, inPlayerID);
+}
+
+static int32_t EEAStarViewSectorGateOwner(void* inView, int32_t inX, int32_t inY, int32_t inPlayerID)
+{
+    return EEASTAR_VIEW(inView)->GetSectorGateOwner(inX, inY, inPlayerID);
+}
+
+static bool EEAStarViewLiveDock(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasLiveDock(inX, inY);
+}
+
+static bool EEAStarViewLiveSpaceDock(void* inView, int32_t inX, int32_t inY)
+{
+    return EEASTAR_VIEW(inView)->HasLiveSpaceDock(inX, inY);
+}
+
 EeAStarViewCallbacks EEAIAStarView::Callbacks()
 {
     EeAStarViewCallbacks theCallbacks;
@@ -522,5 +720,40 @@ EeAStarViewCallbacks EEAIAStarView::Callbacks()
     theCallbacks.height_level = EEAStarViewHeightLevel;
     theCallbacks.continent_id = EEAStarViewContinentID;
     theCallbacks.choke_tile = EEAStarViewChokeTile;
+    theCallbacks.ai_value = EEAStarViewAIValue;
+    theCallbacks.tile_flag = EEAStarViewTileFlag;
+    theCallbacks.can_move_on = EEAStarViewCanMoveOn;
+    theCallbacks.are_passable = EEAStarViewArePassable;
+    theCallbacks.formation_rank = EEAStarViewFormationRank;
+    theCallbacks.step_blocker = EEAStarViewStepBlocker;
+    theCallbacks.unit_region_state = EEAStarViewUnitRegionState;
+    theCallbacks.epoch = EEAStarViewEpoch;
+    theCallbacks.is_alone = EEAStarViewIsAlone;
+    theCallbacks.water_state = EEAStarViewWaterState;
+    theCallbacks.is_sea_going = EEAStarViewIsSeaGoing;
+    theCallbacks.has_hill = EEAStarViewHasHill;
+    theCallbacks.random_at_most = EEAStarViewRandomAtMost;
+    theCallbacks.crowd_cost = EEAStarViewCrowdCost;
+    theCallbacks.is_wide = EEAStarViewIsWide;
+    theCallbacks.ignores_formation = EEAStarViewIgnoresFormation;
+    theCallbacks.rank_probe_blocked = EEAStarViewRankProbeBlocked;
+    theCallbacks.can_enter = EEAStarViewCanEnter;
+    theCallbacks.modifier_cost = EEAStarViewModifierCost;
+    theCallbacks.has_units = EEAStarViewHasUnits;
+    theCallbacks.continent_at = EEAStarViewContinentAt;
+    theCallbacks.tile_value = EEAStarViewTileValue;
+    theCallbacks.path_area_at = EEAStarViewPathAreaAt;
+    theCallbacks.path_area = EEAStarViewPathArea;
+    theCallbacks.stored_path_area_id = EEAStarViewStoredPathAreaID;
+    theCallbacks.resource_kind = EEAStarViewResourceKind;
+    theCallbacks.has_blocker = EEAStarViewHasBlocker;
+    theCallbacks.first_blocker_id = EEAStarViewFirstBlockerID;
+    theCallbacks.first_blocker = EEAStarViewFirstBlocker;
+    theCallbacks.first_obstacle_id = EEAStarViewFirstObstacleID;
+    theCallbacks.own_wall_first = EEAStarViewOwnWallFirst;
+    theCallbacks.area_gate_owner = EEAStarViewAreaGateOwner;
+    theCallbacks.sector_gate_owner = EEAStarViewSectorGateOwner;
+    theCallbacks.live_dock = EEAStarViewLiveDock;
+    theCallbacks.live_space_dock = EEAStarViewLiveSpaceDock;
     return theCallbacks;
 }

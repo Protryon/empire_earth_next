@@ -339,32 +339,32 @@ bool EEAIBPGModifierStormShaper::CheckNode(EEAIAStarNode* inNode)
     return inNode == NULL || this->mSteps >= this->mMaxSteps;
 }
 
+// New (port): the shaper's state as ee_astar's modifiers read it
+EeAStarStorm EEAIBPGModifierStormShaper::StormState() const
+{
+    EeAStarStorm theStorm;
+    theStorm.inner = EEAIAStarRectOf(this->mInner);
+    theStorm.outer = EEAIAStarRectOf(this->mOuter);
+    theStorm.distance_squared = this->mDistanceSquared;
+    theStorm.snow = this->mSnow;
+    theStorm.rain = this->mRain;
+    theStorm.start_x = this->mBoundedGoal->mStartTile.mX;
+    theStorm.start_y = this->mBoundedGoal->mStartTile.mY;
+    return theStorm;
+}
+
 // FUNCTION: EXE 0x52e3ee
 // Returns the cost of a tile for shaping the storm: cheap on cliffs and hills (snow) or water (rain)
 long EEAIBPGModifierStormShaper::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
                                            long inParentY)
 {
     EEAIAStarView theView(gWorld.GetMap(), true);
-    long theCost = 40;
-    if (theView.HasTile(inX, inY)) {
-        long theType = theView.GetTerrain(inX, inY);
-        if (this->mSnow) {
-            if (theType == kTerrainCliff || theView.HasHill(inX, inY))
-                theCost = 1;
-            else if (theType != kTerrainDeepWater)
-                theCost = 5;
-        } else if (this->mRain) {
-            if (theType == kTerrainDeepWater || theType == kTerrainShallowWater)
-                theCost = 1;
-        }
-    }
-    return theCost;
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    EeAStarStorm theStorm = this->StormState();
+    return ee_astar_mod_storm_cost(&theCallbacks, &theStorm, inX, inY);
 }
 
-// the shaper's acceptance chances (unit-local .rdata after its vtable)
-static const float kStormFarChance = 0.2325f;
-static const float kStormNearChance = 0.685f;
-static const float kStormOuterChance = 0.83f;
+// the shaper's acceptance chances (unit-local .rdata after its vtable): ee_astar modifiers::STORM_*_CHANCE
 
 // FUNCTION: EXE 0x52e48b
 // Returns whether the storm may spread onto a tile: always inside the inner box, else by a chance that falls with
@@ -372,19 +372,9 @@ static const float kStormOuterChance = 0.83f;
 bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
     EEAIAStarView theView(gWorld.GetMap(), true);
-    U2DPoint<long> thePoint(inX, inY);
-    bool theResult = false;
-    if (theView.HasTile(inX, inY)) {
-        if (this->mInner.Contains(thePoint))
-            theResult = true;
-        else if (this->mOuter.Contains(thePoint))
-            theResult = theView.RandomAtMost(kStormOuterChance);
-        else if (thePoint.DistanceToSquared(this->mBoundedGoal->mStartTile) <= this->mDistanceSquared)
-            theResult = theView.RandomAtMost(kStormNearChance);
-        else
-            theResult = theView.RandomAtMost(kStormFarChance);
-    }
-    return theResult;
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    EeAStarStorm theStorm = this->StormState();
+    return ee_astar_mod_storm_can_enter(&theCallbacks, &theStorm, inX, inY);
 }
 
 // FUNCTION: EXE 0x52e523

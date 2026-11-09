@@ -23,13 +23,14 @@ public:
     void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited);   // 0x19315
     void GetPoints(std::vector<GE3DPoint>& outPath);  // 0x19388
     void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);  // 0x19429
-    long GetCost(long inFromX, long inFromY, long inX, long inY);          // 0x19528 (the modifier's, else the default)
-    long GetDefaultCost(long inFromX, long inFromY, long inX, long inY);   // 0x19595
-    bool AcceptDefault(long inX, long inY, bool inGoal); // 0x1990c
+    // 0x19528 (the modifier's, else the default 0x19595): ee_astar path_goals::get_cost
+    long GetCost(long inFromX, long inFromY, long inX, long inY);
     virtual bool Prepare();                 // +0x0c 0x19983 (both bases' slot; the second base's thunk 0x199f2)
     virtual void MarkBlockedTiles();        // second base +0x10 (ICF-folded into EEAIAStarBoundedPathGoal's 0xf298)
-    bool AcceptTile(long inX, long inY, bool inGoal);  // 0x199fa
-    bool AcceptOnMap(long inX, long inY, bool inGoal);   // 0x19a3f (the modifier's, else the default)
+    // 0x199fa (the modifier's 0x19a3f, else the default 0x1990c): ee_astar path_goals::accept_tile
+    bool AcceptTile(long inX, long inY, bool inGoal);
+    // New (port): the goal's state for ee_astar's path_goals
+    EeAStarPathGoal PathState(EEAIAStarMachineBase* inMachine);
 };
 
 #endif

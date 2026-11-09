@@ -17,6 +17,8 @@ public:
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);
     // +0x0c 0x12e3d8: `return inNode == 0 || mL34 >= mL38;`
     virtual bool CheckNode(EEAIAStarNode* inNode);
+    // New (port): the state ee_astar's storm_cost / storm_can_enter read
+    EeAStarStorm StormState() const;
 
     U2DRectangle<long> mInner;              // +0x10 (the start +-4, clamped to the map)
     U2DRectangle<long> mOuter;              // +0x20 (mInner +-4 again)

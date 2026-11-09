@@ -36,6 +36,8 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "List" = "EeAStarList"
 "AStarRect" = "EeAStarRect"
 "MachineState" = "EeAStarMachineState"
+"Skip" = "EeAStarSkip"
+"Unit" = "EeAStarUnit"
 # ee_fs
 "Archive" = "EeFsArchive"
 # ee_dx7

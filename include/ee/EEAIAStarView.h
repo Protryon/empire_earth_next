@@ -52,7 +52,7 @@ public:
     // a modifier's view: the given map, its queries not noted when inQuiet
     EEAIAStarView(EEMap* inMap, bool inQuiet) : mMap(inMap), mQuiet(inQuiet) {}
     void SetMap(EEMap* inMap) { this->mMap = inMap; }
-    // the queries the Rust goals make (ee_astar's EeAStarViewCallbacks over this view)
+    // the queries the Rust goals and modifiers make (ee_astar's EeAStarViewCallbacks over this view)
     EeAStarViewCallbacks Callbacks();
 
     // The tile (inX, inY) of the search's map
@@ -133,5 +133,17 @@ private:
     EEMap* mMap;
     bool mQuiet;                            // a modifier's view: its answers are not noted
 };
+
+// A rectangle (U2DRectangle<long>) as ee_astar's EeAStarRect
+template <class R>
+inline EeAStarRect EEAIAStarRectOf(const R& inRect)
+{
+    EeAStarRect theRect;
+    theRect.bottom = inRect.mBottom;
+    theRect.left = inRect.mLeft;
+    theRect.right = inRect.mRight;
+    theRect.top = inRect.mTop;
+    return theRect;
+}
 
 #endif
