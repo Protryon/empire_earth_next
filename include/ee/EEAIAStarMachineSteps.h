@@ -86,234 +86,132 @@ void EEAIAStarMachine<S, G, M>::CaptureOutputs(EEAIAStarCaptureRun& ioRun)
     }
 }
 
+// New (port): the goal and the machine's members behind the Rust machine's callbacks (ee_astar's EeAStarCallbacks).
+// Each asks the goal what the C++ machine asked it, at the same point of the search, and notes it for the capture as
+// the C++ machine did. What a goal reads of the storage meanwhile comes in the arguments (the storage's mHook*).
+template <class S, class G, class M>
+struct EEAIAStarHooks {
+    typedef EEAIAStarMachine<S, G, M> Machine;
+
+    static bool AcceptTile(void* inMachine, int32_t inX, int32_t inY, bool inFlag)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        return EEAIAStarNote(kAStarEventAccept, inX, inY, inFlag, 0, 0, theMachine->mGoal.AcceptTile(inX, inY, inFlag)) != 0;
+    }
+    static int32_t GetCost(void* inMachine, int32_t inFromX, int32_t inFromY, int32_t inX, int32_t inY, bool inHasParent,
+                           int32_t inParentX, int32_t inParentY)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        theMachine->mHookHasParent = inHasParent;
+        theMachine->mHookParentX = inParentX;
+        theMachine->mHookParentY = inParentY;
+        return EEAIAStarNote(kAStarEventCost, inFromX, inFromY, inX, inY, 0,
+                             theMachine->mGoal.GetCost(inFromX, inFromY, inX, inY));
+    }
+    static int32_t Estimate(void* inMachine, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        return EEAIAStarNote(kAStarEventEstimate, inFromX, inFromY, inToX, inToY, 0,
+                             theMachine->mGoal.Estimate(U2DPoint<long>(inFromX, inFromY), U2DPoint<long>(inToX, inToY)));
+    }
+    static bool IsGoalNode(void* inMachine, bool inHasNode, int32_t inX, int32_t inY)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        EEAIAStarNode theNode;
+        memset(&theNode, 0, sizeof(theNode));
+        theNode.mX = inX;
+        theNode.mY = inY;
+        return EEAIAStarNote(kAStarEventGoalNode, inHasNode, inX, inY, 0, 0,
+                             theMachine->mGoal.IsGoalNode(inHasNode ? &theNode : NULL)) != 0;
+    }
+    static void SearchDone(void* inMachine, bool inHasCurrent, int32_t inX, int32_t inY, bool inHasOpen)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        theMachine->mHookHasCurrent = inHasCurrent;
+        theMachine->mHookCurrentX = inX;
+        theMachine->mHookCurrentY = inY;
+        theMachine->mHookHasOpen = inHasOpen;
+        theMachine->mGoal.SearchDone(theMachine);
+        EEAIAStarNote(kAStarEventSearchDone, theMachine->mGoal.mSearchFailed, theMachine->mGoal.mTookNearest, 0, 0, 0, 0);
+    }
+    static bool SearchFailed(void* inMachine) { return ((Machine*)inMachine)->mGoal.mSearchFailed; }
+    static bool AcceptNearest(void* inMachine) { return ((Machine*)inMachine)->mGoal.mAcceptNearest; }
+    static bool IsStepLimit(void* inMachine, int32_t inSteps) { return ((Machine*)inMachine)->mGoal.IsStepLimit(inSteps); }
+    static bool IsRevLimit(void* inMachine, int32_t inRevs) { return ((Machine*)inMachine)->mGoal.IsRevLimit(inRevs); }
+    static bool IsCheaper(void* inMachine, uint32_t inCost, uint32_t inOld)
+    {
+        return ((Machine*)inMachine)->mGoal.IsCheaper(inCost, inOld);
+    }
+    static void Tiles(void* inMachine, int32_t* outTiles)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        outTiles[0] = theMachine->mGoal.mStartTile.mX;
+        outTiles[1] = theMachine->mGoal.mStartTile.mY;
+        outTiles[2] = theMachine->mGoal.mGoalTile.mX;
+        outTiles[3] = theMachine->mGoal.mGoalTile.mY;
+    }
+    static void GetState(void* inMachine, EeAStarMachineState* outState)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        outState->tile_x = theMachine->mTile.mX;
+        outState->tile_y = theMachine->mTile.mY;
+        outState->revs = theMachine->mRevs;
+        outState->num_runs = theMachine->mNumRuns;
+        outState->steps = theMachine->mSteps;
+        outState->check_corners = theMachine->mCheckCorners;
+        outState->found = theMachine->mFound;
+        outState->map_width = theMachine->mMapWidth;
+        outState->map_height = theMachine->mMapHeight;
+    }
+    static void SetState(void* inMachine, const EeAStarMachineState* inState)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        theMachine->mTile.mX = inState->tile_x;
+        theMachine->mTile.mY = inState->tile_y;
+        theMachine->mRevs = inState->revs;
+        theMachine->mNumRuns = inState->num_runs;
+        theMachine->mSteps = inState->steps;
+        theMachine->mCheckCorners = inState->check_corners;
+        theMachine->mFound = inState->found;
+    }
+};
+
+template <class S, class G, class M>
+EeAStarCallbacks EEAIAStarMachine<S, G, M>::Callbacks()
+{
+    typedef EEAIAStarHooks<S, G, M> Hooks;
+    EeAStarCallbacks theCallbacks;
+    theCallbacks.ctx = this;
+    theCallbacks.accept_tile = Hooks::AcceptTile;
+    theCallbacks.get_cost = Hooks::GetCost;
+    theCallbacks.estimate = Hooks::Estimate;
+    theCallbacks.is_goal_node = Hooks::IsGoalNode;
+    theCallbacks.search_done = Hooks::SearchDone;
+    theCallbacks.search_failed = Hooks::SearchFailed;
+    theCallbacks.accept_nearest = Hooks::AcceptNearest;
+    theCallbacks.is_step_limit = Hooks::IsStepLimit;
+    theCallbacks.is_rev_limit = Hooks::IsRevLimit;
+    theCallbacks.is_cheaper = Hooks::IsCheaper;
+    theCallbacks.tiles = Hooks::Tiles;
+    theCallbacks.get_state = Hooks::GetState;
+    theCallbacks.set_state = Hooks::SetState;
+    return theCallbacks;
+}
+
+// 0x1d184 (Rust: ee_astar machine.rs start)
 template <class S, class G, class M>
 bool EEAIAStarMachine<S, G, M>::Start()
 {
-    bool theResult = this->TestTile(this->mGoal.mStartTile.GetX(), this->mGoal.mStartTile.GetY());
-    const U2DPoint<long>& theGoal = this->mGoal.mGoalTile;
-    this->mTile = theGoal;
-    mCurrentNode = NewNode(this->mGoal.mStartTile.GetX(), this->mGoal.mStartTile.GetY());
-    mCurrentNode->mPathCost = 0;
-    mCurrentNode->mEstimate = EEAIAStarNote(kAStarEventEstimate, this->mGoal.mStartTile.mX, this->mGoal.mStartTile.mY,
-                                            this->mTile.mX, this->mTile.mY, 0,
-                                            this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile));
-    mCurrentNode->mCost = mCurrentNode->mEstimate + mCurrentNode->mPathCost;
-    AddOpen(mCurrentNode);
-    return theResult;
+    EeAStarCallbacks theCallbacks = this->Callbacks();
+    return ee_astar_start(this->mCore, &theCallbacks);
 }
 
+// 0x1d1fb (Rust: ee_astar machine.rs expand, with Restart, TestTile, NextNode and AddNode)
 template <class S, class G, class M>
 void EEAIAStarMachine<S, G, M>::Expand()
 {
-    this->mSteps = 0;
-    this->mNumRuns++;
-    this->mRevs++;
-    for (;;) {
-        mCurrentNode = RemoveBestOpen();
-        if (EEAIAStarNote(kAStarEventGoalNode, mCurrentNode != NULL, mCurrentNode ? mCurrentNode->mX : 0,
-                          mCurrentNode ? mCurrentNode->mY : 0, 0, 0, this->mGoal.IsGoalNode(mCurrentNode))) {
-            this->mFound = false;
-            break;
-        }
-        long theX = mCurrentNode->mX;
-        long theY = mCurrentNode->mY;
-        long theLeft = theX - 1;
-        long theBottom = theY - 1;
-        long theRight = theX + 1;
-        long theTop = theY + 1;
-        long theParentX;
-        long theParentY;
-        if (mCurrentNode->mParent) {
-            theParentX = mCurrentNode->mParent->mX;
-            theParentY = mCurrentNode->mParent->mY;
-        } else {
-            theParentX = 0;
-            theParentY = 0;
-        }
-        bool theBelow = this->TestTile(theX, theBottom);
-        bool theLeftOK = this->TestTile(theLeft, theY);
-        bool theRightOK = this->TestTile(theRight, theY);
-        bool theAbove = this->TestTile(theX, theTop);
-        if (theBelow && (theParentX != theX || theParentY != theBottom))
-            this->AddNode(mCurrentNode, theX, theBottom);
-        if (theLeftOK && (theParentX != theLeft || theParentY != theY))
-            this->AddNode(mCurrentNode, theLeft, theY);
-        if (theRightOK && (theParentX != theRight || theParentY != theY))
-            this->AddNode(mCurrentNode, theRight, theY);
-        if (theAbove && (theParentX != theX || theParentY != theTop))
-            this->AddNode(mCurrentNode, theX, theTop);
-        if (this->mCheckCorners) {
-            if ((theLeftOK || theBelow) && (theParentX != theLeft || theParentY != theBottom) &&
-                this->TestTile(theLeft, theBottom))
-                this->AddNode(mCurrentNode, theLeft, theBottom);
-            if ((theBelow || theRightOK) && (theParentX != theRight || theParentY != theBottom) &&
-                this->TestTile(theRight, theBottom))
-                this->AddNode(mCurrentNode, theRight, theBottom);
-            if ((theRightOK || theAbove) && (theParentX != theRight || theParentY != theTop) &&
-                this->TestTile(theRight, theTop))
-                this->AddNode(mCurrentNode, theRight, theTop);
-            if ((theAbove || theLeftOK) && (theParentX != theLeft || theParentY != theTop) &&
-                this->TestTile(theLeft, theTop))
-                this->AddNode(mCurrentNode, theLeft, theTop);
-        } else {
-            if (this->TestTile(theLeft, theBottom) && (theParentX != theLeft || theParentY != theBottom))
-                this->AddNode(mCurrentNode, theLeft, theBottom);
-            if (this->TestTile(theRight, theBottom) && (theParentX != theRight || theParentY != theBottom))
-                this->AddNode(mCurrentNode, theRight, theBottom);
-            if (this->TestTile(theRight, theTop) && (theParentX != theRight || theParentY != theTop))
-                this->AddNode(mCurrentNode, theRight, theTop);
-            if (this->TestTile(theLeft, theTop) && (theParentX != theLeft || theParentY != theTop))
-                this->AddNode(mCurrentNode, theLeft, theTop);
-        }
-        AddClosed(mCurrentNode);
-        if (this->mGoal.IsStepLimit(this->mSteps)) {
-            mCurrentNode = 0;
-            this->mFound = true;
-            break;
-        }
-        if (this->mGoal.IsRevLimit(this->mRevs)) {
-            mCurrentNode = 0;
-            this->mFound = false;
-            break;
-        }
-        this->mSteps++;
-        this->mRevs++;
-    }
-    if (!this->mFound) {
-        this->mGoal.SearchDone(this);
-        EEAIAStarNote(kAStarEventSearchDone, this->mGoal.mSearchFailed, this->mGoal.mTookNearest, 0, 0, 0, 0);
-    }
-    if (this->mGoal.mSearchFailed) {
-        if (mCurrentNode) {
-            AddClosed(mCurrentNode);
-            mCurrentNode = 0;
-        }
-        this->Restart();
-    } else if (!this->mFound && mCurrentNode)
-        mPath = mCurrentNode;
-    else
-        mCurrentNode = 0;
-}
-
-template <class S, class G, class M>
-bool EEAIAStarMachine<S, G, M>::Restart()
-{
-    const bool& theAtGoal = this->mGoal.mAcceptNearest;
-    bool theDone = theAtGoal;
-    mPath = 0;
-    if (theAtGoal) {
-        EEAIAStarNode* theNode = this->NextNode();
-        if (theNode) {
-            mPath = theNode;
-            mCurrentNode = theNode;
-            this->mTile.mX = theNode->mX;
-            this->mTile.mY = theNode->mY;
-        } else {
-            mCurrentNode = NewNode(this->mGoal.mStartTile.GetX(), this->mGoal.mStartTile.GetY());
-            mCurrentNode->mPathCost = 0;
-            mCurrentNode->mEstimate = 1;
-            mCurrentNode->mCost = 1;
-            mPath = mCurrentNode;
-        }
-        this->mFound = false;
-        theDone = true;
-    }
-    while (!theDone) {
-        EEAIAStarNode* theNode = this->NextNode();
-        if (theNode) {
-            theDone = EEAIAStarNote(kAStarEventAccept, theNode->mX, theNode->mY, 1, 0, 0,
-                                    this->mGoal.AcceptTile(theNode->mX, theNode->mY, true));
-            if (theDone) {
-                mPath = theNode;
-                mCurrentNode = theNode;
-                this->mTile.SetX(theNode->mX);
-                this->mTile.SetY(theNode->mY);
-                this->mFound = false;
-            } else
-                ReleaseNode(theNode);
-        } else {
-            mCurrentNode = NewNode(this->mGoal.mStartTile.GetX(), this->mGoal.mStartTile.GetY());
-            mCurrentNode->mPathCost = 0;
-            mCurrentNode->mEstimate = 1;
-            mCurrentNode->mCost = 1;
-            this->mFound = false;
-            mPath = mCurrentNode;
-            theDone = true;
-        }
-    }
-    return theDone;
-}
-
-template <class S, class G, class M>
-bool EEAIAStarMachine<S, G, M>::TestTile(unsigned long inX, unsigned long inY)
-{
-    bool theResult = false;
-    if (inX < this->mMapWidth && inY < this->mMapHeight) {
-        unsigned char* theFlag = GetTileFlags(inX, inY);
-        if (*theFlag & kAStarTileAccepted || *theFlag & kAStarTileRejected)
-            theResult = *theFlag & kAStarTileAccepted;
-        else {
-            theResult = EEAIAStarNote(kAStarEventAccept, inX, inY, 0, 0, 0, this->mGoal.AcceptTile(inX, inY, false));
-            if (!theResult)
-                *theFlag |= kAStarTileRejected;
-            else
-                *theFlag |= kAStarTileAccepted;
-        }
-        ExtendBounds(inX, inY);
-    }
-    return theResult;
-}
-
-template <class S, class G, class M>
-EEAIAStarNode* EEAIAStarMachine<S, G, M>::NextNode()
-{
-    EEAIAStarNode* theOpen = RemoveNearestOpen(this->mTile);
-    EEAIAStarNode* theClosed = RemoveNearestClosed(this->mTile);
-    if (theOpen) {
-        if (theClosed) {
-            if (theOpen->mCost <= theClosed->mCost)
-                AddClosed(theClosed);
-            else {
-                AddOpen(theOpen);
-                theOpen = theClosed;
-            }
-        }
-    } else
-        theOpen = theClosed;
-    return theOpen;
-}
-
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::AddNode(EEAIAStarNode* inParent, long inX, long inY)
-{
-    unsigned long theCost = EEAIAStarNote(kAStarEventCost, inParent->mX, inParent->mY, inX, inY, 0,
-                                          this->mGoal.GetCost(inParent->mX, inParent->mY, inX, inY)) + inParent->mPathCost;
-    EEAIAStarNode* theOpen = FindOpen(inX, inY);
-    EEAIAStarNode* theClosed = FindClosed(inX, inY);
-    if (theOpen && !this->mGoal.IsCheaper(theCost, theOpen->mPathCost))
-        return;
-    if (theClosed) {
-        if (!this->mGoal.IsCheaper(theCost, theClosed->mPathCost))
-            return;
-        RemoveClosed(theClosed);
-        ReleaseNode(theClosed);
-    }
-    if (!theOpen) {
-        EEAIAStarNode* theNode = NewNode(inX, inY);
-        theNode->mParent = inParent;
-        theNode->mPathCost = theCost;
-        theNode->mEstimate = EEAIAStarNote(kAStarEventEstimate, theNode->mX, theNode->mY, this->mTile.mX, this->mTile.mY, 0,
-                                           this->mGoal.Estimate(U2DPoint<long>(theNode->mX, theNode->mY), this->mTile));
-        theNode->mCost = theNode->mEstimate + theCost;
-        AddOpen(theNode);
-    } else {
-        theOpen->mPathCost = theCost;
-        theOpen->mParent = inParent;
-        if (theOpen->mCost != theOpen->mEstimate + theCost) {
-            theOpen->mCost = theOpen->mEstimate + theCost;
-            UpdateOpen(theOpen);
-        }
-    }
+    EeAStarCallbacks theCallbacks = this->Callbacks();
+    ee_astar_expand(this->mCore, &theCallbacks);
 }
 
 #endif

@@ -1,0 +1,8 @@
+[package]
+name = "ee_astar"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]

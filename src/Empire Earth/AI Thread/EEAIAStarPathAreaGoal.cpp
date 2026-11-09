@@ -47,6 +47,7 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarPathAreaGoal.h"
 #include "ee/EEAIAStarMachine.h"
 
@@ -91,16 +92,16 @@ EEAIAStarPathAreaGoal::EEAIAStarPathAreaGoal()
 // Stamps every closed and open node's tile with the next path area id and collects those tiles into the area's list
 void EEAIAStarPathAreaGoal::CollectTiles()
 {
-    EEAIAStarNode* theNode;
     unsigned short theID = this->mNextPathAreaID;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mPathAreaIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = theID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mPathAreaIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = theID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        this->mStorage->mPathAreaIDs[this->mStorage->mHeight * theNode.mX + theNode.mY] = theID;
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -138,8 +139,7 @@ void EEAIAStarPathAreaGoal::CreateAreas()
         this->mNextKindID++;
         this->AssignKindIDs();
     }
-    EEAIAStarBounds& theBounds = this->mStorage->mDirtyBounds;
-    theBounds = this->mTileBounds;
+    this->mStorage->SetDirtyBounds(this->mTileBounds);
     this->mTiles.clear();
     this->mTileCount = 0;
     this->mContinentKind = kContinentCategoryNone;

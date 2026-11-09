@@ -4,22 +4,28 @@
 // open list (+0x24/+0x28), the found path (+0x2c, walked through mParent) and a per-tile flag byte (+0x38) over
 // mL3C x mL40 tiles; nodes come from a static free list. Derived: EEAIAStarFastStorage > EEAIAStarTerrainStorage > the
 // per-goal storages. Slots named by vtable offset; fields by offset (provisional names).
+//
+// Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tile flags, the node map, the bounds and the machine's
+// search steps are Rust (rust/crates/ee_astar, one EeAStarStorage per storage). The C++ classes keep their vtables,
+// their own per-tile arrays (the flood storages' ids) and forward the rest; what the goals read of the storage while a
+// search runs comes from the machine's hooks (mHook*), since a hook must not call back into the running storage.
 #ifndef EE_EEAIASTARSTORAGE_H
 #define EE_EEAIASTARSTORAGE_H
 
 #include "ee/EETileCoordinate.h"     // EETileCoordinate (the inline Set needs the whole type; was a forward declaration)
 #include "lle/U2DRectangle.h"     // EEAIAStarBounds (exe view: no statics)
+#include "rust/ee_rust.h"         // EeAStarStorage, the storage kinds and slots
 
-// A search node (0x20 bytes; EEAIAStarStorage keeps a free list of them, 0x4e5c40: NewNode 0x1bc68 pops or allocates
-// one, ReleaseNode 0x1ba9b pushes it back). Names are provisional.
+// A search node as the goals see one (the machine's hooks hand IsGoalNode / CheckNode a node of the tile; the links
+// and costs are Rust's and zero here). Names are provisional.
 struct EEAIAStarNode {
-    EEAIAStarNode* mParent;                 // +0x00 (the path is walked through it)
-    EEAIAStarNode* mNext;                   // +0x04 (a hash bucket, a list; the free list)
+    EEAIAStarNode* mParent;                 // +0x00
+    EEAIAStarNode* mNext;                   // +0x04
     EEAIAStarNode* mPrev;                   // +0x08
-    unsigned long mCost;                    // +0x0c (the sorted open list's key)
+    unsigned long mCost;                    // +0x0c
     long mPathCost;                         // +0x10
     long mEstimate;                         // +0x14
-    long mX;                                // +0x18 (the tile: index mX * mL3C + mY; hash (mX << 4) + mY)
+    long mX;                                // +0x18
     long mY;                                // +0x1c
 };
 
@@ -33,65 +39,48 @@ struct EEAIAStarNodeView;               // ee/EEAIAStarCapture.h
 
 class EEAIAStarStorage {
 public:
-    EEAIAStarStorage();                     // 0x1b9b7
+    EEAIAStarStorage();                     // 0x1b9b7 (a hashed storage)
     virtual ~EEAIAStarStorage();            // +0x00 (dtor 0x1ba18)
     virtual void ResetNodes();              // +0x04 0x1bb52 (Clear, then no path)
     virtual void Virtual08(long inArg) {}   // +0x08 (empty: ICF-folded `ret 4` 0x157269)
     virtual bool Init(long inWidth, long inHeight);        // +0x0c 0x1be27 (sizes the storage, new hash tables)
     virtual void PrepareGrid(long inWidth, long inHeight);  // +0x10 0x1c491 (each storage overrides it)
 
-    static void FreeNodePool();             // 0x1b991 (deletes the free list)
-    static void ReleaseNode(EEAIAStarNode* inNode);        // 0x1ba9b
-    EEAIAStarNode* NewNode(long inX, long inY);            // 0x1bc68 (thiscall: `ret 8`; this unused)
-    // the inline hash of a tile (PJW-like; 0x1ba43 and every table user expand it)
-    long GetBucket(long inX, long inY) const
-    {
-        long theHash = (inX << 4) + inY;
-        long theHigh = theHash & 0xf0000000;
-        if (theHigh)
-            theHash = (theHigh >> 24) ^ theHigh;
-        return theHash % this->mBucketCount;
-    }
-    void AddClosed(EEAIAStarNode* inNode);  // 0x1ba43
-    void AddOpen(EEAIAStarNode* inNode);    // 0x1baae
-    EEAIAStarNode* FindClosed(long inX, long inY);   // 0x1bb64
-    EEAIAStarNode* FindOpen(long inX, long inY);     // 0x1bbb9
+    static void FreeNodePool() {}           // 0x1b991 (the Rust storages free their nodes with themselves)
     bool GetFirstPathTile(long& outX, long& outY);   // 0x1bc2a
     bool GetNextPathTile(long& outX, long& outY);    // 0x1bcc3
-    void Clear();                           // 0x1bcfe (every node back to the free list)
-    void UpdateOpen(EEAIAStarNode* inNode); // 0x1be86 (its cost changed: re-sort it)
-    EEAIAStarNode* RemoveNearestClosed(const EETileCoordinate& inTile);   // 0x1bf8b
-    EEAIAStarNode* RemoveNearestOpen(const EETileCoordinate& inTile);     // 0x1c0b6
-    EEAIAStarNode* RemoveBestOpen();        // 0x1c268
-    void RemoveClosed(EEAIAStarNode* inNode);   // 0x1c420
     void MarkTile(unsigned long inX, unsigned long inY, bool inFlag);   // 0x1c586 (flag 1 or 2, extends the bounds)
-    void InsertSorted(EEAIAStarNode* inNode);   // 0x1c5bd
-    void ExtendBounds(long inX, long inY);  // 0x1c617
-    unsigned char* GetTileFlags(unsigned long inX, unsigned long inY) { return this->mTileFlags + this->mWidth * inX + inY; }
-    // New (port): the storage as the capture reads it (ee/EEAIAStarCapture.h): the current node (0) and the found
-    // path's (1), a list's nodes in its order (EEAIAStarList), the search bounds
+
+    // New (port): the storage as the capture and the goals read it outside a search: the current node (0) and the
+    // found path's (1), a list's nodes in its order (EEAIAStarList), the bounds
     bool GetNodeView(long inWhich, EEAIAStarNodeView& outNode);
     void ListNodes(long inList, std::vector<EEAIAStarNodeView>& outNodes);
-    EEAIAStarBounds GetSearchBounds() const { return this->mBounds; }
-    bool GetHasBounds() const { return this->mHasBounds; }
+    void AppendTiles(long inList, std::vector<U2DPoint<long> >& ioTiles);   // a list's tiles in its order
+    EEAIAStarBounds GetSearchBounds();
+    bool GetHasBounds();
+    void SetHasBounds(bool inHasBounds);
+    EEAIAStarBounds GetDirtyBounds();
+    void SetDirtyBounds(const EEAIAStarBounds& inBounds);  // EEAIAStarTerrainStorage::mDirtyBounds (the flood goals)
 
-    EEAIAStarBounds mBounds;                // +0x04
-    EEAIAStarNode** mClosedTable;           // +0x14 (mL44 buckets; delete[] in the dtor)
-    EEAIAStarNode** mOpenTable;             // +0x18 (mL44 buckets; delete[] in the dtor)
-    EEAIAStarNode* mFastClosedList;         // +0x1c (EEAIAStarFastStorage::Add pushes in front)
-    EEAIAStarNode* mFastOpenList;           // +0x20
-    EEAIAStarNode* mSortedOpen;             // +0x24 (ascending mCost)
-    EEAIAStarNode* mSortedOpenTail;         // +0x28
-    EEAIAStarNode* mPath;                   // +0x2c
-    EEAIAStarNode* mPathCursor;             // +0x30
-    EEAIAStarNode* mCurrentNode;            // +0x34
-    unsigned char* mTileFlags;              // +0x38 (delete[] in the dtor; one byte per tile: 8 closed, 4 open)
     long GetWidth() const { return this->mWidth; }
-    long mWidth;                            // +0x3c the width (the terrain storages: +0x58 = this - 1)
     long GetHeight() const { return this->mHeight; }
-    long mHeight;                           // +0x40 the height (the terrain storages: +0x50 = this - 1)
-    long mBucketCount;                      // +0x44 the bucket count (= 0x35)
-    bool mHasBounds;                        // +0x48 (set once the bounds hold a tile)
+
+    // New (port): what the goals read during a search, set by the machine's hooks before it asks the goal: the
+    // current node, its parent (GetCost), whether an open node is left (SearchDone)
+    bool mHookHasCurrent;
+    long mHookCurrentX;
+    long mHookCurrentY;
+    bool mHookHasParent;
+    long mHookParentX;
+    long mHookParentY;
+    bool mHookHasOpen;
+
+    EeAStarStorage* mCore;                  // the Rust storage
+    long mWidth;                            // +0x3c the width (Init's; the per-tile arrays' stride)
+    long mHeight;                           // +0x40 the height
+
+protected:
+    explicit EEAIAStarStorage(EeAStarStorageKind inKind);
 };
 
 #endif

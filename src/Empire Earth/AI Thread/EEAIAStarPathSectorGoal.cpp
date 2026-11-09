@@ -48,6 +48,7 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIAStarMachine.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarPathSectorGoal.h"
 
 // 0x29ced (cdecl): non-zero when a resource unit stands on inTile (EEAIAStarPathAreaGoal.cpp declares it too)
@@ -66,16 +67,16 @@ EEAIAStarPathSectorGoal::EEAIAStarPathSectorGoal()
 // collects those tiles
 void EEAIAStarPathSectorGoal::CollectTiles()
 {
-    EEAIAStarNode* theNode;
     unsigned short theID = this->mNextID = gContinentManager.NewSubSectorID();
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mSubSectorIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = theID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mSubSectorIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = theID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        this->mStorage->mSubSectorIDs[this->mStorage->mHeight * theNode.mX + theNode.mY] = theID;
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -98,7 +99,7 @@ void EEAIAStarPathSectorGoal::CreateSubSector()
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mSubSectors.insert(std::map<unsigned short, EEAIPathSubSector*>::value_type(this->mNextID, theSubSector));
-    this->mStorage->mDirtyBounds = this->mTileBounds;
+    this->mStorage->SetDirtyBounds(this->mTileBounds);
     this->mUnitID = -1;
     this->mContinentID = 0;
     this->mCategory = kContinentCategoryNone;

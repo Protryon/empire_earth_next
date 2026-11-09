@@ -40,6 +40,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarContinentGoal.h"
 
 // FUNCTION: EXE 0x4155c0
@@ -56,19 +57,17 @@ void EEAIAStarContinentGoal::CollectTiles()
     EEAIAStarContinentTile theValue;
     theValue.mKind = this->mKind;
     theValue.mID = this->mNextID;
-    EEAIAStarNode* theNode;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode->mX + theNode->mY];
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode.mX + theNode.mY];
         theTile.mID = theValue.mID;
         theTile.mKind = theValue.mKind;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode->mX + theNode->mY];
-        theTile.mID = theValue.mID;
-        theTile.mKind = theValue.mKind;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -83,7 +82,7 @@ void EEAIAStarContinentGoal::CreateContinent()
     theContinent->mAreaType = kAIAreaContinent;
     theContinent->Create(this->mTiles);
     theContinent->UpdateBounds(gWorld.mInfluenceTable);
-    this->mStorage->mDirtyBounds = theContinent->mHull.GetBounds();
+    this->mStorage->SetDirtyBounds(theContinent->mHull.GetBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mContinents.insert(std::make_pair(this->mNextID, theContinent));

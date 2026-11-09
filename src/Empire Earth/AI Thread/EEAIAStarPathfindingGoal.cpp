@@ -45,6 +45,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarPathfindingGoalBase.h"
 #include "ee/EEAIAStarPathfindingGoal.h"
 #include "ee/EEAIAStarMachine.h"
@@ -83,17 +84,15 @@ void EEAIAStarPathfindingGoal::Reset()
 // or when the machine has used up its revolutions
 void EEAIAStarPathfindingGoal::SearchDone(EEAIAStarMachineBase* inMachine)
 {
-    EEAIAStarNode* theNode = this->mStorage->mCurrentNode;
-    if (theNode == NULL) {
-        bool theOpen = this->mStorage->mFastOpenList != NULL || this->mStorage->mSortedOpen != NULL;
-        for (long i = this->mStorage->mBucketCount - 1; i >= 0 && !theOpen; i--)
-            theOpen = this->mStorage->mOpenTable[i] != NULL;
+    // (the machine's hook: the current node, whether an open node is left)
+    if (!this->mStorage->mHookHasCurrent) {
+        bool theOpen = this->mStorage->mHookHasOpen;
         if (!theOpen) {
             this->mSearchFailed = true;
             this->mTookNearest = this->mAcceptNearest;
         }
-    } else if (UMAbs(theNode->mX - this->mGoalTile.mX) <= 1 && UMAbs(theNode->mY - this->mGoalTile.mY) <= 1) {
-        this->mSearchFailed = !this->AcceptTile(theNode->mX, theNode->mY, true);
+    } else if (UMAbs(this->mStorage->mHookCurrentX - this->mGoalTile.mX) <= 1 && UMAbs(this->mStorage->mHookCurrentY - this->mGoalTile.mY) <= 1) {
+        this->mSearchFailed = !this->AcceptTile(this->mStorage->mHookCurrentX, this->mStorage->mHookCurrentY, true);
         this->mTookNearest = this->mAcceptNearest;
     }
     if (!this->mSearchFailed) {
@@ -152,13 +151,10 @@ void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath)
 // Appends the found path's tiles, and every tile on the fast closed and open lists to outVisited
 void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
-    EEAIAStarNode* theNode;
     this->GetPath(outPath);
     outVisited.reserve(this->mMachine->mRevs);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    this->mStorage->AppendTiles(kAStarListFastClosed, outVisited);
+    this->mStorage->AppendTiles(kAStarListFastOpen, outVisited);
 }
 
 // NEAR: the original adds the offsets as fld member + faddp
@@ -183,22 +179,13 @@ void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath)
 // Appends the found path as world points, and every tile on all open and closed lists to outVisited
 void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
-    EEAIAStarNode* theNode;
-    long i;
     this->GetPoints(outPath);
     outVisited.reserve(this->mMachine->mRevs);
-    for (theNode = this->mStorage->mSortedOpen; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (i = this->mStorage->mBucketCount - 1; i >= 0; i--)
-        for (theNode = this->mStorage->mClosedTable[i]; theNode; theNode = theNode->mNext)
-            outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (i = this->mStorage->mBucketCount - 1; i >= 0; i--)
-        for (theNode = this->mStorage->mOpenTable[i]; theNode; theNode = theNode->mNext)
-            outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    this->mStorage->AppendTiles(kAStarListSortedOpen, outVisited);
+    this->mStorage->AppendTiles(kAStarListFastClosed, outVisited);
+    this->mStorage->AppendTiles(kAStarListClosedTable, outVisited);
+    this->mStorage->AppendTiles(kAStarListFastOpen, outVisited);
+    this->mStorage->AppendTiles(kAStarListOpenTable, outVisited);
 }
 
 // NEAR: the original loads the parent tile into registers before the vtable
@@ -209,10 +196,10 @@ long EEAIAStarPathfindingGoal::GetCost(long inFromX, long inFromY, long inX, lon
 {
     if (this->mModifier == NULL)
         return this->GetDefaultCost(inFromX, inFromY, inX, inY);
-    EEAIAStarNode* theNode = this->mStorage->mCurrentNode;
-    if (theNode && theNode->mParent) {
-        long theX = theNode->mParent->mX;
-        long theY = theNode->mParent->mY;
+    // (the machine's hook: the current node's parent)
+    if (this->mStorage->mHookHasParent) {
+        long theX = this->mStorage->mHookParentX;
+        long theY = this->mStorage->mHookParentY;
         return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, theX, theY);
     }
     return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, -10000, -10000);

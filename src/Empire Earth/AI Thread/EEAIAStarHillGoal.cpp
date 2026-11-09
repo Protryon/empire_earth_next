@@ -43,6 +43,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIHill.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarHillGoal.h"
 
 // FUNCTION: EXE 0x416c0e
@@ -59,19 +60,17 @@ void EEAIAStarHillGoal::CollectTiles()
     EEAIAStarHillTile theValue;
     theValue.mContinentID = this->mContinentID;
     theValue.mID = this->mNextID;
-    EEAIAStarNode* theNode;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode->mX + theNode->mY];
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode.mX + theNode.mY];
         theTile.mID = theValue.mID;
         theTile.mContinentID = theValue.mContinentID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode->mX + theNode->mY];
-        theTile.mID = theValue.mID;
-        theTile.mContinentID = theValue.mContinentID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -86,8 +85,7 @@ void EEAIAStarHillGoal::CreateHill()
     theHill->mAreaType = kAIAreaHill;
     theHill->Create(this->mTiles);
     theHill->UpdateBounds(gWorld.mInfluenceTable);
-    EEAIAStarBounds& theBounds = this->mStorage->mDirtyBounds;
-    theBounds = theHill->mHull.GetBounds();
+    this->mStorage->SetDirtyBounds(theHill->mHull.GetBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mHills.insert(std::map<unsigned short, EEAIHill*>::value_type(this->mNextID, theHill));
