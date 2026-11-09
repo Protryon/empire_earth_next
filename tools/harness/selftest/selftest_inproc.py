@@ -6,7 +6,10 @@
   plumbing  hbuild.Build on a stand-in build (the guard test exe, a lld-format map of the game's x64 names, the real
             layouts): bridge defines, renderer/static-exe RVAs, the production
             bridge build (build_presentation_bridge), the no-human-defeat and mutex-bypass locators, the frame-cap range
-Stages: build/boot/selftest_stage and (probe, plumbing: the paths those tools accept) build/boot/windowed_o_32."""
+  fixture   fixture_driver.py (the gates' fixture driver: commands, verdicts, frames, the civilization pre-empt, the
+            play loop's time cap, the telemetry and game log parsers) against fixture_standin.py, the fixture's protocol
+            without a game
+Stages: build/boot/selftest_stage, build/boot/selftest_fixture (fixture) and (probe, plumbing: the paths those tools accept) build/boot/windowed_o_32."""
 import pathlib
 import re
 import shutil
@@ -234,3 +237,58 @@ def plumbing(arch, d):
     shutil.rmtree(PROBE_STAGE)
     return not problems, (f"{len(table)} map names, layout {fake / 'layout.json'}; bridge {out.name} {arch}"
                           + (f"; mutex test at rva {mutex:#x}" if mutex else "") + (f"; PROBLEMS {problems}" if problems else ""))
+
+
+def fixture(arch, d):
+    """fixture_driver.py against fixture_standin.py (no game, no layout, no debugger)."""
+    import os
+    import time
+    import types
+    import fixture_driver
+    out = st.BOOT / "selftest_fixture"
+    if out.exists():
+        if out.resolve().parent != st.BOOT.resolve():
+            raise ValueError("the fixture stage must be inside build/boot")
+        shutil.rmtree(out)
+    (out / "root").mkdir(parents=True)
+    env = dict(os.environ, EE_TEST_TIME_FACTOR="32", EE_TEST_SEED="2")
+    g = fixture_driver.Game(out, [sys.executable, "-I", str(HERE / "fixture_standin.py")], env, cwd=str(out / "root"),
+                            deadline=time.monotonic() + 90)
+    problems = []
+    try:
+        g.wait(lambda s: s["form"] == fixture_driver.MAIN, "the main menu", 30)
+        pixels = fixture_driver.frame(g, "main-menu")
+        if pixels[18:26] != (64).to_bytes(4, "little") + (-48).to_bytes(4, "little", signed=True):
+            problems.append("frame size")
+        g.click(12, 0, 6, "single player")
+        if g.verdict(g.seq) != "triggered":
+            problems.append(f"verdict {g.verdict(g.seq)}")
+        seq = g.command("click 6 99")
+        g.wait(lambda s: s["command"] >= seq, "a rejected click", 10)
+        time.sleep(0.3)
+        if g.verdict(seq) != "rejected":
+            problems.append(f"rejected verdict {g.verdict(seq)}")
+        g.click(6, 1, 26, "random map setup")
+        g.click(26, 10, 11, "start")
+        pre = fixture_driver.civ_preempt(g)
+        if pre["form"] != 7 or pre["civ_chosen"] != 1:
+            problems.append(f"preempt {pre}")
+        tel = fixture_driver.wait_running(g, 4)
+        if tel.get("clock") != [1, 1] or tel.get("paused") != 0 or tel["players"][2].get("stock") != [1, 2, 3, 4, 5]:
+            problems.append(f"telemetry {tel}")
+        played = fixture_driver.play(g, types.SimpleNamespace(max_game_seconds=40, play_seconds=None, capture_every=0),
+                                     ai_game=True)
+        if played["outcome"] != "max-game-seconds":
+            problems.append(f"outcome {played['outcome']}")
+        taken = [line for line in g.game_output().splitlines() if line.startswith("TEST UI clock") or
+                 line.startswith("TEST UI seed")]
+        if len(taken) != 2:
+            problems.append(f"switches {taken}")
+    except Exception as error:
+        problems.append(repr(error))
+    finally:
+        g.stop()
+    log = fixture_driver.copy_game_logs(out / "root", out)
+    if not log or [p["kind"] for p in log["players"].values()].count("computer") != 2 or 3 not in log["last_sample"]:
+        problems.append(f"game log {log}")
+    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, time cap, telemetry, game log"
