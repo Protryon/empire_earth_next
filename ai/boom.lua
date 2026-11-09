@@ -52,7 +52,7 @@ local PLAN = {
         soldiers = 20, soldiers_max = 30,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
-        settlements = 9,
+        settlements = 12,       -- (§8.36: every worked mine has its own)
         barracks = 2, ranges = 1,
         barracks_at = 10,
         boats = 10, docks = 2,
@@ -71,7 +71,7 @@ local PLAN = {
         soldiers = 20, soldiers_max = 40,
         barracks_at = 10,
         towers = 10,
-        settlements = 10,
+        settlements = 14,
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,

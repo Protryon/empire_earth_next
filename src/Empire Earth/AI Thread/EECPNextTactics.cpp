@@ -214,6 +214,12 @@ static long EECPNextGap(long inX, long inY, long inSize, EEUnit* inUnit)
     return (std::max)(theDX, theDY);
 }
 
+static long long EECPNextDistance2Of(long inX, long inY, long inX2, long inY2)
+{
+    long long theDX = inX - inX2, theDY = inY - inY2;
+    return theDX * theDX + theDY * theDY;
+}
+
 // a drop site by its resource (§8.35, the owner: "settlements directly adjacent to all resource mines, not just randomly
 // 3 tiles away"): of the tiles in the rings 1..inLast round a tile where the class can be built (CanBuildAt keeps a
 // one-tile margin free, the gatherers' side), the one nearest the resource units (inUnits; the tile itself when
@@ -416,7 +422,20 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
             // comes again once the site is seen
             EETile* theSiteTile = gWorld.mMap != NULL
                 ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)theX, (unsigned long)theY)) : NULL;
-            if ((!theFound || theGap > 2) && theSiteTile != NULL && !theSiteTile->IsVisibleTo(inPlayer)) {
+            // (a building goes only on tiles in sight now, EECanPlaceUnitOnTile: the walker stands there until the
+            // order comes again; once it is there the rings' result stands)
+            bool theArrived = false;
+            {
+                EECPNextState* theState = EECPNextGetState(inPlayer);
+                for (unsigned long e = 0; e < theState->mExplore.size(); e++) {
+                    EEUnit* theUnit = gWorld.GetUnit((unsigned long)theState->mExplore[e].mUnit);
+                    if (theState->mExplore[e].mX == theX && theState->mExplore[e].mY == theY && theUnit != NULL
+                        && theUnit->mHitPoints > 0 && theUnit->mTile != NULL
+                        && EECPNextDistance2Of(theUnit->GetTileX(), theUnit->GetTileY(), theX, theY) <= 9)
+                        theArrived = true;
+                }
+            }
+            if ((!theFound || theGap > 2) && !theArrived && theSiteTile != NULL) {
                 if (EECPNextBuildUnsafe(inPlayer, theX, theY) != kNextBlockedNone)
                     return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonUnsafe, 0,
                         "cls=%ld near=site arg=%ld x=%ld y=%ld (unexplored)", inType, inArg1, theX, theY);
