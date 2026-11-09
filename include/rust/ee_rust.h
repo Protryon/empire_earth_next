@@ -871,6 +871,22 @@ struct EeGeCemFrame {
   size_t bbox_count;
 };
 
+/// `RemoveModelScale`'s matrices for one frame.
+struct EeGeScaleRemoval {
+  /// The scale baked into the frame's points, normals, tag points, box and (frame 0) centre.
+  EeGeTransformation scale;
+  /// The largest of the three scales (the radius's factor).
+  float largest;
+  /// The frame's transform within its parent (`parent x internal`), for the sub-models.
+  EeGeTransformation transform;
+  /// The new internal transform: the rotation without its scale, the translation re-derived.
+  EeGeTransformation unscaled;
+  /// The accumulated scales the sub-models receive.
+  float x;
+  float y;
+  float z;
+};
+
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
 
@@ -2930,6 +2946,72 @@ void ee_ge_cem_frame(const EeGeCemModel *model, uint32_t index, EeGeCemFrame *ou
 /// # Safety
 /// `model` is live.
 const EeGeCemModel *ee_ge_cem_sub_model(const EeGeCemModel *model, uint32_t index);
+
+/// `ComputeBoundingBoxes` for one frame's points.
+///
+/// # Safety
+/// `points` holds `count` points; `out` is valid for a write.
+void ee_ge_model_frame_box(const EeGe3DPoint *points, size_t count, EeGeBoundingBox *out);
+
+/// `ComputeBoundingVolumes`' centre from the frames' boxes.
+///
+/// # Safety
+/// `boxes` holds `count` boxes; `out` is valid for a write.
+void ee_ge_model_center(const EeGeBoundingBox *boxes, size_t count, EeGe3DPoint *out);
+
+/// `ComputeBoundingVolumes`' radius of one frame.
+///
+/// # Safety
+/// `center` is valid; `points` holds `count` points.
+float ee_ge_model_radius(const EeGe3DPoint *center, const EeGe3DPoint *points, size_t count);
+
+/// `ComputeModelNormals` for one frame: `out` receives one normal per point.
+///
+/// # Safety
+/// `points` and `out` hold `count` elements; `indices` holds `index_count`.
+void ee_ge_model_vertex_normals(const EeGe3DPoint *points,
+                                size_t count,
+                                const uint32_t *indices,
+                                size_t index_count,
+                                EeGeVector *out);
+
+/// `PrepareTransforms`' graphics transform.
+///
+/// # Safety
+/// The pointers are valid; `out` may be any of the inputs.
+void ee_ge_model_graphics_transform(const EeGeTransformation *internal,
+                                    const EeGeTransformation *pre,
+                                    const EeGeTransformation *post,
+                                    float scale,
+                                    EeGeTransformation *out);
+
+/// `RemoveModelScale`'s matrices for one frame.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_model_scale_removal(const EeGeTransformation *internal,
+                               const EeGeTransformation *parent,
+                               float x,
+                               float y,
+                               float z,
+                               EeGeScaleRemoval *out);
+
+/// `SortTagPoints`' order: `out[i]` is the index swapped into position `i`.
+///
+/// # Safety
+/// `first` and `out` hold `count` elements.
+void ee_ge_model_tag_point_order(const int8_t *first, size_t count, uint32_t *out);
+
+/// `Verify` for one frame: `ranges` holds per material its LOD 0 polygon start, polygon count and first vertex.
+///
+/// # Safety
+/// `points` holds `count` points, `indices` `index_count` values, `ranges` `range_count` triples.
+bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
+                                size_t count,
+                                const uint32_t *indices,
+                                size_t index_count,
+                                const uint32_t *ranges,
+                                size_t range_count);
 
 /// `EEFLine`'s constructor: `count` column offsets into `out`.
 ///

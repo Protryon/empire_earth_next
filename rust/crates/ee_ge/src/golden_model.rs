@@ -19,17 +19,28 @@ use crate::model_file::{load, CemModel, SharedFrames};
 
 const GOLDEN: &str = include_str!("golden_model.txt");
 
-struct Gen {
+pub(crate) struct Gen {
     s: u32,
     b: Vec<u8>,
 }
 
 impl Gen {
+    #[allow(dead_code)] // golden_model_save.rs
+    pub fn new(seed: u32) -> Gen {
+        Gen { s: seed, b: Vec::new() }
+    }
+    /// The next model's bytes.
+    #[allow(dead_code)]
+    pub fn model_bytes(&mut self) -> Vec<u8> {
+        self.b.clear();
+        self.model(0);
+        self.b.clone()
+    }
     fn n(&mut self) -> u32 {
         self.s = self.s.wrapping_mul(1664525).wrapping_add(1013904223);
         self.s
     }
-    fn r(&mut self, n: u32) -> u32 {
+    pub fn r(&mut self, n: u32) -> u32 {
         self.n() % n
     }
     fn f(&mut self) -> f32 {
@@ -250,22 +261,25 @@ impl Gen {
     }
 }
 
-struct Fnv(u64);
+pub(crate) struct Fnv(pub u64);
 
 impl Fnv {
-    fn b(&mut self, bytes: &[u8]) {
+    pub fn new() -> Fnv {
+        Fnv(0xcbf2_9ce4_8422_2325)
+    }
+    pub fn b(&mut self, bytes: &[u8]) {
         for &c in bytes {
             self.0 ^= c as u64;
             self.0 = self.0.wrapping_mul(0x100000001b3);
         }
     }
-    fn u(&mut self, v: u64) {
+    pub fn u(&mut self, v: u64) {
         self.b(&v.to_le_bytes());
     }
-    fn f(&mut self, v: f32) {
+    pub fn f(&mut self, v: f32) {
         self.u(v.to_bits() as u64);
     }
-    fn s(&mut self, text: &[u8]) {
+    pub fn s(&mut self, text: &[u8]) {
         self.u(text.len() as u64);
         self.b(text);
     }

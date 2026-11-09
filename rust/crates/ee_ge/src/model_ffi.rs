@@ -9,7 +9,8 @@ use std::ptr;
 
 use crate::io::{CppIo, EeGeFieldIo};
 use crate::model_file::{self, CemModel, SharedFrames};
-use crate::types::{Ge3DPoint, GeVector};
+use crate::model_geom::{self, EeGeScaleRemoval};
+use crate::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
 #[repr(C)]
@@ -252,4 +253,136 @@ pub unsafe extern "C" fn ee_ge_cem_sub_model(model: *const CemModel, index: u32)
         Some(sub) => sub,
         None => ptr::null(),
     }
+}
+
+// ---- GEModel's geometry (model_geom.rs)
+
+/// Builds a slice from a C pointer and a count (empty for a null pointer).
+///
+/// # Safety
+/// `data` is null or valid for `count` elements.
+unsafe fn slice<'a, T>(data: *const T, count: usize) -> &'a [T] {
+    if data.is_null() || count == 0 {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, count) }
+    }
+}
+
+/// `ComputeBoundingBoxes` for one frame's points.
+///
+/// # Safety
+/// `points` holds `count` points; `out` is valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_frame_box(points: *const Ge3DPoint, count: usize, out: *mut GeBoundingBox) {
+    // SAFETY: the caller's contract
+    unsafe { *out = model_geom::frame_box(slice(points, count)) };
+}
+
+/// `ComputeBoundingVolumes`' centre from the frames' boxes.
+///
+/// # Safety
+/// `boxes` holds `count` boxes; `out` is valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_center(boxes: *const GeBoundingBox, count: usize, out: *mut Ge3DPoint) {
+    // SAFETY: the caller's contract
+    unsafe { *out = model_geom::center(slice(boxes, count)) };
+}
+
+/// `ComputeBoundingVolumes`' radius of one frame.
+///
+/// # Safety
+/// `center` is valid; `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_radius(center: *const Ge3DPoint, points: *const Ge3DPoint, count: usize) -> f32 {
+    // SAFETY: the caller's contract
+    unsafe { model_geom::radius(*center, slice(points, count)) }
+}
+
+/// `ComputeModelNormals` for one frame: `out` receives one normal per point.
+///
+/// # Safety
+/// `points` and `out` hold `count` elements; `indices` holds `index_count`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_vertex_normals(
+    points: *const Ge3DPoint,
+    count: usize,
+    indices: *const u32,
+    index_count: usize,
+    out: *mut GeVector,
+) {
+    // SAFETY: the caller's contract
+    let normals = unsafe { model_geom::vertex_normals(slice(points, count), slice(indices, index_count)) };
+    for (k, n) in normals.into_iter().enumerate() {
+        // SAFETY: `out` holds `count` vectors
+        unsafe { *out.add(k) = n };
+    }
+}
+
+/// `PrepareTransforms`' graphics transform.
+///
+/// # Safety
+/// The pointers are valid; `out` may be any of the inputs.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_graphics_transform(
+    internal: *const GeTransformation,
+    pre: *const GeTransformation,
+    post: *const GeTransformation,
+    scale: f32,
+    out: *mut GeTransformation,
+) {
+    // SAFETY: the caller's contract (every input is read before the store)
+    unsafe { *out = model_geom::graphics_transform(&*internal, &*pre, &*post, scale) };
+}
+
+/// `RemoveModelScale`'s matrices for one frame.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_scale_removal(
+    internal: *const GeTransformation,
+    parent: *const GeTransformation,
+    x: f32,
+    y: f32,
+    z: f32,
+    out: *mut EeGeScaleRemoval,
+) {
+    // SAFETY: the caller's contract
+    unsafe { *out = model_geom::scale_removal(&*internal, &*parent, x, y, z) };
+}
+
+/// `SortTagPoints`' order: `out[i]` is the index swapped into position `i`.
+///
+/// # Safety
+/// `first` and `out` hold `count` elements.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_tag_point_order(first: *const i8, count: usize, out: *mut u32) {
+    // SAFETY: the caller's contract
+    let order = model_geom::tag_point_order(unsafe { slice(first, count) });
+    for (k, v) in order.into_iter().enumerate() {
+        // SAFETY: `out` holds `count` values
+        unsafe { *out.add(k) = v };
+    }
+}
+
+/// `Verify` for one frame: `ranges` holds per material its LOD 0 polygon start, polygon count and first vertex.
+///
+/// # Safety
+/// `points` holds `count` points, `indices` `index_count` values, `ranges` `range_count` triples.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_model_frame_is_sound(
+    points: *const Ge3DPoint,
+    count: usize,
+    indices: *const u32,
+    index_count: usize,
+    ranges: *const u32,
+    range_count: usize,
+) -> bool {
+    // SAFETY: the caller's contract
+    let flat = unsafe { slice(ranges, range_count * 3) };
+    let triples: Vec<[u32; 3]> = flat.as_chunks::<3>().0.to_vec();
+    // SAFETY: the caller's contract
+    unsafe { model_geom::frame_is_sound(slice(points, count), slice(indices, index_count), &triples) }
 }

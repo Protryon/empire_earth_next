@@ -3,7 +3,8 @@
 //
 // 0x1001eb9f..0x100206c7: GEModel's ctors, dtor and core members, then its map COMDAT and the UList<GELOD*> pool init
 // pair (lle/GELOD.h via GEModel.h). AllocateInternalData differs from the original in block layout and register
-// choice.
+// choice. The geometry (boxes, centre and radii, normals, the graphics transform, the scale removal's matrices, the
+// tag point order, Verify's test) is Rust (rust/crates/ee_ge model_geom.rs) over flat copies of the arrays.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -33,6 +34,8 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
+#include <vector>
+#include "GERustMath.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -61,6 +64,36 @@
 // SYNTHETIC: LLE 0x1001ec99
 // SYNTHETIC: LLE 0x1001eca9
 // SYNTHETIC: LLE 0x1001ecb5
+
+// A frame's points and LOD 0's vertex indices as flat arrays for the geometry in Rust (rust/crates/ee_ge
+// model_geom.rs): the arrays stay behind GEVertexArray's and GEPolygonArray's virtuals.
+static void GEGatherPoints(const GEVertexArray* inArray, unsigned long inCount, std::vector<GE3DPoint>& outPoints)
+{
+    outPoints.resize(inCount);
+    for (unsigned long i = 0; i < inCount; i++)
+        inArray->GetPoint(outPoints[i], i);
+}
+
+static void GEGatherIndices(const GEPolygonArray* inArray, unsigned long inCount, std::vector<uint32_t>& outIndices)
+{
+    outIndices.resize(inCount * 3);
+    for (unsigned long i = 0; i < inCount; i++) {
+        outIndices[i * 3] = (uint32_t)inArray->GetVertexIndex1(i);
+        outIndices[i * 3 + 1] = (uint32_t)inArray->GetVertexIndex2(i);
+        outIndices[i * 3 + 2] = (uint32_t)inArray->GetVertexIndex3(i);
+    }
+}
+
+static const EeGe3DPoint* GERustPoints(const std::vector<GE3DPoint>& inPoints)
+{
+    return inPoints.empty() ? NULL : reinterpret_cast<const EeGe3DPoint*>(&inPoints[0]);
+}
+
+static const uint32_t* GERustIndices(const std::vector<uint32_t>& inIndices)
+{
+    return inIndices.empty() ? NULL : &inIndices[0];
+}
+
 
 // FUNCTION: LLE 0x1001ecbf
 // Creates an empty model owned by a model manager, with one LOD and no data allocated
@@ -251,32 +284,14 @@ long GEModel::AllocateInternalData(unsigned long inFlags, std::map<unsigned long
 }
 
 // FUNCTION: LLE 0x1001f544
-// Computes each frame's bounding box from its vertices, then the sub-models' boxes
+// Computes each frame's bounding box from its vertices, then the sub-models' boxes (Rust: ee_ge_model_frame_box)
 void GEModel::ComputeBoundingBoxes()
 {
-    GE3DPoint theMinimum;
-    GE3DPoint theMaximum;
-    GE3DPoint thePoint;
+    std::vector<GE3DPoint> thePoints;
     unsigned long i;
     for (i = 0; i < this->mFrameCount; i++) {
-        this->mVertexArrays[i]->GetPoint(theMinimum, 0);
-        this->mVertexArrays[i]->GetPoint(theMaximum, 0);
-        for (unsigned long j = 0; j < this->mVertexCount; j++) {
-            this->mVertexArrays[i]->GetPoint(thePoint, j);
-            if (thePoint.mX < theMinimum.mX)
-                theMinimum.mX = thePoint.mX;
-            else if (thePoint.mX > theMaximum.mX)
-                theMaximum.mX = thePoint.mX;
-            if (thePoint.GetY() < theMinimum.GetY())
-                theMinimum.SetY(thePoint.GetY());
-            else if (thePoint.GetY() > theMaximum.GetY())
-                theMaximum.SetY(thePoint.GetY());
-            if (thePoint.GetZ() < theMinimum.GetZ())
-                theMinimum.SetZ(thePoint.GetZ());
-            else if (thePoint.GetZ() > theMaximum.GetZ())
-                theMaximum.SetZ(thePoint.GetZ());
-        }
-        this->mBoundingBoxes[i].Define(theMinimum, theMaximum);
+        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
+        ee_ge_model_frame_box(GERustPoints(thePoints), thePoints.size(), GERust(this->mBoundingBoxes[i]));
     }
     for (i = 0; i < this->mSubModelCount; i++)
         this->mSubModels[i]->ComputeBoundingBoxes();
@@ -284,100 +299,40 @@ void GEModel::ComputeBoundingBoxes()
 
 // FUNCTION: LLE 0x1001f69a
 // Computes bounding boxes, the centre point (average of every frame's box) and each frame's bounding radius,
-// sub-models first
+// sub-models first (Rust: ee_ge_model_center, ee_ge_model_radius)
 void GEModel::ComputeBoundingVolumes()
 {
-    GE3DPoint thePoint;
-    float theX = 0.0f;
-    float theY = 0.0f;
-    float theZ = 0.0f;
-    float theScale = 1.0f / (this->mFrameCount * 2.0f);
-    GE3DPoint theMinimum;
-    GE3DPoint theMaximum;
+    std::vector<GE3DPoint> thePoints;
     unsigned long i;
     this->ComputeBoundingBoxes();
     for (i = 0; i < this->mSubModelCount; i++)
         this->mSubModels[i]->ComputeBoundingVolumes();
+    ee_ge_model_center(GERust(this->mBoundingBoxes[0]), this->mFrameCount, GERust(this->mCenterPoint));
     for (i = 0; i < this->mFrameCount; i++) {
-        theMinimum = this->mBoundingBoxes[i].GetBottomLeftFront();
-        theMaximum = this->mBoundingBoxes[i].GetTopRightBack();
-        theX += theMinimum.GetX() + theMaximum.GetX();
-        theY += theMinimum.GetY() + theMaximum.GetY();
-        theZ += theMinimum.GetZ() + theMaximum.GetZ();
-    }
-    this->mCenterPoint.SetX(theScale * theX);
-    this->mCenterPoint.SetY(theScale * theY);
-    this->mCenterPoint.SetZ(theScale * theZ);
-    for (i = 0; i < this->mFrameCount; i++) {
-        float theMaximumDistance = 0.0f;
-        for (unsigned long j = 0; j < this->mVertexCount; j++) {
-            this->mVertexArrays[i]->GetPoint(thePoint, j);
-            float theDistance = this->mCenterPoint.DistanceToSquared(thePoint);
-            if (theDistance > theMaximumDistance)
-                theMaximumDistance = theDistance;
-        }
-        this->mBoundingRadii[i] = sqrt(theMaximumDistance);
+        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
+        this->mBoundingRadii[i] =
+            ee_ge_model_radius(GERust(this->mCenterPoint), GERustPoints(thePoints), thePoints.size());
     }
 }
 
 // FUNCTION: LLE 0x1001f80c
-// Recomputes vertex normals from the polygons of LOD 0 for every frame
+// Recomputes vertex normals from the polygons of LOD 0 for every frame (Rust: ee_ge_model_vertex_normals)
 void GEModel::ComputeModelNormals()
 {
-    GEVector theEdge1;
-    GEVector theEdge2;
-    GEVector theNormal;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    GEVector* theNormals = new GEVector[this->mVertexCount];
-    if (!theNormals)
-        return;
+    std::vector<GE3DPoint> thePoints;
+    std::vector<uint32_t> theIndices;
+    std::vector<GEVector> theNormals(this->mVertexCount);
+    GEGatherIndices(this->GetPolygonArray(0), this->GetPolygonCount(), theIndices);
     for (unsigned long i = 0; i < this->GetFrameCount(); i++) {
         GEVertexArray* theArray = this->GetVertexArray(i);
-        unsigned long j;
-        // Start each frame from zero sums (they carried the previous frame's normals).
-        for (j = 0; j < this->mVertexCount; j++) {
-            theNormals[j].mX = 0.0f;
-            theNormals[j].mY = 0.0f;
-            theNormals[j].mZ = 0.0f;
-        }
-        for (j = 0; j < this->GetPolygonCount(); j++) {
-            theArray->GetPoint(thePoint1, this->GetPolygonArray(0)->GetVertexIndex1(j));
-            theArray->GetPoint(thePoint2, this->GetPolygonArray(0)->GetVertexIndex2(j));
-            theArray->GetPoint(thePoint3, this->GetPolygonArray(0)->GetVertexIndex3(j));
-            theEdge1.SetX(thePoint2.GetX() - thePoint1.GetX());
-            theEdge1.SetY(thePoint2.GetY() - thePoint1.GetY());
-            theEdge1.SetZ(thePoint2.GetZ() - thePoint1.GetZ());
-            theEdge2.SetX(thePoint3.GetX() - thePoint1.GetX());
-            theEdge2.SetY(thePoint3.GetY() - thePoint1.GetY());
-            theEdge2.SetZ(thePoint3.GetZ() - thePoint1.GetZ());
-            theEdge2.CrossProduct(theEdge1, theNormal);
-            {
-                GEVector& theSum = theNormals[this->GetPolygonArray(0)->GetVertexIndex1(j)];
-                theSum.mX += theNormal.mX;
-                theSum.mY += theNormal.mY;
-                theSum.mZ += theNormal.mZ;
-            }
-            {
-                GEVector& theSum = theNormals[this->GetPolygonArray(0)->GetVertexIndex2(j)];
-                theSum.mX += theNormal.mX;
-                theSum.mY += theNormal.mY;
-                theSum.mZ += theNormal.mZ;
-            }
-            {
-                GEVector& theSum = theNormals[this->GetPolygonArray(0)->GetVertexIndex3(j)];
-                theSum.mX += theNormal.mX;
-                theSum.mY += theNormal.mY;
-                theSum.mZ += theNormal.mZ;
-            }
-        }
-        for (j = 0; j < this->mVertexCount; j++) {
-            theNormals[j].Normalize();
+        GEGatherPoints(theArray, this->mVertexCount, thePoints);
+        if (thePoints.empty())
+            continue;
+        ee_ge_model_vertex_normals(GERustPoints(thePoints), thePoints.size(), GERustIndices(theIndices),
+                                   theIndices.size(), GERust(theNormals[0]));
+        for (unsigned long j = 0; j < this->mVertexCount; j++)
             theArray->SetNormal(theNormals[j], j);
-        }
     }
-    delete[] theNormals;
 }
 
 // FUNCTION: LLE 0x1001fa84
@@ -415,90 +370,40 @@ unsigned long GEModel::GetPolygonCountOfHierarchy(unsigned long inLOD) const
 
 // FUNCTION: LLE 0x1001fb1d
 // Builds the graphics transform for the current frame (pre transform, internal transform, scale, post transform)
-// for the model and its sub-models
+// for the model and its sub-models (Rust: ee_ge_model_graphics_transform)
 void GEModel::PrepareTransforms()
 {
-    float theScale = this->mGraphicsScale;
     unsigned long theSubModelCount = this->mSubModelCount;
-    GETransformation theTransform(false);
-    GETransformation theScaled(false);
-    this->mInternalTransforms[this->mGraphicsCurrentFrame].Apply(this->mGraphicsPreModelTransform, theTransform);
-    theScaled.SetElement(0, 0, theTransform.GetElement(0, 0) * theScale);
-    theScaled.SetElement(0, 1, theTransform.GetElement(0, 1) * theScale);
-    theScaled.SetElement(0, 2, theTransform.GetElement(0, 2) * theScale);
-    theScaled.SetElement(0, 3, theTransform.GetElement(0, 3));
-    theScaled.SetElement(1, 0, theTransform.GetElement(1, 0) * theScale);
-    theScaled.SetElement(1, 1, theTransform.GetElement(1, 1) * theScale);
-    theScaled.SetElement(1, 2, theTransform.GetElement(1, 2) * theScale);
-    theScaled.SetElement(1, 3, theTransform.GetElement(1, 3));
-    theScaled.SetElement(2, 0, theTransform.GetElement(2, 0) * theScale);
-    theScaled.SetElement(2, 1, theTransform.GetElement(2, 1) * theScale);
-    theScaled.SetElement(2, 2, theTransform.GetElement(2, 2) * theScale);
-    theScaled.SetElement(2, 3, theTransform.GetElement(2, 3));
-    theScaled.SetElement(3, 0, 0.0f);
-    theScaled.SetElement(3, 1, 0.0f);
-    theScaled.SetElement(3, 2, 0.0f);
-    theScaled.SetElement(3, 3, 1.0f);
-    this->mGraphicsPostModelTransform.Apply(theScaled, this->mGraphicsTransform);
+    ee_ge_model_graphics_transform(GERust(this->mInternalTransforms[this->mGraphicsCurrentFrame]),
+                                   GERust(this->mGraphicsPreModelTransform), GERust(this->mGraphicsPostModelTransform),
+                                   this->mGraphicsScale, GERust(this->mGraphicsTransform));
     for (unsigned long i = 0; i < theSubModelCount; i++)
         this->mSubModels[i]->PrepareTransforms();
 }
 
 // FUNCTION: LLE 0x1001fc00
 // Bakes the frame's transform scale into its vertices, tag points, box, radius and centre and leaves the
-// transform unscaled; recurses into the sub-models
+// transform unscaled; recurses into the sub-models (Rust: ee_ge_model_scale_removal, the matrices)
 void GEModel::RemoveModelScale(unsigned long inFrame, const GETransformation& inParent, float inX, float inY,
                                float inZ)
 {
     GE3DPoint thePoint;
     GE3DPoint theResult;
-    GE3DPoint theOrigin;
     GEBoundingBox theBox;
-    GETransformation theInternal;
-    GETransformation theUnscaled;
-    GETransformation theScale;
-    GETransformation theTransform;
-    GEVector theAxis;
-    float theX;
-    unsigned long theCount;
-    unsigned long i;
-    float theZ;
-    float theScaleX;
-    float theScaleY;
-    float theScaleZ;
-    unsigned long theSubModelCount = this->mSubModelCount;
     GEVector theNormal;
     GEVector theTransformedNormal;
-    theInternal = this->mInternalTransforms[inFrame];
-    inParent.Apply(theInternal, theTransform);
-    theAxis.SetX(theInternal.GetElement(0, 0));
-    theAxis.SetY(theInternal.GetElement(1, 0));
-    theAxis.SetZ(theInternal.GetElement(2, 0));
-    theScaleX = theAxis.GetMagnitude();
-    theX = theScaleX * inX;
-    theAxis.SetX(theInternal.GetElement(0, 1));
-    theAxis.SetY(theInternal.GetElement(1, 1));
-    theAxis.SetZ(theInternal.GetElement(2, 1));
-    theScaleY = theAxis.GetMagnitude();
-    inY = theScaleY * inY;
-    theAxis.SetX(theInternal.GetElement(0, 2));
-    theAxis.SetY(theInternal.GetElement(1, 2));
-    theAxis.SetZ(theInternal.GetElement(2, 2));
-    theScaleZ = theAxis.GetMagnitude();
-    theZ = theScaleZ * inZ;
-    theScale.SetElement(0, 0, theX);
-    theScale.SetElement(1, 1, inY);
-    theScale.SetElement(2, 2, theZ);
+    EeGeScaleRemoval theRemoval;
+    unsigned long theCount;
+    unsigned long i;
+    unsigned long theSubModelCount = this->mSubModelCount;
+    ee_ge_model_scale_removal(GERust(this->mInternalTransforms[inFrame]), GERust(inParent), inX, inY, inZ,
+                              &theRemoval);
+    const GETransformation& theScale = *reinterpret_cast<const GETransformation*>(&theRemoval.scale);
     if (inFrame == 0) {
         theScale.Apply(this->mCenterPoint, theResult);
         this->mCenterPoint = theResult;
     }
-    float theMaximum = theX;
-    if (inY > theMaximum)
-        theMaximum = inY;
-    if (theZ > theMaximum)
-        theMaximum = theZ;
-    this->mBoundingRadii[inFrame] *= theMaximum;
+    this->mBoundingRadii[inFrame] *= theRemoval.largest;
     this->mBoundingBoxes[inFrame].Transform(theScale, theBox);
     this->mBoundingBoxes[inFrame] = theBox;
     theCount = this->mVertexArrays[inFrame]->GetSize();
@@ -516,35 +421,10 @@ void GEModel::RemoveModelScale(unsigned long inFrame, const GETransformation& in
         theScale.Apply(this->mFrameTagPoints[inFrame][i], theResult);
         this->mFrameTagPoints[inFrame][i] = theResult;
     }
-    theUnscaled.SetElement(0, 0, theInternal.GetElement(0, 0));
-    theUnscaled.SetElement(0, 1, theInternal.GetElement(0, 1));
-    theUnscaled.SetElement(0, 2, theInternal.GetElement(0, 2));
-    theUnscaled.SetElement(0, 3, 0.0f);
-    theUnscaled.SetElement(1, 0, theInternal.GetElement(1, 0));
-    theUnscaled.SetElement(1, 1, theInternal.GetElement(1, 1));
-    theUnscaled.SetElement(1, 2, theInternal.GetElement(1, 2));
-    theUnscaled.SetElement(1, 3, 0.0f);
-    theUnscaled.SetElement(2, 0, theInternal.GetElement(2, 0));
-    theUnscaled.SetElement(2, 1, theInternal.GetElement(2, 1));
-    theUnscaled.SetElement(2, 2, theInternal.GetElement(2, 2));
-    theUnscaled.SetElement(2, 3, 0.0f);
-    theUnscaled.SetElement(3, 0, 0.0f);
-    theUnscaled.SetElement(3, 1, 0.0f);
-    theUnscaled.SetElement(3, 2, 0.0f);
-    theUnscaled.SetElement(3, 3, 1.0f);
-    theUnscaled.Scale(1.0f / theScaleX, 1.0f / theScaleY, 1.0f / theScaleZ);
-    thePoint.SetX(0.0f);
-    thePoint.SetY(0.0f);
-    thePoint.SetZ(0.0f);
-    inParent.Apply(thePoint, theResult);
-    theTransform.Apply(thePoint, theOrigin);
-    theOrigin -= theResult;
-    theUnscaled.SetElement(0, 3, theOrigin.GetX());
-    theUnscaled.SetElement(1, 3, theOrigin.GetY());
-    theUnscaled.SetElement(2, 3, theOrigin.GetZ());
-    this->mInternalTransforms[inFrame] = theUnscaled;
+    this->mInternalTransforms[inFrame] = *reinterpret_cast<const GETransformation*>(&theRemoval.unscaled);
+    const GETransformation& theTransform = *reinterpret_cast<const GETransformation*>(&theRemoval.transform);
     for (unsigned long k = 0; k < theSubModelCount; k++)
-        this->mSubModels[k]->RemoveModelScale(inFrame, theTransform, theX, inY, theZ);
+        this->mSubModels[k]->RemoveModelScale(inFrame, theTransform, theRemoval.x, theRemoval.y, theRemoval.z);
 }
 
 // FUNCTION: LLE 0x1002004b
@@ -644,19 +524,23 @@ unsigned long GEModel::SizeOf()
 }
 
 // FUNCTION: LLE 0x10020338
-// Sorts the tag points by the first letter of their names, in every frame, then in the sub-models
+// Sorts the tag points by the first letter of their names, in every frame, then in the sub-models (Rust:
+// ee_ge_model_tag_point_order decides the swaps)
 void GEModel::SortTagPoints()
 {
     UString theName;
     GE3DPoint theTemp;
     unsigned long theFrameCount = this->mFrameCount;
     unsigned long theTagPointCount = this->mTagPointCount;
-    for (unsigned long i = 0; i < theTagPointCount; i++) {
-        unsigned long theMinimum = i;
-        for (unsigned long j = i + 1; j < theTagPointCount; j++) {
-            if (((const char*)this->mTagPointNames[j])[0] < ((const char*)this->mTagPointNames[theMinimum])[0])
-                theMinimum = j;
-        }
+    std::vector<int8_t> theFirst(theTagPointCount);
+    std::vector<uint32_t> theOrder(theTagPointCount);
+    unsigned long i;
+    for (i = 0; i < theTagPointCount; i++)
+        theFirst[i] = (int8_t)((const char*)this->mTagPointNames[i])[0];
+    if (theTagPointCount > 0)
+        ee_ge_model_tag_point_order(&theFirst[0], theTagPointCount, &theOrder[0]);
+    for (i = 0; i < theTagPointCount; i++) {
+        unsigned long theMinimum = theOrder[i];
         if (theMinimum == i)
             continue;
         theName = this->mTagPointNames[i];
@@ -674,28 +558,27 @@ void GEModel::SortTagPoints()
 }
 
 // FUNCTION: LLE 0x10020495
-// Returns false when any LOD 0 polygon of any frame has two equal corners; checks the sub-models too
+// Returns false when any LOD 0 polygon of any frame has two equal corners; checks the sub-models too (Rust:
+// ee_ge_model_frame_is_sound)
 bool GEModel::Verify() const
 {
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
     unsigned long theMaterialCount = this->mMaterialCount;
     unsigned long theFrameCount = this->mFrameCount;
     bool theResult = true;
+    std::vector<GE3DPoint> thePoints;
+    std::vector<uint32_t> theIndices;
+    std::vector<uint32_t> theRanges(theMaterialCount * 3);
+    GEGatherIndices(this->mPolygonArrays[0], this->mPolygonCount, theIndices);
+    for (unsigned long j = 0; j < theMaterialCount; j++) {
+        theRanges[j * 3] = (uint32_t)this->mMaterials[j]->GetPolygonStartingIndex(0);
+        theRanges[j * 3 + 1] = (uint32_t)this->mMaterials[j]->GetPolygonRangeLength(0);
+        theRanges[j * 3 + 2] = (uint32_t)this->mMaterials[j]->GetVertexStartingIndex();
+    }
     for (unsigned long i = 0; i < theFrameCount; i++) {
-        GEVertexArray* theArray = this->mVertexArrays[i];
-        for (unsigned long j = 0; j < theMaterialCount; j++) {
-            unsigned long theEnd = this->mMaterials[j]->GetPolygonStartingIndex(0) + this->mMaterials[j]->GetPolygonRangeLength(0);
-            unsigned long theVertexStart = this->mMaterials[j]->GetVertexStartingIndex();
-            for (unsigned long k = this->mMaterials[j]->GetPolygonStartingIndex(0); k < theEnd; k++) {
-                theArray->GetPoint(thePoint1, this->mPolygonArrays[0]->GetVertexIndex1(k) + theVertexStart);
-                theArray->GetPoint(thePoint2, this->mPolygonArrays[0]->GetVertexIndex2(k) + theVertexStart);
-                theArray->GetPoint(thePoint3, this->mPolygonArrays[0]->GetVertexIndex3(k) + theVertexStart);
-                if (thePoint1 == thePoint2 || thePoint1 == thePoint3 || thePoint2 == thePoint3)
-                    theResult = false;
-            }
-        }
+        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
+        if (!ee_ge_model_frame_is_sound(GERustPoints(thePoints), thePoints.size(), GERustIndices(theIndices),
+                                        theIndices.size(), GERustIndices(theRanges), theMaterialCount))
+            theResult = false;
     }
     if (theResult) {
         for (unsigned long l = 0; l < this->mSubModelCount; l++) {
