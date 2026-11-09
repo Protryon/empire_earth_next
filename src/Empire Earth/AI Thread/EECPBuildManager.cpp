@@ -537,6 +537,12 @@ void EECPBuildManager::CollectSiteTiles(char inKind)
 // or planet maps), ignoring idle searchers (timer above 60 s)
 bool EECPBuildManager::HasEnemyNear(long inX, long inY)
 {
+    // the next engine: a real threat that the player sees or remembers (EECPNextSiteThreat: enemy soldiers seen within
+    // kNextThreatRange tiles lately, an enemy tower or armed building in range; docs/AI_RESEARCH.md §8.34). The
+    // original counts every armed unit not its own in a box of influence regions (up to 27 tiles across), citizens
+    // and towers out of range too, whether the player sees them or not.
+    if (EECPNextEngine(this->mPlayer))
+        return EECPNextSiteThreat(this->mPlayer, inX, inY, false, NULL) != 0;
     std::vector<EEComplexUnit*> theUnits;
     EEInfluenceTable* theTable = gWorld.mInfluenceTable;
     EEMap* theMap = gWorld.mMap;
@@ -574,16 +580,6 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
                 else
                     it++;
             }
-            // the next engine: only an enemy's armed units count, not gaia's (player 0, the wild animals) or an ally's
-            // (the original counts every armed unit that is not its own)
-            if (EECPNextEngine(this->mPlayer))
-                for (it = theUnits.begin(); it != theUnits.end();) {
-                    EEPlayer* theOwner = (*it)->mPlayer;
-                    if (theOwner == NULL || theOwner == gWorld.mPlayers[0] || this->mPlayer->IsAlly(theOwner))
-                        it = theUnits.erase(it);
-                    else
-                        it++;
-                }
             theCount = theUnits.size();
         }
     }

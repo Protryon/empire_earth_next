@@ -81,7 +81,7 @@ const char* EECPNextReasonName(long inReason)
 
 EECPNextState::EECPNextState()
     : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mEpoch(-1), mEpochStart(0),
-      mNextRepairTime(0), mIncomeSteps(0), mNextGroup(1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
+      mNextRepairTime(0), mIncomeSteps(0), mNextGroup(1), mThreatsTime(-1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
       mShadow(NULL)
 {
     memset(this->mReserve, 0, sizeof(this->mReserve));
