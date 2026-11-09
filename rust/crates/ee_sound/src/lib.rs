@@ -1,6 +1,19 @@
-//! The Sound Engine's sound manager (`docs/RUST_PLAN.md` R3.6), in progress: MSVC's `std::sort`, which the manager's
-//! scavenger uses on its paused queue.
+//! The Sound Engine's sound manager (`docs/RUST_PLAN.md` R3.6) behind the C++ `SESoundManager` facade: which channel
+//! an instance gets, the category and instance limits and priorities, the paused queue of looping sounds, the
+//! scavenger thread's decisions, one-shot sounds and the random start offsets.
 //!
-//! `golden_sound.txt` holds the C++ behaviour, dumped by a throwaway driver compiled from the C++ source.
+//! C++ keeps the objects and their lifetimes: the instance nodes (pooled, intrusively reference counted, held by
+//! units, unit classes and effects), the samples (shared with the mixer plug-in), the sound path, the mixer, the
+//! scavenger thread and the manager's lock. Rust sees them as opaque handles through [`manager::Host`] and is called
+//! with the C++ lock held where the C++ held it.
+//!
+//! `golden_sound.txt` holds the C++ implementation's behaviour (scenario scripts over a fake mixer, and MSVC
+//! `std::sort` permutations), dumped by a throwaway driver before the C++ was replaced.
 
+pub mod manager;
 pub mod msvc_sort;
+
+#[cfg(test)]
+mod fake;
+#[cfg(test)]
+mod golden;
