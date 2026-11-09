@@ -96,48 +96,14 @@ void EEAIAStarContinentGoal::CreateContinent()
 // first tile picks the kind), counting it; map edge tiles join only map edge continents
 bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bool inStart)
 {
-    bool theResult = false;
-    if (this->mView.HasTile(inX, inY)) {
-        long theTerrain = this->mView.GetTerrain(inX, inY);
-        bool theMatch = false;
-        if (this->mKind == kContinentCategoryLand)
-            theMatch = theTerrain != kTerrainDeepWater && theTerrain != kTerrainCliff && theTerrain != kTerrainSpace;
-        else if (this->mKind == kContinentCategoryWater)
-            theMatch = theTerrain == kTerrainDeepWater;
-        else if (this->mKind == kContinentCategorySpace)
-            theMatch = theTerrain == kTerrainSpace;
-        else if (this->mKind == kContinentCategoryCliff)
-            theMatch = theTerrain == kTerrainCliff;
-        else if (this->mKind == kContinentCategoryMapEdge)
-            theMatch = this->mView.IsEdgeTile(inX, inY);
-        else if (this->mKind == kContinentCategoryNone) {
-            switch (theTerrain) {
-            case kTerrainDeepWater:
-                this->mKind = kContinentCategoryWater;
-                break;
-            case kTerrainCliff:
-                this->mKind = kContinentCategoryCliff;
-                break;
-            case kTerrainSpace:
-                this->mKind = kContinentCategorySpace;
-                break;
-            default:
-                this->mKind = kContinentCategoryLand;
-                break;
-            }
-            if (this->mView.IsEdgeTile(inX, inY))
-                this->mKind = kContinentCategoryMapEdge;
-            theMatch = true;
-        }
-        if (theMatch) {
-            if (this->mView.IsEdgeTile(inX, inY) == (this->mKind == kContinentCategoryMapEdge)) {
-                this->mTileCount++;
-                theResult = true;
-            } else
-                theResult = false;
-        } else
-            theResult = false;
-    }
+    // Rust (ee_astar goals.rs continent_accept): the kind and the count go in and come back
+    EeAStarContinentFill theFill;
+    theFill.kind = this->mKind;
+    theFill.tile_count = this->mTileCount;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    bool theResult = ee_astar_continent_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY);
+    this->mKind = theFill.kind;
+    this->mTileCount = theFill.tile_count;
     return theResult;
 }
 

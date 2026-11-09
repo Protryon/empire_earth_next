@@ -5,6 +5,7 @@
 //! While `ee_astar_start` / `ee_astar_expand` run, the callbacks must not call any `ee_astar_*` function on the same
 //! storage: what the goals read of the storage during a search comes in the callbacks' arguments.
 
+use crate::goals::{self, EeAStarChokeFill, EeAStarContinentFill, EeAStarHillFill, View};
 use crate::machine::{self, Host, MachineState};
 use crate::storage::{AStarRect, GridKind, List, Storage, StorageKind, NIL};
 use std::ffi::c_void;
@@ -349,4 +350,99 @@ pub unsafe extern "C" fn ee_astar_start(s: *mut EeAStarStorage, cb: *const EeASt
 pub unsafe extern "C" fn ee_astar_expand(s: *mut EeAStarStorage, cb: *const EeAStarCallbacks) {
     let s = unsafe { st(s) };
     machine::expand(s, &mut CHost(unsafe { &*cb }))
+}
+
+/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
+#[repr(C)]
+pub struct EeAStarViewCallbacks {
+    pub ctx: *mut c_void,
+    pub has_tile: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub terrain: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub is_edge: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
+    pub height_level: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
+    pub continent_id: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> u16,
+    /// a choke tile at `index` (`*serial` its area serial)
+    pub choke_tile: extern "C" fn(ctx: *mut c_void, index: i32, serial: *mut u32) -> bool,
+}
+
+struct CView<'a>(&'a EeAStarViewCallbacks);
+
+impl View for CView<'_> {
+    fn has_tile(&mut self, x: i32, y: i32) -> bool {
+        (self.0.has_tile)(self.0.ctx, x, y)
+    }
+    fn terrain(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.terrain)(self.0.ctx, x, y)
+    }
+    fn is_edge(&mut self, x: i32, y: i32) -> bool {
+        (self.0.is_edge)(self.0.ctx, x, y)
+    }
+    fn height_level(&mut self, x: i32, y: i32) -> i32 {
+        (self.0.height_level)(self.0.ctx, x, y)
+    }
+    fn continent_id(&mut self, x: i32, y: i32) -> u16 {
+        (self.0.continent_id)(self.0.ctx, x, y)
+    }
+    fn choke_tile(&mut self, index: i32) -> Option<u32> {
+        let mut serial = 0u32;
+        (self.0.choke_tile)(self.0.ctx, index, &mut serial).then_some(serial)
+    }
+}
+
+/// `EEAIAStarContinentGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_accept(
+    fill: *mut EeAStarContinentFill,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+) -> bool {
+    let mut f = unsafe { *fill };
+    let r = goals::continent_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
+    unsafe { *fill = f };
+    r
+}
+
+/// `EEAIAStarHillGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_hill_accept(
+    fill: *mut EeAStarHillFill,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+) -> bool {
+    let mut f = unsafe { *fill };
+    let r = goals::hill_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
+    unsafe { *fill = f };
+    r
+}
+
+/// `EEAIAStarChokePointGoal::AcceptTile` over the goal's state; `*serial` the tile's area serial when accepted.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`; `serial` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_accept(
+    fill: *mut EeAStarChokeFill,
+    view: *const EeAStarViewCallbacks,
+    x: i32,
+    y: i32,
+    serial: *mut u32,
+) -> bool {
+    let mut f = unsafe { *fill };
+    let r = goals::choke_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
+    unsafe { *fill = f };
+    match r {
+        Some(s) => {
+            unsafe { *serial = s };
+            true
+        }
+        None => false,
+    }
 }

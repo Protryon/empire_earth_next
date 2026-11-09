@@ -560,3 +560,142 @@ fn c_abi_runs_the_same_search() {
         ffi::ee_astar_free(s);
     }
 }
+
+// ---- the flood goals' tile tests (goals.rs) ----
+
+use crate::goals::*;
+
+/// A map of terrains (`.` land, `~` deep water, `#` cliff, `*` space), heights and continents; its edge is the
+/// outer ring; it records every query in order.
+struct MapView {
+    rows: Vec<&'static [u8]>,
+    levels: Vec<Vec<i32>>,
+    continents: Vec<Vec<u16>>,
+    chokes: Vec<Option<u32>>,
+    queries: Vec<String>,
+}
+
+impl MapView {
+    fn new(rows: Vec<&'static [u8]>) -> MapView {
+        let n = rows.len();
+        MapView {
+            rows,
+            levels: vec![vec![0; n]; n],
+            continents: vec![vec![1; n]; n],
+            chokes: vec![None; n * n],
+            queries: Vec::new(),
+        }
+    }
+    fn n(&self) -> i32 {
+        self.rows.len() as i32
+    }
+}
+
+impl View for MapView {
+    fn has_tile(&mut self, x: i32, y: i32) -> bool {
+        self.queries.push(format!("has {x} {y}"));
+        x >= 0 && y >= 0 && x < self.n() && y < self.n()
+    }
+    fn terrain(&mut self, x: i32, y: i32) -> i32 {
+        self.queries.push(format!("terrain {x} {y}"));
+        match self.rows[y as usize][x as usize] {
+            b'~' => TERRAIN_DEEP_WATER,
+            b'#' => TERRAIN_CLIFF,
+            b'*' => TERRAIN_SPACE,
+            _ => 0,
+        }
+    }
+    fn is_edge(&mut self, x: i32, y: i32) -> bool {
+        self.queries.push(format!("edge {x} {y}"));
+        x == 0 || y == 0 || x == self.n() - 1 || y == self.n() - 1
+    }
+    fn height_level(&mut self, x: i32, y: i32) -> i32 {
+        self.queries.push(format!("level {x} {y}"));
+        self.levels[y as usize][x as usize]
+    }
+    fn continent_id(&mut self, x: i32, y: i32) -> u16 {
+        self.queries.push(format!("continent {x} {y}"));
+        self.continents[y as usize][x as usize]
+    }
+    fn choke_tile(&mut self, index: i32) -> Option<u32> {
+        self.queries.push(format!("choke {index}"));
+        self.chokes[index as usize]
+    }
+}
+
+const ISLES: [&[u8]; 5] = [b".....", b".~~#.", b".~*..", b".....", b"....."];
+
+#[test]
+fn continent_first_tile_picks_the_kind_then_matches_it() {
+    let mut v = MapView::new(ISLES.to_vec());
+    let mut fill = EeAStarContinentFill::default();
+    assert!(continent_accept(&mut fill, &mut v, 1, 1));
+    assert_eq!(fill, EeAStarContinentFill { kind: CATEGORY_WATER, tile_count: 1 });
+    assert_eq!(v.queries, ["has 1 1", "terrain 1 1", "edge 1 1", "edge 1 1"]);
+    assert!(continent_accept(&mut fill, &mut v, 2, 1));
+    assert!(!continent_accept(&mut fill, &mut v, 3, 1)); // cliff
+    assert!(!continent_accept(&mut fill, &mut v, 9, 9)); // off the map
+    assert_eq!(fill.tile_count, 2);
+    // a rejected terrain is not asked about the edge
+    v.queries.clear();
+    assert!(!continent_accept(&mut fill, &mut v, 2, 2));
+    assert_eq!(v.queries, ["has 2 2", "terrain 2 2"]);
+}
+
+#[test]
+fn continent_edge_tiles_make_their_own_continents() {
+    let mut v = MapView::new(ISLES.to_vec());
+    let mut fill = EeAStarContinentFill::default();
+    assert!(continent_accept(&mut fill, &mut v, 0, 0));
+    assert_eq!(fill.kind, CATEGORY_MAP_EDGE);
+    assert!(continent_accept(&mut fill, &mut v, 4, 2));
+    assert!(!continent_accept(&mut fill, &mut v, 3, 3)); // land, not an edge
+    let mut land = EeAStarContinentFill::default();
+    assert!(continent_accept(&mut land, &mut v, 3, 3));
+    assert_eq!(land.kind, CATEGORY_LAND);
+    assert!(!continent_accept(&mut land, &mut v, 4, 3)); // land on the edge
+    assert!(!continent_accept(&mut land, &mut v, 2, 2)); // space
+    let mut space = EeAStarContinentFill::default();
+    assert!(continent_accept(&mut space, &mut v, 2, 2));
+    assert_eq!(space.kind, CATEGORY_SPACE);
+    // an unknown kind matches nothing
+    let mut odd = EeAStarContinentFill { kind: 9, tile_count: 0 };
+    assert!(!continent_accept(&mut odd, &mut v, 3, 3));
+}
+
+#[test]
+fn hill_takes_high_tiles_of_its_first_continent() {
+    let mut v = MapView::new(ISLES.to_vec());
+    v.levels[3][3] = 4;
+    v.levels[3][2] = 6;
+    v.levels[3][1] = 3;
+    v.levels[1][3] = 9; // a cliff
+    v.continents[3][2] = 2;
+    let mut fill = EeAStarHillFill { continent_id: 0, tile_count: 0, level_sum: 100 };
+    assert!(hill_accept(&mut fill, &mut v, 3, 3));
+    assert_eq!(fill, EeAStarHillFill { continent_id: 1, tile_count: 1, level_sum: 104 });
+    assert!(!hill_accept(&mut fill, &mut v, 2, 3)); // another continent
+    assert!(!hill_accept(&mut fill, &mut v, 1, 3)); // too low
+    assert!(!hill_accept(&mut fill, &mut v, 3, 1)); // cliff
+    assert!(!hill_accept(&mut fill, &mut v, -1, 0));
+    assert_eq!(fill.tile_count, 1);
+    // the level is asked before the terrain; the continent only for a high, non-cliff tile
+    v.queries.clear();
+    hill_accept(&mut fill, &mut v, 1, 3);
+    assert_eq!(v.queries, ["has 1 3", "level 1 3", "terrain 1 3"]);
+}
+
+#[test]
+fn choke_takes_flagged_tiles_with_their_serials() {
+    let mut v = MapView::new(ISLES.to_vec());
+    v.chokes[5 * 2 + 3] = Some(77);
+    let mut fill = EeAStarChokeFill { width: 5, height: 5, tile_count: 0 };
+    assert_eq!(choke_accept(&mut fill, &mut v, 2, 3), Some(77));
+    assert_eq!(fill.tile_count, 1);
+    assert_eq!(choke_accept(&mut fill, &mut v, 3, 2), None);
+    // off the grid: no query
+    v.queries.clear();
+    assert_eq!(choke_accept(&mut fill, &mut v, 5, 0), None);
+    assert_eq!(choke_accept(&mut fill, &mut v, 0, -1), None);
+    assert!(v.queries.is_empty());
+}

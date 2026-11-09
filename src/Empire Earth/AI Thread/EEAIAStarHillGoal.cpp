@@ -98,22 +98,16 @@ void EEAIAStarHillGoal::CreateHill()
 // tile picks it); counts the tile and adds its level to the sum
 bool EEAIAStarHillGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
 {
-    bool theResult = false;
-    if (this->mView.HasTile(inX, inY)) {
-        long theLevel = this->mView.GetHeightLevel(inX, inY);
-        if (this->mView.GetTerrain(inX, inY) != kTerrainCliff && theLevel >= 4) {
-            if (this->mContinentID != 0) {
-                theResult = this->mView.GetContinentID(inX, inY) == this->mContinentID;
-            } else {
-                this->mContinentID = this->mView.GetContinentID(inX, inY);
-                theResult = true;
-            }
-            if (theResult) {
-                this->mTileCount++;
-                this->mLevelSum += theLevel;
-            }
-        }
-    }
+    // Rust (ee_astar goals.rs hill_accept): the continent, the count and the level sum go in and come back
+    EeAStarHillFill theFill;
+    theFill.continent_id = this->mContinentID;
+    theFill.tile_count = this->mTileCount;
+    theFill.level_sum = this->mLevelSum;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    bool theResult = ee_astar_hill_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY);
+    this->mContinentID = theFill.continent_id;
+    this->mTileCount = theFill.tile_count;
+    this->mLevelSum = theFill.level_sum;
     return theResult;
 }
 

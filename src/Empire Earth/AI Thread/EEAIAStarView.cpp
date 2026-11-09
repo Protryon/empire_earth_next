@@ -377,3 +377,50 @@ long EEAIAStarView::GetModifierCost(EEAIPathGoalModifierBase* inModifier, long i
     Note(kViewModifierCost, inX, inY, theCost, inFromX, inFromY);
     return Note(kViewModifierCost, inX, inY, theCost, inParentX, inParentY);
 }
+
+// The view's queries as the Rust goals' callbacks (ee_astar's EeAStarViewCallbacks)
+static bool EEAStarViewHasTile(void* inView, int32_t inX, int32_t inY)
+{
+    return ((EEAIAStarView*)inView)->HasTile(inX, inY);
+}
+
+static int32_t EEAStarViewTerrain(void* inView, int32_t inX, int32_t inY)
+{
+    return ((EEAIAStarView*)inView)->GetTerrain(inX, inY);
+}
+
+static bool EEAStarViewIsEdge(void* inView, int32_t inX, int32_t inY)
+{
+    return ((EEAIAStarView*)inView)->IsEdgeTile(inX, inY);
+}
+
+static int32_t EEAStarViewHeightLevel(void* inView, int32_t inX, int32_t inY)
+{
+    return ((EEAIAStarView*)inView)->GetHeightLevel(inX, inY);
+}
+
+static uint16_t EEAStarViewContinentID(void* inView, int32_t inX, int32_t inY)
+{
+    return ((EEAIAStarView*)inView)->GetContinentID(inX, inY);
+}
+
+static bool EEAStarViewChokeTile(void* inView, int32_t inIndex, uint32_t* outSerial)
+{
+    unsigned long theSerial;
+    bool theResult = ((EEAIAStarView*)inView)->IsChokeTile(inIndex, &theSerial);
+    *outSerial = (uint32_t)theSerial;
+    return theResult;
+}
+
+EeAStarViewCallbacks EEAIAStarView::Callbacks()
+{
+    EeAStarViewCallbacks theCallbacks;
+    theCallbacks.ctx = this;
+    theCallbacks.has_tile = EEAStarViewHasTile;
+    theCallbacks.terrain = EEAStarViewTerrain;
+    theCallbacks.is_edge = EEAStarViewIsEdge;
+    theCallbacks.height_level = EEAStarViewHeightLevel;
+    theCallbacks.continent_id = EEAStarViewContinentID;
+    theCallbacks.choke_tile = EEAStarViewChokeTile;
+    return theCallbacks;
+}

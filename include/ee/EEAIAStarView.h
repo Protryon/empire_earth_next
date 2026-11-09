@@ -14,6 +14,8 @@
 #ifndef EE_EEAIASTARVIEW_H
 #define EE_EEAIASTARVIEW_H
 
+#include "rust/ee_rust.h"   // EeAStarViewCallbacks
+
 class EEMap;
 class EEComplexUnit;
 class EEAIPathGoalModifierBase;
@@ -47,6 +49,8 @@ class EEAIAStarView {
 public:
     EEAIAStarView() : mMap(0) {}
     void SetMap(EEMap* inMap) { this->mMap = inMap; }
+    // the queries the Rust goals make (ee_astar's EeAStarViewCallbacks over this view)
+    EeAStarViewCallbacks Callbacks();
 
     // The tile (inX, inY) of the search's map
     bool HasTile(long inX, long inY);

@@ -267,6 +267,45 @@ struct EeAStarCallbacks {
   void (*set_state)(void *ctx, const EeAStarMachineState *state);
 };
 
+/// `EEAIAStarContinentGoal`'s fill state.
+struct EeAStarContinentFill {
+  /// `mKind` (`EEAIContinentCategory`; 0 until the first tile picks it)
+  uint8_t kind;
+  /// `mTileCount`
+  int32_t tile_count;
+};
+
+/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
+struct EeAStarViewCallbacks {
+  void *ctx;
+  bool (*has_tile)(void *ctx, int32_t x, int32_t y);
+  int32_t (*terrain)(void *ctx, int32_t x, int32_t y);
+  bool (*is_edge)(void *ctx, int32_t x, int32_t y);
+  int32_t (*height_level)(void *ctx, int32_t x, int32_t y);
+  uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
+  /// a choke tile at `index` (`*serial` its area serial)
+  bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+};
+
+/// `EEAIAStarHillGoal`'s fill state.
+struct EeAStarHillFill {
+  /// `mContinentID` (the first tile's; 0 between hills)
+  uint16_t continent_id;
+  /// `mTileCount`
+  int32_t tile_count;
+  /// `mLevelSum`
+  int32_t level_sum;
+};
+
+/// `EEAIAStarChokePointGoal`'s fill state.
+struct EeAStarChokeFill {
+  /// `mWidth`, `mHeight` (the map's size: `Attach`)
+  int32_t width;
+  int32_t height;
+  /// `mTileCount`
+  int32_t tile_count;
+};
+
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -1342,6 +1381,34 @@ bool ee_astar_start(EeAStarStorage *s, const EeAStarCallbacks *cb);
 /// # Safety
 /// As `ee_astar_start`.
 void ee_astar_expand(EeAStarStorage *s, const EeAStarCallbacks *cb);
+
+/// `EEAIAStarContinentGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+bool ee_astar_continent_accept(EeAStarContinentFill *fill,
+                               const EeAStarViewCallbacks *view,
+                               int32_t x,
+                               int32_t y);
+
+/// `EEAIAStarHillGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`.
+bool ee_astar_hill_accept(EeAStarHillFill *fill,
+                          const EeAStarViewCallbacks *view,
+                          int32_t x,
+                          int32_t y);
+
+/// `EEAIAStarChokePointGoal::AcceptTile` over the goal's state; `*serial` the tile's area serial when accepted.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`; `serial` writable.
+bool ee_astar_choke_accept(EeAStarChokeFill *fill,
+                           const EeAStarViewCallbacks *view,
+                           int32_t x,
+                           int32_t y,
+                           uint32_t *serial);
 
 /// `UDataCompression::Compress`.
 ///

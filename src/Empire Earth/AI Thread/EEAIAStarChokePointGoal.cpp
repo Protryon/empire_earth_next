@@ -108,15 +108,17 @@ void EEAIAStarChokePointGoal::CreateChokePoint()
 // records its area serial
 bool EEAIAStarChokePointGoal::AcceptTile(long inX, long inY, bool inStart)
 {
-    bool theResult = false;
-    if (inX >= 0 && inX < this->mWidth && inY >= 0 && inY < this->mHeight) {
-        unsigned long theSerial;
-        if (this->mView.IsChokeTile(this->mWidth * inX + inY, &theSerial)) {
-            this->mTileCount++;
-            theResult = true;
-            this->mAreaSerials.push_back(theSerial);
-        }
-    }
+    // Rust (ee_astar goals.rs choke_accept): the size and the count go in, the accepted tile's serial comes back
+    EeAStarChokeFill theFill;
+    theFill.width = this->mWidth;
+    theFill.height = this->mHeight;
+    theFill.tile_count = this->mTileCount;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    uint32_t theSerial = 0;
+    bool theResult = ee_astar_choke_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY, &theSerial);
+    this->mTileCount = theFill.tile_count;
+    if (theResult)
+        this->mAreaSerials.push_back(theSerial);
     return theResult;
 }
 
