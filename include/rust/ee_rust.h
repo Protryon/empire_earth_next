@@ -25,6 +25,21 @@ constexpr static const uint32_t ALIGN_CENTER = 1;
 
 constexpr static const uint32_t ALIGN_RIGHT = 2;
 
+/// `GETM_VISIBLE_POINTS`: the fixed visible-area arrays are `[N][N]`, indexed `[column][row]`.
+constexpr static const size_t VISIBLE_POINTS = 257;
+
+constexpr static const unsigned long CLIP_NEAR = 1;
+
+constexpr static const unsigned long CLIP_FAR = 2;
+
+constexpr static const unsigned long CLIP_LEFT = 4;
+
+constexpr static const unsigned long CLIP_RIGHT = 8;
+
+constexpr static const unsigned long CLIP_TOP = 16;
+
+constexpr static const unsigned long CLIP_BOTTOM = 32;
+
 constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
 
 constexpr static const uint32_t ARCHIVE_VERSION = 1;
@@ -198,6 +213,69 @@ struct EeDx7ViewportInfo {
   EeDx7Plane right_plane;
   EeDx7Plane top_plane;
   EeDx7Plane bottom_plane;
+};
+
+/// `GETMRenderVertex`, pinned.
+struct EeDx7RenderVertex {
+  float point[3];
+  float color[3];
+  float visibility;
+  float fog;
+  unsigned long clip_flags;
+  float *linked_visibility;
+};
+
+/// The parts of one `GETerrainMesh` the draws read directly (plain data, valid during the forwarded call).
+struct EeDx7TerrainMeshView {
+  EeDx7Handle mesh;
+  EeDx7RenderVertex *terrain_vertices;
+  EeDx7RenderVertex *water_vertices;
+  const bool *terrain_visible;
+  const bool *water_visible;
+  unsigned long visible_tile_rows;
+  unsigned long start_x;
+  unsigned long start_y;
+  unsigned long width;
+  unsigned long height;
+  float water_percentage;
+  bool is_space;
+  const float (*edge_world)[3];
+  EeDx7RenderVertex *const *edge_vertices;
+  unsigned long edge_count;
+  const float (*cliff_world)[3];
+  EeDx7RenderVertex *const *cliff_vertices;
+  unsigned long cliff_count;
+};
+
+/// One `(texture, material index)` of the terrain material map, in map order.
+struct EeDx7MaterialMapEntry {
+  EeDx7Handle texture;
+  unsigned long index;
+};
+
+/// `GETMPolygon`, pinned.
+struct EeDx7TerrainPolygon {
+  EeDx7RenderVertex *vertices[3];
+  float alpha[3];
+  float uv[3][2];
+};
+
+/// One `GETMMaterial` (its vectors' memory).
+struct EeDx7MaterialView {
+  EeDx7Handle texture;
+  EeDx7TerrainPolygon *const *polygons;
+  unsigned long polygon_count;
+  EeDx7TerrainPolygon **indices;
+  unsigned long indices_length;
+  EeDx7TerrainPolygon **strips;
+  unsigned long strips_length;
+};
+
+/// The ripple tunables (`mWaterRipple0..2`).
+struct EeDx7WaterRipple {
+  float time_rate;
+  float water_height;
+  float terrain_height;
 };
 
 /// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
@@ -541,6 +619,13 @@ struct EeDx7MaterialInfo {
   float color[3];
 };
 
+/// One device light as `Light` gathers it.
+struct EeDx7LightData {
+  unsigned long light_type;
+  float diffuse[3];
+  float direction[3];
+};
+
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 extern "C" {
@@ -872,6 +957,81 @@ long ee_dx7r_draw_3d_line(void *rast,
                           float v,
                           bool orthographic,
                           const EeDx7ViewportInfo *viewport);
+
+/// `Draw(GETerrainMesh&)`: `map` is the terrain material map, in map order.
+long ee_dx7r_draw_terrain(void *rast,
+                          unsigned long screen,
+                          EeDx7ScreenState *state,
+                          const EeDx7TerrainMeshView *mesh,
+                          const EeDx7MaterialMapEntry *map,
+                          size_t map_count,
+                          const EeDx7MaterialView *terrain_materials,
+                          size_t material_count,
+                          const EeDx7ViewportInfo *viewport,
+                          bool orthographic);
+
+long ee_dx7r_draw_water(void *rast,
+                        unsigned long screen,
+                        EeDx7ScreenState *state,
+                        const EeDx7TerrainMeshView *mesh,
+                        const EeDx7MaterialView *water_materials,
+                        size_t material_count,
+                        const EeDx7ViewportInfo *viewport,
+                        bool orthographic);
+
+long ee_dx7r_draw_terrain_material(void *rast,
+                                   unsigned long screen,
+                                   EeDx7ScreenState *state,
+                                   EeDx7TerrainPolygon **list,
+                                   unsigned long length);
+
+/// `DrawGridLines`: `lines` is `count` `(x1, y1, x2, y2)` records.
+long ee_dx7r_draw_grid_lines(void *rast,
+                             unsigned long screen,
+                             EeDx7ScreenState *state,
+                             const EeDx7TerrainMeshView *mesh,
+                             const long (*lines)[4],
+                             size_t count,
+                             EeDx7Handle texture,
+                             float width,
+                             const EeDx7ViewportInfo *viewport,
+                             bool orthographic);
+
+long ee_dx7r_draw_terrain_grid(void *rast,
+                               unsigned long screen,
+                               EeDx7ScreenState *state,
+                               const EeDx7TerrainMeshView *mesh,
+                               const EeDx7ViewportInfo *viewport,
+                               bool orthographic);
+
+long ee_dx7r_draw_terrain_highlight(void *rast,
+                                    unsigned long screen,
+                                    EeDx7ScreenState *state,
+                                    const EeDx7TerrainMeshView *mesh,
+                                    const long *rect,
+                                    const float *color,
+                                    float opacity,
+                                    const EeDx7ViewportInfo *viewport,
+                                    bool orthographic);
+
+void ee_dx7r_light_terrain(void *rast,
+                           unsigned long screen,
+                           EeDx7ScreenState *state,
+                           const EeDx7TerrainMeshView *mesh,
+                           const float *ambient);
+
+/// `TransformToCamera`: `water_time` is the C++ `sWaterTime`.
+void ee_dx7r_transform_to_camera(const EeDx7TerrainMeshView *mesh,
+                                 const EeDx7MaterialView *terrain_materials,
+                                 size_t terrain_count,
+                                 const EeDx7MaterialView *water_materials,
+                                 size_t water_count,
+                                 const EeDx7ViewportInfo *viewport,
+                                 float scale,
+                                 bool water_only,
+                                 bool orthographic,
+                                 EeDx7WaterRipple ripple,
+                                 float *water_time);
 
 /// `DX7TextBounds`: `clip` may be null.
 void ee_dx7r_text_bounds(const EeDx7TextInfo *info, const EeDx7TextRect *clip, EeDx7TextRect *out);

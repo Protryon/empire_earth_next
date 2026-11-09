@@ -10,6 +10,9 @@ use core::ffi::{c_char, c_long, c_ulong, c_void};
 use crate::draw::*;
 use crate::draw2d::{self, Draw2DHost, TextHost, TextInfo, TextRect};
 use crate::draw_model::{self, MaterialInfo, ModelHost, ModelInfo, ViewportInfo};
+use crate::draw_terrain::{
+    self, LightData, MaterialMapEntry, MaterialView, TerrainHost, TerrainMeshView, TerrainPolygon, WaterRipple,
+};
 use crate::gx::{yield_now, RawDevice};
 use crate::state::ScreenState;
 use crate::vertex::Dx7StdColorVertex;
@@ -68,6 +71,17 @@ mod cpp {
         pub fn ee_dx7cpp_polygon_indices(model: Handle, lod: c_ulong) -> *const u16;
         pub fn ee_dx7cpp_frame_vertices(model: Handle, frame: c_ulong, vertex_type: c_ulong) -> *const c_void;
         pub fn ee_dx7cpp_sub_model(model: Handle, index: c_ulong) -> Handle;
+
+        pub fn ee_dx7cpp_mesh_z(mesh: Handle, x: c_ulong, y: c_ulong) -> f32;
+        pub fn ee_dx7cpp_mesh_normal(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
+        pub fn ee_dx7cpp_mesh_vertex_color(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
+        pub fn ee_dx7cpp_mesh_water_color(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
+        pub fn ee_dx7cpp_mesh_valid_tile(mesh: Handle, x: c_ulong, y: c_ulong) -> bool;
+        pub fn ee_dx7cpp_light(rast: *mut c_void, screen: c_ulong, index: c_ulong, out: *mut LightData) -> bool;
+        pub fn ee_dx7cpp_um_arctan(value: f32) -> f32;
+        pub fn ee_dx7cpp_um_tan(value: f32) -> f32;
+        pub fn ee_dx7cpp_um_sin(value: f32) -> f32;
+        pub fn ee_dx7cpp_um_cos(value: f32) -> f32;
 
         pub fn ee_dx7cpp_text_measure(font: *const c_void, text: *const c_char, length: u32) -> i32;
         pub fn ee_dx7cpp_text_scaled(font: *const c_void, scale: f32) -> *const c_void;
@@ -238,6 +252,49 @@ impl ModelHost for Host {
     }
 }
 
+impl TerrainHost for Host {
+    fn mesh_z(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> f32 {
+        unsafe { ee_dx7cpp_mesh_z(mesh, x, y) }
+    }
+    fn mesh_normal(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
+        let mut out = [0.0; 3];
+        unsafe { ee_dx7cpp_mesh_normal(mesh, x, y, out.as_mut_ptr()) };
+        out
+    }
+    fn mesh_vertex_color(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
+        let mut out = [0.0; 3];
+        unsafe { ee_dx7cpp_mesh_vertex_color(mesh, x, y, out.as_mut_ptr()) };
+        out
+    }
+    fn mesh_water_color(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
+        let mut out = [0.0; 3];
+        unsafe { ee_dx7cpp_mesh_water_color(mesh, x, y, out.as_mut_ptr()) };
+        out
+    }
+    fn mesh_valid_tile(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> bool {
+        unsafe { ee_dx7cpp_mesh_valid_tile(mesh, x, y) }
+    }
+    fn mark_viewport_changed(&mut self) {
+        unsafe { (*self.state).mViewportChanged = true };
+    }
+    fn light(&mut self, index: u32) -> Option<LightData> {
+        let mut out = LightData::default();
+        unsafe { ee_dx7cpp_light(self.rast, self.screen, index as c_ulong, &mut out) }.then_some(out)
+    }
+    fn um_arctan(&mut self, value: f32) -> f32 {
+        unsafe { ee_dx7cpp_um_arctan(value) }
+    }
+    fn um_tan(&mut self, value: f32) -> f32 {
+        unsafe { ee_dx7cpp_um_tan(value) }
+    }
+    fn um_sin(&mut self, value: f32) -> f32 {
+        unsafe { ee_dx7cpp_um_sin(value) }
+    }
+    fn um_cos(&mut self, value: f32) -> f32 {
+        unsafe { ee_dx7cpp_um_cos(value) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_bitmap(
     rast: *mut c_void,
@@ -346,6 +403,186 @@ pub unsafe extern "C" fn ee_dx7r_draw_3d_line(
 ) -> c_long {
     let points = if count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(points, count) } };
     draw_model::draw_3d_line(&mut Host { rast, screen, state }, points, texture, v, orthographic, unsafe { &*viewport })
+}
+
+unsafe fn materials<'a>(materials: *const MaterialView, count: usize) -> &'a [MaterialView] {
+    if count == 0 {
+        &[]
+    } else {
+        unsafe { core::slice::from_raw_parts(materials, count) }
+    }
+}
+
+/// `Draw(GETerrainMesh&)`: `map` is the terrain material map, in map order.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_terrain(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    map: *const MaterialMapEntry,
+    map_count: usize,
+    terrain_materials: *const MaterialView,
+    material_count: usize,
+    viewport: *const ViewportInfo,
+    orthographic: bool,
+) -> c_long {
+    let map = if map_count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(map, map_count) } };
+    draw_terrain::draw_terrain(
+        &mut Host { rast, screen, state },
+        unsafe { &*mesh },
+        map,
+        unsafe { materials(terrain_materials, material_count) },
+        unsafe { &*viewport },
+        orthographic,
+    )
+}
+
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_water(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    water_materials: *const MaterialView,
+    material_count: usize,
+    viewport: *const ViewportInfo,
+    orthographic: bool,
+) -> c_long {
+    draw_terrain::draw_water_and_mark(
+        &mut Host { rast, screen, state },
+        unsafe { &*mesh },
+        unsafe { materials(water_materials, material_count) },
+        unsafe { &*viewport },
+        orthographic,
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_terrain_material(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    list: *mut *mut TerrainPolygon,
+    length: c_ulong,
+) -> c_long {
+    draw_terrain::draw_terrain_material(&mut Host { rast, screen, state }, list, length)
+}
+
+/// `DrawGridLines`: `lines` is `count` `(x1, y1, x2, y2)` records.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_grid_lines(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    lines: *const [c_long; 4],
+    count: usize,
+    texture: Handle,
+    width: f32,
+    viewport: *const ViewportInfo,
+    orthographic: bool,
+) -> c_long {
+    let lines = if count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(lines, count) } };
+    draw_terrain::draw_grid_lines(
+        &mut Host { rast, screen, state },
+        unsafe { &*mesh },
+        lines,
+        texture,
+        width,
+        unsafe { &*viewport },
+        orthographic,
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_terrain_grid(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    viewport: *const ViewportInfo,
+    orthographic: bool,
+) -> c_long {
+    draw_terrain::draw_terrain_grid(
+        &mut Host { rast, screen, state },
+        unsafe { &*mesh },
+        unsafe { &*viewport },
+        orthographic,
+    )
+}
+
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_terrain_highlight(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    rect: *const c_long,
+    color: *const f32,
+    opacity: f32,
+    viewport: *const ViewportInfo,
+    orthographic: bool,
+) -> c_long {
+    let rect = unsafe { [*rect, *rect.add(1), *rect.add(2), *rect.add(3)] };
+    let color = unsafe { [*color, *color.add(1), *color.add(2)] };
+    draw_terrain::draw_terrain_highlight(
+        &mut Host { rast, screen, state },
+        unsafe { &*mesh },
+        rect,
+        color,
+        opacity,
+        unsafe { &*viewport },
+        orthographic,
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_light_terrain(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    mesh: *const TerrainMeshView,
+    ambient: *const f32,
+) {
+    let ambient = unsafe { [*ambient, *ambient.add(1), *ambient.add(2)] };
+    draw_terrain::light_terrain(&mut Host { rast, screen, state }, unsafe { &*mesh }, ambient);
+}
+
+/// `TransformToCamera`: `water_time` is the C++ `sWaterTime`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_transform_to_camera(
+    mesh: *const TerrainMeshView,
+    terrain_materials: *const MaterialView,
+    terrain_count: usize,
+    water_materials: *const MaterialView,
+    water_count: usize,
+    viewport: *const ViewportInfo,
+    scale: f32,
+    water_only: bool,
+    orthographic: bool,
+    ripple: WaterRipple,
+    water_time: *mut f32,
+) {
+    // only the mesh and the UM functions are reached: no device or vertex-buffer call
+    let mut host = Host { rast: core::ptr::null_mut(), screen: 0, state: core::ptr::null_mut() };
+    draw_terrain::transform_to_camera(
+        &mut host,
+        unsafe { &*mesh },
+        unsafe { materials(terrain_materials, terrain_count) },
+        unsafe { materials(water_materials, water_count) },
+        unsafe { &*viewport },
+        scale,
+        water_only,
+        orthographic,
+        ripple,
+        unsafe { &mut *water_time },
+    );
 }
 
 struct TextPlat {

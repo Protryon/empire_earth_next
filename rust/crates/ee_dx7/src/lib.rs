@@ -7,6 +7,7 @@
 pub mod draw;
 pub mod draw2d;
 pub mod draw_model;
+pub mod draw_terrain;
 pub mod filter;
 pub mod state;
 pub mod vertex;
