@@ -36,7 +36,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 
 | **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
 | R5a.1 per-CT checksum trace | Done: `EE-SIM --checksum-trace`, `sim_oracle.py run --checksums` and `ticks` (the first divergent tick). The option leaves the traces of seeds 2-7 equal to the reference |
-| R5a.2 side-effect-free save | Done (a declared rebaseline for games that save): three more Save functions wrote the running state. With autosaves every 150 game s, seeds 2-7 now trace like the unsaved games (before: seeds 2 and 4 diverged) |
+| R5a.2 side-effect-free save | Done (a declared rebaseline for games that save): three more Save functions wrote the running state. With autosaves every 150 game s, seeds 2-7 now trace like the unsaved games (before: seeds 2 and 4 diverged). **Load equals continue: in progress.** `EE-SIM --save-at/--load-save`, `sim_oracle.py saveload` (18 saves of seeds 2-7). Save version 0.253 writes the running values and much state the original rebuilt at load (path points, herds, forests, unit order, unit and goal fields); every save still diverges at the first ticks after the load (the AI's own update state, area effects, references to dead units: PORT_LEARNINGS "R5a.2: load equals continue") |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and

@@ -2376,3 +2376,56 @@ them (`ct-SEED.txt`) and `sim_oracle.py ticks BASE NAME` names the first diverge
 - **Not done: a loaded game still differs from the saved one.** The file keeps the original's values
   (`mBuildingCountsChecked` true, the gather flags cleared, the walls re-planned), so a game loaded from a save plays
   differently from the game that went on. Writing the live values instead would change the save files.
+
+## R5a.2: load equals continue (EE-SIM save/load, save version 0.253, 2026-11-09)
+
+The owner approved changing the saved-game contents: a game loaded from a save must play exactly like the game that
+went on. The test is `tools/sim_oracle.py saveload NAME --at 600,1350,2100`: per seed one game to 2700 s with
+`EE-SIM --save-at MS=FILE` (the autosave's request, EEMLoadOrSaveGame through SendToAllAndWait, under a fixed name),
+then one fresh process per save with `EE-SIM --load-save FILE` (the game's own Load Game screen: single player ->
+Load Game -> the file -> Load) to the same end. The checksum lines are compared from the load on, aligned by game ms;
+the CT number (EE-SIM counts from the process's first tick) and `inputs` (gU531CF0, reset by every load as in the
+original; `oos` is compared less it) are left out.
+
+- **Where a save lands.** The request is put into a CT; DrainInput executes it at the start of the next CT and
+  ServeLoadSaveRequests saves right after, before that CT's ticks: the loaded game's first line is the CT after the
+  save request's CT. The continued games with three saves each trace like the reference (`compare ref`: PASS), and
+  the no-save oracle is unchanged at every commit.
+- **The numbers.** Before: all 18 saves of seeds 2-7 diverged at the first tick after the load (rng, oos, units).
+  After: still 18 failures, but five now hold for 2-7 ticks (seed 2 600 s and 1350 s, seed 6 600 s, seed 7 1350 s).
+  The tick count is coarse: within the first CT the random draws matched for 0 of seed 2's draws before (the seed
+  itself was another) and for 291 of its 752 draws after.
+- **The tools of the hunt** (TEST ONLY, committed): `--dump-at MS=FILE` and `--dump-load FILE` write every unit's
+  fields, each goal's own DumpOutOfSynch and the unit's raw bytes (build/clang/layout.json names the offsets;
+  pointers differ by run), the loaded one at its first tick after the fix-ups. The random draws were compared with a
+  temporary caller trace in URandom::Generate (RtlCaptureStackBackTrace, resolved by `tools/sim.py resolve`), removed
+  again: the LCG gives the same values in both games, so what differs is the caller of draw n.
+- **What a load rebuilt instead of reading, and what 0.253 saves** (`EESaveHasLiveState`, ee/EESaveGameFiles.h;
+  older saves load as before):
+  - the physics seed: rebuilding the players drew 23 numbers after the physics chunk was read (favourite unit types
+    as the epochs are entered again, herds, patrol points, the lobby's player records); the first tick puts the
+    saved seed back (no format change);
+  - the four running values (civilization manager's mBuildingCountsChecked, the gather flags, the wall manager's
+    plans and the wall being planned: Update asks for its path again; the defense commander's loose ids were already
+    the live ones since R5a.2);
+  - path points and town patrols: not saved; the towns made new ones from their hulls (other units, ids and, for a
+    town whose patrol lagged its hull, other tiles). Now saved, and a rebuilt town adopts its saved patrol;
+  - goals: the attack goal's destination and sidestep count; the build/repair goal's site (RepairPointers made it
+    from the building's position: 61.85, 44.15 became 61, 43); an attack sub group unit's next update and pick;
+  - a herd's area (RepairPointers rebuilt it from the animals' tiles, drew a new margin, picked the leader again);
+  - each forest's next renewal: the continent manager is rebuilt at load with none, so the first tree cut regrew
+    its forest at once;
+  - unit fields the original never saved: animation fraction and next frame, collision radius, push velocity,
+    mF24C, AI state, trigger time, ignored targets, bounded path tiles. The load's own rebuilding sets several of
+    them again, so they go back at the first tick (`EEAfterLoad`, run once by EEPhysics::Tick);
+  - the order of the world's unit chain (x-sorted, ties by arrival), of the stepped units and of the activation
+    queues: a load linked units in its own order, so units stepped (and drew) in another order;
+  - and, no format change: Load truncated the tick length into ms where UpdateTiming rounds (same at 62.5 ms).
+- **Still different after a load** (first divergent draw of seed 2's 600 s save: #292 of the first CT, an
+  EECPAttackSubGroupUnit::SetState draw from EEComputerPlayer::Update that the loaded game does not make): the
+  computer players' own update schedule; every unit's area effect list (empty after a load until the area effect
+  tick; 195 units at seed 2's 600 s save); references to units that are dead or gone (mLastResource, a gather goal's
+  invalid resource: saved as -1, loaded as NULL where the running game keeps the dead unit); the continent manager
+  and the AI's other derived state (the `ai` checksum parts differ at the first tick and agree after the first AI
+  update); a herd's path request and the path manager's pending requests; the wall request is asked again at the
+  first Update, not where it was in the queue. In-game times far off the default (game speed) are untested.
