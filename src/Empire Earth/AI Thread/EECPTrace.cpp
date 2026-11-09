@@ -572,7 +572,9 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             unsigned long theFamily = theGathered[g]->mUnitClass->GetFamily();
             if (theFamily != kUnitFamilyAnimal && theFamily != kUnitFamilyFish && theClass != kUnitTypeResFish
                 && theClass != kUnitTypeFarm && theClass != kUnitTypeRoboticFarm
-                && !EECPNextUnitDropReady(inPlayer, theGathered[g]))
+                && !(theType == kResourceWood
+                         ? EECPNextDropReady(inPlayer, theGathered[g]->GetTileX(), theGathered[g]->GetTileY(), false, kNextWoodSlack)
+                         : EECPNextUnitDropReady(inPlayer, theGathered[g])))
                 theNoDrop[theType]++;
             double theLength = sqrt((double)theBest);
             theTrip[theType] += theLength;

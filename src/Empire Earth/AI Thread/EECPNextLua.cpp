@@ -211,6 +211,8 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("distance", EECPNextInt(s.distance));
         e.Set("claimed", EECPLuaValue::Bool(s.claimed != 0));
         e.Set("has_drop", EECPLuaValue::Bool(s.has_drop != 0));
+        e.Set("ready", EECPNextResources(s.ready));   // §8.36: 1 by a finished drop site, by resource
+        e.Set("drop", EECPNextResources(s.drop));     // ... by one finished or going up
         e.Set("has_tower", EECPLuaValue::Bool(s.has_tower != 0));
         e.Set("danger", EECPNextInt(s.danger));
         e.Set("patch", EECPLuaValue::Bool(s.patch != 0));
@@ -343,6 +345,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         theWood.Set("y", EECPNextInt(inView.wood_y));
         theWood.Set("distance", EECPNextInt(inView.wood_distance));
         theWood.Set("has_drop", EECPLuaValue::Bool(inView.wood_drop != 0));
+        theWood.Set("ready", EECPLuaValue::Bool(inView.wood_ready != 0));
         v.Set("wood", theWood);
     }
     EECPLuaValue theResults = EECPLuaValue::NewArray();

@@ -76,6 +76,8 @@ const char* EECPNextReasonName(long inReason)
     case kNextReasonBusy: return "busy";
     case kNextReasonNoTarget: return "no_target";
     case kNextReasonUnsafe: return "unsafe";
+    case kNextReasonNoDropoff: return "no_dropoff";
+    case kNextReasonUnexplored: return "unexplored";
     default: return "-";
     }
 }
