@@ -79,6 +79,20 @@ public:
     char* mAllocation; //10, the only additional owned array
 };
 
+// ee_won's sinks: bytes into a new ByteBuffer held by *(ByteBufferPtr*)inContext; UTF-16 units into the std::wstring
+// at inContext
+inline void WonByteBufferSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    *static_cast<ConstSmartPtr<ByteBuffer>*>(inContext)=new ByteBuffer(inBytes,static_cast<unsigned long>(inLength),false);
+}
+inline void WonWideSink(void* inContext, const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring& text=*static_cast<std::wstring*>(inContext);
+    text.resize(inCount);
+    size_t n=inCount>0 ? ee_won_wide_from_utf16(inUnits,inCount,sizeof(wchar_t),&text[0],inCount) : 0;
+    text.resize(n);
+}
+
 class ReadBuffer {
 public:
     const char* data() const { return this->mData; }

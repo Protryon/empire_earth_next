@@ -1,4 +1,4 @@
-// AuthBase: owned raw certificate bytes, unpack dispatch and expiry checks
+// AuthBase: owned raw certificate bytes; the unpacking and the checks are ee_won's (rust/crates/ee_won/src/auth.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -13,50 +13,43 @@ namespace WONAPI {
 // FUNCTION: WON 0x006dcce0
 // Creates an unvalidated auth block, copying the raw bytes when any are given
 AuthBase::AuthBase(const void* data, unsigned long length)
+    : mDataLen(0), mFamily(0), mIssueTime(0), mExpireTime(0), mIsValid(false), mParsed(NULL), mHeader()
 {
-    this->mIsValid = false;
     if (data != NULL && length != 0)
         this->mRawBuf = new ByteBuffer(data, length, false);
 }
 // FUNCTION: WON 0x006dcdd0
-// Destroys the auth block (members only)
-AuthBase::~AuthBase() {}
+// Destroys the auth block and its unpacked form
+AuthBase::~AuthBase() { ee_won_auth_free(this->mParsed); }
 // FUNCTION: WON 0x006dce40
-// Unpacks the raw bytes through UnpackHook and records whether a signature follows the data; returns validity
+// Unpacks the raw bytes as this class's kind of block (valid when its fields parse and a signature follows), then
+// lets the subclass copy its fields; returns validity
 bool AuthBase::Unpack()
 {
-    bool valid = false;
+    ee_won_auth_free(this->mParsed);
+    this->mParsed = NULL;
+    this->mHeader = EeWonAuthHeader();
     if (this->mRawBuf.get() != NULL) {
-        try {
-            ReadBuffer input(this->mRawBuf->data(), this->mRawBuf->length());
-            valid = this->UnpackHook(input);
-            if (valid) {
-                this->mDataLen = static_cast<unsigned short>(input.mPos);
-                if (static_cast<unsigned long>(input.mLength) <= this->mDataLen)
-                    valid = false;
-            }
-        }
-        catch (ReadBufferException&) {}
+        this->mParsed = ee_won_auth_unpack(this->UnpackKind(), reinterpret_cast<const uint8_t*>(this->mRawBuf->data()),
+                                           this->mRawBuf->length());
+        ee_won_auth_header(this->mParsed, &this->mHeader);
     }
-    this->mIsValid = valid;
+    this->mFamily = this->mHeader.family;
+    this->mIssueTime = this->mHeader.issue_time;
+    this->mExpireTime = this->mHeader.expire_time;
+    this->mDataLen = this->mHeader.data_len;
+    this->mIsValid = this->mHeader.valid;
+    if (this->mParsed != NULL)
+        this->UnpackHook();
     return this->mIsValid;
 }
 // FUNCTION: WON 0x006dcf40
 // Returns true when the block is invalid or expires within the given number of seconds
 bool AuthBase::IsExpired(time_t extra) const
 {
-    if (!this->mIsValid)
+    if (!this->mIsValid || this->mParsed == NULL)
         return true;
-    return this->mExpireTime <= time(NULL) + extra;
-}
-// FUNCTION: WON 0x006dcf80
-// Reads the family, issue time and expiry time from the buffer
-bool AuthBase::UnpackHook(ReadBuffer& input)
-{
-    this->mFamily = input.ReadShort();
-    this->mIssueTime = input.ReadLong();
-    this->mExpireTime = input.ReadLong();
-    return true;
+    return ee_won_auth_is_expired(this->mParsed, static_cast<int64_t>(time(NULL)), static_cast<int64_t>(extra));
 }
 // FUNCTION: WON 0x006dced0
 // Verifies the block's signature over its data with the given ElGamal key
@@ -64,9 +57,4 @@ bool AuthBase::Verify(const ElGamal& key) const
 {
     return key.Verify(this->GetData(), this->GetDataLen(), this->GetSig(), this->GetSigLen());
 }
-
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006dcdb0
-// (protected: virtual void * __thiscall WONAPI::AuthBase::`scalar deleting destructor'(unsigned int)    [??_GAuthBase@WONAPI@@MAEPAXI@Z])

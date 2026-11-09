@@ -1,32 +1,19 @@
-// ElGamal (0x1a8 bytes): storage and the external public-key API.
-// 3d7690 constructs Random at 0, then six 0x20-byte BigIntegers; CreateAccount spans 108..2b0 (0x1a8).
-// Implicit destruction, from 2cc010/2cc2e0: six BigInteger dtors and the Random COW members.
+// ElGamal: the keys, the big-integer arithmetic, the random generator, block encryption and the signatures are
+// ee_won's (rust/crates/ee_won/src/elgamal.rs, bigint.rs, random.rs, der.rs); this class owns one key. Copies are
+// deep (the key and its generator state), as the original's 0x1a8 bytes of value members were.
 #ifndef EE_WONAPI_WONELGAMAL_H
 #define EE_WONAPI_WONELGAMAL_H
-#include "ee/wonapi/WONRandom.h"
-#include "ee/wonapi/WONBigInteger.h"
+#include "ee/wonapi/WONBlowfish.h"
 namespace WONAPI {
 class ElGamal {
-    mutable Random mRandom; //00..d8
-    BigInteger p; //d8..f8
-    BigInteger q; //f8..118
-    BigInteger g; //118..138
-    BigInteger y; //138..158
-    BigInteger x; //158..178
-    BigInteger recip; //178..198
-    int nb; //198
-    int modulusLen; //19c
-    bool mIsPrivate; //1a0
-    bool mIsPublic; //1a1; natural1a2..1a8 alignment
-    bool EncodeDigest(const RawBuffer&,BigInteger&) const; //3d84a0, external, ret 8
-    bool encrypt(const BigInteger&,BigInteger[]) const; //3d8990, external, ret 8
-    bool decrypt(const BigInteger&,const BigInteger&,BigInteger&) const; //3d8b70, external, ret 0c
-    bool BogusVerify(const BigInteger&,const BigInteger&,const BigInteger&) const; //3d8c50, external, ret 0c
-    static BigInteger GetRandBetween(Random&,const BigInteger&,const BigInteger&);
-    bool BogusSign(const BigInteger&,BigInteger[]) const;
+    EeWonElGamal* mKey;
+    ByteBufferPtr Run(EeWonElGamalOp inOp, const void* inData, int inLength) const;
 public:
     ElGamal(); //3d7690
     ElGamal(const void*, int, bool); //3d7740
+    ElGamal(const ElGamal&);
+    ElGamal& operator=(const ElGamal&);
+    ~ElGamal();
     void Invalidate(); //3d7820
     bool IsPrivate() const; //3d7830
     bool IsPublic() const; //3d7840
@@ -38,7 +25,8 @@ public:
     ByteBufferPtr Sign(const void*,int) const;
     ByteBufferPtr GetRawPrivateKey() const;
     ByteBufferPtr GetRawPublicKey() const;
-    // Implicit destructor: no vtable, members above
+    // takes ownership of a key ee_won made (an auth block's); NULL leaves no key
+    void Adopt(EeWonElGamal* inKey);
 };
 }
 #endif
