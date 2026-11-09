@@ -10,7 +10,7 @@ fixture_driver.py's, shared with posix_game.py.
   python -I tools/harness/fixture_game.py --exercise tour [--play-seconds 120] [--input-check]
   python -I tools/harness/fixture_game.py --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard \\
          --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40
-  options: [--exe EXE] [--data TREE | --tree binary|open] [--out DIR] [--timeout S] [--config block.key=VALUE ...]
+  options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...]
 
   menu         the main menu reached and its frame captured
   tour         as game_session.py's tour: main menu, the settings form's video/audio/interface tabs and Cancel, single
@@ -23,10 +23,10 @@ fixture_driver.py's, shared with posix_game.py.
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
                (outcome time-cap) or --play-seconds of wall time
 
-Data: --data TREE stages that unified data tree (tools/open_data.py); else --tree binary|open picks
-build/open_data/tree-binary or tree (EE_HARNESS_OPEN_DATA, or EE_HARNESS_TEXT_DB with EE_HARNESS_OPEN_ASSETS, means
-open, as exe_boot.py), built when missing. The stage is build/fixture_game/stage (the exe and the tree as hard links;
-the game's data root is the exe's directory), with a fresh config.yaml holding the run's pins.
+Data: --data TREE stages that unified open data tree (tools/open_data.py); else build/open_data/tree (or the tree
+EE_HARNESS_OPEN_DATA names, as exe_boot.py), built when missing. The game reads only the open forms (RUST_PLAN D9):
+there is no binary tree. The stage is build/fixture_game/stage (the exe and the tree as hard links; the game's data
+root is the exe's directory), with a fresh config.yaml holding the run's pins.
 Evidence: --out (default build/fixture_game/<time>): game.log (the game's output), ui/, the frames (<name>.bmp),
 rendering.json, samples.json, the game log (game-*.log), summary.json; the last line printed is
 "RESULT PASS|FAIL <exercise> ..." (an ai-game adds outcome, final PT and per-player units). Exit 0 on PASS.
@@ -52,19 +52,14 @@ EXE = 'EE-AOC.exe' if WINDOWS else 'ee-aoc'
 
 
 def data_tree(a):
-    """The unified data tree the run stages (--data, else exe_boot.data_tree of --tree or the environment)."""
+    """The unified data tree the run stages (--data, else exe_boot.data_tree: build/open_data/tree)."""
     if a.data:
         tree = pathlib.Path(a.data).resolve()
         if not (tree / 'Data').is_dir():
             raise SystemExit(f'{tree} is not a data tree (no Data folder)')
         return tree
     import exe_boot
-    kind = a.tree
-    if kind is None:
-        env = os.environ
-        kind = 'open' if env.get('EE_HARNESS_OPEN_DATA') or (env.get('EE_HARNESS_TEXT_DB')
-                                                            and env.get('EE_HARNESS_OPEN_ASSETS')) else 'binary'
-    return exe_boot.data_tree(kind)
+    return exe_boot.data_tree()
 
 
 def stage(a, tree):
@@ -338,8 +333,8 @@ def main():
                                  epilog=__doc__.split('\n', 2)[2])
     ap.add_argument('--exe', type=pathlib.Path, default=ROOT / 'build' / 'clang-test' / 'exe' / 'EE-AOC.exe',
                     help='the game (default: the test-profile build)')
-    ap.add_argument('--data', help='the unified data tree to stage (default: --tree)')
-    ap.add_argument('--tree', choices=['binary', 'open'], help='build/open_data/tree-binary or tree')
+    ap.add_argument('--data', help='the unified open data tree to stage (default: build/open_data/tree)')
+    ap.add_argument('--tree', choices=['open'], help='(kept for old command lines: open is the only tree)')
     ap.add_argument('--out', default=str(ROOT / 'build' / 'fixture_game' / time.strftime('%Y%m%d-%H%M%S')))
     ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'ai-game'], default='tour')
     ap.add_argument('--timeout', type=float, default=1800, help='wall seconds the whole run may take')
