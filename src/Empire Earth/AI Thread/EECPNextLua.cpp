@@ -554,8 +554,8 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
         theOrder.mCount = r.Int("n", 0, theOrder.mGroup == 0);
         theOrder.mClasses = r.Classes("classes");
         theOrder.mPlayer = v == "attack" || v == "raid" ? r.Int("player", 0) : 0;
-        theOrder.mX = v != "scout" ? r.Int("x", -1) : -1;
-        theOrder.mY = v != "scout" ? r.Int("y", -1) : -1;
+        theOrder.mX = r.Int("x", -1);
+        theOrder.mY = r.Int("y", -1);
         theOrder.mRadius = v == "defend" ? r.Int("radius", 0) : 0;
         if (!r.Done())
             return EECPNextRefuse(inPlayer, v, r.mProblem);

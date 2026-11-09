@@ -662,8 +662,17 @@ static void EECPNextScoutStep(EEComputerPlayer* inPlayer, EECPNextGroup& ioGroup
             theNeed = true;
         }
     }
-    if (!theNeed)
+    if (!theNeed) {
+        if (ioGroup.mWayTime == 0) {   // the first place the order named: on its way there
+            ioGroup.mWayTime = inNow;
+            for (unsigned long k = 0; k < ioGroup.mUnits.size(); k++) {
+                EEComplexUnit* theUnit = EECPNextGroupUnit(inPlayer, ioGroup.mUnits[k]);
+                if (theUnit != NULL)
+                    EECPNextGiveMove(theUnit, ioGroup.mX, ioGroup.mY, true);
+            }
+        }
         return;
+    }
     long theX, theY;
     if (!EECPNextScoutPlace(inPlayer, ioGroup, inCX, inCY, gContinentManager.GetContinent(theLead, kAIPathLandMass), theX, theY)) {
         EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
@@ -978,7 +987,7 @@ EECPNextResult EECPNextGroupTask(EEComputerPlayer* inPlayer, long inTask, const 
         if (theRadius == 0)
             theRadius = 12;
     } else {
-        theX = theY = -1;   // a scout finds its places
+        ;   // a scout: x, y is its first place (unexplored); without one it finds its places
     }
     // the soldiers
     std::vector<long> theUnits;
