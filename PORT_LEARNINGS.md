@@ -5783,3 +5783,28 @@ entry).
   included crate is exported too: internal constants are `pub(crate)` (a `GX_OK` export collided with `GX.h`'s macro).
 - **Line endings:** this repository stores files byte for byte (`* -text`); Windows Python text mode (`open` without
   `newline=''`) turned LF files to CRLF and produced whole-file diffs. Patch scripts open with `newline=''`.
+
+### The rasterizer's draw paths (R4.2)
+
+`DX7Rasterizer Draw2D/DrawModel/DrawTerrain.cpp` moved to Rust (`src/draw2d.rs`, `draw_model.rs`, `draw_terrain.rs`);
+the C++ members forward, `Common/DX7DrawSeam.cpp` (new unit) and the `ee_dx7cpp_*` functions in the three units are the
+way back into C++ objects.
+
+- **The seam is per-object, not per-field.** `GEModel`/`GEMaterial`/`GEViewport`/`GETerrainMesh` cross as plain records
+  built by C++ (`ModelInfo`, `MaterialInfo`, `ViewportInfo`, `TerrainMeshView`, `MaterialView`); the visible vertex
+  arrays (`GETM_VISIBLE_POINTS`^2) and `GETMPolygon` are pinned records (`static_assert`s in the Draw unit); per-point
+  reads (height, normal, colour) stay `ee_dx7cpp_mesh_*`. No Rust reference lives across a host call: vertex memory is
+  written through raw pointers between calls and `ScreenState` is only touched in the `Host`.
+- **The transform stack became a Rust parameter.** `GERasterizer::sTransformStack` was only used by
+  `DrawModelHierarchy`; `compose` (a port of `GETransformation::Apply(transformation)`) replaces it.
+- **`sWaterTime` stays a C++ static** passed by pointer: Rust owns the arithmetic, C++ the storage. Its tests pin the
+  clock as a parameter instead of a static.
+- **The C++ `sin` overload is float.** `TransformToCamera`'s wave calls `sin` on a float expression: with the MSVC STL
+  headers it resolves to `float sin(float)` (`sinf`), and Rust's `f32::sin` matched bit-for-bit in the goldens. Don't
+  "fix" it to `f64` or to a `libm` crate.
+- **The goldens** (`golden_draw.txt`, 40+ sections) come from a scratch program that `#include`s the original C++ bodies
+  unchanged against fake engine objects (headers copied with `virtual`/`= 0` stripped so a `calloc`ed rasterizer needs no
+  vtable; `private`/`protected` opened with macros; `UMath.cpp` real). Every test rebuilds the same inputs in Rust and
+  compares the event log line for line (device calls, vertex bits, the `WASSTILLDRAWING` retry, the VB restart at 0x960).
+- **Protected rasterizer members** are reached by `struct DX7DrawAccess : DX7Rasterizer { using ...; }`, a view of the
+  same object (no data of its own), so `DX7Rasterizer.h` needs no friend declarations.
