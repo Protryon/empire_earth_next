@@ -206,7 +206,7 @@ pub unsafe extern "C" fn ee_data_ids(
     };
     match (*content).content.ids(t.name) {
         Ok(ids) => {
-            for (k, id) in ids.iter() {
+            for (k, id) in ids.ids.iter() {
                 visit(ctx, *k as i32, id.as_ptr(), id.len());
             }
             true
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn ee_data_civ_read(
             return false;
         }
     };
-    match text::node_text(doc.find(b"name").map(|r| &**r), w, "name") {
+    match text::node_text(doc.find(b"name"), w, "name") {
         Ok(n) => *name = EeDataBytes::from_vec(n),
         Err(f) => {
             put_error(err, f);
