@@ -34,6 +34,11 @@ public:
     static long AddControlLike(UIManager* inManager, long inTemplateID, long inID, long inFormIndex,
                                unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
                                long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID);
+    // port: moves the form inFormID's controls with form index inFirstIndex .. inLastIndex horizontally (after
+    // Create, before the form makes its controls): inLeftDelta and inRightDelta are added to their left and right
+    // offsets, which must be fractions of the window (offset type 4; others are left alone). -> the number moved
+    static long MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
+                                         float inRightDelta);
     GEBitmap* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle, const UString& inFileName,
                            bool inHasAlpha, const GERectangle& inTextureRectangle) const;
     UIControl* CreateControl(UIManager* inManager);
