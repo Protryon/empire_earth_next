@@ -210,7 +210,9 @@
 #   define FAR
 #endif
 
-#if !defined(MACOS) && !defined(TARGET_OS_MAC)
+/* Fork: TARGET_OS_MAC is defined on every Apple target (macOS too), where no header defines Byte; as later zlib,
+   skip it only when the classic Mac headers (MacTypes.h) did */
+#if !defined(__MACTYPES__)
 typedef unsigned char  Byte;  /* 8 bits */
 #endif
 typedef unsigned int   uInt;  /* 16 bits or more */
