@@ -28,7 +28,8 @@ PLATFORM_UNITS = [
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 # the DX7 renderer's C++ trampolines into Rust (ee_dx7, docs/RUST_PLAN.md R4.2): the classes' deleted bodies live there
-DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
+DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp",
+                   "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7DrawSeam.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",

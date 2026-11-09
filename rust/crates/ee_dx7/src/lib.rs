@@ -4,10 +4,14 @@
 //! Modules that only need their inputs as plain data are tested with golden values captured from the C++
 //! (each module's tests say how).
 
+pub mod draw;
+pub mod draw2d;
 pub mod filter;
 pub mod state;
 pub mod vertex;
 
+#[cfg(not(test))]
+mod draw_ffi;
 mod ffi;
 #[cfg(not(test))]
 mod filter_ffi;

@@ -19,6 +19,12 @@ constexpr static const int32_t CODE_FAILURE = 21;
 
 constexpr static const int32_t CODE_OUTPUT_TOO_SMALL = 22;
 
+constexpr static const uint32_t ALIGN_LEFT = 0;
+
+constexpr static const uint32_t ALIGN_CENTER = 1;
+
+constexpr static const uint32_t ALIGN_RIGHT = 2;
+
 constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
 
 constexpr static const uint32_t ARCHIVE_VERSION = 1;
@@ -183,6 +189,31 @@ struct EeDx7ScreenState {
   bool mAlphaBlendEnable;
   bool mCanModulateTextureAlpha;
   bool mDirtyRectangleSupport;
+};
+
+/// A C++ object seen from Rust.
+using Handle = void*;
+
+/// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
+struct EeDx7TextInfo {
+  const void *font;
+  const char *text;
+  uint32_t length;
+  float x;
+  float y;
+  unsigned long alignment;
+  bool transparent;
+  bool shadow_font;
+  float foreground[3];
+  float background[3];
+};
+
+/// `RECT`: `long`s (LP64: 8 bytes), pinned by the C++.
+struct EeDx7TextRect {
+  long left;
+  long top;
+  long right;
+  long bottom;
 };
 
 /// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
@@ -452,6 +483,11 @@ struct EeRmapState {
   const int32_t *player_order;
   uint32_t player_order_len;
 };
+
+/// `GETransformation`: row-major, translation in the last column.
+using Transform = float[4][4];
+
+constexpr static const Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 extern "C" {
 
@@ -830,6 +866,39 @@ void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
                                     uint32_t i3);
 
 uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
+
+long ee_dx7r_draw_bitmap(void *rast, unsigned long screen, EeDx7ScreenState *state, Handle bitmap);
+
+long ee_dx7r_draw_lines(void *rast,
+                        unsigned long screen,
+                        EeDx7ScreenState *state,
+                        Handle lines,
+                        unsigned long count);
+
+long ee_dx7r_draw_points(void *rast,
+                         unsigned long screen,
+                         EeDx7ScreenState *state,
+                         Handle points,
+                         unsigned long count);
+
+long ee_dx7r_draw_rhombus(void *rast,
+                          unsigned long screen,
+                          EeDx7ScreenState *state,
+                          Handle rhombus);
+
+/// `DX7TextBounds`: `clip` may be null.
+void ee_dx7r_text_bounds(const EeDx7TextInfo *info, const EeDx7TextRect *clip, EeDx7TextRect *out);
+
+/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback). `target` is the `PlatFontTarget*`. Returns false when the
+/// font has no OS font.
+bool ee_dx7r_text_draw(const EeDx7TextInfo *info,
+                       const EeDx7TextRect *clip,
+                       long origin_x,
+                       long origin_y,
+                       int32_t target_width,
+                       int32_t target_height,
+                       float target_scale,
+                       const void *target);
 
 /// The 32-bit path; pitches in pixels. `source_rect`/`destination_rect`: float pixels (see `Rect`).
 void ee_dx7_copy_with_filter_32(unsigned long format,
