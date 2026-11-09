@@ -228,7 +228,7 @@ pub fn begin_scene<B: Backend, P: Platform>(gx: &mut Gx<B, P>) -> GxResult {
             for line in &lines {
                 gx.log(line);
             }
-            let live = stats::live_line(gx.live_surfaces(), &gx.backend.live());
+            let live = stats::live_line(gx.live_surfaces(), gx.presents, gx.acquire_failures, &gx.backend.live());
             gx.log(&live);
             gx.stats = stats::DrawStats::default();
         }

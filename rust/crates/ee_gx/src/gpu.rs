@@ -157,6 +157,8 @@ pub struct WgpuBackend {
     frames: VecDeque<Arc<AtomicBool>>,
     /// a wait for the GPU timed out (logged once)
     wait_timed_out: bool,
+    /// `get_current_texture` errors logged (the first 8)
+    acquire_errors_logged: u32,
 }
 
 impl WgpuBackend {
@@ -795,7 +797,13 @@ impl crate::gx::Backend for WgpuBackend {
                 slot.frame = Some(frame);
                 true
             }
-            Err(_) => false,
+            Err(error) => {
+                if self.acquire_errors_logged < 8 {
+                    self.acquire_errors_logged += 1;
+                    gx_log(&format!("GX: no swap chain image: {error}"));
+                }
+                false
+            }
         }
     }
 
