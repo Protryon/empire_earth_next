@@ -278,6 +278,13 @@ static_assert(sizeof(EeDx7LogicalMetrics) == 5 * sizeof(uint32_t), "ee_dx7/src/s
 
 // --- GESurfaceDescription: filled by Rust (ee_dx7/src/api.rs SurfaceDescription) --------------------------------------
 static_assert(sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription), "ee_dx7/src/api.rs SurfaceDescription");
+#include "lle/GEScreen.h"
+static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode), "ee_dx7/src/screen.rs VideoMode");
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mWidth);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mHeight);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mRefreshRate);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mBitCount);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mPixelFormat);
 DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mType);
 DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelFormat);
 DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mSurfaceVolatility);

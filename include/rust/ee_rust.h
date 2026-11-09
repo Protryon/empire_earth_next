@@ -204,6 +204,31 @@ struct EeDx7ScreenState {
   bool mDirtyRectangleSupport;
 };
 
+/// `sScreensCaptured` and `sFirstCaptureWasAttachedToDesktop`.
+struct EeDx7CaptureState {
+  uint32_t captured;
+  bool first_attached;
+};
+
+/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+struct EeDx7VideoMode {
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long mRefreshRate;
+  unsigned long mBitCount;
+  unsigned long mPixelFormat;
+};
+
+/// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
+struct EeDx7WindowParams {
+  bool create_at;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  uint32_t flags;
+};
+
 /// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
 struct EeDx7StageView {
   void *surface;
@@ -932,6 +957,39 @@ int32_t ee_dx7r_activate_the_screen(EeDx7ScreenState *state,
 int32_t ee_dx7r_create_vertex_buffers(EeDx7ScreenState *state, bool tnl);
 
 bool ee_dx7r_is_screen_valid(void *dd, bool tnl);
+
+void ee_dx7sc_initialize(void *screen, void *dd);
+
+void ee_dx7sc_test_32bit_support(void *screen, void *dd);
+
+int32_t ee_dx7sc_capture(void *dd,
+                         void *window,
+                         bool to_clipboard,
+                         bool attached,
+                         EeDx7CaptureState *state,
+                         bool *full_screen);
+
+int32_t ee_dx7sc_release(void *dd, void *window, EeDx7CaptureState *state, bool *full_screen);
+
+int32_t ee_dx7sc_restore_all(void *dd);
+
+int32_t ee_dx7sc_set_mode(void *dd, bool full_screen, const EeDx7VideoMode *mode, bool *update);
+
+/// `DX7Screen::CreateSurface`: the description is copied in and out (the C++ reference argument's updates).
+int32_t ee_dx7sc_create_surface(void *screen,
+                                void *dd,
+                                EeDx7SurfaceDescription *description,
+                                void **out);
+
+void ee_dx7sc_window_params(bool sim,
+                            uint32_t style,
+                            int32_t width,
+                            int32_t height,
+                            int32_t display_width,
+                            int32_t display_height,
+                            float x,
+                            float y,
+                            EeDx7WindowParams *out);
 
 bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
 

@@ -49,6 +49,10 @@ public:
     virtual long TextUnlock();
     virtual long Unlock();
     virtual float GetRenderScale() const;   // port: GXSurface::GetRenderScale
+    // port: the Rust screen's CreateSurface trampolines (DX7Screen.cpp)
+    static GESurface* NewForScreen(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen)
+        { return new DX7Surface(inSurface, inDescription, inParentScreen); }
+    void PushAttached(GESurface* inSurface) { this->mAttachedSurfaces.push_back(inSurface); }
 
 protected:
     virtual ~DX7Surface();

@@ -44,12 +44,10 @@ public:
     virtual long RestoreAllSurfaces();
     virtual long SetMode(unsigned long inIndex);
 
-private:
+    // port: the Rust algorithms' trampolines (ee_dx7cpp_screen_*, DX7Screen.cpp) reach these
     DX7Screen(void* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
               bool inSharesPrimary);
     virtual ~DX7Screen();
-    static long __stdcall EnumTextureFormatCallback(GXPIXELFORMAT* inFormat, void* inContext);
-    static long __stdcall EnumVideoModeCallback(GXSURFACEDESC* inDescription, void* inContext);
     void Test32BitSupport();
 
     std::vector<GEVideoMode> mModes;        // +0x0c
