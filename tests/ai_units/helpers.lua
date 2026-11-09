@@ -70,6 +70,22 @@ function P.step(view, mem)
             end
         end
     end
+    if mem.step == 3 then
+        -- the later helpers (docs/AI_LUA_UNITS.md §11): path_len, drop_site, shore, unexplored, the layers, config
+        local tx, ty = view.town_x, view.town_y
+        local len = ai.path_len(tx, ty, tx + 20, ty)
+        local id, dist, dx, dy = ai.drop_site(tx + 10, ty + 10, "food")
+        local sx, sy, sea, land = ai.shore(tx, ty, {max = 30})
+        local ux, uy = ai.unexplored(tx, ty, {away = {tx, ty}})
+        local lost = ai.danger(tx, ty, "lost")
+        local infl = ai.danger(tx, ty, "influence")
+        local imax, isum = ai.danger_box(tx - 8, ty - 8, tx + 8, ty + 8, "influence")
+        local ms = ai.config{memory_ms = 120000}
+        print(string.format("helpers.more path_len=%s drop=%s dist=%s at=%s,%s shore=%s,%s sea=%s land=%s unexplored=%s,%s lost=%d influence=%d box=%d/%d memory_ms=%d",
+            tostring(len), tostring(id), tostring(dist), tostring(dx), tostring(dy), tostring(sx), tostring(sy), tostring(sea),
+            tostring(land), tostring(ux), tostring(uy), lost, infl, imax, isum, ms))
+        mem.step = 4
+    end
     return {}
 end
 

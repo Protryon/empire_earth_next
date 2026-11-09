@@ -90,6 +90,9 @@ struct DangerMark {                 // ai.mark: the script's own danger
 };
 
 const long kDangerCell = 4;         // the danger layers' and the route's cell (tiles)
+const long kLostMs = 1200000;       // the lost layer remembers a bad trade this long (Age of AI's 20 minutes)
+const long kMaxTrades = 1024;       // (minute, cell) records of the lost layer
+const long kInfluenceSpread = 3;    // cells
 
 const long kMaxEvents = 512;
 const long kMaxRemembered = 4000;
@@ -124,6 +127,11 @@ struct EECPUnitsState {
     long mDangerW = 0, mDangerH = 0;
     std::vector<std::pair<long, long> > mHurt;      // own citizens hurt: (x + y * 65536, game ms), 2 minutes
     std::vector<DangerMark> mMarks;
+    // the lost layer (§4.4): the hit points own units lost over those they dealt, by cell and minute, 20 minutes
+    std::map<std::pair<long, long>, std::pair<long, long> > mTrades;   // (minute, cell) -> (lost, dealt)
+    std::vector<long> mLost;
+    // the influence layer: own strength less the remembered enemies', spread over kInfluenceSpread cells
+    std::vector<long> mInfluence;
     std::vector<long> mG, mFrom;                    // the route's scratch
     std::vector<unsigned char> mOpen;
     std::vector<std::pair<long, long> > mHeap;
@@ -206,9 +214,18 @@ static bool EECPUnitsIsResource(EEUnit* inUnit)
         && (inUnit->mPlayer == NULL || inUnit->mPlayer == gWorld.mPlayers[0]);
 }
 
+// a projectile, bomb, missile or torpedo in flight: in the owner's unit list, never a unit of the interface
+static bool EECPUnitsIsProjectile(EEUnit* inUnit)
+{
+    long k = inUnit->mUnitClass->mCategory;
+    return k == kUnitCategoryProjectile || k == kUnitCategoryBomb || k == kUnitCategoryMissile || k == kUnitCategoryTorpedo;
+}
+
 static const char* EECPUnitsCategory(EEUnit* inUnit)
 {
     EEUnitClass* c = inUnit->mUnitClass;
+    if (EECPUnitsIsProjectile(inUnit))
+        return "projectile";
     switch (c->mCategory) {
     case kUnitCategoryLandCitizen: return "citizen";
     case kUnitCategoryNavalCitizen: return "boat";
@@ -361,11 +378,43 @@ static void EECPUnitsEventAdd(EECPUnitsState* s, long inKind, long inUnit, long 
     s->mEvents.push_back(e);
 }
 
+// the lost layer's record of a hit where inUnit stands: own hit points lost, or dealt to an enemy (AI_LUA_UNITS §4.4)
+static void EECPUnitsTrade(EECPUnitsState* s, EEUnit* inUnit, long inLost, long inDealt)
+{
+    if (s->mDangerW <= 0 || !EECPUnitsOnMap(inUnit) || (inLost <= 0 && inDealt <= 0))
+        return;
+    long cx = inUnit->GetTileX() / kDangerCell, cy = inUnit->GetTileY() / kDangerCell;
+    if (cx < 0 || cy < 0 || cx >= s->mDangerW || cy >= s->mDangerH)
+        return;
+    std::pair<long, long> theKey((long)gPhysics->mGameTime / 60000, cy * s->mDangerW + cx);
+    std::map<std::pair<long, long>, std::pair<long, long> >::iterator it = s->mTrades.find(theKey);
+    if (it == s->mTrades.end()) {
+        if ((long)s->mTrades.size() >= kMaxTrades)
+            s->mTrades.erase(s->mTrades.begin());   // the oldest minute goes first
+        it = s->mTrades.insert(std::make_pair(theKey, std::make_pair(0L, 0L))).first;
+    }
+    it->second.first += inLost;
+    it->second.second += inDealt;
+}
+
+void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim)
+{
+    EECPUnitsState* s = inPlayer->mUnitsState;
+    if (s == NULL || inVictim == NULL || inVictim->mPlayer == NULL || inVictim->mPlayer == inPlayer
+        || inVictim->mPlayer == gWorld.mPlayers[0] || inPlayer->IsAlly(inVictim->mPlayer))
+        return;
+    EECPUnitsTrade(s, inVictim, 0, inAmount);
+}
+
 void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit)
 {
     EECPUnitsState* s = inPlayer->mUnitsState;
     if (s == NULL || inUnit == NULL)
         return;
+    long theLost = inAmount;   // an animal's or an ally's hit is no trade (the event still comes below)
+    if (inAttackerPlayer <= 0 || (unsigned long)inAttackerPlayer >= gWorld.mNumPlayers || gWorld.mPlayers[inAttackerPlayer] == NULL
+        || inPlayer->IsAlly(gWorld.mPlayers[inAttackerPlayer]))
+        theLost = 0;
     long theID = (long)inUnit->mUnitID;
     long theAttacker = 0;
     EEComplexUnit* theLast = inUnit->mComplexUnit != NULL ? inUnit->mComplexUnit->mLastAttacker : NULL;
@@ -380,10 +429,12 @@ void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long i
             e.mOther = theAttacker;
         e.mType = inAttackerPlayer;
         e.mTime = (long)gPhysics->mGameTime;
+        EECPUnitsTrade(s, inUnit, theLost, 0);
         return;
     }
     s->mAttackedAt[theID] = (long)s->mEvents.size();
     EECPUnitsEventAdd(s, kEvAttacked, theID, theAttacker, inAttackerPlayer, inAmount);
+    EECPUnitsTrade(s, inUnit, theLost, 0);
     long theCategory = inUnit->mUnitClass->mCategory;
     if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) && inAttackerPlayer > 0
         && EECPUnitsOnMap(inUnit) && s->mHurt.size() < 256)
@@ -463,7 +514,7 @@ static void EECPUnitsRemember(EEComputerPlayer* inPlayer, EECPUnitsState* s)
             continue;
         for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
             if (!(theUnit->mHitPoints > 0) || theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mContainer != NULL
-                || !EECPUnitsOnMap(theUnit) || !static_cast<EETile*>(theUnit->mTile)->IsSeenBy(inPlayer))
+                || EECPUnitsIsProjectile(theUnit) || !EECPUnitsOnMap(theUnit) || !static_cast<EETile*>(theUnit->mTile)->IsSeenBy(inPlayer))
                 continue;
             long theID = (long)theUnit->mUnitID;
             std::map<long, Remembered>::iterator it = s->mMemory.find(theID);
@@ -783,7 +834,7 @@ static int LuaUnits(lua_State* L)
     for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         theTested++;
         EEComplexUnit* c = theUnit->mComplexUnit;
-        if (c == NULL || !(theUnit->mHitPoints > 0) || !theUnit->mIsValid)
+        if (c == NULL || !(theUnit->mHitPoints > 0) || !theUnit->mIsValid || EECPUnitsIsProjectile(theUnit))
             continue;
         long long theKey;
         if (!EECPUnitsPasses(theUnit, f, theKey))
@@ -820,7 +871,7 @@ static int LuaSeen(lua_State* L)
         for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
             theTested++;
             if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mComplexUnit->mContainer != NULL
-                || !EECPUnitsSeen(me, theUnit))
+                || EECPUnitsIsProjectile(theUnit) || !EECPUnitsSeen(me, theUnit))
                 continue;
             long long theKey;
             if (!EECPUnitsPasses(theUnit, f, theKey))
@@ -947,6 +998,8 @@ static EEUnit* EECPUnitsKnown(EEComputerPlayer* me, long inID)
     }
     if (EECPUnitsIsResource(theUnit))
         return EECPUnitsExplored(me, theUnit) ? theUnit : NULL;
+    if (EECPUnitsIsProjectile(theUnit))
+        return NULL;
     if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer != NULL && theUnit->mPlayer != me)
         return NULL;
     return EECPUnitsSeen(me, theUnit) ? theUnit : NULL;
@@ -1255,7 +1308,7 @@ static void EECPUnitsOwnUnits(EEComputerPlayer* me, EECPUnitsState* s, bool inIn
     outReason = kOK;
     for (unsigned long k = 0; k < s->mIds.size(); k++) {
         EEComplexUnit* c = EECPUnitsOwn(me, s->mIds[k]);
-        if (c == NULL) {
+        if (c == NULL || EECPUnitsIsProjectile(c)) {
             if (outReason == kOK)
                 outReason = kNotOwn;
             continue;
@@ -1813,6 +1866,22 @@ static void EECPUnitsDangerAdd(EECPUnitsState* s, long inX, long inY, long inRan
         }
 }
 
+// adds inValue to the influence cell at (inX, inY) and, falling off linearly, to the cells within kInfluenceSpread
+static void EECPUnitsInfluenceAdd(EECPUnitsState* s, long inX, long inY, long inValue)
+{
+    long cx0 = inX / kDangerCell, cy0 = inY / kDangerCell, r = kInfluenceSpread;
+    for (long cy = cy0 - r; cy <= cy0 + r; cy++)
+        for (long cx = cx0 - r; cx <= cx0 + r; cx++) {
+            if (cx < 0 || cy < 0 || cx >= s->mDangerW || cy >= s->mDangerH)
+                continue;
+            long dx = cx > cx0 ? cx - cx0 : cx0 - cx, dy = cy > cy0 ? cy - cy0 : cy0 - cy;
+            long d = dx > dy ? dx : dy;
+            long long v = (long long)inValue * (r + 1 - d) / (r + 1);
+            long long sum = (long long)s->mInfluence[cy * s->mDangerW + cx] + v;
+            s->mInfluence[cy * s->mDangerW + cx] = sum > 1000000000LL ? 1000000000L : sum < -1000000000LL ? -1000000000L : (long)sum;
+        }
+}
+
 // the threat layer, rebuilt from what the player sees and remembers, and where its citizens were hurt
 static void EECPUnitsDangerBuild(EEComputerPlayer* inPlayer, EECPUnitsState* s)
 {
@@ -1858,37 +1927,112 @@ static void EECPUnitsDangerBuild(EEComputerPlayer* inPlayer, EECPUnitsState* s)
         EECPUnitsDangerAdd(s, s->mMarks[k].mX, s->mMarks[k].mY, s->mMarks[k].mR, s->mMarks[k].mValue);
         k++;
     }
+    // the lost layer: where own units lost more hit points than they dealt in the last kLostMs, the difference over
+    // 10 on the cell and half of it on the cells round it (Age of AI's DANGER_LOST, cover.c)
+    s->mLost.assign((size_t)(s->mDangerW * s->mDangerH), 0);
+    long theMinute = theNow / 60000 - kLostMs / 60000;
+    while (!s->mTrades.empty() && s->mTrades.begin()->first.first < theMinute)
+        s->mTrades.erase(s->mTrades.begin());
+    for (std::map<std::pair<long, long>, std::pair<long, long> >::iterator it = s->mTrades.begin(); it != s->mTrades.end(); ++it) {
+        long theNet = it->second.first - it->second.second;
+        long c = it->first.second;
+        if (theNet <= 0 || c < 0 || c >= s->mDangerW * s->mDangerH)
+            continue;
+        long v = theNet / 10;
+        v = v > 30000 ? 30000 : v;
+        long cx = c % s->mDangerW, cy = c / s->mDangerW;
+        for (long dy = -1; dy <= 1; dy++)
+            for (long dx = -1; dx <= 1; dx++) {
+                long nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || ny < 0 || nx >= s->mDangerW || ny >= s->mDangerH)
+                    continue;
+                long& cell = s->mLost[ny * s->mDangerW + nx];
+                long add = (dx == 0 && dy == 0) ? v : v / 2;
+                cell = cell + add > 30000 ? 30000 : cell + add;
+            }
+    }
+    // the influence layer: own strength less the remembered enemies' (weighed down with age as the threat layer
+    // does), each spread over kInfluenceSpread cells with a linear fall-off
+    s->mInfluence.assign((size_t)(s->mDangerW * s->mDangerH), 0);
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        if (!(theUnit->mHitPoints > 0) || !EECPUnitsOnMap(theUnit) || theUnit->mStats == NULL || EECPUnitsIsProjectile(theUnit))
+            continue;
+        long v = EECPUnitsStrength(theUnit);
+        if (v > 0)
+            EECPUnitsInfluenceAdd(s, theUnit->GetTileX(), theUnit->GetTileY(), v);
+    }
+    for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
+        const Remembered& r = it->second;
+        if (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
+            || r.mPlayer <= 0 || (unsigned long)r.mPlayer >= gWorld.mNumPlayers || gWorld.mPlayers[r.mPlayer] == NULL)
+            continue;
+        EEPlayer* theOwner = gWorld.mPlayers[r.mPlayer];
+        if ((unsigned long)r.mType >= theOwner->mUnitClassUpgrades.size() || theOwner->mUnitClassUpgrades[r.mType] == NULL)
+            continue;
+        long theAttack = UMFloatToLong(theOwner->mUnitClassUpgrades[r.mType]->mAttack);
+        if (theAttack <= 0)
+            continue;
+        long theAge = theNow - r.mSeen;
+        long v = r.mHP * theAttack;
+        if (!r.mBuilding && theAge > 0)
+            v = (long)((long long)v * (s->mMemoryMs - (theAge < s->mMemoryMs ? theAge : s->mMemoryMs)) / (s->mMemoryMs > 0 ? s->mMemoryMs : 1));
+        if (v > 0)
+            EECPUnitsInfluenceAdd(s, r.mX, r.mY, -v);
+    }
 }
 
-static long EECPUnitsDangerAt(const EECPUnitsState* s, long inX, long inY)
+static long EECPUnitsLayerAt(const std::vector<long>& inLayer, const EECPUnitsState* s, long inX, long inY)
 {
-    if (inX < 0 || inY < 0 || s->mThreat.empty())
+    if (inX < 0 || inY < 0 || inLayer.empty())
         return 0;
     long cx = inX / kDangerCell, cy = inY / kDangerCell;
     if (cx >= s->mDangerW || cy >= s->mDangerH)
         return 0;
-    return s->mThreat[cy * s->mDangerW + cx];
+    return inLayer[cy * s->mDangerW + cx];
 }
 
-// ai.danger(x, y) -> the threat layer's value at the tile (0: none)
+static long EECPUnitsDangerAt(const EECPUnitsState* s, long inX, long inY)
+{
+    return EECPUnitsLayerAt(s->mThreat, s, inX, inY);
+}
+
+// the layer an optional string argument names: "threat" (the default), "lost" or "influence"; NULL: unknown
+static const std::vector<long>* EECPUnitsLayerArg(lua_State* L, int inIndex, const EECPUnitsState* s)
+{
+    if (lua_type(L, inIndex) != LUA_TSTRING)
+        return &s->mThreat;
+    const char* theName = lua_tostring(L, inIndex);
+    if (strcmp(theName, "threat") == 0)
+        return &s->mThreat;
+    if (strcmp(theName, "lost") == 0)
+        return &s->mLost;
+    if (strcmp(theName, "influence") == 0)
+        return &s->mInfluence;
+    return NULL;
+}
+
+// ai.danger(x, y[, layer]) -> the layer's value at the tile (0: none); layer "threat" (the default), "lost" or
+// "influence" (own less enemy strength: negative where the enemy is stronger)
 static int LuaDanger(lua_State* L)
 {
     EECPUnitsCharge(L, kCostTile);
     EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
+    const std::vector<long>* theLayer = EECPUnitsLayerArg(L, 3, s);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || theLayer == NULL) {
         lua_pushinteger(L, 0);
         return 1;
     }
-    lua_pushinteger(L, (lua_Integer)EECPUnitsDangerAt(s, (long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2)));
+    lua_pushinteger(L, (lua_Integer)EECPUnitsLayerAt(*theLayer, s, (long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2)));
     return 1;
 }
 
-// ai.danger_box(x1, y1, x2, y2) -> the highest and the summed value of the cells over the box
+// ai.danger_box(x1, y1, x2, y2[, layer]) -> the highest and the summed value of the cells over the box
 static int LuaDangerBox(lua_State* L)
 {
     EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
+    const std::vector<long>* theLayer = EECPUnitsLayerArg(L, 5, s);
     for (int i = 1; i <= 4; i++)
-        if (!lua_isinteger(L, i) || s->mDangerW <= 0) {
+        if (!lua_isinteger(L, i) || s->mDangerW <= 0 || theLayer == NULL || theLayer->empty()) {
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
             return 2;
@@ -1906,7 +2050,7 @@ static int LuaDangerBox(lua_State* L)
     long theMax = 0, theSum = 0, theCells = 0;
     for (long cy = y1; cy <= y2; cy++)
         for (long cx = x1; cx <= x2; cx++) {
-            long v = s->mThreat[cy * s->mDangerW + cx];
+            long v = (*theLayer)[cy * s->mDangerW + cx];
             theMax = v > theMax ? v : theMax;
             theSum += v;
             theCells++;
@@ -1976,33 +2120,22 @@ static bool EECPUnitsCellOpen(long inCX, long inCY, long inKind, unsigned short 
     return false;
 }
 
-// ai.route(x1, y1, x2, y2, {avoid = 4, sea = false}) -> waypoints {{x, y}, ...} (the last is the goal) and the cost;
-// nil when the goal is not on the start's land mass (or water body). An A* over 4-tile cells: 10 a straight step, 14
-// a diagonal, plus avoid x the threat layer of the cell entered (AI_LUA_UNITS §4.3, step 1)
-static int LuaRoute(lua_State* L)
+// the A* over the kDangerCell cells of the start's land mass (or water body), from (x1, y1) to (x2, y2): 10 a
+// straight step, 14 a diagonal, plus inAvoid x the threat and inAvoidLost x the lost layer of the cell entered. The
+// cells of the way end in s->mIds (start to goal); outExpanded counts the cells closed. false: no way
+static bool EECPUnitsCellRoute(EECPUnitsState* s, long inKind, long x1, long y1, long x2, long y2, long inAvoid,
+    long inAvoidLost, long& outExpanded)
 {
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    for (int i = 1; i <= 4; i++)
-        if (!lua_isinteger(L, i))
-            return 0;
-    long x1 = (long)lua_tointeger(L, 1), y1 = (long)lua_tointeger(L, 2), x2 = (long)lua_tointeger(L, 3), y2 = (long)lua_tointeger(L, 4);
-    long theAvoid = 4;
-    EECPUnitsOptInt(L, 5, "avoid", theAvoid);
-    theAvoid = theAvoid < 0 ? 0 : theAvoid > 100 ? 100 : theAvoid;
-    long theKind = EECPUnitsOptBool(L, 5, "sea", false) ? kAIPathWaterBody : kAIPathLandMass;
-    if (!EECPUnitsTileOK(x1, y1) || !EECPUnitsTileOK(x2, y2))
-        return 0;
-    if (s->mDangerW <= 0)
-        EECPUnitsDangerBuild(me, s);
-    EECPUnitsCharge(L, 5000);
-    unsigned short theArea = EECPUnitsAreaNear(x1, y1, theKind);
-    if (theArea == 0 || EECPUnitsAreaNear(x2, y2, theKind) != theArea)
-        return 0;
+    outExpanded = 0;
+    unsigned short theArea = EECPUnitsAreaNear(x1, y1, inKind);
+    if (theArea == 0 || EECPUnitsAreaNear(x2, y2, inKind) != theArea)
+        return false;
     long w = s->mDangerW, h = s->mDangerH, n = w * h;
     long theStart = (y1 / kDangerCell) * w + x1 / kDangerCell, theGoal = (y2 / kDangerCell) * w + x2 / kDangerCell;
     if (theStart < 0 || theStart >= n || theGoal < 0 || theGoal >= n)
-        return 0;
+        return false;
+    if ((long)s->mLost.size() != n)
+        s->mLost.assign((size_t)n, 0);
     s->mG.assign((size_t)n, -1);
     s->mFrom.assign((size_t)n, -1);
     s->mOpen.assign((size_t)n, 0);   // 2 closed, 3 blocked
@@ -2010,7 +2143,6 @@ static int LuaRoute(lua_State* L)
     s->mG[theStart] = 0;
     long gx = theGoal % w, gy = theGoal / w;
     s->mHeap.push_back(std::make_pair(0L, theStart));
-    long theExpanded = 0;
     static const long kStep[8][3] = {{1, 0, 10}, {-1, 0, 10}, {0, 1, 10}, {0, -1, 10},
                                      {1, 1, 14}, {1, -1, 14}, {-1, 1, 14}, {-1, -1, 14}};
     bool theFound = false;
@@ -2021,7 +2153,7 @@ static int LuaRoute(lua_State* L)
         if (s->mOpen[c] == 2)
             continue;
         s->mOpen[c] = 2;
-        theExpanded++;
+        outExpanded++;
         if (c == theGoal) {
             theFound = true;
             break;
@@ -2034,11 +2166,11 @@ static int LuaRoute(lua_State* L)
             long d = ny * w + nx;
             if (s->mOpen[d] >= 2)
                 continue;
-            if (d != theGoal && !EECPUnitsCellOpen(nx, ny, theKind, theArea)) {
+            if (d != theGoal && !EECPUnitsCellOpen(nx, ny, inKind, theArea)) {
                 s->mOpen[d] = 3;
                 continue;
             }
-            long g = s->mG[c] + kStep[k][2] + theAvoid * s->mThreat[d];
+            long g = s->mG[c] + kStep[k][2] + inAvoid * s->mThreat[d] + inAvoidLost * s->mLost[d];
             if (s->mG[d] >= 0 && s->mG[d] <= g)
                 continue;
             s->mG[d] = g;
@@ -2049,14 +2181,60 @@ static int LuaRoute(lua_State* L)
             std::push_heap(s->mHeap.begin(), s->mHeap.end(), std::greater<std::pair<long, long> >());
         }
     }
-    EECPUnitsCharge(L, theExpanded * 10);
     if (!theFound)
-        return 0;
-    // the cells back from the goal; a waypoint where the direction changes
+        return false;
     s->mIds.clear();
     for (long c = theGoal; c >= 0; c = s->mFrom[c])
         s->mIds.push_back(c);
     std::reverse(s->mIds.begin(), s->mIds.end());
+    return true;
+}
+
+// the shared argument reading of ai.route and ai.path_len: the tiles at 1-4 and the options at inOpts
+static bool EECPUnitsRouteArgs(lua_State* L, int inOpts, EECPUnitsState* s, EEComputerPlayer* me, long& x1, long& y1,
+    long& x2, long& y2, long& outAvoid, long& outAvoidLost, long& outKind)
+{
+    for (int i = 1; i <= 4; i++)
+        if (!lua_isinteger(L, i))
+            return false;
+    x1 = (long)lua_tointeger(L, 1);
+    y1 = (long)lua_tointeger(L, 2);
+    x2 = (long)lua_tointeger(L, 3);
+    y2 = (long)lua_tointeger(L, 4);
+    outAvoid = 4;
+    outAvoidLost = 0;
+    EECPUnitsOptInt(L, inOpts, "avoid", outAvoid);
+    EECPUnitsOptInt(L, inOpts, "avoid_lost", outAvoidLost);
+    outAvoid = outAvoid < 0 ? 0 : outAvoid > 100 ? 100 : outAvoid;
+    outAvoidLost = outAvoidLost < 0 ? 0 : outAvoidLost > 100 ? 100 : outAvoidLost;
+    outKind = EECPUnitsOptBool(L, inOpts, "sea", false) ? kAIPathWaterBody : kAIPathLandMass;
+    if (!EECPUnitsTileOK(x1, y1) || !EECPUnitsTileOK(x2, y2))
+        return false;
+    if (s->mDangerW <= 0)
+        EECPUnitsDangerBuild(me, s);
+    return true;
+}
+
+// ai.route(x1, y1, x2, y2, {avoid = 4, avoid_lost = 0, sea = false}) -> waypoints {{x, y}, ...} (the last is the
+// goal) and the cost; nil when the goal is not on the start's land mass (or water body). An A* over 4-tile cells:
+// 10 a straight step, 14 a diagonal, plus avoid x the threat layer (and avoid_lost x the lost layer) of the cell
+// entered (AI_LUA_UNITS §4.3, step 1)
+static int LuaRoute(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    long x1, y1, x2, y2, theAvoid, theAvoidLost, theKind;
+    if (!EECPUnitsRouteArgs(L, 5, s, me, x1, y1, x2, y2, theAvoid, theAvoidLost, theKind))
+        return 0;
+    EECPUnitsCharge(L, 5000);
+    long theExpanded = 0;
+    bool theFound = EECPUnitsCellRoute(s, theKind, x1, y1, x2, y2, theAvoid, theAvoidLost, theExpanded);
+    EECPUnitsCharge(L, theExpanded * 10);
+    if (!theFound)
+        return 0;
+    long w = s->mDangerW;
+    long theGoal = s->mIds.back();
+    // a waypoint where the direction changes
     s->mIds2.clear();
     for (unsigned long k = 1; k + 1 < s->mIds.size(); k++) {
         long a = s->mIds[k - 1], b = s->mIds[k], c = s->mIds[k + 1];
@@ -2080,6 +2258,29 @@ static int LuaRoute(lua_State* L)
     }
     lua_pushinteger(L, (lua_Integer)s->mG[theGoal]);
     return 2;
+}
+
+// ai.path_len(x1, y1, x2, y2, {sea = false}) -> the length in tiles of the way over the cells (no danger), or nil
+// when there is none: coarse (4-tile cells), about the walking distance round water and cliffs
+static int LuaPathLen(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    long x1, y1, x2, y2, theAvoid, theAvoidLost, theKind;
+    if (!EECPUnitsRouteArgs(L, 5, s, me, x1, y1, x2, y2, theAvoid, theAvoidLost, theKind))
+        return 0;
+    EECPUnitsCharge(L, 2000);
+    long theExpanded = 0;
+    bool theFound = EECPUnitsCellRoute(s, theKind, x1, y1, x2, y2, 0, 0, theExpanded);
+    EECPUnitsCharge(L, theExpanded * 10);
+    if (!theFound)
+        return 0;
+    long theCost = s->mG[s->mIds.back()];
+    long theLen = theCost * kDangerCell / 10;
+    long dx = x1 > x2 ? x1 - x2 : x2 - x1, dy = y1 > y2 ? y1 - y2 : y2 - y1;
+    long theStraight = dx > dy ? dx : dy;
+    lua_pushinteger(L, (lua_Integer)(theLen < theStraight ? theStraight : theLen));
+    return 1;
 }
 
 // ai.find_site(type, x, y, {min = 0, max = 12, safe = false}) -> x, y: the nearest explored tile where the class can be
@@ -2125,6 +2326,197 @@ static int LuaFindSite(lua_State* L)
     lua_pushinteger(L, (lua_Integer)theX);
     lua_pushinteger(L, (lua_Integer)theY);
     return 2;
+}
+
+// ai.drop_site(x, y[, kind]) -> the id of the player's nearest finished drop site for the resource kind ("food":
+// a granary too; the default any), its tile distance, and its centre x, y; nil when it has none
+static int LuaDropSite(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, 500);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+        return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+    bool theFood = lua_type(L, 3) == LUA_TSTRING && strcmp(lua_tostring(L, 3), "food") == 0;
+    EEUnit* theBest = NULL;
+    long theBestD2 = 0;
+    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        long theType = theUnit->mUnitClass->mUnitType;
+        if (theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol && theType != kUnitTypeSettlement
+            && !(theFood && theType == kUnitTypeGranary))
+            continue;
+        if (theUnit->mComplexUnit == NULL || !theUnit->mComplexUnit->mIsBuilt || !(theUnit->mHitPoints > 0) || !EECPUnitsOnMap(theUnit))
+            continue;
+        long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
+        long d2 = EECPUnitsD2(theUnit->GetTileX() + theHalf, theUnit->GetTileY() + theHalf, x, y);
+        if (theBest == NULL || d2 < theBestD2 || (d2 == theBestD2 && theUnit->mUnitID < theBest->mUnitID)) {
+            theBest = theUnit;
+            theBestD2 = d2;
+        }
+    }
+    if (theBest == NULL)
+        return 0;
+    long theHalf = theBest->mUnitClass->GetTileSize() / 2;
+    long d = 0;
+    while ((d + 1) * (d + 1) <= theBestD2)
+        d++;
+    lua_pushinteger(L, (lua_Integer)theBest->mUnitID);
+    lua_pushinteger(L, (lua_Integer)d);
+    lua_pushinteger(L, (lua_Integer)(theBest->GetTileX() + theHalf));
+    lua_pushinteger(L, (lua_Integer)(theBest->GetTileY() + theHalf));
+    return 4;
+}
+
+// ai.shore(x, y, {sea = id, land = id, max = 20}) -> x, y, sea, land: the nearest explored land tile, ring by ring
+// from (x, y), that touches water (of the water body `sea` when given) and lies on the land mass `land` when given;
+// nil: none within max rings
+static int LuaShore(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
+        return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+    long theSea = 0, theLand = 0, theMax = 20;
+    EECPUnitsOptInt(L, 3, "sea", theSea);
+    EECPUnitsOptInt(L, 3, "land", theLand);
+    EECPUnitsOptInt(L, 3, "max", theMax);
+    theMax = theMax < 0 ? 0 : theMax > 40 ? 40 : theMax;
+    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * 6);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    static const long kSide[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (long r = 0; r <= theMax; r++)
+        for (long dy = -r; dy <= r; dy++)
+            for (long dx = -r; dx <= r; dx++) {
+                if (dx > -r && dx < r && dy > -r && dy < r)
+                    continue;
+                long tx = x + dx, ty = y + dy;
+                if (tx < 0 || ty < 0 || tx >= w || ty >= h)
+                    continue;
+                EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty));
+                if (theTile == NULL || !theTile->IsVisibleTo(me))
+                    continue;
+                unsigned short theMass = gContinentManager.GetContinent(U2DPoint<long>(tx, ty), kAIPathLandMass);
+                if (theMass == 0 || (theLand != 0 && theMass != theLand))
+                    continue;
+                unsigned short theWater = 0;
+                for (int k = 0; k < 4 && theWater == 0; k++) {
+                    long nx = tx + kSide[k][0], ny = ty + kSide[k][1];
+                    if (nx < 0 || ny < 0 || nx >= w || ny >= h)
+                        continue;
+                    unsigned short b = gContinentManager.GetContinent(U2DPoint<long>(nx, ny), kAIPathWaterBody);
+                    if (b != 0 && (theSea == 0 || b == theSea))
+                        theWater = b;
+                }
+                if (theWater == 0)
+                    continue;
+                lua_pushinteger(L, (lua_Integer)tx);
+                lua_pushinteger(L, (lua_Integer)ty);
+                lua_pushinteger(L, (lua_Integer)theWater);
+                lua_pushinteger(L, (lua_Integer)theMass);
+                return 4;
+            }
+    return 0;
+}
+
+// ai.unexplored(x, y, {land = id, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
+// point (every `grid` tiles) on the land mass nearest (x, y) (EECPNextArmy's scout), scored by its distance less
+// half its distance from `away` (further from the town first); points within grid of a skip entry are left out.
+// nil: nothing unexplored on that land
+static int LuaUnexplored(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
+        return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+    long theLand = 0, theGrid = 8, ax = x, ay = y;
+    EECPUnitsOptInt(L, 3, "land", theLand);
+    EECPUnitsOptInt(L, 3, "grid", theGrid);
+    theGrid = theGrid < 4 ? 4 : theGrid > 32 ? 32 : theGrid;
+    s->mIds2.clear();
+    if (lua_type(L, 3) == LUA_TTABLE) {
+        lua_getfield(L, 3, "away");
+        if (lua_type(L, -1) == LUA_TTABLE) {
+            lua_rawgeti(L, -1, 1);
+            lua_rawgeti(L, -2, 2);
+            if (lua_isinteger(L, -2) && lua_isinteger(L, -1)) {
+                ax = (long)lua_tointeger(L, -2);
+                ay = (long)lua_tointeger(L, -1);
+            }
+            lua_pop(L, 2);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 3, "skip");
+        if (lua_type(L, -1) == LUA_TTABLE) {
+            lua_Integer n = (lua_Integer)lua_rawlen(L, -1);
+            for (lua_Integer i = 1; i <= n && i <= 128; i++) {
+                lua_rawgeti(L, -1, i);
+                if (lua_type(L, -1) == LUA_TTABLE) {
+                    lua_rawgeti(L, -1, 1);
+                    lua_rawgeti(L, -2, 2);
+                    if (lua_isinteger(L, -2) && lua_isinteger(L, -1)) {
+                        s->mIds2.push_back((long)lua_tointeger(L, -2));
+                        s->mIds2.push_back((long)lua_tointeger(L, -1));
+                    }
+                    lua_pop(L, 2);
+                }
+                lua_pop(L, 1);
+            }
+        }
+        lua_pop(L, 1);
+    }
+    if (theLand == 0)
+        theLand = EECPUnitsAreaNear(x, y, kAIPathLandMass);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    EECPUnitsCharge(L, kCostCall + (w / theGrid + 1) * (h / theGrid + 1) * 3);
+    bool theFound = false;
+    long theBest = 0, bx = -1, by = -1;
+    for (long gy = theGrid / 2; gy < h; gy += theGrid)
+        for (long gx = theGrid / 2; gx < w; gx += theGrid) {
+            EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)gx, (unsigned long)gy));
+            if (theTile == NULL || theTile->GetVisibility(me->mPlayerID) > 0)
+                continue;
+            if (gContinentManager.GetContinent(U2DPoint<long>(gx, gy), kAIPathLandMass) != theLand)
+                continue;
+            bool theSkip = false;
+            for (unsigned long k = 0; k + 1 < s->mIds2.size() && !theSkip; k += 2)
+                theSkip = EECPUnitsD2(gx, gy, s->mIds2[k], s->mIds2[k + 1]) <= theGrid * theGrid;
+            if (theSkip)
+                continue;
+            long d1 = 0, d2 = 0;
+            long q1 = EECPUnitsD2(gx, gy, x, y), q2 = EECPUnitsD2(gx, gy, ax, ay);
+            while ((d1 + 1) * (d1 + 1) <= q1)
+                d1++;
+            while ((d2 + 1) * (d2 + 1) <= q2)
+                d2++;
+            long theScore = d1 - d2 / 2;
+            if (!theFound || theScore < theBest) {
+                theFound = true;
+                theBest = theScore;
+                bx = gx;
+                by = gy;
+            }
+        }
+    if (!theFound)
+        return 0;
+    lua_pushinteger(L, (lua_Integer)bx);
+    lua_pushinteger(L, (lua_Integer)by);
+    return 2;
+}
+
+// ai.config{memory_ms = n} -> memory_ms: the enemy memory's life for mobile units (30 s to 30 minutes; the default
+// 3 minutes, Age of AI's fight_memory)
+static int LuaConfig(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
+    long v;
+    if (EECPUnitsOptInt(L, 1, "memory_ms", v))
+        s->mMemoryMs = v < 30000 ? 30000 : v > 1800000 ? 1800000 : v;
+    lua_pushinteger(L, (lua_Integer)s->mMemoryMs);
+    return 1;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -2342,6 +2734,8 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
+        {"config", LuaConfig},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
         lua_pushlightuserdata(L, inPlayer);
@@ -2417,7 +2811,7 @@ void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
     if (s == NULL)
         return;
     outBytes.append("EENU", 4);
-    EECPUnitsPut(outBytes, 2);
+    EECPUnitsPut(outBytes, 3);
     EECPUnitsPut(outBytes, (long)s->mHeld.size());
     for (std::set<long>::const_iterator it = s->mHeld.begin(); it != s->mHeld.end(); ++it)
         EECPUnitsPut(outBytes, *it);
@@ -2468,6 +2862,14 @@ void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
         EECPUnitsPut(outBytes, s->mMarks[k].mValue);
         EECPUnitsPut(outBytes, s->mMarks[k].mUntil);
     }
+    // version 3: the lost layer's trades
+    EECPUnitsPut(outBytes, (long)s->mTrades.size());
+    for (std::map<std::pair<long, long>, std::pair<long, long> >::const_iterator it = s->mTrades.begin(); it != s->mTrades.end(); ++it) {
+        EECPUnitsPut(outBytes, it->first.first);
+        EECPUnitsPut(outBytes, it->first.second);
+        EECPUnitsPut(outBytes, it->second.first);
+        EECPUnitsPut(outBytes, it->second.second);
+    }
 }
 
 namespace {
@@ -2507,7 +2909,7 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
     Getter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 2)
+    if (theVersion < 1 || theVersion > 3)
         return false;
     EECPUnitsState* s = EECPUnitsGet(inPlayer);
     s->mHeld.clear();
@@ -2574,6 +2976,16 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
             s->mMarks.push_back(m);
         }
     }
+    s->mTrades.clear();
+    if (theVersion >= 3) {
+        n = g.Count(kMaxTrades);
+        for (long k = 0; k < n && g.mOK; k++) {
+            long a = g.Get(), b = g.Get(), c = g.Get(), d = g.Get();
+            s->mTrades[std::make_pair(a, b)] = std::make_pair(c, d);
+        }
+    }
+    s->mLost.clear();
+    s->mInfluence.clear();
     s->mThreat.clear();
     s->mDangerW = s->mDangerH = 0;   // rebuilt at the next game second
     return g.mOK && g.mOffset == inBytes.size();

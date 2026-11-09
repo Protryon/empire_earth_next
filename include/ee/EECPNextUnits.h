@@ -31,6 +31,8 @@ bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName);
 
 // the events (EEComputerPlayer's handlers; nothing is decided there: they are queued for the script)
 void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit);
+// a hit one of the player's units dealt to inVictim (EEUnit::TakeHit): the lost layer's "dealt" side
+void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim);
 void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
 void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
 void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped);
