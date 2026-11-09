@@ -44,6 +44,7 @@
 #include "lle/GEPolygonArray.h"
 #include "ee/EEE3DNuclearExplosion.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4f43c7
 // SYNTHETIC: EXE 0x4f43d1
@@ -149,7 +150,7 @@ long EEE3DNuclearExplosion::DrawPass6()
     unsigned long i;
     GETransformation theCloudTransformation;
     GETransformation theStemTransformation;
-    GETransformation theFlashTransformation(gWorld.mTransformation);
+    GETransformation theFlashTransformation(gRenderSnapshot.mCamera);
     GETextureCoordinate theCoordinate;
     GE3DPoint thePosition;
     GEModel* theFlashModel = gEffect2DModel;

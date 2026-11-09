@@ -41,6 +41,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DShockwave.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e614f
 // SYNTHETIC: EXE 0x4e6159
@@ -170,7 +171,7 @@ long EEE2DShockwave::DrawPass6()
     float theStartSize = this->mGraphicEffect->GetStartSize();
     float theEndSize = this->mGraphicEffect->GetSize();
     float theFrom = this->mGraphicEffect->GetStartSize();
-    theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, 0.0f);
+    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
     const GE3DPoint& thePosition = this->mPosition;
     theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
     theTransformation.SetElement(3, 0, 0.0f);
