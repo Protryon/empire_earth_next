@@ -17,6 +17,8 @@
 //   4. the report (JSON) and an exit without the game's shutdown.
 // EE_AI_TRACE=1: the EE-AI debug strings go to --trace (default stdout) as "debugstring EE-AI ..." lines, the
 // harness's session-log form (tools/harness/ai_trace.py extract/compare/summary read the file as it is).
+// --checksum-trace FILE: after every communications tick, one line of the simulation's state hashes (ChecksumLine;
+// docs/RUST_PLAN.md R5a.1), so two runs name the first divergent tick (tools/sim_oracle.py ticks).
 #ifdef _WIN32
 #include <winsock2.h>
 #else
@@ -148,6 +150,9 @@
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
+extern long gU531CF0;               // EEPhysics.cpp: the user-input messages processed
+extern unsigned long gU531CF4;      // EEPhysics.cpp: the last out-of-synch checksum (GetOutOfSynchChecksum writes it)
+
 namespace {
 
 // ------------------------------------------------------------------------------------------------ options
@@ -167,6 +172,7 @@ struct Options {
     std::string mReport;                                 // the JSON report ("-": stdout)
     std::string mTrace;                                  // the EE-AI lines ("" stdout)
     std::string mLog;                                    // every debug string
+    std::string mChecksumTrace;                          // the per-CT checksum lines ("" none)
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
@@ -178,6 +184,7 @@ struct Options {
 Options sOptions;
 FILE* sTraceFile = NULL;
 FILE* sLogFile = NULL;
+FILE* sChecksumFile = NULL;
 std::mutex sOutLock;
 std::chrono::steady_clock::time_point sStartWall;
 std::chrono::steady_clock::time_point sGameWall;
@@ -229,6 +236,8 @@ void DebugHandler(const char* inText)
             fflush(sTraceFile);
         if (sLogFile)
             fflush(sLogFile);
+        if (sChecksumFile)
+            fflush(sChecksumFile);
     }
 #ifdef _WIN32
     TerminateProcess(GetCurrentProcess(), (UINT)inCode);
@@ -363,9 +372,50 @@ void Finish(const char* inOutcome)
     sDone.notify_all();
 }
 
+// The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
+// commands and update counts (2), calamities (0x10), air traffic (0x40), the continent manager's checksum (0x100).
+// Left out because reading them is not free of effects: 4, the map's window checksum, advances the map's checksum
+// cursor (EEMap::ComputeChecksum); and 0x20, the goals, copies each goal queue and dereferences goal members the
+// multiplayer game (flag 1 only) never reads. The game's own OOS check uses flag 1.
+const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
+
+// --checksum-trace: one line per communications tick (the physics thread, under the world's write lock, after the
+// CT's last physics tick). Only reads: no random draws, no caches filled; gU531CF4, the one global
+// GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
+//   CT <the game's CTs run, from 1> pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
+//      oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
+//      inputs=<user inputs executed>
+// The CT number counts from the game's first CT: the communications' own count (GetNumberOfCTsProcessedInPhysics)
+// includes the CTs the send thread sent before the sim took over, a wall-clock-dependent number (22-25 in six runs).
+// A line only after physics ticks ran: around a save the physics loop passes gPlatSimAfterTick without running a
+// tick, a wall-clock-dependent number of times (151 at one autosave of seed 2), and those lines would differ by run.
+unsigned long sChecksumLines = 0;
+unsigned long sChecksumLastPT = 0;
+
+void ChecksumLine()
+{
+    if (sChecksumFile == NULL || (sChecksumLines > 0 && gPhysics->mNumTicksDone == sChecksumLastPT))
+        return;
+    sChecksumLastPT = gPhysics->mNumTicksDone;
+    unsigned long theSaved = gU531CF4;
+    unsigned long theChecksum = gPhysics->GetOutOfSynchChecksum(false, kChecksumFlags);
+    gU531CF4 = theSaved;
+    unsigned long theUnits = 0;
+    unsigned long theCount = 0;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+        theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
+        theCount++;
+    }
+    fprintf(sChecksumFile, "CT %lu pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
+            ++sChecksumLines, gPhysics->mNumTicksDone, gPhysics->mCurrentTick,
+            gPhysics->mGameTime, (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum,
+            theCount, (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(), gU531CF0);
+}
+
 // the physics thread, after each communications tick, under the world's write lock
 void AfterTick()
 {
+    ChecksumLine();
     long theTime = gPhysics->mGameTime;
     unsigned long theCount = gWorld.GetNumPlayers();
     if (sResults.size() < theCount)
@@ -917,6 +967,8 @@ const char* kUsage =
     "  --trace FILE           the EE-AI trace lines (with EE_AI_TRACE=1 or --ai-trace; default stdout)\n"
     "  --ai-trace             EE_AI_TRACE=1\n"
     "  --log FILE             every debug string of the game\n"
+    "  --checksum-trace FILE  one line of state hashes per communications tick (tick, random seed, out-of-synch\n"
+    "                         checksum, units, AI); reading them changes nothing (tools/sim_oracle.py ticks)\n"
     "  --autosave-ms N        the game's autosave period in PT time (default 0: none; the game and the harness: 600000)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --quiet                no progress on stderr\n";
@@ -1105,6 +1157,8 @@ int EESimMain(int argc, char** argv)
             theTraceOn = true;
         else if (a == "--log")
             sOptions.mLog = Absolute(value());
+        else if (a == "--checksum-trace")
+            sOptions.mChecksumTrace = Absolute(value());
         else if (a == "--quiet")
             sOptions.mQuiet = true;
         else if (a == "--port-offset")
@@ -1140,6 +1194,13 @@ int EESimMain(int argc, char** argv)
     }
     if (!sOptions.mLog.empty())
         sLogFile = fopen(sOptions.mLog.c_str(), "w");
+    if (!sOptions.mChecksumTrace.empty()) {
+        sChecksumFile = fopen(sOptions.mChecksumTrace.c_str(), "w");
+        if (!sChecksumFile) {
+            fprintf(stderr, "EE-SIM: cannot write %s\n", sOptions.mChecksumTrace.c_str());
+            return 66;
+        }
+    }
     gPlatSimMode = 1;
     gPlatSimSeedSet = 1;
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
