@@ -11,6 +11,12 @@ class FSFileSpec;
 
 extern const unsigned long kSaveGameMajorVersion;   // 0x4420ac
 extern const unsigned long kSaveGameMinorVersion;   // 0x4420b0
+// port: from 0.253 a save holds the running game's own values where the original wrote others or nothing, so a game
+// loaded from it plays on as the game that was saved ("load equals continue", docs/RUST_PLAN.md R5a.2)
+inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 253;
+}
 
 // 0x14ce98: opens inName in data\inDirectory (the lobby's load checks); keseOK and outFile on success
 // (gDataPath->FindFile(inDirectory + inName, outFile), hence FSFileSpec*&)

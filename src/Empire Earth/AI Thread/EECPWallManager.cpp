@@ -45,6 +45,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EECommunications.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMapDimensions.h"
@@ -487,6 +488,23 @@ void EECPWallManager::StartNextWall()
         theModifier->Dereference();
 }
 
+// port: asks again for the path of the wall being planned (mFrom, mTo) as StartNextWall did, for a game loaded while
+// the wall was planned (save version 0.253); without a request the plan is dropped
+void EECPWallManager::RequestPath()
+{
+    EECPASGFlags theFlags;
+    gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, theFlags);
+    EEPlayer* theEnemy = this->mTo->mPlayer;
+    EEAIGPGModifierComputerPlayerWallPlanner* theModifier =
+        new EEAIGPGModifierComputerPlayerWallPlanner(theEnemy->GetPlayerID(), 0);
+    EETileCoordinate theTo = this->mFrom->GetTile();
+    EETileCoordinate theFrom = this->mTo->GetTile();
+    this->mRequest = gPathManager.RequestPath(theEnemy->GetPlayerID(), theFrom, theTo, &theFlags, 2, -1, theModifier, 1);
+    theModifier->Dereference();
+    if (this->mRequest == NULL)
+        this->ClearRequest();
+}
+
 // FUNCTION: EXE 0x49d815
 // Returns the player's capitol, else its first unit (NULL without units)
 EEComplexUnit* EECPWallManager::GetCenter(EEPlayer* inPlayer)
@@ -766,6 +784,33 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
         theResult = inFile.Read(this->mBuildingPlannedWall);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mNextTime);
+    // port (0.253): the wall being planned, as unit ids (Restore) with no path request yet (Update asks again)
+    if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        bool thePathing = false;
+        theResult = inFile.Read(thePathing);
+        if (theResult == kErrorOK && thePathing) {
+            theResult = inFile.Read(theValue);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theOther);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(this->mSize);
+            if (theResult == kErrorOK) {
+                this->mPathing = true;
+                this->mFrom = reinterpret_cast<EEComplexUnit*>(theValue);
+                this->mTo = reinterpret_cast<EEComplexUnit*>(theOther);
+            }
+        }
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theCount);
+        for (i = 0; i < theCount && theResult == kErrorOK; i++) {
+            RTSMapTileRun theRun(U2DPoint<long>(0, 0), U2DPoint<long>(0, 0));
+            theResult = theRun.mStart.Load(inFile);
+            if (theResult == kErrorOK)
+                theResult = theRun.mEnd.Load(inFile);
+            if (theResult == kErrorOK)
+                this->mRuns.push_back(theRun);
+        }
+    }
     return theResult;
 }
 
@@ -929,6 +974,22 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
         }
     }
     this->mNextTime += gPhysics->mGameTime;
+    // port (0.253): the wall being planned, its units back (Update requests its path again); without them none
+    if (this->mPathing) {
+        EEComplexUnit* theFrom = USavedID(this->mFrom) == -1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mFrom))));
+        EEComplexUnit* theTo = USavedID(this->mTo) == -1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTo))));
+        this->mFrom = this->mTo = NULL;
+        this->mPathing = false;
+        if (theFrom != NULL && theTo != NULL) {
+            this->mFrom = theFrom;
+            theFrom->Reference();
+            this->mTo = theTo;
+            theTo->Reference();
+            this->mPathing = true;
+        }
+    }
     return 0;
 }
 
@@ -945,38 +1006,15 @@ void EECPWallManager::ResetSizes()
 
 // FUNCTION: EXE 0x49eea6
 // Writes the planned walls, pending wall pieces (unit and player IDs), gate and wall tiles and the time to the
-// next wall; an unfinished path request is written as planned again (the running one is kept); returns the write error
+// next wall (port, from 0.253: and the wall being planned); returns the write error
 long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     // port: the original planned an unfinished path request's walls again here (AddWalls(mFrom), then ClearRequest),
     // so saving dropped the running request and moved the next wall 30 s on (PORT_LEARNINGS "Saving without side
-    // effects"). The file still gets that state, computed on a copy (AddWalls' rules, no references taken: only ids
-    // are written); the running game keeps its request.
-    std::vector<EECPWMWall> theWalls = this->mWalls;
+    // effects"). The file gets the running plans and timer, and after them the wall being planned (save version
+    // 0.253): Load and Update take it up again (R5a.2, "load equals continue").
+    const std::vector<EECPWMWall>& theWalls = this->mWalls;
     unsigned long theNextTime = this->mNextTime;
-    if (this->mPathing && !this->IsRequestDone()) {
-        EEComplexUnit* theFrom = this->mFrom;
-        std::vector<EECPWMWall>::iterator it = theWalls.begin();
-        while (it != theWalls.end()) {
-            if (it->mUnit == theFrom)
-                it = theWalls.erase(it);
-            else
-                it++;
-        }
-        std::vector<EEPlayer*> theEnemies;
-        for (unsigned long k = 1; k < gWorld.mNumPlayers; k++) {
-            EEPlayer* thePlayer = gWorld.mPlayers[k];
-            if (thePlayer != NULL && thePlayer != this->mPlayer && this->mPlayer->mEnemies[thePlayer->mPlayerID] != 0 &&
-                this->GetCenter(thePlayer) != NULL)
-                theEnemies.push_back(thePlayer);
-        }
-        if (theEnemies.size() > 0) {
-            std::sort(theEnemies.begin(), theEnemies.end(), EECPWMPlayerFarther(this, theFrom));
-            for (std::vector<EEPlayer*>::iterator theEnemy = theEnemies.begin(); theEnemy != theEnemies.end(); theEnemy++)
-                theWalls.push_back(EECPWMWall(theFrom, *theEnemy));
-        }
-        theNextTime = gPhysics->mGameTime + 30000;
-    }
     unsigned long theCount = theWalls.size();
     unsigned long theID;
     unsigned long thePlayerID;
@@ -1019,6 +1057,25 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     if (theResult == 0) {
         theTime = theNextTime - gPhysics->mGameTime;
         theResult = outFile.Write(theTime);
+    }
+    // port (0.253): the wall being planned (its town and enemy center, the size tried) and the runs found so far
+    bool thePathing = this->mPathing && this->mFrom != NULL && this->mTo != NULL;
+    if (theResult == 0)
+        theResult = outFile.Write(thePathing);
+    if (theResult == 0 && thePathing) {
+        theResult = outFile.Write(this->mFrom->GetUnitID());
+        if (theResult == 0)
+            theResult = outFile.Write(this->mTo->GetUnitID());
+        if (theResult == 0)
+            theResult = outFile.Write(this->mSize);
+    }
+    theCount = this->mRuns.size();
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
+    for (i = 0; i < theCount && theResult == 0; i++) {
+        theResult = this->mRuns[i].mStart.Save(outFile);
+        if (theResult == 0)
+            theResult = this->mRuns[i].mEnd.Save(outFile);
     }
     return theResult;
 }
@@ -1101,6 +1158,10 @@ void EECPWallManager::Update(unsigned long inTime)
     if (this->mPlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper)
         return;
     if (this->mPathing) {
+        if (this->mRequest == NULL) {   // port: a wall being planned when the game was saved (Restore)
+            this->RequestPath();
+            return;
+        }
         if (!this->IsRequestDone())
             return;
         if (this->IsPathUsable()) {
