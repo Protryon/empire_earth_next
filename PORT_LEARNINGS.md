@@ -2427,3 +2427,69 @@ the C++ members forward. The mesh, its rows, the render arrays and the materials
   `rust_build.py gate` PASS (940 tests), `eedata.py check` PASS, `gx_test` PASS, the sim oracle (seeds 2-7 identical
   to `ref`). Not run: `eemodel.py cppgate` (no model or texture bytes changed), tours, a saved game loaded through the
   new `Load` in the game (the codec is pinned by the goldens only).
+
+## R6: edit boxes and list boxes in Rust (ee_ui edit.rs, list.rs, 2026-11-09)
+
+`UIEditBox`'s text model (insertion with word wrap, deletion and re-wrap, caret moves, selection, single-line
+scrolling, the caret from a mouse location, the IME composition's bookkeeping: 30 members) and `UIListBox<T>`'s
+selection and scrolling (`ChangeSelectionIndex`, `CheckScrollBar`, the arrow keys, clicks, double clicks, auto-select,
+`SetLocation`, the bookkeeping after inserts and deletes) moved to `rust/crates/ee_ui`. The C++ classes keep every
+member, vtable and exported name; `include/lle/UIEditBox.h` gained only `friend struct UIEditBoxRust`, `UIListBox.h`
+`friend struct UIListBoxRust<T>`. What stays C++: construction, drawing (`CopyData`, `DrawPolygons`, `DrawTextA`), the
+clipboard, mouse and keyboard capture, key dispatch and repeat timers, focus, the list data (`std::vector<T>`),
+`FindString`, `std::sort`.
+
+- **The lines stay a `std::vector<UWideString>`.** The harness reads an edit box through `GetText`/`GetLineCount`
+  (header inlines over `mLines`) and a list box through `GetData`/`GetLineCount`, so Rust reads and writes the lines
+  through host calls (`ee_uicpp_edit_line`, `..._set_line`, `..._insert_line`, ...) instead of owning them. Only the
+  `UWideString` capacities differ from before (no one reads them).
+- **A template's host calls are a table.** `UIListBox<T>` is instantiated for `UWideString` (exported, emitted by
+  `UIComboBox.cpp`) and by the game for its own line types, whose subclasses override virtuals. `UIListBoxRust<T>` in
+  the header instantiates one static `EeUiListHost` of function pointers per `T` and passes it in `EeUiListRefs`; the
+  virtual members the algorithms call (`GetNumLines`, `ChangeSelectionIndex`, `ClearSelection`) are called virtually,
+  so an override still runs. The record offsets are `static_assert`ed in `Refs`' constructor, which every forwarder
+  instantiates.
+- **Re-entry.** A virtual host call can come back into Rust for the same object (`SetRectangle` -> the box's own
+  `SetLocation`; a list's virtual `ChangeSelectionIndex` -> the forwarder). Each FFI call loads the record at entry and
+  stores it at exit, and stores/reloads it around every host call with side effects (`Edit::call`, `List::call`), as
+  `UISlider` did.
+- **Text.** Everything that interprets text is in `text.rs`: characters through `Mbcs` (lengths, `CopyString`'s
+  prefixes, `_mbsninc` tails, `_mbschr(s, '\n')`, `_mbsnccnt`, spaces, digits) and the case-folded order
+  (`_mbsicmp`, `UWSNoCaseAlphaSort` now calls `ee_ui_text_less_no_case`). `SingleByte::inc` no longer steps past the
+  terminator. In `AddChar`, `\t` and `\r` are spaces to `_ismbcspace`, so their own branches never ran: kept.
+- **One divergence (a crash in the original):** `GetLocationFromIndex` with an index before the drawing index asked
+  `UWideString::CopyString` for 2^32 - k characters, and `_mbsncpy` padded that many NUL bytes into a small buffer. A
+  multi-line box gets a drawing index from `SetCaretLocation`'s `ComputeDrawingIndex` (a caret line whose prefix is as
+  wide as the box); typing at the start of such a line then crashed the scratch driver. Rust measures nothing there
+  (the caret at the left edge). The golden driver ran the original with that one line patched.
+- **One fix (`InsertLine`):** the inserted line's index was taken after `mData.insert`, from an iterator that a
+  reallocation had invalidated, so the selection's bump after an insert depended on the heap. The index is now taken
+  before the insert (the header's member template; the golden driver ran the original with the same change).
+- **`_mbsicmp` folds to lower case** in the UCRT's C locale (as `_stricmp`): `'_'` sorts before the letters. The
+  golden showed it; `ee_plat_core`'s POSIX fallback (`mbs_icmp`) folds to upper, so Linux and macOS sort names with
+  `[`, `\`, `]`, `^`, `_` or `` ` `` differently from Windows. Not changed here (it is ee_plat_core's).
+- **MSVC's `std::lower_bound`** is a binary search: over an unsorted range (`InsertLine(line, at, sort)` from an
+  arbitrary index) it does not give the first greater element; the replay searches the same way.
+- **Other original hazards kept:** a single character wider than a multi-line box's text area makes `AddChar` add
+  lines forever; `DeleteChar` with a selection (the game deletes the selection instead) can index past the lines.
+  The drivers avoid both, as the game does.
+- **Goldens:** `golden_edit.txt` (80 boxes x 60 operations: typing, paste, Enter, Backspace, Delete, arrows, Home,
+  End, selections, `SetText`, clears, mouse positions, `CheckScrollBar`, width and location changes, IME open, change,
+  close, scrolling) and `golden_list.txt` (60 boxes x 60 operations). The drivers over the forwarders print the same
+  files and also equal the original on 2,000 edit boxes x 150 operations (979k lines) and 400 list boxes x 100.
+  MSVC's `std::sort` is an insertion sort (stable) up to 32 elements; the list driver keeps lists shorter so that the
+  replay's stable sort matches.
+- **Python and line endings:** `PORT_LEARNINGS.md` and some goldens are CRLF, the Rust sources LF, and
+  `.gitattributes` stores bytes as they are (`* -text`): write files in binary. A Python heredoc that carries Rust
+  escapes (`b"\0"`, `'\n'`) put raw NUL and newline bytes into `text.rs`; write such code with an editor, not through
+  Python string literals.
+- **Gates run for this part:** both commits built EE-AOC and EE-SIM (`build.py -j 3 --sim`) and the windowed-software
+  profile, each 0 unresolved, 0 duplicates; the sim oracle (seeds 2-7, open tree) identical to `ref` after each;
+  `layout.json`'s 38 UI records unchanged from the pre-change build; the 24 names `presentation_bridge.c` resolves
+  (the `UIListBox<UWideString>`, `UIEditBox`, `UIComboBox`, `UICheckBox`, `UIRadioButton` members and vtables, the
+  `UWideString` members, `gUIManager`) present in both maps; `rust_build.py gate`'s steps pass except
+  `ee_plat_sys`'s two socket tests, which fail when the tests run in parallel on this shared machine and pass with
+  `--test-threads=1` (the crate is untouched here). No tour, screenshot or live edit-box/list-box use was run.
+- **Still C++ in R6's toolkit:** `UIComboBox`, the buttons, check boxes and radio buttons (state machines over tab
+  stops, sounds and capture), `UIControlsTable`, `UIManager`, every `CopyData`/drawing member, the edit box's key
+  dispatch and repeat timers.

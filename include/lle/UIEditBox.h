@@ -18,6 +18,7 @@ class UIScrollBar;
 
 class LLE_API UIEditBox : public UIControl {
     friend class UIComboBox;                // calls the protected mouse/tab handlers
+    friend struct UIEditBoxRust;            // the Rust text model's host calls (UIEditBox.cpp)
 public:
     UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness,

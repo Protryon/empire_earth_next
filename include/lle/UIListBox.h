@@ -4,10 +4,15 @@
 // after the unit's own code in declaration order (0x100629a3..0x10063f1e), the InsertLine member template after the
 // vector COMDATs (0x1006452c). Vtable 0x1009920c (UIControl's 34 slots, then AppendLine 0x88 .. ProcessUp 0xb8).
 // sizeof 0x134 (UILBString's members start at +0x134). Field names are provisional.
+// The selection and scrolling are Rust (rust/crates/ee_ui/src/list.rs, docs/RUST_PLAN.md R6): the members below forward
+// to it through UIListBoxRust<T>; the data, drawing, key repeat and the sort's algorithm (std::sort, with the order
+// from ee_ui/src/text.rs) stay here.
 // Requires lle/UIControl.h, lle/UIScrollBar.h, lle/TMPoll.h, lle/GERhombus.h, <vector>, <algorithm>.
 #ifndef LLE_UILISTBOX_H
 #define LLE_UILISTBOX_H
 #include "platform/PlatString.h"
+#include "rust/ee_rust.h"
+#include <stddef.h>
 
 #include <vector>
 #include <algorithm>
@@ -25,7 +30,7 @@ public:
     UWSNoCaseAlphaSort() {}                 // user-declared: exported ??0UWSNoCaseAlphaSort@@QAE@XZ (ICF-folded, 0x1093c)
     bool operator()(const UWideString& inLeft, const UWideString& inRight) const
     {
-        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)inLeft), reinterpret_cast<const unsigned char*>((const char*)inRight)) < 0;
+        return ee_ui_text_less_no_case(inLeft, inRight);   // ee_ui/src/text.rs
     }
 };
 
@@ -38,8 +43,10 @@ public:
 #else
 #define UILISTBOX_API LLE_API
 #endif
+template <class T> struct UIListBoxRust;
 template <class T> class UILISTBOX_API UIListBox : public UIControl {
     friend class UIComboBox;                // OpenListBox reads mLineHeight
+    friend struct UIListBoxRust<T>;         // the Rust algorithms' host calls (below)
 public:
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -90,15 +97,13 @@ public:
     {
         std::vector<T>::iterator theWhere = this->mData.begin() + inIndex;
         theWhere = std::lower_bound(theWhere, this->mData.end(), inLine, inSort);
+        // Fixed: the index was taken after the insert, from an iterator a reallocation had invalidated
+        unsigned long theIndex = theWhere - this->mData.begin();
         if (theWhere != this->mData.end())
             this->mData.insert(theWhere, inLine);
         else
             this->mData.push_back(inLine);
-        unsigned long theIndex = theWhere - this->mData.begin();
-        this->SetDirty(true);
-        if (this->mCurrentSelection >= theIndex && this->GetNumLines() > 1)
-            this->mCurrentSelection++;
-        this->CheckScrollBar();
+        ee_ui_list_inserted(typename UIListBoxRust<T>::Refs(this), theIndex);
     }
     std::vector<T>::const_iterator Begin() const { return this->mData.begin(); }
     std::vector<T>::iterator Begin() { return this->mData.begin(); }
@@ -190,6 +195,98 @@ protected:
     bool mHasSelection;                     // +0x133
 };
 
+
+// The Rust algorithms' view of a UIListBox<T> (rust/crates/ee_ui/src/list.rs): the object, its members from
+// mScrollBarBgOpacity on as the pinned record EeUiListFields, and a table of host functions instantiated per T. The
+// virtual members stay virtual.
+template <class T> struct UIListBoxRust {
+    typedef UIListBox<T> Box;
+    static Box* B(void* inList) { return static_cast<Box*>(inList); }
+    static unsigned long NumLines(void* inList) { return B(inList)->GetNumLines(); }
+    static void ChangeSelection(void* inList, unsigned long inIndex, bool inFire, bool inScrollTo)
+    {
+        B(inList)->ChangeSelectionIndex(inIndex, inFire, inScrollTo);
+    }
+    static void ClearSelection(void* inList) { B(inList)->ClearSelection(); }
+    static bool HasScrollBar(void* inList) { return B(inList)->mScrollBar != NULL; }
+    static long ScrollValue(void* inList) { return B(inList)->mScrollBar->GetSlider()->GetCurrentRangeValue(); }
+    static long ScrollMax(void* inList) { return B(inList)->mScrollBar->GetSlider()->GetMaxRange(); }
+    static void SetScrollValue(void* inList, unsigned long inValue) { B(inList)->mScrollBar->SetCurrentRangeValue(inValue); }
+    static void SetScrollRange(void* inList, unsigned long inMin, unsigned long inMax)
+    {
+        B(inList)->mScrollBar->SetRange(inMin, inMax);
+    }
+    static void ScrollSetRectangle(void* inList, const EeUiRect* inRectangle)
+    {
+        B(inList)->mScrollBar->SetRectangle(*reinterpret_cast<const GERectangle*>(inRectangle));
+    }
+    static void CreateScrollBar(void* inList, float inX, float inY, float inLength, unsigned long inPage,
+                                unsigned long inValue)
+    {
+        Box* theList = B(inList);
+        theList->mScrollBar = new UIScrollBar(theList->mId, GE2DPoint(inX, inY), inLength, 1, theList->mForm,
+                                              theList->mIndex, theList->mBorderThickness);
+        theList->mScrollBar->SetPageSize(inPage);
+        theList->mScrollBar->SetCurrentRangeValue(inValue);
+        theList->mScrollBar->SetBgColor(theList->mScrollBarBgColor);
+        theList->mScrollBar->SetBgOpacity(theList->mScrollBarBgOpacity);
+    }
+    static void SetDirty(void* inList) { B(inList)->SetDirty(true); }
+    static void Fire(void* inList, unsigned long inEvent) { B(inList)->FireTriggerEvent(inEvent); }
+    static void SetBgRectangle(void* inList, const EeUiRect* inRectangle)
+    {
+        B(inList)->SetBgRectangle(*reinterpret_cast<const GERectangle*>(inRectangle));
+    }
+    static void BaseSetLocation(void* inList, float inX, float inY) { B(inList)->UIControl::SetLocation(GE2DPoint(inX, inY)); }
+    static void MouseLocation(void* inList, EeUiPoint* outLocation)
+    {
+        const GE2DPoint& theMouse = B(inList)->GetMouseLocation();
+        outLocation->x = theMouse.GetX();
+        outLocation->y = theMouse.GetY();
+    }
+    static const EeUiListHost* Table()
+    {
+        static const EeUiListHost sTable = {NumLines, ChangeSelection, ClearSelection, HasScrollBar, ScrollValue,
+                                            ScrollMax, SetScrollValue, SetScrollRange, ScrollSetRectangle,
+                                            CreateScrollBar, SetDirty, Fire, SetBgRectangle, BaseSetLocation,
+                                            MouseLocation};
+        return &sTable;
+    }
+    struct Refs {
+        EeUiListRefs mRefs;
+        Refs(const Box* inList)
+        {
+            // the record's offsets from mScrollBarBgOpacity (ee_ui/src/list.rs ListFields)
+#define EE_UI_LIST_FIELD(member, field)                                                                               \
+    static_assert(offsetof(Box, member) - offsetof(Box, mScrollBarBgOpacity) == offsetof(EeUiListFields, field),      \
+                  "ee_ui/src/list.rs")
+            EE_UI_LIST_FIELD(mNumberLinesDisplayed, number_lines_displayed);
+            EE_UI_LIST_FIELD(mCurrentSelection, current_selection);
+            EE_UI_LIST_FIELD(mDrawLineCount, draw_line_count);
+            EE_UI_LIST_FIELD(mLineHeight, line_height);
+            EE_UI_LIST_FIELD(mAutoSelect, auto_select);
+            EE_UI_LIST_FIELD(mButtonDown, button_down);
+            EE_UI_LIST_FIELD(mScrollBarCaptured, scroll_bar_captured);
+            EE_UI_LIST_FIELD(mCopiedHasFocus, copied_has_focus);
+            EE_UI_LIST_FIELD(mCopiedHasSelection, copied_has_selection);
+            EE_UI_LIST_FIELD(mScrollBarRemoved, scroll_bar_removed);
+            EE_UI_LIST_FIELD(mCopiedScrollBarVisible, copied_scroll_bar_visible);
+            EE_UI_LIST_FIELD(mHasSelection, has_selection);
+#undef EE_UI_LIST_FIELD
+            static_assert(sizeof(Box) - offsetof(Box, mScrollBarBgOpacity) >= sizeof(EeUiListFields), "ee_ui/src/list.rs");
+            Box* theList = const_cast<Box*>(inList);
+            this->mRefs.list = theList;
+            this->mRefs.host = Table();
+            this->mRefs.fields = reinterpret_cast<EeUiListFields*>(&theList->mScrollBarBgOpacity);
+            this->mRefs.text = reinterpret_cast<EeUiRect*>(&theList->mTextRectangle);
+            this->mRefs.rect = reinterpret_cast<const EeUiRect*>(&theList->mRectangle);
+            this->mRefs.border = &theList->mBorderThickness;
+        }
+        operator const EeUiListRefs*() const { return &this->mRefs; }
+    };
+    static EeUiPoint Point(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+};
+
 template <class T>
 UIListBox<T>::UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
                         const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -254,23 +351,7 @@ template <class T> void UIListBox<T>::AppendStringArray(std::vector<T>& inLines)
 
 template <class T> void UIListBox<T>::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
 {
-    unsigned long theCount = this->GetNumLines();
-    if (theCount > 0 && inIndex >= this->GetNumLines())
-        inIndex = theCount - 1;
-    if (!this->mHasSelection || this->mCurrentSelection != inIndex) {
-        this->mCurrentSelection = inIndex;
-        this->SetDirty(true);
-        if (inFireEvent)
-            this->FireTriggerEvent(kControlTriggerSelectionChanged);
-        this->mHasSelection = true;
-    }
-    if (inScrollTo && this->mScrollBar) {
-        this->CheckScrollBar();
-        if (this->mCurrentSelection < (unsigned long)this->mScrollBar->GetSlider()->GetCurrentRangeValue())
-            this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection);
-        else if (this->mCurrentSelection >= this->mScrollBar->GetSlider()->GetCurrentRangeValue() + this->mNumberLinesDisplayed)
-            this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection - this->mNumberLinesDisplayed + 1);
-    }
+    ee_ui_list_change_selection_index(typename UIListBoxRust<T>::Refs(this), inIndex, inFireEvent, inScrollTo);
 }
 
 template <class T> void UIListBox<T>::ChangeWidth(unsigned long inWidth)
@@ -332,19 +413,13 @@ template <class T> long UIListBox<T>::CopyData()
 template <class T> void UIListBox<T>::DeleteAllEntries()
 {
     this->mData.clear();
-    this->mCurrentSelection = 0;
-    this->ClearSelection();
-    this->SetDirty(true);
-    this->CheckScrollBar();
+    ee_ui_list_cleared(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> void UIListBox<T>::DeleteLine(unsigned long inLine)
 {
     this->mData.erase(this->mData.begin() + inLine);
-    this->SetDirty(true);
-    if (this->mHasSelection && (this->mCurrentSelection > inLine || this->GetNumLines() > 0 && this->mCurrentSelection == this->GetNumLines()))
-        this->mCurrentSelection--;
-    this->CheckScrollBar();
+    ee_ui_list_deleted_line(typename UIListBoxRust<T>::Refs(this), inLine);
 }
 
 template <class T> long UIListBox<T>::DrawPolygons()
@@ -407,22 +482,7 @@ template <class T> bool UIListBox<T>::FindString(const T& inString, unsigned lon
 
 template <class T> void UIListBox<T>::SetLocation(const GE2DPoint& inLocation)
 {
-    UIControl::SetLocation(inLocation);
-    this->mTextRectangle.SetLeft(this->GetRectangle().GetLeft() + this->GetBorderThickness());
-    this->mTextRectangle.SetTop(this->GetRectangle().GetTop() + this->GetBorderThickness());
-    this->mTextRectangle.SetBottom(this->GetRectangle().GetBottom() - this->mBorderThickness);
-    this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - this->mBorderThickness);
-    if (this->mScrollBar != NULL && !this->mScrollBarRemoved) {
-        this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - kScrollBarWidth);
-        GE2DPoint theLocation;
-        theLocation = this->mTextRectangle.GetTopRight();
-        theLocation.SetX(theLocation.GetX() + 1.0f);
-        this->mScrollBar->SetRectangle(GERectangle(theLocation, GE2DPoint(this->mRectangle.GetRight(), this->mTextRectangle.mBottom)));
-    }
-    this->mNumberLinesDisplayed = UMFloor(this->mRectangle.mBottom - this->mRectangle.mTop - 2 * this->mBorderThickness) /
-                            this->mLineHeight;
-    this->SetBgRectangle(this->mTextRectangle);
-    this->CheckScrollBar();
+    ee_ui_list_set_location(typename UIListBoxRust<T>::Refs(this), UIListBoxRust<T>::Point(inLocation));
 }
 
 template <class T> void UIListBox<T>::SetScrollBarBgOpacity(float inOpacity)
@@ -492,18 +552,7 @@ template <class T> long UIListBox<T>::UpdateKeyboard()
 
 template <class T> void UIListBox<T>::ButtonDown()
 {
-    if (!this->mButtonDown && !this->mAutoSelect) {
-        long theFirst;
-        if (this->mScrollBar)
-            theFirst = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-        else
-            theFirst = 0;
-        unsigned long theLine = UMFloor((this->GetMouseLocation().GetY() - this->mTextRectangle.GetTop()) / this->mLineHeight + theFirst);
-        if (theLine < this->GetNumLines())
-            this->ChangeSelectionIndex(theLine, true, false);
-        this->FireTriggerEvent(kControlTriggerButtonDown);
-        this->mButtonDown = true;
-    }
+    ee_ui_list_button_down(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> long UIListBox<T>::MouseLButtonDown()
@@ -524,17 +573,11 @@ template <class T> long UIListBox<T>::MouseLButtonDown()
 
 template <class T> long UIListBox<T>::MouseLButtonUp()
 {
-    GERectangle theRectangle;
     long theResult = kErrorOK;
     if (this->mScrollBarCaptured)
         theResult = this->mScrollBar->MouseLButtonUp();
-    else if (this->mTextRectangle.Contains(this->GetMouseLocation())) {
-        theRectangle = this->mTextRectangle;
-        theRectangle.SetTop((float)(this->mCurrentSelection - this->GetDisplayLine()) * (float)this->mLineHeight + theRectangle.GetTop());
-        theRectangle.SetBottom(theRectangle.GetTop() + this->mLineHeight);
-        if (theRectangle.Contains(this->GetMouseLocation()))
-            this->ButtonUp();
-    }
+    else if (ee_ui_list_up_on_selection(typename UIListBoxRust<T>::Refs(this)))
+        this->ButtonUp();
     this->ReleaseCapturedMouse();
     this->mScrollBarCaptured = false;
     this->mButtonDown = false;
@@ -544,17 +587,7 @@ template <class T> long UIListBox<T>::MouseLButtonUp()
 template <class T> long UIListBox<T>::MouseLButtonDoublePressed()
 {
     long theResult = kErrorOK;
-    if (this->mTextRectangle.Contains(this->GetMouseLocation())) {
-        long theFirst;
-        if (this->mScrollBar)
-            theFirst = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-        else
-            theFirst = 0;
-        unsigned long theLine = UMFloor((this->GetMouseLocation().GetY() - this->mTextRectangle.GetTop()) / this->mLineHeight + theFirst);
-        if (theLine < this->GetNumLines())
-            this->ChangeSelectionIndex(theLine, true, false);
-        this->FireTriggerEvent(kControlTriggerDoubleClicked);
-    } else
+    if (!ee_ui_list_double_pressed(typename UIListBoxRust<T>::Refs(this)))
         theResult = UIControl::MouseLButtonDoublePressed();
     return theResult;
 }
@@ -564,65 +597,29 @@ template <class T> long UIListBox<T>::MouseMove(const GE2DPoint& inLocation)
     long theResult = kErrorOK;
     if (this->mScrollBarCaptured)
         theResult = this->mScrollBar->MouseMove(inLocation);
-    else if (this->mAutoSelect && this->mTextRectangle.Contains(inLocation)) {
-        unsigned long theFirst = 0;
-        if (this->mScrollBar)
-            theFirst = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-        long theLine = (unsigned long)UMFloor(this->GetMouseLocation().GetY() - this->mTextRectangle.GetTop()) / this->mLineHeight + theFirst;
-        if (theLine >= (long)(this->mNumberLinesDisplayed + theFirst))
-            theLine = this->mNumberLinesDisplayed + theFirst - 1;
-        if (theLine < (long)this->GetNumLines())
-            this->ChangeSelectionIndex(theLine, true, false);
-    }
+    else
+        ee_ui_list_mouse_move(typename UIListBoxRust<T>::Refs(this), UIListBoxRust<T>::Point(inLocation));
     return theResult;
 }
 
 template <class T> void UIListBox<T>::ProcessDown()
 {
-    if (this->mCurrentSelection + 1 < this->GetNumLines()) {
-        this->ChangeSelectionIndex(this->mCurrentSelection + 1, true, false);
-        if (this->mScrollBar) {
-            if ((long)this->mCurrentSelection < this->mScrollBar->GetSlider()->GetCurrentRangeValue())
-                this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection);
-            else if (this->mCurrentSelection >= this->mScrollBar->GetSlider()->GetCurrentRangeValue() + this->mNumberLinesDisplayed)
-                this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection - this->mNumberLinesDisplayed + 1);
-        }
-        this->SetDirty(true);
-    }
+    ee_ui_list_down(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> void UIListBox<T>::ProcessEnd()
 {
-    if (this->mCurrentSelection < this->GetNumLines()) {
-        if (this->mScrollBar)
-            this->mScrollBar->SetCurrentRangeValue(this->mScrollBar->GetSlider()->GetMaxRange());
-        this->ChangeSelectionIndex(this->GetNumLines() - 1, true, false);
-        this->SetDirty(true);
-    }
+    ee_ui_list_end(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> void UIListBox<T>::ProcessHome()
 {
-    if (this->mCurrentSelection > 0) {
-        if (this->mScrollBar)
-            this->mScrollBar->SetCurrentRangeValue(0);
-        this->ChangeSelectionIndex(0, true, false);
-        this->SetDirty(true);
-    }
+    ee_ui_list_home(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> void UIListBox<T>::ProcessUp()
 {
-    if (this->mCurrentSelection != 0) {
-        this->ChangeSelectionIndex(this->mCurrentSelection - 1, true, false);
-        if (this->mScrollBar) {
-            if (this->mCurrentSelection < (unsigned long)this->mScrollBar->GetSlider()->GetCurrentRangeValue())
-                this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection);
-            else if (this->mCurrentSelection >= this->mScrollBar->GetSlider()->GetCurrentRangeValue() + this->mNumberLinesDisplayed)
-                this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection - this->mNumberLinesDisplayed + 1);
-        }
-        this->SetDirty(true);
-    }
+    ee_ui_list_up(typename UIListBoxRust<T>::Refs(this));
 }
 
 template <class T> void UIListBox<T>::TabbedFrom()
@@ -636,29 +633,7 @@ template <class T> void UIListBox<T>::TabbedFrom()
 
 template <class T> void UIListBox<T>::CheckScrollBar()
 {
-    if (this->mScrollBar != NULL && !this->mScrollBarRemoved) {
-        if (this->GetNumLines() <= this->mNumberLinesDisplayed) {
-            this->mScrollBarRemoved = true;
-            this->SetDirty(true);
-            this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - this->GetBorderThickness());
-            this->SetBgRectangle(this->mTextRectangle);
-        } else
-            this->mScrollBar->SetRange(0, this->GetNumLines() - this->mNumberLinesDisplayed);
-    } else if (this->GetNumLines() > this->mNumberLinesDisplayed) {
-        if (this->mScrollBar == NULL) {
-            this->mScrollBar = new UIScrollBar(this->mId, GE2DPoint(this->mRectangle.GetRight() - kScrollBarWidth, this->mTextRectangle.mTop),
-                                         this->mTextRectangle.mBottom - this->mTextRectangle.mTop, 1, this->mForm, this->mIndex,
-                                         this->mBorderThickness);
-            this->mScrollBar->SetPageSize(this->mNumberLinesDisplayed > 1 ? this->mNumberLinesDisplayed - 1 : this->mNumberLinesDisplayed);
-            this->mScrollBar->SetCurrentRangeValue(this->mCurrentSelection);
-            this->mScrollBar->SetBgColor(this->mScrollBarBgColor);
-            this->mScrollBar->SetBgOpacity(this->mScrollBarBgOpacity);
-        }
-        this->mTextRectangle.mRight = this->mRectangle.GetRight() - kScrollBarWidth;
-        this->mScrollBar->SetRange(0, this->GetNumLines() - this->mNumberLinesDisplayed);
-        this->SetBgRectangle(this->mTextRectangle);
-        this->mScrollBarRemoved = false;
-    }
+    ee_ui_list_check_scroll_bar(typename UIListBoxRust<T>::Refs(this));
 }
 
 #endif

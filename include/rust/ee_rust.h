@@ -84,6 +84,17 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `kControlTriggerEnterPressed`.
+constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
+
+/// `kScrollBarWidth`.
+constexpr static const float SCROLL_BAR_WIDTH = 20.0;
+
+/// `kErrorOK`, `kErrorFailed`.
+constexpr static const long ERROR_OK = 0;
+
+constexpr static const long ERROR_FAILED = 9;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
 
@@ -104,6 +115,13 @@ constexpr static const unsigned long PROPORTIONAL = 4;
 
 /// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
 constexpr static const unsigned long FROM_START_EDGE = 5;
+
+/// `kControlTriggerSelectionChanged`, `kControlTriggerDoubleClicked`, `kControlTriggerButtonDown`.
+constexpr static const unsigned long TRIGGER_SELECTION_CHANGED = 1003;
+
+constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
+
+constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
@@ -910,6 +928,64 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
+/// `static_assert`ed in `UIEditBox.cpp`).
+struct EeUiEditFields {
+  float caret_x;
+  float saved_bg_opacity;
+  unsigned long selection_start_line;
+  unsigned long copied_selection_start_line;
+  unsigned long copied_selection_end_line;
+  unsigned long max_chars;
+  unsigned long char_scroll;
+  unsigned long caret_line;
+  unsigned long visible_line_count;
+  unsigned long ime_composition_length;
+  unsigned long ime_start_index;
+  unsigned long ime_start_line;
+  unsigned long copied_ime_start_index;
+  unsigned long copied_ime_start_line;
+  unsigned long copied_ime_end_index;
+  unsigned long copied_ime_end_line;
+  long copied_selection_end_index;
+  long copied_selection_start_index;
+  long selection_start_index;
+  long caret_index;
+  long drawing_index;
+  bool is_text_selected;
+  bool key_repeating;
+  bool cursor_on;
+  bool selecting;
+  bool copied_cursor_on;
+  bool copied_is_text_selected;
+  bool numbers_only;
+  bool is_single_line;
+  bool scroll_bar_captured;
+  bool scroll_bar_visible;
+  bool is_password_box;
+  bool ime_active;
+  bool copied_ime_active;
+  bool saved_always_dirty;
+};
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
+/// `mBorderThickness`.
+struct EeUiEditRefs {
+  void *edit;
+  EeUiEditFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -928,12 +1004,57 @@ struct EeUiLayout {
   unsigned long bottom_type;
 };
 
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
+/// The host functions of one `UIListBox<T>` instantiation.
+struct EeUiListHost {
+  unsigned long (*num_lines)(void *list);
+  void (*change_selection)(void *list, unsigned long index, bool fire, bool scroll_to);
+  void (*clear_selection)(void *list);
+  bool (*has_scroll_bar)(void *list);
+  long (*scroll_value)(void *list);
+  long (*scroll_max)(void *list);
+  void (*set_scroll_value)(void *list, unsigned long value);
+  void (*set_scroll_range)(void *list, unsigned long min, unsigned long max);
+  void (*scroll_set_rectangle)(void *list, const EeUiRect *r);
+  void (*create_scroll_bar)(void *list,
+                            float x,
+                            float y,
+                            float length,
+                            unsigned long page,
+                            unsigned long value);
+  void (*set_dirty)(void *list);
+  void (*fire)(void *list, unsigned long event);
+  void (*set_bg_rectangle)(void *list, const EeUiRect *r);
+  void (*base_set_location)(void *list, float x, float y);
+  void (*mouse_location)(void *list, EeUiPoint *out);
+};
+
+/// `UIListBox`'s members from `mScrollBarBgOpacity` to `mHasSelection`, in order (offsets `static_assert`ed in
+/// `lle/UIListBox.h`).
+struct EeUiListFields {
+  float scroll_bar_bg_opacity;
+  unsigned long number_lines_displayed;
+  unsigned long current_selection;
+  unsigned long draw_line_count;
+  unsigned long line_height;
+  bool auto_select;
+  bool button_down;
+  bool scroll_bar_captured;
+  bool copied_has_focus;
+  bool copied_has_selection;
+  bool scroll_bar_removed;
+  bool copied_scroll_bar_visible;
+  bool has_selection;
+};
+
+/// One list box as Rust sees it: the object, its host table, its record from `mScrollBarBgOpacity` on,
+/// `mTextRectangle`, `mRectangle` and `mBorderThickness`.
+struct EeUiListRefs {
+  void *list;
+  const EeUiListHost *host;
+  EeUiListFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
 };
 
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
@@ -3239,6 +3360,133 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
 
+/// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
+size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::BackSpaceChar`.
+void ee_ui_edit_back_space_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CalculateCaretFromMouseLocation` (the outputs are written after the model ran: a caller may pass the
+/// box's own caret members).
+void ee_ui_edit_caret_from_mouse(const EeUiEditRefs *refs,
+                                 EeUiPoint at,
+                                 unsigned long *out_line,
+                                 long *out_index);
+
+/// `UIEditBox::ChangeWidth`.
+void ee_ui_edit_change_width(const EeUiEditRefs *refs, unsigned long width);
+
+/// `UIEditBox::CheckScrollBar`.
+void ee_ui_edit_check_scroll_bar(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ComputeCaretLocation`.
+void ee_ui_edit_compute_caret_location(const EeUiEditRefs *refs, bool update_x);
+
+/// `UIEditBox::ComputeDrawingIndex`.
+void ee_ui_edit_compute_drawing_index(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DecrementCaretPos`.
+void ee_ui_edit_decrement_caret_pos(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteChar`.
+void ee_ui_edit_delete_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteLine`.
+void ee_ui_edit_delete_line(const EeUiEditRefs *refs, unsigned long line);
+
+/// `UIEditBox::DeleteSelectedText`.
+void ee_ui_edit_delete_selected_text(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteText(start index, start line, end index, end line)`.
+void ee_ui_edit_delete_range(const EeUiEditRefs *refs,
+                             unsigned long start_index,
+                             unsigned long start_line,
+                             unsigned long end_index,
+                             unsigned long end_line);
+
+/// `UIEditBox::DeleteText()`.
+void ee_ui_edit_clear(const EeUiEditRefs *refs);
+
+/// `UIEditBox::GetLocationFromIndex`.
+void ee_ui_edit_location_from_index(const EeUiEditRefs *refs,
+                                    unsigned long index,
+                                    unsigned long line,
+                                    EeUiPoint *out);
+
+/// `UIEditBox::GetSelectedText` into the `UWideString` `out` (left alone without a selection).
+void ee_ui_edit_selected_text(const EeUiEditRefs *refs, void *out);
+
+/// `UIEditBox::GetText(start line, end line, start index, end index)` into the `UWideString` `out`.
+void ee_ui_edit_text(const EeUiEditRefs *refs,
+                     unsigned long start_line,
+                     unsigned long end_line,
+                     unsigned long start_index,
+                     unsigned long end_index,
+                     void *out);
+
+/// `UIEditBox::IncrementCaretPos`.
+void ee_ui_edit_increment_caret_pos(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::ProcessDownKey`.
+void ee_ui_edit_down_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEndKey`.
+void ee_ui_edit_end_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEnterKey`.
+void ee_ui_edit_enter_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessHomeKey`.
+void ee_ui_edit_home_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessUpKey`.
+void ee_ui_edit_up_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollLeft`.
+void ee_ui_edit_scroll_left(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollRight`.
+void ee_ui_edit_scroll_right(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::SelectText()`.
+void ee_ui_edit_select_all(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SelectText(caret index, anchor index, caret line, anchor line)`.
+void ee_ui_edit_select(const EeUiEditRefs *refs,
+                       unsigned long caret_index,
+                       unsigned long start_index,
+                       unsigned long caret_line,
+                       unsigned long start_line);
+
+/// `UIEditBox::SetCaretLocation`.
+void ee_ui_edit_set_caret_location(const EeUiEditRefs *refs,
+                                   unsigned long index,
+                                   unsigned long line);
+
+/// `UIEditBox::SetIndexFromUpDownOffset`.
+void ee_ui_edit_index_from_up_down_offset(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SetLocation`.
+void ee_ui_edit_set_location(const EeUiEditRefs *refs, EeUiPoint at);
+
+/// `UIEditBox::SetText`.
+void ee_ui_edit_set_text(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::OpenIMECompositionString`.
+long ee_ui_edit_ime_open(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CloseIMECompositionString`.
+long ee_ui_edit_ime_close(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ChangeIMECompositionString` (the C++ sets `mIMEAttributes`).
+long ee_ui_edit_ime_change(const EeUiEditRefs *refs, const char *text, unsigned long cursor);
+
+/// `UIEditBox::RemoveIMECompositionString`.
+void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
+
+/// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
+void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -3263,6 +3511,54 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIListBox::ChangeSelectionIndex`.
+void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
+                                       unsigned long index,
+                                       bool fire,
+                                       bool scroll_to);
+
+/// `UIListBox::CheckScrollBar`.
+void ee_ui_list_check_scroll_bar(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteAllEntries` after `mData.clear()`.
+void ee_ui_list_cleared(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteLine` after the erase.
+void ee_ui_list_deleted_line(const EeUiListRefs *refs, unsigned long line);
+
+/// `UIListBox::InsertLine` after the insert at `index`.
+void ee_ui_list_inserted(const EeUiListRefs *refs, unsigned long index);
+
+/// `UIListBox::ButtonDown`.
+void ee_ui_list_button_down(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonDoublePressed` inside the text (false: the C++ hands the click to `UIControl`).
+bool ee_ui_list_double_pressed(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonUp`'s test: the button went up on the selected line.
+bool ee_ui_list_up_on_selection(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseMove` off the scroll bar.
+void ee_ui_list_mouse_move(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UIListBox::ProcessDown`.
+void ee_ui_list_down(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessUp`.
+void ee_ui_list_up(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessHome`.
+void ee_ui_list_home(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessEnd`.
+void ee_ui_list_end(const EeUiListRefs *refs);
+
+/// `UIListBox::SetLocation`.
+void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
+bool ee_ui_text_less_no_case(const char *left, const char *right);
 
 /// The constructor's track and thumb ([`slider::init`]).
 void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);
