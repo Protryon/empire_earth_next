@@ -11,6 +11,8 @@ use ee_mixer as _;
 use ee_net_tcp as _;
 use ee_random as _;
 use wgpu_native as _;
+// the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
+use ee_data as _;
 
 // The platform layer's leaves: its `#[no_mangle]` functions and variables reach the staticlib through this
 // dependency.

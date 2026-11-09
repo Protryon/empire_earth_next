@@ -1,5 +1,5 @@
-r"""The two text containers: a strict YAML subset and CSV with leading directives. The C++ loader
-(src/Empire Earth/Database/EEDataText.cpp) implements the same grammar; keep the two in step.
+r"""The two text containers: a strict YAML subset and CSV with leading directives. The Rust compiler
+(rust/crates/ee_data/src/text.rs) implements the same grammar; keep the two in step.
 
 YAML subset ("strict profile", docs/MODDING_PLAN.md 3.3): UTF-8; indentation by spaces; block mappings
 (`key: value`, `key:` + an indented block, or a block sequence at the same indent); block sequences (`- value`,

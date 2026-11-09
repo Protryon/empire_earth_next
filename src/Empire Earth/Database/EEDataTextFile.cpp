@@ -1,13 +1,13 @@
 // EEDbFindFile: the game's seam for the text db tables (new unit, not in the original game). The database loaders
 // look their files up through this instead of FSPath::FindFile. When a table's text form (tools/eedata: the .dat's
-// name with .csv or .yaml) is on the path, it is compiled (EEDataText.cpp) into the binary db file and served as an
+// name with .csv or .yaml) is on the path, it is compiled (the Rust compiler, rust/crates/ee_data) into the binary db file and served as an
 // FSMemoryFile, so the loaders read the same record stream as from the .dat; otherwise the .dat is found as before.
 // The path's own order applies: a loose Data\db\<table>.csv wins over the archive. When both the text and a .dat
 // are loose, the text wins.
 // The text tables reference each other's rows by id: one EEDataText::Content serves every table, reading the other
 // tables' texts through the same path when a reference needs their ids (each text is parsed once).
 // EE_DUMP_CONTENT=<file> (tests): every db table served, text or .dat, is appended to <file> as the content dump
-// (EEDataDump.cpp; docs/MODDING_PLAN.md gate G1).
+// (docs/MODDING_PLAN.md gate G1).
 #include <windows.h>
 #include <set>
 #include <string>
@@ -26,7 +26,6 @@
 #include "ee/EETechTreeRecord.h"
 #include "ee/EEUnitClassRecord.h"
 
-#include "EEDataDump.h"
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
 

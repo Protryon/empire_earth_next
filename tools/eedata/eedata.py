@@ -186,6 +186,10 @@ def main():
     p.add_argument('--check', action='store_true')
     p = sub.add_parser('cppgen')
     p.add_argument('--check', action='store_true')
+    p = sub.add_parser('rustgen')
+    p.add_argument('--check', action='store_true')
+    p = sub.add_parser('rulesgen')
+    p.add_argument('--check', action='store_true')
     p = sub.add_parser('extra')
     p.add_argument('text')
     p.add_argument('out')
@@ -212,6 +216,12 @@ def main():
     if a.cmd == 'cppgen':
         import cppgen
         sys.exit(cppgen.run(a, spec))
+    if a.cmd == 'rustgen':
+        import rustgen
+        sys.exit(rustgen.run(a, spec))
+    if a.cmd == 'rulesgen':
+        import rulesgen
+        sys.exit(rulesgen.run(a))
     if a.cmd == 'census':
         import census
         sys.exit(census.run(a, spec))

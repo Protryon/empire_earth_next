@@ -1839,3 +1839,31 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   source, which the conductor and `DX7Movie` rely on before freeing it.
 - **cbindgen writes `Option<alias>` literally** when the alias is a function pointer; a callback parameter must be
   spelled inline as `Option<unsafe extern "C" fn(...)>` to become a nullable C function pointer.
+
+## R2: the data layer in Rust (ee_data, 2026-11-08)
+
+- **`std::from_chars` and `f32::from_str` agree.** The text compiler's floats moved to `f32::from_str` (correctly
+  rounded); `cppgate` compared C++ and Rust on a 12,074-string sweep (tables' float cells, subnormals, 7e-46 / 7.1e-46
+  halfway cases, exact-tie decimals) with identical bits and messages; from_chars' `result_out_of_range` and Rust's
+  inf/0 land in the same message through the C++'s own post-checks.
+- **`strchr` matches the NUL.** The C++ YAML subset's `strchr(" [,:-", s[i - 1])` and the plain-scalar check treat a
+  NUL byte as "in the set" (the terminator). The port keeps that (`strchr_set`), byte-level parity needs it.
+- **cbindgen writes a dependency's functions only from loose sources.** `parse_deps` follows the crate tree but
+  functions from any crate other than the binding crate are skipped ("not used"); xtask adds
+  `rust/crates/ee_data/src/ffi.rs` with `with_src` to get them into `include/rust/ee_rust.h`.
+- **A shared `CARGO_TARGET_DIR` hides worktrees' `cargo run` binaries.** Cargo's uplifted `target/debug/xtask.exe` is
+  whichever worktree linked it last; `env!("CARGO_MANIFEST_DIR")` then pointed at another worktree (`cbindgen` wrote the
+  r1-core header once from the r2-data worktree). Touch the crate or run with a private target dir before relying on it.
+- **Generated headers next to a staged unit must end in `.h`.** `verify.stage_source` copies a unit's sibling `*.h`
+  to `C:\EEX\` (or `EE_ORIG_SRC_ROOT`); a generated `.inl` was not found. Hence `EERulesGenDecode.h`.
+- **Rules live in Rust; the game keeps a C++ copy.** `EERules` holds a Rust handle (`ee_data_rules_*`); every rules
+  field, default and dump key is generated from `tools/eedata/rules_schema.json` (`rulesgen.py`); C++ reads a binary
+  snapshot after each change (`Refresh`). The dump formats `(long)float_bits` as signed like the Windows 32-bit `long`
+  (gate pins it); Rust's `RuleNumber::constant` truncates as x86's `cvttss2si` does (INT_MIN out of range).
+- **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
+  recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
+  recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
+- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
+  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
+  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
+  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
