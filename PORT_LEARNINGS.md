@@ -1817,3 +1817,19 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   continent (`GetContinent(x, y, kAIPathLandMass)`) refuses every site: take the town's continent.
 - **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
   while the town's own fish lie in other water by it.
+
+## The next computer player's settlement-first rule and the binary tree (2026-11-09, docs/AI_RESEARCH.md §8.36)
+
+- **A binary data tree has no row ids.** The Lua AIs name classes and techs by the text tables' `id`; on the binary
+  tree (`.dat` only) every class was `dbobjects_<n>`, so boom found no `citizen`, released every site and never
+  trained, and `research copper_tower_upgrade` was refused as unknown. The gates' AI games play classic only, so
+  nothing caught it. The binary tree now carries `Data/db/dbobjects.ids` / `dbtechtree.ids` (`key id` lines from
+  `ids.generate`, the same ids the converter gives the text rows); `EEDbFindFile` reads them with the `.dat`. The
+  boom traces of both trees are identical (seeds 26-27, 40 minutes).
+- **`EETile::IsVisibleTo` is "in sight now" (a count of the units seeing it), not "explored".** A home patch 7 tiles
+  from the town centre read as unexplored all game, and the finders (which test it) never sent anyone there. Building
+  placement (`EECanPlaceUnitOnTile`) tests it per footprint tile too: a settlement at a site nobody stands by went 5-6
+  tiles off, or nowhere. The next engine sends a walker and keeps it standing there until the settlement is placed,
+  and a resource by the player's own finished drop site skips the visibility test.
+- **A resource centre can hold gold and iron 6 tiles apart.** A per-site `has_drop` from its first unit said the iron
+  had a drop site; per-resource `drop`/`ready` in the view, and a settlement placed by the units that have none.
