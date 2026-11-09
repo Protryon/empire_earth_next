@@ -4,13 +4,13 @@
 use std::ffi::c_char;
 
 // wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
-use wgpu_native as _;
 use ee_codec as _;
-#[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
-use ee_net_tcp as _;
 #[cfg(not(test))] // its FFI imports the C++ shim
 use ee_mixer as _;
+#[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
+use ee_net_tcp as _;
 use ee_random as _;
+use wgpu_native as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
