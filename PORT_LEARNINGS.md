@@ -2341,3 +2341,54 @@ harness's hooks and `layout_gen.py`'s offsets are untouched (`UIForm` gained onl
   `rust_build.py gate`, the seeded sim oracle (seeds 2-7 identical to `ref`), `layout.json`'s records for UIForm,
   UIManager, UISlider, UITextLabel and UILayoutUtility unchanged, and the harness's 34 UI symbols present in the map.
   No tour or screenshot comparison was run here.
+
+## R4.3, second part: GETerrainMesh's edits, fog and file codec (ee_ge terrain_mesh.rs, 2026-11-09)
+
+`ComputeVertexNormal`, `ComputeShorelines`, `UpdateFogOfWar`, `Load` and `Save` are Rust (`ee_ge` `terrain_mesh.rs`);
+the C++ members forward. The mesh, its rows, the render arrays and the materials stay C++. `ee_dx7` now takes
+`GETransformation::Apply` (the composition and the point and vector forms) from `ee_ge` instead of its own copy; its
+`golden_draw` model sections pin it.
+
+- **Simulation code.** The random map generator, `RTSMap`'s height edits and the scenario editor call
+  `ComputeVertexNormal` and `ComputeShorelines` while a game is set up and played, and units read the normals and the
+  water bits, so RUST_PLAN 2.1 applies: the C++'s `f32` order (`d + ne + nw`, `ne + n - nw`), `unsigned long` index
+  tests that wrap (`inY - 1 < mPointRowCount`), a neighbour row read only when it exists. The Rust returns the
+  unquantized normal; the C++ stores `GetQuantizedVersion()` of it (already Rust). `ComputeShorelines` returns the
+  bits for `SetWaterInfo`, or -1 where the C++ leaves a land tile alone.
+- **A file codec as a field stream.** `Load`/`Save` keep going field by field through the file's own typed
+  `Read`/`Write` (`EeGeFieldIo`, filled by `Graphics Engine/GERustIO.h` from an `FSFile&`; `io.rs`), so the bytes,
+  each file class's short-read rule (`FSMemoryFile` reads nothing, `FSFileSpec` reads a part and says
+  `kErrorFailed`) and what a failed load leaves behind are the C++'s. A whole-block read would have changed all three.
+  `Read(long&)` goes through a 32-bit copy of the old value and stores it back even on failure; the Rust repeats that
+  for the map size and the fractal seed. `Load` is split where it builds C++ objects: Rust reads the size, the C++
+  runs `CreateFlatMesh`, Rust reads the tiles, points and seed (an unregistered texture set id becomes 0 through a
+  256-entry table the C++ fills), the C++ recomputes the fractal and the normals. The engine's codes are
+  `kErrorFailed` = 9 and `kErrorEndOfFile` = 0x12, not small negatives.
+- **`UpdateFogOfWar`** reads the visible area through `EeGeTerrainFog` (`GERustTerrain.h`): the two `[257][257]`
+  point-visibility arrays, and the render vertices' `mVisibility` reached as a pointer plus `sizeof(GETMRenderVertex)`
+  (0x28 on 32-bit, larger on LP64), so no render-vertex mirror is needed.
+- **Goldens** (`golden_terrain_mesh.txt`, 6,146 cases over six meshes including 1 x 1 and space maps): the original
+  function text compiled alone (`#define private public` around `GETerrainMesh.h` only, after the STL), with the real
+  `CreateFlatMesh` and `InitializePlanes`, a driver `FSFile` with `FSMemoryFile`'s rules and a write limit, cut files
+  at every field boundary kind, and `GEVector::GetQuantizedVersion` replaced by a copy so the stored normals are the
+  unquantized vectors (the quantization would hide a last-bit difference). The driver relinked over the forwarders
+  and `ee_rmap_gatelib` printed the same file.
+- **Line endings:** `.gitattributes` is `* -text`, so each file keeps its own (the sources are LF,
+  `PORT_LEARNINGS.md` is CR LF). From Git Bash on Windows, a text-mode Python write turns LF into CR LF and `sed -i`
+  turns CR LF into LF: edit in binary, or with `newline=""`, and check `git diff --stat`.
+- **`GEPhysicalModel`'s per-triangle tests** (`physical.rs`): the line-against-triangle step of
+  `Intersects(line)` (the plane through the triangle, the crossing, the line from the first corner through it against
+  the opposite edge) and `ComputeTriangleBox`. Units test projectile lines against target models with them
+  (`EEUnitClass.cpp`), so they are simulation code. The C++ keeps the walks (materials, LODs, sub-models, the vertex
+  arrays behind `GEVertexArray`'s virtuals) and the transform set-up. The distance is written whenever the plane is not
+  parallel, hit or not, as the C++'s reference was. Golden: `golden_physical.txt`, 40,000 triangles and lines (through
+  the first corner, parallel to the plane, aimed inside, anywhere), from the original loop body compiled alone; its
+  math is the build's GE units, themselves pinned to the original by `golden_math.txt`.
+- Not moved: `UpdateVisibleTerrain` and the eight `Generate*EdgePolygons` (they build C++ material maps keyed by
+  `GETexture*`, reference textures and fill polygon pointers into the mesh), `GetTileRowsInVolume` (the
+  `U2DConvexHull` template), `SetGlobalWaterState`/`SetColorSet`/`SetWaterColorSet` (URandom, the fractal, the
+  registered sets), `UpdateWaterAnimation` (the clock and texture sets), `CreateFlatMesh` (allocation).
+- **Gates run for this part:** `build.py -j 3 --sim` links EE-AOC and EE-SIM 0/0, the windowed-software test profile 0/0,
+  `rust_build.py gate` PASS (940 tests), `eedata.py check` PASS, `gx_test` PASS, the sim oracle (seeds 2-7 identical
+  to `ref`). Not run: `eemodel.py cppgate` (no model or texture bytes changed), tours, a saved game loaded through the
+  new `Load` in the game (the codec is pinned by the goldens only).
