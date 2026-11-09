@@ -290,6 +290,7 @@ version = "0.1.0"
 dependencies = [
  "ee_codec",
  "ee_data",
+ "ee_gx",
  "ee_mixer",
  "ee_net_tcp",
  "ee_panic",

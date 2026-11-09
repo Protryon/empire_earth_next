@@ -56,11 +56,8 @@ def include_paths(src=None):
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
     use_dx7 = src is not None and "dx7sdk" in unit_includes(src) and dx7.exists()
-    # the renderer's GX layer: wgpu-native's C headers (rust/vendor/wgpu-native; the headers must match the library that
-    # is linked)
     import ee
-    wgpu = [str(ee.wgpu_dir() / "include")] if src is not None and "DX7 Display Plug-ins" in str(src) \
-        else []
+    wgpu = []
     # the built-in fonts (#embed in src/Platform/Common/PlatFontData.c; tools/fetch_posix.py fonts)
     if src is not None and "Platform" in pathlib.Path(src).parts and "Common" in pathlib.Path(src).parts:
         flags.append(f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}")

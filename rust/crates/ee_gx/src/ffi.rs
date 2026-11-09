@@ -441,6 +441,27 @@ pub unsafe extern "C" fn gx_vertex_buffer_lock(
 
 // ---- GXDevice
 
+type EnumFormatsCallback = unsafe extern "C" fn(*mut GxPixelFormat, *mut c_void) -> GxResult;
+
+#[no_mangle]
+pub unsafe extern "C" fn gx_device_get_caps(out: *mut GxDeviceDesc) -> GxResult {
+    *out = GxDeviceDesc {
+        dwDevCaps: (GXDEVCAPS_HWRASTERIZATION | GXDEVCAPS_HWTRANSFORMANDLIGHT | GXDEVCAPS_FLOATTLVERTEX) as c_ulong,
+        dwDeviceRenderBitDepth: (GXBD_16 | GXBD_32) as c_ulong,
+    };
+    GX_OK
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn gx_device_enum_texture_formats(callback: EnumFormatsCallback, context: *mut c_void) -> GxResult {
+    for mut format in directdraw::texture_formats() {
+        if callback(&mut format, context) == GXENUMRET_CANCEL {
+            break;
+        }
+    }
+    GX_OK
+}
+
 unsafe fn device_mut<'a>(device: *mut c_void) -> &'a mut Device {
     &mut *(device as *mut Device)
 }

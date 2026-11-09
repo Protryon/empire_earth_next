@@ -1,4 +1,4 @@
-"""Build and run the GX self-test (gx_test.cpp + the renderer's GX layer) against the pinned wgpu-native.
+"""Build and run the GX self-test (gx_test.cpp + the shim classes) against ee_gx, the renderer's GX layer in Rust.
 
 The window comes from the platform layer on SDL3 (src/Platform/SDL/PlatWindow.cpp; tools/xbuild.py sdl3) and the
 text from PlatFont with the built-in fonts (src/Platform/Common; toolchain/fonts, embedded with #embed).
@@ -24,7 +24,7 @@ from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
 PLATFORM = ROOT / "src" / "Platform"
 # PlatMessage, PlatString, PlatTime and PlatSim come with the Rust library (rust/crates/ee_plat_core)
-SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp", PLATFORM / "SDL" / "PlatWindow.cpp",
+SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", PLATFORM / "SDL" / "PlatWindow.cpp",
            PLATFORM / "Common" / "PlatFont.cpp", PLATFORM / "Common" / "PlatFontData.c"]   # the rest: ee_rust
 # what SDL3 (static) imports besides LIBS
 SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
@@ -32,7 +32,6 @@ SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
 
 def build(arch):
     triple, libarch, machine = TARGETS[arch]
-    wgpu = rust_build.WGPU_HEADERS
     rust_lib = rust_build.ensure("windows-x86_64")
     msvc, sdk_inc, sdk_lib, _ = modern_dirs()
     out = ROOT / "build" / "gx_test" / arch
@@ -40,7 +39,7 @@ def build(arch):
     sdl3 = sdl3_dir()
     if not (sdl3 / "lib" / "SDL3-static.lib").exists():
         sys.exit(f"{sdl3} is missing: python -I tools/xbuild.py sdl3")
-    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(wgpu / "include"), str(sdl3 / "include"),
+    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(sdl3 / "include"),
                            str(ROOT / "src" / "ThirdParty" / "stb"), str(msvc / "include"),
                            str(sdk_inc / "ucrt"), str(sdk_inc / "um"), str(sdk_inc / "shared")])
     objs = []

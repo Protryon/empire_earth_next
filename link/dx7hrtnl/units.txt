@@ -11,4 +11,3 @@
 0ed72 0fd16 Common/DX7Surface.cpp
 0fd16 10512 DX7HRTnLDisplay/DX7TnLRasterizer.cpp
 10512 10512 GX/GX.cpp
-10512 10512 GX/GXDevice.cpp

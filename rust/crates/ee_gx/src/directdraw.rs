@@ -58,6 +58,16 @@ pub fn mode_description(width: u32, height: u32, bits: u32) -> GxSurfaceDesc {
     }
 }
 
+/// `GXDevice::EnumTextureFormats`: the formats the renderer can use, in the C++'s order.
+pub fn texture_formats() -> [GxPixelFormat; 4] {
+    [
+        GxPixelFormat::rgba(32, 0x00ff_0000, 0x0000_ff00, 0x0000_00ff, 0xff00_0000),
+        GxPixelFormat::rgba(16, 0x0f00, 0x00f0, 0x000f, 0xf000),
+        GxPixelFormat::rgba(16, 0x7c00, 0x03e0, 0x001f, 0x8000),
+        GxPixelFormat::rgb(16, 0xf800, 0x07e0, 0x001f),
+    ]
+}
+
 /// `GXDirectDraw::CreateSurface`.
 pub fn create_surface<B: Backend, P: Platform>(
     gx: &mut Gx<B, P>,
@@ -292,6 +302,15 @@ mod tests {
         assert!(g.s(z).scale > 1.0);
         let texture = create_surface(&mut g, &d, &desc(1024, 768, GXSCAPS_TEXTURE)).unwrap();
         assert_eq!(g.s(texture).scale, 1.0);
+    }
+
+    #[test]
+    fn texture_formats_are_32_bit_argb_then_the_16_bit_formats() {
+        let formats = texture_formats();
+        assert_eq!(formats[0].dwRGBBitCount, 32);
+        assert_eq!(formats[1].dwRGBAlphaBitMask, 0xf000);
+        assert_eq!(formats[2].dwRBitMask, 0x7c00);
+        assert_eq!(formats[3].dwFlags as u32, GXPF_RGB);
     }
 
     #[test]
