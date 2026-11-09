@@ -13,6 +13,7 @@ class GEBitmap;
 class GEText;
 
 class LLE_API UIButton : public UIControl {
+    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
 public:
     UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap, GEBitmap* inPressedBitmap,
              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);

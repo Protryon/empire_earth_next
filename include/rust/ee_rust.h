@@ -1106,6 +1106,64 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
+/// `GEColor`: red, green, blue.
+struct EeUiColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
+/// never dereferenced here.
+struct EeUiButtonFields {
+  EeUiRect text_rect;
+  EeUiPoint bitmap_location;
+  void *pressed_bitmap;
+  void *normal_bitmap;
+  void *focused_bitmap;
+  void *copied_bitmap;
+  unsigned long state;
+  EeUiRect copied_text_rect;
+  EeUiPoint bitmap_draw_offset;
+  EeUiColor focused_text_color;
+  unsigned long button_down_sound;
+  unsigned long button_up_sound;
+  void *text;
+  void *copied_text;
+  bool key_down;
+  bool mouse_down;
+  bool has_copied_text;
+};
+
+/// One button as Rust sees it: the C++ object (as a `UIButton*`), its record from `mTextRectangle` on, the
+/// `UIControl` members it uses, the subclass's record (`CheckFields`, `RadioFields`, the scroll button's
+/// `mDecrement`; NULL for a plain button) and `ctx`, the C++ forwarder's own context for a host call (a `SetText`'s
+/// text and font; NULL otherwise).
+struct EeUiButtonRefs {
+  void *button;
+  EeUiButtonFields *fields;
+  unsigned long *border_type;
+  const EeUiRect *rect;
+  const unsigned long *border;
+  const unsigned long *index;
+  void *sub;
+  void *ctx;
+};
+
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
 /// `static_assert`ed in `UIEditBox.cpp`).
 struct EeUiEditFields {
@@ -1146,14 +1204,6 @@ struct EeUiEditFields {
   bool saved_always_dirty;
 };
 
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
 /// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
 /// `mBorderThickness`.
 struct EeUiEditRefs {
@@ -1162,12 +1212,6 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
-};
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
 };
 
 /// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
@@ -1360,6 +1404,28 @@ struct EeGeTmTile {
   uint16_t reference_count;
   uint8_t texture_set_id;
   uint8_t water_info;
+};
+
+/// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
+struct EeUiCheckFields {
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  bool is_checked;
+  bool has_text;
+  bool scale_bitmap;
+  bool is_disabled;
+};
+
+/// `UIRadioButton`'s members in their C++ order (from `mOtherNormalBitmap` on).
+struct EeUiRadioFields {
+  void *other_normal_bitmap;
+  void *other_pressed_bitmap;
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  bool is_checked;
+  bool has_text;
+  bool is_push_button;
+  bool scale_bitmap;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -3716,6 +3782,101 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// The constructor's part after `UIControl`'s ([`button::init`]).
+void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
+
+/// `UIButton::ButtonDown`.
+void ee_ui_button_button_down(const EeUiButtonRefs *refs);
+
+/// `UIButton::ButtonUp`.
+void ee_ui_button_button_up(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseOver`.
+void ee_ui_button_mouse_over(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseLButtonDown`.
+long ee_ui_button_mouse_l_button_down(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseLButtonUp`.
+long ee_ui_button_mouse_l_button_up(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseMove`.
+long ee_ui_button_mouse_move(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIButton::TabbedTo`.
+void ee_ui_button_tabbed_to(const EeUiButtonRefs *refs);
+
+/// `UIButton::TabbedFrom`.
+void ee_ui_button_tabbed_from(const EeUiButtonRefs *refs);
+
+/// `UIButton::UpdateKeyboard`.
+long ee_ui_button_update_keyboard(const EeUiButtonRefs *refs);
+
+/// `UIButton::SetLocation`.
+void ee_ui_button_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIButton::CopyData`.
+long ee_ui_button_copy_data(const EeUiButtonRefs *refs);
+
+/// `UIDualButton::MouseRButtonDown`.
+long ee_ui_dual_button_mouse_r_button_down(const EeUiButtonRefs *refs);
+
+/// `UIDualButton::MouseRButtonUp`.
+long ee_ui_dual_button_mouse_r_button_up(const EeUiButtonRefs *refs);
+
+/// `UIScrollButton::ButtonDown` (`sub`: `mDecrement`).
+void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
+
+/// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
+EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
+
+/// The check box's (`float_border`) and radio button's bitmap offset: true and `out` written, or false to keep it
+/// ([`button::label_bitmap_offset`]).
+bool ee_ui_button_label_bitmap_offset(float height,
+                                      unsigned long border,
+                                      bool scale_bitmap,
+                                      bool float_border,
+                                      EeUiPoint *out);
+
+/// `UICheckBox::SetChecked` (`sub`: the check box's record).
+void ee_ui_check_set_checked(const EeUiButtonRefs *refs, bool checked);
+
+/// `UICheckBox::ToggleCheck`.
+void ee_ui_check_toggle(const EeUiButtonRefs *refs);
+
+/// `UICheckBox::SetDisabled`.
+void ee_ui_check_set_disabled(const EeUiButtonRefs *refs, bool disabled);
+
+/// `UICheckBox::SetLocation` (`ctx`: the label, as for `SetText`).
+void ee_ui_check_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UICheckBox::SetText` (`ctx`: the C++ text and font for the label host calls).
+void ee_ui_check_set_text(const EeUiButtonRefs *refs, const char *s);
+
+/// `UICheckBox::ButtonDown` and the mouse handlers: whether the enabled box goes on to `UIButton`'s.
+bool ee_ui_check_enabled(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::Check`.
+void ee_ui_radio_check(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::UnCheck`.
+void ee_ui_radio_uncheck(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::RemoveOtherChecks`.
+void ee_ui_radio_remove_other_checks(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::CopyData`'s button part (the label's stays C++).
+long ee_ui_radio_copy_data(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::MouseLButtonDown`.
+long ee_ui_radio_mouse_l_button_down(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::SetLocation` (`ctx`: the label, as for `SetText`).
+void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIRadioButton::SetText` (`ctx` as for the check box).
+void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
 
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);

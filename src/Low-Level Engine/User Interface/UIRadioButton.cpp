@@ -4,7 +4,15 @@
 // 0x1007badf..0x1007c38e: the U2D key init chains, the ctor, then the out-of-line members in alphabetical order. The
 // header-inline members (and the implicit copy members, ??_E) are emitted first by UICheckBox.cpp (0x1005fc41..).
 // The next unit (0x1007c38e..0x1007c901) is UIScalableButton.cpp (not exported; RTTI .?AVUIScalableButton@@).
+//
+// The check logic and the label's geometry are Rust (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md R6): the box
+// rectangle, Check, UnCheck, RemoveOtherChecks, the checked push button's border and ignored press, SetLocation and
+// SetText forward to it (UIButtonRust.h; the record from mOtherNormalBitmap on is EeUiRadioFields). The bitmaps'
+// reference counts, the label object and drawing stay here.
 #include <windows.h>
+#include <stddef.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -34,6 +42,81 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "UIButtonRust.h"
+
+void* UIButtonRust::RadioFields(UIRadioButton* inButton)
+{
+#define EE_UI_RADIO_FIELD(member, field)                                                                              \
+    static_assert(offsetof(UIRadioButton, member) - offsetof(UIRadioButton, mOtherNormalBitmap) ==                    \
+                      offsetof(EeUiRadioFields, field),                                                               \
+                  "ee_ui/src/button.rs")
+    EE_UI_RADIO_FIELD(mOtherNormalBitmap, other_normal_bitmap);
+    EE_UI_RADIO_FIELD(mOtherPressedBitmap, other_pressed_bitmap);
+    EE_UI_RADIO_FIELD(mTextLabel, text_label);
+    EE_UI_RADIO_FIELD(mIsChecked, is_checked);
+    EE_UI_RADIO_FIELD(mHasText, has_text);
+    EE_UI_RADIO_FIELD(mIsPushButton, is_push_button);
+    EE_UI_RADIO_FIELD(mScaleBitmap, scale_bitmap);
+#undef EE_UI_RADIO_FIELD
+    static_assert(sizeof(UIRadioButton) - offsetof(UIRadioButton, mOtherNormalBitmap) >= sizeof(EeUiRadioFields),
+                  "ee_ui/src/button.rs");
+    return &inButton->mOtherNormalBitmap;
+}
+UITextLabel** UIButtonRust::RadioLabel(UIRadioButton* inButton) { return &inButton->mTextLabel; }
+
+// The radio button's own host calls (ee_ui/src/button_ffi.rs)
+static UIRadioButton* RadioButton(void* inButton) { return static_cast<UIRadioButton*>(UIButtonRust::Button(inButton)); }
+// Check's and UnCheck's swap: the normal and pressed bitmaps trade places with the other check state's
+extern "C" void ee_uicpp_radio_swap_bitmaps(void* inButton)
+{
+    UIRadioButton* theButton = RadioButton(inButton);
+    UIButtonRust::RadioSwap(theButton);
+}
+extern "C" long ee_uicpp_radio_control_count(void* inButton) { return (long)RadioButton(inButton)->GetForm()->GetControlCount(); }
+extern "C" bool ee_uicpp_radio_is_radio(void* inButton, long inIndex)
+{
+    UIControl* theControl = RadioButton(inButton)->GetForm()->GetControl(inIndex);
+    return theControl && theControl->GetType() == kControlTypeRadioButton;
+}
+extern "C" bool ee_uicpp_radio_checked(void* inButton, long inIndex)
+{
+    return static_cast<UIRadioButton*>(RadioButton(inButton)->GetForm()->GetControl(inIndex))->GetIsChecked();
+}
+extern "C" void ee_uicpp_radio_uncheck(void* inButton, long inIndex)
+{
+    UIButtonRust::RadioUnCheck(static_cast<UIRadioButton*>(RadioButton(inButton)->GetForm()->GetControl(inIndex)));
+}
+
+void UIButtonRust::RadioSwap(UIRadioButton* inButton)
+{
+    GEBitmap* theNormalBitmap = inButton->mNormalBitmap;
+    if (theNormalBitmap)
+        theNormalBitmap->Reference();
+    GEBitmap* thePressedBitmap = inButton->mPressedBitmap;
+    if (thePressedBitmap)
+        thePressedBitmap->Reference();
+    inButton->SetNormalBitmap(inButton->mOtherNormalBitmap);
+    inButton->SetPressedBitmap(inButton->mOtherPressedBitmap);
+    if (inButton->mOtherNormalBitmap)
+        inButton->mOtherNormalBitmap->Dereference();
+    inButton->mOtherNormalBitmap = theNormalBitmap;
+    if (inButton->mOtherNormalBitmap)
+        inButton->mOtherNormalBitmap->Reference();
+    if (inButton->mOtherPressedBitmap)
+        inButton->mOtherPressedBitmap->Dereference();
+    inButton->mOtherPressedBitmap = thePressedBitmap;
+    if (inButton->mOtherPressedBitmap)
+        inButton->mOtherPressedBitmap->Reference();
+    inButton->SetDirty(true);
+    if (theNormalBitmap)
+        theNormalBitmap->Dereference();
+    if (thePressedBitmap)
+        thePressedBitmap->Dereference();
+}
+void UIButtonRust::RadioUnCheck(UIRadioButton* inButton) { inButton->UnCheck(); }
+
+// The Rust view of this radio button, with a label context for SetText/SetLocation
+#define EE_UI_RADIO_REFS(label) UIButtonRust::Refs(this, UIButtonRust::RadioFields(this), label)
 
 // FUNCTION: LLE 0x1007bbff
 // Creates a radio button with the shared radio bitmaps (checked ones when checked), 19x19 unless scaled, and a label
@@ -42,13 +125,7 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
                              unsigned long inBorderThickness, bool inIsPushButton, bool inIsChecked,
                              bool inScaleBitmap)
     : UIButton(inId, inForm->GetManager()->GetRadioOff(), NULL, inForm->GetManager()->GetRadioDownOff(),
-               GERectangle(inRectangle.GetTopLeft(),
-                           GE2DPoint(!inScaleBitmap && inRectangle.GetWidth() <= kScrollBarWidth
-                                         ? inRectangle.GetLeft() + 19.0f
-                                         : inRectangle.GetRight(),
-                                     !inScaleBitmap && inRectangle.GetHeight() <= kScrollBarWidth
-                                         ? inRectangle.GetTop() + 19.0f
-                                         : inRectangle.GetBottom())),
+               UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
                inForm, inIndex, inBorderThickness)
 {
     this->mTextLabel = NULL;
@@ -80,11 +157,7 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
         if (thePressedBitmap)
             thePressedBitmap->Dereference();
     }
-    if (!this->mScaleBitmap) {
-        float theHeight = inRectangle.GetHeight();
-        if (theHeight > kScrollBarWidth)
-            this->SetBitmapDrawOffset(GE2DPoint(0.0f, (theHeight - 2 * inBorderThickness) * 0.5f - 10.0f));
-    }
+    UIButtonRust::BitmapOffset(this, inRectangle.GetHeight(), inBorderThickness, this->mScaleBitmap, false);
     this->SetText(inText, inFont);
 }
 
@@ -92,46 +165,14 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
 // Checks the button: unchecks its checked neighbour, swaps to the checked bitmaps and fires the checked trigger
 void UIRadioButton::Check()
 {
-    if (this->mIsChecked)
-        return;
-    this->RemoveOtherChecks();
-    this->mIsChecked = true;
-    GEBitmap* theNormalBitmap = this->mNormalBitmap;
-    if (theNormalBitmap)
-        theNormalBitmap->Reference();
-    GEBitmap* thePressedBitmap = this->mPressedBitmap;
-    if (thePressedBitmap)
-        thePressedBitmap->Reference();
-    this->SetNormalBitmap(this->mOtherNormalBitmap);
-    this->SetPressedBitmap(this->mOtherPressedBitmap);
-    if (this->mOtherNormalBitmap)
-        this->mOtherNormalBitmap->Dereference();
-    this->mOtherNormalBitmap = theNormalBitmap;
-    if (this->mOtherNormalBitmap)
-        this->mOtherNormalBitmap->Reference();
-    if (this->mOtherPressedBitmap)
-        this->mOtherPressedBitmap->Dereference();
-    this->mOtherPressedBitmap = thePressedBitmap;
-    if (this->mOtherPressedBitmap)
-        this->mOtherPressedBitmap->Reference();
-    this->SetDirty(true);
-    if (theNormalBitmap)
-        theNormalBitmap->Dereference();
-    if (thePressedBitmap)
-        thePressedBitmap->Dereference();
-    this->mBorderType = 0;
-    if (this->mIsPushButton)
-        this->mState = kButtonStatePressed;
-    this->FireTriggerEvent(kControlTriggerChecked);
+    ee_ui_radio_check(EE_UI_RADIO_REFS(NULL));
 }
 
 // FUNCTION: LLE 0x1007bed5
 // Snapshots the button and its label (deleted once its text is cleared); a checked push button loses its border
 long UIRadioButton::CopyData()
 {
-    if (this->mIsChecked && this->mIsPushButton)
-        this->mBorderType = 0;
-    long theResult = UIButton::CopyData();
+    long theResult = ee_ui_radio_copy_data(EE_UI_RADIO_REFS(NULL));
     if (this->mHasText)
         theResult = this->mTextLabel->CopyData();
     else if (this->mTextLabel) {
@@ -174,10 +215,7 @@ long UIRadioButton::DrawTextA()
 // Presses the button, except a checked push button
 long UIRadioButton::MouseLButtonDown()
 {
-    long theResult = kErrorOK;
-    if (!this->mIsPushButton || !this->mIsChecked)
-        theResult = UIButton::MouseLButtonDown();
-    return theResult;
+    return ee_ui_radio_mouse_l_button_down(EE_UI_RADIO_REFS(NULL));
 }
 
 // FUNCTION: LLE 0x1007bff0
@@ -191,26 +229,7 @@ long UIRadioButton::MouseLButtonUp()
 // Unchecks the first checked radio button among the adjacent radio controls before, then after, this one
 void UIRadioButton::RemoveOtherChecks()
 {
-    long i;
-    UIControl* theControl;
-    for (i = this->GetIndex() - 1; i >= 0; i--) {
-        theControl = this->mForm->GetControl(i);
-        if (!theControl || theControl->GetType() != kControlTypeRadioButton)
-            break;
-        if (static_cast<UIRadioButton*>(theControl)->mIsChecked) {
-            static_cast<UIRadioButton*>(theControl)->UnCheck();
-            return;
-        }
-    }
-    for (i = this->GetIndex() + 1; i < (long)this->mForm->GetControlCount(); i++) {
-        theControl = this->mForm->GetControl(i);
-        if (!theControl || theControl->GetType() != kControlTypeRadioButton)
-            break;
-        if (static_cast<UIRadioButton*>(theControl)->mIsChecked) {
-            static_cast<UIRadioButton*>(theControl)->UnCheck();
-            return;
-        }
-    }
+    ee_ui_radio_remove_other_checks(EE_UI_RADIO_REFS(NULL));
 }
 
 // FUNCTION: LLE 0x1007c066
@@ -255,44 +274,16 @@ void UIRadioButton::SetDownUncheckedBitmap(GEBitmap* inBitmap)
 // Moves the button, keeping its label to the right of the bitmap
 void UIRadioButton::SetLocation(const GE2DPoint& inLocation)
 {
-    GE2DPoint theLocation;
-    UIControl::SetLocation(inLocation);
-    if (this->mTextLabel == NULL)
-        return;
-    if (this->mScaleBitmap)
-        theLocation.SetX(this->mRectangle.GetHeight() + this->mRectangle.GetLeft() + this->GetBorderThickness());
-    else
-        theLocation.SetX(this->mRectangle.GetLeft() + this->GetBorderThickness() + kScrollBarWidth);
-    theLocation.SetY(this->mRectangle.GetTop() + this->GetBorderThickness());
-    this->mTextLabel->SetLocation(theLocation);
+    UIButtonRust::Label theLabel = {UIButtonRust::RadioLabel(this), NULL, NULL};
+    ee_ui_radio_set_location(EE_UI_RADIO_REFS(&theLabel), UIButtonRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x1007c146
 // Sets the label text, creating the label right of the bitmap on first use; empty text hides the label
 void UIRadioButton::SetText(const UWideString& inText, GEFont* inFont)
 {
-    if (inText.GetLength() > 0) {
-        if (this->mTextLabel) {
-            this->mTextLabel->SetText(inText, true);
-            this->SetDirty(true);
-        } else {
-            float theLeft;
-            if (this->mScaleBitmap == true)
-                theLeft = this->mRectangle.GetHeight() + this->mRectangle.GetLeft() + this->GetBorderThickness();
-            else
-                theLeft = this->mRectangle.GetLeft() + this->GetBorderThickness() + kScrollBarWidth;
-            this->mTextLabel = new UITextLabel(inText, inFont, this->GetId(),
-                                         GERectangle(theLeft, this->mRectangle.GetTop() + this->GetBorderThickness(),
-                                                     this->mRectangle.GetWidth() + this->mRectangle.GetLeft() -
-                                                         this->GetBorderThickness(),
-                                                     this->mRectangle.GetHeight() + this->mRectangle.GetTop() -
-                                                         this->GetBorderThickness()),
-                                         this->GetForm(), 0, this->GetIndex(), 0);
-        }
-        this->mHasText = true;
-        this->SetDirty(true);
-    } else
-        this->mHasText = false;
+    UIButtonRust::Label theLabel = {UIButtonRust::RadioLabel(this), &inText, inFont};
+    ee_ui_radio_set_text(EE_UI_RADIO_REFS(&theLabel), inText);
 }
 
 // FUNCTION: LLE 0x1007c25d
@@ -337,36 +328,7 @@ void UIRadioButton::SetUpUncheckedBitmap(GEBitmap* inBitmap)
 // Unchecks the button: swaps to the unchecked bitmaps, restores its border and fires the unchecked trigger
 void UIRadioButton::UnCheck()
 {
-    if (!this->mIsChecked)
-        return;
-    this->mIsChecked = false;
-    GEBitmap* theNormalBitmap = this->mNormalBitmap;
-    if (theNormalBitmap)
-        theNormalBitmap->Reference();
-    GEBitmap* thePressedBitmap = this->mPressedBitmap;
-    if (thePressedBitmap)
-        thePressedBitmap->Reference();
-    this->SetNormalBitmap(this->mOtherNormalBitmap);
-    this->SetPressedBitmap(this->mOtherPressedBitmap);
-    if (this->mOtherNormalBitmap)
-        this->mOtherNormalBitmap->Dereference();
-    this->mOtherNormalBitmap = theNormalBitmap;
-    if (this->mOtherNormalBitmap)
-        this->mOtherNormalBitmap->Reference();
-    if (this->mOtherPressedBitmap)
-        this->mOtherPressedBitmap->Dereference();
-    this->mOtherPressedBitmap = thePressedBitmap;
-    if (this->mOtherPressedBitmap)
-        this->mOtherPressedBitmap->Reference();
-    this->SetDirty(true);
-    if (theNormalBitmap)
-        theNormalBitmap->Dereference();
-    if (thePressedBitmap)
-        thePressedBitmap->Dereference();
-    if (this->mIsPushButton)
-        this->mState = kButtonStateNormal;
-    this->mBorderType = 1;
-    this->FireTriggerEvent(kControlTriggerUnchecked);
+    ee_ui_radio_uncheck(EE_UI_RADIO_REFS(NULL));
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

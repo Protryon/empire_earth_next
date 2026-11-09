@@ -13,6 +13,7 @@
 class UITextLabel;
 
 class LLE_API UICheckBox : public UIButton {
+    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
 public:
     UICheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap);

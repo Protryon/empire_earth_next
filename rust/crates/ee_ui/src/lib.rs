@@ -5,6 +5,7 @@
 //! Text stays Windows-1252 bytes (`&[u8]`; decision D6 is open). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
+pub mod button;
 pub mod edit;
 pub mod form;
 pub mod layout;
@@ -14,6 +15,9 @@ pub mod slider;
 pub mod text;
 pub mod wrap;
 
+// imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
+#[cfg(not(test))]
+mod button_ffi;
 // imports the C++ edit box's lines, measuring and scroll bar (UIEditBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod edit_ffi;

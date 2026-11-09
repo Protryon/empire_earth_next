@@ -11,6 +11,7 @@
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
 class LLE_API UIRadioButton : public UIButton {
+    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
 public:
     UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inIsPushButton,

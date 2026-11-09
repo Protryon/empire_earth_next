@@ -4,7 +4,16 @@
 // 0x1005e47c..0x1005ef4b: the U2D key init chains (U2DRectangle.h, via the rasterizer header), the ctor, the dtor
 // and the out-of-line members in alphabetical order. The header-inline members are emitted first by
 // UIBlinkingButton.cpp (it sorts before UIButton.cpp). UICheckBox.cpp's inline block starts at 0x1005ef4b.
+//
+// The button's logic is Rust (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md R6): the state machine over the
+// mouse, the keyboard and tabbing, SetLocation's text rectangle and what CopyData shows. The members below forward to
+// it with the object's members from mTextRectangle on as the pinned record EeUiButtonFields (UIButtonRust.h). What
+// stays here touches other objects: the bitmaps' and texts' lifetimes, the sounds, drawing, and the ee_uicpp_button_*
+// host calls through which Rust reaches the form, the capture, the trigger events and the virtual members.
 #include <windows.h>
+#include <stddef.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -25,24 +34,90 @@
 #include "lle/UIControl.h"
 #include "lle/UIForm.h"
 #include "lle/UIButton.h"
+#include "lle/UITextLabel.h"
+#include "UIButtonRust.h"
+
+// --- the host calls of ee_ui/src/button_ffi.rs -----------------------------------------------------------------------
+
+extern "C" unsigned long ee_uicpp_button_tab_stop(void* inButton) { return UIButtonRust::Button(inButton)->GetForm()->GetTabStop(); }
+extern "C" bool ee_uicpp_button_tabbing_on(void* inButton) { return UIButtonRust::Button(inButton)->GetForm()->GetTabbingOn(); }
+extern "C" void ee_uicpp_button_set_tab_stop(void* inButton, unsigned long inIndex)
+{
+    UIButtonRust::Button(inButton)->GetForm()->SetTabStop(inIndex);
+}
+extern "C" bool ee_uicpp_button_tabable(void* inButton) { return UIButtonRust::Button(inButton)->GetTabable(); }
+extern "C" void ee_uicpp_button_set_dirty(void* inButton) { UIButtonRust::Button(inButton)->SetDirty(true); }
+extern "C" void ee_uicpp_button_play(void* inButton, unsigned long inSound)
+{
+    UIButtonRust::Button(inButton)->GetSoundManager()->Play(inSound, 1.0f, 0.0f, 1.0f, false, NULL);
+}
+extern "C" void ee_uicpp_button_capture_mouse(void* inButton) { UIButtonRust::CaptureMouse(inButton); }
+extern "C" void ee_uicpp_button_release_mouse(void* inButton) { UIButtonRust::Button(inButton)->ReleaseCapturedMouse(); }
+extern "C" void ee_uicpp_button_capture_keyboard(void* inButton) { UIButtonRust::CaptureKeyboard(inButton); }
+extern "C" void ee_uicpp_button_release_keyboard(void* inButton) { UIButtonRust::Button(inButton)->ReleaseCapturedKeyboard(); }
+extern "C" void ee_uicpp_button_fire(void* inButton, unsigned long inEvent) { UIButtonRust::Button(inButton)->FireTriggerEvent(inEvent); }
+extern "C" EeUiPoint ee_uicpp_button_mouse_location(void* inButton) { return UIButtonRust::Point(UIButtonRust::MouseLocation(inButton)); }
+extern "C" bool ee_uicpp_button_has_mouse_capture(void* inButton) { return UIButtonRust::Button(inButton)->GetHasMouseCapture(); }
+extern "C" bool ee_uicpp_button_right_button_down(void* inButton) { return UIButtonRust::Button(inButton)->GetRightMouseButtonDown(); }
+extern "C" bool ee_uicpp_button_key(void* inButton, int inKey) { return UIButtonRust::Key(inKey); }
+extern "C" void ee_uicpp_button_button_down(void* inButton) { UIButtonRust::ButtonDown(inButton); }
+extern "C" void ee_uicpp_button_button_up(void* inButton) { UIButtonRust::ButtonUp(inButton); }
+extern "C" void ee_uicpp_button_mouse_over(void* inButton) { UIButtonRust::MouseOver(inButton); }
+extern "C" void ee_uicpp_button_mouse_move(void* inButton, float inX, float inY) { UIButtonRust::MouseMove(inButton, inX, inY); }
+extern "C" void ee_uicpp_button_base_set_location(void* inButton, float inX, float inY)
+{
+    UIButtonRust::Button(inButton)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" long ee_uicpp_button_base_copy_data(void* inButton) { return UIButtonRust::Button(inButton)->UIControl::CopyData(); }
+extern "C" void ee_uicpp_button_set_copied_bitmap(void* inButton, void* inBitmap)
+{
+    UIButtonRust::SetCopiedBitmap(inButton, static_cast<GEBitmap*>(inBitmap));
+}
+extern "C" const char* ee_uicpp_button_text(void* inButton) { return UIButtonRust::Text(inButton)->GetText(); }
+extern "C" void ee_uicpp_button_text_extent(void* inButton, float* outWidth, float* outHeight)
+{
+    const GERectangle& theExtent = UIButtonRust::Text(inButton)->GetTextExtent();
+    *outWidth = theExtent.GetWidth();
+    *outHeight = theExtent.GetHeight();
+}
+void UIButtonRust::CopyText(void* inButton, bool inFocused)
+{
+    UIButton* theButton = Button(inButton);
+    *theButton->mCopiedText = *theButton->mText;
+    if (inFocused)
+        theButton->mCopiedText->SetFgColor(theButton->mFocusedTextColor);
+}
+extern "C" void ee_uicpp_button_copy_text(void* inButton, bool inFocused) { UIButtonRust::CopyText(inButton, inFocused); }
+
+// The check box's and radio button's label (UICheckBox.cpp, UIRadioButton.cpp): the context names it
+extern "C" void ee_uicpp_label_set_text(void* inButton, void* inLabel)
+{
+    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
+    (*theLabel->mLabel)->SetText(*theLabel->mText);   // the public SetText(text, true)
+}
+extern "C" void ee_uicpp_label_create(void* inButton, void* inLabel, const EeUiRect* inRectangle)
+{
+    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
+    UIButton* theButton = UIButtonRust::Button(inButton);
+    *theLabel->mLabel = new UITextLabel(*theLabel->mText, theLabel->mFont, theButton->GetId(),
+                                        *reinterpret_cast<const GERectangle*>(inRectangle), theButton->GetForm(), 0,
+                                        theButton->GetIndex(), 0);
+}
+extern "C" void ee_uicpp_label_set_location(void* inButton, void* inLabel, float inX, float inY)
+{
+    (*static_cast<UIButtonRust::Label*>(inLabel)->mLabel)->SetLocation(GE2DPoint(inX, inY));
+}
 
 // FUNCTION: LLE 0x1005e59c
 // Creates a button with normal, focused and pressed bitmaps (pressed defaults to normal) and no text or sounds
 UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                    GEBitmap* inPressedBitmap, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                    unsigned long inBorderThickness)
-    : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness), mButtonDownSound(-1),
-      mButtonUpSound(-1)
+    : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mMouseDown = false;
-    this->mHasCopiedText = false;
-    this->mText = NULL;
-    this->mCopiedText = NULL;
-    this->mState = kButtonStateNormal;
-    this->mCopiedBitmap = NULL;
+    ee_ui_button_init(reinterpret_cast<EeUiButtonFields*>(&this->mTextRectangle),
+                      reinterpret_cast<const EeUiRect*>(&this->mRectangle), inBorderThickness);
     this->mBorderType = 1;
-    this->mKeyDown = false;
-    this->mFocusedTextColor = GEColor(1.0f, 1.0f, 0.0f);
     this->mNormalBitmap = inNormalBitmap;
     if (this->mNormalBitmap)
         this->mNormalBitmap->Reference();
@@ -57,10 +132,6 @@ UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFoc
     this->mFocusedBitmap = inFocusedBitmap;
     if (this->mFocusedBitmap)
         this->mFocusedBitmap->Reference();
-    this->mTextRectangle.mLeft = this->mRectangle.GetLeft() + inBorderThickness;
-    this->mTextRectangle.mTop = this->mRectangle.GetTop() + inBorderThickness;
-    this->mTextRectangle.mRight = this->mRectangle.GetRight() - inBorderThickness;
-    this->mTextRectangle.mBottom = this->mRectangle.GetBottom() - inBorderThickness;
 }
 
 // FUNCTION: LLE 0x1005e70b
@@ -89,33 +160,14 @@ UIButton::~UIButton()
 // Takes the tab stop if tabbable, shows the button pressed and plays the button-down sound
 void UIButton::ButtonDown()
 {
-    if (this->mForm->GetTabStop() != this->mIndex && this->GetTabable())
-        this->mForm->SetTabStop(this->mIndex);
-    if (this->mState != kButtonStatePressed) {
-        this->mBorderType = 0;
-        this->mState = kButtonStatePressed;
-        this->SetDirty(true);
-    }
-    if (!UIsNone32(this->mButtonDownSound))
-        this->GetSoundManager()->Play(this->mButtonDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
+    ee_ui_button_button_down(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005e832
 // Shows the button focused or normal; plays the button-up sound if one is set
 void UIButton::ButtonUp()
 {
-    if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex) {
-        if (this->mState != kButtonStateFocused) {
-            this->mState = kButtonStateFocused;
-            this->SetDirty(true);
-        }
-    } else if (this->mState != kButtonStateNormal) {
-        this->mState = kButtonStateNormal;
-        this->SetDirty(true);
-    }
-    this->mBorderType = 1;
-    if (!UIsNone32(this->mButtonUpSound))   // Fixed: used to play the button-down sound here
-        this->GetSoundManager()->Play(this->mButtonUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
+    ee_ui_button_button_up(UIButtonRust::Refs(this));   // Fixed (kept): plays the button-up sound
 }
 
 // FUNCTION: LLE 0x1005e8b4
@@ -132,47 +184,7 @@ void UIButton::ChangeFont(GEFont* inFont)
 // Copies the bitmap for the button state and the centred text (offset 1 pixel when pressed) for the draw pass
 long UIButton::CopyData()
 {
-    long theResult = UIControl::CopyData();
-    if (this->mCopiedBitmap)
-        this->mCopiedBitmap->Dereference();
-    switch (this->mState) {
-    case kButtonStateNormal:
-        this->mCopiedBitmap = this->mNormalBitmap;
-        break;
-    case kButtonStateFocused:
-        this->mCopiedBitmap = this->mFocusedBitmap ? this->mFocusedBitmap : this->mNormalBitmap;
-        break;
-    case kButtonStatePressed:
-        this->mCopiedBitmap = this->mPressedBitmap;
-        break;
-    }
-    if (this->mCopiedBitmap)
-        this->mCopiedBitmap->Reference();
-    this->mBitmapLocation.SetX(this->mBitmapDrawOffset.GetX() + this->mRectangle.GetLeft() + this->mBorderThickness);
-    this->mBitmapLocation.SetY(this->mBitmapDrawOffset.GetY() + this->mRectangle.GetTop() + this->mBorderThickness);
-    if (this->mText && this->mText->GetText().GetLength() > 0) {
-        this->mCopiedTextRectangle = this->mTextRectangle;
-        if (this->mState == kButtonStatePressed) {
-            // the original expands SetTopLeft/SetBottomRight inline (stores top then left, bottom then right):
-            // they are header-inline in the real GERectangle.h (GEBitmap.cpp emits them in its GERectangle block)
-            GE2DPoint theTopLeft = this->mCopiedTextRectangle.GetTopLeft();
-            this->mCopiedTextRectangle.SetTopLeft(GE2DPoint(theTopLeft.GetX() + 1.0f, theTopLeft.GetY() + 1.0f));
-            GE2DPoint theBottomRight = this->mCopiedTextRectangle.GetBottomRight();
-            this->mCopiedTextRectangle.SetBottomRight(GE2DPoint(theBottomRight.GetX() + 1.0f, theBottomRight.GetY() + 1.0f));
-        }
-        if (this->mText->GetTextExtent().GetWidth() < this->mCopiedTextRectangle.GetWidth())
-            this->mCopiedTextRectangle.SetLeft(this->mCopiedTextRectangle.GetWidth() * 0.5f + this->mCopiedTextRectangle.GetLeft() -
-                                         this->mText->GetTextExtent().GetWidth() * 0.5f);
-        if (this->mText->GetTextExtent().GetHeight() < this->mCopiedTextRectangle.GetHeight())
-            this->mCopiedTextRectangle.SetTop(this->mCopiedTextRectangle.GetHeight() * 0.5f + this->mCopiedTextRectangle.GetTop() -
-                                        this->mText->GetTextExtent().GetHeight() * 0.5f);
-        *this->mCopiedText = *this->mText;
-        if (this->mState == kButtonStateFocused || this->mState == kButtonStatePressed)
-            this->mCopiedText->SetFgColor(this->mFocusedTextColor);
-        this->mHasCopiedText = true;
-    } else
-        this->mHasCopiedText = false;
-    return theResult;
+    return ee_ui_button_copy_data(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005eb30
@@ -203,61 +215,28 @@ long UIButton::DrawTextA()
 // Captures the mouse, presses the button and fires the button-down trigger
 long UIButton::MouseLButtonDown()
 {
-    this->mMouseDown = true;
-    this->CaptureMouse();
-    this->ButtonDown();
-    this->FireTriggerEvent(kControlTriggerButtonDown);
-    return kErrorOK;
+    return ee_ui_button_mouse_l_button_down(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005ebf8
 // Releases the mouse and keyboard; if the pointer is still over the button, releases it and fires the button-up trigger
 long UIButton::MouseLButtonUp()
 {
-    this->MouseMove(this->GetMouseLocation());
-    this->mMouseDown = false;
-    this->mKeyDown = false;
-    this->ReleaseCapturedMouse();
-    this->ReleaseCapturedKeyboard();
-    if (this->mRectangle.Contains(this->GetMouseLocation())) {
-        this->ButtonUp();
-        this->FireTriggerEvent(kControlTriggerButtonUp);
-    }
-    return kErrorOK;
+    return ee_ui_button_mouse_l_button_up(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005ec54
 // While the button is held, shows it pressed when the pointer is over it (or a key holds it), else focused or normal
 long UIButton::MouseMove(const GE2DPoint& inLocation)
 {
-    if (!(this->mMouseDown || this->GetHasMouseCapture() && this->GetRightMouseButtonDown()))
-        return kErrorOK;
-    if (this->mRectangle.Contains(inLocation) || this->mKeyDown)
-        this->MouseOver();
-    else {
-        if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex) {
-            if (this->mState != kButtonStateFocused) {
-                this->mState = kButtonStateFocused;
-                this->SetDirty(true);
-            }
-        } else if (this->mState != kButtonStateNormal) {
-            this->mState = kButtonStateNormal;
-            this->SetDirty(true);
-        }
-        this->mBorderType = 1;
-    }
-    return kErrorOK;
+    return ee_ui_button_mouse_move(UIButtonRust::Refs(this), UIButtonRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x1005ece9
 // Shows the button pressed
 void UIButton::MouseOver()
 {
-    if (this->mState == kButtonStatePressed)
-        return;
-    this->mBorderType = 0;
-    this->mState = kButtonStatePressed;
-    this->SetDirty(true);
+    ee_ui_button_mouse_over(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005ed04
@@ -282,11 +261,7 @@ void UIButton::SetButtonUpSound(const UString& inName)
 // Moves the button and its text rectangle
 void UIButton::SetLocation(const GE2DPoint& inLocation)
 {
-    UIControl::SetLocation(inLocation);
-    this->mTextRectangle.SetLeft(this->GetRectangle().GetLeft() + this->GetBorderThickness());
-    this->mTextRectangle.SetTop(this->GetRectangle().GetTop() + this->GetBorderThickness());
-    this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - this->GetBorderThickness());
-    this->mTextRectangle.SetBottom(this->GetRectangle().GetBottom() - this->GetBorderThickness());
+    ee_ui_button_set_location(UIButtonRust::Refs(this), UIButtonRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x1005edf1
@@ -305,42 +280,22 @@ void UIButton::SetText(const UWideString& inText, GEFont* inFont)
 // Shows the button focused when tabbed to
 void UIButton::TabbedTo()
 {
-    this->mState = kButtonStateFocused;
-    this->SetDirty(true);
+    ee_ui_button_tabbed_to(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005ee77
 // Shows the button normal when tabbed away from, releasing the mouse, keyboard and any press
 void UIButton::TabbedFrom()
 {
-    this->mState = kButtonStateNormal;
-    this->ReleaseCapturedMouse();
-    this->ReleaseCapturedKeyboard();
-    this->mMouseDown = false;
-    this->mKeyDown = false;
-    this->SetDirty(true);
+    ee_ui_button_tabbed_from(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1005eea6
 // Space or Enter presses the button; releasing them after a key press on it clicks it
 long UIButton::UpdateKeyboard()
 {
-    if (UIControl::sSpaceKey->JustPressed() || UIControl::sEnterKey->JustPressed()) {
-        this->mKeyDown = true;
-        this->CaptureKeyboard();
-        this->ButtonDown();
-        if (!this->mMouseDown)
-            this->FireTriggerEvent(kControlTriggerButtonDown);
-    } else if (this->mKeyDown && (UIControl::sSpaceKey->JustUnpressed() || UIControl::sEnterKey->JustUnpressed())) {
-        // Fixed: the missing parentheses let an Enter release click the button without a key press on it
-        this->mMouseDown = false;
-        this->ReleaseCapturedMouse();
-        this->ReleaseCapturedKeyboard();
-        this->mKeyDown = false;
-        this->ButtonUp();
-        this->FireTriggerEvent(kControlTriggerButtonUp);
-    }
-    return kErrorOK;
+    // Fixed (kept): only a release after a key press on the button clicks it
+    return ee_ui_button_update_keyboard(UIButtonRust::Refs(this));
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
