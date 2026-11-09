@@ -1,6 +1,7 @@
 # Rust: a research plan for an iterative rewrite
 
-Status (2026-11-08): proposal, nothing built. The goal is a game written wholly in Rust. The way there is one binary
+Status (2026-11-08): proposal, nothing built; revised for the WON library (module `won`, the upstream merge to
+3f51317465d6) and its lobby on the platform layer. The goal is a game written wholly in Rust. The way there is one binary
 in which C++ and Rust coexist for a long time. Each step moves one module across a seam, and the game keeps passing
 its gates at every commit. This document covers:
 
@@ -17,16 +18,18 @@ the chosen Rust path), PORT_LEARNINGS.md.
 
 ## 0. Summary
 
-- **Size.** About 440k lines of first-party C++: `src/` 375k, `include/` 64k. The vendored C is ~175k more
-  (miniaudio, zlib, libpng, libjpeg, dmusic, pl_mpeg, stb, cgltf). The engine (`src/Low-Level Engine`, 68k) is
-  cleanly layered. The game (`src/Empire Earth`, ~300k) is one strongly connected component around `EEWorld`, the
-  units, `EEPlayer` and the physics tick.
+- **Size.** About 570k lines of first-party C++: `src/` 484k, `include/` 86k. Of that, 131k is the WON library and
+  its lobby; the other ~440k is the engine and the game. The vendored C is ~210k more (miniaudio, zlib, libpng,
+  libjpeg, dmusic, pl_mpeg, stb, cgltf, Lua, the codec headers WON carries). The engine (`src/Low-Level Engine`, 68k)
+  is cleanly layered. The game (`src/Empire Earth` without WON, ~300k) is one strongly connected component around
+  `EEWorld`, the units, `EEPlayer` and the physics tick.
 - **The seams are better than the coupling suggests.**
   - The platform layer is already a C ABI that names Rust as an intended implementation (`include/platform/Platform.h`).
   - The renderer sits behind the GX contract and four abstract engine classes.
   - Plug-ins are name-indexed entry-point tables (PIM).
   - UI input reaches the simulation only as network messages (`NEMessage`), never as direct writes.
   - Every on-disk record is size-pinned, and every network message has a fixed wire format.
+  - The WON lobby reaches the screen as one pulled BGRA frame, and its GUI backend is already ours (`WONGUI/Plat*.cpp`).
 - **The rewrite is testable.** EE-SIM plays a seeded 45-minute 2-AI game in ~15 s. Its AI trace is identical
   between runs and equal to the harness's. "Same trace for seeds 2-7 over 2700 game seconds" is a ready-made,
   layout-independent oracle for any change on the simulation side. The data side has the content-dump parity gate
@@ -44,12 +47,12 @@ the chosen Rust path), PORT_LEARNINGS.md.
   - R3: engine services and plug-ins.
   - R4: the renderer.
   - R5: the simulation, after C++-side untangling.
-  - R6: UI and editor.
+  - R6: UI, editor and the lobby (what is left of WON is decision D8).
   - R7: the entry point and the last C/C++.
 
-  Each phase ends with the existing gates. R5 is about half the code and most of the risk; R0-R4 are worth doing
-  even if R5 slips, because they remove the C toolchain's hardest dependencies (webgpu.h pinning, Win32/POSIX
-  forks, the text compilers).
+  Every Rust module lands with unit tests (section 5). Each phase ends with the existing gates. R5 is about half the code outside WON and most of the risk; R0-R4 are
+  worth doing even if R5 slips, because they remove the C toolchain's hardest dependencies (webgpu.h pinning,
+  Win32/POSIX forks, the text compilers).
 
 ---
 
@@ -61,7 +64,7 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
 
 | Area | Lines | What | Coupling |
 |---|---|---|---|
-| Platform (`src/Platform`, `include/platform`) | 7.2k | Time, threads, files, paths, strings, config, sockets, window (SDL3), fonts (stb_truetype) | **No outbound edges.** C ABI. Tests in `tests/platform` (217 checks) |
+| Platform (`src/Platform`, `include/platform`) | 7.7k | Time, threads, files, paths, strings, config, sockets, window (SDL3), fonts (stb_truetype) | **No outbound edges.** C ABI. Tests in `tests/platform` (about 265 checks) |
 | LLE Utilities | 9.4k | UString, URandom, compression (PKWARE DCL), encryption, graphs, 2D geometry | Leaf; fan-in 35 modules |
 | LLE File System | 3.9k | FSFile, FSArchive, FSChunk, FSMemoryFile, FSPersistent | Utilities, threads, platform; fan-in 31 |
 | LLE Thread System / Time Manager / Error System | 1.8k | TSThread queues, locks, scheduler, timers | Platform |
@@ -80,6 +83,7 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
 | User Interface Thread, UI Events | 36.5k | In-game UI | |
 | Scenario Editor (+ Actions), Scenario Manager, Campaign | 39.5k | Editor, triggers | Largest fan-out (30 modules) |
 | Empire Earth | 14.4k | WinMain, EEWorld, game state, EESim, test fixture, game log | Hub |
+| WON library (`src/Empire Earth/WONAPI`, `include/ee/wonapi`) | 131k | WONGUI toolkit 49k; WONLobby 28k (with the game glue in `GameCode/EmpireEarth`); sockets, async ops, crypto, auth, directory, routing, HTTP and the rest 32k; headers 21k, not split by area | On the platform layer (46 files call `Plat*`). Own `SmartPtr` objects (173 typedefs), 52 `dynamic_cast`s. The game side is `EEWonNet`, `EEAWonNet` and the WonNet forms (~4k, counted in the rows above) |
 
 ### 1.2 Coupling
 
@@ -104,12 +108,16 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
   much narrower: all 10 Formations files include UIForm and SESoundManager without using them. Before taking a
   module across, measure its real surface: the symbols its objects import, from `llvm-nm` on its objects, not its
   `#include`s.
+- **WON sits beside the knot, not in it, as far as the source shows.** The game calls the lobby through about ten
+  `EELobby*` functions. The other direction is wider: `EELobbyInterface.cpp` creates and drives `EEServer` and
+  `gCommunications` itself. 538 WON files open with `lle/LowLevelEngine.h` and `ee/EEWonNet.h`, the same preamble
+  noise as above, so its real surface still needs the `llvm-nm` measurement.
 
 ### 1.3 The seams that exist today
 
 | Seam | Shape | Rust-ready? |
 |---|---|---|
-| `include/platform/Plat*.h` | `extern "C"`, `<stdint.h>` types, opaque handles; 11 headers, ~180 functions | **Yes**, as is (`#[no_mangle] extern "C"`). The tests run against any implementation |
+| `include/platform/Plat*.h` | `extern "C"`, `<stdint.h>` types, opaque handles; 11 headers, ~195 functions | **Yes**, as is (`#[no_mangle] extern "C"`). The tests run against any implementation |
 | PIM plug-ins (`include/lle/PIMModule.h`) | Name -> `void*` tables: renderer `'rast'`, network `'ntwk'`, mixer `' snd'`, random map `'rmap'` | Mixer: nearly (36 `SPIM*`, POD and opaque pointers). The others pass C++ objects: `UString&`, `TCPServer**`, `EERandomMap*` (vectors of vectors), `GERasterizer*` |
 | GX (`include/gx/GX.h`) | COM-style C++ classes (DirectDraw 7/D3D7 subset) over webgpu.h, behind one lock; ~15 caller files | Needs C++ shim classes forwarding to `extern "C"` (thin: ~60 methods) |
 | GERasterizer / GEScreen / GESurface / GEVertexArray | Pure-virtual C++ (54/19/31/15 pure virtuals) | Via C++ trampolines (a vtable implemented by forwarding to Rust) |
@@ -117,6 +125,9 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
 | On-disk records | 37 raw records, 51 `static_assert(sizeof)` pins, `tools/record_sizes.py` | **Yes:** one `#[repr(C)]` mirror each, with the same asserts |
 | Saved games | FSChunk tags, field-by-field writes with version gates (`tools/harness/savefile.py` documents it) | The order is the contract, not the layout; a Rust codec can match it |
 | `platform/PlatSim.h` | C globals and a per-tick callback (the sim's switchboard) | Yes, but it switches C++ behaviour |
+| Lobby frame (`EELobbyLockFrame`/`UnlockFrame`/`SetPresentation`/`GetSurfaceSize`, `RTSGraphics::RenderLobby`) | BGRA pixels, sizes and a present rectangle, pulled by the graphics thread | **Yes**, plain data; only `EELobbyLockFrame`'s C++ reference parameters need flattening |
+| WONGUI backend (`WONGUI/Plat*.cpp`, 2.3k; `units.WON_REPLACED`) | WON's WindowManager, Window, Graphics, NativeImage and Font implemented on the platform layer and WON's software rasteriser | A replaceable C++ class boundary, if WONGUI is kept while the rest moves (D8) |
+| WON wire messages (`WONBuffer.h`, `ReadBuffer`/`WriteBuffer`) | Little-endian fields, UTF-16 LE wide strings per unit, pinned by `tests/won` | **Yes:** a Rust codec has a byte-for-byte test |
 
 ---
 
@@ -164,12 +175,20 @@ commit, with a statistical gate (`sim_bench.py`, `ai_scorecard.py`) and new refe
   rebuild pointers on load.
 - **No Rust reference may live across a call back into C++,** because C++ may reach the same object. Rust code
   called under the world lock receives `&mut` derived from the lock contract and drops it before returning.
+- **The lobby runs inside a posted UI action and owns the UI thread while it is open.** `EEUserInterface::ProcessActions`
+  holds the UI copy lock and the world write lock around every action, so `EELobbyRunLoop` releases both and takes
+  them back in that order; otherwise the graphics thread blocks in `EEGraphics::FrameStarting`. The frame's lock
+  order is `EELobbyLock`, then the frame lock. A replacement keeps both rules or removes the nesting.
 
 ### 2.3 Text
 
 `UString` is Windows-1252 bytes; CJK and the encoding decision are open (PORT.md step 6). Until that decision, Rust
 treats game text as bytes (`&[u8]`/`Vec<u8>`, or a `GameStr` newtype) and converts at the platform edge, which SDL3
 already does in UTF-8. Do not map `UString` to Rust `String`.
+
+WON's text is different: `GUIString` and `wchar_t` in memory, cp1252 at the platform calls, and UTF-16 LE code units
+on the wire and in WON's files (`wchar_t` is 4 bytes on Linux and macOS, which is why `WideAppendUtf16LE` exists).
+Rust keeps those as `u16` units until they reach a display, because a name from the wire need not be valid UTF-16.
 
 ### 2.4 Observability
 
@@ -189,6 +208,10 @@ Everything Rust owns is invisible to that harness. The layout-independent observ
 - the `EE_TEST_UI` fixture (`ui-state.txt`/`test.command`, used by `posix_game.py`);
 - OOS dumps.
 
+The fixture does not acknowledge commands while the lobby is open, because the lobby owns the UI thread. The
+harness's `--exercise lobby` waits for presented frames instead, so a lobby replacement must keep presenting frames
+or give the fixture a real way in.
+
 **Move the gates onto these before R5.** R1-R4 can keep exporting the mangled C++ shims the harness hooks.
 
 ---
@@ -204,6 +227,8 @@ Everything Rust owns is invisible to that harness. The layout-independent observ
 | `tests/platform` (plat_test, font_test), `tools/gx_test`, `tools/sdl_test`, `tools/tcp_test` | Self-checks of a C API, exit code = failures | Run unchanged against the Rust implementation (link swap) |
 | `tools/record_sizes.py`, the `static_assert` pins | Record sizes | Mirror each assert in Rust (`const _: () = assert!(size_of::<T>() == N)`) |
 | `tools/harness/posix_game.py` + `EETestFixture.cpp` | Live game through the UI fixture | The layout-independent live harness; port its Windows half before R5 |
+| `tests/won` (`xbuild.py wontest`: `won_wire_test`, `won_socket_test`) | WON's wire format byte for byte, its socket layer over loopback | Gates R1's PlatSocket and any Rust WON codec. Not part of `gates.sh` today. `won_gui_test.cpp` (the GUI backend's GDI rules, offscreen) is in the tree, but `wontest` does not build it |
+| Harness `--exercise lobby` (`--refuse-autodial`) | Main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer -> the LAN screen | Smoke test of a lobby replacement. **It plays no game:** a LAN or Direct Connect game between two instances through the lobby is still untested (`mp_game.py` bypasses the lobby), and that test must exist before the lobby moves |
 | wgpu-native in the exe (`tools/build.py:127`) | | **Precedent:** a Rust staticlib already links with lld-link and `/MT`, with the system libraries Rust std needs |
 | MODDING_PLAN / AI_RESEARCH choices | | JSON-shaped canonical data "read by C++ and Rust alike"; strict YAML; `f32::from_str` float parsing; Lua through mlua; deferred caps (16 players, 6 armour kinds, 7 resources) planned for Rust |
 
@@ -265,6 +290,18 @@ a staticlib carries all object code of its dependencies), and that the link repo
 Each step: one concern per commit, the CLAUDE.md gates, a PORT_LEARNINGS entry, the C++ it replaces deleted in the
 same branch (no long-lived dual implementations beyond the comparison period).
 
+**Everything written in Rust is unit tested (the owner's rule).** Every module lands with its tests, in the same
+commit, in every phase:
+
+- Tests cover each module's public behaviour, its edge cases and its error paths, and run under `cargo test` with no
+  game, data tree or window. Code that seems to need those is split so that its logic can be tested alone, with the
+  I/O or the FFI as a thin layer around it.
+- Behaviour carried over from C++ is pinned by golden values captured from the C++ before it is deleted (RNG
+  sequences, float-to-int rounding, record bytes, wire messages, map dumps).
+- A bug fix comes with a test that fails without it.
+- The oracles in section 3 (the sim trace, `cppgate`, the tours) are additional. They show that the whole game still
+  agrees; they do not replace a module's tests.
+
 ### R0: the Rust library (foundation)
 
 - `rust/` workspace, `ee_rust` staticlib, wgpu-native from source at v24.0.3.1, panic hook, cbindgen, build.py /
@@ -282,12 +319,17 @@ same branch (no long-lived dual implementations beyond the comparison period).
    `src/Platform/{Win32,Posix}`, with the Windows-only differences in `cfg(windows)`.
    - Constraint: the harness's time shim hooks the Win32 imports PlatTime calls, so the Rust PlatTime must call the
      same Win32 functions until the harness clock moves to PlatSim (section 5 pre-work).
+   - WON is now a large PlatSocket and PlatThread client: `PlatSocketWait`/`GetError`/`Shutdown`, the socket options
+     and thread wait were added for it, and its `WSAE*` names are the `PLAT_SOCK_*` values, so those numbers are
+     part of the contract. PlatString's `PlatCp1252ToWide`/`PlatWideToCp1252` move with step 2.
 4. **PlatWindow** on winit (PORT.md already names it) or kept on SDL3 through `sdl3-sys`. Decide on the evidence:
    SDL3 works on all three systems today.
-5. **PlatFont** (stb_truetype -> `fontdue`/`ab_glyph`, or `swash`). Gate: font_test and menu screenshots within the
-   hinting tolerance.
+5. **PlatFont** (stb_truetype -> `fontdue`/`ab_glyph`, or `swash`). The lobby's text goes through it too
+   (`PlatGUIFont.cpp`, rasterised at size x the pixel scale). Gate: font_test and menu and lobby screenshots within
+   the hinting tolerance.
 
-Gate: `tests/platform` on all three systems with the Rust implementation, the tour, an AI game.
+Gate: `tests/platform` and `xbuild.py wontest` on all three systems with the Rust implementation, the tour,
+`--exercise lobby`, an AI game.
 
 ### R2: the data layer
 
@@ -326,7 +368,8 @@ Ordered by isolation:
    - Gates: `gx_test`, the tour's screenshots, `EE_GX_STATS` summaries.
 2. **The DX7 renderer plug-in** (9.7k) behind `GERasterizer`/`GEScreen`/`GESurface`/`GEVertexArray`
    trampolines. Then a choice: port it faithfully, or redesign the renderer in Rust from the GX contract
-   (PORT_LEARNINGS "GX").
+   (PORT_LEARNINGS "GX"). Either way the lobby's path stays: a system-memory surface with a 1024x768 logical size over
+   the frame's pixels (`GESurface::SetLogicalSize`), letterboxed onto the back buffer by `RTSGraphics::RenderLobby`.
 3. **The Graphics Engine** (GE*: models, textures, fonts, cameras; 17k) last in this phase. It is shared with the
    game's renderer (Graphics Thread), so it may move with R5's renderer decoupling instead.
 
@@ -376,11 +419,25 @@ The UI toolkit (14.4k, forms from the UI db tables), the in-game UI (36.5k) and 
 screenshot comparisons. Port the toolkit faithfully (the forms are data); an immediate-mode replacement is a design
 change, not a port.
 
+**The WON lobby** is a separate job with its own toolkit: WONGUI is not the UI* toolkit, and porting one does not
+port the other. It blocks nothing in R0-R5. It only needs its platform calls (R1), its surface path (R4) and
+`EEServer`/`gCommunications` to stay reachable from `EELobbyInterface.cpp` (R5). The scope is decision D8.
+
+Pre-work, whichever way D8 goes:
+
+1. A LAN and a Direct Connect game between two instances through the lobby, as a harness exercise (PORT.md "Other next
+   steps"). It is the only oracle for what the lobby must keep doing.
+2. A run on Linux and macOS through the lobby's screens.
+3. The `llvm-nm` surface of the WON objects (section 1.2), which also shows how much of the 32k service code the LAN
+   path pulls in. `LanLogic` uses `AuthContext` and the peer-auth ops, so some of WONAuth and WONCrypt is on that
+   path even without the online services.
+
 ### R7: the end
 
 - `main` in Rust;
 - the last vendored C (zlib/libpng/libjpeg -> `flate2`/`png`/`jpeg-decoder`, miniaudio -> cpal, dmusic, pl_mpeg)
-  replaced or kept behind `-sys` crates;
+  replaced or kept behind `-sys` crates (WON's PNG and JPEG decoders use the same codecs, so they go first or
+  together);
 - the clang toolchain becomes optional, then gone;
 - build.py and xbuild.py become `cargo build`, and the harness keeps only its layout-independent drivers.
 
@@ -389,12 +446,12 @@ change, not a port.
 | Phase | C++ replaced | Main risk | Value even alone |
 |---|---|---|---|
 | R0 | none | linking (std duplication) | the pipeline |
-| R1 | ~7k | Win32 hook compatibility with the harness | one platform implementation for 3 systems |
+| R1 | ~8k | Win32 hook compatibility with the harness | one platform implementation for 3 systems |
 | R2 | ~5k | none (strong gates) | the mod layer in Rust |
 | R3 | ~25k | interface inversion | plug-ins and services |
 | R4 | ~30k | D3D7 semantics | the renderer on the wgpu crate; no webgpu.h pin |
 | R5 | ~190k | determinism, ownership | the game |
-| R6 | ~90k | fidelity (no exact oracle) | |
+| R6 | ~90k, plus WON's 131k ported or retired (D8) | fidelity (no exact oracle) | |
 | R7 | rest + vendored C | | total Rust |
 
 ---
@@ -417,6 +474,16 @@ change, not a port.
 - **D7. Lockstep across systems:** with `-ffp-contract` unset, arm64 may already disagree with x86-64. Decide
   whether cross-system multiplayer is a goal; if so, set `-ffp-contract=off` now and add a Mac-vs-Windows sim trace
   comparison.
+- **D8. The WON lobby.** Its online services no longer exist, so what still works is LAN and Direct Connect, and
+  neither has been tested as a full game through it. Options:
+  - (a) port all 131k faithfully;
+  - (b) strip the online services in C++ first, then port what LAN and Direct Connect use;
+  - (c) keep the C++ until R6, then replace it with a small Rust lobby (LAN and Direct Connect only) on the game's
+    own UI toolkit, which also retires WONGUI, its crypto and its second text model. No retail compatibility holds
+    this back.
+
+  Proposed: (c), once the two-instance test (R6 pre-work) exists to gate it. (b) would pay sooner but costs merge
+  conflicts on every upstream sync of WON's sources, so stripping waits until upstream sync no longer matters.
 
 ## 7. First steps
 
