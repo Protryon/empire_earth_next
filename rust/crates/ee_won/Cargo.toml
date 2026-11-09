@@ -6,3 +6,8 @@ publish.workspace = true
 
 [lib]
 crate-type = ["rlib"]
+
+# the platform layer's sockets, threads and clock, called as Rust (ee_rust links them as the C ABI too)
+[dependencies]
+ee_plat_core = { path = "../ee_plat_core" }
+ee_plat_sys = { path = "../ee_plat_sys" }

@@ -3054,3 +3054,54 @@ RUST_PLAN R5a.3, a C++ refactor with no change to the simulation. `ee/EERenderSn
   as well). At each intermediate commit only its changed units were compiled alone (`clang_build.py --only`); the first
   commit's full build found a missing include in the new unit (fixed in that commit). No tour was run: the harness was
   in use by another session, and a comparison needs a tour of the unmodified branch too. Visual equality is unchecked.
+
+## R6: WON's socket layer and ops in Rust (ee_won, branch rust-r6-won2, 2026-11-09)
+
+`ee_won` now holds WON's network layer below the ops' objects, on the platform layer's Rust sockets
+(`ee_plat_sys::socket`, called as Rust, not through the C ABI): the status names (`status.rs`, WONStatusToString's
+table), NetStats (`netstats.rs`, atomics), IPAddr's parsing, lookups, text forms, order and the local address lists
+(`ipaddr.rs`), AsyncSocket's core (`socket.rs`), and the ops' algorithms (`ops.rs`: an op's time left, the message
+length prefix, the receive chunk, the send loop of SendBytesOp and the CR-LF loop of RecvCRMsgOp). The C++ classes
+stay the types callers use; `NetStats.cpp` is gone.
+
+- **`SendMsgOp` crashed in the clang-built game.** It constructs `SendBytesOp(NULL, ...)`, whose initialiser called
+  `inData->data()`; `ByteBuffer::data()` / `length()` test `this` for NULL, which is undefined behaviour that clang
+  folds away, so the op read through NULL (the original compiler kept the test). LanLogic sends every TCP message
+  (to the captain, to the game, its join replies) with `SendMsgOp`, so a LAN game through the lobby crashed at its
+  first message. The constructor now tests the pointer itself. Other `this ? ...` getters called on NULL are the same
+  hazard (not audited).
+- **The socket core is a `#[repr(C)]` struct in `AsyncSocket`** (`EeWonSocket mCore`: the handle, type, connected and
+  open flags, status, last receive time and first blocked send time; the times are 64-bit now). The C++ keeps the
+  lock (`mDataCrit`; the Rust functions expect it held, as the C++ held it), the virtual open / close / kill hooks
+  (so `Open`, `Bind`'s implicit open, `SendTo`'s implicit open and `Disconnect`'s close stay C++ around the Rust
+  calls), the destination `IPAddr`, the transforms and `Duplicate`. Users of the old members: the `Duplicate`s
+  (`mCore.kind`) and `HTTPGetOp::CleanupHook` (`mCore.status`).
+- **Ops that loop on a socket lock per call.** `ops::send_all` and `ops::recv_line` take the socket's core and its
+  `PlatMutex` (`mDataCrit.mCrit`) and lock around each send / receive, the wait without the lock, as the C++
+  `WaitForWrite` + `Send` did. The CR-LF test carries the line's last byte in from the C++ buffer, so a CR and LF split
+  between two `Continue` calls still end the line.
+- **`atoi` is the original's (MSVC):** a port text past `int` saturates (glibc's `(int)strtol` would differ for values
+  between 2^31 and 2^63). `inet_addr`'s failure value is 255.255.255.255, so that address stays unparseable without a
+  lookup, as before.
+- **cbindgen:** modules with only Rust callers are `/// cbindgen:ignore` (status, netstats, ipaddr), and so are the
+  socket's and op's constants: a `pub const` of a Rust type alias or of `ee_plat_sys`'s constants lands in
+  `ee_rust.h` as an undeclared name and breaks every unit (the first full build here failed on it).
+  `ee_plat_sys`'s `socket` and `thread` modules are public for Rust callers (`missing_safety_doc` allowed there: each
+  function's contract is its C header's).
+- **Golden first:** `tests/won/won_ops_test.cpp` (new, `xbuild.py wontest won_ops_test`) ran over the original C++
+  units before any forwarder: BlockingSocket's Connect, SendMsg / RecvMsg with 1-, 2- and 4-byte length fields and the
+  2-byte 0xffff escape, bad lengths and field sizes, a receive timeout, RecvCRMsg, RecvBytes (counted and until the
+  peer closes), a 3 MB SendBytes to a reader thread, datagrams, refused and invalid connects; then the same ops async
+  through WONAPICore (the op queue, the socket thread, the timer thread: a timeout, Kill, RunAsTimer) and
+  WONStatusToString. The status table was printed by the C++ for every code from -40000 to 120000
+  (`golden_status.tsv`). Both, and won_socket_test, pass over the forwarders. `wontest` takes program names now.
+
+What the harness's `--exercise lobby` reaches of this: WONAPICore's start (StartWinsock, the socket and timer
+threads, the op queue pumped by the lobby), InitLogic's `HasInternetConnection` (when the lobby config checks it) and
+`SetLocalHost` (the chosen adapter), and on the LAN screen LanLogic's discovery: a UDP `QueueSocket` bound to the local
+host's broadcast port (`Fn2B0D90`), the repeat `RecvBytesFromOp` on the socket thread, a broadcast `SendBytesToOp`
+and the 15 s discovery timer (`RunAsTimer`). It does not reach: TCP between two instances (`LobbyLanSocket`'s
+connect, accept, `SendMsgOp` / `RecvMsgOp` with 2-byte fields), peer auth, GetLocalAddr's join reply, the gone
+servers' ops (directory, routing, DB, HTTP's `RecvCRMsgOp`, FTP). Those are covered only by won_ops_test over loopback
+in one process.
+||||||| 5ffeba22
