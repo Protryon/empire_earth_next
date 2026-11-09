@@ -1,6 +1,6 @@
 """The rules documents (docs/DATA_FORMATS.md 8.8): named settings that were literals in the game code, as YAML next
-to the db tables. The game reads them in src/Empire Earth/Database/EERules.cpp (ee/EERules.h), whose defaults are
-the original's values; this module writes the same values as the vanilla documents (references as ids) and
+to the db tables. The game reads them in Rust (rust/crates/ee_data/src/rules.rs, ee/EERules.h), whose defaults, from
+rules_schema.json, are the original's values; this module writes the same values as the vanilla documents (references as ids) and
 validates documents (every key known, every reference an id of its table). `eedata.py cppgate` checks that the C++
 defaults and the vanilla documents dump identically.
 
@@ -442,7 +442,7 @@ def _check_entries(entries, w, what):
 
 def validate(name, text, content, spec):
     """Parses a rules document and checks every key and reference (tables.Content resolves the ids); raises
-    TextError naming the line. The game's reader (EERules.cpp) applies the same rules."""
+    TextError naming the line. The game's reader (ee_data rules.rs) applies the same rules."""
     try:
         doc = parse_yaml(text.decode('utf-8'))
     except UnicodeDecodeError as e:

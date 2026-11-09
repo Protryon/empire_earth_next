@@ -1769,3 +1769,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
   recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
   recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
+- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
+  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
+  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
+  reproduce its acceptance rules exactly) and waits for the gate to be runnable.

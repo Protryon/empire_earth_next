@@ -8,7 +8,7 @@
 // cases, compared with the Python importer by cppgate.py (the other tables, which references name, from text dir).
 //   eedata_gate --dump-text <text dir> <out.json>     the content dump of every table compiled from its text
 //   eedata_gate --dump-dat <db dir> <out.json>        the content dump of every .dat (the binary load)
-// (EEDataDump.cpp: canonical JSON of what the loaders read; the two must be identical.)
+// (ee_data dump.rs: canonical JSON of what the loaders read; the two must be identical.)
 #include <chrono>
 #include <filesystem>
 #include <cstdio>
