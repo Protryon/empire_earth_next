@@ -19,10 +19,13 @@
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Movie.h"
+#include "rust/ee_rust.h"
+#include "platform/PlatTime.h"
 
 TSCriticalSection* DX7Movie::sMovieCriticalSection;
 
-const unsigned long kSoundRingFloats = 2 * 32768;   // about 0.7 s of stereo at 44.1 kHz waiting for the mixer
+// The player's logic is in Rust (rust/crates/ee_dx7/src/movie.rs); this file keeps the class, its thread-system objects
+// and the trampolines into the engine (the mixer, pl_mpeg, the surfaces).
 
 // Creates a movie shown over the whole back buffer and starts its playback thread
 DX7Movie::DX7Movie(const FSFileSpec& inFile, unsigned long inScreen)
@@ -51,6 +54,7 @@ DX7Movie::~DX7Movie()
     TSScheduler::DestroyThread(this->mThread);
     TSScheduler::DestroyCriticalSection(this->mFrameAccess);
     TSScheduler::DestroyCriticalSection(this->mSoundAccess);
+    ee_dx7m_ring_destroy(this->mSoundRing);
 }
 
 // Creates the system-memory frame buffer at the movie's size in the back buffer's pixel format; on success sets the
@@ -60,16 +64,8 @@ long DX7Movie::CreateFrameBuffer(unsigned long inWidth, unsigned long inHeight)
     GESurfaceDescription theDescription;
     GEScreen* theScreen = GERasterizer::GetActiveRasterizer()->GetScreen(this->mScreen);
     GESurface* theTarget = GERasterizer::GetActiveRasterizer()->GetSecondarySurface(this->mScreen);
-    theDescription.mType = kSurfaceSystemMemory;
-    theDescription.mPixelFormat = theTarget->GetPixelFormat();
-    theDescription.mPixelDepth = theTarget->GetPixelDepth();
-    theDescription.mSurfaceVolatility = 0;
-    theDescription.mWidth = inWidth;
-    theDescription.mHeight = inHeight;
-    theDescription.m14 = 0;
-    theDescription.mMipLevelCount = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
+    ee_dx7m_frame_buffer_description(reinterpret_cast<EeDx7SurfaceDescription*>(&theDescription), theTarget->GetPixelFormat(),
+                                     theTarget->GetPixelDepth(), inWidth, inHeight);
     if (!this->mHasRectangle)
         this->mDestinationRectangle = GERectangle(0.0f, 0.0f, (float)theDescription.mWidth, (float)theDescription.mHeight);
     long theResult = theScreen->CreateSurface(theDescription, &this->mFrameBuffer);
@@ -103,11 +99,8 @@ void DX7Movie::Initialize(const FSFileSpec& inFile, unsigned long inScreen, bool
     this->mPlayMovieParameter.mIsLooping = inLoop;
     this->mJustStarted = true;
     this->mThread = NULL;
-    this->mSound.assign(kSoundRingFloats, 0.0f);
-    this->mSoundRead = 0;
-    this->mSoundCount = 0;
-    this->mSoundPosition = 0.0;
-    this->mSoundStep = 0.0;
+    this->mSoundRing = ee_dx7m_ring_new();
+    this->mPLM = NULL;
     char theName[MAX_PATH];
     snprintf(theName, MAX_PATH, "%s%s%s", (const char*)inFile.GetVolume(), (const char*)inFile.GetDirectory(),
               (const char*)inFile.GetFile());
@@ -125,30 +118,7 @@ void DX7Movie::Initialize(const FSFileSpec& inFile, unsigned long inScreen, bool
 // Waits for a decoded frame and copies it to the back buffer (stretched to the destination); 7 once playback has ended
 long DX7Movie::RenderFrame()
 {
-    long theResult = kErrorOK;
-    GERectangle theDestination;
-    if (!this->mJustStarted && !this->mIsPlaying)
-        theResult = 7;
-    else {
-        this->mFrameReadyEvent->Wait(INFINITE);
-        this->mFrameAccess->Enter();
-        GESurface* theTarget = GERasterizer::GetActiveRasterizer()->GetSecondarySurface(this->mScreen);
-        GESurface* theFrame;
-        if (this->mIsPlaying && (theFrame = this->mFrameBuffer) != NULL) {
-            theFrame->Reference();
-            if (!this->mHasRectangle) {
-                theDestination.SetLeft(0.0f);
-                theDestination.SetTop(0.0f);
-                theDestination.SetRight((float)(long)theTarget->GetWidth());
-                theDestination.SetBottom((float)(long)theTarget->GetHeight());
-            } else
-                theDestination = this->mDestinationRectangle;
-            theResult = theFrame->CopyTo(theTarget, this->mSourceRectangle, theDestination, false);
-            theFrame->Dereference();
-        }
-        this->mFrameAccess->Leave();
-    }
-    return theResult;
+    return ee_dx7m_render_frame(this);
 }
 
 // pl_mpeg decoded a frame (BGRA): converts it into the frame buffer and wakes RenderFrame
@@ -158,10 +128,8 @@ void DX7Movie::DecodedFrame(const unsigned char* inBGRA, unsigned long inStride)
     if (this->mFrameBuffer && this->mFrameBuffer->Lock() == kErrorOK) {
         unsigned long theWidth = (unsigned long)this->mSourceRectangle.GetRight();
         unsigned long theHeight = (unsigned long)this->mSourceRectangle.GetBottom();
-        unsigned char* theRow = this->mFrameBuffer->GetMemoryAddress();
-        unsigned long theFormat = this->mFrameBuffer->GetPixelFormat();
-        for (unsigned long y = 0; y < theHeight; y++, theRow += this->mFrameBuffer->GetBytesPerRow())
-            GEPackBGRXRow(inBGRA + y * inStride, theRow, theWidth, theFormat);
+        ee_dx7m_convert_frame(inBGRA, inStride, this->mFrameBuffer->GetMemoryAddress(), this->mFrameBuffer->GetBytesPerRow(),
+                              theWidth, theHeight, this->mFrameBuffer->GetPixelFormat());
         this->mIsReady = true;
         this->mFrameReadyEvent->Set();
         this->mFrameBuffer->Unlock();
@@ -174,11 +142,7 @@ void DX7Movie::DecodedFrame(const unsigned char* inBGRA, unsigned long inStride)
 void DX7Movie::DecodedSamples(const float* inInterleaved, unsigned long inCount)
 {
     this->mSoundAccess->Enter();
-    unsigned long theSize = this->mSound.size();
-    for (unsigned long i = 0; i < 2 * inCount && this->mSoundCount < theSize; i++) {
-        this->mSound[(this->mSoundRead + this->mSoundCount) % theSize] = inInterleaved[i];
-        this->mSoundCount++;
-    }
+    ee_dx7m_ring_push(this->mSoundRing, inInterleaved, inCount);
     this->mSoundAccess->Leave();
 }
 
@@ -187,21 +151,7 @@ void DX7Movie::MixSound(void* inMovie, float* outFrames, unsigned long inCount)
 {
     DX7Movie* theMovie = static_cast<DX7Movie*>(inMovie);
     theMovie->mSoundAccess->Enter();
-    const std::vector<float>& theRing = theMovie->mSound;
-    unsigned long theSize = theRing.size();
-    for (unsigned long i = 0; i < inCount && theMovie->mSoundCount >= 4; i++) {
-        unsigned long a = theMovie->mSoundRead;
-        unsigned long b = (a + 2) % theSize;
-        float f = (float)theMovie->mSoundPosition;
-        outFrames[2 * i] += theRing[a] + (theRing[b] - theRing[a]) * f;
-        outFrames[2 * i + 1] += theRing[a + 1] + (theRing[b + 1] - theRing[a + 1]) * f;
-        theMovie->mSoundPosition += theMovie->mSoundStep;
-        while (theMovie->mSoundPosition >= 1.0 && theMovie->mSoundCount >= 2) {
-            theMovie->mSoundPosition -= 1.0;
-            theMovie->mSoundRead = (theMovie->mSoundRead + 2) % theSize;
-            theMovie->mSoundCount -= 2;
-        }
-    }
+    ee_dx7m_ring_mix(theMovie->mSoundRing, outFrames, inCount);
     theMovie->mSoundAccess->Leave();
 }
 
@@ -220,75 +170,14 @@ static void PLMAudio(plm_t* inPLM, plm_samples_t* inSamples, void* inMovie)
     static_cast<DX7Movie*>(inMovie)->DecodedSamples(inSamples->interleaved, inSamples->count);
 }
 
-// Playback thread (one movie at a time): decodes the movie in real time until stopped or finished, then frees the
-// frame buffer, releases the movie's reference and signals that it stopped
+// Playback thread (one movie at a time): the Rust loop (ee_dx7m_play_movie) decodes until stopped or finished, then
+// frees the frame buffer, releases the movie's reference and signals that it stopped
 unsigned long DX7Movie::PlayMovie(void* inParameter)
 {
-    DX7Movie::sMovieCriticalSection->Enter();
     DX7Movie* theMovie = static_cast<PlayMovieParameter*>(inParameter)->mMovie;
     bool theLoop = static_cast<PlayMovieParameter*>(inParameter)->mIsLooping;
-    theMovie->mThread->SetPriority(0);
-    UMSetFloatingPointPrecision(0x10000);
-    // the converted movie next to the name the game gave (X.bik -> X.mpg)
-    char thePath[MAX_PATH];
-    snprintf(thePath, MAX_PATH, "%s", (const char*)theMovie->mFilename);
-    thePath[MAX_PATH - 1] = 0;
-    char* theDot = strrchr(thePath, '.');
-    if (theDot && strchr(theDot, '\\') == NULL && (size_t)(theDot - thePath) + 5 <= MAX_PATH)
-        strcpy(theDot, ".mpg");
-    // the game's path on the native file system (case-insensitive lookup off Windows; the same path on Win32)
-    char theNative[PLAT_MAX_PATH];
-    plm_t* thePLM = PlatPathGetAttributes(thePath) != PLAT_ATTR_INVALID && PlatPathToNative(thePath, theNative, sizeof(theNative))
-                        ? plm_create_with_filename(theNative) : NULL;
-    if (thePLM != NULL && plm_get_num_video_streams(thePLM) > 0) {
-        if (theMovie->CreateFrameBuffer(plm_get_width(thePLM), plm_get_height(thePLM)) != kErrorOK)
-            theMovie->mIsFinished = true;
-        plm_set_loop(thePLM, theLoop);
-        plm_set_video_decode_callback(thePLM, PLMVideo, theMovie);
-        SEMixer* theMixer = SEMixer::GetActiveMixer();
-        unsigned long theRate = theMixer ? theMixer->GetOutputRate() : 0;
-        bool theSound = theRate && plm_get_num_audio_streams(thePLM) > 0 && plm_get_samplerate(thePLM) > 0;
-        plm_set_audio_enabled(thePLM, theSound);
-        if (theSound) {
-            plm_set_audio_decode_callback(thePLM, PLMAudio, theMovie);
-            plm_set_audio_lead_time(thePLM, (double)PLM_AUDIO_SAMPLES_PER_FRAME / plm_get_samplerate(thePLM));
-            theMovie->mSoundStep = (double)plm_get_samplerate(thePLM) / theRate;
-            theMixer->SetMovieSource(DX7Movie::MixSound, theMovie);
-        }
-        theMovie->mIsPlaying = true;
-        theMovie->mJustStarted = false;
-        int64_t theFrequency = PlatCounterFrequency(), theLast = PlatCounterTicks(), theNow;
-        while (!theMovie->ShouldStop()) {
-            if (UMGetFloatingPointPrecision() != 0x10000)
-                UMSetFloatingPointPrecision(0x10000);
-            if (UMGetFloatingPointRoundingMode() != 0)
-                UMSetFloatingPointRoundingMode(0);
-            theNow = PlatCounterTicks();
-            double theElapsed = (double)(theNow - theLast) / theFrequency;
-            theLast = theNow;
-            plm_decode(thePLM, theElapsed < 0.1 ? theElapsed : 0.1);
-            if (!theLoop && plm_has_ended(thePLM))
-                theMovie->mIsFinished = true;
-            PlatSleep(1);
-        }
-        if (theSound)
-            theMixer->SetMovieSource(NULL, NULL);   // the device thread no longer pulls after this returns
-        theMovie->mFrameAccess->Enter();
-        theMovie->mIsPlaying = false;
-        theMovie->mFrameReadyEvent->Set();
-        if (theMovie->mFrameBuffer != NULL) {
-            theMovie->mFrameBuffer->Dereference();
-            theMovie->mFrameBuffer = NULL;
-        }
-        theMovie->mFrameAccess->Leave();
-        PlatSleep(100);
-    }
-    if (thePLM != NULL)
-        plm_destroy(thePLM);
-    theMovie->mJustStarted = false;
-    theMovie->Dereference();
-    DX7Movie::sMovieCriticalSection->Leave();
-    theMovie->mMovieStopped->Set();
+    const char* theName = (const char*)theMovie->mFilename;
+    ee_dx7m_play_movie(theMovie, reinterpret_cast<const unsigned char*>(theName), strlen(theName), theLoop);
     return 0;
 }
 
@@ -303,4 +192,119 @@ void DX7Movie::Stop()
 {
     this->mStopRequested = true;
     this->mMovieStopped->Wait(INFINITE);
+}
+
+// ---- the trampolines the Rust player calls (rust/crates/ee_dx7/src/movie_ffi.rs)
+extern "C" {
+void ee_dx7cpp_movie_thread_begin(DX7Movie* m)
+{
+    DX7Movie::sMovieCriticalSection->Enter();
+    m->mThread->SetPriority(0);
+    UMSetFloatingPointPrecision(0x10000);
+}
+
+bool ee_dx7cpp_movie_open(DX7Movie* m, const unsigned char* inPath, size_t inLength)
+{
+    char thePath[MAX_PATH];
+    memcpy(thePath, inPath, inLength);
+    thePath[inLength] = 0;
+    // the game's path on the native file system (case-insensitive lookup off Windows; the same path on Win32)
+    char theNative[PLAT_MAX_PATH];
+    m->mPLM = PlatPathGetAttributes(thePath) != PLAT_ATTR_INVALID && PlatPathToNative(thePath, theNative, sizeof(theNative))
+                  ? plm_create_with_filename(theNative) : NULL;
+    return m->mPLM != NULL;
+}
+
+int32_t ee_dx7cpp_movie_video_streams(DX7Movie* m) { return plm_get_num_video_streams((plm_t*)m->mPLM); }
+int32_t ee_dx7cpp_movie_width(DX7Movie* m) { return plm_get_width((plm_t*)m->mPLM); }
+int32_t ee_dx7cpp_movie_height(DX7Movie* m) { return plm_get_height((plm_t*)m->mPLM); }
+int32_t ee_dx7cpp_movie_create_frame_buffer(DX7Movie* m, int32_t inWidth, int32_t inHeight) { return m->CreateFrameBuffer(inWidth, inHeight); }
+void ee_dx7cpp_movie_set_finished(DX7Movie* m) { m->mIsFinished = true; }
+void ee_dx7cpp_movie_set_loop(DX7Movie* m, bool inLoop) { plm_set_loop((plm_t*)m->mPLM, inLoop); }
+void ee_dx7cpp_movie_install_video_callback(DX7Movie* m) { plm_set_video_decode_callback((plm_t*)m->mPLM, PLMVideo, m); }
+uint32_t ee_dx7cpp_movie_mixer_rate(DX7Movie* m)
+{
+    SEMixer* theMixer = SEMixer::GetActiveMixer();
+    return theMixer ? theMixer->GetOutputRate() : 0;
+}
+int32_t ee_dx7cpp_movie_audio_streams(DX7Movie* m) { return plm_get_num_audio_streams((plm_t*)m->mPLM); }
+int32_t ee_dx7cpp_movie_sample_rate(DX7Movie* m) { return plm_get_samplerate((plm_t*)m->mPLM); }
+void ee_dx7cpp_movie_set_audio_enabled(DX7Movie* m, bool inEnabled) { plm_set_audio_enabled((plm_t*)m->mPLM, inEnabled); }
+void ee_dx7cpp_movie_install_audio_callback(DX7Movie* m, double inLeadTime)
+{
+    plm_set_audio_decode_callback((plm_t*)m->mPLM, PLMAudio, m);
+    plm_set_audio_lead_time((plm_t*)m->mPLM, inLeadTime);
+}
+void ee_dx7cpp_movie_set_sound_step(DX7Movie* m, double inStep) { ee_dx7m_ring_set_step(m->mSoundRing, inStep); }
+void ee_dx7cpp_movie_set_mixer_source(DX7Movie* m, bool inAttach)
+{
+    SEMixer* theMixer = SEMixer::GetActiveMixer();
+    if (inAttach)
+        theMixer->SetMovieSource(DX7Movie::MixSound, m);
+    else
+        theMixer->SetMovieSource(NULL, NULL);
+}
+void ee_dx7cpp_movie_set_playing_started(DX7Movie* m) { m->mIsPlaying = true; m->mJustStarted = false; }
+bool ee_dx7cpp_movie_should_stop(DX7Movie* m) { return m->ShouldStop(); }
+uint32_t ee_dx7cpp_movie_fp_precision() { return UMGetFloatingPointPrecision(); }
+void ee_dx7cpp_movie_set_fp_precision(uint32_t inPrecision) { UMSetFloatingPointPrecision(inPrecision); }
+uint32_t ee_dx7cpp_movie_fp_rounding() { return UMGetFloatingPointRoundingMode(); }
+void ee_dx7cpp_movie_set_fp_rounding(uint32_t inMode) { UMSetFloatingPointRoundingMode(inMode); }
+void ee_dx7cpp_movie_decode(DX7Movie* m, double inElapsed) { plm_decode((plm_t*)m->mPLM, inElapsed); }
+bool ee_dx7cpp_movie_has_ended(DX7Movie* m) { return plm_has_ended((plm_t*)m->mPLM); }
+void ee_dx7cpp_movie_frame_enter(DX7Movie* m) { m->mFrameAccess->Enter(); }
+void ee_dx7cpp_movie_frame_leave(DX7Movie* m) { m->mFrameAccess->Leave(); }
+void ee_dx7cpp_movie_clear_playing(DX7Movie* m) { m->mIsPlaying = false; }
+void ee_dx7cpp_movie_frame_ready_set(DX7Movie* m) { m->mFrameReadyEvent->Set(); }
+void ee_dx7cpp_movie_release_frame_buffer(DX7Movie* m)
+{
+    if (m->mFrameBuffer != NULL) {
+        m->mFrameBuffer->Dereference();
+        m->mFrameBuffer = NULL;
+    }
+}
+void ee_dx7cpp_movie_clear_just_started(DX7Movie* m) { m->mJustStarted = false; }
+void ee_dx7cpp_movie_destroy(DX7Movie* m) { plm_destroy((plm_t*)m->mPLM); m->mPLM = NULL; }
+void ee_dx7cpp_movie_dereference(DX7Movie* m) { m->Dereference(); }
+void ee_dx7cpp_movie_thread_end(DX7Movie* m)
+{
+    DX7Movie::sMovieCriticalSection->Leave();
+    m->mMovieStopped->Set();
+}
+bool ee_dx7cpp_movie_is_playing(DX7Movie* m) { return m->mIsPlaying; }
+bool ee_dx7cpp_movie_just_started(DX7Movie* m) { return m->mJustStarted; }
+void ee_dx7cpp_movie_wait_frame_ready(DX7Movie* m) { m->mFrameReadyEvent->Wait(INFINITE); }
+bool ee_dx7cpp_movie_frame_buffer_present(DX7Movie* m) { return m->mFrameBuffer != NULL; }
+bool ee_dx7cpp_movie_has_rectangle(DX7Movie* m) { return m->mHasRectangle; }
+void ee_dx7cpp_movie_destination_rectangle(DX7Movie* m, float* outRect)
+{
+    outRect[0] = m->mDestinationRectangle.GetLeft();
+    outRect[1] = m->mDestinationRectangle.GetTop();
+    outRect[2] = m->mDestinationRectangle.GetRight();
+    outRect[3] = m->mDestinationRectangle.GetBottom();
+}
+void ee_dx7cpp_movie_target_size(DX7Movie* m, uint32_t* outWidth, uint32_t* outHeight)
+{
+    GESurface* theTarget = GERasterizer::GetActiveRasterizer()->GetSecondarySurface(m->mScreen);
+    *outWidth = theTarget->GetWidth();
+    *outHeight = theTarget->GetHeight();
+}
+int32_t ee_dx7cpp_movie_copy_frame(DX7Movie* m, const float* inDestination)
+{
+    GESurface* theTarget = GERasterizer::GetActiveRasterizer()->GetSecondarySurface(m->mScreen);
+    GESurface* theFrame = m->mFrameBuffer;
+    theFrame->Reference();
+    GERectangle theDestination;
+    theDestination.SetLeft(inDestination[0]);
+    theDestination.SetTop(inDestination[1]);
+    theDestination.SetRight(inDestination[2]);
+    theDestination.SetBottom(inDestination[3]);
+    long theResult = theFrame->CopyTo(theTarget, m->mSourceRectangle, theDestination, false);
+    theFrame->Dereference();
+    return theResult;
+}
+void ee_dx7cpp_pack_bgrx_row(const unsigned char* inSource, unsigned char* outDestination, unsigned long inWidth, unsigned long inFormat)
+{
+    GEPackBGRXRow(inSource, outDestination, inWidth, inFormat);
+}
 }

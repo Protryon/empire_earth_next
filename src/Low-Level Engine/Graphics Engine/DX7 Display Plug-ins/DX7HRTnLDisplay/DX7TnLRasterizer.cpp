@@ -13,6 +13,7 @@
 #include "dx7/DX7TnLRasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
+#include "rust/ee_rust.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HRTNL 0x1000fd16
@@ -44,28 +45,6 @@
 // SYNTHETIC: DX7HRTNL 0x1000fe5d
 // SYNTHETIC: DX7HRTNL 0x1000fe69
 
-// Built without /Og like DX7Rasterizer.cpp's enumeration callbacks (memory-resident locals, `leave`; CLAUDE.md rule
-// 4). The required caps live in a memory local (`mov [ebp-0xc], 0x90000`), so they are a named variable.
-#pragma optimize("g", off)
-
-// FUNCTION: DX7HRTNL 0x1000fe74
-// Device enumeration callback: marks the screen valid and stops at the first device with hardware T&L and rasterization
-GXRESULT CALLBACK DX7TnLEnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps,
-                                           LPVOID inContext)
-{
-    bool* theContext = (bool*)inContext;
-    HRESULT theResult = GXENUMRET_OK;
-    unsigned long theRequiredCaps = GXDEVCAPS_HWTRANSFORMANDLIGHT | GXDEVCAPS_HWRASTERIZATION;
-    bool theFlag = (inCaps->dwDevCaps & theRequiredCaps) == theRequiredCaps;
-    if (theFlag) {
-        *theContext = true;
-        theResult = GXENUMRET_CANCEL;
-    }
-    return theResult;
-}
-
-#pragma optimize("g", on)
-
 // FUNCTION: DX7HRTNL 0x1000feba
 // Creates the T&L rasterizer under the given name
 DX7TnLRasterizer::DX7TnLRasterizer(const UString& inName) : DX7Rasterizer(inName)
@@ -80,118 +59,29 @@ DX7TnLRasterizer::~DX7TnLRasterizer()
 
 // FUNCTION: DX7HRTNL 0x1000fedd
 // Creates the T&L HAL device on the back buffer, sets the viewport, fixed render states and vertex buffer, then
-// resets the cached states; on a CreateDevice failure the GXDirect3D interface is never released
+// resets the cached states (rust/crates/ee_dx7/src/raster.rs); on a CreateDevice failure the GXDirect3D interface is released
 long DX7TnLRasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
                                          GETextureManager* inManager, GEWindow* inWindow)
 {
     DX7Surface* theTarget = dynamic_cast<DX7Surface*>(inSecondary);
-    GXDirect3D* theDirect3D = NULL;
-    GXDevice* theDevice = NULL;
-    long theResult;
-    HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->QueryInterface(
-        GXIID_Direct3D7, (void**)&theDirect3D);
-    if (theError == GX_OK) {
-        theError = theDirect3D->CreateDevice(GXIID_TnLHalDevice, *theTarget, &theDevice);
-        if (theError == GX_OK) {
-            this->mDX7ScreenStates[inScreen]->mDirect3D = theDirect3D;
-            this->mDX7ScreenStates[inScreen]->mDevice = theDevice;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwX = 0;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwY = 0;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwWidth = theTarget->GetWidth();
-            this->mDX7ScreenStates[inScreen]->mViewport.dwHeight = theTarget->GetHeight();
-            this->mDX7ScreenStates[inScreen]->mViewport.dvMinZ = 0.0f;
-            this->mDX7ScreenStates[inScreen]->mViewport.dvMaxZ = 1.0f;
-            theDevice->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
-            theDevice->SetRenderState(GXRS_SPECULARENABLE, FALSE);
-            theDevice->SetRenderState(GXRS_EXTENTS, FALSE);
-            theDevice->SetRenderState(GXRS_CLIPPING, FALSE);
-            theDevice->SetRenderState(GXRS_NORMALIZENORMALS, TRUE);
-            theDevice->SetRenderState(GXRS_LOCALVIEWER, FALSE);
-            theDevice->SetRenderState(GXRS_FOGVERTEXMODE, GXFOG_LINEAR);
-            theDevice->SetRenderState(GXRS_SPECULARMATERIALSOURCE, GXMCS_MATERIAL);
-            theDevice->SetRenderState(GXRS_EMISSIVEMATERIALSOURCE, GXMCS_MATERIAL);
-            theResult = this->CreateVertexBuffers(inScreen);
-            if (theResult == kErrorOK) {
-                this->mDX7ScreenStates[inScreen]->mCanModulateTextureAlpha = true;
-                this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
-                this->mDX7ScreenStates[inScreen]->mZEnable = 1;
-                this->mDX7ScreenStates[inScreen]->mZWriteEnable = true;
-                this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable = true;
-                this->mDX7ScreenStates[inScreen]->mBlendSource = -16;
-                this->mDX7ScreenStates[inScreen]->mBlendDestination = -16;
-                this->mDX7ScreenStates[inScreen]->mStage.mTexture = NULL;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorMode = 4;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaMode = 4;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorArgument1 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorArgument2 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument1 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument2 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mTextureAddressingMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMinFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = FLT_MAX;
-                this->mDX7ScreenStates[inScreen]->mDevice->SetTextureStageState(0, GXTSS_TEXCOORDINDEX, 0);
-            }
-            return theResult;
-        }
-        // CreateDevice failed: release the GXDirect3D the query returned.
-        theDirect3D->Release();
-    }
-    theResult = kErrorNativeError;
-    ESRecordNativeError(theError);
-    return theResult;
+    return ee_dx7r_activate_the_screen(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]),
+                                       static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw,
+                                       (GXSurface*)*theTarget, theTarget->GetWidth(), theTarget->GetHeight(), true);
 }
 
 // FUNCTION: DX7HRTNL 0x10010391
 // Creates the screen's write-only vertex buffer (2400 vertices: position, normal, colour, one texture)
 long DX7TnLRasterizer::CreateVertexBuffers(unsigned long inScreen)
 {
-    GXDirect3D* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
-    long theResult = kErrorOK;
-    GXVERTEXBUFFERDESC theDescription;
-    memset(&theDescription, 0, sizeof(theDescription));
-    theDescription.dwSize = sizeof(theDescription);
-    theDescription.dwCaps = GXVBCAPS_WRITEONLY;
-    theDescription.dwFVF = GXFVF_XYZ | GXFVF_NORMAL | GXFVF_DIFFUSE | GXFVF_TEX1;
-    theDescription.dwNumVertices = 0x960;
-    HRESULT theError = theDirect3D->CreateVertexBuffer(&theDescription, &this->mDX7ScreenStates[inScreen]->mVertexBuffer, 0);
-    if (theError != GX_OK) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    }
-    return theResult;
+    return ee_dx7r_create_vertex_buffers(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), true);
 }
-
-// Built without /Og like DX7Rasterizer::GetIsScreenValid (CLAUDE.md rule 4).
-#pragma optimize("g", off)
 
 // FUNCTION: DX7HRTNL 0x10010410
 // Tells whether a screen's DirectDraw object offers a device with hardware T&L and rasterization
 bool DX7TnLRasterizer::GetIsScreenValid(DX7Screen* inScreen)
 {
-    long theRetVal = 9;
-    GXDirect3D* theIDirect3D = NULL;
-    bool theIsValid = false;
-    HRESULT theHResult = ((GXDirectDraw*)*inScreen)->QueryInterface(GXIID_Direct3D7, (void**)&theIDirect3D);
-    if (theHResult == GX_OK) {
-        theHResult = theIDirect3D->EnumDevices(DX7TnLEnumDevicesCallback, &theIsValid);
-        if (theHResult == GX_OK) {
-            if (theIsValid)
-                theRetVal = kErrorOK;
-        } else {
-            theRetVal = kErrorNativeError;
-            ESRecordNativeError(theHResult);
-        }
-        theIDirect3D->Release();
-    } else {
-        theRetVal = kErrorNativeError;
-        ESRecordNativeError(theHResult);
-    }
-    return theRetVal == kErrorOK;
+    return ee_dx7r_is_screen_valid((GXDirectDraw*)*inScreen, true);
 }
-
-#pragma optimize("g", on)
 
 // The template-static init chain head and its atexit registrars:
 // SYNTHETIC: DX7HRTNL 0x100104ba

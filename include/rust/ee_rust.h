@@ -40,6 +40,8 @@ constexpr static const unsigned long CLIP_TOP = 16;
 
 constexpr static const unsigned long CLIP_BOTTOM = 32;
 
+constexpr static const size_t LIGHT_SLOTS = 8;
+
 constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
 
 constexpr static const uint32_t ARCHIVE_VERSION = 1;
@@ -107,6 +109,10 @@ struct EeRmapResult;
 
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
+
+/// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
+/// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
+struct EeDx7SoundRing;
 
 /// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
 /// ignored).
@@ -325,6 +331,74 @@ struct Dx7StdColorVertex {
   float tv;
 };
 
+/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+struct EeDx7SurfaceDescription {
+  unsigned long mType;
+  unsigned long mPixelFormat;
+  unsigned long mSurfaceVolatility;
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long m14;
+  long mMipLevelCount;
+  unsigned long mPixelDepth;
+  bool mIs3DRenderable;
+  bool mIsTransparencyEnabled;
+  bool mNoAlpha;
+};
+
+/// `GELight`'s fields as `UpdateLight` reads them.
+struct EeDx7LightParams {
+  float location[3];
+  float direction[3];
+  float computed_color[3];
+  uint32_t style;
+  float attenuation[3];
+  float range;
+};
+
+/// The statistics `ShowScene` keeps (`GERScreenState`): frames, polys, texture changes and the rates.
+struct EeDx7FrameStats {
+  uint32_t frame_counter;
+  uint32_t scene_polys;
+  uint32_t last_time;
+  uint32_t texture_changes;
+  uint32_t drawn_poly_count;
+  float drawn_poly_area;
+  float area_per_frame;
+  float area_per_second;
+  float polys_per_frame;
+  float polys_per_second;
+  float frames_per_second;
+  float scene_polys_per_frame;
+  float scene_polys_per_second;
+  float texture_changes_per_frame;
+};
+
+/// `sScreensCaptured` and `sFirstCaptureWasAttachedToDesktop`.
+struct EeDx7CaptureState {
+  uint32_t captured;
+  bool first_attached;
+};
+
+/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+struct EeDx7VideoMode {
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long mRefreshRate;
+  unsigned long mBitCount;
+  unsigned long mPixelFormat;
+};
+
+/// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
+struct EeDx7WindowParams {
+  bool create_at;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  uint32_t flags;
+};
+
 /// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
 struct EeDx7StageView {
   void *surface;
@@ -335,6 +409,23 @@ struct EeDx7StageView {
   unsigned long mMagFilterMode;
   unsigned long mMipFilterMode;
   float mMipMapBias;
+};
+
+/// `GESurface`'s logical-size members and the surface's pixel size (`GetLogicalShift`, `SetLogicalSize`).
+struct EeDx7LogicalMetrics {
+  uint32_t logical_width;
+  uint32_t logical_height;
+  uint32_t pixel_width;
+  uint32_t pixel_height;
+  uint32_t logical_shift;
+};
+
+/// The result of `DX7Surface::Lock` (the C++ stores the rest in its fields when `locked`).
+struct EeDx7LockOutcome {
+  int32_t result;
+  void *memory;
+  int32_t pitch;
+  bool locked;
 };
 
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
@@ -1189,6 +1280,156 @@ void ee_dx7_copy_with_filter_16(unsigned long format,
                                 const float *source_rect,
                                 const float *destination_rect);
 
+EeDx7SoundRing *ee_dx7m_ring_new();
+
+void ee_dx7m_ring_destroy(EeDx7SoundRing *ring);
+
+void ee_dx7m_ring_set_step(EeDx7SoundRing *ring, double step);
+
+/// `DecodedSamples`: `2 * inCount` interleaved floats.
+void ee_dx7m_ring_push(EeDx7SoundRing *ring, const float *samples, uint32_t count);
+
+/// `MixSound`: adds to `2 * count` floats.
+void ee_dx7m_ring_mix(EeDx7SoundRing *ring, float *out, uint32_t count);
+
+/// `DX7Movie::PlayMovie`: `movie` is the `DX7Movie*`, `filename` its file name (not NUL terminated in Rust).
+void ee_dx7m_play_movie(void *movie,
+                        const uint8_t *filename,
+                        size_t length,
+                        bool looping);
+
+/// `DX7Movie::RenderFrame`.
+int32_t ee_dx7m_render_frame(void *movie);
+
+/// `DecodedFrame`'s rows, through `GEPackBGRXRow`.
+void ee_dx7m_convert_frame(const uint8_t *bgra,
+                           uint32_t stride,
+                           uint8_t *destination,
+                           uint32_t pitch,
+                           uint32_t width,
+                           uint32_t height,
+                           unsigned long format);
+
+/// `CreateFrameBuffer`'s description.
+void ee_dx7m_frame_buffer_description(EeDx7SurfaceDescription *out,
+                                      uint32_t pixel_format,
+                                      uint32_t pixel_depth,
+                                      uint32_t width,
+                                      uint32_t height);
+
+int32_t ee_dx7r_activate_the_screen(EeDx7ScreenState *state,
+                                    void *dd,
+                                    void *target,
+                                    uint32_t width,
+                                    uint32_t height,
+                                    bool tnl);
+
+int32_t ee_dx7r_create_vertex_buffers(EeDx7ScreenState *state, bool tnl);
+
+bool ee_dx7r_is_screen_valid(void *dd, bool tnl);
+
+int32_t ee_dx7r_begin_scene(void *device);
+
+int32_t ee_dx7r_end_scene(void *device);
+
+int32_t ee_dx7r_clear(void *device, const float *rect, const float *rgb);
+
+int32_t ee_dx7r_clear_z(void *device, const float *rect, float z);
+
+/// `LockVB`: `out` receives the vertex pointer; the result is always OK, as in the C++.
+int32_t ee_dx7r_lock_vb(EeDx7ScreenState *state, uint32_t count, void **out);
+
+int32_t ee_dx7r_unlock_vb(void *buffer);
+
+/// `in_use` is `gLightsInUse`, 8 slots.
+int32_t ee_dx7r_add_light(void *device,
+                          unsigned long *in_use,
+                          const EeDx7LightParams *params,
+                          uint32_t *out_index);
+
+int32_t ee_dx7r_update_light(void *device,
+                             const unsigned long *in_use,
+                             uint32_t index,
+                             const EeDx7LightParams *params);
+
+int32_t ee_dx7r_remove_light(void *device, unsigned long *in_use, uint32_t index);
+
+int32_t ee_dx7r_remove_all_lights(void *device, unsigned long *in_use);
+
+int32_t ee_dx7r_set_2d_mode(EeDx7ScreenState *state);
+
+/// `view`/`projection`: the engine transformations as 16 elements, row by row.
+int32_t ee_dx7r_set_3d_mode(EeDx7ScreenState *state, const float *view, const float *projection);
+
+void ee_dx7r_set_render_target(EeDx7ScreenState *state,
+                               void *target,
+                               uint32_t width,
+                               uint32_t height);
+
+void ee_dx7r_set_viewport(EeDx7ScreenState *state, const float *rect, float near, float far);
+
+void ee_dx7r_update_frame_stats(EeDx7FrameStats *stats, uint32_t time);
+
+/// `ShowScene`'s presentation; `primary_surface` is the primary's `GESurface*` for the flip.
+int32_t ee_dx7r_show_scene(bool full_screen,
+                           void *primary,
+                           void *secondary,
+                           uint32_t secondary_width,
+                           uint32_t secondary_height,
+                           float origin_x,
+                           float origin_y,
+                           void *primary_surface,
+                           bool wait);
+
+/// `ActivateScreen`: `context` is a `DX7ActivateContext*`.
+int32_t ee_dx7r_activate_screen(void *context,
+                                uint32_t window_width,
+                                uint32_t window_height,
+                                uint32_t back_buffers,
+                                bool z_buffer,
+                                uint32_t z_format);
+
+int32_t ee_dx7r_activate_rendering_surface(void *context, uint32_t width, uint32_t height);
+
+/// `DX7Rasterizer::ActivateRasterizer`.
+int32_t ee_dx7r_activate_rasterizer(void *rasterizer);
+
+/// `GetVideoMemory`.
+int32_t ee_dx7r_get_video_memory(void *dd, uint32_t *total, uint32_t *free);
+
+void ee_dx7sc_initialize(void *screen, void *dd);
+
+void ee_dx7sc_test_32bit_support(void *screen, void *dd);
+
+int32_t ee_dx7sc_capture(void *dd,
+                         void *window,
+                         bool to_clipboard,
+                         bool attached,
+                         EeDx7CaptureState *state,
+                         bool *full_screen);
+
+int32_t ee_dx7sc_release(void *dd, void *window, EeDx7CaptureState *state, bool *full_screen);
+
+int32_t ee_dx7sc_restore_all(void *dd);
+
+int32_t ee_dx7sc_set_mode(void *dd, bool full_screen, const EeDx7VideoMode *mode, bool *update);
+
+/// `DX7Screen::CreateSurface`: the description is copied in and out (the C++ reference argument's updates).
+int32_t ee_dx7sc_create_surface(void *screen,
+                                void *dd,
+                                EeDx7SurfaceDescription *description,
+                                void **out);
+
+void ee_dx7sc_window_params(bool sim,
+                            uint32_t style,
+                            int32_t width,
+                            int32_t height,
+                            int32_t display_width,
+                            int32_t display_height,
+                            float x,
+                            float y,
+                            EeDx7WindowParams *out);
+
 bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
 
 bool ee_dx7r_set_alpha_testing_compare_state(void *device,
@@ -1246,6 +1487,44 @@ void ee_dx7r_clear_texture(EeDx7ScreenState *state);
 
 /// `SetTexture`'s stage-0 diff and stage 1 off (after the C++ reference counting).
 void ee_dx7r_apply_texture_stage(EeDx7ScreenState *state, const EeDx7StageView *view);
+
+int32_t ee_dx7s_clear(void *s, uint32_t fill);
+
+int32_t ee_dx7s_clear_rect(void *s,
+                           const float *r,
+                           const EeDx7LogicalMetrics *metrics,
+                           uint32_t fill);
+
+int32_t ee_dx7s_copy_to(void *source,
+                        void *target,
+                        const float *source_rect,
+                        const EeDx7LogicalMetrics *source_metrics,
+                        const float *destination_rect,
+                        const EeDx7LogicalMetrics *target_metrics,
+                        bool transparent);
+
+/// `DX7PixelRectangle` for `CopyWithFilter`: `out` is 4 floats.
+void ee_dx7s_pixel_rect(const float *r, const EeDx7LogicalMetrics *metrics, float *out);
+
+int32_t ee_dx7s_flip(void *s, bool wait);
+
+void ee_dx7s_lock(void *s, EeDx7LockOutcome *out);
+
+int32_t ee_dx7s_unlock(void *s, bool *cleared);
+
+int32_t ee_dx7s_restore(void *s);
+
+int32_t ee_dx7s_attach(void *s, void *other);
+
+int32_t ee_dx7s_detach(void *s, void *other);
+
+void ee_dx7s_set_transparency_color(void *s, uint32_t color);
+
+uint32_t ee_dx7s_own_size(uint32_t pixel_depth, uint32_t height, uint32_t width);
+
+int32_t ee_dx7s_text_lock(bool *locked);
+
+int32_t ee_dx7s_text_unlock(bool *locked);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);

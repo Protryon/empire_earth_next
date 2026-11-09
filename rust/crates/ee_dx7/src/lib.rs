@@ -4,12 +4,17 @@
 //! Modules that only need their inputs as plain data are tested with golden values captured from the C++
 //! (each module's tests say how).
 
+pub mod api;
 pub mod draw;
 pub mod draw2d;
 pub mod draw_model;
 pub mod draw_terrain;
 pub mod filter;
+pub mod movie;
+pub mod raster;
+pub mod screen;
 pub mod state;
+pub mod surface;
 pub mod vertex;
 
 #[cfg(not(test))]
@@ -20,6 +25,14 @@ mod filter_ffi;
 #[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]
+mod movie_ffi;
+#[cfg(not(test))]
+mod raster_ffi;
+#[cfg(not(test))]
+mod screen_ffi;
+#[cfg(not(test))]
 mod state_ffi;
+#[cfg(not(test))]
+mod surface_ffi;
 
 pub use vertex::{float_to_long, rgb_make, rgba, PolygonArray, StandardVertexArray, StdColorVertexArray};

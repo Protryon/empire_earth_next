@@ -1,0 +1,304 @@
+# tnl_activate_ok
+dd_query_interface 100 1
+dd_create_device 100 3 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_set_render_state 9 29 0
+device_set_render_state 9 138 0
+device_set_render_state 9 136 0
+device_set_render_state 9 143 1
+device_set_render_state 9 142 0
+device_set_render_state 9 140 3
+device_set_render_state 9 146 0
+device_set_render_state 9 148 0
+dd_create_vertex_buffer 100 10000 152 2400
+device_set_stage_state 9 0 11 0
+= 0
+state d3d=100 dev=9 vb=11 mod=1 s1=1 zen=1 zw=1 ab=1 sb=4294967280 db=4294967280 tex=0 cm=4 am=4 arg=4294967295 addr=3 minf=3 bias=7f7fffff
+# tnl_create_device_fails
+dd_query_interface 100 1
+dd_create_device 100 3 5
+dd_release 100
+native_error 70
+= 1
+# tnl_query_fails
+dd_query_interface 100 1
+native_error 71
+= 1
+# tnl_create_vb_fails
+dd_query_interface 100 1
+dd_create_device 100 3 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_set_render_state 9 29 0
+device_set_render_state 9 138 0
+device_set_render_state 9 136 0
+device_set_render_state 9 143 1
+device_set_render_state 9 142 0
+device_set_render_state 9 140 3
+device_set_render_state 9 146 0
+device_set_render_state 9 148 0
+dd_create_vertex_buffer 100 10000 152 2400
+native_error 74
+= 1
+# hal_activate_ok
+dd_query_interface 100 1
+dd_create_device 100 2 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_set_render_state 9 29 0
+device_set_render_state 9 138 0
+device_set_render_state 9 136 0
+device_set_render_state 9 143 1
+device_set_render_state 9 142 0
+device_set_render_state 9 140 3
+device_set_render_state 9 146 0
+device_set_render_state 9 148 0
+dd_create_vertex_buffer 100 10800 152 2400
+dd_get_device_identifier 100
+dd_get_available_vid_mem 100 4000
+device_set_stage_state 9 0 11 0
+= 0
+hal mod=1 dirty=1
+# hal_activate_rage
+dd_query_interface 100 1
+dd_create_device 100 2 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_set_render_state 9 29 0
+device_set_render_state 9 138 0
+device_set_render_state 9 136 0
+device_set_render_state 9 143 1
+device_set_render_state 9 142 0
+device_set_render_state 9 140 3
+device_set_render_state 9 146 0
+device_set_render_state 9 148 0
+dd_create_vertex_buffer 100 10800 152 2400
+dd_get_device_identifier 100
+dd_get_available_vid_mem 100 4000
+device_set_stage_state 9 0 11 0
+= 0
+hal mod=0 dirty=0
+# hal_activate_matrox
+dd_query_interface 100 1
+dd_create_device 100 2 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_set_render_state 9 29 0
+device_set_render_state 9 138 0
+device_set_render_state 9 136 0
+device_set_render_state 9 143 1
+device_set_render_state 9 142 0
+device_set_render_state 9 140 3
+device_set_render_state 9 146 0
+device_set_render_state 9 148 0
+dd_create_vertex_buffer 100 10800 152 2400
+dd_get_device_identifier 100
+dd_get_available_vid_mem 100 4000
+device_set_stage_state 9 0 11 0
+= 0
+hal mod=1 dirty=0
+# tnl_valid_needs_both
+dd_query_interface 100 1
+dd_enum_devices 100
+dd_release 100
+= 0
+# tnl_valid
+dd_query_interface 100 1
+dd_enum_devices 100
+dd_release 100
+= 1
+# tnl_valid_query_fails
+dd_query_interface 100 1
+native_error 73
+= 0
+# tnl_valid_enum_fails
+dd_query_interface 100 1
+dd_enum_devices 100
+native_error 72
+dd_release 100
+= 0
+# hal_valid
+dd_query_interface 100 1
+dd_enum_devices 100
+dd_release 100
+= 1
+# hal_invalid
+dd_query_interface 100 1
+dd_enum_devices 100
+dd_release 100
+= 0
+# begin_scene_new_target_retry
+device_set_render_target 9 5
+device_set_viewport 9 0 0 640 480 00000000 3f800000
+device_begin_scene 9
+sleep 1
+device_begin_scene 9
+= 0
+rt=3591186192 vp=640,480
+# begin_scene_same_target_err
+device_begin_scene 9
+native_error 75
+= 1
+# begin_scene_lost
+device_begin_scene 9
+native_error 887601c2
+= 9
+# end_scene_retry
+device_end_scene 9
+sleep 1
+device_end_scene 9
+= 0
+# end_scene_lost
+device_end_scene 9
+native_error 887601c2
+= 9
+# end_scene_err
+device_end_scene 9
+native_error 76
+= 1
+# clear_retry
+device_clear 9 1,3,101,201 1 ff7fff3f 00000000
+sleep 0
+device_clear 9 1,3,101,201 1 ff7fff3f 00000000
+= 0
+# clear_err
+device_clear 9 1,3,101,201 1 ff7fff3f 00000000
+native_error 77
+= 1
+# clearz_retry
+device_clear 9 1,3,101,201 2 0 3f400000
+sleep 0
+device_clear 9 1,3,101,201 2 0 3f400000
+= 0
+# clearz_err
+device_clear 9 1,3,101,201 2 0 3f400000
+native_error 78
+= 1
+# video_memory_ok
+dd_get_available_vid_mem 100 4000
+= 0
+outs 16777216 8388608
+# video_memory_query_fails
+dd_get_available_vid_mem 100 4000
+= 13
+outs 1 2
+# video_memory_zero
+dd_get_available_vid_mem 100 4000
+= 13
+outs 1 2
+# lock_vb_nooverwrite
+vb_lock 11 1020
+= 0
+pos 100 vb 8192
+# lock_vb_discard
+vb_lock 11 2020
+= 0
+pos 0 vb 8192
+# lock_vb_busy
+vb_lock 11 1020
+sleep 0
+vb_lock 11 1020
+= 0
+pos 0 vb 8192
+# unlock_vb_busy
+vb_unlock 11
+sleep 0
+vb_unlock 11
+= 0
+# unlock_vb_err
+vb_unlock 11
+native_error 79
+= 1
+# add_light_ok_point
+device_set_light 9 0 kind=1 d=3dcccccd,3e4ccccd,3e99999a p=3f800000,40000000,40400000 dr=be800000,bf000000,bf800000 r=42c60000 a=3fc00000,3e800000,3e000000
+device_light_enable 9 0 1
+= 0
+idx 0
+# add_light_directional
+device_set_light 9 1 kind=3 d=3dcccccd,3e4ccccd,3e99999a p=3f800000,40000000,40400000 dr=be800000,bf000000,bf800000 r=42c60000 a=3fc00000,3e800000,3e000000
+device_light_enable 9 1 1
+= 0
+idx 1
+# add_light_enable_fails
+device_set_light 9 2 kind=3 d=3dcccccd,3e4ccccd,3e99999a p=3f800000,40000000,40400000 dr=be800000,bf000000,bf800000 r=42c60000 a=3fc00000,3e800000,3e000000
+device_light_enable 9 2 1
+= 1
+idx 2
+# add_light_setlight_fails
+device_set_light 9 3 kind=3 d=3dcccccd,3e4ccccd,3e99999a p=3f800000,40000000,40400000 dr=be800000,bf000000,bf800000 r=42c60000 a=3fc00000,3e800000,3e000000
+= 1
+idx 3
+# remove_light_ok
+device_light_enable 9 0 0
+= 0
+# remove_light_again
+= 9
+# remove_light_range
+= 9
+# update_light_unused
+= 9
+# remove_light_enable_fails
+device_light_enable 9 1 0
+= 1
+# remove_all
+device_light_enable 9 0 0
+device_light_enable 9 2 0
+device_light_enable 9 3 0
+= 0
+# add_light_full
+= 7
+idx 8
+# set2d_from3d
+device_set_render_state 9 136 1
+device_set_transform 9 1 3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000
+device_set_transform 9 2 3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000
+device_set_transform 9 3 3b23d70a,00000000,00000000,00000000,00000000,bb5a740e,00000000,00000000,00000000,00000000,3f800000,00000000,bf800000,3f800000,00000000,3f800000
+= 0
+mode 0 changed 0
+# set2d_already
+= 0
+# set2d_viewport_changed
+device_set_render_state 9 136 1
+device_set_transform 9 1 3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000
+device_set_transform 9 2 3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000
+device_set_transform 9 3 3b23d70a,00000000,00000000,00000000,00000000,bb5a740e,00000000,00000000,00000000,00000000,3f800000,00000000,bf800000,3f800000,00000000,3f800000
+= 0
+mode 0 changed 0
+# set3d_perspective
+device_set_transform 9 2 00000000,41200000,41a00000,41f00000,3f800000,41300000,41a80000,41f80000,40000000,41400000,41b00000,42000000,40400000,41500000,41b80000,42040000
+device_set_transform 9 3 42c80000,42dc0000,42f00000,43020000,42ca0000,42de0000,42f20000,43030000,42cc0000,42e00000,42f40000,43040000,42ce0000,42e20000,42f60000,43050000
+= 0
+mode 1 changed 0
+# set3d_already
+= 0
+# set3d_orthographic
+device_set_transform 9 2 00000000,41200000,41a00000,41f00000,3f800000,41300000,41a80000,41f80000,40000000,41400000,41b00000,42000000,40400000,41500000,41b80000,42040000
+device_set_transform 9 3 43480000,43520000,435c0000,43660000,43490000,43530000,435d0000,43670000,434a0000,43540000,435e0000,43680000,434b0000,43550000,435f0000,43690000
+= 0
+mode 1 changed 0
+# set_render_target
+device_set_render_target 9 6
+device_set_viewport 9 0 0 320 240 00000000 3f800000
+= 0
+rt=3591200144 vp=320,240
+# set_render_target_same
+= 0
+# set_viewport
+device_set_viewport 9 2 3 100 200 3e000000 3f600000
+= 0
+vp 2 3 100 200 3e000000 3f600000 changed=1
+# show_windowed_frame12
+surface_blt 20 dst=3,5,1027,773 src=21 srcr=0,0,1024,768 flags=0 fill=-
+sleep 0
+surface_blt 20 dst=3,5,1027,773 src=21 srcr=0,0,1024,768 flags=0 fill=-
+= 0
+stats frames=0 polys=0 texch=0 t0=777 area=00000000 af=41a00000 as=44960000 pf=43480000 ps=463b8000 fps=42700000 sf=43960000 ss=468ca000 tf=41a00000 dc=0
+# show_windowed_elapsed_zero
+surface_blt 20 dst=3,5,1027,773 src=21 srcr=0,0,1024,768 flags=0 fill=-
+= 0
+stats frames=0 polys=0 texch=0 t0=777 area=00000000 af=00000000 as=00000000 pf=00000000 ps=00000000 fps=00000000 sf=00000000 ss=00000000 tf=00000000 dc=0
+# show_windowed_err
+surface_blt 20 dst=3,5,1027,773 src=21 srcr=0,0,1024,768 flags=0 fill=-
+native_error 7e
+= 1
+stats frames=1 polys=0 texch=0 t0=777 area=00000000 af=00000000 as=00000000 pf=00000000 ps=00000000 fps=00000000 sf=00000000 ss=00000000 tf=00000000 dc=0
+# show_fullscreen
+host_flip 20 0
+= 0
+stats frames=2 polys=0 texch=0 t0=777 area=00000000 af=00000000 as=00000000 pf=00000000 ps=00000000 fps=00000000 sf=00000000 ss=00000000 tf=00000000 dc=0

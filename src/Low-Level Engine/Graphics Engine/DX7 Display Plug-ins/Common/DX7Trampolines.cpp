@@ -239,6 +239,7 @@ unsigned long DX7StdColorVertexArray::SizeOf() const { return ee_dx7_color_va_si
 // --- DX7RScreenState: the pinned record the Rust state setters write ---------------------------------------------------
 #include <stddef.h>
 #include "dx7/DX7Rasterizer.h"
+#include "lle/GESurface.h"
 #define DX7_SAME_OFFSET(cpp, rust, field) static_assert(offsetof(cpp, field) == offsetof(rust, field), #field)
 static_assert(sizeof(GXVIEWPORT) == sizeof(EeDx7Viewport), "ee_dx7/src/state.rs Viewport");
 static_assert(sizeof(DX7RTextureStage) == sizeof(EeDx7TextureStageCache), "ee_dx7/src/state.rs TextureStageCache");
@@ -273,8 +274,32 @@ DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMagFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipMapBias);
 
+static_assert(sizeof(EeDx7LogicalMetrics) == 5 * sizeof(uint32_t), "ee_dx7/src/surface.rs LogicalMetrics");
+
+// --- GESurfaceDescription: filled by Rust (ee_dx7/src/api.rs SurfaceDescription) --------------------------------------
+static_assert(sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription), "ee_dx7/src/api.rs SurfaceDescription");
+#include "lle/GEScreen.h"
+static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode), "ee_dx7/src/screen.rs VideoMode");
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mWidth);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mHeight);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mRefreshRate);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mBitCount);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mPixelFormat);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mType);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelFormat);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mSurfaceVolatility);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mWidth);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mHeight);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, m14);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mMipLevelCount);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelDepth);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIs3DRenderable);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIsTransparencyEnabled);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mNoAlpha);
+
 // --- the pixel format helpers the Rust filter copy needs (the Graphics Engine's tables, R4.3) ----------------------------
 extern "C" {
+void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
 unsigned char ee_dx7cpp_unpack_red(unsigned long inFormat, unsigned long inColor) { return GEUnpackRed(inFormat, inColor); }
 unsigned char ee_dx7cpp_unpack_green(unsigned long inFormat, unsigned long inColor) { return GEUnpackGreen(inFormat, inColor); }
 unsigned char ee_dx7cpp_unpack_blue(unsigned long inFormat, unsigned long inColor) { return GEUnpackBlue(inFormat, inColor); }
