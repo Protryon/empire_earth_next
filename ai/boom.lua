@@ -367,6 +367,11 @@ function M.step(view, memory)
             soldier_cost = c.cost
         end
     end
+    -- the epoch's tower upgrade (cheap) before the reserve
+    local upgrade = V.tower_upgrade(view, memory)
+    if upgrade ~= nil and order("tower_upgrade", upgrade) then
+        memory.tower_up_at = #orders
+    end
     local reserve, differs = {}, false
     for _, r in ipairs(V.resources) do
         local want = 0

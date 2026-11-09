@@ -95,6 +95,13 @@ function M.step(view, memory, plan, orders, opts)
     local citizen = V.cost(view, "citizen")
     local saving = M.saving(view, plan, opts)
 
+    -- the epoch's tower upgrade (cheap) before the reserve
+    local upgrade = V.tower_upgrade(view, mem)
+    if upgrade ~= nil then
+        order(upgrade)
+        mem.tower_up_at = #orders
+    end
+
     -- the reserve holds the advance's cost while saving; the advance is asked for only when it is paid
     local reserve, differs = {}, false
     for _, r in ipairs(V.resources) do
