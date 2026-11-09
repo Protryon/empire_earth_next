@@ -100,20 +100,19 @@ void EEAIAStarHillGoal::CreateHill()
 // tile picks it); counts the tile and adds its level to the sum
 bool EEAIAStarHillGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
 {
-    EEMapTile* theTile = this->mMap->GetTile(inX, inY);
     bool theResult = false;
-    if (theTile) {
-        long theLevel = UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f);
-        if (theTile->mTerrainType != kTerrainCliff && theLevel >= 4) {
+    if (this->mView.HasTile(inX, inY)) {
+        long theLevel = this->mView.GetHeightLevel(inX, inY);
+        if (this->mView.GetTerrain(inX, inY) != kTerrainCliff && theLevel >= 4) {
             if (this->mContinentID != 0) {
-                theResult = gContinentManager.GetContinentID(inX, inY) == this->mContinentID;
+                theResult = this->mView.GetContinentID(inX, inY) == this->mContinentID;
             } else {
-                this->mContinentID = gContinentManager.GetContinentID(inX, inY);
+                this->mContinentID = this->mView.GetContinentID(inX, inY);
                 theResult = true;
             }
             if (theResult) {
                 this->mTileCount++;
-                this->mLevelSum += UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f);
+                this->mLevelSum += theLevel;
             }
         }
     }

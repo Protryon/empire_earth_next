@@ -110,11 +110,11 @@ bool EEAIAStarChokePointGoal::AcceptTile(long inX, long inY, bool inStart)
 {
     bool theResult = false;
     if (inX >= 0 && inX < this->mWidth && inY >= 0 && inY < this->mHeight) {
-        long theIndex = this->mWidth * inX + inY;
-        if (gEEAIChokeTileFlags[theIndex] && gEEAIChokeTileKinds[theIndex] != 0x36) {
+        unsigned long theSerial;
+        if (this->mView.IsChokeTile(this->mWidth * inX + inY, &theSerial)) {
             this->mTileCount++;
             theResult = true;
-            this->mAreaSerials.push_back(gEEAIChokeTileSerials[theIndex]);
+            this->mAreaSerials.push_back(theSerial);
         }
     }
     return theResult;

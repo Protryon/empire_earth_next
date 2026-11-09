@@ -25,11 +25,11 @@ public:
     void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);  // 0x19429
     long GetCost(long inFromX, long inFromY, long inX, long inY);          // 0x19528 (the modifier's, else the default)
     long GetDefaultCost(long inFromX, long inFromY, long inX, long inY);   // 0x19595
-    bool AcceptDefault(EEMapTile* inTile, long inX, long inY, bool inGoal); // 0x1990c
+    bool AcceptDefault(long inX, long inY, bool inGoal); // 0x1990c
     virtual bool Prepare();                 // +0x0c 0x19983 (both bases' slot; the second base's thunk 0x199f2)
     virtual void MarkBlockedTiles();        // second base +0x10 (ICF-folded into EEAIAStarBoundedPathGoal's 0xf298)
     bool AcceptTile(long inX, long inY, bool inGoal);  // 0x199fa
-    bool AcceptTile(EEMapTile* inTile, long inX, long inY, bool inGoal);   // 0x19a3f (the modifier's, else the default)
+    bool AcceptOnMap(long inX, long inY, bool inGoal);   // 0x19a3f (the modifier's, else the default)
 };
 
 #endif

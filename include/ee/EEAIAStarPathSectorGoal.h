@@ -27,7 +27,7 @@ public:
     // 0x1acbf (ret 0xc): whether the fill may take the tile (0x1ae1d the detailed test)
     bool AcceptTile(unsigned long inX, unsigned long inY, long inStart);
     // 0x1ae1d (ret 0x10; not written yet: a switch over the region kind mLA4) (provisional name)
-    bool ClassifyTile(EETile* inTile, unsigned long inX, unsigned long inY, bool inArg);
+    bool ClassifyTile(unsigned long inX, unsigned long inY, bool inArg);
 
     std::map<unsigned short, EEAIPathSubSector*> mSubSectors;   // +0x30 (CreateSubSector inserts mNextID)
     std::vector<EETileCoordinate> mStaleTiles;  // +0x3c

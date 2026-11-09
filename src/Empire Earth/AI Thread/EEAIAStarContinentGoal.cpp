@@ -97,22 +97,22 @@ void EEAIAStarContinentGoal::CreateContinent()
 // first tile picks the kind), counting it; map edge tiles join only map edge continents
 bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bool inStart)
 {
-    EEMapTile* theTile = this->mMap->GetTile(inX, inY);
     bool theResult = false;
-    if (theTile) {
+    if (this->mView.HasTile(inX, inY)) {
+        long theTerrain = this->mView.GetTerrain(inX, inY);
         bool theMatch = false;
         if (this->mKind == kContinentCategoryLand)
-            theMatch = theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainCliff && theTile->mTerrainType != kTerrainSpace;
+            theMatch = theTerrain != kTerrainDeepWater && theTerrain != kTerrainCliff && theTerrain != kTerrainSpace;
         else if (this->mKind == kContinentCategoryWater)
-            theMatch = theTile->mTerrainType == kTerrainDeepWater;
+            theMatch = theTerrain == kTerrainDeepWater;
         else if (this->mKind == kContinentCategorySpace)
-            theMatch = theTile->mTerrainType == kTerrainSpace;
+            theMatch = theTerrain == kTerrainSpace;
         else if (this->mKind == kContinentCategoryCliff)
-            theMatch = theTile->mTerrainType == kTerrainCliff;
+            theMatch = theTerrain == kTerrainCliff;
         else if (this->mKind == kContinentCategoryMapEdge)
-            theMatch = this->mMap->IsEdgeTile(inX, inY);
+            theMatch = this->mView.IsEdgeTile(inX, inY);
         else if (this->mKind == kContinentCategoryNone) {
-            switch (theTile->mTerrainType) {
+            switch (theTerrain) {
             case kTerrainDeepWater:
                 this->mKind = kContinentCategoryWater;
                 break;
@@ -126,12 +126,12 @@ bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bo
                 this->mKind = kContinentCategoryLand;
                 break;
             }
-            if (this->mMap->IsEdgeTile(inX, inY))
+            if (this->mView.IsEdgeTile(inX, inY))
                 this->mKind = kContinentCategoryMapEdge;
             theMatch = true;
         }
         if (theMatch) {
-            if (this->mMap->IsEdgeTile(inX, inY) == (this->mKind == kContinentCategoryMapEdge)) {
+            if (this->mView.IsEdgeTile(inX, inY) == (this->mKind == kContinentCategoryMapEdge)) {
                 this->mTileCount++;
                 theResult = true;
             } else

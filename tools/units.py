@@ -49,6 +49,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/AI Thread/EECPLua.cpp",
                        # the next engine's strategy: the personality's Lua script behind the verbs (§3.2)
                        "Empire Earth/AI Thread/EECPNextLua.cpp",
+                       # the tile A* searches' view of the world (docs/RUST_PLAN.md R5b.1; ee/EEAIAStarView.h)
+                       "Empire Earth/AI Thread/EEAIAStarView.cpp",
                        # the start of the Rust library (ee_rust_init)
                        "Empire Earth/Empire Earth/EERust.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)
