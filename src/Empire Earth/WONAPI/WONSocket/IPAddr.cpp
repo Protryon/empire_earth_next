@@ -1,12 +1,12 @@
-// WONAPI IPAddr: IPv4 address and port, with DNS lookup and local adapter listing (file grouping inferred)
+// WONAPI IPAddr: IPv4 address and port, with DNS lookup and local adapter listing (file grouping inferred). The
+// parsing, the lookups, the text forms, the order and the local address lists are Rust's
+// (rust/crates/ee_won/src/ipaddr.rs); the class keeps its PlatSockAddrIn and the remembered host string.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
 #include <list>
 #include <map>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
@@ -15,21 +15,29 @@
 #include "platform/PlatSocket.h"
 namespace WONAPI {
 
+static const uint8_t* Bytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+
+// A parsed address into the sockaddr: zeroed, IPv4, the network-order address and port
+static void SetAddr(PlatSockAddrIn& outAddr, uint32_t inAddress, uint16_t inPort)
+{
+    memset(&outAddr, 0, sizeof(outAddr));
+    outAddr.mFamily = PLAT_AF_INET;
+    outAddr.mAddress = inAddress;
+    outAddr.mPort = inPort;
+}
+
 // FUNCTION: WON 0x006b2660
 // Sets the address from a dotted IP or host name (resolved by DNS) and a port; returns false if it does not resolve
 bool IPAddr::Fn2B2660(const std::string& inHost,unsigned short inPort)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
     this->mIsValid=false;
-    uint32_t aHost=PlatSocketParseIPv4(inHost.c_str());
-    if (aHost==PLAT_INADDR_NONE) {
-        if (PlatSocketResolveIPv4(inHost.c_str(),&aHost,1)==0) return false;
-    }
+    uint32_t anAddress=0;
+    uint16_t aPort=0;
+    if (!ee_won_ipaddr_resolve(Bytes(inHost),inHost.length(),inPort,&anAddress,&aPort)) return false;
     if (this->mRememberHostString) this->mHost=inHost;
     else this->mHost.erase();
-    this->mAddr.mFamily=PLAT_AF_INET;
-    this->mAddr.mAddress=aHost;
-    this->mAddr.mPort=PlatHostToNet16(inPort);
+    SetAddr(this->mAddr,anAddress,aPort);
     this->mIsValid=true;
     return true;
 }
@@ -42,8 +50,9 @@ bool IPAddr::Fn2B2890(const std::string& inHostAndPort)
         this->mIsValid=false;
         return false;
     }
-    return this->Fn2B2660(inHostAndPort.substr(0,aColon),
-        static_cast<unsigned short>(atoi(inHostAndPort.substr(aColon+1).c_str())));
+    // the port is the text after the colon as atoi reads it
+    std::string aPort=inHostAndPort.substr(aColon+1);
+    return this->Fn2B2660(inHostAndPort.substr(0,aColon),ee_won_ipaddr_port_of(Bytes(aPort),aPort.length()));
 }
 // FUNCTION: WON 0x006b29d0
 // Sets the address from the 6-byte wire form (port then IP, network order)
@@ -67,10 +76,7 @@ void IPAddr::Fn2B2B00(const PlatSockAddrIn& inAddress)
 // Sets the address from a host-order IP and port and forgets the host name
 void IPAddr::Fn2B2C20(long inHost,unsigned short inPort)
 {
-    memset(&this->mAddr,0,sizeof(this->mAddr));
-    this->mAddr.mFamily=PLAT_AF_INET;
-    this->mAddr.mAddress=PlatHostToNet32(static_cast<uint32_t>(inHost));
-    this->mAddr.mPort=PlatHostToNet16(inPort);
+    SetAddr(this->mAddr,PlatHostToNet32(static_cast<uint32_t>(inHost)),PlatHostToNet16(inPort));
     this->mHost.erase();
     this->mIsValid=true;
 }
@@ -79,21 +85,10 @@ void IPAddr::Fn2B2C20(long inHost,unsigned short inPort)
 bool IPAddr::SetWithDefaultPortNoDNS(const std::string& inHostAndPort,unsigned short inDefaultPort)
 {
     this->mIsValid=false;
-    std::string::size_type aColon=inHostAndPort.find(':');
-    uint32_t aHost;
-    unsigned short aPort;
-    if (aColon!=std::string::npos) {
-        aHost=PlatSocketParseIPv4(inHostAndPort.substr(0,aColon).c_str());
-        aPort=atoi(inHostAndPort.substr(aColon+1).c_str());
-    } else {
-        aHost=PlatSocketParseIPv4(inHostAndPort.c_str());
-        aPort=inDefaultPort;
-    }
-    if (aHost!=PLAT_INADDR_NONE) {
-        memset(&this->mAddr,0,sizeof(this->mAddr));
-        this->mAddr.mFamily=PLAT_AF_INET;
-        this->mAddr.mAddress=aHost;
-        this->mAddr.mPort=PlatHostToNet16(static_cast<unsigned short>(aPort));
+    uint32_t anAddress=0;
+    uint16_t aPort=0;
+    if (ee_won_ipaddr_parse_no_dns(Bytes(inHostAndPort),inHostAndPort.length(),inDefaultPort,&anAddress,&aPort)) {
+        SetAddr(this->mAddr,anAddress,aPort);
         this->mHost.erase();
         this->mIsValid=true;
     }
@@ -106,7 +101,7 @@ std::string IPAddr::GetHostString(bool inUseOriginal) const
 {
     if (inUseOriginal && !this->mHost.empty()) return this->mHost;
     char aText[16];
-    PlatSocketFormatIPv4(this->mAddr.mAddress,aText);
+    ee_won_ipaddr_dotted(this->mAddr.mAddress,aText);
     return std::string(aText, std::allocator<char>());
 }
 // FUNCTION: WON 0x006b2500
@@ -115,54 +110,33 @@ IPAddr IPAddr::GetLocalAddr()
 {
     if (IPAddr::mLocalHost!=0) return IPAddr(IPAddr::mLocalHost,0);
     char aHostName[1024];
-    if (PlatSocketGetHostName(aHostName,1024)) return IPAddr(aHostName,0);
+    if (ee_won_ipaddr_host_name(aHostName,sizeof(aHostName))) return IPAddr(aHostName,0);
     return IPAddr();
 }
 
 // FUNCTION: WON 0x006b37a0
-// Chooses the local interface IP; with validation, refuses an IP this machine does not have
+// Chooses the local interface IP; with validation, refuses an IP this machine does not have (the host name's
+// addresses, as LobbyGetNetAddresses without details lists them)
 bool IPAddr::SetLocalHost(long inHost,bool inValidate)
 {
-    if (inValidate && inHost!=0) {
-        std::list<LobbyNetAddress> aAddresses;
-        LobbyGetNetAddresses(aAddresses,false);
-        std::list<LobbyNetAddress>::iterator aEnd=aAddresses.end();
-        std::list<LobbyNetAddress>::iterator it=aAddresses.begin();
-        for (;it!=aEnd;++it)
-            if (it->mHandle==inHost) break;
-        if (it==aEnd) return false;
-    }
+    if (inValidate && inHost!=0 && !ee_won_ipaddr_is_local(static_cast<uint32_t>(inHost)))
+        return false;
     IPAddr::mLocalHost=inHost;
     return true;
 }
 
-
-// FUNCTION: WON 0x006b3540
-// Lists each network adapter's description and first IP (Win32: GetAdaptersInfo); false when there is none
-static bool IPAddr_PlatformGetNetworkAdapterList(std::list<LobbyNetAddress>& outAddresses)
+static void AddNetAddress(void* inList, const uint8_t* inName, size_t inLength, uint32_t inHost)
 {
-    PlatNetAdapter anAdapters[64];
-    uint32_t aCount=PlatSocketGetAdapters(anAdapters,64);
-    if(aCount==0) return false;
-    for(uint32_t i=0;i<aCount;++i) {
-        std::string aName=anAdapters[i].mDescription;
-        long aHost=static_cast<long>(PlatNetToHost32(anAdapters[i].mAddress));
-        outAddresses.push_back(LobbyNetAddress(aName,aHost));
-    }
-    return true;
+    static_cast<std::list<LobbyNetAddress>*>(inList)->push_back(
+        LobbyNetAddress(std::string(reinterpret_cast<const char*>(inName),inLength),static_cast<long>(inHost)));
 }
 // FUNCTION: WON 0x006b32b0
 // Lists this machine's IP addresses: from the adapter list when details are asked for, else by host name lookup
+// (the adapter list was 0x6b3540, IPAddr_PlatformGetNetworkAdapterList)
 void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses,bool inGetDetails)
 {
     outAddresses.clear();
-    if(inGetDetails && IPAddr_PlatformGetNetworkAdapterList(outAddresses) && !outAddresses.empty()) return;
-    char aHostName[1024];
-    if(!PlatSocketGetHostName(aHostName,sizeof(aHostName))) return;
-    uint32_t anAddresses[64];
-    uint32_t aCount=PlatSocketResolveIPv4(aHostName,anAddresses,64);
-    for(uint32_t i=0;i<aCount;++i)
-        outAddresses.push_back(LobbyNetAddress("",static_cast<long>(PlatNetToHost32(anAddresses[i]))));
+    ee_won_ipaddr_local_addresses(inGetDetails,AddNetAddress,&outAddresses);
 }
 // FUNCTION: WON 0x006b2350
 // Creates an empty, invalid address
@@ -236,11 +210,12 @@ long IPAddr::GetHost() const
     return static_cast<long>(PlatNetToHost32(this->mAddr.mAddress));
 }
 // FUNCTION: WON 0x006b3070
-// Returns "host:port", formatted into a 50-byte buffer (a long remembered host name is cut short)
+// Returns "host:port", as formatted into a 50-byte buffer (a long remembered host name is cut short)
 std::string IPAddr::GetHostAndPortString(bool inUseOriginal) const
 {
+    std::string aHost=this->GetHostString(inUseOriginal);
     char text[50];
-    snprintf(text,sizeof(text),"%s:%d",this->GetHostString(inUseOriginal).c_str(),this->GetPort());
+    ee_won_ipaddr_host_and_port(Bytes(aHost),aHost.length(),this->GetPort(),text);
     return text;
 }
 // FUNCTION: WON 0x006b31c0
@@ -265,27 +240,28 @@ const PlatSockAddrIn& IPAddr::GetSockAddrIn() const
 // Orders addresses by their 6-byte wire form (port first)
 bool IPAddr::operator<(const IPAddr& other) const
 {
-    return memcmp(&mAddr.mPort,&other.mAddr.mPort,6)<0;
+    return ee_won_ipaddr_compare_six(reinterpret_cast<const uint8_t*>(&this->mAddr.mPort),
+                                     reinterpret_cast<const uint8_t*>(&other.mAddr.mPort))<0;
 }
 // FUNCTION: WON 0x006b3220
 // Returns whether two addresses have the same IP and port
 bool IPAddr::operator==(const IPAddr& other) const
 {
-    return memcmp(&this->mAddr.mPort,&other.mAddr.mPort,6)==0;
+    return ee_won_ipaddr_compare_six(reinterpret_cast<const uint8_t*>(&this->mAddr.mPort),
+                                     reinterpret_cast<const uint8_t*>(&other.mAddr.mPort))==0;
 }
 // FUNCTION: WON 0x006b3240
 // Returns whether two addresses differ in IP or port
 bool IPAddr::operator!=(const IPAddr& other) const
 {
-    return memcmp(&this->mAddr.mPort,&other.mAddr.mPort,6)!=0;
+    return !(*this==other);
 }
 // FUNCTION: WON 0x006b3260
 // Compares two addresses by host-order IP, then by port
 int IPAddr::StringCompare(const IPAddr& other) const
 {
-    int result=this->GetHost()-other.GetHost();
-    if(result!=0) return result;
-    return this->GetPort()-other.GetPort();
+    return ee_won_ipaddr_string_compare(this->mAddr.mAddress,this->mAddr.mPort,other.mAddr.mAddress,
+                                        other.mAddr.mPort);
 }
 }
 

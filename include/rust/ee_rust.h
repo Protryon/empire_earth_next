@@ -1300,6 +1300,34 @@ struct EeWonCdKeyDecoded {
   uint8_t raw[8];
 };
 
+/// Receives one local address: its name (`length` bytes) and the host-order address.
+using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
+
+/// WON's socket state, embedded in the C++ `AsyncSocket` (`mCore`).
+struct EeWonSocket {
+  /// The platform socket (`PLAT_SOCKET_INVALID` when closed).
+  ptrdiff_t handle;
+  /// [`KIND_STREAM`] or [`KIND_DATAGRAM`].
+  int32_t kind;
+  /// Connected (a stream connect was started or accepted; a datagram socket's peer was set).
+  bool connected;
+  /// Opened since the last close.
+  bool open;
+  /// The last socket error recorded (`WS_None` after an open).
+  long status;
+  /// When data last arrived (seconds since 1970; the original's 32-bit `time(NULL)`).
+  int64_t last_recv_time;
+  /// When the first of the current run of blocked sends failed (0: the last send went out).
+  int64_t first_blocked_send_time;
+};
+
+/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
+struct EeWonOpTiming {
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+};
+
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
   uint32_t material_count;
@@ -4357,6 +4385,278 @@ void ee_won_cdkey_decrypt(const uint8_t *product,
 /// # Safety
 /// `raw` holds `length` bytes.
 bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
+
+/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
+/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
+///
+/// # Safety
+/// `buffer` has `size` bytes.
+const char *ee_won_status_name(long s,
+                               char *buffer,
+                               size_t size);
+
+void ee_won_netstats_enable(bool on);
+
+/// Adds to counter `counter` (0 constructed sockets, 1 open sockets, 2 bytes sent, 3 bytes received, 4 messages
+/// sent, 5 messages received) while counting is on.
+void ee_won_netstats_add(uint32_t counter,
+                         int64_t amount);
+
+int64_t ee_won_netstats_get(uint32_t counter);
+
+/// `Fn2B2660`: a dotted address or a host name (looked up) and a host-order port -> the address; false when it does
+/// not resolve.
+///
+/// # Safety
+/// `host` holds `length` bytes; the out-parameters are valid.
+bool ee_won_ipaddr_resolve(const uint8_t *host,
+                           size_t length,
+                           uint16_t port,
+                           uint32_t *address,
+                           uint16_t *port_out);
+
+/// `Fn2B2890`'s port: the text after the colon as `atoi` reads it, cut to 16 bits (host order).
+///
+/// # Safety
+/// `text_in` holds `length` bytes.
+uint16_t ee_won_ipaddr_port_of(const uint8_t *text_in, size_t length);
+
+/// `SetWithDefaultPortNoDNS`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_resolve`.
+bool ee_won_ipaddr_parse_no_dns(const uint8_t *text_in,
+                                size_t length,
+                                uint16_t default_port,
+                                uint32_t *address,
+                                uint16_t *port);
+
+/// The dotted form of a network-order address into `out` (16 bytes).
+///
+/// # Safety
+/// `out` has 16 bytes.
+void ee_won_ipaddr_dotted(uint32_t address, char *out);
+
+/// `GetHostAndPortString`: "host:port" (at most 49 bytes) into `out` (50 bytes); returns its length.
+///
+/// # Safety
+/// `host` holds `length` bytes; `out` has 50 bytes.
+size_t ee_won_ipaddr_host_and_port(const uint8_t *host,
+                                   size_t length,
+                                   uint16_t port,
+                                   char *out);
+
+/// The order of two addresses' 6-byte wire forms (`operator<`, `==`): negative, 0 or positive.
+///
+/// # Safety
+/// `a` and `b` point at 6 bytes each (a `PlatSockAddrIn`'s port and address).
+int32_t ee_won_ipaddr_compare_six(const uint8_t *a, const uint8_t *b);
+
+/// `StringCompare` (network-order addresses and ports).
+int32_t ee_won_ipaddr_string_compare(uint32_t a_address,
+                                     uint16_t a_port,
+                                     uint32_t b_address,
+                                     uint16_t b_port);
+
+/// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
+///
+/// # Safety
+/// The sink is called during the call only.
+void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
+
+/// Whether a host-order address is one of this machine's (`SetLocalHost`'s test: the host name's addresses).
+bool ee_won_ipaddr_is_local(uint32_t host);
+
+/// This machine's name into `out` (`size` bytes); false when the system gives none.
+///
+/// # Safety
+/// `out` has `size` bytes.
+bool ee_won_ipaddr_host_name(char *out, size_t size);
+
+/// `AsyncSocket::HasInternetConnection`.
+bool ee_won_has_internet_connection();
+
+/// The constructor: a closed socket of `kind` (0 stream, 1 datagram) into `core`.
+///
+/// # Safety
+/// `core` points at an `EeWonSocket` (uninitialised is fine).
+void ee_won_socket_init(EeWonSocket *core, int32_t kind);
+
+/// The destructor's count (after the C++ closed the socket).
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_destroyed(EeWonSocket *core);
+
+/// `StartWinsock`.
+long ee_won_socket_start();
+
+/// `StopWinsock`.
+long ee_won_socket_stop();
+
+/// `GetLastSocketError`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_last_error(EeWonSocket *core);
+
+/// `Open`'s handle (after the C++ closed a valid socket; the C++ runs the open hook on 0).
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_open(EeWonSocket *core);
+
+/// `Bind` on an open socket.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_bind(EeWonSocket *core, uint32_t address, uint16_t port, bool reuse);
+
+/// The connect of `Fn2B0E60` on an open socket.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_connect(EeWonSocket *core, uint32_t address, uint16_t port);
+
+/// `Listen`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_listen(EeWonSocket *core, int32_t backlog);
+
+/// `Accept`'s system part: the accepted handle and the peer, or the error.
+///
+/// # Safety
+/// `core` is a socket; the out-parameters are valid.
+long ee_won_socket_accept(EeWonSocket *core, ptrdiff_t *handle, uint32_t *address, uint16_t *port);
+
+/// The accepted handle into the new socket's core (open, connected).
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_adopt(EeWonSocket *core, ptrdiff_t handle);
+
+/// A wait on a handle without the lock (`WaitForRead` 1, `WaitForWrite` 2).
+void ee_won_socket_wait(ptrdiff_t handle, uint32_t mask, uint32_t timeout);
+
+/// `WaitForConnect`'s wait on a handle, without the lock.
+long ee_won_socket_wait_for_connect(ptrdiff_t handle, uint32_t timeout);
+
+/// `Send`; `*sent` (when not null) is set when the send did not fail.
+///
+/// # Safety
+/// `core` is a socket; `data` holds `length` bytes.
+long ee_won_socket_send(EeWonSocket *core, const void *data, int32_t length, int32_t *sent);
+
+/// `Recv`; `*received` (when not null) is set when bytes came.
+///
+/// # Safety
+/// `core` is a socket; `data` has room for `length` bytes.
+long ee_won_socket_recv(EeWonSocket *core, void *data, int32_t length, int32_t *received);
+
+/// `SendTo` / `RecvFrom`'s test of the socket's kind.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_datagram_only(const EeWonSocket *core);
+
+/// `SendTo` on an open datagram socket.
+///
+/// # Safety
+/// `core` is a socket; `data` holds `length` bytes.
+long ee_won_socket_send_to(EeWonSocket *core,
+                           const void *data,
+                           int32_t length,
+                           uint32_t address,
+                           uint16_t port);
+
+/// `RecvFrom`: on success the sender in `*address` / `*port` and `*from` true, `*received` (when not null) set.
+///
+/// # Safety
+/// `core` is a socket; `data` has room for `length` bytes; the out-parameters are valid.
+long ee_won_socket_recv_from(EeWonSocket *core,
+                             void *data,
+                             int32_t length,
+                             uint32_t *address,
+                             uint16_t *port,
+                             bool *from,
+                             int32_t *received);
+
+/// `ClosePrv`.
+///
+/// # Safety
+/// `core` is a socket.
+void ee_won_socket_close(EeWonSocket *core);
+
+/// `Disconnect` of a datagram socket: false when dissolving the peer failed.
+///
+/// # Safety
+/// `core` is a socket.
+bool ee_won_socket_dissolve_peer(EeWonSocket *core);
+
+/// `GetLocalPort`.
+///
+/// # Safety
+/// `core` is a socket.
+uint16_t ee_won_socket_local_port(const EeWonSocket *core);
+
+/// `SetBroadcast`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_set_broadcast(EeWonSocket *core, bool on);
+
+/// `SetNagling`.
+///
+/// # Safety
+/// `core` is a socket.
+long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
+
+/// WON's millisecond tick (`WONTickCount`).
+uint32_t ee_won_tick();
+
+/// `AsyncOp::TimeLeft` now.
+uint32_t ee_won_op_time_left(EeWonOpTiming timing);
+
+/// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
+uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
+
+/// `RecvMsgOp`'s length prefix: 0 and the body's length in `*body`, 1 for the 2-byte escape (a 4-byte prefix
+/// follows), 2 for an invalid length.
+///
+/// # Safety
+/// `prefix` holds `length` bytes; `body` is valid.
+int32_t ee_won_op_length_step(const uint8_t *prefix,
+                              size_t length,
+                              uint32_t *body);
+
+/// `RecvMsgOp::Start`'s length field test.
+bool ee_won_op_valid_length_field(uint32_t size);
+
+/// `RecvBytesOp`'s chunk read size.
+int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
+
+/// `SendBytesOp::Continue`: sends `data[*pos..length]`; `*pos` follows.
+///
+/// # Safety
+/// `core` is the socket and `lock` its `PlatMutex`, both alive during the call; `data` holds `length` bytes.
+long ee_won_op_send_all(EeWonSocket *core,
+                        void *lock,
+                        const uint8_t *data,
+                        size_t length,
+                        uint32_t *pos,
+                        EeWonOpTiming timing);
+
+/// `RecvCRMsgOp::Continue`: each byte to `sink` until a CR-LF; `last` is the line so far's last byte (-1 for none).
+///
+/// # Safety
+/// As `ee_won_op_send_all`; the sink is called during the call only.
+long ee_won_op_recv_line(EeWonSocket *core,
+                         void *lock,
+                         int32_t last,
+                         EeWonOpTiming timing,
+                         EeWonByteSink sink,
+                         void *context);
 
 }  // extern "C"
 

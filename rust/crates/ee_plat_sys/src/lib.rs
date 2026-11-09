@@ -13,8 +13,11 @@ pub mod constants;
 
 mod cstr;
 mod file;
-mod socket;
-mod thread;
+// public for the Rust callers of the platform layer (ee_won's sockets); each function's contract is its C header's
+#[allow(clippy::missing_safety_doc)]
+pub mod socket;
+#[allow(clippy::missing_safety_doc)]
+pub mod thread;
 
 #[cfg(unix)]
 mod last_error;

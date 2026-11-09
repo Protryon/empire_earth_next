@@ -71,6 +71,13 @@ public:
     void StartRunAsync(); //29f4c0
     unsigned long TimeLeft();               // 0x29f700
     DWORD RealTimeLeft();
+    // the run mode, start and timeout for the Rust op algorithms (rust/crates/ee_won/src/ops.rs)
+    EeWonOpTiming GetTiming() const
+    {
+        EeWonOpTiming aTiming = {static_cast<int32_t>(this->mRunMode), this->mStartTime,
+                                 static_cast<uint32_t>(this->mTimeout)};
+        return aTiming;
+    }
 
     CriticalSection mLock;                  // +0x08, originalInitialize/DeleteCriticalSection
     SmartPtr<CompletionBase<SmartPtr<AsyncOp> > > mCompletion;     // +0x20
@@ -128,40 +135,27 @@ public:
     virtual WONStatus Recv(ByteBufferPtr&) { return 0; } //VT+8=2ad870, ret4
 };
 
-// WON SDK NetStats: static members only, no instance layout or virtual functions
+// WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won/src/netstats.rs)
 class NetStats
 {
-protected:
-	static CriticalSection mDataCrit;
-
-	static bool mEnabled;
-
-	static int mNumConstructedSockets;
-	static int mNumOpenSockets;
-
-	static __int64 mNumBytesSent;
-	static __int64 mNumBytesReceived;
-	static __int64 mNumMessagesSent;
-	static __int64 mNumMessagesReceived;
-
 public:
-	static void Enable(bool isEnabled) { NetStats::mEnabled = isEnabled; }
+	static void Enable(bool isEnabled) { ee_won_netstats_enable(isEnabled); }
 
-	static void IncrementNumConstructedSockets(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumConstructedSockets+=theAmount; NetStats::mDataCrit.Leave(); }
-	static void IncrementNumOpenSockets(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumOpenSockets+=theAmount; NetStats::mDataCrit.Leave(); }
+	static void IncrementNumConstructedSockets(int theAmount) { ee_won_netstats_add(0, theAmount); }
+	static void IncrementNumOpenSockets(int theAmount) { ee_won_netstats_add(1, theAmount); }
 
-	static void IncrementBytesSent(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumBytesSent+=theAmount; NetStats::mDataCrit.Leave(); }
-	static void IncrementBytesReceived(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumBytesReceived+=theAmount; NetStats::mDataCrit.Leave(); }
-	static void IncrementMessagesSent(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumMessagesSent+=theAmount; NetStats::mDataCrit.Leave(); }
-	static void IncrementMessagesReceived(int theAmount) { if(!NetStats::mEnabled) return; NetStats::mDataCrit.Enter(); NetStats::mNumMessagesReceived+=theAmount; NetStats::mDataCrit.Leave(); }
+	static void IncrementBytesSent(int theAmount) { ee_won_netstats_add(2, theAmount); }
+	static void IncrementBytesReceived(int theAmount) { ee_won_netstats_add(3, theAmount); }
+	static void IncrementMessagesSent(int theAmount) { ee_won_netstats_add(4, theAmount); }
+	static void IncrementMessagesReceived(int theAmount) { ee_won_netstats_add(5, theAmount); }
 
-	static int GetNumConstructedSockets() { return NetStats::mNumConstructedSockets; }
-	static int GetNumOpenSockets() { return NetStats::mNumOpenSockets; }
+	static int GetNumConstructedSockets() { return static_cast<int>(ee_won_netstats_get(0)); }
+	static int GetNumOpenSockets() { return static_cast<int>(ee_won_netstats_get(1)); }
 
-	static __int64 GetNumBytesSent() { return NetStats::mNumBytesSent; }
-	static __int64 GetNumBytesReceived() { return NetStats::mNumBytesReceived; }
-	static __int64 GetNumMessagesSent() { return NetStats::mNumMessagesSent; }
-	static __int64 GetNumMessagesReceived() { return NetStats::mNumMessagesReceived; }
+	static __int64 GetNumBytesSent() { return ee_won_netstats_get(2); }
+	static __int64 GetNumBytesReceived() { return ee_won_netstats_get(3); }
+	static __int64 GetNumMessagesSent() { return ee_won_netstats_get(4); }
+	static __int64 GetNumMessagesReceived() { return ee_won_netstats_get(5); }
 };
 
 class AsyncSocket : public RefCount {
@@ -173,9 +167,8 @@ public:
     bool IsOpen();
     void SetType(SocketType);
     WONStatus SetNagling(bool);
-    static WONStatus StartWinsock(); //2b0940, cdecl (WON SDK)
+    static WONStatus StartWinsock(); //2b0940, cdecl (WON SDK); the user count is Rust's
     static WONStatus StopWinsock(); //2b0980, cdecl (WON SDK)
-    static int mWinsockStartCount; //565f34, 4-byte static, zero-initialized
     static bool HasInternetConnection();
     WONStatus SetBroadcast(bool); //2b0a50, sets the broadcast socket option
     WONStatus Open();     //2b0a90, creates the socket
@@ -215,15 +208,12 @@ public:
     WONStatus Recv(void*,int,int*);     //recv
 
     CriticalSection mDataCrit; //08..1f
-    PlatSocket mSocket; //20
-    int mType; //24, fullDWORD argument/factory forwarding
+    // the socket's handle (the original's mSocket at +0x20), type (+0x24), connected and open flags (+0x51, +0x52),
+    // status (+0x54), last receive and first blocked send times (+0x58, +0x5c): Rust's socket core
+    // (rust/crates/ee_won/src/socket.rs), which makes the platform socket calls. Callers hold mDataCrit.
+    EeWonSocket mCore;
     IPAddr mDestAddr; //28..4f, complete28
     unsigned char mLengthFieldSize; //50
-    bool mConnected; //51
-    bool mOpen; //52; natural padding53
-    WONStatus mStatus; //54, not in the archived SDK
-    long mLastRecvTime; //58, 32-bit time_t, ctor and recv write time(NULL)
-    long mFirstBlockedSendTime; //5c, time of the first blocked send (set, tested, reset)
     std::list<MsgTransform*> mMsgTransformQueue; //60 allocator,64head,68size; ownsraw virtualobjects
     typedef void (*CloseCallback)(AsyncSocket*);
     CloseCallback mThreadCloseCallback; //6c, cdecl caller-pops4 at2b1aed/1b6d
