@@ -4,6 +4,8 @@
 use std::ffi::c_char;
 
 use ee_codec as _;
+// the DX7 renderer plug-in behind the C++ trampolines (ee_dx7/src/ffi.rs)
+use ee_dx7 as _;
 #[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
 use ee_gx as _;
 #[cfg(not(test))] // its FFI imports the C++ shim

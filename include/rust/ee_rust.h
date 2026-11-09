@@ -49,6 +49,16 @@ struct EeDataSink;
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
 
+/// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
+struct EeDx7PolygonArray;
+
+/// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
+/// ignored).
+struct EeDx7StandardVertexArray;
+
+/// A `GEVertexArray` of [`Dx7StdColorVertex`].
+struct EeDx7StdColorVertexArray;
+
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
   uint8_t *ptr;
@@ -66,6 +76,31 @@ using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, in
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// `GXVERTEX`: position, normal, one texture coordinate.
+struct Dx7Vertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  float tu;
+  float tv;
+};
+
+/// `GXVERTEX_STD_COLOR`: position, normal, a packed ARGB colour, one texture coordinate.
+struct Dx7StdColorVertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  uint32_t color;
+  float tu;
+  float tv;
+};
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -560,6 +595,113 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         size_t capacity,
                         EeCodecSink sink,
                         void *context);
+
+EeDx7StandardVertexArray *ee_dx7_std_va_new(uint32_t size);
+
+void ee_dx7_std_va_destroy(EeDx7StandardVertexArray *a);
+
+/// The vertex memory (GX reads it directly).
+Dx7Vertex *ee_dx7_std_va_vertices(EeDx7StandardVertexArray *a);
+
+void ee_dx7_std_va_copy_from(EeDx7StandardVertexArray *a, const EeDx7StandardVertexArray *b);
+
+void ee_dx7_std_va_color(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+void ee_dx7_std_va_normal(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+float ee_dx7_std_va_opacity(const EeDx7StandardVertexArray *a, uint32_t index);
+
+void ee_dx7_std_va_point(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+uint32_t ee_dx7_std_va_size(const EeDx7StandardVertexArray *a);
+
+void ee_dx7_std_va_texture_coordinate(const EeDx7StandardVertexArray *a,
+                                      uint32_t index,
+                                      float *out);
+
+void ee_dx7_std_va_set_normal(EeDx7StandardVertexArray *a, const float *n, uint32_t index);
+
+void ee_dx7_std_va_set_point(EeDx7StandardVertexArray *a, const float *p, uint32_t index);
+
+void ee_dx7_std_va_set_texture_coordinate(EeDx7StandardVertexArray *a,
+                                          const float *uv,
+                                          uint32_t index);
+
+void ee_dx7_std_va_set_vertex(EeDx7StandardVertexArray *a,
+                              const float *p,
+                              const float *n,
+                              const float *uv,
+                              uint32_t index);
+
+uint32_t ee_dx7_std_va_size_of(const EeDx7StandardVertexArray *a);
+
+EeDx7StdColorVertexArray *ee_dx7_color_va_new(uint32_t size);
+
+void ee_dx7_color_va_destroy(EeDx7StdColorVertexArray *a);
+
+Dx7StdColorVertex *ee_dx7_color_va_vertices(EeDx7StdColorVertexArray *a);
+
+void ee_dx7_color_va_copy_from(EeDx7StdColorVertexArray *a, const EeDx7StdColorVertexArray *b);
+
+void ee_dx7_color_va_color(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+void ee_dx7_color_va_normal(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+float ee_dx7_color_va_opacity(const EeDx7StdColorVertexArray *a, uint32_t index);
+
+void ee_dx7_color_va_point(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+uint32_t ee_dx7_color_va_size(const EeDx7StdColorVertexArray *a);
+
+void ee_dx7_color_va_texture_coordinate(const EeDx7StdColorVertexArray *a,
+                                        uint32_t index,
+                                        float *out);
+
+void ee_dx7_color_va_set_color(EeDx7StdColorVertexArray *a, const float *c, uint32_t index);
+
+void ee_dx7_color_va_set_normal(EeDx7StdColorVertexArray *a, const float *n, uint32_t index);
+
+void ee_dx7_color_va_set_opacity(EeDx7StdColorVertexArray *a, float opacity, uint32_t index);
+
+void ee_dx7_color_va_set_point(EeDx7StdColorVertexArray *a, const float *p, uint32_t index);
+
+void ee_dx7_color_va_set_texture_coordinate(EeDx7StdColorVertexArray *a,
+                                            const float *uv,
+                                            uint32_t index);
+
+void ee_dx7_color_va_set_vertex(EeDx7StdColorVertexArray *a,
+                                const float *c,
+                                const float *p,
+                                const float *n,
+                                const float *uv,
+                                float opacity,
+                                uint32_t index);
+
+uint32_t ee_dx7_color_va_size_of(const EeDx7StdColorVertexArray *a);
+
+EeDx7PolygonArray *ee_dx7_poly_new(uint32_t size);
+
+void ee_dx7_poly_destroy(EeDx7PolygonArray *p);
+
+/// The 16-bit index memory (GX reads it directly).
+uint16_t *ee_dx7_poly_indices(EeDx7PolygonArray *p);
+
+uint32_t ee_dx7_poly_size(const EeDx7PolygonArray *p);
+
+uint32_t ee_dx7_poly_vertex_index(const EeDx7PolygonArray *p, uint32_t polygon, uint32_t corner);
+
+void ee_dx7_poly_set_vertex_index(EeDx7PolygonArray *p,
+                                  uint32_t polygon,
+                                  uint32_t corner,
+                                  uint32_t index);
+
+void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
+                                    uint32_t polygon,
+                                    uint32_t i1,
+                                    uint32_t i2,
+                                    uint32_t i3);
+
+uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

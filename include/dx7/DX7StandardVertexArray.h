@@ -6,6 +6,8 @@
 #include "dx7/DX7Common.h"
 #include "lle/GEVertexArray.h"
 
+struct EeDx7StandardVertexArray;   // rust/crates/ee_dx7/src/vertex.rs (Common/DX7Trampolines.cpp forwards to it)
+
 class DX7_API DX7StandardVertexArray : public GEVertexArray {
 public:
     DX7StandardVertexArray(unsigned long inSize);
@@ -29,6 +31,7 @@ public:
 
     GXVERTEX* mVertices;                   // +0x04
     unsigned long mSize;                    // +0x08
+    EeDx7StandardVertexArray* mRust;        // the Rust array owning mVertices
 };
 
 #endif

@@ -7,6 +7,8 @@
 #include "dx7/DX7Common.h"
 #include "lle/GEPolygonArray.h"
 
+struct EeDx7PolygonArray;   // rust/crates/ee_dx7/src/vertex.rs: the trampoline forwards to it (Common/DX7Trampolines.cpp)
+
 class DX7_API DX7PolygonArray : public GEPolygonArray {
 public:
     DX7PolygonArray(unsigned long inSize);
@@ -25,6 +27,7 @@ public:
     unsigned short* mIndices;               // +0x04
     unsigned long mIndexCount;              // +0x08
     unsigned long mSize;                    // +0x0c
+    EeDx7PolygonArray* mRust;               // the Rust array owning mIndices
 };
 
 #endif

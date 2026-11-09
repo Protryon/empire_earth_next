@@ -1,13 +1,10 @@
 0105d 01fbe DX7HRTnLDisplay/DX7HRTnLDisplay.cpp
 01fbe 029dc Common/DX7Movie.cpp
-029dc 02b83 Common/DX7PolygonArray.cpp
 02b83 038a7 Common/DX7Rasterizer Draw2D.cpp
 038a7 04da6 Common/DX7Rasterizer DrawModel.cpp
 04da6 09217 Common/DX7Rasterizer DrawTerrain.cpp
 09217 0d144 Common/DX7Rasterizer.cpp
 0d144 0e818 Common/DX7Screen.cpp
-0e818 0e9f1 Common/DX7StandardVertexArray.cpp
-0e9f1 0ed72 Common/DX7StdColorVertexArray.cpp
 0ed72 0fd16 Common/DX7Surface.cpp
 0fd16 10512 DX7HRTnLDisplay/DX7TnLRasterizer.cpp
 10512 10512 GX/GX.cpp
