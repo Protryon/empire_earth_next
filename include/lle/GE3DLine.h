@@ -46,6 +46,7 @@ public:
     bool SolveForZ(float inZ, float& outT) const;
     bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const;
 private:
+    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     void ComputeDirection(const GE3DPoint& inEnd);
 
     GE3DPoint mStart;                       // +0x00

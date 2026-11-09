@@ -11,3 +11,5 @@ crate-type = ["staticlib"]
 
 [dependencies]
 ee_rmap = { path = "../ee_rmap" }
+# the engine units the tool compiles (UMath.cpp, the GE math) forward to ee_ge
+ee_ge = { path = "../ee_ge" }

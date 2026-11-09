@@ -84,12 +84,6 @@ constexpr static const int32_t TEAM_OUTER_NEUTRAL = -15;
 
 constexpr static const int32_t TEAM_MOON = -14;
 
-constexpr static const float PI = 3.1415927;
-
-constexpr static const float TWO_PI = 6.2831855;
-
-constexpr static const float HALF_PI = 1.5707964;
-
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -460,6 +454,84 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t start,
                                int32_t end,
                                int32_t length);
+
+/// `GE2DPoint` (sizeof 8).
+struct EeGe2DPoint {
+  float x;
+  float y;
+};
+
+/// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
+using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
+
+/// `GE3DPoint` (sizeof 0xc).
+struct EeGe3DPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// Receives one point of a 3D interpolation.
+using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
+
+/// `GEVector` (sizeof 0xc).
+struct EeGeVector {
+  float x;
+  float y;
+  float z;
+};
+
+/// `GE3DLine` (sizeof 0x18): start, direction.
+struct EeGe3DLine {
+  EeGe3DPoint start;
+  EeGeVector direction;
+};
+
+/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+struct EeGe3DPlane {
+  EeGe3DPoint point;
+  EeGeVector normal;
+};
+
+/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+struct EeGeTransformation {
+  float m[4][4];
+};
+
+/// `GEOrientation` (sizeof 0xc).
+struct EeGeOrientation {
+  float yaw;
+  float pitch;
+  float roll;
+};
+
+/// `GEQuaternion` (sizeof 0x10).
+struct EeGeQuaternion {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
+struct EeGeBoundingBox {
+  EeGe3DPoint bottom_left_front;
+  EeGe3DPoint top_right_back;
+  float width;
+  float height;
+  float depth;
+};
+
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// Receives one rectangle of a split.
+using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -1850,6 +1922,387 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t start,
                                   int32_t length,
                                   EeFsMemFile **out_file);
+
+/// `UMCos`.
+float ee_ge_um_cos(float angle);
+
+/// `UMArcCos`.
+float ee_ge_um_arccos(float value);
+
+/// `UMArcTan`.
+float ee_ge_um_arctan(float value);
+
+/// `UMArcTan2`.
+float ee_ge_um_arctan2(float y, float x);
+
+/// `UMTan`.
+float ee_ge_um_tan(float angle);
+
+/// `UMQuadraticEquation`: false (roots unwritten) when a and b are 0.
+///
+/// # Safety
+/// `root1` and `root2` are valid for writes.
+bool ee_ge_um_quadratic(float a, float b, float c, float *root1, float *root2);
+
+/// `GE2DPoint::GetDirection`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_direction(const EeGe2DPoint *p, const EeGe2DPoint *from, const EeGe2DPoint *to);
+
+/// `GE2DPoint::DistanceTo`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_distance(const EeGe2DPoint *p, const EeGe2DPoint *q);
+
+/// `GE2DPoint::DistanceToSquared`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_distance_squared(const EeGe2DPoint *p, const EeGe2DPoint *q);
+
+/// `GE2DPoint::RotatePoint(angle, centre, out)` (and the in-place form with `out == p`).
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+void ee_ge_2d_rotate(const EeGe2DPoint *p,
+                     float angle,
+                     const EeGe2DPoint *center,
+                     EeGe2DPoint *out);
+
+/// `GE2DPoint::InterpolateTo`: each point goes to `push` (the caller clears its vector first).
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_2d_interpolate(const EeGe2DPoint *from,
+                          const EeGe2DPoint *to,
+                          float step,
+                          EeGePush2D push,
+                          void *context);
+
+/// `GE3DPoint::DistanceTo`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_3d_distance(const EeGe3DPoint *p, const EeGe3DPoint *q);
+
+/// `GE3DPoint::DistanceToSquared`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_3d_distance_squared(const EeGe3DPoint *p, const EeGe3DPoint *q);
+
+/// `GE3DPoint::InterpolateTo`.
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_3d_interpolate(const EeGe3DPoint *from,
+                          const EeGe3DPoint *to,
+                          float step,
+                          EeGePush3D push,
+                          void *context);
+
+/// `GEVector::GetMagnitude`.
+///
+/// # Safety
+/// `v` is valid.
+float ee_ge_vector_magnitude(const EeGeVector *v);
+
+/// `GEVector::GetMagnitudeSquared`.
+///
+/// # Safety
+/// `v` is valid.
+float ee_ge_vector_magnitude_squared(const EeGeVector *v);
+
+/// `GEVector::CrossProduct(in, out)`, storing each component before computing the next as the C++ does.
+///
+/// # Safety
+/// The pointers are valid; any of them may be equal.
+void ee_ge_vector_cross(const EeGeVector *v,
+                        const EeGeVector *other,
+                        EeGeVector *out);
+
+/// Fills `QuantizedVectorArray::mVectors` (`count` must be 41 * 246).
+///
+/// # Safety
+/// `out` is valid for `count` vectors.
+void ee_ge_vector_quantized_table(EeGeVector *out, size_t count);
+
+/// `GEVector::GetQuantizedVersion` as an index into the table, -1 for the zero vector, -2 for no face
+/// (`vector::QUANT_ZERO`, `vector::QUANT_NONE`).
+///
+/// # Safety
+/// `v` is valid.
+int32_t ee_ge_vector_quantized_index(const EeGeVector *v);
+
+/// `GE3DLine::Intersects(point, tolerance, t)`: `t` written only on a hit.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_point(const EeGe3DLine *line,
+                                 const EeGe3DPoint *point,
+                                 float tolerance,
+                                 float *t);
+
+/// `GE3DLine::Intersects(line, t, lineT)`: the parameters are written whenever a branch computed them.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_line(const EeGe3DLine *line,
+                                const EeGe3DLine *other,
+                                float *t,
+                                float *line_t);
+
+/// `GE3DLine::IntersectsIn2D`: the parameters written only when the lines are not parallel.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_2d(const EeGe3DLine *line,
+                              const EeGe3DLine *other,
+                              float *t,
+                              float *line_t);
+
+/// `GE3DLine::Intersects(plane, t)`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_plane(const EeGe3DLine *line, const EeGe3DPlane *plane, float *t);
+
+/// `GE3DLine::SolveForX/Y/Z` (`axis` 0, 1, 2), with the point when `point` is not null; nothing written when the
+/// line runs parallel to the axis.
+///
+/// # Safety
+/// `line` and `t` are valid; `point` is null or valid.
+bool ee_ge_line_solve(const EeGe3DLine *line,
+                      uint32_t axis,
+                      float value,
+                      float *t,
+                      EeGe3DPoint *point);
+
+/// `GE3DPlane::Define(p1, p2, p3)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may be the storage of an input.
+void ee_ge_plane_define(const EeGe3DPoint *p1,
+                        const EeGe3DPoint *p2,
+                        const EeGe3DPoint *p3,
+                        EeGe3DPlane *out);
+
+/// `GE3DPlane::Intersects(plane, line)`: the line written only when the planes are not parallel.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_plane_intersects(const EeGe3DPlane *plane, const EeGe3DPlane *other, EeGe3DLine *out);
+
+/// `GE3DPlane::IsPoint*`: `test` 0 above, 1 below, 2 on or above, 3 on or below, 4 on.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_plane_side(const EeGe3DPlane *plane, const EeGe3DPoint *point, uint32_t test);
+
+/// `GETransformation::Apply(transformation, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+void ee_ge_t_compose(const EeGeTransformation *a,
+                     const EeGeTransformation *b,
+                     EeGeTransformation *out);
+
+/// `GETransformation::Apply(line, out)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_apply_line(const EeGeTransformation *t, const EeGe3DLine *line, EeGe3DLine *out);
+
+/// `GETransformation::Apply(plane, out)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_apply_plane(const EeGeTransformation *t, const EeGe3DPlane *plane, EeGe3DPlane *out);
+
+/// `GETransformation::ConvertToOrientation`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_orientation(const EeGeTransformation *t, EeGeOrientation *out);
+
+/// `GETransformation::GetYaw`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_yaw(const EeGeTransformation *t);
+
+/// `GETransformation::GetPitch`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_pitch(const EeGeTransformation *t);
+
+/// `GETransformation::GetRoll`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_roll(const EeGeTransformation *t);
+
+/// `GETransformation::DistanceTo(point)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `GETransformation::DistanceSquaredTo(point)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_squared_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `GETransformation::DistanceTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_to(const EeGeTransformation *t, const EeGeTransformation *other);
+
+/// `GETransformation::DistanceSquaredTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_squared_to(const EeGeTransformation *t, const EeGeTransformation *other);
+
+/// `GETransformation::MakeInverse(out)`, in the C++'s store order (an output equal to `t` included).
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+void ee_ge_t_make_inverse(const EeGeTransformation *t,
+                          EeGeTransformation *out);
+
+/// `GETransformation::MakeLookAtTransform(eye, target)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_make_look_at(EeGeTransformation *t, const EeGe3DPoint *eye, const EeGe3DPoint *target);
+
+/// `GETransformation::Normalize`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_normalize(EeGeTransformation *t);
+
+/// `GETransformation::Revolve(yaw, pitch, roll)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_revolve(EeGeTransformation *t, float yaw, float pitch, float roll);
+
+/// `GETransformation::Rotate(yaw, pitch, roll)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_rotate(EeGeTransformation *t, float yaw, float pitch, float roll);
+
+/// `GETransformation::Scale(x, y, z)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_scale(EeGeTransformation *t, float x, float y, float z);
+
+/// `GETransformation::SetOrientation{PRY,PYR,RPY,RYP,YPR,YRP}` (`order` 0..5 in that order).
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_set_orientation(EeGeTransformation *t,
+                             uint32_t order,
+                             float yaw,
+                             float pitch,
+                             float roll);
+
+/// `GEOrientation::Normalize`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_ge_orientation_normalize(EeGeOrientation *o);
+
+/// `GEQuaternion::ConvertFrom(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_quat_from(const EeGeTransformation *t, EeGeQuaternion *out);
+
+/// `GEQuaternion::ConvertTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_quat_to(const EeGeQuaternion *q, EeGeTransformation *out);
+
+/// `GEQuaternion::Normalize`.
+///
+/// # Safety
+/// `q` is valid.
+void ee_ge_quat_normalize(EeGeQuaternion *q);
+
+/// `GEQuaternion::Slerp(target, t, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+void ee_ge_quat_slerp(const EeGeQuaternion *q,
+                      const EeGeQuaternion *target,
+                      float t,
+                      EeGeQuaternion *out);
+
+/// `GEBoundingBox::ComputeDimensions`.
+///
+/// # Safety
+/// `b` is valid.
+void ee_ge_bbox_compute_dimensions(EeGeBoundingBox *b);
+
+/// `GEBoundingBox::Contains`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_contains(const EeGeBoundingBox *b, const EeGe3DPoint *p);
+
+/// `GEBoundingBox::Intersects(box)`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_intersects(const EeGeBoundingBox *b, const EeGeBoundingBox *other);
+
+/// `GEBoundingBox::Intersects(line, distance)`: the distance is always written.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_intersects_line(const EeGeBoundingBox *b, const EeGe3DLine *line, float *distance);
+
+/// `GEBoundingBox::Transform(transformation, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal `b`.
+void ee_ge_bbox_transform(const EeGeBoundingBox *b,
+                          const EeGeTransformation *t,
+                          EeGeBoundingBox *out);
+
+/// `GERectangle::And(rectangle)`.
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+bool ee_ge_rect_and_in_place(EeGeRectangle *r, const EeGeRectangle *other);
+
+/// `GERectangle::And(rectangle, out)`: `out` written only when they overlap.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+bool ee_ge_rect_and(const EeGeRectangle *r, const EeGeRectangle *other, EeGeRectangle *out);
+
+/// `GERectangle::RemoveIntersectingRectangle`: each piece goes to `push`; `existing` is the output vector's size
+/// before the call.
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_rect_remove_intersecting(const EeGeRectangle *r,
+                                    const EeGeRectangle *other,
+                                    size_t existing,
+                                    EeGePushRectangle push,
+                                    void *context);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

@@ -4,11 +4,13 @@
 // 0x10020d20..0x10020e09: Normalize and Save (Save's body is ICF-folded with GEVector::Save and GE3DPoint::Save; this
 // unit's copy is the one kept). Load is defined here too, but the fold keeps GE3DPoint.cpp's copy (0x1000dc23). The
 // ctors and accessors are header-inline. No init chains.
+// Normalize forwards to Rust (rust/crates/ee_ge transform.rs; GERustMath.h).
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/FSFile.h"
 #include "lle/GEOrientation.h"
+#include "GERustMath.h"
 
 // Not in this unit's range (ICF keeps 0x1000dc23).
 long GEOrientation::Load(FSFile& inFile)
@@ -30,18 +32,7 @@ long GEOrientation::Load(FSFile& inFile)
 // Wraps yaw, pitch and roll into the range -pi..pi
 void GEOrientation::Normalize()
 {
-    while (this->mYaw > 3.1415927f)
-        this->mYaw -= 6.2831855f;
-    while (this->mYaw < -3.1415927f)
-        this->mYaw += 6.2831855f;
-    while (this->mPitch > 3.1415927f)
-        this->mPitch -= 6.2831855f;
-    while (this->mPitch < -3.1415927f)
-        this->mPitch += 6.2831855f;
-    while (this->mRoll > 3.1415927f)
-        this->mRoll -= 6.2831855f;
-    while (this->mRoll < -3.1415927f)
-        this->mRoll += 6.2831855f;
+    ee_ge_orientation_normalize(GERust(*this));
 }
 
 // FUNCTION: LLE 0x10020dc6

@@ -3,6 +3,8 @@
 //
 // Opens with the GEVector(x, y, z)/operator= COMDATs and GETransformation's small members (0x1000d5a1..), emitted
 // first by this unit (same pattern as GE2DPoint.cpp; see lle/GETransformation.h).
+// The distances, the angles and InterpolateTo forward to Rust (rust/crates/ee_ge: transform.rs, point.rs;
+// GERustMath.h); the accessors, the orientation overloads and the file I/O stay here.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -17,6 +19,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
+#include "GERustMath.h"
 // header-inline members emitted by this unit: GEVector(float, float, float) 0x1000d56f (ICF representative),
 // GEVector::operator= 0x1000d588, GETransformation::GetZ 0x1000d7c4, SetPosition(float, float, float) 0x1000d955,
 // Translate(float, float, float) 0x1000d9b2
@@ -33,38 +36,28 @@
 // Returns the distance from the transformation's position to a point (full-precision square root)
 float GETransformation::DistanceTo(const GE3DPoint& inPoint) const
 {
-    // each difference written out twice (a squaring macro's shape): every operand is loaded twice, the y and z
-    // accessor values go through memory temps, sqrt takes the double directly
-    return (float)sqrt((inPoint.GetX() - this->GetX()) * (inPoint.GetX() - this->GetX()) +
-                       (inPoint.GetY() - this->GetY()) * (inPoint.GetY() - this->GetY()) +
-                       (inPoint.GetZ() - this->GetZ()) * (inPoint.GetZ() - this->GetZ()));
+    return ee_ge_t_distance_to_point(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000d702
 // Returns the distance between two transformations' positions (fast square root)
 float GETransformation::DistanceTo(const GETransformation& inTransformation) const
 {
-    return UMFastMath::Sqrt(this->DistanceSquaredTo(inTransformation));
+    return ee_ge_t_distance_to(GERust(*this), GERust(inTransformation));
 }
 
 // FUNCTION: LLE 0x1000d71a
 // Returns the squared distance from the transformation's position to a point
 float GETransformation::DistanceSquaredTo(const GE3DPoint& inPoint) const
 {
-    float theZ = inPoint.GetZ() - this->GetZ();
-    float theY = inPoint.GetY() - this->GetY();
-    float theX = inPoint.GetX() - this->GetX();
-    return theX * theX + theY * theY + theZ * theZ;
+    return ee_ge_t_distance_squared_to_point(GERust(*this), GERust(inPoint));
 }
 
 // FUNCTION: LLE 0x1000d74e
 // Returns the squared distance between two transformations' positions
 float GETransformation::DistanceSquaredTo(const GETransformation& inTransformation) const
 {
-    float theZ = this->GetZ() - inTransformation.GetZ();
-    float theY = this->GetY() - inTransformation.GetY();
-    float theX = this->GetX() - inTransformation.GetX();
-    return theX * theX + theY * theY + theZ * theZ;
+    return ee_ge_t_distance_squared_to(GERust(*this), GERust(inTransformation));
 }
 
 // SYNTHETIC: LLE 0x1000d783
@@ -90,21 +83,21 @@ void GETransformation::GetPosition(GE3DPoint& outPosition) const
 // Returns the yaw angle taken from the matrix
 float GETransformation::GetYaw() const
 {
-    return UMArcTan2(this->mMatrix[1][0], this->mMatrix[0][0]);
+    return ee_ge_t_yaw(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000d7dd
 // Returns the pitch angle taken from the matrix
 float GETransformation::GetPitch() const
 {
-    return UMArcCos(-this->mMatrix[2][1]) - 1.5707964f;
+    return ee_ge_t_pitch(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000d7f3
 // Returns the roll angle taken from the matrix
 float GETransformation::GetRoll() const
 {
-    return UMArcTan2(this->mMatrix[2][0], this->mMatrix[0][0]);
+    return ee_ge_t_roll(GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000d808
@@ -226,32 +219,11 @@ bool GE3DPoint::operator==(const GETransformation& inTransformation) const
 // Fills outPoints with points every inStep along the segment to inPoint, always ending with inPoint itself
 void GE3DPoint::InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vector<GE3DPoint>& outPoints) const
 {
-    GE3DPoint theCurrent;
-    GE3DLine theLine;
-    GEVector theDirection;
-    float theT = 0.0f;
-    float theEndT;
+    // (points within 0.0001 of each other but not equal: the C++ read an uninitialized end, Rust takes 0)
+    GE3DPoint theFrom(*this);
+    GE3DPoint theTo(inPoint);   // copies: either may be an element of outPoints
     outPoints.clear();
-    if (*this != inPoint) {
-        theDirection.SetX(inPoint.mX - this->mX);
-        theDirection.SetY(inPoint.mY - this->mY);
-        theDirection.SetZ(inPoint.mZ - this->mZ);
-        theDirection.Normalize();
-        theDirection.mX *= inStep;
-        theDirection.mY *= inStep;
-        theDirection.mZ *= inStep;
-        theLine.SetStart(*this);
-        theLine.SetDirection(theDirection);
-        if (!theLine.SolveForX(inPoint.GetX(), theEndT))
-            if (!theLine.SolveForY(inPoint.GetY(), theEndT))
-                theLine.SolveForZ(inPoint.GetZ(), theEndT);
-        while (theT < theEndT) {
-            theLine.GetPointAt(theT, theCurrent);
-            outPoints.push_back(theCurrent);
-            theT += inStep;
-        }
-    }
-    outPoints.push_back(inPoint);
+    ee_ge_3d_interpolate(GERust(theFrom), GERust(theTo), inStep, GERustPush3D, &outPoints);
 }
 
 // FUNCTION: LLE 0x1000dc23

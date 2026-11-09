@@ -5,6 +5,8 @@
 // 0x10080c07..0x1008104b: UMFastMath::BuildSqrtTable (empty), then the UM functions alphabetical. Its .data is the two
 // lookup tables (0x100dd8a4, 0x100ed8a8), its .rdata the named constants 0x10099bf0..0x10099c18.
 // UReferenceCounter.cpp's sReferenceDebugInfo init chain starts at 0x1008104b.
+// The table trigonometry and the quadratic forward to Rust (rust/crates/ee_ge um.rs, RUST_PLAN R4.3); the tables
+// (UMTables.h, deleted) are rebuilt there and pinned by a digest. The floating-point control stays here.
 #include <windows.h>
 #include <math.h>
 #include <float.h>
@@ -14,18 +16,7 @@
 #endif
 
 #include "lle/LowLevelEngine.h"
-
-#include "UMTables.h"
-
-static const float kCosTableScale = 5215.189f;          // 16384 / pi
-static const float kOneThird = 0.33333334f;
-static const float kOneFifth = 0.2f;
-static const float kOneSeventh = 0.14285715f;
-static const float kArcCosTableLimit = 0.9995f;
-static const float kQuarterPi = 0.78539819f;
-static const float kMinusHalfPi = -1.5707964f;
-static const float kMinusInfinity = -FLT_MAX;
-static const float kPlusInfinity = FLT_MAX;
+#include "rust/ee_rust.h"
 
 // FUNCTION: LLE 0x10080c07
 // Does nothing (the square root table is not built in the retail engine)
@@ -35,96 +26,30 @@ void UMFastMath::BuildSqrtTable()
 
 // FUNCTION: LLE 0x10080c08
 // Returns the arc cosine from a lookup table, or a series near 1; clamps below -1, returns 0 above 1
-// NEAR: the original loads the 0 above 1 with fldz (series arithmetic identical)
 float UMArcCos(float inValue)
 {
-    if (inValue > 0.0f) {
-        if (inValue < kArcCosTableLimit)
-            return sArcCosTable[UMFloatToLong(inValue * 32768.0f)];
-        if (inValue < 1.0f) {
-            // one power variable (kept on the FPU stack) and the sum in inValue (rounded through its float slot):
-            // the original's x - x^3/3 subtracts from the float-rounded x and forms x^3 from the unrounded one; a
-            // separate square-then-power pair rounds differently (MP game with our engine on one end desynced)
-            float thePower = (float)sqrt(1.0f - inValue * inValue) / inValue;
-            float theSquare = thePower * thePower;
-            inValue = thePower;
-            thePower *= theSquare;
-            inValue -= kOneThird * thePower;
-            thePower *= theSquare;
-            inValue += kOneFifth * thePower;
-            thePower *= theSquare;
-            inValue -= thePower * kOneSeventh;
-        } else
-            inValue = 0;   // through the variable: the original loads it with fldz (a `return 0` is fld [0.0f])
-        return inValue;
-    }
-    if (inValue < 0.0f) {
-        if (inValue < -1.0f)
-            inValue = -1.0f;
-        return 3.1415927f - UMArcCos(-inValue);
-    }
-    return 1.5707964f;
+    return ee_ge_um_arccos(inValue);
 }
 
 // FUNCTION: LLE 0x10080ce8
 // Returns the arc tangent by a short power series, folding values outside -1..1 back into it
 float UMArcTan(float inValue)
 {
-    if (inValue > 0.0f && inValue < 1.0f) {
-        float theSquare = inValue * inValue;
-        float thePower = inValue * theSquare;
-        float theResult = inValue - kOneThird * thePower;
-        thePower = theSquare * thePower;
-        theResult += kOneFifth * thePower;
-        // the original multiplies (x^2 * x^5) first, then by 1/7 (0x80d2c); without the parentheses VC6 forms
-        // (1/7 * x^5) * x^2, which rounds differently (an MP game with our engine on one end only drifted)
-        return theResult - (theSquare * thePower) * kOneSeventh;
-    }
-    if (inValue > 1.0f) {
-        float theInverse = 1.0f / inValue;
-        if (std::isfinite((double)theInverse))
-            return 1.5707964f - UMArcTan(theInverse);
-        return 1.5707964f;
-    }
-    if (inValue < -1.0f) {
-        float theInverse = -1.0f / inValue;
-        if (std::isfinite((double)theInverse))
-            return UMArcTan(theInverse) - 1.5707964f;
-        return kMinusHalfPi;
-    }
-    if (inValue < 0.0f)
-        return -UMArcTan(-inValue);
-    float theResult;
-    theResult = inValue == 0.0f ? 0 : kQuarterPi;
-    return theResult;
+    return ee_ge_um_arctan(inValue);
 }
 
 // FUNCTION: LLE 0x10080dff
 // Returns the angle of the vector (y, x) in -pi..pi from the arc cosine of its normalised x
 float UMArcTan2(float inY, float inX)
 {
-    if (inX != 0.0f) {
-        float theCosine = inX / (float)sqrt(inY * inY + inX * inX);
-        if (inY >= 0.0f)
-            return UMArcCos(theCosine);
-        return -UMArcCos(theCosine);
-    }
-    if (inY < 0.0f)
-        return kMinusHalfPi;
-    return 1.5707964f;
+    return ee_ge_um_arctan2(inY, inX);
 }
 
 // FUNCTION: LLE 0x10080e6c
 // Returns the cosine of an angle from a lookup table after wrapping it into -pi..pi
 float UMCos(float inAngle)
 {
-    while (inAngle < -3.1415927f)
-        inAngle += 6.2831855f;
-    while (inAngle > 3.1415927f)
-        inAngle -= 6.2831855f;
-    if (inAngle < 0.0f)
-        inAngle = -inAngle;
-    return sCosTable[UMFloatToLong(kCosTableScale * inAngle)];
+    return ee_ge_um_cos(inAngle);
 }
 
 // FUNCTION: LLE 0x10080ed1
@@ -167,21 +92,7 @@ unsigned long UMGetFloatingPointRoundingMode()
 // Solves a*x^2 + b*x + c = 0 into two roots (a negative discriminant is not checked); false when a and b are 0
 bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot1, float& outRoot2)
 {
-    if (inA != 0.0f) {
-        double theDiscriminant = inB * inB - inA * inC * 4.0f;
-        inA += inA;
-        outRoot1 = ((float)sqrt(theDiscriminant) - inB) / inA;
-        inB = -inB;
-        outRoot2 = (inB - (float)sqrt(theDiscriminant)) / inA;
-        return true;
-    }
-    if (inB != 0.0f) {
-        float theRoot = (-inC) / inB;
-        outRoot1 = theRoot;
-        outRoot2 = theRoot;
-        return true;
-    }
-    return false;
+    return ee_ge_um_quadratic(inA, inB, inC, &outRoot1, &outRoot2);
 }
 
 // FUNCTION: LLE 0x10080fab
@@ -213,10 +124,5 @@ void UMSetFloatingPointRoundingMode(unsigned long inMode)
 // Returns the tangent from the table sine and cosine; plus or minus FLT_MAX where the cosine is 0
 float UMTan(float inAngle)
 {
-    float theCosine = UMCos(inAngle);
-    if (theCosine != 0.0f)
-        return UMSin(inAngle) / theCosine;
-    if (inAngle >= 0.0f && inAngle < 1.5707964f || inAngle >= -3.1415927f && inAngle <= kMinusHalfPi)
-        return kPlusInfinity;
-    return kMinusInfinity;
+    return ee_ge_um_tan(inAngle);
 }

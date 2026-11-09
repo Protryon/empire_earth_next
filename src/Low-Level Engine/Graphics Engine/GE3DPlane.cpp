@@ -1,5 +1,7 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GE3DPlane.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// Define, the intersection and the point-side tests forward to Rust (rust/crates/ee_ge line.rs; GERustMath.h); the
+// constructors and the file I/O stay here.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -12,86 +14,56 @@
 #include "lle/GE3DPoint.h"
 #include "lle/GE3DLine.h"
 #include "lle/GE3DPlane.h"
+#include "GERustMath.h"
 
 // FUNCTION: LLE 0x1000d24d
 // Defines the plane through three points (first point plus the unit normal of their cross product)
 void GE3DPlane::Define(const GE3DPoint& inPoint1, const GE3DPoint& inPoint2, const GE3DPoint& inPoint3)
 {
-    GEVector theFirst(inPoint1.GetX() - inPoint2.GetX(), inPoint1.GetY() - inPoint2.GetY(),
-                      inPoint1.GetZ() - inPoint2.GetZ());
-    GEVector theSecond(inPoint2.GetX() - inPoint3.GetX(), inPoint2.GetY() - inPoint3.GetY(),
-                       inPoint2.GetZ() - inPoint3.GetZ());
-    this->mPoint = inPoint1;
-    theSecond.CrossProduct(theFirst, this->mNormal);
-    this->mNormal.Normalize();
+    ee_ge_plane_define(GERust(inPoint1), GERust(inPoint2), GERust(inPoint3), GERust(*this));
 }
 
 // FUNCTION: LLE 0x1000d2c7
 // Finds the line where this plane meets another; false when the planes are parallel
 bool GE3DPlane::Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
 {
-    GE3DPoint thePoint(this->mPoint);
-    GE3DLine theLine;
-    GEVector theNormal(this->mNormal);
-    GEVector theDirection;
-    GEVector thePerpendicular;
-    float theT;
-    theNormal.CrossProduct(inPlane.mNormal, theDirection);
-    // the original's word 0x1009781c is 9.9999994e-11f (0x2edbe6fe), the folded square of 0.00001f; 1.0e-10f would
-    // be 0x2edbe6ff
-    if (theDirection.GetMagnitudeSquared() > 0.00001f * 0.00001f) {
-        theNormal.CrossProduct(theDirection, thePerpendicular);
-        theLine.SetStart(thePoint);
-        theLine.SetDirection(thePerpendicular);
-        theLine.Intersects(inPlane, theT);
-        theLine.GetPointAt(theT, thePoint);
-        outLine.SetStart(thePoint);
-        outLine.SetDirection(theDirection);
-        return true;
-    } else
-        return false;
+    // (degenerate normals: the C++ read an uninitialized parameter, Rust takes 0)
+    return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine));
 }
 
 // FUNCTION: LLE 0x1000d3a7
 // Tells whether a point lies strictly on the normal's side of the plane
 bool GE3DPlane::IsPointAbovePlane(const GE3DPoint& inPoint) const
 {
-    GEVector theDelta(inPoint.GetX() - this->mPoint.GetX(), inPoint.GetY() - this->mPoint.GetY(), inPoint.GetZ() - this->mPoint.GetZ());
-    return theDelta.DotProduct(this->mNormal) > 0.0f;
+    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 0);
 }
 
 // FUNCTION: LLE 0x1000d3ee
 // Tells whether a point lies strictly behind the plane
 bool GE3DPlane::IsPointBelowPlane(const GE3DPoint& inPoint) const
 {
-    GEVector theDelta(inPoint.GetX() - this->mPoint.GetX(), inPoint.GetY() - this->mPoint.GetY(), inPoint.GetZ() - this->mPoint.GetZ());
-    return theDelta.DotProduct(this->mNormal) < 0.0f;
+    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 1);
 }
 
 // FUNCTION: LLE 0x1000d435
 // Tells whether a point lies on the plane or on the normal's side
 bool GE3DPlane::IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const
 {
-    GEVector theDelta(inPoint.GetX() - this->mPoint.GetX(), inPoint.GetY() - this->mPoint.GetY(), inPoint.GetZ() - this->mPoint.GetZ());
-    return theDelta.DotProduct(this->mNormal) >= 0.0f;
+    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 2);
 }
 
 // FUNCTION: LLE 0x1000d47c
 // Tells whether a point lies on the plane or behind it
 bool GE3DPlane::IsPointOnOrBelowPlane(const GE3DPoint& inPoint) const
 {
-    GEVector theDelta(inPoint.GetX() - this->mPoint.GetX(), inPoint.GetY() - this->mPoint.GetY(), inPoint.GetZ() - this->mPoint.GetZ());
-    return theDelta.DotProduct(this->mNormal) <= 0.0f;
+    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 3);
 }
 
 // FUNCTION: LLE 0x1000d4c3
 // Tells whether a point lies on the plane (direction from the plane point within 1e-6 of perpendicular to the normal)
 bool GE3DPlane::IsPointOnPlane(const GE3DPoint& inPoint) const
 {
-    GEVector theDelta(inPoint.GetX() - this->mPoint.GetX(), inPoint.GetY() - this->mPoint.GetY(), inPoint.GetZ() - this->mPoint.GetZ());
-    theDelta.Normalize();
-    float theDot = theDelta.DotProduct(this->mNormal);
-    return theDot > -0.000001f && theDot < 0.000001f;
+    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 4);
 }
 
 // FUNCTION: LLE 0x1000d52f

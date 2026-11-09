@@ -39,11 +39,9 @@ public:
     void SetTopRightBack(const GE3DPoint& inPoint) { this->mTopRightBack = inPoint; this->ComputeDimensions(); }
     void Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const;
 private:
+    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
+    // LineToPlaneIntersection and TransformPoint, Intersects(line)'s and Transform's helpers, are Rust (ee_ge bbox.rs)
     void ComputeDimensions();
-    bool LineToPlaneIntersection(const GE3DLine& inLine, const GE3DPlane& inPlane, float inBest, float& outDistance,
-                                 bool inFirst) const;
-    void TransformPoint(const GETransformation& inTransformation, const GE3DPoint& inPoint, GE3DPoint& ioMinimum,
-                        GE3DPoint& ioMaximum, bool inFirst) const;
 
     GE3DPoint mBottomLeftFront;             // +0x00
     GE3DPoint mTopRightBack;                // +0x0c
