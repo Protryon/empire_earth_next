@@ -28,6 +28,8 @@ pub(crate) const TS_WORLD: u32 = 1;
 pub(crate) const TS_VIEW: u32 = 2;
 pub(crate) const TS_PROJECTION: u32 = 3;
 
+pub(crate) const RS_CLIPPING: u32 = 136;
+
 /// `GETransformation`: row-major, translation in the last column.
 pub type Transform = [[f32; 4]; 4];
 
@@ -242,6 +244,9 @@ pub(crate) mod testing {
         pub position: u32,
         pub polys: u32,
         pub busy: u32,
+        /// The value `UnlockVB` returns (the C++ fake's `gUnlockResult`).
+        pub force_unlock: Option<LongResult>,
+        pub force_rs: Option<LongResult>,
     }
 
     pub fn tex_name(h: Handle, names: &[(Handle, &str)]) -> String {
@@ -253,7 +258,15 @@ pub(crate) mod testing {
 
     impl Rec {
         pub fn new() -> Rec {
-            Rec { log: Vec::new(), vb: vec![Dx7StdColorVertex::default(); 0x960 + 8], position: 0, polys: 0, busy: 0 }
+            Rec {
+                log: Vec::new(),
+                vb: vec![Dx7StdColorVertex::default(); 0x960 + 8],
+                position: 0,
+                polys: 0,
+                busy: 0,
+                force_unlock: None,
+                force_rs: None,
+            }
         }
 
         pub fn dump_v(&self, i: u32) -> String {
@@ -343,7 +356,7 @@ pub(crate) mod testing {
                 }
                 fn unlock_vb(&mut self) -> LongResult {
                     self.rec.log.push("unlock".into());
-                    11
+                    self.rec.force_unlock.unwrap_or(11)
                 }
                 fn vb_position(&self) -> u32 {
                     self.rec.position
@@ -386,7 +399,7 @@ pub(crate) mod testing {
                 }
                 fn set_render_state(&mut self, state: u32, value: u32) -> LongResult {
                     self.rec.log.push(format!("rs {state} {value}"));
-                    8
+                    self.rec.force_rs.unwrap_or(8)
                 }
                 fn set_material(&mut self, m: &Material) {
                     let mut line = String::from("material");

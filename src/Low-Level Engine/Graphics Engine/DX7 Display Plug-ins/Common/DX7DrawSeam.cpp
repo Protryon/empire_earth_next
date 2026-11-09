@@ -6,8 +6,6 @@
 #include "rust/ee_rust.h"
 #include "dx7/DX7DrawSeam.h"
 
-static DX7DrawAccess* DX7Access(void* inRasterizer) { return static_cast<DX7DrawAccess*>(static_cast<DX7Rasterizer*>(inRasterizer)); }
-
 extern "C" {
 void ee_dx7cpp_enter(void* inRasterizer) { DX7Access(inRasterizer)->mDrawingAccess->Enter(); }
 void ee_dx7cpp_leave(void* inRasterizer) { DX7Access(inRasterizer)->mDrawingAccess->Leave(); }

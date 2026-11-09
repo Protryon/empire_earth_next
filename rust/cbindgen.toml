@@ -12,6 +12,8 @@ extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
+# seam records only C++ fills (referenced by no exported function)
+include = ["ModelInfo", "MaterialInfo"]
 
 # ee_rmap's generic names, kept unique in the shared header
 [export.rename]
@@ -37,3 +39,10 @@ item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"
 "StageView" = "EeDx7StageView"
 "TextInfo" = "EeDx7TextInfo"
 "TextRect" = "EeDx7TextRect"
+"Handle" = "EeDx7Handle"
+"LongResult" = "EeDx7LongResult"
+"Transform" = "EeDx7Transform"
+"ModelInfo" = "EeDx7ModelInfo"
+"MaterialInfo" = "EeDx7MaterialInfo"
+"ViewportInfo" = "EeDx7ViewportInfo"
+"Plane" = "EeDx7Plane"

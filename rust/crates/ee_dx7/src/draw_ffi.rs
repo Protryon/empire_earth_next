@@ -9,6 +9,7 @@ use core::ffi::{c_char, c_long, c_ulong, c_void};
 
 use crate::draw::*;
 use crate::draw2d::{self, Draw2DHost, TextHost, TextInfo, TextRect};
+use crate::draw_model::{self, MaterialInfo, ModelHost, ModelInfo, ViewportInfo};
 use crate::gx::{yield_now, RawDevice};
 use crate::state::ScreenState;
 use crate::vertex::Dx7StdColorVertex;
@@ -36,6 +37,37 @@ mod cpp {
         pub fn ee_dx7cpp_point_vertices(points: Handle, index: c_ulong) -> *mut Dx7StdColorVertex;
         pub fn ee_dx7cpp_rhombus_vertices(rhombus: Handle) -> *mut Dx7StdColorVertex;
         pub fn ee_dx7cpp_texture_frame(texture: Handle, out_size: *mut f32, out_corner: *mut f32);
+
+        pub fn ee_dx7cpp_model_info(model: Handle, out: *mut ModelInfo);
+        pub fn ee_dx7cpp_model_visible(
+            rast: *mut c_void,
+            screen: c_ulong,
+            model: Handle,
+            scale: f32,
+            transform: *const Transform,
+            orthographic: bool,
+            out_visible: *mut bool,
+            out_clipped: *mut bool,
+        );
+        pub fn ee_dx7cpp_pixel_size(
+            rast: *mut c_void,
+            screen: c_ulong,
+            model: Handle,
+            transform: *const Transform,
+            scale: f32,
+            orthographic: bool,
+        ) -> f32;
+        pub fn ee_dx7cpp_view_width(rast: *mut c_void, screen: c_ulong) -> f32;
+        pub fn ee_dx7cpp_material_info(
+            model: Handle,
+            screen: c_ulong,
+            index: c_ulong,
+            lod: c_ulong,
+            out: *mut MaterialInfo,
+        );
+        pub fn ee_dx7cpp_polygon_indices(model: Handle, lod: c_ulong) -> *const u16;
+        pub fn ee_dx7cpp_frame_vertices(model: Handle, frame: c_ulong, vertex_type: c_ulong) -> *const c_void;
+        pub fn ee_dx7cpp_sub_model(model: Handle, index: c_ulong) -> Handle;
 
         pub fn ee_dx7cpp_text_measure(font: *const c_void, text: *const c_char, length: u32) -> i32;
         pub fn ee_dx7cpp_text_scaled(font: *const c_void, scale: f32) -> *const c_void;
@@ -157,6 +189,55 @@ impl Draw2DHost for Host {
     }
 }
 
+impl ModelHost for Host {
+    fn model_info(&mut self, model: Handle) -> ModelInfo {
+        let mut out = core::mem::MaybeUninit::uninit();
+        unsafe {
+            ee_dx7cpp_model_info(model, out.as_mut_ptr());
+            out.assume_init()
+        }
+    }
+    fn model_visible(&mut self, model: Handle, scale: f32, transform: &Transform, orthographic: bool) -> (bool, bool) {
+        let (mut visible, mut clipped) = (false, false);
+        unsafe {
+            ee_dx7cpp_model_visible(
+                self.rast,
+                self.screen,
+                model,
+                scale,
+                transform,
+                orthographic,
+                &mut visible,
+                &mut clipped,
+            )
+        };
+        (visible, clipped)
+    }
+    fn pixel_size(&mut self, model: Handle, transform: &Transform, scale: f32, orthographic: bool) -> f32 {
+        unsafe { ee_dx7cpp_pixel_size(self.rast, self.screen, model, transform, scale, orthographic) }
+    }
+    fn view_width(&mut self) -> f32 {
+        unsafe { ee_dx7cpp_view_width(self.rast, self.screen) }
+    }
+    fn material_info(&mut self, model: Handle, index: u32, lod: u32) -> MaterialInfo {
+        let mut out = core::mem::MaybeUninit::uninit();
+        unsafe {
+            ee_dx7cpp_material_info(model, self.screen, index as c_ulong, lod as c_ulong, out.as_mut_ptr());
+            out.assume_init()
+        }
+    }
+    fn polygon_indices(&mut self, model: Handle, lod: u32) -> *const u16 {
+        unsafe { ee_dx7cpp_polygon_indices(model, lod as c_ulong) }
+    }
+    fn frame_vertices(&mut self, model: Handle, frame: u32) -> *const c_void {
+        let vertex_type = self.model_info(model).vertex_type;
+        unsafe { ee_dx7cpp_frame_vertices(model, frame as c_ulong, vertex_type as c_ulong) }
+    }
+    fn sub_model(&mut self, model: Handle, index: u32) -> Handle {
+        unsafe { ee_dx7cpp_sub_model(model, index as c_ulong) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_bitmap(
     rast: *mut c_void,
@@ -197,6 +278,74 @@ pub unsafe extern "C" fn ee_dx7r_draw_rhombus(
     rhombus: Handle,
 ) -> c_long {
     draw2d::draw_rhombus(&mut Host { rast, screen, state }, rhombus)
+}
+
+/// `Draw(GEPolygonArray&, ...)`: `vertex_type` 1 is coloured.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_polygon_array(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    indices: *const u16,
+    count: c_ulong,
+    vertex_type: c_ulong,
+    vertices: *const c_void,
+    vertex_count: c_ulong,
+    texture: Handle,
+) -> c_long {
+    draw_model::draw_polygon_array(
+        &mut Host { rast, screen, state },
+        indices,
+        count as u32,
+        vertex_type as u32,
+        vertices,
+        vertex_count as u32,
+        texture,
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_model(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    model: Handle,
+    detail: f32,
+    orthographic: bool,
+) -> c_long {
+    draw_model::draw_model(&mut Host { rast, screen, state }, model, detail, orthographic)
+}
+
+/// `DrawModelHierarchy` from outside the recursion (no parent transform).
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_model_hierarchy(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    model: Handle,
+    detail: f32,
+    orthographic: bool,
+) -> c_long {
+    draw_model::draw_model_hierarchy(&mut Host { rast, screen, state }, model, detail, orthographic, None)
+}
+
+/// `Draw3DLine`: `points` is `count` `(x, y, z, advance)` records.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_dx7r_draw_3d_line(
+    rast: *mut c_void,
+    screen: c_ulong,
+    state: *mut ScreenState,
+    points: *const [f32; 4],
+    count: usize,
+    texture: Handle,
+    v: f32,
+    orthographic: bool,
+    viewport: *const ViewportInfo,
+) -> c_long {
+    let points = if count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(points, count) } };
+    draw_model::draw_3d_line(&mut Host { rast, screen, state }, points, texture, v, orthographic, unsafe { &*viewport })
 }
 
 struct TextPlat {

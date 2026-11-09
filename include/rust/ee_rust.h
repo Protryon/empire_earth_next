@@ -118,31 +118,6 @@ using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, in
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
-/// `GXVERTEX`: position, normal, one texture coordinate.
-struct Dx7Vertex {
-  float x;
-  float y;
-  float z;
-  float nx;
-  float ny;
-  float nz;
-  float tu;
-  float tv;
-};
-
-/// `GXVERTEX_STD_COLOR`: position, normal, a packed ARGB colour, one texture coordinate.
-struct Dx7StdColorVertex {
-  float x;
-  float y;
-  float z;
-  float nx;
-  float ny;
-  float nz;
-  uint32_t color;
-  float tu;
-  float tv;
-};
-
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -192,7 +167,38 @@ struct EeDx7ScreenState {
 };
 
 /// A C++ object seen from Rust.
-using Handle = void*;
+using EeDx7Handle = void*;
+
+/// `GETransformation`: row-major, translation in the last column.
+using EeDx7Transform = float[4][4];
+
+/// A `GE3DPlane`: a point and a normal.
+struct EeDx7Plane {
+  float point[3];
+  float normal[3];
+};
+
+/// The parts of `GEViewport` the 3D draws read.
+struct EeDx7ViewportInfo {
+  EeDx7Transform camera;
+  EeDx7Transform camera_inverse;
+  EeDx7Transform perspective;
+  EeDx7Transform orthographic;
+  float front_clip;
+  float rear_clip;
+  float half_width;
+  float half_height;
+  float field_of_view;
+  float y_clip_plane;
+  float ortho_left;
+  float ortho_top;
+  float ortho_right;
+  float ortho_bottom;
+  EeDx7Plane left_plane;
+  EeDx7Plane right_plane;
+  EeDx7Plane top_plane;
+  EeDx7Plane bottom_plane;
+};
 
 /// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
 struct EeDx7TextInfo {
@@ -214,6 +220,31 @@ struct EeDx7TextRect {
   long top;
   long right;
   long bottom;
+};
+
+/// `GXVERTEX`: position, normal, one texture coordinate.
+struct Dx7Vertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  float tu;
+  float tv;
+};
+
+/// `GXVERTEX_STD_COLOR`: position, normal, a packed ARGB colour, one texture coordinate.
+struct Dx7StdColorVertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  uint32_t color;
+  float tu;
+  float tv;
 };
 
 /// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
@@ -484,10 +515,33 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
-/// `GETransformation`: row-major, translation in the last column.
-using Transform = float[4][4];
+/// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
+struct EeDx7ModelInfo {
+  uint32_t material_count;
+  uint32_t lod_count;
+  uint32_t sub_model_count;
+  uint32_t current_frame;
+  uint32_t next_frame;
+  /// `GetVertexArray(0)->GetType()`: 0 standard, 1 coloured.
+  uint32_t vertex_type;
+  float scale;
+  float opacity;
+  float fraction;
+  EeDx7Transform transform;
+};
 
-constexpr static const Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
+/// One material for one level of detail.
+struct EeDx7MaterialInfo {
+  EeDx7Handle texture;
+  uint32_t polygon_start;
+  uint32_t polygon_length;
+  uint32_t vertex_start;
+  uint32_t vertex_length;
+  float opacity;
+  float color[3];
+};
+
+constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 extern "C" {
 
@@ -760,6 +814,79 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         EeCodecSink sink,
                         void *context);
 
+long ee_dx7r_draw_bitmap(void *rast,
+                         unsigned long screen,
+                         EeDx7ScreenState *state,
+                         EeDx7Handle bitmap);
+
+long ee_dx7r_draw_lines(void *rast,
+                        unsigned long screen,
+                        EeDx7ScreenState *state,
+                        EeDx7Handle lines,
+                        unsigned long count);
+
+long ee_dx7r_draw_points(void *rast,
+                         unsigned long screen,
+                         EeDx7ScreenState *state,
+                         EeDx7Handle points,
+                         unsigned long count);
+
+long ee_dx7r_draw_rhombus(void *rast,
+                          unsigned long screen,
+                          EeDx7ScreenState *state,
+                          EeDx7Handle rhombus);
+
+/// `Draw(GEPolygonArray&, ...)`: `vertex_type` 1 is coloured.
+long ee_dx7r_draw_polygon_array(void *rast,
+                                unsigned long screen,
+                                EeDx7ScreenState *state,
+                                const uint16_t *indices,
+                                unsigned long count,
+                                unsigned long vertex_type,
+                                const void *vertices,
+                                unsigned long vertex_count,
+                                EeDx7Handle texture);
+
+long ee_dx7r_draw_model(void *rast,
+                        unsigned long screen,
+                        EeDx7ScreenState *state,
+                        EeDx7Handle model,
+                        float detail,
+                        bool orthographic);
+
+/// `DrawModelHierarchy` from outside the recursion (no parent transform).
+long ee_dx7r_draw_model_hierarchy(void *rast,
+                                  unsigned long screen,
+                                  EeDx7ScreenState *state,
+                                  EeDx7Handle model,
+                                  float detail,
+                                  bool orthographic);
+
+/// `Draw3DLine`: `points` is `count` `(x, y, z, advance)` records.
+long ee_dx7r_draw_3d_line(void *rast,
+                          unsigned long screen,
+                          EeDx7ScreenState *state,
+                          const float (*points)[4],
+                          size_t count,
+                          EeDx7Handle texture,
+                          float v,
+                          bool orthographic,
+                          const EeDx7ViewportInfo *viewport);
+
+/// `DX7TextBounds`: `clip` may be null.
+void ee_dx7r_text_bounds(const EeDx7TextInfo *info, const EeDx7TextRect *clip, EeDx7TextRect *out);
+
+/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback). `target` is the `PlatFontTarget*`. Returns false when the
+/// font has no OS font.
+bool ee_dx7r_text_draw(const EeDx7TextInfo *info,
+                       const EeDx7TextRect *clip,
+                       long origin_x,
+                       long origin_y,
+                       int32_t target_width,
+                       int32_t target_height,
+                       float target_scale,
+                       const void *target);
+
 EeDx7StandardVertexArray *ee_dx7_std_va_new(uint32_t size);
 
 void ee_dx7_std_va_destroy(EeDx7StandardVertexArray *a);
@@ -866,39 +993,6 @@ void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
                                     uint32_t i3);
 
 uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
-
-long ee_dx7r_draw_bitmap(void *rast, unsigned long screen, EeDx7ScreenState *state, Handle bitmap);
-
-long ee_dx7r_draw_lines(void *rast,
-                        unsigned long screen,
-                        EeDx7ScreenState *state,
-                        Handle lines,
-                        unsigned long count);
-
-long ee_dx7r_draw_points(void *rast,
-                         unsigned long screen,
-                         EeDx7ScreenState *state,
-                         Handle points,
-                         unsigned long count);
-
-long ee_dx7r_draw_rhombus(void *rast,
-                          unsigned long screen,
-                          EeDx7ScreenState *state,
-                          Handle rhombus);
-
-/// `DX7TextBounds`: `clip` may be null.
-void ee_dx7r_text_bounds(const EeDx7TextInfo *info, const EeDx7TextRect *clip, EeDx7TextRect *out);
-
-/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback). `target` is the `PlatFontTarget*`. Returns false when the
-/// font has no OS font.
-bool ee_dx7r_text_draw(const EeDx7TextInfo *info,
-                       const EeDx7TextRect *clip,
-                       long origin_x,
-                       long origin_y,
-                       int32_t target_width,
-                       int32_t target_height,
-                       float target_scale,
-                       const void *target);
 
 /// The 32-bit path; pitches in pixels. `source_rect`/`destination_rect`: float pixels (see `Rect`).
 void ee_dx7_copy_with_filter_32(unsigned long format,
