@@ -529,6 +529,13 @@ Pre-work, whichever way D8 goes:
   (news, help, messages) it shows plain text instead. The online services are ported with the rest even though their
   servers are gone.
 
+- **D9. Open formats only: decided (owner, 2026-11-09).** The game reads glTF models, PNG textures and the text db
+  tables (CSV/YAML) only. The binary forms are retired at run time: `.cem` models (current and legacy), `.sst`/`.tga`
+  textures and the binary db records. The models and textures load natively (glTF -> GEModel, PNG -> texture) instead of
+  through in-memory `.cem`/`.sst` bytes, and their loaders and savers are deleted rather than ported. The binary data
+  tree leaves the gates; the importers that turn the retail installs into the open tree (tools/open_data.py,
+  tools/eedata, tools/eemodel) keep reading the binary forms, since that is where the open data comes from.
+
 ## 7. First steps
 
 1. R0 on a branch: the workspace, wgpu-native from source, the link at 0/0, CI.
