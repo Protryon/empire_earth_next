@@ -84,6 +84,17 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `kControlTriggerEnterPressed`.
+constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
+
+/// `kScrollBarWidth`.
+constexpr static const float SCROLL_BAR_WIDTH = 20.0;
+
+/// `kErrorOK`, `kErrorFailed`.
+constexpr static const long ERROR_OK = 0;
+
+constexpr static const long ERROR_FAILED = 9;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
 
@@ -868,6 +879,64 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
+/// `static_assert`ed in `UIEditBox.cpp`).
+struct EeUiEditFields {
+  float caret_x;
+  float saved_bg_opacity;
+  unsigned long selection_start_line;
+  unsigned long copied_selection_start_line;
+  unsigned long copied_selection_end_line;
+  unsigned long max_chars;
+  unsigned long char_scroll;
+  unsigned long caret_line;
+  unsigned long visible_line_count;
+  unsigned long ime_composition_length;
+  unsigned long ime_start_index;
+  unsigned long ime_start_line;
+  unsigned long copied_ime_start_index;
+  unsigned long copied_ime_start_line;
+  unsigned long copied_ime_end_index;
+  unsigned long copied_ime_end_line;
+  long copied_selection_end_index;
+  long copied_selection_start_index;
+  long selection_start_index;
+  long caret_index;
+  long drawing_index;
+  bool is_text_selected;
+  bool key_repeating;
+  bool cursor_on;
+  bool selecting;
+  bool copied_cursor_on;
+  bool copied_is_text_selected;
+  bool numbers_only;
+  bool is_single_line;
+  bool scroll_bar_captured;
+  bool scroll_bar_visible;
+  bool is_password_box;
+  bool ime_active;
+  bool copied_ime_active;
+  bool saved_always_dirty;
+};
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
+/// `mBorderThickness`.
+struct EeUiEditRefs {
+  void *edit;
+  EeUiEditFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -884,14 +953,6 @@ struct EeUiLayout {
   unsigned long right_type;
   unsigned long top_type;
   unsigned long bottom_type;
-};
-
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
 };
 
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
@@ -3110,6 +3171,133 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
+size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::BackSpaceChar`.
+void ee_ui_edit_back_space_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CalculateCaretFromMouseLocation` (the outputs are written after the model ran: a caller may pass the
+/// box's own caret members).
+void ee_ui_edit_caret_from_mouse(const EeUiEditRefs *refs,
+                                 EeUiPoint at,
+                                 unsigned long *out_line,
+                                 long *out_index);
+
+/// `UIEditBox::ChangeWidth`.
+void ee_ui_edit_change_width(const EeUiEditRefs *refs, unsigned long width);
+
+/// `UIEditBox::CheckScrollBar`.
+void ee_ui_edit_check_scroll_bar(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ComputeCaretLocation`.
+void ee_ui_edit_compute_caret_location(const EeUiEditRefs *refs, bool update_x);
+
+/// `UIEditBox::ComputeDrawingIndex`.
+void ee_ui_edit_compute_drawing_index(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DecrementCaretPos`.
+void ee_ui_edit_decrement_caret_pos(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteChar`.
+void ee_ui_edit_delete_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteLine`.
+void ee_ui_edit_delete_line(const EeUiEditRefs *refs, unsigned long line);
+
+/// `UIEditBox::DeleteSelectedText`.
+void ee_ui_edit_delete_selected_text(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteText(start index, start line, end index, end line)`.
+void ee_ui_edit_delete_range(const EeUiEditRefs *refs,
+                             unsigned long start_index,
+                             unsigned long start_line,
+                             unsigned long end_index,
+                             unsigned long end_line);
+
+/// `UIEditBox::DeleteText()`.
+void ee_ui_edit_clear(const EeUiEditRefs *refs);
+
+/// `UIEditBox::GetLocationFromIndex`.
+void ee_ui_edit_location_from_index(const EeUiEditRefs *refs,
+                                    unsigned long index,
+                                    unsigned long line,
+                                    EeUiPoint *out);
+
+/// `UIEditBox::GetSelectedText` into the `UWideString` `out` (left alone without a selection).
+void ee_ui_edit_selected_text(const EeUiEditRefs *refs, void *out);
+
+/// `UIEditBox::GetText(start line, end line, start index, end index)` into the `UWideString` `out`.
+void ee_ui_edit_text(const EeUiEditRefs *refs,
+                     unsigned long start_line,
+                     unsigned long end_line,
+                     unsigned long start_index,
+                     unsigned long end_index,
+                     void *out);
+
+/// `UIEditBox::IncrementCaretPos`.
+void ee_ui_edit_increment_caret_pos(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::ProcessDownKey`.
+void ee_ui_edit_down_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEndKey`.
+void ee_ui_edit_end_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEnterKey`.
+void ee_ui_edit_enter_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessHomeKey`.
+void ee_ui_edit_home_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessUpKey`.
+void ee_ui_edit_up_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollLeft`.
+void ee_ui_edit_scroll_left(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollRight`.
+void ee_ui_edit_scroll_right(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::SelectText()`.
+void ee_ui_edit_select_all(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SelectText(caret index, anchor index, caret line, anchor line)`.
+void ee_ui_edit_select(const EeUiEditRefs *refs,
+                       unsigned long caret_index,
+                       unsigned long start_index,
+                       unsigned long caret_line,
+                       unsigned long start_line);
+
+/// `UIEditBox::SetCaretLocation`.
+void ee_ui_edit_set_caret_location(const EeUiEditRefs *refs,
+                                   unsigned long index,
+                                   unsigned long line);
+
+/// `UIEditBox::SetIndexFromUpDownOffset`.
+void ee_ui_edit_index_from_up_down_offset(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SetLocation`.
+void ee_ui_edit_set_location(const EeUiEditRefs *refs, EeUiPoint at);
+
+/// `UIEditBox::SetText`.
+void ee_ui_edit_set_text(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::OpenIMECompositionString`.
+long ee_ui_edit_ime_open(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CloseIMECompositionString`.
+long ee_ui_edit_ime_close(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ChangeIMECompositionString` (the C++ sets `mIMEAttributes`).
+long ee_ui_edit_ime_change(const EeUiEditRefs *refs, const char *text, unsigned long cursor);
+
+/// `UIEditBox::RemoveIMECompositionString`.
+void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
+
+/// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
+void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
 
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);

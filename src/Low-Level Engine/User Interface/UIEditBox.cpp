@@ -5,11 +5,19 @@
 // and the out-of-line members in alphabetical order (the multibyte character helper sits right after AddChar, its
 // first user). The header-inline members, the implicit copy members and ??_E are emitted first by UIComboBox.cpp.
 // UIEMouseWheelScroll.cpp starts at 0x1006de9d.
+//
+// The text model is Rust (rust/crates/ee_ui/src/edit.rs, docs/RUST_PLAN.md R6): insertion and word wrap, deletion,
+// caret moves, selection, scrolling, the caret from a mouse location and the IME composition's bookkeeping. Their
+// members below forward to it with the box's members from mCaretX on as the pinned record EeUiEditFields; the lines
+// stay here (mLines), read and written through the ee_uicpp_edit_* host calls. What stays C++: construction, drawing
+// (CopyData, DrawPolygons, DrawTextA), the clipboard, mouse capture, key dispatch and repeat, focus.
 #include <windows.h>
 #include <mbstring.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
@@ -37,6 +45,141 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
+
+// --- the Rust text model's view of the box (ee_ui/src/edit_ffi.rs) --------------------------------------------------
+
+struct UIEditBoxRust {
+    // The members Rust reads and writes: the record from mCaretX on, mTextRectangle, mRectangle, mBorderThickness
+    struct Refs {
+        EeUiEditRefs mRefs;
+        Refs(const UIEditBox* inBox)
+        {
+            UIEditBox* theBox = const_cast<UIEditBox*>(inBox);
+            this->mRefs.edit = theBox;
+            this->mRefs.fields = reinterpret_cast<EeUiEditFields*>(&theBox->mCaretX);
+            this->mRefs.text = reinterpret_cast<EeUiRect*>(&theBox->mTextRectangle);
+            this->mRefs.rect = reinterpret_cast<const EeUiRect*>(&theBox->mRectangle);
+            this->mRefs.border = &theBox->mBorderThickness;
+        }
+        operator const EeUiEditRefs*() const { return &this->mRefs; }
+    };
+    static EeUiPoint Point(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+    static UIEditBox* Box(void* inBox) { return static_cast<UIEditBox*>(inBox); }
+    static void CheckLayout()
+    {
+        // the record's offsets from mCaretX (ee_ui/src/edit.rs EditFields)
+#define EE_UI_EDIT_FIELD(member, field)                                                                               \
+    static_assert(offsetof(UIEditBox, member) - offsetof(UIEditBox, mCaretX) == offsetof(EeUiEditFields, field),      \
+                  "ee_ui/src/edit.rs")
+        EE_UI_EDIT_FIELD(mCaretX, caret_x);
+        EE_UI_EDIT_FIELD(mSavedBgOpacity, saved_bg_opacity);
+        EE_UI_EDIT_FIELD(mSelectionStartLine, selection_start_line);
+        EE_UI_EDIT_FIELD(mCopiedSelectionStartLine, copied_selection_start_line);
+        EE_UI_EDIT_FIELD(mCopiedSelectionEndLine, copied_selection_end_line);
+        EE_UI_EDIT_FIELD(mMaxChars, max_chars);
+        EE_UI_EDIT_FIELD(mCharScroll, char_scroll);
+        EE_UI_EDIT_FIELD(mCaretLine, caret_line);
+        EE_UI_EDIT_FIELD(mVisibleLineCount, visible_line_count);
+        EE_UI_EDIT_FIELD(mIMECompositionLength, ime_composition_length);
+        EE_UI_EDIT_FIELD(mIMEStartIndex, ime_start_index);
+        EE_UI_EDIT_FIELD(mIMEStartLine, ime_start_line);
+        EE_UI_EDIT_FIELD(mCopiedIMEStartIndex, copied_ime_start_index);
+        EE_UI_EDIT_FIELD(mCopiedIMEStartLine, copied_ime_start_line);
+        EE_UI_EDIT_FIELD(mCopiedIMEEndIndex, copied_ime_end_index);
+        EE_UI_EDIT_FIELD(mCopiedIMEEndLine, copied_ime_end_line);
+        EE_UI_EDIT_FIELD(mCopiedSelectionEndIndex, copied_selection_end_index);
+        EE_UI_EDIT_FIELD(mCopiedSelectionStartIndex, copied_selection_start_index);
+        EE_UI_EDIT_FIELD(mSelectionStartIndex, selection_start_index);
+        EE_UI_EDIT_FIELD(mCaretIndex, caret_index);
+        EE_UI_EDIT_FIELD(mDrawingIndex, drawing_index);
+        EE_UI_EDIT_FIELD(mIsTextSelected, is_text_selected);
+        EE_UI_EDIT_FIELD(mKeyRepeating, key_repeating);
+        EE_UI_EDIT_FIELD(mCursorOn, cursor_on);
+        EE_UI_EDIT_FIELD(mSelecting, selecting);
+        EE_UI_EDIT_FIELD(mCopiedCursorOn, copied_cursor_on);
+        EE_UI_EDIT_FIELD(mCopiedIsTextSelected, copied_is_text_selected);
+        EE_UI_EDIT_FIELD(mNumbersOnly, numbers_only);
+        EE_UI_EDIT_FIELD(mIsSingleLine, is_single_line);
+        EE_UI_EDIT_FIELD(mScrollBarCaptured, scroll_bar_captured);
+        EE_UI_EDIT_FIELD(mScrollBarVisible, scroll_bar_visible);
+        EE_UI_EDIT_FIELD(mIsPasswordBox, is_password_box);
+        EE_UI_EDIT_FIELD(mIMEActive, ime_active);
+        EE_UI_EDIT_FIELD(mCopiedIMEActive, copied_ime_active);
+        EE_UI_EDIT_FIELD(mSavedAlwaysDirty, saved_always_dirty);
+#undef EE_UI_EDIT_FIELD
+        static_assert(sizeof(UIEditBox) - offsetof(UIEditBox, mCaretX) >= sizeof(EeUiEditFields), "ee_ui/src/edit.rs");
+        static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
+        static_assert(sizeof(((UIEditBox*)0)->mBorderThickness) == sizeof(unsigned long), "ee_ui/src/edit_ffi.rs");
+    }
+
+    static size_t LineCount(void* inBox) { return Box(inBox)->mLines.size(); }
+    static const char* Line(void* inBox, size_t inLine) { return Box(inBox)->mLines[inLine]; }
+    static void SetLine(void* inBox, size_t inLine, const char* inText) { Box(inBox)->mLines[inLine] = inText; }
+    static void InsertLine(void* inBox, size_t inLine, const char* inText)
+    {
+        Box(inBox)->mLines.insert(Box(inBox)->mLines.begin() + inLine, UWideString(inText));
+    }
+    static void EraseLine(void* inBox, size_t inLine) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + inLine); }
+    static void KeepFirstLine(void* inBox) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + 1, Box(inBox)->mLines.end()); }
+    static UIScrollBar* ScrollBar(void* inBox) { return Box(inBox)->mScrollBar; }
+};
+
+// The host calls of ee_ui/src/edit_ffi.rs
+extern "C" size_t ee_uicpp_edit_line_count(void* inBox) { return UIEditBoxRust::LineCount(inBox); }
+extern "C" const char* ee_uicpp_edit_line(void* inBox, size_t inLine) { return UIEditBoxRust::Line(inBox, inLine); }
+extern "C" void ee_uicpp_edit_set_line(void* inBox, size_t inLine, const char* inText)
+{
+    UIEditBoxRust::SetLine(inBox, inLine, inText);
+}
+extern "C" void ee_uicpp_edit_insert_line(void* inBox, size_t inLine, const char* inText)
+{
+    UIEditBoxRust::InsertLine(inBox, inLine, inText);
+}
+extern "C" void ee_uicpp_edit_erase_line(void* inBox, size_t inLine) { UIEditBoxRust::EraseLine(inBox, inLine); }
+extern "C" void ee_uicpp_edit_keep_first_line(void* inBox) { UIEditBoxRust::KeepFirstLine(inBox); }
+extern "C" float ee_uicpp_edit_text_width(void* inBox, const char* inText)
+{
+    GEText* theText = UIEditBoxRust::Box(inBox)->GetGEText();
+    theText->SetText(UWideString(inText));
+    return theText->GetTextExtent().GetWidth();
+}
+extern "C" long ee_uicpp_edit_font_height(void* inBox)
+{
+    return UIEditBoxRust::Box(inBox)->GetGEText()->GetFont()->GetHeight();
+}
+extern "C" bool ee_uicpp_edit_has_scroll_bar(void* inBox) { return UIEditBoxRust::ScrollBar(inBox) != NULL; }
+extern "C" long ee_uicpp_edit_scroll_value(void* inBox)
+{
+    return UIEditBoxRust::ScrollBar(inBox)->GetSlider()->GetCurrentRangeValue();
+}
+extern "C" long ee_uicpp_edit_scroll_max(void* inBox) { return UIEditBoxRust::ScrollBar(inBox)->GetSlider()->GetMaxRange(); }
+extern "C" void ee_uicpp_edit_set_scroll_value(void* inBox, unsigned long inValue)
+{
+    UIEditBoxRust::ScrollBar(inBox)->SetCurrentRangeValue(inValue);
+}
+extern "C" void ee_uicpp_edit_set_scroll_range(void* inBox, unsigned long inMin, unsigned long inMax)
+{
+    UIEditBoxRust::ScrollBar(inBox)->SetRange(inMin, inMax);
+}
+extern "C" void ee_uicpp_edit_scroll_set_location(void* inBox, float inX, float inY)
+{
+    UIEditBoxRust::ScrollBar(inBox)->SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_edit_set_dirty(void* inBox) { UIEditBoxRust::Box(inBox)->SetDirty(true); }
+extern "C" void ee_uicpp_edit_set_rectangle(void* inBox, const EeUiRect* inRectangle)
+{
+    UIEditBoxRust::Box(inBox)->SetRectangle(*reinterpret_cast<const GERectangle*>(inRectangle));
+}
+extern "C" void ee_uicpp_edit_base_set_rectangle(void* inBox, const EeUiRect* inRectangle)
+{
+    UIEditBoxRust::Box(inBox)->UIControl::SetRectangle(*reinterpret_cast<const GERectangle*>(inRectangle));
+}
+extern "C" void ee_uicpp_edit_base_set_location(void* inBox, float inX, float inY)
+{
+    UIEditBoxRust::Box(inBox)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_edit_fire(void* inBox, unsigned long inEvent) { UIEditBoxRust::Box(inBox)->FireTriggerEvent(inEvent); }
+extern "C" void ee_uicpp_wide_assign(void* outString, const char* inText) { *static_cast<UWideString*>(outString) = inText; }
 
 // FUNCTION: LLE 0x10069e8b
 // Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
@@ -146,103 +289,7 @@ UIEditBox::~UIEditBox()
 // counts them); multi-line boxes re-wrap the following text at word breaks, adding lines as needed
 const char* UIEditBox::AddChar(const char* inString)
 {
-    UWideString theLine;
-    UWideString theChar;
-    UWideString theEmpty;
-    unsigned long theLength = PlatMbsLen(reinterpret_cast<const unsigned char*>(inString));
-    unsigned long theSpaces = 0;
-    bool theNewLine = false;
-    if (this->mIsTextSelected)
-        this->DeleteSelectedText();
-    theLine = this->mLines[this->mCaretLine];
-    unsigned long theLineLength = PlatMbsLen(reinterpret_cast<const unsigned char*>((const char*)theLine));
-    this->mWorkString = "";
-    if (theLength == 0)
-        return inString;
-    if (this->mIsSingleLine) {
-        while (theLineLength < this->mMaxChars && *inString != 0) {
-            if (!this->mNumbersOnly || PlatIsMbcDigit(GetMultiByteChar(inString))) {
-                theChar.CopyString(inString, 1);
-                this->mWorkString += theChar;
-            }
-            theLineLength++;
-            inString = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(inString));
-        }
-        theLength = PlatMbsLen(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString));
-        char* theTail = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
-        this->mWorkString += theTail;
-        strcpy(theTail, "");
-        theLine += this->mWorkString;
-        this->mLines[this->mCaretLine] = theLine;
-    } else {
-        unsigned long theLineIndex = this->mCaretLine;
-        this->mWorkString.CopyString(theLine, this->mCaretIndex);
-        const char* theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
-        this->mWorkString += inString;
-        this->mWorkString += theTail;
-        const char* theCursor = this->mWorkString;
-        while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0) {
-            theLine = "";
-            float theWidth = 0.0f;
-            unsigned long theCount = 0;
-            unsigned long theLastSpace = 0;
-            const char* theStart = theCursor;
-            bool theWrap = false;
-            do {
-                if (theSpaces == 0) {
-                    theChar.CopyString(theCursor, 1);
-                    if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\n", 1) == 0) {
-                        theNewLine = true;
-                        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-                        theLine += "\n";
-                    } else if (PlatIsMbcSpace(GetMultiByteChar(theCursor))) {
-                        theLastSpace = theCount + 1;
-                    } else if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\r", 1) == 0) {
-                        theChar = "";
-                    } else if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\t", 1) == 0) {
-                        theSpaces = 4;
-                        theChar = "";
-                    }
-                } else {
-                    theChar = " ";
-                    theSpaces--;
-                }
-                this->GetGEText()->SetText(theChar);
-                theWidth += this->GetGEText()->GetTextExtent().GetWidth();
-                if (theWidth > this->mTextRectangle.GetWidth() || theNewLine) {
-                    theWrap = true;
-                    break;
-                }
-                theLine += theChar;
-                if (theSpaces == 0)
-                    theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-                theCount++;
-            } while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0 &&
-                     theCursor != theStart);
-            if (!theWrap) {
-                this->mLines[theLineIndex] = theLine;
-                continue;
-            }
-            if (theLastSpace > 0 && !theNewLine && theLastSpace < theCount + 1) {
-                theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), theLastSpace);
-                this->mLines[theLineIndex].CopyString(theLine, theLastSpace);
-                if (theLineIndex == this->mCaretLine && this->mCaretIndex > (long)this->mLines[theLineIndex].GetLength()) {
-                    this->mCaretIndex -= theLastSpace;
-                    this->mCaretLine++;
-                }
-            } else
-                this->mLines[theLineIndex] = theLine;
-            if (theLineIndex == this->mLines.size() - 1)
-                this->mLines.push_back(theEmpty);
-            theNewLine = false;
-            theLineIndex++;
-            theChar = theCursor;
-            theChar += this->mLines[theLineIndex];
-            this->mWorkString = theChar;
-            theCursor = this->mWorkString;
-        }
-    }
-    return inString;
+    return inString + ee_ui_edit_add_char(UIEditBoxRust::Refs(this), inString);
 }
 
 // SYNTHETIC: LLE 0x1006a9a5
@@ -269,19 +316,7 @@ void UIEditBox::AddIMEResultString(const UWideString& inString)
 // Deletes the character before the caret (joining onto the previous line at a line start); nothing at the very start
 void UIEditBox::BackSpaceChar()
 {
-    if (!this->mIsSingleLine && this->mCaretLine != 0) {
-        if (this->mCaretIndex == 0) {
-            this->DecrementCaretPos();
-            this->DeleteChar();
-            this->ComputeCaretLocation(true);
-        } else {
-            this->DecrementCaretPos();
-            this->DeleteChar();
-        }
-    } else if (this->mCaretIndex > 0) {
-        this->DecrementCaretPos();
-        this->DeleteChar();
-    }
+    ee_ui_edit_back_space_char(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006aa7b
@@ -289,44 +324,7 @@ void UIEditBox::BackSpaceChar()
 void UIEditBox::CalculateCaretFromMouseLocation(unsigned long& outLine, long& outIndex,
                                                 const GE2DPoint& inLocation) const
 {
-    UWideString theChar;
-    long theX = UMFloor(this->mTextRectangle.GetLeft());
-    long theIndex = this->mDrawingIndex;
-    if (this->mIsSingleLine)
-        outLine = 0;
-    else {
-        if (inLocation.GetY() < this->mTextRectangle.GetTop())
-            outLine = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-        else if (inLocation.GetY() > this->mTextRectangle.GetBottom())
-            outLine = this->mScrollBar->GetSlider()->GetCurrentRangeValue() + this->mVisibleLineCount - 1;
-        else
-            outLine = this->mScrollBar->GetSlider()->GetCurrentRangeValue() +
-                      UMFloor((inLocation.GetY() - this->mTextRectangle.GetTop()) / this->GetGEText()->GetFont()->GetHeight());
-        if (outLine >= this->mLines.size())
-            outLine = this->mLines.size() - 1;
-    }
-    if (inLocation.GetX() > this->mTextRectangle.GetLeft()) {
-        const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[outLine]),
-                                                      this->mDrawingIndex);
-        long theLength;
-        if (!this->mIsSingleLine && PlatMbsChr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
-            theLength = this->mLines[outLine].GetLength() - 1;
-        else
-            theLength = this->mLines[outLine].GetLength();
-        while (++theIndex <= theLength) {
-            theChar.CopyString(theCursor, 1);
-            char* theEnd = (char*)PlatMbsInc(reinterpret_cast<const unsigned char*>((const char*)theChar));
-            strcpy(theEnd, "");
-            this->GetGEText()->SetText(theChar);
-            theX += UMFloor(this->GetGEText()->GetTextExtent().GetWidth());
-            float theRight = (float)theX;
-            if (theRight > this->mTextRectangle.GetRight() || theRight > inLocation.GetX())
-                break;
-            theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-        }
-        theIndex--;
-    }
-    outIndex = theIndex;
+    ee_ui_edit_caret_from_mouse(UIEditBoxRust::Refs(this), UIEditBoxRust::Point(inLocation), &outLine, &outIndex);
 }
 
 // FUNCTION: LLE 0x1006ad00
@@ -334,16 +332,11 @@ void UIEditBox::CalculateCaretFromMouseLocation(unsigned long& outLine, long& ou
 long UIEditBox::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                            unsigned long inCursor)
 {
-    if (this->mIMEActive == true) {
-        this->RemoveIMECompositionString();
-        this->AddChar(inString);
+    bool theActive = this->mIMEActive == true;
+    long theResult = ee_ui_edit_ime_change(UIEditBoxRust::Refs(this), inString, inCursor);
+    if (theActive)
         this->mIMEAttributes = inAttributes;
-        this->mIMEStartIndex = this->mCaretIndex;
-        this->mIMEStartLine = this->mCaretLine;
-        this->mIMECompositionLength = inString.GetLength();
-        this->IncrementCaretPos(PlatMbsNCCnt(reinterpret_cast<const unsigned char*>((const char*)inString), inCursor));
-    }
-    return kErrorOK;
+    return theResult;
 }
 
 // FUNCTION: LLE 0x1006ad6f
@@ -360,91 +353,35 @@ void UIEditBox::ChangeFont(GEFont* inFont)
 // Resizes the edit box to a new width and recomputes the text area (leaving room for a visible scroll bar)
 void UIEditBox::ChangeWidth(unsigned long inWidth)
 {
-    GERectangle theRectangle;
-    theRectangle = this->mRectangle;
-    theRectangle.SetRight(theRectangle.GetLeft() + inWidth - 1.0f);
-    UIControl::SetRectangle(theRectangle);
-    this->mTextRectangle.SetTop(this->GetRectangle().GetTop() + this->GetBorderThickness());
-    this->mTextRectangle.SetLeft(this->GetRectangle().GetLeft() + this->GetBorderThickness());
-    this->mTextRectangle.mBottom = this->mRectangle.GetBottom() - this->mBorderThickness;
-    if (this->mScrollBarVisible)
-        this->mTextRectangle.mRight = this->mRectangle.GetRight() - this->mBorderThickness - kScrollBarWidth;
-    else
-        this->mTextRectangle.mRight = this->mRectangle.GetRight() - this->mBorderThickness;
+    ee_ui_edit_change_width(UIEditBoxRust::Refs(this), inWidth);
 }
 
 // FUNCTION: LLE 0x1006ae42
 // Shows or hides the scroll bar and updates its range as the line count crosses the visible line count
 void UIEditBox::CheckScrollBar()
 {
-    if (this->mScrollBar == NULL)
-        return;
-    if (this->mLines.size() <= this->mVisibleLineCount) {
-        if (this->mScrollBar->GetSlider()->GetMaxRange() > 0) {
-            this->mScrollBar->SetRange(0, 0);
-            this->ComputeCaretLocation(true);
-        }
-        if (this->mScrollBarVisible == true) {
-            this->mScrollBarVisible = false;
-            this->SetRectangle(GERectangle(this->mRectangle.GetTopLeft(),
-                                     GE2DPoint(this->mRectangle.GetRight() - kScrollBarWidth, this->mRectangle.GetBottom())));
-            this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - this->GetBorderThickness());
-        }
-    } else {
-        if (this->mScrollBar->GetSlider()->GetMaxRange() != this->mLines.size() - this->mVisibleLineCount) {
-            this->mScrollBar->SetRange(0, this->mLines.size() - this->mVisibleLineCount);
-            this->ComputeCaretLocation(true);
-        }
-        if (this->mScrollBarVisible == false) {
-            this->mScrollBarVisible = true;
-            this->SetRectangle(GERectangle(this->mRectangle.GetTopLeft(),
-                                     GE2DPoint(this->mRectangle.GetRight() + kScrollBarWidth, this->mRectangle.GetBottom())));
-        }
-    }
+    ee_ui_edit_check_scroll_bar(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006afca
 // Ends an active IME composition, removing its uncommitted text
 long UIEditBox::CloseIMECompositionString()
 {
-    if (this->mIMEActive == true) {
-        this->RemoveIMECompositionString();
-        this->mIMEActive = false;
-    }
-    return kErrorOK;
+    return ee_ui_edit_ime_close(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006afe6
 // Recomputes the caret's screen position (optionally its remembered x) and scrolls so the caret line is visible
 void UIEditBox::ComputeCaretLocation(bool inUpdateCaretX)
 {
-    GE2DPoint theLocation;
-    this->GetLocationFromIndex(this->mCaretIndex, this->mCaretLine, theLocation);
-    if (inUpdateCaretX)
-        this->mCaretX = theLocation.GetX() - this->mTextRectangle.GetLeft();
-    if (this->mScrollBar == NULL)
-        return;
-    if (this->mCaretLine < (unsigned long)this->mScrollBar->GetSlider()->GetCurrentRangeValue())
-        this->mScrollBar->SetCurrentRangeValue(this->mCaretLine);
-    else if (this->mCaretLine >= this->mScrollBar->GetSlider()->GetCurrentRangeValue() + this->mVisibleLineCount)
-        this->mScrollBar->SetCurrentRangeValue(this->mCaretLine - this->mVisibleLineCount + 1);
+    ee_ui_edit_compute_caret_location(UIEditBoxRust::Refs(this), inUpdateCaretX);
 }
 
 // FUNCTION: LLE 0x1006b05c
 // Picks the first visible character of a single-line box so the text before the caret fits the text area
 void UIEditBox::ComputeDrawingIndex()
 {
-    this->mWorkString.CopyString(this->mLines[this->mCaretLine], this->mCaretIndex);
-    const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), this->mCaretIndex);
-    theCursor = this->mWorkString;
-    this->mDrawingIndex = 0;
-    while (this->mDrawingIndex < this->mCaretIndex) {
-        this->GetGEText()->SetText(theCursor);
-        if (this->GetGEText()->GetTextExtent().GetWidth() < this->mTextRectangle.GetWidth())
-            break;
-        this->mDrawingIndex++;
-        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-    }
+    ee_ui_edit_compute_drawing_index(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006b122
@@ -621,91 +558,28 @@ void UIEditBox::Cut()
 // Moves the caret one character left, wrapping to the end of the previous line and scrolling left when needed
 void UIEditBox::DecrementCaretPos()
 {
-    this->mCaretIndex--;
-    if (this->mCaretIndex >= 0) {
-        if (this->mDrawingIndex != 0 && this->mCaretIndex <= this->mDrawingIndex)
-            this->ScrollLeft();
-        else
-            this->ComputeCaretLocation(true);
-        this->SetDirty(true);
-    } else if (this->mCaretLine > 0) {
-        this->mCaretLine--;
-        this->mCaretIndex = this->mLines[this->mCaretLine].GetLength() - 1;
-        this->ComputeCaretLocation(true);
-        this->SetDirty(true);
-    } else
-        this->mCaretIndex = 0;
+    ee_ui_edit_decrement_caret_pos(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006b884
 // Deletes the character after the caret
 void UIEditBox::DeleteChar()
 {
-    long theIndex = this->mCaretIndex;
-    unsigned long theLine = this->mCaretLine;
-    this->IncrementCaretPos(1);
-    long theEndIndex = this->mCaretIndex;
-    unsigned long theEndLine = this->mCaretLine;
-    this->mCaretIndex = theIndex;
-    this->mCaretLine = theLine;
-    this->DeleteText(theIndex, theLine, theEndIndex, theEndLine);
+    ee_ui_edit_delete_char(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006b8d7
 // Removes one line, keeping the caret on a valid line and scrolling up by one when the box is scrolled down
 void UIEditBox::DeleteLine(unsigned long inLine)
 {
-    std::vector<UWideString>::iterator theLine = this->mLines.begin() + inLine;
-    if (this->mCaretLine > inLine)
-        this->mCaretLine--;
-    else if (this->mCaretLine == inLine) {
-        if (this->mCaretLine == this->mLines.size() - 1)
-            this->mCaretLine--;
-        this->mCaretIndex = this->mLines[this->mCaretLine].GetLength();
-    }
-    this->mLines.erase(theLine);
-    if (this->mScrollBar == NULL || !(this->mLines.size() >= this->mVisibleLineCount) ||
-        !(this->mScrollBar->GetSlider()->GetCurrentRangeValue() > 0))
-        return;
-    this->mScrollBar->SetCurrentRangeValue(this->mScrollBar->GetSlider()->GetCurrentRangeValue() - 1);
-    this->ComputeCaretLocation(true);
-    this->SetDirty(true);
+    ee_ui_edit_delete_line(UIEditBoxRust::Refs(this), inLine);
 }
 
 // FUNCTION: LLE 0x1006b9c1
 // Deletes the selected text and clears the selection (not while an IME composition is open)
 void UIEditBox::DeleteSelectedText()
 {
-    if (!this->mIsTextSelected || this->mIMEActive)
-        return;
-    this->mIsTextSelected = false;
-    this->mSelecting = false;
-    unsigned long theStartIndex;
-    unsigned long theStartLine;
-    unsigned long theEndIndex;
-    unsigned long theEndLine;
-    if (this->mCaretLine == this->mSelectionStartLine) {
-        theStartLine = this->mCaretLine;
-        theEndLine = this->mCaretLine;
-        if (this->mCaretIndex < this->mSelectionStartIndex) {
-            theStartIndex = this->mCaretIndex;
-            theEndIndex = this->mSelectionStartIndex;
-        } else {
-            theStartIndex = this->mSelectionStartIndex;
-            theEndIndex = this->mCaretIndex;
-        }
-    } else if (this->mCaretLine < this->mSelectionStartLine) {
-        theStartIndex = this->mCaretIndex;
-        theStartLine = this->mCaretLine;
-        theEndIndex = this->mSelectionStartIndex;
-        theEndLine = this->mSelectionStartLine;
-    } else {
-        theStartIndex = this->mSelectionStartIndex;
-        theStartLine = this->mSelectionStartLine;
-        theEndIndex = this->mCaretIndex;
-        theEndLine = this->mCaretLine;
-    }
-    this->DeleteText(theStartIndex, theStartLine, theEndIndex, theEndLine);
+    ee_ui_edit_delete_selected_text(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006ba3f
@@ -713,65 +587,14 @@ void UIEditBox::DeleteSelectedText()
 void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
                            unsigned long inEndLine)
 {
-    UWideString theString;
-    if (inStartLine == inEndLine) {
-        theString.CopyString(this->mLines[inStartLine], inStartIndex);
-        theString += (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]),
-                                           inEndIndex);
-        this->mLines[inStartLine] = theString;
-    } else {
-        theString.CopyString(this->mLines[inStartLine], inStartIndex);
-        *(this->mLines.begin() + inStartLine) = theString;
-        if (inEndIndex == (this->mLines.begin() + inEndLine)->GetLength())
-            this->DeleteLine(inEndLine);
-        else {
-            const char* theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inEndLine]),
-                                                        inEndIndex);
-            this->mLines[inEndLine] = theTail;
-            if (this->mCaretIndex > (long)(this->mLines.begin() + inEndLine)->GetLength())
-                this->mCaretIndex = this->mLines[inEndLine].GetLength();
-        }
-    }
-    if (inEndLine > 0)
-        for (unsigned long i = inStartLine + 1; i < inEndLine; i++)
-            this->DeleteLine(inStartLine + 1);
-    if (inStartLine > 0 && !PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine - 1]), '\n')) {
-        inStartLine--;
-        inStartIndex += this->mLines[inStartLine].GetLength();
-    }
-    unsigned long theLine = inStartLine;
-    while (theLine + 1 < this->mLines.size()) {
-        if (PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[theLine]), '\n'))
-            break;
-        this->mCaretLine = theLine;
-        this->mCaretIndex = this->mLines[theLine].GetLength();
-        theString = this->mLines[theLine + 1];
-        this->DeleteLine(theLine + 1);
-        this->AddChar(theString);
-        theLine++;
-        if (theLine >= this->mLines.size() || theString == this->mLines[theLine])
-            break;
-    }
-    this->mCaretIndex = 0;
-    this->mDrawingIndex = 0;
-    this->mCaretLine = inStartLine;
-    this->IncrementCaretPos(inStartIndex);
-    this->SetDirty(true);
-    this->ComputeCaretLocation(true);
+    ee_ui_edit_delete_range(UIEditBoxRust::Refs(this), inStartIndex, inStartLine, inEndIndex, inEndLine);
 }
 
 // FUNCTION: LLE 0x1006bdab
 // Clears the edit box to one empty line, with the caret at the start and no selection
 void UIEditBox::DeleteText()
 {
-    UWideString theEmpty;
-    this->mIsTextSelected = false;
-    this->mCaretIndex = 0;
-    this->mDrawingIndex = 0;
-    this->mCaretLine = 0;
-    this->mLines.erase(this->mLines.begin() + 1, this->mLines.end());
-    this->mLines[this->mCaretLine] = theEmpty;
-    this->SetDirty(true);
+    ee_ui_edit_clear(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006be4b
@@ -883,60 +706,16 @@ long UIEditBox::DrawTextA()
 // Returns the screen position of a character index on a line (x from the caret line's text, y from the line)
 void UIEditBox::GetLocationFromIndex(unsigned long inIndex, unsigned long inLine, GE2DPoint& outLocation) const
 {
-    UWideString theString;
-    UWideString thePassword;
-    const char* theText;
-    if (!this->mIsPasswordBox)
-        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
-                                        this->mDrawingIndex);
-    else {
-        thePassword.Clear();
-        for (unsigned long i = 0; i < this->mLines[this->mCaretLine].GetLength(); i++)
-            thePassword += UWideString("*");
-        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)thePassword), this->mDrawingIndex);
-    }
-    theString.CopyString(theText, inIndex - this->mDrawingIndex);
-    char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theString), inIndex - this->mDrawingIndex);
-    strcpy(theEnd, "");
-    this->GetGEText()->SetText(theString);
-    outLocation = GE2DPoint(this->GetGEText()->GetTextExtent().GetWidth() + this->mTextRectangle.GetLeft(), this->mTextRectangle.GetTop());
-    if (this->mScrollBar != NULL)
-        outLocation.SetY((float)((inLine - this->mScrollBar->GetSlider()->GetCurrentRangeValue()) *
-                                 this->GetGEText()->GetFont()->GetHeight()) + this->mTextRectangle.GetTop());
+    EeUiPoint theLocation;
+    ee_ui_edit_location_from_index(UIEditBoxRust::Refs(this), inIndex, inLine, &theLocation);
+    outLocation = GE2DPoint(theLocation.x, theLocation.y);
 }
 
 // FUNCTION: LLE 0x1006c5d9
 // Returns the selected text, ordering the caret and selection anchor into start and end
 void UIEditBox::GetSelectedText(UWideString& outString) const
 {
-    if (!this->mIsTextSelected)
-        return;
-    unsigned long theStartIndex;
-    unsigned long theStartLine;
-    unsigned long theEndIndex;
-    unsigned long theEndLine;
-    if (this->mCaretLine == this->mSelectionStartLine) {
-        theStartLine = this->mCaretLine;
-        theEndLine = this->mCaretLine;
-        if (this->mCaretIndex < this->mSelectionStartIndex) {
-            theStartIndex = this->mCaretIndex;
-            theEndIndex = this->mSelectionStartIndex;
-        } else {
-            theStartIndex = this->mSelectionStartIndex;
-            theEndIndex = this->mCaretIndex;
-        }
-    } else if (this->mCaretLine < this->mSelectionStartLine) {
-        theStartIndex = this->mCaretIndex;
-        theStartLine = this->mCaretLine;
-        theEndIndex = this->mSelectionStartIndex;
-        theEndLine = this->mSelectionStartLine;
-    } else {
-        theStartIndex = this->mSelectionStartIndex;
-        theStartLine = this->mSelectionStartLine;
-        theEndIndex = this->mCaretIndex;
-        theEndLine = this->mCaretLine;
-    }
-    this->GetText(theStartLine, theEndLine, theStartIndex, theEndIndex, outString);
+    ee_ui_edit_selected_text(UIEditBoxRust::Refs(this), &outString);
 }
 
 // FUNCTION: LLE 0x1006c64a
@@ -964,62 +743,14 @@ void UIEditBox::GetSelectedTextRectangle(unsigned long inLine, unsigned long inS
 void UIEditBox::GetText(unsigned long inStartLine, unsigned long inEndLine, unsigned long inStartIndex,
                         unsigned long inEndIndex, UWideString& outString) const
 {
-    UWideString theString;
-    const char* theText;
-    if (inStartLine == inEndLine) {
-        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
-        outString.CopyString(theText, inEndIndex - inStartIndex);
-    } else {
-        if (inStartIndex == this->mLines[inStartLine].GetLength())
-            outString = "";
-        else {
-            theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
-            outString.CopyString(theText, this->mLines[inStartLine].GetLength() - inStartIndex);
-        }
-        for (unsigned long i = inStartLine + 1; i < inEndLine; i++)
-            outString += this->mLines[i];
-        if (inEndIndex == this->mLines[inEndLine].GetLength())
-            outString += this->mLines[inEndLine];
-        else {
-            theString.CopyString(this->mLines[inEndLine], inEndIndex);
-            outString += theString;
-        }
-    }
+    ee_ui_edit_text(UIEditBoxRust::Refs(this), inStartLine, inEndLine, inStartIndex, inEndIndex, &outString);
 }
 
 // FUNCTION: LLE 0x1006c89a
 // Moves the caret a number of characters right, wrapping across lines and scrolling right when it passes the edge
 void UIEditBox::IncrementCaretPos(long inCount)
 {
-    GE2DPoint theLocation;
-    while (inCount > 0) {
-        long theIndex = this->mCaretIndex + inCount;
-        if ((unsigned long)theIndex < this->mLines[this->mCaretLine].GetLength()) {
-            this->mCaretIndex = theIndex;
-            break;
-        }
-        if ((unsigned long)theIndex == this->mLines[this->mCaretLine].GetLength()) {
-            if (this->mCaretLine < this->mLines.size() - 1) {
-                this->mCaretLine++;
-                this->mCaretIndex = 0;
-            } else
-                this->mCaretIndex = theIndex;
-            break;
-        }
-        if (this->mCaretLine < this->mLines.size() - 1) {
-            inCount += this->mCaretIndex - this->mLines[this->mCaretLine].GetLength();
-            this->mCaretIndex = 0;
-            this->mCaretLine++;
-        } else {
-            this->mCaretIndex = this->mLines[this->mCaretLine].GetLength();
-            break;
-        }
-    }
-    this->GetLocationFromIndex(this->mCaretIndex, this->mCaretLine, theLocation);
-    if (theLocation.mX > this->mTextRectangle.GetRight())
-        this->ScrollRight(inCount);
-    this->ComputeCaretLocation(true);
-    this->SetDirty(true);
+    ee_ui_edit_increment_caret_pos(UIEditBoxRust::Refs(this), inCount);
 }
 
 // FUNCTION: LLE 0x1006c9f3
@@ -1140,78 +871,35 @@ long UIEditBox::MouseMove(const GE2DPoint& inLocation)
 // Starts an IME composition at the caret, deleting any selection; fails for a numbers-only box
 long UIEditBox::OpenIMECompositionString()
 {
-    if (!this->mNumbersOnly) {
-        if (!this->mIMEActive) {
-            this->DeleteSelectedText();
-            this->mIMEStartIndex = this->mCaretIndex;
-            this->mIMEActive = true;
-            this->mIMEStartLine = this->mCaretLine;
-        }
-        return kErrorOK;
-    }
-    return kErrorFailed;
+    return ee_ui_edit_ime_open(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006cdc6
 // Moves the caret down one line, keeping its x position
 void UIEditBox::ProcessDownKey()
 {
-    if (this->mCaretLine < this->mLines.size() - 1) {
-        this->mCaretLine++;
-        this->SetIndexFromUpDownOffset();
-    }
-    this->ComputeCaretLocation(false);
+    ee_ui_edit_down_key(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006ce0b
 // Moves the caret to the end of the line (before its line break)
 void UIEditBox::ProcessEndKey()
 {
-    this->mCaretIndex = this->mLines[this->mCaretLine].GetLength();
-    if (PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]), '\n'))
-        this->mCaretIndex--;
-    if (this->mIsSingleLine)
-        this->ComputeDrawingIndex();
-    this->ComputeCaretLocation(true);
-    this->SetDirty(true);
+    ee_ui_edit_end_key(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006ce6f
 // Breaks the line at the caret in a multi-line box (re-wrapping the rest); a single-line box fires its Enter trigger
 void UIEditBox::ProcessEnterKey()
 {
-    UWideString theLine;
-    UWideString theEmpty;
-    if (!this->mIsSingleLine) {
-        if (this->mIsTextSelected)
-            this->DeleteSelectedText();
-        if (this->mCaretLine == this->mLines.size() - 1)
-            this->mLines.insert(this->mLines.begin() + (this->mCaretLine + 1), theEmpty);
-        const char* theTail;
-        if (this->mLines[this->mCaretLine].GetLength() > 0) {
-            theLine = this->mLines[this->mCaretLine];
-            this->mLines[this->mCaretLine].InsertString("\n", this->mCaretIndex, true);
-            theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
-        } else {
-            this->mLines[this->mCaretLine] = "\n";
-            theTail = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]));
-        }
-        this->mCaretLine++;
-        this->mCaretIndex = 0;
-        this->AddChar(theTail);
-        this->ComputeCaretLocation(true);
-    } else
-        this->FireTriggerEvent(kControlTriggerEnterPressed);
+    ee_ui_edit_enter_key(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006cfed
 // Moves the caret to the start of the line and scrolls back to the first character
 void UIEditBox::ProcessHomeKey()
 {
-    this->mDrawingIndex = 0;
-    this->mCaretIndex = 0;
-    this->ComputeCaretLocation(true);
-    this->SetDirty(true);
+    ee_ui_edit_home_key(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006d010
@@ -1463,41 +1151,21 @@ bool UIEditBox::ProcessShiftInput(bool inRepeat)
 // Moves the caret up one line, keeping its x position
 void UIEditBox::ProcessUpKey()
 {
-    if (this->mCaretLine > 0) {
-        this->mCaretLine--;
-        this->SetIndexFromUpDownOffset();
-    }
-    this->ComputeCaretLocation(false);
+    ee_ui_edit_up_key(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006d6ee
 // Scrolls a single-line box left so the caret stays visible
 void UIEditBox::ScrollLeft()
 {
-    GE2DPoint theLocation;
-    this->mDrawingIndex = this->mCaretIndex;
-    for (unsigned long i = this->mCharScroll - 1; i > 0; i--) {
-        this->mDrawingIndex--;
-        this->GetLocationFromIndex(this->mCaretIndex, this->mCaretLine, theLocation);
-        if (this->mDrawingIndex < 0 || this->mTextRectangle.GetRight() == theLocation.GetX()) {
-            this->mDrawingIndex++;
-            break;
-        }
-    }
+    ee_ui_edit_scroll_left(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006d75d
 // Scrolls right to show the given number of extra characters (moves the caret to line 0 while doing so)
 void UIEditBox::ScrollRight(long inCount)
 {
-    long theIndex = this->mCaretIndex;
-    this->mCaretIndex += inCount;
-    if (this->mCaretIndex > (long)this->mLines[this->mCaretLine].GetLength())
-        this->mCaretIndex = this->mLines[this->mCaretLine].GetLength();
-    this->SetCaretLocation(this->mCaretIndex, 0);
-    this->mCaretIndex = theIndex;
-    if (this->mCaretIndex < this->mDrawingIndex)
-        this->mCaretIndex = this->mDrawingIndex;
+    ee_ui_edit_scroll_right(UIEditBoxRust::Refs(this), inCount);
 }
 
 // FUNCTION: LLE 0x1006d7be
@@ -1518,19 +1186,14 @@ void UIEditBox::ReleaseCapturedKeyboard()
 // Deletes the uncommitted IME composition text, leaving the caret where it started
 void UIEditBox::RemoveIMECompositionString()
 {
-    this->SetCaretLocation(this->mIMEStartIndex, this->mIMEStartLine);
-    while (this->mIMECompositionLength > 0) {
-        this->DeleteChar();
-        this->mIMECompositionLength--;
-    }
+    ee_ui_edit_ime_remove(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006d860
 // Selects all the text (not while an IME composition is open)
 void UIEditBox::SelectText()
 {
-    if (!this->mIMEActive && this->mLines.size() > 0)
-        this->SelectText(0, this->mLines[this->mLines.size() - 1].GetLength(), 0, this->mLines.size() - 1);
+    ee_ui_edit_select_all(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006d8dc
@@ -1538,77 +1201,35 @@ void UIEditBox::SelectText()
 void UIEditBox::SelectText(unsigned long inCaretIndex, unsigned long inStartIndex, unsigned long inCaretLine,
                            unsigned long inStartLine)
 {
-    if (this->mIMEActive)
-        return;
-    this->mCaretIndex = inCaretIndex;
-    this->mCaretLine = inCaretLine;
-    this->mSelectionStartIndex = inStartIndex;
-    this->mSelectionStartLine = inStartLine;
-    if (this->mIsSingleLine)
-        this->ComputeDrawingIndex();
-    this->ComputeCaretLocation(true);
-    this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-    this->SetDirty(true);
+    ee_ui_edit_select(UIEditBoxRust::Refs(this), inCaretIndex, inStartIndex, inCaretLine, inStartLine);
 }
 
 // FUNCTION: LLE 0x1006d95d
 // Moves the caret to a character index on a line, scrolling to show it
 void UIEditBox::SetCaretLocation(unsigned long inIndex, unsigned long inLine)
 {
-    this->mCaretLine = inLine;
-    this->mCaretIndex = inIndex;
-    this->ComputeDrawingIndex();
-    this->ComputeCaretLocation(true);
-    this->SetDirty(true);
+    ee_ui_edit_set_caret_location(UIEditBoxRust::Refs(this), inIndex, inLine);
 }
 
 // FUNCTION: LLE 0x1006d98f
 // Places the caret on its new line at the character nearest its remembered x position (after an up/down move)
 void UIEditBox::SetIndexFromUpDownOffset()
 {
-    UWideString theChar;
-    const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
-                                                  this->mDrawingIndex);
-    float theWidth = 0.0f;
-    long theLength = this->mLines[this->mCaretLine].GetLength();
-    if (PlatMbsChr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
-        theLength--;
-    for (this->mCaretIndex = this->mDrawingIndex; this->mCaretIndex < theLength; this->mCaretIndex++) {
-        theChar = "";
-        theChar.CopyString(theCursor, 1);
-        this->GetGEText()->SetText(theChar);
-        theWidth += this->GetGEText()->GetTextExtent().GetWidth();
-        if (theWidth > this->mCaretX)
-            break;
-        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-    }
-    this->SetDirty(true);
+    ee_ui_edit_index_from_up_down_offset(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006da92
 // Moves the edit box, keeping the text area's size and moving the scroll bar with it
 void UIEditBox::SetLocation(const GE2DPoint& inLocation)
 {
-    unsigned long theWidth = UMFloor(this->mTextRectangle.GetWidth());
-    unsigned long theHeight = UMFloor(this->mTextRectangle.GetHeight());
-    UIControl::SetLocation(inLocation);
-    this->mTextRectangle.SetTop(this->GetRectangle().GetTop() + this->GetBorderThickness());
-    this->mTextRectangle.SetLeft(this->GetRectangle().GetLeft() + this->GetBorderThickness());
-    this->mTextRectangle.SetRight(this->mTextRectangle.GetLeft() + theWidth);
-    this->mTextRectangle.SetBottom(this->mTextRectangle.GetTop() + theHeight);
-    if (this->mScrollBar != NULL)
-        this->mScrollBar->SetLocation(this->mTextRectangle.GetTopRight());
+    ee_ui_edit_set_location(UIEditBoxRust::Refs(this), UIEditBoxRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x1006db7b
 // Replaces the whole text with a string and puts the caret at the start
 void UIEditBox::SetText(const UWideString& inString)
 {
-    this->DeleteText();
-    this->AddChar(inString);
-    this->mCaretLine = 0;
-    this->SetCaretLocation(0, 0);
-    this->SetDirty(true);
+    ee_ui_edit_set_text(UIEditBoxRust::Refs(this), inString);
 }
 
 // FUNCTION: LLE 0x1006dbaf
@@ -1693,18 +1314,7 @@ long UIEditBox::UpdateKeyboard()
 // Types a translated key the given number of times at the caret (or into the IME composition) and shows the caret
 long UIEditBox::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    for (short i = inRepeat; i-- > 0;) {
-        if (!this->mIMEActive) {
-            this->AddChar(inKey);
-            this->IncrementCaretPos(1);
-        } else {
-            this->SetCaretLocation(this->mIMEStartIndex, this->mIMEStartLine);
-            this->AddChar(inKey);
-            this->IncrementCaretPos(1);
-            this->mIMEStartIndex = this->mCaretIndex;
-            this->mIMEStartLine = this->mCaretLine;
-        }
-    }
+    ee_ui_edit_type_key(UIEditBoxRust::Refs(this), inKey, inRepeat);
     this->mCursorPoll->Stop();
     this->mCursorPoll->Start();
     this->mCursorOn = true;
