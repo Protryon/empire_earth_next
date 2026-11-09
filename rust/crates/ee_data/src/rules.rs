@@ -9,10 +9,10 @@ use crate::content::Content;
 use crate::fail;
 use crate::generated::rules_gen::*;
 use crate::msg;
+use crate::msg::{At, Part};
 use crate::node::{Kind, Node};
 use crate::spec::table;
 use crate::text::{self, node_bool, node_float, node_int, node_scalar, parse_yaml, Res};
-use std::rc::Rc;
 use std::sync::Mutex;
 
 /// A number that is a constant or one of dbworld's values (`EERuleNumber`).
@@ -140,10 +140,11 @@ impl<'a> Map<'a> {
         }
         Ok(Map { node, doc, used: vec![false; node.keys.len()] })
     }
-    fn where_at(&self, at: &Node) -> Vec<u8> {
+    /// The place of a value of this mapping, written only into a message.
+    fn where_at(&self, at: &Node) -> At<'a> {
         where_of(self.doc, at)
     }
-    fn where_(&self) -> Vec<u8> {
+    fn where_(&self) -> At<'a> {
         where_of(self.doc, self.node)
     }
     fn get(&mut self, key: &str) -> Option<&'a Node> {
@@ -216,11 +217,11 @@ impl<'a> Map<'a> {
     }
 }
 
-fn where_of(doc: &str, at: &Node) -> Vec<u8> {
-    msg!(doc, " line ", at.line)
+fn where_of<'a>(doc: &'a str, at: &Node) -> At<'a> {
+    At { what: doc, line: at.line }
 }
 
-fn named(value: Option<&Node>, where_: &[u8], key: &str, names: &[&str], what: &str) -> Res<i32> {
+fn named<W: Part + ?Sized>(value: Option<&Node>, where_: &W, key: &str, names: &[&str], what: &str) -> Res<i32> {
     let t = node_scalar(value, where_, key)?;
     if let Some(i) = names.iter().position(|n| n.as_bytes() == t) {
         return Ok(i as i32);
@@ -228,7 +229,7 @@ fn named(value: Option<&Node>, where_: &[u8], key: &str, names: &[&str], what: &
     fail!(where_, ": ", key, ": '", t, "' is not ", what);
 }
 
-fn category(value: Option<&Node>, where_: &[u8], key: &str) -> Res<i32> {
+fn category<W: Part + ?Sized>(value: Option<&Node>, where_: &W, key: &str) -> Res<i32> {
     named(value, where_, key, UNIT_CATEGORY_NAMES, "a unit category")
 }
 
@@ -277,7 +278,7 @@ fn default_of<T>(m: &mut Map, key: &str, list: &[T], id: impl Fn(&T) -> &[u8], d
     fail!(&w, ": ", key, ": '", t, "' is not an entry of the list");
 }
 
-fn check_unique<T>(list: &[T], id: impl Fn(&T) -> &[u8], where_: &[u8], what: &str) -> Res<()> {
+fn check_unique<T, W: Part + ?Sized>(list: &[T], id: impl Fn(&T) -> &[u8], where_: &W, what: &str) -> Res<()> {
     for i in 0..list.len() {
         for j in 0..i {
             if id(&list[i]) == id(&list[j]) {
@@ -532,7 +533,7 @@ fn load_civ_categories(d: &Node, r: &mut CivBuilderRules) -> Res<()> {
         if e.kind != Kind::Map {
             continue;
         }
-        let where_ = msg!("dbcivilization line ", e.line);
+        let where_ = At { what: "dbcivilization", line: e.line };
         let mut t = CivCategoryText::default();
         let row = e.find(b"row").filter(|n| !n.is_missing());
         let row_value = match row {
@@ -541,7 +542,7 @@ fn load_civ_categories(d: &Node, r: &mut CivBuilderRules) -> Res<()> {
         };
         t.row = to_i32(row_value);
         next = next.max(row_value + 1);
-        t.id = e.find(b"id").filter(|n| n.kind == Kind::Scalar).map_or(Vec::new(), |n| n.text.clone());
+        t.id = e.find(b"id").filter(|n| n.kind == Kind::Scalar).map_or(Vec::new(), |n| n.text.to_vec());
         if let Some(levels) = e.find(b"levels") {
             if levels.kind != Kind::List && !levels.is_missing() {
                 fail!(&where_, ": levels must be a list");
@@ -638,7 +639,7 @@ fn load_epochs(c: &mut Content, d: &Node, r: &mut Rules) -> Res<()> {
     let Some(recs) = d.find(b"records").filter(|n| n.kind == Kind::List) else { return Ok(()) };
     let mut out = Vec::with_capacity(recs.items.len());
     for (k, e) in recs.items.iter().enumerate() {
-        let where_ = msg!("epochs line ", e.line);
+        let where_ = At { what: "epochs", line: e.line };
         let mut m = default_epoch_media(k as i32);
         if e.kind != Kind::Map {
             fail!(&where_, ": an epoch must be a mapping");
@@ -649,7 +650,12 @@ fn load_epochs(c: &mut Content, d: &Node, r: &mut Rules) -> Res<()> {
                     fail!(&where_, ": music must be a list");
                 }
                 for s in &music.items {
-                    m.music.push(to_i32(c.key_of("dbmusic", Some(s), &msg!("epochs line ", s.line), "music")?));
+                    m.music.push(to_i32(c.key_of(
+                        "dbmusic",
+                        Some(s),
+                        &At { what: "epochs", line: s.line },
+                        "music",
+                    )?));
                 }
             }
         }
@@ -803,7 +809,7 @@ fn load_ai_personalities(d: &Node, r: &mut AIPersonalityRules) -> Res<()> {
 }
 
 /// A dbworld value named `<id>.<F|F2|L|L2>` -> its row and value (0 F .. 3 L2).
-pub fn world_value(text_value: &[u8], where_: &[u8], name: &str) -> Res<(i32, i32)> {
+pub fn world_value<W: Part + ?Sized>(text_value: &[u8], where_: &W, name: &str) -> Res<(i32, i32)> {
     const VALUES: [&[u8]; 4] = [b"F", b"F2", b"L", b"L2"];
     const FIELDS: [&str; 4] = ["mFloatValue", "mFloatValue2", "mLongValue", "mLongValue2"];
     let dot = text_value.iter().rposition(|&c| c == b'.');
@@ -1084,14 +1090,14 @@ pub fn clear_overrides() {
 fn override_step<'a>(node: &'a mut Node, key: &[u8]) -> Option<&'a mut Node> {
     if node.kind == Kind::Map {
         if let Some(i) = node.keys.iter().position(|k| k == key) {
-            return Some(Rc::get_mut(&mut node.items[i]).expect("a fresh document"));
+            return Some(&mut node.items[i]);
         }
     }
     fn by_id<'a>(list: &'a mut Node, key: &[u8]) -> Option<&'a mut Node> {
         let found = list.items.iter().position(|e| {
             e.kind == Kind::Map && e.find(b"id").is_some_and(|id| id.kind == Kind::Scalar && id.text == key)
         })?;
-        Some(Rc::get_mut(&mut list.items[found]).expect("a fresh document"))
+        Some(&mut list.items[found])
     }
     if node.kind == Kind::List {
         return by_id(node, key);
@@ -1104,7 +1110,7 @@ fn override_step<'a>(node: &'a mut Node, key: &[u8]) -> Option<&'a mut Node> {
                 })
         });
         if let Some(i) = list_index {
-            return by_id(Rc::get_mut(&mut node.items[i]).expect("a fresh document"), key);
+            return by_id(&mut node.items[i], key);
         }
     }
     None
@@ -1142,7 +1148,7 @@ pub fn apply_overrides(name: &str, doc: &mut Node) {
                 o.problem = msg!(&where_, ": not a list: ", &o.value);
                 continue;
             };
-            *n = (*v).clone();
+            *n = v;
             o.applied = true;
             o.problem.clear();
             continue;
@@ -1151,7 +1157,7 @@ pub fn apply_overrides(name: &str, doc: &mut Node) {
             o.problem = msg!(&where_, ": not a single value");
             continue;
         }
-        n.text = o.value.clone();
+        n.text = o.value.clone().into();
         n.quoted = false;
         o.applied = true;
         o.problem.clear();

@@ -3,7 +3,8 @@
 //! byte by `eedata.py cppgate` and pinned by this module's tests.
 
 use crate::msg;
-use crate::node::{Kind, Node};
+use crate::msg::Part;
+use crate::node::{Bytes, Kind, Node};
 use crate::spec::Type;
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
@@ -67,9 +68,11 @@ fn find(s: &[u8], b: u8) -> Option<usize> {
 
 // ------------------------------------------------------------------------------------------- YAML subset
 
+/// A line of a YAML text: its content is `src[start..end]` (no copy).
 struct Line {
     indent: i64,
-    content: Vec<u8>,
+    start: usize,
+    end: usize,
     number: i64,
 }
 
@@ -104,12 +107,13 @@ fn strip_comment(s: &[u8]) -> &[u8] {
 const BOM: &[u8] = b"\xEF\xBB\xBF";
 
 fn split_lines(text: &[u8]) -> Res<Vec<Line>> {
-    let mut out: Vec<Line> = Vec::new();
+    let mut out: Vec<Line> = Vec::with_capacity(text.iter().filter(|&&c| c == b'\n').count() + 1);
     let mut p = if text.starts_with(BOM) { 3 } else { 0 };
     let mut no = 0i64;
     while p <= text.len() {
         let e = find(&text[p..], b'\n').map_or(text.len(), |x| x + p);
         let mut raw = &text[p..e];
+        let line_start = p;
         p = e + 1;
         no += 1;
         if raw.last() == Some(&b'\r') {
@@ -129,7 +133,8 @@ fn split_lines(text: &[u8]) -> Res<Vec<Line>> {
         if content == b"---" || content == b"..." {
             fail!("line ", no, ": only one document per file");
         }
-        out.push(Line { indent: ind as i64, content: content.to_vec(), number: no });
+        let start = line_start + ind;
+        out.push(Line { indent: ind as i64, start, end: start + content.len(), number: no });
         if e == text.len() {
             break;
         }
@@ -164,11 +169,35 @@ fn hex_digit(c: u8) -> i32 {
     }
 }
 
-/// s[*i] is a quote -> the text; *i is left after the closing quote.
-fn parse_quoted(s: &[u8], i: &mut usize, no: i64) -> Res<Vec<u8>> {
+/// s[*i] is a quote -> the text: a slice of `s` when it has no escape (nothing to copy), else the unescaped bytes
+/// (`parse_quoted`, which also gives every error); *i is left after the closing quote.
+/// The unescaped text goes to `scratch` (a buffer reused for every quoted scalar), and the result is None.
+fn quoted<'s>(s: &'s [u8], i: &mut usize, no: i64, scratch: &mut Vec<u8>) -> Res<Option<&'s [u8]>> {
+    let q = s[*i];
+    let start = *i + 1;
+    let mut j = start;
+    while j < s.len() {
+        let c = s[j];
+        if c == q {
+            if q == b'\'' && j + 1 < s.len() && s[j + 1] == b'\'' {
+                break; // a doubled quote: unescape
+            }
+            *i = j + 1;
+            return Ok(Some(&s[start..j]));
+        }
+        if q == b'"' && c == b'\\' {
+            break; // an escape
+        }
+        j += 1;
+    }
+    parse_quoted(s, i, no, scratch).map(|()| None)
+}
+
+/// s[*i] is a quote -> the text in `out` (cleared first); *i is left after the closing quote.
+fn parse_quoted(s: &[u8], i: &mut usize, no: i64, out: &mut Vec<u8>) -> Res<()> {
     let q = s[*i];
     *i += 1;
-    let mut out = Vec::new();
+    out.clear();
     loop {
         if *i >= s.len() {
             fail!("line ", no, ": unterminated string");
@@ -182,7 +211,7 @@ fn parse_quoted(s: &[u8], i: &mut usize, no: i64) -> Res<Vec<u8>> {
                     continue;
                 }
                 *i += 1;
-                return Ok(out);
+                return Ok(());
             }
             out.push(c);
             *i += 1;
@@ -190,7 +219,7 @@ fn parse_quoted(s: &[u8], i: &mut usize, no: i64) -> Res<Vec<u8>> {
         }
         if c == b'"' {
             *i += 1;
-            return Ok(out);
+            return Ok(());
         }
         if c == b'\\' {
             let e = if *i + 1 < s.len() { s[*i + 1] } else { 0 };
@@ -222,7 +251,7 @@ fn parse_quoted(s: &[u8], i: &mut usize, no: i64) -> Res<Vec<u8>> {
                 if cp > 0x10ffff {
                     fail!("line ", no, ": escape out of range");
                 }
-                append_utf8(&mut out, cp as u32);
+                append_utf8(out, cp as u32);
                 *i += 2 + n;
             } else {
                 fail!("line ", no, ": unknown escape \\", e);
@@ -257,90 +286,246 @@ fn check_plain(t: &[u8], no: i64) -> Res<()> {
     Ok(())
 }
 
-fn parse_flow(s: &[u8], i: &mut usize, no: i64) -> Res<Node> {
-    let mut out = Node::collection(Kind::List, no);
-    *i += 1;
-    let mut expect_item = true;
-    loop {
-        while *i < s.len() && s[*i] == b' ' {
-            *i += 1;
+/// The parser's state: the source (scalars and keys are slices of it) and the stacks the collections are built on
+/// (a collection's keys and items are moved off them into vectors of their exact size: one allocation each).
+struct Yaml<'a> {
+    src: &'a Rc<[u8]>,
+    lines: &'a [Line],
+    keys: Vec<Bytes>,
+    items: Vec<Node>,
+    scratch: Vec<u8>, // an unescaped quoted scalar
+}
+
+impl<'a> Yaml<'a> {
+    fn content(&self, k: usize) -> &'a [u8] {
+        let l = &self.lines[k];
+        &self.src[l.start..l.end]
+    }
+
+    /// A slice of the source, or (None) the unescaped text in `scratch`, copied once.
+    fn bytes(&self, part: Option<&[u8]>) -> Bytes {
+        match part {
+            Some(b) => Bytes::within(self.src, b),
+            None => Bytes::copy_of(&self.scratch),
         }
-        if *i >= s.len() {
-            fail!("line ", no, ": unterminated [ (flow sequences must close on their line)");
+    }
+
+    fn take_items(&mut self, mark: usize) -> Vec<Node> {
+        self.items.drain(mark..).collect()
+    }
+
+    fn parse_flow(&mut self, s: &'a [u8], i: &mut usize, no: i64) -> Res<Node> {
+        let mut out = Node::collection(Kind::List, no);
+        let mark = self.items.len();
+        let r = self.flow_items(s, i, no, mark);
+        let items = self.take_items(mark);
+        r?;
+        out.items = items;
+        Ok(out)
+    }
+
+    fn flow_items(&mut self, s: &'a [u8], i: &mut usize, no: i64, mark: usize) -> Res<()> {
+        *i += 1;
+        let mut expect_item = true;
+        loop {
+            while *i < s.len() && s[*i] == b' ' {
+                *i += 1;
+            }
+            if *i >= s.len() {
+                fail!("line ", no, ": unterminated [ (flow sequences must close on their line)");
+            }
+            let c = s[*i];
+            if c == b']' {
+                if expect_item && self.items.len() > mark {
+                    fail!("line ", no, ": trailing comma in a flow sequence");
+                }
+                *i += 1;
+                return Ok(());
+            }
+            if !expect_item {
+                if c != b',' {
+                    fail!("line ", no, ": expected , or ] in a flow sequence");
+                }
+                *i += 1;
+                expect_item = true;
+                continue;
+            }
+            if c == b'[' {
+                let n = self.parse_flow(s, i, no)?;
+                self.items.push(n);
+            } else if c == b'"' || c == b'\'' {
+                let t = quoted(s, i, no, &mut self.scratch)?;
+                let t = self.bytes(t);
+                self.items.push(Node::scalar(t, true, no));
+            } else {
+                let mut j = *i;
+                while j < s.len() && s[j] != b',' && s[j] != b']' {
+                    j += 1;
+                }
+                let t = trim(&s[*i..j]);
+                if t.is_empty() {
+                    fail!("line ", no, ": empty item in a flow sequence");
+                }
+                if t[0] == b'{' || t[0] == b'[' {
+                    fail!("line ", no, ": flow mappings are not allowed");
+                }
+                check_plain(t, no)?;
+                let t = Bytes::within(self.src, t);
+                self.items.push(Node::scalar(t, false, no));
+                *i = j;
+            }
+            expect_item = false;
         }
-        let c = s[*i];
-        if c == b']' {
-            if expect_item && !out.items.is_empty() {
-                fail!("line ", no, ": trailing comma in a flow sequence");
+    }
+
+    fn parse_value(&mut self, s: &'a [u8], no: i64) -> Res<Node> {
+        if s == b"{}" {
+            return Ok(Node::collection(Kind::Map, no));
+        }
+        let mut i = 0;
+        if s[0] == b'[' {
+            let v = self.parse_flow(s, &mut i, no)?;
+            if !trim(&s[i..]).is_empty() {
+                fail!("line ", no, ": text after ]");
+            }
+            return Ok(v);
+        }
+        if s[0] == b'"' || s[0] == b'\'' {
+            let t = quoted(s, &mut i, no, &mut self.scratch)?;
+            if !trim(&s[i..]).is_empty() {
+                fail!("line ", no, ": text after the closing quote");
+            }
+            return Ok(Node::scalar(self.bytes(t), true, no));
+        }
+        check_plain(s, no)?;
+        Ok(Node::scalar(Bytes::within(self.src, s), false, no))
+    }
+
+    fn block(&mut self, i: &mut usize, indent: i64) -> Res<Node> {
+        if is_seq(self.content(*i)) {
+            return self.seq(i, indent);
+        }
+        self.map(i, indent, None)
+    }
+
+    fn map(&mut self, i: &mut usize, indent: i64, first: Option<&'a [u8]>) -> Res<Node> {
+        let mut out = Node::collection(Kind::Map, self.lines.get(*i).map_or(0, |l| l.number));
+        let (kmark, imark) = (self.keys.len(), self.items.len());
+        let r = self.map_entries(i, indent, first, kmark);
+        out.keys = self.keys.drain(kmark..).collect();
+        out.items = self.take_items(imark);
+        r?;
+        Ok(out)
+    }
+
+    fn map_entries(&mut self, i: &mut usize, indent: i64, first: Option<&'a [u8]>, kmark: usize) -> Res<()> {
+        let mut first = first;
+        while *i < self.lines.len() {
+            let ln = &self.lines[*i];
+            let ind = if first.is_some() { indent } else { ln.indent };
+            let content: &'a [u8] = first.unwrap_or(self.content(*i));
+            let no = ln.number;
+            if first.is_none() && ind < indent {
+                break;
+            }
+            if ind != indent {
+                fail!("line ", no, ": unexpected indentation");
+            }
+            if first.is_none() && is_seq(content) {
+                break;
+            }
+            first = None;
+            let Some((k, rest)) = split_key(content, no, &mut self.scratch)? else {
+                fail!("line ", no, ": expected \"key: value\"");
+            };
+            let key: &[u8] = k.unwrap_or(&self.scratch);
+            if self.keys[kmark..].iter().any(|x| *x == key) {
+                fail!("line ", no, ": duplicate key '", key, "'");
             }
             *i += 1;
-            return Ok(out);
-        }
-        if !expect_item {
-            if c != b',' {
-                fail!("line ", no, ": expected , or ] in a flow sequence");
+            let k = self.bytes(k);
+            self.keys.push(k);
+            if !rest.is_empty() {
+                let v = self.parse_value(rest, no)?;
+                self.items.push(v);
+            } else if *i < self.lines.len()
+                && (self.lines[*i].indent > indent || (self.lines[*i].indent == indent && is_seq(self.content(*i))))
+            {
+                let sub = self.lines[*i].indent;
+                let v = self.block(i, sub)?;
+                self.items.push(v);
+            } else {
+                self.items.push(Node::scalar(Bytes::default(), false, no));
             }
+        }
+        Ok(())
+    }
+
+    fn seq(&mut self, i: &mut usize, indent: i64) -> Res<Node> {
+        let mut out = Node::collection(Kind::List, self.lines[*i].number);
+        let mark = self.items.len();
+        let r = self.seq_items(i, indent);
+        out.items = self.take_items(mark);
+        r?;
+        Ok(out)
+    }
+
+    fn seq_items(&mut self, i: &mut usize, indent: i64) -> Res<()> {
+        while *i < self.lines.len() {
+            let ln = &self.lines[*i];
+            let c = self.content(*i);
+            if ln.indent < indent || (ln.indent == indent && !is_seq(c)) {
+                break;
+            }
+            if ln.indent != indent {
+                fail!("line ", ln.number, ": unexpected indentation");
+            }
+            let number = ln.number;
+            let rest: &'a [u8] = match c.iter().skip(1).position(|&x| x != b' ') {
+                Some(r) => &c[r + 1..],
+                None => &[],
+            };
+            if rest.is_empty() {
+                *i += 1;
+                if *i < self.lines.len() && self.lines[*i].indent > indent {
+                    let sub = self.lines[*i].indent;
+                    let v = self.block(i, sub)?;
+                    self.items.push(v);
+                } else {
+                    self.items.push(Node::scalar(Bytes::default(), false, number));
+                }
+                continue;
+            }
+            let sub = indent + (c.len() - rest.len()) as i64;
+            if is_seq(rest) {
+                fail!("line ", number, ": nested \"- -\" sequences are not allowed");
+            }
+            if split_key(rest, number, &mut self.scratch)?.is_some() {
+                let v = self.map(i, sub, Some(rest))?;
+                self.items.push(v);
+                continue;
+            }
+            let v = self.parse_value(rest, number)?;
+            self.items.push(v);
             *i += 1;
-            expect_item = true;
-            continue;
         }
-        if c == b'[' {
-            out.items.push(Rc::new(parse_flow(s, i, no)?));
-        } else if c == b'"' || c == b'\'' {
-            let t = parse_quoted(s, i, no)?;
-            out.items.push(Rc::new(Node::scalar(t, true, no)));
-        } else {
-            let mut j = *i;
-            while j < s.len() && s[j] != b',' && s[j] != b']' {
-                j += 1;
-            }
-            let t = trim(&s[*i..j]);
-            if t.is_empty() {
-                fail!("line ", no, ": empty item in a flow sequence");
-            }
-            if t[0] == b'{' || t[0] == b'[' {
-                fail!("line ", no, ": flow mappings are not allowed");
-            }
-            check_plain(t, no)?;
-            out.items.push(Rc::new(Node::scalar(t.to_vec(), false, no)));
-            *i = j;
-        }
-        expect_item = false;
+        Ok(())
     }
 }
 
-fn parse_value(s: &[u8], no: i64) -> Res<Node> {
-    if s == b"{}" {
-        return Ok(Node::collection(Kind::Map, no));
-    }
-    let mut i = 0;
-    if s[0] == b'[' {
-        let v = parse_flow(s, &mut i, no)?;
-        if !trim(&s[i..]).is_empty() {
-            fail!("line ", no, ": text after ]");
-        }
-        return Ok(v);
-    }
-    if s[0] == b'"' || s[0] == b'\'' {
-        let t = parse_quoted(s, &mut i, no)?;
-        if !trim(&s[i..]).is_empty() {
-            fail!("line ", no, ": text after the closing quote");
-        }
-        return Ok(Node::scalar(t, true, no));
-    }
-    check_plain(s, no)?;
-    Ok(Node::scalar(s.to_vec(), false, no))
-}
+/// A mapping entry's key (None: in the scratch buffer) and the rest of its line.
+type KeyRest<'s> = (Option<&'s [u8]>, &'s [u8]);
 
-/// "key: rest" / "key:" -> the key and the rest; None when s is not a mapping entry.
-fn split_key(s: &[u8], no: i64) -> Res<Option<(Vec<u8>, Vec<u8>)>> {
+/// "key: rest" / "key:" -> the key (None: unescaped into `scratch`) and the rest; None when s is not a mapping
+/// entry.
+fn split_key<'s>(s: &'s [u8], no: i64, scratch: &mut Vec<u8>) -> Res<Option<KeyRest<'s>>> {
     if s[0] == b'"' || s[0] == b'\'' {
         let mut i = 0;
-        let k = parse_quoted(s, &mut i, no)?;
+        let k = quoted(s, &mut i, no, scratch)?;
         if i >= s.len() || s[i] != b':' || (i + 1 < s.len() && s[i + 1] != b' ') {
             return Ok(None);
         }
-        return Ok(Some((k, trim(&s[i + 1..]).to_vec())));
+        return Ok(Some((k, trim(&s[i + 1..]))));
     }
     if s[0] == b'[' || s[0] == b'{' || (s[0] == b'-' && !(s.len() > 1 && s[1] != b' ')) {
         return Ok(None);
@@ -359,119 +544,30 @@ fn split_key(s: &[u8], no: i64) -> Res<Option<(Vec<u8>, Vec<u8>)>> {
     if k.is_empty() {
         return Ok(None);
     }
-    let rest = if c + 1 < s.len() { trim(&s[c + 2..]).to_vec() } else { Vec::new() };
-    Ok(Some((k.to_vec(), rest)))
+    let rest: &[u8] = if c + 1 < s.len() { trim(&s[c + 2..]) } else { &[] };
+    Ok(Some((Some(k), rest)))
 }
 
 fn is_seq(c: &[u8]) -> bool {
     c == b"-" || c.starts_with(b"- ")
 }
 
-struct YamlParser<'a> {
-    items: &'a [Line],
-}
-
-impl YamlParser<'_> {
-    fn block(&self, i: &mut usize, indent: i64) -> Res<Node> {
-        if is_seq(&self.items[*i].content) {
-            return self.seq(i, indent);
-        }
-        self.map(i, indent, None)
-    }
-
-    fn map(&self, i: &mut usize, indent: i64, first: Option<&[u8]>) -> Res<Node> {
-        let mut out = Node::collection(Kind::Map, self.items.get(*i).map_or(0, |l| l.number));
-        let mut first = first;
-        while *i < self.items.len() {
-            let ln = &self.items[*i];
-            let ind = if first.is_some() { indent } else { ln.indent };
-            let content: &[u8] = first.unwrap_or(&ln.content);
-            let no = ln.number;
-            if first.is_none() && ind < indent {
-                break;
-            }
-            if ind != indent {
-                fail!("line ", no, ": unexpected indentation");
-            }
-            if first.is_none() && is_seq(content) {
-                break;
-            }
-            first = None;
-            let Some((k, rest)) = split_key(content, no)? else {
-                fail!("line ", no, ": expected \"key: value\"");
-            };
-            if out.find(&k).is_some() {
-                fail!("line ", no, ": duplicate key '", &k, "'");
-            }
-            *i += 1;
-            out.keys.push(k);
-            if !rest.is_empty() {
-                out.items.push(Rc::new(parse_value(&rest, no)?));
-            } else if *i < self.items.len()
-                && (self.items[*i].indent > indent
-                    || (self.items[*i].indent == indent && is_seq(&self.items[*i].content)))
-            {
-                let sub = self.items[*i].indent;
-                out.items.push(Rc::new(self.block(i, sub)?));
-            } else {
-                out.items.push(Rc::new(Node::scalar(Vec::new(), false, no)));
-            }
-        }
-        Ok(out)
-    }
-
-    fn seq(&self, i: &mut usize, indent: i64) -> Res<Node> {
-        let mut out = Node::collection(Kind::List, self.items[*i].number);
-        while *i < self.items.len() {
-            let ln = &self.items[*i];
-            if ln.indent < indent || (ln.indent == indent && !is_seq(&ln.content)) {
-                break;
-            }
-            if ln.indent != indent {
-                fail!("line ", ln.number, ": unexpected indentation");
-            }
-            let c = &ln.content;
-            let rest: &[u8] = match c.iter().skip(1).position(|&x| x != b' ') {
-                Some(r) => &c[r + 1..],
-                None => &[],
-            };
-            if rest.is_empty() {
-                let no = ln.number;
-                *i += 1;
-                if *i < self.items.len() && self.items[*i].indent > indent {
-                    let sub = self.items[*i].indent;
-                    out.items.push(Rc::new(self.block(i, sub)?));
-                } else {
-                    out.items.push(Rc::new(Node::scalar(Vec::new(), false, no)));
-                }
-                continue;
-            }
-            let sub = indent + (c.len() - rest.len()) as i64;
-            if is_seq(rest) {
-                fail!("line ", ln.number, ": nested \"- -\" sequences are not allowed");
-            }
-            if split_key(rest, ln.number)?.is_some() {
-                out.items.push(Rc::new(self.map(i, sub, Some(rest))?));
-                continue;
-            }
-            out.items.push(Rc::new(parse_value(rest, ln.number)?));
-            *i += 1;
-        }
-        Ok(out)
-    }
-}
-
 /// A whole YAML text -> its tree.
 pub fn parse_yaml(text: &[u8]) -> Res<Node> {
-    let items = split_lines(text)?;
-    if items.is_empty() {
+    parse_yaml_shared(&Rc::from(text))
+}
+
+/// A whole YAML text -> its tree, whose scalars and keys are slices of `src` (no copies).
+pub fn parse_yaml_shared(src: &Rc<[u8]>) -> Res<Node> {
+    let lines = split_lines(src)?;
+    if lines.is_empty() {
         return Ok(Node::collection(Kind::Map, 0));
     }
-    let p = YamlParser { items: &items };
+    let mut p = Yaml { src, lines: &lines, keys: Vec::new(), items: Vec::new(), scratch: Vec::new() };
     let mut i = 0;
-    let n = p.block(&mut i, items[0].indent)?;
-    if i != items.len() {
-        fail!("line ", items[i].number, ": unexpected indentation");
+    let n = p.block(&mut i, lines[0].indent)?;
+    if i != lines.len() {
+        fail!("line ", lines[i].number, ": unexpected indentation");
     }
     Ok(n)
 }
@@ -480,12 +576,18 @@ pub fn parse_yaml(text: &[u8]) -> Res<Node> {
 
 pub struct Csv {
     pub directives: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub header: Vec<Vec<u8>>,
-    pub rows: Vec<Vec<Vec<u8>>>,
+    pub header: Vec<Bytes>,
+    pub rows: Vec<Vec<Bytes>>,
     pub row_lines: Vec<i64>,
 }
 
 pub fn parse_csv(text: &[u8]) -> Res<Csv> {
+    parse_csv_shared(&Rc::from(text))
+}
+
+/// A CSV text -> its cells, slices of `src` (a quoted cell with a doubled quote is the only copy).
+pub fn parse_csv_shared(src: &Rc<[u8]>) -> Res<Csv> {
+    let text: &[u8] = src;
     let mut directives = BTreeMap::new();
     let mut p = if text.starts_with(BOM) { 3 } else { 0 };
     let mut no = 0i64;
@@ -510,25 +612,28 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
         p = e + 1;
     }
     // RFC 4180 records (as Python's csv module reads them: a quote inside an unquoted field is a character)
-    let mut rows: Vec<Vec<Vec<u8>>> = Vec::new();
+    let mut rows: Vec<Vec<Bytes>> = Vec::new();
     let mut starts: Vec<i64> = Vec::new();
     let mut line = no + 1;
+    let mut width = 0;
     while p < text.len() {
         let start = line;
-        let mut row: Vec<Vec<u8>> = Vec::new();
-        let mut cell: Vec<u8> = Vec::new();
+        let mut row: Vec<Bytes> = Vec::with_capacity(width);
         let mut any = false;
         loop {
+            let cell: Bytes;
             if p < text.len() && text[p] == b'"' {
                 any = true;
                 p += 1;
+                let cell_start = p;
+                let mut owned: Option<Vec<u8>> = None; // after a doubled quote
                 loop {
                     if p >= text.len() {
                         fail!("CSV: unterminated quoted field");
                     }
                     if text[p] == b'"' {
                         if p + 1 < text.len() && text[p + 1] == b'"' {
-                            cell.push(b'"');
+                            owned.get_or_insert_with(|| text[cell_start..p].to_vec()).push(b'"');
                             p += 2;
                             continue;
                         }
@@ -538,9 +643,15 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
                     if text[p] == b'\n' {
                         line += 1;
                     }
-                    cell.push(text[p]);
+                    if let Some(o) = owned.as_mut() {
+                        o.push(text[p]);
+                    }
                     p += 1;
                 }
+                cell = match owned {
+                    Some(o) => Bytes::from(o),
+                    None => Bytes::slice(src, cell_start, p - 1),
+                };
                 if p < text.len()
                     && text[p] != b','
                     && text[p] != b'\n'
@@ -550,17 +661,18 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
                     fail!("CSV: text after a closing quote");
                 }
             } else {
+                let cell_start = p;
                 while p < text.len()
                     && text[p] != b','
                     && text[p] != b'\n'
                     && !(text[p] == b'\r' && (p + 1 >= text.len() || text[p + 1] == b'\n'))
                 {
-                    cell.push(text[p]);
                     p += 1;
                     any = true;
                 }
+                cell = Bytes::slice(src, cell_start, p);
             }
-            row.push(std::mem::take(&mut cell));
+            row.push(cell);
             if p < text.len() && text[p] == b',' {
                 p += 1;
                 any = true;
@@ -576,6 +688,7 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
             break;
         }
         if any {
+            width = row.len();
             rows.push(row);
             starts.push(start);
         }
@@ -583,7 +696,7 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
     if rows.is_empty() {
         fail!("CSV: no header row");
     }
-    let header = rows[0].clone();
+    let header = std::mem::take(&mut rows[0]);
     for i in 0..header.len() {
         for j in 0..i {
             if header[i] == header[j] {
@@ -591,8 +704,8 @@ pub fn parse_csv(text: &[u8]) -> Res<Csv> {
             }
         }
     }
-    let mut out_rows = Vec::new();
-    let mut row_lines = Vec::new();
+    let mut out_rows = Vec::with_capacity(rows.len() - 1);
+    let mut row_lines = Vec::with_capacity(rows.len() - 1);
     for i in 1..rows.len() {
         if rows[i].len() != header.len() {
             fail!("line ", starts[i], ": ", rows[i].len(), " cells, the header has ", header.len());
@@ -712,12 +825,15 @@ fn is_decimal(s: &[u8]) -> bool {
 /// A float32 or `.inf`/`.nan`/a hex bit pattern, as its bits (correctly rounded).
 pub fn parse_f32(text: &[u8]) -> Res<u32> {
     let s = trim(text);
-    let low: Vec<u8> = s.iter().map(u8::to_ascii_lowercase).collect();
-    match low.as_slice() {
-        b".inf" | b"+.inf" | b"inf" | b"+inf" | b"infinity" => return Ok(0x7f800000),
-        b"-.inf" | b"-inf" | b"-infinity" => return Ok(0xff800000),
-        b".nan" | b"nan" => return Ok(0x7fc00000),
-        _ => {}
+    let is = |names: &[&[u8]]| names.iter().any(|n| s.eq_ignore_ascii_case(n));
+    if is(&[b".inf", b"+.inf", b"inf", b"+inf", b"infinity"]) {
+        return Ok(0x7f800000);
+    }
+    if is(&[b"-.inf", b"-inf", b"-infinity"]) {
+        return Ok(0xff800000);
+    }
+    if is(&[b".nan", b"nan"]) {
+        return Ok(0x7fc00000);
     }
     if is_hex_int(s) {
         let mut v: u64 = 0;
@@ -767,8 +883,14 @@ fn code_page_inverse() -> &'static HashMap<u16, u8> {
 
 /// UTF-8 text -> CP-1252 bytes.
 pub fn encode_text(text: &[u8]) -> Res<Vec<u8>> {
-    let inverse = code_page_inverse();
     let mut out = Vec::with_capacity(text.len());
+    encode_text_into(text, &mut out)?;
+    Ok(out)
+}
+
+/// UTF-8 text -> CP-1252 bytes appended to `out` (a reused buffer).
+pub fn encode_text_into(text: &[u8], out: &mut Vec<u8>) -> Res<()> {
+    let inverse = code_page_inverse();
     let mut i = 0;
     while i < text.len() {
         let c = text[i];
@@ -799,7 +921,7 @@ pub fn encode_text(text: &[u8]) -> Res<Vec<u8>> {
             None => fail!("character U+", cp as i64, " has no CP-1252 byte"),
         }
     }
-    Ok(out)
+    Ok(())
 }
 
 /// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8): what `encode_text` reads back.
@@ -835,14 +957,25 @@ pub fn is_id(s: &[u8]) -> bool {
 /// A mapping read key by key; `leftover` fails on a key nobody asked for.
 pub struct Getter<'a> {
     pub map: &'a Node,
-    pub where_: Vec<u8>,
+    pub where_: &'a [u8],
     used: Vec<bool>,
     cursor: usize,
 }
 
 impl<'a> Getter<'a> {
-    pub fn new(map: &'a Node, where_: &[u8]) -> Getter<'a> {
-        Getter { map, where_: where_.to_vec(), used: vec![false; map.keys.len()], cursor: 0 }
+    pub fn new(map: &'a Node, where_: &'a [u8]) -> Getter<'a> {
+        Getter::reusing(map, where_, Vec::new())
+    }
+
+    /// A Getter whose key marks reuse `used` (a buffer kept from row to row: `into_used` gives it back).
+    pub fn reusing(map: &'a Node, where_: &'a [u8], mut used: Vec<bool>) -> Getter<'a> {
+        used.clear();
+        used.resize(map.keys.len(), false);
+        Getter { map, where_, used, cursor: 0 }
+    }
+
+    pub fn into_used(self) -> Vec<bool> {
+        self.used
     }
 
     /// The value, or None when the key is absent or holds a null.
@@ -875,29 +1008,72 @@ impl<'a> Getter<'a> {
             }
         }
         if count > 0 {
-            fail!(&self.where_, ": unknown key(s) ", &extra);
+            fail!(self.where_, ": unknown key(s) ", &extra);
         }
         Ok(())
     }
 }
 
-/// An array value -> n element references (None = missing).
-pub fn elems<'a>(v: Option<&'a Node>, n: usize, where_: &[u8], name: &str) -> Res<Vec<Option<&'a Node>>> {
-    let mut out = vec![None; n];
-    let Some(v) = v else { return Ok(out) };
+/// An array value's n elements (`elems`): element k, None when missing (past the list's end, or a null).
+#[derive(Clone, Copy)]
+pub struct Elems<'a> {
+    items: &'a [Node],
+    n: usize,
+}
+
+impl<'a> Elems<'a> {
+    pub fn get(&self, k: usize) -> Option<&'a Node> {
+        self.items.get(k).filter(|item| !item.is_missing())
+    }
+    pub fn len(&self) -> usize {
+        self.n
+    }
+    pub fn is_empty(&self) -> bool {
+        self.n == 0
+    }
+    pub fn iter(&self) -> ElemsIter<'a> {
+        ElemsIter { e: *self, k: 0 }
+    }
+}
+
+/// The elements of an `Elems` in order.
+pub struct ElemsIter<'a> {
+    e: Elems<'a>,
+    k: usize,
+}
+
+impl<'a> Iterator for ElemsIter<'a> {
+    type Item = Option<&'a Node>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.k >= self.e.n {
+            return None;
+        }
+        self.k += 1;
+        Some(self.e.get(self.k - 1))
+    }
+}
+
+impl<'a> IntoIterator for Elems<'a> {
+    type Item = Option<&'a Node>;
+    type IntoIter = ElemsIter<'a>;
+    fn into_iter(self) -> ElemsIter<'a> {
+        ElemsIter { e: self, k: 0 }
+    }
+}
+
+/// An array value -> its n elements (None = missing); fails when it is not a list or has more than n.
+pub fn elems<'a, W: Part + ?Sized>(v: Option<&'a Node>, n: usize, where_: &W, name: &str) -> Res<Elems<'a>> {
+    let Some(v) = v else { return Ok(Elems { items: &[], n }) };
     if v.kind != Kind::List {
         fail!(where_, ": ", name, " must be a list");
     }
     if v.items.len() > n {
         fail!(where_, ": ", name, " has ", v.items.len(), " elements, the field has ", n);
     }
-    for (i, item) in v.items.iter().enumerate() {
-        out[i] = if item.is_missing() { None } else { Some(&**item) };
-    }
-    Ok(out)
+    Ok(Elems { items: &v.items, n })
 }
 
-pub fn scalar_text<'a>(v: &'a Node, where_: &[u8], name: &str, what: &str) -> Res<&'a [u8]> {
+pub fn scalar_text<'a, W: Part + ?Sized>(v: &'a Node, where_: &W, name: &str, what: &str) -> Res<&'a [u8]> {
     if v.kind != Kind::Scalar {
         fail!(where_, ": ", name, ": a list where ", what, " belongs");
     }
@@ -905,7 +1081,7 @@ pub fn scalar_text<'a>(v: &'a Node, where_: &[u8], name: &str, what: &str) -> Re
 }
 
 /// A number field's bits: `Number` in the C++ (a missing value is 0).
-pub fn number(field: &str, ty: Type, v: Option<&Node>, where_: &[u8]) -> Res<u32> {
+pub fn number<W: Part + ?Sized>(field: &str, ty: Type, v: Option<&Node>, where_: &W) -> Res<u32> {
     let Some(v) = v else { return Ok(0) };
     let attempt = (|| -> Res<u32> {
         let t = scalar_text(v, where_, field, "a number")?;
@@ -915,26 +1091,33 @@ pub fn number(field: &str, ty: Type, v: Option<&Node>, where_: &[u8]) -> Res<u32
             Ok(parse_int(t, ty)? as u32)
         }
     })();
-    attempt.map_err(
-        |e| {
-            if e.text.starts_with(where_) {
-                e
-            } else {
-                Failure::new(msg!(where_, ": ", field, ": ", &e.text))
-            }
-        },
-    )
+    attempt.map_err(|e| {
+        let w = msg!(where_);
+        if e.text.starts_with(&w) {
+            e
+        } else {
+            Failure::new(msg!(w, ": ", field, ": ", &e.text))
+        }
+    })
 }
 
 /// A string field: empty when missing, encoded as CP-1252.
-pub fn text_value(v: Option<&Node>, where_: &[u8], name: &str) -> Res<Vec<u8>> {
+pub fn text_value<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<Vec<u8>> {
     let Some(v) = v else { return Ok(Vec::new()) };
     let t = scalar_text(v, where_, name, "a string")?;
     encode_text(t).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))
 }
 
+/// `text_value` into `out` (cleared first), a buffer reused from row to row.
+pub fn text_value_into<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str, out: &mut Vec<u8>) -> Res<()> {
+    out.clear();
+    let Some(v) = v else { return Ok(()) };
+    let t = scalar_text(v, where_, name, "a string")?;
+    encode_text_into(t, out).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))
+}
+
 /// A document's value that must be there: its text (`NodeScalar`).
-pub fn node_scalar<'a>(v: Option<&'a Node>, where_: &[u8], name: &str) -> Res<&'a [u8]> {
+pub fn node_scalar<'a, W: Part + ?Sized>(v: Option<&'a Node>, where_: &W, name: &str) -> Res<&'a [u8]> {
     match v {
         Some(n) if !n.is_missing() => scalar_text(n, where_, name, "a value"),
         _ => {
@@ -944,26 +1127,26 @@ pub fn node_scalar<'a>(v: Option<&'a Node>, where_: &[u8], name: &str) -> Res<&'
 }
 
 /// A signed 32-bit integer of a document (`NodeInt`).
-pub fn node_int(v: Option<&Node>, where_: &[u8], name: &str) -> Res<i64> {
+pub fn node_int<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<i64> {
     let t = node_scalar(v, where_, name)?;
     parse_int(t, Type::S32).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))
 }
 
 /// A float of a document (`NodeFloat`).
-pub fn node_float(v: Option<&Node>, where_: &[u8], name: &str) -> Res<f32> {
+pub fn node_float<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<f32> {
     let t = node_scalar(v, where_, name)?;
     let bits = parse_f32(t).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))?;
     Ok(f32::from_bits(bits))
 }
 
 /// A boolean of a document (`NodeBool`): 0/1, true/false.
-pub fn node_bool(v: Option<&Node>, where_: &[u8], name: &str) -> Res<bool> {
+pub fn node_bool<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<bool> {
     let t = node_scalar(v, where_, name)?;
     parse_int(t, Type::Bool).map(|x| x != 0).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))
 }
 
 /// A string of a document as CP-1252 bytes; a missing one is empty (`NodeText`).
-pub fn node_text(v: Option<&Node>, where_: &[u8], name: &str) -> Res<Vec<u8>> {
+pub fn node_text<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<Vec<u8>> {
     match v {
         Some(n) if !n.is_missing() => text_value(Some(n), where_, name),
         _ => Ok(Vec::new()),
@@ -1153,6 +1336,25 @@ b: 'it''s'
     }
 
     #[test]
+    fn text_values_into_a_reused_buffer() {
+        let n = yaml(
+            "a: \"café\"
+b: [1]
+",
+        )
+        .unwrap();
+        let mut buf = b"old".to_vec();
+        text_value_into(n.find(b"a"), b"w", "a", &mut buf).unwrap();
+        assert_eq!(buf, vec![b'c', b'a', b'f', 0xe9]);
+        text_value_into(None, b"w", "a", &mut buf).unwrap();
+        assert!(buf.is_empty());
+        assert_eq!(
+            text_value_into(n.find(b"b"), b"w", "b", &mut buf).unwrap_err().text,
+            b"w: b: a list where a string belongs".to_vec()
+        );
+    }
+
+    #[test]
     fn encode_text_maps_utf8_to_cp1252() {
         assert_eq!(encode_text("€é".as_bytes()).unwrap(), vec![0x80, 0xe9]);
         assert_eq!(encode_text(b"\xC2\x81").unwrap(), vec![0x81]); // a C1 control maps to its byte
@@ -1185,22 +1387,30 @@ b: 'it''s'
         let mut g = Getter::new(&n, b"where");
         g.get("a");
         assert_eq!(g.leftover().unwrap_err().text, b"where: unknown key(s) b, c".to_vec());
+        // a reused buffer starts clear
+        let mut g = Getter::reusing(&n, b"where", vec![true; 9]);
+        g.get("a");
+        assert_eq!(g.leftover().unwrap_err().text, b"where: unknown key(s) b, c".to_vec());
+        assert_eq!(g.into_used(), vec![true, false, false]);
     }
 
     #[test]
     fn elems_checks_shape() {
         let n = yaml("a: [1, ~, 3]\nb: 7\n").unwrap();
-        let v = elems(n.find(b"a").map(|r| &**r), 4, b"w", "a").unwrap();
+        let v = elems(n.find(b"a"), 4, b"w", "a").unwrap();
         assert_eq!(v.len(), 4);
-        assert!(v[1].is_none());
-        assert_eq!(v[2].unwrap().text, b"3");
-        assert!(v[3].is_none());
+        assert!(v.get(1).is_none());
+        assert_eq!(v.get(2).unwrap().text, b"3");
+        assert!(v.get(3).is_none());
+        assert_eq!(v.iter().map(|x| x.is_some()).collect::<Vec<_>>(), vec![true, false, true, false]);
+        assert_eq!(v.into_iter().count(), 4);
         assert_eq!(
-            elems(n.find(b"a").map(|r| &**r), 2, b"w", "a").unwrap_err().text,
+            elems(n.find(b"a"), 2, b"w", "a").err().unwrap().text,
             b"w: a has 3 elements, the field has 2".to_vec()
         );
-        assert_eq!(elems(n.find(b"b").map(|r| &**r), 2, b"w", "b").unwrap_err().text, b"w: b must be a list".to_vec());
-        assert_eq!(elems(None, 2, b"w", "a").unwrap(), vec![None, None]);
+        assert_eq!(elems(n.find(b"b"), 2, b"w", "b").err().unwrap().text, b"w: b must be a list".to_vec());
+        let none = elems(None, 2, b"w", "a").unwrap();
+        assert_eq!((none.len(), none.get(0).is_none(), none.get(1).is_none()), (2, true, true));
     }
 
     #[test]
@@ -1219,7 +1429,7 @@ b: 'it''s'
     #[test]
     fn node_readers() {
         let n = yaml("a: 5\nb: 1.5\nc: true\nd: ~\n").unwrap();
-        let get = |k: &[u8]| n.find(k).map(|r| &**r);
+        let get = |k: &[u8]| n.find(k);
         assert_eq!(node_int(get(b"a"), b"w", "a").unwrap(), 5);
         assert_eq!(node_float(get(b"b"), b"w", "b").unwrap(), 1.5);
         assert!(node_bool(get(b"c"), b"w", "c").unwrap());
