@@ -4,150 +4,12 @@
 //! `UMCos` and `UMArcCos` are lookup tables. Rather than carry 49,154 numbers, the tables are recomputed the way the
 //! C++ tables were generated (`UMTables.h`: the `%f` spelling of an `f32` cosine); `tables_digest` pins them to the C++.
 
-use std::sync::OnceLock;
-
-pub const PI: f32 = 3.1415927;
-pub const TWO_PI: f32 = 6.2831855;
-pub const HALF_PI: f32 = 1.5707964;
-
-const COS_TABLE_SCALE: f32 = 5215.189;
-const ONE_THIRD: f32 = 0.33333334;
-const ONE_FIFTH: f32 = 0.2;
-const ONE_SEVENTH: f32 = 0.14285715;
-const ARCCOS_TABLE_LIMIT: f32 = 0.9995;
-const MINUS_HALF_PI: f32 = -1.5707964;
-
-/// `lrintf` as the x86-64 build computes it: round half to even, and the conversion's "indefinite" value for NaN or a
-/// value out of range (which `as i32` would saturate instead).
-pub fn lrintf(value: f32) -> i32 {
-    let rounded = value.round_ties_even();
-    if (-2_147_483_648.0..2_147_483_648.0).contains(&rounded) {
-        rounded as i32
-    } else {
-        i32::MIN
-    }
-}
-
-/// `UMFloor`: rounds to nearest, then steps down when that went up.
-pub fn floor(value: f32) -> i32 {
-    let result = lrintf(value);
-    if result as f32 > value {
-        result.wrapping_sub(1)
-    } else {
-        result
-    }
-}
-
-/// `UMFloorUnsigned`: as `floor`, with the comparison on the unsigned value (a negative input wraps).
-pub fn floor_unsigned(value: f32) -> u32 {
-    let result = lrintf(value) as u32;
-    if result as f32 > value {
-        result.wrapping_sub(1)
-    } else {
-        result
-    }
-}
-
-/// `UMFastMath::Sqrt`, and the C++'s `(float)sqrt(float)`: through `double`.
-pub fn sqrt(value: f32) -> f32 {
-    f64::from(value).sqrt() as f32
-}
-
-/// `(float)sqrt(unsigned long)`.
-pub fn sqrt_u32(value: u32) -> f32 {
-    f64::from(value).sqrt() as f32
-}
-
-struct Tables {
-    cos: Vec<f32>,
-    arccos: Vec<f32>,
-}
-
-/// One table entry: the `%f` text of an `f32` read back as an `f32`, as the C++ compiler reads `UMTables.h`.
-fn entry(value: f32) -> f32 {
-    let parsed: f32 = format!("{value:.6}").parse().expect("a formatted float parses");
-    // the table spells cos(pi/2), a tiny negative, as 0.000000: a plus zero
-    if parsed == 0.0 {
-        0.0
-    } else {
-        parsed
-    }
-}
-
-fn tables() -> &'static Tables {
-    static TABLES: OnceLock<Tables> = OnceLock::new();
-    TABLES.get_or_init(|| {
-        let cos = (0..=16384u32).map(|i| entry(f64::from(i as f32 * PI / 16384.0).cos() as f32)).collect();
-        let arccos = (0..=32768u32).map(|i| entry(f64::from(i as f32 / 32768.0).acos() as f32)).collect();
-        Tables { cos, arccos }
-    })
-}
-
-/// `UMCos`.
-pub fn um_cos(angle: f32) -> f32 {
-    let mut angle = angle;
-    while angle < -PI {
-        angle += TWO_PI;
-    }
-    while angle > PI {
-        angle -= TWO_PI;
-    }
-    if angle < 0.0 {
-        angle = -angle;
-    }
-    tables().cos[lrintf(COS_TABLE_SCALE * angle) as usize]
-}
-
-/// `UMSin`.
-pub fn um_sin(angle: f32) -> f32 {
-    um_cos(HALF_PI - angle)
-}
-
-/// `UMArcCos`.
-pub fn um_arccos(value: f32) -> f32 {
-    let mut value = value;
-    if value > 0.0 {
-        if value < ARCCOS_TABLE_LIMIT {
-            return tables().arccos[lrintf(value * 32768.0) as usize];
-        }
-        if value < 1.0 {
-            let mut power = sqrt(1.0 - value * value) / value;
-            let square = power * power;
-            value = power;
-            power *= square;
-            value -= ONE_THIRD * power;
-            power *= square;
-            value += ONE_FIFTH * power;
-            power *= square;
-            value -= power * ONE_SEVENTH;
-        } else {
-            value = 0.0;
-        }
-        return value;
-    }
-    if value < 0.0 {
-        if value < -1.0 {
-            value = -1.0;
-        }
-        return PI - um_arccos(-value);
-    }
-    HALF_PI
-}
-
-/// `UMArcTan2`.
-pub fn um_arctan2(y: f32, x: f32) -> f32 {
-    if x != 0.0 {
-        let cosine = x / sqrt(y * y + x * x);
-        if y >= 0.0 {
-            return um_arccos(cosine);
-        }
-        return -um_arccos(cosine);
-    }
-    if y < 0.0 {
-        return MINUS_HALF_PI;
-    }
-    HALF_PI
-}
+// The engine's helpers and the table trigonometry: one implementation, the one the game's UMath.cpp forwards to
+// (ee_ge::um, which also pins the tables to the C++ digest).
+pub use ee_ge::um::{
+    floor, floor_unsigned, lrintf, sqrt, sqrt_u32, tables_digest, um_arccos, um_arctan2, um_cos, um_sin, HALF_PI,
+    MINUS_HALF_PI, PI, TWO_PI,
+};
 
 /// `GE2DPoint`.
 #[repr(C)]
@@ -274,19 +136,6 @@ impl Rotation {
             z: v.x * m[2][0] + v.z * m[2][2] + v.y * m[2][1],
         }
     }
-}
-
-/// FNV-1a of the `f32` bit patterns of both lookup tables, compared with the C++ tables in a test.
-pub fn tables_digest() -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    let t = tables();
-    for value in t.cos.iter().chain(t.arccos.iter()) {
-        for byte in value.to_bits().to_le_bytes() {
-            hash ^= u64::from(byte);
-            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-        }
-    }
-    hash
 }
 
 #[cfg(test)]

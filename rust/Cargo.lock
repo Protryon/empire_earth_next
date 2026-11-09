@@ -267,6 +267,7 @@ version = "0.1.0"
 name = "ee_rmap"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
  "ee_random",
 ]
 
