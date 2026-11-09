@@ -4,7 +4,7 @@
 //! 0: a literal; 1: a copy (length code + extra bits, then distance code + low bits).
 //!
 //! Not byte-matched to PKWARE's encoder, but byte-identical to the former C encoder (the golden vectors in this
-//! crate's tests come from it), because saved games and archives are compared against it.
+//! crate's tests come from it).
 
 use crate::dcl_tables::*;
 

@@ -1770,8 +1770,8 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   `cargo test`, so tests link without the platform layer).
 - **`tcp_test` shares its ports with the game** (33334/33335). `EE_TCP_TEST_PORT_OFFSET` moves it (through
   `gPlatSimPortOffset`) so it can run beside a live game or harness.
-- **Behaviour changes in the port**: the cipher loop has no 16-bit counter (C++ hung on datagrams above 32767 bytes;
-  none exist), `strcpy` into packet fields is bounded, `connect`'s failed-resolve socket and the search's sockets on
+- **Behaviour changes in the port**: the cipher loop has no 16-bit counter (by reading the C++, its 16-bit counter never ended the loop for datagrams above 32767 bytes;
+  not exercised), `strcpy` into packet fields is bounded, `connect`'s failed-resolve socket and the search's sockets on
   failure are closed. Everything else, including the search thread's timing and the quirky result codes (`13`, a
   socket-open failure in `SendSingle` being `OK`) is carried over.
 
