@@ -1,7 +1,7 @@
 # Rust: a research plan for an iterative rewrite
 
-Status (2026-11-08): proposal, nothing built; revised for the WON library (module `won`, the upstream merge to
-3f51317465d6) and its lobby on the platform layer. The goal is a game written wholly in Rust. The way there is one binary
+Status (2026-11-09): R0-R3 and R4.1-R4.2 built on the `rust` branch, except what the table below lists as open.
+Revised for the WON library (module `won`, the upstream merge to 3f51317465d6) and its lobby on the platform layer. The goal is a game written wholly in Rust. The way there is one binary
 in which C++ and Rust coexist for a long time. Each step moves one module across a seam, and the game keeps passing
 its gates at every commit. This document covers:
 
@@ -13,6 +13,28 @@ its gates at every commit. This document covers:
 Companion documents: PORT.md (the port, the platform layer, GX), docs/MODDING_PLAN.md (schemas, rules as data;
 several items there are deferred "to the Rust rewrite"), docs/AI_RESEARCH.md (the AI and its scripting runtime: mlua is
 the chosen Rust path), PORT_LEARNINGS.md.
+
+## Progress (the `rust` branch, 2026-11-09)
+
+| Step | State |
+|---|---|
+| R0 Rust library | Done |
+| R1.1-R1.3 platform leaves, files, threads, sockets | Done (`ee_plat_core`, `ee_plat_sys`). Windows PlatString still calls the CRT, whose behaviour depends on the locale |
+| R1.4-R1.5 window, fonts | Done (`ee_plat_ui`, `ee_plat_sdl`): SDL3 kept (D4), stb_truetype ported line by line, 51,520 glyphs byte-equal |
+| R2.1-R2.3 rules schema, rustgen, text compiler | Done (`ee_data`) |
+| R2.4 glTF and PNG | Done (`ee_openformats`), 7,150 of 7,150 gate cases equal to the C++ digests |
+| R3.1-R3.3 mixer logic, compression, encryption, TCP | Done (`ee_mixer`, `ee_codec`, `ee_net_tcp`). miniaudio stays; no audio has been listened to through the Rust mixer |
+| R3.4 random maps | Done (`ee_rmap`), 2,088 of 2,088 maps equal to the C++ digests. The `.rmv` reader (`Unit10.cpp`) stays C++ |
+| R3.5 File System | Done (`ee_fs`) behind the C++ facades |
+| **R3.6 Sound Engine** | **Open.** `SESoundManager`'s nodes are held by simulation objects and shared between threads |
+| R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
+| R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
+| **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+
+Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
+trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
+played on. Linux: the game cross-compiles and links, but has not been run. macOS: Rust type-checks only; nothing was
+built or run.
 
 ---
 
