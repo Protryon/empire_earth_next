@@ -8,6 +8,7 @@
 pub mod layout;
 pub mod rect;
 pub mod slider;
+pub mod text;
 pub mod wrap;
 
 mod layout_ffi;

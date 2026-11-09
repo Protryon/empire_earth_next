@@ -10,84 +10,11 @@
 //! 257th character (the line itself is copied from the source, so only the next line loses it); a line ends after a
 //! newline, which the stored line drops.
 
-use core::ffi::{c_long, c_uint, c_ulong};
+use core::ffi::{c_long, c_ulong};
 
 use crate::rect::{um_floor, um_floor_unsigned};
-
-/// The C runtime's multibyte stepping, on NUL-terminated byte slices (`s` includes the terminator).
-pub trait Mbcs {
-    /// `_mbsinc`: the offset of the character after the one at `at`.
-    fn inc(&self, s: &[u8], at: usize) -> usize;
-    /// `_mbsninc`: `n` characters on from `at`, stopping at the terminator.
-    fn ninc(&self, s: &[u8], at: usize, n: usize) -> usize;
-    /// `_ismbcspace`.
-    fn is_space(&self, c: c_uint) -> bool;
-    /// `_ismbblead`.
-    fn is_lead(&self, b: u8) -> bool;
-}
-
-/// A single-byte code page (Windows-1252, the game's): every byte a character, the C locale's spaces.
-pub struct SingleByte;
-
-impl Mbcs for SingleByte {
-    fn inc(&self, _s: &[u8], at: usize) -> usize {
-        at + 1
-    }
-    fn ninc(&self, s: &[u8], at: usize, n: usize) -> usize {
-        let mut at = at;
-        for _ in 0..n {
-            if s[at] == 0 {
-                break;
-            }
-            at += 1;
-        }
-        at
-    }
-    fn is_space(&self, c: c_uint) -> bool {
-        c == 0x20 || (0x09..=0x0d).contains(&c)
-    }
-    fn is_lead(&self, _b: u8) -> bool {
-        false
-    }
-}
-
-/// The running C runtime's code page, through the platform layer (`PlatMbsInc`, ...; `ee_plat_core`), as the C++
-/// stepped. A step past the terminator (a lead byte before the NUL, if the runtime steps over it) stops at the
-/// terminator, where the C++ would have read on.
-pub struct Platform;
-
-impl Mbcs for Platform {
-    fn inc(&self, s: &[u8], at: usize) -> usize {
-        // SAFETY: `s` is NUL-terminated and `at` inside it
-        let next = unsafe { ee_plat_core::string::PlatMbsInc(s.as_ptr().add(at)).offset_from(s.as_ptr()) };
-        (next as usize).min(s.len() - 1)
-    }
-    fn ninc(&self, s: &[u8], at: usize, n: usize) -> usize {
-        // SAFETY: as above; `_mbsninc` stops at the terminator
-        let next = unsafe { ee_plat_core::string::PlatMbsNInc(s.as_ptr().add(at), n).offset_from(s.as_ptr()) };
-        (next as usize).min(s.len() - 1)
-    }
-    fn is_space(&self, c: c_uint) -> bool {
-        // SAFETY: a plain value
-        unsafe { ee_plat_core::string::PlatIsMbcSpace(c) != 0 }
-    }
-    fn is_lead(&self, b: u8) -> bool {
-        // SAFETY: a plain value
-        unsafe { ee_plat_core::string::PlatIsMbbLead(b as c_uint) != 0 }
-    }
-}
-
-/// `GetMultiByteChar` (`lle/UIMultiByte.h`): the character at `s[0]` as `_ismbcspace` takes it, from *signed* chars
-/// (a byte above 0x7f is negative, as the C++'s `char` was).
-pub fn multi_byte_char(m: &impl Mbcs, s: &[u8]) -> i32 {
-    let mut c = 0i32;
-    let mut s = s;
-    if m.is_lead(s[0]) {
-        c = (s[0] as i8 as i32) << 8;
-        s = &s[1..];
-    }
-    (s[0] as i8 as i32).wrapping_add(c)
-}
+use crate::text::{at_end, ends_word, is_line_end};
+pub use crate::text::{Mbcs, Platform, SingleByte};
 
 /// `ReadWord`: the next word of `text` (NUL-terminated), up to and including a space, tab or newline, at most 256
 /// characters -> (the character count, the word's bytes). The count is 257 when the cap stops a word that goes on.
@@ -96,7 +23,7 @@ pub fn read_word(m: &impl Mbcs, text: &[u8]) -> (c_ulong, Vec<u8>) {
     let mut at = 0;
     let mut word = Vec::new();
     loop {
-        if text[at] == 0 {
+        if at_end(text, at) {
             break;
         }
         let under = count < 256;
@@ -107,7 +34,7 @@ pub fn read_word(m: &impl Mbcs, text: &[u8]) -> (c_ulong, Vec<u8>) {
         let next = m.inc(text, at);
         let ch = &text[at..next];
         word.extend_from_slice(ch);
-        if ch[0] == b'\n' || m.is_space(multi_byte_char(m, ch) as c_uint) || ch[0] == b'\t' {
+        if ends_word(m, ch) {
             break;
         }
         at = next;
@@ -129,7 +56,7 @@ pub fn read_line(m: &impl Mbcs, measure: &mut impl FnMut(&[u8]) -> f32, text: &[
     let mut total: c_ulong = 0;
     let mut length: c_ulong = 0;
     let mut at = 0;
-    while text[at] != 0 {
+    while !at_end(text, at) {
         let (count, word) = read_word(m, &text[at..]);
         let mut word_length = count as c_long;
         let mut word = terminated(&word);
@@ -152,7 +79,7 @@ pub fn read_line(m: &impl Mbcs, measure: &mut impl FnMut(&[u8]) -> f32, text: &[
         length = length.wrapping_add(word_length as c_ulong);
         at = m.ninc(text, at, word_length as usize);
         let last = m.ninc(&word, 0, (word_length - 1) as usize);
-        if word[last] == b'\n' {
+        if is_line_end(&word, last) {
             break;
         }
     }
@@ -169,7 +96,7 @@ pub fn split_lines(
     line: &mut impl FnMut(&[u8]),
 ) {
     let mut at = 0;
-    while text[at] != 0 {
+    while !at_end(text, at) {
         let length = read_line(m, measure, &text[at..], width);
         if length == 0 {
             break;
@@ -177,7 +104,7 @@ pub fn split_lines(
         let end = m.ninc(text, at, length as usize);
         let copy = terminated(&text[at..end]);
         let mut last = m.ninc(&copy, 0, (length - 1) as usize);
-        if copy[last] != b'\n' {
+        if !is_line_end(&copy, last) {
             last = m.inc(&copy, last);
         }
         line(&copy[..last]);
@@ -188,6 +115,8 @@ pub fn split_lines(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::text::multi_byte_char;
+    use core::ffi::c_uint;
 
     const GOLDEN: &str = include_str!("golden_label.txt");
 
