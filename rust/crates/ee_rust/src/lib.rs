@@ -5,6 +5,7 @@ use std::ffi::c_char;
 
 // wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
 use ee_codec as _;
+use ee_fs as _;
 #[cfg(not(test))] // its FFI imports the C++ shim
 use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
