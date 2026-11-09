@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
@@ -27,6 +27,9 @@ include = ["ModelInfo", "MaterialInfo", "LightData"]
 "ResourceKind" = "EeRmapResourceKind"
 "ResourceSlot" = "EeRmapResourceSlot"
 "SpacingRule" = "EeRmapSpacingRule"
+# ee_formations
+"Vec3" = "EeFormationVec3"
+"Rotation" = "EeFormationRotation"
 # ee_fs
 "Archive" = "EeFsArchive"
 # ee_dx7

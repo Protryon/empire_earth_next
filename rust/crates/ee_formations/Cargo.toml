@@ -1,0 +1,12 @@
+[package]
+name = "ee_formations"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+# the engine's float helpers (UMCos/UMSin/UMArcTan2 lookup tables, lrintf), bit for bit
+ee_rmap = { path = "../ee_rmap" }

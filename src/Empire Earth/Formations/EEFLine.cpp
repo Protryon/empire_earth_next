@@ -52,9 +52,11 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFLine.h"
+#include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
+#include "ee/EEFormationRust.h"
 
 
-// NEAR: register allocation only (inCount in ebx and the new array in edi in the original)
 // FUNCTION: EXE 0x4dd8b2
 // Creates a line formation of inCount columns, precomputing the column offsets alternating out from the
 // centre; inDepth shifts alternate rows and an empty row follows every inRows rows
@@ -63,33 +65,7 @@ EEFLine::EEFLine(long inType, float inSpacing, float inDepth, long inCount, long
 {
     this->mCount = inCount;
     this->mOffsets = new float[inCount];
-    float theOffset;
-    long theLeft;
-    long theRight;
-    long theIndex;
-    if (inCount % 2 == 0) {
-        theOffset = inSpacing * -0.5f;
-        theLeft = inCount / 2 - 1;
-        theRight = inCount / 2;
-        theIndex = 0;
-    } else {
-        theOffset = 0.0f;
-        this->mOffsets[0] = 0.0f;
-        theLeft = inCount / 2 - 1;
-        theRight = inCount / 2 + 1;
-        theIndex = 1;
-    }
-    while (theLeft >= 0 && theRight < inCount) {
-        theOffset += inSpacing;
-        if (theLeft >= 0) {
-            this->mOffsets[theIndex] = -theOffset;
-            theLeft--;
-            theIndex++;
-        }
-        this->mOffsets[theIndex] = theOffset;
-        theRight++;
-        theIndex++;
-    }
+    ee_formation_line_offsets(inSpacing, inCount, this->mOffsets);   // the geometry is Rust (ee_formations)
 }
 
 // SYNTHETIC: EXE 0x4dd966
@@ -107,40 +83,21 @@ EEFLine::~EEFLine()
 // all facing the formation heading
 void EEFLine::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
 {
-    GEVector theOffset;
-    GE3DPoint theCenter(this->mCenter);
-    GEVector theTransformedOffset;
-    EEFormationSlot theSlot;
-    long theRow = 1;
-    long theUnitCount = inUnits.size();
     outSlots.clear();
-    float theRadius = 0.0f;
-    for (long i = 0; i < theUnitCount; i++)
-        theRadius = max(inUnits[i]->mUnitClass->mOuterCollisionSphere, theRadius);
-    long theDepth = 0;
-    for (long j = 0; j < theUnitCount; j++) {
-        EEComplexUnit* theUnit = inUnits[j];
-        long theColumn = j % this->mCount;
-        theOffset.SetX(theRadius * this->mOffsets[theColumn]);
-        if (theRow % 2 != 1)
-            theOffset.SetX(theOffset.GetX() + this->mDepth);
-        theOffset.SetY(-((float)theDepth * this->mSpacing * theRadius));
-        theOffset.SetZ(0.0f);
-        this->mOrientation.Apply(theOffset, theTransformedOffset);
-        theSlot.mPosition = GE3DPoint(theCenter.GetX() + theTransformedOffset.GetX(),
-                                    theCenter.GetY() + theTransformedOffset.GetY(),
-                                    theCenter.GetZ() + theTransformedOffset.GetZ());
-        theSlot.mUnit = theUnit;
-        theSlot.mHeading = this->mHeading;
-        outSlots.push_back(theSlot);
-        if (theColumn != this->mCount - 1)
-            continue;
-        theRow++;
-        theDepth++;
-        if (this->mRows != 0 && theRow % this->mRows == 0) {
-            theRow++;
-            theDepth++;
-        }
+    EEFormationRadii theRadii(this, inUnits);
+    EeFormationLine theLine = {this->mCount, this->mRows, this->mSpacing, this->mDepth};
+    unsigned int theCount = ee_formation_line_place(&theRadii.mFrame, &theLine, this->mOffsets, theRadii.Radii(),
+                                                    theRadii.Count(), theRadii.Slots());
+    theRadii.Append(theCount, inUnits, outSlots);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(0x4e4c4d46);   // "FMLN"
+        EEFormationCaptureBegin(theRecord, this);
+        theRecord.I32(this->mCount);
+        theRecord.I32(this->mRows);
+        theRecord.F32(this->mSpacing);
+        theRecord.F32(this->mDepth);
+        theRecord.F32s(this->mOffsets, this->mCount);
+        EEFormationCaptureEnd(theRecord, inUnits, outSlots, 0);
     }
 }
 
