@@ -792,9 +792,7 @@ void EEROUnits::DrawUnitModel(EERenderUnit* inUnit)
     theModel->SetGraphicsPostModelTransform(theTransformation);
     theModel->SetGraphicsScale(inUnit->mScale);
     theModel->PrepareTransforms();
-    EEUnit* theUnit;
-    if (inUnit->mUnitClassIndex == kUnitTypeRoboticFarm &&
-        ((theUnit = static_cast<EEUnit*>(gWorld.GetUnit(inUnit->mUnitId))) == NULL || theUnit->mHitPoints == 1))
+    if (inUnit->mSecondFullOpacity)   // port: taken by FillRenderLists (R5a.3), not read from the live unit
         theModel->SetOpacity(1.0f);
     else
         theModel->SetOpacity(inUnit->mOpacity);

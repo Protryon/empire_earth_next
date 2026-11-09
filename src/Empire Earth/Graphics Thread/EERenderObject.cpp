@@ -1614,6 +1614,16 @@ void EERenderObject::FillRenderLists()
         }
         gUnitPicker.GetLock()->Leave();
         this->FillGhostRecords();
+        // port (R5a.3): what EEROUnits::DrawUnitModel read from the live unit after the lock was released, read here
+        // with the same lookup (a pure one: the player's id table); the doppelgangers' render units keep the id their
+        // pool slot had, as before
+        for (unsigned long i = 0; i < EERenderLists::sInstance.mRenderUnitCount; i++) {
+            EERenderUnit& theRenderUnit = EERenderLists::sInstance.mRenderUnits[i];
+            EEUnit* theLive;
+            theRenderUnit.mSecondFullOpacity = theRenderUnit.mUnitClassIndex == kUnitTypeRoboticFarm
+                && ((theLive = static_cast<EEUnit*>(gWorld.GetUnit(theRenderUnit.mUnitId))) == NULL
+                    || theLive->mHitPoints == 1);
+        }
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;

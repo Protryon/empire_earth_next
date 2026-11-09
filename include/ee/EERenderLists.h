@@ -68,6 +68,9 @@ struct EERenderUnit {
     bool mIsTinted;                         // +0x146
 
     bool mHasSubModelOffset;                // +0x147 (sub model 0 is offset against its internal transform)
+    // port (R5a.3; past the original record): a robotic farm's second model is drawn opaque (its unit gone or at
+    // 1 hp). FillRenderLists takes it under the world's lock; EEROUnits::DrawUnitModel read the live unit for it
+    bool mSecondFullOpacity;
 
 };
 
