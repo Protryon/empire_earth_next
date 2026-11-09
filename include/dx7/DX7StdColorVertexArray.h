@@ -23,6 +23,8 @@ struct GXVERTEX_STD_COLOR {
 };
 static_assert(sizeof(GXVERTEX_STD_COLOR) == 0x24, "GXVERTEX_STD_COLOR: the GX vertex layout");
 
+struct EeDx7StdColorVertexArray;   // rust/crates/ee_dx7/src/vertex.rs (Common/DX7Trampolines.cpp forwards to it)
+
 class DX7_API DX7StdColorVertexArray : public GEVertexArray {
 public:
     DX7StdColorVertexArray(unsigned long inSize);
@@ -46,6 +48,7 @@ public:
 
     GXVERTEX_STD_COLOR* mVertices;                   // +0x04
     unsigned long mSize;                    // +0x08
+    EeDx7StdColorVertexArray* mRust;        // the Rust array owning mVertices
 };
 
 #endif

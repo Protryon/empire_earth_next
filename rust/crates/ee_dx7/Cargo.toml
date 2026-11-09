@@ -1,0 +1,13 @@
+[package]
+name = "ee_dx7"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The DX7 display plug-in (docs/RUST_PLAN.md R4.2), behind the C++ GERasterizer/GEScreen/GESurface/GEVertexArray
+# trampolines. No dependency on ee_gx: its `extern "C"` functions (the GX contract) are declared in src/gx.rs and
+# resolved in the staticlib, so that `cargo test -p ee_dx7` needs no wgpu.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]

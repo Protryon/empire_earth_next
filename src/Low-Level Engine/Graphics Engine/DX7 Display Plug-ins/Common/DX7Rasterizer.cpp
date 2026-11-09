@@ -16,6 +16,7 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
+#include "rust/ee_rust.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
@@ -963,47 +964,15 @@ long DX7Rasterizer::Set3DMode(unsigned long inScreen)
 // Turns alpha testing on or off when it changes
 void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
 {
-    if (inState != this->mScreenStates[inScreen]->mAlphaTesting) {
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHATESTENABLE, inState) == GX_OK)
-            GERasterizer::SetAlphaTesting(inState, inScreen);
-    }
+    if (ee_dx7r_set_alpha_testing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAlphaTesting))
+        GERasterizer::SetAlphaTesting(inState, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000b26c
 // Sets the alpha test compare function (skipped when unchanged)
 void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
 {
-    unsigned long theFunction = 0;
-    // Compare with the current compare function (this tested the alpha-testing on/off state).
-    if (inState == this->mScreenStates[inScreen]->mAlphaTestingCompareState)
-        return;
-    switch (inState) {
-    case kCompareNever:
-        theFunction = GXCMP_NEVER;
-        break;
-    case kCompareLess:
-        theFunction = GXCMP_LESS;
-        break;
-    case kCompareLessEqual:
-        theFunction = GXCMP_LESSEQUAL;
-        break;
-    case kCompareEqual:
-        theFunction = GXCMP_EQUAL;
-        break;
-    case kCompareNotEqual:
-        theFunction = GXCMP_NOTEQUAL;
-        break;
-    case kCompareGreaterEqual:
-        theFunction = GXCMP_GREATEREQUAL;
-        break;
-    case kCompareGreater:
-        theFunction = GXCMP_GREATER;
-        break;
-    case kCompareAlways:
-        theFunction = GXCMP_ALWAYS;
-        break;
-    }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHAFUNC, theFunction) == GX_OK)
+    if (ee_dx7r_set_alpha_testing_compare_state(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAlphaTestingCompareState))
         GERasterizer::SetAlphaTestingCompareState(inState, inScreen);
 }
 
@@ -1011,10 +980,7 @@ void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned 
 // Sets the alpha test reference value (0..1 scaled to 0..255) when it changes
 void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen)
 {
-    if (inValue == this->mScreenStates[inScreen]->mAlphaTestingRefValue)
-        return;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHAREF, (long)(inValue * 255.0f)) ==
-        GX_OK)
+    if (ee_dx7r_set_alpha_testing_ref_value(this->mDX7ScreenStates[inScreen]->mDevice, inValue, this->mScreenStates[inScreen]->mAlphaTestingRefValue))
         GERasterizer::SetAlphaTestingRefValue(inValue, inScreen);
 }
 
@@ -1026,10 +992,9 @@ void DX7Rasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScre
     this->mComputedAmbientColor.SetRed(inColor.GetRed() * this->mAmbientIntensity);
     this->mComputedAmbientColor.SetGreen(inColor.GetGreen() * this->mAmbientIntensity);
     this->mComputedAmbientColor.SetBlue(inColor.GetBlue() * this->mAmbientIntensity);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENT,
-        GXRGBA(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
-                  UMFloatToLong(this->mComputedAmbientColor.GetGreen() * 255.0f),
-                  UMFloatToLong(this->mComputedAmbientColor.GetBlue() * 255.0f), UMFloatToLong(255.0f)));
+    const float theRGB[3] = { this->mComputedAmbientColor.GetRed(), this->mComputedAmbientColor.GetGreen(),
+                              this->mComputedAmbientColor.GetBlue() };
+    ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
 }
 
 // FUNCTION: DX7HR 0x1000b403
@@ -1040,24 +1005,16 @@ void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScree
     this->mComputedAmbientColor.SetRed(this->mAmbientColor.GetRed() * inIntensity);
     this->mComputedAmbientColor.SetGreen(this->mAmbientColor.GetGreen() * inIntensity);
     this->mComputedAmbientColor.SetBlue(this->mAmbientColor.GetBlue() * inIntensity);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENT,
-        GXRGBA(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
-                  UMFloatToLong(this->mComputedAmbientColor.GetGreen() * 255.0f),
-                  UMFloatToLong(this->mComputedAmbientColor.GetBlue() * 255.0f), UMFloatToLong(255.0f)));
+    const float theRGB[3] = { this->mComputedAmbientColor.GetRed(), this->mComputedAmbientColor.GetGreen(),
+                              this->mComputedAmbientColor.GetBlue() };
+    ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
 }
 
 // FUNCTION: DX7HR 0x1000b49d
 // Turns sort-independent antialiasing on or off when it changes
 void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mAntiAliasing)
-        return;
-    unsigned long theMode;
-    if (inState == 1)
-        theMode = GXANTIALIAS_SORTINDEPENDENT;
-    else
-        theMode = GXANTIALIAS_NONE;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ANTIALIAS, theMode) == GX_OK)
+    if (ee_dx7r_set_anti_aliasing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAntiAliasing))
         GERasterizer::SetAntiAliasing(inState, inScreen);
 }
 
@@ -1065,71 +1022,16 @@ void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScree
 // Sets the source and destination blend factors, turning alpha blending off for one/zero and sending only what changed
 void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen)
 {
-    unsigned long theBlend = 0;
-    if (inSource == this->mScreenStates[inScreen]->mBlendSource && inDestination == this->mScreenStates[inScreen]->mBlendDestination)
-        return;
-    bool theEnable;
-    if (inSource == kBlendOne && inDestination == kBlendZero)
-        theEnable = false;
-    else
-        theEnable = true;
-    if (this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable != theEnable) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHABLENDENABLE, theEnable);
-        this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable = theEnable;
-    }
-    if (this->mDX7ScreenStates[inScreen]->mBlendSource != inSource) {
-        switch (inSource) {
-        case kBlendZero: theBlend = GXBLEND_ZERO; break;
-        case kBlendOne: theBlend = GXBLEND_ONE; break;
-        case kBlendSrcColor: theBlend = GXBLEND_SRCCOLOR; break;
-        case kBlendInvSrcColor: theBlend = GXBLEND_INVSRCCOLOR; break;
-        case kBlendSrcAlpha: theBlend = GXBLEND_SRCALPHA; break;
-        case kBlendInvSrcAlpha: theBlend = GXBLEND_INVSRCALPHA; break;
-        case kBlendDestAlpha: theBlend = GXBLEND_DESTALPHA; break;
-        case kBlendInvDestAlpha: theBlend = GXBLEND_INVDESTALPHA; break;
-        case kBlendDestColor: theBlend = GXBLEND_DESTCOLOR; break;
-        case kBlendInvDestColor: theBlend = GXBLEND_INVDESTCOLOR; break;
-        case kBlendSrcAlphaSat: theBlend = GXBLEND_SRCALPHASAT; break;
-        case kBlendBothSrcAlpha: theBlend = GXBLEND_BOTHSRCALPHA; break;
-        case kBlendBothInvSrcAlpha: theBlend = GXBLEND_BOTHINVSRCALPHA; break;
-        }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SRCBLEND, theBlend);
-        this->mDX7ScreenStates[inScreen]->mBlendSource = inSource;
-    }
-    if (this->mDX7ScreenStates[inScreen]->mBlendDestination != inDestination) {
-        switch (inDestination) {
-        case kBlendZero: theBlend = GXBLEND_ZERO; break;
-        case kBlendOne: theBlend = GXBLEND_ONE; break;
-        case kBlendSrcColor: theBlend = GXBLEND_SRCCOLOR; break;
-        case kBlendInvSrcColor: theBlend = GXBLEND_INVSRCCOLOR; break;
-        case kBlendSrcAlpha: theBlend = GXBLEND_SRCALPHA; break;
-        case kBlendInvSrcAlpha: theBlend = GXBLEND_INVSRCALPHA; break;
-        case kBlendDestAlpha: theBlend = GXBLEND_DESTALPHA; break;
-        case kBlendInvDestAlpha: theBlend = GXBLEND_INVDESTALPHA; break;
-        case kBlendDestColor: theBlend = GXBLEND_DESTCOLOR; break;
-        case kBlendInvDestColor: theBlend = GXBLEND_INVDESTCOLOR; break;
-        case kBlendSrcAlphaSat: theBlend = GXBLEND_SRCALPHASAT; break;
-        case kBlendBothSrcAlpha: theBlend = GXBLEND_BOTHSRCALPHA; break;
-        case kBlendBothInvSrcAlpha: theBlend = GXBLEND_BOTHINVSRCALPHA; break;
-        }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DESTBLEND, theBlend);
-        this->mDX7ScreenStates[inScreen]->mBlendDestination = inDestination;
-    }
-    GERasterizer::SetBlending(inSource, inDestination, inScreen);
+    if (ee_dx7r_set_blending(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inSource, inDestination, this->mScreenStates[inScreen]->mBlendSource,
+                             this->mScreenStates[inScreen]->mBlendDestination))
+        GERasterizer::SetBlending(inSource, inDestination, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000b79d
 // Turns colour keying on or off when it changes
 void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mColorKeying)
-        return;
-    bool theEnable;
-    if (inState == 1)
-        theEnable = true;
-    else
-        theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORKEYENABLE, theEnable) == GX_OK)
+    if (ee_dx7r_set_color_keying(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mColorKeying))
         GERasterizer::SetColorKeying(inState, inScreen);
 }
 
@@ -1139,22 +1041,10 @@ void DX7Rasterizer::SetCulling(unsigned long inState)
 {
     if (inState == this->GetCulling())
         return;
-    unsigned long theCullMode;
-    switch (inState) {
-    case kCullCW:
-        theCullMode = GXCULL_CW;
-        break;
-    case kCullCCW:
-        theCullMode = GXCULL_CCW;
-        break;
-    default:
-        theCullMode = GXCULL_NONE;
-        break;
-    }
     for (unsigned long i = 0; i < this->mDX7ScreenStates.size(); i++) {
         GXDevice* theDevice = this->mDX7ScreenStates[i]->mDevice;
         if (theDevice != NULL)
-            theDevice->SetRenderState(GXRS_CULLMODE, theCullMode);
+            ee_dx7r_set_cull_mode(theDevice, inState);
     }
     GERasterizer::SetCulling(inState);
 }
@@ -1163,8 +1053,8 @@ void DX7Rasterizer::SetCulling(unsigned long inState)
 // Sets the debug colour (opaque)
 void DX7Rasterizer::SetDebugColor(const GEColor& inColor)
 {
-    this->mDebugColor = GXRGBA(UMFloatToLong(inColor.GetRed() * 255.0f), UMFloatToLong(inColor.GetGreen() * 255.0f),
-                            UMFloatToLong(inColor.GetBlue() * 255.0f), UMFloatToLong(255.0f));
+    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
+    this->mDebugColor = ee_dx7r_debug_color(theRGB);
 }
 
 // FUNCTION: DX7HR 0x1000b8aa
@@ -1185,14 +1075,7 @@ void DX7Rasterizer::SetDisplayOverdrawMode(bool inState, unsigned long inScreen)
 // Turns dithering on or off when it changes
 void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mDithering)
-        return;
-    bool theEnable;
-    if (inState == 1)
-        theEnable = true;
-    else
-        theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DITHERENABLE, theEnable) == GX_OK)
+    if (ee_dx7r_set_dithering(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mDithering))
         GERasterizer::SetDithering(inState, inScreen);
 }
 
@@ -1200,21 +1083,7 @@ void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
 // Sets solid, wireframe or point drawing when it changes
 void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
 {
-    unsigned long theFillMode = 0;
-    if (inStyle == this->mScreenStates[inScreen]->mDrawStyle)
-        return;
-    switch (inStyle) {
-    case kDrawStyleSolid:
-        theFillMode = GXFILL_SOLID;
-        break;
-    case kDrawStyleWireframe:
-        theFillMode = GXFILL_WIREFRAME;
-        break;
-    case kDrawStylePoint:
-        theFillMode = GXFILL_POINT;
-        break;
-    }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FILLMODE, theFillMode) == GX_OK)
+    if (ee_dx7r_set_draw_style(this->mDX7ScreenStates[inScreen]->mDevice, inStyle, this->mScreenStates[inScreen]->mDrawStyle))
         GERasterizer::SetDrawStyle(inStyle, inScreen);
 }
 
@@ -1222,14 +1091,7 @@ void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
 // Turns fog on or off when it changes
 void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mFogState)
-        return;
-    bool theEnable;
-    if (inState == 1)
-        theEnable = true;
-    else
-        theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGENABLE, theEnable) == GX_OK)
+    if (ee_dx7r_set_fog(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mFogState))
         GERasterizer::SetFog(inState, inScreen);
 }
 
@@ -1237,10 +1099,8 @@ void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 // Sets the fog colour when it changes
 void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
-    if (this->mScreenStates[inScreen]->mFog.mColor == inColor)
-        return;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGCOLOR,
-            GXRGB(inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue())) == GX_OK)
+    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
+    if (ee_dx7r_set_fog_color(this->mDX7ScreenStates[inScreen]->mDevice, theRGB, this->mScreenStates[inScreen]->mFog.mColor == inColor))
         GERasterizer::SetFogColor(inColor, inScreen);
 }
 
@@ -1248,10 +1108,7 @@ void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 // Sets the fog start and end distances, sending only the ones that changed
 void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
 {
-    if (this->mScreenStates[inScreen]->mFog.mStart != inStart)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGSTART, *reinterpret_cast<uint32_t*>(&inStart));
-    if (this->mScreenStates[inScreen]->mFog.mEnd != inEnd)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGEND, *reinterpret_cast<uint32_t*>(&inEnd));
+    ee_dx7r_set_fog_range(this->mDX7ScreenStates[inScreen]->mDevice, inStart, inEnd, this->mScreenStates[inScreen]->mFog.mStart, this->mScreenStates[inScreen]->mFog.mEnd);
     GERasterizer::SetFogRange(inStart, inEnd, inScreen);
 }
 
@@ -1273,13 +1130,8 @@ void DX7Rasterizer::SetFogValue(float inValue, unsigned long inScreen)
 // Turns lighting on or off when it changes
 void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mLighting)
-        return;
-    if (inState == 1)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_LIGHTING, TRUE);
-    else
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_LIGHTING, FALSE);
-    GERasterizer::SetLighting(inState, inScreen);
+    if (ee_dx7r_set_lighting(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mLighting))
+        GERasterizer::SetLighting(inState, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000bb66
@@ -1302,14 +1154,7 @@ void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen)
 // Sets Gouraud or flat shading when it changes
 void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mShading)
-        return;
-    unsigned long theMode;
-    if (inState == 1)
-        theMode = GXSHADE_GOURAUD;
-    else
-        theMode = GXSHADE_FLAT;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SHADEMODE, theMode) == GX_OK)
+    if (ee_dx7r_set_shading(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mShading))
         GERasterizer::SetShading(inState, inScreen);
 }
 
@@ -1317,38 +1162,7 @@ void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 // Takes lighting colours from the material (source 0) or from the vertex colours (white material) when it changes
 void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
 {
-    if (inSource == this->mScreenStates[inScreen]->mShadingColorSource)
-        return;
-    HRESULT theError;
-    if (inSource == 0) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORVERTEX, FALSE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENTMATERIALSOURCE, GXMCS_MATERIAL);
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DIFFUSEMATERIALSOURCE, GXMCS_MATERIAL);
-    } else {
-        GXMATERIAL theMaterial;
-        theMaterial.dcvAmbient.r = 1.0f;
-        theMaterial.dcvAmbient.g = 1.0f;
-        theMaterial.dcvAmbient.b = 1.0f;
-        theMaterial.dcvAmbient.a = 1.0f;
-        theMaterial.dcvDiffuse.r = 1.0f;
-        theMaterial.dcvDiffuse.g = 1.0f;
-        theMaterial.dcvDiffuse.b = 1.0f;
-        theMaterial.dcvDiffuse.a = 1.0f;
-        theMaterial.dcvEmissive.r = 0.0f;
-        theMaterial.dcvEmissive.g = 0.0f;
-        theMaterial.dcvEmissive.b = 0.0f;
-        theMaterial.dcvEmissive.a = 0.0f;
-        theMaterial.dcvSpecular.r = 0.0f;
-        theMaterial.dcvSpecular.g = 0.0f;
-        theMaterial.dcvSpecular.b = 0.0f;
-        theMaterial.dcvSpecular.a = 0.0f;
-        theMaterial.dvPower = 0.0f;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetMaterial(&theMaterial);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORVERTEX, TRUE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENTMATERIALSOURCE, GXMCS_COLOR1);
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DIFFUSEMATERIALSOURCE, GXMCS_COLOR1);
-    }
-    if (theError == GX_OK)
+    if (ee_dx7r_set_shading_color_source(this->mDX7ScreenStates[inScreen]->mDevice, inSource, this->mScreenStates[inScreen]->mShadingColorSource))
         GERasterizer::SetShadingColorSource(inSource, inScreen);
 }
 
@@ -1356,14 +1170,7 @@ void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long 
 // Turns specular highlights on or off when it changes
 void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
 {
-    if (inState == this->mScreenStates[inScreen]->mSpecular)
-        return;
-    bool theEnable;
-    if (inState == 1)
-        theEnable = true;
-    else
-        theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SPECULARENABLE, theEnable) == GX_OK)
+    if (ee_dx7r_set_specular(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mSpecular))
         GERasterizer::SetSpecular(inState, inScreen);
 }
 
@@ -1372,16 +1179,6 @@ void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
 // only what changed; null disables texturing; stage 1 is always disabled
 void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
-    unsigned long theColorArgument1 = 0;
-    unsigned long theColorArgument2 = 0;
-    unsigned long theColorOperation = 0;
-    unsigned long theAlphaArgument1 = 0;
-    unsigned long theAlphaArgument2 = 0;
-    unsigned long theAlphaOperation = 0;
-    unsigned long theAddressing = 0;
-    unsigned long theMinFilter = 0;
-    unsigned long theMagFilter = 0;
-    unsigned long theMipFilter = 0;
     GERScreenState* theState = this->mScreenStates[inScreen];
     if (inTexture == theState->mTexture && (inTexture == NULL || !inTexture->HasChanged()))
         return;
@@ -1395,140 +1192,22 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
         inTexture->Promote();
     }
     this->mScreenStates[inScreen]->m32C[3]++;
+    EeDx7ScreenState* theDX7State = reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]);
     if (inTexture == NULL) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(0, NULL);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLOROP, GXTOP_DISABLE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAOP, GXTOP_DISABLE);
-        this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
-        this->mDX7ScreenStates[inScreen]->mStage.mTexture = NULL;
-        this->mDX7ScreenStates[inScreen]->mStage.mColorMode = 4;
-        this->mDX7ScreenStates[inScreen]->mStage.mAlphaMode = 4;
+        ee_dx7r_clear_texture(theDX7State);
         return;
     }
-    DX7RTextureStage theCurrent = this->mDX7ScreenStates[inScreen]->mStage;
-    GXSurface* theSurface = *static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
-    if (theSurface != theCurrent.mTexture) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(0, theSurface);
-        this->mDX7ScreenStates[inScreen]->mStage.mTexture =
-            *static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
-    }
-    if (inTexture->GetStage()->mColorMode != theCurrent.mColorMode) {
-        switch (inTexture->GetStage()->mColorMode) {
-        case kStageOpDiffuse:
-            theColorArgument1 = GXTA_TEXTURE;
-            theColorArgument2 = GXTA_DIFFUSE;
-            theColorOperation = GXTOP_SELECTARG2;
-            break;
-        case kStageOpTexture:
-            theColorArgument1 = GXTA_TEXTURE;
-            theColorArgument2 = GXTA_DIFFUSE;
-            theColorOperation = GXTOP_SELECTARG1;
-            break;
-        case kStageOpModulate:
-            theColorArgument2 = GXTA_DIFFUSE;
-            theColorArgument1 = GXTA_TEXTURE;
-            theColorOperation = GXTOP_MODULATE;
-            break;
-        case kStageOpModulateCurrent:
-            theColorArgument2 = GXTA_CURRENT;
-            theColorArgument1 = GXTA_TEXTURE;
-            theColorOperation = GXTOP_MODULATE;
-            break;
-        }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLOROP, theColorOperation);
-        this->mDX7ScreenStates[inScreen]->mStage.mColorMode = inTexture->GetStage()->mColorMode;
-        if (theColorArgument1 != theCurrent.mColorArgument1) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLORARG1, theColorArgument1);
-            this->mDX7ScreenStates[inScreen]->mStage.mColorArgument1 = theColorArgument1;
-        }
-        if (theColorArgument2 != theCurrent.mColorArgument2) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLORARG2, theColorArgument2);
-            this->mDX7ScreenStates[inScreen]->mStage.mColorArgument2 = theColorArgument2;
-        }
-    }
-    if (inTexture->GetStage()->mAlphaMode != theCurrent.mAlphaMode) {
-        switch (inTexture->GetStage()->mAlphaMode) {
-        case kStageOpDiffuse:
-            theAlphaArgument1 = GXTA_TEXTURE;
-            theAlphaArgument2 = GXTA_DIFFUSE;
-            theAlphaOperation = GXTOP_SELECTARG2;
-            break;
-        case kStageOpTexture:
-            theAlphaArgument1 = GXTA_TEXTURE;
-            theAlphaArgument2 = GXTA_DIFFUSE;
-            theAlphaOperation = GXTOP_SELECTARG1;
-            break;
-        case kStageOpModulate:
-            theAlphaArgument2 = GXTA_DIFFUSE;
-            theAlphaArgument1 = GXTA_TEXTURE;
-            theAlphaOperation = GXTOP_MODULATE;
-            break;
-        case kStageOpModulateCurrent:
-            theAlphaArgument2 = GXTA_CURRENT;
-            theAlphaArgument1 = GXTA_TEXTURE;
-            theAlphaOperation = GXTOP_MODULATE;
-            break;
-        }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAOP, theAlphaOperation);
-        this->mDX7ScreenStates[inScreen]->mStage.mAlphaMode = inTexture->GetStage()->mAlphaMode;
-        if (theAlphaArgument1 != theCurrent.mAlphaArgument1) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAARG1, theAlphaArgument1);
-            this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument1 = theAlphaArgument1;
-        }
-        if (theAlphaArgument2 != theCurrent.mAlphaArgument2) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAARG2, theAlphaArgument2);
-            this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument2 = theAlphaArgument2;
-        }
-    }
-    if (inTexture->GetStage()->mTextureAddressingMode != theCurrent.mTextureAddressingMode) {
-        if (inTexture->GetStage()->mTextureAddressingMode == kAddressingClamp)
-            theAddressing = GXTADDRESS_CLAMP;
-        else if (inTexture->GetStage()->mTextureAddressingMode == kAddressingMirror)
-            theAddressing = GXTADDRESS_MIRROR;
-        else if (inTexture->GetStage()->mTextureAddressingMode == kAddressingWrap)
-            theAddressing = GXTADDRESS_WRAP;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ADDRESS, theAddressing);
-        this->mDX7ScreenStates[inScreen]->mStage.mTextureAddressingMode = inTexture->GetStage()->mTextureAddressingMode;
-    }
-    if (inTexture->GetStage()->mMinFilterMode != theCurrent.mMinFilterMode) {
-        if (inTexture->GetStage()->mMinFilterMode == kMinFilterPoint)
-            theMinFilter = GXTFN_POINT;
-        else if (inTexture->GetStage()->mMinFilterMode == kMinFilterLinear)
-            theMinFilter = GXTFN_LINEAR;
-        else if (inTexture->GetStage()->mMinFilterMode == kMinFilterAnisotropic)
-            theMinFilter = GXTFN_ANISOTROPIC;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MINFILTER, theMinFilter);
-        this->mDX7ScreenStates[inScreen]->mStage.mMinFilterMode = inTexture->GetStage()->mMinFilterMode;
-    }
-    if (inTexture->GetStage()->mMagFilterMode != theCurrent.mMagFilterMode) {
-        if (inTexture->GetStage()->mMagFilterMode == kMagFilterPoint)
-            theMagFilter = GXTFG_POINT;
-        else if (inTexture->GetStage()->mMagFilterMode == kMagFilterLinear)
-            theMagFilter = GXTFG_LINEAR;
-        else if (inTexture->GetStage()->mMagFilterMode == kMagFilterFlatCubic)
-            theMagFilter = GXTFG_FLATCUBIC;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MAGFILTER, theMagFilter);
-        this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = inTexture->GetStage()->mMagFilterMode;
-    }
-    if (inTexture->GetStage()->mMipFilterMode != theCurrent.mMipFilterMode) {
-        if (inTexture->GetStage()->mMipFilterMode == kMipFilterNone)
-            theMipFilter = GXTFP_NONE;
-        else if (inTexture->GetStage()->mMipFilterMode == kMipFilterPoint)
-            theMipFilter = GXTFP_POINT;
-        else if (inTexture->GetStage()->mMipFilterMode == kMipFilterLinear)
-            theMipFilter = GXTFP_LINEAR;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MIPFILTER, theMipFilter);
-        this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = inTexture->GetStage()->mMipFilterMode;
-    }
-    if (inTexture->GetStage()->mMipMapBias != theCurrent.mMipMapBias) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MIPMAPLODBIAS,
-                                                                  *(uint32_t*)&inTexture->GetStage()->mMipMapBias);
-        this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = inTexture->GetStage()->mMipMapBias;
-    }
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(1, NULL);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, GXTSS_COLOROP, GXTOP_DISABLE);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, GXTSS_ALPHAOP, GXTOP_DISABLE);
-    this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
+    const GETStage* theStage = inTexture->GetStage();
+    EeDx7StageView theView;
+    theView.surface = (GXSurface*)*static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
+    theView.mColorMode = theStage->mColorMode;
+    theView.mAlphaMode = theStage->mAlphaMode;
+    theView.mTextureAddressingMode = theStage->mTextureAddressingMode;
+    theView.mMinFilterMode = theStage->mMinFilterMode;
+    theView.mMagFilterMode = theStage->mMagFilterMode;
+    theView.mMipFilterMode = theStage->mMipFilterMode;
+    theView.mMipMapBias = theStage->mMipMapBias;
+    ee_dx7r_apply_texture_stage(theDX7State, &theView);
     inTexture->ValidateChanges();
 }
 
@@ -1560,57 +1239,15 @@ void DX7Rasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
 // Sets Z testing and Z writing from the Z-buffer state when it changes, sending only what changed
 void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
 {
-    unsigned long theEnable = 1;
-    bool theWrite = (inState & kZBufferWriteOnly) > 0;
-    if (inState == this->mScreenStates[inScreen]->mZBuffer)
-        return;
-    if ((inState & kZBufferTestOnly) <= 0 && !theWrite)
-        theEnable = 0;
-    if (this->mDX7ScreenStates[inScreen]->mZEnable != theEnable) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZENABLE, theEnable);
-        this->mDX7ScreenStates[inScreen]->mZEnable = theEnable;
-    }
-    if (this->mDX7ScreenStates[inScreen]->mZWriteEnable != theWrite) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZWRITEENABLE, theWrite);
-        this->mDX7ScreenStates[inScreen]->mZWriteEnable = theWrite;
-    }
-    GERasterizer::SetZBuffer(inState, inScreen);
+    if (ee_dx7r_set_z_buffer(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inState, this->mScreenStates[inScreen]->mZBuffer))
+        GERasterizer::SetZBuffer(inState, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000c910
 // Sets the Z compare function when it changes
 void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
 {
-    unsigned long theFunction = 0;
-    if (inState == this->mScreenStates[inScreen]->mZCompare)
-        return;
-    switch (inState) {
-    case kCompareNever:
-        theFunction = GXCMP_NEVER;
-        break;
-    case kCompareLess:
-        theFunction = GXCMP_LESS;
-        break;
-    case kCompareLessEqual:
-        theFunction = GXCMP_LESSEQUAL;
-        break;
-    case kCompareEqual:
-        theFunction = GXCMP_EQUAL;
-        break;
-    case kCompareNotEqual:
-        theFunction = GXCMP_NOTEQUAL;
-        break;
-    case kCompareGreaterEqual:
-        theFunction = GXCMP_GREATEREQUAL;
-        break;
-    case kCompareGreater:
-        theFunction = GXCMP_GREATER;
-        break;
-    case kCompareAlways:
-        theFunction = GXCMP_ALWAYS;
-        break;
-    }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZFUNC, theFunction) == GX_OK)
+    if (ee_dx7r_set_z_compare(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mZCompare))
         GERasterizer::SetZCompare(inState, inScreen);
 }
 

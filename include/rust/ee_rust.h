@@ -84,6 +84,16 @@ struct EeFsMemFile;
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
 
+/// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
+struct EeDx7PolygonArray;
+
+/// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
+/// ignored).
+struct EeDx7StandardVertexArray;
+
+/// A `GEVertexArray` of [`Dx7StdColorVertex`].
+struct EeDx7StdColorVertexArray;
+
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
   uint8_t *ptr;
@@ -101,6 +111,91 @@ using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, in
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// `GXVERTEX`: position, normal, one texture coordinate.
+struct Dx7Vertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  float tu;
+  float tv;
+};
+
+/// `GXVERTEX_STD_COLOR`: position, normal, a packed ARGB colour, one texture coordinate.
+struct Dx7StdColorVertex {
+  float x;
+  float y;
+  float z;
+  float nx;
+  float ny;
+  float nz;
+  uint32_t color;
+  float tu;
+  float tv;
+};
+
+/// `GXVIEWPORT`.
+struct EeDx7Viewport {
+  unsigned long dwX;
+  unsigned long dwY;
+  unsigned long dwWidth;
+  unsigned long dwHeight;
+  float dvMinZ;
+  float dvMaxZ;
+};
+
+/// `DX7RTextureStage`. `#[repr(C)]`, pinned by the C++ (`unsigned long` is `c_ulong`, as the C++ fields were).
+struct EeDx7TextureStageCache {
+  void *mTexture;
+  unsigned long mColorMode;
+  unsigned long mAlphaMode;
+  unsigned long mColorArgument1;
+  unsigned long mColorArgument2;
+  unsigned long mAlphaArgument1;
+  unsigned long mAlphaArgument2;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
+};
+
+/// `DX7RScreenState`. A pinned record shared with the C++ draw code (`DX7Trampolines.cpp` asserts the size and each
+/// offset).
+struct EeDx7ScreenState {
+  EeDx7Viewport mViewport;
+  void *mDirect3D;
+  void *mDevice;
+  void *mScreen;
+  void *mVertexBuffer;
+  unsigned long mVertexBufferPosition;
+  unsigned long mStage1ColorOperation;
+  EeDx7TextureStageCache mStage;
+  unsigned long mBlendSource;
+  unsigned long mBlendDestination;
+  unsigned long mZEnable;
+  bool mIs3DMode;
+  bool mViewportChanged;
+  bool mZWriteEnable;
+  bool mAlphaBlendEnable;
+  bool mCanModulateTextureAlpha;
+  bool mDirtyRectangleSupport;
+};
+
+/// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
+struct EeDx7StageView {
+  void *surface;
+  unsigned long mColorMode;
+  unsigned long mAlphaMode;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
+};
 
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
 /// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
@@ -628,6 +723,189 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         size_t capacity,
                         EeCodecSink sink,
                         void *context);
+
+EeDx7StandardVertexArray *ee_dx7_std_va_new(uint32_t size);
+
+void ee_dx7_std_va_destroy(EeDx7StandardVertexArray *a);
+
+/// The vertex memory (GX reads it directly).
+Dx7Vertex *ee_dx7_std_va_vertices(EeDx7StandardVertexArray *a);
+
+void ee_dx7_std_va_copy_from(EeDx7StandardVertexArray *a, const EeDx7StandardVertexArray *b);
+
+void ee_dx7_std_va_color(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+void ee_dx7_std_va_normal(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+float ee_dx7_std_va_opacity(const EeDx7StandardVertexArray *a, uint32_t index);
+
+void ee_dx7_std_va_point(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
+
+uint32_t ee_dx7_std_va_size(const EeDx7StandardVertexArray *a);
+
+void ee_dx7_std_va_texture_coordinate(const EeDx7StandardVertexArray *a,
+                                      uint32_t index,
+                                      float *out);
+
+void ee_dx7_std_va_set_normal(EeDx7StandardVertexArray *a, const float *n, uint32_t index);
+
+void ee_dx7_std_va_set_point(EeDx7StandardVertexArray *a, const float *p, uint32_t index);
+
+void ee_dx7_std_va_set_texture_coordinate(EeDx7StandardVertexArray *a,
+                                          const float *uv,
+                                          uint32_t index);
+
+void ee_dx7_std_va_set_vertex(EeDx7StandardVertexArray *a,
+                              const float *p,
+                              const float *n,
+                              const float *uv,
+                              uint32_t index);
+
+uint32_t ee_dx7_std_va_size_of(const EeDx7StandardVertexArray *a);
+
+EeDx7StdColorVertexArray *ee_dx7_color_va_new(uint32_t size);
+
+void ee_dx7_color_va_destroy(EeDx7StdColorVertexArray *a);
+
+Dx7StdColorVertex *ee_dx7_color_va_vertices(EeDx7StdColorVertexArray *a);
+
+void ee_dx7_color_va_copy_from(EeDx7StdColorVertexArray *a, const EeDx7StdColorVertexArray *b);
+
+void ee_dx7_color_va_color(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+void ee_dx7_color_va_normal(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+float ee_dx7_color_va_opacity(const EeDx7StdColorVertexArray *a, uint32_t index);
+
+void ee_dx7_color_va_point(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
+
+uint32_t ee_dx7_color_va_size(const EeDx7StdColorVertexArray *a);
+
+void ee_dx7_color_va_texture_coordinate(const EeDx7StdColorVertexArray *a,
+                                        uint32_t index,
+                                        float *out);
+
+void ee_dx7_color_va_set_color(EeDx7StdColorVertexArray *a, const float *c, uint32_t index);
+
+void ee_dx7_color_va_set_normal(EeDx7StdColorVertexArray *a, const float *n, uint32_t index);
+
+void ee_dx7_color_va_set_opacity(EeDx7StdColorVertexArray *a, float opacity, uint32_t index);
+
+void ee_dx7_color_va_set_point(EeDx7StdColorVertexArray *a, const float *p, uint32_t index);
+
+void ee_dx7_color_va_set_texture_coordinate(EeDx7StdColorVertexArray *a,
+                                            const float *uv,
+                                            uint32_t index);
+
+void ee_dx7_color_va_set_vertex(EeDx7StdColorVertexArray *a,
+                                const float *c,
+                                const float *p,
+                                const float *n,
+                                const float *uv,
+                                float opacity,
+                                uint32_t index);
+
+uint32_t ee_dx7_color_va_size_of(const EeDx7StdColorVertexArray *a);
+
+EeDx7PolygonArray *ee_dx7_poly_new(uint32_t size);
+
+void ee_dx7_poly_destroy(EeDx7PolygonArray *p);
+
+/// The 16-bit index memory (GX reads it directly).
+uint16_t *ee_dx7_poly_indices(EeDx7PolygonArray *p);
+
+uint32_t ee_dx7_poly_size(const EeDx7PolygonArray *p);
+
+uint32_t ee_dx7_poly_vertex_index(const EeDx7PolygonArray *p, uint32_t polygon, uint32_t corner);
+
+void ee_dx7_poly_set_vertex_index(EeDx7PolygonArray *p,
+                                  uint32_t polygon,
+                                  uint32_t corner,
+                                  uint32_t index);
+
+void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
+                                    uint32_t polygon,
+                                    uint32_t i1,
+                                    uint32_t i2,
+                                    uint32_t i3);
+
+uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
+
+/// The 32-bit path; pitches in pixels. `source_rect`/`destination_rect`: float pixels (see `Rect`).
+void ee_dx7_copy_with_filter_32(unsigned long format,
+                                const uint32_t *source,
+                                uint32_t source_pitch,
+                                uint32_t *destination,
+                                uint32_t destination_pitch,
+                                const float *source_rect,
+                                const float *destination_rect);
+
+/// The 16-bit path: as the 32-bit one (the original copy-pasted loop, words differ).
+void ee_dx7_copy_with_filter_16(unsigned long format,
+                                const uint16_t *source,
+                                uint32_t source_pitch,
+                                uint16_t *destination,
+                                uint32_t destination_pitch,
+                                const float *source_rect,
+                                const float *destination_rect);
+
+bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_alpha_testing_compare_state(void *device,
+                                             unsigned long in_state,
+                                             unsigned long current);
+
+bool ee_dx7r_set_alpha_testing_ref_value(void *device, float value, float current);
+
+bool ee_dx7r_set_anti_aliasing(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_color_keying(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_dithering(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_draw_style(void *device, unsigned long in_style, unsigned long current);
+
+bool ee_dx7r_set_fog(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_lighting(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_shading(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_shading_color_source(void *device, unsigned long in_source, unsigned long current);
+
+bool ee_dx7r_set_specular(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_z_compare(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_blending(EeDx7ScreenState *state,
+                          unsigned long in_source,
+                          unsigned long in_destination,
+                          unsigned long current_source,
+                          unsigned long current_destination);
+
+bool ee_dx7r_set_z_buffer(EeDx7ScreenState *state, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_fog_color(void *device, const float *rgb, bool current_equal);
+
+void ee_dx7r_set_fog_range(void *device,
+                           float start,
+                           float end,
+                           float current_start,
+                           float current_end);
+
+int32_t ee_dx7r_set_cull_mode(void *device, unsigned long in_state);
+
+/// `SetAmbientColor`/`SetAmbientIntensity`: `computed` is `mComputedAmbientColor` (r,g,b); the value sent to the device.
+int32_t ee_dx7r_set_ambient(void *device,
+                            const float *computed);
+
+uint32_t ee_dx7r_debug_color(const float *rgb);
+
+/// `SetTexture`'s NULL path.
+void ee_dx7r_clear_texture(EeDx7ScreenState *state);
+
+/// `SetTexture`'s stage-0 diff and stage 1 off (after the C++ reference counting).
+void ee_dx7r_apply_texture_stage(EeDx7ScreenState *state, const EeDx7StageView *view);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);

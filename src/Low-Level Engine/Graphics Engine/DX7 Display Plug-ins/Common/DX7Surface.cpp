@@ -11,6 +11,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/Graphics Engine.h"
 #include "dx7/DX7Surface.h"
+#include "rust/ee_rust.h"
 
 // FUNCTION: DX7HR 0x1000eced
 // Wraps a DirectDraw surface with its description and parent screen, unlocked and with no attachments
@@ -182,123 +183,17 @@ long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inLogicalSourc
 // forward-substituted GEUnpackAlpha calls, the destination pointer step at the loop end).
 long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
-    long theResult;
-    unsigned long theTop, theBottom, theLeft, theRight;
-    float theXStep, theYStep, theXOffset, theYOffset;
-    unsigned short* theSource;
-    unsigned long theFormat;
-    unsigned long theSourcePitch;
-    unsigned short* theDestination;
-    unsigned long theDestinationPitch;
-    unsigned long x, y;
-    float theX, theY;
-    long theSourceX, theSourceY;
-    float theXFraction, theYFraction, theXInverse, theYInverse;
-    long theIndex;
-    long theMinX, theMaxX, theMinY, theMaxY, theNextX, theNextY;
-    unsigned long thePixel00, thePixel01, thePixel10, thePixel11;
-    float theRed1, theGreen1, theBlue1, theAlpha1;
-    float theRed2, theGreen2, theBlue2, theAlpha2;
-    float theTopRed, theTopGreen, theTopBlue, theTopAlpha;
-    float theRed, theGreen, theBlue, theAlpha;
-
-    theTop = (unsigned long)inDestination.GetTop();
-    theBottom = (unsigned long)inDestination.GetBottom();
-    theLeft = (unsigned long)inDestination.GetLeft();
-    theRight = (unsigned long)inDestination.GetRight();
-    theXStep = 1.0f / inDestination.GetWidth();
-    theYStep = 1.0f / inDestination.GetHeight();
-    theXOffset = 1.0f / (2.0f * inDestination.GetWidth());
-    theYOffset = 1.0f / (2.0f * inDestination.GetHeight());
-    // The taps stay inside the source rectangle (right and bottom are exclusive).
-    theMinX = (long)inSource.GetLeft();
-    theMaxX = (long)inSource.GetRight() - 1;
-    theMinY = (long)inSource.GetTop();
-    theMaxY = (long)inSource.GetBottom() - 1;
-    theResult = this->Lock();
+    long theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
-    theSource = reinterpret_cast<unsigned short*>(this->mMemoryAddress);
-    theFormat = this->mDescription.mPixelFormat;
-    theSourcePitch = this->mBytesPerRow / 2;
     theResult = inTarget->Lock();
     if (theResult == kErrorOK) {
-        theDestination = reinterpret_cast<unsigned short*>(inTarget->mMemoryAddress);
-        theDestinationPitch = inTarget->mBytesPerRow / 2;
-        for (y = theTop; y < theBottom; y++) {
-            for (x = theLeft; x < theRight; x++) {
-                theX = inSource.GetWidth() * ((x - theLeft + 1) * theXStep - theXOffset) + inSource.GetLeft()
-                       - 0.5f;
-                theY = inSource.GetHeight() * ((y - theTop + 1) * theYStep - theYOffset) + inSource.GetTop()
-                       - 0.5f;
-                theSourceX = UMFloatToLong(theX);
-                theSourceY = UMFloatToLong(theY);
-                theXFraction = theX - theSourceX;
-                theYFraction = theY - theSourceY;
-                // The conversion rounds to nearest: a negative fraction means the sample lies left of (above) the
-                // rounded pixel, so step back one pixel.
-                if (theXFraction < 0.0f) {
-                    theXFraction += 1.0f;
-                    theSourceX--;
-                }
-                if (theYFraction < 0.0f) {
-                    theYFraction += 1.0f;
-                    theSourceY--;
-                }
-                if (theSourceX < theMinX) {
-                    theSourceX = theMinX;
-                    theXFraction = 0.0f;
-                }
-                if (theSourceX > theMaxX)
-                    theSourceX = theMaxX;
-                if (theSourceY < theMinY) {
-                    theSourceY = theMinY;
-                    theYFraction = 0.0f;
-                }
-                if (theSourceY > theMaxY)
-                    theSourceY = theMaxY;
-                theNextX = theSourceX < theMaxX ? 1 : 0;
-                theNextY = theSourceY < theMaxY ? (long)theSourcePitch : 0;
-                theXInverse = 1.0f - theXFraction;
-                theYInverse = 1.0f - theYFraction;
-                theIndex = theSourceY * theSourcePitch + theSourceX;
-                thePixel00 = theSource[theIndex];
-                thePixel01 = theSource[theIndex + theNextX];
-                thePixel10 = theSource[theIndex + theNextY];
-                thePixel11 = theSource[theIndex + theNextY + theNextX];
-                theRed1 = GEUnpackRed(theFormat, thePixel00);
-                theGreen1 = GEUnpackGreen(theFormat, thePixel00);
-                theBlue1 = GEUnpackBlue(theFormat, thePixel00);
-                theAlpha1 = GEUnpackAlpha(theFormat, thePixel00);
-                theRed2 = GEUnpackRed(theFormat, thePixel01);
-                theGreen2 = GEUnpackGreen(theFormat, thePixel01);
-                theBlue2 = GEUnpackBlue(theFormat, thePixel01);
-                theAlpha2 = GEUnpackAlpha(theFormat, thePixel01);
-                theTopRed = theRed1 * theXInverse + theRed2 * theXFraction;
-                theTopGreen = theGreen1 * theXInverse + theGreen2 * theXFraction;
-                theTopBlue = theBlue1 * theXInverse + theBlue2 * theXFraction;
-                theTopAlpha = theAlpha1 * theXInverse + theAlpha2 * theXFraction;
-                theRed1 = GEUnpackRed(theFormat, thePixel10);
-                theGreen1 = GEUnpackGreen(theFormat, thePixel10);
-                theBlue1 = GEUnpackBlue(theFormat, thePixel10);
-                theAlpha1 = GEUnpackAlpha(theFormat, thePixel10);
-                theRed2 = GEUnpackRed(theFormat, thePixel11);
-                theGreen2 = GEUnpackGreen(theFormat, thePixel11);
-                theBlue2 = GEUnpackBlue(theFormat, thePixel11);
-                theAlpha2 = GEUnpackAlpha(theFormat, thePixel11);
-                theRed = theTopRed * theYInverse +
-                    (theRed1 * theXInverse + theRed2 * theXFraction) * theYFraction;
-                theGreen = theTopGreen * theYInverse +
-                    (theGreen1 * theXInverse + theGreen2 * theXFraction) * theYFraction;
-                theBlue = theTopBlue * theYInverse +
-                    (theBlue1 * theXInverse + theBlue2 * theXFraction) * theYFraction;
-                theAlpha = theTopAlpha * theYInverse +
-                    (theAlpha1 * theXInverse + theAlpha2 * theXFraction) * theYFraction;
-                theDestination[y * theDestinationPitch + x] = (unsigned short)GEPackColor(theFormat,
-                    UMFloatToLong(theRed), UMFloatToLong(theGreen), UMFloatToLong(theBlue),
-                    UMFloatToLong(theAlpha));
-            }
-        }
+        const float theSourceRect[4] = { inSource.GetLeft(), inSource.GetTop(), inSource.GetRight(), inSource.GetBottom() };
+        const float theDestinationRect[4] = { inDestination.GetLeft(), inDestination.GetTop(), inDestination.GetRight(),
+                                              inDestination.GetBottom() };
+        ee_dx7_copy_with_filter_16(this->mDescription.mPixelFormat, reinterpret_cast<unsigned short*>(this->mMemoryAddress), this->mBytesPerRow / 2,
+           reinterpret_cast<unsigned short*>(inTarget->mMemoryAddress), inTarget->mBytesPerRow / 2, theSourceRect,
+           theDestinationRect);
         inTarget->Unlock();
     }
     theResult = this->Unlock();
@@ -310,123 +205,17 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
 // NEAR: the same -G6 scheduling differences as Copy16BitWithFilter.
 long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
-    long theResult;
-    unsigned long theTop, theBottom, theLeft, theRight;
-    float theXStep, theYStep, theXOffset, theYOffset;
-    uint32_t* theSource;
-    unsigned long theFormat;
-    unsigned long theSourcePitch;
-    uint32_t* theDestination;
-    unsigned long theDestinationPitch;
-    unsigned long x, y;
-    float theX, theY;
-    long theSourceX, theSourceY;
-    float theXFraction, theYFraction, theXInverse, theYInverse;
-    long theIndex;
-    long theMinX, theMaxX, theMinY, theMaxY, theNextX, theNextY;
-    unsigned long thePixel00, thePixel01, thePixel10, thePixel11;
-    float theRed1, theGreen1, theBlue1, theAlpha1;
-    float theRed2, theGreen2, theBlue2, theAlpha2;
-    float theTopRed, theTopGreen, theTopBlue, theTopAlpha;
-    float theRed, theGreen, theBlue, theAlpha;
-
-    theTop = (unsigned long)inDestination.GetTop();
-    theBottom = (unsigned long)inDestination.GetBottom();
-    theLeft = (unsigned long)inDestination.GetLeft();
-    theRight = (unsigned long)inDestination.GetRight();
-    theXStep = 1.0f / inDestination.GetWidth();
-    theYStep = 1.0f / inDestination.GetHeight();
-    theXOffset = 1.0f / (2.0f * inDestination.GetWidth());
-    theYOffset = 1.0f / (2.0f * inDestination.GetHeight());
-    // The taps stay inside the source rectangle (right and bottom are exclusive).
-    theMinX = (long)inSource.GetLeft();
-    theMaxX = (long)inSource.GetRight() - 1;
-    theMinY = (long)inSource.GetTop();
-    theMaxY = (long)inSource.GetBottom() - 1;
-    theResult = this->Lock();
+    long theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
-    theSource = reinterpret_cast<uint32_t*>(this->mMemoryAddress);
-    theFormat = this->mDescription.mPixelFormat;
-    theSourcePitch = this->mBytesPerRow / 4;
     theResult = inTarget->Lock();
     if (theResult == kErrorOK) {
-        theDestination = reinterpret_cast<uint32_t*>(inTarget->mMemoryAddress);
-        theDestinationPitch = inTarget->mBytesPerRow / 4;
-        for (y = theTop; y < theBottom; y++) {
-            for (x = theLeft; x < theRight; x++) {
-                theX = inSource.GetWidth() * ((x - theLeft + 1) * theXStep - theXOffset) + inSource.GetLeft()
-                       - 0.5f;
-                theY = inSource.GetHeight() * ((y - theTop + 1) * theYStep - theYOffset) + inSource.GetTop()
-                       - 0.5f;
-                theSourceX = UMFloatToLong(theX);
-                theSourceY = UMFloatToLong(theY);
-                theXFraction = theX - theSourceX;
-                theYFraction = theY - theSourceY;
-                // The conversion rounds to nearest: a negative fraction means the sample lies left of (above) the
-                // rounded pixel, so step back one pixel.
-                if (theXFraction < 0.0f) {
-                    theXFraction += 1.0f;
-                    theSourceX--;
-                }
-                if (theYFraction < 0.0f) {
-                    theYFraction += 1.0f;
-                    theSourceY--;
-                }
-                if (theSourceX < theMinX) {
-                    theSourceX = theMinX;
-                    theXFraction = 0.0f;
-                }
-                if (theSourceX > theMaxX)
-                    theSourceX = theMaxX;
-                if (theSourceY < theMinY) {
-                    theSourceY = theMinY;
-                    theYFraction = 0.0f;
-                }
-                if (theSourceY > theMaxY)
-                    theSourceY = theMaxY;
-                theNextX = theSourceX < theMaxX ? 1 : 0;
-                theNextY = theSourceY < theMaxY ? (long)theSourcePitch : 0;
-                theXInverse = 1.0f - theXFraction;
-                theYInverse = 1.0f - theYFraction;
-                theIndex = theSourceY * theSourcePitch + theSourceX;
-                thePixel00 = theSource[theIndex];
-                thePixel01 = theSource[theIndex + theNextX];
-                thePixel10 = theSource[theIndex + theNextY];
-                thePixel11 = theSource[theIndex + theNextY + theNextX];
-                theRed1 = GEUnpackRed(theFormat, thePixel00);
-                theGreen1 = GEUnpackGreen(theFormat, thePixel00);
-                theBlue1 = GEUnpackBlue(theFormat, thePixel00);
-                theAlpha1 = GEUnpackAlpha(theFormat, thePixel00);
-                theRed2 = GEUnpackRed(theFormat, thePixel01);
-                theGreen2 = GEUnpackGreen(theFormat, thePixel01);
-                theBlue2 = GEUnpackBlue(theFormat, thePixel01);
-                theAlpha2 = GEUnpackAlpha(theFormat, thePixel01);
-                theTopRed = theRed1 * theXInverse + theRed2 * theXFraction;
-                theTopGreen = theGreen1 * theXInverse + theGreen2 * theXFraction;
-                theTopBlue = theBlue1 * theXInverse + theBlue2 * theXFraction;
-                theTopAlpha = theAlpha1 * theXInverse + theAlpha2 * theXFraction;
-                theRed1 = GEUnpackRed(theFormat, thePixel10);
-                theGreen1 = GEUnpackGreen(theFormat, thePixel10);
-                theBlue1 = GEUnpackBlue(theFormat, thePixel10);
-                theAlpha1 = GEUnpackAlpha(theFormat, thePixel10);
-                theRed2 = GEUnpackRed(theFormat, thePixel11);
-                theGreen2 = GEUnpackGreen(theFormat, thePixel11);
-                theBlue2 = GEUnpackBlue(theFormat, thePixel11);
-                theAlpha2 = GEUnpackAlpha(theFormat, thePixel11);
-                theRed = theTopRed * theYInverse +
-                    (theRed1 * theXInverse + theRed2 * theXFraction) * theYFraction;
-                theGreen = theTopGreen * theYInverse +
-                    (theGreen1 * theXInverse + theGreen2 * theXFraction) * theYFraction;
-                theBlue = theTopBlue * theYInverse +
-                    (theBlue1 * theXInverse + theBlue2 * theXFraction) * theYFraction;
-                theAlpha = theTopAlpha * theYInverse +
-                    (theAlpha1 * theXInverse + theAlpha2 * theXFraction) * theYFraction;
-                theDestination[y * theDestinationPitch + x] = GEPackColor(theFormat,
-                    UMFloatToLong(theRed), UMFloatToLong(theGreen), UMFloatToLong(theBlue),
-                    UMFloatToLong(theAlpha));
-            }
-        }
+        const float theSourceRect[4] = { inSource.GetLeft(), inSource.GetTop(), inSource.GetRight(), inSource.GetBottom() };
+        const float theDestinationRect[4] = { inDestination.GetLeft(), inDestination.GetTop(), inDestination.GetRight(),
+                                              inDestination.GetBottom() };
+        ee_dx7_copy_with_filter_32(this->mDescription.mPixelFormat, reinterpret_cast<uint32_t*>(this->mMemoryAddress), this->mBytesPerRow / 4,
+           reinterpret_cast<uint32_t*>(inTarget->mMemoryAddress), inTarget->mBytesPerRow / 4, theSourceRect,
+           theDestinationRect);
         inTarget->Unlock();
     }
     theResult = this->Unlock();

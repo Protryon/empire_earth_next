@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
@@ -27,3 +27,11 @@ item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"
 "SpacingRule" = "EeRmapSpacingRule"
 # ee_fs
 "Archive" = "EeFsArchive"
+# ee_dx7
+"StandardVertexArray" = "EeDx7StandardVertexArray"
+"StdColorVertexArray" = "EeDx7StdColorVertexArray"
+"PolygonArray" = "EeDx7PolygonArray"
+"ScreenState" = "EeDx7ScreenState"
+"TextureStageCache" = "EeDx7TextureStageCache"
+"Viewport" = "EeDx7Viewport"
+"StageView" = "EeDx7StageView"
