@@ -139,12 +139,14 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEFormation.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
+#include "ee/EESimCapture.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -230,6 +232,7 @@ void DebugHandler(const char* inText)
         if (sLogFile)
             fflush(sLogFile);
     }
+    EESimCaptureRecord::Flush();
 #ifdef _WIN32
     TerminateProcess(GetCurrentProcess(), (UINT)inCode);
 #endif
@@ -392,6 +395,12 @@ void AfterTick()
             Note("RESULT player %lu %s at game ms %ld PT %lu", i,
                  theResult == 1 ? "victorious" : theResult == 2 ? "defeated" : "?", theTime, gPhysics->mNumTicksDone);
         }
+    }
+    // TEST ONLY: the formation sweep of the simulation capture (ee/EEFormation.h), every five game minutes
+    static long sNextSweepMs = 300000;
+    if (EESimCaptureRecord::Active() && theTime >= sNextSweepMs) {
+        sNextSweepMs += 300000;
+        EEFormationCaptureSweep();
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();

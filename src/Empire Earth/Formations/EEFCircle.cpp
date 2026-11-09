@@ -53,6 +53,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
+#include "ee/EESimCapture.h"
 
 // .rdata 0x43f818.. (unit-local named constants, then the vtable 0x43f828)
 const float kEEFCircleF64 = 0.5f;
@@ -92,6 +93,7 @@ void EEFCircle::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormat
     float theRadius = kEEFCirclePlace;
     GEVector theTransformedOffset;
     GE3DPoint thePosition;
+    unsigned long theFirst = outSlots.size();
     if (inUnits.size() == 0)
         return;
     if (inUnits.size() > 1) {
@@ -131,6 +133,14 @@ void EEFCircle::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormat
         theSlot.mUnit = inUnits[0];
         theSlot.mHeading = 0.0f;
         outSlots.push_back(theSlot);
+    }
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(0x49434d46);   // "FMCI"
+        EEFormationCaptureBegin(theRecord, this);
+        theRecord.I32(this->mMode);
+        theRecord.F32(this->mHalfArc);
+        theRecord.F32(this->mMinRadius);
+        EEFormationCaptureEnd(theRecord, inUnits, outSlots, theFirst);
     }
 }
 

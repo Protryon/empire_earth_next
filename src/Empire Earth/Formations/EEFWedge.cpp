@@ -51,6 +51,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFWedge.h"
+#include "ee/EESimCapture.h"
 
 // NEAR: scheduling only (the init-list stores of +0x78/+0x80 sink below the six fldz stores in the original)
 // FUNCTION: EXE 0x4ddf3a
@@ -137,5 +138,19 @@ void EEFWedge::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormati
                 outSlots.push_back(theSlot);
             }
         }
+    }
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(0x47574d46);   // "FMWG"
+        EEFormationCaptureBegin(theRecord, this);
+        theRecord.F32(this->mLeftArm.mX);
+        theRecord.F32(this->mLeftArm.mY);
+        theRecord.F32(this->mLeftArm.mZ);
+        theRecord.F32(this->mRightArm.mX);
+        theRecord.F32(this->mRightArm.mY);
+        theRecord.F32(this->mRightArm.mZ);
+        theRecord.F32(this->mSpacing);
+        theRecord.F32(this->mRowDepth);
+        theRecord.U32(this->mCount);
+        EEFormationCaptureEnd(theRecord, inUnits, outSlots, 0);
     }
 }

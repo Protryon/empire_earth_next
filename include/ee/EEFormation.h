@@ -45,4 +45,16 @@ public:
     bool mB5C;                              // +0x5c (= true)
 };
 
+// TEST ONLY: a Place call's record for the simulation capture (ee/EESimCapture.h; tools/sim_capture.py). Begin
+// writes the formation's common state (type, orientation, centre, heading), the caller its own, End the units' radii
+// and the slots from inFirst on (as unit indices), then commits.
+class EESimCaptureRecord;
+void EEFormationCaptureBegin(EESimCaptureRecord& ioRecord, const EEFormation* inFormation);
+void EEFormationCaptureEnd(EESimCaptureRecord& ioRecord, std::vector<EEComplexUnit*>& inUnits,
+                           std::vector<EEFormationSlot>& inSlots, unsigned long inFirst);
+// TEST ONLY: with the capture on, EE-SIM calls this every few game minutes: every formation type Places groups of
+// each player's newest units (their real radii and positions), so that lines and wedges, which the computer players
+// never form, are captured too. Reads the world; changes nothing.
+void EEFormationCaptureSweep();
+
 #endif

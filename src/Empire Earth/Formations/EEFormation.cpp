@@ -59,6 +59,9 @@
 #include "ee/EEFWedge.h"
 #include "ee/EEFDeepWedge.h"
 #include "ee/EEFShallowWedge.h"
+#include "ee/EEUnit.h"
+#include "ee/EEAreaUtilities.h"
+#include "ee/EESimCapture.h"
 
 // FUNCTION: EXE 0x4ddcc6
 // Creates the formation of a type: 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge;
@@ -104,4 +107,75 @@ void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlo
     for (long i = inGroup->GetNumUnits() - 1; i >= 0; i--)
         theUnits[i] = inGroup->GetUnit(i);
     this->Place(theUnits, outSlots);
+}
+
+void EEFormationCaptureBegin(EESimCaptureRecord& ioRecord, const EEFormation* inFormation)
+{
+    ioRecord.I32(inFormation->mType);
+    for (int i = 0; i < 3; i++)
+        ioRecord.F32s(inFormation->mOrientation.mMatrix[i], 3);
+    ioRecord.F32(inFormation->mCenter.GetX());
+    ioRecord.F32(inFormation->mCenter.GetY());
+    ioRecord.F32(inFormation->mCenter.GetZ());
+    ioRecord.F32(inFormation->mHeading);
+}
+
+void EEFormationCaptureEnd(EESimCaptureRecord& ioRecord, std::vector<EEComplexUnit*>& inUnits,
+                           std::vector<EEFormationSlot>& inSlots, unsigned long inFirst)
+{
+    ioRecord.U32((unsigned int)inUnits.size());
+    for (size_t i = 0; i < inUnits.size(); i++)
+        ioRecord.F32(inUnits[i]->mUnitClass->mOuterCollisionSphere);
+    ioRecord.U32((unsigned int)(inSlots.size() - inFirst));
+    for (size_t i = inFirst; i < inSlots.size(); i++) {
+        const EEFormationSlot& theSlot = inSlots[i];
+        ioRecord.F32(theSlot.mPosition.GetX());
+        ioRecord.F32(theSlot.mPosition.GetY());
+        ioRecord.F32(theSlot.mPosition.GetZ());
+        ioRecord.F32(theSlot.mHeading);
+        unsigned int theIndex = 0xffffffff;
+        for (size_t j = 0; j < inUnits.size(); j++)
+            if (inUnits[j] == theSlot.mUnit) {
+                theIndex = (unsigned int)j;
+                break;
+            }
+        ioRecord.U32(theIndex);
+    }
+    ioRecord.Commit();
+}
+
+void EEFormationCaptureSweep()
+{
+    static const unsigned long kSizes[] = {1, 2, 3, 4, 5, 6, 9, 10, 11, 16, 20, 21, 22, 23, 43, 64};
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<EEComplexUnit*> theAll;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
+                theAll.push_back(theUnit->mComplexUnit);
+        for (unsigned long s = 0; s < sizeof(kSizes) / sizeof(kSizes[0]) && kSizes[s] <= theAll.size(); s++) {
+            unsigned long theSize = kSizes[s];
+            std::vector<EEComplexUnit*> theUnits(theAll.end() - theSize, theAll.end());
+            GE3DPoint theFirst;
+            GE3DPoint theLast;
+            theUnits.front()->GetPosition(theFirst);
+            theUnits.back()->GetPosition(theLast);
+            float theYaw = EEGetHeadingBetween(&theFirst, &theLast);
+            for (long theType = 0; theType < 8; theType++) {
+                EEFormation* theFormation = EEFormation::Create(theType);
+                theFormation->SetCenter(theFirst);
+                theFormation->mHeading = theYaw;
+                if (theSize % 2 == 0)   // odd sizes keep the identity orientation, as EEHerd's circles
+                    theFormation->mOrientation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
+                EEFCircle* theCircle = dynamic_cast<EEFCircle*>(theFormation);
+                if (theCircle != NULL && theSize % 3 == 0)
+                    theCircle->SetMinRadius((float)theSize * 0.75f);
+                std::vector<EEFormationSlot> theSlots;
+                theFormation->Place(theUnits, theSlots);
+                delete theFormation;
+            }
+        }
+    }
 }

@@ -52,6 +52,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFLine.h"
+#include "ee/EESimCapture.h"
 
 
 // NEAR: register allocation only (inCount in ebx and the new array in edi in the original)
@@ -141,6 +142,16 @@ void EEFLine::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormatio
             theRow++;
             theDepth++;
         }
+    }
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(0x4e4c4d46);   // "FMLN"
+        EEFormationCaptureBegin(theRecord, this);
+        theRecord.I32(this->mCount);
+        theRecord.I32(this->mRows);
+        theRecord.F32(this->mSpacing);
+        theRecord.F32(this->mDepth);
+        theRecord.F32s(this->mOffsets, this->mCount);
+        EEFormationCaptureEnd(theRecord, inUnits, outSlots, 0);
     }
 }
 
