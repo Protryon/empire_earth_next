@@ -394,7 +394,7 @@ state's new fields, the save functions).
   (`EECPLuaReadFromFolder`);
 - `print` -> a `next.print` trace line (manager `next`; line breaks become ` | `);
 - `mCheckMemory` on: a step that leaves something unsaveable in the memory fails like an error;
-- the script: the personality's `next_script` (aipersonalities.yaml, default `test_opening`). TEST ONLY:
+- the script: the seat's AI's in the AI manifest (§3.3; until 2026-11-09 the personality's `next_script`). TEST ONLY:
   `EE_AI_NEXT_SCRIPT` names it per player (a comma list by player id from player 1, as `EE_AI_ENGINE`); `c++` there
   runs the C++ test opening instead (the gate's reference). A `next.script name=...` line records the choice.
 - A new game calls `init(view, memory)` (optional) and then `step(view, memory)` in the first tick; every later tick
@@ -518,10 +518,76 @@ where clang fuses `a * b + c` by default; the Windows/macOS trace comparison sti
 
 **Open after S2:**
 - the scripts are not in the multiplayer checksum (`gBinaryChecksum` covers the db, .tai and .cem files): peers with
-  different `Data/ai` would diverge silently;
+  different `Data/ai` would diverge silently (done in §3.3: the AI folder's hash is in it);
 - the Windows/macOS trace gate (with `-ffp-contract=off` now on both);
 - reload on change (the developer loop) is not wired;
 - a real save-load-resume run of EE-SIM (it has no load path; the shadow check stands in).
+
+### 3.3 The AI manifest (2026-11-09)
+
+The lobby's per-seat AI choice comes from data: `Data/ai/ais.json` (written in the repository as `ai/ais.json`;
+`tools/open_data.py ai TREE` and every tree build install it with the scripts, and it ships in the db release part
+with the rest of `Data/ai`). Code: `include/ee/EECPEngine.h`, `src/Empire Earth/AI Thread/EECPEngine.cpp`.
+
+```json
+{"ais": [
+  {"id": "boom", "name": "Boom", "script": "boom", "random": true,
+   "description": "Builds its economy first ..."}
+]}
+```
+
+- `id`: 1-64 of `a-z`, `0-9`, `_`; unique; `classic`, `random` and `next` are reserved. The save and the traces name
+  the AI by it (`engine=boom` in the trace's `cp start` line and the game log's player line).
+- `name`: the lobby's text (UTF-8; shown in Windows-1252, other characters as `?`; the id when missing).
+- `script`: the Lua module the seat runs, as `require` takes it (below).
+- `random`: whether the lobby's Random may pick it (default false). `description` is free text (not shown yet).
+- Unknown keys are logged and ignored. A bad entry (a wrong type, a bad or duplicate id, a bad module name, a script
+  file that is not there) is skipped with an `EE-AI engine ...` log line; a missing or unreadable `ais.json` leaves
+  just Classic and Random. The manifest is read once per process (at the lobby's creation).
+
+**The choices.** The engine box's lines and `EEGameOptionsPlayer::mEngine` (the lobby's wire value, `EEMPlayerInformation`
+field 6): 0 Classic, 1 Random, 2 + k the manifest's entry k in file order. The box's open list is as tall as its lines
+(0.034 of the window each, up to 8; more scroll). Random resolves at the game's start (`EECPEngineResolve`, the
+seed and slot hash of S0) uniformly among Classic and the entries with `random: true`; with one such AI it is the old
+classic/next coin. A resolved seat gets `EEComputerPlayer::mEngine` = next and `EECPNextState::mAI` = the id.
+
+**Adding an AI.** Put its scripts in a folder of their own and list it:
+
+```
+Data/ai/ais.json                 {"id": "turtle", "name": "Turtle", "script": "turtle.main", "random": false}
+Data/ai/turtle/main.lua          return {init = ..., step = function(view, memory) ... end}
+Data/ai/turtle/plan.lua          require("turtle.plan")
+Data/ai/lib/view.lua             require("lib.view"): the shared helpers every AI may use
+```
+
+`require` names are relative to `Data/ai`, with dots as folders (`turtle.plan` is `Data/ai/turtle/plan.lua`); letters,
+digits and `_` only, so nothing outside `Data/ai` can be read. The sandbox is Â§3.1's: no `io`, `os`, `load` or
+`debug`, no libm transcendentals, `ai.random` for randomness, `each` for ordered iteration, a per-call instruction
+budget and a memory limit, and a memory that must hold only nil, booleans, integers, strings and tables.
+`EE_AI_SCRIPTS` (TEST ONLY) reads `ais.json` and the scripts from another folder first.
+
+**Starting a seat.** `EEComputerPlayer::Update`'s first tick calls `EECPNextPrepare` before anything else: it picks
+the script (the `EE_AI_NEXT_SCRIPT` override, TEST ONLY, else the AI's manifest entry) and loads it. If it does not
+load (a missing module, a syntax or top-level error: the `next.error` line says which), the seat plays the classic
+engine from that first tick (an `EE-AI engine` log line says so); nothing has been decided by either engine yet, and
+the start-up block is the same for both. A loaded game keeps the script its save names.
+
+**Multiplayer.** `EECPAIFolderHash` (FNV-1a over `ais.json` and every `.lua` under `Data/ai`, by relative path,
+carriage returns dropped) is added to `gBinaryChecksum` in `EEInitializeNetwork`, so a joiner whose AI folder differs
+from the host's is refused like any other data mismatch ("One or more of your files are not the correct version"). The
+hash is logged with the manifest.
+
+**Saves** (version 0.253): after each computer player's engine byte, a next seat's AI id (uint32 length, bytes). A
+save whose AI the manifest does not list fails to load, with an `EE-AI engine` log line naming the id. Older saves:
+an engine byte 1 is `boom`; the options' choices 0/1/2 (classic/next/random) become 0/2/1.
+
+**Personalities** no longer name a script: `next_script` is gone from `aipersonalities.yaml` (an older document's
+`next_script` is read and ignored). For now the manifest lists only boom; `ai/rush.lua` and `ai/balanced.lua` stay
+and run through `EE_AI_NEXT_SCRIPT` (TEST ONLY) or once listed.
+
+**EE-SIM and the tools.** `--engine` (and `EE_AI_ENGINE`) take `classic`, `random`, an AI's id, or `next` for the
+manifest's first AI (boom), so older bench commands still work; EE-SIM selects the box's line by index.
+`tools/game_log.py` and `tools/ai_scorecard.py --key engine` show the id.
 
 ## 4. The first scripts
 
@@ -699,7 +765,8 @@ Each stage ends on a gate. Each one is useful on its own, and the work can stop 
 
 *S0 as built* (2026-11-08). The owner's decision 2 replaced the `gameoptions.yaml` setting: the choice is the lobby's.
 - **The choice:** `EEGameOptionsPlayer::mEngine` per lobby slot, 0 classic (the default, and every reset of a slot),
-  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`).
+  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`). Since §3.3: 0 classic, 1 random, 2 + k the AI manifest's
+  entries.
 - **The lobby:** the engine column sits in the ping column, which a computer row leaves empty, widened to 0.428-0.520
   of the window. The controls are not in dbuicontrols; `EEUIManager`'s ctor adds them with
   `UIControlsTable::AddControlLike` (form 26):
