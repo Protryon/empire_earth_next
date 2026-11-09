@@ -516,7 +516,7 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                             theResult = inFile.Read(this->mTimeOfDayStep);
                             if (theResult == kErrorOK) {
                                 theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = (long)this->mTickTime;
+                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
                                 if (theResult == kErrorOK) {
                                     theResult = inFile.Read(this->mTickStartTime);
                                     if (theResult == kErrorOK) {
@@ -589,7 +589,7 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                             theResult = inFile.Read(this->mTimeOfDayStep);
                             if (theResult == kErrorOK) {
                                 theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = (long)this->mTickTime;
+                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
                                 if (theResult == kErrorOK) {
                                     theResult = inFile.Read(this->mTickStartTime);
                                     if (theResult == kErrorOK) {
