@@ -152,9 +152,6 @@
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
-extern long gU531CF0;               // EEPhysics.cpp: the user-input messages processed
-extern unsigned long gU531CF4;      // EEPhysics.cpp: the last out-of-synch checksum (GetOutOfSynchChecksum writes it)
-
 namespace {
 
 // ------------------------------------------------------------------------------------------------ options
@@ -383,8 +380,8 @@ void Finish(const char* inOutcome)
 const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
 
 // --checksum-trace: one line per communications tick (the physics thread, under the world's write lock, after the
-// CT's last physics tick). Only reads: no random draws, no caches filled; gU531CF4, the one global
-// GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
+// CT's last physics tick). Only reads: no random draws, no caches filled; EEPhysics::mLastOutOfSynchChecksum, the one
+// member GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
 //   CT <the game's CTs run, from 1> pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
 //      oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
 //      inputs=<user inputs executed>
@@ -400,9 +397,9 @@ void ChecksumLine()
     if (sChecksumFile == NULL || (sChecksumLines > 0 && gPhysics->mNumTicksDone == sChecksumLastPT))
         return;
     sChecksumLastPT = gPhysics->mNumTicksDone;
-    unsigned long theSaved = gU531CF4;
+    unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
     unsigned long theChecksum = gPhysics->GetOutOfSynchChecksum(false, kChecksumFlags);
-    gU531CF4 = theSaved;
+    gPhysics->mLastOutOfSynchChecksum = theSaved;
     unsigned long theUnits = 0;
     unsigned long theCount = 0;
     for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
@@ -412,7 +409,7 @@ void ChecksumLine()
     fprintf(sChecksumFile, "CT %lu pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
             ++sChecksumLines, gPhysics->mNumTicksDone, gPhysics->mCurrentTick,
             gPhysics->mGameTime, (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum,
-            theCount, (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(), gU531CF0);
+            theCount, (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(), gPhysics->mInputMessagesProcessed);
 }
 
 // the physics thread, after each communications tick, under the world's write lock
