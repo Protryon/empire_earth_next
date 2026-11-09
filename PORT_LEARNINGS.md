@@ -2956,3 +2956,13 @@ then `BindGroup with '' label is invalid` in `set_bind_group`, and the view stop
 - **Still open, a separate bug:** in these fixture runs, the window capture (PrintWindow) keeps the first gameplay
   frame, even after a camera zoom. This happens with and without the bound and with no wgpu error, while GX keeps
   presenting. `fixture_game.py`'s play check ("the window shows the same picture as gameplay") fails on it.
+
+## Window captures on Windows: PrintWindow is not proof of presenting (2026-11-09)
+
+The fixture driver (tools/harness/fixture_driver.py capture_frame) captured Windows frames with PrintWindow because
+GX's read-back timed out on WARP. Both symptoms were the same bug: GX's unbounded GPU backlog (the section "GX on
+WARP" above) made a read-back wait behind seconds of queued work, and PrintWindow on the flip-model swap chain kept
+returning the first gameplay frame while GX presented ~10 frames a second. With the backlog bounded, the read-back
+(frame.request -> frame.bmp) works on WARP, and the driver uses it on every system; the window capture is only the
+fallback. A fixture tour on the binary tree then passed with gameplay and play frames differing and no GX errors.
+
