@@ -3,11 +3,11 @@
 
 use crate::dcl;
 
-pub(crate) const CODE_OK: i32 = 0;
-pub(crate) const CODE_NOT_COMPRESSED: i32 = 0x13;
-pub(crate) const CODE_ALREADY_COMPRESSED: i32 = 0x14;
-pub(crate) const CODE_FAILURE: i32 = 0x15;
-pub(crate) const CODE_OUTPUT_TOO_SMALL: i32 = 0x16;
+pub const CODE_OK: i32 = 0;
+pub const CODE_NOT_COMPRESSED: i32 = 0x13;
+pub const CODE_ALREADY_COMPRESSED: i32 = 0x14;
+pub const CODE_FAILURE: i32 = 0x15;
+pub const CODE_OUTPUT_TOO_SMALL: i32 = 0x16;
 
 const SIGNATURE: &[u8; 4] = b"PK01";
 const HEADER_SIZE: usize = 12;

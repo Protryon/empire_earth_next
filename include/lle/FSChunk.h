@@ -4,9 +4,10 @@
 #ifndef LLE_FSCHUNK_H
 #define LLE_FSCHUNK_H
 
+#include "rust/ee_rust.h"                   // EeFsChunk (rust/crates/ee_fs/src/chunk.rs), embedded below
+
 class FSDebugFile;
 class FSFile;
-class FSMemoryFile;
 class FSPersistent;
 
 class LLE_API FSChunk {                     // sizeof 0x1c
@@ -27,17 +28,9 @@ public:
     long SkipChunk(FSFile& inFile);                                             // 0x805e
 
 private:
-    FSFile* BuildFileToUse();                                                   // 0x7df8
-    long SaveChunkHeader(FSFile& outFile);                                      // 0x7f5a
+    FSFile* BuildFileToUse(FSFile* inFile);                                     // 0x7df8
 
-    FSMemoryFile* mData;                    // +0x04
-    long mTagID;                            // +0x08
-    unsigned long mChunkSize;               // +0x0c
-    unsigned long mMajorVersion;            // +0x10
-    unsigned long mMinorVersion;            // +0x14
-    bool mDataLoaded;                       // +0x18 (loaded or skipped)
-    bool mHeaderLoaded;                     // +0x19
-    bool mDecompressed;                     // +0x1a
+    EeFsChunk mState;                       // the header fields and the payload (the C++ copy copies it as before)
 
     static FSDebugFile* sDebugFile;                     // 0x1010f768
     static const UString sChunkSizeStringID;            // 0x1010f758 "FSChunk-ChunkSize"

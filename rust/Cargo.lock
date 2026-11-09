@@ -186,6 +186,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_fs"
+version = "0.1.0"
+dependencies = [
+ "ee_codec",
+ "ee_plat_core",
+]
+
+[[package]]
 name = "ee_gx"
 version = "0.1.0"
 dependencies = [
@@ -263,6 +271,7 @@ version = "0.1.0"
 dependencies = [
  "ee_codec",
  "ee_data",
+ "ee_fs",
  "ee_gx",
  "ee_mixer",
  "ee_net_tcp",

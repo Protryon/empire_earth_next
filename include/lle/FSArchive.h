@@ -9,6 +9,7 @@
 #include <vector>
 
 class FSMemoryFile;                         // only by pointer: File System.cpp emits FSMemoryFile's inlines after these
+struct EeFsArchive;                         // rust/crates/ee_fs/src/archive.rs: the file and tag tables
 
 typedef long int32;                         // Inferred home: the assert text "(int32)theCompressedSize" (0x100d8f64)
 
@@ -23,7 +24,7 @@ public:
     FSArchive();                                                                // 0x4e29
     FSArchive(const FSFileSpec& inFile);                                        // 0x4e71
     virtual ~FSArchive();                                                       // 0x4ec8
-    // implicit copy ctor (0x40cf), emitted with File System.cpp's inlines
+    FSArchive(const FSArchive& inArchive);                                      // 0x40cf: copies the tables, shares the view
     FSArchive& operator=(const FSArchive& inArchive);                           // 0x4ef0 (the archive file only)
 
     long Close();                                                               // 0x51fe
@@ -47,26 +48,18 @@ private:
     long BuildFAT(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression);   // 0x50c4
     unsigned long ComputeCompressedFileLength(const FSFileSpec& inFile, unsigned long inCompression);   // 0x5212
     void ComputeFATFilename(const FSFileSpec& inRoot, const FSFileSpec& inFile, UString& outName);   // 0x52cd
-    unsigned long ComputeFATSize();                                             // 0x53a6
-    unsigned long ComputeTagsSize();                                            // 0x53e2
-    void DumpFAT();                                                             // empty (folded 0x80c07)
-    long ReadFAT();                                                             // 0x5d30
+    long FinishCreate(const FSFileSpec& inRoot, unsigned long inCompression);   // the end of both Creates
     long ReadFATFile(const ArchivedFile& inFile, FSMemoryFile*& outFile);       // 0x5e83
-    long ReadHeader();                                                          // 0x5f51
     long ReadIntoMemoryFile(FSFileSpec& inFile, FSMemoryFile& outFile);         // 0x5fa3
-    long ReadTags();                                                            // 0x5ff9
     void Reset();                                                               // 0x608e
-    void SetFATFileOffsets(unsigned long inOffset);                             // 0x60e2
-    long WriteFAT();                                                            // 0x61d9
     long WriteFATFiles(const FSFileSpec& inRoot, unsigned long inCompression);  // 0x626d
-    long WriteHeader();                                                         // 0x6448
-    long WriteTags();                                                           // 0x6484
+    void CheckFATAfterCreate();
 
     FSFileSpec mArchiveFile;                            // +0x04
-    std::map<UString, ArchivedFile> mFAT;               // +0x4c (head +0x50, size +0x54); keys lower case
-    std::map<UWideString, UWideString> mTags;           // +0x58 (head +0x5c, size +0x60)
-    PlatFileMapping* mMapping;                          // +0x64 PlatFileMap (CreateFileMappingA in the original)
-    const unsigned char* mView;                         // +0x68 the mapped view
+    EeFsArchive* mTable;                                // the FAT and the tags (rust/crates/ee_fs/src/archive.rs)
+    PlatFileMapping* mMapping;                          // PlatFileMap (CreateFileMappingA in the original)
+    const unsigned char* mView;                         // the mapped view
+    unsigned long mViewLength;                          // the view's size (the file's length)
 };
 
 #endif

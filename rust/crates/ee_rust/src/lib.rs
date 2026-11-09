@@ -4,6 +4,7 @@
 use std::ffi::c_char;
 
 use ee_codec as _;
+use ee_fs as _;
 #[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
 use ee_gx as _;
 #[cfg(not(test))] // its FFI imports the C++ shim

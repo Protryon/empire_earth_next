@@ -9,6 +9,36 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+constexpr static const int32_t CODE_OK = 0;
+
+constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
+
+constexpr static const int32_t CODE_ALREADY_COMPRESSED = 20;
+
+constexpr static const int32_t CODE_FAILURE = 21;
+
+constexpr static const int32_t CODE_OUTPUT_TOO_SMALL = 22;
+
+constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
+
+constexpr static const uint32_t ARCHIVE_VERSION = 1;
+
+constexpr static const uint32_t ARCHIVE_RESERVED = 0;
+
+constexpr static const int32_t OK = 0;
+
+constexpr static const int32_t NOT_SUSPENDED = 2;
+
+constexpr static const int32_t NOT_FOUND = 3;
+
+constexpr static const int32_t NOT_OPEN = 4;
+
+constexpr static const int32_t FAILED = 9;
+
+constexpr static const int32_t BEYOND_END = 10;
+
+constexpr static const int32_t END_OF_FILE = 18;
+
 constexpr static const int32_t OBJECT_STONE = 0;
 
 constexpr static const int32_t OBJECT_GOLD = 1;
@@ -37,6 +67,9 @@ constexpr static const float TWO_PI = 6.2831855;
 
 constexpr static const float HALF_PI = 1.5707964;
 
+/// `FSArchive`'s tables.
+struct EeFsArchive;
+
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
 
@@ -45,6 +78,8 @@ struct EeDataRules;
 
 /// A sink handed to the read callback; the text goes in with `ee_data_sink_write`.
 struct EeDataSink;
+
+struct EeFsMemFile;
 
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
@@ -66,6 +101,39 @@ using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, in
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
+/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
+struct EeFsFileOps {
+  void *context;
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+};
+
+/// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
+/// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
+struct EeFsChunk {
+  EeFsMemFile *data;
+  int32_t tag;
+  uint32_t chunk_size;
+  uint32_t major;
+  uint32_t minor;
+  bool data_loaded;
+  bool header_loaded;
+  bool decompressed;
+};
+
+/// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
+using EeFsTextSink = void(*)(void *context, const char *text);
+
+/// Visits a FAT entry; `name` is valid during the call.
+using EeFsFatVisitor = void(*)(void *context,
+                               const char *name,
+                               int32_t start,
+                               int32_t end,
+                               int32_t length);
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -560,6 +628,331 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         size_t capacity,
                         EeCodecSink sink,
                         void *context);
+
+/// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
+EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
+
+/// Creates a memory file holding a copy of `data` (`FSMemoryFile(inData, inLength, ...)`; the caller frees its buffer).
+///
+/// # Safety
+/// `data` is valid for `length` bytes.
+EeFsMemFile *ee_fs_mem_new_over(const uint8_t *data,
+                                size_t length,
+                                size_t block_size,
+                                bool grow_by_doubling);
+
+/// Frees a memory file (the facade's `~FSMemoryFile`).
+///
+/// # Safety
+/// `file` is null or came from this crate and is not used again.
+void ee_fs_mem_free(EeFsMemFile *file);
+
+/// `Close`'s data part (the facade closes the stdio stream).
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_close(EeFsMemFile *file);
+
+/// `Compact`.
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_compact(EeFsMemFile *file);
+
+/// `Compress`.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write.
+int32_t ee_fs_mem_compress(EeFsMemFile *file, uint32_t level, uint32_t *out_length);
+
+/// `Decompress`.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write.
+int32_t ee_fs_mem_decompress(EeFsMemFile *file, uint32_t *out_length);
+
+/// `Delete`.
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_delete(EeFsMemFile *file);
+
+/// `GetLength`.
+///
+/// # Safety
+/// `file` is live.
+uint32_t ee_fs_mem_length(const EeFsMemFile *file);
+
+/// `GetPosition`.
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_position(const EeFsMemFile *file);
+
+/// `Open`.
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_open(EeFsMemFile *file);
+
+/// `GetData`; null when the file has no buffer.
+///
+/// # Safety
+/// `file` is live.
+const uint8_t *ee_fs_mem_data(const EeFsMemFile *file);
+
+/// `Read`: `*out_read` is written unless the file has no buffer (`kErrorNotOpen`, the C++ left it untouched).
+///
+/// # Safety
+/// `file` is live, `out` valid for `length` bytes, `out_read` for a write.
+int32_t ee_fs_mem_read(EeFsMemFile *file,
+                       uint8_t *out,
+                       size_t length,
+                       uint32_t *out_read);
+
+/// `Write`.
+///
+/// # Safety
+/// `file` is live, `data` valid for `length` bytes, `out_written` for a write.
+int32_t ee_fs_mem_write(EeFsMemFile *file,
+                        const uint8_t *data,
+                        size_t length,
+                        uint32_t *out_written);
+
+/// `SetPosition`.
+///
+/// # Safety
+/// `file` is live.
+int32_t ee_fs_mem_set_position(EeFsMemFile *file, int64_t offset, uint32_t origin);
+
+/// Whether the file is open (`mIsOpen`, read by the facade).
+///
+/// # Safety
+/// `file` is live.
+bool ee_fs_mem_is_open(const EeFsMemFile *file);
+
+/// Sets the open flag (`FOpen`, which owns the temporary file, drives it).
+///
+/// # Safety
+/// `file` is live.
+void ee_fs_mem_set_open(EeFsMemFile *file, bool open);
+
+/// `Load(inFile, inLength)`.
+///
+/// # Safety
+/// `file` is live, `ops` valid and its callbacks live for the call.
+int32_t ee_fs_mem_load(EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+
+/// `Load(inFile)`.
+///
+/// # Safety
+/// As `ee_fs_mem_load`.
+int32_t ee_fs_mem_load_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+
+/// `Save(outFile, inLength)`.
+///
+/// # Safety
+/// As `ee_fs_mem_load`.
+int32_t ee_fs_mem_save(const EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+
+/// `Save(outFile)`.
+///
+/// # Safety
+/// As `ee_fs_mem_load`.
+int32_t ee_fs_mem_save_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+
+/// `FSChunk()`: fills the embedded state.
+///
+/// # Safety
+/// `chunk` is valid for a write.
+void ee_fs_chunk_init(EeFsChunk *chunk);
+
+/// `~FSChunk`: frees the payload.
+///
+/// # Safety
+/// `chunk` is valid; its `data` is null or live and not used again.
+void ee_fs_chunk_free(EeFsChunk *chunk);
+
+/// `GetChunkSize`.
+///
+/// # Safety
+/// `chunk` and `out_size` are valid.
+bool ee_fs_chunk_size(const EeFsChunk *chunk, uint32_t *out_size);
+
+/// `LoadChunkHeader`.
+///
+/// # Safety
+/// `chunk` is valid; `ops` valid and its callbacks live for the call.
+int32_t ee_fs_chunk_load_header(EeFsChunk *chunk, const EeFsFileOps *ops);
+
+/// `LoadChunkFromFile`.
+///
+/// # Safety
+/// As `ee_fs_chunk_load_header`.
+int32_t ee_fs_chunk_load_from_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+
+/// `SaveChunkToFile`.
+///
+/// # Safety
+/// As `ee_fs_chunk_load_header`.
+int32_t ee_fs_chunk_save_to_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+
+/// `SkipChunk`.
+///
+/// # Safety
+/// As `ee_fs_chunk_load_header`.
+int32_t ee_fs_chunk_skip(EeFsChunk *chunk, const EeFsFileOps *ops);
+
+/// `SavePersistentToChunk`'s first half: a new payload, or null when the chunk has one already.
+///
+/// # Safety
+/// `chunk` is valid.
+EeFsMemFile *ee_fs_chunk_begin_save(EeFsChunk *chunk);
+
+/// `SavePersistentToChunk`'s second half.
+///
+/// # Safety
+/// `chunk` is valid and `ee_fs_chunk_begin_save` returned non-null for it.
+void ee_fs_chunk_finish_save(EeFsChunk *chunk, uint32_t major, uint32_t minor, int32_t tag);
+
+/// Creates an empty `FSArchive` table set.
+EeFsArchive *ee_fs_archive_new();
+
+/// Copies an archive's tables (the C++ implicit copy constructor copied them).
+///
+/// # Safety
+/// `archive` is valid.
+EeFsArchive *ee_fs_archive_clone(const EeFsArchive *archive);
+
+/// Frees an archive's tables.
+///
+/// # Safety
+/// `archive` is null or came from this crate and is not used again.
+void ee_fs_archive_free(EeFsArchive *archive);
+
+/// Empties the file table.
+///
+/// # Safety
+/// `archive` is valid.
+void ee_fs_archive_clear_fat(EeFsArchive *archive);
+
+/// Empties the tag table.
+///
+/// # Safety
+/// `archive` is valid.
+void ee_fs_archive_clear_tags(EeFsArchive *archive);
+
+/// `std::map::insert` of a FAT entry.
+///
+/// # Safety
+/// `archive` is valid; `name` NUL-terminated.
+void ee_fs_archive_fat_insert(EeFsArchive *archive, const char *name, int32_t length);
+
+/// `ComputeFATSize`.
+///
+/// # Safety
+/// `archive` is valid.
+uint32_t ee_fs_archive_fat_size(const EeFsArchive *archive);
+
+/// `ComputeTagsSize`.
+///
+/// # Safety
+/// `archive` is valid.
+uint32_t ee_fs_archive_tags_size(const EeFsArchive *archive);
+
+/// `SetFATFileOffsets`.
+///
+/// # Safety
+/// `archive` is valid.
+void ee_fs_archive_set_offsets(EeFsArchive *archive, uint32_t offset);
+
+/// `WriteHeader`.
+///
+/// # Safety
+/// `archive` is valid; `ops` valid and live for the call.
+int32_t ee_fs_archive_write_header(const EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `ReadHeader`.
+///
+/// # Safety
+/// As `ee_fs_archive_write_header`.
+int32_t ee_fs_archive_read_header(const EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `WriteFAT`.
+///
+/// # Safety
+/// As `ee_fs_archive_write_header`.
+int32_t ee_fs_archive_write_fat(const EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `ReadFAT`.
+///
+/// # Safety
+/// As `ee_fs_archive_write_header`.
+int32_t ee_fs_archive_read_fat(EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `WriteTags`.
+///
+/// # Safety
+/// As `ee_fs_archive_write_header`.
+int32_t ee_fs_archive_write_tags(const EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `ReadTags`.
+///
+/// # Safety
+/// As `ee_fs_archive_write_header`.
+int32_t ee_fs_archive_read_tags(EeFsArchive *archive, const EeFsFileOps *ops);
+
+/// `SetTag` (always `kErrorOK` in C++).
+///
+/// # Safety
+/// `archive` is valid; `name` and `value` NUL-terminated.
+void ee_fs_archive_set_tag(EeFsArchive *archive, const char *name, const char *value);
+
+/// `GetTag`: gives the value to `sink` and returns `kErrorOK`, or `kErrorNotFound`.
+///
+/// # Safety
+/// `archive` is valid; `name` NUL-terminated; `sink` callable.
+int32_t ee_fs_archive_get_tag(const EeFsArchive *archive,
+                              const char *name,
+                              EeFsTextSink sink,
+                              void *context);
+
+/// `ListFiles`' selection: each matching name goes to `sink` in order.
+///
+/// # Safety
+/// `archive` is valid; `pattern` NUL-terminated; `sink` callable.
+void ee_fs_archive_list(const EeFsArchive *archive,
+                        const char *pattern,
+                        EeFsTextSink sink,
+                        void *context);
+
+/// Visits the FAT in order (the `Create` check loop, `ExtractAll`).
+///
+/// # Safety
+/// `archive` is valid; `visit` callable; `visit` must not touch this archive.
+void ee_fs_archive_for_each_fat(const EeFsArchive *archive, EeFsFatVisitor visit, void *context);
+
+/// `FindFile` after the facade lower-cased the name: on a hit `*out_file` receives a new memory file (always, even for
+/// a failed decompression, as the C++ `ReadFATFile`) and the status is returned; a miss leaves it and returns
+/// `kErrorNotFound`.
+///
+/// # Safety
+/// `archive` is valid, `name` NUL-terminated, `view` valid for `view_length` bytes, `out_file` for a write.
+int32_t ee_fs_archive_find_file(const EeFsArchive *archive,
+                                const char *name,
+                                const uint8_t *view,
+                                size_t view_length,
+                                EeFsMemFile **out_file);
+
+/// `ReadFATFile` for an entry from `ee_fs_archive_for_each_fat`: a new memory file, as `ee_fs_archive_find_file`.
+///
+/// # Safety
+/// `view` valid for `view_length` bytes, `out_file` for a write.
+int32_t ee_fs_archive_read_member(const uint8_t *view,
+                                  size_t view_length,
+                                  int32_t start,
+                                  int32_t length,
+                                  EeFsMemFile **out_file);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

@@ -7,6 +7,8 @@
 
 #include "lle/FSFileSpec.h"  // the base class
 
+struct EeFsMemFile;          // rust/crates/ee_fs: the contents and position
+
 class LLE_API FSMemoryFile : public FSFileSpec {
 public:
     using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
@@ -14,10 +16,13 @@ public:
     // defaults proven by the default-constructor closure ??_F (0x4715: push 1; push 1; push 1000)
     FSMemoryFile(unsigned long inBlockSize = 1000, bool inGrowByDoubling = true, unsigned long inBlockCount = 1);   // 0x9ec5
     FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize, bool inGrowByDoubling);   // 0x9f30
+    FSMemoryFile(EeFsMemFile* inState, bool inOwns);                            // over a state made by Rust; inOwns: free it
     virtual ~FSMemoryFile();                                                    // 0x9f91
-    // implicit copy ctor (0x466d) and operator= (0x46c4)
+    // implicit copy ctor (0x466d) and operator= (0x46c4) dropped: they copied the raw buffer pointer (double delete)
+    FSMemoryFile(const FSMemoryFile&) = delete;
+    FSMemoryFile& operator=(const FSMemoryFile&) = delete;
 
-    virtual long Create() { return this->mBuffer ? kErrorOK : kErrorFailed; }                     // +0x04 0x4644 (provisional names)
+    virtual long Create();                                                      // +0x04 0x4644 (provisional names)
     virtual long Close();                                                       // +0x08 0x9fbe
     virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes);   // +0x0c 0xa176
     virtual long Delete();                                                      // +0x10 0xa315
@@ -61,7 +66,7 @@ public:
     virtual long Unlock() { return kErrorFailed; }                                         // +0xd4 (0x4652)
     virtual void CloseSearchHandle() {}                                         // +0xd8 (folded 0x0c16a)
 
-    const unsigned char* GetData() const { return this->mBuffer; }             // 0x4630
+    const unsigned char* GetData() const;                                       // 0x4630
     void GetTemporaryFileName(UString& outName) { outName = this->mTemporaryFileName; }  // 0x4634
     long Compact();                                                             // 0x9ff6
     long Compress(unsigned long inMethod, unsigned long& outLength);            // 0xa05e (provisional names)
@@ -72,23 +77,9 @@ public:
     long Save(FSFile& outFile);                                                 // 0xa6ab
 
 protected:
-    void ClearData()                                                            // 0x4656
-    {
-        if (this->mBuffer)
-            delete[] this->mBuffer;
-        this->mBuffer = NULL;
-    }
-    void IncreaseFileSize(unsigned long inLength);                              // 0xa492
-
     UString mTemporaryFileName;                       // +0x48
-    unsigned char* mBuffer;                           // +0x58: the allocation (delete[]); GetData()
-    unsigned char* mStart;                            // +0x5c: first data byte
-    unsigned char* mEnd;                              // +0x60: one past the last data byte (length = end - start)
-    unsigned char* mLimit;                            // +0x64: one past the allocation
-    unsigned char* mCurrent;                          // +0x68: read/write position
-    unsigned long mAllocatedLength;                   // +0x6c
-    unsigned long mBlockSize;                         // +0x70 (0 -> 1)
-    bool mGrowByDoubling;                             // +0x74: Write grows by max(allocation, 2 * length) instead of blocks
+    EeFsMemFile* mState;                              // the contents (rust/crates/ee_fs/src/memfile.rs)
+    bool mOwnsState;                                  // false for the view a chunk wraps around its payload
 };
 
 #endif

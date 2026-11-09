@@ -1,0 +1,13 @@
+[package]
+name = "ee_fs"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The File System's logic (docs/RUST_PLAN.md R3.5): FSMemoryFile, FSChunk, FSArchive behind their C++ facades.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_codec = { path = "../ee_codec" }
+ee_plat_core = { path = "../ee_plat_core" }
