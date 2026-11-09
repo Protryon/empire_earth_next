@@ -15,6 +15,7 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "lle/GEMaterial.h"
+#include "dx7/DX7DrawSeam.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x1000383a
@@ -50,95 +51,83 @@
 // TEMPLATE: DX7HR 0x10003998
 // TEMPLATE: DX7HR 0x100039bb
 
-// FUNCTION: DX7HR 0x10003a15
-// Copies a material's vertex range of the model's current frame (coloured vertices) into the vertex buffer
-void DX7Rasterizer::CopyStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices)
+// The model draws moved to Rust (rust/crates/ee_dx7/src/draw_model.rs, docs/RUST_PLAN.md R4.2). The C++ here forwards;
+// the ee_dx7cpp_* below read the GE objects for it. The original's CopyStd*/CopyAndSmooth* (0x10003a15..0x10003c5d) are
+// the Rust blend_*/white_copy; the transform stack became a Rust call parameter (only DrawModelHierarchy used it).
+
+extern "C" {
+void ee_dx7cpp_model_info(void* inModel, EeDx7ModelInfo* outInfo)
 {
-    memcpy(outVertices,
-           static_cast<DX7StdColorVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsCurrentFrame()))->mVertices +
-               inMaterial->GetVertexStartingIndex(),
-           inMaterial->GetVertexRangeLength() * sizeof(GXVERTEX_STD_COLOR));
+    GEModel* theModel = static_cast<GEModel*>(inModel);
+    outInfo->material_count = theModel->GetMaterialCount();
+    outInfo->lod_count = theModel->GetLODCount();
+    outInfo->sub_model_count = theModel->GetSubModelCount();
+    outInfo->current_frame = theModel->GetGraphicsCurrentFrame();
+    outInfo->next_frame = theModel->GetGraphicsNextFrame();
+    outInfo->vertex_type = theModel->GetVertexArray(0)->GetType();
+    outInfo->scale = theModel->GetGraphicsScale();
+    outInfo->opacity = theModel->GetModelOpacity();
+    outInfo->fraction = theModel->GetFractionalFramePosition();
+    DX7CopyTransform(theModel->GetGraphicsTransform(), outInfo->transform);
 }
 
-// FUNCTION: DX7HR 0x10003a52
-// Copies a material's vertex range of the model's current frame into the vertex buffer as white coloured vertices
-void DX7Rasterizer::CopyStdVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices)
+void ee_dx7cpp_model_visible(void* inRasterizer, unsigned long inScreen, void* inModel, float inScale, const float inTransform[4][4], bool inOrthographic,
+                             bool* outVisible, bool* outClipped)
 {
-    GXVERTEX* theVertex =
-        static_cast<DX7StandardVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsCurrentFrame()))->mVertices +
-        inMaterial->GetVertexStartingIndex();
-    GXVERTEX* theEnd = theVertex + inMaterial->GetVertexRangeLength();
-    for (; theVertex < theEnd; theVertex++, outVertices++) {
-        outVertices->x = theVertex->x;
-        outVertices->y = theVertex->y;
-        outVertices->z = theVertex->z;
-        outVertices->nx = theVertex->nx;
-        outVertices->ny = theVertex->ny;
-        outVertices->nz = theVertex->nz;
-        outVertices->color = 0xffffffff;
-        outVertices->tu = theVertex->tu;
-        outVertices->tv = theVertex->tv;
-    }
+    DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
+    GEViewport* theViewport = &theRasterizer->mScreenStates[inScreen]->mViewport;
+    GETransformation theTransformation(inTransform);
+    bool theVisible;
+    bool theClipped;
+    if (!inOrthographic)
+        theRasterizer->IsPerspectiveModelVisible(static_cast<GEModel*>(inModel), inScale, theViewport, theTransformation, theVisible, theClipped);
+    else
+        theRasterizer->IsOrthographicModelVisible(static_cast<GEModel*>(inModel), theViewport, theTransformation, theVisible, theClipped);
+    *outVisible = theVisible;
+    *outClipped = theClipped;
 }
 
-// FUNCTION: DX7HR 0x10003ac5
-// Writes a material's coloured vertices blended between the current and next frame (by the fractional frame position)
-void DX7Rasterizer::CopyAndSmoothStdColorVertices(GEModel* inModel, GEMaterial* inMaterial,
-                                                  GXVERTEX_STD_COLOR* outVertices)
+float ee_dx7cpp_pixel_size(void* inRasterizer, unsigned long inScreen, void* inModel, const float inTransform[4][4], float inScale, bool inOrthographic)
 {
-    float theFraction = inModel->GetFractionalFramePosition();
-    float theInverse = 1.0f - theFraction;
-    // The range length is read into a local first: its load precedes the frame loads, and the x87 operand order
-    // of the first blend follows from it (94.8 -> exact).
-    unsigned long theLength = inMaterial->GetVertexRangeLength();
-    GXVERTEX_STD_COLOR* theCurrent =
-        static_cast<DX7StdColorVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsCurrentFrame()))->mVertices +
-        inMaterial->GetVertexStartingIndex();
-    GXVERTEX_STD_COLOR* theEnd = theCurrent + theLength;
-    GXVERTEX_STD_COLOR* theNext =
-        static_cast<DX7StdColorVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsNextFrame()))->mVertices +
-        inMaterial->GetVertexStartingIndex();
-    for (; theCurrent < theEnd; theCurrent++, theNext++, outVertices++) {
-        outVertices->x = theNext->x * theFraction + theCurrent->x * theInverse;
-        outVertices->y = theCurrent->y * theInverse + theNext->y * theFraction;
-        outVertices->z = theCurrent->z * theInverse + theNext->z * theFraction;
-        outVertices->nx = theCurrent->nx * theInverse + theNext->nx * theFraction;
-        outVertices->ny = theCurrent->ny * theInverse + theNext->ny * theFraction;
-        outVertices->nz = theCurrent->nz * theInverse + theNext->nz * theFraction;
-        outVertices->color = theCurrent->color;
-        outVertices->tu = theCurrent->tu;
-        outVertices->tv = theCurrent->tv;
-    }
+    DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
+    GEViewport* theViewport = &theRasterizer->mScreenStates[inScreen]->mViewport;
+    GETransformation theTransformation(inTransform);
+    return theRasterizer->GetPixelSize(static_cast<GEModel*>(inModel), theViewport, theTransformation, inScale, inOrthographic);
 }
 
-// FUNCTION: DX7HR 0x10003b94
-// Writes a material's vertices blended between the current and next frame as white coloured vertices
-void DX7Rasterizer::CopyAndSmoothStdVertices(GEModel* inModel, GEMaterial* inMaterial,
-                                             GXVERTEX_STD_COLOR* outVertices)
+float ee_dx7cpp_view_width(void* inRasterizer, unsigned long inScreen)
 {
-    float theFraction = inModel->GetFractionalFramePosition();
-    float theInverse = 1.0f - theFraction;
-    // The range length is read into a local first: its load precedes the frame loads, and the x87 operand order
-    // of the first blend follows from it (94.8 -> exact).
-    unsigned long theLength = inMaterial->GetVertexRangeLength();
-    GXVERTEX* theCurrent =
-        static_cast<DX7StandardVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsCurrentFrame()))->mVertices +
-        inMaterial->GetVertexStartingIndex();
-    GXVERTEX* theEnd = theCurrent + theLength;
-    GXVERTEX* theNext =
-        static_cast<DX7StandardVertexArray*>(inModel->GetVertexArray(inModel->GetGraphicsNextFrame()))->mVertices +
-        inMaterial->GetVertexStartingIndex();
-    for (; theCurrent < theEnd; theCurrent++, theNext++, outVertices++) {
-        outVertices->x = theNext->x * theFraction + theCurrent->x * theInverse;
-        outVertices->y = theCurrent->y * theInverse + theNext->y * theFraction;
-        outVertices->z = theCurrent->z * theInverse + theNext->z * theFraction;
-        outVertices->nx = theCurrent->nx * theInverse + theNext->nx * theFraction;
-        outVertices->ny = theCurrent->ny * theInverse + theNext->ny * theFraction;
-        outVertices->nz = theCurrent->nz * theInverse + theNext->nz * theFraction;
-        outVertices->color = 0xffffffff;
-        outVertices->tu = theCurrent->tu;
-        outVertices->tv = theCurrent->tv;
-    }
+    return DX7Access(inRasterizer)->mScreenStates[inScreen]->mViewport.GetViewRectangle().GetWidth();
+}
+
+void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
+{
+    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(inIndex);
+    outInfo->texture = theMaterial->GetTexture(inScreen);
+    outInfo->polygon_start = theMaterial->GetPolygonStartingIndex(inLOD);
+    outInfo->polygon_length = theMaterial->GetPolygonRangeLength(inLOD);
+    outInfo->vertex_start = theMaterial->GetVertexStartingIndex();
+    outInfo->vertex_length = theMaterial->GetVertexRangeLength();
+    outInfo->opacity = theMaterial->GetOpacity();
+    outInfo->color[0] = theMaterial->GetColor().GetRed();
+    outInfo->color[1] = theMaterial->GetColor().GetGreen();
+    outInfo->color[2] = theMaterial->GetColor().GetBlue();
+}
+
+const unsigned short* ee_dx7cpp_polygon_indices(void* inModel, unsigned long inLOD)
+{
+    return static_cast<DX7PolygonArray*>(static_cast<GEModel*>(inModel)->GetPolygonArray(inLOD))->mIndices;
+}
+
+const void* ee_dx7cpp_frame_vertices(void* inModel, unsigned long inFrame, unsigned long inVertexType)
+{
+    GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(inFrame);
+    if (inVertexType == 0)
+        return static_cast<DX7StandardVertexArray*>(theArray)->mVertices;
+    return static_cast<DX7StdColorVertexArray*>(theArray)->mVertices;
+}
+
+void* ee_dx7cpp_sub_model(void* inModel, unsigned long inIndex) { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); }
 }
 
 // FUNCTION: DX7HR 0x10003c5d
@@ -146,59 +135,18 @@ void DX7Rasterizer::CopyAndSmoothStdVertices(GEModel* inModel, GEMaterial* inMat
 long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
                          unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
 {
-    GETransformation theIdentity;
-    GXMATRIX theMatrix;
-    long theResult;
-    this->mDrawingAccess->Enter();
-    this->Set3DMode(inScreen);
-    this->ConvertToD3DMatrix(theIdentity, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
-    this->SetTexture(inTexture, inScreen);
-    GXVERTEX_STD_COLOR* theBuffer;
-    this->LockVB(inVertexCount, inScreen, theBuffer);
-    theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
-    if (inVertices.GetType() == 1)
-        memcpy(theBuffer, ((DX7StdColorVertexArray&)inVertices).mVertices,
-               inVertexCount * sizeof(GXVERTEX_STD_COLOR));
-    else {
-        GXVERTEX* theVertex = ((DX7StandardVertexArray&)inVertices).mVertices;
-        GXVERTEX* theEnd = theVertex + inVertexCount;
-        for (; theVertex < theEnd; theVertex++, theBuffer++) {
-            theBuffer->x = theVertex->x;
-            theBuffer->y = theVertex->y;
-            theBuffer->z = theVertex->z;
-            theBuffer->nx = theVertex->nx;
-            theBuffer->ny = theVertex->ny;
-            theBuffer->nz = theVertex->nz;
-            theBuffer->color = 0xffffffff;
-            theBuffer->tu = theVertex->tu;
-            theBuffer->tv = theVertex->tv;
-        }
-    }
-    theResult = this->UnlockVB(inScreen);
-    while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
-                this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                inVertexCount, ((DX7PolygonArray&)inPolygons).mIndices, inCount * 3, 0) != GXERR_WASSTILLDRAWING)
-            break;
-        PlatSleep(0);
-    }
-    this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += inVertexCount;
-    this->mScreenStates[inScreen]->m32C[1] += inCount;
-    this->mDrawingAccess->Leave();
-    return theResult;
+    unsigned long theType = inVertices.GetType();
+    const void* theVertices = theType == 1 ? static_cast<const void*>(((DX7StdColorVertexArray&)inVertices).mVertices)
+                                           : static_cast<const void*>(((DX7StandardVertexArray&)inVertices).mVertices);
+    return ee_dx7r_draw_polygon_array(this, inScreen, DX7DrawState(this, inScreen), ((DX7PolygonArray&)inPolygons).mIndices,
+                                      inCount, theType, theVertices, inVertexCount, inTexture);
 }
 
 // FUNCTION: DX7HR 0x10003e60
 // Draws a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
 long DX7Rasterizer::Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
 {
-    this->mDrawingAccess->Enter();
-    this->Set3DMode(inScreen);
-    long theResult = this->DrawModelHierarchy(inModel, inScreen, inOpacity, inOrthographic);
-    this->mDrawingAccess->Leave();
-    return theResult;
+    return ee_dx7r_draw_model(this, inScreen, DX7DrawState(this, inScreen), inModel, inOpacity, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10003ea7
@@ -207,210 +155,17 @@ long DX7Rasterizer::Draw(GEModel* inModel, unsigned long inScreen, float inOpaci
 long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoints, GETexture* inTexture,
                                float inV, unsigned long inScreen, bool inOrthographic)
 {
-    GE3DPoint thePoint;
-    GETransformation theTransformation;
-    GXMATRIX theMatrix;
-    float theV = inV;
-    GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
-    this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
-    theTransformation.SetElement(1, 1, 0.0f);
-    theTransformation.SetElement(1, 2, 1.0f);
-    theTransformation.SetElement(2, 1, 1.0f);
-    theTransformation.SetElement(2, 2, 0.0f);
-    this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
-    if (!inOrthographic)
-        this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
-    else
-        this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
-    this->SetTexture(inTexture, inScreen);
-    GXMATERIAL theMaterial;
-    theMaterial.dcvAmbient.r = 1.0f;
-    theMaterial.dcvAmbient.g = 1.0f;
-    theMaterial.dcvAmbient.b = 1.0f;
-    theMaterial.dcvAmbient.a = 1.0f;
-    theMaterial.dcvDiffuse.r = 1.0f;
-    theMaterial.dcvDiffuse.g = 1.0f;
-    theMaterial.dcvDiffuse.b = 1.0f;
-    theMaterial.dcvDiffuse.a = 1.0f;
-    theMaterial.dcvEmissive.r = 0.0f;
-    theMaterial.dcvEmissive.g = 0.0f;
-    theMaterial.dcvEmissive.b = 0.0f;
-    theMaterial.dcvEmissive.a = 0.0f;
-    theMaterial.dcvSpecular.r = 0.0f;
-    theMaterial.dcvSpecular.g = 0.0f;
-    theMaterial.dcvSpecular.b = 0.0f;
-    theMaterial.dcvSpecular.a = 0.0f;
-    theMaterial.dvPower = 0.0f;
-    this->mDX7ScreenStates[inScreen]->mDevice->SetMaterial(&theMaterial);
-    this->SetShadingColorSource(0, inScreen);
-    unsigned long theCount = inPoints.size();
-    // A polyline needs two points (an empty one would wrap the unsigned vertex count and read past the vector).
-    if (theCount < 2)
-        return 0;
-    unsigned long theVertexCount = theCount * 2 - 2;
-    if (theVertexCount > 0x960) {
-        theVertexCount = 0x960;
-        theCount = 0x4b1;
-    }
-    GXVERTEX_STD_COLOR* theBuffer;
-    this->LockVB(theVertexCount, inScreen, theBuffer);
-    theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
-    for (unsigned long i = 1; i < theCount; i++) {
-        theViewport.GetCameraInverse().Apply(inPoints[i - 1].first, thePoint);
-        theBuffer->x = thePoint.GetX();
-        theBuffer->y = thePoint.GetY();
-        theBuffer->z = thePoint.GetZ();
-        theBuffer->nx = 0.0f;
-        theBuffer->ny = 0.0f;
-        theBuffer->nz = 0.0f;
-        theBuffer->color = 0xffff0000;
-        theBuffer->tu = 0.0f;
-        theBuffer->tv = theV;
-        theV += inPoints[i - 1].second;
-        theBuffer++;
-        theViewport.GetCameraInverse().Apply(inPoints[i].first, thePoint);
-        theBuffer->x = thePoint.GetX();
-        theBuffer->y = thePoint.GetY();
-        theBuffer->z = thePoint.GetZ();
-        theBuffer->nx = 0.0f;
-        theBuffer->ny = 0.0f;
-        theBuffer->nz = 0.0f;
-        theBuffer->color = 0xffff0000;
-        theBuffer->tu = 0.0f;
-        theBuffer->tv = theV;
-        theBuffer++;
-        if (theV <= -1.0f)
-            theV = UMCeil(theV) - theV;
-        else if (theV > 1.0f)
-            theV = theV - UMFloor(theV);
-    }
-    long theResult = this->UnlockVB(inScreen);
-    while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_LINELIST,
-                this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                theVertexCount, 0) != GXERR_WASSTILLDRAWING)
-            break;
-        PlatSleep(0);
-    }
-    this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;
-    return theResult;
+    static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    return ee_dx7r_draw_3d_line(this, inScreen, DX7DrawState(this, inScreen), reinterpret_cast<const float(*)[4]>(inPoints.data()),
+                                inPoints.size(), inTexture, inV, inOrthographic, &theViewport);
 }
 
 // FUNCTION: DX7HR 0x100042c1
-// Draws a model and recursively its sub-models: composes the transforms, culls, picks the root's level of detail from
-// its on-screen size and draws each material's triangles; stops at the first sub-model error
+// Draws a model and recursively its sub-models (no parent: the top of a hierarchy); stops at the first sub-model error
 long DX7Rasterizer::DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inDetail, bool inOrthographic)
 {
-    long theResult = kErrorOK;
-    GXVERTEX_STD_COLOR* theBuffer;
-    GEViewport* theViewport = &this->mScreenStates[inScreen]->mViewport;
-    unsigned long theMaterialCount = inModel->GetMaterialCount();
-    GETransformation theTransformation(false);
-    float theScale;
-    bool theHasParent;
-    if (GERasterizer::sTransformStack.empty()) {
-        theTransformation = inModel->GetGraphicsTransform();
-        theScale = inModel->GetGraphicsScale();
-        theHasParent = false;
-    } else {
-        GERasterizer::sTransformStack.back().mTransformation->Apply(inModel->GetGraphicsTransform(), theTransformation);
-        theScale = inModel->GetGraphicsScale() * GERasterizer::sTransformStack.back().mScale;
-        theHasParent = true;
-    }
-    GERasterizer::sTransformStack.push_back(TransformStack(&theTransformation, theScale));
-    bool theIsVisible;
-    bool theIsClipped;
-    if (!inOrthographic)
-        this->IsPerspectiveModelVisible(inModel, theScale, theViewport, theTransformation, theIsVisible, theIsClipped);
-    else
-        this->IsOrthographicModelVisible(inModel, theViewport, theTransformation, theIsVisible, theIsClipped);
-    if (theIsVisible) {
-        unsigned long theLOD;
-        if (!theHasParent) {
-            float theWidth = theViewport->GetViewRectangle().GetWidth();
-            float theDetail = this->GetPixelSize(inModel, theViewport, theTransformation, theScale, inOrthographic) *
-                              (800.0f / theWidth) / inDetail;
-            if (1.0f < theDetail)
-                theDetail = 1.0f;
-            theLOD = UMFloatToLong((1.0f - theDetail) * inModel->GetLODCount());
-            if (theLOD >= inModel->GetLODCount() - 1)
-                theLOD = inModel->GetLODCount() - 1;
-        } else
-            theLOD = 0;
-        GXMATRIX theMatrix;
-        this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
-        if (!theIsClipped)
-            theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, FALSE);
-        else
-            theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
-        GEPolygonArray* thePolygons = inModel->GetPolygonArray(theLOD);
-        GXMATERIAL theD3DMaterial;
-        theD3DMaterial.dcvAmbient.r = 1.0f;
-        theD3DMaterial.dcvAmbient.g = 1.0f;
-        theD3DMaterial.dcvAmbient.b = 1.0f;
-        theD3DMaterial.dcvAmbient.a = 1.0f;
-        theD3DMaterial.dcvDiffuse.r = 1.0f;
-        theD3DMaterial.dcvDiffuse.g = 1.0f;
-        theD3DMaterial.dcvDiffuse.b = 1.0f;
-        theD3DMaterial.dcvDiffuse.a = 1.0f;
-        theD3DMaterial.dcvEmissive.r = 0.0f;
-        theD3DMaterial.dcvEmissive.g = 0.0f;
-        theD3DMaterial.dcvEmissive.b = 0.0f;
-        theD3DMaterial.dcvEmissive.a = 0.0f;
-        theD3DMaterial.dcvSpecular.r = 0.0f;
-        theD3DMaterial.dcvSpecular.g = 0.0f;
-        theD3DMaterial.dcvSpecular.b = 0.0f;
-        theD3DMaterial.dcvSpecular.a = 0.0f;
-        theD3DMaterial.dvPower = 0.0f;
-        for (unsigned long i = 0; i < theMaterialCount; i++) {
-            GEMaterial* theMaterial = inModel->GetMaterial(i);
-            if (!(theMaterial->GetPolygonRangeLength(theLOD) > 0))
-                continue;
-            this->mScreenStates[inScreen]->m32C[1] += theMaterial->GetPolygonRangeLength(theLOD);
-            this->SetTexture(theMaterial->GetTexture(inScreen), inScreen);
-            theD3DMaterial.dcvAmbient.r = theMaterial->GetColor().GetRed();
-            theD3DMaterial.dcvAmbient.g = theMaterial->GetColor().GetGreen();
-            theD3DMaterial.dcvAmbient.b = theMaterial->GetColor().GetBlue();
-            theD3DMaterial.dcvDiffuse.r = theMaterial->GetColor().GetRed();
-            theD3DMaterial.dcvDiffuse.g = theMaterial->GetColor().GetGreen();
-            theD3DMaterial.dcvDiffuse.b = theMaterial->GetColor().GetBlue();
-            theD3DMaterial.dcvDiffuse.a = theMaterial->GetOpacity() * inModel->GetModelOpacity();
-            this->mDX7ScreenStates[inScreen]->mDevice->SetMaterial(&theD3DMaterial);
-            this->LockVB(theMaterial->GetVertexRangeLength(), inScreen, theBuffer);
-            theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
-            if (inModel->GetVertexArray(0)->GetType() == 0) {
-                if (inModel->GetFractionalFramePosition() != 0.0f)
-                    this->CopyAndSmoothStdVertices(inModel, theMaterial, theBuffer);
-                else
-                    this->CopyStdVertices(inModel, theMaterial, theBuffer);
-            } else {
-                if (inModel->GetFractionalFramePosition() != 0.0f)
-                    this->CopyAndSmoothStdColorVertices(inModel, theMaterial, theBuffer);
-                else
-                    this->CopyStdColorVertices(inModel, theMaterial, theBuffer);
-            }
-            theResult = this->UnlockVB(inScreen);
-            while (true) {
-                if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
-                        this->mDX7ScreenStates[inScreen]->mVertexBuffer,
-                        this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, theMaterial->GetVertexRangeLength(),
-                        static_cast<DX7PolygonArray*>(thePolygons)->mIndices +
-                            theMaterial->GetPolygonStartingIndex(theLOD) * 3,
-                        theMaterial->GetPolygonRangeLength(theLOD) * 3, 0) != GXERR_WASSTILLDRAWING)
-                    break;
-                PlatSleep(0);
-            }
-            this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theMaterial->GetVertexRangeLength();
-        }
-    }
-    for (unsigned long j = 0; j < inModel->GetSubModelCount() && theResult == kErrorOK; j++)
-        theResult = this->DrawModelHierarchy(inModel->GetSubModel(j), inScreen, inDetail, inOrthographic);
-    GERasterizer::sTransformStack.pop_back();
-    return theResult;
+    return ee_dx7r_draw_model_hierarchy(this, inScreen, DX7DrawState(this, inScreen), inModel, inDetail, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10004741

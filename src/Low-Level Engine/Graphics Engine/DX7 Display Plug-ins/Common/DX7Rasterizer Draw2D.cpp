@@ -9,6 +9,8 @@
 #include "gx/GX.h"
 #include "platform/PlatFont.h"
 #include <math.h>
+#include <stddef.h>
+#include <string.h>
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -22,6 +24,7 @@
 #include "lle/GEPoint.h"
 #include "lle/GERhombus.h"
 #include "lle/GEText.h"
+#include "dx7/DX7DrawSeam.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x10002b04
@@ -54,280 +57,111 @@
 // SYNTHETIC: DX7HR 0x10002c57
 
 // FUNCTION: DX7HR 0x10002c62
-// Draws a bitmap as a textured quad, rewriting its vertex UVs in place into the texture's frame; 9 without texture
+// The draws moved to Rust (rust/crates/ee_dx7/src/draw2d.rs, docs/RUST_PLAN.md R4.2). The C++ here forwards; the
+// ee_dx7cpp_* below read the GE objects for it.
 long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
 {
-    unsigned short theIndices[6] = {0, 1, 2, 2, 1, 3};
-    long theResult;
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theBottomLeft;
-    this->mDrawingAccess->Enter();
-    this->Set2DMode(inScreen);
-    GETexture* theTexture = inBitmap->GetTexture(inScreen);
-    if (theTexture != NULL) {
-        GEVertexArray* theVertices = inBitmap->GetVertexArray();
-        float theUVSize = theTexture->GetFrameUVSize();
-        if (theUVSize != 1.0f) {
-            GETextureCoordinate theCorner = theTexture->GetFrameTopLeftCorner();
-            theVertices->GetTextureCoordinate(theTopLeft, 0);
-            theVertices->GetTextureCoordinate(theTopRight, 1);
-            theVertices->GetTextureCoordinate(theBottomRight, 2);
-            theVertices->GetTextureCoordinate(theBottomLeft, 3);
-            theTopLeft.SetU(theTopLeft.GetU() * theUVSize + theCorner.GetU());
-            theTopLeft.SetV(theTopLeft.GetV() * theUVSize + theCorner.GetV());
-            theTopRight.SetU(theTopRight.GetU() * theUVSize + theCorner.GetU());
-            theTopRight.SetV(theTopRight.GetV() * theUVSize + theCorner.GetV());
-            theBottomRight.SetU(theBottomRight.GetU() * theUVSize + theCorner.GetU());
-            theBottomRight.SetV(theBottomRight.GetV() * theUVSize + theCorner.GetV());
-            theBottomLeft.SetU(theBottomLeft.GetU() * theUVSize + theCorner.GetU());
-            theBottomLeft.SetV(theBottomLeft.GetV() * theUVSize + theCorner.GetV());
-            theVertices->SetTextureCoordinate(theTopLeft, 0);
-            theVertices->SetTextureCoordinate(theTopRight, 1);
-            theVertices->SetTextureCoordinate(theBottomRight, 2);
-            theVertices->SetTextureCoordinate(theBottomLeft, 3);
-        }
-        this->SetTexture(theTexture, inScreen);
-        GXVERTEX_STD_COLOR* theBuffer;
-        this->LockVB(4, inScreen, theBuffer);
-        memcpy(theBuffer + this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-               static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(GXVERTEX_STD_COLOR));
-        theResult = this->UnlockVB(inScreen);
-        while (true) {
-            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
-                    this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
-                    theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
-                break;
-            PlatSleep(0);
-        }
-        this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 4;
-    } else
-        theResult = 9;
-    this->mDrawingAccess->Leave();
-    return theResult;
+    return ee_dx7r_draw_bitmap(this, inScreen, DX7DrawState(this, inScreen), inBitmap);
 }
 
-// The half-pixel-ish nudge applied to line end points (a named constant: the original reloads it for every add).
-// (provisional name)
-static const float kLineOffset = 0.001f;
-
 // FUNCTION: DX7HR 0x10002e88
-// Draws lines as one line list, nudging both ends by 0.001; remaps only each first vertex's UV into the texture frame
 long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long inScreen)
 {
-    GETextureCoordinate theCoordinate;
-    unsigned long theVertexCount = inCount * 2;
-    long theResult;
-    this->mDrawingAccess->Enter();
-    this->Set2DMode(inScreen);
-    GETexture* theTexture = inLine->GetTexture(inScreen);
-    bool theHasTexture = theTexture != NULL;
-    this->SetTexture(theTexture, inScreen);
-    GXVERTEX_STD_COLOR* theBuffer;
-    this->LockVB(theVertexCount, inScreen, theBuffer);
-    theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
-    GELine* theLine = inLine;
-    for (unsigned long i = 0; i < inCount; i++, theLine++) {
-        GEVertexArray* theVertices = theLine->GetVertexArray();
-        if (theHasTexture) {
-            float theUVSize = theTexture->GetFrameUVSize();
-            if (theUVSize != 1.0f) {
-                GETextureCoordinate theCorner = theTexture->GetFrameTopLeftCorner();
-                theVertices->GetTextureCoordinate(theCoordinate, 0);
-                theCoordinate.SetU(theCoordinate.GetU() * theUVSize + theCorner.GetU());
-                theCoordinate.SetV(theCoordinate.GetV() * theUVSize + theCorner.GetV());
-                theVertices->SetTextureCoordinate(theCoordinate, 0);
-            }
-        }
-        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 2 * sizeof(GXVERTEX_STD_COLOR));
-        theBuffer[0].x += kLineOffset;
-        theBuffer[0].y += kLineOffset;
-        theBuffer[1].x += kLineOffset;
-        theBuffer[1].y += kLineOffset;
-        theBuffer += 2;
-    }
-    theResult = this->UnlockVB(inScreen);
-    while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_LINELIST,
-                this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                theVertexCount, 0) != GXERR_WASSTILLDRAWING)
-            break;
-        PlatSleep(0);
-    }
-    this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;
-    this->mDrawingAccess->Leave();
-    return theResult;
+    return ee_dx7r_draw_lines(this, inScreen, DX7DrawState(this, inScreen), inLine, inCount);
 }
 
 // FUNCTION: DX7HR 0x10003042
-// Draws points as one point list, remapping each point's UV in place into the texture frame
 long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)
 {
-    GETextureCoordinate theCoordinate;
-    long theResult;
-    this->mDrawingAccess->Enter();
-    this->Set2DMode(inScreen);
-    GETexture* theTexture = inPoint->GetTexture(inScreen);
-    bool theHasTexture = theTexture != NULL;
-    this->SetTexture(theTexture, inScreen);
-    GXVERTEX_STD_COLOR* theBuffer;
-    this->LockVB(inCount, inScreen, theBuffer);
-    theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
-    GEPoint* thePoint = inPoint;
-    for (unsigned long i = 0; i < inCount; i++, thePoint++) {
-        GEVertexArray* theVertices = thePoint->GetVertexArray();
-        if (theHasTexture) {
-            float theUVSize = theTexture->GetFrameUVSize();
-            if (theUVSize != 1.0f) {
-                GETextureCoordinate theCorner = theTexture->GetFrameTopLeftCorner();
-                theVertices->GetTextureCoordinate(theCoordinate, 0);
-                theCoordinate.SetU(theCoordinate.GetU() * theUVSize + theCorner.GetU());
-                theCoordinate.SetV(theCoordinate.GetV() * theUVSize + theCorner.GetV());
-                theVertices->SetTextureCoordinate(theCoordinate, 0);
-            }
-        }
-        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, sizeof(GXVERTEX_STD_COLOR));
-        theBuffer++;
-    }
-    theResult = this->UnlockVB(inScreen);
-    while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_POINTLIST,
-                   this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                   inCount, 0) != GXERR_WASSTILLDRAWING)
-            break;
-        PlatSleep(0);
-    }
-    this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += inCount;
-    this->mDrawingAccess->Leave();
-    return theResult;
+    return ee_dx7r_draw_points(this, inScreen, DX7DrawState(this, inScreen), inPoint, inCount);
 }
 
 // FUNCTION: DX7HR 0x100031b6
-// Draws a rhombus as an untextured quad
 long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
 {
-    unsigned short theIndices[6] = {0, 1, 2, 2, 1, 3};
-    long theResult;
-    this->mDrawingAccess->Enter();
-    this->Set2DMode(inScreen);
-    this->SetTexture(NULL, inScreen);
-    GEVertexArray* theVertices = inRhombus->GetVertexArray();
-    GXVERTEX_STD_COLOR* theBuffer;
-    this->LockVB(4, inScreen, theBuffer);
-    memcpy(theBuffer + this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-           static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(GXVERTEX_STD_COLOR));
-    theResult = this->UnlockVB(inScreen);
-    while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
-                   this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
-                   theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
-            break;
-        PlatSleep(0);
-    }
-    this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 4;
-    this->mDrawingAccess->Leave();
-    return theResult;
+    return ee_dx7r_draw_rhombus(this, inScreen, DX7DrawState(this, inScreen), inRhombus);
 }
 
-// One text draw (platform/PlatFont.h; GDI in the original, with the same steps): background mode and colours, the
-// font, alignment by the text extent, the shadow 1 pixel down-right for shadow fonts, then the text; clipped to inClip
-// when given. A GXSurface::DrawText callback: the target covers the surface from (inOriginX, inOriginY).
+static Dx7StdColorVertex* DX7StdColorVerticesOf(GEVertexArray* inArray)
+{
+    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(inArray)->mVertices);
+}
+
+extern "C" {
+void* ee_dx7cpp_bitmap_texture(void* inBitmap, unsigned long inScreen) { return static_cast<GEBitmap*>(inBitmap)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_bitmap_vertices(void* inBitmap) { return DX7StdColorVerticesOf(static_cast<GEBitmap*>(inBitmap)->GetVertexArray()); }
+void* ee_dx7cpp_line_texture(void* inLines, unsigned long inScreen) { return static_cast<GELine*>(inLines)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_line_vertices(void* inLines, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GELine*>(inLines)[inIndex].GetVertexArray()); }
+void* ee_dx7cpp_point_texture(void* inPoints, unsigned long inScreen) { return static_cast<GEPoint*>(inPoints)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_point_vertices(void* inPoints, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GEPoint*>(inPoints)[inIndex].GetVertexArray()); }
+Dx7StdColorVertex* ee_dx7cpp_rhombus_vertices(void* inRhombus) { return DX7StdColorVerticesOf(static_cast<GERhombus*>(inRhombus)->GetVertexArray()); }
+void ee_dx7cpp_texture_frame(void* inTexture, float* outSize, float* outCorner)
+{
+    GETexture* theTexture = static_cast<GETexture*>(inTexture);
+    *outSize = theTexture->GetFrameUVSize();
+    outCorner[0] = theTexture->GetFrameTopLeftCorner().GetU();
+    outCorner[1] = theTexture->GetFrameTopLeftCorner().GetV();
+}
+int32_t ee_dx7cpp_text_measure(const void* inFont, const char* inText, uint32_t inLength) { return PlatFontMeasure(static_cast<const PlatFont*>(inFont), inText, inLength); }
+const void* ee_dx7cpp_text_scaled(const void* inFont, float inScale) { return PlatFontScaled(static_cast<const PlatFont*>(inFont), inScale); }
+int32_t ee_dx7cpp_font_height(const void* inFont)
+{
+    PlatFontMetrics theMetrics;
+    PlatFontGetMetrics(static_cast<const PlatFont*>(inFont), &theMetrics);
+    return theMetrics.mHeight;
+}
+void ee_dx7cpp_text_draw(const void* inFont, const char* inText, uint32_t inLength, int32_t inX, int32_t inY, uint32_t inColor, int inOpaque,
+                         uint32_t inBackground, const int32_t* inClip, const void* inTarget)
+{
+    PlatFontRect theClip = {inClip[0], inClip[1], inClip[2], inClip[3]};
+    PlatFontDraw(static_cast<const PlatFont*>(inFont), inText, inLength, inX, inY, inColor, inOpaque, inBackground, &theClip,
+                 static_cast<const PlatFontTarget*>(inTarget));
+}
+}
+
+// One text draw's plain inputs (Rust: draw2d.rs TextInfo). The layout and the draws are in Rust.
+static EeDx7TextInfo DX7TextInfoOf(GEText* inText)
+{
+    GEFont* theFont = inText->GetFont();
+    EeDx7TextInfo theInfo;
+    theInfo.font = theFont->GetOSFont();
+    theInfo.text = inText->GetText();
+    theInfo.length = inText->GetText().GetLength();
+    theInfo.x = inText->GetLocation().GetX();
+    theInfo.y = inText->GetLocation().GetY();
+    theInfo.alignment = inText->GetAlignment();
+    theInfo.transparent = inText->GetIsTransparent();
+    theInfo.shadow_font = (theFont->GetFontStyle() & kFontStyleShadow) != 0;
+    theInfo.foreground[0] = inText->GetFgColor().GetRed();
+    theInfo.foreground[1] = inText->GetFgColor().GetGreen();
+    theInfo.foreground[2] = inText->GetFgColor().GetBlue();
+    theInfo.background[0] = inText->GetBgColor().GetRed();
+    theInfo.background[1] = inText->GetBgColor().GetGreen();
+    theInfo.background[2] = inText->GetBgColor().GetBlue();
+    return theInfo;
+}
+
+static_assert(sizeof(EeDx7TextRect) == sizeof(RECT), "ee_dx7/src/draw2d.rs TextRect");
+
+// One text draw (GDI in the original): a GXSurface::DrawText callback; the target covers the surface from
+// (inOriginX, inOriginY). The font is referenced around the draw, as the original did.
 struct DX7TextJob {
     GEText* mText;
     const RECT* mClip;
     long mResult;
 };
 
-static uint32_t DX7TextColor(const GEColor& inColor)
-{
-    return ((uint32_t)(BYTE)(inColor.GetRed() * 255.0f) << 16) | ((uint32_t)(BYTE)(inColor.GetGreen() * 255.0f) << 8) |
-           (uint32_t)(BYTE)(inColor.GetBlue() * 255.0f);
-}
-
 static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inJob)
 {
     DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
-    GEText* inText = theJob->mText;
-    GEFont* theFont = inText->GetFont();
+    GEFont* theFont = theJob->mText->GetFont();
     theFont->Reference();
-    PlatFont* thePlatFont = theFont->GetOSFont();
-    if (thePlatFont == NULL) {
-        theFont->Dereference();
+    EeDx7TextInfo theInfo = DX7TextInfoOf(theJob->mText);
+    if (!ee_dx7r_text_draw(&theInfo, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
+                           inTarget.mWidth, inTarget.mHeight, inTarget.mScale, &inTarget))
         theJob->mResult = kErrorNativeError;
-        return true;
-    }
-    const char* theString = inText->GetText();
-    uint32_t theLength = inText->GetText().GetLength();
-    // port: a target drawn at a multiple of its logical size (GX's render scale) gets the text at that scale, from the
-    // font made that much larger: placed in logical pixels, drawn sharp
-    float theScale = inTarget.mScale > 1.0f ? inTarget.mScale : 1.0f;
-    const PlatFont* theDrawFont = PlatFontScaled(thePlatFont, theScale);
-    PlatFontRect theClip = {0, 0, inTarget.mWidth, inTarget.mHeight};
-    if (theJob->mClip) {   // ETO_CLIPPED
-        theClip.mLeft = (int32_t)floorf((theJob->mClip->left - inOriginX) * theScale);
-        theClip.mTop = (int32_t)floorf((theJob->mClip->top - inOriginY) * theScale);
-        theClip.mRight = (int32_t)ceilf((theJob->mClip->right - inOriginX) * theScale);
-        theClip.mBottom = (int32_t)ceilf((theJob->mClip->bottom - inOriginY) * theScale);
-    }
-    GE2DPoint theLocation = inText->GetLocation();
-    int32_t theWidth = PlatFontMeasure(thePlatFont, theString, theLength);
-    if (inText->GetAlignment() == kTextAlignCenter)
-        theLocation.SetX(theLocation.GetX() - theWidth / 2);
-    else if (inText->GetAlignment() == kTextAlignRight)
-        theLocation.SetX(theLocation.GetX() - theWidth);
-    // the scaled text keeps the logical text's centre (its own width rounds differently)
-    float theX = ((long)theLocation.GetX() - inOriginX) * theScale;
-    if (theScale > 1.0f && inText->GetAlignment() != kTextAlignLeft) {
-        float theScaledWidth = (float)PlatFontMeasure(theDrawFont, theString, theLength);
-        theX += (theWidth * theScale - theScaledWidth) * (inText->GetAlignment() == kTextAlignCenter ? 0.5f : 1.0f);
-    }
-    int32_t theDrawX = (int32_t)lroundf(theX);
-    int32_t theDrawY = (int32_t)lroundf(((long)theLocation.GetY() - inOriginY) * theScale);
-    int32_t theShadow = (int32_t)lroundf(theScale) > 0 ? (int32_t)lroundf(theScale) : 1;
-    int theOpaque = inText->GetIsTransparent() ? 0 : 1;
-    uint32_t theBackground = DX7TextColor(inText->GetBgColor());
-    if (theFont->GetFontStyle() & kFontStyleShadow) {
-        uint32_t theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
-                            inText->GetFgColor().GetBlue() > 0.1f ? 0 : 0xffffff;
-        PlatFontDraw(theDrawFont, theString, theLength, theDrawX + theShadow, theDrawY + theShadow, theShade, theOpaque,
-                     theBackground, &theClip, &inTarget);
-    }
-    PlatFontDraw(theDrawFont, theString, theLength, theDrawX, theDrawY, DX7TextColor(inText->GetFgColor()), theOpaque,
-                 theBackground, &theClip, &inTarget);
     theFont->Dereference();
     return true;
-}
-
-// The pixels a text draw can touch: its aligned extent with the shadow and a margin for overhangs, within inClip
-static RECT DX7TextBounds(GEText* inText, const RECT* inClip)
-{
-    RECT theBounds = {0, 0, 0, 0};
-    PlatFont* theFont = inText->GetFont()->GetOSFont();
-    long theWidth = 0, theHeight = 0;
-    if (theFont != NULL) {
-        PlatFontMetrics theMetrics;
-        PlatFontGetMetrics(theFont, &theMetrics);
-        theWidth = PlatFontMeasure(theFont, inText->GetText(), inText->GetText().GetLength());
-        theHeight = theMetrics.mHeight;
-    }
-    GE2DPoint theLocation = inText->GetLocation();
-    if (inText->GetAlignment() == kTextAlignCenter)
-        theLocation.SetX(theLocation.GetX() - theWidth / 2);
-    else if (inText->GetAlignment() == kTextAlignRight)
-        theLocation.SetX(theLocation.GetX() - theWidth);
-    long theMargin = theHeight / 2 + 2;
-    theBounds.left = (long)theLocation.GetX() - theMargin;
-    theBounds.top = (long)theLocation.GetY() - 2;
-    theBounds.right = (long)theLocation.GetX() + theWidth + theMargin;
-    theBounds.bottom = (long)theLocation.GetY() + theHeight + 3;
-    if (inClip) {
-        theBounds.left = max(theBounds.left, inClip->left);
-        theBounds.top = max(theBounds.top, inClip->top);
-        theBounds.right = min(theBounds.right, inClip->right);
-        theBounds.bottom = min(theBounds.bottom, inClip->bottom);
-    }
-    return theBounds;
 }
 
 // Draws a text on the target: onto the GPU copy of a GPU-resident target (no read-back), else onto its CPU copy (a
@@ -336,8 +170,12 @@ static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
 {
     DX7TextJob theJob = {inText, inClip, kErrorOK};
     GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
-    RECT theBounds = DX7TextBounds(inText, inClip);
-    if (theSurface->DrawText(theBounds, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
+    EeDx7TextInfo theInfo = DX7TextInfoOf(inText);
+    EeDx7TextRect theBounds;
+    ee_dx7r_text_bounds(&theInfo, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
+    RECT theRect;
+    memcpy(&theRect, &theBounds, sizeof(RECT));
+    if (theSurface->DrawText(theRect, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
         theJob.mResult = kErrorNativeError;
     return theJob.mResult;
 }
