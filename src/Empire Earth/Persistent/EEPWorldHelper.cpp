@@ -134,7 +134,7 @@ FSPersistent* EEPWorldHelper::CreateDefault() const
     return new EEPWorldHelper;
 }
 
-// port (save version 0.253): the order of the world's unit chain (x-sorted; units on one column in the order they
+// port (save version 0.254): the order of the world's unit chain (x-sorted; units on one column in the order they
 // came) and of the units stepped each tick, and the queued (de)activations, as unit ids. A load links the units in
 // its own order and rebuilds the stepped list from the chain, so a loaded game stepped its units (and drew its random
 // numbers) in another order than the game that was saved. Put back at the first tick (EEAfterLoad), when every unit
@@ -199,7 +199,7 @@ static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const st
     }
 }
 
-// port (save version 0.253): each forest's next renewal (EEUnit::RegrowForest), with its tiles. The continent manager
+// port (save version 0.254): each forest's next renewal (EEUnit::RegrowForest), with its tiles. The continent manager
 // is not saved: a load builds its forests again from the map with no renewal due date, so the first tree cut in a
 // loaded game regrew its forest at once. Put back at the first tick to the rebuilt forest on each saved forest's tiles.
 static void SaveForests(FSFile& outFile)
@@ -314,7 +314,7 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         this->mUsingCarbon = false;
     else
         inFile.Read(this->mUsingCarbon);
-    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
+    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
         if (LoadUnitOrder(inFile) == kErrorOK)
             LoadForests(inFile);
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
@@ -362,7 +362,7 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     outFile.Write(this->mTownIDCounter);
     outFile.Write(this->mHerdIDCounter);
     outFile.Write(this->mUsingCarbon);
-    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
+    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
     {
         SaveUnitOrder(outFile);
         SaveForests(outFile);

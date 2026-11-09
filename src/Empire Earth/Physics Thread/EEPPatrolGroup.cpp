@@ -211,7 +211,7 @@ long EEPPatrolGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             }
             if (theResult == kErrorOK)
                 theResult = inFile->Read(this->mIsLoop);
-            // port (0.253): the town patrol flag (town patrols are saved from then on) and the id counter as saved
+            // port (0.254): the town patrol flag (town patrols are saved from then on) and the id counter as saved
             if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
                 theResult = inFile->Read(this->mIsTownPatrol);
                 unsigned long theNextID = 0;
@@ -255,7 +255,7 @@ long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long 
         long theID = theIDs[j];
         theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(theID));
         if (theUnit != NULL) {
-            // port: a point without a group is this group's too (path points are saved from 0.253 on)
+            // port: a point without a group is this group's too (path points are saved from 0.254 on)
             if (theUnit->GetPatrolGroup() != this)
                 theUnit->SetPatrolGroup(this);
             this->mPatrolPoints.push_back(theUnit);
@@ -293,7 +293,7 @@ long EEPPatrolGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     }
     if (theResult == 0)
         theResult = inFile->Write(this->mIsLoop);
-    // port (0.253): the town patrol flag and the id counter (Load)
+    // port (0.254): the town patrol flag and the id counter (Load)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         theResult = inFile->Write(this->mIsTownPatrol);
         if (theResult == 0)

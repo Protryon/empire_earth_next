@@ -1289,7 +1289,7 @@ long EECPAttackSubGroupUnit::Load(unsigned long inMajorVersion, unsigned long in
     theResult = inFile.Read(this->mState);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mPostAttackMode);
-    // port (0.253): the next update time and the last target pick (older saves: 0, the unit updated at once)
+    // port (0.254): the next update time and the last target pick (older saves: 0, the unit updated at once)
     if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         theResult = inFile.Read(this->mNextUpdateTime);
         if (theResult == kErrorOK)
@@ -1431,7 +1431,7 @@ long EECPAttackSubGroupUnit::Save(unsigned long inMajorVersion, unsigned long in
     theResult = outFile.Write(this->mState);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mPostAttackMode);
-    // port (0.253): the next update time and the last target pick, so a loaded unit updates when the saved one does
+    // port (0.254): the next update time and the last target pick, so a loaded unit updates when the saved one does
     if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         theResult = outFile.Write(this->mNextUpdateTime);
         if (theResult == kErrorOK)

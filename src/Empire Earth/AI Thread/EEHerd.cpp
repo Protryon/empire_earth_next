@@ -57,7 +57,7 @@
 #include "ee/EESaveGameFiles.h"
 #include <map>
 
-// port (save version 0.253): each loaded herd's area tiles as saved, from Load to RepairPointers, which takes them
+// port (save version 0.254): each loaded herd's area tiles as saved, from Load to RepairPointers, which takes them
 // instead of the animals' tiles now (the original rebuilt the area, its territory margin and leader from those at
 // load). A side table: the herd's layout stays the original's.
 static std::map<const EEHerd*, std::vector<U2DPoint<long> > > sLoadedTiles;
@@ -442,7 +442,7 @@ void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
 {
     U2DPoint<long> theCorner;
     EEAIArea::Create(inTiles);
-    if (gLoadingSavedGame && sLoadedTiles.count(this))   // port: a 0.253 save's area, territory and leader as saved
+    if (gLoadingSavedGame && sLoadedTiles.count(this))   // port: a 0.254 save's area, territory and leader as saved
         return;
     if (!gLoadingSavedGame || (this->mBounds2.mRight - this->mBounds2.mLeft > 4 || this->mBounds2.mBottom - this->mBounds2.mTop > 4)) {
         if (gLoadingSavedGame)
@@ -830,7 +830,7 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
         theResult = inFile.Read(this->mChaseTime);
     if (theResult == 0)
         theResult = inFile.Read(this->mLC8);
-    // port (0.253): the area's tiles (RepairPointers)
+    // port (0.254): the area's tiles (RepairPointers)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         theCount = 0;
         theResult = inFile.Read(theCount);
@@ -969,7 +969,7 @@ long EEHerd::RepairPointers(long, long)
         this->mContinent = gContinentManager.GetContinentID(this->mUnits[0]);
     for (long k = this->mUnits.size() - 1; k >= 0; k--)
         theTiles.push_back(U2DPoint<long>(this->mUnits[k]->GetTileX(), this->mUnits[k]->GetTileY()));
-    if (sLoadedTiles.count(this))   // port: a 0.253 save's area as saved (Create keeps the territory and leader)
+    if (sLoadedTiles.count(this))   // port: a 0.254 save's area as saved (Create keeps the territory and leader)
         theTiles = sLoadedTiles[this];
     this->Create(theTiles);
     sLoadedTiles.erase(this);
@@ -1069,7 +1069,7 @@ long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
         theResult = outFile.Write(this->mChaseTime);
     if (theResult == 0)
         theResult = outFile.Write(this->mLC8);
-    // port (0.253): the area's tiles, so a loaded herd keeps its area, territory and leader (Load, RepairPointers)
+    // port (0.254): the area's tiles, so a loaded herd keeps its area, territory and leader (Load, RepairPointers)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         std::vector<U2DPoint<long> > theTiles;
         this->mTiles.BuildPointList(theTiles, 1);

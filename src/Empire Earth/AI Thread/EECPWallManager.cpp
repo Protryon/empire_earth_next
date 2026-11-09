@@ -489,7 +489,7 @@ void EECPWallManager::StartNextWall()
 }
 
 // port: asks again for the path of the wall being planned (mFrom, mTo) as StartNextWall did, for a game loaded while
-// the wall was planned (save version 0.253); without a request the plan is dropped
+// the wall was planned (save version 0.254); without a request the plan is dropped
 void EECPWallManager::RequestPath()
 {
     EECPASGFlags theFlags;
@@ -784,7 +784,7 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
         theResult = inFile.Read(this->mBuildingPlannedWall);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mNextTime);
-    // port (0.253): the wall being planned, as unit ids (Restore) with no path request yet (Update asks again)
+    // port (0.254): the wall being planned, as unit ids (Restore) with no path request yet (Update asks again)
     if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         bool thePathing = false;
         theResult = inFile.Read(thePathing);
@@ -974,7 +974,7 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
         }
     }
     this->mNextTime += gPhysics->mGameTime;
-    // port (0.253): the wall being planned, its units back (Update requests its path again); without them none
+    // port (0.254): the wall being planned, its units back (Update requests its path again); without them none
     if (this->mPathing) {
         EEComplexUnit* theFrom = this->mFrom.GetSavedID() == (uint32_t)-1 ? NULL
             : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mFrom.GetSavedID())));
@@ -1006,13 +1006,13 @@ void EECPWallManager::ResetSizes()
 
 // FUNCTION: EXE 0x49eea6
 // Writes the planned walls, pending wall pieces (unit and player IDs), gate and wall tiles and the time to the
-// next wall (port, from 0.253: and the wall being planned); returns the write error
+// next wall (port, from 0.254: and the wall being planned); returns the write error
 long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     // port: the original planned an unfinished path request's walls again here (AddWalls(mFrom), then ClearRequest),
     // so saving dropped the running request and moved the next wall 30 s on (PORT_LEARNINGS "Saving without side
     // effects"). The file gets the running plans and timer, and after them the wall being planned (save version
-    // 0.253): Load and Update take it up again (R5a.2, "load equals continue").
+    // 0.254): Load and Update take it up again (R5a.2, "load equals continue").
     const std::vector<EECPWMWall>& theWalls = this->mWalls;
     unsigned long theNextTime = this->mNextTime;
     unsigned long theCount = theWalls.size();
@@ -1058,7 +1058,7 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
         theTime = theNextTime - gPhysics->mGameTime;
         theResult = outFile.Write(theTime);
     }
-    // port (0.253): the wall being planned (its town and enemy center, the size tried) and the runs found so far
+    // port (0.254): the wall being planned (its town and enemy center, the size tried) and the runs found so far
     bool thePathing = this->mPathing && this->mFrom != NULL && this->mTo != NULL;
     if (theResult == 0)
         theResult = outFile.Write(thePathing);

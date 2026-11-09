@@ -3154,7 +3154,7 @@ long EEPlayer::FinishUnitsLoad(long inMajorVersion, long inMinorVersion)
     return 0;
 }
 
-// port: a town rebuilt by a load of a 0.253 save takes back its saved patrol group, the town patrol with a point on
+// port: a town rebuilt by a load of a 0.254 save takes back its saved patrol group, the town patrol with a point on
 // one of the town's hull vertices, as it was (the original made the points again from the hull: other units, other
 // ids; FindPatrolGroup cannot find the saved one yet, its points are not on their tiles before the load ends);
 // returns whether one was found
@@ -3488,7 +3488,7 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
                     theResult = outFile.Write(this->mResourceCaps[r]);
             }
             if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-                // port (0.253): every patrol group, the towns' too, in their order (the original left the towns'
+                // port (0.254): every patrol group, the towns' too, in their order (the original left the towns'
                 // out, rebuilt them at load with new path points, and wrote the others backwards)
                 theCount = 0;
                 for (unsigned long p = 0; p < this->mPatrolGroups.size(); p++)
@@ -3656,7 +3656,7 @@ long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned 
     long theResult = outFile.Write(theType);
     if (theResult != kErrorOK)
         return theResult;
-    // port (0.253): path points are saved as units too (the original wrote only their type and made the towns'
+    // port (0.254): path points are saved as units too (the original wrote only their type and made the towns'
     // patrol points again at load: other units, other ids)
     theIsUnit = theClass->mUnitType != kUnitTypePathPoint || EESaveHasLiveState(inMajorVersion, inMinorVersion);
     theResult = outFile.Write(theIsUnit);
