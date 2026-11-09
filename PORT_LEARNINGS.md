@@ -2341,3 +2341,38 @@ harness's hooks and `layout_gen.py`'s offsets are untouched (`UIForm` gained onl
   `rust_build.py gate`, the seeded sim oracle (seeds 2-7 identical to `ref`), `layout.json`'s records for UIForm,
   UIManager, UISlider, UITextLabel and UILayoutUtility unchanged, and the harness's 34 UI symbols present in the map.
   No tour or screenshot comparison was run here.
+
+## R5a.1 and R5a.2: the per-tick checksum trace and saving without side effects (EE-SIM, 2026-11-09)
+
+`EE-SIM --checksum-trace FILE` writes one line per communications tick (`EESim.cpp` ChecksumLine, from the
+`gPlatSimAfterTick` hook): the game's CT index, PT, tick, game ms, the physics random seed, `GetOutOfSynchChecksum`,
+the units' `GetChecksum(3)`, `EECPOutOfSynchChecksum` and the input count. `tools/sim_oracle.py run --checksums` keeps
+them (`ct-SEED.txt`) and `sim_oracle.py ticks BASE NAME` names the first divergent tick and which fields differ there.
+
+- **Reading must not write.** `GetOutOfSynchChecksum`'s flag 4 (the map) is not a read: `EEMap::ComputeChecksum`
+  checks a 64 x 64 window and advances `mChecksumCursor`. Flag 0x20 (the goals) copies every goal queue and
+  dereferences goal members the multiplayer check (flag 1 only) never reaches. The trace uses 1|2|0x10|0x40|0x100 and
+  puts back `gU531CF4`, the one global the function writes. Proof: seeds 2-7 with the option on and off print EE-AI
+  traces equal to the reference, and two runs' checksum traces are identical (3086 ticks each).
+- **Two numbers that are not the game's.** The communications' own CT count includes the CTs the send thread sent
+  before the sim took over (22-25, wall-clock dependent): the line counts from the game's first CT. Around a save the
+  physics loop reaches the after-tick hook many times without running a tick (151 times at one autosave of seed 2):
+  a line is written only after ticks ran.
+- **Saving changed the game in three more places** (the first, `EECPCivilizationManager::Save` setting
+  `mBuildingCountsChecked`, was fixed on 2026-11-06): `EEUGGather::Save` cleared `mGathering`/`mWaiting` when the
+  resource was gone; `EECPWallManager::Save` cancelled an unfinished wall path request and planned the walls again
+  (`AddWalls(mFrom)`, `ClearRequest`, the next wall 30 s later); `EECPDefenseCommander::Save` left its loose sub group
+  ids in `mLoadedSubGroupIDs` (no reader outside Load/Restore). Each now computes the file's values on locals: the
+  file's bytes are unchanged, the running objects untouched. Found by grepping every `Save*`/`Write*` body for member
+  and global writes (266 functions); the rest of the save path (`SaveGame`, `BuildSaveGameChunks`, `GetChecksum`) only
+  touches presentation (`ApplyVertexColors`, `ShowSelectionAreas`, the sound volumes).
+- **The evidence.** With `--autosave-ms 60000` (a save every 150 game s, 18 per game) seeds 2 and 4 diverged from the
+  unsaved game before the fix, reproducibly: first divergent tick at 763.9 s (13 s after the 750 s save) and 2402.8 s,
+  both first in the random seed and the units. An earlier build with the same save code did not diverge at all: where
+  the save lands between ticks follows the wall clock, so whether a side effect shows depends on timing. After the fix
+  the six seeds' checksum traces equal the unsaved game's at 60000 (two runs) and 600000. A build with only the
+  gather fix also cleared seeds 2 and 4: the gather flags were the side effect these games hit; the wall and defense
+  fixes are by inspection.
+- **Not done: a loaded game still differs from the saved one.** The file keeps the original's values
+  (`mBuildingCountsChecked` true, the gather flags cleared, the walls re-planned), so a game loaded from a save plays
+  differently from the game that went on. Writing the live values instead would change the save files.

@@ -34,6 +34,10 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) `UMath`'s table trigonometry and `GETerrainMesh`'s height, normal, closest-tile and line queries, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: the rest of `GETerrainMesh` (visible-terrain build, fog, water, load/save), `GEModel` load/save/LOD/caching, the managers, fonts, textures, the viewport |
 | **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module). Open: lists and combo boxes (`UIListBox.h`, a template the harness hooks), edit boxes, buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
 
+| **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+| R5a.1 per-CT checksum trace | Done: `EE-SIM --checksum-trace`, `sim_oracle.py run --checksums` and `ticks` (the first divergent tick). The option leaves the traces of seeds 2-7 equal to the reference |
+| R5a.2 side-effect-free save | Done (a declared rebaseline for games that save): three more Save functions wrote the running state. With autosaves every 150 game s, seeds 2-7 now trace like the unsaved games (before: seeds 2 and 4 diverged) |
+
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
 played on. Linux: the game cross-compiles and links, but has not been run. macOS: Rust type-checks only; nothing was
@@ -246,7 +250,7 @@ or give the fixture a real way in.
 
 | Asset | Compares | Use for Rust |
 |---|---|---|
-| EE-SIM + `tools/sim.py`, `sim_bench.py`, `tools/harness/ai_trace.py compare` | Seeded games: trace, report, first difference | **The simulation oracle.** A mixed C++/Rust build must print the reference trace for seeds 2-7 over 2700 s (with the autosave off). Today it pins down the first divergent *decision*; a per-CT checksum line (section 5) would pin down the first divergent *tick* |
+| EE-SIM + `tools/sim.py`, `sim_bench.py`, `tools/harness/ai_trace.py compare` | Seeded games: trace, report, first difference | **The simulation oracle.** A mixed C++/Rust build must print the reference trace for seeds 2-7 over 2700 s. `compare` pins down the first divergent *decision*; the per-CT checksum lines (`run --checksums`, `ticks`; R5a.1) pin down the first divergent *tick* and what differs there. Saving no longer changes the game (R5a.2), so `--autosave-ms` runs are comparable too |
 | `eedata.py check` / `cppgate`, `EEDataDump` | Text -> records, content dump parity (floats as bits) | A Rust text compiler is gated by an identical dump and identical record bytes |
 | `tools/eedata/specs.json` (38 tables, typed fields with offsets and sizes) + `cppgen.py` | Generates the C++ specs and `EEWorldConstants.h` | Add `rustgen.py` with the same `--check` gate: generated `#[repr(C)]` + serde structs, never hand-maintained twice (MODDING_PLAN §3) |
 | `eemodel.py cppgate` | glTF/PNG -> .cem/.sst bytes, C++ vs Python | Gates a Rust model loader the same way |
@@ -409,9 +413,10 @@ Two stages. The first is in C++ and changes no behaviour (each step gated by the
 
 1. **Per-CT checksum trace** in EE-SIM: `GetOutOfSynchChecksum` and the RNG seed every CT, and an
    `ai_trace.py`-style compare. The oracle then names the first divergent tick, not only the first divergent
-   decision.
-2. **Make saving free of side effects** (`EECPCivilizationManager::Save` sets `mBuildingCountsChecked`;
-   PORT_LEARNINGS "The headless simulation"), so games with autosaves stay comparable.
+   decision. (Done: `EE-SIM --checksum-trace`, `sim_oracle.py ticks`; PORT_LEARNINGS "R5a.1 and R5a.2".)
+2. **Make saving free of side effects** (`EECPCivilizationManager::Save` set `mBuildingCountsChecked`;
+   PORT_LEARNINGS "The headless simulation"), so games with autosaves stay comparable. (Done: that one and three
+   more, in the gather goal, the wall manager and the defense commander.)
 3. **The renderer reads a snapshot,** not the live world under the read lock. Graphics Thread gets a per-frame view:
    positions, animation states, selection. This cuts the Graphics <-> Units/Physics edges and is the precondition
    for Rust-owned units. It also lets the physics tick stop sharing reference counts with the render thread.
@@ -515,8 +520,8 @@ Pre-work, whichever way D8 goes:
 
 1. R0 on a branch: the workspace, wgpu-native from source, the link at 0/0, CI.
 2. The cheap oracles, independent of Rust and useful now:
-   - the per-CT checksum trace (R5a.1);
-   - the side-effect-free save (R5a.2);
+   - the per-CT checksum trace (R5a.1, done);
+   - the side-effect-free save (R5a.2, done);
    - `-ffp-contract=off` with a Mac/Windows trace comparison (D7).
 3. PlatConfig in Rust (R1.1) as the first code across the seam.
 4. `rustgen.py` from `specs.json` (R2.2): it costs little and makes every later phase's records free.

@@ -945,14 +945,39 @@ void EECPWallManager::ResetSizes()
 
 // FUNCTION: EXE 0x49eea6
 // Writes the planned walls, pending wall pieces (unit and player IDs), gate and wall tiles and the time to the
-// next wall; an unfinished path request is planned again first; returns the write error
+// next wall; an unfinished path request is written as planned again (the running one is kept); returns the write error
 long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
+    // port: the original planned an unfinished path request's walls again here (AddWalls(mFrom), then ClearRequest),
+    // so saving dropped the running request and moved the next wall 30 s on (PORT_LEARNINGS "Saving without side
+    // effects"). The file still gets that state, computed on a copy (AddWalls' rules, no references taken: only ids
+    // are written); the running game keeps its request.
+    std::vector<EECPWMWall> theWalls = this->mWalls;
+    unsigned long theNextTime = this->mNextTime;
     if (this->mPathing && !this->IsRequestDone()) {
-        this->AddWalls(this->mFrom);
-        this->ClearRequest();
+        EEComplexUnit* theFrom = this->mFrom;
+        std::vector<EECPWMWall>::iterator it = theWalls.begin();
+        while (it != theWalls.end()) {
+            if (it->mUnit == theFrom)
+                it = theWalls.erase(it);
+            else
+                it++;
+        }
+        std::vector<EEPlayer*> theEnemies;
+        for (unsigned long k = 1; k < gWorld.mNumPlayers; k++) {
+            EEPlayer* thePlayer = gWorld.mPlayers[k];
+            if (thePlayer != NULL && thePlayer != this->mPlayer && this->mPlayer->mEnemies[thePlayer->mPlayerID] != 0 &&
+                this->GetCenter(thePlayer) != NULL)
+                theEnemies.push_back(thePlayer);
+        }
+        if (theEnemies.size() > 0) {
+            std::sort(theEnemies.begin(), theEnemies.end(), EECPWMPlayerFarther(this, theFrom));
+            for (std::vector<EEPlayer*>::iterator theEnemy = theEnemies.begin(); theEnemy != theEnemies.end(); theEnemy++)
+                theWalls.push_back(EECPWMWall(theFrom, *theEnemy));
+        }
+        theNextTime = gPhysics->mGameTime + 30000;
     }
-    unsigned long theCount = this->mWalls.size();
+    unsigned long theCount = theWalls.size();
     unsigned long theID;
     unsigned long thePlayerID;
     unsigned long theTime;
@@ -960,7 +985,7 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     long theResult = outFile.Write(theCount);
     if (theResult == 0) {
         for (i = 0; i < theCount && theResult == 0; i++) {
-            EECPWMWall theWall = this->mWalls[i];
+            EECPWMWall theWall = theWalls[i];
             theID = theWall.mUnit != NULL ? theWall.mUnit->GetUnitID() : -1;
             theResult = outFile.Write(theID);
             if (theResult == 0) {
@@ -992,7 +1017,7 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     if (theResult == 0)
         theResult = outFile.Write(this->mBuildingPlannedWall);
     if (theResult == 0) {
-        theTime = this->mNextTime - gPhysics->mGameTime;
+        theTime = theNextTime - gPhysics->mGameTime;
         theResult = outFile.Write(theTime);
     }
     return theResult;
