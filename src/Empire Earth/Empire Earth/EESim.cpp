@@ -159,6 +159,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -474,6 +475,9 @@ void DumpState(const std::string& inPath)
                     fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
+            fprintf(f, "\n  raw ");   // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
+            for (size_t b = 0; b < sizeof(EEComplexUnit); b++)
+                fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);
             fprintf(f, "\n");
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {   // each goal's own out-of-synch dump
                 std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
@@ -484,6 +488,9 @@ void DumpState(const std::string& inPath)
             }
             continue;
         }
+        fprintf(f, "\n  rawu ");   // a simple unit's bytes (layout.json "EEUnit")
+        for (size_t b = 0; b < sizeof(EEUnit); b++)
+            fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(u)[b]);
         fprintf(f, "\n");
     }
     fclose(f);
@@ -1132,7 +1139,7 @@ void Drive()
                 ChecksumFields(sChecksumFile);
             }
             if (!sDumpLoad.empty())
-                DumpState(sDumpLoad);
+                EEAfterLoad([] { DumpState(sDumpLoad); });   // at the first tick, after the load's own fix-ups
             gWorld.mLock->WriteUnlock();
         } else {
             // the idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder
@@ -1226,7 +1233,7 @@ const char* kUsage =
     "                         file is copied to FILE at the end of the run\n"
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
-    "  --dump-load FILE       with --load-save: the same of the state just loaded\n"
+    "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --quiet                no progress on stderr\n";
 
