@@ -335,6 +335,9 @@ struct EeFsArchive;
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
+/// A model as `GEModel::Load` leaves it.
+struct EeGeCemModel;
+
 /// One storage (opaque to C++).
 struct EeAStarStorage;
 
@@ -1081,6 +1084,14 @@ struct EeGeFieldIo {
   long (*write_u16)(void *file, uint16_t value);
   long (*write_u32)(void *file, uint32_t value);
   long (*write_f32)(void *file, float value);
+  /// `Read(char*, length, read)`.
+  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
+  /// `Write(const char*, length, written)`.
+  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
+  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
+  long (*get_position)(void *file, long *out);
+  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
+  long (*set_position)(void *file, long offset);
 };
 
 /// The mesh's members `load_body` updates.
@@ -1091,6 +1102,127 @@ struct EeGeTerrainLoad {
   unsigned long fractal_seed;
   /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
   bool compute_fractal;
+};
+
+/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
+struct EeGeSharedFrame {
+  uint32_t frame;
+  int32_t offset;
+};
+
+/// Borrowed bytes (no terminating NUL).
+struct EeGeBytes {
+  const uint8_t *data;
+  size_t length;
+};
+
+/// The model's result, counts and scalar fields.
+struct EeGeCemInfo {
+  long result;
+  /// The counts were read and the arrays are to be allocated with them.
+  bool allocated;
+  uint32_t polygon_count;
+  uint32_t vertex_count;
+  uint32_t tag_point_count;
+  uint32_t material_count;
+  uint32_t frame_count;
+  uint32_t sub_model_count;
+  uint32_t lod_count;
+  EeGeBytes name;
+  /// The centre's values read (x, y, z; a prefix).
+  const float *center;
+  size_t center_count;
+  /// The sub-models created (all of `sub_model_count` when the model's own chunks loaded, else none).
+  size_t sub_models_loaded;
+};
+
+/// One LOD's polygons: `created` when the LOD's array is created with `count` polygons (LOD 0 has the allocation's);
+/// `indices` the vertex indices set, three per polygon (a prefix).
+struct EeGeCemLod {
+  bool created;
+  uint32_t count;
+  const uint32_t *indices;
+  size_t index_count;
+};
+
+/// One material: its name, the values set in order (texture index, polygon start and length per LOD, vertex start,
+/// vertex length; a prefix) and its texture file name.
+struct EeGeCemMaterial {
+  EeGeBytes name;
+  const uint32_t *values;
+  size_t value_count;
+  EeGeBytes texture_filename;
+};
+
+/// One frame: the radius when read; the vertices and tag points for frame `target`'s arrays; the transform's
+/// elements read (row by row) and the box's corner values read (prefixes).
+struct EeGeCemFrame {
+  bool has_radius;
+  float radius;
+  uint32_t target;
+  const EeGe3DPoint *points;
+  size_t point_count;
+  const EeGeVector *normals;
+  size_t normal_count;
+  /// u, v pairs.
+  const float *uvs;
+  size_t uv_count;
+  const EeGe3DPoint *tag_points;
+  size_t tag_point_count;
+  const float *transform;
+  size_t transform_count;
+  const float *bbox;
+  size_t bbox_count;
+};
+
+/// `RemoveModelScale`'s matrices for one frame.
+struct EeGeScaleRemoval {
+  /// The scale baked into the frame's points, normals, tag points, box and (frame 0) centre.
+  EeGeTransformation scale;
+  /// The largest of the three scales (the radius's factor).
+  float largest;
+  /// The frame's transform within its parent (`parent x internal`), for the sub-models.
+  EeGeTransformation transform;
+  /// The new internal transform: the rotation without its scale, the translation re-derived.
+  EeGeTransformation unscaled;
+  /// The accumulated scales the sub-models receive.
+  float x;
+  float y;
+  float z;
+};
+
+/// One material for `ee_ge_model_save`: `ranges` holds the polygon start and length of each LOD.
+struct EeGeCemSaveMaterial {
+  EeGeBytes name;
+  uint32_t texture_index;
+  const uint32_t *ranges;
+  uint32_t vertex_start;
+  uint32_t vertex_length;
+  EeGeBytes texture_filename;
+};
+
+/// One frame for `ee_ge_model_save`: `vertices` holds per vertex the point, the normal and the texture coordinate
+/// (eight values).
+struct EeGeCemSaveFrame {
+  float radius;
+  const float *vertices;
+  const EeGe3DPoint *tag_points;
+  EeGeTransformation transform;
+  EeGe3DPoint bbox[2];
+};
+
+/// A model's own data for `ee_ge_model_save`. `counts`: polygons, vertices, tag points, materials, frames,
+/// sub-models, LODs; `lod_sizes` holds each LOD array's polygon count and `lod_indices` their indices one after
+/// the other; `materials`, `tag_point_names` and `frames` hold the counts' numbers of entries.
+struct EeGeCemSave {
+  uint32_t counts[7];
+  EeGeBytes name;
+  EeGe3DPoint center;
+  const uint32_t *lod_sizes;
+  const uint32_t *lod_indices;
+  const EeGeCemSaveMaterial *materials;
+  const EeGeBytes *tag_point_names;
+  const EeGeCemSaveFrame *frames;
 };
 
 /// `GXVIEWPORT`.
@@ -3409,6 +3541,130 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p2,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
+
+/// Reads a model from the file's current position (`GEModel::Load` once the file is open): the header, the body
+/// by version, the sub-models; on failure the file is put back. Never null.
+///
+/// # Safety
+/// `io` is a valid field stream; `shared` holds `shared_count` entries sorted by frame (or is null when 0).
+EeGeCemModel *ee_ge_model_load(const EeGeFieldIo *io,
+                               const EeGeSharedFrame *shared,
+                               size_t shared_count);
+
+/// Frees a model read by `ee_ge_model_load` (not a sub-model's handle).
+///
+/// # Safety
+/// `model` came from `ee_ge_model_load` and is freed once.
+void ee_ge_cem_free(EeGeCemModel *model);
+
+/// The model's result, counts and scalars.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_info(const EeGeCemModel *model, EeGeCemInfo *out);
+
+/// LOD `lod`'s polygons (`lod` below the LOD count of an allocated model).
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_lod(const EeGeCemModel *model, uint32_t lod, EeGeCemLod *out);
+
+/// Material `index`.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_material(const EeGeCemModel *model, uint32_t index, EeGeCemMaterial *out);
+
+/// Tag point `index`'s name.
+///
+/// # Safety
+/// `model` is live.
+EeGeBytes ee_ge_cem_tag_point_name(const EeGeCemModel *model, uint32_t index);
+
+/// Frame `index`.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_frame(const EeGeCemModel *model, uint32_t index, EeGeCemFrame *out);
+
+/// Sub-model `index` (borrowed from its parent: never freed on its own).
+///
+/// # Safety
+/// `model` is live.
+const EeGeCemModel *ee_ge_cem_sub_model(const EeGeCemModel *model, uint32_t index);
+
+/// `ComputeBoundingBoxes` for one frame's points.
+///
+/// # Safety
+/// `points` holds `count` points; `out` is valid for a write.
+void ee_ge_model_frame_box(const EeGe3DPoint *points, size_t count, EeGeBoundingBox *out);
+
+/// `ComputeBoundingVolumes`' centre from the frames' boxes.
+///
+/// # Safety
+/// `boxes` holds `count` boxes; `out` is valid for a write.
+void ee_ge_model_center(const EeGeBoundingBox *boxes, size_t count, EeGe3DPoint *out);
+
+/// `ComputeBoundingVolumes`' radius of one frame.
+///
+/// # Safety
+/// `center` is valid; `points` holds `count` points.
+float ee_ge_model_radius(const EeGe3DPoint *center, const EeGe3DPoint *points, size_t count);
+
+/// `ComputeModelNormals` for one frame: `out` receives one normal per point.
+///
+/// # Safety
+/// `points` and `out` hold `count` elements; `indices` holds `index_count`.
+void ee_ge_model_vertex_normals(const EeGe3DPoint *points,
+                                size_t count,
+                                const uint32_t *indices,
+                                size_t index_count,
+                                EeGeVector *out);
+
+/// `PrepareTransforms`' graphics transform.
+///
+/// # Safety
+/// The pointers are valid; `out` may be any of the inputs.
+void ee_ge_model_graphics_transform(const EeGeTransformation *internal,
+                                    const EeGeTransformation *pre,
+                                    const EeGeTransformation *post,
+                                    float scale,
+                                    EeGeTransformation *out);
+
+/// `RemoveModelScale`'s matrices for one frame.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_model_scale_removal(const EeGeTransformation *internal,
+                               const EeGeTransformation *parent,
+                               float x,
+                               float y,
+                               float z,
+                               EeGeScaleRemoval *out);
+
+/// `SortTagPoints`' order: `out[i]` is the index swapped into position `i`.
+///
+/// # Safety
+/// `first` and `out` hold `count` elements.
+void ee_ge_model_tag_point_order(const int8_t *first, size_t count, uint32_t *out);
+
+/// `Verify` for one frame: `ranges` holds per material its LOD 0 polygon start, polygon count and first vertex.
+///
+/// # Safety
+/// `points` holds `count` points, `indices` `index_count` values, `ranges` `range_count` triples.
+bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
+                                size_t count,
+                                const uint32_t *indices,
+                                size_t index_count,
+                                const uint32_t *ranges,
+                                size_t range_count);
+
+/// Writes a model's chunks (`GEModel::Save` from the header to the frames); the first failure's result.
+///
+/// # Safety
+/// `io` is a valid field stream and `model` a view as documented on [`EeGeCemSave`].
+long ee_ge_model_save(const EeGeFieldIo *io,
+                      const EeGeCemSave *model);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,

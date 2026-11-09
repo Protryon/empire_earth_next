@@ -86,6 +86,7 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "NodeFields" = "EeSoundNodeFields"
 # ee_ge (the C++ classes GE2DPoint, GEVector, ... keep their names; the Rust mirrors are EeGe*)
 "Ge2DPoint" = "EeGe2DPoint"
+"CemModel" = "EeGeCemModel"
 "Ge3DPoint" = "EeGe3DPoint"
 "GeVector" = "EeGeVector"
 "Ge3DLine" = "EeGe3DLine"
