@@ -255,6 +255,16 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
         // a little further out so that it does not stand on the gatherers' path
         theFound = inType == kUnitTypeSettlement ? EECPNextRingSite(inPlayer, inType, theX, theY, 2, kEECPPatchDropRange + 2, theTile)
             : EECPNextRingSite(inPlayer, inType, theX, theY, 2, 7, theTile);
+        // a settlement with no room in those rings (trees, cliffs, other buildings round a mine): the rings a little
+        // further out, then the centre's own placement (as BuildSettlementFor's fallback), still near the resource
+        if (!theFound && inType == kUnitTypeSettlement) {
+            theFound = EECPNextRingSite(inPlayer, inType, theX, theY, kEECPPatchDropRange + 3, kEECPPatchDropRange + 5,
+                theTile);
+            if (!theFound && theCenter->FindBuildSite(inType, theTile)) {
+                long theDX = theTile.mX - theX, theDY = theTile.mY - theY;
+                theFound = theDX * theDX + theDY * theDY <= (kEECPPatchDropRange + 6) * (kEECPPatchDropRange + 6);
+            }
+        }
     } else {
         theNearName = "tile";
         if (gWorld.mMap == NULL || inArg1 < 0 || inArg2 < 0 || gWorld.mMap->GetTile((unsigned long)inArg1, (unsigned long)inArg2) == NULL)
