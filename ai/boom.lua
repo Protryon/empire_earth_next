@@ -8,7 +8,7 @@
 -- Everything it decides comes from the view and the previous step's results. Each minute it prints a `plan` line (the
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
-local A = require("lib.army")
+local G = require("lib.groups")
 
 local PLAN = {
     {   -- Prehistoric
@@ -946,58 +946,60 @@ function M.step(view, memory)
         end
     end
 
-    -- the groups (lib.army; docs/AI_LUA_PLAN.md "S4 as built"): the soldiers guard the town together (a defence of the
-    -- claim range: they fight what comes onto the claimed land and come back), and one of them scouts, the nearest
-    -- claimed site not explored yet first (the gatherers go only to what the player has seen), then the land beyond
-    A.collect(view, memory)
-    local home = A.role(view, memory, "home")
-    local scout = A.role(view, memory, "scout")
+    -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
+    -- the town together (a defence of the claim range: they fight what comes onto the claimed land and come back), and
+    -- one of them scouts, the nearest claimed site not explored yet first (the gatherers go only to what the player
+    -- has seen), then the land beyond
+    local home = G.role(memory, "home")
+    local scout = G.role(memory, "scout")
     if scout ~= nil and scout.state == "done" then
-        order("scout_done", {verb = "disband", group = scout.id})
+        G.disband(memory, scout)
+        scout = nil
     end
+    local free = G.free_soldiers(view.town_x, view.town_y)
     if scout == nil and view.time >= SCOUT_AT and (memory.scouts or 0) < SCOUTS
-            and (view.free_soldiers > 0 or (home ~= nil and home.units > 1)) then
-        local o = {verb = "scout", n = 1}
+            and (#free > 0 or (home ~= nil and #home.units > 1)) then
         local first = nil
         for _, s in ipairs(view.sites) do
             if s.claimed and not s.explored and (first == nil or s.distance < first.distance) then
                 first = s
             end
         end
-        if first ~= nil then
-            o.x, o.y = first.x, first.y
-        end
-        if view.free_soldiers == 0 then
-            o.from = home.id
-        end
-        if order("scout", o) then
-            A.track(memory, orders, "scout")
+        local g = G.create(memory, {task = "scout", role = "scout", x = first and first.x or -1, y = first and first.y or -1})
+        local n = G.recruit(memory, g, 1, {from = #free == 0 and home or nil, x = view.town_x, y = view.town_y})
+        if n == 0 then
+            G.disband(memory, g)
+        else
             memory.scouts = (memory.scouts or 0) + 1
+            free = G.free_soldiers(view.town_x, view.town_y)
         end
     end
-    if view.free_soldiers > 0 then
-        if home ~= nil then
-            order("guard", {verb = "defend", group = home.id, n = view.free_soldiers})
-        elseif order("guard", {verb = "defend", n = view.free_soldiers}) then
-            A.track(memory, orders, "home")
+    if #free > 0 and view.town_x >= 0 then
+        if home == nil then
+            home = G.create(memory, {task = "defend", role = "home", x = view.town_x, y = view.town_y, radius = view.claim_range})
         end
+        G.add(memory, home, free)
+    end
+    if home ~= nil then
+        home.radius = view.claim_range
     end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
     -- the town is threatened (its soldiers go back to the guard). A lost escort is sent again after ESCORT_WAIT.
-    local escort = A.role(view, memory, "escort")
+    local escort = G.role(memory, "escort")
     local contested = memory.contest
-    if escort == nil and contested ~= nil and not threatened and home ~= nil and home.units >= ESCORT_MIN + 2
+    if escort == nil and contested ~= nil and not threatened and home ~= nil and #home.units >= ESCORT_MIN + 2
             and view.time >= (memory.escort_next or 0) then
-        if order("escort", {verb = "defend", n = math.min(home.units - 2, ESCORT_MAX), x = contested.x,
-                            y = contested.y, radius = 8, from = home.id}) then
-            A.track(memory, orders, "escort")
-            memory.escort_next = view.time + ESCORT_WAIT
+        local g = G.create(memory, {task = "defend", role = "escort", x = contested.x, y = contested.y, radius = 8})
+        if G.recruit(memory, g, math.min(#home.units - 2, ESCORT_MAX), {from = home, x = contested.x, y = contested.y}) == 0 then
+            G.disband(memory, g)
         end
-    elseif escort ~= nil and (contested == nil or threatened or escort.tx ~= contested.x or escort.ty ~= contested.y) then
-        order("escort_done", {verb = "disband", group = escort.id})
+        memory.escort_next = view.time + ESCORT_WAIT
+    elseif escort ~= nil and (contested == nil or threatened or escort.x ~= contested.x or escort.y ~= contested.y) then
+        G.disband(memory, escort)
     end
+    G.step(view, memory)
 
     -- the plan line, once a minute
     if view.time % 60000 < 1000 then
