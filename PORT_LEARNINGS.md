@@ -1742,6 +1742,12 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   opposite. Measure before fixing. The `research` verb answered such a tech `busy`; it is now `done` (n=0).
 - **A research started at a building leaves `mEpochIDs`** (TryResearch hands it to the producer's queue), so the
   verb's busy check missed it and a second order queued it again; it now also looks at the producers' queues.
+- **The later towers found no room round their sites** because only far or contested sites were left unguarded by
+  then: the ring tiles out of sight (`EECanPlaceUnitOnTile` takes only tiles visible now), under trees or the mine,
+  or with an armed enemy near. The classic FindTowerSite fails, too, once the centres nearest the town are guarded.
+  `EECPNextBuild` now falls back to the rings round the town, spaced by the tower's range. A TEMP per-tile
+  classification of the failed searches (which test failed first) found it in one run, where reading the code had
+  not.
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
