@@ -18,7 +18,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[2]
 SP_FORM=6;PLAY_CAMPAIGN=8;SELECT=33;INTRO=19;GAME=11
 LIST=2;DIFFICULTY=6
 CAMPAIGNS=dict(learning='EEUIEPCELearningCampaign',roman='EEUIEPCECampaign1',pacific='EEUIEPCECampaign2',asian='EEUIEPCECampaign3')
-def _pe(cls):return f'?ProcessEvent@{cls}@@UAEJPAVUIForm@@PAVUIEntity@@@Z'
+def _pe(cls):return f'?ProcessEvent@{cls}@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z'
 SYM=dict(sp_campaign=_pe('EEUIESPECampaign'),start=_pe('EEUIECSSEStartScenario'),intro_start=_pe('EEUIESIEStart'),
          load_scenario=_pe('EEUIELELoadScenarioGame'),
          **{k:_pe(v) for k,v in CAMPAIGNS.items()})

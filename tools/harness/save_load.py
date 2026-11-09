@@ -21,11 +21,11 @@ import pathlib,re,shutil,time
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 GAME=11;OPTIONS=28;SAVE_FORM=3;SP_FORM=6;LOAD_FORM=13
 SYM=dict(
-    options_save='?ProcessEvent@EEUIEMGOESaveGame@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-    save_file='?ProcessEvent@EEUIESLESaveFile@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-    return_to_game='?ProcessEvent@EEUIEMGOEReturnToGame@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-    sp_load='?ProcessEvent@EEUIESPELoadGame@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-    sp_load_file='?ProcessEvent@EEUIESPLELoadFile@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
+    options_save='?ProcessEvent@EEUIEMGOESaveGame@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+    save_file='?ProcessEvent@EEUIESLESaveFile@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+    return_to_game='?ProcessEvent@EEUIEMGOEReturnToGame@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+    sp_load='?ProcessEvent@EEUIESPELoadGame@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+    sp_load_file='?ProcessEvent@EEUIESPLELoadFile@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
 )
 SAVE_DIR=('Data','Saved Games')
 EXT='.ees'
@@ -152,10 +152,10 @@ def do_save(ui,cur,raw,note,options,stage,evidence,pid,addresses,sample):
     return rec
 
 
-CANCEL_SYMS=['?ProcessEvent@EEUIESLECancelSave@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-             '?ProcessEvent@EEUIECCCECancel@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-             '?ProcessEvent@EEUIECSSEBack@@UAEJPAVUIForm@@PAVUIEntity@@@Z',
-             '?ProcessEvent@EEUIECancel@@UAEJPAVUIForm@@PAVUIEntity@@@Z']
+CANCEL_SYMS=['?ProcessEvent@EEUIESLECancelSave@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+             '?ProcessEvent@EEUIECCCECancel@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+             '?ProcessEvent@EEUIECSSEBack@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
+             '?ProcessEvent@EEUIECancel@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z']
 
 
 def cancel_rvas(options):
