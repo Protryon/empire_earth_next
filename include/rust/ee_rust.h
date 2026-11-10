@@ -15,6 +15,15 @@ constexpr static const int32_t KIND_AREA = 54;
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
 
+/// `kAIPathWaterBody`, `kAIPathLandMass`, `kAIPathSpaceRegion`, `kAIPathNonSpace` (ee/EEAIKindIDs.h).
+constexpr static const int32_t PATH_WATER_BODY = 1;
+
+constexpr static const int32_t PATH_LAND_MASS = 2;
+
+constexpr static const int32_t PATH_SPACE_REGION = 3;
+
+constexpr static const int32_t PATH_NON_SPACE = 4;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -863,6 +872,24 @@ struct EeTileUnit {
   bool space_dock;
   /// `mUnitID`
   int32_t id;
+};
+
+/// The map's diagonal edge lines (`EEMap::mL195608`, `mL195610`, `mL19560C`).
+struct EeMapEdges {
+  int32_t sum_low;
+  int32_t half;
+  int32_t sum_high;
+};
+
+/// The tile's path area as the start test reads it.
+struct EePathAreaIDs {
+  /// the area exists
+  bool present;
+  int32_t kind;
+  uint16_t land_mass;
+  uint16_t water_body;
+  uint16_t space_region;
+  uint16_t surface_region;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -3224,6 +3251,28 @@ int32_t ee_astar_tile_kind(uint8_t category,
 /// `units` valid for `count` records (any pointer when `count` is 0).
 int32_t ee_astar_tile_wall_id(const EeTileUnit *units,
                               size_t count);
+
+/// A fill's `mCheckCorners` at `(x, y)`: not of terrain `no_corners` and off the map's diagonal edges.
+bool ee_astar_check_corners(int32_t terrain,
+                            int32_t no_corners,
+                            int32_t x,
+                            int32_t y,
+                            EeMapEdges edges);
+
+/// `CreatePathAreaKind`'s test of tile `(x, y)`: whether a fill of `kind` starts there; `flag` is the loop's
+/// `theFlag`, read and updated.
+///
+/// # Safety
+/// `area` and `flag` valid; `units` valid for `count` records (any pointer when `count` is 0).
+bool ee_astar_path_area_kind_starts(int32_t kind,
+                                    int32_t terrain,
+                                    int32_t x,
+                                    int32_t y,
+                                    EeMapEdges edges,
+                                    const EePathAreaIDs *area,
+                                    const EeTileUnit *units,
+                                    size_t count,
+                                    bool *flag);
 
 /// `UDataCompression::Compress`.
 ///

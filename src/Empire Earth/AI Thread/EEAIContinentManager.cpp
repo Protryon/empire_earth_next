@@ -205,6 +205,16 @@ static void EEAITileUnits(EETile* inTile, std::vector<EeTileUnit>& outUnits)
     }
 }
 
+// The map's diagonal edge lines (ee_astar path_area_kind.rs)
+static EeMapEdges EEAIMapEdges(EEMap* inMap)
+{
+    EeMapEdges theEdges;
+    theEdges.sum_low = (int32_t)inMap->GetL195608();
+    theEdges.half = (int32_t)inMap->GetL195610();
+    theEdges.sum_high = (int32_t)inMap->GetL19560C();
+    return theEdges;
+}
+
 // FUNCTION: EXE 0x41ed2c
 // Returns the AI tile kind of inTile: 0 off the map; by continent category and shore flag (land 1/7..9, water 2/10/11,
 // space 15/10/11, map edge 6, cliff 3); on land 4 for live wood, 12/13/14 under a live blocking unit, wall or gate
@@ -522,8 +532,8 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
             EETile* theTile = inMap->GetTile(x, y);
             if (!theTile)
                 continue;
-            theMachine.mCheckCorners = theTile->GetTerrainType() != kTerrainCliff && x + y != inMap->GetL195608() &&
-                y - x != inMap->GetL195610() && x + y != inMap->GetL19560C() && x - y != inMap->GetL195610();
+            theMachine.mCheckCorners = ee_astar_check_corners((int32_t)theTile->GetTerrainType(), kTerrainCliff, (int32_t)x,
+                                                              (int32_t)y, EEAIMapEdges(inMap));   // Rust: ee_astar path_area_kind.rs
             theMachine.mGoal.mStartTile.mX = x;
             theMachine.mGoal.mStartTile.mY = y;
             theMachine.mGoal.mGoalTile.mX = inMap->GetSize();
@@ -691,7 +701,8 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
 
 // FUNCTION: EXE 0x4204ea
 // Assigns the inKind region ids (water body, land mass, space or surface region) to the path areas: one fill from
-// every matching tile whose area has no such id yet, then keeps the next id of that kind
+// every matching tile whose area has no such id yet, then keeps the next id of that kind (Rust: ee_astar
+// path_area_kind.rs, the start test and the corner test of each tile)
 void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
 {
     EEAIPathAreaMachine theMachine(0xe, inMap);
@@ -705,85 +716,30 @@ void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
     this->GetPathAreas(inMap, theAreas);
     theMachine.mGoal.mAreas = theAreas;
     theMachine.mGoal.mAreasSize = theSize;
+    EeMapEdges theEdges = EEAIMapEdges(inMap);
+    std::vector<EeTileUnit> theUnits;
     for (long x = inMap->GetSize() - 1; x >= 0; x--) {
         for (long y = inMap->GetSize() - 1; y >= 0; y--) {
             EETile* theTile = inMap->GetTile(x, y);
             if (!theTile)
                 continue;
-            if (inKind == kAIPathWaterBody) {
-                if (theTile->GetTerrainType() != kTerrainDeepWater && theTile->GetTerrainType() != kTerrainShallowWater)
-                    continue;
-                theFlag = true;
-            } else if (inKind == kAIPathSpaceRegion) {
-                theFlag = theTile->GetTerrainType() == kTerrainSpace;
-                if (!theFlag)
-                    continue;
-            } else if (inKind == kAIPathLandMass) {
-                if (theTile->GetTerrainType() == kTerrainDeepWater || theTile->GetTerrainType() == kTerrainSpace)
-                    continue;
-                theFlag = true;
-            } else {
-                if (inKind == kAIPathNonSpace) {
-                    if (theTile->GetTerrainType() != kTerrainSpace && x + y != inMap->GetL195608() && y - x != inMap->GetL195610() &&
-                        x + y != inMap->GetL19560C() && x - y != inMap->GetL195610())
-                        theFlag = true;
-                    else
-                        theFlag = false;
-                }
-                if (!theFlag)
-                    continue;
-            }
+            // the start test (Rust: ee_astar path_area_kind.rs): the tile's terrain and place, its area's kind and
+            // region ids, a live dock or space dock on an obstacle area; theFlag carries from tile to tile
             EEAIPathArea* theArea = theAreas[x * theSize + y];
-            if (!theArea)
-                continue;
-            bool theRun = false;
-            if (inKind == kAIPathWaterBody) {
-                if (theArea->GetKind() == kAITileForest || theArea->GetWaterBodyID() != 0)
-                    continue;
-                if (theArea->GetKind() == kAITileWater) {
-                    theRun = true;
-                } else if (theArea->GetKind() <= kAITileMapEdge) {
-                    continue;
-                } else if (theArea->GetKind() < kAITileUnitObstacle) {
-                    theRun = true;
-                } else if (theArea->GetKind() == kAITileUnitObstacle) {
-                    for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode; theNode = theNode->GetNext()) {
-                        EEUnit* theUnit = theNode->GetUnit();
-                        if ((theUnit->GetUnitClass()->GetUnitType() == kUnitTypeDock || theUnit->GetUnitClass()->GetUnitType() == kUnitTypeNavyYard) &&
-                            theUnit->GetHitPoints() > 0 && !theUnit->IsFoundation()) {
-                            theRun = true;
-                            break;
-                        }
-                    }
-                }
-            } else if (inKind == kAIPathLandMass) {
-                if (theArea->GetKind() != kAITileForest && theArea->GetLandMassID() == 0)
-                    theRun = true;
-            } else if (inKind == kAIPathSpaceRegion) {
-                if (theArea->GetKind() == kAITileForest || theArea->GetSpaceRegionID() != 0)
-                    continue;
-                if (theArea->GetKind() == kAITileUnitObstacle) {
-                    for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode; theNode = theNode->GetNext()) {
-                        EEUnit* theUnit = theNode->GetUnit();
-                        unsigned long theType = theUnit->GetUnitClass()->GetUnitType();
-                        if ((theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation) && theUnit->GetHitPoints() > 0 &&
-                            !theUnit->IsFoundation()) {
-                            theRun = true;
-                            break;
-                        }
-                    }
-                } else if (theArea->GetKind() == kAITileSpace) {
-                    theRun = true;
-                }
-            } else if (inKind == kAIPathNonSpace) {
-                if (theArea->GetSurfaceRegionID() == 0)
-                    theRun = true;
-            }
-            if (!theRun)
+            EePathAreaIDs theIDs;
+            theIDs.present = theArea != NULL;
+            theIDs.kind = theArea ? (int32_t)theArea->GetKind() : 0;
+            theIDs.land_mass = theArea ? theArea->GetLandMassID() : 0;
+            theIDs.water_body = theArea ? theArea->GetWaterBodyID() : 0;
+            theIDs.space_region = theArea ? theArea->GetSpaceRegionID() : 0;
+            theIDs.surface_region = theArea ? theArea->GetSurfaceRegionID() : 0;
+            EEAITileUnits(theTile, theUnits);
+            if (!ee_astar_path_area_kind_starts((int32_t)inKind, (int32_t)theTile->GetTerrainType(), (int32_t)x, (int32_t)y,
+                                                theEdges, &theIDs, theUnits.data(), theUnits.size(), &theFlag))
                 continue;
             theMachine.mGoal.mMode = inKind;
-            theMachine.mCheckCorners = theTile->GetTerrainType() != 3 && x + y != inMap->GetL195608() &&
-                y - x != inMap->GetL195610() && x + y != inMap->GetL19560C() && x - y != inMap->GetL195610();
+            theMachine.mCheckCorners = ee_astar_check_corners((int32_t)theTile->GetTerrainType(), 3, (int32_t)x, (int32_t)y,
+                                                              theEdges);   // terrain 3 here, as the original
             theMachine.mGoal.mStartTile.mY = y;
             theMachine.mGoal.mStartTile.mX = x;
             theMachine.mGoal.mGoalTile.mX = inMap->GetSize();

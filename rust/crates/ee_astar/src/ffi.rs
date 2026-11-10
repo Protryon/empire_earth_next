@@ -1475,3 +1475,35 @@ unsafe fn unit_slice<'a>(units: *const EeTileUnit, count: usize) -> &'a [EeTileU
         unsafe { std::slice::from_raw_parts(units, count) }
     }
 }
+
+// ---- the region fills' start tests (path_area_kind.rs) ----
+
+use crate::path_area_kind::{self, EeMapEdges, EePathAreaIDs};
+
+/// A fill's `mCheckCorners` at `(x, y)`: not of terrain `no_corners` and off the map's diagonal edges.
+#[no_mangle]
+pub extern "C" fn ee_astar_check_corners(terrain: i32, no_corners: i32, x: i32, y: i32, edges: EeMapEdges) -> bool {
+    path_area_kind::check_corners(terrain, no_corners, x, y, &edges)
+}
+
+/// `CreatePathAreaKind`'s test of tile `(x, y)`: whether a fill of `kind` starts there; `flag` is the loop's
+/// `theFlag`, read and updated.
+///
+/// # Safety
+/// `area` and `flag` valid; `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_area_kind_starts(
+    kind: i32,
+    terrain: i32,
+    x: i32,
+    y: i32,
+    edges: EeMapEdges,
+    area: *const EePathAreaIDs,
+    units: *const EeTileUnit,
+    count: usize,
+    flag: *mut bool,
+) -> bool {
+    // SAFETY: the caller's contract
+    let (area, units, flag) = unsafe { (&*area, unit_slice(units, count), &mut *flag) };
+    path_area_kind::starts_fill(kind, terrain, x, y, &edges, area, units, flag)
+}
