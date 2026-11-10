@@ -1146,6 +1146,20 @@ function M.step(view, memory, orders, army)
         for _, r in ipairs(V.resources) do
             reserve_civ[r] = math.max(reserve[r] - epoch_reserve[r] + (mem.epoch_acc[r] or 0), 0)
         end
+        -- unless the map's food runs out (econ.c): wild food is all there is before farms - the food sites within
+        -- site_max_distance x wild_food_share short of the epoch's food less the account + 500 - then the epoch's
+        -- food first, as the plan always did
+        local wild = 0
+        for _, st in ipairs(view.sites) do
+            if st.resource == "food" and st.units > 0 and st.distance <= S.site_max_distance then
+                wild = wild + (st.amount or 0)
+            end
+        end
+        wild = wild * S.wild_food_share // 100
+        mem.wild_food = wild
+        if wild < view.next_epoch_cost.food - (mem.epoch_acc.food or 0) + 500 then
+            reserve_civ.food = reserve.food
+        end
     end
     local avail, civil = M.accounts(view, mem, hold_mil, reserve_civ)
     local order_vis = P.visible(view, memory, P.S_MIL | P.S_ORDER)
