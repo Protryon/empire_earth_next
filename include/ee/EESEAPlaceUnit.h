@@ -9,13 +9,15 @@
 #ifndef EE_EESEAPLACEUNIT_H
 #define EE_EESEAPLACEUNIT_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEComplexUnit;
 
 // one placed (or undone) unit (0x50 bytes): ctor COMDAT 0x1a984e (+0 = 0, GETransformation(), +0x44/+0x48 = 0,
 // +0x4c = 7), implicit operator= 0x1a9870
 struct EESEAPlacedUnit {
     EESEAPlacedUnit();                      // 0x1a984e (EESEAPlaceUnit.cpp, after its first user Virtual4)
-    EEComplexUnit* mContainer;              // +0x00 the transport/building it was put into (referenced)
+    EEUnitHandle<EEComplexUnit> mContainer; // +0x00 the transport/building it was put into (referenced; a handle since R5a.4)
     GETransformation mTransformation;       // +0x04
     long mPlayer;                           // +0x44
     long mUnitType;                         // +0x48

@@ -19,22 +19,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unordered_map>
 
-// New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h). Looked up only, never iterated.
-static std::unordered_map<uint32_t, RTSUnit*>& RTSUnitRegistry()
-{
-    static std::unordered_map<uint32_t, RTSUnit*> sRegistry;
-    return sRegistry;
-}
+#include "rust/ee_rust.h"   // the unit registry (rust/crates/ee_units)
 
+// New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
+// tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its
+// last Dereference. Looked up only, never iterated.
 RTSUnit* RTSResolveUnitID(uint32_t inUnitID)
 {
     if (inUnitID == 0xffffffff)
         return NULL;
-    std::unordered_map<uint32_t, RTSUnit*>& theRegistry = RTSUnitRegistry();
-    std::unordered_map<uint32_t, RTSUnit*>::const_iterator it = theRegistry.find(inUnitID);
-    return it != theRegistry.end() ? it->second : NULL;
+    return static_cast<RTSUnit*>(ee_units_resolve(inUnitID));
 }
 
 // A unit's id is final when its player inserts it. A second object with the same id (none in a game: ids count up)
@@ -43,18 +38,14 @@ void RTSRegisterUnit(RTSUnit* inUnit)
 {
     uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
     if (theID != 0xffffffff)
-        RTSUnitRegistry()[theID] = inUnit;
+        ee_units_register(theID, inUnit);
 }
 
 void RTSUnregisterUnit(RTSUnit* inUnit)
 {
     uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
-    if (theID == 0xffffffff)
-        return;
-    std::unordered_map<uint32_t, RTSUnit*>& theRegistry = RTSUnitRegistry();
-    std::unordered_map<uint32_t, RTSUnit*>::iterator it = theRegistry.find(theID);
-    if (it != theRegistry.end() && it->second == inUnit)
-        theRegistry.erase(it);
+    if (theID != 0xffffffff)
+        ee_units_unregister(theID, inUnit);   // only if the entry is still this unit
 }
 
 // A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The

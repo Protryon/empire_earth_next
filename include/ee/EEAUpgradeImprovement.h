@@ -5,6 +5,8 @@
 #ifndef EE_EEAUPGRADEIMPROVEMENT_H
 #define EE_EEAUPGRADEIMPROVEMENT_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEUnit;
 
 class EEAUpgradeImprovement : public EEAction {
@@ -16,7 +18,7 @@ public:
     virtual void Virtual4();                // +0x04
     virtual void Virtual8();                // +0x08
 
-    EEUnit* mUnit;                          // +0x0c (referenced)
+    EEUnitHandle<EEUnit> mUnit;             // +0x0c (referenced; a handle since R5a.4: posted from the UI thread, run on the physics thread)
     long mImprovement;                      // +0x10
     bool mRaise;                            // +0x14 (EEUIBUpgrade: true from ButtonUp, false from MouseRButtonUp)
     bool mIsInGame;                         // +0x15 (EEUIBUpgrade: not on the scenario editor)

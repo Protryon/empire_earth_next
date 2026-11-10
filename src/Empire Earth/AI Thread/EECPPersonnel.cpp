@@ -586,7 +586,7 @@ void EECPPersonnel::ReleaseOfType(long inUnitClass, long inCount)
 // type slots from free units of that type, else by ordering one built at the request's town and continent
 void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
 {
-    std::multimap<long, EEUnit*>::iterator it;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator it;
     std::vector<long> theIDs;
     long theTownID = inRequest->GetTownID();
     for (long i = inRequest->mUnits.size() - 1; i >= 0; i--) {
@@ -598,7 +598,7 @@ void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
         if (!theIsClassSlot && !UIsNone32((inRequest->mUnits[i]).mUnitID)) {
             for (it = this->mUnits.begin(); it != this->mUnits.end();) {
                 if (it->second->mUnitID == (inRequest->mUnits[i]).mUnitID &&
-                    (theFound = inRequest->TryAssign((EEComplexUnit*)it->second)) != false) {
+                    (theFound = inRequest->TryAssign(static_cast<EEComplexUnit*>(it->second.Get()))) != false) {
                     it->second->Dereference();
                     it = this->mUnits.erase(it);
                     theUseClass = false;
@@ -621,7 +621,7 @@ void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
         if (theUseClass && (inRequest->mUnits[i]).mUnit == NULL) {
             it = this->mUnits.find((inRequest->mUnits[i]).mClass);
             if (it != this->mUnits.end()) {
-                if (inRequest->TryAssign((EEComplexUnit*)it->second)) {
+                if (inRequest->TryAssign(static_cast<EEComplexUnit*>(it->second.Get()))) {
                     it->second->Dereference();
                     this->mUnits.erase(it);
                 }
@@ -658,7 +658,7 @@ void EECPPersonnel::ReleaseRequest(long inID)
 void EECPPersonnel::Update(unsigned long inTime)
 {
     std::map<long, EECPPersonnelRequest*>::iterator it;
-    std::multimap<long, EEUnit*>::iterator theEntry;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator theEntry;
     std::vector<EEComplexUnit*> theUnits;
     this->KillUnitsForMilitary();
     for (it = this->mRequests.begin(); it != this->mRequests.end();) {
@@ -679,8 +679,8 @@ void EECPPersonnel::Update(unsigned long inTime)
         if (theEntry->second == NULL)
             theEntry = this->mUnits.erase(theEntry);
         else {
-            if (((EEComplexUnit*)theEntry->second)->GetNumCargoUnits() != 0)
-                theUnits.push_back((EEComplexUnit*)theEntry->second);
+            if (static_cast<EEComplexUnit*>(theEntry->second.Get())->GetNumCargoUnits() != 0)
+                theUnits.push_back(static_cast<EEComplexUnit*>(theEntry->second.Get()));
             ++theEntry;
         }
     }
@@ -808,7 +808,7 @@ long EECPPersonnel::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     for (i = 0; i < theCount; i++) {
         if (theResult == kErrorOK && (theResult = inFile.Read(theUnitID)) == 0)
             theResult = inFile.Read(theValue);
-        this->mUnits.insert(std::multimap<long, EEUnit*>::value_type(theUnitID, reinterpret_cast<EEUnit*>(theValue)));
+        this->mUnits.insert(std::multimap<long, EEUnitHandle<EEUnit> >::value_type(theUnitID, EEUnitHandle<EEUnit>::FromSavedID(theValue)));   // ids until Restore
     }
     if (theResult != kErrorOK)
         return theResult;
@@ -910,8 +910,8 @@ EECPPersonnelRequest* EECPPersonnel::NewTownRequest(std::vector<long>& inClasses
 // military units newly gained from another player unless combat claims them
 void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
-    std::multimap<long, EEUnit*>::iterator it;
-    std::multimap<long, EEUnit*>::iterator theEnd;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator it;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator theEnd;
     long theType = 0;
     long i;
     if (this->mUnits.size() > 0) {
@@ -921,7 +921,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
             if ((ioSwaps[i]).mOld->mPlayer != this->mPlayer && (ioSwaps[i]).mNew->mPlayer != this->mPlayer)
                 continue;
             theType = (ioSwaps[i]).mNew->GetUnitClass()->GetUnitType();
-            std::pair<std::multimap<long, EEUnit*>::iterator, std::multimap<long, EEUnit*>::iterator> theRange =
+            std::pair<std::multimap<long, EEUnitHandle<EEUnit> >::iterator, std::multimap<long, EEUnitHandle<EEUnit> >::iterator> theRange =
                 this->mUnits.equal_range(theType);
             for (it = theRange.first, theEnd = theRange.second; it != theEnd; ++it) {
                 if (it->second != (ioSwaps[i]).mNew)
@@ -982,7 +982,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 // Releases every free unit and request and empties both
 void EECPPersonnel::ClearAll()
 {
-    std::multimap<long, EEUnit*>::iterator it;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator it;
     std::map<long, EECPPersonnelRequest*>::iterator theRequest;
     for (it = this->mUnits.begin(); it != this->mUnits.end(); ++it)
         it->second->Dereference();
@@ -1009,12 +1009,12 @@ bool EECPPersonnel::RemoveFromRequests(EEComplexUnit* inUnit)
 // and removes units held by more than one request; returns the first request error
 long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    std::multimap<long, EEUnit*>::iterator it;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator it;
     std::map<long, EECPPersonnelRequest*>::iterator theRequestIt;
     long theResult = 0;
     std::map<long, EEComplexUnit*> theUnits;
     for (it = this->mUnits.begin(); it != this->mUnits.end();) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(it->second)));
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(it->second.GetSavedID()));
         if (theUnit != NULL) {
             if (theUnits.end() == theUnits.find(theUnit->mUnitID)) {
                 it->second = theUnit;
@@ -1080,7 +1080,7 @@ void EECPPersonnel::ReturnUnit(EEUnit* inUnit)
         return;
     if (!this->OfferUnit(theUnit)) {
         theUnit->Reference();
-        this->mUnits.insert(std::multimap<long, EEUnit*>::value_type(theUnit->mUnitClass->mUnitType, theUnit));
+        this->mUnits.insert(std::multimap<long, EEUnitHandle<EEUnit> >::value_type(theUnit->mUnitClass->mUnitType, theUnit));
     }
     this->DraftUnit(theUnit);
 }
@@ -1094,7 +1094,7 @@ long EECPPersonnel::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     unsigned long theType;
     unsigned long theUnitID;
     long theKey;
-    std::multimap<long, EEUnit*>::iterator theUnit;
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator theUnit;
     std::map<long, EECPPersonnelRequest*>::iterator theRequest;
     std::set<unsigned long>::iterator theID;
     unsigned long theCount = this->mUnits.size();
@@ -1139,7 +1139,7 @@ void EECPPersonnel::AddNewUnit(EEComplexUnit* inUnit)
     if (!this->OfferUnit(inUnit)) {
         inUnit->Reference();
         inUnit->SetFlightTime(inUnit->mStats->mFlightTime);
-        this->mUnits.insert(std::multimap<long, EEUnit*>::value_type(inUnit->mUnitClass->mUnitType, inUnit));
+        this->mUnits.insert(std::multimap<long, EEUnitHandle<EEUnit> >::value_type(inUnit->mUnitClass->mUnitType, inUnit));
     }
     if (this->DraftUnit(inUnit))
         return;
@@ -1171,7 +1171,7 @@ void EECPPersonnel::AddNewUnit(EEComplexUnit* inUnit)
 // returns whether it was found
 bool EECPPersonnel::RemoveUnit(EEComplexUnit* inUnit)
 {
-    std::multimap<long, EEUnit*>::iterator it = this->mUnits.find(inUnit->mUnitClass->mUnitType);
+    std::multimap<long, EEUnitHandle<EEUnit> >::iterator it = this->mUnits.find(inUnit->mUnitClass->mUnitType);
     long theType = inUnit->mUnitClass->mUnitType;
     bool theFound = it != this->mUnits.end();
     bool theRemoved = false;

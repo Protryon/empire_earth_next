@@ -10,6 +10,7 @@
 #define EE_EECPASGUPROPHETCALAMITYANALYZERBASE_H
 
 #include "lle/U2DPoint.h"           // mTile (no statics)
+#include "ee/EEUnitHandle.h"
 
 class EEComplexUnit;
 class EECalamityClass;
@@ -69,7 +70,7 @@ public:
     long mL30;                              // +0x30
     bool mIsExcluded;                       // +0x34
     bool mB35;                              // +0x35
-    EEComplexUnit* mUnit;                   // +0x38 (referenced; ReleaseUnit)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x38 (referenced; ReleaseUnit; a handle since R5a.4)
 };
 
 // The kinds: inline ctors (the base ctor, then the vptr); slot bodies by vtable.
@@ -204,7 +205,7 @@ public:
     // 0x797c (provisional name): inUnit's unit alive, +0x347 clear, on the map, and in mUnitSet
     bool MayShield(EECPAttackSubGroupUnit* inUnit);
 
-    EEComplexUnit* mTarget;                 // +0x3c (referenced)
+    EEUnitHandle<EEComplexUnit> mTarget;    // +0x3c (referenced; a handle since R5a.4)
 };
 
 // vtable 0x4395e0; sizeof 0x40
@@ -226,7 +227,7 @@ public:
     void SetTarget(EEComplexUnit* inUnit);
     bool MayGo(EECPAttackSubGroupUnit* inUnit);     // 0x6b9e (this-call, ret 4; Virtual24's unit filter) (provisional name)
 
-    EEComplexUnit* mTarget;                 // +0x3c (referenced)
+    EEUnitHandle<EEComplexUnit> mTarget;    // +0x3c (referenced; a handle since R5a.4)
 };
 
 // vtable 0x4395b4

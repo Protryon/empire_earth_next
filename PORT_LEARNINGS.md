@@ -3762,3 +3762,111 @@ thread, the UI and the loaders call it), but the C++'s `f32` order and `unsigned
   `Generate*EdgePolygons` (they build the C++ material lists keyed by `GETexture*` and fill polygon pointers into the
   mesh's arrays: a plan-and-fill port with a golden driver over `GEViewport`), `GEPhysicalModel`'s walks and viewport
   test, fonts, bitmaps, the viewport.
+
+## R5a.4, finished: the registry in Rust, the UI, editor, camera, world and AI holders as handles (branch rust-r5a-handles2, 2026-11-09)
+
+The second half of "R5a.4-R5a.6: unit handles" above: the three things it left open (the registry's lock, the holders
+outside the AI, the AI's containers), with no behaviour change (the sim oracle identical to `ref` after every commit).
+
+### The registry is Rust and lock-free (`rust/crates/ee_units`)
+
+- **A lock would have been paid on every `mUnit->X`.** The AI resolves handles on most of its reads; an uncontended
+  critical section costs about what the `unordered_map::find` it would guard costs, so the registry became a structure
+  that needs none: a three-level radix tree over the id's bits (8: the player byte, 12, 12) of atomic pointers. A
+  resolve is at most three dependent loads (root -> branch -> leaf -> slot); register is a store; unregister a
+  compare-exchange that clears the slot only if it still names that object (the C++'s "only if the entry is still
+  this unit"). Branches and leaves (32 KiB each on x64) are allocated on first use with a compare-exchange (the loser
+  frees its own) and never freed while the registry lives: a reader can hold no dangling node. Memory: one branch per
+  player byte in use and one leaf per 4096 ids of that player.
+- **What a reader sees.** The registered object or NULL, never a torn value: the pointer store is `Release`, the loads
+  `Acquire`. Whether the unit behind the pointer is alive is the holder's business, as it was with the raw pointer (a
+  holder that referenced the unit still does). So a unit's last `Dereference` on the UI thread (the registry erase in
+  `FreeNode`) or a resolve in the graphics thread's `CopyData` may now race the physics tick's inserts and resolves.
+- `RTSUnit.cpp` keeps the entry points (`RTSResolveUnitID`, `RTSRegisterUnit`, `RTSUnregisterUnit`) and the "no id"
+  guard; the Rust side (`ee_units_register/unregister/resolve`) treats every 32-bit id alike. Nine `cargo test`s: the
+  bit split (every bit of the id tells ids apart), replace and the same-object unregister, the pages a player's ids
+  share, drop, four writers racing three readers on shared leaves, and the last-Dereference-on-another-thread case.
+- **Measured.** EE-SIM's game time per seed (`wall_seconds_game` in the report) moved within the run-to-run noise of a
+  machine shared with other agents: 8.4/8.5/6.7/6.7/6.4/5.0 s before, 7.5/8.1/6.1/5.9/7.9/5.9 s after the registry,
+  7.7/8.6/7.1/6.8/9.0/6.9 s after the world's containers (the Step loop resolves every unit every tick). A side-by-side
+  run of the kept baseline exe against the final one is in the gates paragraph.
+
+### The holders converted (every one referenced its unit, so each resolves to what the pointer held)
+
+- UI: `EEUICPortrait::mUnit`. Editor: `EESEAMoveUnitEntry::mUnit`/`mContainer`, `EESEAPlacedUnit::mContainer` (undo
+  records), `EEUIFScenarioEditor::mSelectedUnits` and `EEUIFSELBCargoList::mCargo` (vectors of handles). Camera:
+  `EECameraControl::mUnitA`/`mUnitB`. Actions: `EEAUpgradeImprovement::mUnit`. Communications holds none (its 95
+  locals live inside one message's Execute); UI Events' one member (`EEUIEHKUnitEntry::mUnit`) is a hot key's
+  per-call candidate list, left a pointer with the other function objects.
+- EEWorld's five: `mUpdateUnits`, `mActivateQueue`, `mDeactivateQueue` (deques of handles: the order is the elements'
+  order; `EEPhysics::UpdateUnits` steps through them, `EEPWorldHelper` saves and restores them as before),
+  `mActiveUnits` (keyed by id, handle values) and `mResourceUsers`, a map keyed by the unit: keyed by handles through
+  `EEUnitHandleLess<T>` (by id), which is only the same as the address order for a map nothing iterates (this one is
+  looked up only). One edge differs by design: a freed resource unit's entry stays unmatched, where a new unit reusing
+  the address used to inherit its gatherer count (the entries are never erased).
+- AI: the prophet calamity analyzers' `mUnit` and the Teleport/ShieldBattery `mTarget` (members the first pass did not
+  list), and 11 containers: `EECPResourceManager::mMines`/`mFish` (vectors; their `std::sort` with a distance comparator
+  over `EEComplexUnit*` converts each handle per compare, the same comparisons in the same order),
+  `EECPWallManager::mGates`, `EEHerd::mUnits`, `EECPResourceCenter::mUnits`, `EECPUnitSelectionGroup::mUnits`,
+  `EEComputerPlayer::mUnitsToKill`, `EECPCivilizationManager::mRepairing` (vectors), `EECPPersonnel::mUnits` (a
+  multimap keyed by unit type: equal keys keep insertion order, so the order is unchanged). No AI container is keyed
+  by the unit's address, so none changed its iteration order; the oracle (identical, six seeds) is the proof that no
+  computer player's decision moved.
+- **A handle cannot hold a unit that has no id yet.** `EECPResourceManager::mGatherers[7]` converted and the game
+  crashed at its first tick: `EEUnitClass::CreateUnitAtPoint` -> `ActionChanged` -> `EEComputerPlayer::UnitGoalDone` ->
+  `AddIdleGatherer` puts a new citizen on the idle list while it is still pending (its id comes at the tick's
+  `AddPendingUnits`), so the handle stored 0xffffffff and `AssignGatherers` read NULL. It is a pointer deque again,
+  with the reason at the member. Found with a temporary stack capture in the EE-HANDLE report (every distinct caller
+  chain once, symbolised by the exe's .map); with mGatherers back, six full seeds store no other id-less unit in any
+  converted holder, which is the check to run after any further conversion (the message prints once, and only a
+  holder read before the flush crashes).
+- **Saves.** Every Load that read an id into a pointer field (`reinterpret_cast<EEUnit*>(id)`, `USavedPointer<T>`)
+  now reads it into the handle with `FromSavedID`, and every Restore reads it back with `GetSavedID()` (grep
+  `USavedID(` finds no handle left). The file formats are unchanged. `EEHerd::RepairPointers` tested the pointer
+  against `(EEComplexUnit*)-1`: that is `GetSavedID() != 0xffffffff` now.
+- **The compiler's catches.** `a ? ptr : handle` is ambiguous (both convert to each other): `handle.Get()`.
+  `(EEComplexUnit*)handle` (a C-style downcast of an `EEUnitHandle<EEUnit>`) does not compile:
+  `static_cast<EEComplexUnit*>(handle.Get())`. `vector<T*> v = handleVector;` does not convert: `v.assign(begin, end)`
+  or the range constructor. `EEHerd::Attack` took `const std::vector<EEComplexUnit*>&` and was passed `mUnits` live (a
+  copy would read a snapshot where the original read the list as GiveGoal ran): it gained an overload over the handle
+  vector with the same body. `EEUnit*& theUnit = mSelectedUnits[i]` became a value. A `std::find` of a handle in a
+  container of handles compares through the built-in pointer `==` after both convert; no comparison operator was added
+  to the handle (one would make `handle == ptr` ambiguous).
+
+### Left as pointers, and why
+
+- `EECPResourceManager::mGatherers[7]`: filled with pending units (above).
+- `EECPUnitManager::mUnits` (`std::map<long, std::deque<EEComplexUnit*>*>`): the deque type is the signature of
+  `GetUnits()` and of `CountUnits(EEUnitClass*, std::deque<EEComplexUnit*>*)` on ~15 gatherer classes, with 103 uses
+  in 21 units; the order is a deque's, so it converts without a behaviour change, but as a change of its own, and
+  `UnitAdded` may well see pending units too (check with the EE-HANDLE report first).
+- The function objects (built and dropped inside one call, so a unit cannot be freed under them): `EECPDefenseCommander.cpp`'s
+  `EECPUGatherCitizenUnits::mCitizens`, `EECPASGLand.cpp`'s `EECPAILoadGroup::mUnits`/`mTransport`, `EECPBuildManager.cpp`'s
+  and `EECPWallManager.cpp`'s target finders, `EEUIEHKUnitEntry`, `EEUUTargetSearch`.
+- The A* goals' `mUnit`/`mTarget` (`EEAIAStarPathGraphGoal`, `EEAIAStarPathfindingGoalBase`, `EEAIPathGoalModifiers`:
+  the `rust-r5b-astar` branches' files), the Graphics Thread's (`EEE3DMarchingLine`, `EEE3DTracerBeam`, `EEEffect::mUnit`,
+  `EEUnitPicker::mCarriers`, `EERenderLists::mPickedUnit`: `rust-r5a-snap`'s), and the Units, Physics, Player,
+  Calamities and Map modules (not in R5a.4's scope: `EEContagionHelper::mUnits`, `EEPPatrolGroup::mPatrolPoints`,
+  `EEAirTrafficControl`, `EECalamity`, `EEPlayer`'s lists and viewed units).
+
+### Record layouts and gates
+
+- The harness's records: EEPlayer, EEPhysics and NESynchronousCommunications have the same layout.json as before;
+  **EEWorld is 8 bytes smaller** (the camera's two pointers are 4-byte handles), so its members after `mCameraControl`
+  (`mActiveUnits` on, among them the harness's WORLD_LOCAL and WORLD_VICTORY) are 8 bytes earlier. The harness reads
+  them by member name from the layout.json the build regenerates, which is what that file is for. The AI classes that
+  shrank are read by no tool.
+- Builds between commits used a scratch wrapper over `tools/build.py` (not committed; `build/handles2/inc_build.py`):
+  it recompiles the units whose source or quoted include closure is newer than their object (a header name resolves
+  to every header of that name under include/ and src/) and links EE-SIM. A touch of `EEUnitHandle.h` recompiles 761
+  of 1,361 units (it is in every unit through RTSUnit.h), `EEWorld.h` 433; the AI headers 70. It does not regenerate
+  layout.json (`tools/harness/layout_gen.py --out build/clang` does).
+- **Gates run.** Per commit: EE-SIM linked 0/0 (the incremental wrapper) and the sim oracle (seeds 2-7, 2700 s)
+  identical to the main checkout's `ref`; `cargo test -p ee_units` (9), its clippy and rustfmt. At the last code
+  commit: the full `build.py -j 3 --sim` (EE-AOC and EE-SIM 0/0, 569 s), its oracle identical, `--test-profile
+  windowed-software` 0/0, `rust_build.py gate` PASS (cargo test over the workspace, clippy, rustfmt, the header
+  current). Timing, the baseline exe kept from the unmodified branch against the final one, alternating per seed
+  over two rounds (12 pairs, `--jobs 1`): 94.8 s against 96.5 s of game time in all (ratio 1.017; single pairs swing
+  by 40 % either way on this shared machine), so nothing the oracle or EE-SIM's clock can see got slower. After the
+  merge of `rust` (667440fa, rust-r4-ge4; no conflicts; the generated header merged current): `build.py -j 3 --sim` 0/0 (556 s), its oracle identical on seeds 2-7, `rust_build.py gate` PASS, `--test-profile windowed-software` linked last (its result in the branch's report).
+  Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.

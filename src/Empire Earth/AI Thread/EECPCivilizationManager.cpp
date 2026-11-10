@@ -937,7 +937,7 @@ void EECPCivilizationManager::RepairBuildings()
     std::vector<EEComplexUnit*> theWorkers;
     std::vector<EEComplexUnit*> theDamaged;
     EEUnit* theUnit = this->mPlayer->mFirstUnit;
-    theDamaged = this->mRepairing;
+    theDamaged.assign(this->mRepairing.begin(), this->mRepairing.end());
     for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEUnitClass* theClass = theUnit->GetUnitClass();
         if (!theClass->IsLandBuilding() || theUnit->mTileNode == NULL)
@@ -979,7 +979,7 @@ void EECPCivilizationManager::RepairBuildings()
         }
         theRepairer->SetGoal(new EEUGBuildRepair(this->mPlayer, theTarget, true), 1, 0);
         theRepairer->GetUnitClass()->ActionChanged(theRepairer);
-        std::vector<EEComplexUnit*>::iterator theFound = std::find(this->mRepairing.begin(), this->mRepairing.end(), theTarget);
+        std::vector<EEUnitHandle<EEComplexUnit> >::iterator theFound = std::find(this->mRepairing.begin(), this->mRepairing.end(), theTarget);
         if (theFound != this->mRepairing.end())
             this->mRepairing.erase(theFound);
     }
