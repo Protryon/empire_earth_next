@@ -102,6 +102,10 @@ static const wchar_t* const kInputs[] = {
     L"L x",
     L"\"\"",
     L"\"a\"+",
+    L"\xb2\xb3 1\xb9",
+    L"0x\xb2",
+    L"\"\\x4\xb2\"",
+    L"\xe9X, \xff",
 };
 
 static bool IsWideOnly(const wchar_t* inText)
