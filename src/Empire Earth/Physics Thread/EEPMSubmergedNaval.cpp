@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -100,8 +101,8 @@ void EEPMSubmergedNaval::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
-    EEUGHealUnit* theHeal = dynamic_cast<EEUGHealUnit*>(inUnit->GetGoal());
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
+    EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(inUnit->GetGoal());
     float theBrake = inUnit->GetAcceleration();
     float theSpeed = inUnit->mVelocity;
     float theStep = gPhysics->mTickSeconds;
@@ -315,7 +316,7 @@ void EEPMSubmergedNaval::Step5(EEComplexUnit* inUnit)
     GEVector theForward(0.0f, 1.0f, 0.0f);
     GEVector theResult;
     EEUnitGoal* theGoalState = inUnit->mGoalState;
-    EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theGoalState);
+    EEUGLocation* theGoal = EEGoalCast<EEUGLocation>(theGoalState);
     if (!theGoal)
         return;
     if (inUnit->mVelocity != 0.0f) {

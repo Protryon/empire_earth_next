@@ -534,6 +534,106 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// The goal classes (`EEUG*`).
+constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
+
+constexpr static const uint32_t EE_GOAL_KIND_ATTACK_UNIT = 2;
+
+constexpr static const uint32_t EE_GOAL_KIND_ATTACK_GROUND = 4;
+
+constexpr static const uint32_t EE_GOAL_KIND_BUILD_REPAIR = 8;
+
+constexpr static const uint32_t EE_GOAL_KIND_GATHER = 16;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_CONTAINER = 32;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_TRANSPORT = 64;
+
+constexpr static const uint32_t EE_GOAL_KIND_UNLOAD_TRANSPORT = 128;
+
+constexpr static const uint32_t EE_GOAL_KIND_PATROL = 256;
+
+constexpr static const uint32_t EE_GOAL_KIND_EXPLORE = 512;
+
+constexpr static const uint32_t EE_GOAL_KIND_CAST_CALAMITY = 1024;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_GARRISON = 2048;
+
+constexpr static const uint32_t EE_GOAL_KIND_HEAL_UNIT = 4096;
+
+/// The unit classes (`EEUC*`).
+constexpr static const uint64_t EE_CLASS_KIND_AMBIENT = 1;
+
+constexpr static const uint64_t EE_CLASS_KIND_RESOURCE = 2;
+
+constexpr static const uint64_t EE_CLASS_KIND_BUILDING = 4;
+
+constexpr static const uint64_t EE_CLASS_KIND_LANDABLE = 8;
+
+constexpr static const uint64_t EE_CLASS_KIND_AIRPLANE = 16;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL = 32;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND = 64;
+
+constexpr static const uint64_t EE_CLASS_KIND_BASIC_CITIZEN = 128;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_CITIZEN = 256;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_CITIZEN = 512;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER = 1024;
+
+constexpr static const uint64_t EE_CLASS_KIND_PROJECTILE = 2048;
+
+constexpr static const uint64_t EE_CLASS_KIND_BOMB = 4096;
+
+constexpr static const uint64_t EE_CLASS_KIND_MISSILE = 8192;
+
+constexpr static const uint64_t EE_CLASS_KIND_TORPEDO = 16384;
+
+constexpr static const uint64_t EE_CLASS_KIND_BASIC_PRIEST = 32768;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_PRIEST = 65536;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_PRIEST = 131072;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER_PRIEST = 262144;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_BUILDING = 524288;
+
+constexpr static const uint64_t EE_CLASS_KIND_MINING_BUILDING = 1048576;
+
+constexpr static const uint64_t EE_CLASS_KIND_GATE = 2097152;
+
+constexpr static const uint64_t EE_CLASS_KIND_BUILDING_PRIEST = 4194304;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACE_BUILDING = 8388608;
+
+constexpr static const uint64_t EE_CLASS_KIND_SUBMERGED_NAVAL = 16777216;
+
+constexpr static const uint64_t EE_CLASS_KIND_SEA_ANIMAL = 33554432;
+
+constexpr static const uint64_t EE_CLASS_KIND_AIR_ANIMAL = 67108864;
+
+constexpr static const uint64_t EE_CLASS_KIND_TRANSPORT = 134217728;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_TRANSPORT = 268435456;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER_TRANSPORT = 536870912;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_TRANSPORT = 1073741824;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACE_TRANSPORT = 2147483648;
+
+constexpr static const uint64_t EE_CLASS_KIND_FORTRESS = 4294967296;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_MILITARY_HERO = 8589934592;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACESHIP = 17179869184;
+
+constexpr static const uint64_t EE_CLASS_KIND_PLANET_SPACESHIP = 34359738368;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 

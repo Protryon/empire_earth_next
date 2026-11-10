@@ -27,6 +27,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -271,7 +272,7 @@ void EEActiveGroup::LayOutFormation()
     EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloorUnsigned(theLocation.GetX()), UMFloorUnsigned(theLocation.GetY()));
     switch (this->mGoal->mKind) {
     case kGoalLocation: {
-        EEUGLocation* theLocationGoal = dynamic_cast<EEUGLocation*>(this->mGoal);
+        EEUGLocation* theLocationGoal = EEGoalCast<EEUGLocation>(this->mGoal);
         unsigned long theCount = this->GetNumUnits();
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
@@ -335,10 +336,10 @@ void EEActiveGroup::LayOutFormation()
     switch (this->mGoal->mKind) {
     case kGoalLocation:
         theHasYaw = true;
-        theYaw = dynamic_cast<EEUGLocation*>(this->mGoal)->mYaw;
+        theYaw = EEGoalCast<EEUGLocation>(this->mGoal)->mYaw;
         break;
     case kGoalUnloadTransport: {
-        EEUGUnloadTransport* theUnload = dynamic_cast<EEUGUnloadTransport*>(this->mGoal);
+        EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(this->mGoal);
         if (this->GetNumUnits() > 0) {
             theDestination = theUnload->mDestination;
             theHasYaw = true;
@@ -498,7 +499,7 @@ void EEActiveGroup::LayOutFormation()
             theFree++;
         switch (this->mGoal->mKind) {
         case kGoalLocation: {
-            EEUGLocation* theLocationGoal = dynamic_cast<EEUGLocation*>(this->mGoal);
+            EEUGLocation* theLocationGoal = EEGoalCast<EEUGLocation>(this->mGoal);
             theGoal = new EEUGLocation(&theSlotLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
                                        theLocationGoal->mShouldFace, theSlots[i].mHeading, false, 1);
             break;
@@ -508,7 +509,7 @@ void EEActiveGroup::LayOutFormation()
                 && theUnit->GetComplexUnit()->GetNumCargoUnits() > 0) {
                 theGoal = new EEUGUnloadTransport(theUnit, UMFloor(theSlotLocation.GetX()),
                                                   UMFloor(theSlotLocation.GetY()), true);
-                if (dynamic_cast<EEUGUnloadTransport*>(theGoal)->CanUnloadAtDestination())
+                if (EEGoalCast<EEUGUnloadTransport>(theGoal)->CanUnloadAtDestination())
                     theUnloads = true;
                 else {
                     delete theGoal;
@@ -523,7 +524,7 @@ void EEActiveGroup::LayOutFormation()
             if (this->mIsQueued)
                 theQueued.push_back(theUnit);
         } else if (theGoal->mKind == kGoalLocation)
-            dynamic_cast<EEUGLocation*>(theGoal)->mGroupPathState = 0;
+            EEGoalCast<EEUGLocation>(theGoal)->mGroupPathState = 0;
         long theClassType = theUnit->GetUnitClass()->mAIKind;
         if (theClassType == kAIKindAircraftCarrier || theClassType == kAIKindSpaceCarrier) {
             theGoal->GetGoalLocation(theLocation);
@@ -873,7 +874,7 @@ void EEActiveGroup::Plan()
         this->Finish();
         break;
     case kActionDropoffResource: {
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(this->mGoal);
+        EEUGGather* theGoal = EEGoalCast<EEUGGather>(this->mGoal);
         EEComplexUnit* theStorage = static_cast<EEComplexUnit*>(theGoal->mStorage);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
@@ -883,7 +884,7 @@ void EEActiveGroup::Plan()
                 theUnit->QueueGoal(theGoal->Clone(), 0);
             else {
                 if (theUnit->mResourceAmount > 0 && theStorage->CanTake(theUnit, theUnit->mResourceType)) {
-                    EEUGGather* theCurrent = dynamic_cast<EEUGGather*>(theUnit->mGoalState);
+                    EEUGGather* theCurrent = EEGoalCast<EEUGGather>(theUnit->mGoalState);
                     theUnit->SetGatheredResource(NULL);
                     if (theCurrent == NULL)
                         theUnit->SetGoal(theGoal->Clone(), 0, 0);
@@ -909,14 +910,14 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionGatherResource: {
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(this->mGoal);
+        EEUGGather* theGoal = EEGoalCast<EEUGGather>(this->mGoal);
         EEUnit* theResource = theGoal->mResource;
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if (!theUnit->mIsCommandable)
                 continue;
             if (gContinentManager.CanGetTo(theUnit, theResource->GetTileX(), theResource->GetTileY())) {
-                EEUGGather* theCurrent = dynamic_cast<EEUGGather*>(theUnit->mGoalState);
+                EEUGGather* theCurrent = EEGoalCast<EEUGGather>(theUnit->mGoalState);
                 if (theCurrent == NULL || theCurrent->mResource != theResource) {
                     if (this->mIsQueued && theUnit->mGoalState)
                         theUnit->QueueGoal(theGoal->Clone(), 0);
@@ -943,7 +944,7 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionAttackLocation: {
-        EEUGAttackGround* theGoal = dynamic_cast<EEUGAttackGround*>(this->mGoal);
+        EEUGAttackGround* theGoal = EEGoalCast<EEUGAttackGround>(this->mGoal);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             bool theTransport = theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;
@@ -974,7 +975,7 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionAttackEnemyUnit: {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->mGoal);
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(this->mGoal);
         EEUnit* theTarget = theGoal->mTarget;
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
@@ -1065,7 +1066,7 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionHealUnit: {
-        EEUGHealUnit* theGoal = dynamic_cast<EEUGHealUnit*>(this->mGoal);
+        EEUGHealUnit* theGoal = EEGoalCast<EEUGHealUnit>(this->mGoal);
         theGoal->GetTarget()->mPhysicalModel.GetLocation().GetPosition(theLocation);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
@@ -1101,7 +1102,7 @@ void EEActiveGroup::Plan()
         this->LayOutFormation();
         break;
     case kActionFindUnexploredArea: {
-        EEUGExplore* theGoal = dynamic_cast<EEUGExplore*>(this->mGoal);
+        EEUGExplore* theGoal = EEGoalCast<EEUGExplore>(this->mGoal);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if (!theUnit->mIsCommandable)
@@ -1120,7 +1121,7 @@ void EEActiveGroup::Plan()
                 if (theHero) {
                     long theX = theUnit->GetTileX();
                     long theY = theUnit->GetTileY();
-                    EEUGExplore* theCopy = dynamic_cast<EEUGExplore*>(theGoal->Clone());
+                    EEUGExplore* theCopy = EEGoalCast<EEUGExplore>(theGoal->Clone());
                     theCopy->mTile.mY = theY;
                     theCopy->mTile.mX = theX;
                     theUnit->SetSquadronGoals(theCopy, false);
@@ -1142,7 +1143,7 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionMoveToNextPatrolPoint: {
-        EEUGPatrol* theGoal = dynamic_cast<EEUGPatrol*>(this->mGoal);
+        EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(this->mGoal);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             bool theTransport = theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;

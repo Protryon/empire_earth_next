@@ -15,6 +15,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -193,7 +194,7 @@ bool EEUGLoadTransport::LoadUnit(EEComplexUnit* inUnit)
     if (inUnit != NULL && theContainer != NULL) {
         std::vector<EEComplexUnit*>::iterator theIterator;
         if (this->mUnits.Contains(inUnit, theIterator)) {
-            EEUGLoadTransport* theGoal = dynamic_cast<EEUGLoadTransport*>(this->mContainer->GetGoal());
+            EEUGLoadTransport* theGoal = EEGoalCast<EEUGLoadTransport>(this->mContainer->GetGoal());
             if (theGoal != NULL)
                 theGoal->RemoveUnit(inUnit);
             if (this->mContainer->LoadCargo(inUnit, 0, 0) == 7) {

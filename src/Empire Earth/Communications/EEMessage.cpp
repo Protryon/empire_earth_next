@@ -54,6 +54,7 @@
 #include "lle/FSPersistent.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -717,7 +718,7 @@ void EEMAddPatrolPoint::Execute()
         if (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
             theUnit->mPatrolGroup->InsertPatrolPointAt(this->mPoint, thePlayer->mPlayerID, theUnit);
         else {
-            EEUGPatrol* theGoal = dynamic_cast<EEUGPatrol*>(theUnit->GetGoal());
+            EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(theUnit->GetGoal());
             if (theGoal)
                 theGoal->mPatrolGroup->AddPoint(this->mPoint, thePlayer->mPlayerID);
             else {
@@ -4341,7 +4342,7 @@ void EEMLoadGarrison::Execute()
     if (theUnits.size() > 0) {
         EEUGLoadGarrison* theGoal;
         if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadGarrison) {
-            theGoal = dynamic_cast<EEUGLoadGarrison*>(theOldGoal);
+            theGoal = EEGoalCast<EEUGLoadGarrison>(theOldGoal);
             theGoal->AddUnits(theUnits);
         } else {
             theGoal = new EEUGLoadGarrison(theGarrison, theUnits, false);
@@ -4462,7 +4463,7 @@ void EEMLoadTransport::Execute()
     if (theUnits.size() != 0) {
         EEUGLoadTransport* theGoal;
         if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadTransport) {
-            theGoal = dynamic_cast<EEUGLoadTransport*>(theOldGoal);
+            theGoal = EEGoalCast<EEUGLoadTransport>(theOldGoal);
             theGoal->AddUnits(theUnits);
         } else {
             theGoal = new EEUGLoadTransport(theTransport, theUnits, true);
@@ -7001,8 +7002,8 @@ issue:
             if (theUnit->mUnitClass->mUnitType != kUnitTypeAirport || theGoal == NULL)
                 continue;
             EEUnitGoal* theCopy = NULL;
-            if (dynamic_cast<EEUGAttackUnit*>(theGoal) != NULL)
-                theCopy = dynamic_cast<EEUGAttackUnit*>(theGoal->Clone());
+            if (EEGoalCast<EEUGAttackUnit>(theGoal) != NULL)
+                theCopy = EEGoalCast<EEUGAttackUnit>(theGoal->Clone());
             switch (this->mCommand) {
             case 10:
             case 12:
@@ -7452,7 +7453,7 @@ void EEMSmartFarmers::Execute()
         } while (theFarm != NULL);
         for (long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+            EEUGGather* theGather = EEGoalCast<EEUGGather>(theUnit->GetLoadGoal());
             if (theGather == NULL || theGather->mResource == NULL || theGather->mResource->mUnitClass->mUnitType != kUnitTypeFarm)
                 theFarm = NULL;
             else {

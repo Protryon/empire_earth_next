@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <cstddef>
+#include "ee/EEUnitKind.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
@@ -1283,7 +1284,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                         // The original does not set the flag on this branch.
                         theGoal->GetGoalLocation(theGoalPoint);
                     } else {
-                        EEUnit* theTarget = dynamic_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+                        EEUnit* theTarget = EEGoalCast<EEUGAttackUnit>(theGoal)->mTarget;
                         if (theTarget == NULL) {
                             theHaveGoalPoint = false;
                         } else {
@@ -1341,16 +1342,16 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                     EEUnitGoal* theGoal;
                     if ((*i)->Suits(theCreated)) {
                         if ((*i)->mKind == kGoalBuildRepair) {
-                            theCreated->AddBuildTarget(dynamic_cast<EEUGBuildRepair*>(*i)->mTarget);
+                            theCreated->AddBuildTarget(EEGoalCast<EEUGBuildRepair>(*i)->mTarget);
                             continue;
                         } else if ((*i)->mKind == kGoalLoadGarrison) {
-                            EEUGLoadGarrison* theLoad = dynamic_cast<EEUGLoadGarrison*>(*i);
+                            EEUGLoadGarrison* theLoad = EEGoalCast<EEUGLoadGarrison>(*i);
                             if (theCreated->GetUnitClass()->mCanGarrison) {
                                 theGoal = theLoad->Clone();
                                 if (theGoal->IsLoadGoal())
                                     theGoal->AddCreatedUnit(theCreated);
                                 if (theLoad->mContainer->mActiveGoal != NULL)
-                                    dynamic_cast<EEUGLoadGarrison*>(theLoad->mContainer->mActiveGoal)->AddUnit(theCreated);
+                                    EEGoalCast<EEUGLoadGarrison>(theLoad->mContainer->mActiveGoal)->AddUnit(theCreated);
                             } else {
                                 if (theLoad->mContainer == NULL)
                                     continue;
@@ -1387,7 +1388,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                         }
                     }
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
-                        EEUnit* theTarget = dynamic_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+                        EEUnit* theTarget = EEGoalCast<EEUGAttackUnit>(theGoal)->mTarget;
                         if (theCreated->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, true)) {
                             EEUnitGoal* theGather = new EEUGGather(theTarget, 0, true);
                             delete theGoal;
@@ -1859,7 +1860,7 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
     GE3DPoint thePosition;
     GE3DLine theLine;
     GEVector theDirection;
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(inUnit->mGoalState);
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
     EEComplexUnit* theResult = NULL;
     const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
     thePosition.SetX(theLocation.GetX());
@@ -3691,7 +3692,7 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
         inUnit->mCollisionResolutionCount = 0.0f;
         inUnit->SetVelocity(0.0f);
         inUnit->SetCurrentPhysicsAction(6);
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+        EEUGGather* theGather = EEGoalCast<EEUGGather>(theGoal);
         if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mResourceType == kResourceWood)
             inUnit->StartAction(kActionFindNewResource);
         else

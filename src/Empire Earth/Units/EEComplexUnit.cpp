@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <math.h>
 #include <typeinfo>
+#include "ee/EEUnitKind.h"
 #include "ee/EETechCapture.h"
 
 #include "lle/LowLevelEngine.h"
@@ -431,7 +432,7 @@ void EEComplexUnit::OrderRepair(EEUnit* inTarget)
 {
     EEUnit* theTarget;
     if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalBuildRepair) {
-        theTarget = dynamic_cast<EEUGBuildRepair*>(this->GetGoal())->mTarget;
+        theTarget = EEGoalCast<EEUGBuildRepair>(this->GetGoal())->mTarget;
         theTarget->Reference();
         this->mCitizenBuildQueue.push_front(theTarget);
     }
@@ -1021,7 +1022,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
         for (unsigned long j = 0; j < theOther->mGoalQueues[i].mGoals.size(); ++j) {
             EEUnitGoal* theGoal = theOther->mGoalQueues[i].mGoals[j];
             if (theGoal->mKind == kGoalUnloadTransport && theOther->GetPlayer() == this->GetPlayer())
-                dynamic_cast<EEUGUnloadTransport*>(theGoal)->SetTransport(this);
+                EEGoalCast<EEUGUnloadTransport>(theGoal)->SetTransport(this);
             theGoal = theGoal->Clone();
             this->mGoalQueues[i].mGoals.push_back(theGoal);
             theGoal->SetOwner(this->mGoalQueues[i].mUnit);
@@ -2694,7 +2695,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
         inPlayer != NULL && (inPlayer == this->mPlayer || this->mPlayer->mEnemies[inPlayer->mPlayerID] == 0 ||
                           theUnarmed || inForce)) {
         if (theCommand == kActionWaitForOpenPosition) {
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(this->GetGoal());
+            EEUGGather* theGather = EEGoalCast<EEUGGather>(this->GetGoal());
             if (theGather->FindGatherSpot(this)) {
                 this->StartAction(kActionMoveToWaitingArea);
                 this->GetUnitClass()->ActionChanged(this);
@@ -2873,8 +2874,8 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
 {
     std::vector<GE3DPoint> thePath;
     EEUnitVectorItem* theQueue = &this->mGoalQueues[0];
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(this->GetGoal());
-    EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(this->GetGoal());
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(this->GetGoal());
+    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
     EEAIPathSector* theStartSector = gContinentManager.GetPathSector(this);
     long theSkipped = 0;
     bool theKeepAttack = false;
@@ -2931,7 +2932,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     this->RefreshGoals();
     this->RefreshActiveGoal();
     if (!theReplaced) {
-        EEUGLocation* theCurrent = dynamic_cast<EEUGLocation*>(this->GetGoal());
+        EEUGLocation* theCurrent = EEGoalCast<EEUGLocation>(this->GetGoal());
         if (theCurrent == NULL)
             goto done;
         long theY = UMFloor(theCurrent->mLocation.GetY());
@@ -3450,7 +3451,7 @@ void EEComplexUnit::TakeOffMap()
         ::gWorld.DeactivateUnit(theUnit);
     }
     if (this->mGoalState != NULL
-        && (this->mGoalState->mKind != kGoalCastCalamity || dynamic_cast<EEUGCastCalamity*>(this->GetGoal())->mCalamityType != 0x77c)) {
+        && (this->mGoalState->mKind != kGoalCastCalamity || EEGoalCast<EEUGCastCalamity>(this->GetGoal())->mCalamityType != 0x77c)) {
         this->StartAction(kActionIdle);
         this->GetUnitClass()->ActionChanged(this);
     }
@@ -3902,7 +3903,7 @@ void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex
             if ((unsigned long)inIndex < 1)
                 this->mActiveGoal = NULL;
             for (;;) {
-                EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(this->GetQueuedGoal(inIndex));
+                EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetQueuedGoal(inIndex));
                 if (theLocation == NULL || !theLocation->mIsAutoWaypoint)
                     break;
                 this->mGoalQueues[inIndex].PopFront();
@@ -3970,7 +3971,7 @@ void EEComplexUnit::PlayEffect(long inTechnology)
 // so it may move on to the next goal
 bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
 {
-    EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(this->GetGoal());
+    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
     if (theLocation == NULL || !theLocation->mIsAutoWaypoint || this->mGoalQueues[0].mGoals.size() <= 1
         || !gPathManager.IsPathDone(this) || gPathManager.HasAutoPath(this))
         return false;
@@ -4264,7 +4265,7 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
 {
     if (this->mLastAttacker == NULL)
         return NULL;
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(this->mLastAttacker->GetGoal());
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(this->mLastAttacker->GetGoal());
     if (theAttack != NULL) {
         if (theAttack->mTarget == this && this->mLastAttacker->IsInReach(this)) {
             EEUnit* theArg1;
@@ -4274,7 +4275,7 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
                 return this->mLastAttacker;
         }
     } else {
-        EEUGAttackGround* theGround = dynamic_cast<EEUGAttackGround*>(this->mLastAttacker->GetGoal());
+        EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(this->mLastAttacker->GetGoal());
         if (theGround != NULL) {
             float theDX = this->mPhysicalModel.GetLocation().GetX() - theGround->mTarget.GetX();
             float theDY = this->mPhysicalModel.GetLocation().GetY() - theGround->mTarget.GetY();

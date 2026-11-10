@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -133,7 +134,7 @@ void EEPMAirplane::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+    EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
     float theStep = gPhysics->mTickSeconds;
     if (theClass->mAirTrafficType == 2 || theClass->mAirTrafficType == 4) {
         if (theLocation.GetZ() >= theClass->GetCruiseAltitude())

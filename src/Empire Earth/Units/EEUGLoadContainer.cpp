@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -290,7 +291,7 @@ void EEUGLoadContainer::Step(EEComplexUnit* inUnit)
         this->ClearUnitsIfFull();
         break;
     case kActionCannotReachContainer: {
-            EEUGLoadContainer* theGoal = dynamic_cast<EEUGLoadContainer*>(this->mContainer->GetLoadGoal());
+            EEUGLoadContainer* theGoal = EEGoalCast<EEUGLoadContainer>(this->mContainer->GetLoadGoal());
             // the container may no longer have a load goal (Abandon checks the same cast)
             if (theGoal != NULL)
                 theGoal->RemoveUnit(inUnit);
@@ -372,7 +373,7 @@ void EEUGLoadContainer::Abandon(EEComplexUnit* inUnit)
 {
     if (this->mContainer == NULL || inUnit == this->mContainer || inUnit->mContainer != NULL)
         return;
-    EEUGLoadContainer* theGoal = dynamic_cast<EEUGLoadContainer*>(this->mContainer->GetLoadGoal());
+    EEUGLoadContainer* theGoal = EEGoalCast<EEUGLoadContainer>(this->mContainer->GetLoadGoal());
     if (theGoal != NULL && theGoal->HasUnit(inUnit))
         theGoal->RemoveUnit(inUnit);
 }
@@ -450,7 +451,7 @@ bool EEUGLoadContainer::EvaluateCondition(EEComplexUnit* inUnit, unsigned long i
     U2DPoint<long> theTile;
     switch (inEvent) {
     case kTriggerContainerHasLostGoal: {
-            EEUGLoadContainer* theGoal = dynamic_cast<EEUGLoadContainer*>(this->mContainer->GetLoadGoal());
+            EEUGLoadContainer* theGoal = EEGoalCast<EEUGLoadContainer>(this->mContainer->GetLoadGoal());
             std::vector<EEComplexUnit*>::iterator theIterator;
             if (theGoal != NULL) {
                 EEComplexUnit* theUnit = inUnit;

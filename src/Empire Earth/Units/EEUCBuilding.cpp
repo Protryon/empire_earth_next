@@ -22,6 +22,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -115,7 +116,7 @@ bool EEUCBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             }
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = theCargo->mGoalQueues[1].GetFront();
-                EEUGExplore* theExplore = dynamic_cast<EEUGExplore*>(theGoal);
+                EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
                 if (theGoal != NULL) {
                     theCargo->mGoalQueues[0].Clear();
                     inUnit->SetExitingUnitID(theCargo->mUnitID);
@@ -426,7 +427,7 @@ void EEUCBuilding::ActionChanged(EEComplexUnit* inUnit)
 {
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionSearchForSecondaryTarget: {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         if (theGoal != NULL && theGoal->mTarget != NULL) {
             EEUnit* theTarget = this->FindNearestTargetBuilding(theGoal->mTarget);
             if (theTarget != NULL)
@@ -559,7 +560,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
     if (!theCargo->mGoalQueues[1].mGoals.empty()) {
         theIterator = theCargo->GetQueueGoals(1).begin();
         for (; theIterator != theCargo->GetQueueGoals(1).end(); ++theIterator) {
-            EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(*theIterator);
+            EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(*theIterator);
             EEUnitGoal* theCopy;
             if (theAttack != NULL) {
                 if (theAttack->Suits(theCargo) && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0)
@@ -621,7 +622,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                             theGoal = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
                     }
                 } else {
-                    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(*theIterator);
+                    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(*theIterator);
                     if (theAttack != NULL) {
                         if (theAttack->Suits(theCargo) && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0)
                             theGoal = theAttack->Clone();
@@ -698,7 +699,7 @@ long EEUCBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         theFlag = this->EruptVolcano(inUnit);
         break;
     case kTriggerSecondaryTargetFound: {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         theFlag = theGoal != NULL && theGoal->mTarget->mHitPoints > 0;
         break;
     }

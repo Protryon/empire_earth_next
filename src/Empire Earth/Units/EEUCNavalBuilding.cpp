@@ -17,6 +17,7 @@
 #include "lle/GEModel.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -57,18 +58,18 @@ bool EEUCNavalBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
         if (theCargo->mPlayer->IsHuman()) {
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
-                if (dynamic_cast<EEUGAttackUnit*>(theGoal) == 0 &&
-                    dynamic_cast<EEUGLocation*>(theGoal) == 0 &&
-                    dynamic_cast<EEUGExplore*>(theGoal) == 0)
+                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                    EEGoalCast<EEUGLocation>(theGoal) == 0 &&
+                    EEGoalCast<EEUGExplore>(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;
             }
             if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
-                if (dynamic_cast<EEUGAttackUnit*>(theGoal) == 0 &&
-                    dynamic_cast<EEUGLocation*>(theGoal) == 0 &&
-                    dynamic_cast<EEUGExplore*>(theGoal) == 0)
+                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                    EEGoalCast<EEUGLocation>(theGoal) == 0 &&
+                    EEGoalCast<EEUGExplore>(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;

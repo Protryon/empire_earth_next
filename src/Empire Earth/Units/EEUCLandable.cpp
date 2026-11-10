@@ -25,6 +25,7 @@
 #include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -224,12 +225,12 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     EEUnit* theUnit;
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(theGoal);
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-    EEUGExplore* theExplore = dynamic_cast<EEUGExplore*>(theGoal);
-    EEUGPatrol* thePatrol = dynamic_cast<EEUGPatrol*>(theGoal);
-    EEUGAttackGround* theGround = dynamic_cast<EEUGAttackGround*>(theGoal);
-    EEUGUnloadTransport* theUnload = dynamic_cast<EEUGUnloadTransport*>(theGoal);
+    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
+    EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
+    EEUGPatrol* thePatrol = EEGoalCast<EEUGPatrol>(theGoal);
+    EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(theGoal);
+    EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
     if (theLocation != NULL) {
         theTarget.SetX(theLocation->mLocation.GetX());
         theTarget.SetY(theLocation->mLocation.GetY());
@@ -413,7 +414,7 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
         break;
     case kActionSearchForSecondaryTarget: {
         inUnit->SetCurrentPhysicsAction(6);
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+        EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
         if (theAttack == NULL)
             return;
         EEUnit* theTargetUnit = theAttack->mTarget;
@@ -636,7 +637,7 @@ bool EEUCLandable::IsBombOnTarget(EEComplexUnit* inUnit)
     GEVector theVelocity;
     GEVector theHeading;
     EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(inUnit->mGoalState);
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
     float theGravity = this->mProjectileClass->mAcceleration;
     float theSpeed = theStats->mLaunchSpeed;
     if (theAttack == NULL)
@@ -752,7 +753,7 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
     }
     EEUGLocation* theLocation = NULL;
     if (inUnit->mGoalState != NULL)
-        theLocation = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+        theLocation = EEGoalCast<EEUGLocation>(inUnit->GetGoal());
     if (theLocation == NULL) {
         EEUGLocation* theMove = new EEUGLocation(&theDeck, false, true, false, 0.0f, false, false);
         inUnit->ClearGoalQueue(0);
@@ -1176,7 +1177,7 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         theFlag = inUnit->mHomeBase == NULL || inUnit->mHomeBase->mHitPoints == 0;
         break;
     case kTriggerSecondaryTargetFound: {
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+        EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         theFlag = theAttack != NULL && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0;
         break;
     }
@@ -1185,7 +1186,7 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         if (inUnit->mHomeBase != NULL) {
             long theCategory = inUnit->mHomeBase->GetUnitClass()->mCategory;
             if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && inUnit->mHomeBase->GetUnitClass()->mAirTrafficType != 0
-                && dynamic_cast<EEUGLocation*>(theGoal) != 0)
+                && EEGoalCast<EEUGLocation>(theGoal) != 0)
                 theFlag = this->IsAwayFromGoal(inUnit);
         }
         break;
