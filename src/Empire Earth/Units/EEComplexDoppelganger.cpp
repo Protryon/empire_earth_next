@@ -50,6 +50,40 @@
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGBuildRepair.h"
 
+// port (save version 0.255): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
+// makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
+// without contacts skips its collision step), so the loaded units collided differently in their first tick. Put back
+// at the first tick in two passes over every unit (clear, then add): ClearContacts also removes the unit from its
+// contacts' lists, so a unit-by-unit rebuild would undo its neighbours'.
+static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sLoadedContacts;
+
+static EEComplexUnit* LoadedComplexUnit(unsigned long inID)
+{
+    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(inID)));
+}
+
+static void RestoreLoadedContacts()
+{
+    std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > theContacts;
+    theContacts.swap(sLoadedContacts);
+    for (size_t i = 0; i < theContacts.size(); i++) {
+        EEComplexUnit* theUnit = theContacts[i].first.first;
+        if (static_cast<RTSUnit*>(theUnit) == gWorld.GetUnit(theContacts[i].first.second))
+            theUnit->ClearContacts();
+    }
+    for (size_t i = 0; i < theContacts.size(); i++) {
+        EEComplexUnit* theUnit = theContacts[i].first.first;
+        if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theContacts[i].first.second))
+            continue;
+        const std::vector<unsigned long>& theIDs = theContacts[i].second;
+        for (size_t k = theIDs.size(); k-- > 0;) {   // AddContact adds at the head: the last saved first
+            EEComplexUnit* theContact = LoadedComplexUnit(theIDs[k]);
+            if (theContact != NULL)
+                theUnit->AddContact(theContact);
+        }
+    }
+}
+
 // FUNCTION: EXE 0x5f1f19
 // Creates an empty complex doppelganger with no model, hit points or tile
 EEComplexDoppelganger::EEComplexDoppelganger()
@@ -692,6 +726,11 @@ LoadFinalVersions:
             unsigned long mNextTriggerTime;
             std::deque<EEComplexUnitAttacker> mIgnoredTargets;
             std::vector<U2DPoint<long> > mBoundedPathTiles;
+            // port (0.255): the model's frame (RepairPointers restarts an animation at its last frame), the counters
+            // the original saved as fractions (FinishLoad) or set at load (the rotting time, a builder's research)
+            bool mRunning = false;
+            unsigned long mFrame = 0;
+            long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
         } theLive;
         unsigned long theLiveCount = 0;
         if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
@@ -716,6 +755,25 @@ LoadFinalVersions:
         }
         unsigned long theUnitID = this->mUnitID;
         EEComplexUnit* theSelf = this;   // only while it is the world's unit of that id (not a doppelganger, not freed)
+        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.255), see LiveState
+            theLive.mRunning = true;
+            if ((theResult = inFile.Read(theLive.mFrame)) == 0 && (theResult = inFile.Read(theLive.mFlightTime)) == 0
+                && (theResult = inFile.Read(theLive.mRottingAwayTime)) == 0 && (theResult = inFile.Read(theLive.mCurrentResearch)) == 0
+                && (theResult = inFile.Read(theLive.mLastHitPoints)) == 0 && (theResult = inFile.Read(theLive.mGarrisonCount)) == 0
+                && (theResult = inFile.Read(theLive.mPower)) == 0)
+                theResult = inFile.Read(theLiveCount);
+            std::vector<unsigned long> theContacts;
+            for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+                unsigned long theID = 0;
+                if ((theResult = inFile.Read(theID)) == 0)
+                    theContacts.push_back(theID);
+            }
+            if (theResult == 0) {
+                if (sLoadedContacts.empty())
+                    EEAfterLoad(RestoreLoadedContacts);   // once per load (the first unit read registers it; it runs at the first tick, every unit read)
+                sLoadedContacts.push_back(std::make_pair(std::make_pair(theSelf, theUnitID), theContacts));
+            }
+        }
         if (theResult == 0)
             EEAfterLoad([theUnitID, theSelf, theLive]() {
                 EEComplexUnit* theUnit = theSelf;
@@ -731,6 +789,15 @@ LoadFinalVersions:
                 theUnit->mNextTriggerTime = theLive.mNextTriggerTime;
                 theUnit->mIgnoredTargets = theLive.mIgnoredTargets;
                 theUnit->mBoundedPathTiles = theLive.mBoundedPathTiles;
+                if (theLive.mRunning) {
+                    theUnit->mPhysicalModel.SetFrame(theLive.mFrame);
+                    theUnit->mFlightTime = theLive.mFlightTime;
+                    theUnit->mRottingAwayTime = theLive.mRottingAwayTime;
+                    theUnit->mCurrentResearch = theLive.mCurrentResearch;
+                    theUnit->mLastHitPoints = theLive.mLastHitPoints;
+                    theUnit->mGarrisonCount = theLive.mGarrisonCount;
+                    theUnit->mPower = theLive.mPower;
+                }
             });
     }
     return theResult;
@@ -1298,6 +1365,17 @@ SaveFinalFields:
         for (size_t k = 0; k < this->mBoundedPathTiles.size() && theResult == 0; k++) {
             if ((theResult = outFile.Write(this->mBoundedPathTiles[k].mX)) == 0)
                 theResult = outFile.Write(this->mBoundedPathTiles[k].mY);
+        }
+        // port (0.255): the model's frame, the exact counters the original saved as fractions or set at load, and the
+        // contact list's unit ids, head first (Load; sLoadedContacts)
+        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
+            if ((theResult = outFile.Write(this->mPhysicalModel.GetFrame())) == 0 && (theResult = outFile.Write(this->mFlightTime)) == 0
+                && (theResult = outFile.Write(this->mRottingAwayTime)) == 0 && (theResult = outFile.Write(this->mCurrentResearch)) == 0
+                && (theResult = outFile.Write(this->mLastHitPoints)) == 0 && (theResult = outFile.Write(this->mGarrisonCount)) == 0
+                && (theResult = outFile.Write(this->mPower)) == 0)
+                theResult = outFile.Write((unsigned long)this->mContacts.mCount);
+            for (UListNode<EEComplexUnit*>* theNode = this->mContacts.mHead; theNode != NULL && theResult == 0; theNode = theNode->mNext)
+                theResult = outFile.Write(theNode->mData->mUnitID);
         }
     }
     return theResult;

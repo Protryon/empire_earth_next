@@ -183,20 +183,43 @@ static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const st
         }
     } else
         ESDebugOut("EEPWorldHelper: the loaded units are not the saved ones: their order is the load's\n");
-    // the stepped units and the queues: the same units, in the saved order
+    // the stepped units and the queues: the saved units in the saved order. The load's RebuildActiveUnits steps
+    // every placed unit, where the saved game had some still queued for activation (a unit made in the save's
+    // last tick is stepped from the next tick on) or deactivated since, so the sets differ as well as the order;
+    // the lists are made the saved ones, with the references UpdateActiveUnits keeps (two per stepped unit, in
+    // mActiveUnits too; one per queued unit). A saved unit the load does not have is left out.
     std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
     for (int l = 0; l < 3; l++) {
         std::deque<EEComplexUnit*> theOrder;
-        bool theFound = inLists[l].size() == theLists[l]->size();
-        for (size_t i = 0; i < inLists[l].size() && theFound; i++) {
+        for (size_t i = 0; i < inLists[l].size(); i++) {
             EEComplexUnit* theUnit = LoadedComplexUnit(inLists[l][i]);
-            theFound = theUnit != NULL && std::find(theLists[l]->begin(), theLists[l]->end(), theUnit) != theLists[l]->end();
-            theOrder.push_back(theUnit);
+            if (theUnit != NULL && std::find(theOrder.begin(), theOrder.end(), theUnit) == theOrder.end())
+                theOrder.push_back(theUnit);
+            else if (theUnit == NULL)
+                ESDebugOut("EEPWorldHelper: saved stepped unit %lu is not in the loaded game\n", inLists[l][i]);
         }
-        if (theFound)
-            *theLists[l] = theOrder;
-        else if (l == 0)
-            ESDebugOut("EEPWorldHelper: the loaded stepped units are not the saved ones: their order is the load's\n");
+        std::deque<EEComplexUnit*>& theList = *theLists[l];
+        for (size_t i = 0; i < theList.size(); i++) {   // the load's units the saved game did not have
+            EEComplexUnit* theUnit = theList[i];
+            if (std::find(theOrder.begin(), theOrder.end(), theUnit) != theOrder.end())
+                continue;
+            theUnit->Dereference();
+            if (l == 0) {
+                theUnit->Dereference();
+                gWorld.mActiveUnits.erase(theUnit->mUnitID);
+            }
+        }
+        for (size_t i = 0; i < theOrder.size(); i++) {   // the saved units the load did not have
+            EEComplexUnit* theUnit = theOrder[i];
+            if (std::find(theList.begin(), theList.end(), theUnit) != theList.end())
+                continue;
+            theUnit->Reference();
+            if (l == 0) {
+                theUnit->Reference();
+                gWorld.mActiveUnits[theUnit->mUnitID] = theUnit;
+            }
+        }
+        theList = theOrder;
     }
 }
 
