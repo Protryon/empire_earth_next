@@ -58,6 +58,15 @@
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAEManager.h"
+#include "lle/GE2DPoint.h"
+#include "lle/GE3DPoint.h"
+#include "lle/GEVector.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GE3DLine.h"
+#include "lle/GETransformation.h"
+#include "lle/GEPhysicalModel.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEMap.h"
 #include <algorithm>
 #include <vector>
 
@@ -322,6 +331,92 @@ static long LoadAISchedule(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.255): the order of the units on each tile (RTSTile::mUnits, newest first). A load places the
+// units in its own order, so a tile with several units listed them otherwise, and EEComplexUnit::FindContacts, which
+// walks the tiles' lists, built the contact lists in another order (collisions resolved in another order). Saved:
+// every tile with two units or more, by index, with its units' ids; put back at the first tick by moving the units
+// between the tile's own nodes (each node keeps its reference) when the tile holds the same units.
+static void SaveTileOrder(FSFile& outFile)
+{
+    EEMap* theMap = gWorld.mMap;
+    std::vector<std::pair<unsigned long, std::vector<unsigned long> > > theTiles;
+    long theSize = theMap != NULL ? theMap->mSize : 0;
+    for (long i = 0; i < theSize * theSize; i++) {
+        EEMapTile* theTile = theMap->mTiles[i];
+        if (theTile == NULL || theTile->mUnits == NULL || theTile->mUnits->mNext == NULL)
+            continue;
+        std::vector<unsigned long> theIDs;
+        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
+            theIDs.push_back(theNode->mUnit != NULL ? (unsigned long)theNode->mUnit->mUnitID : (unsigned long)-1);
+        theTiles.push_back(std::make_pair((unsigned long)i, theIDs));
+    }
+    outFile.Write((unsigned long)theTiles.size());
+    for (size_t t = 0; t < theTiles.size(); t++) {
+        outFile.Write(theTiles[t].first);
+        outFile.Write((unsigned long)theTiles[t].second.size());
+        for (size_t k = 0; k < theTiles[t].second.size(); k++)
+            outFile.Write(theTiles[t].second[k]);
+    }
+}
+
+static void RestoreTileOrder(const std::vector<std::pair<unsigned long, std::vector<unsigned long> > >& inTiles)
+{
+    EEMap* theMap = gWorld.mMap;
+    unsigned long theOther = 0;
+    for (size_t t = 0; t < inTiles.size(); t++) {
+        if (theMap == NULL || inTiles[t].first >= (unsigned long)(theMap->mSize * theMap->mSize))
+            break;
+        EEMapTile* theTile = theMap->mTiles[inTiles[t].first];
+        const std::vector<unsigned long>& theIDs = inTiles[t].second;
+        std::vector<RTSTileUnitNode*> theNodes;
+        for (RTSTileUnitNode* theNode = theTile != NULL ? theTile->mUnits : NULL; theNode != NULL; theNode = theNode->mNext)
+            theNodes.push_back(theNode);
+        std::vector<EEUnit*> theUnits;
+        for (size_t k = 0; k < theIDs.size() && theNodes.size() == theIDs.size(); k++) {
+            EEUnit* theUnit = NULL;
+            for (size_t n = 0; n < theNodes.size() && theUnit == NULL; n++)
+                if (theNodes[n]->mUnit != NULL && (unsigned long)theNodes[n]->mUnit->mUnitID == theIDs[k]
+                    && std::find(theUnits.begin(), theUnits.end(), theNodes[n]->mUnit) == theUnits.end())
+                    theUnit = theNodes[n]->mUnit;
+            if (theUnit == NULL)
+                break;
+            theUnits.push_back(theUnit);
+        }
+        if (theUnits.size() != theNodes.size() || theUnits.size() != theIDs.size()) {
+            theOther++;
+            continue;
+        }
+        for (size_t n = 0; n < theNodes.size(); n++)
+            theNodes[n]->mUnit = theUnits[n];
+    }
+    if (theOther != 0)
+        ESDebugOut("EEPWorldHelper: %lu tiles hold other units than the saved ones: their order is the load's\n", theOther);
+}
+
+static long LoadTileOrder(FSFile& inFile)
+{
+    std::vector<std::pair<unsigned long, std::vector<unsigned long> > > theTiles;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long t = 0; t < theCount && theResult == kErrorOK; t++) {
+        unsigned long theIndex = 0;
+        unsigned long theUnits = 0;
+        theResult = inFile.Read(theIndex);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theUnits);
+        std::vector<unsigned long> theIDs;
+        for (unsigned long k = 0; k < theUnits && theResult == kErrorOK; k++) {
+            unsigned long theID = 0;
+            theResult = inFile.Read(theID);
+            theIDs.push_back(theID);
+        }
+        theTiles.push_back(std::make_pair(theIndex, theIDs));
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theTiles]() { RestoreTileOrder(theTiles); });
+    return theResult;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -373,8 +468,9 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
             && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.255): the computer players' schedule
             && LoadAISchedule(inFile) == kErrorOK
-            && gPathManager.LoadRunningState(inFile) == kErrorOK)   // port (0.255): the path manager's history, regions, timers
-            EEAELoadRunningState(inFile);   // port (0.255): the area effects' locations, the lists acting
+            && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.255): the path manager's history, regions, timers
+            && EEAELoadRunningState(inFile) == kErrorOK)   // port (0.255): the area effects' locations, the lists acting
+            LoadTileOrder(inFile);   // port (0.255): the order of the units on each tile
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -428,6 +524,7 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
             SaveAISchedule(outFile);
             gPathManager.SaveRunningState(outFile);   // port (0.255): the path manager's history, regions and timers
             EEAESaveRunningState(outFile);   // port (0.255): the area effects' locations and the lists of those acting
+            SaveTileOrder(outFile);   // port (0.255): the order of the units on each tile
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
