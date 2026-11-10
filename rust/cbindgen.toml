@@ -47,6 +47,11 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "MachineState" = "EeAStarMachineState"
 "Skip" = "EeAStarSkip"
 "Unit" = "EeAStarUnit"
+"GraphKind" = "EeAStarGraphKind"
+"GraphList" = "EeAStarGraphList"
+"GraphMachineState" = "EeAStarGraphMachineState"
+"GraphNodeView" = "EeAStarGraphNodeView"
+"Obj" = "EeAStarGraphObject"
 # ee_fs
 "Archive" = "EeFsArchive"
 # ee_dx7

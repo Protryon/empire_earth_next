@@ -12,10 +12,9 @@
 #ifndef EE_EEAIASTARMACHINE_H
 #define EE_EEAIASTARMACHINE_H
 
-#include "rust/ee_rust.h"   // EeAStarCallbacks (the Rust search steps)
+#include "rust/ee_rust.h"   // EeAStarCallbacks, EeAStarGraphCallbacks (the Rust search steps)
 #include "ee/EEAIAStarCapture.h"   // TEST ONLY: the graph machine's capture notes
-
-struct EEAIAStarGraphNode;               // ee/EEAIAStarGraphStorage.h
+#include "ee/EEAIAStarGraphStorage.h"   // EEAIAStarGraphNode (the graph hooks' node views)
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
 
@@ -142,12 +141,12 @@ public:
     // Run's steps (the continental-chain machine's COMDATs 0x27434.. in EEAIContinentManager.cpp's range, the path
     // machine's 0xaacf0.. in EEPathManager.cpp's). The goal supplies the hooks: IsGoalNode, GetStartObject,
     // GetGoalID, Estimate, GetStepCost, AcceptNeighbor, SearchDone; M its mNeighbors, GetNumNeighbors, mID and
-    // GetGraphLocation. (provisional names)
-    bool Start();                           // 0x27434: the start node from the goal's start object
-    void Expand();                          // 0x274a3: pops nodes and adds the neighbours the goal accepts
-    bool Restart();                         // 0x28a34: the nearest remaining node, else a new start node
-    EEAIAStarGraphNode* NextNode();         // 0x2945f: the nearer of the nearest open and closed nodes
-    void AddNode(EEAIAStarGraphNode* inParent, M* inObject);   // 0x28aa7: a new open node unless known cheaper
+    // GetGraphLocation. (provisional names) Port: Start 0x27434, Expand 0x274a3 and their Restart 0x28a34, NextNode
+    // 0x2945f and AddNode 0x28aa7 are Rust (rust/crates/ee_astar graph.rs); these call it with the goal and the
+    // objects behind EeAStarGraphCallbacks (EEAIAStarGraphHooks below)
+    bool Start();
+    void Expand();
+    EeAStarGraphCallbacks Callbacks();
     // New (port), TEST ONLY: Run's record in the A* capture (ee/EEAIAStarCapture.h, tag ASGR)
     void CaptureInputs(EEAIAStarCaptureRun& ioRun);
     void CaptureOutputs(EEAIAStarCaptureRun& ioRun);
@@ -289,156 +288,160 @@ void EEAIAStarGraphMachine<S, G, M>::CaptureOutputs(EEAIAStarCaptureRun& ioRun)
     theStorage->CaptureNodes(ioRun);
 }
 
+// New (port): the goal and the graph objects behind the Rust graph machine's callbacks (ee_astar's
+// EeAStarGraphCallbacks). Each asks the goal what the C++ machine asked it, at the same point of the search, and notes
+// it for the capture as the C++ machine did. The objects travel as opaque handles: an M's AStarGraphableObjectBase*
+// (at +0x68 in EEAIContinent), which Rust stores in its nodes and hands back. The nodes the goal takes (IsGoalNode,
+// GetStepCost) are EEAIAStarGraphNode views of the Rust node (mObject, mIndex, mTile, the costs; no links). What the
+// goal reads of the storage meanwhile (SearchDone: the current node, an open node left) arrives in the arguments and
+// is parked on the storage (mHook*).
+template <class S, class G, class M>
+struct EEAIAStarGraphHooks {
+    typedef EEAIAStarGraphMachine<S, G, M> Machine;
+
+    static void* Handle(M* inObject)
+    {
+        AStarGraphableObjectBase* theBase = inObject;
+        return theBase;
+    }
+    static M* Object(void* inHandle) { return static_cast<M*>(static_cast<AStarGraphableObjectBase*>(inHandle)); }
+
+    static void* StartObject(void* inMachine)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        M* theStart = theMachine->mGoal.GetStartObject();
+        EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
+        return Handle(theStart);
+    }
+    static int32_t GoalID(void* inMachine) { return ((Machine*)inMachine)->mGoal.GetGoalID(); }
+    static int32_t Estimate(void* inMachine, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        return EEAIAStarNote(kAStarEventGraphEstimate, inFromX, inFromY, inToX, inToY, 0,
+                             theMachine->mGoal.Estimate(U2DPoint<long>(inFromX, inFromY), U2DPoint<long>(inToX, inToY)));
+    }
+    static bool IsGoalNode(void* inMachine, bool inHasNode, const EeAStarGraphNodeView* inNode)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        EEAIAStarGraphNode theNode(*inNode);
+        return EEAIAStarNote(kAStarEventGraphGoalNode, inHasNode ? inNode->index : -1, 0, 0, 0, 0,
+                             theMachine->mGoal.IsGoalNode(inHasNode ? &theNode : NULL)) != 0;
+    }
+    static int32_t ObjectID(void* inMachine, void* inObject) { return Object(inObject)->mID; }
+    static uint32_t NumNeighbors(void* inMachine, void* inObject) { return Object(inObject)->GetNumNeighbors(); }
+    static void* Neighbor(void* inMachine, void* inObject, uint32_t inIndex)
+    {
+        return Handle(Object(inObject)->mNeighbors[inIndex]);
+    }
+    static void GraphLocation(void* inMachine, void* inObject, int32_t* outX, int32_t* outY)
+    {
+        U2DPoint<long> theTile = Object(inObject)->GetGraphLocation();
+        *outX = theTile.mX;
+        *outY = theTile.mY;
+    }
+    static bool CanEnter(void* inMachine, void* inNeighbor, void* inFrom)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        M* theNeighbor = Object(inNeighbor);
+        M* theFrom = Object(inFrom);
+        return EEAIAStarNote(kAStarEventGraphEnter, theNeighbor->mID, theFrom->mID, 0, 0, 0,
+                             theMachine->mGoal.CanEnter(theNeighbor, theFrom)) != 0;
+    }
+    static int32_t StepCost(void* inMachine, const EeAStarGraphNodeView* inParent, void* inObject)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        EEAIAStarGraphNode theParent(*inParent);
+        M* theObject = Object(inObject);
+        return EEAIAStarNote(kAStarEventGraphCost, inParent->index, theObject->mID, 0, 0, 0,
+                             (long)theMachine->mGoal.GetStepCost(&theParent, theObject));
+    }
+    static void SearchDone(void* inMachine, bool inHasCurrent, const EeAStarGraphNodeView* inCurrent, bool inHasOpen)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        S* theStorage = theMachine;
+        theStorage->mHookHasCurrent = inHasCurrent;
+        if (inHasCurrent)
+            theStorage->mHookCurrent = EEAIAStarGraphNode(*inCurrent);
+        theStorage->mHookHasOpen = inHasOpen;
+        theMachine->mGoal.SearchDone(theMachine);
+        EEAIAStarNote(kAStarEventGraphSearchDone, theMachine->mGoal.mSearchFailed, theMachine->mGoal.mTookNearest, 0, 0,
+                      0, 0);
+    }
+    static bool SearchFailed(void* inMachine) { return ((Machine*)inMachine)->mGoal.mSearchFailed; }
+    static int32_t RevLimit(void* inMachine) { return ((Machine*)inMachine)->mGoal.mRevLimit; }
+    static int32_t MaxRevs(void* inMachine) { return ((Machine*)inMachine)->mGoal.mMaxRevs; }
+    static void Tiles(void* inMachine, int32_t* outTiles)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        outTiles[0] = theMachine->mGoal.mStartTile.mX;
+        outTiles[1] = theMachine->mGoal.mStartTile.mY;
+        outTiles[2] = theMachine->mGoal.mGoalTile.mX;
+        outTiles[3] = theMachine->mGoal.mGoalTile.mY;
+    }
+    static void GetState(void* inMachine, EeAStarGraphMachineState* outState)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        outState->tile_x = theMachine->mTile.mX;
+        outState->tile_y = theMachine->mTile.mY;
+        outState->revs = theMachine->mRevs;
+        outState->num_runs = theMachine->mNumRuns;
+        outState->steps = theMachine->mSteps;
+        outState->sector = theMachine->mSector;
+        outState->found = theMachine->mFound;
+    }
+    static void SetState(void* inMachine, const EeAStarGraphMachineState* inState)
+    {
+        Machine* theMachine = (Machine*)inMachine;
+        theMachine->mTile.mX = inState->tile_x;
+        theMachine->mTile.mY = inState->tile_y;
+        theMachine->mRevs = inState->revs;
+        theMachine->mNumRuns = inState->num_runs;
+        theMachine->mSteps = inState->steps;
+        theMachine->mSector = inState->sector;
+        theMachine->mFound = inState->found;
+    }
+};
+
+template <class S, class G, class M>
+EeAStarGraphCallbacks EEAIAStarGraphMachine<S, G, M>::Callbacks()
+{
+    typedef EEAIAStarGraphHooks<S, G, M> Hooks;
+    EeAStarGraphCallbacks theCallbacks;
+    theCallbacks.ctx = this;
+    theCallbacks.start_object = Hooks::StartObject;
+    theCallbacks.goal_id = Hooks::GoalID;
+    theCallbacks.estimate = Hooks::Estimate;
+    theCallbacks.is_goal_node = Hooks::IsGoalNode;
+    theCallbacks.object_id = Hooks::ObjectID;
+    theCallbacks.num_neighbors = Hooks::NumNeighbors;
+    theCallbacks.neighbor = Hooks::Neighbor;
+    theCallbacks.graph_location = Hooks::GraphLocation;
+    theCallbacks.can_enter = Hooks::CanEnter;
+    theCallbacks.step_cost = Hooks::StepCost;
+    theCallbacks.search_done = Hooks::SearchDone;
+    theCallbacks.search_failed = Hooks::SearchFailed;
+    theCallbacks.rev_limit = Hooks::RevLimit;
+    theCallbacks.max_revs = Hooks::MaxRevs;
+    theCallbacks.tiles = Hooks::Tiles;
+    theCallbacks.get_state = Hooks::GetState;
+    theCallbacks.set_state = Hooks::SetState;
+    return theCallbacks;
+}
+
+// 0x27434 (Rust: ee_astar graph.rs start)
 template <class S, class G, class M>
 bool EEAIAStarGraphMachine<S, G, M>::Start()
 {
-    this->mTile.mX = this->mGoal.mGoalTile.mX;
-    this->mTile.mY = this->mGoal.mGoalTile.mY;
-    this->mSector = this->mGoal.GetGoalID();
-    M* theStart = this->mGoal.GetStartObject();
-    EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
-    mCurrentNode = NewNode(this->mGoal.mStartTile, theStart, theStart->mID);
-    mCurrentNode->mPathCost = 0;
-    mCurrentNode->mEstimate = EEAIAStarNote(kAStarEventGraphEstimate, this->mGoal.mStartTile.mX, this->mGoal.mStartTile.mY,
-                                            this->mTile.mX, this->mTile.mY, 0,
-                                            this->mGoal.Estimate(this->mGoal.mStartTile, this->mTile));
-    mCurrentNode->mCost = mCurrentNode->mEstimate + mCurrentNode->mPathCost;
-    AddOpen(mCurrentNode);
-    return true;
+    EeAStarGraphCallbacks theCallbacks = this->Callbacks();
+    return ee_astar_graph_start(this->mCore, &theCallbacks);
 }
 
+// 0x274a3 (Rust: ee_astar graph.rs expand, with Restart, NextNode and AddNode)
 template <class S, class G, class M>
 void EEAIAStarGraphMachine<S, G, M>::Expand()
 {
-    this->mNumRuns++;
-    this->mRevs++;
-    this->mSteps = 0;
-    for (;;) {
-        mCurrentNode = RemoveBestOpen();
-        bool theIsGoal = this->mGoal.IsGoalNode(mCurrentNode);
-        EEAIAStarNote(kAStarEventGraphGoalNode, mCurrentNode ? mCurrentNode->mIndex : -1, 0, 0, 0, 0, theIsGoal);
-        if (theIsGoal) {
-            this->mFound = false;
-            break;
-        }
-        M* theObject = static_cast<M*>(mCurrentNode->mObject);
-        if (theObject->GetNumNeighbors() > 0) {
-            for (long i = theObject->mNeighbors.size() - 1; i >= 0; i--) {
-                AStarGraphableObjectBase* theNeighbor = theObject->mNeighbors[i];
-                if (theObject->mID != -1 &&
-                    EEAIAStarNote(kAStarEventGraphEnter, static_cast<M*>(theNeighbor)->mID, theObject->mID, 0, 0, 0,
-                                  this->mGoal.CanEnter(static_cast<M*>(theNeighbor), theObject)) != 0)
-                    this->AddNode(mCurrentNode, theObject->mNeighbors[i]);
-            }
-        }
-        AddClosed(mCurrentNode);
-        if (this->mGoal.mRevLimit != -1 && this->mSteps >= this->mGoal.mRevLimit) {
-            mCurrentNode = 0;
-            this->mFound = true;
-            break;
-        }
-        if (this->mGoal.mMaxRevs != -1 && this->mRevs >= this->mGoal.mMaxRevs) {
-            mCurrentNode = 0;
-            this->mFound = false;
-            break;
-        }
-        this->mSteps++;
-        this->mRevs++;
-    }
-    if (!this->mFound) {
-        this->mGoal.SearchDone(this);
-        EEAIAStarNote(kAStarEventGraphSearchDone, this->mGoal.mSearchFailed, this->mGoal.mTookNearest, 0, 0, 0, 0);
-    }
-    if (this->mGoal.mSearchFailed) {
-        if (mCurrentNode) {
-            AddClosed(mCurrentNode);
-            mCurrentNode = 0;
-        }
-        this->Restart();
-    } else if (!this->mFound && mCurrentNode)
-        mPath = mCurrentNode;
-    else
-        mCurrentNode = 0;
-}
-
-template <class S, class G, class M>
-bool EEAIAStarGraphMachine<S, G, M>::Restart()
-{
-    mPath = 0;
-    EEAIAStarGraphNode* theNode = this->NextNode();
-    if (theNode) {
-        this->mTile.mX = theNode->mTile.mX;
-        this->mTile.mY = theNode->mTile.mY;
-        mPath = theNode;
-        mCurrentNode = theNode;
-        this->mSector = theNode->mIndex;
-    } else {
-        M* theStart = this->mGoal.GetStartObject();
-        EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
-        mCurrentNode = NewNode(this->mGoal.mStartTile, theStart, -1);
-        mCurrentNode->mPathCost = 0;
-        mCurrentNode->mEstimate = 1;
-        mCurrentNode->mCost = 1;
-        mPath = mCurrentNode;
-    }
-    this->mFound = false;
-    return true;
-}
-
-template <class S, class G, class M>
-EEAIAStarGraphNode* EEAIAStarGraphMachine<S, G, M>::NextNode()
-{
-    EEAIAStarGraphNode* theOpen = RemoveNearestOpen(this->mTile);
-    EEAIAStarGraphNode* theClosed = RemoveNearestClosed(this->mTile);
-    if (theOpen) {
-        if (theClosed) {
-            if (theOpen->mCost <= theClosed->mCost)
-                AddClosed(theClosed);
-            else {
-                AddOpen(theOpen);
-                theOpen = theClosed;
-            }
-        }
-    } else
-        theOpen = theClosed;
-    return theOpen;
-}
-
-template <class S, class G, class M>
-void EEAIAStarGraphMachine<S, G, M>::AddNode(EEAIAStarGraphNode* inParent, M* inObject)
-{
-    auto theStep = this->mGoal.GetStepCost(inParent, inObject);
-    EEAIAStarNote(kAStarEventGraphCost, inParent->mIndex, inObject->mID, 0, 0, 0, (long)theStep);
-    unsigned long theCost = inParent->mPathCost + theStep;
-    U2DPoint<long> theTile = inObject->GetGraphLocation();
-    long theIndex = inObject->mID;
-    EEAIAStarGraphNode* theOpen = GetOpenNode(theIndex);
-    EEAIAStarGraphNode* theClosed = GetClosedNode(theIndex);
-    if (theOpen && theOpen->mPathCost <= theCost)
-        return;
-    if (theClosed) {
-        if (theClosed->mPathCost <= theCost)
-            return;
-        RemoveClosed(theClosed);
-        ReleaseNode(theClosed);
-    }
-    if (!theOpen) {
-        EEAIAStarGraphNode* theNode = NewNode(theTile, inObject, theIndex);
-        theNode->mPathCost = theCost;
-        theNode->mParent = inParent;
-        theNode->mEstimate = EEAIAStarNote(kAStarEventGraphEstimate, theNode->mTile.mX, theNode->mTile.mY, this->mTile.mX,
-                                           this->mTile.mY, 0, this->mGoal.Estimate(theNode->mTile, this->mTile));  // the goal's heuristic (0xab6c1: Manhattan * 10)
-        theNode->mCost = theNode->mEstimate + theCost;
-        AddOpen(theNode);
-    } else {
-        theOpen->mParent = inParent;
-        unsigned long theTotal = theOpen->mEstimate + theCost;
-        theOpen->mPathCost = theCost;
-        if (theOpen->mCost != theTotal) {
-            theOpen->mCost = theTotal;
-            UpdateOpen(theOpen);                // re-sorts the open list (0xab6c1 calls 0x1656d)
-        }
-    }
+    EeAStarGraphCallbacks theCallbacks = this->Callbacks();
+    ee_astar_graph_expand(this->mCore, &theCallbacks);
 }
 
 #endif

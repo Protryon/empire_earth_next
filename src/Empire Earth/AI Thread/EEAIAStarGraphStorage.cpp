@@ -1,8 +1,13 @@
 // C:\EEX\Empire Earth\AI Thread\EEAIAStarGraphStorage.cpp (file name inferred: no __FILE__; RTTI class
 // EEAIAStarGraphStorage, vtable 0x439ee8). The graph A* node storage: 0x16070..0x16c0e (the graph goal base's ??_G
 // ends at 0x16070; EEAIAStarHillGoal's ctor starts at 0x16c0e; the name sorts between EEAIAStarGraphContinentalChainGoal
-// and EEAIAStarHillGoal). The twin of EEAIAStarStorage.cpp: the node free list (file statics: every user is here),
-// ctor, ??_G (after its first user), dtor, then the members in address order.
+// and EEAIAStarHillGoal). The twin of EEAIAStarStorage.cpp.
+//
+// Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tables, the per-index flag and node arrays and the
+// machine's search steps are Rust (rust/crates/ee_astar/src/graph.rs, the members line by line there: the node free
+// list 0x16070/0x1616b/0x162b0, AddClosed 0x1613f, AddOpen 0x1618a, GetBucket 0x16233, Clear 0x16394, UpdateOpen
+// 0x1656d, RemoveNearestClosed 0x1665f, RemoveNearestOpen 0x16771, RemoveBestOpen 0x16905, RemoveClosed 0x16aa5,
+// InsertSorted 0x16b5b, Push 0x16bb5, Pop 0x16be1); the class forwards to it.
 #include <windows.h>
 #include <string.h>
 #include <vector>
@@ -10,721 +15,165 @@
 #include "lle/LowLevelEngine.h"
 
 #include "ee/EETileCoordinate.h"
+#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIAStarGraphStorage.h"
 #include "ee/EEAIAStarCapture.h"
-#include "ee/EEMathInline.h"
 
-// the free nodes and their counters (0x4e5c28..0x4e5c3c) (provisional names)
-static EEAIAStarGraphNode* sGSFreeNodes;   // 0x4e5c28
-static long sGSNewNodeCalls;            // 0x4e5c2c
-static long sGSReusedNodes;             // 0x4e5c30
-static long sGSFreeCount;               // 0x4e5c34
-static long sGSAllocatedNodes;          // 0x4e5c38
-static long sGSPooledNodes;             // 0x4e5c3c
+// New (port): the goals' view of a Rust node (the links stay NULL: the lists are Rust's)
+EEAIAStarGraphNode::EEAIAStarGraphNode(const EeAStarGraphNodeView& inView)
+    : mObject(reinterpret_cast<AStarGraphableObjectBase*>(inView.object)), mParent(NULL), mNext(NULL), mPrev(NULL),
+      mIndex(inView.index), mCost(inView.cost), mPathCost(inView.path_cost), mEstimate(inView.estimate),
+      mTile(inView.x, inView.y)
+{
+}
 
 // FUNCTION: EXE 0x416070
-// Deletes every node in the shared free node pool and resets the pool's counters
+// The shared free node pool is gone: each Rust storage frees its nodes with itself (EEPathManager::Shutdown calls it)
 void EEAIAStarGraphStorage::FreeNodePool()
 {
-    EEAIAStarGraphNode* theNode = sGSFreeNodes;
-    while (theNode) {
-        EEAIAStarGraphNode* theDelete = theNode;
-        theNode = theNode->mNext;
-        if (theDelete)
-            delete theDelete;
-        sGSPooledNodes--;
-        sGSAllocatedNodes--;
-    }
-    sGSFreeNodes = NULL;
-    sGSFreeCount = 0;
-    sGSNewNodeCalls = 0;
-    sGSReusedNodes = 0;
 }
 
 // FUNCTION: EXE 0x4160b7
 // Creates an empty graph node storage with no lists or tables and 27 hash buckets
 EEAIAStarGraphStorage::EEAIAStarGraphStorage()
+    : mHookHasCurrent(false), mHookHasOpen(false), mCore(ee_astar_graph_new(EeAStarGraphKind::Hashed)), mCount(0)
 {
-    this->mCount = 0;
-    this->mSortedOpen = NULL;
-    this->mClosedList = NULL;
-    this->mCurrentNode = NULL;
-    this->mPath = NULL;
-    this->mOpenList = NULL;
-    this->mPathCursor = NULL;
-    this->mFlags = NULL;
-    this->mClosedTable = NULL;
-    this->mOpenTable = NULL;
-    this->mSortedOpenTail = NULL;
-    this->mNodes = NULL;
-    this->mBucketCount = 0x1b;
-    this->mOldCount = 0;
+}
+
+// New (port): the storage of a derived kind (the terrain storage's fast open list)
+EEAIAStarGraphStorage::EEAIAStarGraphStorage(EeAStarGraphKind inKind)
+    : mHookHasCurrent(false), mHookHasOpen(false), mCore(ee_astar_graph_new(inKind)), mCount(0)
+{
 }
 
 // SYNTHETIC: EXE 0x4160f0
 // (the scalar deleting destructor)
 
 // FUNCTION: EXE 0x41610c
-// Destroys the storage, returning its nodes to the free pool and freeing its flag and node arrays
+// Destroys the storage and its nodes
 EEAIAStarGraphStorage::~EEAIAStarGraphStorage()
 {
-    this->Clear();
-    delete[] this->mFlags;
-    delete[] this->mClosedTable;
-    delete[] this->mOpenTable;
-    delete[] this->mNodes;
-}
-
-// FUNCTION: EXE 0x41613f
-// Puts a node at the head of the closed list, flags its index closed and records it in the node array
-void EEAIAStarGraphStorage::AddClosed(EEAIAStarGraphNode* inNode)
-{
-    if (this->mClosedList)
-        this->mClosedList->mPrev = inNode;
-    inNode->mNext = this->mClosedList;
-    this->mClosedList = inNode;
-    unsigned char* theFlags = this->mFlags + inNode->mIndex;
-    *theFlags |= kAStarTileClosed;
-    this->mNodes[inNode->mIndex] = inNode;
-}
-
-// FUNCTION: EXE 0x41616b
-// Returns a node to the shared free node pool
-void EEAIAStarGraphStorage::ReleaseNode(EEAIAStarGraphNode* inNode)
-{
-    inNode->mNext = sGSFreeNodes;
-    sGSPooledNodes++;
-    sGSFreeCount++;
-    sGSFreeNodes = inNode;
-}
-
-// FUNCTION: EXE 0x41618a
-// Opens a node: inserts it into the cost-sorted open list when it is no dearer than the tail, else into its
-// hash bucket; flags its index open and records it in the node array
-void EEAIAStarGraphStorage::AddOpen(EEAIAStarGraphNode* inNode)
-{
-    bool theInserted = false;
-    if (this->mSortedOpenTail && inNode->mCost <= this->mSortedOpenTail->mCost) {
-        for (EEAIAStarGraphNode* theNode = this->mSortedOpen; theNode; theNode = theNode->mNext) {
-            if (!(inNode->mCost <= theNode->mCost))
-                continue;
-            if (theNode->mPrev) {
-                theNode->mPrev->mNext = inNode;
-                inNode->mNext = theNode;
-                inNode->mPrev = theNode->mPrev;
-                theNode->mPrev = inNode;
-            } else {
-                inNode->mNext = theNode;
-                theNode->mPrev = inNode;
-                this->mSortedOpen = inNode;
-            }
-            if (theNode->mNext == NULL)
-                this->mSortedOpenTail = theNode;
-            theInserted = true;
-            break;
-        }
-    }
-    if (!theInserted) {
-        long theBucket = this->GetBucket(inNode->mTile.mX, inNode->mTile.mY);
-        if (this->mOpenTable[theBucket])
-            this->mOpenTable[theBucket]->mPrev = inNode;
-        inNode->mNext = this->mOpenTable[theBucket];
-        this->mOpenTable[theBucket] = inNode;
-    }
-    unsigned char* theFlags = this->mFlags + inNode->mIndex;
-    *theFlags |= kAStarTileOpen;
-    this->mNodes[inNode->mIndex] = inNode;
+    ee_astar_graph_free(this->mCore);
+    this->mCore = NULL;
 }
 
 // FUNCTION: EXE 0x416221
 // Returns all nodes to the free pool and forgets the found path
 void EEAIAStarGraphStorage::ResetNodes()
 {
-    this->Clear();
-    this->mPathCursor = NULL;
-    this->mPath = NULL;
-}
-
-// FUNCTION: EXE 0x416233
-// Returns the hash bucket of a tile
-long EEAIAStarGraphStorage::GetBucket(long inX, long inY)
-{
-    long theHash = (inX << 4) + inY;
-    long theHigh = theHash & 0xf0000000;
-    if (theHigh)
-        theHash = (theHigh >> 24) ^ theHigh;
-    return theHash % this->mBucketCount;
+    ee_astar_graph_reset_nodes(this->mCore);
 }
 
 // FUNCTION: EXE 0x416258
 // Starts walking the found path and returns its first node's tile and index; false (zeros) without a path
 bool EEAIAStarGraphStorage::GetFirstPathNode(EETileCoordinate& outTile, long& outIndex)
 {
-    bool theResult = false;
-    if (this->mPath) {
-        this->mPathCursor = this->mPath;
-        if (this->mPath->mParent) {
-            theResult = this->GetNextPathNode(outTile, outIndex);
-        } else {
-            outTile = this->mPath->mTile;
-            outIndex = this->mPath->mIndex;
-            theResult = true;
-            this->mPathCursor = NULL;
-        }
-    } else {
-        outIndex = 0;
-        outTile.mX = 0;
-        outTile.mY = 0;
-    }
+    int32_t theX;
+    int32_t theY;
+    int32_t theIndex;
+    bool theResult = ee_astar_graph_first_path_node(this->mCore, &theX, &theY, &theIndex);
+    outTile.mX = theX;
+    outTile.mY = theY;
+    outIndex = theIndex;
     return theResult;
-}
-
-// FUNCTION: EXE 0x4162b0
-// Returns a node for a tile, object and index, reusing one from the free pool (reset) or allocating a new one
-EEAIAStarGraphNode* EEAIAStarGraphStorage::NewNode(EETileCoordinate inTile, AStarGraphableObjectBase* inObject,
-                                                   long inIndex)
-{
-    EEAIAStarGraphNode* theNode;
-    sGSNewNodeCalls++;
-    if (sGSFreeNodes) {
-        theNode = sGSFreeNodes;
-        sGSFreeNodes = sGSFreeNodes->mNext;
-        theNode->mTile = inTile;
-        theNode->mIndex = inIndex;
-        theNode->mCost = 0;
-        theNode->mPathCost = 0;
-        theNode->mEstimate = 0;
-        theNode->mParent = NULL;
-        theNode->mPrev = NULL;
-        theNode->mNext = NULL;
-        theNode->mObject = inObject;
-        sGSPooledNodes--;
-        sGSReusedNodes++;
-        sGSFreeCount--;
-    } else {
-        theNode = new EEAIAStarGraphNode(inTile, inIndex);
-        theNode->mObject = inObject;
-        sGSAllocatedNodes++;
-    }
-    return theNode;
 }
 
 // FUNCTION: EXE 0x41634f
 // Returns the next path node's tile and index and steps to its parent; false (zeros) at the end
 bool EEAIAStarGraphStorage::GetNextPathNode(EETileCoordinate& outTile, long& outIndex)
 {
-    bool theResult = false;
-    if (this->mPathCursor) {
-        outTile = this->mPathCursor->mTile;
-        outIndex = this->mPathCursor->mIndex;
-        this->mPathCursor = this->mPathCursor->mParent;
-        theResult = true;
-    } else {
-        outIndex = 0;
-        outTile.mX = 0;
-        outTile.mY = 0;
-    }
+    int32_t theX;
+    int32_t theY;
+    int32_t theIndex;
+    bool theResult = ee_astar_graph_next_path_node(this->mCore, &theX, &theY, &theIndex);
+    outTile.mX = theX;
+    outTile.mY = theY;
+    outIndex = theIndex;
     return theResult;
-}
-
-// FUNCTION: EXE 0x416394
-// Returns the current node and every closed, sorted open, bucketed and pushed node to the free pool and frees
-// the hash tables
-void EEAIAStarGraphStorage::Clear()
-{
-    EEAIAStarGraphNode* theLast;
-    long theCount;
-    if (this->mCurrentNode) {
-        EEAIAStarGraphStorage::ReleaseNode(this->mCurrentNode);
-        this->mCurrentNode = NULL;
-    }
-    if (this->mClosedTable) {
-        for (long i = this->mBucketCount - 1; i >= 0; i--) {
-            if (!this->mClosedTable[i])
-                continue;
-            theCount = 0;
-            for (theLast = this->mClosedTable[i]; theLast; theLast = theLast->mNext, theCount++)
-                if (theLast->mNext == NULL)
-                    break;
-            theCount++;   // the last node counts too (the loop stops before counting it)
-            theLast->mNext = sGSFreeNodes;
-            sGSFreeNodes = this->mClosedTable[i];
-            sGSFreeCount += theCount;
-            sGSPooledNodes += theCount;
-            this->mClosedTable[i] = NULL;
-        }
-        delete[] this->mClosedTable;
-        this->mClosedTable = NULL;
-    }
-    if (this->mClosedList) {
-        theCount = 0;
-        for (theLast = this->mClosedList; theLast; theLast = theLast->mNext, theCount++)
-            if (theLast->mNext == NULL)
-                break;
-        theCount++;   // the last node counts too (the loop stops before counting it)
-        theLast->mNext = sGSFreeNodes;
-        sGSFreeNodes = this->mClosedList;
-        sGSFreeCount += theCount;
-        sGSPooledNodes += theCount;
-        this->mClosedList = NULL;
-    }
-    if (this->mSortedOpen) {
-        theCount = 0;
-        for (theLast = this->mSortedOpen; theLast; theLast = theLast->mNext, theCount++)
-            if (theLast->mNext == NULL)
-                break;
-        theCount++;   // the last node counts too (the loop stops before counting it)
-        theLast->mNext = sGSFreeNodes;
-        sGSFreeNodes = this->mSortedOpen;
-        sGSFreeCount += theCount;
-        sGSPooledNodes += theCount;
-        this->mSortedOpen = NULL;
-        this->mSortedOpenTail = NULL;
-    }
-    if (this->mOpenTable) {
-        for (long i = this->mBucketCount - 1; i >= 0; i--) {
-            if (!this->mOpenTable[i])
-                continue;
-            theCount = 0;
-            for (theLast = this->mOpenTable[i]; theLast; theLast = theLast->mNext, theCount++)
-                if (theLast->mNext == NULL)
-                    break;
-            theCount++;   // the last node counts too (the loop stops before counting it)
-            theLast->mNext = sGSFreeNodes;
-            sGSFreeNodes = this->mOpenTable[i];
-            sGSFreeCount += theCount;
-            sGSPooledNodes += theCount;
-            this->mOpenTable[i] = NULL;
-        }
-        delete[] this->mOpenTable;
-        this->mOpenTable = NULL;
-    }
-    if (!this->mOpenList)
-        return;
-    theCount = 0;
-    for (theLast = this->mOpenList; theLast; theLast = theLast->mNext, theCount++)
-        if (theLast->mNext == NULL)
-            break;
-    theCount++;   // the last node counts too (the loop stops before counting it)
-    theLast->mNext = sGSFreeNodes;
-    sGSFreeNodes = this->mOpenList;
-    sGSFreeCount += theCount;
-    sGSPooledNodes += theCount;
-    this->mOpenList = NULL;
 }
 
 // FUNCTION: EXE 0x416514
-// Prepares the storage for a graph of inCount nodes: clears the arrays and nodes and allocates empty hash
-// tables; returns true
+// Prepares the storage for a graph of inCount nodes: clears the arrays (the virtual slot) and nodes and allocates
+// empty hash tables; returns true
 bool EEAIAStarGraphStorage::Init(long inCount)
 {
-    this->mOldCount = this->mCount;
     this->mCount = inCount;
+    ee_astar_graph_init_begin(this->mCore, inCount);
     this->PrepareArrays(inCount);
-    this->Clear();
-    this->mClosedTable = new EEAIAStarGraphNode*[this->mBucketCount];
-    this->mOpenTable = new EEAIAStarGraphNode*[this->mBucketCount];
-    for (long i = this->mBucketCount - 1; i >= 0; i--) {
-        this->mClosedTable[i] = NULL;
-        this->mOpenTable[i] = NULL;
-    }
+    ee_astar_graph_init_end(this->mCore);
     return true;
-}
-
-// FUNCTION: EXE 0x41656d
-// Re-files an open node after its cost changed: unlinks it, then inserts it into the sorted open list when it
-// is no dearer than the tail, else at the head of its hash bucket
-void EEAIAStarGraphStorage::UpdateOpen(EEAIAStarGraphNode* inNode)
-{
-    long theBucket = this->GetBucket(inNode->mTile.mX, inNode->mTile.mY);
-    unsigned long theCost = inNode->mCost;
-    if (inNode->mPrev) {
-        inNode->mPrev->mNext = inNode->mNext;
-        if (inNode->mNext)
-            inNode->mNext->mPrev = inNode->mPrev;
-    } else if (this->mOpenTable[theBucket] == inNode) {
-        this->mOpenTable[theBucket] = this->mOpenTable[theBucket]->mNext;
-        if (this->mOpenTable[theBucket])
-            this->mOpenTable[theBucket]->mPrev = NULL;
-    } else if (this->mSortedOpen == inNode) {
-        this->mSortedOpen = this->mSortedOpen->mNext;
-        if (this->mSortedOpen)
-            this->mSortedOpen->mPrev = NULL;
-    }
-    if (this->mSortedOpenTail == inNode)
-        this->mSortedOpenTail = inNode->mPrev;
-    inNode->mPrev = NULL;
-    inNode->mNext = NULL;
-    if (this->mSortedOpen && this->mSortedOpenTail && theCost <= this->mSortedOpenTail->mCost) {
-        EEAIAStarGraphNode* theNode;
-        for (theNode = this->mSortedOpen; theNode; theNode = theNode->mNext)
-            if (theCost <= theNode->mCost)
-                break;
-        if (theNode) {
-            if (theNode->mPrev) {
-                inNode->mPrev = theNode->mPrev;
-                inNode->mNext = theNode;
-                theNode->mPrev->mNext = inNode;
-                theNode->mPrev = inNode;
-            } else {
-                this->mSortedOpen->mPrev = inNode;
-                inNode->mNext = this->mSortedOpen;
-                this->mSortedOpen = inNode;
-            }
-            if (inNode->mNext == NULL)
-                this->mSortedOpenTail = inNode;
-            return;
-        }
-    }
-    if (this->mOpenTable[theBucket])
-        this->mOpenTable[theBucket]->mPrev = inNode;
-    inNode->mNext = this->mOpenTable[theBucket];
-    this->mOpenTable[theBucket] = inNode;
-}
-
-// FUNCTION: EXE 0x41665f
-// Removes and returns the closed node nearest to a tile (by Manhattan distance), clearing its closed flag;
-// NULL when none
-EEAIAStarGraphNode* EEAIAStarGraphStorage::RemoveNearestClosed(const EETileCoordinate& inTile)
-{
-    long theBestDistance = -1;
-    EEAIAStarGraphNode* theResult = NULL;
-    EEAIAStarGraphNode* theNode;
-    long theDistance;
-    for (theNode = this->mClosedList; theNode; theNode = theNode->mNext) {
-        theDistance = UMAbs(theNode->mTile.mX - inTile.mX) + UMAbs(theNode->mTile.mY - inTile.mY);
-        if (theBestDistance == -1 || theDistance < theBestDistance) {
-            theResult = theNode;
-            theBestDistance = theDistance;
-        }
-    }
-    for (long i = this->mBucketCount - 1; i >= 0; i--) {
-        for (theNode = this->mClosedTable[i]; theNode; theNode = theNode->mNext) {
-            theDistance = UMAbs(theNode->mTile.mX - inTile.mX) + UMAbs(theNode->mTile.mY - inTile.mY);
-            if (theBestDistance == -1 || theDistance < theBestDistance) {
-                theResult = theNode;
-                theBestDistance = theDistance;
-            }
-        }
-    }
-    if (theResult) {
-        if (theResult->mPrev) {
-            theResult->mPrev->mNext = theResult->mNext;
-            if (theResult->mNext)
-                theResult->mNext->mPrev = theResult->mPrev;
-        } else {
-            long theBucket = this->GetBucket(theResult->mTile.mX, theResult->mTile.mY);
-            if (theResult == this->mClosedTable[theBucket])
-                this->mClosedTable[theBucket] = theResult->mNext;
-            else
-                this->mClosedList = theResult->mNext;
-            if (theResult->mNext)
-                theResult->mNext->mPrev = NULL;
-        }
-        theResult->mNext = NULL;
-        theResult->mPrev = NULL;
-        unsigned char* theFlags = this->mFlags + theResult->mIndex;
-        *theFlags &= ~kAStarTileClosed;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x416771
-// Removes and returns the open node nearest to a tile (by Manhattan distance) from whichever open list holds it,
-// clearing its open flag; NULL when none
-EEAIAStarGraphNode* EEAIAStarGraphStorage::RemoveNearestOpen(const EETileCoordinate& inTile)
-{
-    long theBestDistance = -1;
-    EEAIAStarGraphNode* theResult = NULL;
-    EEAIAStarGraphNode* theNode;
-    long theDistance;
-    for (theNode = this->mSortedOpen; theNode; theNode = theNode->mNext) {
-        theDistance = UMAbs(theNode->mTile.mX - inTile.mX) + UMAbs(theNode->mTile.mY - inTile.mY);
-        if (theBestDistance == -1 || theDistance < theBestDistance) {
-            theResult = theNode;
-            theBestDistance = theDistance;
-        }
-    }
-    for (theNode = this->mOpenList; theNode; theNode = theNode->mNext) {
-        theDistance = UMAbs(theNode->mTile.mX - inTile.mX) + UMAbs(theNode->mTile.mY - inTile.mY);
-        if (theBestDistance == -1 || theDistance < theBestDistance) {
-            theResult = theNode;
-            theBestDistance = theDistance;
-        }
-    }
-    for (long i = this->mBucketCount - 1; i >= 0; i--) {
-        for (theNode = this->mOpenTable[i]; theNode; theNode = theNode->mNext) {
-            theDistance = UMAbs(theNode->mTile.mX - inTile.mX) + UMAbs(theNode->mTile.mY - inTile.mY);
-            if (theBestDistance == -1 || theDistance < theBestDistance) {
-                theResult = theNode;
-                theBestDistance = theDistance;
-            }
-        }
-    }
-    if (theResult) {
-        if (theResult->mPrev) {
-            theResult->mPrev->mNext = theResult->mNext;
-            if (theResult->mNext)
-                theResult->mNext->mPrev = theResult->mPrev;
-        } else {
-            long theBucket = this->GetBucket(theResult->mTile.mX, theResult->mTile.mY);
-            if (this->mOpenTable[theBucket] == theResult) {
-                if (theResult->mNext)
-                    theResult->mNext->mPrev = NULL;
-                this->mOpenTable[theBucket] = theResult->mNext;
-            } else if (this->mOpenList == theResult) {
-                if (theResult->mNext)
-                    theResult->mNext->mPrev = NULL;
-                this->mOpenList = theResult->mNext;
-            } else if (this->mSortedOpen == theResult) {
-                if (theResult->mNext)
-                    theResult->mNext->mPrev = NULL;
-                this->mSortedOpen = theResult->mNext;
-                if (this->mSortedOpenTail == theResult)
-                    this->mSortedOpen = theResult->mPrev;
-            }
-        }
-        if (this->mSortedOpenTail == theResult)
-            this->mSortedOpenTail = theResult->mPrev;
-        theResult->mNext = NULL;
-        theResult->mPrev = NULL;
-        unsigned char* theFlags = this->mFlags + theResult->mIndex;
-        *theFlags &= ~kAStarTileOpen;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x416905
-// Removes and returns the cheapest open node; when the sorted list is empty, first moves up to 15 of the
-// cheapest bucketed nodes into it; NULL when nothing is open
-EEAIAStarGraphNode* EEAIAStarGraphStorage::RemoveBestOpen()
-{
-    EEAIAStarGraphNode* theResult = NULL;
-    if (this->mSortedOpen == NULL) {
-        EEAIAStarGraphNode* theBest[15];
-        long theWorst = -1;
-        unsigned long theWorstCost = 0;
-        long theSeen = 0;
-        long theFilled = 0;
-        long i;
-        for (i = this->mBucketCount - 1; i >= 0; i--) {
-            for (EEAIAStarGraphNode* theNode = this->mOpenTable[i]; theNode; theNode = theNode->mNext) {
-                if (theSeen >= 15) {
-                    if (theNode->mCost < theWorstCost) {
-                        theBest[theWorst] = theNode;
-                        theWorst = 0;
-                        for (long j = 1; j < 15; j++)
-                            if (theBest[j]->mCost > theBest[theWorst]->mCost)
-                                theWorst = j;
-                        theWorstCost = theBest[theWorst]->mCost;
-                        theSeen++;
-                    }
-                } else {
-                    if (theWorst != -1) {
-                        if (theNode->mCost >= theBest[theWorst]->mCost) {
-                            theWorst = theFilled;
-                            theWorstCost = theNode->mCost;
-                        }
-                        theBest[theFilled++] = theNode;
-                    } else {
-                        theWorstCost = theNode->mCost;
-                        theWorst = 0;
-                        theBest[0] = theNode;
-                        theFilled = 1;
-                    }
-                    theSeen++;
-                }
-            }
-        }
-        if (theWorst != -1) {
-            for (i = min(15, theFilled) - 1; i >= 0; i--) {
-                EEAIAStarGraphNode* theNode = theBest[i];
-                if (theNode->mPrev) {
-                    theNode->mPrev->mNext = theNode->mNext;
-                    if (theNode->mNext)
-                        theNode->mNext->mPrev = theNode->mPrev;
-                    theNode->mPrev = NULL;
-                    theNode->mNext = NULL;
-                } else {
-                    long theBucket = this->GetBucket(theNode->mTile.mX, theNode->mTile.mY);
-                    this->mOpenTable[theBucket] = theNode->mNext;
-                    if (this->mOpenTable[theBucket])
-                        this->mOpenTable[theBucket]->mPrev = NULL;
-                    theNode->mNext = NULL;
-                }
-                this->InsertSorted(theNode);
-            }
-        }
-    }
-    if (this->mSortedOpen) {
-        theResult = this->mSortedOpen;
-        this->mSortedOpen = theResult->mNext;
-        if (this->mSortedOpen)
-            this->mSortedOpen->mPrev = NULL;
-        if (this->mSortedOpen == NULL)
-            this->mSortedOpenTail = NULL;
-        if (theResult) {
-            theResult->mNext = NULL;
-            theResult->mPrev = NULL;
-            unsigned char* theFlags = this->mFlags + theResult->mIndex;
-            *theFlags &= ~kAStarTileOpen;
-            this->mNodes[theResult->mIndex] = NULL;
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x416aa5
-// Unlinks a node from the closed list, clears its closed flag and removes it from the node array
-void EEAIAStarGraphStorage::RemoveClosed(EEAIAStarGraphNode* inNode)
-{
-    if (inNode->mPrev) {
-        inNode->mPrev->mNext = inNode->mNext;
-        if (inNode->mNext)
-            inNode->mNext->mPrev = inNode->mPrev;
-    } else {
-        this->mClosedList = inNode->mNext;
-        if (inNode->mNext)
-            inNode->mNext->mPrev = NULL;
-    }
-    inNode->mNext = NULL;
-    inNode->mPrev = NULL;
-    unsigned char* theFlags = this->mFlags + inNode->mIndex;
-    *theFlags &= ~kAStarTileClosed;
-    this->mNodes[inNode->mIndex] = NULL;
 }
 
 // FUNCTION: EXE 0x416af6
 // Sizes the flag and node arrays to inCount (reallocating when the count changed) and clears both
 void EEAIAStarGraphStorage::PrepareArrays(long inCount)
 {
-    if (this->mFlags == NULL || this->mNodes == NULL || this->mOldCount != inCount) {
-        delete[] this->mFlags;
-        this->mFlags = new unsigned char[inCount];
-        delete[] this->mNodes;
-        this->mNodes = new EEAIAStarGraphNode*[inCount];
-    }
-    memset(this->mNodes, 0, inCount * sizeof(EEAIAStarGraphNode*));
-    memset(this->mFlags, 0, inCount);
+    ee_astar_graph_prepare_arrays(this->mCore, inCount);
 }
 
-// FUNCTION: EXE 0x416b5b
-// Inserts a node into the cost-sorted open list before the first node that costs at least as much
-void EEAIAStarGraphStorage::InsertSorted(EEAIAStarGraphNode* inNode)
+// New (port): the objects of a list's nodes in its order (the chain goal's NumberChain walked mClosedList and
+// mOpenList)
+void EEAIAStarGraphStorage::ListObjects(EeAStarGraphList inList, std::vector<AStarGraphableObjectBase*>& outObjects)
 {
-    EEAIAStarGraphNode* thePrev = NULL;
-    EEAIAStarGraphNode* theNode = this->mSortedOpen;
-    unsigned long theCost = inNode->mCost;
-    if (theNode) {
-        for (; theNode; theNode = theNode->mNext) {
-            if (theCost <= theNode->mCost)
-                break;
-            thePrev = theNode;
-        }
-        if (theNode) {
-            if (theNode->mPrev) {
-                theNode->mPrev->mNext = inNode;
-                inNode->mNext = theNode;
-                inNode->mPrev = theNode->mPrev;
-                theNode->mPrev = inNode;
-            } else {
-                inNode->mNext = theNode;
-                theNode->mPrev = inNode;
-                this->mSortedOpen = inNode;
-            }
-        } else {
-            inNode->mPrev = thePrev;
-            thePrev->mNext = inNode;
-            this->mSortedOpenTail = inNode;
-        }
-    } else {
-        this->mSortedOpen = inNode;
-        this->mSortedOpenTail = inNode;
-    }
-}
-
-// FUNCTION: EXE 0x416bb5
-// Pushes a node onto the unsorted open list, flags its index open and records it in the node array
-void EEAIAStarGraphStorage::Push(EEAIAStarGraphNode* inNode)
-{
-    unsigned char* theFlags = this->mFlags + inNode->mIndex;
-    *theFlags |= kAStarTileOpen;
-    if (this->mOpenList)
-        this->mOpenList->mPrev = inNode;
-    inNode->mNext = this->mOpenList;
-    this->mOpenList = inNode;
-    this->mNodes[inNode->mIndex] = inNode;
-}
-
-// FUNCTION: EXE 0x416be1
-// Pops the head of the unsorted open list (NULL when empty), clearing its open flag and node array entry; the
-// new head no longer links back to it
-EEAIAStarGraphNode* EEAIAStarGraphStorage::Pop()
-{
-    EEAIAStarGraphNode* theNode = NULL;
-    if (this->mOpenList) {
-        theNode = this->mOpenList;
-        this->mOpenList = theNode->mNext;
-        if (this->mOpenList)
-            this->mOpenList->mPrev = NULL;
-        theNode->mNext = NULL;
-        theNode->mPrev = NULL;
-        unsigned char* theFlags = this->mFlags + theNode->mIndex;
-        *theFlags &= ~kAStarTileOpen;
-        this->mNodes[theNode->mIndex] = NULL;
-    }
-    return theNode;
+    uint32_t theCount = ee_astar_graph_list_objects(this->mCore, inList, NULL, 0);
+    if (theCount == 0)
+        return;
+    std::vector<void*> theHandles(theCount);
+    ee_astar_graph_list_objects(this->mCore, inList, &theHandles[0], theCount);
+    for (uint32_t i = 0; i < theCount; i++)
+        outObjects.push_back(static_cast<AStarGraphableObjectBase*>(theHandles[i]));
 }
 
 // New (port), TEST ONLY: a node as the capture sees it (EEAIAStarNodeView's fields: the tile, the costs, the parent's
 // index in mParentX and the node's own index in mParentY)
-static EEAIAStarNodeView EEAIAStarGraphNodeView(const EEAIAStarGraphNode* inNode)
+static void EEAIAStarGraphViewOf(const EeAStarNodeView& inNode, EEAIAStarNodeView& outNode)
 {
-    EEAIAStarNodeView theView;
-    theView.mX = inNode->mTile.mX;
-    theView.mY = inNode->mTile.mY;
-    theView.mCost = inNode->mCost;
-    theView.mPathCost = inNode->mPathCost;
-    theView.mEstimate = inNode->mEstimate;
-    theView.mHasParent = inNode->mParent != NULL;
-    theView.mParentX = inNode->mParent ? inNode->mParent->mIndex : 0;
-    theView.mParentY = inNode->mIndex;
-    return theView;
+    outNode.mX = inNode.x;
+    outNode.mY = inNode.y;
+    outNode.mCost = inNode.cost;
+    outNode.mPathCost = inNode.path_cost;
+    outNode.mEstimate = inNode.estimate;
+    outNode.mHasParent = inNode.has_parent;
+    outNode.mParentX = inNode.parent_x;
+    outNode.mParentY = inNode.parent_y;
 }
 
-static void EEAIAStarGraphListNodes(const EEAIAStarGraphNode* inHead, std::vector<EEAIAStarNodeView>& ioNodes)
+static void EEAIAStarGraphListNodes(EeAStarGraphStorage* inCore, EeAStarGraphList inList,
+                                    std::vector<EEAIAStarNodeView>& ioNodes)
 {
-    for (const EEAIAStarGraphNode* theNode = inHead; theNode; theNode = theNode->mNext)
-        ioNodes.push_back(EEAIAStarGraphNodeView(theNode));
+    uint32_t theCount = ee_astar_graph_list(inCore, inList, NULL, 0);
+    if (theCount == 0)
+        return;
+    std::vector<EeAStarNodeView> theNodes(theCount);
+    ee_astar_graph_list(inCore, inList, &theNodes[0], theCount);
+    EEAIAStarNodeView theView;
+    for (uint32_t i = 0; i < theCount; i++) {
+        EEAIAStarGraphViewOf(theNodes[i], theView);
+        ioNodes.push_back(theView);
+    }
 }
 
 // New (port), TEST ONLY: the current and path nodes, then the closed list, the closed table (the last bucket first),
 // the sorted open list, the open table (the last bucket first) and the fast open list, each digested in order
 void EEAIAStarGraphStorage::CaptureNodes(EEAIAStarCaptureRun& ioRun)
 {
-    const EEAIAStarGraphNode* theNodes[2] = {this->mCurrentNode, this->mPath};
-    for (long i = 0; i < 2; i++) {
-        ioRun.U8(theNodes[i] != NULL);
-        if (theNodes[i])
-            ioRun.Node(EEAIAStarGraphNodeView(theNodes[i]));
+    for (uint32_t i = 0; i < 2; i++) {
+        EeAStarNodeView theNode;
+        bool theHas = ee_astar_graph_node(this->mCore, i, &theNode);
+        ioRun.U8(theHas);
+        if (theHas) {
+            EEAIAStarNodeView theView;
+            EEAIAStarGraphViewOf(theNode, theView);
+            ioRun.Node(theView);
+        }
     }
+    static const EeAStarGraphList kLists[5] = {EeAStarGraphList::Closed, EeAStarGraphList::ClosedTable,
+                                               EeAStarGraphList::SortedOpen, EeAStarGraphList::OpenTable,
+                                               EeAStarGraphList::FastOpen};
     std::vector<EEAIAStarNodeView> theList;
-    EEAIAStarGraphListNodes(this->mClosedList, theList);
-    ioRun.Nodes(theList);
-    theList.clear();
-    if (this->mClosedTable)
-        for (long i = this->mBucketCount - 1; i >= 0; i--)
-            EEAIAStarGraphListNodes(this->mClosedTable[i], theList);
-    ioRun.Nodes(theList);
-    theList.clear();
-    EEAIAStarGraphListNodes(this->mSortedOpen, theList);
-    ioRun.Nodes(theList);
-    theList.clear();
-    if (this->mOpenTable)
-        for (long i = this->mBucketCount - 1; i >= 0; i--)
-            EEAIAStarGraphListNodes(this->mOpenTable[i], theList);
-    ioRun.Nodes(theList);
-    theList.clear();
-    EEAIAStarGraphListNodes(this->mOpenList, theList);
-    ioRun.Nodes(theList);
+    for (long i = 0; i < 5; i++) {
+        theList.clear();
+        EEAIAStarGraphListNodes(this->mCore, kLists[i], theList);
+        ioRun.Nodes(theList);
+    }
 }

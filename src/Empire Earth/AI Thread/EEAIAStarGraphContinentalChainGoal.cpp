@@ -59,16 +59,17 @@ void EEAIAStarGraphContinentalChainGoal::NumberChain()
 {
     unsigned long theKind = this->mKind;
     unsigned short theID = theKind < 7 ? ++gContinentManager.mNextIDs[theKind] : 0;
-    EEAIAStarGraphNode* theNode;
-    for (theNode = this->mStorage->mClosedList; theNode; theNode = theNode->mNext) {
-        EEAIContinent* theContinent = static_cast<EEAIContinent*>(theNode->mObject);
-        if (this->mKind < 7)
-            theContinent->mCounts[this->mKind] = theID;
-    }
-    for (theNode = this->mStorage->mOpenList; theNode; theNode = theNode->mNext) {
-        EEAIContinent* theContinent = static_cast<EEAIContinent*>(theNode->mObject);
-        if (this->mKind < 7)
-            theContinent->mCounts[this->mKind] = theID;
+    // the closed list, then the fast open list (the storage's lists are Rust's: ee_astar graph.rs)
+    static const EeAStarGraphList kLists[2] = {EeAStarGraphList::Closed, EeAStarGraphList::FastOpen};
+    std::vector<AStarGraphableObjectBase*> theObjects;
+    for (long j = 0; j < 2; j++) {
+        theObjects.clear();
+        this->mStorage->ListObjects(kLists[j], theObjects);
+        for (size_t i = 0; i < theObjects.size(); i++) {
+            EEAIContinent* theContinent = static_cast<EEAIContinent*>(theObjects[i]);
+            if (this->mKind < 7)
+                theContinent->mCounts[this->mKind] = theID;
+        }
     }
 }
 

@@ -9,6 +9,9 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+/// A tile of an area of its own (`0x36`).
+constexpr static const int32_t KIND_AREA = 54;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -209,6 +212,28 @@ enum class EeAStarSkip {
   Trees = 2,
 };
 
+/// Which members the storage's machine calls (see the module table).
+enum class EeAStarGraphKind {
+  /// `EEAIAStarGraphStorage`
+  Hashed = 0,
+  /// `EEAIAStarGraphTerrainStorage`
+  Terrain = 1,
+};
+
+/// The storage's lists, in the capture's order (`EEAIAStarGraphStorage::CaptureNodes`).
+enum class EeAStarGraphList {
+  /// `mClosedList`
+  Closed = 0,
+  /// `mClosedTable`, every bucket, the last first
+  ClosedTable = 1,
+  /// `mSortedOpen`
+  SortedOpen = 2,
+  /// `mOpenTable`, every bucket, the last first
+  OpenTable = 3,
+  /// `mOpenList` (`Push` / `Pop`)
+  FastOpen = 4,
+};
+
 /// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
 /// the others to the upgrade of every unit class the effect names.
 enum class EeTechAttributeOp : uint32_t {
@@ -337,6 +362,9 @@ struct EeWonAuth;
 
 /// A model as `GEModel::Load` leaves it.
 struct EeGeCemModel;
+
+/// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
+struct EeAStarGraphStorage;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
@@ -676,6 +704,59 @@ struct EeAStarPathSectorFill {
   int32_t check_corners;
   /// out: the tile goes to `mStaleTiles` (classified, but not in a path area of the sub-sector's kind)
   bool stale;
+};
+
+/// A graph object as the storage keeps it: the C++ pointer's bits (`AStarGraphableObjectBase*`), opaque here.
+using EeAStarGraphObject = size_t;
+
+/// A node as the goals see one (`IsGoalNode`, `GetStepCost`, `SearchDone`): its tile, costs, index and object. The
+/// C++ goals read `mObject`, `mIndex` and `mTile` of the nodes the machine hands them, never the links.
+struct EeAStarGraphNodeView {
+  int32_t x;
+  int32_t y;
+  uint32_t cost;
+  int32_t path_cost;
+  int32_t estimate;
+  int32_t index;
+  EeAStarGraphObject object;
+};
+
+/// `EEAIAStarGraphMachineBase`'s search members.
+struct EeAStarGraphMachineState {
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t revs;
+  int32_t num_runs;
+  int32_t steps;
+  int32_t sector;
+  bool found;
+};
+
+/// The graph goal and the graph objects (`graph::GraphHost`), as C function pointers over `ctx`. The objects are
+/// the C++ `AStarGraphableObjectBase*` as opaque handles: Rust stores and hands them back, never reads them.
+struct EeAStarGraphCallbacks {
+  void *ctx;
+  void *(*start_object)(void *ctx);
+  int32_t (*goal_id)(void *ctx);
+  int32_t (*estimate)(void *ctx, int32_t from_x, int32_t from_y, int32_t to_x, int32_t to_y);
+  bool (*is_goal_node)(void *ctx, bool has_node, const EeAStarGraphNodeView *node);
+  int32_t (*object_id)(void *ctx, void *object);
+  uint32_t (*num_neighbors)(void *ctx, void *object);
+  void *(*neighbor)(void *ctx, void *object, uint32_t i);
+  void (*graph_location)(void *ctx, void *object, int32_t *x, int32_t *y);
+  bool (*can_enter)(void *ctx, void *neighbor, void *from);
+  int32_t (*step_cost)(void *ctx, const EeAStarGraphNodeView *parent, void *object);
+  void (*search_done)(void *ctx,
+                      bool has_current,
+                      const EeAStarGraphNodeView *current,
+                      bool has_open);
+  bool (*search_failed)(void *ctx);
+  int32_t (*rev_limit)(void *ctx);
+  int32_t (*max_revs)(void *ctx);
+  /// the goal's start (`out[0..2]`) and goal (`out[2..4]`) tiles
+  void (*tiles)(void *ctx, int32_t *out);
+  void (*get_state)(void *ctx, EeAStarGraphMachineState *out);
+  void (*set_state)(void *ctx, const EeAStarGraphMachineState *state);
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -2800,6 +2881,89 @@ bool ee_astar_path_sector_accept(EeAStarPathSectorFill *fill,
                                  const EeAStarViewCallbacks *view,
                                  int32_t x,
                                  int32_t y);
+
+/// A new graph storage of the given kind.
+EeAStarGraphStorage *ee_astar_graph_new(EeAStarGraphKind kind);
+
+/// Frees a graph storage.
+///
+/// # Safety
+/// `s` must come from `ee_astar_graph_new` (or be null) and not be used afterwards.
+void ee_astar_graph_free(EeAStarGraphStorage *s);
+
+/// `ResetNodes`.
+///
+/// # Safety
+/// As `gst`.
+void ee_astar_graph_reset_nodes(EeAStarGraphStorage *s);
+
+/// `Init`'s first lines: the counts.
+///
+/// # Safety
+/// As `gst`.
+void ee_astar_graph_init_begin(EeAStarGraphStorage *s, int32_t count);
+
+/// `PrepareArrays` (the virtual slot `Init` calls between its two halves).
+///
+/// # Safety
+/// As `gst`.
+void ee_astar_graph_prepare_arrays(EeAStarGraphStorage *s, int32_t count);
+
+/// `Init`'s last lines: `Clear`, then empty hash tables.
+///
+/// # Safety
+/// As `gst`.
+void ee_astar_graph_init_end(EeAStarGraphStorage *s);
+
+/// `GetFirstPathNode` (false and zeros: no path).
+///
+/// # Safety
+/// As `gst`; `x`, `y`, `index` valid for writes.
+bool ee_astar_graph_first_path_node(EeAStarGraphStorage *s, int32_t *x, int32_t *y, int32_t *index);
+
+/// `GetNextPathNode` (false and zeros at the end).
+///
+/// # Safety
+/// As `ee_astar_graph_first_path_node`.
+bool ee_astar_graph_next_path_node(EeAStarGraphStorage *s, int32_t *x, int32_t *y, int32_t *index);
+
+/// The current node, the found path's node (`which` 0, 1) as the capture sees it; false when none.
+///
+/// # Safety
+/// As `gst`; `out` writable.
+bool ee_astar_graph_node(EeAStarGraphStorage *s, uint32_t which, EeAStarNodeView *out);
+
+/// The nodes of a list (`GraphList`) in its order, as the capture sees them: writes up to `capacity` into `out`,
+/// returns the list's length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
+uint32_t ee_astar_graph_list(EeAStarGraphStorage *s,
+                             EeAStarGraphList which,
+                             EeAStarNodeView *out,
+                             uint32_t capacity);
+
+/// The objects of a list's nodes in its order (the chain goal's `NumberChain`): writes up to `capacity` handles
+/// into `out`, returns the list's length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
+uint32_t ee_astar_graph_list_objects(EeAStarGraphStorage *s,
+                                     EeAStarGraphList which,
+                                     void **out,
+                                     uint32_t capacity);
+
+/// The graph machine's `Start`.
+///
+/// # Safety
+/// As `gst`; `cb` valid, its functions callable and not re-entering this storage.
+bool ee_astar_graph_start(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
+
+/// The graph machine's `Expand`.
+///
+/// # Safety
+/// As `ee_astar_graph_start`.
+void ee_astar_graph_expand(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
 
 /// `UDataCompression::Compress`.
 ///

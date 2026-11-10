@@ -10,6 +10,7 @@ use crate::area_goals::{
     EeAStarPathSectorFill,
 };
 use crate::goals::{self, EeAStarChokeFill, EeAStarContinentFill, EeAStarHillFill, View};
+use crate::graph::{self, GraphHost, GraphKind, GraphList, GraphMachineState, GraphNodeView, GraphStorage, Obj};
 use crate::machine::{self, Host, MachineState};
 use crate::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
 use crate::path_goals::{self, EeAStarPathGoal, PathView};
@@ -841,4 +842,301 @@ pub unsafe extern "C" fn ee_astar_path_sector_accept(
     let r = area_goals::path_sector_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
     unsafe { *fill = f };
     r
+}
+
+// ---- the graph searches (graph.rs) ----
+
+/// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
+pub struct EeAStarGraphStorage(GraphStorage);
+
+/// The graph goal and the graph objects (`graph::GraphHost`), as C function pointers over `ctx`. The objects are
+/// the C++ `AStarGraphableObjectBase*` as opaque handles: Rust stores and hands them back, never reads them.
+#[repr(C)]
+pub struct EeAStarGraphCallbacks {
+    pub ctx: *mut c_void,
+    pub start_object: extern "C" fn(ctx: *mut c_void) -> *mut c_void,
+    pub goal_id: extern "C" fn(ctx: *mut c_void) -> i32,
+    pub estimate: extern "C" fn(ctx: *mut c_void, from_x: i32, from_y: i32, to_x: i32, to_y: i32) -> i32,
+    pub is_goal_node: extern "C" fn(ctx: *mut c_void, has_node: bool, node: *const GraphNodeView) -> bool,
+    pub object_id: extern "C" fn(ctx: *mut c_void, object: *mut c_void) -> i32,
+    pub num_neighbors: extern "C" fn(ctx: *mut c_void, object: *mut c_void) -> u32,
+    pub neighbor: extern "C" fn(ctx: *mut c_void, object: *mut c_void, i: u32) -> *mut c_void,
+    pub graph_location: extern "C" fn(ctx: *mut c_void, object: *mut c_void, x: *mut i32, y: *mut i32),
+    pub can_enter: extern "C" fn(ctx: *mut c_void, neighbor: *mut c_void, from: *mut c_void) -> bool,
+    pub step_cost: extern "C" fn(ctx: *mut c_void, parent: *const GraphNodeView, object: *mut c_void) -> i32,
+    pub search_done: extern "C" fn(ctx: *mut c_void, has_current: bool, current: *const GraphNodeView, has_open: bool),
+    pub search_failed: extern "C" fn(ctx: *mut c_void) -> bool,
+    pub rev_limit: extern "C" fn(ctx: *mut c_void) -> i32,
+    pub max_revs: extern "C" fn(ctx: *mut c_void) -> i32,
+    /// the goal's start (`out[0..2]`) and goal (`out[2..4]`) tiles
+    pub tiles: extern "C" fn(ctx: *mut c_void, out: *mut i32),
+    pub get_state: extern "C" fn(ctx: *mut c_void, out: *mut GraphMachineState),
+    pub set_state: extern "C" fn(ctx: *mut c_void, state: *const GraphMachineState),
+}
+
+struct CGraphHost<'a>(&'a EeAStarGraphCallbacks);
+
+impl GraphHost for CGraphHost<'_> {
+    fn start_object(&mut self) -> Obj {
+        (self.0.start_object)(self.0.ctx) as Obj
+    }
+    fn goal_id(&mut self) -> i32 {
+        (self.0.goal_id)(self.0.ctx)
+    }
+    fn estimate(&mut self, from_x: i32, from_y: i32, to_x: i32, to_y: i32) -> i32 {
+        (self.0.estimate)(self.0.ctx, from_x, from_y, to_x, to_y)
+    }
+    fn is_goal_node(&mut self, node: Option<&GraphNodeView>) -> bool {
+        let empty = GraphNodeView::default();
+        (self.0.is_goal_node)(self.0.ctx, node.is_some(), node.unwrap_or(&empty))
+    }
+    fn object_id(&mut self, object: Obj) -> i32 {
+        (self.0.object_id)(self.0.ctx, object as *mut c_void)
+    }
+    fn num_neighbors(&mut self, object: Obj) -> u32 {
+        (self.0.num_neighbors)(self.0.ctx, object as *mut c_void)
+    }
+    fn neighbor(&mut self, object: Obj, i: u32) -> Obj {
+        (self.0.neighbor)(self.0.ctx, object as *mut c_void, i) as Obj
+    }
+    fn graph_location(&mut self, object: Obj) -> (i32, i32) {
+        let (mut x, mut y) = (0i32, 0i32);
+        (self.0.graph_location)(self.0.ctx, object as *mut c_void, &mut x, &mut y);
+        (x, y)
+    }
+    fn can_enter(&mut self, neighbor: Obj, from: Obj) -> bool {
+        (self.0.can_enter)(self.0.ctx, neighbor as *mut c_void, from as *mut c_void)
+    }
+    fn step_cost(&mut self, parent: &GraphNodeView, object: Obj) -> i32 {
+        (self.0.step_cost)(self.0.ctx, parent, object as *mut c_void)
+    }
+    fn search_done(&mut self, current: Option<&GraphNodeView>, has_open: bool) {
+        let empty = GraphNodeView::default();
+        (self.0.search_done)(self.0.ctx, current.is_some(), current.unwrap_or(&empty), has_open)
+    }
+    fn search_failed(&mut self) -> bool {
+        (self.0.search_failed)(self.0.ctx)
+    }
+    fn rev_limit(&mut self) -> i32 {
+        (self.0.rev_limit)(self.0.ctx)
+    }
+    fn max_revs(&mut self) -> i32 {
+        (self.0.max_revs)(self.0.ctx)
+    }
+    fn start_tile(&mut self) -> (i32, i32) {
+        let mut t = [0i32; 4];
+        (self.0.tiles)(self.0.ctx, t.as_mut_ptr());
+        (t[0], t[1])
+    }
+    fn goal_tile(&mut self) -> (i32, i32) {
+        let mut t = [0i32; 4];
+        (self.0.tiles)(self.0.ctx, t.as_mut_ptr());
+        (t[2], t[3])
+    }
+    fn state(&mut self) -> GraphMachineState {
+        let mut s = GraphMachineState::default();
+        (self.0.get_state)(self.0.ctx, &mut s);
+        s
+    }
+    fn set_state(&mut self, state: &GraphMachineState) {
+        (self.0.set_state)(self.0.ctx, state)
+    }
+}
+
+/// # Safety
+/// `s` must come from `ee_astar_graph_new` and not be in use elsewhere (no search running on it).
+unsafe fn gst<'a>(s: *mut EeAStarGraphStorage) -> &'a mut GraphStorage {
+    // SAFETY: the caller's contract
+    unsafe { &mut (*s).0 }
+}
+
+/// A new graph storage of the given kind.
+#[no_mangle]
+pub extern "C" fn ee_astar_graph_new(kind: GraphKind) -> *mut EeAStarGraphStorage {
+    Box::into_raw(Box::new(EeAStarGraphStorage(GraphStorage::new(kind))))
+}
+
+/// Frees a graph storage.
+///
+/// # Safety
+/// `s` must come from `ee_astar_graph_new` (or be null) and not be used afterwards.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_free(s: *mut EeAStarGraphStorage) {
+    if !s.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(s) });
+    }
+}
+
+/// `ResetNodes`.
+///
+/// # Safety
+/// As `gst`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_reset_nodes(s: *mut EeAStarGraphStorage) {
+    unsafe { gst(s) }.reset_nodes();
+}
+
+/// `Init`'s first lines: the counts.
+///
+/// # Safety
+/// As `gst`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_init_begin(s: *mut EeAStarGraphStorage, count: i32) {
+    unsafe { gst(s) }.init_begin(count);
+}
+
+/// `PrepareArrays` (the virtual slot `Init` calls between its two halves).
+///
+/// # Safety
+/// As `gst`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_prepare_arrays(s: *mut EeAStarGraphStorage, count: i32) {
+    unsafe { gst(s) }.prepare_arrays(count);
+}
+
+/// `Init`'s last lines: `Clear`, then empty hash tables.
+///
+/// # Safety
+/// As `gst`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_init_end(s: *mut EeAStarGraphStorage) {
+    unsafe { gst(s) }.init_end();
+}
+
+/// `GetFirstPathNode` (false and zeros: no path).
+///
+/// # Safety
+/// As `gst`; `x`, `y`, `index` valid for writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_first_path_node(
+    s: *mut EeAStarGraphStorage,
+    x: *mut i32,
+    y: *mut i32,
+    index: *mut i32,
+) -> bool {
+    let r = unsafe { gst(s) }.first_path_node();
+    let (tx, ty, ti) = r.unwrap_or((0, 0, 0));
+    unsafe {
+        *x = tx;
+        *y = ty;
+        *index = ti;
+    }
+    r.is_some()
+}
+
+/// `GetNextPathNode` (false and zeros at the end).
+///
+/// # Safety
+/// As `ee_astar_graph_first_path_node`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_next_path_node(
+    s: *mut EeAStarGraphStorage,
+    x: *mut i32,
+    y: *mut i32,
+    index: *mut i32,
+) -> bool {
+    let r = unsafe { gst(s) }.next_path_node();
+    let (tx, ty, ti) = r.unwrap_or((0, 0, 0));
+    unsafe {
+        *x = tx;
+        *y = ty;
+        *index = ti;
+    }
+    r.is_some()
+}
+
+/// A graph node as the capture sees it (`EEAIAStarGraphStorage::CaptureNodes`): the parent's index in `parent_x`
+/// and the node's own index in `parent_y`.
+fn graph_view(s: &GraphStorage, node: i32) -> EeAStarNodeView {
+    let n = s.node(node);
+    EeAStarNodeView {
+        x: n.x,
+        y: n.y,
+        cost: n.cost,
+        path_cost: n.path_cost,
+        estimate: n.estimate,
+        has_parent: n.parent != graph::NIL,
+        parent_x: if n.parent != graph::NIL { s.node(n.parent).index } else { 0 },
+        parent_y: n.index,
+    }
+}
+
+/// The current node, the found path's node (`which` 0, 1) as the capture sees it; false when none.
+///
+/// # Safety
+/// As `gst`; `out` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_node(
+    s: *mut EeAStarGraphStorage,
+    which: u32,
+    out: *mut EeAStarNodeView,
+) -> bool {
+    let s = unsafe { gst(s) };
+    let node = if which == 0 { s.current } else { s.path };
+    if node == graph::NIL {
+        return false;
+    }
+    unsafe { *out = graph_view(s, node) };
+    true
+}
+
+/// The nodes of a list (`GraphList`) in its order, as the capture sees them: writes up to `capacity` into `out`,
+/// returns the list's length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_list(
+    s: *mut EeAStarGraphStorage,
+    which: GraphList,
+    out: *mut EeAStarNodeView,
+    capacity: u32,
+) -> u32 {
+    let s = unsafe { gst(s) };
+    let nodes = s.list(which);
+    for (i, &node) in nodes.iter().take(capacity as usize).enumerate() {
+        unsafe { *out.add(i) = graph_view(s, node) };
+    }
+    nodes.len() as u32
+}
+
+/// The objects of a list's nodes in its order (the chain goal's `NumberChain`): writes up to `capacity` handles
+/// into `out`, returns the list's length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_list_objects(
+    s: *mut EeAStarGraphStorage,
+    which: GraphList,
+    out: *mut *mut c_void,
+    capacity: u32,
+) -> u32 {
+    let s = unsafe { gst(s) };
+    let nodes = s.list(which);
+    for (i, &node) in nodes.iter().take(capacity as usize).enumerate() {
+        unsafe { *out.add(i) = s.node(node).object as *mut c_void };
+    }
+    nodes.len() as u32
+}
+
+/// The graph machine's `Start`.
+///
+/// # Safety
+/// As `gst`; `cb` valid, its functions callable and not re-entering this storage.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_start(s: *mut EeAStarGraphStorage, cb: *const EeAStarGraphCallbacks) -> bool {
+    let s = unsafe { gst(s) };
+    graph::start(s, &mut CGraphHost(unsafe { &*cb }))
+}
+
+/// The graph machine's `Expand`.
+///
+/// # Safety
+/// As `ee_astar_graph_start`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: *const EeAStarGraphCallbacks) {
+    let s = unsafe { gst(s) };
+    graph::expand(s, &mut CGraphHost(unsafe { &*cb }))
 }
