@@ -16,12 +16,9 @@ return {
     -- costs 1,584 food / 844 gold / 844 iron after the variant's factor where upstream quotes 750 / 400 / 400, so
     -- "on" sent half the Prehistoric workers to gold and iron and put the Stone Age back 10-15 minutes (8.38)
     copper_plan = "next_epoch",
-    epoch_share = 60,               -- percent of the income into the epoch account (copper_plan=next_epoch).
-                                    -- DEVIATION (40 shipped): upstream's own measurement - "with epoch_share 60% and
-                                    -- no cheat it does best (6/0/14, kills - losses +23)" (docs/economy.md) - and
-                                    -- our Small maps' forage is a fraction of its Continental's: at 40% the Stone Age
-                                    -- came at 48 minutes against the classic's 26 (8.38); the owner's goal is the
-                                    -- epoch pace
+    epoch_share = 40,               -- percent of the income into the epoch account (copper_plan=next_epoch).
+                                    -- (40 shipped; 60 - upstream's "does best without the cheat" - brought the Stone
+                                    -- Age from 48 to 38 minutes but with early_army lost more games: 8.38 f10-f11)
     copper_reserve_pct = nil,       -- the alternative for the epoch costs (8.38): {76, 47} holds, in the first two
                                     -- epochs, the reserve upstream's costs were (850 of our 1,122; 750 / 400 / 400 of
                                     -- our 1,584 / 844 / 844) with copper_plan = "on"; nil: the whole cost
@@ -53,16 +50,16 @@ return {
     tower_bait = true,              -- a citizen hit by a raider walks behind the nearest tower ...
     tower_bait_epoch = 3,           -- ... up to this epoch (upstream: up to the Bronze Age)
     early_core = 2, early_dist = 4,
-    early_army = true,              -- DEVIATION (0 shipped; upstream's variant B, measured "not clearly better than
+    early_army = false,             -- off as shipped (upstream's variant B, measured "not clearly better than
                                     -- A", off): no army in the first epoch - towers, bait and militia hold the town
                                     -- - and before farms the army's food share is early_army_food_share at most 300
-                                    -- held, the citizens never spend the army's food. The owner's own opening (the
-                                    -- Prehistoric army ignored, food first, about 20 spearmen in the Stone Age)
+                                    -- held, the citizens never spend the army's food, the account pays out whatever
+                                    -- the reserve is. Tried as the owner's opening in 8.38 f10-f11: the Stone Age
+                                    -- army came too late (0 at 30 minutes, 5 at 40) and more games were lost
     early_soldiers = 0,             -- early.c early_soldiers (0 upstream): with early_army, N soldiers in the first
                                     -- epoch from minute 2 (the alternative to the bait; upstream's worst variant)
-    early_army_food_share = 40,     -- percent of the food income for the army before farms (early_army), at most
-                                    -- 300 held. DEVIATION (10 shipped): the owner's build order has about 20
-                                    -- spearmen in the Stone Age; at 10% the Stone Age army stayed at 0 (f9 smoke)
+    early_army_food_share = 10,     -- percent of the food income for the army before farms (early_army), at most
+                                    -- 300 held (40 in 8.38 f10-f11)
     recover_economy = true,         -- econ.c RECOVERY: from the Copper Age, while the workforce is under
                                     -- min_workforce, two thirds of the workers on food, the citizens spend the whole
                                     -- stock, no soldiers unless enemies are in the base

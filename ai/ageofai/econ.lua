@@ -388,7 +388,7 @@ function M.workers(view, mem, reserve, wants)
             -- the excess by the plan's floors: wood and the towers' stone first; gold and iron only a token before
             -- the Stone Age (docs/STRATEGY_RESEARCH.md 4.2: the Copper Age's metals are not gathered before the
             -- earlier goal - a DEVIATION from the port's first split of 37 / 37, not an upstream rule either way)
-            local shares = {wood = 55, stone = 25, gold = 10, iron = 10}
+            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}   -- (55 / 25 / 10 / 10 in 8.38 f11: no gain)
             local given = 0
             for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
                 local n = excess * shares[r] // 100
