@@ -3439,3 +3439,32 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
   optimiser): neither has a caller in the game, the tools or the data path. `GEModelManager` is a map and a lock
   (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
   of `GETerrainMesh` were not reached.
+
+## The merge of main ce3df9e4 into the rust branch (AI manifest, settlement first; 2026-11-09)
+
+- **Main stores PORT_LEARNINGS.md with LF, this branch with CRLF**, so git saw the whole file as one conflict (the
+  base and main LF, ours CRLF, every line "changed"). Resolved by inserting main's added lines, converted to CRLF, at
+  their places in this branch's file (difflib over the LF base). Expect the same at every upstream merge until one
+  side normalises the file.
+- **Both lines bumped the save version to 0.253 for different things**: here R5a.2's live state
+  (`EESaveHasLiveState`), on main the next engine's AI id after a computer player's engine and the renumbered engine
+  choices. Git merged it cleanly apart from the version comment, and a merged 0.253 save would have been read as both
+  (the AI id's length read from the first live-state field). Main's 0.253 stays; the live state is from 0.254.
+  Look at the version gates of both sides at every merge, not only at the conflicts.
+- **Upstream rules changes land in the schema, not in EERules.cpp**: main removed the personalities' `next_script`
+  (the manifest `Data/ai/ais.json` names the scripts; an older document's key is read and ignored). Here that is
+  `tools/eedata/rules_schema.json` (the field and its per-personality values), `eedata.py rulesgen` (EERulesGen.h,
+  EERulesGenDecode.h, rules_gen.rs), ee_data's loader (`x.get("next_script")`, ignored) and its tests, and
+  rules_parity's case (a bad name is no longer refused: `a_script_obsolete`). rules.py came over from main as is.
+- **No other semantic clash showed**: main's new AI code keeps unit pointers only within a call (finder locals, an
+  address-keyed `std::map` used for lookups, not iterated into decisions), the improvement table fix
+  (`EEUnitClassImprovementTable::mU00` pointer-sized) touches nothing ee_combat ported, `MoveControlsHorizontally`
+  builds on the C++ `UILayoutUtility` facade, and `EEReadIdsFile` (binary trees' `.ids`) sits beside ee_data's text
+  path. The oracle over the merge equalled main's own EE-SIM (refmain) on seeds 2-7 at once.
+- **The capture goldens were rebaselined** (their C++ is gone): the merged game plays main's game, not the old one,
+  so every A*, formation, combat and tech digest changed. Evidence: the oracle equal to refmain, two captures per
+  profile equal, and `sim_capture.py replay` (the Rust leaves over the new captures) with no difference. The late,
+  space and calamity goldens now hold all six seeds and every tag (before: seeds 2-3/2-4, no CB** or ASGR).
+- The main open tree has no `Data/ai/ais.json` (built before the manifest): EE-SIM logs "the lobby offers only
+  classic and random". The oracle plays classic, so it does not matter there; a next-engine run on that tree needs
+  `--ai-scripts ai` (or `open_data.py ai`, which edits the tree).
