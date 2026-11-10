@@ -50,6 +50,7 @@
 #include "ee/EECPAttackGroup.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEAutoPathRequest.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPASGTransport.h"
 #include "ee/EECPASGLand.h"
 #include "ee/EECPASGAirTransport.h"
@@ -1852,7 +1853,9 @@ long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
             }
         }
     }
-    if (theFlag && !this->mUnits.empty())
+    // port (0.255): the running request is asked again as it was (EECPAttackSubGroup::LoadRunningState), so the state
+    // stays the saved one; an older save resumes travel as the original did
+    if (theFlag && !this->mUnits.empty() && !EESaveHasRunningState(inMajorVersion, inMinorVersion))
         this->mState = kASGStatePrepareTravel;
     return theResult;
 }

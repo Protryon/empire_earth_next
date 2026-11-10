@@ -64,6 +64,7 @@
 #include "ee/EECPPersonnel.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEPathManager.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPAttackFormation.h"
 #include "ee/EEFOLocationScreenBase.h"
 #include "ee/EECalamityClass.h"
@@ -1873,6 +1874,8 @@ long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMino
             }
         }
     }
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255)
+        theResult = this->LoadRunningState(inFile);
     return theResult;
 }
 // FUNCTION: EXE 0x45ef56
@@ -2093,6 +2096,21 @@ long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inM
     this->mRequest = (int32_t)USavedID(this->mRequest) != -1 ? this->mGroup->mCommander->GetPersonnel()->GetRequest((int32_t)USavedID(this->mRequest)) : 0;
     if (this->mRequest)
         this->mRequest->Reference();
+    // port (0.255): the saved targets, in their order (a target unit the load does not have is left out)
+    std::vector<EECPASTargetUnit*>* theTargetLists[2] = {&this->mTargets, &this->mSiegeTargets};
+    for (int l = 0; l < 2; l++) {
+        for (size_t t = 0; t < this->mLoadedTargets[l].size(); t++) {
+            EEUnit* theFound = gWorld.GetUnit(this->mLoadedTargets[l][t].first);
+            EEComplexUnit* theUnit = theFound != NULL ? theFound->mComplexUnit : NULL;
+            if (theUnit == NULL)
+                continue;
+            EECPASTargetUnit* theTarget = EECPAttackSubGroup::NewTarget(theUnit);
+            theTarget->mNumNearbyTargets = this->mLoadedTargets[l][t].second.first;
+            theTarget->mNumAttackers = this->mLoadedTargets[l][t].second.second;
+            theTargetLists[l]->push_back(theTarget);
+        }
+        this->mLoadedTargets[l].clear();
+    }
     if (this->mUnits.size() > 0)
         this->RefreshUnits();
     if (this->mGatherDeadline == 0 && this->mState == kASGStateGather && gPhysics)
@@ -2224,6 +2242,138 @@ long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMino
     theResult = outFile.Write(this->mMission);
     if (theResult == 0)
         theResult = outFile.Write(this->mSplitKind);
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255)
+        theResult = this->SaveRunningState(outFile);
+    return theResult;
+}
+
+// port (save version 0.255): the running state the original did not save. The targets and siege targets (by unit id,
+// with their counts: a loaded sub group had none until its next scan, so it left the attack state or skipped it), the
+// formation's next position time (0 after a load: the formation moved at the first update), the gather deadline
+// (Restore set it 10 s after the load), the area-effect and shore flags, and the path request: a finished one with
+// its path (the loaded sub group had none, so it never saw its path ready and gave up its task), a running one as its
+// ends and flags, asked again at the first tick (the search itself is not saved: it finishes later than it did).
+long EECPAttackSubGroup::SaveRunningState(FSFile& outFile)
+{
+    long theResult = 0;
+    std::vector<EECPASTargetUnit*>* theLists[2] = {&this->mTargets, &this->mSiegeTargets};
+    for (int l = 0; l < 2 && theResult == 0; l++) {
+        theResult = outFile.Write((unsigned long)theLists[l]->size());
+        for (size_t i = 0; i < theLists[l]->size() && theResult == 0; i++) {
+            EECPASTargetUnit* theTarget = (*theLists[l])[i];
+            theResult = outFile.Write(theTarget->mUnitID);
+            if (theResult == 0)
+                theResult = outFile.Write(theTarget->mNumNearbyTargets);
+            if (theResult == 0)
+                theResult = outFile.Write(theTarget->mNumAttackers);
+        }
+    }
+    if (theResult == 0)
+        theResult = outFile.Write(this->mNextPositionTime);
+    if (theResult == 0)
+        theResult = outFile.Write(this->mGatherDeadline);
+    if (theResult == 0)
+        theResult = outFile.Write(this->mHasAreaEffect);
+    if (theResult == 0)
+        theResult = outFile.Write(this->mCanAttackShore);
+    EEAutoPathRequest* theRequest = this->mPathRequest;
+    unsigned char theKind = theRequest == NULL ? 0 : (theRequest->mIsDone ? 1 : 2);
+    if (theResult == 0)
+        theResult = outFile.Write(theKind);
+    if (theResult == 0 && theRequest != NULL) {
+        outFile.Write(theRequest->mFrom.mX);
+        outFile.Write(theRequest->mFrom.mY);
+        outFile.Write(theRequest->mTo.mX);
+        outFile.Write(theRequest->mTo.mY);
+        outFile.Write(theRequest->mPlayerID);
+        outFile.Write(theRequest->mRequestID);
+        outFile.Write(theRequest->mPathLength);
+        outFile.Write(theRequest->mFlags.mPlayerID);
+        for (int f = 0; f < 17; f++)
+            outFile.Write(theRequest->mFlags.mFlags[f]);
+        outFile.Write((unsigned long)theRequest->mPath.size());
+        for (size_t i = 0; i < theRequest->mPath.size(); i++) {
+            outFile.Write(theRequest->mPath[i].mX);
+            theResult = outFile.Write(theRequest->mPath[i].mY);
+        }
+    }
+    return theResult;
+}
+
+long EECPAttackSubGroup::LoadRunningState(FSFile& inFile)
+{
+    long theResult = 0;
+    for (int l = 0; l < 2 && theResult == 0; l++) {
+        unsigned long theCount = 0;
+        this->mLoadedTargets[l].clear();
+        theResult = inFile.Read(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+            long theID = 0, theNearby = 0, theAttackers = 0;
+            theResult = inFile.Read(theID);
+            if (theResult == 0)
+                theResult = inFile.Read(theNearby);
+            if (theResult == 0)
+                theResult = inFile.Read(theAttackers);
+            this->mLoadedTargets[l].push_back(std::make_pair(theID, std::make_pair(theNearby, theAttackers)));
+        }
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(this->mNextPositionTime);
+    if (theResult == 0)
+        theResult = inFile.Read(this->mGatherDeadline);
+    if (theResult == 0)
+        theResult = inFile.Read(this->mHasAreaEffect);
+    if (theResult == 0)
+        theResult = inFile.Read(this->mCanAttackShore);
+    unsigned char theKind = 0;
+    if (theResult == 0)
+        theResult = inFile.Read(theKind);
+    if (theResult == 0 && theKind != 0) {
+        EETileCoordinate theFrom, theTo;
+        long thePlayerID = 0, theRequestID = 0, theLength = 0;
+        EECPASGFlags theFlags;
+        unsigned long theCount = 0;
+        inFile.Read(theFrom.mX);
+        inFile.Read(theFrom.mY);
+        inFile.Read(theTo.mX);
+        inFile.Read(theTo.mY);
+        inFile.Read(thePlayerID);
+        inFile.Read(theRequestID);
+        inFile.Read(theLength);
+        inFile.Read(theFlags.mPlayerID);
+        for (int f = 0; f < 17; f++)
+            inFile.Read(theFlags.mFlags[f]);
+        theResult = inFile.Read(theCount);
+        std::vector<EETileCoordinate> thePath;
+        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+            EETileCoordinate theTile;
+            inFile.Read(theTile.mX);
+            theResult = inFile.Read(theTile.mY);
+            thePath.push_back(theTile);
+        }
+        if (theResult == 0 && theKind == 1) {
+            // a finished request: the sub group's own (the path manager no longer holds it)
+            EEAutoPathRequest* theRequest = new EEAutoPathRequest(theRequestID, thePlayerID, theFrom, theTo, theFlags);
+            theRequest->mFlags.mPlayerID = theFlags.mPlayerID;
+            theRequest->mPath = thePath;
+            theRequest->mPathLength = theLength;
+            theRequest->mIsDone = true;
+            if (this->mPathRequest != NULL)
+                this->mPathRequest->Dereference();
+            this->mPathRequest = theRequest;
+        } else if (theResult == 0 && theKind == 2) {
+            // a running one: asked again at the first tick by the sub group's own request (its flags and modifier)
+            this->Reference();
+            EECPAttackSubGroup* theSubGroup = this;
+            EEAfterLoad([theSubGroup, theFrom, theTo]() {
+                EETileCoordinate theStart = theFrom;
+                EETileCoordinate theEnd = theTo;
+                if (theSubGroup->mPlayer != NULL)
+                    theSubGroup->RequestPath(&theStart, &theEnd);
+                theSubGroup->Dereference();
+            });
+        }
+    }
     return theResult;
 }
 // FUNCTION: EXE 0x45fbcf

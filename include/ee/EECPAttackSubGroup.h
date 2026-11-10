@@ -204,6 +204,11 @@ public:
     virtual void RemoveUnits(std::vector<EEComplexUnit*>& inUnits);
     virtual long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion); // +0x110 0x5f622
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile); // +0x114 0x5f895
+    // port (save version 0.255; Save and Load call them last): the targets, the position and gather timers, the two
+    // flags and the path request, which the original did not save (a loaded sub group had no targets until its next
+    // scan, moved its formation at once and had lost its path search)
+    long SaveRunningState(FSFile& outFile);
+    long LoadRunningState(FSFile& inFile);
     virtual void Virtual118(long inArg1);   // +0x118 0x157269 (`ret 4`)
     virtual void ReturnToRallyPoint();      // +0x11c 0x5fbcf
     virtual bool Virtual120();              // +0x120 0x6025e
@@ -353,6 +358,9 @@ public:
     bool mIsOutOfFight;                     // +0x1e3 (saved)
     bool mHasAreaEffect;                    // +0x1e4 (slot +0x4c clears it first)
     bool mCanAttackShore;                   // +0x1e5 (= true)
+    // port (save version 0.255): the loaded targets and siege targets (unit id, nearby targets, attackers), made into
+    // targets by Restore once the units exist
+    std::vector<std::pair<long, std::pair<long, long> > > mLoadedTargets[2];
 };
 
 // Attack subgroup conditions (EECPAttackSubGroup::TestCondition 0x4604cf and the EECPASG* overrides; a transport tests
