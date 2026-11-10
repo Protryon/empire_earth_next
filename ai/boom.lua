@@ -9,6 +9,7 @@
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
 local G = require("lib.groups")
+local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
 
 local PLAN = {
     {   -- Prehistoric
@@ -596,6 +597,7 @@ function M.step(view, memory)
             and view.population < view.population_cap then
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
     end
+    ES.step(view, memory, view.citizens + making < cap)
 
     local tower = tower_class(view)
 
