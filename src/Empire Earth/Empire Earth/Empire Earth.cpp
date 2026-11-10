@@ -866,8 +866,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // path manager, the area effects, contacts and tile order, ee/EESaveGameFiles.h EESaveHasRunningState)
 // 257 the units' order in each map region (EESaveHasRegionOrder)
 // 258 the computer players' experiment timers (EESaveHasExperimentTimers)
+// 259 their count of units in production (EESaveHasProductionCount)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 258;
+const unsigned long kSaveGameMinorVersion = 259;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

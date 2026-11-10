@@ -51,6 +51,12 @@ inline bool EESaveHasExperimentTimers(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 258;
 }
+// port: from 0.259 a save holds the computer players' count of units in production (EECPUnitManager): a loaded game
+// counted from 0 and made room for more units
+inline bool EESaveHasProductionCount(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 259;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

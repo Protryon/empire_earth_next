@@ -56,6 +56,7 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
@@ -604,6 +605,24 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     }
     if (theResult == 0 && (theResult = inFile.Read(this->mNumWaiting)) == 0)
         theResult = inFile.Read(this->mProductionEnabled);
+    // port (0.259): the units in production (the original never saved the count: a loaded game started from 0 and
+    // made room for more units, seed 2's 2100 s save); put back at the first tick, after Restore's AddAllUnits (whose
+    // UnitAdded counts every unit down from it)
+    if (theResult == 0 && EESaveHasProductionCount(inMajorVersion, inMinorVersion)) {
+        long theInProduction = 0;
+        theResult = inFile.Read(theInProduction);
+        if (theResult == 0) {
+            EECPUnitManager* theSelf = this;
+            unsigned long thePlayerID = this->mPlayer != NULL ? this->mPlayer->mPlayerID : (unsigned long)-1;
+            EEAfterLoad([theSelf, thePlayerID, theInProduction]() {
+                EEPlayer* thePlayer = thePlayerID < gWorld.mNumPlayers ? gWorld.mPlayers[thePlayerID] : NULL;
+                EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+                if (theCP == NULL || theCP->mCivilizationManager == NULL || theCP->mCivilizationManager->mUnitManager != theSelf)
+                    return;   // not that player's unit manager any more
+                theSelf->mNumInProduction = theInProduction;
+            });
+        }
+    }
     return theResult;
 }
 
@@ -847,6 +866,8 @@ long EECPUnitManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
                 theResult = outFile.Write(this->mNumWaiting);
                 if (theResult == 0)
                     theResult = outFile.Write(this->mProductionEnabled);
+                if (theResult == 0 && EESaveHasProductionCount(inMajorVersion, inMinorVersion))
+                    theResult = outFile.Write(this->mNumInProduction);   // port (0.259): the units in production
             }
         }
     }
