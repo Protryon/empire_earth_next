@@ -30,6 +30,13 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
+    do
+        local above = {}
+        for _, r in ipairs(V.resources) do
+            above[r] = math.max(view.stock[r] - (budget.reserve[r] or 0), 0)
+        end
+        T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above)
+    end
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
@@ -55,6 +62,7 @@ function M.micro(info, memory)
     memory.army = memory.army or {}
     T.counterfire(memory.army, events, info.time)
     T.bait(memory.army, events, info.time, memory.epoch_now)
+    T.shelter(memory.army, events, info.time)
     return nil
 end
 

@@ -1555,7 +1555,8 @@ static int LuaBuild(lua_State* L)
         return r;
     long theType = EECPUnitsClassArg(L, 2);
     if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || !gUnitClassTable[theType]->IsBuilding() || !lua_isinteger(L, 3) || !lua_isinteger(L, 4))
+        || (!gUnitClassTable[theType]->IsBuilding() && !gUnitClassTable[theType]->IsLandBuilding())   // a fortress: a land building of a transport class
+        || !lua_isinteger(L, 3) || !lua_isinteger(L, 4))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
     long x = (long)lua_tointeger(L, 3), y = (long)lua_tointeger(L, 4);
     long theTech = gUnitClassTable[theType]->mTechnology;

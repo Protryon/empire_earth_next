@@ -25,6 +25,8 @@ return {
     direct_granary = true,          -- a granary through ai.build where the town's rings are full (an island town)
     replant_fields = true,          -- ai.replant lays such a granary's fields (both were off for a crash of the engine's
                                     -- footprint code at the map's edge, fixed: PORT_LEARNINGS, AI_RESEARCH 8.37)
+    bunkers = true,                 -- a Fortress by the drop site nearest the base from the Copper Age once citizens
+                                    -- were hurt three times in two minutes; the citizens hit shelter in it (bunker.c)
     tower_bait = true,              -- a citizen hit by a raider walks behind the nearest tower ...
     tower_bait_epoch = 2,           -- ... up to this epoch (upstream: up to the Bronze Age; every citizen near the
                                     -- raider in every epoch lost 4 of 16 games at 90 minutes: the economy stood still)
