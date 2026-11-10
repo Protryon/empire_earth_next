@@ -84,8 +84,8 @@ public:
     // inline (COMDAT 0x9bb76 after EECPUnitSelector.cpp's functions, its first user GatherCandidates): every unit to inGatherer
     void Gather(EEAIFOPAvailablePersonnelGatherer& ioGatherer)
     {
-        for (std::multimap<long, EEUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); ++it)
-            ioGatherer.AddUnit(*it);
+        for (std::multimap<long, EEUnitHandle<EEUnit> >::iterator it = this->mUnits.begin(); it != this->mUnits.end(); ++it)
+            ioGatherer.AddUnit(*it);   // (a copy of the entry, the handle resolved)
     }
 
     EECPPersonnel(EEComputerPlayer* inPlayer);   // 0x868b8 (ret 4)
@@ -124,7 +124,7 @@ public:
     // vptr                                 // +0x00
     // +0x04 the free units by unit type (referenced): a multimap (ReturnUnit/Load insert through 0x11005e, which
     // returns an iterator, not map's pair; RemoveUnit walks the equal keys from find(type))
-    std::multimap<long, EEUnit*> mUnits;
+    std::multimap<long, EEUnitHandle<EEUnit> > mUnits;   // (handles since R5a.4: keyed by type, equal keys in insertion order, as before)
     std::map<long, EECPPersonnelRequest*> mRequests;   // +0x10 request id -> request (referenced)
     std::set<unsigned long> mDeferredUnits;  // +0x1c (unit ids; 0x86959 inserts the unit's id, DraftDeferred clears it)
     EEComputerPlayer* mPlayer;              // +0x28

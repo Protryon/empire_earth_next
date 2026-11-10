@@ -78,7 +78,7 @@ public:
     std::map<long, long> mUnitCounts;       // +0x04 by unit type (the ctor zeroes 19 keys; AdjustUnitCount adds to them)
     std::map<long, long> mMaxCounts;        // +0x10 (the player's +0xdd0.. values; CheckBuildingCounts' cap)
     std::map<long, long> mUnitsPer;         // +0x1c (the player's +0xe8c.. values; CheckBuildingCounts divides by it)
-    std::vector<EEComplexUnit*> mRepairing; // +0x28 (RepairBuildings copies it and erases the repaired target)
+    std::vector<EEUnitHandle<EEComplexUnit> > mRepairing;   // +0x28 (RepairBuildings copies it and erases the repaired target; handles since R5a.4)
     EECPResourceManager* mResourceManager;  // +0x38 (new 0x18c, ctor 0x8e8f1)
     EECPBuildManager* mBuildManager;        // +0x3c (new 0x170, ctor 0x66c5d)
     EECPResearchManager* mResearchManager;  // +0x40 (new 0x12c, ctor 0x8a007)

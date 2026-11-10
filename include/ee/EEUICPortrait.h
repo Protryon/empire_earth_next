@@ -7,6 +7,8 @@
 #ifndef EE_EEUICPORTRAIT_H
 #define EE_EEUICPORTRAIT_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEButtonObject;
 class EEUnit;
 class GEBitmap;
@@ -43,7 +45,7 @@ protected:
     GERhombus* mFirstBar;                   // +0x0a8 green
     GERhombus* mBackground;                 // +0x0ac red
     GERhombus* mSecondBar;                  // +0x0b0 yellow
-    EEUnit* mUnit;                          // +0x0b4 (referenced)
+    EEUnitHandle<EEUnit> mUnit;             // +0x0b4 (referenced; a handle since R5a.4: read on the UI thread and in CopyData)
     EEButtonObject* mButton;                // +0x0b8 the unit class's button (loaded while shown)
     unsigned long mLevel;                   // +0x0bc
     bool mShowFirstBar;                     // +0x0c0

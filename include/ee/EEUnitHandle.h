@@ -7,12 +7,19 @@
 // in its pool slot (PORT_LEARNINGS "R5a.4"). Resolution does not depend on player membership: a killed unit that
 // is still referenced resolves to itself, as the pointer it replaces did.
 //
-// The registry is only looked up, never iterated: it orders nothing and draws no random number. It is touched by
-// the same threads, under the same world lock, as the units' pool and reference counts.
+// The registry is only looked up, never iterated: it orders nothing and draws no random number. It is Rust
+// (rust/crates/ee_units, a lock-free radix tree of atomic pointers), so a thread may resolve a handle while another
+// inserts a unit or frees one: the physics thread under the world's write lock, the UI and graphics threads under
+// its read lock (where a unit's last Dereference can run). A resolve gives the registered object or NULL, never a
+// torn value; whether the object is still alive is the holder's business, as it was with the pointer.
 //
 // A holder that referenced the unit (Reference/Dereference) still does, through the handle: then the handle
 // always resolves to the same object as the pointer did. A unit without an id (pending: created this tick, before
 // RTSPlayer::AddPendingUnits) has no handle; storing one is reported once on stderr ("EE-HANDLE").
+//
+// A container of handles keeps a vector's or deque's order (the elements are what they were, resolved on each
+// read); a container keyed by the unit (std::map<EEUnit*, ...>) keyed by handles orders by id instead of by
+// address (EEUnitHandleLess), which is only the same for a container nothing iterates.
 #ifndef EE_EEUNITHANDLE_H
 #define EE_EEUNITHANDLE_H
 
@@ -23,7 +30,7 @@ class RTSUnit;
 class EEUnit;
 class EEComplexUnit;
 
-// The registry (RTSUnit.cpp)
+// The registry (RTSUnit.cpp over ee_units)
 RTSUnit* RTSResolveUnitID(uint32_t inUnitID);  // NULL for none (0xffffffff) or a freed unit
 void RTSRegisterUnit(RTSUnit* inUnit);         // at RTSPlayer::InsertUnit (its id is final there)
 void RTSUnregisterUnit(RTSUnit* inUnit);       // at RTSUnit::FreeNode (only if the id is still this unit's)
@@ -70,6 +77,16 @@ public:
 
 private:
     uint32_t mUnitID;
+};
+
+// The order of a map keyed by handles: by id (a map keyed by pointers ordered by address). Only for a map nothing
+// iterates, where the order is not observable.
+template <class T>
+struct EEUnitHandleLess {
+    bool operator()(const EEUnitHandle<T>& inFirst, const EEUnitHandle<T>& inSecond) const
+    {
+        return inFirst.GetSavedID() < inSecond.GetSavedID();
+    }
 };
 
 #endif

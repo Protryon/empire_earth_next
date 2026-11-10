@@ -40,6 +40,7 @@ public:
     bool AddUnit(EEComplexUnit* inUnit);    // 0xa1b45 (ret 4)
     void HandleUnitHit(EEComplexUnit* inUnit);  // 0xa1d0f (ret 4): the unit was attacked (+0x1dc): flee or fight back
     void Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits);   // 0xa1df7 (ret 8): one attack goal per unit
+    void Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUnit> >& inUnits);   // the same over mUnits (R5a.4)
     bool CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile);  // 0xa1e75 (ret 8): may inUnit stand on inTile
     bool Chase();                           // 0xa1efc: pick a moving target on the continent and circle it
     bool MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius);   // 0xa2275 (ret 8): circle the herd round inTile
@@ -84,7 +85,7 @@ public:
 
     std::map<unsigned long, EEMedia*> mMedia;      // +0x68 unit id -> the media attached to it (SetUnitMedia/RemoveUnitMedia; UnloadMedia on release; the map code is ICF-shared with map<long, long*>)
     EEComplexUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
-    std::vector<EEComplexUnit*> mUnits;     // +0x74
+    std::vector<EEUnitHandle<EEComplexUnit> > mUnits;   // +0x74 (referenced; handles since R5a.4, the vector's order kept)
     U2DRectangle<long> mBounds2;            // +0x84
     U2DPoint<long> mP94;                    // +0x94
     U2DPoint<long> mCenter;                 // +0x9c (the target's tile)

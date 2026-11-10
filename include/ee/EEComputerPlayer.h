@@ -6,6 +6,8 @@
 #ifndef EE_EECOMPUTERPLAYER_H
 #define EE_EECOMPUTERPLAYER_H
 
+#include "ee/EEUnitHandle.h"
+
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPCombatManager;                    // ee/EECPCombatManager.h
 class EECPCivilizationManager;              // ee/EECPCivilizationManager.h
@@ -196,7 +198,7 @@ public:
     std::vector<UWideString> mB90;          // +0xb90 (20-byte polymorphic elements: _Tidy 0x40ee8; unused here) (provisional name)
     std::vector<std::pair<unsigned long, long> > mFavoriteTypeHistory;  // +0xba0 (Load: resize(n, make_pair(0, 0)), then first/second)
     EEComplexUnit* GetUnitsToKillAt(unsigned long inIndex) const { return this->mUnitsToKill[inIndex]; }
-    std::vector<EEComplexUnit*> mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills; the dtor dereferences each)
+    std::vector<EEUnitHandle<EEComplexUnit> > mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills, referenced; the dtor dereferences each; handles since R5a.4)
     EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
     EECPCivilizationManager* GetCivilizationManager() const { return this->mCivilizationManager; }

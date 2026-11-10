@@ -191,7 +191,7 @@ public:
     void AddCargo(EEUnit* inUnit);          // 0x199f74 (sorted by name)
     void RemoveSelected();                  // 0x19a05f
 
-    std::vector<EEUnit*> mCargo;            // +0x13c
+    std::vector<EEUnitHandle<EEUnit> > mCargo;   // +0x13c (the carried units shown; handles since R5a.4, the vector's order kept)
 };
 
 // One of the six unit type buttons (RTTI EEUIFSEBUnitType > UIRadioButton; vtable 0x444cb0; id 0x406..0x40b)
@@ -428,7 +428,7 @@ void EEUIFSELBCargoList::AddCargo(EEUnit* inUnit)
     if (this->GetLineCount() == 0)
         this->mCargo.insert(this->mCargo.begin(), inUnit);
     else {
-        std::vector<EEUnit*>::iterator it;
+        std::vector<EEUnitHandle<EEUnit> >::iterator it;
         for (it = this->mCargo.begin(); it != this->mCargo.end(); it++) {
             if (theName < this->mData[theIndex])
                 break;

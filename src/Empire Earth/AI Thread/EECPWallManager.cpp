@@ -417,7 +417,7 @@ void EECPWallManager::AddGates(EEComplexUnit* inUnit)
     long theSide = 0;
     long theIndex;
     if (inUnit->GetClass()->GetIsWall() && !inUnit->GetClass()->GetIsTower()) {
-        std::vector<EEComplexUnit*>::iterator it = std::find(this->mGates.begin(), this->mGates.end(), inUnit);
+        std::vector<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mGates.begin(), this->mGates.end(), inUnit);
         if (it != this->mGates.end()) {
             this->mGates.erase(it);
             inUnit->Dereference();
@@ -741,7 +741,6 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     unsigned long theCount;
     unsigned long theValue;
     unsigned long theOther;
-    EEComplexUnit* theGate;
     unsigned long i;
     this->Clear();
     long theResult = inFile.Read(theCount);
@@ -763,10 +762,8 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
         return theResult;
     for (i = 0; i < theCount && theResult == kErrorOK; i++) {
         theResult = inFile.Read(theValue);
-        if (theResult == kErrorOK) {
-            theGate = reinterpret_cast<EEComplexUnit*>(theValue);
-            this->mGates.push_back(theGate);
-        }
+        if (theResult == kErrorOK)
+            this->mGates.push_back(EEUnitHandle<EEComplexUnit>::FromSavedID(theValue));   // ids until Restore
     }
     if (theResult == kErrorOK)
         theResult = this->mGateTile.Load(inFile);
@@ -913,7 +910,7 @@ bool EECPWallManager::ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2D
 void EECPWallManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 {
     for (std::vector<EEPUnitSwap>::iterator it = inSwaps.begin(); it != inSwaps.end(); it++) {
-        std::vector<EEComplexUnit*>::iterator theGate = std::find(this->mGates.begin(), this->mGates.end(), it->mOld);
+        std::vector<EEUnitHandle<EEComplexUnit> >::iterator theGate = std::find(this->mGates.begin(), this->mGates.end(), it->mOld);
         if (theGate == this->mGates.end())
             continue;
         theGate = this->mGates.erase(theGate);
@@ -939,7 +936,7 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     theWall.mUnit = NULL;
     theWall.mEnemy = NULL;
     std::vector<EECPWMWall> theWalls;
-    std::vector<EEComplexUnit*> theGates;
+    std::vector<EEUnitHandle<EEComplexUnit> > theGates;
     std::vector<EEComplexUnit*> theUnused;
     unsigned long i;
     EEComplexUnit* theUnit;
@@ -964,10 +961,10 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     theGates = this->mGates;
     this->mGates.clear();
     for (i = 0; i < theGates.size(); i++) {
-        theUnit = theGates[i];
-        if (USavedID(theUnit) == -1)
+        uint32_t theID = theGates[i].GetSavedID();
+        if (theID == 0xffffffff)
             continue;
-        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit))));
+        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theID)));
         if (theUnit != NULL) {
             theUnit->Reference();
             this->mGates.push_back(theUnit);

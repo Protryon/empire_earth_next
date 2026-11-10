@@ -1363,7 +1363,7 @@ void EEUIFScenarioEditor::DeselectFirstUnit()
 void EEUIFScenarioEditor::DeselectUnit(EEUnit* inUnit)
 {
     bool theFirst = false;
-    std::vector<EEUnit*>::iterator theFound;
+    std::vector<EEUnitHandle<EEUnit> >::iterator theFound;
     theFound = std::find(this->mSelectedUnits.begin(), this->mSelectedUnits.end(), inUnit);
     if (theFound == this->mSelectedUnits.end())
         return;
