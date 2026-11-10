@@ -45,6 +45,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
 | **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Then (branch `rust-r5a-handles2`): the registry is Rust (`ee_units`, a lock-free radix tree of atomic pointers, 9 tests), so any thread resolves handles; the UI portrait, the editor's undo records and selection, the camera's followed units, the improvement action, EEWorld's five containers (the stepped units, the queues, the active map, the resource users) and 12 of the AI's containers (vectors, deques and a type-keyed multimap of referenced units: their order is the elements' order) are handles; the prophet analyzers' members too (PORT_LEARNINGS "R5a.4, finished"). Open: `EECPUnitManager`'s class-keyed deques (the type reaches ~20 units through `GetUnits`/`CountUnits`), the function objects' containers (one call's life: left as pointers), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
 | D6 game text is UTF-8 | Done (branch `rust-d6-utf8`, a declared rebaseline; PORT_LEARNINGS "D6: game text is UTF-8"): `ee_plat_core::utf8` is the one text implementation (`PlatStrICmp`, the `PlatMbs*` family, the case folding, the wide conversions) on every system, the CRT and the POSIX single-byte port gone; `PlatFont` renders by code point (U+0020..U+00FF at creation, the rest on first use), `GEFontBitmap` keeps its Windows-1252 cells; `ee_ui`'s `text.rs`, SDL text input, the clipboard, WON's `StringUtil` (through `ee_won`'s `text.rs`), `PlatGUIFont`, `PlatClipboard` and the lobby's pages are UTF-8; the text compiler keeps UTF-8 in the records (the Python importer the same, retail transcoded once at load), the Language strings are UTF-8; saves are version 0.255, older saves and files without a version convert their strings from Windows-1252 on load. Sim oracle identical, the Rust gate, eedata check/cppgate, plat_test, font_test and the WON tests pass; the menus' pixels are for the lead's tours. Left: the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK), `GEFontBitmap` draws only what Windows-1252 has, `_mbs*` stubs in tools/rmap_gate, campaign archive tags are not converted |
+| **R5b.4 world and units** | **Started** (branch `rust-r5b4-core`): the map (section 5, R5b item 4: 657 `dynamic_cast` sites, 337 of them unit goal, object and class tests; 133 message codecs) |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera** (branch `rust-r5a-snap`; PORT_LEARNINGS "R5a.3", with the measured read table): FrameStarting under the existing read lock is the capture (`ee/EERenderSnapshot.h`, the render lists, the effects' `Queue`); after it the render phase reads no unit, player or physics state, and the unit picker holds ids, so the graphics thread takes no unit references. Left: the effects' own state (stepped by the tick while drawn), the terrain mesh's heights, the see-through flags written in the capture, the UI's CopyData. Sim oracle identical; no tour run |
 
 
@@ -483,6 +484,53 @@ Two stages. The first is in C++ and changes no behaviour (each step gated by the
    unit-kind data.
 
    Lifting the deferred caps (16 players, 6 armour kinds, 7 resources: MODDING_PLAN §4) belongs here, as rebaselines.
+
+#### R5b.4: the map (measured 2026-11-10, branch `rust-r5b4-core`)
+
+**`dynamic_cast` sites** (657 in code under `src/` and `include/`, 683 with comments; the 638 above is an older
+count), by the class they test:
+
+| Tested class | Sites | Becomes |
+|---|---|---|
+| unit goals `EEUG*` (13 classes; `EEUGAttackUnit` 58, `EEUGLocation` 34, `EEUGGather` 27) | 191 | the goal kind: `EEUnitGoal::mKind`, set by each constructor, never written after (`EEUGHealUnit` 15 derives from `EEUGLocation` 1) |
+| unit objects `EEComplexUnit` 81, `EEUnit` 8 | 89 | the object kind (simple or complex), fixed at construction |
+| unit classes `EEUC*` (`EEUCGate` 24, `EEUCTransport` 17, `EEUCBasicCitizen` 7) | 57 | the class kind: `CreateUnitClasses` builds the class from the record's category alone, and `mCategory` is written only by the constructor |
+| players `EEComputerPlayer`, `EEHumanPlayer`, `EEPlayer` | 12 | a player kind |
+| AI `EECP*`, `EEAI*` | 55 | held with the AI (R5b.3) |
+| UI toolkit and in-game UI (`UI*`, `EEUI*`) | 121 | R6 |
+| network (`EEServer`, `EEClient`, `NES*`, `EEMessage`) | 27 | the communications role; the message kind by type |
+| other (WON 49, persistent helpers 17, input keys, formations, effects, calamities) | 105 | per module |
+
+By module: AI Thread 162, Units 150, UI Events 92, WON 50, Physics Thread 29, Communications 26, User Interface
+Thread 26, Empire Earth 24, Civilization Builder 20, Persistent 17, Scenario Manager 16, Graphics Thread 14, the rest 31.
+The three unit tables (goal, object, class: 337 sites) are the simulation's; 97 of them are in the AI Thread.
+
+**Commands** (`NEMessage`):
+
+| | |
+|---|---|
+| Type ids | 108 game messages (`EEMessageID`, 0x41..0xfd, factory `EEMessage::BuildEEMessage`) and 28 engine messages (`NEMessageID`, 0x20..0x3c, `NEMessage::BuildNEMessage`) |
+| Codecs | 133 classes with `ExportMessage`/`ExportSize`/`ImportMessage` (312 functions): 104 game classes in `EEMessage.cpp` (8,961 lines with the `Execute` bodies), 29 engine classes in `NEMessage.cpp`. 94 carry fixed fields only; the others carry wide strings (`UWideString::Export`: u32 length + 2, the bytes, u16 0), the compressed box selection (`CompressUnits`/`DecompressUnits`), vectors (`EEMSelectTheseUnits`, `EEMCivUpgrades`) or nested messages (`NEMPlayerInput`, `NEMCommunicationsTick[Response]`) |
+| Encoded | `NEMessageManager` (the send queues), `NESynchronousClient::Send`, `NESynchronousServer`, `NETimestampedMessage`, `NERecordPlayback`, `NEMPlayerInput` (nested) |
+| Decoded | `NEMessage::CreateMessage` -> `sConstructors[type]` (the two factories), also inside `NEMPlayerInput::ImportMessage` |
+| Sent | 114 `new EEM*` in 47 files: UI events 11 files, the user interface thread 9, actions 6, the editor's actions 3, the computer player once (`EECPWallManager`: walls and gates), EE-SIM's save |
+| Executed | `EEPhysics::DrainInput`, per communications tick: the selection types -> `EEMessage::ExecuteSelectionMessage`, the rest -> `ExecuteMessage` (the selection id check) -> `Execute`; engine messages -> `Execute` |
+
+**Order of the leaves:**
+
+1. The game messages' codec: the wire layout of the 104 game classes in Rust (`ee_netmsg`), the C++ classes keeping
+   their members and calling it; `CompressUnits`/`DecompressUnits` with it. Gate: an NM** capture of every message the
+   games import and a sweep of every class with edge values (this branch).
+2. Unit kinds as data: the goal, object and class kinds as Rust tables, the `dynamic_cast` sites as kind queries,
+   the simulation's first (this branch).
+3. The engine messages and the nested player inputs into the codec; the message kind (game or engine) by type.
+4. The `Execute` bodies' decisions (the selection id check, resource arithmetic, the box selection's pick) over the id
+   API.
+5. The unit store: each unit's plain state (position, hit points, the goal queues as ids) in a Rust struct of arrays
+   behind the `EEUnit` accessors; the out-of-sync checksum over it.
+6. The physics tick (`EEPhysics::Update`, `DrainInput`, the units' steps) over the store.
+7. The save codec, object by object, the 0.256 field order as the contract.
+8. The other casts with their modules (AI in R5b.3, UI and WON in R6); then the caps, as declared rebaselines.
 
 ### R6: UI, events, editor
 
