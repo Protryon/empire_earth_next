@@ -6,6 +6,7 @@
 // 0x1007c901.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -30,6 +31,19 @@
 #include "lle/UIButton.h"
 #include "lle/UIScalableButton.h"
 
+// The Rust slices' records (rust/crates/ee_ui/src/button_variants.rs) and the GE types
+struct UIScalableButtonRust {
+    static EeUiRect Rect(const GERectangle& inRectangle)
+    {
+        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+    static GE2DPoint Point(const EeUiPoint& inPoint) { return GE2DPoint(inPoint.x, inPoint.y); }
+};
+
 // FUNCTION: LLE 0x1007c4ae
 // Creates a scalable button from source rectangles for its normal, focused, pressed and text parts
 UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
@@ -49,20 +63,12 @@ UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap,
 // Picks the source rectangle for the button state (focused falls back to normal without a focus bitmap), then snapshots
 long UIScalableButton::CopyData()
 {
-    switch (this->mState) {
-    case kButtonStateNormal:
-        this->mCopiedRectangle = this->mNormalRectangle;
-        break;
-    case kButtonStateFocused:
-        if (this->mFocusedBitmap)
-            this->mCopiedRectangle = this->mFocusedRectangle;
-        else
-            this->mCopiedRectangle = this->mNormalRectangle;
-        break;
-    case kButtonStatePressed:
-        this->mCopiedRectangle = this->mPressedRectangle;
-        break;
-    }
+    EeUiRect theNormal = UIScalableButtonRust::Rect(this->mNormalRectangle);
+    EeUiRect theFocused = UIScalableButtonRust::Rect(this->mFocusedRectangle);
+    EeUiRect thePressed = UIScalableButtonRust::Rect(this->mPressedRectangle);
+    EeUiRect theCurrent = UIScalableButtonRust::Rect(this->mCopiedRectangle);
+    this->mCopiedRectangle = UIScalableButtonRust::Rect(ee_ui_scalable_copied_rect(this->mState, this->mFocusedBitmap != NULL, &theNormal,
+                                                                           &theFocused, &thePressed, &theCurrent));
     return UIButton::CopyData();
 }
 
@@ -74,39 +80,18 @@ long UIScalableButton::DrawPolygons()
     GERectangle theDestination;
     long theResult = kErrorOK;
     if (this->mCopiedBitmap) {
-        // left cap
-        theSource.SetLeft(0.0f);
-        theSource.SetTop(this->mCopiedRectangle.GetTop());
-        theSource.SetRight(this->mCopiedRectangle.GetLeft() + 1.0f);
-        theSource.SetBottom(this->mCopiedRectangle.GetBottom());
-        theDestination.SetLeft(this->mCopiedDrawRectangle.GetLeft());
-        theDestination.SetRight(theDestination.GetLeft() + theSource.GetWidth() - 1.0f);
-        theDestination.SetTop(this->mCopiedDrawRectangle.GetTop());
-        theDestination.SetBottom(this->mCopiedDrawRectangle.GetBottom());
-        this->mCopiedBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
-        this->mCopiedBitmap->SetLocation(this->mCopiedDrawRectangle.GetTopLeft());
-        theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
-
-        // right cap
-        theSource.SetLeft(this->mCopiedRectangle.GetRight() + 1.0f);
-        theSource.SetTop(this->mCopiedRectangle.GetTop());
-        theSource.SetRight((float)this->mCopiedBitmap->GetTexture(this->GetScreenIndex())->GetWidth());
-        theSource.SetBottom(this->mCopiedRectangle.GetBottom());
-        theDestination.SetLeft(this->mCopiedDrawRectangle.GetRight() - theSource.GetWidth() + 1.0f);
-        theDestination.SetRight(this->mCopiedDrawRectangle.GetRight());
-        this->mCopiedBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
-        this->mCopiedBitmap->SetLocation(theDestination.GetTopLeft());
-        theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
-
-        // stretched middle
-        theSource = this->mCopiedRectangle;
-        theDestination.SetLeft(this->mCopiedDrawRectangle.GetLeft() + theSource.GetLeft() + 1.0f);
-        theDestination.SetRight(this->mCopiedDrawRectangle.GetRight()
-                                - (this->mCopiedBitmap->GetTexture(this->GetScreenIndex())->GetWidth() - theSource.GetRight())
-                                + 1.0f);
-        this->mCopiedBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
-        this->mCopiedBitmap->SetLocation(theDestination.GetTopLeft());
-        theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
+        // the left cap, the right cap and the stretched middle (ee_ui button_variants.rs)
+        EeUiSlice theSlices[3];
+        EeUiRect theCopied = UIScalableButtonRust::Rect(this->mCopiedRectangle);
+        EeUiRect theDraw = UIScalableButtonRust::Rect(this->mCopiedDrawRectangle);
+        ee_ui_scalable_slices(&theCopied, &theDraw, this->mCopiedBitmap->GetTexture(this->GetScreenIndex())->GetWidth(), theSlices);
+        for (int i = 0; i < 3; i++) {
+            theSource = UIScalableButtonRust::Rect(theSlices[i].source);
+            theDestination = UIScalableButtonRust::Rect(theSlices[i].destination);
+            this->mCopiedBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
+            this->mCopiedBitmap->SetLocation(UIScalableButtonRust::Point(theSlices[i].location));
+            theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
+        }
     }
     return theResult;
 }

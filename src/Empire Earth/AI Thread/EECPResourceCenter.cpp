@@ -111,7 +111,7 @@ bool EECPResourceCenter::Contains(EEUnit* inUnit)
 {
     bool theResult = false;
     if (this->mUnits.size() > 0) {
-        std::vector<EEUnit*>::iterator theFound = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
+        std::vector<EEUnitHandle<EEUnit> >::iterator theFound = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
         theResult = theFound != this->mUnits.end();
     }
     return theResult;
@@ -643,10 +643,8 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
         this->mUnits.clear();
         for (i = 0; i < theCount; i++) {
             theResult = inFile.Read(theID);
-            if (theResult == kErrorOK) {
-                EEUnit* theUnit = reinterpret_cast<EEUnit*>(theID);  // the ids sit in the list until Restore
-                this->mUnits.push_back(theUnit);
-            }
+            if (theResult == kErrorOK)
+                this->mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID(theID));  // the ids sit in the list until Restore
         }
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theID);
@@ -671,7 +669,7 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
     long theResult = 0;
     unsigned long i;
     for (i = 0; i < this->mUnits.size(); i++)
-        theIDs.push_back((int32_t)USavedID(this->mUnits[i]));
+        theIDs.push_back((int32_t)this->mUnits[i].GetSavedID());
     this->mUnits.clear();
     for (i = 0; i < theIDs.size(); i++) {
         if (gWorld.mPlayers[0] == NULL)

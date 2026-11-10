@@ -816,7 +816,7 @@ bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
 static long long EECPBMHomeDistance2(EECPBuildManager* inManager, EECPResourceCenter* inCenter)
 {
     EEUnit* theUnit = inCenter->mUnit != NULL ? static_cast<EEUnit*>(inCenter->mUnit)
-        : inCenter->mUnits.empty() ? NULL : inCenter->mUnits[0];
+        : inCenter->mUnits.empty() ? NULL : inCenter->mUnits[0].Get();
     if (theUnit == NULL || inManager->mTownCenterTile.mX == -10000)
         return 1LL << 40;
     long long theDX = theUnit->GetTileX() - inManager->mTownCenterTile.mX;
@@ -854,7 +854,7 @@ struct EECPBMCenterLess {
         unsigned long theSecond = 0;
         unsigned long theCount;
         unsigned long i;
-        theUnits = inFirst->mUnits;
+        theUnits.assign(inFirst->mUnits.begin(), inFirst->mUnits.end());
         theCount = theUnits.size();
         for (i = 0; i < theCount; i++) {
             if (gAEManager.HasAreaEffect(this->mResource, theUnits[i]->GetTileX(), (*(theUnits.begin() + i))->GetTileY(),
@@ -862,7 +862,7 @@ struct EECPBMCenterLess {
                 theFirst++;
         }
         theUnits.clear();
-        theUnits = inSecond->mUnits;
+        theUnits.assign(inSecond->mUnits.begin(), inSecond->mUnits.end());
         theCount = theUnits.size();
         for (i = 0; i < theCount; i++) {
             if (gAEManager.HasAreaEffect(this->mResource, theUnits[i]->GetTileX(), theUnits[i]->GetTileY(), this->mPlayerID))

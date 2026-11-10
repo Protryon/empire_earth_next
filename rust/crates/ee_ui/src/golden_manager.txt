@@ -1,0 +1,3166 @@
+form 1 00000000 00000000 447fc000 443fc000
+form 2 42c80000 42c80000 43fa0000 43c80000
+form 3 43160000 43160000 43960000 43960000
+form 4 44160000 42c80000 44610000 43fa0000
+form 5 42480000 42480000 446d8000 442f0000
+form 6 00000000 00000000 447fc000 443fc000
+form 7 43c80000 43960000 442f0000 44160000
+redrawall
+  stack
+  visible
+byid 7 = 7
+relayoutall 640 720
+  stack
+  visible
+swap 6
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 6
+  visible 6
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  stack 6
+  visible 6
+popto 7
+  stack 6
+  visible 6
+push 2
+  deactivate 6
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 6 2
+  visible 6 2
+push 6
+  stack 6 2
+  visible 6 2
+push 7
+  deactivate 2
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 6 2 7
+  visible 6 2 7
+byid 5 = 5
+swap 2
+  stack 6 2 7
+  visible 6 2 7
+dirty 7 44198000 44008000 44500000 443f4000
+  dirty 7 44198000 44008000 44500000 443f4000
+  stack 6 2 7
+  visible 6 2 7
+swap 6
+  stack 6 2 7
+  visible 6 2 7
+swap 6
+  stack 6 2 7
+  visible 6 2 7
+relayoutall 640 960
+  relayout 6 00000000 00000000 441fc000 446fc000
+  relayout 2 00000000 00000000 441fc000 446fc000
+  relayout 7 00000000 00000000 441fc000 446fc000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 6 2 7
+  visible 6 2 7
+events 230:2 231:2 232:5 233:3 for 1
+  queued 4
+  stack 6 2 7
+  visible 6 2 7
+relayoutall 1280 720
+  relayout 6 00000000 00000000 449fe000 4433c000
+  relayout 2 00000000 00000000 449fe000 4433c000
+  relayout 7 00000000 00000000 449fe000 4433c000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 6 2 7
+  visible 6 2 7
+byid 3 = 3
+swap 6
+  stack 6 2 7
+  visible 6 2 7
+push 5
+  deactivate 7
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 7
+  close 2
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 6 2 7 5
+  visible 6 5
+events 270:7 271:1 272:4 for 1
+  process 271 form 1 entity 1
+  event-free 271
+  queued 6
+  stack 6 2 7 5
+  visible 6 5
+push 7
+  stack 6 2 7 5
+  visible 6 5
+push 6
+  stack 6 2 7 5
+  visible 6 5
+push 3
+  deactivate 5
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 5
+  clip 5 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 6 2 7 5 3
+  visible 6 5 3
+events 310:2 311:7 for 1
+  queued 8
+  stack 6 2 7 5 3
+  visible 6 5 3
+byid 2 = 2
+popto 2
+  deactivate 3
+  close 3
+  dirty 6 43160000 43160000 43960000 43960000
+  redraw 6 43160000 43160000 43960000 43960000
+  dirty 5 43160000 43160000 43960000 43960000
+  redraw 5 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 5
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  deactivate 5
+  close 5
+  open 2
+  open 7
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 7
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 2 43c80000 43960000 43fa0000 43c80000
+  redraw 2 43c80000 43960000 43fa0000 43c80000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 2
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 6 2
+  visible 6 2
+relayoutall 640 960
+  relayout 6 00000000 00000000 441fc000 446fc000
+  relayout 2 00000000 00000000 441fc000 446fc000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 6 2
+  visible 6 2
+swap 6
+  stack 6 2
+  visible 6 2
+swap 5
+  deactivate 2
+  close 2
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 6 5
+  visible 6 5
+pop
+  deactivate 5
+  close 5
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 6
+  clear-clips 6
+  stack 6
+  visible 6
+swap 1
+  deactivate 6
+  close 6
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+swap 6
+  deactivate 1
+  close 1
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 6
+  visible 6
+byid 4 = 4
+events 390:6 391:1 for 6
+  process 390 form 6 entity 0
+  event-free 390
+  queued 9
+  stack 6
+  visible 6
+dirty 3 43770000 43878000 44160000 4407c000
+  stack 6
+  visible 6
+relayoutall 1280 960
+  relayout 6 00000000 00000000 449fe000 446fc000
+  clear-clips 6
+  stack 6
+  visible 6
+dirty 4 429c0000 43180000 439d0000 43da0000
+  stack 6
+  visible 6
+push 6
+  stack 6
+  visible 6
+pop
+  deactivate 6
+  close 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  stack
+  visible
+redrawall
+  stack
+  visible
+byid 6 = 6
+popto 1
+  stack
+  visible
+pop
+  stack
+  visible
+relayoutall 640 720
+  stack
+  visible
+relayoutall 640 720
+  stack
+  visible
+swap 5
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 5
+  visible 5
+push 3
+  deactivate 5
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 5
+  clip 5 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 3
+  visible 5 3
+relayoutall 1280 960
+  relayout 5 00000000 00000000 449fe000 446fc000
+  relayout 3 00000000 00000000 449fe000 446fc000
+  clear-clips 5
+  clip 5 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 3
+  visible 5 3
+byid 0 = -1
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 5 3
+  visible 5 3
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 5 3
+  visible 5 3
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 5 3
+  visible 5 3
+relayoutall 1280 960
+  relayout 5 00000000 00000000 449fe000 446fc000
+  relayout 3 00000000 00000000 449fe000 446fc000
+  clear-clips 5
+  clip 5 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 3
+  visible 5 3
+swap 1
+  deactivate 3
+  close 3
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 5
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 5 1
+  visible 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  stack 5 1
+  visible 1
+popto 6
+  stack 5 1
+  visible 1
+byid 0 = -1
+push 6
+  deactivate 1
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 1
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 5 1 6
+  visible 6
+swap 5
+  stack 5 1 6
+  visible 6
+push 7
+  deactivate 6
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 5 1 6 7
+  visible 6 7
+push 7
+  stack 5 1 6 7
+  visible 6 7
+pop
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 6
+  clear-clips 6
+  stack 5 1 6
+  visible 6
+swap 1
+  stack 5 1 6
+  visible 6
+swap 5
+  stack 5 1 6
+  visible 6
+byid 4 = 4
+push 7
+  deactivate 6
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 5 1 6 7
+  visible 6 7
+push 2
+  deactivate 7
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 5 1 6 7 2
+  visible 6 7 2
+push 7
+  stack 5 1 6 7 2
+  visible 6 7 2
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 5 1 6 7 2
+  visible 6 7 2
+dirty 1 442ec000 439f8000 4481e000 4419c000
+  stack 5 1 6 7 2
+  visible 6 7 2
+pop
+  deactivate 2
+  close 2
+  dirty 6 42c80000 42c80000 43fa0000 43c80000
+  redraw 6 42c80000 42c80000 43fa0000 43c80000
+  dirty 7 43c80000 43960000 43fa0000 43c80000
+  redraw 7 43c80000 43960000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 7
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 5 1 6 7
+  visible 6 7
+popto 1
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 6
+  clear-clips 6
+  deactivate 6
+  close 6
+  open 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 1
+  clear-clips 1
+  stack 5 1
+  visible 1
+byid 0 = -1
+pop
+  deactivate 1
+  close 1
+  open 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  activate 5
+  clear-clips 5
+  stack 5
+  visible 5
+push 4
+  deactivate 5
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 5
+  clip 5 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 5 4
+  visible 5 4
+dirty 3 4418c000 42a40000 443dc000 43a50000
+  stack 5 4
+  visible 5 4
+swap 1
+  deactivate 4
+  close 4
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 5
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 5 1
+  visible 1
+events 780:1 for 1
+  process 391 form 1 entity 1
+  event-free 391
+  process 780 form 1 entity 0
+  event-free 780
+  queued 8
+  stack 5 1
+  visible 1
+swap 6
+  deactivate 1
+  close 1
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 5 6
+  visible 6
+push 3
+  deactivate 6
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 6 3
+  visible 6 3
+byid 0 = -1
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 5 6 3
+  visible 6 3
+events 820:5 for 6
+  queued 9
+  stack 5 6 3
+  visible 6 3
+swap 7
+  deactivate 3
+  close 3
+  open 7
+  activate 7
+  dirty 6 43160000 43160000 43960000 43960000
+  redraw 6 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 5 6 7
+  visible 6 7
+push 6
+  stack 5 6 7
+  visible 6 7
+dirty 7 4404c000 435e0000 445ec000 438e8000
+  dirty 7 4404c000 435e0000 445ec000 438e8000
+  stack 5 6 7
+  visible 6 7
+push 3
+  deactivate 7
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 6 7 3
+  visible 6 7 3
+events 870:6 871:7 872:2 873:1 for 3
+  process 233 form 3 entity 1
+  event-free 233
+  queued 12
+  stack 5 6 7 3
+  visible 6 7 3
+byid 4 = 4
+relayoutall 1280 720
+  relayout 5 00000000 00000000 449fe000 4433c000
+  relayout 6 00000000 00000000 449fe000 4433c000
+  relayout 7 00000000 00000000 449fe000 4433c000
+  relayout 3 00000000 00000000 449fe000 4433c000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 5 6 7 3
+  visible 6 7 3
+popto 5
+  deactivate 3
+  close 3
+  dirty 6 43160000 43160000 43960000 43960000
+  redraw 6 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 7
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 6
+  clear-clips 6
+  deactivate 6
+  close 6
+  open 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 5
+  clear-clips 5
+  stack 5
+  visible 5
+events 900:5 for 3
+  queued 13
+  stack 5
+  visible 5
+events 910:3 for 1
+  process 873 form 1 entity 1
+  event-free 873
+  queued 13
+  stack 5
+  visible 5
+push 5
+  stack 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  stack
+  visible
+push 3
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 3
+  visible 3
+byid 3 = 3
+push 5
+  deactivate 3
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 3
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 3 5
+  visible 5
+relayoutall 960 480
+  relayout 3 00000000 00000000 446fc000 43ef8000
+  relayout 5 00000000 00000000 446fc000 43ef8000
+  clear-clips 5
+  stack 3 5
+  visible 5
+push 6
+  deactivate 5
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 5
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 3 5 6
+  visible 6
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  stack 3 5 6
+  visible 6
+push 1
+  deactivate 6
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 6
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 3 5 6 1
+  visible 1
+push 1
+  stack 3 5 6 1
+  visible 1
+pop
+  deactivate 1
+  close 1
+  open 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  activate 6
+  clear-clips 6
+  stack 3 5 6
+  visible 6
+byid 5 = 5
+pop
+  deactivate 6
+  close 6
+  open 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 5
+  clear-clips 5
+  stack 3 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  open 3
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 3
+  clear-clips 3
+  stack 3
+  visible 3
+swap 4
+  deactivate 3
+  close 3
+  open 4
+  activate 4
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 4
+  visible 4
+swap 1
+  deactivate 4
+  close 4
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+popto 3
+  stack 1
+  visible 1
+popto 2
+  stack 1
+  visible 1
+popto 6
+  stack 1
+  visible 1
+byid 4 = 4
+dirty 6 43180000 43d40000 43ad0000 44278000
+  stack 1
+  visible 1
+swap 7
+  deactivate 1
+  close 1
+  open 7
+  activate 7
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 7
+  visible 7
+pop
+  deactivate 7
+  close 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  stack
+  visible
+relayoutall 640 960
+  stack
+  visible
+pop
+  stack
+  visible
+swap 3
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 3
+  visible 3
+relayoutall 640 720
+  relayout 3 00000000 00000000 441fc000 4433c000
+  clear-clips 3
+  stack 3
+  visible 3
+byid 8 = -1
+popto 1
+  stack 3
+  visible 3
+swap 4
+  deactivate 3
+  close 3
+  open 4
+  activate 4
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 4
+  visible 4
+popto 7
+  stack 4
+  visible 4
+push 5
+  deactivate 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 4
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 4 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  open 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 4
+  clear-clips 4
+  stack 4
+  visible 4
+relayoutall 640 480
+  relayout 4 00000000 00000000 441fc000 43ef8000
+  clear-clips 4
+  stack 4
+  visible 4
+push 3
+  deactivate 4
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 4
+  clip 4 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 4 3
+  visible 4 3
+byid 2 = 2
+events 1230:4 1231:7 1232:7 1233:5 for 1
+  queued 17
+  stack 4 3
+  visible 4 3
+push 2
+  deactivate 3
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  close 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 4
+  clip 4 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 4 3 2
+  visible 4 2
+pop
+  deactivate 2
+  close 2
+  open 3
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 3
+  clear-clips 4
+  clip 4 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 4 3
+  visible 4 3
+popto 2
+  stack 4 3
+  visible 4 3
+popto 3
+  stack 4 3
+  visible 4 3
+push 3
+  stack 4 3
+  visible 4 3
+pop
+  deactivate 3
+  close 3
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 4
+  clear-clips 4
+  stack 4
+  visible 4
+byid 4 = 4
+pop
+  deactivate 4
+  close 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  stack
+  visible
+pop
+  stack
+  visible
+push 2
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 2
+  visible 2
+events 1330:3 for 7
+  process 270 form 7 entity 0
+  event-free 270
+  process 311 form 7 entity 1
+  event-free 311
+  process 871 form 7 entity 1
+  event-free 871
+  process 1231 form 7 entity 1
+  event-free 1231
+  process 1232 form 7 entity 0
+  event-free 1232
+  queued 13
+  stack 2
+  visible 2
+redrawall
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 2
+  visible 2
+push 2
+  stack 2
+  visible 2
+redrawall
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 2
+  visible 2
+byid 5 = 5
+redrawall
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 2
+  visible 2
+events 1380:6 for 6
+  process 870 form 6 entity 0
+  event-free 870
+  process 1380 form 6 entity 0
+  event-free 1380
+  queued 12
+  stack 2
+  visible 2
+redrawall
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 2
+  visible 2
+push 2
+  stack 2
+  visible 2
+swap 6
+  deactivate 2
+  close 2
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 6
+  visible 6
+popto 5
+  stack 6
+  visible 6
+swap 7
+  deactivate 6
+  close 6
+  open 7
+  activate 7
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 7
+  visible 7
+byid 5 = 5
+swap 7
+  stack 7
+  visible 7
+popto 4
+  stack 7
+  visible 7
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  stack 7
+  visible 7
+push 3
+  deactivate 7
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 7 3
+  visible 7 3
+dirty 5 43080000 4410c000 433b0000 441ac000
+  stack 7 3
+  visible 7 3
+pop
+  deactivate 3
+  close 3
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 7
+  clear-clips 7
+  stack 7
+  visible 7
+byid 1 = 1
+swap 4
+  deactivate 7
+  close 7
+  open 4
+  activate 4
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 4
+  visible 4
+popto 6
+  stack 4
+  visible 4
+dirty 3 43480000 43820000 43918000 43980000
+  stack 4
+  visible 4
+swap 5
+  deactivate 4
+  close 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 5
+  visible 5
+swap 2
+  deactivate 5
+  close 5
+  open 2
+  activate 2
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 2
+  visible 2
+push 6
+  deactivate 2
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 2
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 2 6
+  visible 6
+push 6
+  stack 2 6
+  visible 6
+byid 4 = 4
+push 2
+  stack 2 6
+  visible 6
+push 7
+  deactivate 6
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 2 6 7
+  visible 6 7
+pop
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 6
+  clear-clips 6
+  stack 2 6
+  visible 6
+popto 4
+  stack 2 6
+  visible 6
+pop
+  deactivate 6
+  close 6
+  open 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 2
+  clear-clips 2
+  stack 2
+  visible 2
+events 1630:2 1631:1 for 6
+  queued 14
+  stack 2
+  visible 2
+relayoutall 1280 960
+  relayout 2 00000000 00000000 449fe000 446fc000
+  clear-clips 2
+  stack 2
+  visible 2
+byid 7 = 7
+events 1650:2 1651:3 1652:6 for 7
+  queued 17
+  stack 2
+  visible 2
+events 1660:7 1661:4 1662:7 1663:2 for 7
+  process 1660 form 7 entity 0
+  event-free 1660
+  process 1662 form 7 entity 0
+  event-free 1662
+  queued 19
+  stack 2
+  visible 2
+swap 3
+  deactivate 2
+  close 2
+  open 3
+  activate 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 3
+  visible 3
+push 7
+  deactivate 3
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 3
+  clip 3 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 3 7
+  visible 3 7
+pop
+  deactivate 7
+  close 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 3
+  clear-clips 3
+  stack 3
+  visible 3
+popto 1
+  stack 3
+  visible 3
+pop
+  deactivate 3
+  close 3
+  dirty 3 43160000 43160000 43960000 43960000
+  stack
+  visible
+byid 5 = 5
+push 1
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+dirty 2 440ac000 429e0000 44568000 43400000
+  stack 1
+  visible 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  stack 1
+  visible 1
+push 7
+  deactivate 1
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 1
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 7
+  visible 1 7
+push 6
+  deactivate 7
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 7
+  close 1
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 1 7 6
+  visible 6
+push 5
+  deactivate 6
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 1 7 6 5
+  visible 6 5
+push 1
+  stack 1 7 6 5
+  visible 6 5
+byid 3 = 3
+push 1
+  stack 1 7 6 5
+  visible 6 5
+relayoutall 1280 480
+  relayout 1 00000000 00000000 449fe000 43ef8000
+  relayout 7 00000000 00000000 449fe000 43ef8000
+  relayout 6 00000000 00000000 449fe000 43ef8000
+  relayout 5 00000000 00000000 449fe000 43ef8000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 1 7 6 5
+  visible 6 5
+pop
+  deactivate 5
+  close 5
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 6
+  clear-clips 6
+  stack 1 7 6
+  visible 6
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  stack 1 7 6
+  visible 6
+swap 1
+  stack 1 7 6
+  visible 6
+pop
+  deactivate 6
+  close 6
+  open 1
+  open 7
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 7
+  clear-clips 1
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 7
+  visible 1 7
+relayoutall 640 480
+  relayout 1 00000000 00000000 441fc000 43ef8000
+  relayout 7 00000000 00000000 441fc000 43ef8000
+  clear-clips 1
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 7
+  visible 1 7
+byid 2 = 2
+swap 5
+  deactivate 7
+  close 7
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 1
+  clip 1 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 1 5
+  visible 1 5
+dirty 3 41700000 440b8000 43b80000 443c8000
+  stack 1 5
+  visible 1 5
+swap 3
+  deactivate 5
+  close 5
+  open 3
+  activate 3
+  dirty 1 42480000 42480000 446d8000 442f0000
+  redraw 1 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 1
+  clip 1 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 3
+  visible 1 3
+push 3
+  stack 1 3
+  visible 1 3
+push 2
+  deactivate 3
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  close 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 3 2
+  visible 1 2
+push 7
+  deactivate 2
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 3 2 7
+  visible 1 2 7
+popto 6
+  stack 1 3 2 7
+  visible 1 2 7
+byid 1 = 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  stack 1 3 2 7
+  visible 1 2 7
+push 6
+  deactivate 7
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 7
+  close 2
+  close 1
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 1 3 2 7 6
+  visible 6
+push 4
+  deactivate 6
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 6
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 1 3 2 7 6 4
+  visible 6 4
+events 1960:2 1961:4 1962:1 1963:3 for 7
+  queued 23
+  stack 1 3 2 7 6 4
+  visible 6 4
+swap 2
+  stack 1 3 2 7 6 4
+  visible 6 4
+pop
+  deactivate 4
+  close 4
+  dirty 6 44160000 42c80000 44610000 43fa0000
+  redraw 6 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 6
+  clear-clips 6
+  stack 1 3 2 7 6
+  visible 6
+pop
+  deactivate 6
+  close 6
+  open 1
+  open 2
+  open 7
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 7
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 2
+  clip 2 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 3 2 7
+  visible 1 2 7
+byid 3 = 3
+dirty 6 43670000 43d00000 43f98000 440bc000
+  stack 1 3 2 7
+  visible 1 2 7
+events 2010:5 2011:1 for 6
+  process 1652 form 6 entity 0
+  event-free 1652
+  queued 24
+  stack 1 3 2 7
+  visible 1 2 7
+pop
+  deactivate 7
+  close 7
+  dirty 1 43c80000 43960000 442f0000 44160000
+  redraw 1 43c80000 43960000 442f0000 44160000
+  dirty 2 43c80000 43960000 43fa0000 43c80000
+  redraw 2 43c80000 43960000 43fa0000 43c80000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 2
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 3 2
+  visible 1 2
+push 2
+  stack 1 3 2
+  visible 1 2
+pop
+  deactivate 2
+  close 2
+  open 3
+  dirty 1 42c80000 42c80000 43fa0000 43c80000
+  redraw 1 42c80000 42c80000 43fa0000 43c80000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 3
+  clear-clips 1
+  clip 1 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 3
+  visible 1 3
+relayoutall 1280 960
+  relayout 1 00000000 00000000 449fe000 446fc000
+  relayout 3 00000000 00000000 449fe000 446fc000
+  clear-clips 1
+  clip 1 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 3
+  visible 1 3
+push 7
+  deactivate 3
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 1
+  clip 1 43160000 43160000 43960000 43960000
+  clip 1 43c80000 43960000 442f0000 44160000
+  clear-clips 3
+  clip 3 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 1 3 7
+  visible 1 3 7
+byid 8 = -1
+push 1
+  stack 1 3 7
+  visible 1 3 7
+pop
+  deactivate 7
+  close 7
+  dirty 1 43c80000 43960000 442f0000 44160000
+  redraw 1 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 3
+  clear-clips 1
+  clip 1 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 3
+  visible 1 3
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 1 3
+  visible 1 3
+push 3
+  stack 1 3
+  visible 1 3
+pop
+  deactivate 3
+  close 3
+  dirty 1 43160000 43160000 43960000 43960000
+  redraw 1 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 1
+  clear-clips 1
+  stack 1
+  visible 1
+swap 2
+  deactivate 1
+  close 1
+  open 2
+  activate 2
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 2
+  visible 2
+popto 2
+  stack 2
+  visible 2
+byid 6 = 6
+swap 5
+  deactivate 2
+  close 2
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 5
+  visible 5
+push 1
+  deactivate 5
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 5
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 5 1
+  visible 1
+relayoutall 960 720
+  relayout 5 00000000 00000000 446fc000 4433c000
+  relayout 1 00000000 00000000 446fc000 4433c000
+  clear-clips 1
+  stack 5 1
+  visible 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  stack 5 1
+  visible 1
+relayoutall 960 480
+  relayout 5 00000000 00000000 446fc000 43ef8000
+  relayout 1 00000000 00000000 446fc000 43ef8000
+  clear-clips 1
+  stack 5 1
+  visible 1
+swap 6
+  deactivate 1
+  close 1
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 5 6
+  visible 6
+swap 4
+  deactivate 6
+  close 6
+  open 4
+  activate 4
+  open 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 5
+  clip 5 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 5 4
+  visible 5 4
+byid 7 = 7
+pop
+  deactivate 4
+  close 4
+  dirty 5 44160000 42c80000 44610000 43fa0000
+  redraw 5 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 5
+  clear-clips 5
+  stack 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  stack
+  visible
+push 2
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 2
+  visible 2
+relayoutall 960 720
+  relayout 2 00000000 00000000 446fc000 4433c000
+  clear-clips 2
+  stack 2
+  visible 2
+swap 1
+  deactivate 2
+  close 2
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+push 6
+  deactivate 1
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 1
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 1 6
+  visible 6
+push 3
+  deactivate 6
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 6 3
+  visible 6 3
+byid 8 = -1
+pop
+  deactivate 3
+  close 3
+  dirty 6 43160000 43160000 43960000 43960000
+  redraw 6 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 6
+  clear-clips 6
+  stack 1 6
+  visible 6
+push 3
+  deactivate 6
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 6 3
+  visible 6 3
+swap 1
+  stack 1 6 3
+  visible 6 3
+push 4
+  deactivate 3
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 1 6 3 4
+  visible 6 3 4
+events 2320:4 2321:1 for 5
+  process 232 form 5 entity 0
+  event-free 232
+  process 820 form 5 entity 0
+  event-free 820
+  process 900 form 5 entity 0
+  event-free 900
+  process 1233 form 5 entity 1
+  event-free 1233
+  process 2010 form 5 entity 0
+  event-free 2010
+  queued 21
+  stack 1 6 3 4
+  visible 6 3 4
+pop
+  deactivate 4
+  close 4
+  dirty 6 44160000 42c80000 44610000 43fa0000
+  redraw 6 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 3
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 6 3
+  visible 6 3
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 1 6 3
+  visible 6 3
+byid 3 = 3
+push 2
+  deactivate 3
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  close 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 6 3 2
+  visible 6 2
+push 4
+  deactivate 2
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 2
+  clip 2 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 1 6 3 2 4
+  visible 6 2 4
+relayoutall 1280 960
+  relayout 1 00000000 00000000 449fe000 446fc000
+  relayout 6 00000000 00000000 449fe000 446fc000
+  relayout 3 00000000 00000000 449fe000 446fc000
+  relayout 2 00000000 00000000 449fe000 446fc000
+  relayout 4 00000000 00000000 449fe000 446fc000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 2
+  clip 2 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 1 6 3 2 4
+  visible 6 2 4
+dirty 4 441ec000 42a00000 445dc000 42d00000
+  dirty 4 441ec000 42a00000 445dc000 42d00000
+  stack 1 6 3 2 4
+  visible 6 2 4
+pop
+  deactivate 4
+  close 4
+  dirty 6 44160000 42c80000 44610000 43fa0000
+  redraw 6 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 2
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 6 3 2
+  visible 6 2
+relayoutall 960 960
+  relayout 1 00000000 00000000 446fc000 446fc000
+  relayout 6 00000000 00000000 446fc000 446fc000
+  relayout 3 00000000 00000000 446fc000 446fc000
+  relayout 2 00000000 00000000 446fc000 446fc000
+  clear-clips 6
+  clip 6 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 6 3 2
+  visible 6 2
+swap 3
+  stack 1 6 3 2
+  visible 6 2
+byid 7 = 7
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 1 6 3 2
+  visible 6 2
+push 1
+  stack 1 6 3 2
+  visible 6 2
+pop
+  deactivate 2
+  close 2
+  open 3
+  dirty 6 42c80000 42c80000 43fa0000 43c80000
+  redraw 6 42c80000 42c80000 43fa0000 43c80000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 3
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 1 6 3
+  visible 6 3
+events 2450:4 2451:1 2452:6 for 6
+  process 2452 form 6 entity 0
+  event-free 2452
+  queued 23
+  stack 1 6 3
+  visible 6 3
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 1 6 3
+  visible 6 3
+push 4
+  deactivate 3
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 1 6 3 4
+  visible 6 3 4
+push 1
+  stack 1 6 3 4
+  visible 6 3 4
+byid 8 = -1
+popto 1
+  deactivate 4
+  close 4
+  dirty 6 44160000 42c80000 44610000 43fa0000
+  redraw 6 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 3
+  clear-clips 6
+  clip 6 43160000 43160000 43960000 43960000
+  clear-clips 3
+  deactivate 3
+  close 3
+  dirty 6 43160000 43160000 43960000 43960000
+  redraw 6 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 6
+  clear-clips 6
+  deactivate 6
+  close 6
+  open 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 1
+  clear-clips 1
+  stack 1
+  visible 1
+dirty 2 42000000 43cf0000 43c40000 44164000
+  stack 1
+  visible 1
+swap 4
+  deactivate 1
+  close 1
+  open 4
+  activate 4
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 4
+  visible 4
+push 5
+  deactivate 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 4
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 4 5
+  visible 5
+dirty 7 43750000 43f48000 437e0000 4438c000
+  stack 4 5
+  visible 5
+swap 6
+  deactivate 5
+  close 5
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 4 6
+  visible 6
+relayoutall 640 720
+  relayout 4 00000000 00000000 441fc000 4433c000
+  relayout 6 00000000 00000000 441fc000 4433c000
+  clear-clips 6
+  stack 4 6
+  visible 6
+byid 5 = 5
+popto 6
+  stack 4 6
+  visible 6
+dirty 5 42f00000 439b8000 43f08000 43da8000
+  stack 4 6
+  visible 6
+relayoutall 1280 720
+  relayout 4 00000000 00000000 449fe000 4433c000
+  relayout 6 00000000 00000000 449fe000 4433c000
+  clear-clips 6
+  stack 4 6
+  visible 6
+swap 1
+  deactivate 6
+  close 6
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 4 1
+  visible 1
+dirty 1 43f10000 43950000 441dc000 43ec8000
+  dirty 1 43f10000 43950000 441dc000 43ec8000
+  stack 4 1
+  visible 1
+pop
+  deactivate 1
+  close 1
+  open 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  activate 4
+  clear-clips 4
+  stack 4
+  visible 4
+popto 1
+  stack 4
+  visible 4
+byid 3 = 3
+relayoutall 960 720
+  relayout 4 00000000 00000000 446fc000 4433c000
+  clear-clips 4
+  stack 4
+  visible 4
+swap 6
+  deactivate 4
+  close 4
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 6
+  visible 6
+swap 1
+  deactivate 6
+  close 6
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+popto 1
+  stack 1
+  visible 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  stack 1
+  visible 1
+relayoutall 960 480
+  relayout 1 00000000 00000000 446fc000 43ef8000
+  clear-clips 1
+  stack 1
+  visible 1
+pop
+  deactivate 1
+  close 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  stack
+  visible
+byid 1 = 1
+pop
+  stack
+  visible
+dirty 5 43be8000 43ad0000 43e00000 44150000
+  stack
+  visible
+redrawall
+  stack
+  visible
+relayoutall 1280 480
+  stack
+  visible
+push 5
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 5
+  visible 5
+swap 6
+  deactivate 5
+  close 5
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 6
+  visible 6
+push 5
+  deactivate 6
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 6 5
+  visible 6 5
+byid 3 = 3
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  stack 6 5
+  visible 6 5
+push 7
+  deactivate 5
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clip 6 43c80000 43960000 442f0000 44160000
+  clear-clips 5
+  clip 5 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 6 5 7
+  visible 6 5 7
+pop
+  deactivate 7
+  close 7
+  dirty 6 43c80000 43960000 442f0000 44160000
+  redraw 6 43c80000 43960000 442f0000 44160000
+  dirty 5 43c80000 43960000 442f0000 44160000
+  redraw 5 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  activate 5
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 6 5
+  visible 6 5
+pop
+  deactivate 5
+  close 5
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 6
+  clear-clips 6
+  stack 6
+  visible 6
+dirty 2 443f0000 43e78000 44578000 4415c000
+  stack 6
+  visible 6
+swap 5
+  deactivate 6
+  close 6
+  open 5
+  activate 5
+  dirty 6 00000000 00000000 447fc000 443fc000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 5
+  visible 5
+push 5
+  stack 5
+  visible 5
+byid 8 = -1
+relayoutall 960 480
+  relayout 5 00000000 00000000 446fc000 43ef8000
+  clear-clips 5
+  stack 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  stack
+  visible
+redrawall
+  stack
+  visible
+pop
+  stack
+  visible
+events 2880:2 2881:7 2882:6 2883:7 for 3
+  process 910 form 3 entity 0
+  event-free 910
+  process 1330 form 3 entity 0
+  event-free 1330
+  process 1651 form 3 entity 1
+  event-free 1651
+  process 1963 form 3 entity 1
+  event-free 1963
+  queued 23
+  stack
+  visible
+relayoutall 960 720
+  stack
+  visible
+push 7
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 7
+  visible 7
+byid 5 = 5
+push 2
+  deactivate 7
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 2
+  visible 7 2
+push 7
+  stack 7 2
+  visible 7 2
+pop
+  deactivate 2
+  close 2
+  dirty 7 43c80000 43960000 43fa0000 43c80000
+  redraw 7 43c80000 43960000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 7
+  clear-clips 7
+  stack 7
+  visible 7
+dirty 7 43cc0000 43700000 441f8000 43a28000
+  dirty 7 43cc0000 43700000 441f8000 43a28000
+  stack 7
+  visible 7
+dirty 6 44454000 43958000 44802000 43f58000
+  stack 7
+  visible 7
+swap 7
+  stack 7
+  visible 7
+relayoutall 1280 720
+  relayout 7 00000000 00000000 449fe000 4433c000
+  clear-clips 7
+  stack 7
+  visible 7
+byid 8 = -1
+swap 1
+  deactivate 7
+  close 7
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 1
+  visible 1
+push 2
+  deactivate 1
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 2
+  visible 1 2
+dirty 3 41f80000 40a00000 43d60000 43460000
+  stack 1 2
+  visible 1 2
+dirty 4 43f78000 43310000 44148000 437e0000
+  stack 1 2
+  visible 1 2
+relayoutall 960 480
+  relayout 1 00000000 00000000 446fc000 43ef8000
+  relayout 2 00000000 00000000 446fc000 43ef8000
+  clear-clips 1
+  clip 1 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 1 2
+  visible 1 2
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 1 2
+  visible 1 2
+pop
+  deactivate 2
+  close 2
+  dirty 1 42c80000 42c80000 43fa0000 43c80000
+  redraw 1 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 1
+  clear-clips 1
+  stack 1
+  visible 1
+byid 7 = 7
+pop
+  deactivate 1
+  close 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  stack
+  visible
+popto 5
+  stack
+  visible
+dirty 5 44004000 42280000 441e0000 43900000
+  stack
+  visible
+swap 7
+  open 7
+  activate 7
+  dirty 7 43c80000 43960000 442f0000 44160000
+  dirty 7 43c80000 43960000 442f0000 44160000
+  clear-clips 7
+  stack 7
+  visible 7
+popto 3
+  stack 7
+  visible 7
+push 3
+  deactivate 7
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 7 3
+  visible 7 3
+byid 7 = 7
+push 4
+  deactivate 3
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clip 7 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 4
+  visible 7 3 4
+relayoutall 960 480
+  relayout 7 00000000 00000000 446fc000 43ef8000
+  relayout 3 00000000 00000000 446fc000 43ef8000
+  relayout 4 00000000 00000000 446fc000 43ef8000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clip 7 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 4
+  visible 7 3 4
+swap 3
+  stack 7 3 4
+  visible 7 3 4
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  set-all-dirty 4
+  stack 7 3 4
+  visible 7 3 4
+swap 3
+  stack 7 3 4
+  visible 7 3 4
+push 4
+  stack 7 3 4
+  visible 7 3 4
+swap 4
+  stack 7 3 4
+  visible 7 3 4
+byid 6 = 6
+push 4
+  stack 7 3 4
+  visible 7 3 4
+events 3200:7 3201:6 3202:1 3203:4 for 7
+  process 2881 form 7 entity 1
+  event-free 2881
+  process 2883 form 7 entity 1
+  event-free 2883
+  process 3200 form 7 entity 0
+  event-free 3200
+  queued 24
+  stack 7 3 4
+  visible 7 3 4
+push 5
+  deactivate 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 4
+  close 3
+  close 7
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 4 5
+  visible 5
+push 2
+  deactivate 5
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 5
+  clip 5 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 3 4 5 2
+  visible 5 2
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 7 3 4 5 2
+  visible 5 2
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  set-all-dirty 2
+  stack 7 3 4 5 2
+  visible 5 2
+push 7
+  stack 7 3 4 5 2
+  visible 5 2
+byid 0 = -1
+pop
+  deactivate 2
+  close 2
+  dirty 5 42c80000 42c80000 43fa0000 43c80000
+  redraw 5 42c80000 42c80000 43fa0000 43c80000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 5
+  clear-clips 5
+  stack 7 3 4 5
+  visible 5
+push 7
+  stack 7 3 4 5
+  visible 5
+push 5
+  stack 7 3 4 5
+  visible 5
+redrawall
+  dirty 5 42480000 42480000 446d8000 442f0000
+  set-all-dirty 5
+  stack 7 3 4 5
+  visible 5
+dirty 3 43fc8000 43a40000 44574000 43ff0000
+  stack 7 3 4 5
+  visible 5
+dirty 4 43da0000 42a00000 43f68000 43a98000
+  stack 7 3 4 5
+  visible 5
+relayoutall 960 480
+  relayout 7 00000000 00000000 446fc000 43ef8000
+  relayout 3 00000000 00000000 446fc000 43ef8000
+  relayout 4 00000000 00000000 446fc000 43ef8000
+  relayout 5 00000000 00000000 446fc000 43ef8000
+  clear-clips 5
+  stack 7 3 4 5
+  visible 5
+byid 7 = 7
+swap 3
+  stack 7 3 4 5
+  visible 5
+popto 6
+  stack 7 3 4 5
+  visible 5
+events 3350:1 for 6
+  process 2882 form 6 entity 0
+  event-free 2882
+  process 3201 form 6 entity 1
+  event-free 3201
+  queued 23
+  stack 7 3 4 5
+  visible 5
+pop
+  deactivate 5
+  close 5
+  open 7
+  open 3
+  open 4
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 4
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clip 7 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 4
+  visible 7 3 4
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  set-all-dirty 4
+  stack 7 3 4
+  visible 7 3 4
+push 5
+  deactivate 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  close 4
+  close 3
+  close 7
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 4 5
+  visible 5
+push 4
+  stack 7 3 4 5
+  visible 5
+byid 6 = 6
+pop
+  deactivate 5
+  close 5
+  open 7
+  open 3
+  open 4
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 4
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clip 7 44160000 42c80000 44610000 43fa0000
+  clear-clips 3
+  clip 3 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 4
+  visible 7 3 4
+pop
+  deactivate 4
+  close 4
+  dirty 7 44160000 43960000 442f0000 43fa0000
+  redraw 7 44160000 43960000 442f0000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  redraw 4 44160000 42c80000 44610000 43fa0000
+  activate 3
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+push 7
+  stack 7 3
+  visible 7 3
+push 2
+  deactivate 3
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  close 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 3 2
+  visible 7 2
+push 2
+  stack 7 3 2
+  visible 7 2
+pop
+  deactivate 2
+  close 2
+  open 3
+  dirty 7 43c80000 43960000 43fa0000 43c80000
+  redraw 7 43c80000 43960000 43fa0000 43c80000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 3
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 7 3
+  visible 7 3
+byid 1 = 1
+swap 3
+  stack 7 3
+  visible 7 3
+popto 1
+  stack 7 3
+  visible 7 3
+relayoutall 960 480
+  relayout 7 00000000 00000000 446fc000 43ef8000
+  relayout 3 00000000 00000000 446fc000 43ef8000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+push 2
+  deactivate 3
+  open 2
+  activate 2
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  close 3
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 3 2
+  visible 7 2
+popto 4
+  stack 7 3 2
+  visible 7 2
+events 3520:1 3521:1 3522:7 for 1
+  process 1631 form 1 entity 1
+  event-free 1631
+  process 1962 form 1 entity 0
+  event-free 1962
+  process 2011 form 1 entity 1
+  event-free 2011
+  process 2321 form 1 entity 1
+  event-free 2321
+  process 2451 form 1 entity 1
+  event-free 2451
+  process 3202 form 1 entity 0
+  event-free 3202
+  process 3350 form 1 entity 0
+  event-free 3350
+  process 3520 form 1 entity 0
+  event-free 3520
+  process 3521 form 1 entity 1
+  event-free 3521
+  queued 17
+  stack 7 3 2
+  visible 7 2
+dirty 3 43cb8000 439c0000 43f80000 43c40000
+  stack 7 3 2
+  visible 7 2
+byid 5 = 5
+push 3
+  stack 7 3 2
+  visible 7 2
+swap 3
+  stack 7 3 2
+  visible 7 2
+relayoutall 1280 720
+  relayout 7 00000000 00000000 449fe000 4433c000
+  relayout 3 00000000 00000000 449fe000 4433c000
+  relayout 2 00000000 00000000 449fe000 4433c000
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 3 2
+  visible 7 2
+push 7
+  stack 7 3 2
+  visible 7 2
+push 6
+  deactivate 2
+  open 6
+  activate 6
+  dirty 6 00000000 00000000 447fc000 443fc000
+  close 2
+  close 7
+  dirty 6 00000000 00000000 447fc000 443fc000
+  clear-clips 6
+  stack 7 3 2 6
+  visible 6
+push 7
+  stack 7 3 2 6
+  visible 6
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  stack 7 3 2 6
+  visible 6
+byid 7 = 7
+push 4
+  deactivate 6
+  open 4
+  activate 4
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 6
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 2 6 4
+  visible 6 4
+relayoutall 640 720
+  relayout 7 00000000 00000000 441fc000 4433c000
+  relayout 3 00000000 00000000 441fc000 4433c000
+  relayout 2 00000000 00000000 441fc000 4433c000
+  relayout 6 00000000 00000000 441fc000 4433c000
+  relayout 4 00000000 00000000 441fc000 4433c000
+  clear-clips 6
+  clip 6 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 3 2 6 4
+  visible 6 4
+events 3630:4 for 5
+  queued 18
+  stack 7 3 2 6 4
+  visible 6 4
+events 3640:4 3641:3 3642:2 3643:1 for 5
+  queued 22
+  stack 7 3 2 6 4
+  visible 6 4
+redrawall
+  dirty 6 00000000 00000000 447fc000 443fc000
+  set-all-dirty 6
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  set-all-dirty 4
+  stack 7 3 2 6 4
+  visible 6 4
+swap 7
+  stack 7 3 2 6 4
+  visible 6 4
+events 3670:5 for 1
+  process 3643 form 1 entity 1
+  event-free 3643
+  queued 22
+  stack 7 3 2 6 4
+  visible 6 4
+byid 2 = 2
+push 2
+  stack 7 3 2 6 4
+  visible 6 4
+swap 5
+  deactivate 4
+  close 4
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 2 6 5
+  visible 6 5
+events 3700:1 3701:3 for 4
+  process 272 form 4 entity 0
+  event-free 272
+  process 1230 form 4 entity 0
+  event-free 1230
+  process 1661 form 4 entity 1
+  event-free 1661
+  process 1961 form 4 entity 1
+  event-free 1961
+  process 2320 form 4 entity 0
+  event-free 2320
+  process 2450 form 4 entity 0
+  event-free 2450
+  process 3203 form 4 entity 1
+  event-free 3203
+  process 3630 form 4 entity 0
+  event-free 3630
+  process 3640 form 4 entity 0
+  event-free 3640
+  queued 15
+  stack 7 3 2 6 5
+  visible 6 5
+relayoutall 960 720
+  relayout 7 00000000 00000000 446fc000 4433c000
+  relayout 3 00000000 00000000 446fc000 4433c000
+  relayout 2 00000000 00000000 446fc000 4433c000
+  relayout 6 00000000 00000000 446fc000 4433c000
+  relayout 5 00000000 00000000 446fc000 4433c000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 2 6 5
+  visible 6 5
+swap 3
+  stack 7 3 2 6 5
+  visible 6 5
+swap 7
+  stack 7 3 2 6 5
+  visible 6 5
+push 3
+  stack 7 3 2 6 5
+  visible 6 5
+byid 2 = 2
+pop
+  deactivate 5
+  close 5
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 6
+  clear-clips 6
+  stack 7 3 2 6
+  visible 6
+events 3760:6 3761:1 for 2
+  process 230 form 2 entity 0
+  event-free 230
+  process 231 form 2 entity 1
+  event-free 231
+  process 310 form 2 entity 0
+  event-free 310
+  process 872 form 2 entity 0
+  event-free 872
+  process 1630 form 2 entity 0
+  event-free 1630
+  process 1650 form 2 entity 0
+  event-free 1650
+  process 1663 form 2 entity 1
+  event-free 1663
+  process 1960 form 2 entity 0
+  event-free 1960
+  process 2880 form 2 entity 0
+  event-free 2880
+  process 3642 form 2 entity 0
+  event-free 3642
+  queued 7
+  stack 7 3 2 6
+  visible 6
+dirty 3 43f20000 42960000 4411c000 43830000
+  stack 7 3 2 6
+  visible 6
+events 3780:5 3781:5 for 6
+  process 3760 form 6 entity 0
+  event-free 3760
+  queued 8
+  stack 7 3 2 6
+  visible 6
+push 6
+  stack 7 3 2 6
+  visible 6
+push 5
+  deactivate 6
+  open 5
+  activate 5
+  dirty 5 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 2 6 5
+  visible 6 5
+events 3810:5 for 4
+  queued 9
+  stack 7 3 2 6 5
+  visible 6 5
+byid 3 = 3
+push 1
+  deactivate 5
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 5
+  close 6
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 7 3 2 6 5 1
+  visible 1
+events 3830:1 3831:4 for 7
+  process 3522 form 7 entity 0
+  event-free 3522
+  queued 10
+  stack 7 3 2 6 5 1
+  visible 1
+pop
+  deactivate 1
+  close 1
+  open 6
+  open 5
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  activate 5
+  clear-clips 6
+  clip 6 42480000 42480000 446d8000 442f0000
+  clear-clips 5
+  stack 7 3 2 6 5
+  visible 6 5
+pop
+  deactivate 5
+  close 5
+  dirty 6 42480000 42480000 446d8000 442f0000
+  redraw 6 42480000 42480000 446d8000 442f0000
+  dirty 5 42480000 42480000 446d8000 442f0000
+  redraw 5 42480000 42480000 446d8000 442f0000
+  activate 6
+  clear-clips 6
+  stack 7 3 2 6
+  visible 6
+pop
+  deactivate 6
+  close 6
+  open 7
+  open 2
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  dirty 6 00000000 00000000 447fc000 443fc000
+  redraw 6 00000000 00000000 447fc000 443fc000
+  activate 2
+  clear-clips 7
+  clip 7 42c80000 42c80000 43fa0000 43c80000
+  clear-clips 2
+  stack 7 3 2
+  visible 7 2
+pop
+  deactivate 2
+  close 2
+  open 3
+  dirty 7 43c80000 43960000 43fa0000 43c80000
+  redraw 7 43c80000 43960000 43fa0000 43c80000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 2 42c80000 42c80000 43fa0000 43c80000
+  redraw 2 42c80000 42c80000 43fa0000 43c80000
+  activate 3
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+dirty 5 43080000 44008000 43090000 440d0000
+  stack 7 3
+  visible 7 3
+byid 1 = 1
+push 1
+  deactivate 3
+  open 1
+  activate 1
+  dirty 1 00000000 00000000 447fc000 443fc000
+  close 3
+  close 7
+  dirty 1 00000000 00000000 447fc000 443fc000
+  clear-clips 1
+  stack 7 3 1
+  visible 1
+redrawall
+  dirty 1 00000000 00000000 447fc000 443fc000
+  set-all-dirty 1
+  stack 7 3 1
+  visible 1
+popto 6
+  stack 7 3 1
+  visible 1
+push 7
+  stack 7 3 1
+  visible 1
+pop
+  deactivate 1
+  close 1
+  open 7
+  open 3
+  dirty 7 43c80000 43960000 442f0000 44160000
+  redraw 7 43c80000 43960000 442f0000 44160000
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 1 00000000 00000000 447fc000 443fc000
+  redraw 1 00000000 00000000 447fc000 443fc000
+  activate 3
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+events 3940:7 3941:1 for 7
+  process 3940 form 7 entity 0
+  event-free 3940
+  queued 11
+  stack 7 3
+  visible 7 3
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 7 3
+  visible 7 3
+byid 2 = 2
+push 3
+  stack 7 3
+  visible 7 3
+pop
+  deactivate 3
+  close 3
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  activate 7
+  clear-clips 7
+  stack 7
+  visible 7
+push 3
+  deactivate 7
+  open 3
+  activate 3
+  dirty 3 43160000 43160000 43960000 43960000
+  dirty 3 43160000 43160000 43960000 43960000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+swap 3
+  stack 7 3
+  visible 7 3
+push 3
+  stack 7 3
+  visible 7 3
+redrawall
+  dirty 7 43c80000 43960000 442f0000 44160000
+  set-all-dirty 7
+  dirty 3 43160000 43160000 43960000 43960000
+  set-all-dirty 3
+  stack 7 3
+  visible 7 3
+relayoutall 1280 720
+  relayout 7 00000000 00000000 449fe000 4433c000
+  relayout 3 00000000 00000000 449fe000 4433c000
+  clear-clips 7
+  clip 7 43160000 43160000 43960000 43960000
+  clear-clips 3
+  stack 7 3
+  visible 7 3
+byid 7 = 7
+push 7
+  stack 7 3
+  visible 7 3
+events 4040:3 4041:5 4042:4 for 6
+  queued 14
+  stack 7 3
+  visible 7 3
+swap 7
+  stack 7 3
+  visible 7 3
+swap 4
+  deactivate 3
+  close 3
+  open 4
+  activate 4
+  dirty 3 43160000 43160000 43960000 43960000
+  redraw 3 43160000 43160000 43960000 43960000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  dirty 4 44160000 42c80000 44610000 43fa0000
+  clear-clips 7
+  clip 7 44160000 42c80000 44610000 43fa0000
+  clear-clips 4
+  stack 7 4
+  visible 7 4
+push 4
+  stack 7 4
+  visible 7 4
+push 4
+  stack 7 4
+  visible 7 4
+push 7
+  stack 7 4
+  visible 7 4
+byid 5 = 5
+drain 1
+  process 3700 form 1 entity 0
+  event-free 3700
+  process 3761 form 1 entity 1
+  event-free 3761
+  process 3830 form 1 entity 0
+  event-free 3830
+  process 3941 form 1 entity 1
+  event-free 3941
+  queued 10
+drain 2
+  queued 10
+drain 3
+  process 3641 form 3 entity 1
+  event-free 3641
+  process 3701 form 3 entity 1
+  event-free 3701
+  process 4040 form 3 entity 0
+  event-free 4040
+  queued 7
+drain 4
+  process 3831 form 4 entity 1
+  event-free 3831
+  process 4042 form 4 entity 0
+  event-free 4042
+  queued 5
+drain 5
+  process 3670 form 5 entity 0
+  event-free 3670
+  process 3780 form 5 entity 0
+  event-free 3780
+  process 3781 form 5 entity 1
+  event-free 3781
+  process 3810 form 5 entity 0
+  event-free 3810
+  process 4041 form 5 entity 1
+  event-free 4041
+  queued 0
+drain 6
+  queued 0
+drain 7
+  queued 0
+end

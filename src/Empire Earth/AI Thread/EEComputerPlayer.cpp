@@ -1041,7 +1041,7 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
     unsigned long theCount = this->mResourceCenters.size();
     for (; i < theCount; i++) {
         EECPResourceCenter* theCenter = this->mResourceCenters[i];
-        theUnits = theCenter->mUnits;
+        theUnits.assign(theCenter->mUnits.begin(), theCenter->mUnits.end());
         std::vector<EEUnit*>::iterator theFound = std::find(theUnits.begin(), theUnits.end(), inUnit);
         if (theFound != theUnits.end()) {
             theResult = theCenter;

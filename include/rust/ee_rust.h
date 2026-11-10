@@ -131,6 +131,13 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
+/// `kCheckStateOff`, `kCheckStateOn`, `kCheckStateNot`.
+constexpr static const unsigned long CHECK_OFF = 0;
+
+constexpr static const unsigned long CHECK_ON = 1;
+
+constexpr static const unsigned long CHECK_NOT = 2;
+
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
 
@@ -2305,6 +2312,59 @@ struct EeUiButtonRefs {
   void *ctx;
 };
 
+/// `UITriStateCheckBox`'s members in their C++ order (from `mTextLabel` on).
+struct EeUiTriStateFields {
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  /// 0 off, 1 on, 2 "not".
+  unsigned long check_state;
+  bool has_text;
+};
+
+/// Where a `UITriStateCheckBox` keeps what the Rust side reads and writes.
+struct EeUiTriStateRefs {
+  /// The `UITriStateCheckBox*`.
+  void *button;
+  /// Its record from `mTextLabel` on.
+  EeUiTriStateFields *fields;
+  /// `mRectangle`.
+  const EeUiRect *rect;
+  /// `mBorderThickness`.
+  const unsigned long *border;
+  /// A `SetText`'s text and font for the label host calls (`UIButtonRust::Label`), else NULL.
+  void *ctx;
+};
+
+/// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
+struct EeUiBlinkFields {
+  /// 1 fading out, 0 fading in.
+  unsigned long blink_phase;
+  /// Milliseconds per phase, 50..5000.
+  unsigned long blink_rate;
+  float pressed_opacity;
+  float normal_opacity;
+  float bg_opacity;
+  float full_border_opacity;
+  bool saved_always_dirty;
+  bool needs_opacities;
+  bool is_blinking;
+};
+
+/// What `CopyData` shows: the background's, the border's and the two bitmaps' opacities.
+struct EeUiBlinkShow {
+  float background;
+  float border;
+  float pressed;
+  float normal;
+};
+
+/// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
+struct EeUiSlice {
+  EeUiRect source;
+  EeUiRect destination;
+  EeUiPoint location;
+};
+
 /// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
 struct EeUiComboFields {
   void *text_box;
@@ -2326,6 +2386,146 @@ struct EeUiComboRefs {
   const EeUiRect *rect;
   const unsigned long *index;
   void *ctx;
+};
+
+/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
+struct EeUiControlsTableFields {
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  /// `mUnknown100`: the record's unused id, copied and never read.
+  long unknown100;
+  long id;
+  long form_id;
+  unsigned long group;
+  unsigned long control_type;
+  long form_index;
+  long border_thickness;
+  unsigned long string_table_id;
+  unsigned long font_table_index;
+  long blink_rate;
+  long string_table_begin;
+  long string_table_end;
+  long text_alignment;
+  long max_chars;
+  long start_current_selection;
+  long start_range;
+  long end_range;
+  long current_range;
+  long page_size;
+  bool is_visible;
+  bool start_checked;
+  bool list_box_always_dirty;
+  bool sort_list_box;
+  bool focused_has_alpha;
+  bool pressed_has_alpha;
+  bool normal_has_alpha;
+  bool always_dirty;
+  bool fit_rect_to_text;
+  bool scale_to_control;
+  bool loop_movie;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// Where one `UIControlsTable` keeps what the Rust side writes.
+struct EeUiControlsTableRefs {
+  EeUiControlsTableFields *fields;
+  EeUiLayout *layout;
+  EeUiColor *background;
+  EeUiColor *text_foreground;
+  EeUiColor *selected_list_box;
+  EeUiColor *focused_line;
+  EeUiRect *normal_rect;
+  EeUiRect *pressed_rect;
+  EeUiRect *focused_rect;
+};
+
+/// One record of the controls database file (`UIDbControl`, 860 bytes on every target).
+struct EeUiDbControl {
+  uint8_t label[100];
+  uint8_t normal_file_name[100];
+  uint8_t pressed_file_name[100];
+  uint8_t focused_file_name[100];
+  uint8_t button_down_sound[100];
+  uint8_t button_up_sound[100];
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  uint32_t unused1[5];
+  float left_offset;
+  float right_offset;
+  float bottom_offset;
+  float top_offset;
+  int32_t unused_db_record_id;
+  int32_t id;
+  int32_t form_id;
+  uint32_t group;
+  uint32_t control_type;
+  int32_t form_index;
+  int32_t border_thickness;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t background_red;
+  uint32_t background_green;
+  uint32_t background_blue;
+  int32_t string_table_begin;
+  int32_t string_table_end;
+  uint32_t font_table_index;
+  uint32_t text_foreground_red;
+  uint32_t text_foreground_green;
+  uint32_t text_foreground_blue;
+  int32_t text_alignment;
+  int32_t normal_left;
+  int32_t normal_right;
+  int32_t normal_top;
+  int32_t normal_bottom;
+  int32_t pressed_left;
+  int32_t pressed_right;
+  int32_t pressed_top;
+  int32_t pressed_bottom;
+  int32_t focused_left;
+  int32_t focused_right;
+  int32_t focused_top;
+  int32_t focused_bottom;
+  int32_t max_chars;
+  uint32_t selected_list_box_red;
+  uint32_t selected_list_box_green;
+  uint32_t selected_list_box_blue;
+  int32_t start_current_selection;
+  uint32_t focused_line_red;
+  uint32_t focused_line_green;
+  uint32_t focused_line_blue;
+  int32_t start_range;
+  int32_t end_range;
+  int32_t current_range;
+  int32_t page_size;
+  int32_t string_table_id;
+  int32_t blink_rate;
+  uint32_t unused2[3];
+  uint8_t is_visible;
+  uint8_t start_checked;
+  uint8_t list_box_always_dirty;
+  uint8_t sort_list_box;
+  uint8_t focused_has_alpha;
+  uint8_t pressed_has_alpha;
+  uint8_t normal_has_alpha;
+  uint8_t always_dirty;
+  uint8_t fit_rect_to_text;
+  uint8_t scale_to_control;
+  uint8_t loop_movie;
 };
 
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
@@ -2376,18 +2576,6 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -2636,6 +2824,20 @@ struct EeUiRadioFields {
   bool has_text;
   bool is_push_button;
   bool scale_bitmap;
+};
+
+/// A table's identity as `AddControlLike` and `MoveControlsHorizontally` search the static array.
+struct EeUiControlsTableKey {
+  long id;
+  long form_id;
+  long form_index;
+};
+
+/// One queued event (`UIEventTrigger`): the referenced event, its form and entity, C++'s.
+struct EeUiTrigger {
+  void *event;
+  void *form;
+  void *entity;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -6196,6 +6398,55 @@ void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
 /// `UIRadioButton::SetText` (`ctx` as for the check box).
 void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
 
+/// The constructor's `UIButton` rectangle.
+EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);
+
+/// The constructor's bitmap offset: true and `out` written, or false to keep it.
+bool ee_ui_tristate_bitmap_offset(float height, unsigned long border, EeUiPoint *out);
+
+/// `UITriStateCheckBox::ChangeWidth`.
+void ee_ui_tristate_change_width(const EeUiTriStateRefs *refs, unsigned long width);
+
+/// `UITriStateCheckBox::CopyData`.
+long ee_ui_tristate_copy_data(const EeUiTriStateRefs *refs);
+
+/// `UITriStateCheckBox::SetCheckState`.
+void ee_ui_tristate_set_check_state(const EeUiTriStateRefs *refs, unsigned long state);
+
+/// `UITriStateCheckBox::SetLocation`.
+void ee_ui_tristate_set_location(const EeUiTriStateRefs *refs, EeUiPoint at);
+
+/// `UITriStateCheckBox::SetText` (`ctx` in `refs`: the C++ text and font for the label host calls).
+void ee_ui_tristate_set_text(const EeUiTriStateRefs *refs, const char *s);
+
+/// `UITriStateCheckBox::CycleCheck`.
+void ee_ui_tristate_cycle(const EeUiTriStateRefs *refs);
+
+/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
+void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
+
+/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
+EeUiBlinkShow ee_ui_blink_copy_data(EeUiBlinkFields *fields,
+                                    bool polled,
+                                    unsigned long time_left,
+                                    unsigned long state,
+                                    float bg,
+                                    float border);
+
+/// `UIScalableButton::CopyData`'s source rectangle for the state.
+EeUiRect ee_ui_scalable_copied_rect(unsigned long state,
+                                    bool has_focused_bitmap,
+                                    const EeUiRect *normal,
+                                    const EeUiRect *focused,
+                                    const EeUiRect *pressed,
+                                    const EeUiRect *current);
+
+/// `UIScalableButton::DrawPolygons`' three slices, written to `out[0..3]`.
+void ee_ui_scalable_slices(const EeUiRect *copied,
+                           const EeUiRect *draw,
+                           unsigned long texture_width,
+                           EeUiSlice *out);
+
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
 
@@ -6267,6 +6518,80 @@ long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
 
 /// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
 long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
+
+/// The default constructor's fields (written whole).
+void ee_ui_controls_table_init(const EeUiControlsTableRefs *refs);
+
+/// The record constructor: the fields, layout, colours and texture rectangles from a database record (written whole).
+void ee_ui_controls_table_from_record(const EeUiControlsTableRefs *refs,
+                                      const EeUiDbControl *record);
+
+/// `Create` keeps a record whose id is not negative.
+bool ee_ui_controls_table_record_is_control(int32_t id);
+
+/// `AddControlLike`'s searches over the static array -> whether a template was found, at `*index`.
+bool ee_ui_controls_table_find_template(long template_id,
+                                        long id,
+                                        long form_index,
+                                        unsigned long *index);
+
+/// `AddControlLike`'s edits to the template's copy.
+void ee_ui_controls_table_like(const EeUiControlsTableRefs *refs,
+                               long id,
+                               long form_index,
+                               unsigned long group,
+                               float left,
+                               float right,
+                               float top,
+                               float bottom,
+                               long string_table_begin,
+                               long string_table_end,
+                               unsigned long help_string_id);
+
+/// `MoveControlsHorizontally` -> how many tables moved.
+long ee_ui_controls_table_move_horizontally(long form_id,
+                                            long first,
+                                            long last,
+                                            float left_delta,
+                                            float right_delta);
+
+/// `SetupFont`: the scaled font follows the window.
+bool ee_ui_controls_table_font_scales_to_window(unsigned long control_type, bool scale_to_window);
+
+/// `SetupFont`: the size of a font scaled to the control.
+long ee_ui_controls_table_control_font_size(float height, long border);
+
+/// `SetupFont`: the size of a font scaled to the window.
+long ee_ui_controls_table_window_font_size(long font_height,
+                                           unsigned long window_height,
+                                           unsigned long designed_height);
+
+/// `SetupStringArray`: how many strings the range names (0: none).
+unsigned long ee_ui_controls_table_string_count(long begin, long end);
+
+/// `CreateControl`'s parent rectangle.
+EeUiRect ee_ui_controls_table_parent_rect(unsigned long window_width,
+                                          unsigned long window_height,
+                                          bool exclusive);
+
+/// `CreateControl`'s font rectangle.
+EeUiRect ee_ui_controls_table_font_rect(const EeUiRect *rect, bool exclusive);
+
+/// `CreateComboBox`: the closed box's rectangle, the list's height at `*list_height`.
+EeUiRect ee_ui_controls_table_combo_list(const EeUiRect *rect,
+                                         bool scale_to_control,
+                                         long font_height,
+                                         long border,
+                                         long *list_height);
+
+/// `CreateFileComboBox`: the box's width, its height at `*height`.
+float ee_ui_controls_table_file_combo_size(const EeUiRect *rect, long *height);
+
+/// `CreateScrollBar`: the bar's length.
+float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical);
+
+/// `CreateSlider`: the page size, capped below the range.
+long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
 
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
@@ -6468,6 +6793,44 @@ void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
 /// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
 
+/// `UIManager::AddDirtyRectangle(rect, form)`.
+void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);
+
+/// `UIManager::Pop`'s body (inside the locks).
+void ee_ui_manager_pop(void *manager);
+
+/// `UIManager::PopTo`'s body (inside the locks).
+void ee_ui_manager_pop_to(void *manager, void *form);
+
+/// `UIManager::Push`'s body (inside the locks).
+void ee_ui_manager_push(void *manager, void *form);
+
+/// `UIManager::SwapForm`'s body (inside the locks).
+void ee_ui_manager_swap_form(void *manager, void *form);
+
+/// `UIManager::RedrawAll`'s body (inside the lock).
+void ee_ui_manager_redraw_all(void *manager);
+
+/// `UIManager::RelayoutAllForms`.
+void ee_ui_manager_relayout_all_forms(void *manager,
+                                      unsigned long window_width,
+                                      unsigned long window_height);
+
+/// `UIManager::ResetClippedForms`.
+void ee_ui_manager_reset_clipped_forms(void *manager);
+
+/// `UIManager::GetFormByID` -> the form, or NULL.
+void *ee_ui_manager_form_by_id(void *manager, unsigned long id);
+
+/// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
+long ee_ui_manager_wheel_scroll_amount(long value);
+
+/// `UpdateUI`'s event loop.
+void ee_ui_manager_process_all_events(void *manager);
+
+/// `UIManager::ProcessAllEventsForForm(form)`.
+void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
+
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
 
@@ -6557,6 +6920,15 @@ void ee_ui_slider_set_range(void *slider,
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);
+
+/// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
+void ee_units_register(uint32_t id, void *unit);
+
+/// Clears `id`'s entry if it still names `unit` (`RTSUnit::FreeNode`); returns whether it did.
+bool ee_units_unregister(uint32_t id, void *unit);
+
+/// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
+void *ee_units_resolve(uint32_t id);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

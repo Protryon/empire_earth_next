@@ -12,3 +12,5 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_plat_core = { path = "../ee_plat_core" }
+# the blinking button's fade: UMSin, the Graphics Engine's table cosine
+ee_ge = { path = "../ee_ge" }

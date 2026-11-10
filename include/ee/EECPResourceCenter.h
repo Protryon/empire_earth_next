@@ -40,7 +40,7 @@ public:
 
     EEComputerPlayer* mPlayer;              // +0x00
     EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
-    std::vector<EEUnit*> mUnits;            // +0x04 (Load reads the ids, Restore turns them into referenced units)
+    std::vector<EEUnitHandle<EEUnit> > mUnits;   // +0x04 (referenced; Load reads the ids, Restore turns them into referenced units; handles since R5a.4, the vector's order kept)
     EEComplexUnit* GetUnit() const { return this->mUnit; }
     EEUnitHandle<EEComplexUnit> mUnit;      // +0x14 the centre's main unit (referenced; a handle since R5a.4)
     bool mIsActive;                         // +0x18 (saved from version 0x8d)
