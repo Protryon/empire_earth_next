@@ -849,7 +849,11 @@ mod tests {
     fn scaled_waits_time_out_early_and_still_see_their_events() {
         use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0, WAIT_TIMEOUT};
         use windows_sys::Win32::System::Threading::{CreateEventA, SetEvent};
-        assert!(unsafe { sim_wait(&[std::ptr::null_mut()], 100) }.is_none(), "no factor: the caller waits");
+        {
+            // under the lock the factor tests hold: another test's factor would make this wait scaled
+            let _guard = crate::test_globals();
+            assert!(unsafe { sim_wait(&[std::ptr::null_mut()], 100) }.is_none(), "no factor: the caller waits");
+        }
         with_factor(100, 1, || unsafe {
             let event = CreateEventA(std::ptr::null(), 0, 0, std::ptr::null());
             let start = std::time::Instant::now();
