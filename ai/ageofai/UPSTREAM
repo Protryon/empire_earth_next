@@ -296,10 +296,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 archery range's 15 touching spots all fell to the drop sites' box (the engine put the barracks by the
                 town centre) - the verb placed them.
   priority.c    NOT STARTED (the priority list: one row for each thing the AI saves for, every spender asks it).
-  forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat),
-                attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +
-                3 x the threat at it - the force's next target once its building is down). Missing: the
-                walk-and-fight record (goal_near, unit_fighting: the engine's action field stands in).
+  forces.c      PORTED -> C++ ai.reach (area_id, cont_at, cont_ok: the continents), lib/army.lua (goal_near: the
+                unit's goal place within r, from the record's tx/ty and action; fighting (unit_fighting): an attack
+                on a target that lives; home_threat: the enemy soldiers and siege seen within 20 tiles of any own
+                building but walls - used by navy.lua's landing plan and waves for the soldiers kept at home, which
+                counted the enemies within 30 tiles of the town before), tactics.lua (the siege's move with
+                goal_near), attack.lua (enemy_objective: the target's known building on the force's land nearest by
+                distance + 3 x the threat at it - the force's next target once its building is down), army.lua (the
+                enemy army in its territory as the threat). Not applicable: asg_live (the game's attack subgroups),
+                is_aa (landing.c's anti-air stay home: the landing takes the force's land soldiers).
   stats.c       PARTLY -> stats.lua (M.ratio(own_ids, enemy_ids), M.estimate; fight_estimate = false as upstream:
                 the summed hit points x attack of ai.strength stand in everywhere). Ported: the fight by type
                 (st_side, the groups), st_shot_t's shape, the reload + ST_SHOT_OVERHEAD, stg_reaches (range: a unit

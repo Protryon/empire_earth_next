@@ -18,6 +18,7 @@
 local V = require("lib.view")
 local S = require("ageofai.settings")
 local AT = require("ageofai.attack")   -- [attack.c] the siege's target and firing position
+local LA = require("lib.army")        -- [forces.c] goal_near
 local M = {}
 
 local SIEGE = {"gun_siege13_paladin_cannon", "gun_siege10_howitzer_cannon", "gun_siege09_serpentine_cannon",
@@ -155,7 +156,7 @@ function M.siege_fire(view, mem, force)
             if u.target ~= t.id then
                 fire[#fire + 1] = u.id
             end
-        elseif not (u.action == "move" and u.tx ~= nil and math.abs(u.tx - px) < 2 and math.abs(u.ty - py) < 2) then
+        elseif not (u.action == "move" and LA.goal_near(u, px, py, 2)) then   -- [forces.c] goal_near
             go[#go + 1] = u.id
         end
         mem.shell[u.id] = now + S.siege_fire_every * 3
