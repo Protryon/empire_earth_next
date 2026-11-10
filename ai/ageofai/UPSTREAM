@@ -10,43 +10,95 @@ and carry the changed decisions into the Lua module named. The port keeps the de
 the force's rules), not the engine patches: what upstream patches into the original exe (danger routes, honest
 vision, the group move, the unload retries) is a C++ helper of this engine (docs/AI_LUA_UNITS.md §4, §11).
 
-Per-file map (upstream dll/ai/<file> -> this folder):
-  econ.c        budget_reserve / spend_reserve (the epoch reserve), hook_add_resource (the military account and its
-                income shares), econ_targets (the worker plan by shortfall and rate), citizens_home (not ported:
-                the engine's finders keep citizens on safe sites), gather_research, early_requirements, the copper
-                plan's epoch attempt, substitute_soldier (the strongest affordable soldier), hoard caps
-                                                                        -> econ.lua (budget, workers, epoch), army.lua (choice)
-  early.c       early_towers (two towers by the town centre: the front and the citizens' side), the builders
-                                                                        -> econ.lua (towers); tower_bait, early_militia: the
-                                                                           engine's reflexes (ai.reflex on) stand in
-  food.c        food_plan_needs (the citizens' food, the real wood need), the hunters       -> econ.lua (workers)
-  mines.c       mine_drops / wood_drops (a settlement at the unworked mine or forest edge nearest a drop site)
-                                                                        -> econ.lua (settlements)
-  citizens.c    cz_targets (the citizens wanted from the mines' places, FEED)                -> econ.lua (citizens)
-  defence.c     def_refresh (the fronts: towards the nearest enemy buildings known), defence_tick (towers at the
-                fronts and the outposts), home_guard, muster                            -> econ.lua (towers), army.lua
-  armies.c      the force (one land army ordered as one: home at the station, the push at the attack time when it
-                beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home under AR_BACK_PCT
-                twice running, the next building, the raid answered, the way home as a convoy)   -> army.lua
-  stage.c       the staging point (the last point of the way out of the enemy's reach)       -> army.lua
-  intel.c       honest vision's memory (buildings until seen gone, soldiers remembered 3 minutes)
-                                                                        -> C++: the enemy memory (ai.memory)
-  danger.c      the threat map (defences at range, soldiers, hurt citizens)           -> C++: ai.danger "threat"
-  cover.c       DANGER_LOST (where own units traded badly, 20 minutes)                 -> C++: ai.danger "lost"
-  shiproute.c   danger-aware routes                                                     -> C++: ai.route (cells)
-  army.c        army_plan BUILD (one more production building of the kind trained when the producers are busy)
-                                                                        -> econ.lua (buildings)
-  attack.c      the siege controller (siege_want / siege_train: 2 + a quarter of the known defences, at most 4,
-                from a Siege Factory, a pause after 3 lost in 10 minutes)                  -> tactics.lua (siege)
-  garrison.c    the settlement upgrades (spare citizens into the drop site with the most metal mines near)
-                                                                        -> tactics.lua (garrison)
-  counterfire.c the shooters out of reach answered by the soldiers near when they win by 1.5 (the micro step, 250 ms
-                for upstream's 2 s)                                     -> tactics.lua (counterfire)
-  Not ported yet (in order of value): landing.c, fleet.c, navy.c, transports.c (the navy and landings), expand.c,
-  towns.c (other islands, resource towns, forward bases), the rest of attack.c (weak spots, breaches, the
-  commander's patches), bunker.c (fortresses, the shelf), airstrike.c, diplo.c, spoils.c, skirmish.c, metal.c,
-  mass.c, fronts.c, sites.c, packing.c, priority.c, forces.c, stats.c.
+Per-file map (upstream dll/ai/<file> -> this folder). Each line says PORTED, PARTLY (what is missing), ENGINE (a
+C++ helper of this engine stands in, nothing to port) or NOT STARTED.
+
+  econ.c        PARTLY -> econ.lua (budget, workers, epoch), army.lua (choice). Ported: budget_reserve /
+                spend_reserve (the epoch reserve; from farms only what the income cannot bring back),
+                hook_add_resource (the military account and its income shares), econ_targets (the worker plan by
+                shortfall and rate), gather_research, early_requirements, the copper plan's epoch attempt,
+                substitute_soldier (the strongest affordable soldier), hoard caps. Missing: citizens_home (the
+                engine's finders keep citizens on safe sites), train_budget's priority rows (priority.c).
+  early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
+                centre: the front and the citizens' side), the builders, tower_bait (the citizens hit lead the
+                raiders under the towers, epochs 1-2). Missing: early_militia (the engine's reflexes, ai.reflex,
+                stand in).
+  food.c        PORTED -> econ.lua (workers, claims): food_plan_needs (the citizens' food, the real wood need), the
+                hunters, the patches (the engine's claims stand in for the site lists).
+  mines.c       PORTED -> econ.lua (settlements): mine_drops / wood_drops (a settlement at the unworked mine or
+                forest edge nearest a drop site).
+  citizens.c    PORTED -> econ.lua (citizens): cz_targets (the citizens wanted from the mines' places, FEED).
+  defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers).
+                Ported: def_refresh (the fronts: towards the nearest enemy buildings known), defence_tick (towers at
+                the fronts and the outposts), home_guard, muster. Missing: WALLS (the 11-tile straight wall 3 tiles
+                before two towers at a front, the gate in its middle), ENCLOSE (the octagon round the town, the
+                coast's ring on an island), DOCK POCKETS; the engine has ai.wall / ai.gate / ai.lock for them.
+  armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
+                attack time when it beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home
+                under AR_BACK_PCT twice running, the next building, the raid answered, the way home as a convoy).
+                Missing: the detachments (the raid parties on the enemy's economy and outposts).
+  stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
+  intel.c       ENGINE -> C++ (ai.memory, ai.seen): honest vision's memory (buildings until seen gone, soldiers
+                remembered 3 minutes).
+  danger.c      ENGINE -> C++ ai.danger "threat": the threat map (defences at range, soldiers, hurt citizens).
+  cover.c       ENGINE -> C++ ai.danger "lost": DANGER_LOST (where own units traded badly, 20 minutes).
+  shiproute.c   ENGINE -> C++ ai.route (cells): danger-aware routes.
+  army.c        PORTED -> econ.lua (buildings): army_plan BUILD (one more production building of the kind trained
+                when the producers are busy).
+  attack.c      PARTLY -> tactics.lua (siege), C++ ai.route (the routing round known defences). Ported: the siege
+                controller (siege_want / siege_train: 2 + a quarter of the known defences, at most 4, from a Siege
+                Factory, a pause after 3 lost in 10 minutes), site_danger (the engine's blocked == "tower").
+                Missing: the weak spots (the target's least defended side), the breaches (through a known wall away
+                from the towers), the commander's patches (the engine's attack groups are not used: the force is
+                the port's).
+  garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades (spare citizens into the drop site with
+                the most metal mines near).
+  counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
+                they win by 1.5 (the micro step, 250 ms for upstream's 2 s).
+  bunker.c      PARTLY -> tactics.lua (bunkers, shelter): a Fortress by the drop site nearest the base once
+                citizens were hurt three times in two minutes, the citizens hit shelter in it, let out when quiet.
+                Missing: the shelf (the fortress's own soldiers), bk_capacity's airport part.
+  navy.c        PARTLY -> navy.lua, lib/navy.lua. Ported: the sea scout (a warship looks over the water from the
+                Stone Age), the navy account's share, transports and a warship from the account. Missing: the
+                fishing boat type, docks and fleet room (stage 1), the warship mix (navy_pick, stage 2).
+  fleet.c       NOT STARTED (the fleet led as one: massing under the towers while weaker, the strike once stronger,
+                the split when clearly stronger, the fishing boats guarded). lib/navy.lua's N.fleet_step is the
+                engine-side move helper only.
+  transports.c  ENGINE -> C++ (the unload retries at the next shore tile; the stalled transport watchdog is the
+                engine's own transport goal). Nothing to port.
+  landing.c     PARTLY -> navy.lua (landing), lib/navy.lua (N.beach, N.plan, N.landing_step). Ported: the beach
+                (the weakest defended shore of the target's continent), the size (1.2 x of 1.4 x the beach's
+                strength), board / sail / unload with retries. Missing: the bridgehead (citizens, towers), the
+                landing's own fleet escort, the second wave, the return of the transports.
+  expand.c      NOT STARTED (expansion to other islands: the empty continent with the most mines nearest the
+                base, the mining camp with a drop site, towers and a barracks, the outpost ferries).
+  towns.c       PARTLY -> econ.lua (settlements: a town centre instead of a settlement at a far mineral site from
+                the Copper Age). Missing: RESOURCE TOWNS (the richest free mine group 32-90 tiles out, its
+                towers_per_town towers, production), FORWARD BASES (the tactical operations centre near the enemy),
+                the towns' defences and walls.
+  airstrike.c   NOT STARTED (the bombers held as a wing of AF_WING, trained while a position needs them, the
+                bombing run on the shooters' spot).
+  diplo.c       NOT STARTED (answer war, the blocks, the vassals, the tributes; the engine has ai.diplomacy and
+                ai.tribute for them; the human chat lines and peace offers through the diplomacy screen are not in
+                this engine's AI path).
+  spoils.c      NOT STARTED (a resigned player's units roam and its buildings change hands: an engine behaviour of
+                the player out of the game, to be weighed against this engine's defeat rule).
+  skirmish.c    NOT STARTED (the sharpshooters' sorties on a position that holds the force's way).
+  metal.c       NOT STARTED (best_per_metal: the soldier that does most per gold + iron against the enemy's army;
+                surplus_cheap; workers_to_metals; fleet_by_enemy).
+  mass.c        NOT STARTED (the army as one: reinforcements gather under cover and join as groups, never a
+                trickle).
+  fronts.c      NOT STARTED (the border cells: where its land meets land the enemy can walk over; the front armies).
+  sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
+                site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
+  packing.c     NOT STARTED (tight_build: production buildings placed touching their kind without cutting a way;
+                upstream default 0).
+  priority.c    NOT STARTED (the priority list: one row for each thing the AI saves for, every spender asks it).
+  forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat).
+                Missing: enemy_objective (an objective building of the target), the walk-and-fight record.
+  stats.c       NOT STARTED (fight_estimate: st_ratio from the game's damage tables; upstream default 0, the
+                summed hit points x attack of ai.strength stand in).
+  settings.c    PORTED -> settings.lua: the [ai_base] defaults of config/ageofai.ini at that commit.
 
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at that commit, with the deviations
-noted there (epoch pacing: the port advances as soon as the epoch is paid, upstream's "independent" timer of 50-70
-minutes an epoch is for games of 200-400 population a player).
+noted there (each marked why: an engine difference, or a measured call of the owner's).
