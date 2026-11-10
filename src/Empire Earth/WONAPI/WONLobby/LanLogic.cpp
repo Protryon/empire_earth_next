@@ -1019,7 +1019,9 @@ void LanLogic::StartDiscovery()
     this->StopDiscovery();
     this->mDiscoveryAddress = IPAddr::GetBroadcastAddr(LobbyGetLanBroadcastPort());
     this->mDiscoverySocket = new QueueSocket(1);
-    long aResult = this->mDiscoverySocket->Fn2B0D90(LobbyGetLanBroadcastPort(), 0);
+    // port: the discovery port is bound with address reuse (the original bound it exclusively), so that two lobbies
+    // on one machine both receive the broadcasts; the second one's bind failed and it neither saw nor advertised a game
+    long aResult = this->mDiscoverySocket->Fn2B0D90(LobbyGetLanBroadcastPort(), 1);
     if (aResult != 0) {
         this->StopDiscovery();
         return;
