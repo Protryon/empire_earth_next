@@ -86,6 +86,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEMessageCapture.h"
 #include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -937,6 +938,7 @@ void EEPhysics::DrainInput()
             theInput->GetMessageLabel();
             if (theInput->GetForSpecificSlot() == kSlotNone)
                 this->mInputMessagesProcessed++;
+            EEMessageCaptureExecuted(theInput);   // TEST ONLY: the simulation capture's NMEX record (off by default)
             switch (theInput->GetType()) {
             case kNetMessageRemovePlayer: {
                 NEMRemovePlayer* theRemove = static_cast<NEMRemovePlayer*>(theInput);

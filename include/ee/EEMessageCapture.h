@@ -9,6 +9,9 @@ class NEMessage;
 
 // one NMIM record (NMSW inside the sweep) for a message the game factory just built from inData
 void EEMessageCaptureImport(NEMessage* inMessage, const unsigned char* inData);
+// one NMEX record for a game message the physics executes (its members and its bytes), then the message built again
+// from its bytes (an NMIM record): in a single-player game the messages reach the physics unencoded
+void EEMessageCaptureExecuted(NEMessage* inMessage);
 // every game message type over edge payloads, and the box selection's packing (NMSW, NMCU); once per game
 void EEMessageCaptureSweep();
 // EEMessage.cpp's CompressUnits then DecompressUnits over its bytes (the box selection's packing); the byte count

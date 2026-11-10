@@ -4,6 +4,9 @@
 // NMIM: every game message the factory builds (EEMessage::BuildEEMessage: the lobby's, the start's and the players'
 //       inputs inside each communications tick): its type, ExportSize, the bytes it was built from, the bytes it exports
 //       again, then its members as Import filled them.
+// NMEX: every game message the physics executes (EEPhysics::DrainInput): its type, ExportSize, the bytes it exports,
+//       its members; then the message is built again from those bytes (an NMIM record). A single-player game hands
+//       its messages to the physics unencoded, so this is where the games' messages meet the codec.
 // NMSW: the same for the sweep: every game message type built from edge payloads (all 0x00, all 0xff, 0x7f, 0x80, a
 //       counting pattern, random bytes; strings of 0..300 bytes, unit lists of 0..63 ids, upgrade lists).
 // NMCU: the box selection's packing: the owner and the ids in, CompressUnits' bytes and DecompressUnits' ids out.
@@ -936,6 +939,28 @@ void EEMessageCaptureImport(NEMessage* inMessage, const unsigned char* inData)
     }
     Members(theRecord, inMessage);
     theRecord.Commit();
+}
+
+void EEMessageCaptureExecuted(NEMessage* inMessage)
+{
+    if (inMessage == NULL || !EESimCaptureRecord::Active() || inMessage->GetType() < 0x41 || inMessage->GetType() > 0xfd)
+        return;
+    EESimCaptureRecord theRecord(0x58454d4eu);   // NMEX
+    unsigned char* theData = NULL;
+    unsigned long theDataSize = 0;
+    theRecord.U32(inMessage->GetType());
+    theRecord.U32((unsigned int)inMessage->ExportSize());
+    inMessage->ExportMessage(&theData, theDataSize);
+    theRecord.U32((unsigned int)theDataSize);
+    theRecord.Bytes(theData, (unsigned int)theDataSize);
+    Members(theRecord, inMessage);
+    theRecord.Commit();
+    std::vector<unsigned char> theCopy(theData, theData + theDataSize);
+    delete[] theData;
+    theCopy.resize(theCopy.size() + 64, 0);
+    NEMessage* theMessage = EEMessage::BuildEEMessage(&theCopy[0]);   // its NMIM record
+    if (theMessage != NULL)
+        theMessage->Dereference();
 }
 
 enum { kSweepFixed, kSweepString, kSweepTheseUnits, kSweepCivUpgrades, kSweepSelectUnits };
