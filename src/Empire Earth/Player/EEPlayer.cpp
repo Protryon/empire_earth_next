@@ -3155,6 +3155,169 @@ long EEPlayer::FinishUnitsLoad(long inMajorVersion, long inMinorVersion)
     return 0;
 }
 
+// port (save version 0.260): the towns' ids and order. A load rebuilds every town from its units (RepairPointers),
+// numbering them on from the saved counter (++mTownIDCounter) in the load's order, so the towns of the loaded game had
+// other ids than the saved game's, which the saved AI state names its towns by (unit requests, defense packages,
+// attack sub groups: GetTownByID), and stood in another order in mTowns, which the AI walks. Saved: the id counter
+// and per player each town's id, hull points, counters and flags in mTowns' order; a rebuilt town whose hull equals a saved one takes
+// its id and its counters, and when every town is matched they take the saved order (EEApplySavedTowns, from
+// RepairPointers).
+struct EESavedTown {
+    long mID;
+    std::vector<std::pair<long, long> > mHull;
+    long mCounters[8];   // mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach
+    bool mNearWater;
+    bool mNearMapEdge;
+};
+
+// the counters a town's units summed as they came and went (the rebuild counts them once each, where the running
+// game counted a farm at its placement and again at its completion)
+static long* EETownCounter(EETown* inTown, long inIndex)
+{
+    long* theCounters[8] = {(long*)&inTown->mValue, &inTown->mNumWalls, &inTown->mL80, &inTown->mNumWonders,
+                            &inTown->mNumDocks, &inTown->mNumAirports, &inTown->mNumUnits, &inTown->mReach};
+    return theCounters[inIndex];
+}
+static std::map<unsigned long, std::vector<EESavedTown> > sSavedTowns;   // by player id; empty when nothing pending
+static long sSavedTownIDCounter = -1;
+
+long EESaveTowns(FSFile& outFile)
+{
+    long theResult = outFile.Write((long)gWorld.mTownIDCounter);
+    unsigned long thePlayers = gWorld.mNumPlayers;
+    if (theResult == kErrorOK)
+        theResult = outFile.Write(thePlayers);
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        unsigned long theCount = 0;
+        if (thePlayer != NULL)
+            for (size_t t = 0; t < thePlayer->mTowns.size(); t++)
+                theCount += thePlayer->mTowns[t] != NULL ? 1 : 0;
+        theResult = outFile.Write(theCount);
+        for (size_t t = 0; thePlayer != NULL && t < thePlayer->mTowns.size() && theResult == kErrorOK; t++) {
+            EETown* theTown = thePlayer->mTowns[t];
+            if (theTown == NULL)
+                continue;
+            unsigned long thePoints = theTown->mHull.GetPointCount();
+            theResult = outFile.Write((long)theTown->mTownID);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(thePoints);
+            for (unsigned long v = 0; v < thePoints && theResult == kErrorOK; v++) {
+                theResult = outFile.Write((long)theTown->mHull.GetPoint(v)->GetX());
+                if (theResult == kErrorOK)
+                    theResult = outFile.Write((long)theTown->mHull.GetPoint(v)->GetY());
+            }
+            for (long c = 0; c < 8 && theResult == kErrorOK; c++)
+                theResult = outFile.Write(*EETownCounter(theTown, c));
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(theTown->mNearWater);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(theTown->mNearMapEdge);
+        }
+    }
+    return theResult;
+}
+
+long EELoadTowns(FSFile& inFile)
+{
+    std::map<unsigned long, std::vector<EESavedTown> > theTowns;
+    long theCounter = 0;
+    unsigned long thePlayers = 0;
+    long theResult = inFile.Read(theCounter);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(thePlayers);
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        unsigned long theCount = 0;
+        theResult = inFile.Read(theCount);
+        for (unsigned long t = 0; t < theCount && theResult == kErrorOK; t++) {
+            EESavedTown theTown;
+            unsigned long thePoints = 0;
+            theTown.mID = 0;
+            theResult = inFile.Read(theTown.mID);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(thePoints);
+            for (unsigned long v = 0; v < thePoints && theResult == kErrorOK; v++) {
+                long theX = 0, theY = 0;
+                theResult = inFile.Read(theX);
+                if (theResult == kErrorOK)
+                    theResult = inFile.Read(theY);
+                theTown.mHull.push_back(std::make_pair(theX, theY));
+            }
+            for (long c = 0; c < 8 && theResult == kErrorOK; c++) {
+                theTown.mCounters[c] = 0;
+                theResult = inFile.Read(theTown.mCounters[c]);
+            }
+            theTown.mNearWater = false;
+            theTown.mNearMapEdge = false;
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theTown.mNearWater);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theTown.mNearMapEdge);
+            theTowns[p].push_back(theTown);
+        }
+    }
+    if (theResult == kErrorOK) {
+        sSavedTowns = theTowns;
+        sSavedTownIDCounter = theCounter;
+        EEAfterLoad([]() {   // the loaded game's own towns from here on
+            sSavedTowns.clear();
+            sSavedTownIDCounter = -1;
+        });
+    }
+    return theResult;
+}
+
+static void EEApplySavedTowns(EEPlayer* inPlayer)
+{
+    std::map<unsigned long, std::vector<EESavedTown> >::iterator theEntry = sSavedTowns.find(inPlayer->mPlayerID);
+    if (sSavedTownIDCounter < 0)
+        return;
+    gWorld.mTownIDCounter = sSavedTownIDCounter;   // the towns made from here on are numbered as in the saved game
+    if (theEntry == sSavedTowns.end())
+        return;
+    const std::vector<EESavedTown>& theSaved = theEntry->second;
+    std::vector<EETown*> theOrder(theSaved.size(), (EETown*)NULL);
+    unsigned long theMatched = 0;
+    for (size_t t = 0; t < inPlayer->mTowns.size(); t++) {
+        EETown* theTown = inPlayer->mTowns[t];
+        if (theTown == NULL)
+            continue;
+        for (size_t s = 0; s < theSaved.size(); s++) {
+            if (theOrder[s] != NULL || theSaved[s].mHull.size() != theTown->mHull.GetPointCount())
+                continue;
+            bool theSame = true;
+            for (unsigned long v = 0; v < theTown->mHull.GetPointCount() && theSame; v++)
+                theSame = theSaved[s].mHull[v].first == (long)theTown->mHull.GetPoint(v)->GetX()
+                    && theSaved[s].mHull[v].second == (long)theTown->mHull.GetPoint(v)->GetY();
+            if (!theSame)
+                continue;
+            theOrder[s] = theTown;
+            theMatched++;
+            break;
+        }
+    }
+    inPlayer->mTownsByID.clear();
+    for (size_t s = 0; s < theSaved.size(); s++)
+        if (theOrder[s] != NULL) {
+            theOrder[s]->mTownID = theSaved[s].mID;
+            for (long c = 0; c < 8; c++)
+                *EETownCounter(theOrder[s], c) = theSaved[s].mCounters[c];
+            theOrder[s]->mNearWater = theSaved[s].mNearWater;
+            theOrder[s]->mNearMapEdge = theSaved[s].mNearMapEdge;
+        }
+    for (size_t t = 0; t < inPlayer->mTowns.size(); t++)
+        if (inPlayer->mTowns[t] != NULL)
+            inPlayer->mTownsByID.insert(std::pair<long, EETown*>(inPlayer->mTowns[t]->mTownID, inPlayer->mTowns[t]));
+    unsigned long theLoaded = 0;
+    for (size_t t = 0; t < inPlayer->mTowns.size(); t++)
+        theLoaded += inPlayer->mTowns[t] != NULL ? 1 : 0;
+    if (theMatched == theSaved.size() && theLoaded == theSaved.size())
+        inPlayer->mTowns.assign(theOrder.begin(), theOrder.end());
+    else
+        ESDebugOut("EEPlayer: player %lu rebuilt %lu towns, %lu of the %lu saved ones: their ids and order are partly the load's\n",
+                   (unsigned long)inPlayer->mPlayerID, theLoaded, theMatched, (unsigned long)theSaved.size());
+}
+
 // port: a town rebuilt by a load of a 0.254 save takes back its saved patrol group, the town patrol with a point on
 // one of the town's hull vertices, as it was (the original made the points again from the hull: other units, other
 // ids; FindPatrolGroup cannot find the saved one yet, its points are not on their tiles before the load ends);
@@ -3259,6 +3422,7 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = this->mNumCapitols > 0;
         this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false;
     }
+    EEApplySavedTowns(this);   // port (0.260): the rebuilt towns take their saved ids and order
     for (long theTown = this->mTowns.size() - 1; theTown >= 0; theTown--)
         if (this->mTowns[theTown] != NULL && this->mTowns[theTown]->mPatrolGroup == NULL
             && !(EESaveHasLiveState(inFirst, inSecond) && this->AdoptTownPatrol(this->mTowns[theTown])))

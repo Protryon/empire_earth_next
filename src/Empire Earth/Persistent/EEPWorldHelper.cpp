@@ -554,8 +554,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && LoadTileOrder(inFile) == kErrorOK   // port (0.256): the order of the units on each tile
             && EESaveHasRegionOrder(inMajorVersion, inMinorVersion)
             && LoadRegionOrder(inFile) == kErrorOK   // port (0.257): the order of the units in each map region
-            && EESaveHasExperimentTimers(inMajorVersion, inMinorVersion))
-            EECPLoadExperimentTimers(inFile);   // port (0.258): the computer players' experiment timers
+            && EESaveHasExperimentTimers(inMajorVersion, inMinorVersion)
+            && EECPLoadExperimentTimers(inFile) == kErrorOK   // port (0.258): the computer players' experiment timers
+            && EESaveHasTowns(inMajorVersion, inMinorVersion))
+            EELoadTowns(inFile);   // port (0.260): the towns' ids and order
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -614,6 +616,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 SaveRegionOrder(outFile);   // port (0.257): the order of the units in each map region
             if (EESaveHasExperimentTimers(inMajorVersion, inMinorVersion))
                 EECPSaveExperimentTimers(outFile);   // port (0.258): the computer players' experiment timers
+            if (EESaveHasTowns(inMajorVersion, inMinorVersion))
+                EESaveTowns(outFile);   // port (0.260): the towns' ids and order
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

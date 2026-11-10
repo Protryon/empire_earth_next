@@ -57,6 +57,16 @@ inline bool EESaveHasProductionCount(unsigned long inMajorVersion, unsigned long
 {
     return inMajorVersion > 0 || inMinorVersion >= 259;
 }
+// port: from 0.260 a save holds the towns' ids, order and counters (EESaveTowns): a load rebuilt the towns with new
+// ids in its own order
+inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 260;
+}
+// the towns' block (EEPlayer.cpp): written by EEPWorldHelper::Save; a load keeps it for EEPlayer::RepairPointers,
+// which gives the rebuilt towns their saved ids and order
+long EESaveTowns(FSFile& outFile);
+long EELoadTowns(FSFile& inFile);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);
