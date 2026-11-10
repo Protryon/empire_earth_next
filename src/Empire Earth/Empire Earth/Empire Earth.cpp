@@ -1181,8 +1181,7 @@ void EEInitializeNetwork()
         theExeName[0] = 0;
     uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
-    theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
-    // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
+    // the db tables, which the game reads only as text (EEDbFindFile; the original summed the .dat files here)
     theChecksum += EEGetFileChecksum(theFile, "*.csv", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.yaml", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
@@ -2717,12 +2716,8 @@ void EEInitializeDatabase()
     theResult = gCivilizationManager.Load(theDbFile);
     if (theResult != kErrorOK) ESVerify(__FILE__, 1069, "theResult == keseOK");
     delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbRandomMapFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1074, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1075, "theDbFile != NULL");
-    theResult = EERandomMapTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1077, "theResult == keseOK");
-    delete theDbFile;
+    // (the original read db\dbrandommap.dat here into EERandomMapTable, dropping every record's contents and reading
+    // nothing of the table afterwards; the file has no text form and is not loaded: RUST_PLAN D9)
     theResult = EEDbFindFile(gDataPath, kDbWeaponToHitFile, theDbFile);
     if (theResult != kErrorOK) ESVerify(__FILE__, 1082, "theResult == keseOK");
     if (theDbFile == NULL) ESVerify(__FILE__, 1083, "theDbFile != NULL");

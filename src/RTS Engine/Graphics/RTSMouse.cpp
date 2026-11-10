@@ -22,18 +22,19 @@
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
-// 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer
+// 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer. PNG files
+// (the original's were Targa files, .tga; RUST_PLAN D9)
 static const char* sPointerFiles[10] = {
-    "Textures\\Normal Pointer.tga",
-    "Textures\\Attack Pointer.tga",
-    "Textures\\Invalid Target Pointer.tga",
-    "Textures\\Target Too Close Pointer.tga",
-    "Textures\\Gather Pointer.tga",
-    "Textures\\Build Pointer.tga",
-    "Textures\\Blank Pointer.tga",
-    "Textures\\No LOS.tga",
-    "Textures\\Plus Pointer.tga",
-    "Textures\\Blank Pointer.tga",
+    "Textures\\Normal Pointer.png",
+    "Textures\\Attack Pointer.png",
+    "Textures\\Invalid Target Pointer.png",
+    "Textures\\Target Too Close Pointer.png",
+    "Textures\\Gather Pointer.png",
+    "Textures\\Build Pointer.png",
+    "Textures\\Blank Pointer.png",
+    "Textures\\No LOS.png",
+    "Textures\\Plus Pointer.png",
+    "Textures\\Blank Pointer.png",
 };
 // 0x4bea20 / 0x4bea24: the smallest raw mouse movement seen so far (Update scales by it)
 static long sMinXValue = 100;
@@ -159,14 +160,14 @@ static long LoadPackPointer(const char* inFile, GEScreen* inScreen, const GESurf
     long theShift = GETextureManager::GetTexturePackLogicalShift();
     long theDrop = GETextureManager::GetTexturePackMipLevelsToDrop();
     if (theShift <= 0 || !GETextureManager::GetTexturePackName(UString(inFile), thePackName)
-        || GEFindTargaFile(inScreen->GetTextureManager()->GetTexturePath(), thePackName, theFile) != kErrorOK
+        || inScreen->GetTextureManager()->GetTexturePath()->FindFile(thePackName, theFile) != kErrorOK
         || theFile == NULL)
         return kErrorNotFound;
     unsigned long theWidth = 0, theHeight = 0, theDepth = 0;
     // open across both reads (an in-memory file reopened keeps its position): the header, then the whole file
     long theResult = theFile->Open(kFileAccessRead);
     if (theResult == kErrorOK)
-        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileTGA, theWidth, theHeight, theDepth);
+        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFilePNG, theWidth, theHeight, theDepth);
     if (theResult == kErrorOK)
         theResult = theFile->SetPosition(0, kFileOriginBegin, true);
     unsigned long theSize = inDescription.mWidth << (theShift + theDrop);
@@ -179,7 +180,7 @@ static long LoadPackPointer(const char* inFile, GEScreen* inScreen, const GESurf
     if (theResult == kErrorOK)
         theResult = inScreen->CreateSurface(theDescription, &theFull);
     if (theResult == kErrorOK)
-        theResult = theFull->Load(*theFile, kImageFileTGA);
+        theResult = theFull->Load(*theFile, kImageFilePNG);
     theFile->Close();
     delete theFile;
     GESurface* theSurface = theFull;
@@ -216,7 +217,7 @@ static long LoadPackPointer(const char* inFile, GEScreen* inScreen, const GESurf
 }
 
 // FUNCTION: EXE 0x51af66
-// Loads a 32x32 TGA pointer texture from the texture path into a surface (created if needed), blue transparent;
+// Loads a 32x32 pointer picture (PNG) from the texture path into a surface (created if needed), blue transparent;
 // returns the first error of finding, loading and closing the file
 long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface)
 {
@@ -242,13 +243,12 @@ long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** i
     }
     if (*ioSurface == NULL)
         inScreen->CreateSurface(theDescription, ioSurface);
-    // its .png in place of the .tga when the data has one (open formats)
-    long theResult = GEFindTargaFile(inScreen->GetTextureManager()->GetTexturePath(), UString(inFile), theFile);
+    long theResult = inScreen->GetTextureManager()->GetTexturePath()->FindFile(UString(inFile), theFile);
     // a missing pointer texture fails instead of being loaded through NULL
     if (theFile == NULL)
         return theResult != kErrorOK ? theResult : kErrorNotFound;
     // the load's result counts too (only the close's used to be returned)
-    theResult = (*ioSurface)->Load(*theFile, kImageFileTGA);
+    theResult = (*ioSurface)->Load(*theFile, kImageFilePNG);
     long theCloseResult = theFile->Close();
     if (theResult == kErrorOK)
         theResult = theCloseResult;

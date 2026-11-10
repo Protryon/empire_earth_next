@@ -6,7 +6,7 @@ and writes into it (error logs, the folders saved games go to), so every run get
 the read-only files hard-linked (the tree itself is never written), the folders the game writes into copied, as the
 harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and reused per slot (build/sim/stage/<slot>).
 
-  python -I tools/sim.py [--data binary|open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
+  python -I tools/sim.py [--data open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
   python -I tools/sim.py -- --seed 3 --ai 2 --difficulty Hard --game-seconds 2700 --report r.json --ai-trace --trace t.txt
   python -I tools/sim.py -- --seed 3 --engine next,classic --report r.json
 
@@ -18,10 +18,13 @@ Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts ai to play the checkout's s
 
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
-for every computer player of that difficulty; EE_AI_CHEATS narrows them per player). The binary tree has no rules
-documents (the game plays with the code's defaults, which equal the documents tools/eedata/rules.py writes), so for
-an override the stage gets that document written by rules.py from the same constants (python -I
-tools/eedata/eedata.py check keeps them equal).
+for every computer player of that difficulty; EE_AI_CHEATS narrows them per player). A tree without the named
+rules document (the game plays with the code's defaults, which equal the documents tools/eedata/rules.py writes) gets
+that document written into the stage by rules.py from the same constants (python -I tools/eedata/eedata.py check
+keeps them equal).
+
+--data: "open" (default) is build/open_data/tree (the main checkout's when this one has none); a directory names
+another open tree. The game reads only the open forms (RUST_PLAN D9): the binary tree is retired.
 """
 import argparse
 import json
@@ -40,12 +43,14 @@ RULE_DOCS = ("combat", "gameoptions", "civbuilder", "civpowers", "aipersonalitie
 
 
 def data_tree(kind):
-    """The data tree: 'binary' (build/open_data/tree-binary), 'open' (build/open_data/tree) or a directory. The main
-    checkout's trees are used when this checkout has none (a worktree; they are only read)."""
-    if kind not in ("binary", "open"):
+    """The data tree: 'open' (build/open_data/tree) or a directory. The main checkout's tree is used when this
+    checkout has none (a worktree; it is only read)."""
+    if kind == "binary":
+        sys.exit("--data binary: the binary tree is retired (RUST_PLAN D9): the game reads only the open forms")
+    if kind != "open":
         tree = pathlib.Path(kind)
     else:
-        name = "tree-binary" if kind == "binary" else "tree"
+        name = "tree"
         tree = OPEN_DATA / name
         if not (tree / "Data").is_dir():
             main = pathlib.Path(subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"],
@@ -104,7 +109,7 @@ def stage_tree(tree, d):
 
 
 def rule_docs(stage, docs):
-    """Write the rules documents an override needs into the stage's Data/db when the tree has none (tools/eedata
+    """Write the rules documents an override needs into the stage's Data/db when the tree lacks them (tools/eedata
     rules.py: the code's defaults). A document the tree has is left as it is."""
     db = stage / "Data" / "db"
     missing = [n for n in docs if not (db / f"{n}.yaml").exists() or (db / f".sim-{n}").exists()]
@@ -130,7 +135,7 @@ def rule_docs(stage, docs):
     return written
 
 
-def prepare(data="binary", slot="default", sets=()):
+def prepare(data="open", slot="default", sets=()):
     """-> the staged data root for a slot, with the rules documents the overrides name."""
     tree = data_tree(data)
     stage = stage_tree(tree, STAGES / slot)
@@ -182,7 +187,7 @@ def main():
         return
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
-    ap.add_argument("--data", default="binary", help="binary (default), open, or a tree directory")
+    ap.add_argument("--data", default="open", help="open (default: build/open_data/tree) or a tree directory")
     ap.add_argument("--slot", default="default", help="the stage's name (one per concurrent run)")
     ap.add_argument("--exe", type=pathlib.Path, default=DEFAULT_EXE)
     ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS: the next engine's scripts read from this "

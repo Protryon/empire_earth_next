@@ -68,7 +68,7 @@ public:
     // renderer draws the game's logical pixels into a larger texture); 1 for every other surface
     virtual float GetRenderScale() const { return 1.0f; }
 
-    // Image files (GESurface.cpp); inType: 0 TGA, 1 BMP, 2 JPG, 3 JPG2 (the switches in Load/Save)
+    // Image files (GESurface.cpp); inType: GEImageFileType (the switches in Load/Save)
     long Load(FSFileSpec& inFile, unsigned char inType);
     long Save(FSFileSpec& inFile, unsigned char inType);
     static long GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
@@ -94,19 +94,19 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
     long LoadBMP(FSFileSpec& inFile);
     long LoadJPG(FSFileSpec& inFile);
     long LoadJPG2(FSFileSpec& inFile);
-    long LoadTGA(FSFileSpec& inFile);
+    long LoadTGA(FSFileSpec& inFile);       // only the texture manager's .sst/.tga frames (GETexture.cpp)
+    long LoadPNG(FSFileSpec& inFile);       // port: the pictures read outside the texture manager
     long SaveAsBMP(FSFileSpec& inFile);
     long SaveAsJPG(FSFileSpec& inFile);
     long SaveAsJPG2(FSFileSpec& inFile);
-    long SaveAsTGA(FSFileSpec& inFile);
     static long GetBMPFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                      unsigned long& outDepth);
     static long GetJPGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                      unsigned long& outDepth);
     static long GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                       unsigned long& outDepth);
-    static long GetTGAFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                     unsigned long& outDepth);
+    static long GetPNGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
+                                     unsigned long& outDepth);   // port (GetTGAFileAttributes: removed)
 
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
     unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)
@@ -115,10 +115,11 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
 
 // GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls
 enum GEImageFileType {
-    kImageFileTGA = 0,  // GESurface switch case -> exported LoadTGA/SaveAsTGA/GetTGAFileAttributes
+    kImageFileTGA = 0,  // Load -> LoadTGA, only for the texture manager's frames; Save/attributes: removed (RUST_PLAN D9)
     kImageFileBMP = 1,  // GESurface switch case -> exported LoadBMP/SaveAsBMP/GetBMPFileAttributes
     kImageFileJPG = 2,  // GESurface switch case -> exported LoadJPG/SaveAsJPG/GetJPGFileAttributes
     kImageFileJPG2 = 3,  // GESurface switch case -> exported LoadJPG2/SaveAsJPG2/GetJPG2FileAttributes
+    kImageFilePNG = 4,  // port: LoadPNG/GetPNGFileAttributes (no saver)
 };
 
 // GETGAHeader::mDescriptor (TGA header byte 17, the image descriptor): Truevision TGA spec bits 4 and 5 give the pixel order (GESurface::LoadTGA)
