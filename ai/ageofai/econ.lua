@@ -146,6 +146,16 @@ function M.reserve(view, mem)
     for _, k in ipairs(V.resources) do
         r[k] = saving and (view.next_epoch_cost[k] + (both and (view.epoch2_cost or {})[k] or 0)) or 0
     end
+    -- copper_reserve_pct: the early epochs' reserve scaled to what upstream's costs were (850 food for the Stone Age
+    -- against our 1,122; 750 / 400 / 400 for the Copper Age against 1,584 / 844 / 844): the reserve the workers
+    -- gather for and the army leaves alone is upstream's, the advance still waits for the whole cost (0: off)
+    if view.epoch < FARM_EPOCH and S.copper_reserve_pct ~= nil and S.copper_reserve_pct[view.epoch + 1] ~= nil then
+        local pct = S.copper_reserve_pct[view.epoch + 1]
+        local pct2 = S.copper_reserve_pct[view.epoch + 2] or pct
+        for _, k in ipairs(V.resources) do
+            r[k] = saving and (view.next_epoch_cost[k] * pct // 100 + (both and (view.epoch2_cost or {})[k] * pct2 // 100 or 0)) or 0
+        end
+    end
     -- copper_plan=next_epoch (econ.c hook_add_resource): from min_workforce on, epoch_share of the income goes into
     -- the epoch account until it holds the next epoch's cost; the citizens spend the rest and never wait for the
     -- epoch (the account is out of their reach: the civil budget and the engine's reserve below); the army sees

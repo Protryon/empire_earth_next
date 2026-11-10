@@ -17,6 +17,9 @@ return {
     -- "on" sent half the Prehistoric workers to gold and iron and put the Stone Age back 10-15 minutes (8.38)
     copper_plan = "next_epoch",
     epoch_share = 40,               -- percent of the income into the epoch account (copper_plan=next_epoch)
+    copper_reserve_pct = nil,       -- the alternative for the epoch costs (8.38): {76, 47} holds, in the first two
+                                    -- epochs, the reserve upstream's costs were (850 of our 1,122; 750 / 400 / 400 of
+                                    -- our 1,584 / 844 / 844) with copper_plan = "on"; nil: the whole cost
     site_max_distance = 20,         -- tiles from the base within which the wild food (berries) counts before farms
     wild_food_share = 60,           -- percent of it the budget counts on (the rest walks, rots or goes to others)
     mineral_worker_margin = 300,    -- the minerals' demand beyond the reserve the workers follow at most
