@@ -31,6 +31,7 @@
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
 #include "GERustMath.h"
+#include "GERustViewport.h"
 
 static const float kLODFraction = 0.2f;   // 0x10097b78 (unit-local) (provisional name)
 // defined after its user (0x1002179e) in address order
@@ -342,80 +343,14 @@ static void ComputeTriangleBox(const GE3DPoint& inPoint1, const GE3DPoint& inPoi
 // FUNCTION: LLE 0x10021fc0
 // Returns whether the placed model can be visible in a viewport: bounding sphere against the four planes and the
 // clip distances, or its box against the orthographic rectangle
+// (the test is Rust: ee_ge physical.rs, model_visible)
 bool GEPhysicalModel::Intersects(const GEViewport& inViewport, bool inOrthographic) const
 {
-    GE3DPoint theCameraPoint;
-    GE3DPoint thePoint;
-    GEBoundingBox theBox;
-    GEVector theLeft = inViewport.GetLeftPlane().GetNormal();
-    GEVector theRight = inViewport.GetRightPlane().GetNormal();
-    GEVector theTop = inViewport.GetTopPlane().GetNormal();
-    GEVector theBottom = inViewport.GetBottomPlane().GetNormal();
-    GEViewport theViewport(inViewport);
-    float theFront = inViewport.GetFrontClippingDistance();
-    float theRear = inViewport.GetRearClippingDistance();
-    GETransformation theTransform(false);
-    GETransformation theCameraTransform(false);
-    bool theResult = true;
-    this->mLocation.Apply(this->mModel->GetInternalTransform(this->mFrame), theTransform);
-    if (this->mScale != 1.0f) {
-        theTransform.Scale(this->mScale);
-        theTransform.SetElement(0, 3, this->mLocation.GetElement(0, 3));
-        theTransform.SetElement(1, 3, this->mLocation.GetElement(1, 3));
-        theTransform.SetElement(2, 3, this->mLocation.GetElement(2, 3));
-    }
-    if (!inOrthographic) {
-        theTransform.Apply(this->mModel->GetCenterPoint(), thePoint);
-        theViewport.GetCameraInverse().Apply(thePoint, theCameraPoint);
-        float theRadius = this->mModel->GetBoundingRadius(this->mFrame) * this->mScale;
-        theLeft.Scale(theRadius, theLeft);
-        theRight.Scale(theRadius, theRight);
-        theTop.Scale(theRadius, theTop);
-        theBottom.Scale(theRadius, theBottom);
-        if (theCameraPoint.GetY() + theRadius < theViewport.GetFrontClippingDistance() ||
-            theCameraPoint.GetY() - theRadius > theViewport.GetRearClippingDistance())
-            theResult = false;
-        else {
-            thePoint.mX = theCameraPoint.mX + theLeft.mX;
-            thePoint.mY = theCameraPoint.mY + theLeft.mY;
-            thePoint.mZ = theCameraPoint.mZ + theLeft.mZ;
-            if (!theViewport.GetLeftPlane().IsPointOnOrAbovePlane(thePoint))
-                theResult = false;
-            else {
-                thePoint.mX = theCameraPoint.mX + theRight.mX;
-                thePoint.mY = theCameraPoint.mY + theRight.mY;
-                thePoint.mZ = theCameraPoint.mZ + theRight.mZ;
-                if (!theViewport.GetRightPlane().IsPointOnOrAbovePlane(thePoint))
-                    theResult = false;
-                else {
-                    thePoint.mX = theCameraPoint.mX + theTop.mX;
-                    thePoint.mY = theCameraPoint.mY + theTop.mY;
-                    thePoint.mZ = theCameraPoint.mZ + theTop.mZ;
-                    if (!theViewport.GetTopPlane().IsPointOnOrAbovePlane(thePoint))
-                        theResult = false;
-                    else {
-                        thePoint.mX = theCameraPoint.mX + theBottom.mX;
-                        thePoint.mY = theCameraPoint.mY + theBottom.mY;
-                        thePoint.mZ = theCameraPoint.mZ + theBottom.mZ;
-                        if (!theViewport.GetBottomPlane().IsPointOnOrAbovePlane(thePoint))
-                            theResult = false;
-                    }
-                }
-            }
-        }
-    } else {
-        theViewport.GetCameraInverse().Apply(theTransform, theCameraTransform);
-        this->mModel->GetBoundingBox(this->mFrame).Transform(theCameraTransform, theBox);
-        float theScale = -theViewport.GetYClippingPlane();
-        const GERectangle& theRectangle = theViewport.GetOrthographicRectangle();
-        if (theBox.GetTopRightBack().GetY() < theFront || theBox.GetBottomLeftFront().GetY() > theRear ||
-            theBox.GetTopRightBack().GetX() < theRectangle.GetLeft() ||
-            theRectangle.GetRight() < theBox.GetBottomLeftFront().GetX() ||
-            theBox.GetTopRightBack().GetZ() < theRectangle.GetBottom() * theScale ||
-            theBox.GetBottomLeftFront().GetZ() > theRectangle.GetTop() * theScale)
-            theResult = false;
-    }
-    return theResult;
+    return ee_ge_physical_visible(GERust(this->mLocation), this->mScale,
+                                  GERust(this->mModel->GetInternalTransform(this->mFrame)),
+                                  GERust(this->mModel->GetCenterPoint()), this->mModel->GetBoundingRadius(this->mFrame),
+                                  GERust(this->mModel->GetBoundingBox(this->mFrame)), GERust(inViewport),
+                                  inOrthographic);
 }
 
 // FUNCTION: LLE 0x1002232f

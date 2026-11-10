@@ -6,7 +6,9 @@
 //! stores (`model_store.rs`, decoded from a glTF by `ee_openformats`; the `.cem` reader and writer were retired under
 //! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
 //! `GETextureSet`'s grid (`texture.rs`), and the texture and model managers' decisions, names and texture pack
-//! (`managers.rs`).
+//! (`managers.rs`), `GEViewport`'s matrices, planes and frustum (`viewport.rs`), `UpdateVisibleTerrain` as a plan the
+//! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and `GEBitmap`'s and
+//! `GERhombus`'s corners and stretched coordinates (`bitmap.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -24,6 +26,7 @@
 
 /// cbindgen:ignore
 pub mod bbox;
+pub mod bitmap;
 pub mod ffi;
 #[cfg(test)]
 mod golden;
@@ -35,6 +38,8 @@ mod golden_physical;
 mod golden_terrain;
 #[cfg(test)]
 mod golden_terrain_mesh;
+#[cfg(test)]
+mod golden_visible;
 pub mod io;
 /// cbindgen:ignore
 pub mod line;
@@ -52,6 +57,7 @@ pub mod pixel;
 pub mod point;
 pub mod terrain;
 pub mod terrain_mesh;
+pub mod terrain_visible;
 /// cbindgen:ignore
 pub mod terrain_volume;
 /// cbindgen:ignore
@@ -64,3 +70,5 @@ pub mod types;
 pub mod um;
 /// cbindgen:ignore
 pub mod vector;
+pub mod viewport;
+pub mod visible_ffi;

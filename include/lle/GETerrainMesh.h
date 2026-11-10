@@ -23,6 +23,7 @@ class GETextureSet;
 class GETransformation;
 class GEViewport;
 class U2DFractal;
+struct EeGeVisiblePolygon;   // a planned polygon (rust/ee_rust.h)
 template <class T> class U2DPoint;
 
 class LLE_API GETerrainMesh {               // sizeof 0x1955b0
@@ -60,13 +61,6 @@ public:
         GETMRenderVertex* mVertices[3];     // +0x00
         float mAlpha[3];                    // +0x0c
         GETextureCoordinate mUV[3];         // +0x18
-    };
-
-    // A tile's four corners, in the order the Add*Polys members index them. sizeof 0x40
-    struct GETMQuad {
-        GETMRenderVertex* mVertices[4];     // +0x00
-        float mAlpha[4];                    // +0x10
-        GETextureCoordinate mUV[4];         // +0x20
     };
 
     // The polygons drawn with one texture this frame. sizeof 0x34
@@ -270,35 +264,12 @@ public:
 
 private:
     friend struct GERustTerrainLayout;      // the Rust view of the rows (Graphics Engine/GERustTerrain.h)
-    void AddCliffPolys(GETMPolygon*& ioPolygon, int inX, int inY, const float* inHeights, unsigned long inMaterial);
+    // (AddCliffPolys, AddTilePolys, AddWaterPolys, CreateNewEdgeVertex, DefineNewEdgePolygon and the eight
+    // Generate*EdgePolygons are Rust: ee_ge terrain_visible.rs plans the frame, FillPolygon stores a planned polygon)
     void AddDenormalizedPointToList(const GEViewport& inViewport, GE3DPoint& inPoint,
                                     std::vector<U2DPoint<float> >& outPoints, bool inOrthographic);
-    void AddTilePolys(int inX, int inY, GETMQuad& inQuad, GETMPolygon*& ioPolygon, unsigned long inMaterial);
-    void AddWaterPolys(int inX, int inY, GETMQuad& inQuad, GETMPolygon*& ioPolygon, unsigned long inMaterial);
-    void CreateNewEdgeVertex(long inX, long inY, float inZ);
-    void DefineNewEdgePolygon(unsigned long inBase, unsigned long inVertex0, unsigned long inVertex1, unsigned long inVertex2,
-                              GETMPolygon*& ioPolygon);
+    void FillPolygon(const EeGeVisiblePolygon& inPlanned, GETMPolygon& outPolygon);
     // (DoesLineIntersectTile, Intersects(line)'s helper, is Rust: ee_ge terrain.rs)
-    void GenerateBackEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                  GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateCornerBackLeftPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2], bool inHasEdgeA,
-                                        U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB, GETMPolygon*& ioPolygon,
-                                        unsigned long& ioVertexBase);
-    void GenerateCornerBackRightPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                         bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                         GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateCornerFrontLeftPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                         bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                         GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateCornerFrontRightPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                          bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                          GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateFrontEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                   GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateLeftEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                  GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
-    void GenerateRightEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                   GETMPolygon*& ioPolygon, unsigned long& ioVertexBase);
     GETMTile* GetTile(unsigned long inX, unsigned long inY)
         { return &this->mTileRows[inY].mTiles[inX - this->mTileRows[inY].mStart]; }
     void InitializePlanes();

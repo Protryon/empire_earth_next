@@ -55,7 +55,7 @@ fn floor_unsigned(value: f32) -> c_ulong {
 }
 
 /// `UMFloor` on `long`.
-fn floor(value: f32) -> c_long {
+pub(crate) fn floor(value: f32) -> c_long {
     let result = long_lrintf(value);
     if result as f32 > value {
         result.wrapping_sub(1)
@@ -83,7 +83,7 @@ impl GeTerrainView {
     ///
     /// # Safety
     /// Row `y` exists and its point `x - start` is in it.
-    unsafe fn point(&self, x: c_ulong, y: c_ulong) -> GeTmPoint {
+    pub(crate) unsafe fn point(&self, x: c_ulong, y: c_ulong) -> GeTmPoint {
         // SAFETY: the function's contract
         unsafe {
             let row = *self.point_rows.add(y as usize);

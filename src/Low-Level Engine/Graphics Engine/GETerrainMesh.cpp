@@ -282,6 +282,7 @@
 #include "lle/GETerrainMesh.h"
 #include "GERustMath.h"
 #include "GERustTerrain.h"
+#include "GERustViewport.h"
 #include "GERustIO.h"
 
 const UString GETerrainMesh::sPlayableWidthID("GETerrainMesh-PlayableWidth");
@@ -440,761 +441,10 @@ void GETerrainMesh::CreateFlatMesh(long inWidth, long inHeight)
     this->mMaximumZ = 0.0f;
 }
 
-// FUNCTION: LLE 0x10027e8e
-// Adds a skirt vertex at (inX, inY, inZ) with a black, fully visible render vertex
-void GETerrainMesh::CreateNewEdgeVertex(long inX, long inY, float inZ)
-{
-    GETMRenderVertex* theVertex;
-    this->mEdgeWorldPoints.push_back(GE3DPoint((float)inX, (float)inY, inZ));
-    theVertex = new GETMRenderVertex;
-    theVertex->mColor.SetRed(0.0f);
-    theVertex->mColor.SetGreen(0.0f);
-    theVertex->mColor.SetBlue(0.0f);
-    theVertex->mVisibility = 1.0f;
-    theVertex->mClipFlags = 0x3f;
-    this->mEdgeRenderVertices.push_back(theVertex);
-}
+// (CreateNewEdgeVertex 0x10027e8e, DefineNewEdgePolygon 0x10027f0a, IsSegmentInFrustum 0x100282f5, the four
+// Is*EdgeVisible 0x1002821c.., the four Generate*EdgePolygons 0x10027f81.. and the four GenerateCorner*Polygons
+// 0x100283d9.. are Rust: ee_ge terrain_visible.rs, the skirts of the plan)
 
-// FUNCTION: LLE 0x10027f0a
-// Fills the next polygon with three skirt vertices (indices relative to inBase), adds it to the untextured material
-// and advances to the next polygon
-void GETerrainMesh::DefineNewEdgePolygon(unsigned long inBase, unsigned long inVertex0, unsigned long inVertex1, unsigned long inVertex2,
-                                         GETMPolygon*& ioPolygon)
-{
-    ioPolygon->mVertices[0] = this->mEdgeRenderVertices[inVertex0 + inBase];
-    ioPolygon->mVertices[1] = this->mEdgeRenderVertices[inVertex1 + inBase];
-    ioPolygon->mVertices[2] = this->mEdgeRenderVertices[inVertex2 + inBase];
-    ioPolygon->mAlpha[0] = 1.0f;
-    ioPolygon->mAlpha[1] = 1.0f;
-    ioPolygon->mAlpha[2] = 1.0f;
-    this->mTerrainMaterialList[0].mPolygons.push_back(ioPolygon);
-    ioPolygon++;
-    this->mVisiblePolyCount++;
-}
-
-// Not inlined: the out-of-line copy follows its first user (0x100282f5) (provisional name).
-// FUNCTION: LLE 0x100282f5
-// Returns false only when both camera-space end points lie outside the same frustum plane (near, far or a side)
-inline bool IsSegmentInFrustum(const GEViewport& inViewport, const GE3DPoint& inStart, const GE3DPoint& inEnd)
-{
-    if (inViewport.GetFrontClippingDistance() > inStart.GetY() &&
-        inViewport.GetFrontClippingDistance() > inEnd.GetY())
-        return false;
-    else if (inViewport.GetRearClippingDistance() < inStart.GetY() &&
-        inViewport.GetRearClippingDistance() < inEnd.GetY())
-        return false;
-    else if (!inViewport.GetLeftPlane().IsPointOnOrAbovePlane(inStart) &&
-        !inViewport.GetLeftPlane().IsPointOnOrAbovePlane(inEnd))
-        return false;
-    else if (!inViewport.GetRightPlane().IsPointOnOrAbovePlane(inStart) &&
-        !inViewport.GetRightPlane().IsPointOnOrAbovePlane(inEnd))
-        return false;
-    else if (!inViewport.GetTopPlane().IsPointOnOrAbovePlane(inStart) &&
-        !inViewport.GetTopPlane().IsPointOnOrAbovePlane(inEnd))
-        return false;
-    else if (!inViewport.GetBottomPlane().IsPointOnOrAbovePlane(inStart) &&
-        !inViewport.GetBottomPlane().IsPointOnOrAbovePlane(inEnd))
-        return false;
-    else
-        return true;
-}
-
-// One per map edge. Not inlined: each out-of-line copy follows its Generate*EdgePolygons user (provisional names).
-// FUNCTION: LLE 0x1002821c
-// Returns whether the back skirt from map point (inX, inY), inDepth tiles (+x, -y), is in view; false off the map
-inline bool IsBackEdgeVisible(const GEViewport& inViewport, const GETerrainMesh& inMesh, long inX, long inY,
-                              long inDepth)
-{
-    GE3DPoint theCameraStart;
-    GE3DPoint theCameraEnd;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    if (!inMesh.GetIsValidPoint(inX, inY))
-        return false;
-    theStart.SetX((float)inX);
-    theStart.SetY((float)inY);
-    theStart.SetZ(0.0f);
-    theEnd.SetX((float)(inX + inDepth));
-    theEnd.SetY((float)(inY - inDepth));
-    theEnd.SetZ(0.0f);
-    inViewport.GetCameraInverse().Apply(theStart, theCameraStart);
-    inViewport.GetCameraInverse().Apply(theEnd, theCameraEnd);
-    return IsSegmentInFrustum(inViewport, theCameraStart, theCameraEnd);
-}
-
-// FUNCTION: LLE 0x100298ae
-// Returns whether the front skirt from map point (inX, inY), inDepth tiles (-x, +y), is in view; false off the map
-inline bool IsFrontEdgeVisible(const GEViewport& inViewport, const GETerrainMesh& inMesh, long inX, long inY,
-                               long inDepth)
-{
-    GE3DPoint theCameraStart;
-    GE3DPoint theCameraEnd;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    if (!inMesh.GetIsValidPoint(inX, inY))
-        return false;
-    theStart.SetX((float)inX);
-    theStart.SetY((float)inY);
-    theStart.SetZ(0.0f);
-    theEnd.SetX((float)(inX - inDepth));
-    theEnd.SetY((float)(inY + inDepth));
-    theEnd.SetZ(0.0f);
-    inViewport.GetCameraInverse().Apply(theStart, theCameraStart);
-    inViewport.GetCameraInverse().Apply(theEnd, theCameraEnd);
-    return IsSegmentInFrustum(inViewport, theCameraStart, theCameraEnd);
-}
-
-// FUNCTION: LLE 0x10029c11
-// Returns whether the left skirt from map point (inX, inY), inDepth tiles (-x, -y), is in view; false off the map
-inline bool IsLeftEdgeVisible(const GEViewport& inViewport, const GETerrainMesh& inMesh, long inX, long inY,
-                              long inDepth)
-{
-    GE3DPoint theCameraStart;
-    GE3DPoint theCameraEnd;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    if (!inMesh.GetIsValidPoint(inX, inY))
-        return false;
-    theStart.SetX((float)inX);
-    theStart.SetY((float)inY);
-    theStart.SetZ(0.0f);
-    theEnd.SetX((float)(inX - inDepth));
-    theEnd.SetY((float)(inY - inDepth));
-    theEnd.SetZ(0.0f);
-    inViewport.GetCameraInverse().Apply(theStart, theCameraStart);
-    inViewport.GetCameraInverse().Apply(theEnd, theCameraEnd);
-    return IsSegmentInFrustum(inViewport, theCameraStart, theCameraEnd);
-}
-
-// FUNCTION: LLE 0x10029f84
-// Returns whether the right skirt from map point (inX, inY), inDepth tiles (+x, +y), is in view; false off the map
-inline bool IsRightEdgeVisible(const GEViewport& inViewport, const GETerrainMesh& inMesh, long inX, long inY,
-                               long inDepth)
-{
-    GE3DPoint theCameraStart;
-    GE3DPoint theCameraEnd;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    if (!inMesh.GetIsValidPoint(inX, inY))
-        return false;
-    theStart.SetX((float)inX);
-    theStart.SetY((float)inY);
-    theStart.SetZ(0.0f);
-    theEnd.SetX((float)(inX + inDepth));
-    theEnd.SetY((float)(inY + inDepth));
-    theEnd.SetZ(0.0f);
-    inViewport.GetCameraInverse().Apply(theStart, theCameraStart);
-    inViewport.GetCameraInverse().Apply(theEnd, theCameraEnd);
-    return IsSegmentInFrustum(inViewport, theCameraStart, theCameraEnd);
-}
-
-// FUNCTION: LLE 0x10027f81
-// Extends the visible back edge strip while its skirt stays in view, then builds the back skirt out to the camera's
-// rear clip depth (three vertices per edge point, four triangles per step)
-void GETerrainMesh::GenerateBackEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                             GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GE3DPoint theStart;
-    GEVector theNormal;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepth;
-    long theX;
-    long theY;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mBackPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.SetStart(theStart);
-    theLine.SetDirection(theNormal);
-    if (theLine.Intersects(this->mBackPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepth = UMFloor(theLimit);
-    while (IsBackEdgeVisible(inViewport, *this, ioEdge[0].GetX() - 1, ioEdge[0].GetY() - 1, theDepth)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() - 1);
-    }
-    if (this->GetIsValidTile(ioEdge[0].GetX() - 1, ioEdge[0].GetY() - 1)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() - 1);
-    }
-    while (IsBackEdgeVisible(inViewport, *this, ioEdge[1].GetX() + 1, ioEdge[1].GetY() + 1, theDepth)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() + 1);
-    }
-    if (this->GetIsValidTile(ioEdge[1].GetX() + 1, ioEdge[1].GetY() + 1)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() + 1);
-    }
-    for (theX = ioEdge[0].GetX(), theY = ioEdge[0].GetY(); theX <= ioEdge[1].GetX(); theX++, theY++) {
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepth, theY - theDepth, 0.0f);
-        if (theX == ioEdge[0].GetX())
-            continue;
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        ioVertexBase += 3;
-    }
-    ioVertexBase += 3;
-}
-
-// FUNCTION: LLE 0x100283d9
-// Builds the back-left corner skirt: a lone back or left strip ending at the corner is extended 1000 tiles past it;
-// with both strips visible, a seven-vertex fan joins them
-void GETerrainMesh::GenerateCornerBackLeftPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                                   bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                                   GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GEVector theNormal;
-    GE3DPoint theStart;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepthA;
-    long theDepthB;
-    long theX;
-    long theY;
-    float theZ;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mBackPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mBackPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthA = UMFloor(theLimit);
-    this->mLeftPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mLeftPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthB = UMFloor(theLimit);
-    if (inHasEdgeA && !inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeA[0].GetX() - 1, inEdgeA[0].GetY() - 1))
-            return;
-        theX = inEdgeA[0].GetX();
-        theY = inEdgeA[0].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthA, theY - theDepthA, 0.0f);
-        theX -= 1000;
-        theY -= 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthA, theY - theDepthA, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (!inHasEdgeA && inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeB[1].GetX() + 1, inEdgeB[1].GetY() - 1))
-            return;
-        theX = inEdgeB[1].GetX();
-        theY = inEdgeB[1].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        theX += 1000;
-        theY -= 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (inHasEdgeA && inHasEdgeB) {
-        theX = inEdgeA[0].GetX();
-        theY = inEdgeA[0].GetY();
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY - 7, 0.0f);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        theX += theDepthA;
-        theY -= theDepthA;
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 2, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 3, 6, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 6, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 4, 6, 5, ioPolygon);
-        ioVertexBase += 7;
-    }
-}
-
-// FUNCTION: LLE 0x10028860
-// Builds the back-right corner skirt: a lone back or right strip ending at the corner is extended 1000 tiles past it;
-// with both strips visible, a seven-vertex fan joins them
-void GETerrainMesh::GenerateCornerBackRightPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                                    bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                                    GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GEVector theNormal;
-    GE3DPoint theStart;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepthA;
-    long theDepthB;
-    long theX;
-    long theY;
-    float theZ;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mBackPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mBackPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthA = UMFloor(theLimit);
-    this->mRightPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mRightPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthB = UMFloor(theLimit);
-    if (inHasEdgeA && !inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeA[1].GetX() + 1, inEdgeA[1].GetY() + 1))
-            return;
-        theX = inEdgeA[1].GetX();
-        theY = inEdgeA[1].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthA, theY - theDepthA, 0.0f);
-        theX += 1000;
-        theY += 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthA, theY - theDepthA, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (!inHasEdgeA && inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeB[1].GetX() + 1, inEdgeB[1].GetY() - 1))
-            return;
-        theX = inEdgeB[1].GetX();
-        theY = inEdgeB[1].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        theX += 1000;
-        theY -= 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (inHasEdgeA && inHasEdgeB) {
-        theX = inEdgeA[1].GetX();
-        theY = inEdgeA[1].GetY();
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + 7, theY, 0.0f);
-        this->CreateNewEdgeVertex(theX + 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        theX += theDepthA;
-        theY -= theDepthA;
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 2, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 3, 6, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 6, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 4, 6, 5, ioPolygon);
-        ioVertexBase += 7;
-    }
-}
-
-// FUNCTION: LLE 0x10028d03
-// Builds the front-left corner skirt: a lone front or left strip ending at the corner is extended 1000 tiles past it;
-// with both strips visible, a seven-vertex fan joins them
-void GETerrainMesh::GenerateCornerFrontLeftPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                                    bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                                    GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GEVector theNormal;
-    GE3DPoint theStart;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepthA;
-    long theDepthB;
-    long theX;
-    long theY;
-    float theZ;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mFrontPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mFrontPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthA = UMFloor(theLimit);
-    this->mLeftPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mLeftPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthB = UMFloor(theLimit);
-    if (inHasEdgeA && !inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeA[0].GetX() - 1, inEdgeA[0].GetY() - 1))
-            return;
-        theX = inEdgeA[0].GetX();
-        theY = inEdgeA[0].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        theX -= 1000;
-        theY -= 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (!inHasEdgeA && inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeB[0].GetX() - 1, inEdgeB[0].GetY() + 1))
-            return;
-        theX = inEdgeB[0].GetX();
-        theY = inEdgeB[0].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        theX -= 1000;
-        theY += 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthB, theY - theDepthB, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (inHasEdgeA && inHasEdgeB) {
-        theX = inEdgeA[0].GetX();
-        theY = inEdgeA[0].GetY();
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - 7, theY, 0.0f);
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        theX -= theDepthB;
-        theY -= theDepthB;
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 2, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 3, 6, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 6, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 4, 6, 5, ioPolygon);
-        ioVertexBase += 7;
-    }
-}
-
-// FUNCTION: LLE 0x10029189
-// Builds the front-right corner skirt: a lone front or right strip ending at the corner is extended 1000 tiles past it;
-// with both strips visible, a seven-vertex fan joins them
-void GETerrainMesh::GenerateCornerFrontRightPolygons(const GEViewport& inViewport, U2DPoint<long> (&inEdgeA)[2],
-                                                     bool inHasEdgeA, U2DPoint<long> (&inEdgeB)[2], bool inHasEdgeB,
-                                                     GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GEVector theNormal;
-    GE3DPoint theStart;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepthA;
-    long theDepthB;
-    long theX;
-    long theY;
-    float theZ;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mFrontPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mFrontPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthA = UMFloor(theLimit);
-    this->mRightPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.Define(theStart, theNormal);
-    if (theLine.Intersects(this->mRightPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepthB = UMFloor(theLimit);
-    if (inHasEdgeA && !inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeA[1].GetX() + 1, inEdgeA[1].GetY() + 1))
-            return;
-        theX = inEdgeA[1].GetX();
-        theY = inEdgeA[1].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        theX += 1000;
-        theY += 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (!inHasEdgeA && inHasEdgeB) {
-        if (this->GetIsValidTile(inEdgeB[0].GetX() - 1, inEdgeB[0].GetY() + 1))
-            return;
-        theX = inEdgeB[0].GetX();
-        theY = inEdgeB[0].GetY();
-        theZ = this->GetZ(theX, theY);
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        theX -= 1000;
-        theY += 1000;
-        this->CreateNewEdgeVertex(theX, theY, theZ);
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepthB, theY + theDepthB, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        ioVertexBase += 6;
-    } else if (inHasEdgeA && inHasEdgeB) {
-        theX = inEdgeA[1].GetX();
-        theY = inEdgeA[1].GetY();
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY + 7, 0.0f);
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        theX += theDepthB;
-        theY += theDepthB;
-        this->CreateNewEdgeVertex(theX - theDepthA, theY + theDepthA, 0.0f);
-        this->CreateNewEdgeVertex(theX, theY, 0.0f);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 2, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 3, 6, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 2, 6, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 4, 6, 5, ioPolygon);
-        ioVertexBase += 7;
-    }
-}
-
-// FUNCTION: LLE 0x10029613
-// Extends the visible front edge strip while its skirt stays in view, then builds the front skirt out to the camera's
-// rear clip depth (three vertices per edge point, four triangles per step)
-void GETerrainMesh::GenerateFrontEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                              GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GE3DPoint theStart;
-    GEVector theNormal;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepth;
-    long theX;
-    long theY;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mFrontPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.SetStart(theStart);
-    theLine.SetDirection(theNormal);
-    if (theLine.Intersects(this->mFrontPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepth = UMFloor(theLimit);
-    while (IsFrontEdgeVisible(inViewport, *this, ioEdge[0].GetX() - 1, ioEdge[0].GetY() - 1, theDepth)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() - 1);
-    }
-    if (this->GetIsValidTile(ioEdge[0].GetX() - 1, ioEdge[0].GetY() - 1)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() - 1);
-    }
-    while (IsFrontEdgeVisible(inViewport, *this, ioEdge[1].GetX() + 1, ioEdge[1].GetY() + 1, theDepth)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() + 1);
-    }
-    if (this->GetIsValidTile(ioEdge[1].GetX() + 1, ioEdge[1].GetY() + 1)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() + 1);
-    }
-    for (theX = ioEdge[0].GetX(), theY = ioEdge[0].GetY(); theX <= ioEdge[1].GetX(); theX++, theY++) {
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX - 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepth, theY + theDepth, 0.0f);
-        if (theX == ioEdge[0].GetX())
-            continue;
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 1, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 3, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 4, ioPolygon);
-        ioVertexBase += 3;
-    }
-    ioVertexBase += 3;
-}
-
-// FUNCTION: LLE 0x10029987
-// Extends the visible left edge strip while its skirt stays in view, then builds the left skirt out to the camera's
-// rear clip depth (three vertices per edge point, four triangles per step)
-void GETerrainMesh::GenerateLeftEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                             GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GE3DPoint theStart;
-    GEVector theNormal;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepth;
-    long theX;
-    long theY;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mLeftPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.SetStart(theStart);
-    theLine.SetDirection(theNormal);
-    if (theLine.Intersects(this->mLeftPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepth = UMFloor(theLimit);
-    while (IsLeftEdgeVisible(inViewport, *this, ioEdge[0].GetX() - 1, ioEdge[0].GetY() + 1, theDepth)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() + 1);
-    }
-    if (this->GetIsValidTile(ioEdge[0].GetX() - 1, ioEdge[0].GetY() + 1)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() + 1);
-    }
-    while (IsLeftEdgeVisible(inViewport, *this, ioEdge[1].GetX() + 1, ioEdge[1].GetY() - 1, theDepth)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() - 1);
-    }
-    if (this->GetIsValidTile(ioEdge[1].GetX() + 1, ioEdge[1].GetY() - 1)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() - 1);
-    }
-    for (theX = ioEdge[0].GetX(), theY = ioEdge[0].GetY(); theX <= ioEdge[1].GetX(); theX++, theY--) {
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX - 5, theY - 5, 0.0f);
-        this->CreateNewEdgeVertex(theX - theDepth, theY - theDepth, 0.0f);
-        if (theX == ioEdge[0].GetX())
-            continue;
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 1, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 3, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 2, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 4, 5, ioPolygon);
-        ioVertexBase += 3;
-    }
-    ioVertexBase += 3;
-}
-
-// FUNCTION: LLE 0x10029ce9
-// Extends the visible right edge strip while its skirt stays in view, then builds the right skirt out to the camera's
-// rear clip depth (three vertices per edge point, four triangles per step)
-void GETerrainMesh::GenerateRightEdgePolygons(const GEViewport& inViewport, U2DPoint<long> (&ioEdge)[2],
-                                              GETMPolygon*& ioPolygon, unsigned long& ioVertexBase)
-{
-    GE3DPoint theStart;
-    GEVector theNormal;
-    GE3DLine theLine;
-    float theDistance;
-    float theLimit;
-    long theDepth;
-    long theX;
-    long theY;
-    const GETransformation& theCamera = inViewport.GetCamera();
-    theStart.SetX(theCamera.GetX());
-    theStart.SetY(theCamera.GetY());
-    theStart.SetZ(theCamera.GetZ());
-    this->mRightPlane.GetNormal().Scale(-1.0f, theNormal);
-    theLine.SetStart(theStart);
-    theLine.SetDirection(theNormal);
-    if (theLine.Intersects(this->mRightPlane, theDistance) && theDistance > 0.0f)
-        theLimit = inViewport.GetRearClippingDistance() - theDistance + 1.0f;
-    else
-        theLimit = inViewport.GetRearClippingDistance();
-    theDepth = UMFloor(theLimit);
-    while (IsRightEdgeVisible(inViewport, *this, ioEdge[0].GetX() - 1, ioEdge[0].GetY() + 1, theDepth)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() + 1);
-    }
-    if (this->GetIsValidTile(ioEdge[0].GetX() - 1, ioEdge[0].GetY() + 1)) {
-        ioEdge[0].SetX(ioEdge[0].GetX() - 1);
-        ioEdge[0].SetY(ioEdge[0].GetY() + 1);
-    }
-    while (IsRightEdgeVisible(inViewport, *this, ioEdge[1].GetX() + 1, ioEdge[1].GetY() - 1, theDepth)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() - 1);
-    }
-    if (this->GetIsValidTile(ioEdge[1].GetX() + 1, ioEdge[1].GetY() - 1)) {
-        ioEdge[1].SetX(ioEdge[1].GetX() + 1);
-        ioEdge[1].SetY(ioEdge[1].GetY() - 1);
-    }
-    for (theX = ioEdge[0].GetX(), theY = ioEdge[0].GetY(); theX <= ioEdge[1].GetX(); theX++, theY--) {
-        this->CreateNewEdgeVertex(theX, theY, this->GetZ(theX, theY));
-        this->CreateNewEdgeVertex(theX + 5, theY + 5, 0.0f);
-        this->CreateNewEdgeVertex(theX + theDepth, theY + theDepth, 0.0f);
-        if (theX == ioEdge[0].GetX())
-            continue;
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 1, 4, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 0, 4, 3, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 2, 5, ioPolygon);
-        this->DefineNewEdgePolygon(ioVertexBase, 1, 5, 4, ioPolygon);
-        ioVertexBase += 3;
-    }
-    ioVertexBase += 3;
-}
 
 // FUNCTION: LLE 0x1002a05d
 // Returns the terrain normal at a map position, interpolated bilinearly from the four surrounding points' normals
@@ -1425,275 +675,10 @@ void GETerrainMesh::UpdateWaterAnimation()
     }
 }
 
-// Per-cell height jitter of the cliff skirts' lower edge (0x100d9760) (provisional name).
-static float sCliffNoise[16][16] = {
-    { -0.997f, 0.127f, -0.613f, 0.617f, 0.17f, -0.04f, -0.299f, 0.792f, 0.646f, 0.493f, -0.652f, 0.718f, 0.421f, 0.027f, -0.392f, -0.97f },
-    { -0.817f, -0.271f, -0.705f, -0.668f, 0.977f, -0.109f, -0.762f, -0.991f, -0.982f, -0.244f, 0.063f, 0.142f, 0.204f, 0.214f, -0.668f, 0.326f },
-    { -0.098f, -0.296f, -0.886f, 0.215f, 0.567f, 0.605f, 0.04f, -0.396f, 0.752f, 0.453f, 0.912f, 0.851f, 0.079f, -0.715f, -0.076f, -0.529f },
-    { 0.724f, -0.581f, 0.559f, 0.687f, 0.994f, 0.999f, 0.223f, -0.215f, -0.468f, -0.405f, 0.68f, -0.953f, -0.248f, -0.815f, 0.354f, -0.888f },
-    { -0.982f, 0.838f, -0.448f, -0.454f, 0.176f, 0.382f, 0.675f, 0.453f, -0.03f, -0.589f, 0.487f, -0.063f, -0.084f, 0.898f, 0.489f, -0.783f },
-    { 0.198f, -0.23f, 0.47f, 0.218f, 0.145f, -0.277f, -0.697f, -0.55f, -0.15f, 0.606f, 0.034f, 0.98f, 0.503f, -0.309f, -0.662f, 0.315f },
-    { -0.016f, -0.873f, 0.4f, 0.01f, -0.705f, 0.899f, -0.717f, 0.81f, 0.386f, -0.394f, -0.147f, -0.859f, 0.933f, 0.366f, -0.694f, 0.755f },
-    { 0.643f, 0.164f, -0.617f, -0.644f, 0.634f, -0.049f, -0.689f, 0.008f, 0.464f, -0.189f, -0.441f, 0.137f, 0.364f, 0.512f, 0.444f, -0.049f },
-    { -0.754f, -0.264f, 0.669f, -0.93f, 0.034f, 0.326f, -0.148f, -0.791f, 0.899f, 0.843f, 0.099f, -0.308f, -0.057f, -0.25f, 0.694f, -0.366f },
-    { -0.088f, -0.456f, 0.966f, -0.404f, 0.478f, 0.135f, -0.608f, 0.523f, 0.679f, -0.205f, 0.002f, 0.78f, -0.945f, 0.989f, 0.145f, -0.899f },
-    { 0.063f, -0.612f, 0.686f, 0.254f, 0.315f, -0.604f, 0.684f, -0.753f, -0.78f, 0.486f, -0.372f, 0.882f, -0.428f, -0.327f, -0.719f, 0.466f },
-    { 0.669f, 0.416f, 0.2f, 0.494f, -0.495f, -0.711f, -0.997f, -0.878f, 0.612f, 0.705f, -0.579f, -0.769f, 0.106f, -0.971f, -0.772f, -0.091f },
-    { 0.504f, 0.372f, 0.087f, -0.852f, -0.127f, -0.596f, 0.392f, -0.419f, -0.127f, -0.535f, 0.156f, 0.065f, 0.257f, -0.68f, 0.008f, 0.926f },
-    { 0.392f, 0.85f, -0.62f, -0.328f, -0.643f, 0.99f, -0.085f, 0.996f, -0.805f, 0.25f, -0.811f, -0.125f, 0.863f, -0.903f, 0.789f, -0.42f },
-    { -0.545f, 0.538f, -0.179f, -0.596f, 0.256f, 0.208f, -0.097f, -0.067f, 0.196f, 0.269f, 0.71f, 0.658f, 0.25f, 0.442f, 0.132f, -0.25f },
-    { -0.631f, 0.476f, 0.11f, 0.81f, -0.514f, -0.622f, 0.209f, 0.397f, 0.169f, -0.297f, -0.011f, -0.839f, 0.481f, 0.224f, 0.241f, 0.382f },
-};
-
-// FUNCTION: LLE 0x1002b8e8
-// Adds a two-triangle cliff wall 8 units deep (noisy lower edge) along a space tile's shoreline, between the end points
-// in inOffsets, with visibility linked to those points; nothing on the left or right map edge
-void GETerrainMesh::AddCliffPolys(GETMPolygon*& ioPolygon, int inX, int inY, const float* inOffsets,
-                                  unsigned long inMaterial)
-{
-    float theX;
-    float theY;
-    float theAX;
-    float theAY;
-    float theBX;
-    float theBY;
-    long theAPointX;
-    long theAPointY;
-    long theBPointX;
-    long theBPointY;
-    float* theAVisibility;
-    float* theBVisibility;
-    float theZ;
-    GETMRenderVertex* theATop;
-    GETMRenderVertex* theABottom;
-    GETMRenderVertex* theBTop;
-    GETMRenderVertex* theBBottom;
-    if (inX + inY != this->mLeftEdge && inX + inY != this->mRightEdge) {
-        this->mVisiblePolyCount += 2;
-        theX = (float)inX;
-        theAX = theX + inOffsets[0];
-        theY = (float)inY;
-        theAY = theY + inOffsets[1];
-        theBX = theX + inOffsets[2];
-        theBY = theY + inOffsets[3];
-        theAPointX = (long)(theAX + 0.5f);
-        theAPointY = (long)(theAY + 0.5f);
-        theBPointX = (long)(theBX + 0.5f);
-        theBPointY = (long)(theBY + 0.5f);
-        theAVisibility = &this->mTerrainRenderVertices[theAPointX - this->mVisibleBottomLeftX][theAPointY - this->mVisibleBottomLeftY].mVisibility;
-        theBVisibility = &this->mTerrainRenderVertices[theBPointX - this->mVisibleBottomLeftX][theBPointY - this->mVisibleBottomLeftY].mVisibility;
-        theZ = this->GetZ(theAPointX, theAPointY) - 0.02f;
-        GE3DPoint thePoint(theAX, theAY, theZ);
-        this->mCliffWorldPoints.push_back(thePoint);
-        theATop = new GETMRenderVertex;
-        theATop->mVisibility = -1.0f;
-        theATop->mLinkedVisibility = theAVisibility;
-        theATop->mClipFlags = 0x3f;
-        this->mCliffRenderVertices.push_back(theATop);
-        thePoint.SetZ(theZ - 8.0f + sCliffNoise[theAPointX % 16][theAPointY % 16] * 0.5f);
-        this->mCliffWorldPoints.push_back(thePoint);
-        theABottom = new GETMRenderVertex;
-        theABottom->mVisibility = -1.0f;
-        theABottom->mLinkedVisibility = theAVisibility;
-        theABottom->mClipFlags = 0x3f;
-        this->mCliffRenderVertices.push_back(theABottom);
-        if (this->GetIsValidPoint(theBPointX, theBPointY))
-            theZ = this->GetZ(theBPointX, theBPointY) - 0.05f;
-        thePoint.SetX(theBX);
-        thePoint.SetY(theBY);
-        thePoint.SetZ(theZ);
-        this->mCliffWorldPoints.push_back(thePoint);
-        theBTop = new GETMRenderVertex;
-        theBTop->mVisibility = -1.0f;
-        theBTop->mLinkedVisibility = theBVisibility;
-        theBTop->mClipFlags = 0x3f;
-        this->mCliffRenderVertices.push_back(theBTop);
-        thePoint.SetZ(theZ - 8.0f + sCliffNoise[theBPointX % 16][theBPointY % 16] * 0.5f);
-        this->mCliffWorldPoints.push_back(thePoint);
-        theBBottom = new GETMRenderVertex;
-        theBBottom->mVisibility = -1.0f;
-        theBBottom->mLinkedVisibility = theBVisibility;
-        theBBottom->mClipFlags = 0x3f;
-        this->mCliffRenderVertices.push_back(theBBottom);
-        ioPolygon->mVertices[0] = theATop;
-        ioPolygon->mVertices[1] = theBTop;
-        ioPolygon->mVertices[2] = theABottom;
-        ioPolygon->mUV[0] = GETextureCoordinate(0.0f, 0.0f);
-        ioPolygon->mUV[1] = GETextureCoordinate(1.0f, 0.0f);
-        ioPolygon->mUV[2] = GETextureCoordinate(0.0f, 1.0f);
-        ioPolygon->mAlpha[0] = 1.0f;
-        ioPolygon->mAlpha[1] = 1.0f;
-        ioPolygon->mAlpha[2] = 1.0f;
-        this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        ioPolygon->mVertices[0] = theABottom;
-        ioPolygon->mVertices[1] = theBTop;
-        ioPolygon->mVertices[2] = theBBottom;
-        ioPolygon->mUV[0] = GETextureCoordinate(0.0f, 1.0f);
-        ioPolygon->mUV[1] = GETextureCoordinate(1.0f, 0.0f);
-        ioPolygon->mUV[2] = GETextureCoordinate(1.0f, 1.0f);
-        ioPolygon->mAlpha[0] = 1.0f;
-        ioPolygon->mAlpha[1] = 1.0f;
-        ioPolygon->mAlpha[2] = 1.0f;
-        this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-    }
-}
-
-// FUNCTION: LLE 0x1002bd08
-// Adds a tile's terrain triangles with a material: one on the left or right map edge, else two, minus the one cut by
-// the top or bottom map edge
-void GETerrainMesh::AddTilePolys(int inX, int inY, GETMQuad& inQuad, GETMPolygon*& ioPolygon, unsigned long inMaterial)
-{
-    if (this->GetIsRightEdgeTile(inX, inY)) {
-        ioPolygon->mVertices[0] = inQuad.mVertices[2];
-        ioPolygon->mVertices[1] = inQuad.mVertices[1];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[2];
-        ioPolygon->mUV[1] = inQuad.mUV[1];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[1];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    } else if (this->GetIsLeftEdgeTile(inX, inY)) {
-        ioPolygon->mVertices[0] = inQuad.mVertices[1];
-        ioPolygon->mVertices[1] = inQuad.mVertices[0];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[1];
-        ioPolygon->mUV[1] = inQuad.mUV[0];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[1];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[0];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    } else {
-        if (!this->GetIsTopEdgeTile(inX, inY)) {
-            ioPolygon->mVertices[0] = inQuad.mVertices[2];
-            ioPolygon->mVertices[1] = inQuad.mVertices[1];
-            ioPolygon->mVertices[2] = inQuad.mVertices[0];
-            ioPolygon->mUV[0] = inQuad.mUV[2];
-            ioPolygon->mUV[1] = inQuad.mUV[1];
-            ioPolygon->mUV[2] = inQuad.mUV[0];
-            ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-            ioPolygon->mAlpha[1] = inQuad.mAlpha[1];
-            ioPolygon->mAlpha[2] = inQuad.mAlpha[0];
-            this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-            ioPolygon++;
-            this->mVisiblePolyCount++;
-        }
-        if (this->GetIsBottomEdgeTile(inX, inY))
-            return;
-        ioPolygon->mVertices[0] = inQuad.mVertices[2];
-        ioPolygon->mVertices[1] = inQuad.mVertices[0];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[2];
-        ioPolygon->mUV[1] = inQuad.mUV[0];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[0];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mTerrainMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    }
-}
-
-// FUNCTION: LLE 0x1002bf5c
-// Adds a tile's water triangles with a water material: one on the left or right map edge, else two, minus the one cut
-// by the top or bottom map edge
-void GETerrainMesh::AddWaterPolys(int inX, int inY, GETMQuad& inQuad, GETMPolygon*& ioPolygon, unsigned long inMaterial)
-{
-    if (this->GetIsRightEdgeTile(inX, inY)) {
-        ioPolygon->mVertices[0] = inQuad.mVertices[2];
-        ioPolygon->mVertices[1] = inQuad.mVertices[1];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[2];
-        ioPolygon->mUV[1] = inQuad.mUV[1];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[1];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mWaterMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    } else if (this->GetIsLeftEdgeTile(inX, inY)) {
-        ioPolygon->mVertices[0] = inQuad.mVertices[1];
-        ioPolygon->mVertices[1] = inQuad.mVertices[0];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[1];
-        ioPolygon->mUV[1] = inQuad.mUV[0];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[1];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[0];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mWaterMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    } else {
-        if (!this->GetIsTopEdgeTile(inX, inY)) {
-            ioPolygon->mVertices[0] = inQuad.mVertices[2];
-            ioPolygon->mVertices[1] = inQuad.mVertices[1];
-            ioPolygon->mVertices[2] = inQuad.mVertices[0];
-            ioPolygon->mUV[0] = inQuad.mUV[2];
-            ioPolygon->mUV[1] = inQuad.mUV[1];
-            ioPolygon->mUV[2] = inQuad.mUV[0];
-            ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-            ioPolygon->mAlpha[1] = inQuad.mAlpha[1];
-            ioPolygon->mAlpha[2] = inQuad.mAlpha[0];
-            this->mWaterMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-            ioPolygon++;
-            this->mVisiblePolyCount++;
-        }
-        if (this->GetIsBottomEdgeTile(inX, inY))
-            return;
-        ioPolygon->mVertices[0] = inQuad.mVertices[2];
-        ioPolygon->mVertices[1] = inQuad.mVertices[0];
-        ioPolygon->mVertices[2] = inQuad.mVertices[3];
-        ioPolygon->mUV[0] = inQuad.mUV[2];
-        ioPolygon->mUV[1] = inQuad.mUV[0];
-        ioPolygon->mUV[2] = inQuad.mUV[3];
-        ioPolygon->mAlpha[0] = inQuad.mAlpha[2];
-        ioPolygon->mAlpha[1] = inQuad.mAlpha[0];
-        ioPolygon->mAlpha[2] = inQuad.mAlpha[3];
-        this->mWaterMaterialList[inMaterial].mPolygons.push_back(ioPolygon);
-        ioPolygon++;
-        this->mVisiblePolyCount++;
-    }
-}
-
-// The map-edge strips UpdateVisibleTerrain found visible this frame ([0] first, [1] last tile) and whether each
-// edge was seen at all (0x1010fdd8.., 0x1010fed8..) (provisional names).
-// The four arrays' init chains (0x1002c1b0..0x1002c264; U2DPoint's ctor zero-fills, its empty dtor leaves a bare
-// atexit stub):
-// SYNTHETIC: LLE 0x1002c1b0
-// SYNTHETIC: LLE 0x1002c1ba
-// SYNTHETIC: LLE 0x1002c1d0
-// SYNTHETIC: LLE 0x1002c1dc
-// SYNTHETIC: LLE 0x1002c1dd
-// SYNTHETIC: LLE 0x1002c1e7
-// SYNTHETIC: LLE 0x1002c1fd
-// SYNTHETIC: LLE 0x1002c209
-// SYNTHETIC: LLE 0x1002c20a
-// SYNTHETIC: LLE 0x1002c214
-// SYNTHETIC: LLE 0x1002c22a
-// SYNTHETIC: LLE 0x1002c236
-// SYNTHETIC: LLE 0x1002c237
-// SYNTHETIC: LLE 0x1002c241
-// SYNTHETIC: LLE 0x1002c257
-// SYNTHETIC: LLE 0x1002c263
-static U2DPoint<long> sFrontEdge[2];
-static U2DPoint<long> sBackEdge[2];
-static U2DPoint<long> sLeftEdge[2];
-static U2DPoint<long> sRightEdge[2];
-static bool sHasFrontEdge;
-static bool sHasBackEdge;
-static bool sHasLeftEdge;
-static bool sHasRightEdge;
+// (sCliffNoise 0x100d9760, AddCliffPolys 0x1002b8e8, AddTilePolys 0x1002bd08, AddWaterPolys 0x1002bf5c, the
+// visible-edge statics 0x1010fdd8.. with their init chains 0x1002c1b0..0x1002c264, sShorelines 0x10097bf8,
+// sCornerTiles 0x10097f78, sCornerNeighbours 0x10097f98, GETMTileLayer, TrackVisibleEdges 0x1002d082 and
+// TrackVisibleSpaceEdges 0x1002d222 are Rust: ee_ge terrain_visible.rs)
 
 // FUNCTION: LLE 0x1002c264
 // Returns whether a tile is a space tile; false off the map
@@ -1704,216 +689,66 @@ bool GETerrainMesh::GetIsSpaceTile(unsigned long inX, unsigned long inY) const
     return (this->mTileRows[inY].mTiles[inX - this->mTileRows[inY].mStart].mWaterInfo & kWaterInfoSpace) != 0;
 }
 
-// A space tile's shoreline drawing, per shoreline code (0x10097bf8): the cliff material offset, the shore texture's
-// corner UVs, the cliff orientation and the cliff end points (provisional names).
-struct GETMShoreline {
-    long mMaterialOffset;
-    float mUV[4][2];
-    long mCliffType;
-    float mCliffOffsets[4];
-};
-
-static const GETMShoreline sShorelines[16] = {
-    { 0, { { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } },
-    { 0, { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } }, 5, { 0.4f, 0.0f, 0.0f, 0.4f } },
-    { 0, { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f } }, 3, { 0.0f, 0.6f, 0.4f, 1.0f } },
-    { 1, { { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f } }, 2, { 0.4f, 0.0f, 0.4f, 1.0f } },
-    { 0, { { 1.0f, 1.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f } }, 4, { 0.6f, 1.0f, 1.0f, 0.6f } },
-    { 3, { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f } }, 2, { 0.0f, 0.4f, 0.4f, 0.0f } },
-    { 1, { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f } }, 1, { 0.0f, 0.5f, 1.0f, 0.6f } },
-    { 2, { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f } }, 4, { 0.4f, 0.0f, 1.0f, 0.6f } },
-    { 0, { { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } },
-    { 1, { { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } },
-    { 3, { { 1.0f, 1.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f } }, 1, { 0.0f, 0.6f, 0.4f, 1.0f } },
-    { 2, { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } }, 6, { 1.0f, 0.4f, 0.4f, 1.0f } },
-    { 1, { { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } },
-    { 2, { { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } },
-    { 2, { { 1.0f, 1.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f } }, 3, { 0.0f, 0.6f, 0.6f, 0.0f } },
-    { 4, { { 1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } }, 0, { 0.0f, 0.0f, 0.0f, 0.0f } }
-};
-
-// The four tiles around a map point (0x10097f78) and, per tile, the three tiles beyond it (0x10097f98)
-// (provisional names).
-static const long sCornerTiles[4][2] = { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, -1 } };
-static const long sCornerNeighbours[4][3][2] = {
-    { { 0, 1 }, { 1, 1 }, { 1, 0 } },
-    { { 0, 1 }, { -1, 1 }, { -1, 0 } },
-    { { 0, -1 }, { -1, -1 }, { -1, 0 } },
-    { { 0, -1 }, { 1, -1 }, { 1, 0 } }
-};
-
-// One texture layer of a tile in UpdateVisibleTerrain (provisional name).
-struct GETMTileLayer {
-    bool mIsUsed;
-    unsigned long mTextureSetID;
-    GETexture* mTexture;
-};
-
-// Not inlined: the out-of-line copies follow UpdateVisibleTerrain (0x1002d082, 0x1002d222) (provisional names).
-// FUNCTION: LLE 0x1002d082
-// Grows the visible map-edge strip the tile (inX, inY) lies on (right, left, else front and/or back)
-inline void TrackVisibleEdges(const GETerrainMesh& inMesh, long inX, long inY)
-{
-    if (inMesh.GetIsRightEdgeTile(inX, inY)) {
-        if (sHasRightEdge) {
-            if (inX < sRightEdge[0].mX) {
-                sRightEdge[0].mX = inX;
-                sRightEdge[0].mY = inY + 1;
-            }
-            if (inX + 1 > sRightEdge[1].mX) {
-                sRightEdge[1].mX = inX + 1;
-                sRightEdge[1].mY = inY;
-            }
-        } else {
-            sRightEdge[0].mX = inX;
-            sRightEdge[0].mY = inY + 1;
-            sRightEdge[1].mX = inX + 1;
-            sRightEdge[1].mY = inY;
-            sHasRightEdge = true;
-        }
-    } else if (inMesh.GetIsLeftEdgeTile(inX, inY)) {
-        if (sHasLeftEdge) {
-            if (inX < sLeftEdge[0].mX) {
-                sLeftEdge[0].mX = inX;
-                sLeftEdge[0].mY = inY + 1;
-            }
-            if (inX + 1 > sLeftEdge[1].mX) {
-                sLeftEdge[1].mX = inX + 1;
-                sLeftEdge[1].mY = inY;
-            }
-        } else {
-            sLeftEdge[0].mX = inX;
-            sLeftEdge[0].mY = inY + 1;
-            sLeftEdge[1].mX = inX + 1;
-            sLeftEdge[1].mY = inY;
-            sHasLeftEdge = true;
-        }
-    } else {
-        if (inMesh.GetIsTopEdgeTile(inX, inY)) {
-            if (sHasFrontEdge) {
-                if (inX < sFrontEdge[0].mX) {
-                    sFrontEdge[0].mX = inX;
-                    sFrontEdge[0].mY = inY;
-                }
-                if (inX + 1 > sFrontEdge[1].mX) {
-                    sFrontEdge[1].mX = inX + 1;
-                    sFrontEdge[1].mY = inY + 1;
-                }
-            } else {
-                sFrontEdge[1].mX = inX + 1;
-                sFrontEdge[0].mX = inX;
-                sFrontEdge[0].mY = inY;
-                sFrontEdge[1].mY = inY + 1;
-                sHasFrontEdge = true;
-            }
-        }
-        if (inMesh.GetIsBottomEdgeTile(inX, inY)) {
-            if (sHasBackEdge) {
-                if (inX < sBackEdge[0].mX) {
-                    sBackEdge[0].mX = inX;
-                    sBackEdge[0].mY = inY;
-                }
-                if (inX + 1 > sBackEdge[1].mX) {
-                    sBackEdge[1].mX = inX + 1;
-                    sBackEdge[1].mY = inY + 1;
-                }
-            } else {
-                sBackEdge[0].mX = inX;
-                sBackEdge[1].mX = inX + 1;
-                sBackEdge[0].mY = inY;
-                sBackEdge[1].mY = inY + 1;
-                sHasBackEdge = true;
-            }
-        }
-    }
-}
-
-// FUNCTION: LLE 0x1002d222
-// Grows the visible back edge strip when the tile (inX, inY) lies on the back edge (space maps)
-inline void TrackVisibleSpaceEdges(const GETerrainMesh& inMesh, long inX, long inY)
-{
-    if (!inMesh.GetIsBottomEdgeTile(inX, inY))
-        return;
-    if (sHasBackEdge) {
-        if (inX < sBackEdge[0].mX) {
-            sBackEdge[0].mX = inX;
-            sBackEdge[0].mY = inY;
-        }
-        if (inX + 1 > sBackEdge[1].mX) {
-            sBackEdge[1].mX = inX + 1;
-            sBackEdge[1].mY = inY + 1;
-        }
-    } else {
-        sBackEdge[0].mX = inX;
-        sBackEdge[1].mX = inX + 1;
-        sBackEdge[0].mY = inY;
-        sBackEdge[1].mY = inY + 1;
-        sHasBackEdge = true;
-    }
-}
-
 // FUNCTION: LLE 0x1002c299
-// Rebuilds the visible terrain for the camera: finds the visible tiles, rebuilds the terrain and water materials,
-// adds blended texture-layer, space shoreline, cliff and water polygons, then the map-edge skirts
+// Rebuilds the visible terrain for the camera: the plan (which tiles, the blended texture-layer, space shoreline,
+// cliff and water polygons, the map-edge skirts; the materials as textures) is Rust (ee_ge terrain_visible.rs); this
+// releases the last frame's materials, rebuilds the material lists from the plan's textures, creates the skirt and
+// cliff render vertices and fills the polygon arrays from the plan's vertex references
 void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEViewport& inViewport,
                                          unsigned long inWidth, unsigned long inHeight, unsigned long inScreen,
                                          bool inOrthographic)
 {
-    std::vector<GE3DPoint> theFrustumPoints;
-    GETMMaterial theMaterial;
-    GETMQuad theQuad;
-    U2DPoint<long> theMinimum;
-    U2DPoint<long> theMaximum;
     std::map<GETexture*, unsigned long>::iterator theIterator;
-    unsigned long theVertexBase = 0;
+    std::vector<EeGeTextureSetView> theSets(this->mRegisteredTextureSets.size());
+    std::vector<std::vector<uintptr_t> > theSetTextures(this->mRegisteredTextureSets.size());
+    std::vector<uintptr_t> theCliffs(this->mSpaceCliffTextures.size());
+    EeGeVisibleInput theInput;
+    EeGeVisibleOut theOut;
+    GETMMaterial theMaterial;
     unsigned long i;
-    unsigned long theRowCount;
-    unsigned long theMaterialIndex;
-    unsigned long theFirstCliffMaterial;
-    long theX;
-    long theY;
-    long theLayerCount;
-    long theBest;
-    long theLayer;
-    long theCode;
-    long theCliff;
-    long k;
-    GETMPolygon* thePolygon;
-    GETMPolygon* theWaterPolygon;
-    unsigned char theWaterInfo;
-    memset(this->mTerrainPointVisibility, 0, sizeof(this->mTerrainPointVisibility));
-    memset(this->mWaterPointVisibility, 0, sizeof(this->mWaterPointVisibility));
-    sHasFrontEdge = false;
-    sHasBackEdge = false;
-    sHasLeftEdge = false;
-    sHasRightEdge = false;
-    this->mVisiblePolyCount = 0;
-    this->mNumVisibleTiles = 0;
-    this->mVisibleTileRows.clear();
-    inViewport.GetFrustrumWorldPoints(theFrustumPoints, inOrthographic);
-    this->GetTileRowsInVolume(theFrustumPoints, this->mVisibleTileRows, theMinimum, theMaximum);
-    // port: the visible tiles stay inside the point arrays (a tile uses its far corner's point too)
-    const long theSpan = GETM_VISIBLE_POINTS - 3;
-    if (theMaximum.mX - theMinimum.mX > theSpan || theMaximum.mY - theMinimum.mY > theSpan) {
-        std::vector<std::pair<long, std::pair<long, long> > > theKept;
-        for (size_t r = 0; r < this->mVisibleTileRows.size(); r++) {
-            std::pair<long, std::pair<long, long> > theRow = this->mVisibleTileRows[r];
-            if (theRow.first - theMinimum.mY > theSpan || theRow.second.first - theMinimum.mX > theSpan)
-                continue;
-            if (theRow.second.second - theMinimum.mX > theSpan)
-                theRow.second.second = theMinimum.mX + theSpan;
-            theKept.push_back(theRow);
-        }
-        this->mVisibleTileRows.swap(theKept);
-        if (theMaximum.mX - theMinimum.mX > theSpan)
-            theMaximum.mX = theMinimum.mX + theSpan;
-        if (theMaximum.mY - theMinimum.mY > theSpan)
-            theMaximum.mY = theMinimum.mY + theSpan;
+    unsigned long j;
+    size_t k;
+    for (i = 0; i < theSets.size(); i++) {
+        GETextureSet* theSet = this->mRegisteredTextureSets[i];
+        unsigned long theWidth = theSet->GetNumTexturesInWidth();
+        unsigned long theHeight = theSet->GetNumTexturesInHeight();
+        theSetTextures[i].resize(theWidth * theHeight);
+        for (j = 0; j < theWidth * theHeight; j++)
+            theSetTextures[i][j] = reinterpret_cast<uintptr_t>(theSet->GetTextureAt(j / theHeight, j % theHeight));
+        theSets[i].textures = theSetTextures[i].data();
+        theSets[i].width = theWidth;
+        theSets[i].height = theHeight;
+        theSets[i].coverage = theSet->GetTextureTileCoverage();
     }
-    this->mVisibleBottomLeftX = theMinimum.mX;
-    this->mVisibleBottomLeftY = theMinimum.mY;
-    this->mVisibleTileWidth = theMaximum.mX - theMinimum.mX;
-    this->mVisibleTileHeight = theMaximum.mY - theMinimum.mY;
+    for (k = 0; k < theCliffs.size(); k++)
+        theCliffs[k] = reinterpret_cast<uintptr_t>(this->mSpaceCliffTextures[k]);
+    theInput.view = GERustTerrainView(*this);
+    theInput.point_row_count = this->mPointRowCount;
+    theInput.left_edge = this->mLeftEdge;
+    theInput.top_edge = this->mTopEdge;
+    theInput.right_edge = this->mRightEdge;
+    theInput.bottom_edge = this->mBottomEdge;
+    theInput.space_tile_count = this->mSpaceTileCount;
+    theInput.texture_sets = theSets.data();
+    theInput.texture_set_count = theSets.size();
+    theInput.space_cliff_textures = theCliffs.data();
+    theInput.space_cliff_texture_count = theCliffs.size();
+    theInput.water_texture_indices = &this->mWaterTextureIndices[0][0];
+    theInput.side = GETM_VISIBLE_POINTS;
+    EeGeVisiblePlan* thePlan = ee_ge_terrain_visible_plan(&theInput, GERust(inViewport), inOrthographic, &theOut);
+    memcpy(this->mTerrainPointVisibility, theOut.terrain_visible, sizeof(this->mTerrainPointVisibility));
+    memcpy(this->mWaterPointVisibility, theOut.water_visible, sizeof(this->mWaterPointVisibility));
+    this->mVisiblePolyCount = theOut.visible_poly_count;
+    this->mNumVisibleTiles = theOut.num_visible_tiles;
+    this->mVisibleTileRows.clear();
+    for (k = 0; k < theOut.row_count; k++)
+        this->mVisibleTileRows.push_back(
+            std::make_pair(theOut.rows[3 * k], std::make_pair(theOut.rows[3 * k + 1], theOut.rows[3 * k + 2])));
+    this->mVisibleBottomLeftX = theOut.bottom_left_x;
+    this->mVisibleBottomLeftY = theOut.bottom_left_y;
+    this->mVisibleTileWidth = theOut.tile_width;
+    this->mVisibleTileHeight = theOut.tile_height;
+    // the last frame's materials released, the lists rebuilt (the water list from the animation frames)
     for (theIterator = this->mTerrainMaterialMap.begin(); theIterator != this->mTerrainMaterialMap.end(); theIterator++) {
         if (theIterator->first != NULL)
             theIterator->first->Dereference();
@@ -1937,206 +772,57 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
     for (i = 0; (long)i < (long)this->mCliffRenderVertices.size(); i++)
         delete this->mCliffRenderVertices[i];
     this->mCliffRenderVertices.clear();
-    this->mTerrainMaterialMap.insert(std::pair<GETexture* const, unsigned long>(NULL, this->mTerrainMaterialList.size()));
-    theMaterial.mTexture = NULL;
-    this->mTerrainMaterialList.push_back(theMaterial);
-    theFirstCliffMaterial = this->mTerrainMaterialList.size();
-    if (this->mSpaceTileCount != 0) {
-        for (i = 0; i < this->mSpaceCliffTextures.size(); i++) {
-            theMaterial.mTexture = this->mSpaceCliffTextures[i];
+    // the terrain materials: the plan's textures in order (the map keeps the first entry of a repeated texture, as
+    // the original's insert did), each referenced once per entry
+    for (k = 0; k < theOut.material_count; k++) {
+        theMaterial.mTexture = reinterpret_cast<GETexture*>(theOut.materials[k]);
+        this->mTerrainMaterialMap.insert(std::pair<GETexture* const, unsigned long>(theMaterial.mTexture, k));
+        this->mTerrainMaterialList.push_back(theMaterial);
+        if (theMaterial.mTexture != NULL)
             theMaterial.mTexture->Reference();
-            this->mTerrainMaterialMap.insert(
-                std::pair<GETexture* const, unsigned long>(theMaterial.mTexture, this->mTerrainMaterialList.size()));
-            this->mTerrainMaterialList.push_back(theMaterial);
-        }
     }
-    theRowCount = this->mVisibleTileRows.size();
-    thePolygon = this->mTerrainPolygons;
-    theWaterPolygon = this->mWaterPolygons;
-    for (i = 0; i < theRowCount; i++) {
-        this->mNumVisibleTiles += this->mVisibleTileRows[i].second.second - this->mVisibleTileRows[i].second.first + 1;
-        theY = this->mVisibleTileRows[i].first;
-        for (theX = this->mVisibleTileRows[i].second.first; theX <= this->mVisibleTileRows[i].second.second; theX++) {
-            this->mTerrainPointVisibility[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY] = true;
-            this->mTerrainPointVisibility[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY] = true;
-            this->mTerrainPointVisibility[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY + 1] = true;
-            this->mTerrainPointVisibility[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY + 1] = true;
-            theQuad.mVertices[0] =
-                &this->mTerrainRenderVertices[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY + 1];
-            theQuad.mVertices[1] = &this->mTerrainRenderVertices[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY + 1];
-            theQuad.mVertices[2] = &this->mTerrainRenderVertices[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY];
-            theQuad.mVertices[3] = &this->mTerrainRenderVertices[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY];
-            theQuad.mUV[0] = GETextureCoordinate(1.0f, 0.0f);
-            theQuad.mUV[1] = GETextureCoordinate(0.0f, 0.0f);
-            theQuad.mUV[2] = GETextureCoordinate(0.0f, 1.0f);
-            theQuad.mUV[3] = GETextureCoordinate(1.0f, 1.0f);
-            theLayerCount = 4;
-            if (this->mSpaceTileCount != 0 && this->GetIsSpaceTile(theX, theY)) {
-                theLayerCount = 0;
-                theQuad.mAlpha[0] = -1.0f;
-                theQuad.mAlpha[1] = -1.0f;
-                theQuad.mAlpha[2] = -1.0f;
-                theQuad.mAlpha[3] = -1.0f;
-                this->AddTilePolys(theX, theY, theQuad, thePolygon, 0);
-                theWaterInfo = this->GetTile(theX, theY)->mWaterInfo;
-                if ((theWaterInfo & kWaterInfoShorelineMask) != 0) {
-                    theCode = (theWaterInfo >> 1) & 0xf;
-                    for (k = 0; k < 4; k++) {
-                        theQuad.mUV[k].SetU(sShorelines[theCode].mUV[k][0]);
-                        theQuad.mUV[k].SetV(sShorelines[theCode].mUV[k][1]);
-                        theQuad.mAlpha[k] = 1.0f;
-                    }
-                    this->AddTilePolys(theX, theY, theQuad, thePolygon,
-                                 theFirstCliffMaterial + 8 + sShorelines[theCode].mMaterialOffset);
-                    switch (sShorelines[theCode].mCliffType) {
-                    case 1:
-                        theCliff = theX;
-                        break;
-                    case 2:
-                        theCliff = theY;
-                        break;
-                    case 3:
-                        theCliff = theX * 2;
-                        break;
-                    case 4:
-                        theCliff = theX * 2 + 1;
-                        break;
-                    case 5:
-                        theCliff = theY * 2;
-                        break;
-                    case 6:
-                        theCliff = theY * 2 + 1;
-                        break;
-                    default:
-                        theCliff = -1;
-                        break;
-                    }
-                    if (theCliff % 8 >= 0)
-                        this->AddCliffPolys(thePolygon, theX, theY, sShorelines[theCode].mCliffOffsets,
-                                      theCliff % 8 + theFirstCliffMaterial);
-                }
-            }
-            GETMTileLayer theLayers[4] = { false };
-            theBest = -1;
-            for (theLayer = 0; theLayer < theLayerCount; theLayer++) {
-                if (this->GetIsValidTile(theX + sCornerTiles[theLayer][0], theY + sCornerTiles[theLayer][1])) {
-                    theLayers[theLayer].mTextureSetID =
-                        this->GetTile(theX + sCornerTiles[theLayer][0], theY + sCornerTiles[theLayer][1])->mTextureSetID;
-                    if (this->mSpaceTileCount != 0) {
-                        for (k = 0; k < 3; k++) {
-                            if (UIsNone32(theLayers[theLayer].mTextureSetID))
-                                break;
-                            if (this->GetIsValidTile(theX + sCornerNeighbours[theLayer][k][0],
-                                               theY + sCornerNeighbours[theLayer][k][1]) &&
-                                (this->GetTile(theX + sCornerNeighbours[theLayer][k][0],
-                                         theY + sCornerNeighbours[theLayer][k][1])->mWaterInfo & kWaterInfoShorelineMask) != 0) {
-                                theLayers[theLayer].mTextureSetID = (unsigned long)-1;
-                                theLayers[theLayer].mTexture = this->mSpaceCliffTextures[12];
-                            }
-                        }
-                    }
-                    if (theLayers[theLayer].mTextureSetID == theLayers[0].mTextureSetID && theLayer != 0) {
-                        theLayers[theLayer].mIsUsed = false;
-                        theLayers[theLayer].mTexture = theLayers[0].mTexture;
-                    } else {
-                        theLayers[theLayer].mIsUsed = true;
-                        if (!UIsNone32(theLayers[theLayer].mTextureSetID))
-                            theLayers[theLayer].mTexture =
-                                this->mRegisteredTextureSets[theLayers[theLayer].mTextureSetID]->GetTexture(theX, theY);
-                        if (theBest == -1 || theLayers[theLayer].mTexture < theLayers[theBest].mTexture)
-                            theBest = theLayer;
-                    }
-                } else
-                    theLayers[theLayer].mIsUsed = false;
-            }
-            for (theLayer = 0; theLayer < theLayerCount; theLayer++) {
-                if (!theLayers[theLayer].mIsUsed)
-                    continue;
-                theIterator = this->mTerrainMaterialMap.find(theLayers[theLayer].mTexture);
-                if (theIterator == this->mTerrainMaterialMap.end()) {
-                    theMaterialIndex = this->mTerrainMaterialList.size();
-                    this->mTerrainMaterialMap.insert(std::pair<GETexture* const, unsigned long>(
-                        theLayers[theLayer].mTexture, this->mTerrainMaterialList.size()));
-                    theMaterial.mTexture = theLayers[theLayer].mTexture;
-                    this->mTerrainMaterialList.push_back(theMaterial);
-                    theLayers[theLayer].mTexture->Reference();
-                } else
-                    theMaterialIndex = theIterator->second;
-                if (theLayer == theBest) {
-                    for (k = 0; k < 4; k++)
-                        theQuad.mAlpha[k] = 1.0f;
-                    for (k = 0; k < 4; k++) {
-                        if (theLayer < k && theLayers[k].mTexture == theLayers[theLayer].mTexture)
-                            theLayers[k].mIsUsed = false;
-                    }
-                } else {
-                    for (k = 0; k < theLayer; k++)
-                        theQuad.mAlpha[k] = 0.0f;
-                    theQuad.mAlpha[k] = 1.0f;
-                    for (k = theLayer + 1; k < 4; k++) {
-                        if (theLayers[k].mTexture == theLayers[theLayer].mTexture) {
-                            theLayers[k].mIsUsed = false;
-                            theQuad.mAlpha[k] = 1.0f;
-                        } else
-                            theQuad.mAlpha[k] = 0.0f;
-                    }
-                }
-                this->AddTilePolys(theX, theY, theQuad, thePolygon, theMaterialIndex);
-            }
-            if (this->mSpaceTileCount == 0)
-                TrackVisibleEdges(*this, theX, theY);
-            else
-                TrackVisibleSpaceEdges(*this, theX, theY);
-            if (this->mSpaceTileCount != 0 || !this->GetIsWaterTile(theX, theY))
-                continue;
-            theQuad.mVertices[2] = &this->mWaterRenderVertices[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY];
-            theQuad.mVertices[1] =
-                &this->mWaterRenderVertices[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY + 1];
-            theQuad.mVertices[0] =
-                &this->mWaterRenderVertices[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY + 1];
-            theQuad.mVertices[3] =
-                &this->mWaterRenderVertices[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY];
-            this->mWaterPointVisibility[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY] = true;
-            this->mWaterPointVisibility[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY] = true;
-            this->mWaterPointVisibility[theX - this->mVisibleBottomLeftX][theY - this->mVisibleBottomLeftY + 1] = true;
-            this->mWaterPointVisibility[theX - this->mVisibleBottomLeftX + 1][theY - this->mVisibleBottomLeftY + 1] = true;
-            theQuad.mUV[2] = GETextureCoordinate(0.0f, 1.0f);
-            theQuad.mUV[1] = GETextureCoordinate(0.0f, 0.0f);
-            theQuad.mUV[3] = GETextureCoordinate(1.0f, 1.0f);
-            theQuad.mUV[0] = GETextureCoordinate(1.0f, 0.0f);
-            theWaterInfo = this->GetTile(theX, theY)->mWaterInfo;
-            theQuad.mAlpha[2] = (theWaterInfo & 2) ? 0.0f : 0.5f;
-            theQuad.mAlpha[1] = (theWaterInfo & 4) ? 0.0f : 0.5f;
-            theQuad.mAlpha[0] = (theWaterInfo & 8) ? 0.0f : 0.5f;
-            theQuad.mAlpha[3] = (theWaterInfo & 16) ? 0.0f : 0.5f;
-            this->AddWaterPolys(theX, theY, theQuad, theWaterPolygon, this->mWaterTextureIndices[theX % 33][theY % 33]);
-        }
+    // the skirt vertices (black, fully visible) and the cliff vertices (following a terrain vertex's visibility)
+    for (k = 0; k < theOut.edge_count; k++) {
+        this->mEdgeWorldPoints.push_back(*reinterpret_cast<const GE3DPoint*>(&theOut.edge_points[k]));
+        GETMRenderVertex* theVertex = new GETMRenderVertex;
+        theVertex->mColor.SetRed(0.0f);
+        theVertex->mColor.SetGreen(0.0f);
+        theVertex->mColor.SetBlue(0.0f);
+        theVertex->mVisibility = 1.0f;
+        theVertex->mClipFlags = 0x3f;
+        this->mEdgeRenderVertices.push_back(theVertex);
     }
-    if (this->mSpaceTileCount == 0) {
-        if (sHasFrontEdge)
-            this->GenerateFrontEdgePolygons(inViewport, sFrontEdge, thePolygon, theVertexBase);
-        if (sHasBackEdge)
-            this->GenerateBackEdgePolygons(inViewport, sBackEdge, thePolygon, theVertexBase);
-        if (sHasLeftEdge)
-            this->GenerateLeftEdgePolygons(inViewport, sLeftEdge, thePolygon, theVertexBase);
-        if (sHasRightEdge)
-            this->GenerateRightEdgePolygons(inViewport, sRightEdge, thePolygon, theVertexBase);
-        this->GenerateCornerFrontLeftPolygons(inViewport, sFrontEdge, sHasFrontEdge, sLeftEdge, sHasLeftEdge, thePolygon,
-                                        theVertexBase);
-        this->GenerateCornerFrontRightPolygons(inViewport, sFrontEdge, sHasFrontEdge, sRightEdge, sHasRightEdge,
-                                         thePolygon, theVertexBase);
-        this->GenerateCornerBackLeftPolygons(inViewport, sBackEdge, sHasBackEdge, sLeftEdge, sHasLeftEdge, thePolygon,
-                                       theVertexBase);
-        this->GenerateCornerBackRightPolygons(inViewport, sBackEdge, sHasBackEdge, sRightEdge, sHasRightEdge, thePolygon,
-                                        theVertexBase);
-    } else {
-        if (sHasBackEdge)
-            this->GenerateBackEdgePolygons(inViewport, sBackEdge, thePolygon, theVertexBase);
-        this->GenerateCornerBackLeftPolygons(inViewport, sBackEdge, sHasBackEdge, sLeftEdge, sHasLeftEdge, thePolygon,
-                                       theVertexBase);
-        this->GenerateCornerBackRightPolygons(inViewport, sBackEdge, sHasBackEdge, sRightEdge, sHasRightEdge, thePolygon,
-                                        theVertexBase);
+    for (k = 0; k < theOut.cliff_count; k++) {
+        this->mCliffWorldPoints.push_back(*reinterpret_cast<const GE3DPoint*>(&theOut.cliff_points[k]));
+        GETMRenderVertex* theVertex = new GETMRenderVertex;
+        theVertex->mVisibility = -1.0f;
+        theVertex->mLinkedVisibility =
+            &this->mTerrainRenderVertices[theOut.cliff_links[2 * k]][theOut.cliff_links[2 * k + 1]].mVisibility;
+        theVertex->mClipFlags = 0x3f;
+        this->mCliffRenderVertices.push_back(theVertex);
     }
+    // the polygons, into the arrays and their materials' lists (port: a frame past an array's capacity stops
+    // there, where the original wrote past it)
+    size_t theTerrainCount = theOut.terrain_polygon_count;
+    if (theTerrainCount > sizeof(this->mTerrainPolygons) / sizeof(GETMPolygon))
+        theTerrainCount = sizeof(this->mTerrainPolygons) / sizeof(GETMPolygon);
+    for (k = 0; k < theTerrainCount; k++) {
+        const EeGeVisiblePolygon& thePlanned = theOut.terrain_polygons[k];
+        GETMPolygon& thePolygon = this->mTerrainPolygons[k];
+        this->FillPolygon(thePlanned, thePolygon);
+        this->mTerrainMaterialList[thePlanned.material].mPolygons.push_back(&thePolygon);
+    }
+    size_t theWaterCount = theOut.water_polygon_count;
+    if (theWaterCount > sizeof(this->mWaterPolygons) / sizeof(GETMPolygon))
+        theWaterCount = sizeof(this->mWaterPolygons) / sizeof(GETMPolygon);
+    for (k = 0; k < theWaterCount; k++) {
+        const EeGeVisiblePolygon& thePlanned = theOut.water_polygons[k];
+        GETMPolygon& thePolygon = this->mWaterPolygons[k];
+        this->FillPolygon(thePlanned, thePolygon);
+        if (thePlanned.material < this->mWaterMaterialList.size())
+            this->mWaterMaterialList[thePlanned.material].mPolygons.push_back(&thePolygon);
+    }
+    ee_ge_terrain_visible_free(thePlan);
     for (i = 0; i < this->mTerrainMaterialList.size(); i++) {
         this->mTerrainMaterialList[i].mStripIndices.resize(this->mTerrainMaterialList[i].mPolygons.size() + 2);
         this->mTerrainMaterialList[i].mIndices.resize(this->mTerrainMaterialList[i].mPolygons.size() + 2);
@@ -2144,6 +830,33 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
     for (i = 0; i < this->mWaterMaterialList.size(); i++) {
         this->mWaterMaterialList[i].mStripIndices.resize(this->mWaterMaterialList[i].mPolygons.size() + 2);
         this->mWaterMaterialList[i].mIndices.resize(this->mWaterMaterialList[i].mPolygons.size() + 2);
+    }
+}
+
+// A planned polygon into a polygon of the arrays: its corners as pointers (a terrain or water render vertex, a
+// skirt or a cliff vertex), its alphas, and its texture coordinates when the plan set them (a skirt polygon keeps
+// its slot's, as the original did)
+void GETerrainMesh::FillPolygon(const EeGeVisiblePolygon& inPlanned, GETMPolygon& outPolygon)
+{
+    for (int v = 0; v < 3; v++) {
+        const EeGeVisibleVertex& theVertex = inPlanned.vertices[v];
+        switch (theVertex.kind) {
+        case 0:
+            outPolygon.mVertices[v] = &this->mTerrainRenderVertices[theVertex.a][theVertex.b];
+            break;
+        case 1:
+            outPolygon.mVertices[v] = &this->mWaterRenderVertices[theVertex.a][theVertex.b];
+            break;
+        case 2:
+            outPolygon.mVertices[v] = this->mEdgeRenderVertices[theVertex.a];
+            break;
+        default:
+            outPolygon.mVertices[v] = this->mCliffRenderVertices[theVertex.a];
+            break;
+        }
+        outPolygon.mAlpha[v] = inPlanned.alpha[v];
+        if (inPlanned.uv_set)
+            outPolygon.mUV[v] = GETextureCoordinate(inPlanned.uv[v][0], inPlanned.uv[v][1]);
     }
 }
 
