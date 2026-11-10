@@ -7,6 +7,7 @@
 
 pub mod button;
 pub mod combo;
+pub mod controls_table;
 pub mod edit;
 pub mod form;
 pub mod layout;
@@ -23,6 +24,9 @@ mod button_ffi;
 // imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod combo_ffi;
+// imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
+#[cfg(not(test))]
+mod controls_table_ffi;
 // imports the C++ edit box's lines, measuring and scroll bar (UIEditBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod edit_ffi;

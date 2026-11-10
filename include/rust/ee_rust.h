@@ -2133,6 +2133,146 @@ struct EeUiComboRefs {
   void *ctx;
 };
 
+/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
+struct EeUiControlsTableFields {
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  /// `mUnknown100`: the record's unused id, copied and never read.
+  long unknown100;
+  long id;
+  long form_id;
+  unsigned long group;
+  unsigned long control_type;
+  long form_index;
+  long border_thickness;
+  unsigned long string_table_id;
+  unsigned long font_table_index;
+  long blink_rate;
+  long string_table_begin;
+  long string_table_end;
+  long text_alignment;
+  long max_chars;
+  long start_current_selection;
+  long start_range;
+  long end_range;
+  long current_range;
+  long page_size;
+  bool is_visible;
+  bool start_checked;
+  bool list_box_always_dirty;
+  bool sort_list_box;
+  bool focused_has_alpha;
+  bool pressed_has_alpha;
+  bool normal_has_alpha;
+  bool always_dirty;
+  bool fit_rect_to_text;
+  bool scale_to_control;
+  bool loop_movie;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// Where one `UIControlsTable` keeps what the Rust side writes.
+struct EeUiControlsTableRefs {
+  EeUiControlsTableFields *fields;
+  EeUiLayout *layout;
+  EeUiColor *background;
+  EeUiColor *text_foreground;
+  EeUiColor *selected_list_box;
+  EeUiColor *focused_line;
+  EeUiRect *normal_rect;
+  EeUiRect *pressed_rect;
+  EeUiRect *focused_rect;
+};
+
+/// One record of the controls database file (`UIDbControl`, 860 bytes on every target).
+struct EeUiDbControl {
+  uint8_t label[100];
+  uint8_t normal_file_name[100];
+  uint8_t pressed_file_name[100];
+  uint8_t focused_file_name[100];
+  uint8_t button_down_sound[100];
+  uint8_t button_up_sound[100];
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  uint32_t unused1[5];
+  float left_offset;
+  float right_offset;
+  float bottom_offset;
+  float top_offset;
+  int32_t unused_db_record_id;
+  int32_t id;
+  int32_t form_id;
+  uint32_t group;
+  uint32_t control_type;
+  int32_t form_index;
+  int32_t border_thickness;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t background_red;
+  uint32_t background_green;
+  uint32_t background_blue;
+  int32_t string_table_begin;
+  int32_t string_table_end;
+  uint32_t font_table_index;
+  uint32_t text_foreground_red;
+  uint32_t text_foreground_green;
+  uint32_t text_foreground_blue;
+  int32_t text_alignment;
+  int32_t normal_left;
+  int32_t normal_right;
+  int32_t normal_top;
+  int32_t normal_bottom;
+  int32_t pressed_left;
+  int32_t pressed_right;
+  int32_t pressed_top;
+  int32_t pressed_bottom;
+  int32_t focused_left;
+  int32_t focused_right;
+  int32_t focused_top;
+  int32_t focused_bottom;
+  int32_t max_chars;
+  uint32_t selected_list_box_red;
+  uint32_t selected_list_box_green;
+  uint32_t selected_list_box_blue;
+  int32_t start_current_selection;
+  uint32_t focused_line_red;
+  uint32_t focused_line_green;
+  uint32_t focused_line_blue;
+  int32_t start_range;
+  int32_t end_range;
+  int32_t current_range;
+  int32_t page_size;
+  int32_t string_table_id;
+  int32_t blink_rate;
+  uint32_t unused2[3];
+  uint8_t is_visible;
+  uint8_t start_checked;
+  uint8_t list_box_always_dirty;
+  uint8_t sort_list_box;
+  uint8_t focused_has_alpha;
+  uint8_t pressed_has_alpha;
+  uint8_t normal_has_alpha;
+  uint8_t always_dirty;
+  uint8_t fit_rect_to_text;
+  uint8_t scale_to_control;
+  uint8_t loop_movie;
+};
+
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
 /// `static_assert`ed in `UIEditBox.cpp`).
 struct EeUiEditFields {
@@ -2181,18 +2321,6 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -2441,6 +2569,13 @@ struct EeUiRadioFields {
   bool has_text;
   bool is_push_button;
   bool scale_bitmap;
+};
+
+/// A table's identity as `AddControlLike` and `MoveControlsHorizontally` search the static array.
+struct EeUiControlsTableKey {
+  long id;
+  long form_id;
+  long form_index;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -5627,6 +5762,80 @@ long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
 
 /// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
 long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
+
+/// The default constructor's fields (written whole).
+void ee_ui_controls_table_init(const EeUiControlsTableRefs *refs);
+
+/// The record constructor: the fields, layout, colours and texture rectangles from a database record (written whole).
+void ee_ui_controls_table_from_record(const EeUiControlsTableRefs *refs,
+                                      const EeUiDbControl *record);
+
+/// `Create` keeps a record whose id is not negative.
+bool ee_ui_controls_table_record_is_control(int32_t id);
+
+/// `AddControlLike`'s searches over the static array -> whether a template was found, at `*index`.
+bool ee_ui_controls_table_find_template(long template_id,
+                                        long id,
+                                        long form_index,
+                                        unsigned long *index);
+
+/// `AddControlLike`'s edits to the template's copy.
+void ee_ui_controls_table_like(const EeUiControlsTableRefs *refs,
+                               long id,
+                               long form_index,
+                               unsigned long group,
+                               float left,
+                               float right,
+                               float top,
+                               float bottom,
+                               long string_table_begin,
+                               long string_table_end,
+                               unsigned long help_string_id);
+
+/// `MoveControlsHorizontally` -> how many tables moved.
+long ee_ui_controls_table_move_horizontally(long form_id,
+                                            long first,
+                                            long last,
+                                            float left_delta,
+                                            float right_delta);
+
+/// `SetupFont`: the scaled font follows the window.
+bool ee_ui_controls_table_font_scales_to_window(unsigned long control_type, bool scale_to_window);
+
+/// `SetupFont`: the size of a font scaled to the control.
+long ee_ui_controls_table_control_font_size(float height, long border);
+
+/// `SetupFont`: the size of a font scaled to the window.
+long ee_ui_controls_table_window_font_size(long font_height,
+                                           unsigned long window_height,
+                                           unsigned long designed_height);
+
+/// `SetupStringArray`: how many strings the range names (0: none).
+unsigned long ee_ui_controls_table_string_count(long begin, long end);
+
+/// `CreateControl`'s parent rectangle.
+EeUiRect ee_ui_controls_table_parent_rect(unsigned long window_width,
+                                          unsigned long window_height,
+                                          bool exclusive);
+
+/// `CreateControl`'s font rectangle.
+EeUiRect ee_ui_controls_table_font_rect(const EeUiRect *rect, bool exclusive);
+
+/// `CreateComboBox`: the closed box's rectangle, the list's height at `*list_height`.
+EeUiRect ee_ui_controls_table_combo_list(const EeUiRect *rect,
+                                         bool scale_to_control,
+                                         long font_height,
+                                         long border,
+                                         long *list_height);
+
+/// `CreateFileComboBox`: the box's width, its height at `*height`.
+float ee_ui_controls_table_file_combo_size(const EeUiRect *rect, long *height);
+
+/// `CreateScrollBar`: the bar's length.
+float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical);
+
+/// `CreateSlider`: the page size, capped below the range.
+long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
 
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
