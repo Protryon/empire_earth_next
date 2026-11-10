@@ -72,52 +72,27 @@ struct GETextureFileHeader {
 };
 
 // port (D9): stores one decoded frame (top row first, R, G, B(, A)) into a surface as the original's Targa reader
-// (GESurface::LoadTGA, removed) stored a texture file's frame: 32-bit surfaces get A8R8G8B8 whatever their
-// format, 16-bit ones GEPackColor of their format; no alpha (3 channels, or a surface without alpha) is 0xff. Each
-// row continues after the surface's row padding plus the surface's pixel width minus the frame's (LoadTGA's skip,
-// computed from the surface's pixel width); a frame larger than the surface is refused.
+// (GESurface::LoadTGA, removed) stored a texture file's frame (the pixel loop is Rust: ee_ge pixel.rs, store_frame):
+// 32-bit surfaces get A8R8G8B8 whatever their format, 16-bit ones GEPackColor of their format; no alpha (3 channels,
+// or a surface without alpha) is 0xff. Each row continues after the surface's row padding plus the surface's pixel
+// width minus the frame's (LoadTGA's skip, computed from the surface's pixel width); a frame larger than the surface
+// is refused.
 static long GEStoreFrame(GESurface* inSurface, const EeOfTextureFrame& inFrame)
 {
-    unsigned long theFormat = inSurface->GetPixelFormat();
-    bool theNoAlpha = inSurface->GetSurfaceDescription().mNoAlpha;
-    unsigned long theBytesPerPixel = inFrame.channels;
-    if (inFrame.width > inSurface->GetPixelWidth() || inFrame.height > inSurface->GetPixelHeight())
+    EeGeStoreTarget theTarget;
+    theTarget.pixel_depth = inSurface->GetPixelDepth();
+    theTarget.pixel_format = inSurface->GetPixelFormat();
+    theTarget.no_alpha = inSurface->GetSurfaceDescription().mNoAlpha;
+    theTarget.pixel_width = inSurface->GetPixelWidth();
+    theTarget.pixel_height = inSurface->GetPixelHeight();
+    if (!ee_ge_texture_frame_fits(&theTarget, inFrame.width, inFrame.height))
         return kErrorFailed;
     long theResult = inSurface->Lock();
     if (theResult != kErrorOK)
         return theResult;
-    unsigned long theBytesPerRow = inSurface->GetBytesPerRow();
-    const unsigned char* theSource = inFrame.pixels;
-    unsigned long x, y;
-    if (inSurface->GetPixelDepth() == 32) {
-        unsigned long theSkip = (theBytesPerRow - inSurface->GetPixelWidth() * 4) / 4;
-        uint32_t* the32BitPixel = reinterpret_cast<uint32_t*>(inSurface->GetMemoryAddress());
-        for (y = 0; y < inFrame.height; y++) {
-            for (x = 0; x < inFrame.width; x++) {
-                unsigned char theRed = theSource[0];
-                unsigned char theGreen = theSource[1];
-                unsigned char theBlue = theSource[2];
-                unsigned char theAlpha = theBytesPerPixel == 4 && !theNoAlpha ? theSource[3] : 0xff;
-                theSource += theBytesPerPixel;
-                *the32BitPixel++ = (theAlpha << 24) | (theRed << 16) | (theGreen << 8) | theBlue;
-            }
-            the32BitPixel += theSkip;
-        }
-    } else {
-        unsigned long theSkip = (theBytesPerRow - inSurface->GetPixelWidth() * 2) / 2;
-        unsigned short* the16BitPixel = reinterpret_cast<unsigned short*>(inSurface->GetMemoryAddress());
-        for (y = 0; y < inFrame.height; y++) {
-            for (x = 0; x < inFrame.width; x++) {
-                unsigned char theRed = theSource[0];
-                unsigned char theGreen = theSource[1];
-                unsigned char theBlue = theSource[2];
-                unsigned char theAlpha = theBytesPerPixel == 4 && !theNoAlpha ? theSource[3] : 0xff;
-                theSource += theBytesPerPixel;
-                *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, theAlpha);
-            }
-            the16BitPixel += theSkip;
-        }
-    }
+    theTarget.bytes_per_row = inSurface->GetBytesPerRow();
+    ee_ge_texture_store_frame(&theTarget, inFrame.width, inFrame.height, inFrame.channels, inFrame.pixels,
+                              inSurface->GetMemoryAddress());
     return inSurface->Unlock();
 }
 
@@ -223,24 +198,20 @@ long GETexture::Demote()
 // Drops a reference; at the last outside reference a managed texture removes itself from its manager
 void GETexture::Dereference()
 {
-    if (this->mReferenceCount > 2)
+    bool theDereference;
+    bool theRemove;
+    ee_ge_texture_dereference_decision(this->mReferenceCount, this->mIsManaged, &theDereference, &theRemove);
+    if (theDereference)
         UReferenceCounter::Dereference();
-    else {
-        if (this->mReferenceCount > 1)
-            UReferenceCounter::Dereference();
-        if (this->mIsManaged)
-            this->mManager->RemoveTexture(this);
-    }
+    if (theRemove)
+        this->mManager->RemoveTexture(this);
 }
 
 // FUNCTION: LLE 0x10032eab
 // Returns the surface's allocated size, times the frame count when each frame has its own texture
 unsigned long GETexture::GetAllocatedSize()
 {
-    unsigned long theSize = this->mSurface->GetAllocatedSize();
-    if (this->mFrameFormat == 0)
-        theSize *= this->mFrameCount;
-    return theSize;
+    return ee_ge_texture_allocated_size(this->mSurface->GetAllocatedSize(), this->mFrameFormat, this->mFrameCount);
 }
 
 // NEAR: control flow, calls and frame order match; what is left is slot choice. The original keeps theResult in a
@@ -257,26 +228,23 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
     GERectangle theSource;
     GESurfaceDescription theDescription;
     GESurfaceDescription theDropDescription;
-    long theMipLevels = 0;
     GERectangle theDestination;
     bool theSuccess = true;
     GETextureFileHeader theHeader;
     EeOfTextureInfo theInfo;
     EeOfTextureFrame theFrameData;
+    EeGeTextureFramePlan thePlan;   // the descriptions' planning is Rust (ee_ge texture.rs)
+    float theCell[4];
     long theResult;
     unsigned long i;
     unsigned long theFrame;
     long j;
-    long theSize;
-    unsigned long theGridSize;
     GESurface* theSurface;
     GESurface* theDropSurface;
     GESurface* theGrid;
     GESurface* theMip;
     GESurface* theNext;
     GESurface* theTarget;
-    float theX;
-    unsigned long theRow;
 
     if (this->mSurface) {
         this->mSurface->Dereference();
@@ -318,43 +286,17 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
                 theDescription.mWidth = theHeader.mWidth;
                 theDescription.mHeight = theHeader.mHeight;
                 theDescription.m14 = 0;
-                theSize = theHeader.mWidth;
-                do {
-                    theSize >>= 1;
-                    theMipLevels++;
-                } while (theSize > 0);
-                if (theMipLevels - 1 < inNumMipLevelsToDrop)
-                    inNumMipLevelsToDrop = theMipLevels - 1;
-                if (inCreateMIPMaps) {
-                    theDescription.mType = kSurfaceMipMappedTexture;
-                    theDescription.mMipLevelCount = theMipLevels;
-                } else if (inNumMipLevelsToDrop > 0) {
-                    theDescription.mType = kSurfaceMipMappedTexture;
-                    theDescription.mMipLevelCount = inNumMipLevelsToDrop + 1;
-                } else {
-                    theDescription.mType = kSurfaceTexture;
-                    theDescription.mMipLevelCount = 1;
-                }
-                if (inNumMipLevelsToDrop > 0) {
-                    if (inNumMipLevelsToDrop == theMipLevels - 1) {
-                        theDropDescription = theDescription;
-                        theDropDescription.mWidth = 1;
-                        theDropDescription.mHeight = 1;
-                        theDropDescription.mType = kSurfaceTexture;
-                        theDropDescription.mMipLevelCount = 1;
-                    } else if (inCreateMIPMaps) {
-                        theDropDescription = theDescription;
-                        theDropDescription.mType = kSurfaceMipMappedTexture;
-                        theDropDescription.mWidth = theHeader.mWidth >> inNumMipLevelsToDrop;
-                        theDropDescription.mHeight = theHeader.mHeight >> inNumMipLevelsToDrop;
-                        theDropDescription.mMipLevelCount = theMipLevels - inNumMipLevelsToDrop;
-                    } else {
-                        theDropDescription = theDescription;
-                        theDropDescription.mType = kSurfaceTexture;
-                        theDropDescription.mMipLevelCount = 1;
-                        theDropDescription.mWidth = theHeader.mWidth >> inNumMipLevelsToDrop;
-                        theDropDescription.mHeight = theHeader.mHeight >> inNumMipLevelsToDrop;
-                    }
+                ee_ge_texture_frame_plan(theHeader.mWidth, theHeader.mHeight, inCreateMIPMaps, inNumMipLevelsToDrop,
+                                         &thePlan);
+                inNumMipLevelsToDrop = thePlan.drop;
+                theDescription.mType = thePlan.surface_type;
+                theDescription.mMipLevelCount = thePlan.mip_level_count;
+                if (thePlan.has_drop) {
+                    theDropDescription = theDescription;
+                    theDropDescription.mWidth = thePlan.drop_width;
+                    theDropDescription.mHeight = thePlan.drop_height;
+                    theDropDescription.mType = thePlan.drop_type;
+                    theDropDescription.mMipLevelCount = thePlan.drop_mip_level_count;
                     inDescription = theDropDescription;
                     this->mMipLevelCount = theDropDescription.mMipLevelCount;
                 }
@@ -408,14 +350,10 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
             } else
                 theResult = kErrorOutOfMemory;
         } else if (inFrameFormat == 1) {
-            theGridSize = 1;
-            while (theHeader.mFrameCount > theGridSize)
-                theGridSize *= 4;
-            this->mFramesPerRow = (unsigned long)sqrt((double)theGridSize);
+            ee_ge_texture_grid_plan(theHeader.mFrameCount, &this->mFramesPerRow, &this->mFrameUVSize);
             this->mFrameTexture = this;
             this->mFrameFormat = 1;
             this->mFrameCount = theHeader.mFrameCount;
-            this->mFrameUVSize = 1.0f / this->mFramesPerRow;
             this->mFrameTopLeftCorner.SetU(0.0f);
             this->mFrameTopLeftCorner.SetV(0.0f);
             inDescription.mWidth = theHeader.mWidth;
@@ -447,12 +385,12 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
                             theSource.SetTop(0.0f);
                             theSource.SetRight((float)theMip->GetWidth());
                             theSource.SetBottom((float)theMip->GetHeight());
-                            theX = (float)i / (float)this->mFramesPerRow;
-                            theRow = (unsigned long)theX;
-                            theDestination.SetLeft((theX - theRow) * theMip->GetWidth() * this->mFramesPerRow);
-                            theDestination.SetTop((float)(theMip->GetHeight() * theRow));
-                            theDestination.SetRight(theMip->GetWidth() + theDestination.GetLeft());
-                            theDestination.SetBottom(theMip->GetHeight() + theDestination.GetTop());
+                            ee_ge_texture_grid_cell(i, this->mFramesPerRow, theMip->GetWidth(), theMip->GetHeight(),
+                                                    theCell);
+                            theDestination.SetLeft(theCell[0]);
+                            theDestination.SetTop(theCell[1]);
+                            theDestination.SetRight(theCell[2]);
+                            theDestination.SetBottom(theCell[3]);
                             theResult = theMip->CopyTo(theTarget, theSource, theDestination, false);
                             if (theResult != kErrorOK)
                                 break;
@@ -598,8 +536,8 @@ void GETexture::SetStageMipFilterMode(unsigned long inMode, unsigned long inStag
     unsigned long i;
     // port: a texture pack's texture is drawn smaller than its pixels (its logical size): its MIP levels are used
     // even where the game asks for none, so it is not point sampled from the big level (GETextureManager makes them)
-    if (inMode == kMipFilterNone && this->mSurface && this->mSurface->GetLogicalShift() > 0 && this->mCreateMIPMaps)
-        inMode = kMipFilterPoint;
+    inMode = ee_ge_texture_mip_filter_mode(inMode, this->mSurface != NULL,
+                                           this->mSurface ? this->mSurface->GetLogicalShift() : 0, this->mCreateMIPMaps);
     if (this->mFrameFormat == 0) {
         for (i = 0; i < this->mFrameCount; i++) {
             if (this->mFrames[i]->mStage.mMipFilterMode != inMode) {
@@ -674,13 +612,9 @@ void GETexture::SetFrame(unsigned long inFrame)
     this->mFrame = inFrame;
     if (this->mFrameFormat == 0)
         this->mFrameTexture = this->mFrames[inFrame];
-    else {
-        float theFramesPerRow = (float)this->mFramesPerRow;
-        float theX = (float)inFrame / theFramesPerRow;
-        float theRow = (float)(unsigned long)theX;
-        this->mFrameTopLeftCorner.SetU(theX - theRow);
-        this->mFrameTopLeftCorner.SetV(theRow / theFramesPerRow);
-    }
+    else
+        ee_ge_texture_frame_corner(inFrame, this->mFramesPerRow, &this->mFrameTopLeftCorner.mU,
+                                   &this->mFrameTopLeftCorner.mV);
     this->SetHasChanged();
 }
 

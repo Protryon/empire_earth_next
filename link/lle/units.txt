@@ -23,9 +23,7 @@
 166d3 166d3 Graphics Engine/GELight.cpp
 166d3 16a7b Graphics Engine/GELine.cpp
 16a7b 16cb8 Graphics Engine/GEMaterial.cpp
-16cb8 189df Graphics Engine/GEModel Caching.cpp
 1c294 1cd3b Graphics Engine/GEModel Load.cpp
-1cd3b 1e4e8 Graphics Engine/GEModel LOD.cpp
 1eb9f 206c7 Graphics Engine/GEModel.cpp
 206c7 20d20 Graphics Engine/GEModelManager.cpp
 20d20 20e09 Graphics Engine/GEOrientation.cpp

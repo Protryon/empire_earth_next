@@ -33,7 +33,6 @@
 #include "lle/GEFont.h"
 #include "lle/UMemoryPool.h"
 #include "lle/UList.h"
-#include "lle/GELOD.h"
 #include "lle/GELight.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GELine.h"

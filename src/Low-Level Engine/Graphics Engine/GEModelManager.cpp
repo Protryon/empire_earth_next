@@ -22,9 +22,9 @@
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf
-#include "rust/ee_rust.h"       // ee_ge_cem_free
+#include "rust/ee_rust.h"       // ee_ge_cem_free; the manager's logic (ee_ge managers.rs)
 
-static unsigned long sModelNumber = 1;      // 0x100d953c: appended to created models' names
+// (sModelNumber 0x100d953c, appended to created models' names, counts in Rust: ee_ge_modman_created_name)
 //
 // FUNCTION: LLE 0x100206c7
 // Creates the model manager with a model search path and its lock
@@ -52,10 +52,11 @@ GEModelManager::~GEModelManager()
 GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
                                      unsigned long inFrameCount, unsigned long inSubModelCount, const UString& inName, unsigned long inFlags)
 {
-    UString theName;
+    char theBuffer[1024];
     GEModel* theModel;
     this->mCriticalSection->Enter();
-    sprintf(theName, "GEModelManager::CreateModel(%s_%ld)", (const char*)inName, sModelNumber++);
+    ee_ge_modman_created_name(inName, theBuffer, sizeof(theBuffer));
+    UString theName(theBuffer);
     theModel = new GEModel(inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount, inSubModelCount, theName, inFlags, this);
     this->mModels[theName] = theModel;
     this->mCriticalSection->Leave();
@@ -130,12 +131,14 @@ long GEModelManager::RemoveAllModels()
     this->mCriticalSection->Enter();
     for (theIter = this->mModels.begin(); theIter != this->mModels.end();) {
         theModel = theIter->second;
-        if (theModel->mReferenceCount == 1) {
+        bool theRemove;
+        long theDecision = ee_ge_manager_remove_decision(theModel->mReferenceCount, &theRemove);
+        if (theRemove) {
             this->mMemoryFootprint -= theModel->SizeOf();
             theModel->UReferenceCounter::Dereference();
             theIter = this->mModels.erase(theIter);
         } else {
-            theResult = 5;
+            theResult = theDecision;
             theIter++;
         }
     }
@@ -152,13 +155,13 @@ long GEModelManager::RemoveModel(GEModel* inModel)
     this->mCriticalSection->Enter();
     for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
         if (theIter->second == inModel) {
-            if (inModel->mReferenceCount == 1) {
+            bool theRemove;
+            theResult = ee_ge_manager_remove_decision(inModel->mReferenceCount, &theRemove);
+            if (theRemove) {
                 this->mMemoryFootprint -= inModel->SizeOf();
                 inModel->UReferenceCounter::Dereference();
                 this->mModels.erase(theIter);
-                theResult = kErrorOK;
-            } else
-                theResult = 5;
+            }
             break;
         }
     this->mCriticalSection->Leave();
