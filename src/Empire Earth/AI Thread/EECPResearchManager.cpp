@@ -39,6 +39,7 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPResearchManager.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
@@ -229,6 +230,11 @@ long EECPResearchManager::Load(unsigned long inMajorVersion, unsigned long inMin
         theResult = inFile.Read(this->mEpoch);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mEnabled);
+    // port (0.255): the started flag and the history flag, so a loaded manager does not reschedule its next random
+    // research at its first update (SetNextRandomResearchTime from the load time, where the saved game kept mNextTime)
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)
+        && (theResult = inFile.Read(this->mStarted)) == kErrorOK)
+        theResult = inFile.Read(this->mRecordsHistory);
     return theResult;
 }
 
@@ -521,6 +527,9 @@ long EECPResearchManager::Save(unsigned long inMajorVersion, unsigned long inMin
         theResult = outFile.Write(this->mEpoch);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mEnabled);
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.255): Load
+        && (theResult = outFile.Write(this->mStarted)) == kErrorOK)
+        theResult = outFile.Write(this->mRecordsHistory);
     return theResult;
 }
 
