@@ -52,6 +52,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitBehavior.h"
+#include "ee/EEUGGather.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
@@ -378,7 +379,9 @@ static void EECPUnitsTake(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECompl
     }
 }
 
-static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit)
+// inWork (ai.release(ids, {gather = true})): a citizen or boat that gathers goes onto its resource's gatherer list, so
+// the engine's runners count it where it works (else only an idle one rejoins them, on the idle list)
+static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit, bool inWork)
 {
     if (s->mHeld.erase((long)inUnit->mUnitID) == 0 || inUnit->mUnitClass->IsBuilding())
         return;
@@ -387,9 +390,22 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     if (inPlayer->mCombatManager != NULL)
         inPlayer->mCombatManager->UnitAdded(inUnit);
     long theCategory = inUnit->mUnitClass->mCategory;
-    if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) && EECPUnitsIdle(inUnit)
-        && inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL)
-        inPlayer->mCivilizationManager->mResourceManager->AddIdleGatherer(inUnit);
+    if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)
+        || inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResourceManager == NULL)
+        return;
+    EECPResourceManager* theManager = inPlayer->mCivilizationManager->mResourceManager;
+    if (EECPUnitsIdle(inUnit)) {
+        theManager->AddIdleGatherer(inUnit);
+        return;
+    }
+    EEUGGather* theGoal = inWork ? dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal()) : NULL;
+    if (theGoal != NULL && theGoal->mResource != NULL && theGoal->mResource->mHitPoints > 0) {
+        long theResource = (long)theGoal->mResource->GetResourceType();
+        if (theResource >= 0 && theResource < 7) {
+            theManager->RemoveGatherer(inUnit);
+            theManager->AddGatherer(inUnit, theResource);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1816,6 +1832,7 @@ static int EECPUnitsHold(lua_State* L, bool inTake)
 {
     EEComputerPlayer* me = EECPUnitsMe(L);
     EECPUnitsState* s = EECPUnitsGet(me);
+    bool theWork = !inTake && EECPUnitsOptBool(L, 2, "gather", false);
     EECPUnitsReadIds(L, 1, s->mIds);
     EECPUnitsCharge(L, kCostCall + (int64_t)s->mIds.size() * kCostId);
     long n = 0;
@@ -1826,7 +1843,7 @@ static int EECPUnitsHold(lua_State* L, bool inTake)
         if (inTake)
             EECPUnitsTake(me, s, c);
         else
-            EECPUnitsRelease(me, s, c);
+            EECPUnitsRelease(me, s, c, theWork);
         n++;
     }
     lua_pushinteger(L, (lua_Integer)n);
