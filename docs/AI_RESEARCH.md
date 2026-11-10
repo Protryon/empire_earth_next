@@ -2232,6 +2232,43 @@ against 11.6). What upstream is strong at - the force's pushes, farms, the army'
 lies past these 45 minutes; a longer bench (90 minutes, the Copper and Bronze Ages) is the next measure, with the
 navy, towns and siege still to port.
 
+**The tactics, the navy and the longer benches (2026-11-09, the second checkpoint).** Ported since the first bench
+(`ai/ageofai/tactics.lua`, `navy.lua`, `ai/lib/navy.lua`; UPSTREAM's map): the siege controller, the settlement
+upgrades (spare citizens only: a first draft on an island put the idle workforce into the settlements), counter-fire
+in the micro step, and the navy (a sea scout over `ai.unexplored{sea = true}`, transports and a warship from the
+account, the landing at the weakest beach when the force at home beats it by 1.4, the landed group on lib.groups).
+The 45-minute numbers are unchanged (against boom Stone 23.1 against 22.7, citizens 47/58 against 42/61 at 30/40
+min, army 8.9/11.0 against 8.8/14.2; against classic Stone 27.1, citizens 35/43, army 4.0/13.9; no defeats).
+
+| 90 minutes, 16 games each | Stone (min, reached) | Copper (min, reached) | Bronze reached | citizens / army at the end | defeats (wiped) |
+|---|---|---|---|---|---|
+| Age of AI against boom | 24.6 +- 1.6 (16/16) | 63.5 +- 2.1 (14/16) | 9/16 (77-90 min) | 89.2 / 33.2 | 0 |
+| boom in those games | 22.7 +- 0.7 (16/16) | 57.9 +- 2.6 (15/16) | 9/16 (60-88 min) | 107.3 / 17.7 | 0 |
+| Age of AI against classic Hard | 29.1 +- 2.3 (15/16) | 64.0 +- 3.2 (7/16) | 0/16 | 28.2 / 6.2 | 4 (1) |
+| classic Hard in those games | 25.2 +- 0.1 (16/16) | 63.3 +- 0.9 (15/16) | 5/16 (77-89 min) | 166.8 / 11.9 | 0 |
+| Small Islands, Age of AI against classic (8 games) | 25.9 +- 1.0 (8/8) | 58.9 +- 2.2 (7/8) | - | 73.4 / 79.1 | 0 |
+| classic Hard in those games | 47.1 +- 6.4 (7/8) | 75.0 (2/8) | - | 39.4 / 28.6 | 0 |
+
+- **Against boom** the port keeps pace to the Bronze Age with twice the army at the end (33 against 18) and fewer
+  citizens (89 against 107); boom's Copper comes 5-6 minutes earlier. The force pushed 10 times in 16 games (0.6 a
+  game; upstream measures 1.6 on huge maps) and came home "losing" 37 times: the pushes meet boom's towers and army
+  and turn round as the rule says; nothing was decided.
+- **Against classic Hard** the port **loses 4 of 16 games in 90 minutes** (one seat wiped out), with 28 citizens
+  left on average against the classic's 167. The force answered 112 raids and came home losing 88 times: the
+  classic's late waves (Copper-Bronze armies of 30+) grind the home guard down at the outposts and the base, and
+  the economy follows. Boom's own 90-minute result against classic is not measured yet (its 45-minute games have
+  no defeats); the next steps for the port are the muster and the home defence against a wave the force cannot
+  beat (upstream's hold_town, bunkers), fewer raid answers at the outposts (upstream's AR_RAID_BAND 3 holds, but
+  our outposts are raided by whole waves), and towers at the fronts earlier.
+- **On Small Islands** the port is far ahead of the classic AI (Stone 26 against 47 minutes, Copper 7/8 against
+  2/8, 73 citizens and 79 soldiers against 39 and 29): the classic AI's economy stalls on islands. The landing
+  worked in 2 of 8 games (40 boarded, 19-23 ashore each time; the landed group was beaten), was given up in 2 on
+  the unload (the transports found no spot in 4 minutes: upstream's unload retries were engine fixes, still to do
+  here) and never sailed in 4 (the force never 1.4 x the beach known). L6's gate (10/10 landings) is not met.
+- **The save check:** with `EE_AI_SAVE_CHECK=1` the units block decodes and encodes to the same bytes at every
+  autosave (`next.savecheck units=same`); the Lua shadow step is skipped for scripts on the per-unit interface
+  (their commands cannot run twice) - a real load stays a manual test.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

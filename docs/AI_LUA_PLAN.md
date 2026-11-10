@@ -485,7 +485,10 @@ the game (one error line).
 into the tree's `Data/ai/`; `open_data.py ai TREE` refreshes only `Data/ai` (seconds) and records the scripts' hash as
 `ai` in `open_data.json`; the harness (`exe_boot.data_tree`) refreshes its own trees when that hash differs (the
 converters' hash leaves the scripts out, so a script change never rebuilds the 4-minute tree); `tools/sim.py` warns.
-`open_data.py pack --part db` ships `Data/ai` with `Data/db`. TEST ONLY: `EE_AI_SCRIPTS=<absolute dir>` (the dir
+`open_data.py pack --part db` ships `Data/ai` with `Data/db`. The installer copies `ais.json`, every `.lua` and a ported AI's notice
+files (`LICENSE`, `UPSTREAM`, `README`, `NOTICE`, `COPYING` under `ai/`: `ai/ageofai/LICENSE` is the GPL-3.0 text,
+`UPSTREAM` the upstream pin); the scripts' hash in `open_data.json` covers the same files. The game's own AI folder
+hash (`EECPAIFolderHash`, the multiplayer checksum) covers `ais.json` and the scripts only. TEST ONLY: `EE_AI_SCRIPTS=<absolute dir>` (the dir
 stands for `Data\ai`) is read first; `tools/sim.py --ai-scripts DIR` and `tools/sim_bench.py --ai-scripts DIR` set
 it (made absolute: the game runs in its data root).
 

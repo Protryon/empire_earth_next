@@ -857,12 +857,38 @@ pushes at the attack time at 130% of the enemy known at the target along `ai.rou
 §8.37 has the bench. Not ported: the navy, landings, other islands, towns, siege, counterfire, garrison upgrades,
 diplomacy (UPSTREAM lists them).
 
+**L6, the navy in Lua (2026-11-09): `ai/lib/navy.lua`.** `N.transports()`, `N.dock_sea()`, `N.plan(target, soldiers,
+transports)` (the site: the shore of the target's land mass on the dock's sea nearest a known enemy building, the
+least dangerous of nine; the boarding shore nearest the soldiers and the water in front of both, `ai.shore`), and
+`N.landing_step(L)`: board (the transports to the boarding water, the soldiers loaded in shares with `ai.load`,
+again every 30 s; sails when all are aboard, 9 in 10 after a minute, or after 3 minutes with half at least), sail (a
+sea route `ai.route{sea = true}` in formation), unload (each transport its own shore tile, `ai.unload` again every
+2 s while anyone is aboard), ashore (the soldiers handed back; the caller makes a lib.groups attack of them).
+`N.fleet_step(mem)`: the warships hold the dock's water, attack the enemy ships, transports and boats seen within
+reach (ships first) and fall back when the seen enemy warships are 1.5 x their strength. The engine's own unload
+bugs (upstream's retries) are not touched yet: the step re-orders the unload instead. The Age of AI port's
+`navy.lua` uses it (a landing at the attack time when the force at home beats the beach by 1.4, transports and a
+warship or two from the account).
+
+**The port's tactics (2026-11-09): `ai/ageofai/tactics.lua`.** The siege controller (2 + a quarter of the known
+enemy defences, at most 4, from a Siege Factory from the Bronze Age, a 10-minute pause after 3 lost in 10 minutes),
+the settlement upgrades (every 20 s up to 10 spare citizens - idle, or wood cutters over 5000 wood - into the drop
+site with the most metal mines within reach, a Settlement first, through `ai.garrison`; the record's new
+`garrisoned` field counts them), and counter-fire in the **micro step** (the attacked events every 250 ms: a shooter
+of 5+ tiles range hitting from beyond the victim's reach + 1; shooters within 6 tiles are one target; the own
+soldiers within 24 tiles join nearest first until 1.5 x the enemy fighters seen within 10 of the shooter, at most 60,
+committed 45 s: `lib.groups` leaves `G.committed` units alone). The step keeps the attacked events the micro step
+took (`memory.hits`) for the raid answer.
+
+**The EENU save check (2026-11-09):** with `EE_AI_SAVE_CHECK=1` every save of the units block decodes into a fresh
+state and encodes it again; `next.savecheck units=same|DIFFERENT bytes= held= events= memory= trades=` in the trace.
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - `patrol`, `wall` / `gate`, `tribute` / `trade` / `diplomacy` (their messages write chat lines);
 - the per-step command limits are counted per game ms, so a step and a micro in the same tick share them;
-- L6 (the navy, transports and landings in lib) and the deletion of `EECPNextArmy.cpp` once rush and balanced run on
-  lib.groups.
+- the deletion of `EECPNextArmy.cpp` once rush and balanced run on lib.groups; the engine's unload fixes (L6's
+  gate on an Islands map is in AI_RESEARCH §8.37 once run).
 
 **Gates:**
 - **Boom unchanged.** sim_bench seeds 2-9 (Small, Hard, `--engine boom,classic`, 2700 game s, `--ai-scripts ai`,
