@@ -31,7 +31,7 @@ inline const char* TextExtension(const char* inTable)
     return ee_data_text_extension(inTable);
 }
 
-// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8): what the text forms read back
+// The game's text (UTF-8) -> a double-quoted YAML scalar: what the text forms read back
 inline std::string QuoteText(const std::string& inBytes)
 {
     EeDataBytes out{nullptr, 0};
@@ -119,7 +119,7 @@ struct CivKey {
     long mLine;
 };
 
-// Reads a keyed .civ text: its name as CP-1252 bytes and its upgrades in order; false with the error (the parse
+// Reads a keyed .civ text: its name as UTF-8 bytes and its upgrades in order; false with the error (the parse
 // error, "<where>: not a civilization", or a bad name).
 inline bool ReadCivilization(const std::string& inText, const char* inWhere, std::string& outName,
                              std::vector<CivKey>& outKeys, std::string& outError)

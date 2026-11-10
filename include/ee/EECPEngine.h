@@ -40,7 +40,7 @@ const unsigned long kEECPMaxAIs = 64;   // the manifest's entries past this are 
 // an AI of the manifest (Data/ai/ais.json "ais")
 struct EECPAIEntry {
     std::string mID;                // [a-z0-9_]+, unique; not classic, random or next
-    std::string mName;              // the lobby's text (UTF-8 in the file; Windows-1252 here, '?' for the rest)
+    std::string mName;              // the lobby's text (UTF-8, a malformed byte as U+FFFD)
     std::string mScript;            // the Lua module (require's name: dots are folders under Data/ai)
     std::string mDescription;
     bool mRandom;                   // the lobby's Random may pick it

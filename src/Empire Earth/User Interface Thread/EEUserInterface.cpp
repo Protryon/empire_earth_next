@@ -682,6 +682,9 @@ long EEUserInterface::Run(void* inParameter)
     gResource->GetString(IDS_ENGLISH, theLocale);
     setlocale(LC_ALL, theLocale);
     setlocale(LC_NUMERIC, "English");
+    // port (decision D6): game text is UTF-8, so the C runtime's character classes stay the "C" locale's; under the
+    // language's code page tolower/toupper/isalpha would have changed the bytes of a multi-byte character
+    setlocale(LC_CTYPE, "C");
     setlocale(LC_ALL, NULL);
     if (this->CreateRenderObject() != kErrorOK)
         return 0;
@@ -1833,7 +1836,7 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
             sComposing = false;
         }
         break;
-    case PLAT_EVENT_TEXT:   // WM_CHAR, one per byte (Windows-1252); a composition's result: GCS_RESULTSTR
+    case PLAT_EVENT_TEXT:   // WM_CHAR, one per character (UTF-8, decision D6); a composition's result: GCS_RESULTSTR
         if (sComposing && gUserInterface != NULL && gUIManager != NULL) {
             gUserInterface->AddIMEResultString(inEvent.mText.mText);
             gUserInterface->CloseIMECompositionString();
@@ -1841,10 +1844,14 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
             break;
         }
         if (!sControlDown || sAltDown == true) {
-            for (const char* p = inEvent.mText.mText; *p; p++) {
-                char theKey[4] = {*p, 0, 0, 0};   // WM_CHAR's wParam
+            for (const char* p = inEvent.mText.mText; *p;) {
+                uint32_t theLength = 0;
+                PlatUtf8Decode(p, &theLength);
+                char theKey[8] = {0, 0, 0, 0, 0, 0, 0, 0};   // WM_CHAR's wParam: one character's bytes
+                memcpy(theKey, p, theLength);
                 if (theKey[0] != '\t' && theKey[0] != 0x1b && theKey[0] != '\b' && theKey[0] != '\r')
                     gUIManager->UpdateTranslatedKey(theKey, 1);
+                p += theLength;
             }
         }
         break;

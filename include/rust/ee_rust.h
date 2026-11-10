@@ -126,6 +126,13 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
+/// `kCheckStateOff`, `kCheckStateOn`, `kCheckStateNot`.
+constexpr static const unsigned long CHECK_OFF = 0;
+
+constexpr static const unsigned long CHECK_ON = 1;
+
+constexpr static const unsigned long CHECK_NOT = 2;
+
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
 
@@ -176,6 +183,52 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
+
+constexpr static const uint8_t JOIN_REQUEST = 1;
+
+constexpr static const uint8_t JOIN_REPLY = 2;
+
+constexpr static const uint8_t CLIENT_JOINED = 3;
+
+constexpr static const uint8_t CLIENT_LEFT = 4;
+
+constexpr static const uint8_t CHAT_REQUEST = 5;
+
+constexpr static const uint8_t CHAT_LINE = 6;
+
+constexpr static const uint8_t PING = 7;
+
+constexpr static const uint8_t STAGING = 8;
+
+constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
+
+constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
+
+constexpr static const uint8_t DISCOVERY_REMOVED = 3;
+
+constexpr static const uint8_t DISCOVERY_QUERY = 4;
+
+/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
+constexpr static const int16_t JOIN_OK = 0;
+
+constexpr static const int32_t JOIN_BAD_REPLY = 1;
+
+constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
+
+constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
+
+/// Chat flags: a whisper to the target, a line to the sender's team.
+constexpr static const uint16_t CHAT_WHISPER = 4;
+
+constexpr static const uint16_t CHAT_TEAM = 256;
+
+/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
+/// host re-sends its full summary instead of a keep-alive after this many.
+constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
+
+constexpr static const int64_t JOINER_PING_IDLE = 120;
+
+constexpr static const int64_t SUMMARY_REPEAT = 30;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -392,6 +445,12 @@ struct EeSoundManager;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
+/// `AsyncOpContainer::mOpQueue`.
+struct EeWonOpQueue;
+
+/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
+struct EeWonOpSet;
+
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
 
@@ -411,6 +470,12 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
+
+/// `TimerThread`'s two maps: the deadlines of this tick-count era and, past the 32-bit wrap, of the next
+/// (`mTimerMap`, `mWrapAroundMap`), each in deadline order and, among equal deadlines, in insertion order (the
+/// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
+/// the first map, which left the ops' iterators dangling).
+struct EeWonTimerQueue;
 
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
@@ -2136,6 +2201,59 @@ struct EeUiButtonRefs {
   void *ctx;
 };
 
+/// `UITriStateCheckBox`'s members in their C++ order (from `mTextLabel` on).
+struct EeUiTriStateFields {
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  /// 0 off, 1 on, 2 "not".
+  unsigned long check_state;
+  bool has_text;
+};
+
+/// Where a `UITriStateCheckBox` keeps what the Rust side reads and writes.
+struct EeUiTriStateRefs {
+  /// The `UITriStateCheckBox*`.
+  void *button;
+  /// Its record from `mTextLabel` on.
+  EeUiTriStateFields *fields;
+  /// `mRectangle`.
+  const EeUiRect *rect;
+  /// `mBorderThickness`.
+  const unsigned long *border;
+  /// A `SetText`'s text and font for the label host calls (`UIButtonRust::Label`), else NULL.
+  void *ctx;
+};
+
+/// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
+struct EeUiBlinkFields {
+  /// 1 fading out, 0 fading in.
+  unsigned long blink_phase;
+  /// Milliseconds per phase, 50..5000.
+  unsigned long blink_rate;
+  float pressed_opacity;
+  float normal_opacity;
+  float bg_opacity;
+  float full_border_opacity;
+  bool saved_always_dirty;
+  bool needs_opacities;
+  bool is_blinking;
+};
+
+/// What `CopyData` shows: the background's, the border's and the two bitmaps' opacities.
+struct EeUiBlinkShow {
+  float background;
+  float border;
+  float pressed;
+  float normal;
+};
+
+/// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
+struct EeUiSlice {
+  EeUiRect source;
+  EeUiRect destination;
+  EeUiPoint location;
+};
+
 /// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
 struct EeUiComboFields {
   void *text_box;
@@ -2157,6 +2275,146 @@ struct EeUiComboRefs {
   const EeUiRect *rect;
   const unsigned long *index;
   void *ctx;
+};
+
+/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
+struct EeUiControlsTableFields {
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  /// `mUnknown100`: the record's unused id, copied and never read.
+  long unknown100;
+  long id;
+  long form_id;
+  unsigned long group;
+  unsigned long control_type;
+  long form_index;
+  long border_thickness;
+  unsigned long string_table_id;
+  unsigned long font_table_index;
+  long blink_rate;
+  long string_table_begin;
+  long string_table_end;
+  long text_alignment;
+  long max_chars;
+  long start_current_selection;
+  long start_range;
+  long end_range;
+  long current_range;
+  long page_size;
+  bool is_visible;
+  bool start_checked;
+  bool list_box_always_dirty;
+  bool sort_list_box;
+  bool focused_has_alpha;
+  bool pressed_has_alpha;
+  bool normal_has_alpha;
+  bool always_dirty;
+  bool fit_rect_to_text;
+  bool scale_to_control;
+  bool loop_movie;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// Where one `UIControlsTable` keeps what the Rust side writes.
+struct EeUiControlsTableRefs {
+  EeUiControlsTableFields *fields;
+  EeUiLayout *layout;
+  EeUiColor *background;
+  EeUiColor *text_foreground;
+  EeUiColor *selected_list_box;
+  EeUiColor *focused_line;
+  EeUiRect *normal_rect;
+  EeUiRect *pressed_rect;
+  EeUiRect *focused_rect;
+};
+
+/// One record of the controls database file (`UIDbControl`, 860 bytes on every target).
+struct EeUiDbControl {
+  uint8_t label[100];
+  uint8_t normal_file_name[100];
+  uint8_t pressed_file_name[100];
+  uint8_t focused_file_name[100];
+  uint8_t button_down_sound[100];
+  uint8_t button_up_sound[100];
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  uint32_t unused1[5];
+  float left_offset;
+  float right_offset;
+  float bottom_offset;
+  float top_offset;
+  int32_t unused_db_record_id;
+  int32_t id;
+  int32_t form_id;
+  uint32_t group;
+  uint32_t control_type;
+  int32_t form_index;
+  int32_t border_thickness;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t background_red;
+  uint32_t background_green;
+  uint32_t background_blue;
+  int32_t string_table_begin;
+  int32_t string_table_end;
+  uint32_t font_table_index;
+  uint32_t text_foreground_red;
+  uint32_t text_foreground_green;
+  uint32_t text_foreground_blue;
+  int32_t text_alignment;
+  int32_t normal_left;
+  int32_t normal_right;
+  int32_t normal_top;
+  int32_t normal_bottom;
+  int32_t pressed_left;
+  int32_t pressed_right;
+  int32_t pressed_top;
+  int32_t pressed_bottom;
+  int32_t focused_left;
+  int32_t focused_right;
+  int32_t focused_top;
+  int32_t focused_bottom;
+  int32_t max_chars;
+  uint32_t selected_list_box_red;
+  uint32_t selected_list_box_green;
+  uint32_t selected_list_box_blue;
+  int32_t start_current_selection;
+  uint32_t focused_line_red;
+  uint32_t focused_line_green;
+  uint32_t focused_line_blue;
+  int32_t start_range;
+  int32_t end_range;
+  int32_t current_range;
+  int32_t page_size;
+  int32_t string_table_id;
+  int32_t blink_rate;
+  uint32_t unused2[3];
+  uint8_t is_visible;
+  uint8_t start_checked;
+  uint8_t list_box_always_dirty;
+  uint8_t sort_list_box;
+  uint8_t focused_has_alpha;
+  uint8_t pressed_has_alpha;
+  uint8_t normal_has_alpha;
+  uint8_t always_dirty;
+  uint8_t fit_rect_to_text;
+  uint8_t scale_to_control;
+  uint8_t loop_movie;
 };
 
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
@@ -2207,18 +2465,6 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -2316,6 +2562,12 @@ struct EeUiSliderFields {
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
+/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
 /// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
 struct EeWonMd5 {
   uint32_t state[4];
@@ -2332,9 +2584,6 @@ struct EeWonBlowfish {
   uint32_t key_len;
   uint32_t valid;
 };
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// An auth block's header and validity.
 struct EeWonAuthHeader {
@@ -2356,6 +2605,18 @@ struct EeWonCdKeyDecoded {
   bool used_machine;
   uint8_t raw[8];
 };
+
+/// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
+/// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.
+struct EeWonLanMsg {
+  uint8_t kind;
+  uint16_t flags;
+  uint16_t id;
+  uint16_t target;
+};
+
+/// Receives one player of a join reply.
+using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *name, size_t count);
 
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
@@ -2384,6 +2645,43 @@ struct EeWonOpTiming {
   uint32_t start;
   uint32_t timeout;
 };
+
+/// `AsyncOp`'s run state: `mStatus`, `mRunMode`, `mStartTime`, `mTimeout`, `mCompletionPending`, `mKilled` and
+/// `mRunAsyncImmediately`, copied in and out by the C++ under the op's lock.
+struct EeWonOpState {
+  /// The `WONStatus` (a 32-bit `long` in the C++).
+  int32_t status;
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+  bool completion_pending;
+  bool killed;
+  bool run_async_immediately;
+};
+
+/// A sink for the ops a queue hands back.
+using EeWonOpSink = void(*)(void *context, void *op);
+
+/// `AsyncOpContainer::Pump`'s accounting: how many ops to run and how long to go on (a value the C++ keeps on its
+/// stack across the pump).
+struct EeWonPumpPlan {
+  uint32_t start;
+  uint32_t wait;
+  int32_t remaining;
+};
+
+/// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
+/// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
+/// 3 forget the repeat op.
+struct EeWonQueueDecision {
+  bool close;
+  int32_t completion;
+  int32_t next;
+  bool clear_current;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
@@ -2469,6 +2767,20 @@ struct EeUiRadioFields {
   bool scale_bitmap;
 };
 
+/// A table's identity as `AddControlLike` and `MoveControlsHorizontally` search the static array.
+struct EeUiControlsTableKey {
+  long id;
+  long form_id;
+  long form_index;
+};
+
+/// One queued event (`UIEventTrigger`): the referenced event, its form and entity, C++'s.
+struct EeUiTrigger {
+  void *event;
+  void *form;
+  void *entity;
+};
+
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 
@@ -2549,13 +2861,13 @@ bool ee_data_dump_table(const char *table_name,
                         EeDataBytes *out,
                         EeDataBytes *err);
 
-/// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8).
+/// The game's text (UTF-8) -> a double-quoted YAML scalar.
 ///
 /// # Safety
 /// `bytes` readable for `len` bytes, `out` writable.
 void ee_data_quote_text(const uint8_t *bytes, size_t len, EeDataBytes *out);
 
-/// Reads a keyed `.civ` text: its name as CP-1252 bytes (`name`), its upgrades through `visit` (the list's items in
+/// Reads a keyed `.civ` text: its name as UTF-8 bytes (`name`), its upgrades through `visit` (the list's items in
 /// order; only when the document is a mapping). The error (with `where_`) is in `err`: false on a parse problem or
 /// when the document is not a mapping ("<where>: not a civilization").
 ///
@@ -5837,6 +6149,55 @@ void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
 /// `UIRadioButton::SetText` (`ctx` as for the check box).
 void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
 
+/// The constructor's `UIButton` rectangle.
+EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);
+
+/// The constructor's bitmap offset: true and `out` written, or false to keep it.
+bool ee_ui_tristate_bitmap_offset(float height, unsigned long border, EeUiPoint *out);
+
+/// `UITriStateCheckBox::ChangeWidth`.
+void ee_ui_tristate_change_width(const EeUiTriStateRefs *refs, unsigned long width);
+
+/// `UITriStateCheckBox::CopyData`.
+long ee_ui_tristate_copy_data(const EeUiTriStateRefs *refs);
+
+/// `UITriStateCheckBox::SetCheckState`.
+void ee_ui_tristate_set_check_state(const EeUiTriStateRefs *refs, unsigned long state);
+
+/// `UITriStateCheckBox::SetLocation`.
+void ee_ui_tristate_set_location(const EeUiTriStateRefs *refs, EeUiPoint at);
+
+/// `UITriStateCheckBox::SetText` (`ctx` in `refs`: the C++ text and font for the label host calls).
+void ee_ui_tristate_set_text(const EeUiTriStateRefs *refs, const char *s);
+
+/// `UITriStateCheckBox::CycleCheck`.
+void ee_ui_tristate_cycle(const EeUiTriStateRefs *refs);
+
+/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
+void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
+
+/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
+EeUiBlinkShow ee_ui_blink_copy_data(EeUiBlinkFields *fields,
+                                    bool polled,
+                                    unsigned long time_left,
+                                    unsigned long state,
+                                    float bg,
+                                    float border);
+
+/// `UIScalableButton::CopyData`'s source rectangle for the state.
+EeUiRect ee_ui_scalable_copied_rect(unsigned long state,
+                                    bool has_focused_bitmap,
+                                    const EeUiRect *normal,
+                                    const EeUiRect *focused,
+                                    const EeUiRect *pressed,
+                                    const EeUiRect *current);
+
+/// `UIScalableButton::DrawPolygons`' three slices, written to `out[0..3]`.
+void ee_ui_scalable_slices(const EeUiRect *copied,
+                           const EeUiRect *draw,
+                           unsigned long texture_width,
+                           EeUiSlice *out);
+
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
 
@@ -5908,6 +6269,80 @@ long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
 
 /// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
 long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
+
+/// The default constructor's fields (written whole).
+void ee_ui_controls_table_init(const EeUiControlsTableRefs *refs);
+
+/// The record constructor: the fields, layout, colours and texture rectangles from a database record (written whole).
+void ee_ui_controls_table_from_record(const EeUiControlsTableRefs *refs,
+                                      const EeUiDbControl *record);
+
+/// `Create` keeps a record whose id is not negative.
+bool ee_ui_controls_table_record_is_control(int32_t id);
+
+/// `AddControlLike`'s searches over the static array -> whether a template was found, at `*index`.
+bool ee_ui_controls_table_find_template(long template_id,
+                                        long id,
+                                        long form_index,
+                                        unsigned long *index);
+
+/// `AddControlLike`'s edits to the template's copy.
+void ee_ui_controls_table_like(const EeUiControlsTableRefs *refs,
+                               long id,
+                               long form_index,
+                               unsigned long group,
+                               float left,
+                               float right,
+                               float top,
+                               float bottom,
+                               long string_table_begin,
+                               long string_table_end,
+                               unsigned long help_string_id);
+
+/// `MoveControlsHorizontally` -> how many tables moved.
+long ee_ui_controls_table_move_horizontally(long form_id,
+                                            long first,
+                                            long last,
+                                            float left_delta,
+                                            float right_delta);
+
+/// `SetupFont`: the scaled font follows the window.
+bool ee_ui_controls_table_font_scales_to_window(unsigned long control_type, bool scale_to_window);
+
+/// `SetupFont`: the size of a font scaled to the control.
+long ee_ui_controls_table_control_font_size(float height, long border);
+
+/// `SetupFont`: the size of a font scaled to the window.
+long ee_ui_controls_table_window_font_size(long font_height,
+                                           unsigned long window_height,
+                                           unsigned long designed_height);
+
+/// `SetupStringArray`: how many strings the range names (0: none).
+unsigned long ee_ui_controls_table_string_count(long begin, long end);
+
+/// `CreateControl`'s parent rectangle.
+EeUiRect ee_ui_controls_table_parent_rect(unsigned long window_width,
+                                          unsigned long window_height,
+                                          bool exclusive);
+
+/// `CreateControl`'s font rectangle.
+EeUiRect ee_ui_controls_table_font_rect(const EeUiRect *rect, bool exclusive);
+
+/// `CreateComboBox`: the closed box's rectangle, the list's height at `*list_height`.
+EeUiRect ee_ui_controls_table_combo_list(const EeUiRect *rect,
+                                         bool scale_to_control,
+                                         long font_height,
+                                         long border,
+                                         long *list_height);
+
+/// `CreateFileComboBox`: the box's width, its height at `*height`.
+float ee_ui_controls_table_file_combo_size(const EeUiRect *rect, long *height);
+
+/// `CreateScrollBar`: the bar's length.
+float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical);
+
+/// `CreateSlider`: the page size, capped below the range.
+long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
 
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
@@ -6109,6 +6544,44 @@ void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
 /// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
 
+/// `UIManager::AddDirtyRectangle(rect, form)`.
+void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);
+
+/// `UIManager::Pop`'s body (inside the locks).
+void ee_ui_manager_pop(void *manager);
+
+/// `UIManager::PopTo`'s body (inside the locks).
+void ee_ui_manager_pop_to(void *manager, void *form);
+
+/// `UIManager::Push`'s body (inside the locks).
+void ee_ui_manager_push(void *manager, void *form);
+
+/// `UIManager::SwapForm`'s body (inside the locks).
+void ee_ui_manager_swap_form(void *manager, void *form);
+
+/// `UIManager::RedrawAll`'s body (inside the lock).
+void ee_ui_manager_redraw_all(void *manager);
+
+/// `UIManager::RelayoutAllForms`.
+void ee_ui_manager_relayout_all_forms(void *manager,
+                                      unsigned long window_width,
+                                      unsigned long window_height);
+
+/// `UIManager::ResetClippedForms`.
+void ee_ui_manager_reset_clipped_forms(void *manager);
+
+/// `UIManager::GetFormByID` -> the form, or NULL.
+void *ee_ui_manager_form_by_id(void *manager, unsigned long id);
+
+/// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
+long ee_ui_manager_wheel_scroll_amount(long value);
+
+/// `UpdateUI`'s event loop.
+void ee_ui_manager_process_all_events(void *manager);
+
+/// `UIManager::ProcessAllEventsForForm(form)`.
+void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
+
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
 
@@ -6255,6 +6728,28 @@ void ee_won_utf16_from_wide(const void *wide,
                             size_t count,
                             EeWonUnitSink sink,
                             void *context);
+
+/// The game's text (UTF-8 bytes, decision D6) as `wchar_t` text (`wchar_size` 2: UTF-16 units; 4: code points),
+/// given to the sink once (`StringToWString`). A stray byte becomes U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `text` holds `length` bytes; the sink is called with `count` characters of `wchar_size` bytes.
+void ee_won_wide_from_utf8(const uint8_t *text,
+                           size_t length,
+                           uint32_t wchar_size,
+                           EeWonWideSink sink,
+                           void *context);
+
+/// `wchar_t` text as the game's text (UTF-8), given to the sink once (`WStringToString`). A lone surrogate becomes
+/// U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes.
+void ee_won_utf8_from_wide(const void *wide,
+                           uint32_t wchar_size,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
 uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
@@ -6590,6 +7085,155 @@ void ee_won_cdkey_decrypt(const uint8_t *product,
 /// `raw` holds `length` bytes.
 bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
 
+/// The joiner's join request; `name` / `password` are UTF-16 LE bytes.
+///
+/// # Safety
+/// The byte arguments hold their lengths; `sink` takes the message.
+void ee_won_lan_join_request(const uint8_t *name,
+                             size_t name_len,
+                             const uint8_t *password,
+                             size_t password_len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's refusal of a join (`status` 2 wrong password, 3 another subnet).
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_join_refused(int16_t status, EeWonByteSink sink, void *context);
+
+/// The host's accepted join reply: `ids[i]` and the UTF-16 LE name `names` from `name_offsets[i]` (in bytes) to
+/// `name_offsets[i + 1]` (`count + 1` offsets).
+///
+/// # Safety
+/// `ids` holds `count` ids, `name_offsets` `count + 1` offsets into `names`; `sink` takes the message.
+void ee_won_lan_join_accepted(uint16_t captain,
+                              uint16_t you,
+                              size_t count,
+                              const uint16_t *ids,
+                              const uint8_t *names,
+                              const size_t *name_offsets,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a new player.
+///
+/// # Safety
+/// `name` holds `name_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_client_joined(uint16_t id,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a departed player.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_client_left(uint16_t id, EeWonByteSink sink, void *context);
+
+/// A player's chat request to the host.
+///
+/// # Safety
+/// `text` holds `text_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_chat_request(uint16_t flags,
+                             const uint8_t *text,
+                             size_t text_len,
+                             uint16_t target,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's relayed chat line.
+///
+/// # Safety
+/// As `ee_won_lan_chat_request`.
+void ee_won_lan_chat_line(uint16_t flags,
+                          uint16_t sender,
+                          const uint8_t *text,
+                          size_t text_len,
+                          uint16_t target,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// The joiner's ping.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_ping(EeWonByteSink sink, void *context);
+
+/// A staging message wrapped for the game channel.
+///
+/// # Safety
+/// `payload` holds `length` bytes; `sink` takes the message.
+void ee_won_lan_staging(const uint8_t *payload, size_t length, EeWonByteSink sink, void *context);
+
+/// A discovery packet's head (`kind` 1 summary, 2 keep-alive, 3 removed, 4 query).
+///
+/// # Safety
+/// `sink` takes the packet.
+void ee_won_lan_discovery(uint8_t kind, uint16_t port, EeWonByteSink sink, void *context);
+
+/// Reads a game-channel message (`skip` 2 for the host's own, else 0). The join request's name goes to
+/// `first`, its password to `second`; a joined player's name and a chat text go to `first`.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is valid; the sinks take the units.
+void ee_won_lan_read_game(const uint8_t *bytes,
+                          size_t length,
+                          size_t skip,
+                          EeWonLanMsg *out,
+                          EeWonUnitSink first,
+                          EeWonUnitSink second,
+                          void *context);
+
+/// Reads a join reply: returns `ReadJoinReply`'s status; `*captain` / `*you` are set and `true` returned through
+/// `have_captain` once the captain's id was read; each player read whole goes to `client`, in order.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid; `client` takes the players.
+int32_t ee_won_lan_read_join_reply(const uint8_t *bytes,
+                                   size_t length,
+                                   bool *have_captain,
+                                   uint16_t *captain,
+                                   uint16_t *you,
+                                   EeWonLanClientSink client,
+                                   void *context);
+
+/// Reads a discovery packet's head: true and its type and port, false when it is short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid.
+bool ee_won_lan_read_discovery(const uint8_t *bytes, size_t length, uint8_t *kind, uint16_t *port);
+
+/// `lan::join_status`: 0 accept, 2 wrong password, 3 another subnet.
+int16_t ee_won_lan_join_status(int32_t game_type,
+                               uint8_t peer0,
+                               uint8_t peer1,
+                               uint8_t local0,
+                               uint8_t local1,
+                               bool password_matches);
+
+/// `lan::next_client_id` over the C++ counter.
+///
+/// # Safety
+/// `next` is valid.
+uint16_t ee_won_lan_next_client_id(uint16_t *next);
+
+/// `lan::chat_route`: 0 everyone, 1 the whisper target and the sender, 2 the sender's team.
+int32_t ee_won_lan_chat_route(uint16_t flags);
+
+/// `lan::chat_line_flags`.
+uint16_t ee_won_lan_chat_line_flags(uint16_t flags);
+
+/// `lan::host_socket_stale`.
+bool ee_won_lan_host_socket_stale(int64_t now, int64_t last_message);
+
+/// `lan::joiner_ping_due`.
+bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
+
+/// `lan::summary_due`.
+bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
+
 /// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
 /// game-specific error) is written into `buffer` (`size` bytes), which is returned.
 ///
@@ -6861,6 +7505,320 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonOpTiming timing,
                          EeWonByteSink sink,
                          void *context);
+
+/// `AsyncOp::AsyncOp`'s state.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_state_init(EeWonOpState *state);
+
+/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
+/// 3 queue it in the container, 4 run blocking.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_run(EeWonOpState *state,
+                      int32_t mode,
+                      uint32_t timeout);
+
+/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_run_as_timer(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_force_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::Kill`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_kill(EeWonOpState *state, bool finish);
+
+/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_complete(EeWonOpState *state);
+
+/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_after_run_hook(const EeWonOpState *state);
+
+/// `AsyncOp::SetTimeout`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::SetMode`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
+
+EeWonTimerQueue *ee_won_timers_new();
+
+/// # Safety
+/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
+void ee_won_timers_destroy(EeWonTimerQueue *timers);
+
+/// The tick the wait times count from (`ThreadFunc`'s start).
+///
+/// # Safety
+/// `timers` is live.
+void ee_won_timers_set_last_tick(EeWonTimerQueue *timers);
+
+/// `TimerThread::AddTimerOp` now -> the entry's key.
+///
+/// # Safety
+/// `timers` is live; `op` stays alive while the entry exists.
+uint64_t ee_won_timers_add(EeWonTimerQueue *timers, uint32_t timeout, void *op);
+
+/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
+///
+/// # Safety
+/// `timers` is live.
+void *ee_won_timers_remove(EeWonTimerQueue *timers, uint64_t key);
+
+/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_pump(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+/// `TimerThread::GetWaitTime`.
+///
+/// # Safety
+/// `timers` is live.
+uint32_t ee_won_timers_wait_time(const EeWonTimerQueue *timers);
+
+/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_purge(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+EeWonOpQueue *ee_won_opqueue_new();
+
+/// # Safety
+/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
+void ee_won_opqueue_destroy(EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
+/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
+///
+/// # Safety
+/// `queue` is live; a queued `op` stays alive until popped.
+int32_t ee_won_opqueue_queue(EeWonOpQueue *queue,
+                             void *op,
+                             void *current,
+                             bool current_pending,
+                             bool purging);
+
+/// The front op, taken (null: none).
+///
+/// # Safety
+/// `queue` is live.
+void *ee_won_opqueue_pop(EeWonOpQueue *queue);
+
+/// # Safety
+/// `queue` is live.
+size_t ee_won_opqueue_len(const EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::Pump`'s accounting, started now.
+EeWonPumpPlan ee_won_pump_plan_new(uint32_t wait, int32_t max_ops, size_t queued);
+
+/// Whether to wait for the signal before pumping.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_should_wait(const EeWonPumpPlan *plan, size_t queued);
+
+/// After one op: whether to go on with the next.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_go_on(EeWonPumpPlan *plan);
+
+EeWonOpSet *ee_won_opset_new();
+
+/// # Safety
+/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
+void ee_won_opset_destroy(EeWonOpSet *set);
+
+/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_insert(EeWonOpSet *set, void *op);
+
+/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_remove(EeWonOpSet *set, void *op);
+
+/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `PurgeOps`: every op to the sink, the set emptied.
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
+bool ee_won_socket_op_finishes(long status);
+
+/// `SocketThreadSimple::Pump`'s wait.
+uint32_t ee_won_socket_pump_wait(uint32_t wait);
+
+/// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
+EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
+                                                long status,
+                                                bool killed,
+                                                bool close_queued,
+                                                bool queue_empty,
+                                                bool socket_valid,
+                                                bool datagram);
+
+/// `StringParser::GetChar(offset)` at `pos`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units (1, 2 or 4) and `pos + offset` inside it.
+uint8_t ee_won_parser_get_char(const void *text,
+                               uint32_t unit_size,
+                               int32_t pos,
+                               int32_t offset);
+
+/// `StringParser::GetWChar(offset)` at `pos`.
+///
+/// # Safety
+/// As `ee_won_parser_get_char`.
+uint32_t ee_won_parser_get_wchar(const void *text, uint32_t unit_size, int32_t pos, int32_t offset);
+
+/// `StringParser::SkipWhitespace`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units, `*pos` inside it.
+void ee_won_parser_skip_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::SkipNonWhitespace`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+void ee_won_parser_skip_non_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::CheckNextChar(ch)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+bool ee_won_parser_check_next_char(const void *text, uint32_t unit_size, int32_t *pos, int32_t ch);
+
+/// `StringParser::StartsWith(prefix)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `prefix` is NUL-terminated.
+bool ee_won_parser_starts_with(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               const char *prefix);
+
+/// `StringParser::Is(word)`.
+///
+/// # Safety
+/// As `ee_won_parser_starts_with`.
+bool ee_won_parser_is(const void *text, uint32_t unit_size, int32_t *pos, const char *word);
+
+/// `StringParser::ReadString(std::string&, stopAtWhitespace)`: the token to `sink` (always true in the C++).
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `sink` takes the bytes.
+void ee_won_parser_read_string(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               bool stop_at_whitespace,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `StringParser::ReadString(std::wstring&, stopAtWhitespace)`: the token's units to `sink`.
+///
+/// # Safety
+/// As `ee_won_parser_read_string`.
+void ee_won_parser_read_wstring(const void *text,
+                                uint32_t unit_size,
+                                int32_t *pos,
+                                bool stop_at_whitespace,
+                                EeWonWideSink sink,
+                                void *context);
+
+/// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `out` is valid.
+bool ee_won_parser_read_int(const void *text,
+                            uint32_t unit_size,
+                            int32_t *pos,
+                            int32_t *out);
+
+/// `StringParser::ReadValue(bool&)`: true and `*out` for a boolean word; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_read_int`.
+bool ee_won_parser_read_bool(const void *text,
+                             uint32_t unit_size,
+                             int32_t *pos,
+                             bool *out);
+
+/// `StringParser::ValueToString` of a signed integer (int, long, short, char, __int64): decimal to `sink`.
+///
+/// # Safety
+/// `sink` takes the bytes.
+void ee_won_parser_format_i64(int64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString` of an unsigned integer (unsigned long, unsigned char, unsigned __int64).
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_u64(uint64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString(const bool&)`: "True" or "False".
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_bool(bool value, EeWonByteSink sink, void *context);
+
+extern int isspace(int c);
+
+extern int isdigit(int c);
+
+extern int isxdigit(int c);
+
+extern int isalnum(int c);
+
+extern int toupper(int c);
+
+extern int tolower(int c);
 
 }  // extern "C"
 

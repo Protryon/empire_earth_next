@@ -82,6 +82,7 @@ class LLE_API UIForm {
     friend struct UIFormRust;               // UIForm.cpp: the Rust focus walk's and hit test's view (ee_ui form.rs)
     friend class UIControl;                 // CaptureMouse writes mMouseCaptured; SetKeyboardCaptured is private
     friend class UIManager;                 // calls the protected Close/CopyData/DrawPolygons/Open and AddDirtyRectangle
+    friend struct UIManagerRust;            // UIManager.cpp: the Rust form stack's calls on a form (ee_ui manager.rs)
 public:
     UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
            unsigned long inFormID, bool inUseGDIForText);

@@ -244,7 +244,7 @@ pub unsafe extern "C" fn ee_data_dump_table(
     }
 }
 
-/// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8).
+/// The game's text (UTF-8) -> a double-quoted YAML scalar.
 ///
 /// # Safety
 /// `bytes` readable for `len` bytes, `out` writable.
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn ee_data_quote_text(bytes: *const u8, len: usize, out: *
 /// One keyed upgrade of a `.civ` text: its key and line.
 pub type EeDataCivVisit = unsafe extern "C" fn(ctx: *mut c_void, key: *const u8, key_len: usize, line: i32);
 
-/// Reads a keyed `.civ` text: its name as CP-1252 bytes (`name`), its upgrades through `visit` (the list's items in
+/// Reads a keyed `.civ` text: its name as UTF-8 bytes (`name`), its upgrades through `visit` (the list's items in
 /// order; only when the document is a mapping). The error (with `where_`) is in `err`: false on a parse problem or
 /// when the document is not a mapping ("<where>: not a civilization").
 ///
@@ -566,7 +566,7 @@ mod tests {
                 &mut seen as *mut _ as *mut c_void,
                 &mut err
             ));
-            assert_eq!(take(&mut name), vec![b'c', b'a', b'f', 0xe9]);
+            assert_eq!(take(&mut name), "caf\u{e9}".as_bytes());
             assert_eq!(seen, vec![(b"a.b".to_vec(), 4), (b"c.d".to_vec(), 4)]);
             let bad = "- 1\n";
             assert!(!ee_data_civ_read(

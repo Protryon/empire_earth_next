@@ -51,13 +51,14 @@ public:
     bool ReadString(std::wstring& outString, bool inStopAtWhitespace); //2a4ff0
     bool ReadValue(int& outValue); //2a53d0
     bool ReadValue(__int64 &theInt64);
-    bool ReadValue(unsigned __int64 &theInt64)  { __int64 anInt64; bool aRet = this->ReadValue(anInt64); theInt64 = anInt64; return aRet; }
-    bool ReadValue(long &theLong) { int anInt; bool aRet = this->ReadValue(anInt); theLong = anInt; return aRet; }
-    bool ReadValue(unsigned long &theLong) { int anInt; bool aRet = this->ReadValue(anInt); theLong = anInt; return aRet; }
-    bool ReadValue(short &theShort) { int anInt; bool aRet = this->ReadValue(anInt); theShort = (short)anInt; return aRet; }
-    bool ReadValue(unsigned short &theShort) { int anInt; bool aRet = this->ReadValue(anInt); theShort = (unsigned short)anInt; return aRet; }
-    bool ReadValue(char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); theByte = (char)anInt; return aRet; }
-    bool ReadValue(unsigned char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); theByte = (unsigned char)anInt; return aRet; }
+    // the sized reads store only on success (the original stored an uninitialised int after a failed read)
+    bool ReadValue(unsigned __int64 &theInt64)  { __int64 anInt64; bool aRet = this->ReadValue(anInt64); if (aRet) theInt64 = anInt64; return aRet; }
+    bool ReadValue(long &theLong) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theLong = anInt; return aRet; }
+    bool ReadValue(unsigned long &theLong) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theLong = anInt; return aRet; }
+    bool ReadValue(short &theShort) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theShort = (short)anInt; return aRet; }
+    bool ReadValue(unsigned short &theShort) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theShort = (unsigned short)anInt; return aRet; }
+    bool ReadValue(char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theByte = (char)anInt; return aRet; }
+    bool ReadValue(unsigned char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theByte = (unsigned char)anInt; return aRet; }
     bool ReadValue(bool& outValue); //2a5550
     bool ReadString(std::string& outString, bool inFlag); // 0x2a49f0
     // Genuine nominal static formatting overloads; call-only original-owned implementations.

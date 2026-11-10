@@ -38,6 +38,7 @@
 #include "ee/EEGameLog.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
+#include "platform/PlatString.h"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The log: "EE-AI engine ..." lines to the debug output, the game log when one is open, and EE-SIM's stderr
@@ -375,35 +376,21 @@ const JValue* Field(const JValue& inObject, const char* inName)
 // ---------------------------------------------------------------------------------------------------------------
 // The manifest
 
-// UTF-8 -> Windows-1252 (the game's narrow text): U+0000..U+00FF as themselves (1252 agrees from 0xa0), else '?'
+// The manifest's text as the game's (UTF-8 both, decision D6): a byte that is not part of a well-formed sequence
+// becomes U+FFFD, so a lobby string is always text
 static std::string EECPAIToGameText(const std::string& inText)
 {
     std::string theOut;
     for (size_t i = 0; i < inText.size();) {
-        unsigned char c = (unsigned char)inText[i];
-        uint32_t u;
-        size_t n;
-        if (c < 0x80) {
-            u = c;
-            n = 1;
-        } else if ((c & 0xe0) == 0xc0) {
-            u = c & 0x1f;
-            n = 2;
-        } else if ((c & 0xf0) == 0xe0) {
-            u = c & 0x0f;
-            n = 3;
-        } else if ((c & 0xf8) == 0xf0) {
-            u = c & 0x07;
-            n = 4;
-        } else {
-            theOut += '?';
-            i++;
-            continue;
-        }
-        for (size_t k = 1; k < n && i + k < inText.size(); k++)
-            u = (u << 6) | ((unsigned char)inText[i + k] & 0x3f);
-        i += n;
-        theOut += u < 0x80 || (u >= 0xa0 && u <= 0xff) ? (char)u : '?';
+        uint32_t theLength = 0;
+        uint32_t theCharacter = PlatUtf8Decode(inText.c_str() + i, &theLength);
+        if (theLength == 0)   // an embedded NUL ends the text
+            break;
+        char theBytes[4];
+        if (theCharacter >= 0xDC80 && theCharacter <= 0xDCFF)
+            theCharacter = 0xFFFD;
+        theOut.append(theBytes, PlatUtf8Encode(theCharacter, theBytes));
+        i += theLength;
     }
     return theOut;
 }

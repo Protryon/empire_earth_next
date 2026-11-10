@@ -1,7 +1,8 @@
 // The WONAPI GUI's fonts on platform/PlatFont.h (WONLobbyPlatform.h), in place of the GDI backend's MSFont.cpp: the
 // same font request (the point size at a fixed 96 dpi as a character height, bold, italic), text drawn with its
 // cell's top-left at x, y in the graphics' colour on a transparent background (TextOut, TA_TOP | TA_LEFT,
-// TRANSPARENT), and MSFont's own underline. Text is converted to Windows-1252 (other characters show as '?'). On a
+// TRANSPARENT), and MSFont's own underline. Text is converted to UTF-8 (decision D6; PlatFont draws any character the
+// font has). On a
 // surface with a pixel scale (WONLobbyPlatform.h) the text is rasterised at the font size times the scale and
 // smoothed (the metrics and every measurement stay the logical font's, so the layout does not move).
 #include <windows.h>
@@ -25,14 +26,15 @@ namespace WONAPI {
 // scale above 1 the text is smoothed: there are pixels enough for it)
 static const int kPlatGUIFontAntialiased = 0;
 
-std::string PlatGUIToCp1252(const wchar_t* inText, unsigned short inLength)
+std::string PlatGUIToUtf8(const wchar_t* inText, unsigned short inLength)
 {
     std::string theText;
     if (inText == NULL || inLength == 0)
         return theText;
-    theText.resize(inLength);
-    uint32_t theCount = PlatWideToCp1252(inText, inLength, &theText[0], inLength);
+    uint32_t theCount = PlatWideToUtf8(inText, inLength, NULL, 0);
     theText.resize(theCount);
+    if (theCount != 0)
+        PlatWideToUtf8(inText, inLength, &theText[0], theCount);
     return theText;
 }
 
@@ -99,7 +101,7 @@ void PlatGUIFont::DrawString(DisplayContext* inContext, const GUIString& inText,
     Graphics* theGraphics = inContext->mGraphics;
     float theScale = inContext->mPixelScale > 0.0f ? inContext->mPixelScale : 1.0f;
     if (theSurface != NULL && theSurface->GetPixelsBase() != NULL && this->mFont != NULL && inLength != 0) {
-        std::string theBytes = PlatGUIToCp1252(inText.mData->mText + inOffset, inLength);
+        std::string theBytes = PlatGUIToUtf8(inText.mData->mText + inOffset, inLength);
         PlatFontTarget theTarget;
         theTarget.mPixels = theSurface->GetPixelsBase();
         theTarget.mPitch = theSurface->GetBytesPerRow();
@@ -140,7 +142,7 @@ int PlatGUIFont::GetStringWidth(const GUIString& inText, unsigned short inOffset
 {
     if (inLength == 0 || this->mFont == NULL)
         return 0;
-    std::string theBytes = PlatGUIToCp1252(inText.mData->mText + inOffset, inLength);
+    std::string theBytes = PlatGUIToUtf8(inText.mData->mText + inOffset, inLength);
     return PlatFontMeasure(this->mFont, theBytes.data(), (uint32_t)theBytes.size());
 }
 
@@ -150,7 +152,7 @@ int PlatGUIFont::GetCharacterWidth(int inChar)
     if (this->mFont == NULL)
         return 0;
     wchar_t theWide = (wchar_t)inChar;
-    std::string theByte = PlatGUIToCp1252(&theWide, 1);
+    std::string theByte = PlatGUIToUtf8(&theWide, 1);
     return PlatFontMeasure(this->mFont, theByte.data(), (uint32_t)theByte.size());
 }
 

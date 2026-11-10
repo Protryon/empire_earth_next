@@ -15,6 +15,7 @@ pub mod sim;
 pub mod sim_clock;
 pub mod string;
 pub mod time;
+pub mod utf8;
 
 /// Copies between C strings and the game's byte strings.
 pub(crate) mod c_text {

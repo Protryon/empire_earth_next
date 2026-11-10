@@ -166,6 +166,56 @@ pub unsafe extern "C" fn ee_won_utf16_from_wide(
     unsafe { give_units(sink, context, &u) }
 }
 
+/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
+pub type EeWonWideSink = unsafe extern "C" fn(context: *mut c_void, text: *const c_void, count: usize);
+
+/// The game's text (UTF-8 bytes, decision D6) as `wchar_t` text (`wchar_size` 2: UTF-16 units; 4: code points),
+/// given to the sink once (`StringToWString`). A stray byte becomes U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `text` holds `length` bytes; the sink is called with `count` characters of `wchar_size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wide_from_utf8(
+    text: *const u8,
+    length: usize,
+    wchar_size: u32,
+    sink: EeWonWideSink,
+    context: *mut c_void,
+) {
+    let s = unsafe { bytes(text, length) };
+    if wchar_size == 2 {
+        let u = text::utf16_from_game(s);
+        unsafe { sink(context, u.as_ptr().cast(), u.len()) }
+    } else {
+        let u = text::utf32_from_game(s);
+        unsafe { sink(context, u.as_ptr().cast(), u.len()) }
+    }
+}
+
+/// `wchar_t` text as the game's text (UTF-8), given to the sink once (`WStringToString`). A lone surrogate becomes
+/// U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_utf8_from_wide(
+    wide: *const c_void,
+    wchar_size: u32,
+    count: usize,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+) {
+    let out = if wchar_size == 2 {
+        text::game_from_utf16(&unsafe { wide_units(wide, wchar_size, count) })
+    } else if count == 0 || wide.is_null() {
+        Vec::new()
+    } else {
+        // SAFETY: `count` code points of 4 bytes
+        text::game_from_utf32(unsafe { slice::from_raw_parts(wide as *const u32, count) })
+    };
+    unsafe { give(sink, context, &out) }
+}
+
 // ---- WriteBuffer / ReadBuffer
 
 /// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
@@ -900,6 +950,50 @@ mod tests {
 
     unsafe extern "C" fn collect_units(context: *mut c_void, data: *const u16, count: usize) {
         unsafe { (*(context as *mut Vec<u16>)).extend_from_slice(units(data, count)) }
+    }
+
+    unsafe extern "C" fn collect_wide16(context: *mut c_void, data: *const c_void, count: usize) {
+        unsafe { (*(context as *mut Vec<u16>)).extend_from_slice(units(data.cast(), count)) }
+    }
+
+    unsafe extern "C" fn collect_wide32(context: *mut c_void, data: *const c_void, count: usize) {
+        unsafe { (*(context as *mut Vec<u32>)).extend_from_slice(slice::from_raw_parts(data.cast::<u32>(), count)) }
+    }
+
+    #[test]
+    fn the_games_utf8_crosses_to_wide_and_back_at_both_wchar_sizes() {
+        let game = "Caf\u{e9} \u{20ac}\u{1f600}".as_bytes();
+        let mut w16: Vec<u16> = Vec::new();
+        unsafe {
+            ee_won_wide_from_utf8(game.as_ptr(), game.len(), 2, collect_wide16, (&mut w16 as *mut Vec<u16>).cast())
+        };
+        assert_eq!(w16, vec![0x43, 0x61, 0x66, 0xe9, 0x20, 0x20ac, 0xd83d, 0xde00]);
+        let mut w32: Vec<u32> = Vec::new();
+        unsafe {
+            ee_won_wide_from_utf8(game.as_ptr(), game.len(), 4, collect_wide32, (&mut w32 as *mut Vec<u32>).cast())
+        };
+        assert_eq!(w32, vec![0x43, 0x61, 0x66, 0xe9, 0x20, 0x20ac, 0x1f600]);
+        let mut back = Vec::new();
+        unsafe {
+            ee_won_utf8_from_wide(w16.as_ptr().cast(), 2, w16.len(), collect, (&mut back as *mut Vec<u8>).cast())
+        };
+        assert_eq!(back, game);
+        back.clear();
+        unsafe {
+            ee_won_utf8_from_wide(w32.as_ptr().cast(), 4, w32.len(), collect, (&mut back as *mut Vec<u8>).cast())
+        };
+        assert_eq!(back, game);
+        // an empty text gives the sink nothing to keep; a stray byte and a lone surrogate become U+FFFD
+        back.clear();
+        unsafe { ee_won_utf8_from_wide(std::ptr::null(), 2, 0, collect, (&mut back as *mut Vec<u8>).cast()) };
+        assert!(back.is_empty());
+        w16.clear();
+        unsafe { ee_won_wide_from_utf8(b"a\xe9".as_ptr(), 2, 2, collect_wide16, (&mut w16 as *mut Vec<u16>).cast()) };
+        assert_eq!(w16, vec![0x61, 0xfffd]);
+        let lone = [0x41u16, 0xd800];
+        back.clear();
+        unsafe { ee_won_utf8_from_wide(lone.as_ptr().cast(), 2, 2, collect, (&mut back as *mut Vec<u8>).cast()) };
+        assert_eq!(back, "A\u{fffd}".as_bytes());
     }
 
     #[test]

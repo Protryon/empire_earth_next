@@ -271,6 +271,7 @@ dependencies = [
 name = "ee_plat_sdl"
 version = "0.1.0"
 dependencies = [
+ "ee_plat_core",
  "ee_plat_ui",
 ]
 
@@ -286,6 +287,9 @@ dependencies = [
 [[package]]
 name = "ee_plat_ui"
 version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
+]
 
 [[package]]
 name = "ee_random"
@@ -355,6 +359,7 @@ dependencies = [
 name = "ee_ui"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
  "ee_plat_core",
 ]
 

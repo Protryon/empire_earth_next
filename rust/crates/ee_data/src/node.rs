@@ -1,5 +1,5 @@
 //! The parsed text: a scalar, a mapping (keys in file order) or a list, with each scalar's text as raw bytes
-//! (`EEDataText::Node`; docs/RUST_PLAN.md 2.3: text is Windows-1252 bytes, never `String`).
+//! (`EEDataText::Node`; docs/RUST_PLAN.md 2.3: text is UTF-8 bytes, never `String`).
 
 use std::borrow::Borrow;
 use std::fmt;

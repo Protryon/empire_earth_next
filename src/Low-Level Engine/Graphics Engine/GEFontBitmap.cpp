@@ -105,10 +105,15 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     PlatFontGetMetrics(inFont->GetOSFont(), &theMetrics);
     this->mFirstCharacter = theMetrics.mFirstChar;
     this->mCharacters.resize(theMetrics.mLastChar - theMetrics.mFirstChar + 1);
-    // the last character of the font is included (mCharacters has room for it).
+    // the last character of the font is included (mCharacters has room for it). A cell is a Windows-1252 byte's
+    // character (port, decision D6: the text is UTF-8, so the cell holds that character's UTF-8 and Draw maps a
+    // drawn character back to its cell; a Latin-1 or 1252 text draws as before)
     for (unsigned long theCharacter = theMetrics.mFirstChar; theCharacter <= theMetrics.mLastChar; theCharacter++) {
         unsigned long theIndex = theCharacter - this->mFirstCharacter;
-        sprintf(theString, "%c", static_cast<int>(theCharacter));
+        char theByte = static_cast<char>(theCharacter);
+        char theCell[8];
+        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
+        theString = theCell;
         theText.SetText(theString);
         float theHeight = theText.GetTextExtent().GetHeight();
         if (theHeight > theRowHeight)
@@ -216,20 +221,18 @@ long GEFontBitmap::CreateSurfaceAlpha(GESurface* inSurface)
 long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
 {
     long theResult = 0;
-    unsigned char theBuffer[8];
     GE2DPoint theLocation;
     theLocation = inText->GetLocation();
-    const unsigned char* theCharacter = reinterpret_cast<const unsigned char*>((const char*)inText->GetText());
+    const char* theCharacter = inText->GetText();
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (PlatMbsCmp(theCharacter, (const unsigned char*)"") != 0) {
-        strcpy(reinterpret_cast<char*>(theBuffer), "");
-        PlatMbsNBCat(theBuffer, theCharacter, 1);
-        // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
-        long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
-        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
-            theCharacter = PlatMbsInc(theCharacter);
+    while (*theCharacter != 0) {
+        // the character's cell (its Windows-1252 byte); a character outside the code page or the font is skipped,
+        // as a byte outside the font was
+        uint32_t theLength = 0;
+        long theIndex = (long)PlatCp1252ByteOf(PlatUtf8Decode(theCharacter, &theLength)) - (long)this->mFirstCharacter;
+        theCharacter += theLength;
+        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size())
             continue;
-        }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
         this->mBitmap->SetTextureCoordinates(
             this->mCharacters[theIndex].mTopLeft,
@@ -240,7 +243,6 @@ long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned lon
         this->mBitmap->SetLocation(theLocation);
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
         theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-        theCharacter = PlatMbsInc(theCharacter);
     }
     return theResult;
 }
@@ -254,18 +256,15 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
     GE2DPoint theLocation = inText->GetLocation();
     GERectangle theDestination(inText->GetLocation());
     long theResult = 0;
-    unsigned char theBuffer[4];
-    const unsigned char* theCharacter = reinterpret_cast<const unsigned char*>((const char*)inText->GetText());
+    const char* theCharacter = inText->GetText();
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (PlatMbsCmp(theCharacter, (const unsigned char*)"") != 0) {
-        strcpy(reinterpret_cast<char*>(theBuffer), "");
-        PlatMbsNBCat(theBuffer, theCharacter, 1);
-        // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
-        long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
-        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
-            theCharacter = PlatMbsInc(theCharacter);
+    while (*theCharacter != 0) {
+        // the character's cell (its Windows-1252 byte), as in Draw above
+        uint32_t theLength = 0;
+        long theIndex = (long)PlatCp1252ByteOf(PlatUtf8Decode(theCharacter, &theLength)) - (long)this->mFirstCharacter;
+        theCharacter += theLength;
+        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size())
             continue;
-        }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
         theDestination = GERectangle(theLocation, this->mCharacters[theIndex].mRect.GetWidth(),
                                      this->mCharacters[theIndex].mRect.GetHeight());
@@ -299,13 +298,11 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
             // A glyph fully outside the rectangle is not drawn, but the pen still advances past it.
             theDestination.SetLeft(theDestination.GetRight() + 1.0f);
             theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-            theCharacter = PlatMbsInc(theCharacter);
             continue;
         }
         this->mBitmap->SetLocation(theDestination.GetTopLeft());
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
         theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-        theCharacter = PlatMbsInc(theCharacter);
     }
     return theResult;
 }

@@ -5,7 +5,7 @@
 //   - an offscreen render target filled on the GPU and read back has the fill colour;
 //   - text drawn by PlatFont (Liberation Sans as "Arial", --fonts DIR) into a CPU surface, uploaded and blitted on
 //     the GPU into the target, reads back with its ink where it was drawn;
-//   - the clipboard keeps a Windows-1252 text through the system's UTF-8 clipboard;
+//   - the clipboard keeps a UTF-8 text (the game's, decision D6) through the system's clipboard;
 //   - the key-state queries answer (nothing is held).
 // Exit code: 0 pass, 1 a check failed, 2 no window system / GPU adapter (CI machines without a display or GPU:
 // reported, not a failure of the layer).
@@ -93,9 +93,9 @@ int main(int argc, char** argv)
         printf("display: %dx%d\n", theDisplayWidth, theDisplayHeight);
 
     // clipboard and key state
-    if (PlatClipboardSetText("Caf\xe9 \x80 1")) {   // "Café € 1" in Windows-1252
+    if (PlatClipboardSetText("Caf\xc3\xa9 \xe2\x82\xac 1")) {   // "Café € 1" (UTF-8, the game's text)
         char* theText = PlatClipboardGetText();
-        CHECK(theText && strcmp(theText, "Caf\xe9 \x80 1") == 0);
+        CHECK(theText && strcmp(theText, "Caf\xc3\xa9 \xe2\x82\xac 1") == 0);
         free(theText);
     } else {
         printf("no clipboard here\n");

@@ -6,7 +6,8 @@
 # Default: the fixture driver (tools/harness/fixture_game.py): the game's own UI fixture and telemetry, its game log,
 # the harness clock through PlatSim. It reads no memory by offset and hooks no symbol or import.
 # Pass: the tour prints "RESULT PASS tour"; the AI game "RESULT PASS ai-game outcome time-cap" with both computer
-# players alive (alive_computers [2, 3]); the script ends "GATES PASS".
+# players alive (alive_computers [2, 3]); a LAN game between two instances through the WON lobby
+# (tools/harness/lan_game.py) "RESULT PASS lan-game"; the script ends "GATES PASS".
 #
 # --legacy: the debugger harness (game_session.py: record layouts, mangled names, the time shim on the Win32
 # imports), kept until it is retired, on the same open tree. Pass: "STOP <windowed session complete> reached",
@@ -53,6 +54,12 @@ ai() {   # log, data option
   grep -E "^data:|^RESULT" "$1"
   grep -qE "^RESULT PASS ai-game outcome time-cap .*alive_computers \[2, 3\]" "$1" || FAILED=1
 }
+lan() {   # log, data option: two instances, a LAN game through the WON lobby (tools/harness/lan_game.py)
+  "$P" -I tools/harness/lan_game.py $2 > "$1" 2>&1
+  grep -E "^RESULT" "$1"
+  grep -q "^RESULT PASS lan-game" "$1" || FAILED=1
+}
 echo "== tour, open tree"; tour build/gates/tour_open.log "$DATA"
 echo "== ai game, open tree"; ai build/gates/ai_open.log "$DATA"
+echo "== lan game through the lobby, open tree"; lan build/gates/lan_open.log "${DATA:---data build/open_data/tree}"
 if [ "$FAILED" = 0 ]; then echo "GATES PASS"; else echo "GATES FAIL"; exit 1; fi

@@ -14,10 +14,11 @@ public:
     void RemoveTimerOp(AsyncOp*); //2a0790
     void Pump(); //2a0800
     unsigned long GetWaitTime(); //2a0970
+    void Detach(AsyncOp* inOp);   // takes the op's entry out of the queue (the lock held)
     CriticalSection mDataCrit; //1c
-    AsyncOpTimeoutMap mTimerMap; //34
-    AsyncOpTimeoutMap mWrapAroundMap; //40
-    unsigned long mLastTick; //4c, end50
+    // the original's two deadline multimaps (this tick era's and the one past the 32-bit wrap) and mLastTick:
+    // Rust's (rust/crates/ee_won/src/asyncop.rs TimerQueue), holding a reference per op
+    EeWonTimerQueue* mTimers;
 };
 
 }

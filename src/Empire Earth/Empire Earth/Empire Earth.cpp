@@ -1545,7 +1545,13 @@ static HANDLE sInstanceMutex;               // 0x5319dc
 bool EECreateInstanceMutex()
 {
 #ifdef _WIN32   // (the test harness finds the GetLastError call here: keep it direct)
-    sInstanceMutex = CreateMutex(NULL, FALSE, "MadDocSoftwarePresentsEmpireEarthExpansion");
+    // TEST ONLY: under the UI fixture (EE_TEST_UI), EE_TEST_INSTANCE=<name> names the mutex per instance, so that a
+    // two-instance test (tools/harness/lan_game.py) can run both games on one machine
+    std::string theName("MadDocSoftwarePresentsEmpireEarthExpansion");
+    const char* theInstance = getenv("EE_TEST_INSTANCE");
+    if (getenv("EE_TEST_UI") != NULL && theInstance != NULL && *theInstance != 0)
+        theName += std::string("-") + theInstance;
+    sInstanceMutex = CreateMutex(NULL, FALSE, theName.c_str());
     if (sInstanceMutex != NULL && GetLastError() == 0)
         return true;
     return false;

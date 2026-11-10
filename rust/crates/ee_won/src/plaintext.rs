@@ -193,9 +193,14 @@ pub fn html_to_text(html: &str) -> String {
 }
 
 /// A page's text: HTML pages converted, others as they are (line ends made `\n`). `skip_first_if_text` drops the
-/// first character of a non-HTML page (the MOTD files' "is new" flag, the SDK's `SkipFirstCharIfNotHTML`).
+/// first character of a non-HTML page (the MOTD files' "is new" flag, the SDK's `SkipFirstCharIfNotHTML`). A page
+/// is UTF-8 (decision D6; tools/open_data.py converts the retail pages); one that is not is an old Windows-1252
+/// page and is read as such.
 pub fn page_text(bytes: &[u8], skip_first_if_text: bool) -> String {
-    let text = from_cp1252(bytes);
+    let text = match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_owned(),
+        Err(_) => from_cp1252(bytes),
+    };
     if is_html(&text) {
         return html_to_text(&text);
     }
@@ -242,7 +247,12 @@ mod tests {
         assert_eq!(page_text(b"1Welcome\r\nback", true), "Welcome\nback");
         assert_eq!(page_text(b"Welcome", false), "Welcome");
         assert_eq!(page_text(b"<p>x</p>", true), "x");
+        // an old Windows-1252 page (not UTF-8) is read as such; a UTF-8 page as it is
         assert_eq!(page_text(b"\x80 \x93q\x94 \x81", false), "\u{20ac} \u{201c}q\u{201d} \u{fffd}");
+        assert_eq!(
+            page_text("\u{20ac} \u{201c}q\u{201d} \u{4e2d}".as_bytes(), false),
+            "\u{20ac} \u{201c}q\u{201d} \u{4e2d}"
+        );
         assert_eq!(page_text(b"", true), "");
     }
 }

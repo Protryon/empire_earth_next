@@ -20,6 +20,12 @@ inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 254;
 }
+// port (decision D6): from 0.255 a save's strings are UTF-8; an older save's are Windows-1252 and are converted as
+// they load (USetLegacyTextLoad around the load: EEPSaveGameHeader::Load, EEGameStateLoader::LoadGame)
+inline bool EESaveTextIsUtf8(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 255;
+}
 // port: from 0.256 a save holds more of the running state ("load equals continue", second round): the computer
 // players' round-robin schedule (EEArtificialIntelligence's next player and next update time, EEPWorldHelper; an older
 // save's loaded game updated its first computer player at its first tick), each computer player's own timers and

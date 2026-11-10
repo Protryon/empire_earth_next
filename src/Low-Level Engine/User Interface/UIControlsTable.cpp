@@ -8,7 +8,9 @@
 // UIFontTable), the sUIControlsArray init chain (0x10067792), the ctors, the dtor and the members in alphabetical
 // order, then the vector<UString> COMDATs (0x10069ad4..). UIDualButton.cpp starts at 0x10069cc7.
 #include <windows.h>
+#include <stddef.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -143,109 +145,128 @@ struct UIDbControl {
     bool mLoopMovie;                 // +0x35a
 };
 static_assert(sizeof(UIDbControl) == 860, "on-disk record: 860 bytes on every target");
-
-static_assert(sizeof(UIDbControl) == 860, "on-disk record: 860 bytes on every target");
+static_assert(sizeof(UIDbControl) == sizeof(EeUiDbControl), "ee_ui/src/controls_table.rs DbControl");
+static_assert(offsetof(UIDbControl, mBackgroundOpacity) == offsetof(EeUiDbControl, background_opacity), "ee_ui DbControl");
+static_assert(offsetof(UIDbControl, mID) == offsetof(EeUiDbControl, id), "ee_ui DbControl");
+static_assert(offsetof(UIDbControl, mBlinkRate) == offsetof(EeUiDbControl, blink_rate), "ee_ui DbControl");
+static_assert(offsetof(UIDbControl, mLoopMovie) == offsetof(EeUiDbControl, loop_movie), "ee_ui DbControl");
 
 std::vector<UIControlsTable*> UIControlsTable::sUIControlsArray;
+
+// The Rust logic's view of a table (rust/crates/ee_ui/src/controls_table.rs): its plain members from
+// mBackgroundOpacity on as one record, its layout, colours and texture rectangles.
+struct UIControlsTableRust {
+    EeUiControlsTableRefs mRefs;
+    UIControlsTableRust(UIControlsTable* inTable)
+    {
+#define EE_UI_TABLE_FIELD(member, field)                                                                               \
+    static_assert(offsetof(UIControlsTable, member) - offsetof(UIControlsTable, mBackgroundOpacity) ==                 \
+                      offsetof(EeUiControlsTableFields, field),                                                        \
+                  "ee_ui/src/controls_table.rs TableFields")
+        EE_UI_TABLE_FIELD(mBackgroundOpacity, background_opacity);
+        EE_UI_TABLE_FIELD(mTextBoxOpacity, text_box_opacity);
+        EE_UI_TABLE_FIELD(mScrollBarBgOpacity, scroll_bar_bg_opacity);
+        EE_UI_TABLE_FIELD(mUnknown100, unknown100);
+        EE_UI_TABLE_FIELD(mID, id);
+        EE_UI_TABLE_FIELD(mFormID, form_id);
+        EE_UI_TABLE_FIELD(mGroup, group);
+        EE_UI_TABLE_FIELD(mControlType, control_type);
+        EE_UI_TABLE_FIELD(mFormIndex, form_index);
+        EE_UI_TABLE_FIELD(mBorderThickness, border_thickness);
+        EE_UI_TABLE_FIELD(mStringTableID, string_table_id);
+        EE_UI_TABLE_FIELD(mFontTableIndex, font_table_index);
+        EE_UI_TABLE_FIELD(mBlinkRate, blink_rate);
+        EE_UI_TABLE_FIELD(mStringTableBegin, string_table_begin);
+        EE_UI_TABLE_FIELD(mStringTableEnd, string_table_end);
+        EE_UI_TABLE_FIELD(mTextAlignment, text_alignment);
+        EE_UI_TABLE_FIELD(mMaxChars, max_chars);
+        EE_UI_TABLE_FIELD(mStartCurrentSelection, start_current_selection);
+        EE_UI_TABLE_FIELD(mStartRange, start_range);
+        EE_UI_TABLE_FIELD(mEndRange, end_range);
+        EE_UI_TABLE_FIELD(mCurrentRange, current_range);
+        EE_UI_TABLE_FIELD(mPageSize, page_size);
+        EE_UI_TABLE_FIELD(mIsVisible, is_visible);
+        EE_UI_TABLE_FIELD(mStartChecked, start_checked);
+        EE_UI_TABLE_FIELD(mListBoxAlwaysDirty, list_box_always_dirty);
+        EE_UI_TABLE_FIELD(mSortListBox, sort_list_box);
+        EE_UI_TABLE_FIELD(mFocusedHasAlpha, focused_has_alpha);
+        EE_UI_TABLE_FIELD(mPressedHasAlpha, pressed_has_alpha);
+        EE_UI_TABLE_FIELD(mNormalHasAlpha, normal_has_alpha);
+        EE_UI_TABLE_FIELD(mAlwaysDirty, always_dirty);
+        EE_UI_TABLE_FIELD(mFitRectToText, fit_rect_to_text);
+        EE_UI_TABLE_FIELD(mScaleToControl, scale_to_control);
+        EE_UI_TABLE_FIELD(mLoopMovie, loop_movie);
+#undef EE_UI_TABLE_FIELD
+        static_assert(sizeof(UIControlsTable) - offsetof(UIControlsTable, mBackgroundOpacity) >= sizeof(EeUiControlsTableFields),
+                      "ee_ui/src/controls_table.rs TableFields");
+        static_assert(sizeof(UILayoutUtility) == sizeof(EeUiLayout), "ee_ui/src/layout.rs");
+        static_assert(sizeof(GEColor) == sizeof(EeUiColor) && offsetof(GEColor, mGreen) == offsetof(EeUiColor, green) &&
+                          offsetof(GEColor, mBlue) == offsetof(EeUiColor, blue),
+                      "ee_ui/src/button.rs UiColor");
+        static_assert(sizeof(GERectangle) == sizeof(EeUiRect) && offsetof(GERectangle, mLeft) == offsetof(EeUiRect, left) &&
+                          offsetof(GERectangle, mTop) == offsetof(EeUiRect, top),
+                      "ee_ui/src/rect.rs");
+        this->mRefs.fields = reinterpret_cast<EeUiControlsTableFields*>(&inTable->mBackgroundOpacity);
+        this->mRefs.layout = reinterpret_cast<EeUiLayout*>(&inTable->mLayout);
+        this->mRefs.background = reinterpret_cast<EeUiColor*>(&inTable->mBackground);
+        this->mRefs.text_foreground = reinterpret_cast<EeUiColor*>(&inTable->mTextForeground);
+        this->mRefs.selected_list_box = reinterpret_cast<EeUiColor*>(&inTable->mSelectedListBox);
+        this->mRefs.focused_line = reinterpret_cast<EeUiColor*>(&inTable->mFocusedLineColor);
+        this->mRefs.normal_rect = reinterpret_cast<EeUiRect*>(&inTable->mNormalTextureRect);
+        this->mRefs.pressed_rect = reinterpret_cast<EeUiRect*>(&inTable->mPressedTextureRect);
+        this->mRefs.focused_rect = reinterpret_cast<EeUiRect*>(&inTable->mFocusedTextureRect);
+    }
+    operator const EeUiControlsTableRefs*() const { return &this->mRefs; }
+    static std::vector<UIControlsTable*>& Array() { return UIControlsTable::sUIControlsArray; }
+    static const EeUiRect* Rect(const GERectangle& inRectangle) { return reinterpret_cast<const EeUiRect*>(&inRectangle); }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+};
+
+// The static array for the Rust searches (ee_ui/src/controls_table_ffi.rs), a slot at a time
+extern "C" unsigned long ee_uicpp_controls_table_count()
+{
+    return (unsigned long)UIControlsTableRust::Array().size();
+}
+
+extern "C" bool ee_uicpp_controls_table_key(unsigned long inIndex, EeUiControlsTableKey* outKey)
+{
+    UIControlsTable* theTable = UIControlsTableRust::Array()[inIndex];
+    if (theTable == NULL)
+        return false;
+    outKey->id = theTable->GetID();
+    outKey->form_id = theTable->GetFormID();
+    outKey->form_index = theTable->GetFormIndex();
+    return true;
+}
+
+extern "C" EeUiLayout* ee_uicpp_controls_table_layout(unsigned long inIndex)
+{
+    return reinterpret_cast<EeUiLayout*>(const_cast<UILayoutUtility*>(&UIControlsTableRust::Array()[inIndex]->GetLayout()));
+}
 
 // FUNCTION: LLE 0x100677db
 // Creates an empty control description (a bitmap with no font, files or layout)
 UIControlsTable::UIControlsTable()
     : mNormalFileName(50), mPressedFileName(50), mFocusedFileName(50)
 {
-    this->mBackgroundOpacity = 0.0f;
-    this->mTextBoxOpacity = 0.0f;
-    this->mScrollBarBgOpacity = 0.0f;
-    this->mUnknown100 = 0;
-    this->mID = 0;
-    this->mFormID = 0;
-    this->mGroup = 0;
-    this->mControlType = kDbControlBitmap;
-    this->mFormIndex = 0;
-    this->mBorderThickness = 0;
-    this->mStringTableBegin = 0;
-    this->mStringTableEnd = 0;
+    ee_ui_controls_table_init(UIControlsTableRust(this));
     this->mFont = NULL;
-    this->mTextAlignment = 0;
-    this->mMaxChars = 0;
-    this->mStartCurrentSelection = 0;
-    this->mStartRange = 0;
-    this->mEndRange = 0;
-    this->mCurrentRange = 0;
-    this->mIsVisible = false;
-    this->mStartChecked = false;
-    this->mListBoxAlwaysDirty = false;
-    this->mSortListBox = false;
-    this->mFocusedHasAlpha = false;
-    this->mPressedHasAlpha = false;
-    this->mNormalHasAlpha = false;
-    this->mFontTableIndex = 0;
-    this->mBlinkRate = 0;
 }
 
 // FUNCTION: LLE 0x1006796f
 // Creates a control description from a controls database record: layout, files, sounds, colours and texture rects
 UIControlsTable::UIControlsTable(const UIDbControl& inControl)
 {
-    this->mBackgroundOpacity = inControl.mBackgroundOpacity;
-    this->mTextBoxOpacity = inControl.mTextBoxOpacity;
-    this->mScrollBarBgOpacity = inControl.mScrollBarBgOpacity;
-    this->mUnknown100 = inControl.mUnusedDbRecordId;
-    this->mID = inControl.mID;
-    this->mFormID = inControl.mFormID;
-    this->mGroup = inControl.mGroup;
-    this->mControlType = inControl.mControlType;
-    this->mFormIndex = inControl.mFormIndex;
-    this->mBorderThickness = inControl.mBorderThickness;
-    this->mLayout.SetTop(inControl.mTopOffsetType, inControl.mTopOffset);
-    this->mLayout.SetBottom(inControl.mBottomOffsetType, inControl.mBottomOffset);
-    this->mLayout.SetLeft(inControl.mLeftOffsetType, inControl.mLeftOffset);
-    this->mLayout.SetRight(inControl.mRightOffsetType, inControl.mRightOffset);
-    this->mStringTableBegin = inControl.mStringTableBegin;
-    this->mStringTableEnd = inControl.mStringTableEnd;
+    ee_ui_controls_table_from_record(UIControlsTableRust(this), reinterpret_cast<const EeUiDbControl*>(&inControl));
     this->mFont = NULL;
-    this->mTextAlignment = inControl.mTextAlignment;
-    this->mMaxChars = inControl.mMaxChars;
-    this->mStartCurrentSelection = inControl.mStartCurrentSelection;
-    this->mStartRange = inControl.mStartRange;
-    this->mEndRange = inControl.mEndRange;
-    this->mCurrentRange = inControl.mCurrentRange;
-    this->mIsVisible = inControl.mIsVisible;
-    this->mStartChecked = inControl.mStartChecked;
-    this->mListBoxAlwaysDirty = inControl.mListBoxAlwaysDirty;
-    this->mSortListBox = inControl.mSortListBox;
-    this->mFocusedHasAlpha = inControl.mFocusedHasAlpha;
-    this->mPressedHasAlpha = inControl.mPressedHasAlpha;
-    this->mNormalHasAlpha = inControl.mNormalHasAlpha;
-    this->mAlwaysDirty = inControl.mAlwaysDirty;
-    this->mFitRectToText = inControl.mFitRectToText;
-    this->mScaleToControl = inControl.mScaleToControl;
-    this->mFontTableIndex = inControl.mFontTableIndex;
-    this->mPageSize = inControl.mPageSize;
-    this->mBlinkRate = inControl.mBlinkRate;
-    this->mLoopMovie = inControl.mLoopMovie;
-    if (inControl.mStringTableID > 0)
-        this->mStringTableID = inControl.mStringTableID;
-    else
-        this->mStringTableID = 0;
     this->mNormalFileName.Copy(inControl.mNormalFileName, 0, strlen(inControl.mNormalFileName), 0, true);
     this->mPressedFileName.Copy(inControl.mPressedFileName, 0, strlen(inControl.mPressedFileName), 0, true);
     this->mFocusedFileName.Copy(inControl.mFocusedFileName, 0, strlen(inControl.mFocusedFileName), 0, true);
     this->mButtonDownSound.Copy(inControl.mButtonDownSound, 0, strlen(inControl.mButtonDownSound), 0, true);
     this->mButtonUpSound.Copy(inControl.mButtonUpSound, 0, strlen(inControl.mButtonUpSound), 0, true);
-    this->CalculateColor(this->mBackground, inControl.mBackgroundRed, inControl.mBackgroundGreen, inControl.mBackgroundBlue);
-    this->CalculateColor(this->mTextForeground, inControl.mTextForegroundRed, inControl.mTextForegroundGreen,
-                   inControl.mTextForegroundBlue);
-    this->CalculateColor(this->mSelectedListBox, inControl.mSelectedListBoxRed, inControl.mSelectedListBoxGreen,
-                   inControl.mSelectedListBoxBlue);
-    this->CalculateColor(this->mFocusedLineColor, inControl.mFocusedLineRed, inControl.mFocusedLineGreen,
-                   inControl.mFocusedLineBlue);
-    this->mNormalTextureRect = GERectangle(long(inControl.mNormalLeft), long(inControl.mNormalTop), long(inControl.mNormalRight),
-                                     long(inControl.mNormalBottom));   // the long overload (int32_t fields)
-    this->mFocusedTextureRect = GERectangle(long(inControl.mFocusedLeft), long(inControl.mFocusedTop), long(inControl.mFocusedRight),
-                                      long(inControl.mFocusedBottom));   // the long overload (int32_t fields)
-    this->mPressedTextureRect = GERectangle(long(inControl.mPressedLeft), long(inControl.mPressedTop), long(inControl.mPressedRight),
-                                      long(inControl.mPressedBottom));   // the long overload (int32_t fields)
 }
 
 // FUNCTION: LLE 0x10067e8d
@@ -271,7 +292,7 @@ long UIControlsTable::Create(FSFileSpec& inFile, UIManager* inManager)
         for (unsigned long i = 0; i < theCount; i++) {
             theTable = NULL;
             theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(UIDbControl), theRead);
-            if (theRecord.mID >= 0) {
+            if (ee_ui_controls_table_record_is_control(theRecord.mID)) {
                 theTable = new UIControlsTable(theRecord);
                 UICDatabase theEntry;
                 theEntry.mControl = NULL;
@@ -290,37 +311,14 @@ long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, lo
                                      unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
                                      long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID)
 {
-    UIControlsTable* theTemplate = NULL;
-    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
-        if (theTable == NULL)
-            continue;
-        if (theTable->mID == inID)
-            return kErrorNotFound;
-        if (theTable->mID == inTemplateID)
-            theTemplate = theTable;
-    }
-    if (theTemplate == NULL)
+    unsigned long theTemplateIndex;
+    if (!ee_ui_controls_table_find_template(inTemplateID, inID, inFormIndex, &theTemplateIndex))
         return kErrorNotFound;
-    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
-        if (theTable && theTable->mFormID == theTemplate->mFormID && theTable->mFormIndex == inFormIndex)
-            return kErrorNotFound;
-    }
-    UIControlsTable* theTable = new UIControlsTable(*theTemplate);
+    UIControlsTable* theTable = new UIControlsTable(*UIControlsTable::sUIControlsArray[theTemplateIndex]);
     theTable->mEventData.clear();
     theTable->mFont = NULL;
-    theTable->mID = inID;
-    theTable->mFormIndex = inFormIndex;
-    theTable->mGroup = inGroup;
-    theTable->mLayout.SetLeft(kLayoutProportional, inLeft);
-    theTable->mLayout.SetRight(kLayoutProportional, inRight);
-    theTable->mLayout.SetTop(kLayoutProportional, inTop);
-    theTable->mLayout.SetBottom(kLayoutProportional, inBottom);
-    theTable->mStringTableBegin = inStringTableBegin;
-    theTable->mStringTableEnd = inStringTableEnd;
-    theTable->mStringTableID = inHelpStringID;
-    theTable->mStartCurrentSelection = 0;
+    ee_ui_controls_table_like(UIControlsTableRust(theTable), inID, inFormIndex, inGroup, inLeft, inRight, inTop, inBottom,
+                              inStringTableBegin, inStringTableEnd, inHelpStringID);
     UICDatabase theEntry;
     theEntry.mControl = NULL;
     theEntry.mTableIndex = UIControlsTable::sUIControlsArray.size();
@@ -334,20 +332,7 @@ long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, lo
 long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
                                                float inRightDelta)
 {
-    long theCount = 0;
-    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
-        if (theTable == NULL || theTable->mFormID != inFormID || theTable->mFormIndex < inFirstIndex ||
-            theTable->mFormIndex > inLastIndex)
-            continue;
-        UILayoutUtility& theLayout = theTable->mLayout;
-        if (theLayout.GetLeftOffsetType() != kLayoutProportional || theLayout.GetRightOffsetType() != kLayoutProportional)
-            continue;
-        theLayout.SetLeft(kLayoutProportional, theLayout.GetLeftOffset() + inLeftDelta);
-        theLayout.SetRight(kLayoutProportional, theLayout.GetRightOffset() + inRightDelta);
-        theCount++;
-    }
-    return theCount;
+    return ee_ui_controls_table_move_horizontally(inFormID, inFirstIndex, inLastIndex, inLeftDelta, inRightDelta);
 }
 
 // FUNCTION: LLE 0x10067fb4
@@ -485,17 +470,10 @@ UIControl* UIControlsTable::CreateComboBox(UIManager* inManager, const GERectang
     std::vector<UWideString> theStrings;
     UIForm* theForm = inManager->GetFormByID(this->mFormID);
     this->SetupStringArray(inManager, theStrings);
-    theListRectangle.SetTopLeft(inRectangle.GetTopLeft());
-    theListRectangle.SetRight(inRectangle.GetRight());
-    if (this->mScaleToControl)
-        theListRectangle.SetBottom(inRectangle.GetTop() + (this->mFont->GetHeight() + this->mBorderThickness * 2.0f));
-    else
-        theListRectangle.SetBottom(inRectangle.GetTop() + kScrollBarWidth);
     long theListHeight;
-    if (inRectangle.GetHeight() > theListRectangle.GetHeight())
-        theListHeight = UMFloor(inRectangle.GetHeight() - theListRectangle.GetHeight());
-    else
-        theListHeight = 1;
+    theListRectangle = UIControlsTableRust::Rect(ee_ui_controls_table_combo_list(
+        UIControlsTableRust::Rect(inRectangle), this->mScaleToControl, this->mScaleToControl ? this->mFont->GetHeight() : 0,
+        this->mBorderThickness, &theListHeight));
     UIComboBox* theComboBox;
     switch (this->mControlType) {
     case kDbControlEditableComboBox:
@@ -529,9 +507,10 @@ UIControl* UIControlsTable::CreateFileComboBox(UIManager* inManager, const GERec
     UIFileComboBox* theComboBox = NULL;
     UIForm* theForm = inManager->GetFormByID(this->mFormID);
     this->SetupStringArray(inManager, theStrings);
-    theComboBox = new UIFileComboBox(this->mID, 1, theStrings, this->mFont, inRectangle.GetTopLeft(),
-                                     inRectangle.GetWidth() + 1.0f, UMFloor(inRectangle.GetHeight()) + 1, theForm,
-                                     this->mFormIndex, this->mMaxChars, this->mBorderThickness);
+    long theHeight;
+    float theWidth = ee_ui_controls_table_file_combo_size(UIControlsTableRust::Rect(inRectangle), &theHeight);
+    theComboBox = new UIFileComboBox(this->mID, 1, theStrings, this->mFont, inRectangle.GetTopLeft(), theWidth, theHeight,
+                                     theForm, this->mFormIndex, this->mMaxChars, this->mBorderThickness);
     this->SetupGEText(theComboBox->GetGEText());
     theComboBox->SetListBoxFocusedRectColor(this->mFocusedLineColor);
     theComboBox->SetListBoxSelectedBgColor(this->mSelectedListBox);
@@ -553,17 +532,11 @@ UIControl* UIControlsTable::CreateControl(UIManager* inManager)
     GEWindow* theWindow = inManager->GetRasterizer()->GetWindow(inManager->GetScreen());
     UIForm* theForm = inManager->GetFormByID(this->mFormID);
     UIControl* theControl = NULL;
-    float theOffset = theForm->GetUseExclusiveCoords() ? 0.0f : 1.0f;
-    theParent.SetLeft(0.0f);
-    theParent.SetTop(0.0f);
-    theParent.SetRight(theWindow->GetWidth() - theOffset);
-    theParent.SetBottom(theWindow->GetHeight() - theOffset);
+    theParent = UIControlsTableRust::Rect(
+        ee_ui_controls_table_parent_rect(theWindow->GetWidth(), theWindow->GetHeight(), theForm->GetUseExclusiveCoords()));
     this->mLayout.CalculateRectangle(theParent, theRectangle, theForm->GetUseExclusiveCoords());
-    theFontRectangle = theRectangle;
-    if (theForm->GetUseExclusiveCoords()) {
-        theFontRectangle.SetRight(theFontRectangle.GetRight() + 1.0f);
-        theFontRectangle.SetBottom(theFontRectangle.GetBottom() + 1.0f);
-    }
+    theFontRectangle = UIControlsTableRust::Rect(
+        ee_ui_controls_table_font_rect(UIControlsTableRust::Rect(theRectangle), theForm->GetUseExclusiveCoords()));
     this->SetupFont(inManager, theFontRectangle, false);
     switch (this->mControlType) {
     case kDbControlBitmap:
@@ -842,12 +815,14 @@ UIControl* UIControlsTable::CreateScrollBar(UIManager* inManager, const GERectan
     UIScrollBar* theScrollBar;
     switch (this->mControlType) {
     case kDbControlHorizontalScrollBar:
-        theScrollBar = new UIScrollBar(this->mID, inRectangle.GetTopLeft(), inRectangle.GetWidth() + 1.0f, 0, theForm,
-                                       this->mFormIndex, this->mBorderThickness);
+        theScrollBar = new UIScrollBar(this->mID, inRectangle.GetTopLeft(),
+                                       ee_ui_controls_table_scroll_bar_length(UIControlsTableRust::Rect(inRectangle), false), 0,
+                                       theForm, this->mFormIndex, this->mBorderThickness);
         break;
     case kDbControlVerticalScrollBar:
-        theScrollBar = new UIScrollBar(this->mID, inRectangle.GetTopLeft(), inRectangle.GetHeight() + 1.0f, 1, theForm,
-                                       this->mFormIndex, this->mBorderThickness);
+        theScrollBar = new UIScrollBar(this->mID, inRectangle.GetTopLeft(),
+                                       ee_ui_controls_table_scroll_bar_length(UIControlsTableRust::Rect(inRectangle), true), 1,
+                                       theForm, this->mFormIndex, this->mBorderThickness);
         break;
     default:
         theScrollBar = NULL;
@@ -891,13 +866,9 @@ UIControl* UIControlsTable::CreateSlider(UIManager* inManager, const GERectangle
         theSlider = NULL;
         break;
     }
-    long theRange = this->mEndRange - this->mStartRange;
     theSlider->SetRange(this->mStartRange, this->mEndRange);
     theSlider->SetCurrentRangeValue(this->mCurrentRange);
-    if (this->mPageSize >= theRange)
-        theSlider->SetPageSize(theRange - 1);
-    else
-        theSlider->SetPageSize(this->mPageSize);
+    theSlider->SetPageSize(ee_ui_controls_table_slider_page_size(this->mStartRange, this->mEndRange, this->mPageSize));
     return theSlider;
 }
 
@@ -975,13 +946,10 @@ void UIControlsTable::RelayoutControl(UIControl* inControl, UIManager* inManager
     GERectangle theRectangle;
     UIForm* theForm = inManager->GetFormByID(this->mFormID);
     GEWindow* theWindow = inManager->GetRasterizer()->GetWindow(inManager->GetScreen());
-    float theOffset = theForm->GetUseExclusiveCoords() ? 0.0f : 1.0f;
     if (!inControl)
         return;
-    theParent.SetLeft(0.0f);
-    theParent.SetTop(0.0f);
-    theParent.SetRight(theWindow->GetWidth() - theOffset);
-    theParent.SetBottom(theWindow->GetHeight() - theOffset);
+    theParent = UIControlsTableRust::Rect(
+        ee_ui_controls_table_parent_rect(theWindow->GetWidth(), theWindow->GetHeight(), theForm->GetUseExclusiveCoords()));
     this->mLayout.CalculateRectangle(theParent, theRectangle, theForm->GetUseExclusiveCoords());
     inControl->SetRectangle(theRectangle);
     this->SetupFont(inManager, theRectangle, false);
@@ -1002,32 +970,14 @@ void UIControlsTable::SetupFont(UIManager* inManager, const GERectangle& inRecta
     if (this->mFontTableIndex > 0) {
         if (this->mScaleToControl == true) {
             long theSize;
-            bool theScale = inScaleToWindow;
-            if (!theScale) {
-                switch (this->mControlType) {
-                case kDbControlEditableComboBox:
-                case kDbControlComboBox:
-                case kDbControlNumberMultiLineEditBox:
-                case kDbControlMultiLineEditBox:
-                case kDbControlListBox:
-                case kDbControlAutoSelectListBox:
-                case kDbControlMultiLineTextLabel:
-                case kDbControlNumberMultiLineTextLabel:
-                case kDbControlFileListBox:
-                case kDbControlMultiLineHelpTextLabel:
-                case kDbControlScrollingTextLabel:
-                    theScale = true;
-                    break;
-                }
-            }
-            if (!theScale)
-                theSize = UMFloor(inRectangle.GetHeight() - this->GetBorderThickness() * 2);
+            if (!ee_ui_controls_table_font_scales_to_window(this->mControlType, inScaleToWindow))
+                theSize = ee_ui_controls_table_control_font_size(inRectangle.GetHeight(), this->GetBorderThickness());
             else {
                 GEWindow* theWindow = inManager->GetRasterizer()->GetWindow(inManager->GetScreen());
                 GEFont* theFont = UIFontTable::GetFont(this->GetFontTableIndex());
                 theForm = inManager->GetFormByID(this->GetFormID());
-                theSize = UMFloor((float)theFont->GetHeight() * theWindow->GetHeight() /
-                                  theForm->GetDesignedHeight());
+                theSize = ee_ui_controls_table_window_font_size(theFont->GetHeight(), theWindow->GetHeight(),
+                                                                theForm->GetDesignedHeight());
                 theFont->Dereference();
             }
             this->mFont = UIFontTable::CreateClosestFont(this->mFontTableIndex, theSize);
@@ -1052,11 +1002,12 @@ void UIControlsTable::SetupGEText(GEText* inText) const
 void UIControlsTable::SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const
 {
     outStrings.clear();
-    if (!(this->mStringTableBegin > 0) || !(this->mStringTableEnd >= this->mStringTableBegin))
+    unsigned long theCount = ee_ui_controls_table_string_count(this->mStringTableBegin, this->mStringTableEnd);
+    if (theCount == 0)
         return;
-    outStrings.resize(this->mStringTableEnd - this->mStringTableBegin + 1);
-    for (long i = this->mStringTableBegin; i <= this->mStringTableEnd; i++)
-        inManager->GetStringTable()->GetString(i, outStrings[i - this->mStringTableBegin]);
+    outStrings.resize(theCount);
+    for (unsigned long i = 0; i < theCount; i++)
+        inManager->GetStringTable()->GetString(this->mStringTableBegin + (long)i, outStrings[i]);
 }
 
 // Header-inline members (UIControlsTable.h, declaration order)

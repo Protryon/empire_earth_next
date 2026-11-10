@@ -2,15 +2,18 @@
 //! classes (docs/RUST_PLAN.md R6, a faithful port). The C++ classes keep their members, vtables and exported names
 //! (the harness hooks some of them); their bodies forward to the algorithms here (`UITrampolines.cpp`).
 //!
-//! Text stays Windows-1252 bytes (`&[u8]`; decision D6 is open). Each module's behaviour is pinned by golden values
+//! Text is UTF-8 bytes (`&[u8]`; decision D6, `text.rs`). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
 pub mod button;
+pub mod button_variants;
 pub mod combo;
+pub mod controls_table;
 pub mod edit;
 pub mod form;
 pub mod layout;
 pub mod list;
+pub mod manager;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
@@ -20,9 +23,15 @@ pub mod wrap;
 // imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
 #[cfg(not(test))]
 mod button_ffi;
+// imports the C++ tri-state check box's host calls (UITriStateCheckBox.cpp), absent from a test binary
+#[cfg(not(test))]
+mod button_variants_ffi;
 // imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod combo_ffi;
+// imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
+#[cfg(not(test))]
+mod controls_table_ffi;
 // imports the C++ edit box's lines, measuring and scroll bar (UIEditBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod edit_ffi;
@@ -33,6 +42,9 @@ mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
+// imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
+#[cfg(not(test))]
+mod manager_ffi;
 // imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrollbar_ffi;

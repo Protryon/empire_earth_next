@@ -6,9 +6,11 @@ publish.workspace = true
 
 # The Low-Level Engine's UI toolkit (docs/RUST_PLAN.md R6, `src/Low-Level Engine/User Interface`): its algorithms
 # (layout, hit testing, sliders, text wrapping) behind the C++ UI* classes, which stay as forwarders
-# (`User Interface/UITrampolines.cpp`). Game text is Windows-1252 bytes (decision D6 is open), never `String`.
+# (`User Interface/UITrampolines.cpp`). Game text is UTF-8 bytes (decision D6), never `String`.
 [lib]
 crate-type = ["rlib"]
 
 [dependencies]
 ee_plat_core = { path = "../ee_plat_core" }
+# the blinking button's fade: UMSin, the Graphics Engine's table cosine
+ee_ge = { path = "../ee_ge" }

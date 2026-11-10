@@ -8,8 +8,8 @@
 // rust/crates/ee_plat_ui, on every system (the game's window since PORT.md step 4.3).
 //
 // Keys are the game's numbering on every system (platform/PlatKeys.h): mScanCode is a DirectInput scan code
-// (DIK_*), mVirtualKey a Windows virtual-key code (VK_*). Text is Windows-1252 bytes (platform/PlatString.h);
-// characters outside it arrive as '?'. Coordinates are client-area pixels of the window, times PlatTimeMilliseconds.
+// (DIK_*), mVirtualKey a Windows virtual-key code (VK_*). Text is UTF-8 (platform/PlatString.h, decision D6;
+// whole characters only). Coordinates are client-area pixels of the window, times PlatTimeMilliseconds.
 #ifndef PLATFORM_PLATWINDOW_H
 #define PLATFORM_PLATWINDOW_H
 
@@ -98,7 +98,7 @@ typedef enum PlatInputEventType {
     PLAT_EVENT_EXPOSED,                     // the window needs repainting
     PLAT_EVENT_KEY_DOWN,                    // mKey (mRepeat nonzero for auto-repeat)
     PLAT_EVENT_KEY_UP,
-    PLAT_EVENT_TEXT,                        // mText: committed text (WM_CHAR), Windows-1252
+    PLAT_EVENT_TEXT,                        // mText: committed text (WM_CHAR), UTF-8
     PLAT_EVENT_TEXT_EDITING,                // mText: the input method's composition, mCursor / mLength inside it
     PLAT_EVENT_MOUSE_MOVE,                  // mMouse mX, mY (client) and mDeltaX, mDeltaY (raw motion when relative)
     PLAT_EVENT_MOUSE_DOWN,                  // mMouse mButton (1 left, 2 middle, 3 right, 4, 5), mClicks (2: double)
@@ -187,7 +187,7 @@ int PlatOpenURL(const char* inURL);
 // confines the pointer to the window (ClipCursor) or frees it
 void PlatMouseConfine(PlatWindow* inWindow, int inConfine);
 
-// ---- clipboard (text, Windows-1252)
+// ---- clipboard (text, UTF-8)
 int PlatClipboardSetText(const char* inText);
 // -> a malloc'ed copy of the clipboard's text (free() it), NULL when it holds none
 char* PlatClipboardGetText(void);

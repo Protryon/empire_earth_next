@@ -10,6 +10,11 @@
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 // FUNCTION: WON 0x0069f190
-// Sets the op's run mode unless the op is already running
-void AsyncOp::SetMode(AsyncRunMode mode) { if(this->mStatus!=WS_Pending) this->mRunMode=mode; }
+// Sets the op's run mode unless the op is already running (Rust decides: ee_won asyncop OpState::set_mode)
+void AsyncOp::SetMode(AsyncRunMode mode)
+{
+    EeWonOpState aState=this->GetState();
+    ee_won_op_set_mode(&aState,static_cast<int32_t>(mode));
+    this->SetState(aState);
+}
 }
