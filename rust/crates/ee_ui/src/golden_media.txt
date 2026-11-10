@@ -1,0 +1,4387 @@
+manager 0 sound 1 volume 3f800000 ime 0 window 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 5 fails 1
+  load [sounds\eeintro.mp3] = 5
+  lock
+  play 5 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 5 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [sounds\eeintro.mp3] id 5 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  unload 5
+  load [sounds\eeintro.mp3] = 6
+  lock
+  play 6 00000000 = 0
+  unlock
+  params 0 3f400000
+  state volume 3f400000 name [sounds\eeintro.mp3] id 6 start 1 stop 1 instance 0 refs 100 open 0 draw 0
+stop fails 0
+  stop 0
+  unload 6
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 1
+  load [none] = 7
+  lock
+  play 7 00000000 = none
+  unlock
+  state volume 00000000 name [none] id 7 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  unload 7
+  load [sounds\menu.mp3] = 8
+  lock
+  play 8 00000000 = 1
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 8 start 1 stop 1 instance 1 refs 100 open 0 draw 0
+start 1 fails 1
+  state volume 00000000 name [sounds\menu.mp3] id 8 start 1 stop 1 instance 1 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 00000000 name [sounds\menu.mp3] id 8 start 1 stop 1 instance 1 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 1
+  play 8 00000000 = 2
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 8 start 0 stop 0 instance 2 refs 100 open 0 draw 0
+volume 3f400000 fails 0
+  stop 2
+  unload 8
+  load [sounds\menu.mp3] = 9
+  lock
+  play 9 00000000 = 3
+  unlock
+  params 3 3f400000
+  state volume 3f400000 name [sounds\menu.mp3] id 9 start 1 stop 1 instance 3 refs 100 open 0 draw 0
+start 4 fails 0
+  stop 3
+  unload 9
+  load [SOUNDS\GAME1.MP3] = 10
+  lock
+  play 10 3f400000 = 4
+  unlock
+  state volume 3f400000 name [sounds\game1.mp3] id 10 start 1 stop 1 instance 4 refs 100 open 0 draw 0
+start 0 fails 0
+  stop 4
+  unload 10
+  load [Sounds\Menu.mp3] = 11
+  lock
+  play 11 3f400000 = 5
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 11 start 1 stop 1 instance 5 refs 100 open 0 draw 0
+instance 5
+  state volume 3f400000 name [sounds\menu.mp3] id 11 start 1 stop 1 instance 5 refs 100 open 0 draw 0
+start 6 fails 1
+  stop 5
+  unload 11
+  load [none] = 12
+  lock
+  play 12 3f400000 = none
+  unlock
+  state volume 3f400000 name [none] id 12 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 12 3f400000 = 6
+  unlock
+  state volume 3f400000 name [none] id 12 start 0 stop 0 instance 6 refs 100 open 0 draw 0
+start 6 fails 1
+  state volume 3f400000 name [none] id 12 start 0 stop 0 instance 6 refs 100 open 0 draw 0
+manager 1 sound 1 volume 3f800000 ime 0 window 1 960 480 00000000 41580000
+start 6 fails 0
+  load [none] = 13
+  lock
+  play 13 3f800000 = 7
+  unlock
+  state volume 3f800000 name [none] id 13 start 1 stop 1 instance 7 refs 100 open 0 draw 0
+remove-stop
+  stop 7
+  state volume 3f800000 name [none] id 13 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 13 3f800000 = none
+  unlock
+  state volume 3f800000 name [none] id 13 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 13
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  load [none] = 14
+  lock
+  play 14 3f800000 = 8
+  unlock
+  state volume 3f800000 name [none] id 14 start 1 stop 1 instance 8 refs 100 open 0 draw 0
+start 7 fails 0
+  stop 8
+  unload 14
+  load [] = 15
+  lock
+  play 15 3f800000 = 9
+  unlock
+  state volume 3f800000 name [] id 15 start 1 stop 1 instance 9 refs 100 open 0 draw 0
+start 1 fails 0
+  stop 9
+  unload 15
+  load [sounds\menu.mp3] = 16
+  lock
+  play 16 3f800000 = 10
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 16 start 1 stop 1 instance 10 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 10
+  play 16 3f800000 = 11
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 16 start 0 stop 0 instance 11 refs 100 open 0 draw 0
+instance 5
+  state volume 3f800000 name [sounds\menu.mp3] id 16 start 0 stop 0 instance 5 refs 100 open 0 draw 0
+start 2 fails 0
+  stop 5
+  unload 16
+  load [sounds\BAD.mp3] = -1
+  state volume 3f800000 name [sounds\menu.mp3] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [sounds\menu.mp3] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 3f800000 name [sounds\menu.mp3] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  state volume 3f800000 name [sounds\menu.mp3] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+instance 5
+  state volume 3f800000 name [sounds\menu.mp3] id -1 start 0 stop 1 instance 5 refs 100 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 17
+  lock
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 17 start 1 stop 1 instance 5 refs 100 open 0 draw 0
+start 7 fails 1
+  stop 5
+  unload 17
+  load [] = 18
+  lock
+  play 18 3f800000 = none
+  unlock
+  state volume 3f800000 name [] id 18 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  unload 18
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 19
+  lock
+  play 19 00000000 = 12
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 19 start 1 stop 1 instance 12 refs 100 open 0 draw 0
+instance 5
+  state volume 00000000 name [sounds\game1.mp3] id 19 start 1 stop 1 instance 5 refs 100 open 0 draw 0
+start 4 fails 1
+  state volume 00000000 name [sounds\game1.mp3] id 19 start 1 stop 1 instance 5 refs 100 open 0 draw 0
+stop fails 0
+  stop 5
+  unload 19
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 0
+  load [sounds\eeintro.mp3] = 20
+  lock
+  play 20 00000000 = 13
+  unlock
+  params 13 3e800000
+  state volume 3e800000 name [sounds\eeintro.mp3] id 20 start 1 stop 1 instance 13 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 13
+  unload 20
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 2 sound 1 volume 3f800000 ime 1 window 1 960 720 40c00000 41c40000
+form 1
+form 2 captured ime 1 42280000 42400000 430e0000 42880000
+visible
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 1
+  lock
+  ime 1
+  set-list 0 1 42280000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 40c00000 41c40000 44718000 443a2000
+  control 42280000 42400000 430e0000 42880000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 40c00000 41c40000 44718000 443a2000
+  control 42280000 42400000 430e0000 42880000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 6
+  lock
+  form 2 change [comp] [attr] 6
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 0 1
+  lock
+  ime 1
+  set-list 0 1 42280000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 0
+  lock
+  form 2 change [comp] [attr] 0
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 6
+  lock
+  form 2 change [comp] [attr] 6
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 3
+  lock
+  form 2 change [comp] [attr] 3
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 4
+  lock
+  form 2 change [comp] [attr] 4
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 40c00000 41c40000 44718000 443a2000
+  control 42280000 42400000 430e0000 42880000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 3 sound 1 volume 3f800000 ime 1 window 0
+form 1
+form 2 captured ime 1 43918000 43280000 43c38000 433c0000
+form 3
+visible 2 3
+candidates 3 3
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 1
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 2
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 5
+  lock
+  form 3 change [comp] [attr] 5
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 2
+  lock
+  form 3 change [comp] [attr] 2
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 0
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 3 0
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  form 3 copy
+  = 3
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 2
+  lock
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 4 sound 0 volume 00000000 ime 0 window 1 640 720 42300000 40f00000
+start 2 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 1 refs 100 open 0 draw 0
+start 2 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 1 refs 100 open 0 draw 0
+stop fails 1
+  stop 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 1
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 5 sound 1 volume 3f800000 ime 0 window 1 960 600 42440000 41480000
+remove-stop
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 21
+  lock
+  play 21 3e800000 = 14
+  unlock
+  state volume 3e800000 name [sounds\game1.mp3] id 21 start 1 stop 1 instance 14 refs 100 open 0 draw 0
+volume 3e800000 fails 0
+  params 14 3e800000
+  state volume 3e800000 name [sounds\game1.mp3] id 21 start 1 stop 1 instance 14 refs 100 open 0 draw 0
+remove-stop
+  stop 14
+  state volume 3e800000 name [sounds\game1.mp3] id 21 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 21 3e800000 = 15
+  unlock
+  state volume 3e800000 name [sounds\game1.mp3] id 21 start 0 stop 0 instance 15 refs 100 open 0 draw 0
+stop fails 0
+  stop 15
+  unload 21
+  state volume 3e800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+instance 15
+  state volume 3e800000 name [] id -1 start 0 stop 1 instance 15 refs 100 open 0 draw 0
+start 3 fails 1
+  load [sounds\game1.mp3] = 22
+  lock
+  unlock
+  state volume 3e800000 name [sounds\game1.mp3] id 22 start 1 stop 1 instance 15 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 15
+  unload 22
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 0 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  params 0 00000000
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 0 refs 100 open 0 draw 0
+stop fails 0
+  stop 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 23
+  lock
+  play 23 00000000 = 16
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 23 start 1 stop 1 instance 16 refs 100 open 0 draw 0
+stop fails 0
+  stop 16
+  unload 23
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 24
+  lock
+  play 24 00000000 = 17
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 24 start 1 stop 1 instance 17 refs 100 open 0 draw 0
+start 3 fails 0
+  state volume 00000000 name [sounds\game1.mp3] id 24 start 1 stop 1 instance 17 refs 100 open 0 draw 0
+start 0 fails 0
+  stop 17
+  unload 24
+  load [Sounds\Menu.mp3] = 25
+  lock
+  play 25 00000000 = 18
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 25 start 1 stop 1 instance 18 refs 100 open 0 draw 0
+stop fails 0
+  stop 18
+  unload 25
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  load [sounds\eeintro.mp3] = 26
+  lock
+  play 26 00000000 = 19
+  unlock
+  params 19 3f800000
+  state volume 3f800000 name [sounds\eeintro.mp3] id 26 start 1 stop 1 instance 19 refs 100 open 0 draw 0
+stop fails 0
+  stop 19
+  unload 26
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 27
+  lock
+  play 27 3f800000 = 20
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 27 start 1 stop 1 instance 20 refs 100 open 0 draw 0
+stop fails 0
+  stop 20
+  unload 27
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 28
+  lock
+  play 28 3f800000 = 21
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 28 start 1 stop 1 instance 21 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 21
+  play 28 3f800000 = 22
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 28 start 0 stop 0 instance 22 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 3f800000 name [sounds\menu.mp3] id 28 start 0 stop 0 instance 22 refs 100 open 0 draw 0
+instance 22
+  state volume 3f800000 name [sounds\menu.mp3] id 28 start 0 stop 0 instance 22 refs 100 open 0 draw 0
+manager 6 sound 1 volume 00000000 ime 1 window 1 640 600 41d80000 41e40000
+form 1
+form 2 captured ime 0 41e00000 42940000 43000000 42bc0000
+form 3
+visible 1
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  = 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 0
+  lock
+  form 3 change [comp] [attr] 0
+  unlock
+  = 13
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 8
+  lock
+  form 3 change [comp] [attr] 8
+  unlock
+  = 13
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 0
+  lock
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  = 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 5
+  lock
+  form 3 change [comp] [attr] 5
+  unlock
+  = 13
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 7 sound 1 volume 3f800000 ime 1 window 1 960 480 40c00000 40200000
+form 1 captured ime 1 42f60000 43270000 435f0000 433b0000
+visible 1
+candidates 0 0
+  lock
+  ime 0
+  set-list 0 0 42f60000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 40c00000 40200000 44718000 43f14000
+  control 42f60000 43270000 435f0000 433b0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 8
+  lock
+  form 1 change [comp] [attr] 8
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 3 0
+  lock
+  ime 0
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 40c00000 40200000 44718000 43f14000
+  control 42f60000 43270000 435f0000 433b0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  form 1 copy
+  = 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 40c00000 40200000 44718000 43f14000
+  control 42f60000 43270000 435f0000 433b0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 1
+  lock
+  form 1 change [comp] [attr] 1
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 6
+  lock
+  form 1 change [comp] [attr] 6
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 6
+  lock
+  form 1 change [comp] [attr] 6
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+candidates 3 2
+  lock
+  ime 0
+  set-list 3 2 42f60000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+manager 8 sound 1 volume 00000000 ime 0 window 1 960 720 42400000 41a40000
+start 1 fails 0
+  load [sounds\menu.mp3] = 29
+  lock
+  play 29 00000000 = 23
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 29 start 1 stop 1 instance 23 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 23
+  play 29 00000000 = 24
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 29 start 0 stop 0 instance 24 refs 100 open 0 draw 0
+remove-stop
+  stop 24
+  state volume 00000000 name [sounds\menu.mp3] id 29 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  unload 29
+  load [] = 30
+  lock
+  play 30 00000000 = 25
+  unlock
+  state volume 00000000 name [] id 30 start 1 stop 1 instance 25 refs 100 open 0 draw 0
+start 2 fails 1
+  stop 25
+  unload 30
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 17
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 17 refs 100 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 31
+  lock
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 31 start 1 stop 1 instance 17 refs 100 open 0 draw 0
+instance 15
+  state volume 00000000 name [sounds\eeintro.mp3] id 31 start 1 stop 1 instance 15 refs 100 open 0 draw 0
+start 4 fails 1
+  stop 15
+  unload 31
+  load [SOUNDS\GAME1.MP3] = 32
+  lock
+  play 32 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 32 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 32 00000000 = 26
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 32 start 0 stop 0 instance 26 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 32 start 0 stop 0 instance 26 refs 100 open 0 draw 0
+volume 3f800000 fails 1
+  stop 26
+  unload 32
+  load [sounds\game1.mp3] = 33
+  lock
+  play 33 00000000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 33 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 33
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 34
+  lock
+  play 34 3f800000 = 27
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 34 start 1 stop 1 instance 27 refs 100 open 0 draw 0
+start 1 fails 0
+  stop 27
+  unload 34
+  load [sounds\menu.mp3] = 35
+  lock
+  play 35 3f800000 = 28
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 35 start 1 stop 1 instance 28 refs 100 open 0 draw 0
+stop fails 1
+  stop 28
+  unload 35
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 6
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance 6 refs 101 open 0 draw 0
+volume 3f000000 fails 0
+  params 6 3f000000
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance 6 refs 101 open 0 draw 0
+volume 00000000 fails 0
+  stop 6
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = 29
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 29 refs 100 open 0 draw 0
+stop fails 0
+  stop 29
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 1
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  load [Sounds\Menu.mp3] = 36
+  lock
+  play 36 00000000 = 30
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 36 start 1 stop 1 instance 30 refs 100 open 0 draw 0
+instance 29
+  state volume 00000000 name [sounds\menu.mp3] id 36 start 1 stop 1 instance 29 refs 100 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 29
+  play 36 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 36 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 9 sound 1 volume 3f800000 ime 0 window 1 800 600 41b00000 421e0000
+start 3 fails 0
+  load [sounds\game1.mp3] = 37
+  lock
+  play 37 3f800000 = 31
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 37 start 1 stop 1 instance 31 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 31
+  play 37 3f800000 = 32
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 37 start 0 stop 0 instance 32 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 32
+  unload 37
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  load [Sounds\Menu.mp3] = 38
+  lock
+  play 38 00000000 = 33
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 38 start 1 stop 1 instance 33 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 00000000 name [sounds\menu.mp3] id 38 start 1 stop 1 instance 33 refs 100 open 0 draw 0
+volume 3f800000 fails 0
+  stop 33
+  unload 38
+  load [sounds\menu.mp3] = 39
+  lock
+  play 39 00000000 = 34
+  unlock
+  params 34 3f800000
+  state volume 3f800000 name [sounds\menu.mp3] id 39 start 1 stop 1 instance 34 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 34
+  unload 39
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = 35
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 35 refs 100 open 0 draw 0
+start 0 fails 0
+  load [Sounds\Menu.mp3] = 40
+  lock
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 40 start 1 stop 1 instance 35 refs 100 open 0 draw 0
+stop fails 1
+  stop 35
+  unload 40
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = 36
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 36 refs 100 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 41
+  lock
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 41 start 1 stop 1 instance 36 refs 100 open 0 draw 0
+start 0 fails 0
+  stop 36
+  unload 41
+  load [Sounds\Menu.mp3] = 42
+  lock
+  play 42 00000000 = 37
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 42 start 1 stop 1 instance 37 refs 100 open 0 draw 0
+stop fails 0
+  stop 37
+  unload 42
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 19
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 19 refs 100 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 43
+  lock
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 43 start 1 stop 1 instance 19 refs 100 open 0 draw 0
+start 3 fails 0
+  state volume 00000000 name [sounds\game1.mp3] id 43 start 1 stop 1 instance 19 refs 100 open 0 draw 0
+stop fails 0
+  stop 19
+  unload 43
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  load [sounds\eeintro.mp3] = 44
+  lock
+  play 44 00000000 = 38
+  unlock
+  params 38 3f800000
+  state volume 3f800000 name [sounds\eeintro.mp3] id 44 start 1 stop 1 instance 38 refs 100 open 0 draw 0
+start 6 fails 0
+  stop 38
+  unload 44
+  load [none] = 45
+  lock
+  play 45 3f800000 = 39
+  unlock
+  state volume 3f800000 name [none] id 45 start 1 stop 1 instance 39 refs 100 open 0 draw 0
+stop fails 0
+  stop 39
+  unload 45
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 3f800000 = 40
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 40 refs 100 open 0 draw 0
+instance 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 7 refs 100 open 0 draw 0
+start 4 fails 1
+  load [SOUNDS\GAME1.MP3] = 46
+  lock
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 46 start 1 stop 1 instance 7 refs 100 open 0 draw 0
+start 7 fails 1
+  stop 7
+  unload 46
+  load [] = 47
+  lock
+  play 47 3f800000 = none
+  unlock
+  state volume 3f800000 name [] id 47 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  unload 47
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 10 sound 1 volume 00000000 ime 0 window 1 640 600 40400000 40b00000
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 48
+  lock
+  play 48 00000000 = 41
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 48 start 1 stop 1 instance 41 refs 100 open 0 draw 0
+stop fails 0
+  stop 41
+  unload 48
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  load [none] = 49
+  lock
+  play 49 00000000 = 42
+  unlock
+  state volume 00000000 name [none] id 49 start 1 stop 1 instance 42 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 42
+  play 49 00000000 = 43
+  unlock
+  state volume 00000000 name [none] id 49 start 0 stop 0 instance 43 refs 100 open 0 draw 0
+instance 14
+  state volume 00000000 name [none] id 49 start 0 stop 0 instance 14 refs 100 open 0 draw 0
+volume 00000000 fails 1
+  params 14 00000000
+  state volume 00000000 name [none] id 49 start 0 stop 0 instance 14 refs 100 open 0 draw 0
+stop fails 0
+  stop 14
+  unload 49
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+instance 16
+  state volume 00000000 name [] id -1 start 0 stop 1 instance 16 refs 100 open 0 draw 0
+volume 3f800000 fails 0
+  load [sounds\eeintro.mp3] = 50
+  lock
+  unlock
+  params 16 3f800000
+  state volume 3f800000 name [sounds\eeintro.mp3] id 50 start 1 stop 1 instance 16 refs 100 open 0 draw 0
+start 3 fails 0
+  stop 16
+  unload 50
+  load [sounds\game1.mp3] = 51
+  lock
+  play 51 3f800000 = 44
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 51 start 1 stop 1 instance 44 refs 100 open 0 draw 0
+instance 34
+  state volume 3f800000 name [sounds\game1.mp3] id 51 start 1 stop 1 instance 34 refs 100 open 0 draw 0
+start 1 fails 0
+  stop 34
+  unload 51
+  load [sounds\menu.mp3] = 52
+  lock
+  play 52 3f800000 = 45
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 52 start 1 stop 1 instance 45 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 3f800000 name [sounds\menu.mp3] id 52 start 1 stop 1 instance 45 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 45
+  play 52 3f800000 = 46
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 52 start 0 stop 0 instance 46 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 52 start 0 stop 0 instance 46 refs 100 open 0 draw 0
+start 6 fails 0
+  stop 46
+  unload 52
+  load [none] = 53
+  lock
+  play 53 3f800000 = 47
+  unlock
+  state volume 3f800000 name [none] id 53 start 1 stop 1 instance 47 refs 100 open 0 draw 0
+start 2 fails 0
+  stop 47
+  unload 53
+  load [sounds\BAD.mp3] = -1
+  state volume 3f800000 name [none] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 41
+  state volume 3f800000 name [none] id -1 start 1 stop 1 instance 41 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 41
+  state volume 00000000 name [none] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 54
+  lock
+  play 54 00000000 = 48
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 54 start 1 stop 1 instance 48 refs 100 open 0 draw 0
+start 7 fails 0
+  stop 48
+  unload 54
+  load [] = 55
+  lock
+  play 55 00000000 = 49
+  unlock
+  state volume 00000000 name [] id 55 start 1 stop 1 instance 49 refs 100 open 0 draw 0
+instance 20
+  state volume 00000000 name [] id 55 start 1 stop 1 instance 20 refs 100 open 0 draw 0
+start 7 fails 0
+  state volume 00000000 name [] id 55 start 1 stop 1 instance 20 refs 100 open 0 draw 0
+volume 3f400000 fails 0
+  stop 20
+  unload 55
+  load [sounds\eeintro.mp3] = 56
+  lock
+  play 56 00000000 = 50
+  unlock
+  params 50 3f400000
+  state volume 3f400000 name [sounds\eeintro.mp3] id 56 start 1 stop 1 instance 50 refs 100 open 0 draw 0
+start 0 fails 0
+  stop 50
+  unload 56
+  load [Sounds\Menu.mp3] = 57
+  lock
+  play 57 3f400000 = 51
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 57 start 1 stop 1 instance 51 refs 100 open 0 draw 0
+start 5 fails 0
+  stop 51
+  unload 57
+  load [sounds\eeintro.mp3] = 58
+  lock
+  play 58 3f400000 = 52
+  unlock
+  state volume 3f400000 name [sounds\eeintro.mp3] id 58 start 1 stop 1 instance 52 refs 100 open 0 draw 0
+stop fails 0
+  stop 52
+  unload 58
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 1
+  load [Sounds\Menu.mp3] = 59
+  lock
+  play 59 3f400000 = none
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 59 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 11 sound 1 volume 3f800000 ime 1 window 1 800 480 41c00000 421e0000
+form 1
+form 2 captured ime 1 43810000 43040000 43b30000 43180000
+visible 1 2
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 2
+  lock
+  ime 1
+  set-list 2 2 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 1 3
+  lock
+  ime 1
+  set-list 1 3 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 1 0
+  lock
+  ime 1
+  set-list 1 0 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 0 2
+  lock
+  ime 1
+  set-list 0 2 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 8
+  lock
+  form 2 change [comp] [attr] 8
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 2
+  lock
+  form 2 change [comp] [attr] 2
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 3 1
+  lock
+  ime 1
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 1
+  lock
+  form 2 change [comp] [attr] 1
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 7
+  lock
+  form 2 change [comp] [attr] 7
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 0
+  lock
+  form 2 change [comp] [attr] 0
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 4
+  lock
+  form 2 change [comp] [attr] 4
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 2
+  lock
+  form 2 change [comp] [attr] 2
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+candidates 0 1
+  lock
+  ime 1
+  set-list 0 1 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 2
+  lock
+  form 2 change [comp] [attr] 2
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 41c00000 421e0000 444e0000 4401e000
+  control 43810000 43040000 43b30000 43180000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 1
+  lock
+  form 2 change [comp] [attr] 1
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 2 2
+  lock
+  ime 1
+  set-list 2 2 43810000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+manager 12 sound 1 volume 3f800000 ime 1 window 1 640 720 41a00000 41080000
+form 1 captured ime 1 42ae0000 42b20000 433b0000 42da0000
+visible
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 41a00000 41080000 44250000 44362000
+  control 42ae0000 42b20000 433b0000 42da0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 4
+  lock
+  form 1 change [comp] [attr] 4
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 3
+  lock
+  form 1 change [comp] [attr] 3
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 0
+  lock
+  form 1 change [comp] [attr] 0
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 41a00000 41080000 44250000 44362000
+  control 42ae0000 42b20000 433b0000 42da0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 2
+  lock
+  form 1 change [comp] [attr] 2
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 41a00000 41080000 44250000 44362000
+  control 42ae0000 42b20000 433b0000 42da0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+manager 13 sound 1 volume 3f800000 ime 0 window 1 800 600 41200000 40900000
+start 6 fails 0
+  load [none] = 60
+  lock
+  play 60 3f800000 = 53
+  unlock
+  state volume 3f800000 name [none] id 60 start 1 stop 1 instance 53 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 53
+  play 60 3f800000 = 54
+  unlock
+  state volume 3f800000 name [none] id 60 start 0 stop 0 instance 54 refs 100 open 0 draw 0
+stop fails 0
+  stop 54
+  unload 60
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 1
+  load [Sounds\Menu.mp3] = 61
+  lock
+  play 61 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 61 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  unload 61
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 1
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 3f000000 = 55
+  unlock
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 55 refs 100 open 0 draw 0
+start 6 fails 0
+  load [none] = 62
+  lock
+  unlock
+  state volume 3f000000 name [none] id 62 start 1 stop 1 instance 55 refs 100 open 0 draw 0
+stop fails 0
+  stop 55
+  unload 62
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  load [sounds\eeintro.mp3] = 63
+  lock
+  play 63 00000000 = 56
+  unlock
+  params 56 3f400000
+  state volume 3f400000 name [sounds\eeintro.mp3] id 63 start 1 stop 1 instance 56 refs 100 open 0 draw 0
+stop fails 1
+  stop 56
+  unload 63
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 64
+  lock
+  play 64 3f400000 = 57
+  unlock
+  state volume 3f400000 name [sounds\game1.mp3] id 64 start 1 stop 1 instance 57 refs 100 open 0 draw 0
+start 4 fails 0
+  state volume 3f400000 name [sounds\game1.mp3] id 64 start 1 stop 1 instance 57 refs 100 open 0 draw 0
+start 5 fails 0
+  stop 57
+  unload 64
+  load [sounds\eeintro.mp3] = 65
+  lock
+  play 65 3f400000 = 58
+  unlock
+  state volume 3f400000 name [sounds\eeintro.mp3] id 65 start 1 stop 1 instance 58 refs 100 open 0 draw 0
+stop fails 0
+  stop 58
+  unload 65
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 66
+  lock
+  play 66 3f400000 = 59
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 66 start 1 stop 1 instance 59 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 59
+  unload 66
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 67
+  lock
+  play 67 00000000 = 60
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 67 start 1 stop 1 instance 60 refs 100 open 0 draw 0
+start 6 fails 0
+  stop 60
+  unload 67
+  load [none] = 68
+  lock
+  play 68 00000000 = 61
+  unlock
+  state volume 00000000 name [none] id 68 start 1 stop 1 instance 61 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 61
+  play 68 00000000 = 62
+  unlock
+  state volume 00000000 name [none] id 68 start 0 stop 0 instance 62 refs 100 open 0 draw 0
+remove-stop
+  stop 62
+  state volume 00000000 name [none] id 68 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  unload 68
+  load [] = 69
+  lock
+  play 69 00000000 = 63
+  unlock
+  state volume 00000000 name [] id 69 start 1 stop 1 instance 63 refs 100 open 0 draw 0
+start 2 fails 0
+  stop 63
+  unload 69
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 70
+  lock
+  play 70 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 70 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 14 sound 1 volume 3f800000 ime 0 window 1 800 600 42240000 40f00000
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 71
+  lock
+  play 71 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 71 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 1
+  unload 71
+  load [Sounds\Menu.mp3] = 72
+  lock
+  play 72 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 72 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 58
+  state volume 00000000 name [sounds\menu.mp3] id 72 start 1 stop 1 instance 58 refs 100 open 0 draw 0
+remove-stop
+  stop 58
+  state volume 00000000 name [sounds\menu.mp3] id 72 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  unload 72
+  load [none] = 73
+  lock
+  play 73 00000000 = none
+  unlock
+  state volume 00000000 name [none] id 73 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  unload 73
+  load [sounds\eeintro.mp3] = 74
+  lock
+  play 74 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 74 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [sounds\eeintro.mp3] id 74 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  unload 74
+  load [Sounds\Menu.mp3] = 75
+  lock
+  play 75 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 75 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  state volume 00000000 name [sounds\menu.mp3] id 75 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 1
+  state volume 00000000 name [sounds\menu.mp3] id 75 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [sounds\menu.mp3] id 75 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 75
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  load [sounds\eeintro.mp3] = 76
+  lock
+  play 76 00000000 = none
+  unlock
+  state volume 3f000000 name [sounds\eeintro.mp3] id 76 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  unload 76
+  load [sounds\BAD.mp3] = -1
+  state volume 3f000000 name [sounds\eeintro.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 3f000000 = none
+  unlock
+  state volume 3f000000 name [sounds\eeintro.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 3 fails 1
+  load [sounds\game1.mp3] = 77
+  lock
+  play 77 3f000000 = none
+  unlock
+  state volume 3f000000 name [sounds\game1.mp3] id 77 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 77
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 78
+  lock
+  play 78 3f000000 = none
+  unlock
+  state volume 3f000000 name [sounds\eeintro.mp3] id 78 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [sounds\eeintro.mp3] id 78 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  unload 78
+  load [] = 79
+  lock
+  play 79 3f400000 = none
+  unlock
+  state volume 3f400000 name [] id 79 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 79
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 3f400000 = none
+  unlock
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 3f400000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 80
+  lock
+  play 80 3f400000 = none
+  unlock
+  state volume 3f400000 name [sounds\game1.mp3] id 80 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 1
+  unload 80
+  load [sounds\menu.mp3] = 81
+  lock
+  play 81 3f400000 = none
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 81 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  unload 81
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 61
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 61 refs 100 open 0 draw 0
+stop fails 1
+  stop 61
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 15 sound 0 volume 00000000 ime 0 window 0
+instance 50
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 50 refs 100 open 0 draw 0
+start 5 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 50 refs 100 open 0 draw 0
+start 2 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 50 refs 100 open 0 draw 0
+stop fails 0
+  stop 50
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 37
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 37 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 37 refs 100 open 0 draw 0
+start 4 fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 37 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 37 refs 100 open 0 draw 0
+stop fails 0
+  stop 37
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 25
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 25 refs 100 open 0 draw 0
+start 1 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 25 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 25 refs 100 open 0 draw 0
+start 1 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 25 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 25 refs 100 open 0 draw 0
+stop fails 0
+  stop 25
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 16 sound 0 volume 00000000 ime 0 window 1 960 720 41e00000 418c0000
+start 5 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 1
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 1
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 1
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 1
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 17 sound 1 volume 00000000 ime 0 window 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  load [sounds\eeintro.mp3] = 82
+  lock
+  play 82 00000000 = none
+  unlock
+  state volume 3f000000 name [sounds\eeintro.mp3] id 82 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  unload 82
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = none
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 83
+  lock
+  play 83 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 83 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  unload 83
+  load [sounds\menu.mp3] = 84
+  lock
+  play 84 00000000 = none
+  unlock
+  state volume 3f000000 name [sounds\menu.mp3] id 84 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  unload 84
+  load [sounds\eeintro.mp3] = 85
+  lock
+  play 85 3f000000 = none
+  unlock
+  state volume 3f000000 name [sounds\eeintro.mp3] id 85 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  unload 85
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 63
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance 63 refs 100 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance 63 refs 100 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 3f000000 name [] id -1 start 1 stop 1 instance 63 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 63
+  play -1 3f000000 = none
+  unlock
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 1
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  load [sounds\BAD.mp3] = -1
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+start 7 fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 0 refs 100 open 0 draw 0
+stop fails 0
+  stop 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 54
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 54 refs 100 open 0 draw 0
+start 5 fails 1
+  load [sounds\eeintro.mp3] = 86
+  lock
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 86 start 1 stop 1 instance 54 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 54
+  play 86 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 86 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 86
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+manager 18 sound 0 volume 3f800000 ime 0 window 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 1
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 1
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 34
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 34 refs 100 open 0 draw 0
+start 5 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 34 refs 100 open 0 draw 0
+start 4 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 34 refs 100 open 0 draw 0
+start 4 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 34 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 34 refs 100 open 0 draw 0
+stop fails 0
+  stop 34
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 59
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 59 refs 100 open 0 draw 0
+start 0 fails 0
+  state volume 3e800000 name [] id -1 start 0 stop 0 instance 59 refs 100 open 0 draw 0
+volume 3f000000 fails 0
+  params 59 3f000000
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance 59 refs 100 open 0 draw 0
+stop fails 1
+  stop 59
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 19 sound 1 volume 3f800000 ime 1 window 1 800 480 41f00000 420a0000
+form 1
+form 2 captured ime 1 433d0000 40c00000 43908000 41d00000
+visible 1 2
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 41f00000 420a0000 444f8000 4400a000
+  control 433d0000 40c00000 43908000 41d00000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 0
+  lock
+  form 2 change [comp] [attr] 0
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 2
+  lock
+  ime 1
+  set-list 0 2 433d0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 2
+  lock
+  form 2 change [comp] [attr] 2
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 41f00000 420a0000 444f8000 4400a000
+  control 433d0000 40c00000 43908000 41d00000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 7
+  lock
+  form 2 change [comp] [attr] 7
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 5
+  lock
+  form 2 change [comp] [attr] 5
+  unlock
+  = 12
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 41f00000 420a0000 444f8000 4400a000
+  control 433d0000 40c00000 43908000 41d00000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 41f00000 420a0000 444f8000 4400a000
+  control 433d0000 40c00000 43908000 41d00000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+manager 20 sound 0 volume 00000000 ime 1 window 1 960 720 41000000 421a0000
+form 1 captured ime 1 43540000 429c0000 439c0000 42c40000
+visible
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 5
+  lock
+  form 1 change [comp] [attr] 5
+  unlock
+  = 11
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 6
+  lock
+  form 1 change [comp] [attr] 6
+  unlock
+  = 11
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 41000000 421a0000 44720000 443da000
+  control 43540000 429c0000 439c0000 42c40000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 2 1
+  lock
+  ime 0
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 5
+  lock
+  form 1 change [comp] [attr] 5
+  unlock
+  = 11
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 4
+  lock
+  form 1 change [comp] [attr] 4
+  unlock
+  = 11
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 6
+  lock
+  form 1 change [comp] [attr] 6
+  unlock
+  = 11
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 1
+  lock
+  ime 0
+  set-list 0 1 43540000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+manager 21 sound 1 volume 3f800000 ime 1 window 1 800 480 421c0000 40600000
+form 1
+form 2
+form 3 captured ime 1 43550000 43160000 439c8000 432a0000
+visible 1 2
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 421c0000 40600000 4451c000 43f1c000
+  control 43550000 43160000 439c8000 432a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 421c0000 40600000 4451c000 43f1c000
+  control 43550000 43160000 439c8000 432a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 2
+  lock
+  form 3 change [comp] [attr] 2
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 421c0000 40600000 4451c000 43f1c000
+  control 43550000 43160000 439c8000 432a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+change 5
+  lock
+  form 3 change [comp] [attr] 5
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 0
+  lock
+  form 3 change [comp] [attr] 0
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  form 2 copy
+  = 2
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 1 3
+  lock
+  ime 2
+  set-list 1 3 43550000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 2
+  lock
+  ime 2
+  set-list 2 2 43550000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 7
+  lock
+  form 3 change [comp] [attr] 7
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 0 2
+  lock
+  ime 2
+  set-list 0 2 43550000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 22 sound 1 volume 00000000 ime 1 window 1 960 720 41900000 41680000
+form 1 captured ime 1 43400000 42860000 43920000 42ae0000
+form 2 captured ime 1 431c0000 42780000 43800000 42a40000
+form 3 captured ime 1 43080000 42780000 436c0000 42a40000
+visible 1
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  = 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 41900000 41680000 44748000 4437a000
+  control 43080000 42780000 436c0000 42a40000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 3 3
+  lock
+  ime 2
+  set-list 3 3 43080000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 41900000 41680000 44748000 4437a000
+  control 43080000 42780000 436c0000 42a40000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 0 1
+  lock
+  ime 2
+  set-list 0 1 43080000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 0
+  lock
+  form 3 change [comp] [attr] 0
+  unlock
+  = 13
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 0
+  lock
+  ime 2
+  set-list 0 0 43080000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+candidates 0 3
+  lock
+  ime 2
+  set-list 0 3 43080000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 8
+  lock
+  form 3 change [comp] [attr] 8
+  unlock
+  = 13
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 3 2
+  lock
+  ime 2
+  set-list 3 2 43080000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+manager 23 sound 1 volume 3f800000 ime 1 window 1 960 600 41d80000 42060000
+form 1 captured ime 1 43850000 42a80000 43b70000 42d00000
+form 2
+form 3 captured ime 1 41700000 41300000 42e60000 41f80000
+visible 1
+copy
+  form 1 copy
+  = 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 2
+  lock
+  form 3 change [comp] [attr] 2
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 3
+  lock
+  form 3 change [comp] [attr] 3
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  = 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 2
+  lock
+  form 3 change [comp] [attr] 2
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 41d80000 42060000 4476c000 441e6000
+  control 41700000 41300000 42e60000 41f80000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 1 copy
+  = 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 3 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 8
+  lock
+  form 3 change [comp] [attr] 8
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 1 1
+  lock
+  ime 2
+  set-list 1 1 41700000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 0 2
+  lock
+  ime 2
+  set-list 0 2 41700000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 3 close
+  unlock
+  = 23
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 2
+  origin
+  origin
+  open-window 41d80000 42060000 4476c000 441e6000
+  control 41700000 41300000 42e60000 41f80000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 3 open
+  unlock
+  = 33
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 5
+  lock
+  form 3 change [comp] [attr] 5
+  unlock
+  = 13
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+manager 24 sound 1 volume 3f800000 ime 0 window 0
+start 7 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 18
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 18 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 18 refs 100 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 87
+  lock
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 87 start 1 stop 1 instance 18 refs 100 open 0 draw 0
+start 4 fails 0
+  stop 18
+  unload 87
+  load [SOUNDS\GAME1.MP3] = 88
+  lock
+  play 88 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 88 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f800000 name [sounds\game1.mp3] id 88 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 88 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 88 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 35
+  state volume 3f800000 name [sounds\game1.mp3] id 88 start 0 stop 0 instance 35 refs 100 open 0 draw 0
+volume 3f000000 fails 0
+  params 35 3f000000
+  state volume 3f000000 name [sounds\game1.mp3] id 88 start 0 stop 0 instance 35 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f000000 name [sounds\game1.mp3] id 88 start 0 stop 0 instance 35 refs 100 open 0 draw 0
+volume 3f400000 fails 0
+  params 35 3f400000
+  state volume 3f400000 name [sounds\game1.mp3] id 88 start 0 stop 0 instance 35 refs 100 open 0 draw 0
+start 5 fails 0
+  stop 35
+  unload 88
+  load [sounds\eeintro.mp3] = 89
+  lock
+  play 89 3f400000 = none
+  unlock
+  state volume 3f400000 name [sounds\eeintro.mp3] id 89 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  unload 89
+  load [sounds\BAD.mp3] = -1
+  state volume 3f400000 name [sounds\eeintro.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [sounds\eeintro.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 90
+  lock
+  play 90 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 90 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [sounds\game1.mp3] id 90 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 28
+  state volume 00000000 name [sounds\game1.mp3] id 90 start 1 stop 1 instance 28 refs 100 open 0 draw 0
+stop fails 0
+  stop 28
+  unload 90
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  load [sounds\eeintro.mp3] = 91
+  lock
+  play 91 00000000 = none
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 91 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [sounds\eeintro.mp3] id 91 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  unload 91
+  load [sounds\game1.mp3] = 92
+  lock
+  play 92 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 92 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 92
+  state volume 3f800000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 1
+  load [none] = 93
+  lock
+  play 93 3f800000 = none
+  unlock
+  state volume 3f800000 name [none] id 93 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  unload 93
+  load [SOUNDS\GAME1.MP3] = 94
+  lock
+  play 94 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 94 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  unload 94
+  load [sounds\BAD.mp3] = -1
+  state volume 3f800000 name [sounds\game1.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 1
+  load [sounds\game1.mp3] = 95
+  lock
+  play 95 00000000 = none
+  unlock
+  state volume 3f000000 name [sounds\game1.mp3] id 95 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 95 3f000000 = none
+  unlock
+  state volume 3f000000 name [sounds\game1.mp3] id 95 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 25 sound 1 volume 00000000 ime 1 window 1 800 480 42180000 41e40000
+form 1
+form 2 captured ime 1 438a0000 41700000 43bc0000 420c0000
+visible 2
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 2 1
+  lock
+  ime 1
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  form 2 copy
+  = 2
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 1
+  lock
+  form 2 change [comp] [attr] 1
+  unlock
+  = 12
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 5
+  lock
+  form 2 change [comp] [attr] 5
+  unlock
+  = 12
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 3
+  lock
+  form 2 change [comp] [attr] 3
+  unlock
+  = 12
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 2 result [kana]
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 2 1
+  lock
+  ime 1
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+copy
+  form 2 copy
+  = 2
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 2 close
+  unlock
+  = 22
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 2 open
+  unlock
+  = 32
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open-candidates
+  lock
+  ime 1
+  origin
+  origin
+  open-window 42180000 41e40000 44518000 43fe4000
+  control 438a0000 41700000 43bc0000 420c0000
+  unlock
+  = 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 2 copy
+  candidate-copy
+  = 7
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+manager 26 sound 1 volume 3f800000 ime 0 window 1 800 480 41a80000 41ec0000
+start 7 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 96
+  lock
+  play 96 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 96 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  unload 96
+  load [] = 97
+  lock
+  play 97 3f800000 = none
+  unlock
+  state volume 3f800000 name [] id 97 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 3 fails 1
+  unload 97
+  load [sounds\game1.mp3] = 98
+  lock
+  play 98 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\game1.mp3] id 98 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  unload 98
+  load [none] = 99
+  lock
+  play 99 3f800000 = none
+  unlock
+  state volume 3f800000 name [none] id 99 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f800000 name [none] id 99 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 20
+  state volume 3f800000 name [none] id 99 start 1 stop 1 instance 20 refs 100 open 0 draw 0
+volume 00000000 fails 0
+  stop 20
+  unload 99
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 100
+  lock
+  play 100 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 100 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 100
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  load [sounds\eeintro.mp3] = 101
+  lock
+  play 101 00000000 = none
+  unlock
+  state volume 3f400000 name [sounds\eeintro.mp3] id 101 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 101
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 56
+  state volume 3f400000 name [] id -1 start 1 stop 1 instance 56 refs 100 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  stop 56
+  play -1 3f400000 = none
+  unlock
+  state volume 3f400000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  load [Sounds\Menu.mp3] = 102
+  lock
+  play 102 3f400000 = none
+  unlock
+  state volume 3f400000 name [sounds\menu.mp3] id 102 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3e800000 fails 0
+  state volume 3e800000 name [sounds\menu.mp3] id 102 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 102 3e800000 = none
+  unlock
+  state volume 3e800000 name [sounds\menu.mp3] id 102 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 102
+  state volume 3e800000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f000000 fails 0
+  state volume 3f000000 name [] id -1 start 0 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 5
+  state volume 00000000 name [] id -1 start 0 stop 0 instance 5 refs 100 open 0 draw 0
+remove-stop
+  stop 5
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 3 fails 1
+  load [sounds\game1.mp3] = 103
+  lock
+  play 103 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 103 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play 103 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 103 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  unload 103
+  load [sounds\menu.mp3] = 104
+  lock
+  play 104 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 104 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  unload 104
+  load [SOUNDS\GAME1.MP3] = 105
+  lock
+  play 105 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 105 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+manager 27 sound 0 volume 3f800000 ime 0 window 1 640 600 41300000 40b00000
+start 2 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 52
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 52 refs 100 open 0 draw 0
+start 1 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 52 refs 100 open 0 draw 0
+stop fails 0
+  stop 52
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 0 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 1
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 48
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 48 refs 100 open 0 draw 0
+start 5 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 48 refs 100 open 0 draw 0
+start 2 fails 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 48 refs 100 open 0 draw 0
+start 1 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance 48 refs 100 open 0 draw 0
+stop fails 0
+  stop 48
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 5 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 3f800000 fails 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+manager 28 sound 1 volume 3f800000 ime 1 window 1 960 600 42240000 41780000
+form 1 captured ime 1 43300000 42ec0000 438a0000 430a0000
+visible 1
+candidates 3 3
+  lock
+  ime 0
+  set-list 3 3 43300000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+change 5
+  lock
+  form 1 change [comp] [attr] 5
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 42240000 41780000 447a4000 4419e000
+  control 43300000 42ec0000 438a0000 430a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+candidates 3 3
+  lock
+  ime 0
+  set-list 3 3 43300000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 42240000 41780000 447a4000 4419e000
+  control 43300000 42ec0000 438a0000 430a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 0 0
+  lock
+  ime 0
+  set-list 0 0 43300000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+copy
+  form 1 copy
+  candidate-copy
+  = 7
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 42240000 41780000 447a4000 4419e000
+  control 43300000 42ec0000 438a0000 430a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 2 3
+  lock
+  ime 0
+  set-list 2 3 43300000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+open-candidates
+  lock
+  ime 0
+  origin
+  origin
+  open-window 42240000 41780000 447a4000 4419e000
+  control 43300000 42ec0000 438a0000 430a0000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 1
+candidates 2 0
+  lock
+  ime 0
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 1
+copy
+  form 1 copy
+  = 1
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+open
+  lock
+  form 1 open
+  unlock
+  = 31
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close
+  lock
+  form 1 close
+  unlock
+  = 21
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+change 6
+  lock
+  form 1 change [comp] [attr] 6
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+result
+  lock
+  form 1 result [kana]
+  unlock
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+close-candidates
+  close-window
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+candidates 1 3
+  lock
+  ime 0
+  set-list 1 3 43300000
+  unlock
+  = 0
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+change 2
+  lock
+  form 1 change [comp] [attr] 2
+  unlock
+  = 11
+  state volume 3f800000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 1 draw 0
+manager 29 sound 1 volume 3f800000 ime 0 window 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 106
+  lock
+  play 106 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\eeintro.mp3] id 106 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  unload 106
+  load [sounds\menu.mp3] = 107
+  lock
+  play 107 3f800000 = none
+  unlock
+  state volume 3f800000 name [sounds\menu.mp3] id 107 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  unload 107
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 3f400000 fails 0
+  load [sounds\eeintro.mp3] = 108
+  lock
+  play 108 00000000 = none
+  unlock
+  state volume 3f400000 name [sounds\eeintro.mp3] id 108 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  unload 108
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 3 fails 0
+  load [sounds\game1.mp3] = 109
+  lock
+  play 109 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 109 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+remove-stop
+  state volume 00000000 name [sounds\game1.mp3] id 109 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 109
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = none
+  unlock
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 1
+  state volume 00000000 name [] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 4 fails 0
+  load [SOUNDS\GAME1.MP3] = 110
+  lock
+  play 110 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id 110 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 2 fails 0
+  unload 110
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+update fails 0
+  lock
+  unlock
+  lock
+  unlock
+  lock
+  play -1 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+instance 59
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance 59 refs 100 open 0 draw 0
+instance 16
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance 16 refs 100 open 0 draw 0
+instance 19
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance 19 refs 100 open 0 draw 0
+remove-stop
+  stop 19
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  state volume 00000000 name [sounds\game1.mp3] id -1 start 0 stop 0 instance -1 refs 0 open 0 draw 0
+start 7 fails 0
+  load [] = 111
+  lock
+  play 111 00000000 = none
+  unlock
+  state volume 00000000 name [] id 111 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 47
+  state volume 00000000 name [] id 111 start 1 stop 1 instance 47 refs 100 open 0 draw 0
+instance 32
+  state volume 00000000 name [] id 111 start 1 stop 1 instance 32 refs 100 open 0 draw 0
+start 2 fails 0
+  stop 32
+  unload 111
+  load [sounds\BAD.mp3] = -1
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+volume 00000000 fails 0
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 1 fails 0
+  load [sounds\menu.mp3] = 112
+  lock
+  play 112 00000000 = none
+  unlock
+  state volume 00000000 name [sounds\menu.mp3] id 112 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+start 6 fails 0
+  unload 112
+  load [none] = 113
+  lock
+  play 113 00000000 = none
+  unlock
+  state volume 00000000 name [none] id 113 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+stop fails 0
+  unload 113
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0
+instance 51
+  state volume 00000000 name [] id -1 start 1 stop 1 instance 51 refs 100 open 0 draw 0
+start 5 fails 0
+  load [sounds\eeintro.mp3] = 114
+  lock
+  unlock
+  state volume 00000000 name [sounds\eeintro.mp3] id 114 start 1 stop 1 instance 51 refs 100 open 0 draw 0
+stop fails 0
+  stop 51
+  unload 114
+  state volume 00000000 name [] id -1 start 1 stop 1 instance -1 refs 0 open 0 draw 0

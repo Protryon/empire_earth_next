@@ -606,8 +606,39 @@ constexpr static const long ERROR_OK = 0;
 
 constexpr static const long ERROR_FAILED = 9;
 
+/// `kFontStyleBold`, `kFontStyleItalic`, `kFontStyleUnderline`, `kFontStyleShadow`.
+constexpr static const unsigned long STYLE_BOLD = 1;
+
+constexpr static const unsigned long STYLE_ITALIC = 2;
+
+constexpr static const unsigned long STYLE_UNDERLINE = 4;
+
+constexpr static const unsigned long STYLE_SHADOW = 16;
+
+/// The screen's `LOGPIXELSY` as the game saw it (a DPI-unaware process): fonts are sized in game pixels.
+constexpr static const int64_t LOG_PIXELS_Y = 96;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
+
+/// `kDisplayModeHidden` / `kDisplayModeShown`.
+constexpr static const unsigned long HIDDEN = 0;
+
+constexpr static const unsigned long SHOWN = 1;
+
+/// `UIEntity::GetType` of a control (`kControlTypeButton`: every `UIControl` is entity type 1).
+constexpr static const unsigned long ENTITY_CONTROL = 1;
+
+/// `kDbControlHelpTextLabel`, `kDbControlMultiLineHelpTextLabel`.
+constexpr static const unsigned long DB_HELP_TEXT_LABEL = 24;
+
+constexpr static const unsigned long DB_MULTI_LINE_HELP_TEXT_LABEL = 25;
+
+/// `kToolTipShadowOffset`.
+constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
+
+/// `kFadeInRate`.
+constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
@@ -3052,6 +3083,19 @@ struct EeUiRect {
   float top;
 };
 
+/// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
+/// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
+/// the tile size.
+struct EeUiTilePlan {
+  EeUiRect clip;
+  unsigned long first_row;
+  unsigned long last_row;
+  unsigned long first_column;
+  unsigned long last_column;
+  float w;
+  float h;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -3368,6 +3412,32 @@ struct EeUiEditRefs {
   const unsigned long *border;
 };
 
+/// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
+/// and size.
+struct EeUiFontEntry {
+  bool present;
+  unsigned long string_id;
+  unsigned long style;
+  unsigned long quality;
+  unsigned long size;
+};
+
+/// `UIDbDataFonts`: one font record of the UI database (0x80 bytes on every target).
+struct EeUiDbFont {
+  /// Empty: no font.
+  char font_name[108];
+  /// The face name's string-table ID.
+  uint32_t string_id;
+  uint32_t size;
+  uint32_t quality;
+  uint8_t bold;
+  uint8_t italic;
+  uint8_t underline;
+  uint8_t style10;
+  uint8_t style08;
+  char pad[3];
+};
+
 /// The host functions of one `UIListBox<T>` instantiation.
 struct EeUiListHost {
   unsigned long (*num_lines)(void *list);
@@ -3680,6 +3750,12 @@ struct EeUiTrigger {
   void *event;
   void *form;
   void *entity;
+};
+
+/// `UIDirtyRectangle`: a rectangle and the surfaces it still has to be redrawn on.
+struct EeUiDirtyRect {
+  EeUiRect rect;
+  unsigned long surface_count;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -7417,6 +7493,57 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
 /// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
 EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
 
+/// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
+long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
+
+/// The tiling classes' `DrawBackground(redraw)` up to `DrawTiledBackground`: `kind` 0 tiled, 1 left-right,
+/// 2 top-bottom, 3 stretched (`across` x `down` tiles) -> whether the redraw rectangle meets the background, the
+/// plan in `out`.
+bool ee_ui_background_tiled_plan(int kind,
+                                 float across,
+                                 float down,
+                                 EeUiRect rect,
+                                 EeUiRect texture,
+                                 EeUiRect redraw,
+                                 EeUiTilePlan *out);
+
+/// `UITiledBackground::DrawTiledBackground(clip, rows, columns, w, h)` (`rect`: the background's).
+long ee_ui_background_draw_tiled(void *background,
+                                 EeUiRect rect,
+                                 EeUiRect clip,
+                                 unsigned long first_row,
+                                 unsigned long last_row,
+                                 unsigned long first_column,
+                                 unsigned long last_column,
+                                 float w,
+                                 float h);
+
+/// `UIFullBackground::DrawBackground(redraw)`: the first tile's texture size, the window's, the designed screen's
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_full_draw(void *background,
+                                EeUiRect redraw,
+                                unsigned long texture_width,
+                                unsigned long texture_height,
+                                unsigned long window_width,
+                                unsigned long window_height,
+                                unsigned long designed_width,
+                                unsigned long designed_height,
+                                unsigned long columns,
+                                unsigned long rows);
+
+/// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
+/// `RelayoutBackground` (never exclusive) lay a background out in.
+EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
+
+/// `UIBackground::SetRectangle(rect)`.
+void ee_ui_background_set_rectangle(void *background, EeUiRect rect);
+
+/// `UIBackground::SetVisibility(visible)`.
+void ee_ui_background_set_visibility(void *background, bool visible);
+
+/// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
+void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
+
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
 
@@ -7846,6 +7973,68 @@ void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
 /// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
 bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
 
+/// `UIForm::AddCopyDirtyRectangle(rect)`.
+void ee_ui_form_add_copy_dirty_rectangle(void *form, const EeUiRect *rect);
+
+/// `UIForm::AddDirtyRectangle(rect)` after its popup test (`surfaces`: the manager's surface count).
+void ee_ui_form_add_dirty_rectangle(void *form,
+                                    const EeUiRect *rect,
+                                    unsigned long surfaces);
+
+/// `UIForm::CopyData` -> its result.
+long ee_ui_form_copy_data(void *form);
+
+/// `UIForm::Open`.
+void ee_ui_form_open(void *form);
+
+/// `UIForm::Close`.
+void ee_ui_form_close(void *form);
+
+/// `UIForm::SetPopup(control)`.
+void ee_ui_form_set_popup(void *form, void *control);
+
+/// `UIForm::RedrawIntersectControls(rect)`.
+void ee_ui_form_redraw_intersect_controls(void *form, const EeUiRect *rect);
+
+/// `UIForm::SetAllControlsDirty`.
+void ee_ui_form_set_all_controls_dirty(void *form);
+
+/// `UIForm::GetToolTipShadowRectangle(rect, out)`.
+EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
+
+/// `UIFontTable::Create`'s reading of one font record.
+EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
+
+/// `UIFontTable::CreateClosestFont`'s point size for a pixel height.
+long ee_ui_font_closest_size(unsigned long pixel_height);
+
+/// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
+size_t ee_ui_font_find_or_create(const void *query);
+
+/// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
+unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
+
+/// `UIHotKeySorter::operator()`.
+bool ee_ui_hotkey_before(bool left_always,
+                         unsigned long left_keys,
+                         bool right_always,
+                         unsigned long right_keys);
+
+/// `UIHotKey::GetHotKeyName`: the modifiers' names (NULL: no modifier) and the key's, as C strings -> the name in
+/// `out` (`capacity` bytes, NUL-terminated); returns its length. The C++ sizes `out` from the names' lengths.
+size_t ee_ui_hotkey_name(const char *m0,
+                         const char *m1,
+                         const char *m2,
+                         const char *key,
+                         uint8_t *out,
+                         size_t capacity);
+
+/// `UIHotKey::FireEvents` -> whether an event fired.
+bool ee_ui_hotkey_fire_events(void *key);
+
+/// `UIForm::UpdateKeyboard` -> its result.
+long ee_ui_form_update_keyboard(void *form);
+
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);
 
@@ -7944,6 +8133,49 @@ void ee_ui_manager_process_all_events(void *manager);
 
 /// `UIManager::ProcessAllEventsForForm(form)`.
 void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
+
+/// `UIManager::SetMusicVolume(volume)`.
+void ee_ui_manager_set_music_volume(void *manager, float volume);
+
+/// `UIManager::StartMusic(name)` (the name as a C string).
+void ee_ui_manager_start_music(void *manager, const char *name);
+
+/// `UIManager::StopMusic`.
+void ee_ui_manager_stop_music(void *manager);
+
+/// `UIManager::SetSoundInstance(instance)`.
+void ee_ui_manager_set_sound_instance(void *manager, void *instance);
+
+/// `UIManager::RemoveSoundInstance`.
+void ee_ui_manager_remove_sound_instance(void *manager);
+
+/// `UIManager::RemoveAndStopSoundInstance`.
+void ee_ui_manager_remove_and_stop_sound_instance(void *manager);
+
+/// `UIManager::UpdateUI`'s music step (inside the lock).
+void ee_ui_manager_update_music(void *manager);
+
+/// `UIManager::AddIMEResultString` (call 0), `ChangeIMECompositionString` (1), `CloseIMECompositionString` (2),
+/// `OpenIMECompositionString` (3): `args` are the call's arguments for the host -> the form's result.
+long ee_ui_manager_ime_form_call(void *manager,
+                                 int call,
+                                 const void *args);
+
+/// `UIManager::ChangeIMECandidateWindow(list)`: `list` is the C++ list (for `SetCandidateList`), with its style and
+/// count.
+long ee_ui_manager_change_candidate_window(void *manager,
+                                           const void *list,
+                                           unsigned long style,
+                                           unsigned long count);
+
+/// `UIManager::OpenIMECandidateWindow`.
+long ee_ui_manager_open_candidate_window(void *manager);
+
+/// `UIManager::CloseIMECandidateWindow`.
+long ee_ui_manager_close_candidate_window(void *manager);
+
+/// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
+long ee_ui_manager_copy_candidate_window(void *manager, long result);
 
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);

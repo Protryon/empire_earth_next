@@ -66,11 +66,197 @@ public:
     virtual ~UIHotKeySorter() {}
     bool operator()(UIHotKey* const& inLeft, UIHotKey* const& inRight) const
     {
-        if (inLeft->GetAlwaysFire() && !inRight->GetAlwaysFire())
+        return ee_ui_hotkey_before(inLeft->GetAlwaysFire(), inLeft->GetKeyCount(), inRight->GetAlwaysFire(),
+                                   inRight->GetKeyCount());
+    }
+};
+
+// The form's focus walk (Tab, ShiftTab, CheckedRadioButton), the control search of UpdateMouseLocation, its
+// dirty-rectangle bookkeeping and its open, close and copy sequences are Rust (rust/crates/ee_ui/src/form.rs and
+// form_state.rs, docs/RUST_PLAN.md R6); these are its questions about the form, its controls, groups, backgrounds,
+// database records and events, and the calls it makes on them (the controls' virtuals stay C++ virtuals).
+struct UIFormRust {
+    static UIForm* Form(void* inForm) { return static_cast<UIForm*>(inForm); }
+    static UIControl* Control(void* inForm, long inIndex) { return static_cast<UIForm*>(inForm)->mControls[inIndex]; }
+    static long Count(void* inForm) { return static_cast<UIForm*>(inForm)->mControlCount; }
+    static bool ShownEnabled(void* inForm, long inIndex)
+    {
+        UIControl* theControl = UIFormRust::Control(inForm, inIndex);
+        return theControl->GetDisplayMode() == kDisplayModeShown &&
+               static_cast<UIForm*>(inForm)->GetEntityGroupById(theControl->GetId())->GetIsEnabled();
+    }
+    static UIEntityGroup* Group(void* inForm, long inGroup) { return static_cast<UIForm*>(inForm)->mEntityGroups[inGroup]; }
+    static long GroupCount(void* inForm) { return static_cast<UIForm*>(inForm)->mControlGroupCount; }
+    static UIControl* Entity(void* inForm, long inGroup, unsigned long inEntity)
+    {
+        return static_cast<UIControl*>(UIFormRust::Group(inForm, inGroup)->GetEntity(inEntity));
+    }
+    static EeUiRect Rect(const GERectangle& inRectangle)
+    {
+        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+    static std::vector<GERectangle>& Copies(void* inForm) { return Form(inForm)->mCopyDirtyRectangles; }
+    static std::deque<UIDirtyRectangle>& Dirty(void* inForm) { return Form(inForm)->mDirtyRectangles; }
+    static unsigned long Value(void* inForm, int inWhich)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inWhich) {
+        case 0:
+            return theForm->mManager->GetNumberOfSurfaces();
+        case 1:
+            return theForm->mManager->GetRasterizer()->GetWindow(theForm->mManager->GetScreen())->GetWidth();
+        case 2:
+            return theForm->mManager->GetRasterizer()->GetWindow(theForm->mManager->GetScreen())->GetHeight();
+        case 3:
+            return TMGetTime();
+        case 4:
+            return theForm->mOpenTime;
+        case 5:
+            return theForm->mPopupDrawCount;
+        case 6:
+            return theForm->mDrawToolTipShadow;
+        case 7:
+            return theForm->GetShouldFadeIn();
+        case 8:
+            return theForm->mControlCount;
+        case 9:
+            return theForm->mControlGroupCount;
+        case 10:
+            return (unsigned long)theForm->mBackgrounds.size();
+        case 11:
+            return (unsigned long)theForm->mDatabaseControls.size();
+        default:
+            return (unsigned long)theForm->mEventData.size();
+        }
+    }
+    static void SetValue(void* inForm, int inWhich, unsigned long inValue)
+    {
+        if (inWhich == 0)
+            Form(inForm)->mOpenTime = inValue;
+        else
+            Form(inForm)->mPopupDrawCount = inValue;
+    }
+    static void* Pointer(void* inForm, int inWhich)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inWhich) {
+        case 0:
+            return theForm->mPopup;
+        case 1:
+            return static_cast<UIControl*>(theForm->mHelpTextLabel);
+        default:
+            return theForm->mMouseOverControl;
+        }
+    }
+    static void SetPointer(void* inForm, int inWhich, void* inPointer)
+    {
+        UIForm* theForm = Form(inForm);
+        UIControl* theControl = static_cast<UIControl*>(inPointer);
+        switch (inWhich) {
+        case 0:
+            theForm->mPopup = theControl;
+            break;
+        case 1:
+            theForm->mHelpTextLabel = static_cast<UITextLabel*>(theControl);
+            break;
+        default:
+            theForm->mCopiedPopup = theControl;
+            break;
+        }
+    }
+    static bool Event(void* inForm, int inWhich, long* outResult)
+    {
+        UIForm* theForm = Form(inForm);
+        UIEvent* theEvent =
+            inWhich == 0 ? theForm->mFormUpdateEvent : inWhich == 1 ? theForm->mFormOpenEvent : theForm->mFormCloseEvent;
+        if (!theEvent)
             return false;
-        if (inRight->GetAlwaysFire() && !inLeft->GetAlwaysFire())
-            return true;
-        return inLeft->GetKeyCount() < inRight->GetKeyCount() ? true : false;
+        *outResult = theEvent->ProcessEvent(theForm, NULL);
+        return true;
+    }
+    static void Call(void* inForm, int inCall, unsigned long inIndex)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inCall) {
+        case 0:
+            theForm->mManager->ProcessAllEventsForForm(theForm);
+            break;
+        case 1:
+            theForm->UpdateHelpText(inIndex != 0);
+            break;
+        case 2:
+            theForm->SetTabbing(theForm->mTabbingOn);
+            break;
+        case 3:
+            theForm->mBackgrounds[inIndex]->Open();
+            break;
+        default:
+            theForm->mBackgrounds[inIndex]->Close();
+            break;
+        }
+    }
+    static UICDatabase& Database(void* inForm, unsigned long inIndex) { return Form(inForm)->mDatabaseControls[inIndex]; }
+    static const UIEventData& EventData(void* inForm, unsigned long inIndex) { return Form(inForm)->mEventData[inIndex]; }
+    static void SetFormEvent(void* inForm, unsigned long inType, UIEvent* inEvent) { Form(inForm)->SetFormEvent(inType, inEvent); }
+    static void ControlCall(void* inForm, int inCall, UIControl* inControl, unsigned long inGroup)
+    {
+        switch (inCall) {
+        case 0:
+            Form(inForm)->AddControl(inControl, inGroup);
+            break;
+        case 1:
+            Form(inForm)->RemoveControl(inControl, inGroup);
+            break;
+        default:
+            delete inControl;
+            break;
+        }
+    }
+    static GERectangle& FormRectangle(void* inForm) { return Form(inForm)->mRectangle; }
+    static UILayoutUtility& Layout(void* inForm) { return Form(inForm)->mLayout; }
+    static float& FadeOpacity(void* inForm) { return Form(inForm)->mFadeOpacity; }
+    static GERectangle& CopiedPopupRectangle(void* inForm) { return Form(inForm)->mCopiedPopupRectangle; }
+    static UIControl*& DrawControl(void* inForm, long inIndex) { return Form(inForm)->mDrawControls[inIndex]; }
+    static std::vector<std::vector<UIHotKey*> >& HotKeys(void* inForm) { return Form(inForm)->mHotKeys; }
+    static unsigned long KeyboardValue(void* inForm, int inWhich, unsigned long inGroup)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inWhich) {
+        case 0:
+            return theForm->mKeyboardCaptured != NULL;
+        case 1:
+            return theForm->mKeyboardCaptured->GetIMEEnabled();
+        case 2:
+            return (unsigned long)theForm->mHotKeys.size();
+        case 3:
+            return (unsigned long)theForm->mHotKeys[inGroup].size();
+        default:
+            return theForm->mTabbingOn;
+        }
+    }
+    static long KeyboardCall(void* inForm, int inCall)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inCall) {
+        case 0:
+            return UIForm::sTabKey->JustPressed();
+        case 1:
+            return UIForm::sShiftKey->GetValue();
+        case 2:
+            theForm->ShiftTab();
+            return 0;
+        case 3:
+            theForm->Tab();
+            return 0;
+        case 4:
+            return theForm->mKeyboardCaptured->UpdateKeyboard();
+        default:
+            return theForm->mControls[theForm->mTabStop]->UpdateKeyboard();
+        }
     }
 };
 
@@ -216,37 +402,8 @@ void UIForm::AddControl(UIControl* inControl, unsigned long inGroup)
 // Adds a rectangle to the background-redraw list, splitting it around listed rectangles so none overlap
 void UIForm::AddCopyDirtyRectangle(const GERectangle& inRectangle)
 {
-    bool theAdd = true;
-    for (unsigned long i = 0; i < this->mCopyDirtyRectangles.size(); i++) {
-        if (inRectangle.Contains(this->mCopyDirtyRectangles[i])) {
-            this->mCopyDirtyRectangles.erase(this->mCopyDirtyRectangles.begin() + i);
-            this->AddCopyDirtyRectangle(inRectangle);
-            theAdd = false;
-            break;
-        }
-        if (this->mCopyDirtyRectangles[i].Contains(inRectangle)) {
-            theAdd = false;
-            break;
-        }
-        if (!this->mCopyDirtyRectangles[i].Intersects(inRectangle))
-            continue;
-        if (inRectangle.GetRight() > this->mCopyDirtyRectangles[i].GetRight() + 1.0f)
-            this->AddCopyDirtyRectangle(GERectangle(this->mCopyDirtyRectangles[i].GetRight() + 1.0f, inRectangle.GetTop(),
-                                              inRectangle.GetRight(), inRectangle.GetBottom()));
-        if (inRectangle.GetLeft() < this->mCopyDirtyRectangles[i].GetLeft() - 1.0f)
-            this->AddCopyDirtyRectangle(GERectangle(inRectangle.GetLeft(), inRectangle.GetTop(),
-                                              this->mCopyDirtyRectangles[i].GetLeft() - 1.0f, inRectangle.GetBottom()));
-        if (inRectangle.GetTop() < this->mCopyDirtyRectangles[i].GetTop() - 1.0f)
-            this->AddCopyDirtyRectangle(GERectangle(inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
-                                              this->mCopyDirtyRectangles[i].GetTop() - 1.0f));
-        if (inRectangle.GetBottom() > this->mCopyDirtyRectangles[i].GetBottom() + 1.0f)
-            this->AddCopyDirtyRectangle(GERectangle(inRectangle.GetLeft(), this->mCopyDirtyRectangles[i].GetBottom() + 1.0f,
-                                              inRectangle.GetRight(), inRectangle.GetBottom()));
-        theAdd = false;
-        break;
-    }
-    if (theAdd)
-        this->mCopyDirtyRectangles.push_back(inRectangle);
+    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
+    ee_ui_form_add_copy_dirty_rectangle(this, &theRectangle);
 }
 
 // FUNCTION: LLE 0x1007110f
@@ -260,25 +417,10 @@ void UIForm::AddDrawControl(unsigned long inIndex)
 // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
 void UIForm::AddDirtyRectangle(const GERectangle& inRectangle)
 {
-    UIDirtyRectangle theNew;
-    UIDirtyRectangle theOld;
-    bool theAdd = true;
     if (this->mPopup && inRectangle.Intersects(this->mPopup->GetRectangle()))
         this->mPopup->SetDirty(true);
-    theNew.mSurfaceCount = this->mManager->GetNumberOfSurfaces();
-    theNew.mRectangle = inRectangle;
-    unsigned long i = this->mDirtyRectangles.size();
-    while (i--) {
-        theOld = this->mDirtyRectangles.front();
-        this->mDirtyRectangles.pop_front();
-        if (theOld.mRectangle.Contains(theNew.mRectangle) && theOld.mSurfaceCount == theNew.mSurfaceCount) {
-            this->mDirtyRectangles.push_back(theOld);
-            theAdd = false;
-        } else if (!theNew.mRectangle.Contains(theOld.mRectangle))
-            this->mDirtyRectangles.push_back(theOld);
-    }
-    if (theAdd)
-        this->mDirtyRectangles.push_back(theNew);
+    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
+    ee_ui_form_add_dirty_rectangle(this, &theRectangle, this->mManager->GetNumberOfSurfaces());
 }
 
 // FUNCTION: LLE 0x100712ab
@@ -350,25 +492,6 @@ long UIForm::ChangeIMECompositionString(const UWideString& inString, const UStri
     return theResult;
 }
 
-// The form's focus walk (Tab, ShiftTab, CheckedRadioButton) and the control search of UpdateMouseLocation are Rust
-// (rust/crates/ee_ui/src/form.rs, docs/RUST_PLAN.md R6); these are its questions about the controls and groups, and
-// its way to SetTabStop (the controls' TabbedFrom/TabbedTo stay C++ virtuals).
-struct UIFormRust {
-    static UIControl* Control(void* inForm, long inIndex) { return static_cast<UIForm*>(inForm)->mControls[inIndex]; }
-    static long Count(void* inForm) { return static_cast<UIForm*>(inForm)->mControlCount; }
-    static bool ShownEnabled(void* inForm, long inIndex)
-    {
-        UIControl* theControl = UIFormRust::Control(inForm, inIndex);
-        return theControl->GetDisplayMode() == kDisplayModeShown &&
-               static_cast<UIForm*>(inForm)->GetEntityGroupById(theControl->GetId())->GetIsEnabled();
-    }
-    static UIEntityGroup* Group(void* inForm, long inGroup) { return static_cast<UIForm*>(inForm)->mEntityGroups[inGroup]; }
-    static long GroupCount(void* inForm) { return static_cast<UIForm*>(inForm)->mControlGroupCount; }
-    static UIControl* Entity(void* inForm, long inGroup, unsigned long inEntity)
-    {
-        return static_cast<UIControl*>(UIFormRust::Group(inForm, inGroup)->GetEntity(inEntity));
-    }
-};
 
 extern "C" long ee_uicpp_form_count(void* inForm) { return UIFormRust::Count(inForm); }
 extern "C" bool ee_uicpp_form_exists(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex) != NULL; }
@@ -399,6 +522,170 @@ extern "C" EeUiRect ee_uicpp_form_entity_rect(void* inForm, long inGroup, unsign
     return EeUiRect{theRectangle.mBottom, theRectangle.mLeft, theRectangle.mRight, theRectangle.mTop};
 }
 
+// UIForm's dirty-rectangle bookkeeping and its open, close and copy sequences (ee_ui form_state.rs)
+extern "C" unsigned long ee_uicpp_form_life_copy_len(void* inForm) { return (unsigned long)UIFormRust::Copies(inForm).size(); }
+extern "C" EeUiRect ee_uicpp_form_life_copy_at(void* inForm, unsigned long inIndex)
+{
+    return UIFormRust::Rect(UIFormRust::Copies(inForm)[inIndex]);
+}
+extern "C" void ee_uicpp_form_life_copy_erase(void* inForm, unsigned long inIndex)
+{
+    UIFormRust::Copies(inForm).erase(UIFormRust::Copies(inForm).begin() + inIndex);
+}
+extern "C" void ee_uicpp_form_life_copy_push(void* inForm, const EeUiRect* inRectangle)
+{
+    UIFormRust::Copies(inForm).push_back(UIFormRust::Rect(*inRectangle));
+}
+extern "C" unsigned long ee_uicpp_form_life_dirty_len(void* inForm) { return (unsigned long)UIFormRust::Dirty(inForm).size(); }
+extern "C" void ee_uicpp_form_life_dirty_take(void* inForm, EeUiDirtyRect* outDirty)
+{
+    UIDirtyRectangle theDirty = UIFormRust::Dirty(inForm).front();
+    UIFormRust::Dirty(inForm).pop_front();
+    outDirty->rect = UIFormRust::Rect(theDirty.mRectangle);
+    outDirty->surface_count = theDirty.mSurfaceCount;
+}
+extern "C" void ee_uicpp_form_life_dirty_push(void* inForm, const EeUiDirtyRect* inDirty)
+{
+    UIDirtyRectangle theDirty;
+    theDirty.mRectangle = UIFormRust::Rect(inDirty->rect);
+    theDirty.mSurfaceCount = inDirty->surface_count;
+    UIFormRust::Dirty(inForm).push_back(theDirty);
+}
+extern "C" unsigned long ee_uicpp_form_life_value(void* inForm, int inWhich) { return UIFormRust::Value(inForm, inWhich); }
+extern "C" void ee_uicpp_form_life_set_value(void* inForm, int inWhich, unsigned long inValue)
+{
+    UIFormRust::SetValue(inForm, inWhich, inValue);
+}
+extern "C" void* ee_uicpp_form_life_ptr(void* inForm, int inWhich) { return UIFormRust::Pointer(inForm, inWhich); }
+extern "C" void ee_uicpp_form_life_set_ptr(void* inForm, int inWhich, void* inPointer)
+{
+    UIFormRust::SetPointer(inForm, inWhich, inPointer);
+}
+extern "C" EeUiRect ee_uicpp_form_life_rect(void* inForm) { return UIFormRust::Rect(UIFormRust::FormRectangle(inForm)); }
+extern "C" void ee_uicpp_form_life_layout(void* inForm, const EeUiRect* inScreen)
+{
+    UIFormRust::Layout(inForm).CalculateRectangle(UIFormRust::Rect(*inScreen), UIFormRust::FormRectangle(inForm), false);
+}
+extern "C" void ee_uicpp_form_life_set_fade(void* inForm, float inOpacity) { UIFormRust::FadeOpacity(inForm) = inOpacity; }
+extern "C" void ee_uicpp_form_life_set_copied_popup_rect(void* inForm, const EeUiRect* inRectangle)
+{
+    UIFormRust::CopiedPopupRectangle(inForm) = UIFormRust::Rect(*inRectangle);
+}
+extern "C" bool ee_uicpp_form_life_event(void* inForm, int inWhich, long* outResult)
+{
+    return UIFormRust::Event(inForm, inWhich, outResult);
+}
+extern "C" void ee_uicpp_form_life_manager_dirty(void* inForm, const EeUiRect* inRectangle)
+{
+    UIFormRust::Form(inForm)->GetManager()->AddDirtyRectangle(UIFormRust::Rect(*inRectangle), UIFormRust::Form(inForm));
+}
+extern "C" void ee_uicpp_form_life_call(void* inForm, int inCall, unsigned long inIndex) { UIFormRust::Call(inForm, inCall, inIndex); }
+extern "C" void* ee_uicpp_form_life_control(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex); }
+extern "C" void ee_uicpp_form_life_set_draw(void* inForm, long inIndex, void* inControl)
+{
+    UIFormRust::DrawControl(inForm, inIndex) = static_cast<UIControl*>(inControl);
+}
+extern "C" bool ee_uicpp_form_life_group_enabled(void* inForm, long inGroup) { return UIFormRust::Group(inForm, inGroup)->GetIsEnabled(); }
+extern "C" unsigned long ee_uicpp_form_life_entity_count(void* inForm, long inGroup)
+{
+    return UIFormRust::Group(inForm, inGroup)->GetEntityCount();
+}
+extern "C" void* ee_uicpp_form_life_entity(void* inForm, long inGroup, unsigned long inEntity)
+{
+    return UIFormRust::Entity(inForm, inGroup, inEntity);
+}
+extern "C" void* ee_uicpp_form_life_db_table(void* inForm, unsigned long inIndex)
+{
+    return UIControlsTable::GetUIControlsTable(UIFormRust::Database(inForm, inIndex).mTableIndex);
+}
+extern "C" void* ee_uicpp_form_life_db_control(void* inForm, unsigned long inIndex) { return UIFormRust::Database(inForm, inIndex).mControl; }
+extern "C" void ee_uicpp_form_life_set_db_control(void* inForm, unsigned long inIndex, void* inControl)
+{
+    UIFormRust::Database(inForm, inIndex).mControl = static_cast<UIControl*>(inControl);
+}
+extern "C" void* ee_uicpp_form_life_create_control(void* inForm, void* inTable)
+{
+    return static_cast<UIControlsTable*>(inTable)->CreateControl(UIFormRust::Form(inForm)->GetManager());
+}
+extern "C" void ee_uicpp_form_life_table_create_event(void* inForm, void* inTable)
+{
+    static_cast<UIControlsTable*>(inTable)->CreateControlEvent(UIFormRust::Form(inForm));
+}
+extern "C" unsigned long ee_uicpp_form_life_table_value(void* inTable, int inWhich)
+{
+    UIControlsTable* theTable = static_cast<UIControlsTable*>(inTable);
+    switch (inWhich) {
+    case 0:
+        return theTable->GetGroup();
+    case 1:
+        return theTable->GetIsVisible() == true;
+    case 2:
+        return theTable->GetControlType();
+    default:
+        return theTable->GetStringTableID();
+    }
+}
+extern "C" void ee_uicpp_form_life_control_call(void* inForm, int inCall, void* inControl, unsigned long inGroup)
+{
+    UIFormRust::ControlCall(inForm, inCall, static_cast<UIControl*>(inControl), inGroup);
+}
+extern "C" unsigned long ee_uicpp_form_life_event_data(void* inForm, unsigned long inIndex, unsigned long* outType)
+{
+    *outType = UIFormRust::EventData(inForm, inIndex).mEventType;
+    return UIFormRust::EventData(inForm, inIndex).mEventID;
+}
+extern "C" void* ee_uicpp_form_life_create_form_event(void* inForm, unsigned long inID)
+{
+    return UIFormRust::Form(inForm)->GetManager()->CreateFormEvent(inID);
+}
+extern "C" void ee_uicpp_form_life_set_form_event(void* inForm, unsigned long inType, void* inEvent)
+{
+    UIEvent* theEvent = static_cast<UIEvent*>(inEvent);
+    UIFormRust::SetFormEvent(inForm, inType, theEvent);
+    theEvent->Dereference();
+}
+extern "C" unsigned long ee_uicpp_form_life_ctl_value(void* inControl, int inWhich)
+{
+    UIControl* theControl = static_cast<UIControl*>(inControl);
+    switch (inWhich) {
+    case 0:
+        return theControl->UIEntity::GetType();
+    case 1:
+        return theControl->GetDisplayMode();
+    case 2:
+        return theControl->GetIsDirty();
+    case 3:
+        return theControl->GetDrawCount();
+    default:
+        return theControl->GetIndex();
+    }
+}
+extern "C" EeUiRect ee_uicpp_form_life_ctl_rect(void* inControl)
+{
+    return UIFormRust::Rect(static_cast<UIControl*>(inControl)->GetRectangle());
+}
+extern "C" long ee_uicpp_form_life_ctl_call(void* inControl, int inCall, unsigned long inArgument)
+{
+    UIControl* theControl = static_cast<UIControl*>(inControl);
+    switch (inCall) {
+    case 0:
+        return theControl->CopyData();
+    case 1:
+        theControl->SetDirty(inArgument != 0);
+        break;
+    case 2:
+        theControl->SetDisplayMode(inArgument);
+        break;
+    case 3:
+        theControl->HideControl();
+        break;
+    default:
+        theControl->SetStringTableID(inArgument);
+        break;
+    }
+    return kErrorOK;
+}
+
 // FUNCTION: LLE 0x100714f3
 // Moves a radio-button index to the checked button of its run of radio buttons (unchanged if it is checked)
 void UIForm::CheckedRadioButton(long& ioIndex)
@@ -411,23 +698,7 @@ void UIForm::CheckedRadioButton(long& ioIndex)
 // and deletes the controls created from the database
 void UIForm::Close()
 {
-    unsigned long i;
-    if (this->mFormCloseEvent)
-        this->mFormCloseEvent->ProcessEvent(this, NULL);
-    this->SetAllControlsDirty();
-    for (i = 0; i < this->mControlCount; i++)
-        this->mDrawControls[i] = NULL;
-    this->mCopiedPopup = NULL;
-    for (i = 0; i < this->mBackgrounds.size(); i++)
-        this->mBackgrounds[i]->Close();
-    this->mManager->ProcessAllEventsForForm(this);
-    for (i = 0; i < this->mDatabaseControls.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(this->mDatabaseControls[i].mTableIndex);
-        if (theTable && this->mDatabaseControls[i].mControl)
-            this->RemoveControl(this->mDatabaseControls[i].mControl, theTable->GetGroup());
-        delete this->mDatabaseControls[i].mControl;
-        this->mDatabaseControls[i].mControl = NULL;
-    }
+    ee_ui_form_close(this);
 }
 
 // FUNCTION: LLE 0x100716ae
@@ -490,51 +761,7 @@ void UIForm::Deactivate()
 // ages the dirty rectangles and updates the help text
 long UIForm::CopyData()
 {
-    UIDirtyRectangle theDirty;
-    long theResult = kErrorOK;
-    long i;
-    if (this->mFormUpdateEvent)
-        theResult = this->mFormUpdateEvent->ProcessEvent(this, NULL);
-    if (this->GetShouldFadeIn()) {
-        this->mFadeOpacity = (float)(TMGetTime() - this->mOpenTime) * kFadeInRate;
-        this->mFadeOpacity = max(min(this->mFadeOpacity, 1.0f), 0.0f);
-        this->SetAllControlsDirty();
-        this->mManager->AddDirtyRectangle(this->mRectangle, this);
-    } else
-        this->mFadeOpacity = 1.0f;
-    for (i = this->mControlGroupCount - 1; i >= 0; i--) {
-        UIEntityGroup* theGroup = this->mEntityGroups[i];
-        if (theGroup->GetIsEnabled())
-            for (long j = theGroup->GetEntityCount() - 1; j >= 0; j--) {
-                UIControl* theControl = static_cast<UIControl*>(theGroup->GetEntity(j));
-                if (theControl->GetDisplayMode() != kDisplayModeShown)
-                    continue;
-                if (theControl->GetIsDirty()) {
-                    this->mManager->AddDirtyRectangle(theControl->GetRectangle(), this);
-                    if (this->mPopup &&
-                        (theControl == this->mPopup || theControl->GetRectangle().Intersects(this->mPopup->GetRectangle()))) {
-                        this->mCopiedPopupRectangle = this->mPopup->GetRectangle();
-                        this->mPopupDrawCount = this->mManager->GetNumberOfSurfaces();
-                    }
-                    theResult = theControl->CopyData();
-                }
-                if (theControl->GetDrawCount() > 0 && theControl != this->mPopup)
-                    this->AddDrawControl(theControl->GetIndex());
-            }
-    }
-    if (this->mPopup && this->mPopupDrawCount > 0)
-        this->mCopiedPopup = this->mPopup;
-    unsigned long k = this->mDirtyRectangles.size();
-    while (k--) {
-        theDirty = this->mDirtyRectangles.front();
-        this->mDirtyRectangles.pop_front();
-        this->AddCopyDirtyRectangle(theDirty.mRectangle);
-        if (--theDirty.mSurfaceCount)
-            this->mDirtyRectangles.push_back(theDirty);
-    }
-    if (this->mHelpTextLabel && this->mMouseOverControl)
-        this->UpdateHelpText(false);
-    return theResult;
+    return ee_ui_form_copy_data(this);
 }
 
 // FUNCTION: LLE 0x10071a3e
@@ -578,38 +805,19 @@ long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, 
     return this->mManager->GetRasterizer()->Draw(inBitmap, this->mManager->GetScreen());
 }
 
+// A piece of the Rust tiling of a bitmap (ee_ui background.rs): drawn at its location
+extern "C" void ee_uicpp_form_tile_draw(void* inForm, void* inBitmap, const EeUiRect* inPiece, float inX, float inY)
+{
+    UIFormRust::Form(inForm)->DrawBackground(static_cast<GEBitmap*>(inBitmap), UIFormRust::Rect(*inPiece), GE2DPoint(inX, inY));
+}
+
 // FUNCTION: LLE 0x10071bee
 // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                             const GERectangle& inTileRectangle)
 {
-    GERectangle theTile;
-    GERectangle theClipped;
-    GE2DPoint theLocation;
-    if (inRectangle.And(inTileRectangle, theClipped)) {
-        unsigned long theTileWidth = UMFloor(inDrawRectangle.GetWidth());
-        unsigned long theTileHeight = UMFloor(inDrawRectangle.GetHeight());
-        unsigned long theFirstRow = UMFloor((theClipped.GetTop() - inTileRectangle.GetTop()) / theTileHeight);
-        unsigned long theLastRow = UMFloor((theClipped.GetBottom() - inTileRectangle.GetTop()) / theTileHeight);
-        unsigned long theFirstColumn = UMFloor((theClipped.GetLeft() - inTileRectangle.GetLeft()) / theTileWidth);
-        unsigned long theLastColumn = UMFloor((theClipped.GetRight() - inTileRectangle.GetLeft()) / theTileWidth);
-        for (unsigned long theRow = theFirstRow; theRow <= theLastRow; theRow++)
-            for (unsigned long theColumn = theFirstColumn; theColumn <= theLastColumn; theColumn++) {
-                GE2DPoint thePosition(inTileRectangle.GetLeft() + theColumn * theTileWidth,
-                                      inTileRectangle.GetTop() + theRow * theTileHeight);
-                theTile = GERectangle(thePosition, GE2DPoint(thePosition.GetX() + theTileWidth,
-                                                             thePosition.GetY() + theTileHeight));
-                if (!theTile.And(theClipped) || !(theTile.GetWidth() > 0.0f) || !(theTile.GetHeight() > 0.0f))
-                    continue;
-                theLocation = theTile.GetTopLeft();
-                GE2DPoint theOrigin(inDrawRectangle.GetTopLeft());
-                theTile.SetLeft(theTile.GetLeft() + theOrigin.GetX() - thePosition.GetX());
-                theTile.SetRight(theTile.GetRight() + theOrigin.GetX() - thePosition.GetX());
-                theTile.SetBottom(theOrigin.GetY() + theTile.GetBottom() - thePosition.GetY());
-                theTile.SetTop(theTile.GetTop() + theOrigin.GetY() - thePosition.GetY());
-                this->DrawBackground(inBitmap, theTile, theLocation);
-            }
-    }
+    ee_ui_form_draw_tiles(this, inBitmap, UIFormRust::Rect(inRectangle), UIFormRust::Rect(inDrawRectangle),
+                          UIFormRust::Rect(inTileRectangle));
     return kErrorOK;
 }
 
@@ -799,12 +1007,7 @@ bool UIForm::GetShouldFadeIn()
 // Returns the tool-tip shadow rectangle: the given rectangle moved 3 pixels right and down
 void UIForm::GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle)
 {
-    GE2DPoint theTopLeft = inRectangle.GetTopLeft();
-    GE2DPoint theBottomRight = inRectangle.GetBottomRight();
-    GE2DPoint theOffset(kToolTipShadowOffset, kToolTipShadowOffset);
-    theTopLeft += theOffset;
-    theBottomRight += theOffset;
-    outRectangle = GERectangle(theTopLeft, theBottomRight);
+    outRectangle = UIFormRust::Rect(ee_ui_form_tool_tip_shadow(UIFormRust::Rect(inRectangle)));
 }
 
 // FUNCTION: LLE 0x100725fd
@@ -877,51 +1080,7 @@ void UIForm::Init()
 // fires the open event and marks every control dirty
 void UIForm::Open()
 {
-    GERectangle theScreenRectangle;
-    unsigned long i;
-    unsigned long j;
-    GEWindow* theWindow = this->mManager->GetRasterizer()->GetWindow(this->mManager->GetScreen());
-    theScreenRectangle.SetLeft(0.0f);
-    theScreenRectangle.SetTop(0.0f);
-    theScreenRectangle.SetRight((float)theWindow->GetWidth() - 1.0f);
-    theScreenRectangle.SetBottom((float)theWindow->GetHeight() - 1.0f);
-    this->mLayout.CalculateRectangle(theScreenRectangle, this->mRectangle, false);
-    for (j = 0; j < this->mBackgrounds.size(); j++)
-        this->mBackgrounds[j]->Open();
-    for (i = 0; i < this->mDatabaseControls.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(this->mDatabaseControls[i].mTableIndex);
-        if (theTable) {
-            this->mDatabaseControls[i].mControl = theTable->CreateControl(this->mManager);
-            if (this->mDatabaseControls[i].mControl) {
-                this->AddControl(this->mDatabaseControls[i].mControl, theTable->GetGroup());
-                this->mDatabaseControls[i].mControl->SetDisplayMode(theTable->GetIsVisible() == true);
-                if ((theTable->GetControlType() == kDbControlHelpTextLabel || theTable->GetControlType() == kDbControlMultiLineHelpTextLabel) &&
-                    theTable->GetIsVisible() == true) {
-                    this->mHelpTextLabel = static_cast<UITextLabel*>(this->mDatabaseControls[i].mControl);
-                    this->mDatabaseControls[i].mControl->SetDisplayMode(kDisplayModeHidden);
-                }
-                if (theTable->GetStringTableID() > 0)
-                    this->mDatabaseControls[i].mControl->SetStringTableID(theTable->GetStringTableID());
-            }
-        }
-        this->SetTabbing(this->mTabbingOn);
-    }
-    for (j = 0; j < this->mDatabaseControls.size(); j++) {
-        UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(this->mDatabaseControls[j].mTableIndex);
-        if (theTable)
-            theTable->CreateControlEvent(this);
-    }
-    for (i = 0; i < this->mEventData.size(); i++) {
-        UIEvent* theEvent = this->mManager->CreateFormEvent(this->mEventData[i].mEventID);
-        if (theEvent) {
-            this->SetFormEvent(this->mEventData[i].mEventType, theEvent);
-            theEvent->Dereference();
-        }
-    }
-    if (this->mFormOpenEvent)
-        this->mFormOpenEvent->ProcessEvent(this, NULL);
-    this->mOpenTime = TMGetTime();
-    this->SetAllControlsDirty();
+    ee_ui_form_open(this);
 }
 
 // FUNCTION: LLE 0x10072b37
@@ -1027,16 +1186,8 @@ void UIForm::RemoveBackground(UIBackground* inBackground)
 // Marks dirty every visible control of an enabled group that overlaps the rectangle
 void UIForm::RedrawIntersectControls(const GERectangle& inRectangle)
 {
-    for (long i = this->mControlGroupCount - 1; i >= 0; i--) {
-        UIEntityGroup* theGroup = this->mEntityGroups[i];
-        if (theGroup->GetIsEnabled())
-            for (long j = theGroup->GetEntityCount() - 1; j >= 0; j--) {
-                UIEntity* theEntity = theGroup->GetEntity(j);
-                if (theEntity->GetType() == kControlTypeButton && static_cast<UIControl*>(theEntity)->GetDisplayMode() != kDisplayModeHidden &&
-                    static_cast<UIControl*>(theEntity)->GetRectangle().Intersects(inRectangle))
-                    (static_cast<UIControl*>(theEntity))->SetDirty(true);
-            }
-    }
+    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
+    ee_ui_form_redraw_intersect_controls(this, &theRectangle);
 }
 
 // FUNCTION: LLE 0x10072f8e
@@ -1062,9 +1213,7 @@ void UIForm::RelayoutForm(const GERectangle& inRectangle)
 // Marks every control of the form dirty
 void UIForm::SetAllControlsDirty()
 {
-    for (long i = this->mControlCount - 1; i >= 0; i--)
-        if (this->mControls[i])
-            this->mControls[i]->SetDirty(true);
+    ee_ui_form_set_all_controls_dirty(this);
 }
 
 // FUNCTION: LLE 0x10073048
@@ -1421,30 +1570,7 @@ void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent)
 // Replaces the popup control, hiding the old one and redrawing what it (and a tool-tip shadow) covered
 void UIForm::SetPopup(UIControl* inControl)
 {
-    GERectangle theRectangle;
-    if (this->mPopup) {
-        theRectangle = this->mPopup->GetRectangle();
-        if (inControl == NULL) {
-            if (this->mDrawToolTipShadow && this->mPopup == this->mHelpTextLabel) {
-                this->GetToolTipShadowRectangle(this->mPopup->GetRectangle(), theRectangle);
-                this->mManager->AddDirtyRectangle(theRectangle, this);
-                theRectangle.And(this->mPopup->GetRectangle());
-            }
-            this->RedrawIntersectControls(theRectangle);
-        } else if (this->mPopup != inControl && this->mPopup == this->mHelpTextLabel) {
-            if (this->mDrawToolTipShadow) {
-                this->GetToolTipShadowRectangle(this->mPopup->GetRectangle(), theRectangle);
-                this->mManager->AddDirtyRectangle(theRectangle, this);
-                theRectangle.And(this->mPopup->GetRectangle());
-            }
-            this->RedrawIntersectControls(theRectangle);
-            this->mHelpTextLabel->SetDisplayMode(kDisplayModeHidden);
-        }
-        this->mPopup->HideControl();
-    }
-    this->mPopup = inControl;
-    if (inControl)
-        inControl->SetDirty(true);
+    ee_ui_form_set_popup(this, inControl);
 }
 
 // FUNCTION: LLE 0x1007377d
@@ -1557,52 +1683,25 @@ void UIForm::UpdateHelpText(bool inForce)
     }
 }
 
+// UIForm's keyboard pass (ee_ui hotkey.rs)
+extern "C" unsigned long ee_uicpp_form_keyboard_value(void* inForm, int inWhich, unsigned long inGroup)
+{
+    return UIFormRust::KeyboardValue(inForm, inWhich, inGroup);
+}
+extern "C" void* ee_uicpp_form_keyboard_hot_key(void* inForm, unsigned long inGroup, unsigned long inIndex)
+{
+    return UIFormRust::HotKeys(inForm)[inGroup][inIndex];
+}
+extern "C" bool ee_uicpp_form_keyboard_always_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->GetAlwaysFire(); }
+extern "C" bool ee_uicpp_form_keyboard_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->FireEvents(); }
+extern "C" long ee_uicpp_form_keyboard_call(void* inForm, int inCall) { return UIFormRust::KeyboardCall(inForm, inCall); }
+
 // FUNCTION: LLE 0x10073cfa
 // Fires hot keys (higher groups first; one non-always-fire key per frame), then Tab/Shift+Tab, else passes the
 // keyboard to the capturing control or the tab stop
 long UIForm::UpdateKeyboard()
 {
-    long theResult = kErrorOK;
-    std::vector<unsigned char> theGroupFired;
-    bool theFired = false;
-    bool theSkipGroup = false;
-    bool theHandled = false;
-    theGroupFired.resize(this->mHotKeys.size(), 0);
-    if (this->mKeyboardCaptured == NULL || !this->mKeyboardCaptured->GetIMEEnabled()) {
-        for (long i = this->mHotKeys.size() - 1; i >= 0; i--) {
-            theGroupFired[i] = 0;
-            if (i != this->mHotKeys.size() - 1 && (theSkipGroup || theGroupFired[i + 1]))
-                theSkipGroup = true;
-            else
-                theSkipGroup = false;
-            for (long j = this->mHotKeys[i].size() - 1; j >= 0 && !theSkipGroup; j--) {
-                UIHotKey* theHotKey = this->mHotKeys[i][j];
-                if ((theFired && !theHotKey->GetAlwaysFire()) || !theHotKey->FireEvents())
-                    continue;
-                theGroupFired[i] = 1;
-                if (!theHotKey->GetAlwaysFire())
-                    theFired = true;
-            }
-        }
-        if (theFired)
-            theHandled = true;
-        else if (this->mTabbingOn) {
-            if (UIForm::sTabKey->JustPressed() && UIForm::sShiftKey->GetValue()) {
-                this->ShiftTab();
-                theHandled = true;
-            } else if (UIForm::sTabKey->JustPressed()) {
-                this->Tab();
-                theHandled = true;
-            }
-        }
-    }
-    if (!theHandled) {
-        if (this->mKeyboardCaptured)
-            theResult = this->mKeyboardCaptured->UpdateKeyboard();
-        else if (this->mTabbingOn)
-            theResult = this->mControls[this->mTabStop]->UpdateKeyboard();
-    }
-    return theResult;
+    return ee_ui_form_update_keyboard(this);
 }
 
 // FUNCTION: LLE 0x10073efa

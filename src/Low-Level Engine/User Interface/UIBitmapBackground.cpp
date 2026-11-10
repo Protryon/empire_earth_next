@@ -6,6 +6,7 @@
 // inline block starts at 0x1005db0f.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -23,6 +24,20 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIBitmapBackground.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top); guarded: a golden driver includes several
+// background units in one translation unit
+#ifndef UI_BACKGROUND_RECT_HELPERS
+#define UI_BACKGROUND_RECT_HELPERS
+static inline EeUiRect UIBgRect(const GERectangle& r) { return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop}; }
+static inline GERectangle UIBgRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+#endif
+
+// A tile of the Rust backgrounds' plans, drawn by the background's (virtual) DrawStrectchedBackground
+extern "C" long ee_uicpp_background_draw(void* inBackground, const EeUiRect* inSource, const EeUiRect* inDestination)
+{
+    return static_cast<UIBitmapBackground*>(inBackground)->DrawStrectchedBackground(UIBgRect(*inSource), UIBgRect(*inDestination));
+}
 
 // FUNCTION: LLE 0x1005d8ca
 // Creates a background that stretches one texture over its rectangle
@@ -47,11 +62,7 @@ UIBitmapBackground::~UIBitmapBackground()
 // Draws the part of the background that overlaps the given rectangle
 long UIBitmapBackground::DrawBackground(const GERectangle& inRectangle)
 {
-    GERectangle theRectangle;
-    long theResult = kErrorOK;
-    if (inRectangle.And(this->mRectangle, theRectangle))
-        theResult = this->DrawStrectchedBackground(this->mRectangle, theRectangle);
-    return theResult;
+    return ee_ui_background_bitmap_draw(this, UIBgRect(this->mRectangle), UIBgRect(inRectangle));
 }
 
 // FUNCTION: LLE 0x1005d988
