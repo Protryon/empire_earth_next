@@ -3735,6 +3735,85 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
 
+/// `GETextureStem`: the length of a texture's cache name within `name`.
+///
+/// # Safety
+/// `name` is NUL-terminated.
+size_t ee_ge_texture_stem(const char *name);
+
+/// `GETextureManager::SetTexturePack`.
+///
+/// # Safety
+/// `directory` is NULL or NUL-terminated.
+void ee_ge_texpack_set(const char *directory, long scale_shift, long mip_levels_to_drop);
+
+/// The pack's name of a texture (`GETexturePackName`; with `require_enabled`, `GetTexturePackName`): false and nothing
+/// written when there is none.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+bool ee_ge_texpack_name(const char *name,
+                        bool require_enabled,
+                        char *out,
+                        size_t capacity);
+
+/// Whether the pack is on (`sTexturePackEnabled`).
+bool ee_ge_texpack_enabled();
+
+/// `GetTexturePackLogicalShift`.
+long ee_ge_texpack_logical_shift();
+
+/// `GetTexturePackMipLevelsToDrop`.
+long ee_ge_texpack_mip_levels_to_drop();
+
+/// `LoadTexture`'s MIP decisions: the levels to drop and whether to build MIP levels; returns the pack's extra drop.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+long ee_ge_texpack_load_plan(bool create_mipmaps,
+                             long drop,
+                             bool from_pack,
+                             long *out_drop,
+                             bool *out_mipmaps);
+
+/// `SetTexturePackSizes`' arithmetic: the texture's new `mNumMipLevelsToDrop` and its logical shift.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+void ee_ge_texpack_sizes(unsigned long drop,
+                         long mip_levels,
+                         unsigned long *out_drop,
+                         unsigned long *out_shift);
+
+/// The surface description a texture description asks for: depth, format and `mNoAlpha`.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+void ee_ge_texture_surface_format(unsigned long pixel_depth,
+                                  bool has_alpha,
+                                  unsigned long *out_depth,
+                                  unsigned long *out_format,
+                                  bool *out_no_alpha);
+
+/// A manager's removal decision at reference count `count`: whether to remove and release; the result code.
+///
+/// # Safety
+/// `out_remove` is valid for a write.
+long ee_ge_manager_remove_decision(unsigned long count,
+                                   bool *out_remove);
+
+/// The next made texture's name (`MakeTexture`), into `out`.
+///
+/// # Safety
+/// `out` holds `capacity` bytes.
+size_t ee_ge_texman_made_name(char *out, size_t capacity);
+
+/// The next created model's name (`CreateModel`) from the caller's, into `out`.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+size_t ee_ge_modman_created_name(const char *name, char *out, size_t capacity);
+
 /// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
 ///
 /// # Safety

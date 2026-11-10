@@ -5,7 +5,8 @@
 //! file codec, `GEPhysicalModel`'s per-triangle tests, and `GEModel`'s geometry (`model_geom.rs`) and the model it
 //! stores (`model_store.rs`, decoded from a glTF by `ee_openformats`; the `.cem` reader and writer were retired under
 //! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
-//! `GETextureSet`'s grid (`texture.rs`).
+//! `GETextureSet`'s grid (`texture.rs`), and the texture and model managers' decisions, names and texture pack
+//! (`managers.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -37,6 +38,9 @@ mod golden_terrain_mesh;
 pub mod io;
 /// cbindgen:ignore
 pub mod line;
+pub mod manager_ffi;
+/// cbindgen:ignore
+pub mod managers;
 pub mod model_ffi;
 pub mod model_geom;
 pub mod model_store;

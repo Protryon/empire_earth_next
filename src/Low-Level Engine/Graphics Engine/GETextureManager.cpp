@@ -29,82 +29,52 @@
 #include "lle/GETexture.h"
 #include "lle/GERenderState.h"
 #include "GEOpenFormats.h"   // GEFindTextureFile: a texture's PNG frames
-#include "rust/ee_rust.h"       // ee_of_texture_free
-static unsigned long sTextureNumber = 1;    // 0x100d9ca8: appended to made textures' names (provisional name)
+#include "rust/ee_rust.h"       // ee_of_texture_free; the manager's logic (ee_ge managers.rs)
+// (sTextureNumber 0x100d9ca8, appended to made textures' names, counts in Rust: ee_ge_texman_made_name)
+
 // port (D9): a texture's cache name, which is also the stem of its PNG files: the name as given, or without its last
 // extension when it holds ".sst" (the original cached "<name>.tga"/"<name>.sst" and loaded those files; the stems
 // are the files its open-format lookup read in their place). "textures\x" and "textures\x.sst" share one texture,
-// as they shared the cached "textures\x.sst" before.
+// as they shared the cached "textures\x.sst" before. (ee_ge managers.rs, texture_stem)
 static UString GETextureStem(const UString& inName)
 {
-    if (inName.FindBackwards(".sst", -1) == inName.GetLength())
-        return inName;
     const char* theName = inName;
-    const char* theFile = theName;
-    for (const char* p = theName; *p; p++)
-        if (*p == '\\' || *p == '/')
-            theFile = p + 1;
-    const char* theDot = strrchr(theFile, '.');
-    if (theDot == NULL)
-        return inName;
-    std::string theStem(theName, theDot - theName);
+    std::string theStem(theName, ee_ge_texture_stem(theName));
     return UString(theStem.c_str());
 }
 
-// port: the texture pack (SetTexturePack). The directory stays set when the pack is turned off, so a texture loaded
-// from it is reloaded from it (RefreshAllTextures).
-static char sTexturePackDirectory[64];      // "textures-4x\\" (with its separator), "" before the first SetTexturePack
-static bool sTexturePackEnabled = false;
-static long sTexturePackScaleShift = 0;      // the pack's files are 1 << this times the originals' size
-static long sTexturePackMipLevelsToDrop = 0;
-
+// port: the texture pack (SetTexturePack): its settings live in Rust (ee_ge managers.rs, TexturePack). The directory
+// stays set when the pack is turned off, so a texture loaded from it is reloaded from it (RefreshAllTextures).
 void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
 {
-    sTexturePackEnabled = inDirectory != NULL && inDirectory[0] != '\0'
-                          && strlen(inDirectory) + 2 <= sizeof(sTexturePackDirectory);
-    if (sTexturePackEnabled)
-        sprintf(sTexturePackDirectory, "%s\\", inDirectory);
-    sTexturePackScaleShift = inScaleShift > 0 ? inScaleShift : 0;
-    sTexturePackMipLevelsToDrop = inMipLevelsToDrop > 0 ? inMipLevelsToDrop : 0;
-    if (sTexturePackMipLevelsToDrop > sTexturePackScaleShift)
-        sTexturePackMipLevelsToDrop = sTexturePackScaleShift;
+    ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop);
 }
 
 // The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\"
 // (or no pack directory), and for the pictures the game reads as data (their pixels are values, not art; they are
-// read by GESurface::LoadPNG, never the pack, but are refused here too)
-static bool GETexturePackName(const UString& inName, UString& outName)
+// read by GESurface::LoadPNG, never the pack, but are refused here too). inEnabledOnly: false too while the pack is off
+static bool GETexturePackName(const UString& inName, UString& outName, bool inEnabledOnly = false)
 {
-    static const char kTextures[] = "textures\\";
-    static const char* const kDataPictures[] = {"colorpalette", "waterpalette", "volcano"};
-    const char* theName = inName;
-    if (sTexturePackDirectory[0] == '\0' || strlen(theName) <= sizeof(kTextures) - 1
-        || PlatStrNICmp(theName, kTextures, sizeof(kTextures) - 1) != 0)
+    char theBuffer[1024];
+    if (!ee_ge_texpack_name(inName, inEnabledOnly, theBuffer, sizeof(theBuffer)))
         return false;
-    const char* theFile = theName + sizeof(kTextures) - 1;
-    for (size_t i = 0; i < sizeof(kDataPictures) / sizeof(kDataPictures[0]); i++) {
-        size_t theLength = strlen(kDataPictures[i]);
-        if (PlatStrNICmp(theFile, kDataPictures[i], theLength) == 0
-            && (theFile[theLength] == '\0' || theFile[theLength] == '.'))
-            return false;
-    }
-    outName = UString(sTexturePackDirectory) + UString(theFile);
+    outName = UString(theBuffer);
     return true;
 }
 
 bool GETextureManager::GetTexturePackName(const UString& inName, UString& outName)
 {
-    return sTexturePackEnabled && GETexturePackName(inName, outName);
+    return GETexturePackName(inName, outName, true);
 }
 
 long GETextureManager::GetTexturePackLogicalShift()
 {
-    return sTexturePackScaleShift - sTexturePackMipLevelsToDrop;
+    return ee_ge_texpack_logical_shift();
 }
 
 long GETextureManager::GetTexturePackMipLevelsToDrop()
 {
-    return sTexturePackMipLevelsToDrop;
+    return ee_ge_texpack_mip_levels_to_drop();
 }
 
 // A texture just loaded from the pack with inMipLevels more dropped than the caller asked: its two sizes (the
@@ -112,12 +82,21 @@ long GETextureManager::GetTexturePackMipLevelsToDrop()
 // 2D code computes the original's size as GetWidth() << GetNumMipLevelsToDrop())
 void GETextureManager::SetTexturePackSizes(GETexture* inTexture, long inMipLevels)
 {
+    unsigned long theShift;
     inTexture->mIsFromTexturePack = true;
     inTexture->mTexturePackMipLevels = inMipLevels;
-    inTexture->mNumMipLevelsToDrop = (long)inTexture->mNumMipLevelsToDrop > inMipLevels
-                                         ? inTexture->mNumMipLevelsToDrop - inMipLevels : 0;
-    long theShift = sTexturePackScaleShift - inMipLevels;
-    inTexture->SetLogicalShift(theShift > 0 ? (unsigned long)theShift : 0);
+    ee_ge_texpack_sizes(inTexture->mNumMipLevelsToDrop, inMipLevels, &inTexture->mNumMipLevelsToDrop, &theShift);
+    inTexture->SetLogicalShift(theShift);
+}
+
+// The surface description a texture description asks for (its depth, format and alpha; the rest copied)
+static void GESurfaceDescriptionFor(const GETextureDescription& inDescription, GESurfaceDescription& outDescription)
+{
+    ee_ge_texture_surface_format(inDescription.mPixelDepth, inDescription.mHasAlpha, &outDescription.mPixelDepth,
+                                 &outDescription.mPixelFormat, &outDescription.mNoAlpha);
+    outDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
+    outDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
+    outDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
 }
 
 // GEFindTextureFile for a cached texture's name: in the pack when it was loaded from there (it falls back to the
@@ -185,27 +164,18 @@ GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureD
         // port: the texture pack's file first when the description allows it (cached under the original's name)
         bool theFromPack = false;
         UString thePackName;
-        if (inDescription.mUseTexturePack && sTexturePackEnabled && GETexturePackName(theName, thePackName))
+        if (inDescription.mUseTexturePack && GETexturePackName(theName, thePackName, true))
             theFromPack = GEFindTextureFile(this->mTexturePath, thePackName, theFile) == kErrorOK;
         theResult = theFromPack ? kErrorOK : GEFindTextureFile(this->mTexturePath, theName, theFile);
         if (theResult == kErrorOK) {
-            if (inDescription.mPixelDepth == 16) {
-                theSurfaceDescription.mPixelDepth = 16;
-                theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
-            } else {
-                theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
-                theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
-                theSurfaceDescription.mPixelDepth = 32;
-            }
-            theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
-            theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
-            theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
+            GESurfaceDescriptionFor(inDescription, theSurfaceDescription);
             theTexture = new GETexture(this);
             // port: the pack's file is drawn smaller by dropping more MIP levels (on top of the caller's); it
             // gets MIP levels when it is bigger than its logical size, so it can be drawn at that size
-            long thePackDrop = theFromPack ? sTexturePackMipLevelsToDrop : 0;
-            long theDrop = inDescription.mNumMipLevelsToDrop + thePackDrop;
-            bool theMIPMaps = inDescription.mCreateMIPMaps || (theFromPack && sTexturePackScaleShift > thePackDrop);
+            long theDrop;
+            bool theMIPMaps;
+            long thePackDrop = ee_ge_texpack_load_plan(inDescription.mCreateMIPMaps, inDescription.mNumMipLevelsToDrop,
+                                                       theFromPack, &theDrop, &theMIPMaps);
             if (theTexture->Load(theFile, theSurfaceDescription, this->mScreen, theMIPMaps, theDrop,
                                  inDescription.mFrameFormat) == kErrorOK) {
                 if (theFromPack)
@@ -233,12 +203,12 @@ GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureD
 // Wraps a surface in a new managed texture, named by a running counter, with modulate blending
 GETexture* GETextureManager::MakeTexture(GESurface* inSurface)
 {
-    UString theName;
+    char theName[64];
     GETexture* theTexture;
     this->mCriticalSection->Enter();
     theTexture = new GETexture(inSurface, this);
-    sprintf(theName, "GETextureManager::MakeTexture(%ld)", sTextureNumber++);
-    this->mTextures[theName] = theTexture;
+    ee_ge_texman_made_name(theName, sizeof(theName));
+    this->mTextures[UString(theName)] = theTexture;
     theTexture->SetStageAlphaMode(kStageOpModulate, -1);
     theTexture->SetStageColorMode(kStageOpModulate, -1);
     theTexture->SetStageMinFilterMode(1, -1);
@@ -275,17 +245,7 @@ long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescr
         theTexture = theIter->second;
         theResult = GEFindCachedTextureFile(this->mTexturePath, theIter->first, theTexture->mIsFromTexturePack, theFile);
         if (theResult == kErrorOK) {
-            if (inDescription.mPixelDepth == 16) {
-                theSurfaceDescription.mPixelDepth = 16;
-                theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
-            } else {
-                theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
-                theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
-                theSurfaceDescription.mPixelDepth = 32;
-            }
-            theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
-            theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
-            theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
+            GESurfaceDescriptionFor(inDescription, theSurfaceDescription);
             this->mMemoryFootprint -= theTexture->GetAllocatedSize();
             // port: a pack texture keeps its file, extra drop and MIP levels (SetTexturePackSizes)
             bool theFromPack = theTexture->mIsFromTexturePack;
@@ -385,12 +345,14 @@ long GETextureManager::RemoveAllTextures()
     this->mCriticalSection->Enter();
     for (theIter = this->mTextures.begin(); theIter != this->mTextures.end();) {
         theTexture = theIter->second;
-        if (theTexture->mReferenceCount == 1) {
+        bool theRemove;
+        long theDecision = ee_ge_manager_remove_decision(theTexture->mReferenceCount, &theRemove);
+        if (theRemove) {
             this->mMemoryFootprint -= theTexture->GetAllocatedSize();
             theTexture->UReferenceCounter::Dereference();
             theIter = this->mTextures.erase(theIter);
         } else {
-            theResult = 5;
+            theResult = theDecision;
             theIter++;
         }
     }
@@ -407,13 +369,13 @@ long GETextureManager::RemoveTexture(GETexture* inTexture)
     this->mCriticalSection->Enter();
     for (theIter = this->mTextures.begin(); theIter != this->mTextures.end(); theIter++)
         if (theIter->second == inTexture) {
-            if (inTexture->mReferenceCount == 1) {
+            bool theRemove;
+            theResult = ee_ge_manager_remove_decision(inTexture->mReferenceCount, &theRemove);
+            if (theRemove) {
                 this->mMemoryFootprint -= inTexture->GetAllocatedSize();
                 inTexture->UReferenceCounter::Dereference();
                 theIter = this->mTextures.erase(theIter);
-                theResult = kErrorOK;
-            } else
-                theResult = 5;
+            }
             break;
         }
     this->mCriticalSection->Leave();
