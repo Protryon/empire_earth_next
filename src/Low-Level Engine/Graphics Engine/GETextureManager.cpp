@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <map>
+#include <string>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -27,12 +28,27 @@
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GERenderState.h"
-#include "GEOpenFormats.h"   // GEFindTextureFile: a texture's .png in place of its .tga/.sst
+#include "GEOpenFormats.h"   // GEFindTextureFile: a texture's PNG frames
+#include "rust/ee_rust.h"       // ee_of_texture_free
 static unsigned long sTextureNumber = 1;    // 0x100d9ca8: appended to made textures' names (provisional name)
-// Release-build trace of a texture file that failed to load or close: compiled out, but its arguments (the file's
-// volume, directory and name) are still evaluated. GEModelManager.cpp has the same shape (provisional name).
-inline void GEReportTextureFile(const UString& inVolume, const UString& inDirectory, const UString& inFile)
+// port (D9): a texture's cache name, which is also the stem of its PNG files: the name as given, or without its last
+// extension when it holds ".sst" (the original cached "<name>.tga"/"<name>.sst" and loaded those files; the stems
+// are the files its open-format lookup read in their place). "textures\x" and "textures\x.sst" share one texture,
+// as they shared the cached "textures\x.sst" before.
+static UString GETextureStem(const UString& inName)
 {
+    if (inName.FindBackwards(".sst", -1) == inName.GetLength())
+        return inName;
+    const char* theName = inName;
+    const char* theFile = theName;
+    for (const char* p = theName; *p; p++)
+        if (*p == '\\' || *p == '/')
+            theFile = p + 1;
+    const char* theDot = strrchr(theFile, '.');
+    if (theDot == NULL)
+        return inName;
+    std::string theStem(theName, theDot - theName);
+    return UString(theStem.c_str());
 }
 
 // port: the texture pack (SetTexturePack). The directory stays set when the pack is turned off, so a texture loaded
@@ -54,9 +70,9 @@ void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift
         sTexturePackMipLevelsToDrop = sTexturePackScaleShift;
 }
 
-// The pack's name of a texture: "textures\x.sst" -> "textures-4x\x.sst"; false for a name outside "textures\"
+// The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\"
 // (or no pack directory), and for the pictures the game reads as data (their pixels are values, not art; they are
-// read through GEFindTargaFile, never the pack, but are refused here too)
+// read by GESurface::LoadPNG, never the pack, but are refused here too)
 static bool GETexturePackName(const UString& inName, UString& outName)
 {
     static const char kTextures[] = "textures\\";
@@ -106,14 +122,13 @@ void GETextureManager::SetTexturePackSizes(GETexture* inTexture, long inMipLevel
 
 // GEFindTextureFile for a cached texture's name: in the pack when it was loaded from there (it falls back to the
 // original when the pack's file is gone)
-static long GEFindCachedTextureFile(FSPath* inPath, const UString& inName, bool inFromPack, FSFileSpec*& outFile,
-                                    bool& outIsOpenFormat)
+static long GEFindCachedTextureFile(FSPath* inPath, const UString& inName, bool inFromPack, EeOfTexture*& outTexture)
 {
     UString thePackName;
     if (inFromPack && GETexturePackName(inName, thePackName)
-        && GEFindTextureFile(inPath, thePackName, outFile, outIsOpenFormat) == kErrorOK)
+        && GEFindTextureFile(inPath, thePackName, outTexture) == kErrorOK)
         return kErrorOK;
-    return GEFindTextureFile(inPath, inName, outFile, outIsOpenFormat);
+    return GEFindTextureFile(inPath, inName, outTexture);
 }
 
 //
@@ -153,108 +168,61 @@ void GETextureManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 }
 
 // FUNCTION: LLE 0x10033cd4
-// Returns the named texture (.tga first, then .sst), loading and caching it from the search path if needed;
-// NULL if it cannot be found or loaded
-// NEAR: frame slots only (the original puts theTGAName at -0x3c and theFoundName at -0x2c, ours the reverse);
-// declaration orders of the function-scope locals tried
+// Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
+// name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
 GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureDescription& inDescription)
 {
     GESurfaceDescription theSurfaceDescription;
-    FSFileSpec* theFile = NULL;
+    EeOfTexture* theFile = NULL;
     GETexture* theTexture = NULL;
-    UString theFoundName;
-    bool theIsSST;
     long theResult;
     this->mCriticalSection->Enter();
-    theIsSST = false;
-    if (inName.FindBackwards(".sst", -1) != inName.GetLength())
-        theIsSST = true;
-    UString theTGAName = inName + ".tga";
-    UString theSSTName(inName);
-    if (theIsSST) {
-        theSSTName = inName;
-        std::map<UString, GETexture*>::iterator theIter = this->mTextures.find(theSSTName);
-        if (theIter != this->mTextures.end())
-            theTexture = theIter->second;
-    } else {
-        std::map<UString, GETexture*>::iterator theIter = this->mTextures.find(theTGAName);
-        if (theIter != this->mTextures.end())
-            theTexture = theIter->second;
-        else {
-            theSSTName = inName + ".sst";
-            theIter = this->mTextures.find(theSSTName);
-            if (theIter != this->mTextures.end())
-                theTexture = theIter->second;
-        }
-    }
+    UString theName = GETextureStem(inName);
+    std::map<UString, GETexture*>::iterator theIter = this->mTextures.find(theName);
+    if (theIter != this->mTextures.end())
+        theTexture = theIter->second;
     if (theTexture == NULL) {
-        // a <name>.png on the path comes first (served as .sst bytes, cached under the .sst name); port: the texture
-        // pack's file first when the description allows it (cached under the original's name)
-        bool theIsOpen = false;
+        // port: the texture pack's file first when the description allows it (cached under the original's name)
         bool theFromPack = false;
-        UString thePackTGAName, thePackSSTName;
-        theResult = kErrorNotFound;
-        if (inDescription.mUseTexturePack && sTexturePackEnabled && GETexturePackName(theTGAName, thePackTGAName)
-            && GETexturePackName(theSSTName, thePackSSTName)) {
-            if (!theIsSST && GEFindTextureFile(this->mTexturePath, thePackTGAName, theFile, theIsOpen) == kErrorOK) {
-                theFoundName = theIsOpen ? theSSTName : theTGAName;
-                theResult = kErrorOK;
-            } else if (GEFindTextureFile(this->mTexturePath, thePackSSTName, theFile, theIsOpen) == kErrorOK) {
-                theFoundName = theSSTName;
-                theResult = kErrorOK;
-            }
-            theFromPack = theResult == kErrorOK;
-        }
-        if (theFromPack)
-            ;
-        else if (!theIsSST && GEFindTextureFile(this->mTexturePath, theTGAName, theFile, theIsOpen) == kErrorOK) {
-            theFoundName = theIsOpen ? theSSTName : theTGAName;
-            theResult = kErrorOK;
-        } else {
-            theResult = GEFindTextureFile(this->mTexturePath, theSSTName, theFile, theIsOpen);
-            theFoundName = theSSTName;
-        }
+        UString thePackName;
+        if (inDescription.mUseTexturePack && sTexturePackEnabled && GETexturePackName(theName, thePackName))
+            theFromPack = GEFindTextureFile(this->mTexturePath, thePackName, theFile) == kErrorOK;
+        theResult = theFromPack ? kErrorOK : GEFindTextureFile(this->mTexturePath, theName, theFile);
         if (theResult == kErrorOK) {
-            if (theFile->Open(kFileAccessRead) == kErrorOK) {
-                if (inDescription.mPixelDepth == 16) {
-                    theSurfaceDescription.mPixelDepth = 16;
-                    theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
-                } else {
-                    theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
-                    theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
-                    theSurfaceDescription.mPixelDepth = 32;
-                }
-                theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
-                theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
-                theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
-                theTexture = new GETexture(this);
-                // port: the pack's file is drawn smaller by dropping more MIP levels (on top of the caller's); it
-                // gets MIP levels when it is bigger than its logical size, so it can be drawn at that size
-                long thePackDrop = theFromPack ? sTexturePackMipLevelsToDrop : 0;
-                long theDrop = inDescription.mNumMipLevelsToDrop + thePackDrop;
-                bool theMIPMaps = inDescription.mCreateMIPMaps || (theFromPack && sTexturePackScaleShift > thePackDrop);
-                if (theTexture->Load(*theFile, theSurfaceDescription, this->mScreen, theMIPMaps,
-                                     theDrop, inDescription.mFrameFormat) == kErrorOK) {
-                    if (theFromPack)
-                        this->SetTexturePackSizes(theTexture, thePackDrop);
-                    if (getenv("EE_TEXTURE_PACK_LOG") && theFromPack)   // port: the test's evidence (posix_game.py)
-                        fprintf(stderr, "texture pack: %s logical %lux%lu pixels %lux%lu (%ld MIP levels dropped)\n",
-                                (const char*)theFoundName, theTexture->GetWidth(), theTexture->GetHeight(),
-                                theTexture->GetSurface()->GetPixelWidth(), theTexture->GetSurface()->GetPixelHeight(),
-                                theDrop);
-                    this->mTextures[theFoundName] = theTexture;
-                    this->mMemoryFootprint += theTexture->GetAllocatedSize();
-                    theTexture->mIsManaged = true;
-                } else {
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-                    theTexture->UReferenceCounter::Dereference();
-                    theTexture = NULL;
-                }
-                if (theFile->Close() != kErrorOK)
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            } else
-                GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            delete theFile;
+            if (inDescription.mPixelDepth == 16) {
+                theSurfaceDescription.mPixelDepth = 16;
+                theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
+            } else {
+                theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
+                theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
+                theSurfaceDescription.mPixelDepth = 32;
+            }
+            theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
+            theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
+            theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
+            theTexture = new GETexture(this);
+            // port: the pack's file is drawn smaller by dropping more MIP levels (on top of the caller's); it
+            // gets MIP levels when it is bigger than its logical size, so it can be drawn at that size
+            long thePackDrop = theFromPack ? sTexturePackMipLevelsToDrop : 0;
+            long theDrop = inDescription.mNumMipLevelsToDrop + thePackDrop;
+            bool theMIPMaps = inDescription.mCreateMIPMaps || (theFromPack && sTexturePackScaleShift > thePackDrop);
+            if (theTexture->Load(theFile, theSurfaceDescription, this->mScreen, theMIPMaps, theDrop,
+                                 inDescription.mFrameFormat) == kErrorOK) {
+                if (theFromPack)
+                    this->SetTexturePackSizes(theTexture, thePackDrop);
+                if (getenv("EE_TEXTURE_PACK_LOG") && theFromPack)   // port: the test's evidence (posix_game.py)
+                    fprintf(stderr, "texture pack: %s logical %lux%lu pixels %lux%lu (%ld MIP levels dropped)\n",
+                            (const char*)theName, theTexture->GetWidth(), theTexture->GetHeight(),
+                            theTexture->GetSurface()->GetPixelWidth(), theTexture->GetSurface()->GetPixelHeight(),
+                            theDrop);
+                this->mTextures[theName] = theTexture;
+                this->mMemoryFootprint += theTexture->GetAllocatedSize();
+                theTexture->mIsManaged = true;
+            } else {
+                theTexture->UReferenceCounter::Dereference();
+                theTexture = NULL;
+            }
+            ee_of_texture_free(theFile);
         }
     }
     this->mCriticalSection->Leave();
@@ -292,65 +260,47 @@ long GETextureManager::PromoteTexture(GETexture* inTexture)
 }
 
 // FUNCTION: LLE 0x10034018
-// Reloads an already cached texture from its file (.tga or .sst name), updating the memory footprint
+// Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
+// looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
 long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
 {
     GESurfaceDescription theSurfaceDescription;
-    FSFileSpec* theFile = NULL;
-    UString theFoundName;
+    EeOfTexture* theFile = NULL;
     GETexture* theTexture;
     long theResult;
     std::map<UString, GETexture*>::iterator theIter;
     this->mCriticalSection->Enter();
-    UString theTGAName = inName + ".tga";
-    theIter = this->mTextures.find(theTGAName);
-    if (theIter != this->mTextures.end())
-        theFoundName = theTGAName;
-    else {
-        UString theSSTName = inName + ".sst";
-        theIter = this->mTextures.find(theSSTName);
-        if (theIter != this->mTextures.end())
-            theFoundName = theSSTName;
-    }
+    theIter = this->mTextures.find(inName);
     if (theIter != this->mTextures.end()) {
         theTexture = theIter->second;
-        bool theIsOpen;
-        theResult = GEFindCachedTextureFile(this->mTexturePath, theFoundName, theTexture->mIsFromTexturePack, theFile,
-                                            theIsOpen);
+        theResult = GEFindCachedTextureFile(this->mTexturePath, theIter->first, theTexture->mIsFromTexturePack, theFile);
         if (theResult == kErrorOK) {
-            theResult = theFile->Open(kFileAccessRead);
-            if (theResult == kErrorOK) {
-                if (inDescription.mPixelDepth == 16) {
-                    theSurfaceDescription.mPixelDepth = 16;
-                    theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
-                } else {
-                    theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
-                    theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
-                    theSurfaceDescription.mPixelDepth = 32;
-                }
-                theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
-                theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
-                theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
-                this->mMemoryFootprint -= theTexture->GetAllocatedSize();
-                // port: a pack texture keeps its file, extra drop and MIP levels (SetTexturePackSizes)
-                bool theFromPack = theTexture->mIsFromTexturePack;
-                long thePackDrop = theTexture->mTexturePackMipLevels;
-                theResult = theTexture->Load(*theFile, theSurfaceDescription, this->mScreen,
-                                             inDescription.mCreateMIPMaps || (theFromPack && theTexture->GetCreateMIPMaps()),
-                                             inDescription.mNumMipLevelsToDrop + thePackDrop,
-                                             inDescription.mFrameFormat);
-                if (theResult == kErrorOK && theFromPack)
-                    this->SetTexturePackSizes(theTexture, thePackDrop);
-                if (theResult == kErrorOK)
-                    this->mMemoryFootprint += theTexture->GetAllocatedSize();
-                else
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-                theResult = theFile->Close();
-                if (theResult != kErrorOK)
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            } else
-                GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            delete theFile;
+            if (inDescription.mPixelDepth == 16) {
+                theSurfaceDescription.mPixelDepth = 16;
+                theSurfaceDescription.mPixelFormat = inDescription.mHasAlpha ? 2 : 7;
+            } else {
+                theSurfaceDescription.mPixelFormat = kPixelFormatA8R8G8B8;
+                theSurfaceDescription.mNoAlpha = !inDescription.mHasAlpha;
+                theSurfaceDescription.mPixelDepth = 32;
+            }
+            theSurfaceDescription.mSurfaceVolatility = inDescription.mSurfaceVolatility;
+            theSurfaceDescription.mIs3DRenderable = inDescription.mIs3DRenderable;
+            theSurfaceDescription.mIsTransparencyEnabled = inDescription.mIsTransparencyEnabled;
+            this->mMemoryFootprint -= theTexture->GetAllocatedSize();
+            // port: a pack texture keeps its file, extra drop and MIP levels (SetTexturePackSizes)
+            bool theFromPack = theTexture->mIsFromTexturePack;
+            long thePackDrop = theTexture->mTexturePackMipLevels;
+            theResult = theTexture->Load(theFile, theSurfaceDescription, this->mScreen,
+                                         inDescription.mCreateMIPMaps || (theFromPack && theTexture->GetCreateMIPMaps()),
+                                         inDescription.mNumMipLevelsToDrop + thePackDrop,
+                                         inDescription.mFrameFormat);
+            if (theResult == kErrorOK && theFromPack)
+                this->SetTexturePackSizes(theTexture, thePackDrop);
+            if (theResult == kErrorOK)
+                this->mMemoryFootprint += theTexture->GetAllocatedSize();
+            // the original's file Close result (always kErrorOK for the in-memory file it read)
+            theResult = kErrorOK;
+            ee_of_texture_free(theFile);
         }
     } else
         theResult = 3;
@@ -359,7 +309,7 @@ long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescr
 }
 
 // FUNCTION: LLE 0x100341d9
-// Reloads every cached texture from its file (or recreates its surface when the file is gone),
+// Reloads every cached texture from its files (or recreates its surface when they are gone),
 // then reapplies the frames' saved stage settings to the whole texture; returns the last result
 // NEAR: inline budget (the original calls _Ptrit::operator+ out of line for every theFrames[i]; ours expands it
 // from the fifth statement of the second loop on); accessors instead of members tried. The while loop with
@@ -370,7 +320,7 @@ long GETextureManager::RefreshAllTextures()
     std::vector<GETexture*> theFrames;
     GESurfaceDescription theSurfaceDescription;
     std::map<UString, GETexture*>::iterator theIter;
-    FSFileSpec* theFile = NULL;
+    EeOfTexture* theFile = NULL;
     GETexture* theTexture;
     GESurface* theSurface;
     unsigned long i;
@@ -378,53 +328,45 @@ long GETextureManager::RefreshAllTextures()
     theIter = this->mTextures.begin();
     while (theIter != this->mTextures.end()) {
         theTexture = theIter->second;
-        bool theIsOpen;
-        if (GEFindCachedTextureFile(this->mTexturePath, theIter->first, theTexture->mIsFromTexturePack, theFile,
-                                    theIsOpen) == kErrorOK) {
-            theResult = theFile->Open(kFileAccessRead);
-            if (theResult == kErrorOK) {
-                theSurface = theTexture->GetSurface();
-                theSurfaceDescription.mPixelFormat = theSurface->GetPixelFormat();
-                theSurfaceDescription.mPixelDepth = theSurface->GetPixelDepth();
-                theSurfaceDescription.mSurfaceVolatility = theSurface->GetSurfaceVolatility();
-                theSurfaceDescription.mIs3DRenderable = theSurface->GetIs3DRenderable();
-                theSurfaceDescription.mIsTransparencyEnabled = theSurface->GetIsTransparencyEnabled();
-                if (theTexture->GetFrameCount() > 1) {
-                    if (theTexture->GetFrameCount() > theFrames.size())
-                        theFrames.resize(theTexture->GetFrameCount());
-                    for (i = 1; i < theTexture->GetFrameCount(); i++) {
-                        theFrames[i] = theTexture->GetFrameTexture(i);
-                        theFrames[i]->Reference();
-                    }
+        if (GEFindCachedTextureFile(this->mTexturePath, theIter->first, theTexture->mIsFromTexturePack, theFile)
+            == kErrorOK) {
+            theSurface = theTexture->GetSurface();
+            theSurfaceDescription.mPixelFormat = theSurface->GetPixelFormat();
+            theSurfaceDescription.mPixelDepth = theSurface->GetPixelDepth();
+            theSurfaceDescription.mSurfaceVolatility = theSurface->GetSurfaceVolatility();
+            theSurfaceDescription.mIs3DRenderable = theSurface->GetIs3DRenderable();
+            theSurfaceDescription.mIsTransparencyEnabled = theSurface->GetIsTransparencyEnabled();
+            if (theTexture->GetFrameCount() > 1) {
+                if (theTexture->GetFrameCount() > theFrames.size())
+                    theFrames.resize(theTexture->GetFrameCount());
+                for (i = 1; i < theTexture->GetFrameCount(); i++) {
+                    theFrames[i] = theTexture->GetFrameTexture(i);
+                    theFrames[i]->Reference();
                 }
-                // port: a pack texture with its extra drop, then its two sizes again (SetTexturePackSizes)
-                bool theFromPack = theTexture->mIsFromTexturePack;
-                long thePackDrop = theTexture->mTexturePackMipLevels;
-                if (theTexture->Load(*theFile, theSurfaceDescription, this->mScreen, theTexture->GetCreateMIPMaps(),
-                                     theTexture->GetNumMipLevelsToDrop() + thePackDrop,
-                                     theTexture->GetFrameFormat()) != kErrorOK)
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-                else if (theFromPack)
-                    this->SetTexturePackSizes(theTexture, thePackDrop);
-                if (theTexture->GetFrameCount() > 1) {
-                    for (i = 1; i < theTexture->GetFrameCount(); i++) {
-                        theTexture->SetStageAlphaMode(theFrames[i]->GetStage()->mAlphaMode, -1);
-                        theTexture->SetStageColorMode(theFrames[i]->GetStage()->mColorMode, -1);
-                        theTexture->SetStageMagFilterMode(theFrames[i]->GetStage()->mMagFilterMode, -1);
-                        theTexture->SetStageMinFilterMode(theFrames[i]->GetStage()->mMinFilterMode, -1);
-                        theTexture->SetStageMipFilterMode(theFrames[i]->GetStage()->mMipFilterMode, -1);
-                        theTexture->SetStageMipMapBias(theFrames[i]->GetStage()->mMipMapBias, -1);
-                        theTexture->SetStageTextureAddressingMode(theFrames[i]->GetStage()->mTextureAddressingMode,
-                                                                  -1);
-                        theFrames[i]->Dereference();
-                    }
+            }
+            // port: a pack texture with its extra drop, then its two sizes again (SetTexturePackSizes)
+            bool theFromPack = theTexture->mIsFromTexturePack;
+            long thePackDrop = theTexture->mTexturePackMipLevels;
+            if (theTexture->Load(theFile, theSurfaceDescription, this->mScreen, theTexture->GetCreateMIPMaps(),
+                                 theTexture->GetNumMipLevelsToDrop() + thePackDrop,
+                                 theTexture->GetFrameFormat()) == kErrorOK && theFromPack)
+                this->SetTexturePackSizes(theTexture, thePackDrop);
+            if (theTexture->GetFrameCount() > 1) {
+                for (i = 1; i < theTexture->GetFrameCount(); i++) {
+                    theTexture->SetStageAlphaMode(theFrames[i]->GetStage()->mAlphaMode, -1);
+                    theTexture->SetStageColorMode(theFrames[i]->GetStage()->mColorMode, -1);
+                    theTexture->SetStageMagFilterMode(theFrames[i]->GetStage()->mMagFilterMode, -1);
+                    theTexture->SetStageMinFilterMode(theFrames[i]->GetStage()->mMinFilterMode, -1);
+                    theTexture->SetStageMipFilterMode(theFrames[i]->GetStage()->mMipFilterMode, -1);
+                    theTexture->SetStageMipMapBias(theFrames[i]->GetStage()->mMipMapBias, -1);
+                    theTexture->SetStageTextureAddressingMode(theFrames[i]->GetStage()->mTextureAddressingMode,
+                                                              -1);
+                    theFrames[i]->Dereference();
                 }
-                theResult = theFile->Close();
-                if (theResult != kErrorOK)
-                    GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            } else
-                GEReportTextureFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-            delete theFile;
+            }
+            // the original's file Close result (always kErrorOK for the in-memory file it read)
+            theResult = kErrorOK;
+            ee_of_texture_free(theFile);
         } else
             theResult = theTexture->Recreate(this->mScreen);
         theIter++;

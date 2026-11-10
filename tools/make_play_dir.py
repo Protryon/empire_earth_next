@@ -6,12 +6,14 @@ converted for the build's player.
 
 OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
-  - the game data: Data (one loose tree: db tables as text, models as glTF, textures as PNG, the rest as shipped),
-    Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or the bundle
-    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing).
-    --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
-    folder tools/fetch_data.py unzipped them into. No
-    data.ssa and nothing of the original Empire Earth's install is needed or referenced;
+  - the game data: Data (one loose tree: db tables as text, models as glTF, textures and pictures as PNG, the rest
+    as shipped), Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or
+    the bundle made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when
+    missing). --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases,
+    or the folder tools/fetch_data.py unzipped them into. No data.ssa and nothing of the original Empire Earth's
+    install is needed or referenced. The game reads only the open forms (RUST_PLAN D9): a binary form an older
+    release still carries (a db .dat file, a .cem, .sst or .tga) is left out of OUT, and a tree made with the
+    retired --binary option is refused;
   - Data/Movies: every Bink movie (.bik) found in the --movies directories (an extracted retail disc, an installation
     that has Data\\Movies) converted to MPEG-1 (.mpg, tools/convert_movies.py, needs ffmpeg). Encodes are cached in
     build/play_cache/movies (keyed by file name and size), so a second play directory costs a copy. The build plays
@@ -62,8 +64,24 @@ def copy_data(data, out):
     made = out / "open_data.json"
     info = json.loads(made.read_text(encoding="utf-8")) if made.exists() else {}
     if info.get("binary"):
-        print("data: a --binary tree (db tables, models and textures in their binary forms)")
+        sys.exit(f"{data}: a --binary tree (the binary forms): the game reads only the open forms; "
+                 f"use a tree made by tools/open_data.py build")
     return info
+
+
+def drop_binary_forms(out):
+    """The binary forms in OUT/Data (an older release's db .dat files, a .cem that is no model) removed -> count"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # noqa: E402
+    data = out / "Data"
+    gone = [p for p in data.rglob("*") if p.is_file()
+            and open_data.binary_form("\\".join(p.relative_to(data).parts).lower())]
+    for p in gone:
+        p.unlink()
+    if gone:
+        print(f"data: {len(gone)} binary forms left out (the game reads only the open forms): "
+              f"{', '.join(p.relative_to(data).as_posix() for p in gone[:5])}{' ...' if len(gone) > 5 else ''}")
+    return len(gone)
 
 
 def movies(out, sources):
@@ -153,13 +171,14 @@ def main():
     for data in datas:
         print(f"game data from {data}", flush=True)
         info = copy_data(data, out) or info
+    drop_binary_forms(out)
     if a.posix_exe:
         posix_files(exe, out)
     else:
         shutil.copy2(exe, out / "EE-AOC.exe")
     count = movies(out, a.movies)
     (out / "play.json").write_bytes((json.dumps(dict(
-        exe=str(exe), data=[str(d) for d in datas], data_binary=bool(info.get("binary")), movies=count,
+        exe=str(exe), data=[str(d) for d in datas], movies=count,
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
     print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 

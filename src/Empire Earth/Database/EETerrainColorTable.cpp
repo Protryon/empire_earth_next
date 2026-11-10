@@ -34,7 +34,7 @@ EETerrainColorTable::EETerrainColorTable()
 }
 
 // FUNCTION: EXE 0x4daec4
-// Loads the terrain colours from the pixels of textures\ColorPalette.tga (16 per row); returns the texture load status
+// Loads the terrain colours from the pixels of textures\ColorPalette.png (16 per row); returns the texture load status
 long EETerrainColorTable::Load()
 {
     GESurfaceDescription theDescription;
@@ -54,11 +54,11 @@ long EETerrainColorTable::Load()
     long theResult = gRasterizer->GetScreen(gScreenIndex)->CreateSurface(theDescription, &theSurface);
     ESVERIFY_AT(theResult == keseOK, 76);
 
-    theFileName = UString("textures\\ColorPalette.tga");
-    theResult = GEFindTargaFile(gTextureManager->GetTexturePath(), theFileName, theFile);   // or its .png
+    theFileName = UString("textures\\ColorPalette.png");   // the original's .tga as PNG (RUST_PLAN D9)
+    theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
     ESVERIFY_AT(theResult == keseOK, 81);
     ESVERIFY_AT(theFile != NULL, 82);
-    theResult = theSurface->Load(*theFile, kImageFileTGA);
+    theResult = theSurface->Load(*theFile, kImageFilePNG);
     ESVERIFY_AT(theResult == keseOK, 84);
     if (theFile != NULL)
         delete theFile;

@@ -1,4 +1,4 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GEModelManager.h (RECONSTRUCTION). Creates, loads (.cem files through an
+// C:\EEX\Low-Level Engine\Graphics Engine\GEModelManager.h (RECONSTRUCTION). Creates, loads (glTF files through an
 // FSPath) and reference-counts GEModels by name. GEModelManager.cpp: 0x100206c7..0x10020d20.
 #ifndef LLE_GEMODELMANAGER_H
 #define LLE_GEMODELMANAGER_H

@@ -384,7 +384,8 @@ long EEUIBMapBackground::DrawBackground(const GERectangle& inRectangle)
 }
 
 // FUNCTION: EXE 0x6556e6
-// Loads the campaign map image (TGA or JPG) and cuts it into 256x256 textures, one per background cell
+// Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one
+// per background cell
 // The image comes from the saved game/scenario resources, else from the startup path
 long EEUIBMapBackground::LoadBackground()
 {
@@ -423,13 +424,13 @@ long EEUIBMapBackground::LoadBackground()
     }
     theExtension = theFile->GetFile().GetSubstring(theFile->GetFile().GetLength() - 4, 4);
     unsigned long theBits;
-    if (PlatStrICmp(theExtension, ".tga") == 0) {
-        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileTGA, theDescription.mWidth, theDescription.mHeight,
+    if (PlatStrICmp(theExtension, ".png") == 0) {
+        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFilePNG, theDescription.mWidth, theDescription.mHeight,
                                                       theBits);
         if (theResult != 0)
             goto done;
         theScreen->CreateSurface(theDescription, &theImage);
-        theResult = theImage->Load(*theFile, kImageFileTGA);
+        theResult = theImage->Load(*theFile, kImageFilePNG);
     } else {
         theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileJPG, theDescription.mWidth, theDescription.mHeight,
                                                       theBits);

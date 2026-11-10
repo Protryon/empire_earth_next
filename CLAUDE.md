@@ -83,17 +83,20 @@ The game reads one loose `Data` folder next to the exe:
 - db tables as text (CSV/YAML, with an `id` on every row);
 - the rules documents in `Data/db`: `combat.yaml`, `gameoptions.yaml`, `civbuilder.yaml`, `civpowers.yaml`,
   `aipersonalities.yaml`, `epochs.yaml`;
-- models as glTF, textures as PNG.
+- models as glTF, textures and the other pictures (pointers, palettes, volcano) as PNG.
+
+These open forms are all the game reads (docs/RUST_PLAN.md D9): no `.dat` db file, `.cem` model or `.sst`/`.tga`
+texture, and no fallback to one; a missing text table stops the game with its name. The converters below still read
+the binary forms of the two retail installs: that is where the open tree comes from.
 
 There is no `data.ssa` and no registry. Settings live in `config.yaml` next to the exe (`EE_CONFIG` overrides it).
 
 ```
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min
-python -I tools/open_data.py build build/open_data/tree-binary --binary   # same tree, binary forms unconverted
 python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but Data/db
 python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: Data/db (the tweakables)
 python -I tools/fetch_data.py [OUT] [--without textures-4x]      # pull the release parts into one folder (data/)
-python -I tools/open_data.py check build/open_data/tree
+python -I tools/open_data.py check build/open_data/tree        # also: no binary form in the tree
 python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...] [--movies DIR]   # exe + data + movies
 ```
 
@@ -124,16 +127,16 @@ Before merging or pushing any code change, all of these are required:
    must pass as well.
 3. `bash tools/gates.sh` (test profile; logs in `build/gates/`). It runs the fixture driver
    (`tools/harness/fixture_game.py`: the game's own UI fixture, telemetry and game log, the harness clock through
-   PlatSim; no record layout, mangled name or import hook). `EE_GATES_TREE_BINARY` / `EE_GATES_TREE_OPEN` name the
-   trees (default `build/open_data/tree-binary` and `tree`). The script ends `GATES PASS` when all of these pass:
-   - a tour on the binary tree and on the open tree: main menu, settings tabs, a random map, 120 s of play, the
-     rendering checks and the F3 input check. Pass: `RESULT PASS tour`;
-   - a seeded 2-AI Hard Small game to the time cap on both trees (`--time-factor 32 --pt-rate 40`). Pass:
+   PlatSim; no record layout, mangled name or import hook) on the open tree (`EE_GATES_TREE` names it, default
+   `build/open_data/tree`; there is no binary tree any more). The script ends `GATES PASS` when all of these pass:
+   - a tour: main menu, settings tabs, a random map, 120 s of play, the rendering checks and the F3 input check.
+     Pass: `RESULT PASS tour`;
+   - a seeded 2-AI Hard Small game to the time cap (`--time-factor 32 --pt-rate 40`). Pass:
      `RESULT PASS ai-game outcome time-cap` with both AI players alive (`alive_computers [2, 3]`; units
      e.g. `[0, 30, 34]`, player 1 being the idle human). Unit counts vary a little between runs.
    - The PT at the cap is the driver's poll (once a real second, about 1,300 PTs at 32 x), not the game: compare it
      only against the same build's spread. GX errors are in `summary.json` (`gx_errors`).
-   - `bash tools/gates.sh --legacy` still runs the debugger harness (`game_session.py`, about 40 minutes; pass:
+   - `bash tools/gates.sh --legacy` still runs the debugger harness (`game_session.py`, on the same open tree; pass:
      `STOP <windowed session complete> reached`, outcome `time-cap`) until it is retired.
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any

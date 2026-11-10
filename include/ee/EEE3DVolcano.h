@@ -32,7 +32,7 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x40 0x100bf7
     virtual long Step();                    // +0x4c 0x100c7e (growth, duration)
 
-    long BuildModel();                      // 0xfe79d (the terrain model from "textures\volcano.tga") (provisional name)
+    long BuildModel();                      // 0xfe79d (the terrain model from "textures\volcano.png") (provisional name)
 
     static const UString sData;             // "EEE3DVolcano-Data" (0x4e8d58; provisional name)
 

@@ -103,7 +103,7 @@ EEE3DVolcano::~EEE3DVolcano()
 
 // FUNCTION: EXE 0x4fe79d
 // Builds the volcano mesh over its area (each tile split 3x3, following the terrain, coloured by terrain and lighting
-// and blended into textures\Volcano.tga near the centre) and the cone heights from the image's alpha
+// and blended into textures\Volcano.png near the centre) and the cone heights from the image's alpha
 // NEAR: the locals' frame layout and statement order are not matched yet
 long EEE3DVolcano::BuildModel()
 {
@@ -170,11 +170,11 @@ long EEE3DVolcano::BuildModel()
     long theResult = gRasterizer->GetScreen(gScreenIndex)->CreateSurface(theDescription, &theSurface);
     ESVERIFY_AT(theResult == keseOK, 233);
 
-    theFileName = UString("textures\\Volcano.tga");
-    theResult = GEFindTargaFile(gTextureManager->GetTexturePath(), theFileName, theFile);   // or its .png
+    theFileName = UString("textures\\Volcano.png");   // the original's .tga as PNG (RUST_PLAN D9)
+    theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
     ESVERIFY_AT(theResult == keseOK, 238);
     ESVERIFY_AT(theFile != NULL, 239);
-    theSurface->Load(*theFile, kImageFileTGA);
+    theSurface->Load(*theFile, kImageFilePNG);
     ESVERIFY_AT(theResult == keseOK, 241);
     if (theFile != NULL)
         delete theFile;

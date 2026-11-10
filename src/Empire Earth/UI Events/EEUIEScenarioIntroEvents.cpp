@@ -138,13 +138,14 @@ UWideString EEUISCIFormManager::GetBriefing()
 }
 
 // FUNCTION: EXE 0x5e72e4
-// Opens the scenario's map picture (.jpg, else .tga) from Scenarios; returns whether one was found
+// Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
+// whether one was found
 bool EEUISCIFormManager::OpenMap()
 {
     UString theName;
     bool theResult = false;
     long theJPEG;
-    long theTarga;
+    long thePNG;
     if (this->mMap)
         delete this->mMap;
     this->mMap = NULL;
@@ -153,9 +154,9 @@ bool EEUISCIFormManager::OpenMap()
     theJPEG = EEOpenSaveGameFile(theName, "Scenarios\\", this->mMap);
     if (theJPEG != kErrorOK) {
         theName = this->mMediaStrings.mMapFile;
-        theName += ".tga";
-        theTarga = EEOpenSaveGameFile(theName, "Scenarios\\", this->mMap);
-        if (theTarga == kErrorOK)
+        theName += ".png";
+        thePNG = EEOpenSaveGameFile(theName, "Scenarios\\", this->mMap);
+        if (thePNG == kErrorOK)
             theResult = true;
     } else
         theResult = true;

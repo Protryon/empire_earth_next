@@ -1,5 +1,5 @@
-//! glTF -> .cem: the importer of GEOpenFormats.cpp (gltf.py `import_`, docs/MODEL_FORMATS.md 4.3), operation by
-//! operation. Floats are combined in double precision and rounded to f32 where the Python side rounds, so that the
+//! glTF -> the model the game stores: the importer of GEOpenFormats.cpp (gltf.py `import_`, docs/MODEL_FORMATS.md
+//! 4.3), operation by operation. Floats are combined in double precision and rounded to f32 where the Python side rounds, so that the
 //! three implementations give the same bytes; Rust's `f64 as f32` is a correctly rounded IEEE conversion on every
 //! target this builds for (no x87, no fused multiply-add).
 #![allow(clippy::needless_range_loop)]
@@ -11,6 +11,12 @@ use crate::cgltf::{
 };
 use crate::json::{self, Value};
 use crate::{fail, Failure};
+use ee_ge::model_store::{CemFrame, CemMaterial, CemModel, CemPolygons, Counts, SharedFrames};
+use ee_ge::types::{Ge3DPoint, GeVector};
+
+/// `kErrorOK` and `kErrorFailed` (`LowLevelEngineCore.h`).
+const OK: std::ffi::c_long = 0;
+const FAILED: std::ffi::c_long = 9;
 
 fn f32r(v: f64) -> f32 {
     v as f32
@@ -789,74 +795,11 @@ fn to4(v: Vec<f64>) -> [f64; 4] {
     [v[0], v[1], v[2], v[3]]
 }
 
-fn put_u32(out: &mut Vec<u8>, v: u32) {
-    out.extend_from_slice(&v.to_le_bytes());
-}
-
-fn put_floats(out: &mut Vec<u8>, v: &[f32]) {
-    for f in v {
-        out.extend_from_slice(&f.to_bits().to_le_bytes());
-    }
-}
-
-fn put_string(out: &mut Vec<u8>, s: &[u8]) {
-    let n = s.iter().position(|&c| c == 0).unwrap_or(s.len()); // UString::Save: up to the NUL
-    put_u32(out, n as u32 + 1);
-    out.extend_from_slice(&s[..n]);
-    out.push(0);
-}
-
-// cem.py write (exact=False): GEModel::Save's layout, version 2.0
-fn write_model(out: &mut Vec<u8>, m: &Model) {
-    out.extend_from_slice(b"SSMF");
-    out.extend_from_slice(&[2, 0, 0, 0]);
-    let fc = m.vertices.len();
-    put_u32(out, m.polygon_count);
-    put_u32(out, (m.vertices[0].len() / 8) as u32);
-    put_u32(out, m.tag_names.len() as u32);
-    put_u32(out, m.materials.len() as u32);
-    put_u32(out, fc as u32);
-    put_u32(out, m.children.len() as u32);
-    put_u32(out, m.lods.len() as u32);
-    put_string(out, &m.name);
-    put_floats(out, &m.center);
-    for lod in &m.lods {
-        put_u32(out, (lod.len() / 3) as u32);
-        for v in lod {
-            put_u32(out, *v);
-        }
-    }
-    for mat in &m.materials {
-        put_string(out, &mat.name);
-        put_u32(out, mat.texture_index);
-        for (first, count) in &mat.ranges {
-            put_u32(out, *first);
-            put_u32(out, *count);
-        }
-        put_u32(out, mat.vertex_start);
-        put_u32(out, mat.vertex_count);
-        put_string(out, &mat.texture);
-    }
-    for t in &m.tag_names {
-        put_string(out, t);
-    }
-    for f in 0..fc {
-        put_floats(out, std::slice::from_ref(&m.radii[f]));
-        put_floats(out, &m.vertices[f]);
-        put_floats(out, &m.tags[f]);
-        put_floats(out, &m.transforms[f]);
-        put_floats(out, &m.boxes[f]);
-    }
-    for c in &m.children {
-        write_model(out, c);
-    }
-}
-
 /// Reads an external buffer a glTF names (its uri, percent-decoded): the bytes, or `None` when it cannot be found.
 pub type Resolver<'r> = dyn FnMut(&[u8]) -> Option<Vec<u8>> + 'r;
 
-/// A .gltf or .glb -> the bytes of the .cem (version 2.0) the game would load in its place (MODEL_FORMATS.md 4.3).
-pub fn gltf_to_cem(input: &[u8], mut resolve: Option<&mut Resolver>) -> Result<Vec<u8>, Failure> {
+/// A .gltf or .glb -> the imported model (gltf.py `import_`).
+fn import(input: &[u8], mut resolve: Option<&mut Resolver>) -> Result<Model, Failure> {
     let Ok(mut d) = cgltf::parse(input) else { return fail("not a glTF 2.0 file") };
     for b in d.buffers.iter_mut() {
         let Some(uri) = b.uri.as_deref() else { continue };
@@ -935,10 +878,97 @@ pub fn gltf_to_cem(input: &[u8], mut resolve: Option<&mut Resolver>) -> Result<V
             importer.channels.insert((ch.target_node as usize - 1, ch.target_path), sampler);
         }
     }
-    let model = importer.import_model(root, correction.as_ref())?;
-    let mut out = Vec::new();
-    write_model(&mut out, &model);
-    Ok(out)
+    importer.import_model(root, correction.as_ref())
+}
+
+/// A .gltf or .glb -> the model `GEModel::StoreLoaded` stores (MODEL_FORMATS.md 4.3), with the frames the game
+/// shares (`shared`: frame -> offset, sorted by frame) mapped as the `.cem` reader mapped them.
+pub fn gltf_to_model(input: &[u8], resolve: Option<&mut Resolver>, shared: SharedFrames) -> Result<CemModel, Failure> {
+    let model = import(input, resolve)?;
+    let mut poisoned = false;
+    Ok(to_cem_model(&model, shared, &mut poisoned))
+}
+
+/// The model as the `.cem` reader (retired under D9) left it after reading the bytes the converter wrote for it
+/// before D9 (GEModel::Save's layout, version 2.0): the counts the reader refused (no polygons, vertices, materials or
+/// frames) fail the model before anything is stored, and since a failed sub-model put the file back where it
+/// started, every model after it in the file read the same bytes and failed the same way (`poisoned`). A later LOD
+/// stores whole triangles (the reader read its count, then three indices per triangle).
+fn to_cem_model(m: &Model, shared: SharedFrames, poisoned: &mut bool) -> CemModel {
+    let fc = m.vertices.len() as u32;
+    let counts = Counts {
+        polygon: m.polygon_count,
+        vertex: (m.vertices[0].len() / 8) as u32,
+        tag_point: m.tag_names.len() as u32,
+        material: m.materials.len() as u32,
+        frame: fc,
+        sub_model: m.children.len() as u32,
+        lod: m.lods.len() as u32,
+    };
+    if *poisoned || counts.polygon == 0 || counts.vertex == 0 || counts.material == 0 || counts.frame == 0 {
+        *poisoned = true;
+        return CemModel { result: FAILED, ..CemModel::default() };
+    }
+    let to_point = |v: &[f32]| Ge3DPoint { x: v[0], y: v[1], z: v[2] };
+    let lods = m
+        .lods
+        .iter()
+        .enumerate()
+        .map(|(i, lod)| {
+            let count = (lod.len() / 3) as u32;
+            CemPolygons { created: if i > 0 { Some(count) } else { None }, indices: lod[..3 * count as usize].to_vec() }
+        })
+        .collect();
+    let materials = m
+        .materials
+        .iter()
+        .map(|mat| {
+            let mut values = vec![mat.texture_index];
+            for &(first, count) in &mat.ranges {
+                values.push(first);
+                values.push(count);
+            }
+            values.push(mat.vertex_start);
+            values.push(mat.vertex_count);
+            CemMaterial { name: up_to_nul(&mat.name), values, texture_filename: up_to_nul(&mat.texture) }
+        })
+        .collect();
+    let frames = (0..fc as usize)
+        .map(|f| {
+            let v = m.vertices[f].as_chunks::<8>().0;
+            CemFrame {
+                radius: Some(m.radii[f]),
+                target: if shared.get(f as u32).is_some() { fc - 1 } else { f as u32 },
+                points: v.iter().map(|c| to_point(&c[0..3])).collect(),
+                normals: v.iter().map(|c| GeVector { x: c[3], y: c[4], z: c[5] }).collect(),
+                uvs: v.iter().map(|c| [c[6], c[7]]).collect(),
+                tag_points: m.tags[f].as_chunks::<3>().0.iter().map(|c| to_point(c)).collect(),
+                transform: m.transforms[f].to_vec(),
+                bbox: m.boxes[f].to_vec(),
+            }
+        })
+        .collect();
+    let mut out = CemModel {
+        result: OK,
+        counts: Some(counts),
+        name: up_to_nul(&m.name),
+        center: m.center.to_vec(),
+        lods,
+        materials,
+        tag_point_names: m.tag_names.iter().map(|t| up_to_nul(t)).collect(),
+        frames,
+        sub_models: Vec::new(),
+    };
+    for c in &m.children {
+        let sub = to_cem_model(c, shared, poisoned);
+        out.sub_models.push(sub);
+    }
+    out
+}
+
+/// A name as `UString::Save` writes it and `UString::Load` reads it back: up to its first NUL.
+fn up_to_nul(s: &[u8]) -> Vec<u8> {
+    s[..s.iter().position(|&c| c == 0).unwrap_or(s.len())].to_vec()
 }
 
 #[cfg(test)]
@@ -989,51 +1019,13 @@ mod tests {
         .into_bytes()
     }
 
-    fn u32_at(b: &[u8], at: usize) -> u32 {
-        u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]])
-    }
-
-    fn f32_at(b: &[u8], at: usize) -> f32 {
-        f32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]])
-    }
-
-    #[test]
-    fn a_triangle_with_a_morph_target_and_a_tag() {
-        let cem = gltf_to_cem(&triangle_gltf(), None).unwrap();
-        assert_eq!(&cem[..4], b"SSMF");
-        assert_eq!(&cem[4..8], &[2, 0, 0, 0]);
-        // polygons, vertices, tags, materials, frames, children, lods
-        assert_eq!(u32_at(&cem, 8), 1);
-        assert_eq!(u32_at(&cem, 12), 3);
-        assert_eq!(u32_at(&cem, 16), 1);
-        assert_eq!(u32_at(&cem, 20), 1);
-        assert_eq!(u32_at(&cem, 24), 2);
-        assert_eq!(u32_at(&cem, 28), 0);
-        assert_eq!(u32_at(&cem, 32), 1);
-        // the name lost its .001 suffix: 4-byte length + "box\0", then the center
-        assert_eq!(u32_at(&cem, 36), 4);
-        assert_eq!(&cem[40..44], b"box\0");
-        // the centre is computed from the two frames' boxes: frame 1 moves vertex 0 by +0.1 in x
-        let center = f32_at(&cem, 44);
-        assert_eq!(center, 0.5);
-    }
-
-    #[test]
-    fn materials_use_cp1252_and_the_uri_stem() {
-        let cem = gltf_to_cem(&triangle_gltf(), None).unwrap();
-        // the material block starts after header + name + center + lod (1 triangle: count + 3 indices)
-        let mat = 44 + 12 + 4 + 12;
-        assert_eq!(u32_at(&cem, mat), 3); // "m\xe9\0"
-        assert_eq!(&cem[mat + 4..mat + 7], &[b'm', 0xe9, 0]);
-        assert_eq!(u32_at(&cem, mat + 7), 7); // ee_textureIndex
-        let name_len = u32_at(&cem, mat + 7 + 4 + 8 + 8);
-        assert_eq!(name_len, 6); // "tex a\0"
-        assert_eq!(&cem[mat + 7 + 4 + 8 + 8 + 4..mat + 7 + 4 + 8 + 8 + 10], b"tex a\0");
+    fn refused(doc: &[u8], resolve: Option<&mut Resolver>) -> Vec<u8> {
+        gltf_to_model(doc, resolve, SharedFrames(&[])).unwrap_err().0
     }
 
     #[test]
     fn broken_files_are_refused_with_the_cpp_messages() {
-        let fails = |doc: &[u8]| gltf_to_cem(doc, None).unwrap_err().0;
+        let fails = |doc: &[u8]| refused(doc, None);
         assert_eq!(fails(b"not json at all"), b"not a glTF 2.0 file".to_vec());
         assert_eq!(fails(br#"{"nodes":[]}"#), b"no node with a mesh".to_vec());
         let mut none = triangle_gltf();
@@ -1048,10 +1040,7 @@ mod tests {
         let doc = String::from_utf8(triangle_gltf())
             .unwrap()
             .replace("[1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1]", "[0.7,0.7,0,0,-0.7,0.7,0,0,0,0,1,0,0,0,0,1]");
-        assert_eq!(
-            gltf_to_cem(doc.as_bytes(), None).unwrap_err().0,
-            b"the transform above the root model is not an axis change"
-        );
+        assert_eq!(refused(doc.as_bytes(), None), b"the transform above the root model is not an axis change");
     }
 
     #[test]
@@ -1062,23 +1051,20 @@ mod tests {
             asked.push(uri.to_vec());
             Some(vec![1, 2, 3])
         };
-        let e = gltf_to_cem(doc, Some(&mut resolve)).unwrap_err();
+        let e = refused(doc, Some(&mut resolve));
         // the position accessor has one component per element: 3 floats, so one vertex; indices absent: 1 triangle index
-        assert_eq!(e.0, b"an index count that is not a multiple of 3".to_vec());
+        assert_eq!(e, b"an index count that is not a multiple of 3".to_vec());
         assert_eq!(asked, vec![b"a b.bin".to_vec()]);
     }
 
     #[test]
     fn missing_and_short_external_buffers() {
         let doc = br#"{"buffers":[{"byteLength":3,"uri":"x.bin"}]}"#;
-        assert_eq!(gltf_to_cem(doc, None).unwrap_err().0, b"buffer \"x.bin\" not found".to_vec());
+        assert_eq!(refused(doc, None), b"buffer \"x.bin\" not found".to_vec());
         let mut none = |_: &[u8]| -> Option<Vec<u8>> { None };
-        assert_eq!(gltf_to_cem(doc, Some(&mut none)).unwrap_err().0, b"buffer \"x.bin\" not found".to_vec());
+        assert_eq!(refused(doc, Some(&mut none)), b"buffer \"x.bin\" not found".to_vec());
         let mut short = |_: &[u8]| -> Option<Vec<u8>> { Some(vec![1]) };
-        assert_eq!(
-            gltf_to_cem(doc, Some(&mut short)).unwrap_err().0,
-            b"buffer \"x.bin\" is shorter than its byteLength".to_vec()
-        );
+        assert_eq!(refused(doc, Some(&mut short)), b"buffer \"x.bin\" is shorter than its byteLength".to_vec());
     }
 
     #[test]
@@ -1118,9 +1104,85 @@ mod tests {
     }
 
     #[test]
-    fn the_string_writer_stops_at_a_nul() {
-        let mut out = Vec::new();
-        put_string(&mut out, b"ab\0cd");
-        assert_eq!(out, vec![3, 0, 0, 0, b'a', b'b', 0]);
+    fn the_stored_model_of_a_triangle() {
+        let m = gltf_to_model(&triangle_gltf(), None, SharedFrames(&[])).unwrap();
+        assert_eq!(m.result, OK);
+        let c = m.counts.unwrap();
+        assert_eq!((c.polygon, c.vertex, c.tag_point, c.material, c.frame, c.sub_model, c.lod), (1, 3, 1, 1, 2, 0, 1));
+        assert_eq!(m.name, b"box".to_vec());
+        assert_eq!(m.center[0], 0.5);
+        assert_eq!(m.lods.len(), 1);
+        assert_eq!(m.lods[0].created, None);
+        assert_eq!(m.lods[0].indices, vec![0, 1, 2]);
+        // texture index, (start, length) of LOD 0, vertex start, vertex length
+        assert_eq!(m.materials[0].values, vec![7, 0, 1, 0, 3]);
+        assert_eq!(m.materials[0].name, vec![b'm', 0xe9]);
+        assert_eq!(m.materials[0].texture_filename, b"tex a".to_vec());
+        assert_eq!(m.tag_point_names, vec![b"tag".to_vec()]);
+        assert_eq!(m.frames.len(), 2);
+        assert_eq!((m.frames[0].target, m.frames[1].target), (0, 1));
+        assert_eq!(m.frames[1].points[0].x, 0.1);
+        assert_eq!(m.frames[0].normals[0].z, 1.0);
+        assert_eq!(m.frames[0].uvs[1], [1.0, 0.0]);
+        assert_eq!(m.frames[0].transform.len(), 16);
+        assert_eq!(m.frames[0].bbox.len(), 6);
+        assert!(m.frames[0].radius.is_some());
+        assert_eq!(m.frames[0].tag_points.len(), 1);
+    }
+
+    #[test]
+    fn a_shared_frame_goes_into_the_last_frames_arrays() {
+        let m = gltf_to_model(&triangle_gltf(), None, SharedFrames(&[(0, 1)])).unwrap();
+        assert_eq!((m.frames[0].target, m.frames[1].target), (1, 1));
+    }
+
+    #[test]
+    fn a_model_the_reader_refuses_and_the_sub_models_after_it() {
+        let ok = || {
+            let mut m = Model { polygon_count: 1, lods: vec![vec![0, 1, 2]], ..Model::default() };
+            m.vertices = vec![vec![0.0; 24]];
+            m.tags = vec![Vec::new()];
+            m.radii = vec![1.0];
+            m.transforms = vec![[0.0; 16]];
+            m.boxes = vec![[0.0; 6]];
+            m.materials = vec![Material { ranges: vec![(0, 1)], ..Material::default() }];
+            m
+        };
+        let mut root = ok();
+        let mut a = ok();
+        a.polygon_count = 0; // the counts chunk fails: nothing stored
+        a.children = vec![ok()];
+        root.children = vec![a, ok()];
+        let mut poisoned = false;
+        let m = to_cem_model(&root, SharedFrames(&[]), &mut poisoned);
+        assert_eq!(m.result, OK);
+        assert_eq!(m.sub_models.len(), 2);
+        for sub in &m.sub_models {
+            // the second read the first one's bytes again
+            assert_eq!(sub.result, FAILED);
+            assert!(sub.counts.is_none());
+            assert!(sub.sub_models.is_empty());
+        }
+        let mut poisoned = false;
+        let fine = to_cem_model(&ok(), SharedFrames(&[]), &mut poisoned);
+        assert_eq!(fine.result, OK);
+        assert!(!poisoned);
+    }
+
+    #[test]
+    fn a_later_lods_indices_are_whole_triangles_and_names_end_at_a_nul() {
+        let mut m = Model { polygon_count: 1, lods: vec![vec![0, 1, 2], vec![2, 1, 0, 1]], ..Model::default() };
+        m.name = b"ab\0cd".to_vec();
+        m.vertices = vec![vec![0.0; 24]];
+        m.tags = vec![Vec::new()];
+        m.radii = vec![1.0];
+        m.transforms = vec![[0.0; 16]];
+        m.boxes = vec![[0.0; 6]];
+        m.materials = vec![Material { ranges: vec![(0, 1), (0, 1)], ..Material::default() }];
+        let c = to_cem_model(&m, SharedFrames(&[]), &mut false);
+        assert_eq!(c.name, b"ab".to_vec());
+        assert_eq!(c.lods[1].created, Some(1));
+        assert_eq!(c.lods[1].indices, vec![2, 1, 0]);
+        assert_eq!(c.materials[0].values, vec![0, 0, 1, 0, 1, 0, 0]);
     }
 }
