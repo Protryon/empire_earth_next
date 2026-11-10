@@ -55,7 +55,7 @@ return {
     -- defences (defence.c)
     defence_distance = 10,          -- the front's tower slots this far from the base
     defence_towers = true,
-    defence_walls = false,          -- DEVIATION: no front walls yet (no ai.wall helper)
+    defence_walls = true,           -- the wall in front of the towers, straight, with a gate in its middle (walls.lua)
     tower_stone_keep = 100,
     towers_max_epoch = 3,           -- DEVIATION (a cap upstream has not): 4 + this x epoch towers at most
     -- attacks (the game's timers upstream, dbcpbehavior: first 20-40 min, then every 20-25)
@@ -137,4 +137,19 @@ return {
     landing = true, landing_transports = 8,   -- the most transports (the size follows the beach)
     landing_citizens = 10,          -- citizens along for the forward base (0 / 3 / 6 / 10 by the transports)
     landing_waves = 3,              -- waves after the first while the bridgehead holds
+    -- defence.c (walls, enclose)
+    defence_layout = true,          -- the defences like a player (the fronts' towers in econ.lua, the walls in walls.lua)
+    game_walls = false,             -- ENGINE: the next engine never runs the classic wall manager (AI_LUA_PLAN §3);
+                                    -- upstream skips its update for the mod's AIs (default 0)
+    enclose = false,                -- enclose itself fully instead of a front: the coast of its own island, else a
+                                    -- ring round the town with a gate on each side and the towers inside (0 upstream
+                                    -- "until measured")
+    enclose_citizens = 40,          -- with enclose: the ring only once it has this many citizens (the economy first)
+    enclose_runs = 1,               -- with enclose: runs of wall (up to 12 pieces each) ordered every 20 s
+    enclose_in_flight = 0,          -- with enclose: a new run only while fewer than this many stand unfinished (0 no limit)
+    enclose_under_ships = false,    -- with enclose, on an island: only enemy land units near keep the builders off
+    enclose_dock_gates = false,     -- with enclose, on an island: the coast by a dock open 4 tiles each way with a
+                                    -- walled pocket and a gate towards the town (0: 2 tiles open, no wall)
+    enclose_safe_tiles = 0,         -- with enclose, on an island: no coast wall with this many tiles beyond a ship's
+                                    -- reach (9) of the sea (0: the coast always)
 }

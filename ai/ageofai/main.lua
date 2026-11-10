@@ -9,6 +9,7 @@ local E = require("ageofai.econ")
 local A = require("ageofai.army")
 local T = require("ageofai.tactics")
 local TW = require("ageofai.towns")   -- [towns.c, expand.c]
+local W = require("ageofai.walls")   -- [defence.c walls, enclose]
 local V = require("lib.view")
 
 local M = {}
@@ -40,6 +41,9 @@ function M.step(view, memory)
     end
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)
+    -- [defence.c walls, enclose] the front walls and their gates, the ring round the town or the island's coast
+    -- (ageofai.walls; econ.lua reads the stone it owes and the ring's tower spots from memory.eco)
+    W.step(view, memory)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
