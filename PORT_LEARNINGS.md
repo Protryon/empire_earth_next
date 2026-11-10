@@ -4347,3 +4347,24 @@ loads with these fields absent, as an older one).
     show;
   - the continent manager and the AI's other derived state are still rebuilt at load, not saved; the path searches
     in progress are asked again, not resumed.
+
+## Merging D6 and R4.3: what only the game showed
+
+Both branches passed every non-harness gate (link, oracle, Rust gate, the goldens); the game found two bugs.
+
+- **A NULL texture-set slot (R4.3):** `GETerrainMesh::mRegisteredTextureSets` has NULL slots for unregistered ids.
+  The new `UpdateVisibleTerrain` read every slot's width for the Rust plan and crashed at a map's first frame. The
+  goldens and EE-SIM never draw terrain, so only a tour reaches it. A NULL slot is now an empty view, and the plan
+  gives no texture for an empty set (it would otherwise divide by a zero width).
+- **Characters where bytes were meant (D6):** `UWideString::GetLength` counts characters, `GetTCHARLength` bytes.
+  Under Windows-1252 they were equal, so the DX7 text draw passed the first to `PlatFontMeasure`/`PlatFontDraw`,
+  which take bytes. Under UTF-8 each multi-byte character cut the drawn text one byte short: the main menu's
+  copyright line ("© 2002 ...") lost its final period. Found by a pixel diff of the menu captures against the
+  build before D6. Anything handing a `UWideString` length to a byte API must use `GetTCHARLength`.
+- **A duplicate cbindgen name:** D6 and the WON branch each added an `EeWonWideSink` with different signatures.
+  Each branch's header was current, but the merged header declared it twice and nothing compiled. Rerun
+  `rust_build.py header` and a compile after every merge that touches two crates' FFI.
+- **Flaky tests under load:** `scaled_waits_time_out_early_and_still_see_their_events` checked "no factor" outside
+  the test lock the factor tests hold (fixed). `ee_data gate::tests::rules_batch_writes_err_for_a_broken_document`
+  fails rarely, only in a whole-library run (the broken document loads without error); not yet explained.
+
