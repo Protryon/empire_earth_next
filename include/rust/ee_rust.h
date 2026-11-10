@@ -841,6 +841,30 @@ struct EeSectorRect {
   int32_t center_y;
 };
 
+/// One unit of a tile's list as the classification reads it.
+struct EeTileUnit {
+  /// the class's resource type is wood
+  bool wood;
+  /// `mResourceAmount > 0`
+  bool has_amount;
+  /// the class's `mBlocksTile`
+  bool blocks;
+  /// the class's category is the gate's
+  bool gate;
+  /// the class's `mIsWall`
+  bool wall;
+  /// `IsFoundation()`
+  bool foundation;
+  /// `mHitPoints > 0`
+  bool alive;
+  /// a dock or navy yard (`CreatePathAreaKind`'s water body test)
+  bool dock;
+  /// a space dock, space turret or orbital space station (its space region test)
+  bool space_dock;
+  /// `mUnitID`
+  int32_t id;
+};
+
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3183,6 +3207,23 @@ int32_t ee_astar_sectors_per_side(int32_t map_size, int32_t sector_size);
 
 /// `CreatePathSectors`' rectangle of sector `(x, y)`.
 EeSectorRect ee_astar_sector_rect(int32_t x, int32_t y, int32_t sector_size, int32_t map_size);
+
+/// `EEAIGetTileKind` of a map tile: its continent's `category`, its `terrain`, its AI value `flag` and its units.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_tile_kind(uint8_t category,
+                           int32_t terrain,
+                           int32_t flag,
+                           const EeTileUnit *units,
+                           size_t count);
+
+/// `EEAIGetTileWallID` of a map tile's units: the first live finished blocker's or gate's id, -1 if none.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_tile_wall_id(const EeTileUnit *units,
+                              size_t count);
 
 /// `UDataCompression::Compress`.
 ///

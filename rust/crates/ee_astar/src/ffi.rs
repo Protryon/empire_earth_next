@@ -1432,3 +1432,46 @@ pub extern "C" fn ee_astar_sectors_per_side(map_size: i32, sector_size: i32) -> 
 pub extern "C" fn ee_astar_sector_rect(x: i32, y: i32, sector_size: i32, map_size: i32) -> EeSectorRect {
     sectors::sector_rect(x, y, sector_size, map_size)
 }
+
+// ---- a tile's AI kind and wall id (tile_kind.rs) ----
+
+use crate::tile_kind::{self, EeTileUnit};
+
+/// `EEAIGetTileKind` of a map tile: its continent's `category`, its `terrain`, its AI value `flag` and its units.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tile_kind(
+    category: u8,
+    terrain: i32,
+    flag: i32,
+    units: *const EeTileUnit,
+    count: usize,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let units = unsafe { unit_slice(units, count) };
+    tile_kind::tile_kind(category, terrain, flag, units)
+}
+
+/// `EEAIGetTileWallID` of a map tile's units: the first live finished blocker's or gate's id, -1 if none.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tile_wall_id(units: *const EeTileUnit, count: usize) -> i32 {
+    // SAFETY: the caller's contract
+    let units = unsafe { unit_slice(units, count) };
+    tile_kind::tile_wall_id(units)
+}
+
+/// # Safety
+/// `units` valid for `count` records unless `count` is 0.
+unsafe fn unit_slice<'a>(units: *const EeTileUnit, count: usize) -> &'a [EeTileUnit] {
+    if count == 0 || units.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(units, count) }
+    }
+}

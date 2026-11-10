@@ -182,85 +182,56 @@ inline void EEAIContinent::RemoveForestID(unsigned short inID)
 
 // 0x273c9/0x273f1: GetPathSubSectorAt/GetPathSubSectorID(long, long) are inline in ee/EEAIContinentManager.h
 
+// The units of a map tile, in its list's order, as ee_astar tile_kind.rs reads them (pure member reads)
+static void EEAITileUnits(EETile* inTile, std::vector<EeTileUnit>& outUnits)
+{
+    outUnits.clear();
+    for (RTSTileUnitNode* theNode = inTile->mUnits; theNode; theNode = theNode->mNext) {
+        EEUnit* theUnit = theNode->mUnit;
+        EEUnitClass* theClass = theUnit->GetUnitClass();
+        unsigned long theType = theClass->GetUnitType();
+        EeTileUnit theRecord;
+        theRecord.wood = theClass->mResourceType == kResourceWood;
+        theRecord.has_amount = theUnit->mResourceAmount > 0;
+        theRecord.blocks = theClass->mBlocksTile != 0;
+        theRecord.gate = theClass->mCategory == kUnitCategoryGate;
+        theRecord.wall = theClass->mIsWall != 0;
+        theRecord.foundation = theUnit->IsFoundation();
+        theRecord.alive = theUnit->mHitPoints > 0;
+        theRecord.dock = theType == kUnitTypeDock || theType == kUnitTypeNavyYard;
+        theRecord.space_dock = theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation;
+        theRecord.id = (int32_t)theUnit->mUnitID;
+        outUnits.push_back(theRecord);
+    }
+}
+
 // FUNCTION: EXE 0x41ed2c
 // Returns the AI tile kind of inTile: 0 off the map; by continent category and shore flag (land 1/7..9, water 2/10/11,
 // space 15/10/11, map edge 6, cliff 3); on land 4 for live wood, 12/13/14 under a live blocking unit, wall or gate
+// (Rust: ee_astar tile_kind.rs over the tile's continent category, terrain, AI value and units)
 long EEAIGetTileKind(const EETileLocation& inTile)
 {
     EETile* theTile = gWorld.mMap->GetTile(inTile.GetX(), inTile.GetY());
-    long theResult = 0;
-    if (theTile) {
-        unsigned char theKind = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY())->mCategory;
-        if (theKind == kContinentCategoryLand) {
-            if (theTile->mTerrainType == kTerrainShallowWater) {
-                long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
-                if (theFlag < 0)
-                    theResult = 8;
-                else
-                    theResult = theFlag > 0 ? 9 : 7;
-            } else {
-                theResult = 1;
-            }
-            if (EEAIHasResourceUnit(theTile)) {
-                for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-                    EEUnit* theUnit = theNode->mUnit;
-                    if (theUnit->GetUnitClass()->mResourceType == kResourceWood && theUnit->mResourceAmount > 0) {
-                        theResult = 4;
-                        break;
-                    }
-                }
-            } else {
-                for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-                    EEUnit* theUnit = theNode->mUnit;
-                    if ((!theUnit->GetUnitClass()->mBlocksTile && theUnit->GetUnitClass()->mCategory != kUnitCategoryGate) || theUnit->IsFoundation() ||
-                        !(theUnit->mHitPoints > 0) || (theUnit->GetUnitClass()->mResourceType == kResourceWood && !(theUnit->mResourceAmount > 0)))
-                        continue;
-                    theResult = 12;
-                    if (theUnit->GetUnitClass()->mCategory == kUnitCategoryGate)
-                        theResult = 14;
-                    else if (theUnit->GetUnitClass()->mIsWall)
-                        theResult = 13;
-                    break;
-                }
-            }
-        } else if (theKind == kContinentCategoryWater) {
-            long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
-            if (theFlag < 0)
-                theResult = 10;
-            else
-                theResult = theFlag > 0 ? 11 : 2;
-        } else if (theKind == kContinentCategorySpace) {
-            long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
-            if (theFlag < 0)
-                theResult = 10;
-            else
-                theResult = theFlag > 0 ? 11 : 15;
-        } else if (theKind == kContinentCategoryMapEdge) {
-            theResult = 6;
-        } else if (theKind == kContinentCategoryCliff) {
-            theResult = 3;
-        }
-    }
-    return theResult;
+    if (!theTile)
+        return 0;
+    unsigned char theKind = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY())->mCategory;
+    long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
+    std::vector<EeTileUnit> theUnits;
+    EEAITileUnits(theTile, theUnits);
+    return ee_astar_tile_kind(theKind, (int32_t)theTile->mTerrainType, (int32_t)theFlag, theUnits.data(), theUnits.size());
 }
 
 // FUNCTION: EXE 0x41eea9
 // Returns the id of the first live, finished blocking unit or gate on inTile (wood only if not used up), -1 if none
+// (Rust: ee_astar tile_kind.rs)
 long EEAIGetTileWallID(const EETileLocation& inTile)
 {
     EETile* theTile = gWorld.mMap->GetTileAtLocation(inTile);
-    long theResult = -1;
-    if (theTile) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-            EEUnit* theUnit = theNode->mUnit;
-            if ((theUnit->GetUnitClass()->mBlocksTile || theUnit->GetUnitClass()->mCategory == kUnitCategoryGate) && !theUnit->IsFoundation() &&
-                theUnit->mHitPoints > 0 && (theUnit->GetUnitClass()->mResourceType != kResourceWood || theUnit->mResourceAmount > 0)) {
-                theResult = theUnit->mUnitID;
-                break;
-            }
-        }
-    }
-    return theResult;
+    if (!theTile)
+        return -1;
+    std::vector<EeTileUnit> theUnits;
+    EEAITileUnits(theTile, theUnits);
+    return ee_astar_tile_wall_id(theUnits.data(), theUnits.size());
 }
 
 static void EEAIContinentsShutDown();
