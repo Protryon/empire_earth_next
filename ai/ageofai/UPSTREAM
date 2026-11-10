@@ -36,12 +36,27 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
                 attack time when it beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home
                 under AR_BACK_PCT twice running, the next building, the raid answered, the way home as a convoy).
-                Missing: the detachments (MINE RAIDS / HIT AND RUN, towns=...|mine_raids, off upstream: up to 20
-                soldiers from those at home for the nearest enemy drop site by a mine they beat, six citizens behind
-                them to found the town; behind, 10-12 cavalry on the least defended mine's citizens; the raiders
-                kept out of the force, the riders' look; attack.c does not use them), the force's own breach
-                (AR_BREACH, off upstream: the stand-off before a defended position; attack.lua's breach through a
-                wall is attack.c's).
+                The detachments (towns=...|mine_raids, off upstream; settings mine_raids) -> detach.lua: MINE RAIDS
+                (every 15 s, none out, 3 min after the last: up to 20 soldiers, half of those at home, 30 at home
+                needed, for the nearest enemy drop site seen by a mine on the own land they beat by AR_GO_PCT; the
+                site down, what else is known within 22 tiles; then they hold the site, judged as the force: AR_FAR_PCT
+                twice before contact, the trade in contact once half their hit points are gone), HIT AND RUN (behind,
+                too few at home or no mine beaten: 10-12 cavalry, mounted archers first, to the least defended mine no
+                known tower covers, not hit in 6 min; the nearest enemy citizen each, the next mine within 12 tiles
+                after 8 s with nobody in sight, 4 mines; out after 90 s, 20 s with nobody, 40% of hit points lost, or
+                as many fighters within 10), THE RAIDERS (16 cavalry out of the force at home, trained two every 30 s
+                from the account once two farms stand, not recovering, half the citizens wanted or outmatched; a
+                Stable when nothing trains; back to the force with enemies in the base), THE RIDERS' LOOK (2 riders,
+                the fastest cavalry, to 12-tile cells not looked at for 10 min nearest the enemy buildings known, a new
+                one a minute while under 3 mines to raid are known, 8 min a rider, a leg 2 min), THE SITES' MEMORY
+                (tried / failed (the force asked: ar_site_asked in army.lua, 30 at home, every 30 s, 3 min after it
+                came home) / covered / hit, 14 tiles a site, retried after 20 min). Deviations: no crew and no
+                tn_claim (towns.lua founds its own towns; the detachment holds the cleared site until an own drop
+                site and two towers stand within 18 tiles, 15 min at most), the cavalry's kind and the field guns by
+                the class name, the best kind to train by hp x attack, "looked at" from the riders' own cells and what
+                is visible now, the base threatened is view.threat_strength > 0, the target's life from the memory.
+                Missing: the force's own breach (AR_BREACH, off upstream: the stand-off before a defended position;
+                attack.lua's breach through a wall is attack.c's).
   stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
   intel.c       ENGINE -> C++ (ai.memory, ai.seen): honest vision's memory (buildings until seen gone, soldiers
                 remembered 3 minutes).
@@ -175,11 +190,38 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 this engine's AI path).
   spoils.c      NOT STARTED (a resigned player's units roam and its buildings change hands: an engine behaviour of
                 the player out of the game, to be weighed against this engine's defeat rule).
-  skirmish.c    NOT STARTED (the sharpshooters' sorties on a position that holds the force's way).
+  skirmish.c    PORTED -> skirmish.lua (SK_ON -> settings skirmish, 0 upstream: "off until measured"). The party
+                (bit 1): every 3 s with the force at home, 30 s after the last came home: a position that holds the
+                force's way (the shooters' spot: where a seen land unit hit ours from 7 tiles or more, a gun from 5,
+                joined within 5 tiles, 3 min, the most hits; else the target the last attack time found too strong,
+                5 min; within 80 of home), up to 8 of the force's at home with range 7+ (a field gun 5+), the longest
+                first, 80% fit, 3 at least; an attack-move to the stand 10 short of the position, each member not
+                attacking picks a long-range shooter seen within 14, else a soldier within its range + 2; idle short
+                of the stand walks on; nothing to shoot: 3 closer every 15 s to 5; home when chasers (moved 2+ since
+                the last look, within 10) beat 1.5 x, under half its hit points, or after 4 min; THE BAIT (the chasers
+                within 25 of home, the force beats them by AR_GO_PCT: a raid answer); home within 2 x AR_HOME_R or
+                after 2 min: back into the force. The spotter (bit 2): a sharpshooter or sniper of the force (one
+                trained a minute apart when none), the Scout stance, SP_BACK inside its sight short of the position,
+                ordered every 20 s; back with its stance when the position is gone; counter-fire leaves it alone.
+                Deviations: the shooters' spots from the attacked events (airstrike.c's list and intel.c's revealed
+                shooters are not ported), the ratio is hit points x attack (st_ratio's damage tables are stats.c),
+                the field guns by the class name.
   metal.c       NOT STARTED (best_per_metal: the soldier that does most per gold + iron against the enemy's army;
                 surplus_cheap; workers_to_metals; fleet_by_enemy).
-  mass.c        NOT STARTED (the army as one: reinforcements gather under cover and join as groups, never a
-                trickle).
+  mass.c        PORTED -> mass.lua (army_mass bits, 0 upstream; only with an enemy town known on the own continent),
+                army.lua's reinforcement path and push, lib/groups.lua's scorer (marked blocks). GATHER (1): the
+                reinforcements for the force out (the trained, a member at home within 25 while the pack is 30+ out)
+                held at the rally (the own finished tower within 14 of the base nearest the point 6 out toward the
+                pack, 2 tiles on the base's side; every 20 s), released together once army_mass_group wait, 3 for
+                army_mass_hold, any after twice that; not held again for 3 min; 8: only while the force fights; 64
+                JOIN: the released walk to the pack. WAIT (2): the push moves on by 20 s while the land army is under
+                army_mass_ratio of the strongest enemy army known (the memory's soldiers seen within 10 min),
+                army_mass_wait min at most. TETHER (16, 128 buildings only): a member out picks no target more than
+                army_mass_tether from the pack unless within its range + 2 (groups.lua). REGROUP (32): a member out
+                and idle tether + 4 from the pack while the force fights walks back. Not ported: the "# mass" /
+                "# mass2" measurement lines (autotest); the refused orders (the held are the wait group's, which the
+                force's orders never reach). Without the plan the port's own flow stands: the trained wait at home
+                until the force is back (upstream's trickle, the commander's hand-off, is the game's).
   fronts.c      NOT STARTED (the border cells: where its land meets land the enemy can walk over; the front armies).
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
