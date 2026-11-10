@@ -16,6 +16,7 @@ only when no other game runs.
 """
 import argparse
 import json
+import os
 import pathlib
 import re
 import sys
@@ -26,12 +27,16 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 import fixture_driver
 import fixture_game
+from ai_game import GAME
 from fixture_driver import MAIN
 
 MULTIPLAYER = 1              # main menu: 'MultiPlayer' (EEUIEMSEMultiPlayer -> EEStartExternalLobby)
+GAME_SCREEN = 30             # the form EELobbyShowGameScreen pushes when the lobby game starts
 # WONLobbyResourceGlobals.h LobbyResourceCtrlId (200000 + n) and WONLobbyGUI.h ControlIdType
 ID_LAN, ID_LOGOUT, ID_HOST, ID_JOIN, ID_LEAVE, ID_START, ID_REFRESH = 200009, 200010, 200011, 200013, 200014, 200015, 200016
+ID_ADD_LAN_NAME = 200019
 ID_OK, ID_CANCEL = 100001, 100002
+TAB_DIRECT, TAB_GAME, TAB_OPTIONS = 1, 2, 3   # the LAN screen's tab buttons (WONTabCtrl: ids by index; the LAN tab is 0)
 LOBBY_KEYS = ('shown', 'screen', 'lan', 'login', 'modal', 'game', 'host', 'clients', 'ready', 'allready', 'name')
 
 
@@ -53,6 +58,8 @@ def parse_lobby(text):
                                               text=p[7])
             elif p[:1] == ['wonlist'] and len(p) >= 6:
                 out['lists'].append(dict(items=int(p[3]), sel=int(p[5])))
+            elif p[:1] == ['wontext'] and len(p) >= 2:
+                out.setdefault('texts', []).append(p[1])
         except (IndexError, ValueError):
             pass
     return out
@@ -63,6 +70,7 @@ class End(fixture_game.Game):
 
     def __init__(self, a, out, label):
         self.label = label
+        os.environ['EE_TEST_INSTANCE'] = label   # its own single-instance mutex (EECreateInstanceMutex, TEST ONLY)
         super().__init__(a, pathlib.Path(out) / label)
 
     def note(self, text):
@@ -79,7 +87,8 @@ class End(fixture_game.Game):
             if pred(st):
                 return st
             if time.monotonic() > end:
-                lines = [v for v in self.raw().splitlines() if v.split(' ')[0] in ('lobbyopen', 'lobby', 'wonctl', 'wonlist', 'form', 'stack')]
+                lines = [v for v in self.raw().splitlines()
+                         if v.split(' ')[0] in ('lobbyopen', 'lobby', 'wonctl', 'wonlist', 'wontext', 'form', 'stack')]
                 raise RuntimeError(f'[{self.label}] timeout waiting for {what}; the lobby state:\n' + '\n'.join(lines))
             time.sleep(0.25)
 
@@ -105,6 +114,13 @@ class End(fixture_game.Game):
             raise RuntimeError(f'[{self.label}] {what}: the lobby says {verdict!r} for wonclick {control}')
         self.note(f'LOBBY {what}: control {control} clicked')
         return seq
+
+    def wonclickat(self, x, y, what):
+        seq = self.command(f'wonclickat {x} {y}')
+        verdict = self.lobby_verdict(seq)
+        if verdict != 'lobby-clicked':
+            raise RuntimeError(f'[{self.label}] {what}: the lobby says {verdict!r} for wonclickat {x} {y}')
+        self.note(f'LOBBY {what}: clicked at {x},{y}')
 
     def wontype(self, text, what):
         for ch in text:
@@ -144,6 +160,23 @@ def open_lan_screen(g):
     g.note(f'LOBBY LAN screen: lists {st["lists"]}')
     time.sleep(1)
     g.capture('lan-screen')
+
+
+def set_lan_name(g, name):
+    """The LAN player name through the Options tab (Add -> the name dialog -> OK), then back to the LAN tab.
+    The default name carries a number made from the local IP address, so both instances start with the same one
+    and the host refuses the joiner ("already being used by another player")."""
+    g.wonclick(TAB_OPTIONS, 'the Options tab')
+    g.wonclick(ID_ADD_LAN_NAME, 'Add (LAN name)')
+    g.wait_lobby(lambda s: s['lobby'] is not None and s['lobby']['modal'] == 1 and ID_OK in s['ctls'], 'the LAN name dialog', 30)
+    g.wontype(name, 'the LAN name')
+    g.wonclick(ID_OK, 'OK (LAN name)')
+    st = g.wait_lobby(lambda s: s['lobby'] is not None and s['lobby']['modal'] == 0 and TAB_DIRECT in s['ctls'],
+                      'the name dialog closed', 30)
+    tab = st['ctls'][TAB_DIRECT]   # the LAN tab (id 0: not listed) sits left of the Direct Connect tab
+    g.wonclickat(tab['x'] - tab['w'] // 2, tab['y'] + tab['h'] // 2, 'the LAN tab')
+    g.wait_lobby(lambda s: s['ctls'].get(ID_HOST, {}).get('enabled') == 1, 'the LAN tab shown', 30)
+    g.note(f'LOBBY LAN name set to {name!r}')
 
 
 def host_game(g, name):
@@ -203,6 +236,8 @@ def run(a):
         ends.append(joiner)
         open_lan_screen(host)
         open_lan_screen(joiner)
+        set_lan_name(host, 'lanhost')
+        set_lan_name(joiner, 'lanjoiner')
         host_game(host, a.game_name)
         join_game(joiner, a.game_name, a.discovery_timeout)
         st = host.wait_lobby(lambda s: s['lobby'] is not None and s['lobby']['clients'] >= 2, 'the joiner in the host\'s game', 60)
@@ -214,8 +249,10 @@ def run(a):
         host.capture('staging-ready')
         host.wonclick(ID_START, 'Start Game')
         for g in ends:
-            g.wait_lobby(lambda s: s['lobby'] is None or s['lobby']['shown'] == 0, 'the lobby hidden (the game starting)', 120)
-            g.note(f'LOBBY hidden; forms {g.state()["stack"]}')
+            # the lobby's snapshot stops with its loop: the game screen (form 30, EELobbyShowGameScreen) is pushed
+            # before the lobby hides, then the game's own form once it runs
+            g.wait(lambda s: GAME_SCREEN in s['stack'] or s['form'] == GAME, 'the game screen (the lobby leaving)', 180)
+            g.note(f'GAME screen; forms {g.state()["stack"]}')
         tel = {}
         for g in ends:
             tel[g.label] = fixture_driver.wait_running(g, timeout=240)

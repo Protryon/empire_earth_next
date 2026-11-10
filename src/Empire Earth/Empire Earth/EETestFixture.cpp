@@ -263,12 +263,14 @@ void WriteTelemetry(FILE* outFile)
 //    allready <0|1> name <text>" (screen: LobbyGetGameScreenType, 1 LAN; game: GetMyLobbyGame != NULL),
 //   "wonctl <controlId> <x> <y> <w> <h> <enabled> <text>" per visible component with a control id (root coordinates
 //   of the lobby window, 1024x768; the text of a button), and
-//   "wonlist <k> items <n> sel <i>" per visible list area, in tree order.
+//   "wonlist <k> items <n> sel <i>" per visible list area, in tree order, and "wontext <text>" per label of the
+//   modal dialog (a message box's message).
 // The commands: "<seq> wonclick <controlId> 0" (a mouse move, press and release at the component's centre, through
 // the window's event queue: the real button path; the modal dialog's component is searched first),
 // "<seq> wonactivate <controlId> 0" (Button::Activate, the keyboard path), "<seq> wonselect <k> <item>" (the k-th
 // list area's selection, ListArea::SetSelItem with its event), "<seq> wonkey <code> 0" (one typed character to the
-// focused control). The verdict ("TEST UI lobby-...") is printed by the lobby thread when the command ran.
+// focused control), "<seq> wonclickat <x> <y>" (a click at root coordinates). The verdict ("TEST UI lobby-...") is
+// printed by the lobby thread when the command ran.
 namespace {
 
 std::mutex sLobbyMutex;
@@ -276,6 +278,8 @@ std::string sLobbySnapshot;                  // the last snapshot the lobby thre
 std::string sLobbyCommand;                   // a pending "<op> <a> <b>" for the lobby thread (empty: none)
 unsigned long sLobbyCommandSeq = 0;
 std::atomic<int> sLobbyWorkPosted(0);        // a UserEvent is queued and not yet delivered
+WONAPI::Component* sLobbyModal = NULL;       // the walk's modal component (lobby thread only)
+bool sLobbyInModal = false;
 
 std::string GUIText(const WONAPI::GUIString& inText)
 {
@@ -293,6 +297,15 @@ void LobbyWalk(WONAPI::Component* inComponent, std::string& outText, std::vector
     using namespace WONAPI;
     if (inComponent == NULL || !inComponent->IsVisible())
         return;
+    bool theModalEntered = inComponent == sLobbyModal;
+    if (theModalEntered)
+        sLobbyInModal = true;
+    if (sLobbyInModal && inComponent->mControlId == 0) {   // the modal dialog's texts (a message box's message)
+        if (Label* theLabel = dynamic_cast<Label*>(inComponent)) {
+            if (theLabel->mWrappedText.get() != NULL && theLabel->mWrappedText->GetText().length() > 0)
+                outText += "wontext " + GUIText(theLabel->mWrappedText->GetText()) + "\n";
+        }
+    }
     if (inComponent->mControlId != 0) {
         int x = 0, y = 0;
         inComponent->LocalToRoot(x, y);
@@ -319,6 +332,8 @@ void LobbyWalk(WONAPI::Component* inComponent, std::string& outText, std::vector
              it != theContainer->mChildList.end(); ++it)
             LobbyWalk(it->get(), outText, outLists);
     }
+    if (theModalEntered)
+        sLobbyInModal = false;
 }
 
 // The first visible, enabled component with control id inId below inComponent
@@ -378,6 +393,14 @@ void LobbyWork(int)
                     theVerdict = "lobby-activated";
                 }
             }
+        } else if (!strcmp(theOp, "wonclickat")) {
+            // "<seq> wonclickat <x> <y>": a left click at root coordinates of the lobby window (a tab, a list row)
+            if (theWindow != NULL) {
+                theWindow->QueueEvent(new MouseEvent(InputEvent_MouseMove, (int)a, (int)b, 0, 0));
+                theWindow->QueueEvent(new MouseEvent(InputEvent_MouseDown, (int)a, (int)b, 0, 0));
+                theWindow->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)a, (int)b, 0, 0));
+                theVerdict = "lobby-clicked";
+            }
         } else if (!strcmp(theOp, "wonkey")) {
             // "<seq> wonkey <code> 0": one typed character to the lobby window's focus (WM_CHAR's path)
             if (theWindow != NULL && a > 0) {
@@ -409,6 +432,8 @@ void LobbyWork(int)
              theGame != NULL ? GUIText(theGame->mName).c_str() : "-");
     theText += theLine;
     std::vector<ListArea*> theLists;
+    sLobbyModal = theManager != NULL ? theManager->mModalComponent : NULL;
+    sLobbyInModal = false;
     LobbyWalk(theRoot, theText, theLists);
     {
         std::lock_guard<std::mutex> theLock(sLobbyMutex);
