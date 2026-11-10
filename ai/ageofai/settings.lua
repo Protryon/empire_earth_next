@@ -54,9 +54,11 @@ return {
     defence_walls = true,           -- the wall in front of the towers, straight, with a gate in its middle (walls.lua)
     tower_stone_keep = 100,
     towers_max_epoch = 1000,        -- no cap (upstream has none): 4 + this x epoch towers at most
-    -- attacks (the game's timers upstream, dbcpbehavior: first 20-40 min, then every 20-25)
-    attack_first_min = 20, attack_first_max = 40,
-    attack_interval_min = 20, attack_interval_max = 25,
+    -- attacks: upstream's first_attack / attack_interval 0 = the game's own times, which at Hard are the dbcpbehavior
+    -- rows scaled by the difficulty (EEComputerPlayer::SetNextAttackTime: initial_attack_delay 20-40 minutes x the
+    -- Hard modifier 30% = 6-12, attack_frequency 14-17 x 90% = 13-15; the port plays Hard's)
+    attack_first_min = 6, attack_first_max = 12,
+    attack_interval_min = 13, attack_interval_max = 15,
     -- the force (armies.c)
     ar_min_launch = 8,              -- soldiers a push needs at least
     ar_go_pct = 130,                -- a push: the force beats the enemy at the target by this
