@@ -494,13 +494,17 @@ mod tests {
 
     #[test]
     fn start_and_stop_count_users() {
+        // this test's own user first, never stopped: the other tests start the system once and keep it, so a stop
+        // here must never take the count to 0 (PlatSocketCleanup, WSACleanup, would close their open sockets; the
+        // former "one more stop than starts" check did that whenever exactly one other test had started)
+        assert_eq!(start(), WS_SUCCESS);
+        let users = *START_COUNT.lock().unwrap();
         assert_eq!(start(), WS_SUCCESS);
         assert_eq!(start(), WS_SUCCESS);
+        assert!(*START_COUNT.lock().unwrap() >= users + 2);
         assert_eq!(stop(), WS_SUCCESS);
         assert_eq!(stop(), WS_SUCCESS);
-        // one more stop than starts is harmless; leave the system started for the other tests
-        assert_eq!(stop(), WS_SUCCESS);
-        assert_eq!(start(), WS_SUCCESS);
+        assert!(*START_COUNT.lock().unwrap() >= 1);
     }
 
     #[test]
