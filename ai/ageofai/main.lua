@@ -40,6 +40,7 @@ function M.step(view, memory)
     end
     memory.hits = {}
     memory.epoch_now = view.epoch
+    memory.town_x, memory.town_y = view.town_x, view.town_y   -- the micro modules' town (no view there)
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
@@ -87,7 +88,7 @@ function M.micro(info, memory)
     SF.step(memory.safety, memory, info.time)
     T.counterfire(memory.army, events, info.time)
     T.militia(memory.army, events, info.time, memory.epoch_now)   -- [defence.c citizen_militia]
-    T.bait(memory.army, events, info.time, memory.epoch_now)
+    T.bait(memory.army, events, info.time, memory.epoch_now, memory.town_x, memory.town_y)
     T.shelter(memory.army, events, info.time)
     return nil
 end

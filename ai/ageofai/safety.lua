@@ -149,14 +149,7 @@ function M.step(mem, memory, now)
     mem.sent_back = mem.sent_back or {}
     if now - (mem.scan_t or 0) >= 1000 or (mem.scan_t or 0) == 0 then
         mem.scan_t = now
-        local town = ai.units{type = "b_town_center", built = true, limit = 1}
-        local hx, hy = 0, 0
-        if #town > 0 then
-            local t = ai.unit(town[1])
-            if t ~= nil then
-                hx, hy = t.x, t.y
-            end
-        end
+        local hx, hy = memory.town_x or 0, memory.town_y or 0   -- the step's town (the view's)
         raiders_scan(hx, hy)
         SPOTS = {}
         for _, h in ipairs(mem.hurt or {}) do

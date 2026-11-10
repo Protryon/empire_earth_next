@@ -73,6 +73,9 @@ function P.step(view, mem)
             print(string.format("commands player id=%d me=%s ally=%s enemy=%s hostile=%s allies=%d human=%s", p.id, tostring(p.me),
                 tostring(p.ally), tostring(p.enemy), tostring(p.hostile), #(p.allies or {}), tostring(p.human)))
         end
+        print(string.format("commands units_type tc=%d tc_built=%d buildings=%d tc_near=%d", #ai.units{type = "b_town_center"},
+            #ai.units{type = "b_town_center", built = true}, #ai.units{category = "building"}, #ai.units{type = "b_town_center", near = {tx, ty, 5}}))
+        print(string.format("commands tc_record type=%s built=%s", tostring(ai.unit(ai.units{category = "building"}[1]).type), tostring(ai.unit(ai.units{category = "building"}[1]).built)))
         local c = ai.class("inf01_clubman")
         print(string.format("commands class type=%s category=%s family=%d cost=%d/%d/%d/%d/%d", c.type, tostring(c.category),
             c.family or -1, c.cost.food, c.cost.wood, c.cost.stone, c.cost.gold, c.cost.iron))

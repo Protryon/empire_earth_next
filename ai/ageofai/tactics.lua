@@ -474,20 +474,30 @@ function M.militia(mem, events, now, epoch)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
--- Tower bait (early.c tower_bait, the playtester's opening; here in every epoch): a citizen hit by a seen enemy
--- soldier, and the citizens within 6 tiles of the attacker, walk to the spot 2 tiles behind the nearest own tower or
--- town centre within 25 tiles (from the attacker), where the raiders that follow come under fire. They are the
--- script's for 40 s (the runners would send them straight back), then released idle.
+-- Tower bait (early.c tower_bait): up to the Bronze Age, every 2 s - a citizen with an enemy soldier within 5 tiles
+-- (or one attacking it) and outside its own towers' reach walks to the nearest finished tower (or other own building
+-- that shoots) within 25 tiles, to the spot 1.5 tiles behind it from the enemy: the raiders that follow come under
+-- the tower. Once it is there the order ends and the assignment sends it back to work (the safety's released claims
+-- keep it off raided sites meanwhile). Citizens the militia sent at the enemy are left alone.
 
-function M.bait(mem, events, now, epoch)
+function M.bait(mem, events, now, epoch, town_x, town_y)
+    mem.town_x, mem.town_y = town_x, town_y
     if not S.tower_bait or (epoch or 0) > S.tower_bait_epoch then
         return
     end
+    if mem.bait_t ~= nil and now - mem.bait_t < 2000 then
+        return
+    end
+    mem.bait_t = now
     mem.bait = mem.bait or {}
-    -- release those whose time is up
+    -- those sent before: released once there (within 2 tiles of the spot) or after 20 s
     local release = {}
     for _, id in ipairs(ai.keys(mem.bait)) do
-        if mem.bait[id] <= now then
+        local b = mem.bait[id]
+        local u = ai.unit(id)
+        if u == nil then
+            mem.bait[id] = nil
+        elseif b.t <= now or (math.abs(u.x - b.x) <= 2 and math.abs(u.y - b.y) <= 2) then
             release[#release + 1] = id
             mem.bait[id] = nil
         end
@@ -495,59 +505,81 @@ function M.bait(mem, events, now, epoch)
     if #release > 0 then
         ai.release(release)
     end
-    local attackers = {}
+    local bx, by = mem.town_x or -1, mem.town_y or -1
+    if bx < 0 then
+        return
+    end
+    -- own towers and shooting buildings: where, their reach
+    local cov = ai.units{category = "building", armed = true, built = true, near = {bx, by, 36}, limit = 24}
+    if #cov == 0 then
+        return
+    end
+    local cc = ai.get(cov, {"x", "y", "range"})
+    -- the enemy soldiers seen: where, whom they attack (the step's events)
+    local en = ai.seen{enemy = true, armed = true, category = "soldier", near = {bx, by, 36}, limit = 64}
+    if #en == 0 then
+        return
+    end
+    local ec = ai.get(en, {"x", "y"})
+    local victim_of = {}
     for _, e in ipairs(events) do
         if e.kind == "attacked" and e.attacker ~= nil then
-            local v = ai.unit(e.unit)
-            local a = ai.unit(e.attacker)
-            if v ~= nil and a ~= nil and v.category == "citizen" and a.category == "soldier" and a.player ~= v.player then
-                attackers[a.id] = a
+            victim_of[e.unit] = e.attacker
+        end
+    end
+    local cits = ai.units{category = "citizen", held = "engine", near = {bx, by, 32}}
+    if #cits == 0 then
+        return
+    end
+    local cx = ai.get(cits, {"x", "y"})
+    local sent = 0
+    for k, id in ipairs(cits) do
+        local ux, uy = cx.x[k], cx.y[k]
+        if ux ~= nil and (mem.militia == nil or mem.militia[id] == nil) and mem.bait[id] == nil then
+            local hit = nil
+            for j = 1, #en do
+                local ex, ey = ec.x[j], ec.y[j]
+                if ex ~= nil and (victim_of[id] == en[j] or (math.abs(ex - ux) <= 5 and math.abs(ey - uy) <= 5)) then
+                    hit = j
+                    break
+                end
+            end
+            if hit ~= nil then
+                local best, bd, covered = nil, 25 * 25, false
+                for c = 1, #cov do
+                    local tx, ty = cc.x[c], cc.y[c]
+                    if tx ~= nil then
+                        local d = (tx - ux) * (tx - ux) + (ty - uy) * (ty - uy)
+                        local r = (cc.range[c] or 0) / 100 - 0.5
+                        if d <= r * r then
+                            covered = true   -- covered already: the tower fights
+                            break
+                        end
+                        if d < bd then
+                            bd, best = d, c
+                        end
+                    end
+                end
+                if not covered and best ~= nil then
+                    -- the spot 1.5 tiles behind the tower from the enemy
+                    local tx, ty = cc.x[best], cc.y[best]
+                    local ex, ey = ec.x[hit], ec.y[hit]
+                    local dx, dy = tx - ex, ty - ey
+                    local len = math.max(math.abs(dx), math.abs(dy), 1)
+                    local sx, sy = tx + dx * 3 // (2 * len), ty + dy * 3 // (2 * len)
+                    if sx == tx and sy == ty then
+                        sx, sy = tx + (dx >= 0 and 1 or -1), ty
+                    end
+                    ai.move({id}, sx, sy, {forced = true})
+                    mem.bait[id] = {x = sx, y = sy, t = now + 20000}
+                    sent = sent + 1
+                    mem.baits = (mem.baits or 0) + 1
+                end
             end
         end
     end
-    for _, aid in ipairs(ai.keys(attackers)) do
-        local a = attackers[aid]
-        -- the citizens hit (upstream: with a soldier within 5 tiles or attacking it), not every citizen near
-        local pick = {}
-        for _, e in ipairs(events) do
-            if e.kind == "attacked" and e.attacker == aid and mem.bait[e.unit] == nil then
-                local v = ai.unit(e.unit)
-                if v ~= nil and v.category == "citizen" then
-                    pick[#pick + 1] = e.unit
-                    mem.bait[e.unit] = now   -- marked below
-                end
-            end
-        end
-        if #pick > 0 then
-            -- the nearest own tower or town centre to the attacker
-            local best, bd = nil, nil
-            for _, id in ipairs(ai.units{category = "building", armed = true, built = true, near = {a.x, a.y, 25}}) do
-                local b = ai.unit(id)
-                if b ~= nil then
-                    local d = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)
-                    if bd == nil or d < bd then
-                        best, bd = b, d
-                    end
-                end
-            end
-            if best ~= nil then
-                local dx, dy = best.x - a.x, best.y - a.y
-                local len = math.max(math.abs(dx), math.abs(dy), 1)
-                local tx, ty = best.x + dx * 2 // len, best.y + dy * 2 // len
-                ai.move(pick, tx, ty, {forced = true})
-                for _, id in ipairs(pick) do
-                    mem.bait[id] = now + 25000
-                end
-                mem.baits = (mem.baits or 0) + #pick
-                if (mem.baits or 0) <= 20 or now % 60000 < 250 then
-                    print(string.format("bait n=%d to=%d,%d attacker=%d baits=%d", #pick, tx, ty, aid, mem.baits))
-                end
-            else
-                for _, id in ipairs(pick) do
-                    mem.bait[id] = nil
-                end
-            end
-        end
+    if sent > 0 and ((mem.baits or 0) <= 20 or now % 60000 < 250) then
+        print(string.format("bait n=%d baits=%d enemies=%d", sent, mem.baits, #en))
     end
 end
 
