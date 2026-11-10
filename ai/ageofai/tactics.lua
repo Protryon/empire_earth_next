@@ -447,6 +447,9 @@ function M.bait(mem, events, now, epoch)
                     mem.bait[id] = now + 25000
                 end
                 mem.baits = (mem.baits or 0) + #pick
+                if (mem.baits or 0) <= 20 or now % 60000 < 250 then
+                    print(string.format("bait n=%d to=%d,%d attacker=%d baits=%d", #pick, tx, ty, aid, mem.baits))
+                end
             else
                 for _, id in ipairs(pick) do
                     mem.bait[id] = nil
