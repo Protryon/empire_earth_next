@@ -31,6 +31,8 @@ M.MOVE_MS = 10000      -- a move is given again after this long
 M.SCOUT_STUCK_MS = 45000
 M.SCOUT_GRID = 8
 M.MAX_COUNT = 100
+M.LEASH_MARGIN = 6     -- [attack.c] the leash: a known defence's range + this (avoid_towers_margin) ...
+M.LEASH_SCAN = 45      -- ... among the defences known this near the group's centre
 M.committed = {}       -- unit ids the script has committed elsewhere this step: the groups give them no order
 
 local function d2(x1, y1, x2, y2)
@@ -266,9 +268,18 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- Targets
 
+-- [attack.c] a wall piece or a gate: its own kind (an attack's last target; the breach segment is the group's focus)
+local function is_wall(t)
+    local p = string.sub(t or "", 1, 7)
+    return p == "b_wall_" or p == "b_gate_"
+end
+
 -- the kinds of a seen enemy record
 local function kind_of(u)
     if u.category == "building" then
+        if is_wall(u.type) then
+            return "wall"
+        end
         return (u.armed and "tower" or "building")
     elseif u.category == "citizen" then
         return "citizen"
@@ -308,7 +319,31 @@ local function priority(task, kind, dist)
     if kind == "tower" then return 3 end
     if kind == "building" then return 4 end
     if kind == "boat" then return 5 end
+    if kind == "wall" then return 6 end   -- [attack.c] walls score below everything else (the scorer's below zero)
     return nil
+end
+
+-- [attack.c] the known defences near a tile (for the leash): their tile, range (centi) and attack
+local function defences_near(x, y, r)
+    local out = {}
+    for _, m in ipairs(ai.memory{buildings = true, near = {x, y, r}}) do
+        if not is_wall(m.type) and string.sub(m.type, 1, 2) ~= "aa" then
+            local c = ai.class(m.type)
+            if c ~= nil and (c.attack or 0) > 0 and (c.range or 0) > 100 then
+                out[#out + 1] = {x = m.x, y = m.y, r = c.range // 100 + M.LEASH_MARGIN}
+            end
+        end
+    end
+    return out
+end
+
+local function defended(defs, x, y)
+    for _, d in ipairs(defs) do
+        if d2(x, y, d.x, d.y) <= d.r * d.r then
+            return true
+        end
+    end
+    return false
 end
 
 -- the known enemy towers (armed buildings in the memory) near a tile
@@ -334,6 +369,17 @@ local function candidates(g, cx, cy, radius)
     end
     local ids = ai.seen(f)
     local out = {}
+    -- [attack.c] the leash (g.leash): an enemy inside known defences is no target unless the group's own place lies
+    -- inside them too (defenders waiting by their towers drew the whole army in); the focus (g.focus_x/y, the breach
+    -- segment): that wall piece first, its neighbours next
+    local leash = nil
+    if g.leash and g.task == "attack" and g.x >= 0 then
+        leash = defences_near(cx, cy, M.LEASH_SCAN)
+        if defended(leash, g.x, g.y) then
+            leash = nil
+        end
+    end
+    local fx, fy = g.focus_x or -1, g.focus_y or -1
     for _, id in ipairs(ids) do
         local u = ai.unit(id)
         if u ~= nil then
@@ -345,6 +391,12 @@ local function candidates(g, cx, cy, radius)
                     if (kind == "ship" or kind == "boat") and dist > M.BOAT_RANGE then
                         p = nil
                     end
+                end
+                if p ~= nil and kind == "wall" and fx >= 0 and math.abs(u.x - fx) <= 1 and math.abs(u.y - fy) <= 1 then
+                    p = (u.x == fx and u.y == fy) and -2 or -1
+                elseif p ~= nil and leash ~= nil and kind ~= "wall" and defended(leash, u.x, u.y) then
+                    p = nil
+                    g.leashed = (g.leashed or 0) + 1
                 end
                 if p ~= nil then
                     out[#out + 1] = {u = u, kind = kind, dist = dist, p = p}
@@ -419,8 +471,21 @@ local function fight(g, recs, cands)
         if keep == nil then
             -- the best candidate by priority, then by distance to this unit (one already taken counts further)
             local best, bs = nil, nil
+            -- [attack.c] aircraft beyond the unit's range + 3 are no target (the march waited for planes it chased);
+            -- a ram takes no building while an enemy soldier guards it within 5 tiles (helpless against soldiers)
+            local ram = string.find(u.type or "", "ram", 1, true) ~= nil and u.category == "soldier"
+            local reach = (u.range or 0) // 100 + 3
             for _, c in ipairs(cands) do
-                if ranged or (c.kind ~= "ship" and c.kind ~= "boat") then
+                local skip = c.u.category == "air" and d2(u.x, u.y, c.u.x, c.u.y) > reach * reach
+                if not skip and ram and (c.kind == "building" or c.kind == "tower" or c.kind == "wall") then
+                    for _, s in ipairs(cands) do
+                        if s.kind == "soldier" and d2(s.u.x, s.u.y, c.u.x, c.u.y) <= 25 then
+                            skip = true
+                            break
+                        end
+                    end
+                end
+                if not skip and (ranged or (c.kind ~= "ship" and c.kind ~= "boat")) then
                     local s = c.p * 10000 + isqrt(d2(u.x, u.y, c.u.x, c.u.y)) * 10 + (taken[c.u.id] or 0)
                     if bs == nil or s < bs then
                         best, bs = c, s

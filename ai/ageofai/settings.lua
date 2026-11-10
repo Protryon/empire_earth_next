@@ -105,4 +105,22 @@ return {
     towers_per_town = 2,            -- towers by a resource town (spread: 2 + one per 4 mines)
     towns_remove_unbuilt = false,   -- a town going up whose citizens are all dead: its foundations removed
     towns_care = true,              -- spread: the spot and its way safe (part 1; the other parts measured no gain)
+    -- attack.c (weak spots, breaches), armies.c (detachments), forces.c
+    avoid_towers = true,            -- ENGINE: ai.route over the threat layer (ar_route_avoid above) stands in for
+                                    -- the route cost hook; avoid_towers_weight (2000 a step) has no counterpart
+    avoid_towers_margin = 6,        -- tiles added to a known defence's range (threat_at, the leash)
+    attack_weak_spots = true,       -- a goal inside known defences: the nearest uncovered enemy building instead
+    attack_weak_spot_radius = 60,   -- tiles around the goal searched for it
+    attack_leash = true,            -- no enemy inside known defences as a target unless the goal lies in them too
+    attack_breach = true,           -- a known wall on the way: through its segment outside the defences
+    attack_ignore_air = true,       -- aircraft beyond range + 3 are no target (lib.groups)
+    attack_retarget = true,         -- DEVIATION (0 upstream): the target out of buildings known, the living enemy
+                                    -- whose building is nearest the force (the port's flow took any enemy's nearest
+                                    -- building before; kept)
+    citizen_attacks = false,        -- not applicable: the force has no citizens (the game's groups took them)
+    mine_raids = false,             -- armies.c MINE RAIDS / HIT AND RUN (towns=...|mine_raids, off upstream): the
+                                    -- detachments are not ported (attack.c does not use them)
+    siege_fire_every = 2000,        -- siege_tick: the shelling looked at every 2 s
+    siege_fire_near = 40,           -- DEVIATION (upstream's waves go from home with escorts): the port's siege go
+                                    -- with the force and shell a target within this of the force's middle
 }

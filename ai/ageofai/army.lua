@@ -27,6 +27,7 @@ local G = require("lib.groups")
 local S = require("ageofai.settings")
 local T = require("ageofai.tactics")
 local NV = require("ageofai.navy")
+local AT = require("ageofai.attack")   -- [attack.c] the weak spots, the breaches, the objective
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -230,9 +231,11 @@ end
 
 -- the enemy building known nearest a tile (the memory), the enemy's drop sites and towers like any other
 local function nearest_building(x, y, r)
-    local list = ai.memory{buildings = true, near = {x, y, r}, limit = 1}
-    if #list > 0 then
-        return list[1]
+    local list = ai.memory{buildings = true, near = {x, y, r}, limit = 8}
+    for _, m in ipairs(list) do
+        if not AT.is_wall(m.type) then   -- [attack.c] never a wall piece (a gap is the breach's business)
+            return m
+        end
     end
     return nil
 end
@@ -288,6 +291,10 @@ local function go_home(view, memory, mem, force, why)
     -- the convoy: the move in formation, the fast wait for the slow
     ai.move(force.units, hx, hy, {forced = true, formation = true})
     force.way_t = view.time
+    -- [attack.c] the breach is over (breach_note -1), the focus with it; the siege's shelling stops
+    AT.breach_forget(mem)
+    force.focus_x, force.focus_y = -1, -1
+    mem.shell = {}
     mem.out = false
     mem.losing = 0
     mem.out_hp = 0
@@ -406,12 +413,14 @@ local function force_step(view, memory, mem, order)
             local standing = false
             for _, id in ipairs(left) do
                 local u = ai.unit(id)
-                if u ~= nil and u.category == "building" then
+                -- [attack.c] a wall piece standing is no target left (the breach segment down: on to the objective)
+                if u ~= nil and u.category == "building" and not AT.is_wall(u.type) then
                     standing = true
                 end
             end
             if not standing then
-                local nextb = nearest_building(cx, cy, 120)
+                -- [attack.c] the next building: the target's objective (forces.c), else wave_retarget's choice
+                local nextb = AT.next_target(mem, force.target, cx, cy)
                 if nextb == nil then
                     go_home(view, memory, mem, force, "nothing_known")
                     return
@@ -421,12 +430,16 @@ local function force_step(view, memory, mem, order)
                     go_home(view, memory, mem, force, "next_too_strong")
                     return
                 end
-                force.x, force.y = nextb.x, nextb.y
+                -- [attack.c] the entry point: the weak spot, the breach
+                local entry = AT.entry(mem, cx, cy, nextb)
+                force.x, force.y = entry.x, entry.y
+                force.focus_x, force.focus_y = entry.focus_x, entry.focus_y
                 force.target = nextb.player
                 force.way_t = 0
                 mem.pushes_next = (mem.pushes_next or 0) + 1
-                print(string.format("force next to=%d,%d player=%d", nextb.x, nextb.y, nextb.player))
-                march(view, mem, force, nextb.x, nextb.y)
+                print(string.format("force next to=%d,%d player=%d weak=%s breach=%s", entry.x, entry.y, nextb.player,
+                    tostring(entry.weak), tostring(entry.breach)))
+                march(view, mem, force, entry.x, entry.y)
             end
         end
         return
@@ -504,9 +517,14 @@ local function force_step(view, memory, mem, order)
             end
             return
         end
+        -- [attack.c] the entry point (hook_asg_route): the weak spot of the target, the breach through a wall on the
+        -- way; the breach segment is the force's focus, the leash holds its members out of known defences
+        local entry = AT.entry(mem, force.cx or hx, force.cy or hy, target)
         force.task = "attack"
         force.target = target.player
-        force.x, force.y = target.x, target.y
+        force.x, force.y = entry.x, entry.y
+        force.focus_x, force.focus_y = entry.focus_x, entry.focus_y
+        force.leash = S.attack_leash
         force.way_t = 0
         force.aims = {}
         mem.out = true
@@ -515,9 +533,10 @@ local function force_step(view, memory, mem, order)
         mem.losing = 0
         mem.pushes = (mem.pushes or 0) + 1
         mem.next_attack = now + (S.attack_interval_min + ai.random(0, S.attack_interval_max - S.attack_interval_min)) * 60000
-        local legs = march(view, mem, force, target.x, target.y)
-        print(string.format("force push to=%d,%d player=%d own=%d foe=%d units=%d legs=%d stage=%d,%d", target.x, target.y,
-            target.player, own, foe, #force.units, legs, mem.stage_x or -1, mem.stage_y or -1))
+        local legs = march(view, mem, force, entry.x, entry.y)
+        print(string.format("force push to=%d,%d player=%d own=%d foe=%d units=%d legs=%d stage=%d,%d weak=%s breach=%s",
+            entry.x, entry.y, target.player, own, foe, #force.units, legs, mem.stage_x or -1, mem.stage_y or -1,
+            tostring(entry.weak), tostring(entry.breach)))
     end
 end
 
@@ -662,6 +681,13 @@ function M.step(view, memory, orders, budget, events)
             G.committed[id] = true
         end
     end
+    -- [attack.c] the siege shelling from its firing position (siege_tick): committed too
+    T.siege_fire(view, mem, G.role(memory, "force"))
+    for _, id in ipairs(ai.keys(mem.shell or {})) do
+        if mem.shell[id] > view.time then
+            G.committed[id] = true
+        end
+    end
     muster(view, memory, mem)
     if not mem.mustering then
         force_step(view, memory, mem, order)
@@ -671,10 +697,12 @@ function M.step(view, memory, orders, budget, events)
     G.step(view, memory)
     if view.time % 60000 < 1000 then
         local force = G.role(memory, "force")
-        print(string.format("army force=%d out=%s next_attack=%d pushes=%d raids=%d musters=%d trained=%d mil=%d/%d/%d/%d/%d",
+        local at = mem.at or {}
+        print(string.format("army force=%d out=%s next_attack=%d pushes=%d raids=%d musters=%d trained=%d mil=%d/%d/%d/%d/%d weak=%d breach=%d/%d retarget=%d leashed=%d shells=%d",
             force and #force.units or 0, tostring(mem.out or false), (mem.next_attack or 0) // 60000, mem.pushes or 0,
             mem.raids or 0, mem.musters or 0, mem.trained or 0, memory.eco.mil.food or 0, memory.eco.mil.wood or 0,
-            memory.eco.mil.stone or 0, memory.eco.mil.gold or 0, memory.eco.mil.iron or 0))
+            memory.eco.mil.stone or 0, memory.eco.mil.gold or 0, memory.eco.mil.iron or 0, at.weak_spots or 0,
+            at.breaches or 0, at.breach_none or 0, at.retargets or 0, force and (force.leashed or 0) or 0, mem.shells or 0))
     end
     return plan
 end
