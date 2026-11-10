@@ -44,6 +44,7 @@ struct State {
     time: u32,
     sleeps: u32,
     get_name_port: u16,
+    port_offset: i32,
 }
 
 #[derive(Default)]
@@ -194,7 +195,7 @@ impl Host for Mock {
         0
     }
     fn port_offset(&self) -> i32 {
-        0
+        self.0.lock().unwrap().port_offset
     }
 }
 
@@ -613,6 +614,34 @@ fn publish_creates_its_sockets_and_the_shared_listen_socket() {
     // the listen socket has both events
     assert!(s.events.contains(&(tcp.listen_socket(), EVENT_READ)));
     assert!(s.events.contains(&(tcp.listen_socket(), EVENT_ACCEPT)));
+}
+
+#[test]
+fn publish_with_any_port_binds_port_0_and_an_offset_moves_both_ports() {
+    for (offset, game, xfer) in [(ANY_PORT, 0, 0), (2000, net16(35334), net16(35335))] {
+        let tcp = activated();
+        tcp.host.0.lock().unwrap().port_offset = offset;
+        let mut out = std::ptr::null_mut();
+        let result = tcp.publish(
+            b"name",
+            b"address",
+            false,
+            true,
+            null_event(),
+            null_event(),
+            null_event(),
+            &mut out,
+            true,
+            true,
+            0,
+        );
+        assert_eq!(result, OK);
+        drop(unsafe { Box::from_raw(out) });
+        let s = tcp.host.0.lock().unwrap();
+        // the datagram socket on the game port, the shared listen socket on the transfer port
+        assert_eq!(s.binds[0].port, game, "offset {offset}");
+        assert_eq!(s.binds[1].port, xfer, "offset {offset}");
+    }
 }
 
 #[test]

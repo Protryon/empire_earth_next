@@ -21,8 +21,8 @@ mod tests {
 
     static STARTUP: Once = Once::new();
 
-    /// Started once; the guard keeps the socket tests one at a time. Socket handles are reused at once, so a test
-    /// that closes a handle twice (startup_is_counted_with_cleanup) could otherwise close another test's socket.
+    /// Started once; the guard keeps the socket tests one at a time (startup_is_counted_with_cleanup's
+    /// cleanup must not run under another socket test).
     fn startup() -> std::sync::MutexGuard<'static, ()> {
         static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
         let guard = SERIAL.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -276,10 +276,12 @@ mod tests {
             assert_eq!(PlatSocketCleanup(), 1);
             let bad: *mut c_void = null_mut();
             let _ = bad;
-            // an unbound, closed descriptor fails cleanly with a Winsock code
+            // a descriptor that is no socket fails cleanly with a Winsock code. Not a second close of `s`: POSIX hands
+            // the lowest free number to the next open, and SERIAL does not cover the file and thread tests, so a
+            // file test's descriptor opened in between would be closed under it
             let s = PlatSocketOpen(PLAT_SOCKET_STREAM);
             assert_eq!(PlatSocketClose(s), 1);
-            assert_eq!(PlatSocketClose(s), 0);
+            assert_eq!(PlatSocketClose(-1), 0);
             let e = PlatSocketLastError();
             assert!(e == PLAT_SOCK_ENOTSOCK || e == PLAT_SOCK_EBADF, "{e}");
         }

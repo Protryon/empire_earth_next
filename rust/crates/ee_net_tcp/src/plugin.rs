@@ -29,6 +29,10 @@ const BAD_XFER: i32 = 13;
 
 const GAME_PORT: u16 = 33334;
 const XFER_PORT: u16 = 33335;
+/// The port offset (`gPlatSimPortOffset`, TEST ONLY) that makes every port 0: the system picks a free one at the bind.
+/// EE-SIM's default: a pair checked free at start could be taken by another process before the local server binds it,
+/// whose publish then failed (and the random-map screen crashed on the unpublished server).
+pub const ANY_PORT: i32 = -1;
 const MAX_HOST_ADDRESSES: usize = 64;
 const MAX_ADAPTERS: u32 = 64;
 const QUERY_PACKET_SIZE: usize = 0x43;
@@ -130,7 +134,11 @@ impl<H: Host> Tcp<H> {
     }
 
     fn port(&self, port: u16) -> u16 {
-        net16((i32::from(port) + self.host.port_offset()) as u16)
+        let offset = self.host.port_offset();
+        if offset == ANY_PORT {
+            return 0;
+        }
+        net16((i32::from(port) + offset) as u16)
     }
 
     fn record_error(&self) {

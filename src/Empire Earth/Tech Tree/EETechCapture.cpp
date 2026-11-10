@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <algorithm>
 #include <set>
+#include <string.h>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -76,8 +78,17 @@ void EETechCaptureUpgrade(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUp
     }
     const unsigned char* theFirst = (const unsigned char*)&inUpgrade->mAreaEffectScale;
     const unsigned char* theEnd = (const unsigned char*)&inUpgrade->mIsInitialized;   // the bools before it included
-    ioRecord.U32((unsigned int)(theEnd - theFirst));
-    ioRecord.Bytes(theFirst, (unsigned int)(theEnd - theFirst));
+    unsigned int theSize = (unsigned int)(theEnd - theFirst);
+    // mMediaCount and mButtonLoadCount count the presentation's media loads (EEPlayer::LoadUnitClassMedia,
+    // SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the record carries simulation
+    // state only
+    std::vector<unsigned char> theBytes(theFirst, theEnd);
+    const unsigned char* theZeroed[] = {(const unsigned char*)&inUpgrade->mMediaCount,
+                                        (const unsigned char*)&inUpgrade->mButtonLoadCount};
+    for (const unsigned char* theField : theZeroed)
+        memset(theBytes.data() + (theField - theFirst), 0, sizeof(long));
+    ioRecord.U32(theSize);
+    ioRecord.Bytes(theBytes.data(), theSize);
 }
 
 void EETechCapturePlayer(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)

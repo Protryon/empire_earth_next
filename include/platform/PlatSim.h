@@ -32,8 +32,11 @@ extern uint32_t gPlatSimSeed;
 // the idle local human is never taken out of the game nor defeated (the harness's --no-human-defeat):
 // EEWorld::RemovePlayerFromGame(false, local player) and EEPlayer::SetGameResult(2) on the local player do nothing
 extern int gPlatSimNoHumanDefeat;
-// added to the TCP protocol's fixed ports 33334/33335 (0 in the game), so simulations do not share them
+// added to the TCP protocol's fixed ports 33334/33335 (0 in the game), so simulations do not share them;
+// kPlatSimAnyPort (EE-SIM's default) makes every port the protocol binds 0: the system picks a free one at the bind
+// (ee_net_tcp ANY_PORT)
 extern int gPlatSimPortOffset;
+enum { kPlatSimAnyPort = -1 };
 extern volatile long gPlatSimNoHumanDefeatHits;
 
 // The harness clock (TEST ONLY; ee_plat_core sim_clock). With a factor set, the clocks of platform/PlatTime.h

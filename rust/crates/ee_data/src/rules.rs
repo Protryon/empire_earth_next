@@ -13,6 +13,7 @@ use crate::msg::{At, Part};
 use crate::node::{Kind, Node};
 use crate::spec::table;
 use crate::text::{self, node_bool, node_float, node_int, node_scalar, parse_yaml, Res};
+#[cfg(not(test))]
 use std::sync::Mutex;
 
 /// A number that is a constant or one of dbworld's values (`EERuleNumber`).
@@ -1013,7 +1014,27 @@ struct RuleOverride {
     applied: bool,
 }
 
+// The list is process-wide: EE-SIM adds the overrides on its main thread, the loader applies them on its own.
+#[cfg(not(test))]
 static OVERRIDES: Mutex<Vec<RuleOverride>> = Mutex::new(Vec::new());
+
+#[cfg(not(test))]
+fn with_overrides<R>(f: impl FnOnce(&mut Vec<RuleOverride>) -> R) -> R {
+    f(&mut OVERRIDES.lock().expect("the override list"))
+}
+
+// In unit tests each test thread has its own list: libtest runs tests in parallel, and an override one test added
+// (overrides_apply_and_report's combat.damage.minimum=8) was applied to another test's documents (the gate's broken
+// combat.yaml then loaded without its error).
+#[cfg(test)]
+thread_local! {
+    static OVERRIDES: std::cell::RefCell<Vec<RuleOverride>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+#[cfg(test)]
+fn with_overrides<R>(f: impl FnOnce(&mut Vec<RuleOverride>) -> R) -> R {
+    OVERRIDES.with(|o| f(&mut o.borrow_mut()))
+}
 
 /// "doc.key.key=value"; false with the reason when the spec is malformed.
 pub fn add_override(spec: &[u8]) -> Result<(), Vec<u8>> {
@@ -1030,30 +1051,26 @@ pub fn add_override(spec: &[u8]) -> Result<(), Vec<u8>> {
     if parts.len() < 2 {
         return Err(msg!("'", spec, "': expected doc.key...=value"));
     }
-    OVERRIDES.lock().expect("the override list").push(RuleOverride {
-        doc: parts[0].clone(),
-        path: parts[1..].to_vec(),
-        value,
-        problem: b"its document was not read".to_vec(),
-        applied: false,
+    with_overrides(|o| {
+        o.push(RuleOverride {
+            doc: parts[0].clone(),
+            path: parts[1..].to_vec(),
+            value,
+            problem: b"its document was not read".to_vec(),
+            applied: false,
+        })
     });
     Ok(())
 }
 
 /// The overrides that changed nothing (document not read, key absent), each with the reason.
 pub fn override_problems() -> Vec<Vec<u8>> {
-    OVERRIDES
-        .lock()
-        .expect("the override list")
-        .iter()
-        .filter(|o| !o.applied)
-        .map(|o| msg!(&o.doc, ": ", &o.problem))
-        .collect()
+    with_overrides(|o| o.iter().filter(|o| !o.applied).map(|o| msg!(&o.doc, ": ", &o.problem)).collect())
 }
 
 #[cfg(test)]
 pub fn clear_overrides() {
-    OVERRIDES.lock().expect("the override list").clear();
+    with_overrides(Vec::clear);
 }
 
 /// a map's child by key, or a list's (or a map's list child's) entry by id
@@ -1088,7 +1105,10 @@ fn override_step<'a>(node: &'a mut Node, key: &[u8]) -> Option<&'a mut Node> {
 
 /// Applies the overrides of this document, as it is read.
 pub fn apply_overrides(name: &str, doc: &mut Node) {
-    let mut overrides = OVERRIDES.lock().expect("the override list");
+    with_overrides(|overrides| apply_overrides_from(overrides, name, doc));
+}
+
+fn apply_overrides_from(overrides: &mut [RuleOverride], name: &str, doc: &mut Node) {
     for o in overrides.iter_mut() {
         if o.doc != name.as_bytes() {
             continue;
@@ -1404,5 +1424,14 @@ mod tests {
         assert_eq!(r.game_options.difficulties[0].ai_cheats, 1);
         assert_eq!(override_problems(), vec![b"combat: combat.damage.nosuch: not in the document".to_vec()]);
         clear_overrides();
+    }
+
+    #[test]
+    fn another_test_threads_overrides_are_not_applied() {
+        std::thread::spawn(|| add_override(b"combat.damage.minimum=8").unwrap()).join().unwrap();
+        let mut c = content(&[("combat", "damage:\n  minimum: 1\n".to_string())]);
+        let mut r = Rules::default();
+        r.load(&mut c).unwrap();
+        assert_eq!(r.combat.minimum_damage, 1);
     }
 }
