@@ -6,7 +6,9 @@
 // then UIBlinkingButton's (0x1005df23..0x1005e0c2), the U2D key init chains, the ctor and the out-of-line members.
 // UIBlinkingButton::DrawPolygons is ICF-folded into UIButton::DrawPolygons (0x1005eb30, UIButton.cpp's range).
 #include <windows.h>
+#include <stddef.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -36,12 +38,24 @@ UIBlinkingButton::UIBlinkingButton(unsigned long inId, GEBitmap* inNormalBitmap,
                inBorderThickness),
       mPoll(250, 0, false)
 {
-    this->mBlinkRate = inBlinkRate == 0 ? 250 : (inBlinkRate < 50 ? 50 : (inBlinkRate > 5000 ? 5000 : inBlinkRate));
+    // the record from mBlinkPhase on (rust/crates/ee_ui/src/button_variants.rs BlinkFields), written whole
+#define EE_UI_BLINK_FIELD(member, field)                                                                             \
+    static_assert(offsetof(UIBlinkingButton, member) - offsetof(UIBlinkingButton, mBlinkPhase) ==                    \
+                      offsetof(EeUiBlinkFields, field),                                                              \
+                  "ee_ui/src/button_variants.rs BlinkFields")
+    EE_UI_BLINK_FIELD(mBlinkRate, blink_rate);
+    EE_UI_BLINK_FIELD(mPressedOpacity, pressed_opacity);
+    EE_UI_BLINK_FIELD(mNormalOpacity, normal_opacity);
+    EE_UI_BLINK_FIELD(mBgOpacity, bg_opacity);
+    EE_UI_BLINK_FIELD(mFullBorderOpacity, full_border_opacity);
+    EE_UI_BLINK_FIELD(mSavedAlwaysDirty, saved_always_dirty);
+    EE_UI_BLINK_FIELD(mNeedsOpacities, needs_opacities);
+    EE_UI_BLINK_FIELD(mIsBlinking, is_blinking);
+#undef EE_UI_BLINK_FIELD
+    static_assert(sizeof(UIBlinkingButton) - offsetof(UIBlinkingButton, mBlinkPhase) >= sizeof(EeUiBlinkFields),
+                  "ee_ui/src/button_variants.rs BlinkFields");
+    ee_ui_blink_init(reinterpret_cast<EeUiBlinkFields*>(&this->mBlinkPhase), inBlinkRate, this->mAlwaysDirty);
     this->mPoll.SetTimeDelay(this->mBlinkRate);
-    this->mSavedAlwaysDirty = this->mAlwaysDirty;
-    this->mIsBlinking = false;
-    this->mBlinkPhase = 1;
-    this->mNeedsOpacities = true;
 }
 
 // FUNCTION: LLE 0x1005e27a
@@ -67,36 +81,16 @@ void UIBlinkingButton::SetIsBlinking(bool inBlinking)
 // Fades the button's background, border and bitmaps in and out while blinking (full otherwise), then copies the button
 long UIBlinkingButton::CopyData()
 {
-    if (this->mNeedsOpacities) {
-        this->mPressedOpacity = 1.0f;
-        this->mNormalOpacity = 1.0f;
-        this->mBgOpacity = this->GetBgOpacity();
-        this->mFullBorderOpacity = this->GetBorderOpacity();
-        this->mNeedsOpacities = false;
-    }
-    if (this->mPoll.Poll())
-        this->mBlinkPhase = this->mBlinkPhase != 1;
-    float theFraction = (float)this->mPoll.GetTimeLeft() / (float)this->mBlinkRate;
-    if (this->mIsBlinking && this->mState != kButtonStatePressed) {
-        float theScale;
-        if (this->mBlinkPhase == 1)
-            theScale = UMSin((1.0f - theFraction) * 1.5707964f);
-        else
-            theScale = UMSin(theFraction * 1.5707964f);
-        this->SetBgOpacity(theScale * this->mBgOpacity);
-        this->SetBorderOpacity(theScale * this->mFullBorderOpacity);
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->SetOpacity(theScale * this->mPressedOpacity);
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->SetOpacity(theScale * this->mNormalOpacity);
-    } else {
-        this->SetBgOpacity(this->mBgOpacity);
-        this->SetBorderOpacity(this->mFullBorderOpacity);
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->SetOpacity(this->mPressedOpacity);
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->SetOpacity(this->mNormalOpacity);
-    }
+    bool thePolled = this->mPoll.Poll() != 0;
+    EeUiBlinkShow theShow = ee_ui_blink_copy_data(reinterpret_cast<EeUiBlinkFields*>(&this->mBlinkPhase), thePolled,
+                                                  this->mPoll.GetTimeLeft(), this->mState, this->GetBgOpacity(),
+                                                  this->GetBorderOpacity());
+    this->SetBgOpacity(theShow.background);
+    this->SetBorderOpacity(theShow.border);
+    if (this->mPressedBitmap)
+        this->mPressedBitmap->SetOpacity(theShow.pressed);
+    if (this->mNormalBitmap)
+        this->mNormalBitmap->SetOpacity(theShow.normal);
     return UIButton::CopyData();
 }
 

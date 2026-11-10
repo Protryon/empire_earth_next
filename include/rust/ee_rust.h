@@ -123,6 +123,13 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
+/// `kCheckStateOff`, `kCheckStateOn`, `kCheckStateNot`.
+constexpr static const unsigned long CHECK_OFF = 0;
+
+constexpr static const unsigned long CHECK_ON = 1;
+
+constexpr static const unsigned long CHECK_NOT = 2;
+
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
 
@@ -2108,6 +2115,59 @@ struct EeUiButtonRefs {
   const unsigned long *index;
   void *sub;
   void *ctx;
+};
+
+/// `UITriStateCheckBox`'s members in their C++ order (from `mTextLabel` on).
+struct EeUiTriStateFields {
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  /// 0 off, 1 on, 2 "not".
+  unsigned long check_state;
+  bool has_text;
+};
+
+/// Where a `UITriStateCheckBox` keeps what the Rust side reads and writes.
+struct EeUiTriStateRefs {
+  /// The `UITriStateCheckBox*`.
+  void *button;
+  /// Its record from `mTextLabel` on.
+  EeUiTriStateFields *fields;
+  /// `mRectangle`.
+  const EeUiRect *rect;
+  /// `mBorderThickness`.
+  const unsigned long *border;
+  /// A `SetText`'s text and font for the label host calls (`UIButtonRust::Label`), else NULL.
+  void *ctx;
+};
+
+/// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
+struct EeUiBlinkFields {
+  /// 1 fading out, 0 fading in.
+  unsigned long blink_phase;
+  /// Milliseconds per phase, 50..5000.
+  unsigned long blink_rate;
+  float pressed_opacity;
+  float normal_opacity;
+  float bg_opacity;
+  float full_border_opacity;
+  bool saved_always_dirty;
+  bool needs_opacities;
+  bool is_blinking;
+};
+
+/// What `CopyData` shows: the background's, the border's and the two bitmaps' opacities.
+struct EeUiBlinkShow {
+  float background;
+  float border;
+  float pressed;
+  float normal;
+};
+
+/// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
+struct EeUiSlice {
+  EeUiRect source;
+  EeUiRect destination;
+  EeUiPoint location;
 };
 
 /// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
@@ -5697,6 +5757,55 @@ void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
 
 /// `UIRadioButton::SetText` (`ctx` as for the check box).
 void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
+
+/// The constructor's `UIButton` rectangle.
+EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);
+
+/// The constructor's bitmap offset: true and `out` written, or false to keep it.
+bool ee_ui_tristate_bitmap_offset(float height, unsigned long border, EeUiPoint *out);
+
+/// `UITriStateCheckBox::ChangeWidth`.
+void ee_ui_tristate_change_width(const EeUiTriStateRefs *refs, unsigned long width);
+
+/// `UITriStateCheckBox::CopyData`.
+long ee_ui_tristate_copy_data(const EeUiTriStateRefs *refs);
+
+/// `UITriStateCheckBox::SetCheckState`.
+void ee_ui_tristate_set_check_state(const EeUiTriStateRefs *refs, unsigned long state);
+
+/// `UITriStateCheckBox::SetLocation`.
+void ee_ui_tristate_set_location(const EeUiTriStateRefs *refs, EeUiPoint at);
+
+/// `UITriStateCheckBox::SetText` (`ctx` in `refs`: the C++ text and font for the label host calls).
+void ee_ui_tristate_set_text(const EeUiTriStateRefs *refs, const char *s);
+
+/// `UITriStateCheckBox::CycleCheck`.
+void ee_ui_tristate_cycle(const EeUiTriStateRefs *refs);
+
+/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
+void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
+
+/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
+EeUiBlinkShow ee_ui_blink_copy_data(EeUiBlinkFields *fields,
+                                    bool polled,
+                                    unsigned long time_left,
+                                    unsigned long state,
+                                    float bg,
+                                    float border);
+
+/// `UIScalableButton::CopyData`'s source rectangle for the state.
+EeUiRect ee_ui_scalable_copied_rect(unsigned long state,
+                                    bool has_focused_bitmap,
+                                    const EeUiRect *normal,
+                                    const EeUiRect *focused,
+                                    const EeUiRect *pressed,
+                                    const EeUiRect *current);
+
+/// `UIScalableButton::DrawPolygons`' three slices, written to `out[0..3]`.
+void ee_ui_scalable_slices(const EeUiRect *copied,
+                           const EeUiRect *draw,
+                           unsigned long texture_width,
+                           EeUiSlice *out);
 
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);

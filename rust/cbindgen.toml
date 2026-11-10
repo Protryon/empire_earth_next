@@ -137,6 +137,11 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "TableRefs" = "EeUiControlsTableRefs"
 "TableKey" = "EeUiControlsTableKey"
 "Trigger" = "EeUiTrigger"
+"TriStateFields" = "EeUiTriStateFields"
+"TriStateRefs" = "EeUiTriStateRefs"
+"BlinkFields" = "EeUiBlinkFields"
+"BlinkShow" = "EeUiBlinkShow"
+"Slice" = "EeUiSlice"
 # ee_won
 "Md5" = "EeWonMd5"
 "Blowfish" = "EeWonBlowfish"
