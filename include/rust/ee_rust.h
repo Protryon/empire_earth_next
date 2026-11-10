@@ -2681,7 +2681,7 @@ struct EeWonQueueDecision {
 };
 
 /// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideSink = void(*)(void *context, const uint32_t *units, size_t count);
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
@@ -7765,7 +7765,7 @@ void ee_won_parser_read_wstring(const void *text,
                                 uint32_t unit_size,
                                 int32_t *pos,
                                 bool stop_at_whitespace,
-                                EeWonWideSink sink,
+                                EeWonWideUnitSink sink,
                                 void *context);
 
 /// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
