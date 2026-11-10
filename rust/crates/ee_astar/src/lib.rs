@@ -13,8 +13,8 @@
 //! `ffi::EeAStarGraphCallbacks`.
 //!
 //! The continent manager's analysis, leaf by leaf (the C++ manager keeps its objects and stores what these
-//! compute): `choke` is the choke point pass's grid smoothing, `continent_grid` the grid, adjacency and shore tiles
-//! from the continent fill, `tile_values` the tile values.
+//! compute): `choke` is the choke point pass's classification and smoothing, `continent_grid` the grid, adjacency
+//! and shore tiles from the continent fill, `tile_values` the tile values.
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is

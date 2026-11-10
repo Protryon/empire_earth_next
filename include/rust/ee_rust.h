@@ -789,6 +789,20 @@ struct EeContinentShore {
   EePoint tile;
 };
 
+/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
+/// tile (outside the playable rhombus it has none), its continent's category
+/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
+/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
+struct EeChokeTileInfo {
+  bool tile;
+  uint8_t category;
+  uint32_t continent_serial;
+  bool resource;
+  bool forest;
+  uint32_t forest_serial;
+  int32_t forest_tiles;
+};
+
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3084,6 +3098,18 @@ void ee_astar_update_tile_values(int32_t size,
                                  const int32_t *weights,
                                  int32_t *values,
                                  int8_t *bytes);
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
+/// `serials` and smooths `passes - 1` times into the `flags`.
+///
+/// # Safety
+/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
+void ee_astar_choke_build_grids(int32_t size,
+                                int32_t passes,
+                                const EeChokeTileInfo *infos,
+                                int32_t *kinds,
+                                uint32_t *serials,
+                                uint8_t *flags);
 
 /// `UDataCompression::Compress`.
 ///

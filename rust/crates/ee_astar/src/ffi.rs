@@ -1143,6 +1143,7 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
 
 // ---- the continent manager's grid (continent_grid.rs) ----
 
+use crate::choke::EeChokeTileInfo;
 use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
 use crate::tile_values;
 
@@ -1303,4 +1304,33 @@ pub unsafe extern "C" fn ee_astar_update_tile_values(
     };
     let world = tile_values::TileWorld { size, terrain, water, shore, ice_shore, weights };
     tile_values::update_tile_values(&world, values, bytes);
+}
+
+// ---- the choke point pass's grids (choke.rs) ----
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
+/// `serials` and smooths `passes - 1` times into the `flags`.
+///
+/// # Safety
+/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_build_grids(
+    size: i32,
+    passes: i32,
+    infos: *const EeChokeTileInfo,
+    kinds: *mut i32,
+    serials: *mut u32,
+    flags: *mut u8,
+) {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
+    // SAFETY: the caller's contract
+    let (infos, kinds, serials, flags) = unsafe {
+        (
+            std::slice::from_raw_parts(infos, n),
+            std::slice::from_raw_parts_mut(kinds, n),
+            std::slice::from_raw_parts_mut(serials, n),
+            std::slice::from_raw_parts_mut(flags, n),
+        )
+    };
+    crate::choke::build_grids(size, passes, infos, kinds, serials, flags);
 }
