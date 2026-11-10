@@ -861,8 +861,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
 // 253 the next engine's AI id after each computer player's engine, EEPPlayerHelper, and the lobby choices' new
 // numbering in EEGameOptionsPlayer, ee/EECPEngine.h; 254 the running game's own values, ee/EESaveGameFiles.h
-// EESaveHasLiveState, docs/RUST_PLAN.md R5a.2: 253 on the rust branch until it merged main's 253; 255 the computer
-// players' round-robin schedule, EESaveHasAISchedule)
+// EESaveHasLiveState, docs/RUST_PLAN.md R5a.2: 253 on the rust branch until it merged main's 253; 255 more of the
+// running state: the computer players' schedule and own timers, the units' contacts, frames and exact counters,
+// EESaveHasRunningState)
 const unsigned long kSaveGameMajorVersion = 0;
 const unsigned long kSaveGameMinorVersion = 255;
 #include "lle/PIMModule.h"

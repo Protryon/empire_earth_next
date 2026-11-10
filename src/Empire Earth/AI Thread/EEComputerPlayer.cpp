@@ -34,6 +34,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPTrace.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -4882,6 +4883,35 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mFavoriteSpaceType);
     }
+    // port (0.255): the running values the original saved otherwise or not at all (Save), put back at the first tick
+    // after RepairPointers (which asks for a regroup) and before the first Update (EEAfterLoad): the pop cap
+    // (WorkOutPopulation's), the enable-time flag (saved as false until now: Update set the time again), the regroup
+    // flag, the population time (unsaved: Update worked the population out at once) and the last damage time
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
+        long thePopulationCap = 0;
+        bool theEnableTimeSet = false;
+        bool theRegroupPending = false;
+        long theNextPopulationTime = 0;
+        long theLastDamagedTime = 0;
+        if ((theResult = inFile.Read(thePopulationCap)) == kErrorOK && (theResult = inFile.Read(theEnableTimeSet)) == kErrorOK
+            && (theResult = inFile.Read(theRegroupPending)) == kErrorOK && (theResult = inFile.Read(theNextPopulationTime)) == kErrorOK)
+            theResult = inFile.Read(theLastDamagedTime);
+        if (theResult == kErrorOK) {
+            EEComputerPlayer* theSelf = this;
+            unsigned long thePlayerID = this->mPlayerID;
+            EEAfterLoad([theSelf, thePlayerID, thePopulationCap, theEnableTimeSet, theRegroupPending, theNextPopulationTime,
+                         theLastDamagedTime]() {
+                if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                    || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
+                    return;   // not the world's computer player of that id any more
+                theSelf->mPopulationCap = thePopulationCap;
+                theSelf->mIsEnableTimeSet = theEnableTimeSet;
+                theSelf->mRegroupPending = theRegroupPending;
+                theSelf->mNextPopulationTime = theNextPopulationTime;
+                theSelf->mLastDamagedTime = theLastDamagedTime;
+            });
+        }
+    }
     return theResult;
 }
 #pragma optimize("g", on)
@@ -5675,6 +5705,12 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         theResult = outFile.Write(this->mSpaceDockMax);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mFavoriteSpaceType);
+    // port (0.255): the running values (Load), without changing the running game
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
+        if ((theResult = outFile.Write(this->mPopulationCap)) == kErrorOK && (theResult = outFile.Write(this->mIsEnableTimeSet)) == kErrorOK
+            && (theResult = outFile.Write(this->mRegroupPending)) == kErrorOK && (theResult = outFile.Write(this->mNextPopulationTime)) == kErrorOK)
+            theResult = outFile.Write(this->mLastDamagedTime);
+    }
     return theResult;
 }
 

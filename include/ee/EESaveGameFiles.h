@@ -20,9 +20,13 @@ inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 254;
 }
-// port: from 0.255 a save holds the computer players' round-robin schedule (EEArtificialIntelligence's next player and
-// next update time, EEPWorldHelper); an older save's loaded game updated its first computer player at its first tick
-inline bool EESaveHasAISchedule(unsigned long inMajorVersion, unsigned long inMinorVersion)
+// port: from 0.255 a save holds more of the running state ("load equals continue", second round): the computer
+// players' round-robin schedule (EEArtificialIntelligence's next player and next update time, EEPWorldHelper; an older
+// save's loaded game updated its first computer player at its first tick), each computer player's own timers and
+// flags (EEComputerPlayer: pop cap, enable-time flag, regroup flag, population and damage times), and per unit the
+// contacts, the animation frame, the exact flight time, rotting time, research, last hit points, garrison and power
+// (EEComplexUnit; the original saved fractions or rebuilt them at load)
+inline bool EESaveHasRunningState(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     return inMajorVersion > 0 || inMinorVersion >= 255;
 }

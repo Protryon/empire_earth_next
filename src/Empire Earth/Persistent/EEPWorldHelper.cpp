@@ -346,7 +346,7 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         inFile.Read(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
         if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
-            && EESaveHasAISchedule(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
+            && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
             LoadAISchedule(inFile);
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
@@ -397,7 +397,7 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     {
         SaveUnitOrder(outFile);
         SaveForests(outFile);
-        if (EESaveHasAISchedule(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
+        if (EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
             SaveAISchedule(outFile);
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
