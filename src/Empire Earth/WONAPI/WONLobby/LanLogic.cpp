@@ -7,6 +7,8 @@
 #include <list>
 #include <map>
 #include <set>
+#include <vector>
+#include <stdint.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -21,9 +23,55 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
+#include "ee/wonapi/WONBuffer.h"
+#include "rust/ee_rust.h"
 
+// The LAN protocol's messages and the host's decisions about them are ee_won's (rust/crates/ee_won/src/lan.rs);
+// this unit keeps the lobby's objects, sockets and events.
 namespace WONAPI {
 AuthContext* GetLobbyAuthContext(); // the lobby's authentication context (cdecl)
+
+static void LanAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static void LanAppendUnits(void* inContext, const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring* anOut = static_cast<std::wstring*>(inContext);
+    for (size_t i = 0; i < inCount; i++)
+        WideAppendUtf16Unit(*anOut, inUnits[i]);
+}
+// a wide string as the UTF-16 LE bytes the Rust side takes
+static std::string LanUtf16(const std::wstring& inText)
+{
+    std::string aBytes;
+    WideAppendUtf16LE(aBytes, inText);
+    return aBytes;
+}
+// a built message as the ByteBuffer the socket ops send
+static ByteBufferPtr LanMessage(const std::string& inBytes)
+{
+    return new ByteBuffer(inBytes.data(), (unsigned long)inBytes.length(), false);
+}
+// the two-byte length prefix of a message the host delivers to itself (HandleMessage skips it)
+static const size_t kLanLocalPrefix = 2;
+// a game-channel message's strings: a name or a chat text first, a join request's password second
+struct LanTexts {
+    std::wstring mFirst;
+    std::wstring mSecond;
+    static void First(void* inContext, const uint16_t* inUnits, size_t inCount)
+    { LanAppendUnits(&static_cast<LanTexts*>(inContext)->mFirst, inUnits, inCount); }
+    static void Second(void* inContext, const uint16_t* inUnits, size_t inCount)
+    { LanAppendUnits(&static_cast<LanTexts*>(inContext)->mSecond, inUnits, inCount); }
+};
+// reads a game-channel message past `inSkip` prefix bytes; kind 0: a short message (the original's read threw)
+static EeWonLanMsg LanRead(const ByteBuffer* inBuffer, size_t inSkip, LanTexts& outTexts)
+{
+    EeWonLanMsg aMsg;
+    ee_won_lan_read_game(reinterpret_cast<const uint8_t*>(inBuffer->data()), inBuffer->length(), inSkip, &aMsg,
+                         LanTexts::First, LanTexts::Second, &outTexts);
+    return aMsg;
+}
 
 // FUNCTION: WON 0x007dfb90
 // Links the socket and a LAN client both ways, unlinking the previous client
@@ -123,12 +171,10 @@ void LanLogic::InitComponent(ComponentConfig* inConfig)
 }
 
 // FUNCTION: WON 0x007e0110
-// Returns the next LAN client id, skipping 0 and 0xffff
+// Returns the next LAN client id, stepping over 0 and 0xffff (after 0xffff the counter wraps to 0, which is used)
 unsigned short LanLogic::GetNextClientId()
 {
-    if (this->mNextClientId == 0xffff || this->mNextClientId == 0)
-        ++this->mNextClientId;
-    return this->mNextClientId++;
+    return ee_won_lan_next_client_id(&this->mNextClientId);
 }
 
 // FUNCTION: WON 0x007e0140
@@ -190,11 +236,10 @@ void LanLogic::HandleSocketClosed(AsyncOp* inOp)
         return;
     if (this->IsCaptain()) {
         if (aSocket->mClient.get() != NULL) {
-            WriteBuffer aBuffer(2, true);
-            aBuffer.AppendByte(4);
-            aBuffer.AppendShort(aSocket->mClient->GetClientId());
+            std::string aMessage;
+            ee_won_lan_client_left(aSocket->mClient->GetClientId(), LanAppendBytes, &aMessage);
             aSocket->SetClient(NULL);
-            this->BroadcastMessage(aBuffer.ToByteBuffer(true).get(), true);
+            this->BroadcastMessage(LanMessage(aMessage).get(), true);
         }
         this->mPendingSockets.erase(aSocket);
     } else if (aSocket == this->mServerSocket.get()) {
@@ -214,12 +259,12 @@ void LanLogic::HandleNetworkTimer(AsyncOp* inOp)
         long aTime = time(NULL);
         for (std::set<SmartPtr<LobbyLanSocket> >::iterator anItr = this->mPendingSockets.begin();
              anItr != this->mPendingSockets.end(); ++anItr)
-            if (aTime - (*anItr)->mLastMessageTime > 300)
+            if (ee_won_lan_host_socket_stale(aTime, (*anItr)->mLastMessageTime))
                 (*anItr)->QueueClose(1000);
-    } else if (this->mServerSocket.get() != NULL && time(NULL) - this->mLastServerPing >= 120) {
-        WriteBuffer aBuffer(2, true);
-        aBuffer.AppendByte(7);
-        this->SendMessageToCaptain(aBuffer.ToByteBuffer(true).get());
+    } else if (this->mServerSocket.get() != NULL && ee_won_lan_joiner_ping_due(time(NULL), this->mLastServerPing)) {
+        std::string aMessage;
+        ee_won_lan_ping(LanAppendBytes, &aMessage);
+        this->SendMessageToCaptain(LanMessage(aMessage).get());
     }
     this->StartNetworkTimer();
 }
@@ -236,55 +281,57 @@ void LanLogic::StartNetworkTimer()
 
 // FUNCTION: WON 0x007e0760
 // Host: answers a join request: rejects other subnets (LAN) or a wrong password, else adds and announces the player
-void LanLogic::HandleJoinRequest(ReadBuffer& inBuffer, LobbyLanSocket* inSocket)
+void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring& inPassword, LobbyLanSocket* inSocket)
 {
     if (this->mMyClient.get() == NULL)
         return;
     LobbyGame* aGame = GetMyLobbyGame();
     if (aGame == NULL)
         return;
-    std::wstring aName;
-    std::wstring aPassword;
-    inBuffer.ReadWString(aName, 2);
-    inBuffer.ReadWString(aPassword, 2);
-    WriteBuffer aReply(2, true);
-    aReply.AppendByte(2);
+    // the subnet check reads the addresses only for a LAN game (type 1), as the original
+    unsigned char aPeerNet[2] = {0, 0}, aLocalNet[2] = {0, 0};
     if (aGame->GetGameType() == 1) {
         IPAddr aLocalAddr = IPAddr::GetLocalAddr();
         const char* aPeerBytes = inSocket->GetDestAddr().GetSixByte();
         const char* aLocalBytes = aLocalAddr.GetSixByte();
-        if (aPeerBytes[2] != aLocalBytes[2] || aPeerBytes[3] != aLocalBytes[3]) {
-            aReply.AppendShort(3);
-            inSocket->QueueOp(new SendMsgOp(aReply.ToByteBuffer(true).get()), -1);
-            return;
-        }
+        aPeerNet[0] = aPeerBytes[2];
+        aPeerNet[1] = aPeerBytes[3];
+        aLocalNet[0] = aLocalBytes[2];
+        aLocalNet[1] = aLocalBytes[3];
     }
-    if (aPassword != std::wstring(aGame->mPassword)) {
-        aReply.AppendShort(2);
-        inSocket->QueueOp(new SendMsgOp(aReply.ToByteBuffer(true).get()), -1);
+    short aStatus = ee_won_lan_join_status(aGame->GetGameType(), aPeerNet[0], aPeerNet[1], aLocalNet[0], aLocalNet[1],
+                                           inPassword == std::wstring(aGame->mPassword));
+    if (aStatus != 0) {
+        std::string aRefusal;
+        ee_won_lan_join_refused(aStatus, LanAppendBytes, &aRefusal);
+        inSocket->QueueOp(new SendMsgOp(LanMessage(aRefusal).get()), -1);
         return;
     }
     SmartPtr<LobbyLanClient> aClient = new LobbyLanClient;
-    aClient->mName = aName;
+    aClient->mName = inName;
     aClient->mClientId = this->GetNextClientId();
     this->mClients->AddClient(aClient.get());
-    WriteBuffer aNotify(2, true);
-    aNotify.AppendByte(3);
-    aNotify.AppendShort(aClient->GetClientId());
-    aNotify.AppendWString(aClient->mName, 2);
-    this->BroadcastMessage(aNotify.ToByteBuffer(true).get(), true);
+    std::string aName = LanUtf16(aClient->mName);
+    std::string aNotify;
+    ee_won_lan_client_joined(aClient->GetClientId(), reinterpret_cast<const uint8_t*>(aName.data()), aName.length(),
+                             LanAppendBytes, &aNotify);
+    this->BroadcastMessage(LanMessage(aNotify).get(), true);
     inSocket->SetClient(aClient.get());
-    aReply.AppendShort(0);
-    aReply.AppendShort(this->mMyClient->GetClientId());
-    aReply.AppendShort(aClient->GetClientId());
-    aReply.AppendShort(this->mClients->mClients.size());
+    std::vector<uint16_t> anIds;
+    std::vector<size_t> anOffsets(1, 0);
+    std::string aNames;
     for (LobbyClientMap::iterator anItr = this->mClients->mClients.begin();
          anItr != this->mClients->mClients.end(); ++anItr) {
         LobbyClient* aListedClient = anItr->second.get();
-        aReply.AppendShort(aListedClient->GetClientId());
-        aReply.AppendWString(aListedClient->mName, 2);
+        anIds.push_back(aListedClient->GetClientId());
+        aNames += LanUtf16(aListedClient->mName);
+        anOffsets.push_back(aNames.length());
     }
-    this->SendMessageToClient(aClient.get(), aReply.ToByteBuffer(true).get());
+    std::string aReply;
+    ee_won_lan_join_accepted(this->mMyClient->GetClientId(), aClient->GetClientId(), anIds.size(),
+                             anIds.empty() ? NULL : &anIds[0], reinterpret_cast<const uint8_t*>(aNames.data()),
+                             &anOffsets[0], LanAppendBytes, &aReply);
+    this->SendMessageToClient(aClient.get(), LanMessage(aReply).get());
 }
 // FUNCTION: WON 0x007e0f90
 // Reads the host's join reply into the player list and the game's captain; returns its status, 1 on bad data
@@ -292,36 +339,37 @@ int LanLogic::ReadJoinReply(const ByteBuffer* inBuffer, LobbyGame* inGame)
 {
     if (inBuffer == NULL || this->mServerSocket.get() == NULL || inGame == NULL)
         return 1;
-    ReadBuffer aBuffer(inBuffer->data(), inBuffer->length());
-    try {
-        if (aBuffer.ReadByte() != 2)
-            return 1;
-        short aStatus = aBuffer.ReadShort();
-        if (aStatus != 0)
-            return aStatus;
-        unsigned short aCaptainId = aBuffer.ReadShort();
-        unsigned short aMyId = aBuffer.ReadShort();
-        inGame->mCaptainId = aCaptainId;
-        unsigned short aNumClients = aBuffer.ReadShort();
-        for (int i = 0; i < aNumClients; ++i) {
-            unsigned short anId = aBuffer.ReadShort();
-            std::wstring aName;
-            aBuffer.ReadWString(aName, 2);
-            SmartPtr<LobbyLanClient> aClient = new LobbyLanClient;
-            aClient->mClientId = anId;
-            aClient->mName = GUIString(new GUIStringData(aName));
-            this->mClients->AddClient(aClient.get());
-            if (anId == aMyId)
-                this->mMyClient = aClient;
-            else if (anId == aCaptainId) {
-                this->mServerSocket->SetClient(aClient.get());
-                aClient->SetCaptain(true, true);
-            }
+    // the reply is read whole first; what the original had applied before a short read (the captain's id, the players
+    // read whole) is applied the same
+    struct Players {
+        std::vector<std::pair<unsigned short, std::wstring> > mList;
+        static void Add(void* inContext, uint16_t inId, const uint16_t* inName, size_t inCount)
+        {
+            Players* aPlayers = static_cast<Players*>(inContext);
+            aPlayers->mList.push_back(std::make_pair((unsigned short)inId, std::wstring()));
+            LanAppendUnits(&aPlayers->mList.back().second, inName, inCount);
         }
-        return 0;
-    } catch (ReadBufferException&) {
+    } aPlayers;
+    bool aHaveCaptain = false;
+    uint16_t aCaptainId = 0, aMyId = 0;
+    int aStatus = ee_won_lan_read_join_reply(reinterpret_cast<const uint8_t*>(inBuffer->data()), inBuffer->length(),
+                                             &aHaveCaptain, &aCaptainId, &aMyId, Players::Add, &aPlayers);
+    if (aHaveCaptain)
+        inGame->mCaptainId = aCaptainId;
+    for (size_t i = 0; i < aPlayers.mList.size(); ++i) {
+        unsigned short anId = aPlayers.mList[i].first;
+        SmartPtr<LobbyLanClient> aClient = new LobbyLanClient;
+        aClient->mClientId = anId;
+        aClient->mName = GUIString(new GUIStringData(aPlayers.mList[i].second));
+        this->mClients->AddClient(aClient.get());
+        if (anId == aMyId)
+            this->mMyClient = aClient;
+        else if (anId == aCaptainId) {
+            this->mServerSocket->SetClient(aClient.get());
+            aClient->SetCaptain(true, true);
+        }
     }
-    return 1;
+    return aStatus;
 }
 // FUNCTION: WON 0x007e1210
 // Host: handles the first message of a socket that has no player yet (only join requests)
@@ -329,13 +377,10 @@ void LanLogic::HandleNewSocketMessage(const ByteBuffer* inBuffer, LobbyLanSocket
 {
     if (inBuffer == NULL || inSocket == NULL || !this->IsCaptain())
         return;
-    ReadBuffer aBuffer(inBuffer->data(), inBuffer->length());
-    try {
-        switch (aBuffer.ReadByte()) {
-        case 1: this->HandleJoinRequest(aBuffer, inSocket); break;
-        }
-    } catch (ReadBufferException&) {
-    }
+    LanTexts aTexts;
+    EeWonLanMsg aMsg = LanRead(inBuffer, 0, aTexts);
+    if (aMsg.kind == 1)
+        this->HandleJoinRequest(aTexts.mFirst, aTexts.mSecond, inSocket);
 }
 
 // FUNCTION: WON 0x007e12a0
@@ -413,51 +458,48 @@ void LanLogic::BroadcastMessage(const ByteBuffer* inBuffer, bool inDeliverLocal)
     }
 }
 
-// AppendBuffer's second argument is the byte size of the length prefix (0: none), not a bool
+// the staging message goes after the type byte without a length of its own (the original's AppendBuffer(buffer, 0))
 // FUNCTION: WON 0x007e1c30
 // Wraps a staging message and sends it to the host
 void LanLogic::SendToCaptain(const ByteBuffer* inBuffer)
 {
-    WriteBuffer aMessage(2, true);
-    aMessage.AppendByte(8);
-    aMessage.AppendBuffer(inBuffer, 0);
-    this->SendMessageToCaptain(aMessage.ToByteBuffer(true).get());
+    std::string aMessage;
+    ee_won_lan_staging(inBuffer != NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
+                       inBuffer != NULL ? inBuffer->length() : 0, LanAppendBytes, &aMessage);
+    this->SendMessageToCaptain(LanMessage(aMessage).get());
 }
 
 // FUNCTION: WON 0x007e1cf0
 // Wraps a staging message and sends it to every other player (host only)
 void LanLogic::BroadcastToGame(const ByteBuffer* inBuffer)
 {
-    WriteBuffer aMessage(2, true);
-    aMessage.AppendByte(8);
-    aMessage.AppendBuffer(inBuffer, 0);
-    this->BroadcastMessage(aMessage.ToByteBuffer(true).get(), false);
+    std::string aMessage;
+    ee_won_lan_staging(inBuffer != NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
+                       inBuffer != NULL ? inBuffer->length() : 0, LanAppendBytes, &aMessage);
+    this->BroadcastMessage(LanMessage(aMessage).get(), false);
 }
 
 // FUNCTION: WON 0x007e1db0
 // Wraps a staging message and sends it to one player (host only)
 void LanLogic::SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer)
 {
-    WriteBuffer aMessage(2, true);
-    aMessage.AppendByte(8);
-    aMessage.AppendBuffer(inBuffer, 0);
-    this->SendMessageToClient(inClient, aMessage.ToByteBuffer(true).get());
+    std::string aMessage;
+    ee_won_lan_staging(inBuffer != NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
+                       inBuffer != NULL ? inBuffer->length() : 0, LanAppendBytes, &aMessage);
+    this->SendMessageToClient(inClient, LanMessage(aMessage).get());
 }
 
 // FUNCTION: WON 0x007e1e70
 // Adds the announced player (the host already has it) and broadcasts a client-added event
-void LanLogic::HandleClientJoined(ReadBuffer& inBuffer)
+void LanLogic::HandleClientJoined(unsigned short inId, const std::wstring& inName)
 {
-    unsigned short anId = inBuffer.ReadShort();
-    std::wstring aName;
-    inBuffer.ReadWString(aName, 2);
     SmartPtr<LobbyClient> aClient;
     if (this->IsCaptain())
-        aClient = this->mClients->FindClient(anId);
+        aClient = this->mClients->FindClient(inId);
     else {
         SmartPtr<LobbyLanClient> aNewClient = new LobbyLanClient;
-        aNewClient->mClientId = anId;
-        aNewClient->mName = GUIString(new GUIStringData(aName));
+        aNewClient->mClientId = inId;
+        aNewClient->mName = GUIString(new GUIStringData(inName));
         aClient = aNewClient.get();
         this->mClients->AddClient(aClient.get());
     }
@@ -468,10 +510,9 @@ void LanLogic::HandleClientJoined(ReadBuffer& inBuffer)
 
 // FUNCTION: WON 0x007e2080
 // Removes the announced player and tells the lobby the player left the game
-void LanLogic::HandleClientLeft(ReadBuffer& inBuffer)
+void LanLogic::HandleClientLeft(unsigned short inClientId)
 {
-    unsigned short aClientId = inBuffer.ReadShort();
-    SmartPtr<LobbyClient> aClient = this->mClients->RemoveClient(aClientId);
+    SmartPtr<LobbyClient> aClient = this->mClients->RemoveClient(inClientId);
     if (aClient.get() != NULL) {
         LobbyBroadcastEvent(new ClientChangedEvent(aClient.get(), this->GetRoomSpec(), 1), true);
         LobbyClientLeftGame(aClient.get());
@@ -480,58 +521,53 @@ void LanLogic::HandleClientLeft(ReadBuffer& inBuffer)
 
 // FUNCTION: WON 0x007e2160
 // Host: relays a chat line to its whisper target and sender, to the sender's team, or to everyone
-void LanLogic::HandleChatRequest(ReadBuffer& inBuffer, LobbyClient* inSender)
+void LanLogic::HandleChatRequest(unsigned short inFlags, const std::wstring& inText, unsigned short inTargetId,
+                                 LobbyClient* inSender)
 {
     if (!this->IsCaptain())
         return;
-    unsigned short aFlags = inBuffer.ReadShort();
-    std::wstring aText;
-    inBuffer.ReadWString(aText, 2);
-    unsigned short aTargetId = inBuffer.ReadShort();
-    WriteBuffer aBuffer(2, true);
-    aBuffer.AppendByte(6);
-    aBuffer.AppendShort(aFlags);
-    aBuffer.AppendShort(inSender->GetClientId());
-    aBuffer.AppendWString(aText, 2);
-    aBuffer.AppendShort(aTargetId);
-    ByteBufferPtr aMessage = aBuffer.ToByteBuffer(true);
-    if (aFlags & 4) {
-        LobbyClient* aTarget = this->mClients->FindClient(aTargetId);
+    std::string aText = LanUtf16(inText);
+    std::string aLine;
+    ee_won_lan_chat_line(inFlags, inSender->GetClientId(), reinterpret_cast<const uint8_t*>(aText.data()),
+                         aText.length(), inTargetId, LanAppendBytes, &aLine);
+    ByteBufferPtr aMessage = LanMessage(aLine);
+    switch (ee_won_lan_chat_route(inFlags)) {
+    case 1: {
+        LobbyClient* aTarget = this->mClients->FindClient(inTargetId);
         if (aTarget == NULL)
             return;
         this->SendMessageToClient(aTarget, aMessage.get());
         if (inSender != aTarget)
             this->SendMessageToClient(inSender, aMessage.get());
+        break;
     }
-    else if (aFlags & 0x100) {
+    case 2: {
         LobbyClientIterator anItr(this->mClients.get());
         while (anItr.HasMore()) {
             LobbyClient* aClient = anItr.Next();
             if (aClient->IsTeammate(inSender))
                 this->SendMessageToClient(aClient, aMessage.get());
         }
+        break;
     }
-    else
+    default:
         this->BroadcastMessage(aMessage.get(), true);
+    }
 }
 // FUNCTION: WON 0x007e23a0
 // Shows a relayed chat line unless the sender is ignored; whispers play a sound and set the reply name
-void LanLogic::HandleChatMessage(ReadBuffer& inBuffer)
+void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSenderId, const std::wstring& inText,
+                                 unsigned short inTargetId)
 {
-    unsigned short aFlags = inBuffer.ReadShort();
-    unsigned short aSenderId = inBuffer.ReadShort();
-    std::wstring aText;
-    inBuffer.ReadWString(aText, 2);
-    unsigned short aTargetId = inBuffer.ReadShort();
-    LobbyClient* aSender = this->mClients->FindClient(aSenderId);
+    LobbyClient* aSender = this->mClients->FindClient(inSenderId);
     if (aSender == NULL)
         return;
     if (aSender->mIgnored)
         return;
     LobbyClient* aTarget = NULL;
-    if (aFlags & 4) {
-        aFlags = 4;
-        aTarget = this->mClients->FindClient(aTargetId);
+    unsigned short aFlags = ee_won_lan_chat_line_flags(inFlags);
+    if (ee_won_lan_chat_route(inFlags) == 1) {
+        aTarget = this->mClients->FindClient(inTargetId);
         if (aTarget == NULL)
             return;
         if (aSender != this->mMyClient.get()) {
@@ -543,7 +579,7 @@ void LanLogic::HandleChatMessage(ReadBuffer& inBuffer)
         }
     }
     LobbyBroadcastEvent(new RecvChatEvent(8, aFlags, aSender,
-        aText, aTarget), true);
+        inText, aTarget), true);
 }
 
 // FUNCTION: WON 0x007e25f0
@@ -558,20 +594,27 @@ void LanLogic::HandleMessage(const ByteBuffer* inBuffer, LobbyClient* inClient)
 {
     if (inBuffer == NULL || inClient == NULL)
         return;
-    unsigned long anOffset = 0;
+    size_t anOffset = 0;
     if (this->IsCaptain() && inClient == this->mMyClient.get())
-        anOffset = 2;
-    ReadBuffer aBuffer(inBuffer->data() + anOffset, inBuffer->length() - anOffset);
-    try {
-        switch (aBuffer.ReadByte()) {
-        case 3: this->HandleClientJoined(aBuffer); break;
-        case 4: this->HandleClientLeft(aBuffer); break;
-        case 5: this->HandleChatRequest(aBuffer, inClient); break;
-        case 6: this->HandleChatMessage(aBuffer); break;
-        case 8: this->HandleStagingMessage(aBuffer, inClient); break;
+        anOffset = kLanLocalPrefix;
+    LanTexts aTexts;
+    EeWonLanMsg aMsg = LanRead(inBuffer, anOffset, aTexts);
+    switch (aMsg.kind) {
+    case 3: this->HandleClientJoined(aMsg.id, aTexts.mFirst); break;
+    case 4: this->HandleClientLeft(aMsg.id); break;
+    case 5: this->HandleChatRequest(aMsg.flags, aTexts.mFirst, aMsg.target, inClient); break;
+    case 6: this->HandleChatMessage(aMsg.flags, aMsg.id, aTexts.mFirst, aMsg.target); break;
+    case 8: {
+        // the staging message is read by the staging logic, from after the type byte
+        ReadBuffer aBuffer(inBuffer->data() + anOffset, inBuffer->length() - anOffset);
+        try {
+            aBuffer.ReadByte();
+            this->HandleStagingMessage(aBuffer, inClient);
         }
+        catch (ReadBufferException&) {}
+        break;
     }
-    catch (ReadBufferException&) {}
+    }
 }
 // FUNCTION: WON 0x007e2760
 // Handles the LAN name, LAN port, refresh game list and show LAN screen commands
@@ -709,12 +752,11 @@ void LanLogic::HandleClientAction(ClientActionEvent* inEvent)
 void LanLogic::SendChat(const GUIString& inText, unsigned short inFlags,
                        unsigned short inTarget)
 {
-    WriteBuffer aBuffer(2, true);
-    aBuffer.AppendByte(5);
-    aBuffer.AppendShort(inFlags);
-    aBuffer.AppendWString(inText, 2);
-    aBuffer.AppendShort(inTarget);
-    this->SendMessageToCaptain(aBuffer.ToByteBuffer(true).get());
+    std::string aText = LanUtf16(inText);
+    std::string aRequest;
+    ee_won_lan_chat_request(inFlags, reinterpret_cast<const uint8_t*>(aText.data()), aText.length(), inTarget,
+                            LanAppendBytes, &aRequest);
+    this->SendMessageToCaptain(LanMessage(aRequest).get());
 }
 
 // FUNCTION: WON 0x007e3050
@@ -758,10 +800,9 @@ void LanLogic::RefreshGames()
         LobbyBroadcastEvent(new SyncGameListEvent(this->mLanGames.get()), true);
         if (this->mDiscoverySocket.get() == NULL)
             return;
-        WriteBuffer aBuffer(0, true);
-        aBuffer.AppendByte(4);
-        this->mDiscoverySocket->QueueOp(new SendBytesToOp(
-            aBuffer.ToByteBuffer(true).get(), this->mDiscoveryAddress), -1);
+        std::string aQuery;
+        ee_won_lan_discovery(4, 0, LanAppendBytes, &aQuery);
+        this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aQuery).get(), this->mDiscoveryAddress), -1);
     } else if (aKind == 3) {
         this->mDirectGames->Rewind();
         while (this->mDirectGames->HasMore()) {
@@ -873,9 +914,10 @@ void LanLogic::BroadcastGameSummary(LobbyGame* inGame, const IPAddr& inAddress)
 {
     if (!this->CanBroadcastGame(inGame))
         return;
+    std::string aHead;
+    ee_won_lan_discovery(1, inGame->mAddress.GetPort(), LanAppendBytes, &aHead);
     WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(1);
-    aBuffer.AppendShort(inGame->mAddress.GetPort());
+    aBuffer.AppendBytes(aHead.data(), (unsigned long)aHead.length());
     inGame->WriteSummary(aBuffer);
     this->mDiscoverySocket->QueueOp(new SendBytesToOp(aBuffer.ToByteBuffer(true).get(), inAddress), -1);
 }
@@ -887,13 +929,12 @@ void LanLogic::BroadcastGameKeepAlive(LobbyGame* inGame)
     if (!this->CanBroadcastGame(inGame))
         return;
     long aTime = time(NULL);
-    if (this->mLastBroadcastTime > 0 && aTime - this->mLastBroadcastTime >= 30)
+    if (ee_won_lan_summary_due(aTime, this->mLastBroadcastTime))
         this->BroadcastGameSummary(inGame, this->mDiscoveryAddress);
     else {
-        WriteBuffer aBuffer(0, true);
-        aBuffer.AppendByte(2);
-        aBuffer.AppendShort(inGame->mAddress.GetPort());
-        this->mDiscoverySocket->QueueOp(new SendBytesToOp(aBuffer.ToByteBuffer(true).get(), this->mDiscoveryAddress), -1);
+        std::string aKeepAlive;
+        ee_won_lan_discovery(2, inGame->mAddress.GetPort(), LanAppendBytes, &aKeepAlive);
+        this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aKeepAlive).get(), this->mDiscoveryAddress), -1);
     }
     this->mLastBroadcastTime = aTime;
 }
@@ -904,10 +945,9 @@ void LanLogic::BroadcastGameRemoved(LobbyGame* inGame)
 {
     if (!this->CanBroadcastGame(inGame))
         return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(3);
-    aBuffer.AppendShort(inGame->mAddress.GetPort());
-    this->mDiscoverySocket->QueueOp(new SendBytesToOp(aBuffer.ToByteBuffer(true).get(), this->mDiscoveryAddress), -1);
+    std::string aRemoved;
+    ee_won_lan_discovery(3, inGame->mAddress.GetPort(), LanAppendBytes, &aRemoved);
+    this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aRemoved).get(), this->mDiscoveryAddress), -1);
 }
 // FUNCTION: WON 0x007e4be0
 // Sends the host's keep-alive, drops LAN games unseen for 30 seconds, then rearms
@@ -927,7 +967,7 @@ void LanLogic::HandleDiscoveryTimer(AsyncOp* inOp)
 
 // FUNCTION: WON 0x007e4c90
 // Answers a discovery query with the hosted game's summary
-void LanLogic::HandleDiscoveryQuery(ReadBuffer&, const IPAddr& inAddress)
+void LanLogic::HandleDiscoveryQuery(const IPAddr& inAddress)
 {
     LobbyGame* aGame = GetMyLobbyGame();
     if (aGame != NULL)
@@ -936,10 +976,10 @@ void LanLogic::HandleDiscoveryQuery(ReadBuffer&, const IPAddr& inAddress)
 
 // FUNCTION: WON 0x007e4cb0
 // Adds or updates a LAN game from its summary; an unreadable one is removed but reported as modified
-void LanLogic::HandleGameSummary(ReadBuffer& inBuffer, const IPAddr& inAddress)
+void LanLogic::HandleGameSummary(unsigned short inPort, ReadBuffer& inBuffer, const IPAddr& inAddress)
 {
     IPAddr anAddress = inAddress;
-    anAddress.SetPort(inBuffer.ReadShort());
+    anAddress.SetPort(inPort);
     bool aFlag = false;
     LobbyGame* aGame = this->mLanGames->GetOrCreateGame(anAddress, &aFlag);
     if (aGame->ReadSummary(inBuffer)) {
@@ -956,10 +996,10 @@ void LanLogic::HandleGameSummary(ReadBuffer& inBuffer, const IPAddr& inAddress)
 
 // FUNCTION: WON 0x007e4ec0
 // Marks a known LAN game as just seen
-void LanLogic::HandleGameKeepAlive(ReadBuffer& inBuffer, const IPAddr& inAddress)
+void LanLogic::HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddress)
 {
     IPAddr anAddress = inAddress;
-    anAddress.SetPort(inBuffer.ReadShort());
+    anAddress.SetPort(inPort);
     long anIP = inAddress.GetHost();
     if (anAddress.GetHost() != anIP)
         return;
@@ -971,10 +1011,10 @@ void LanLogic::HandleGameKeepAlive(ReadBuffer& inBuffer, const IPAddr& inAddress
 
 // FUNCTION: WON 0x007e5050
 // Removes a LAN game its host announced as gone
-void LanLogic::HandleGameRemoved(ReadBuffer& inBuffer, const IPAddr& inAddress)
+void LanLogic::HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress)
 {
     IPAddr anAddress = inAddress;
-    anAddress.SetPort(inBuffer.ReadShort());
+    anAddress.SetPort(inPort);
     long aBroadcast = inAddress.GetHost();
     if (anAddress.GetHost() != aBroadcast)
         return;
@@ -989,17 +1029,28 @@ void LanLogic::HandleDiscoveryRecv(AsyncOp* inOp)
     RecvBytesFromOp* anOp = static_cast<RecvBytesFromOp*>(inOp);
     if (anOp->mSocket.get() != this->mDiscoverySocket.get() || !anOp->Succeeded())
         return;
-    ReadBuffer aBuffer(anOp->GetBytes()->data(), anOp->GetBytes()->length());
+    const ByteBuffer* aBytes = anOp->GetBytes().get();
     const IPAddr& aFrom = anOp->mFromAddress;
-    try {
-        switch (aBuffer.ReadByte()) {
-        case 1: this->HandleGameSummary(aBuffer, aFrom); break;
-        case 2: this->HandleGameKeepAlive(aBuffer, aFrom); break;
-        case 3: this->HandleGameRemoved(aBuffer, aFrom); break;
-        case 4: this->HandleDiscoveryQuery(aBuffer, aFrom); break;
+    uint8_t aKind = 0;
+    uint16_t aPort = 0;
+    if (!ee_won_lan_read_discovery(reinterpret_cast<const uint8_t*>(aBytes->data()), aBytes->length(), &aKind, &aPort))
+        return;
+    switch (aKind) {
+    case 1: {
+        // the game's summary follows the type and the port (LobbyGame::ReadSummary)
+        ReadBuffer aBuffer(aBytes->data(), aBytes->length());
+        try {
+            aBuffer.ReadByte();
+            aBuffer.ReadShort();
+            this->HandleGameSummary(aPort, aBuffer, aFrom);
         }
+        catch (ReadBufferException&) {}
+        break;
     }
-    catch (ReadBufferException&) {}
+    case 2: this->HandleGameKeepAlive(aPort, aFrom); break;
+    case 3: this->HandleGameRemoved(aPort, aFrom); break;
+    case 4: this->HandleDiscoveryQuery(aFrom); break;
+    }
 }
 // FUNCTION: WON 0x007e53a0
 // Starts (creating if needed) the 15-second discovery timer
@@ -1029,10 +1080,9 @@ void LanLogic::StartDiscovery()
     this->mDiscoverySocket->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleDiscoveryRecv, this));
     this->mDiscoverySocket->SetRepeatOp(new RecvBytesFromOp(1024, NULL));
     this->StartDiscoveryTimer();
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(4);
-    this->mDiscoverySocket->QueueOp(new SendBytesToOp(
-        aBuffer.ToByteBuffer(true).get(), this->mDiscoveryAddress), -1);
+    std::string aQuery;
+    ee_won_lan_discovery(4, 0, LanAppendBytes, &aQuery);
+    this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aQuery).get(), this->mDiscoveryAddress), -1);
     if (!this->IsCaptain())
         return;
     LobbyGame* aGame = GetMyLobbyGame();
@@ -1160,11 +1210,12 @@ bool LanLogic::JoinGame(LobbyGame* game)
             if(connect->GetStatus()!=WS_Success) return false;
             needConnect=false;
         }
-        WriteBuffer request(2,true);
-        request.AppendByte(1);
-        request.AppendWString(LobbyGetLanName(),2);
-        request.AppendWString(password,2);
-        this->mServerSocket->QueueOp(new SendMsgOp(request.ToByteBuffer(true).get()),-1);
+        std::string name=LanUtf16(LobbyGetLanName());
+        std::string secret=LanUtf16(password);
+        std::string request;
+        ee_won_lan_join_request(reinterpret_cast<const uint8_t*>(name.data()),name.length(),
+                                reinterpret_cast<const uint8_t*>(secret.data()),secret.length(),LanAppendBytes,&request);
+        this->mServerSocket->QueueOp(new SendMsgOp(LanMessage(request).get()),-1);
         this->mLastServerPing=time(NULL);
         SmartPtr<RecvMsgOp> reply=new RecvMsgOp(this->mServerSocket.get());
         LobbyRunOpWithStatus(reply.get(),::LANLogic_RegisterTitle_String,::LANLogic_RegisterDetails_String,1,0);

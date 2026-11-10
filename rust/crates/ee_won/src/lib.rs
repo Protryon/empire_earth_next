@@ -14,11 +14,13 @@ pub mod crc16;
 pub mod der;
 pub mod elgamal;
 pub mod ffi;
+pub mod ffi_lan;
 pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
 /// cbindgen:ignore
 pub mod ipaddr;
+pub mod lan;
 pub mod md5;
 /// cbindgen:ignore
 pub mod netstats;

@@ -184,6 +184,52 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
 
+constexpr static const uint8_t JOIN_REQUEST = 1;
+
+constexpr static const uint8_t JOIN_REPLY = 2;
+
+constexpr static const uint8_t CLIENT_JOINED = 3;
+
+constexpr static const uint8_t CLIENT_LEFT = 4;
+
+constexpr static const uint8_t CHAT_REQUEST = 5;
+
+constexpr static const uint8_t CHAT_LINE = 6;
+
+constexpr static const uint8_t PING = 7;
+
+constexpr static const uint8_t STAGING = 8;
+
+constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
+
+constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
+
+constexpr static const uint8_t DISCOVERY_REMOVED = 3;
+
+constexpr static const uint8_t DISCOVERY_QUERY = 4;
+
+/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
+constexpr static const int16_t JOIN_OK = 0;
+
+constexpr static const int32_t JOIN_BAD_REPLY = 1;
+
+constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
+
+constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
+
+/// Chat flags: a whisper to the target, a line to the sender's team.
+constexpr static const uint16_t CHAT_WHISPER = 4;
+
+constexpr static const uint16_t CHAT_TEAM = 256;
+
+/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
+/// host re-sends its full summary instead of a keep-alive after this many.
+constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
+
+constexpr static const int64_t JOINER_PING_IDLE = 120;
+
+constexpr static const int64_t SUMMARY_REPEAT = 30;
+
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
   Hashed = 0,
@@ -2556,6 +2602,18 @@ struct EeWonCdKeyDecoded {
   bool used_machine;
   uint8_t raw[8];
 };
+
+/// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
+/// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.
+struct EeWonLanMsg {
+  uint8_t kind;
+  uint16_t flags;
+  uint16_t id;
+  uint16_t target;
+};
+
+/// Receives one player of a join reply.
+using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *name, size_t count);
 
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
@@ -7001,6 +7059,155 @@ void ee_won_cdkey_decrypt(const uint8_t *product,
 /// # Safety
 /// `raw` holds `length` bytes.
 bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
+
+/// The joiner's join request; `name` / `password` are UTF-16 LE bytes.
+///
+/// # Safety
+/// The byte arguments hold their lengths; `sink` takes the message.
+void ee_won_lan_join_request(const uint8_t *name,
+                             size_t name_len,
+                             const uint8_t *password,
+                             size_t password_len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's refusal of a join (`status` 2 wrong password, 3 another subnet).
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_join_refused(int16_t status, EeWonByteSink sink, void *context);
+
+/// The host's accepted join reply: `ids[i]` and the UTF-16 LE name `names` from `name_offsets[i]` (in bytes) to
+/// `name_offsets[i + 1]` (`count + 1` offsets).
+///
+/// # Safety
+/// `ids` holds `count` ids, `name_offsets` `count + 1` offsets into `names`; `sink` takes the message.
+void ee_won_lan_join_accepted(uint16_t captain,
+                              uint16_t you,
+                              size_t count,
+                              const uint16_t *ids,
+                              const uint8_t *names,
+                              const size_t *name_offsets,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a new player.
+///
+/// # Safety
+/// `name` holds `name_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_client_joined(uint16_t id,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a departed player.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_client_left(uint16_t id, EeWonByteSink sink, void *context);
+
+/// A player's chat request to the host.
+///
+/// # Safety
+/// `text` holds `text_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_chat_request(uint16_t flags,
+                             const uint8_t *text,
+                             size_t text_len,
+                             uint16_t target,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's relayed chat line.
+///
+/// # Safety
+/// As `ee_won_lan_chat_request`.
+void ee_won_lan_chat_line(uint16_t flags,
+                          uint16_t sender,
+                          const uint8_t *text,
+                          size_t text_len,
+                          uint16_t target,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// The joiner's ping.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_ping(EeWonByteSink sink, void *context);
+
+/// A staging message wrapped for the game channel.
+///
+/// # Safety
+/// `payload` holds `length` bytes; `sink` takes the message.
+void ee_won_lan_staging(const uint8_t *payload, size_t length, EeWonByteSink sink, void *context);
+
+/// A discovery packet's head (`kind` 1 summary, 2 keep-alive, 3 removed, 4 query).
+///
+/// # Safety
+/// `sink` takes the packet.
+void ee_won_lan_discovery(uint8_t kind, uint16_t port, EeWonByteSink sink, void *context);
+
+/// Reads a game-channel message (`skip` 2 for the host's own, else 0). The join request's name goes to
+/// `first`, its password to `second`; a joined player's name and a chat text go to `first`.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is valid; the sinks take the units.
+void ee_won_lan_read_game(const uint8_t *bytes,
+                          size_t length,
+                          size_t skip,
+                          EeWonLanMsg *out,
+                          EeWonUnitSink first,
+                          EeWonUnitSink second,
+                          void *context);
+
+/// Reads a join reply: returns `ReadJoinReply`'s status; `*captain` / `*you` are set and `true` returned through
+/// `have_captain` once the captain's id was read; each player read whole goes to `client`, in order.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid; `client` takes the players.
+int32_t ee_won_lan_read_join_reply(const uint8_t *bytes,
+                                   size_t length,
+                                   bool *have_captain,
+                                   uint16_t *captain,
+                                   uint16_t *you,
+                                   EeWonLanClientSink client,
+                                   void *context);
+
+/// Reads a discovery packet's head: true and its type and port, false when it is short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid.
+bool ee_won_lan_read_discovery(const uint8_t *bytes, size_t length, uint8_t *kind, uint16_t *port);
+
+/// `lan::join_status`: 0 accept, 2 wrong password, 3 another subnet.
+int16_t ee_won_lan_join_status(int32_t game_type,
+                               uint8_t peer0,
+                               uint8_t peer1,
+                               uint8_t local0,
+                               uint8_t local1,
+                               bool password_matches);
+
+/// `lan::next_client_id` over the C++ counter.
+///
+/// # Safety
+/// `next` is valid.
+uint16_t ee_won_lan_next_client_id(uint16_t *next);
+
+/// `lan::chat_route`: 0 everyone, 1 the whisper target and the sender, 2 the sender's team.
+int32_t ee_won_lan_chat_route(uint16_t flags);
+
+/// `lan::chat_line_flags`.
+uint16_t ee_won_lan_chat_line_flags(uint16_t flags);
+
+/// `lan::host_socket_stale`.
+bool ee_won_lan_host_socket_stale(int64_t now, int64_t last_message);
+
+/// `lan::joiner_ping_due`.
+bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
+
+/// `lan::summary_due`.
+bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
 
 /// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
 /// game-specific error) is written into `buffer` (`size` bytes), which is returned.
