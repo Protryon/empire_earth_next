@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -117,9 +118,9 @@ void EEPMLand::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-    EEUGCastCalamity* theCast = dynamic_cast<EEUGCastCalamity*>(theGoal);
-    EEUGHealUnit* theHeal = dynamic_cast<EEUGHealUnit*>(theGoal);
+    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
+    EEUGCastCalamity* theCast = EEGoalCast<EEUGCastCalamity>(theGoal);
+    EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(theGoal);
     float theBrake = inUnit->GetAcceleration();
     float theSpeed = inUnit->GetVelocity();
     float thePitch = 0.0f;
@@ -294,7 +295,7 @@ void EEPMLand::Step5(EEComplexUnit* inUnit)
     EEUnitClass* theClass = inUnit->GetUnitClass();
     GEVector theForward(0.0f, 1.0f, 0.0f);
     GEVector theResult;
-    EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+    EEUGLocation* theGoal = EEGoalCast<EEUGLocation>(inUnit->GetGoal());
     float thePitch = 0.0f;
     float theRoll = 0.0f;
     if (!theGoal)

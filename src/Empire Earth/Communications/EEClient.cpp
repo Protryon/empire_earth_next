@@ -23,6 +23,7 @@
 #include "lle/UResourceFile.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NESynchronousClient.h"
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
@@ -784,7 +785,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             theDone = true;
             continue;
         }
-        if (inCommand == 0xb8 && dynamic_cast<EEUGLocation*>(theGoal) != NULL) {
+        if (inCommand == 0xb8 && EEGoalCast<EEUGLocation>(theGoal) != NULL) {
             theGoal->GetGoalLocation(theLocation);
             EEMap* theMap = gWorld.mMap;
             if (theMap->GetTile((long)theLocation.GetX(), (long)theLocation.GetY()) != NULL) {
@@ -802,9 +803,9 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             continue;
         }
         if (inCommand == 0xb9) {
-            if (dynamic_cast<EEUGAttackUnit*>(theGoal) != NULL)
+            if (EEGoalCast<EEUGAttackUnit>(theGoal) != NULL)
                 break;
-            if (dynamic_cast<EEUGAttackGround*>(theGoal) != NULL) {
+            if (EEGoalCast<EEUGAttackGround>(theGoal) != NULL) {
                 theGoal->GetGoalLocation(theGround);
                 gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theAttackEffect, &theHandle, theIndex);
                 EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
@@ -817,7 +818,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         if (inCommand == 0xbb) {
             theGoal->GetGoalLocation(theGround);
             if (theGoal->mKind == kGoalUnloadTransport) {
-                EEUGUnloadTransport* theUnload = dynamic_cast<EEUGUnloadTransport*>(theGoal);
+                EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
                 if (theUnload != NULL && theUnload->mTransport != NULL &&
                     theUnload->mTransport->mUnitClass->mCategory == kUnitCategoryFortress)
                     theUnload->mTransport->GetPosition(theGround);
@@ -834,8 +835,8 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             continue;
         }
         if (inTarget != NULL) {
-            if (dynamic_cast<EEUGBuildRepair*>(theGoal) != NULL || dynamic_cast<EEUGGather*>(theGoal) != NULL ||
-                dynamic_cast<EEUGLoadGarrison*>(theGoal) != NULL)
+            if (EEGoalCast<EEUGBuildRepair>(theGoal) != NULL || EEGoalCast<EEUGGather>(theGoal) != NULL ||
+                EEGoalCast<EEUGLoadGarrison>(theGoal) != NULL)
                 break;
             gWorld.GetEffectManager()->CreateUnitEffect(inTarget, theTargetEffect, &theHandle, 0, 0, theIndex);
         } else {
@@ -858,8 +859,8 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         EEUnitGoal* theGoal = theUnit->mGoalQueues[theIndex].mGoals.size() > 0 ? theUnit->mGoalQueues[theIndex].mGoals.back()
                                                                           : NULL;
         if (theGoal == NULL || inCommand == 0xb8 ||
-            ((inCommand != 0xb9 || dynamic_cast<EEUGLocation*>(theGoal) == NULL) &&
-             (inCommand != 0xba || dynamic_cast<EEUGLocation*>(theGoal) == NULL)))
+            ((inCommand != 0xb9 || EEGoalCast<EEUGLocation>(theGoal) == NULL) &&
+             (inCommand != 0xba || EEGoalCast<EEUGLocation>(theGoal) == NULL)))
             continue;
         theGoal->GetGoalLocation(theLocation);
         gWorld.mMap->GetGroundPoint(theLocation, theGround);

@@ -7,6 +7,7 @@
 //! runs its last `Dereference`, so it is lock-free: see `registry`.
 
 pub mod ffi;
+pub mod kinds;
 pub mod registry;
 
 pub use registry::Registry;

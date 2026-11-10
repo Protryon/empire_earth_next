@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -247,7 +248,7 @@ bool EEUGLoadGarrison::LoadUnit(EEComplexUnit* inUnit)
     if (inUnit != NULL && this->mContainer != NULL) {
         std::vector<EEComplexUnit*>::iterator theIterator;
         if (this->mUnits.Contains(inUnit, theIterator)) {
-            EEUGLoadGarrison* theGoal = dynamic_cast<EEUGLoadGarrison*>(this->mContainer->GetGoal());
+            EEUGLoadGarrison* theGoal = EEGoalCast<EEUGLoadGarrison>(this->mContainer->GetGoal());
             if (theGoal != NULL)
                 theGoal->RemoveUnit(inUnit);
             if (inUnit->mResourceAmount > 0 && this->mContainer->CanTake(inUnit, inUnit->mResourceType))

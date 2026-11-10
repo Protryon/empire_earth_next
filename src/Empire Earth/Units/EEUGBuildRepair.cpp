@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -458,7 +459,7 @@ bool EEUGBuildRepair::GatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* i
     std::vector<EEUnit*> theRejected;
     std::vector<EEUnit*> theUnused;
     bool theResult = false;
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
     if (theResource == NULL)
         theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
@@ -511,7 +512,7 @@ bool EEUGBuildRepair::IsGateClosed(EEComplexUnit* inUnit)
 {
     bool theResult = false;
     if (this->mTarget->mUnitClass->mCategory == kUnitCategoryGate) {
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(this->mTarget->mUnitClass);
+        EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mTarget->mUnitClass);
         EEComplexUnit* theUnit = this->mTarget->mComplexUnit;
         if (!theGate->IsSidePart(theUnit) && (theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionClosed)
             theResult = true;

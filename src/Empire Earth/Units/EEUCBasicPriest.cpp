@@ -18,6 +18,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -64,7 +65,7 @@ void EEUCBasicPriest::UpdateConversion(EEComplexUnit* inUnit)
 {
     if (inUnit->GetPower() < EEGetConversionCost(inUnit))
         return;
-    EEComplexUnit* theTarget = static_cast<EEComplexUnit*>(dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal())->mTarget);
+    EEComplexUnit* theTarget = static_cast<EEComplexUnit*>(EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal())->mTarget);
     if (theTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[theTarget->mPlayer->GetPlayerID()] == 0) {
         inUnit->ReleaseConversionEffect();
         inUnit->ClearGoals(0);
@@ -165,7 +166,7 @@ void EEUCBasicPriest::ActionChanged(EEComplexUnit* inUnit)
             if (inUnit->mConversionStartTime != gPhysics->mGameTime)
                 inUnit->mConversionStartTime = gPhysics->mGameTime;
             inUnit->SetWorkTimer(0);
-            dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         }
         inUnit->DropPath();
         break;
@@ -259,7 +260,7 @@ long EEUCBasicPriest::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
         break;
     case kTriggerConvertGoalStillValid:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL && theGoal->mTarget != NULL &&
                 (theGoal->mTarget->mTileNode == NULL || !theGoal->mTarget->GetComplexUnit()->mIsDisabled ||
                  theGoal->mTarget->GetComplexUnit()->IsProtected()))
@@ -277,14 +278,14 @@ long EEUCBasicPriest::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
     }
     case kTriggerGoalIsConversion:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL && (!inUnit->GetUnitClass()->IsCrusader() || theGoal->mIsConvert))
                 theResult = 1;
         }
         break;
     case kTriggerEnemyUnitConverted:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL) {
                 EEPlayer* thePlayer = theGoal->mTarget->GetPlayer();
                 if (thePlayer == inUnit->GetPlayer() || inUnit->GetPlayer()->mEnemies[thePlayer->GetPlayerID()] == 0)

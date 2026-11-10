@@ -13,6 +13,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/ESChecksum.h"
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -383,7 +384,7 @@ void EEGhostUnit::Create(const GE2DPoint& inLocation, long inUnitType, EEPlayer*
 // Replaces the placement ghosts with a gate's three parts (left, middle, right), each turned as its part
 void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* inPlayer)
 {
-    EEUCGate* theClass = dynamic_cast<EEUCGate*>(inClass);
+    EEUCGate* theClass = EEUnitClassCast<EEUCGate>(inClass);
     GETransformation theTransformation(false);
     gWorld.mGhostUnitsLock->Enter();
     gWorld.ClearGhostUnits();
@@ -548,7 +549,7 @@ void EEPreviewPlacement(const GE2DPoint& inLocation)
             theGhost->mTileY = theY;
             long theType = theGhost->mUnitClass->GetUnitType();
             if (theType == kUnitTypeAirport) {
-                EEUCBuilding* theClass = dynamic_cast<EEUCBuilding*>(gUnitClassTable[kUnitTypeAirport]);
+                EEUCBuilding* theClass = EEUnitClassCast<EEUCBuilding>(gUnitClassTable[kUnitTypeAirport]);
                 theDirection = EEGetFacingQuarter(theX - theClass->GetTileSize() / 2, theY - theClass->GetTileSize() / 2);
                 switch (theDirection) {
                 case 0: theGhost->mTransformation.SetOrientationYPR(0.0f, 0.0f, 0.0f); break;

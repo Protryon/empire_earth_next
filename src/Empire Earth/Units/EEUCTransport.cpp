@@ -20,6 +20,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -158,7 +159,7 @@ bool EEUCTransport::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
     U2DPoint<long> theUnitTile;
     U2DPoint<long> theCargoTile;
     U2DPoint<long> theTransportTile;
-    EEUGLoadTransport* theGoal = dynamic_cast<EEUGLoadTransport*>(inTransport->GetGoal());
+    EEUGLoadTransport* theGoal = EEGoalCast<EEUGLoadTransport>(inTransport->GetGoal());
     float theRange = this->mLoadRange;
     unsigned short theFrom = gContinentManager.GetContinentID(inTransport->GetTileX(), inTransport->GetTileY());
     unsigned short theTo = gContinentManager.GetContinentID(inUnit->GetTileX(), inUnit->GetTileY());

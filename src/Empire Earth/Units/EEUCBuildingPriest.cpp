@@ -19,6 +19,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -109,7 +110,7 @@ void EEUCBuildingPriest::UpdateConversion(EEComplexUnit* inUnit)
 {
     if (inUnit->mPower < EEGetConversionCost(inUnit))
         return;
-    EEComplexUnit* theTarget = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal())->mTarget->mComplexUnit;
+    EEComplexUnit* theTarget = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal())->mTarget->mComplexUnit;
     if (theTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] == 0) {
         inUnit->ReleaseConversionEffect();
         inUnit->ClearGoals(0);
@@ -203,7 +204,7 @@ void EEUCBuildingPriest::PriestVirtual74(EEComplexUnit* inUnit)
             if (inUnit->mConversionStartTime != gPhysics->mGameTime)
                 inUnit->mConversionStartTime = gPhysics->mGameTime;
             inUnit->SetWorkTimer(0);
-            dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         }
         inUnit->DropPath();
         break;
@@ -228,7 +229,7 @@ long EEUCBuildingPriest::PriestVirtualA0(EEComplexUnit* inUnit, unsigned long in
     switch (inEvent) {
     case kTriggerEnemyUnitConverted:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL) {
                 EEPlayer* thePlayer = theGoal->mTarget->mPlayer;
                 if (thePlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0)
@@ -238,7 +239,7 @@ long EEUCBuildingPriest::PriestVirtualA0(EEComplexUnit* inUnit, unsigned long in
         break;
     case kTriggerGoalIsConversion:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL && (!inUnit->mUnitClass->IsCrusader() || theGoal->mIsConvert))
                 theResult = 1;
         }
@@ -252,7 +253,7 @@ long EEUCBuildingPriest::PriestVirtualA0(EEComplexUnit* inUnit, unsigned long in
     }
     case kTriggerConvertGoalStillValid:
         if (inUnit->mGoalState != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
             if (theGoal != NULL && theGoal->mTarget != NULL &&
                 (theGoal->mTarget->mTileNode == NULL || !theGoal->mTarget->mComplexUnit->mIsDisabled ||
                  theGoal->mTarget->mComplexUnit->IsProtected()))

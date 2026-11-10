@@ -23,6 +23,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -310,7 +311,7 @@ EEUnit* EEUCBasicCitizen::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
     EEComplexUnit* theResult = NULL;
     EEComplexUnit* theOwn = NULL;
     if (theGoal != NULL && theGoal->mKind == kGoalGather) {
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+        EEUGGather* theGather = EEGoalCast<EEUGGather>(theGoal);
         if (!inAnyStorage) {
             theOwn = static_cast<EEComplexUnit*>(theGather->mStorage);
             if (theOwn != NULL && theOwn->GetHitPoints() > 0 && !theOwn->mIsDisabled)
@@ -373,9 +374,9 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
                                 long inSizeY, GE3DPoint& outLocation)
 {
     std::vector<U2DPoint<long> > theTiles;
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
-    EEUGGather* theGather = dynamic_cast<EEUGGather*>(inUnit->GetGoal());
-    EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(inUnit->GetGoal());
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    EEUGGather* theGather = EEGoalCast<EEUGGather>(inUnit->GetGoal());
+    EEUGBuildRepair* theBuild = EEGoalCast<EEUGBuildRepair>(inUnit->GetGoal());
     long theUnitX = inUnit->mTileX;
     long theUnitY = inUnit->mTileY;
     EEUnit* theFarm;

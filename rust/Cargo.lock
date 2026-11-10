@@ -249,6 +249,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_netmsg"
+version = "0.1.0"
+
+[[package]]
 name = "ee_openformats"
 version = "0.1.0"
 dependencies = [
@@ -326,6 +330,7 @@ dependencies = [
  "ee_gx",
  "ee_mixer",
  "ee_net_tcp",
+ "ee_netmsg",
  "ee_openformats",
  "ee_panic",
  "ee_plat_core",

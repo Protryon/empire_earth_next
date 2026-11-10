@@ -15,6 +15,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -112,7 +113,7 @@ void EEUGLoadTransport::ComputeLoadDistance()
 void EEUGLoadTransport::ComputeRendezvous()
 {
     std::vector<EEComplexUnit*>& theUnits = this->mUnits.mItems;
-    EEUCTransport* theClass = dynamic_cast<EEUCTransport*>(this->mContainer->GetUnitClass());
+    EEUCTransport* theClass = EEUnitClassCast<EEUCTransport>(this->mContainer->GetUnitClass());
     if (this->mUnits.GetSize() > 0)
         theClass->FindRendezvousTiles(&theUnits, this->mContainer, &this->mContainerTile, &this->mUnitTile);
     else
@@ -193,7 +194,7 @@ bool EEUGLoadTransport::LoadUnit(EEComplexUnit* inUnit)
     if (inUnit != NULL && theContainer != NULL) {
         std::vector<EEComplexUnit*>::iterator theIterator;
         if (this->mUnits.Contains(inUnit, theIterator)) {
-            EEUGLoadTransport* theGoal = dynamic_cast<EEUGLoadTransport*>(this->mContainer->GetGoal());
+            EEUGLoadTransport* theGoal = EEGoalCast<EEUGLoadTransport>(this->mContainer->GetGoal());
             if (theGoal != NULL)
                 theGoal->RemoveUnit(inUnit);
             if (this->mContainer->LoadCargo(inUnit, 0, 0) == 7) {
@@ -229,7 +230,7 @@ bool EEUGLoadTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned long i
 {
     EEUCTransport* theClass = NULL;
     if (this->mContainer != NULL && this->mContainer->mHitPoints > 0)
-        theClass = dynamic_cast<EEUCTransport*>(this->mContainer->GetUnitClass());
+        theClass = EEUnitClassCast<EEUCTransport>(this->mContainer->GetUnitClass());
     switch (inEvent) {
     case kTriggerGoalIsLoadContainer:
         return this->mKind == kGoalLoadTransport ? true : false;

@@ -17,6 +17,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -817,7 +818,7 @@ void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
             }
         }
         if (theNode->mData->mUnitClass->mCategory == kUnitCategoryGate) {
-            if (dynamic_cast<EEUCGate*>(theNode->mData->mUnitClass)
+            if (EEUnitClassCast<EEUCGate>(theNode->mData->mUnitClass)
                 && (theNode->mData->mCommand ? theNode->mData->mCommand->mType : 0) != 0x3a99) {
                 theCollide = false;
                 continue;

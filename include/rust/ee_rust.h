@@ -149,6 +149,329 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `EEMAddPatrolPoint`
+constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
+
+/// `EEMAddRemoveResources`
+constexpr static const uint32_t EE_NETMSG_ADD_REMOVE_RESOURCES = 1;
+
+/// `EEMAddUnitToSelectedGroup`
+constexpr static const uint32_t EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP = 2;
+
+/// `EEMAttackGround`
+constexpr static const uint32_t EE_NETMSG_ATTACK_GROUND = 3;
+
+/// `EEMAttackPlayers`
+constexpr static const uint32_t EE_NETMSG_ATTACK_PLAYERS = 4;
+
+/// `EEMAttackUnit`
+constexpr static const uint32_t EE_NETMSG_ATTACK_UNIT = 5;
+
+/// `EEMBuildGate`
+constexpr static const uint32_t EE_NETMSG_BUILD_GATE = 6;
+
+/// `EEMBuildUnit`
+constexpr static const uint32_t EE_NETMSG_BUILD_UNIT = 7;
+
+/// `EEMBuildWall`
+constexpr static const uint32_t EE_NETMSG_BUILD_WALL = 8;
+
+/// `EEMCameraLocationInfo`
+constexpr static const uint32_t EE_NETMSG_CAMERA_LOCATION_INFO = 9;
+
+/// `EEMCastCalamity`
+constexpr static const uint32_t EE_NETMSG_CAST_CALAMITY = 10;
+
+/// `EEMChangeFormation`
+constexpr static const uint32_t EE_NETMSG_CHANGE_FORMATION = 11;
+
+/// `EEMChangeSelectedUnitCollisionSphere`
+constexpr static const uint32_t EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE = 12;
+
+/// `EEMChat`
+constexpr static const uint32_t EE_NETMSG_CHAT = 13;
+
+/// `EEMCheatCode`
+constexpr static const uint32_t EE_NETMSG_CHEAT_CODE = 14;
+
+/// `EEMCivTimerExpired`
+constexpr static const uint32_t EE_NETMSG_CIV_TIMER_EXPIRED = 15;
+
+/// `EEMCivUpgrades`
+constexpr static const uint32_t EE_NETMSG_CIV_UPGRADES = 16;
+
+/// `EEMClearAirportCommands`
+constexpr static const uint32_t EE_NETMSG_CLEAR_AIRPORT_COMMANDS = 17;
+
+/// `EEMDisband`
+constexpr static const uint32_t EE_NETMSG_DISBAND = 18;
+
+/// `EEMDropoffResource`
+constexpr static const uint32_t EE_NETMSG_DROPOFF_RESOURCE = 19;
+
+/// `EEMEdictPreProposal`
+constexpr static const uint32_t EE_NETMSG_EDICT_PRE_PROPOSAL = 20;
+
+/// `EEMEdictPreProposalResponse`
+constexpr static const uint32_t EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE = 21;
+
+/// `EEMEdictProposal`
+constexpr static const uint32_t EE_NETMSG_EDICT_PROPOSAL = 22;
+
+/// `EEMEdictVote`
+constexpr static const uint32_t EE_NETMSG_EDICT_VOTE = 23;
+
+/// `EEMEndCinematic`
+constexpr static const uint32_t EE_NETMSG_END_CINEMATIC = 24;
+
+/// `EEMEnterShiftMode`
+constexpr static const uint32_t EE_NETMSG_ENTER_SHIFT_MODE = 25;
+
+/// `EEMExchangeResources`
+constexpr static const uint32_t EE_NETMSG_EXCHANGE_RESOURCES = 26;
+
+/// `EEMExitShiftMode`
+constexpr static const uint32_t EE_NETMSG_EXIT_SHIFT_MODE = 27;
+
+/// `EEMExplore`
+constexpr static const uint32_t EE_NETMSG_EXPLORE = 28;
+
+/// `EEMFullGameOptions`
+constexpr static const uint32_t EE_NETMSG_FULL_GAME_OPTIONS = 29;
+
+/// `EEMFullPlayerInformation`
+constexpr static const uint32_t EE_NETMSG_FULL_PLAYER_INFORMATION = 30;
+
+/// `EEMGameOptions`
+constexpr static const uint32_t EE_NETMSG_GAME_OPTIONS = 31;
+
+/// `EEMGameRestarting`
+constexpr static const uint32_t EE_NETMSG_GAME_RESTARTING = 32;
+
+/// `EEMGameSpeed`
+constexpr static const uint32_t EE_NETMSG_GAME_SPEED = 33;
+
+/// `EEMGatherResource`
+constexpr static const uint32_t EE_NETMSG_GATHER_RESOURCE = 34;
+
+/// `EEMGoFanatic`
+constexpr static const uint32_t EE_NETMSG_GO_FANATIC = 35;
+
+/// `EEMHackANewUnit`
+constexpr static const uint32_t EE_NETMSG_HACK_A_NEW_UNIT = 36;
+
+/// `EEMHaltSelectedGroup`
+constexpr static const uint32_t EE_NETMSG_HALT_SELECTED_GROUP = 37;
+
+/// `EEMHealUnit`
+constexpr static const uint32_t EE_NETMSG_HEAL_UNIT = 38;
+
+/// `EEMImmediateCargoUnload`
+constexpr static const uint32_t EE_NETMSG_IMMEDIATE_CARGO_UNLOAD = 39;
+
+/// `EEMImproveUnit`
+constexpr static const uint32_t EE_NETMSG_IMPROVE_UNIT = 40;
+
+/// `EEMInGameChat`
+constexpr static const uint32_t EE_NETMSG_IN_GAME_CHAT = 41;
+
+/// `EEMIncrementEpic`
+constexpr static const uint32_t EE_NETMSG_INCREMENT_EPIC = 42;
+
+/// `EEMIncrementRallyTimer`
+constexpr static const uint32_t EE_NETMSG_INCREMENT_RALLY_TIMER = 43;
+
+/// `EEMJITManufacturing`
+constexpr static const uint32_t EE_NETMSG_J_I_T_MANUFACTURING = 44;
+
+/// `EEMKillUnit`
+constexpr static const uint32_t EE_NETMSG_KILL_UNIT = 45;
+
+/// `EEMLagStatus`
+constexpr static const uint32_t EE_NETMSG_LAG_STATUS = 46;
+
+/// `EEMLoadGarrison`
+constexpr static const uint32_t EE_NETMSG_LOAD_GARRISON = 47;
+
+/// `EEMLoadMainScreen`
+constexpr static const uint32_t EE_NETMSG_LOAD_MAIN_SCREEN = 48;
+
+/// `EEMLoadMainScreenResponse`
+constexpr static const uint32_t EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE = 49;
+
+/// `EEMLoadOrSaveGame`
+constexpr static const uint32_t EE_NETMSG_LOAD_OR_SAVE_GAME = 50;
+
+/// `EEMLoadOrSaveGameResponse`
+constexpr static const uint32_t EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE = 51;
+
+/// `EEMLoadPercent`
+constexpr static const uint32_t EE_NETMSG_LOAD_PERCENT = 52;
+
+/// `EEMLoadTransport`
+constexpr static const uint32_t EE_NETMSG_LOAD_TRANSPORT = 53;
+
+/// `EEMLoadUnitData`
+constexpr static const uint32_t EE_NETMSG_LOAD_UNIT_DATA = 54;
+
+/// `EEMLockUnlock`
+constexpr static const uint32_t EE_NETMSG_LOCK_UNLOCK = 55;
+
+/// `EEMMakeWorldVisible`
+constexpr static const uint32_t EE_NETMSG_MAKE_WORLD_VISIBLE = 56;
+
+/// `EEMMigrationSlotInfo`
+constexpr static const uint32_t EE_NETMSG_MIGRATION_SLOT_INFO = 57;
+
+/// `EEMNewEdictEnacted`
+constexpr static const uint32_t EE_NETMSG_NEW_EDICT_ENACTED = 58;
+
+/// `EEMPackUnpack`
+constexpr static const uint32_t EE_NETMSG_PACK_UNPACK = 59;
+
+/// `EEMPathTo`
+constexpr static const uint32_t EE_NETMSG_PATH_TO = 60;
+
+/// `EEMPatrol`
+constexpr static const uint32_t EE_NETMSG_PATROL = 61;
+
+/// `EEMPayTribute`
+constexpr static const uint32_t EE_NETMSG_PAY_TRIBUTE = 62;
+
+/// `EEMPlayerInformation`
+constexpr static const uint32_t EE_NETMSG_PLAYER_INFORMATION = 63;
+
+/// `EEMPlayerSlotInfo`
+constexpr static const uint32_t EE_NETMSG_PLAYER_SLOT_INFO = 64;
+
+/// `EEMRecordFrames`
+constexpr static const uint32_t EE_NETMSG_RECORD_FRAMES = 65;
+
+/// `EEMRemoveImprovement`
+constexpr static const uint32_t EE_NETMSG_REMOVE_IMPROVEMENT = 66;
+
+/// `EEMRemoveTechnology`
+constexpr static const uint32_t EE_NETMSG_REMOVE_TECHNOLOGY = 67;
+
+/// `EEMRemoveUnitFromSelectedGroup`
+constexpr static const uint32_t EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP = 68;
+
+/// `EEMRepairUnit`
+constexpr static const uint32_t EE_NETMSG_REPAIR_UNIT = 69;
+
+/// `EEMReplantFarms`
+constexpr static const uint32_t EE_NETMSG_REPLANT_FARMS = 70;
+
+/// `EEMReportStatistics`
+constexpr static const uint32_t EE_NETMSG_REPORT_STATISTICS = 71;
+
+/// `EEMResearchTechnology`
+constexpr static const uint32_t EE_NETMSG_RESEARCH_TECHNOLOGY = 72;
+
+/// `EEMResign`
+constexpr static const uint32_t EE_NETMSG_RESIGN = 73;
+
+/// `EEMReturnToBase`
+constexpr static const uint32_t EE_NETMSG_RETURN_TO_BASE = 74;
+
+/// `EEMSavedGroupAddSelection`
+constexpr static const uint32_t EE_NETMSG_SAVED_GROUP_ADD_SELECTION = 75;
+
+/// `EEMSavedGroupClear`
+constexpr static const uint32_t EE_NETMSG_SAVED_GROUP_CLEAR = 76;
+
+/// `EEMSavedGroupCreate`
+constexpr static const uint32_t EE_NETMSG_SAVED_GROUP_CREATE = 77;
+
+/// `EEMSavedGroupSelect`
+constexpr static const uint32_t EE_NETMSG_SAVED_GROUP_SELECT = 78;
+
+/// `EEMScrambleAircraft`
+constexpr static const uint32_t EE_NETMSG_SCRAMBLE_AIRCRAFT = 79;
+
+/// `EEMSelectCustomPlayerForChat`
+constexpr static const uint32_t EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT = 80;
+
+/// `EEMSelectPatrolGroup`
+constexpr static const uint32_t EE_NETMSG_SELECT_PATROL_GROUP = 81;
+
+/// `EEMSelectPlayerChatType`
+constexpr static const uint32_t EE_NETMSG_SELECT_PLAYER_CHAT_TYPE = 82;
+
+/// `EEMSelectTheseUnits`
+constexpr static const uint32_t EE_NETMSG_SELECT_THESE_UNITS = 83;
+
+/// `EEMSelectUnit`
+constexpr static const uint32_t EE_NETMSG_SELECT_UNIT = 84;
+
+/// `EEMSelectUnits`
+constexpr static const uint32_t EE_NETMSG_SELECT_UNITS = 85;
+
+/// `EEMSelfDestruct`
+constexpr static const uint32_t EE_NETMSG_SELF_DESTRUCT = 86;
+
+/// `EEMSendFlare`
+constexpr static const uint32_t EE_NETMSG_SEND_FLARE = 87;
+
+/// `EEMSetAirportCommand`
+constexpr static const uint32_t EE_NETMSG_SET_AIRPORT_COMMAND = 88;
+
+/// `EEMSetDiplomaticStance`
+constexpr static const uint32_t EE_NETMSG_SET_DIPLOMATIC_STANCE = 89;
+
+/// `EEMSetRallyGoal`
+constexpr static const uint32_t EE_NETMSG_SET_RALLY_GOAL = 90;
+
+/// `EEMSetUnitBehavior`
+constexpr static const uint32_t EE_NETMSG_SET_UNIT_BEHAVIOR = 91;
+
+/// `EEMSetWaterLevel`
+constexpr static const uint32_t EE_NETMSG_SET_WATER_LEVEL = 92;
+
+/// `EEMSmartFarmers`
+constexpr static const uint32_t EE_NETMSG_SMART_FARMERS = 93;
+
+/// `EEMSnapToDaylight`
+constexpr static const uint32_t EE_NETMSG_SNAP_TO_DAYLIGHT = 94;
+
+/// `EEMStartLoading`
+constexpr static const uint32_t EE_NETMSG_START_LOADING = 95;
+
+/// `EEMStartLoadingResponse`
+constexpr static const uint32_t EE_NETMSG_START_LOADING_RESPONSE = 96;
+
+/// `EEMStopActiveGroup`
+constexpr static const uint32_t EE_NETMSG_STOP_ACTIVE_GROUP = 97;
+
+/// `EEMToggleCollisionDetection`
+constexpr static const uint32_t EE_NETMSG_TOGGLE_COLLISION_DETECTION = 98;
+
+/// `EEMToggleDayNight`
+constexpr static const uint32_t EE_NETMSG_TOGGLE_DAY_NIGHT = 99;
+
+/// `EEMUnloadTransport`
+constexpr static const uint32_t EE_NETMSG_UNLOAD_TRANSPORT = 100;
+
+/// `EEMUnselectAllUnits`
+constexpr static const uint32_t EE_NETMSG_UNSELECT_ALL_UNITS = 101;
+
+/// `EEMUpdatePingStat`
+constexpr static const uint32_t EE_NETMSG_UPDATE_PING_STAT = 102;
+
+/// `EEMZoomInfo`
+constexpr static const uint32_t EE_NETMSG_ZOOM_INFO = 103;
+
+constexpr static const size_t CLASS_COUNT = 104;
+
+/// The header's size: reserved, type, target slot, originating slot.
+constexpr static const size_t HEADER_SIZE = 4;
+
+/// The most ids a buffer keeps.
+constexpr static const size_t MAX_IDS = 63;
+
+/// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
+constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
+
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -210,6 +533,106 @@ constexpr static const unsigned long TRIGGER_SELECTION_CHANGED = 1003;
 constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
+
+/// The goal classes (`EEUG*`).
+constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
+
+constexpr static const uint32_t EE_GOAL_KIND_ATTACK_UNIT = 2;
+
+constexpr static const uint32_t EE_GOAL_KIND_ATTACK_GROUND = 4;
+
+constexpr static const uint32_t EE_GOAL_KIND_BUILD_REPAIR = 8;
+
+constexpr static const uint32_t EE_GOAL_KIND_GATHER = 16;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_CONTAINER = 32;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_TRANSPORT = 64;
+
+constexpr static const uint32_t EE_GOAL_KIND_UNLOAD_TRANSPORT = 128;
+
+constexpr static const uint32_t EE_GOAL_KIND_PATROL = 256;
+
+constexpr static const uint32_t EE_GOAL_KIND_EXPLORE = 512;
+
+constexpr static const uint32_t EE_GOAL_KIND_CAST_CALAMITY = 1024;
+
+constexpr static const uint32_t EE_GOAL_KIND_LOAD_GARRISON = 2048;
+
+constexpr static const uint32_t EE_GOAL_KIND_HEAL_UNIT = 4096;
+
+/// The unit classes (`EEUC*`).
+constexpr static const uint64_t EE_CLASS_KIND_AMBIENT = 1;
+
+constexpr static const uint64_t EE_CLASS_KIND_RESOURCE = 2;
+
+constexpr static const uint64_t EE_CLASS_KIND_BUILDING = 4;
+
+constexpr static const uint64_t EE_CLASS_KIND_LANDABLE = 8;
+
+constexpr static const uint64_t EE_CLASS_KIND_AIRPLANE = 16;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL = 32;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND = 64;
+
+constexpr static const uint64_t EE_CLASS_KIND_BASIC_CITIZEN = 128;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_CITIZEN = 256;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_CITIZEN = 512;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER = 1024;
+
+constexpr static const uint64_t EE_CLASS_KIND_PROJECTILE = 2048;
+
+constexpr static const uint64_t EE_CLASS_KIND_BOMB = 4096;
+
+constexpr static const uint64_t EE_CLASS_KIND_MISSILE = 8192;
+
+constexpr static const uint64_t EE_CLASS_KIND_TORPEDO = 16384;
+
+constexpr static const uint64_t EE_CLASS_KIND_BASIC_PRIEST = 32768;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_PRIEST = 65536;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_PRIEST = 131072;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER_PRIEST = 262144;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_BUILDING = 524288;
+
+constexpr static const uint64_t EE_CLASS_KIND_MINING_BUILDING = 1048576;
+
+constexpr static const uint64_t EE_CLASS_KIND_GATE = 2097152;
+
+constexpr static const uint64_t EE_CLASS_KIND_BUILDING_PRIEST = 4194304;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACE_BUILDING = 8388608;
+
+constexpr static const uint64_t EE_CLASS_KIND_SUBMERGED_NAVAL = 16777216;
+
+constexpr static const uint64_t EE_CLASS_KIND_SEA_ANIMAL = 33554432;
+
+constexpr static const uint64_t EE_CLASS_KIND_AIR_ANIMAL = 67108864;
+
+constexpr static const uint64_t EE_CLASS_KIND_TRANSPORT = 134217728;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_TRANSPORT = 268435456;
+
+constexpr static const uint64_t EE_CLASS_KIND_HELICOPTER_TRANSPORT = 536870912;
+
+constexpr static const uint64_t EE_CLASS_KIND_NAVAL_TRANSPORT = 1073741824;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACE_TRANSPORT = 2147483648;
+
+constexpr static const uint64_t EE_CLASS_KIND_FORTRESS = 4294967296;
+
+constexpr static const uint64_t EE_CLASS_KIND_LAND_MILITARY_HERO = 8589934592;
+
+constexpr static const uint64_t EE_CLASS_KIND_SPACESHIP = 17179869184;
+
+constexpr static const uint64_t EE_CLASS_KIND_PLANET_SPACESHIP = 34359738368;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -2302,6 +2725,14 @@ using EeFsFatVisitor = void(*)(void *context,
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One member of a message (see the module comment).
+struct EeNetMsgSlot {
+  uint8_t *data;
+  uint32_t size;
+  uint32_t count;
+  uint32_t offset;
+};
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 struct EeOfBytes {
@@ -6381,6 +6812,54 @@ int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t *buffer, uint32_t *received);
 /// # Safety
 /// `server` is a valid slot; `data` for `length`.
 int32_t ee_tcp_xfer_send_to(void **server, uint32_t index, const uint8_t *data, uint32_t length);
+
+/// `ExportSize` of a class whose members are all fixed (its constant); 0 for a class with variable members.
+uint32_t ee_netmsg_fixed_size(uint32_t class_id);
+
+/// `ExportSize`: the wire size of the message these slots describe.
+///
+/// # Safety
+/// `slots` points to `count` slots filled as the module comment says.
+uint32_t ee_netmsg_export_size(uint32_t class_id, const EeNetMsgSlot *slots, size_t count);
+
+/// `ExportMessage`: writes the message into `out` (`out_size` bytes, from `ee_netmsg_export_size`); returns the bytes
+/// written.
+///
+/// # Safety
+/// `slots` as for `ee_netmsg_export_size`; `out` holds `out_size` bytes.
+uint32_t ee_netmsg_export(uint32_t class_id,
+                          const EeNetMsgSlot *slots,
+                          size_t count,
+                          uint8_t *out,
+                          size_t out_size);
+
+/// `ImportMessage`: reads the header and the members the class's import reads from `data`.
+///
+/// # Safety
+/// `data` holds a whole message of this class; `slots` points to `count` slots whose fixed members are writable.
+void ee_netmsg_import(uint32_t class_id,
+                      const uint8_t *data,
+                      EeNetMsgSlot *slots,
+                      size_t count);
+
+/// The class the game's factory builds for message type `message_type`, or `u32::MAX`.
+uint32_t ee_netmsg_class_of_type(uint8_t message_type);
+
+/// `CompressUnits`: packs `count` ids for `owner` into `out` (256 bytes); returns the byte count.
+///
+/// # Safety
+/// `ids` holds `count` values; `out` 256 bytes.
+uint8_t ee_netmsg_compress_units(const uint32_t *ids, size_t count, uint32_t owner, uint8_t *out);
+
+/// `DecompressUnits`: the ids of a buffer (256 bytes, `size` of them used) into `out` (room for `capacity`, at least
+/// `units::MAX_BUFFER`); returns how many.
+///
+/// # Safety
+/// `buffer` holds 256 bytes; `out` `capacity` values.
+size_t ee_netmsg_decompress_units(const uint8_t *buffer,
+                                  uint8_t size,
+                                  int32_t *out,
+                                  size_t capacity);
 
 /// Copies `len` bytes into a Rust-owned buffer (a resolver's answer).
 ///

@@ -21,6 +21,7 @@
 #include "lle/FSFile.h"
 #include "lle/FSRestorable.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -921,7 +922,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
             if (!theFailed)
                 theFailed = theResult != 0;
             if (theGoal->mKind == kGoalLocation) {
-                EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(theGoal);
+                EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
                 theAutoWaypoint = theLocation->mIsAutoWaypoint == true;
             } else
                 theAutoWaypoint = false;
@@ -1091,8 +1092,8 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (theAutoWaypoint) {
         for (long autoGoal = this->mGoalQueues[0].mGoals.size() - 1; autoGoal >= 0; autoGoal--) {
             EEUnitGoal* theGoal = this->mGoalQueues[0].mGoals.back();
-            if (theGoal == NULL || dynamic_cast<EEUGLocation*>(theGoal) == NULL
-                || !dynamic_cast<EEUGLocation*>(theGoal)->mIsAutoWaypoint)
+            if (theGoal == NULL || EEGoalCast<EEUGLocation>(theGoal) == NULL
+                || !EEGoalCast<EEUGLocation>(theGoal)->mIsAutoWaypoint)
                 break;
             this->mGoalQueues[0].PopBack();
         }

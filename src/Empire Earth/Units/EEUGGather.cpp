@@ -17,6 +17,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -294,7 +295,7 @@ void EEUGGather::FindNewResource(EEComplexUnit* inUnit)
 {
     std::vector<EEUnit*> theUnits;
     std::vector<EEUnit*> theUnused;
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     this->SetResource(theClass->FindNextResource(inUnit, this->mResource, this->mResource ? this->mResource->mResourceType : inUnit->mResourceType, &theUnits));
 }
 
@@ -330,7 +331,7 @@ void EEUGGather::FindStorage(EEComplexUnit* inUnit)
         if (!theFree)
             return;
     }
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     EEUnit* theStorage = theClass->FindStorage(inUnit, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFindNewStorage);
     this->SetStorage(NULL);
     if (theStorage != NULL)
@@ -603,7 +604,7 @@ void EEUGGather::GatherNextTree(EEComplexUnit* inUnit)
     U2DPoint<long> theTile;
     U2DPoint<long> theTarget;
     GE2DPoint theCenter;
-    EEUCBasicCitizen* theCitizen = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUCBasicCitizen* theCitizen = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != this->mResource->mResourceType)
         inUnit->mResourceAmount = 0;
     if (this->mResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(this->mResource), theLocation)) {
@@ -1023,7 +1024,7 @@ bool EEUGGather::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
             theResult = true;
         break;
     case kTriggerResourceAccessible: {
-        EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+        EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
         if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen) {
             if (this->mResource != NULL && this->mResource->mTile->mTerrainType != kTerrainDeepWater
                 && gContinentManager.InSameContinent(inUnit, this->mResource))
@@ -1145,7 +1146,7 @@ void EEUGGather::SearchNavalResource(EEComplexUnit* inUnit)
 {
     std::vector<EEUnit*> theUnits;
     long theRange = UMFloatToLong(inUnit->GetLineOfSight() * 5.0f);
-    EEUCNavalCitizen* theClass = dynamic_cast<EEUCNavalCitizen*>(inUnit->GetUnitClass());
+    EEUCNavalCitizen* theClass = EEUnitClassCast<EEUCNavalCitizen>(inUnit->GetUnitClass());
     if (this->mResource == NULL || inUnit->mPlayer->mComputerPlayer != NULL && this->mResource->mUnitClass->mUnitType == kUnitTypeFarm)
         inUnit->StartAction(kActionIdle);
     else if (this->mResource->mUnitClass->mUnitType == kUnitTypeResFish) {

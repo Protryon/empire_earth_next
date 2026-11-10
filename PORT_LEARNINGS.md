@@ -4294,7 +4294,6 @@ identical.
 - **Left in R4.3:** the fonts (`GEFont`, `GEFontBitmap`, `GEText`: UTF-8 first, D6), `GEBitmap`'s and `GERhombus`'s
   vertex-array plumbing (no logic).
 
-
 ## R5a.2, second round: the AI's and the path manager's running state, area effects, tile order (save 0.256, branch rust-r5a-aisave, 2026-11-10)
 
 Continues "R5a.2: load equals continue". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`);
@@ -4500,3 +4499,56 @@ choice, `PruneChokePoints`, `CreateScenarioAreas`, the area classes' hulls) stay
   depends on timing: TCST (a node's or an epoch's `GetCost`) had 1,171,743 records against the golden's 1,174,010 in
   oracle seed 2, every other digest equal. Something outside the simulation's own order calls `GetCost` (the
   UI thread's status buttons, `EEUIFMGStatusButton.cpp`, are the suspect); a heavily loaded `check` could fail on it the way EVAT did.
+
+## R5b.4: the map, the game messages' codec and unit kinds as data (ee_netmsg, ee_units kinds.rs; branch rust-r5b4-core, 2026-11-10)
+
+The map (counts of the `dynamic_cast` sites by tested class and module, the message types and their codecs, the order
+of the leaves) is in RUST_PLAN R5b item 4.
+
+**The game messages' codec.** `rust/crates/ee_netmsg` owns the wire layout of the 104 game message classes of
+`EEMessage.cpp` (107 types): `classes.rs` lists every class's members in wire order after the 4-byte header (written
+once from the original `ExportMessage`/`ImportMessage` bodies by a scratch extractor, which also checked every fixed
+class's sum against its `ExportSize` constant), `codec.rs` encodes values and decodes spans, `units.rs` is
+`CompressUnits`/`DecompressUnits`. The C++ classes keep their members, constructors and `Execute`; each class has a
+file-static `Slots()` that lists its members (address and `sizeof`) in wire order, and its three codec functions hand
+them to `ee_netmsg_export_size`/`_export`/`_import`. A member whose `sizeof` differs from the layout stops the game
+with its name (no silent misbinding); members of the same size in the wrong order are what the capture catches.
+Strings stay `UWideString::Import`'s: the Rust reports where a string starts (and reads its u32 to find the next
+member, as the original's `theLocation += Import()`); lists and the box selection's buffer likewise.
+
+- **A single-player game never encodes a message.** The local server hands the sender's objects to the physics; the
+  factory (`EEMessage::BuildEEMessage`) runs only in LAN games and for loaded replays. So the capture has three
+  records: NMEX at `EEPhysics::DrainInput` (every executed game message: its export and its members, then the message
+  built again from its bytes, NMIM), NMSW (a sweep of every type over edge payloads, once per game: all 0x00, 0xff,
+  0x7f, 0x80, counting and random bytes; strings of 0..300 bytes, 0..63 ids, 0..40 upgrades) and NMCU (the packing of
+  unit lists for five owners, single ids at the edges of the 8/16-bit groups, over 63 ids, many groups). The oracle
+  games execute only three game messages each (the same three in all six seeds); the sweep is the codec's real
+  coverage (1,644 messages, 130 packings).
+- **Quirks kept:** `EEMChangeFormation`'s import reads two of its three members (the third stays the constructor's);
+  `EEMCivUpgrades` writes its count as `(unsigned char)size()` and then every upgrade; `DecompressUnits` reads until
+  its index equals the size exactly (on a buffer `CompressUnits` did not make the Rust stops at the 256 bytes where
+  the original read out of bounds: the one declared difference, unreachable from the game's own buffers); the ids'
+  top byte is the owner's, and on LP64 the C++ `long` is the 32-bit value sign-extended, as the original's
+  `inBuffer[0] << 24` was.
+- **Not moved:** the 29 engine messages (`NEMessage.cpp`, with `NEMPlayerInput`'s nested inputs) and every `Execute`.
+
+**Unit kinds as data.** `ee_units/src/kinds.rs` holds two tables Rust owns and C++ reads inline (`ee/EEUnitKind.h`):
+the goal classes of each `EEUnitGoal::mKind` (a heal goal is also a location goal, the load goals also load
+containers) and the unit classes of each `EEUnitClass::mCategory` (with their `EEUC*` bases). Why a kind is the class:
+every goal constructor passes its kind (`EEUGHealUnit` overwrites its base's), copies copy it, nothing else writes it,
+and `EEUGLoadContainer` is abstract; `CreateUnitClasses` picks the class from the category alone, `mCategory` is
+written only by the constructor, and no other code creates a unit class. `EEGoalCast<T>(g)` and
+`EEUnitClassCast<T>(c)` are `dynamic_cast<T*>` for those classes, NULL included.
+
+- **Converted so far:** the 118 goal casts of Units, Physics Thread, Communications and Player and the 34 unit class
+  casts of Units, Physics Thread and Communications (a scratch regex over the code, comments
+  left alone; every converted file compiled and the oracle stayed identical). Not converted: the object casts
+  (`dynamic_cast<EEComplexUnit*>`, 81): an object's class is not a function of its class's data (`EEUnit::Init`
+  sets `mComplexUnit`, `ResetEEUnit` clears it, the load path builds orphans of either kind), so they need a kind
+  byte fixed by the constructors (and reset by the destructors, as the vptr is) first. The AI's casts are held.
+- **The capture's sizes.** A whole oracle capture is about 900 MB (six seeds, mostly CB** and TCST); with the disk
+  shared by several agents it filled the volume twice. The gate ran one seed at a time (`sim_capture.py run --seeds N`,
+  `digest`) and deleted each capture after its digest. A write that failed on the full disk left a source file empty: check `git diff
+  --stat` after a disk-full error.
+- **EVAT seed 2 is flaky** in the C++ alone: one capture of the unchanged build gave `f8db2871dac2a51c`, the next
+  the golden `6388c675769c7b58` (the tech capture's EVAT record; not looked into).

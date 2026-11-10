@@ -17,6 +17,7 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GETerrainMesh.h"
+#include "ee/EEUnitKind.h"
 #include "ee/EETileLocation.h"
 #include "lle/FSFile.h"
 #include "lle/FSFileSpec.h"
@@ -4432,7 +4433,7 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
                 for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                     if (theUnit->GetComplexUnit() == NULL)
                         continue;
-                    EEUGPatrol* theGoal = dynamic_cast<EEUGPatrol*>(theUnit->GetComplexUnit()->mGoalState);
+                    EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(theUnit->GetComplexUnit()->mGoalState);
                     if (theGoal == NULL)
                         continue;
                     EEPPatrolGroup* theGroup = theGoal->mPatrolGroup;

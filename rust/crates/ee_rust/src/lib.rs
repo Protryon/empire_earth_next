@@ -62,6 +62,9 @@ use ee_won as _;
 // the unit registry behind EEUnitHandle<T> (ee_units/src/ffi.rs), called by RTSUnit.cpp
 use ee_units as _;
 
+// the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage
+use ee_netmsg as _;
+
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
 

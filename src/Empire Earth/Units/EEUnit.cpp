@@ -15,6 +15,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
@@ -785,7 +786,7 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
                 if (this->mUnitClass->mCategory != kUnitCategoryGate)
                     gEffectManager->CreateUnitEffect(this, theDamageEffect, NULL, false, 0, 0);
                 else {
-                    EEUCGate* theGate = dynamic_cast<EEUCGate*>(this->mUnitClass);
+                    EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mUnitClass);
                     gEffectManager->CreateUnitEffect(theGate->GetLastLinked(this->mComplexUnit),
                         this->mUnitClass->mDamageEffect, NULL, false, 0, 0);
                     gEffectManager->CreateUnitEffect(theGate->GetLastLinkedCarrier(this->mComplexUnit),
