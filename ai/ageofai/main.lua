@@ -13,6 +13,7 @@ local TW = require("ageofai.towns")   -- [towns.c, expand.c]
 local DP = require("ageofai.diplo")   -- [diplo.c]
 local AIR = require("ageofai.air")   -- [airstrike.c]
 local W = require("ageofai.walls")   -- [defence.c walls, enclose]
+local SF = require("ageofai.safety")   -- [attack.c citizens_safety]
 local FR = require("ageofai.fronts")   -- [fronts.c]
 local MT = require("ageofai.metal")   -- [metal.c]
 local V = require("lib.view")
@@ -76,6 +77,10 @@ function M.micro(info, memory)
         end
     end
     memory.army = memory.army or {}
+    -- [attack.c citizens_safety] the hurt spots from the hits, the citizens sent back or fled every 4 s
+    memory.safety = memory.safety or {}
+    SF.note(memory.safety, events, info.time)
+    SF.step(memory.safety, memory, info.time)
     T.counterfire(memory.army, events, info.time)
     T.bait(memory.army, events, info.time, memory.epoch_now)
     T.shelter(memory.army, events, info.time)

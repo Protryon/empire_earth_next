@@ -333,11 +333,14 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- Sites: the claims (what the finders may send gatherers to), the drop sites
 
-local function nearest_free(view, resource, patch, range)
+local SF = require("ageofai.safety")   -- [attack.c citizens_safety] the sites in danger by the hurt spots
+
+local function nearest_free(view, resource, patch, range, mem)
     local best = nil
     for _, s in ipairs(view.sites) do
         if not (s.claimed or s.resource ~= resource or s.units == 0 or s.danger > 0 or (patch and not s.patch)
-                or s.distance > range or s.blocked == "tower" or s.blocked == "enemy_near") then
+                or s.distance > range or s.blocked == "tower" or s.blocked == "enemy_near"
+                or (mem ~= nil and SF.site_dangerous(mem, s.x, s.y, view.time))) then
             -- the start resources by the town first (home), then the nearest
             if best == nil or (s.home and not best.home) or (s.home == best.home and s.distance < best.distance) then
                 best = s
@@ -362,7 +365,7 @@ end
 local function claims(view, mem, target, order)
     local range = view.claim_range
     local patches, patch_room = claimed(view, "food", true)
-    local free_patch = nearest_free(view, "food", true, range)
+    local free_patch = nearest_free(view, "food", true, range, mem)
     -- forage patches with room for the food gatherers (two at least, four at most); the claim grows when none is
     -- left in it; the food gatherers hunt when no patch is left at all (the game near home first: food_plan HUNT)
     local most = view.epoch == 0 and 3 or 5
@@ -392,7 +395,7 @@ local function claims(view, mem, target, order)
                 mem.range_t = view.time
             end
             if n == 0 or (room <= 0 and n < (late and 5 or 3)) then
-                local site = nearest_free(view, r, false, range)
+                local site = nearest_free(view, r, false, range, mem)
                 if site then
                     order({verb = "claim", site = site.index})
                 elseif range < view.claim_range_max and n == 0 then
@@ -401,9 +404,10 @@ local function claims(view, mem, target, order)
             end
         end
     end
-    -- a claimed site with nothing left, or blocked for good, is released
+    -- a claimed site with nothing left, or blocked for good, or in danger by the hurt spots (citizens_safety: the
+    -- searches refuse it; claimed again once the spots are gone), is released
     for _, s in ipairs(view.sites) do
-        if s.claimed and (s.units == 0 or s.blocked == "tower") then
+        if s.claimed and (s.units == 0 or s.blocked == "tower" or SF.site_dangerous(mem, s.x, s.y, view.time)) then
             order({verb = "release", site = s.index})
         end
     end

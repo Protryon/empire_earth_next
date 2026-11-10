@@ -72,6 +72,11 @@ return {
     ar_bleed_pct = 0,               -- 0 upstream: home once the force has lost this much of the hit points it went
                                     -- out with (0: never for that)
     fight_memory_ms = 180000,       -- the enemy memory's life for soldiers (ai.config)
+    -- the citizens' safety (attack.c citizens_safety, DAMAGE MEMORY, SEEN HURTS, raid_held)
+    avoid_towers_citizens = true,   -- citizens sent back from raided sites and sites behind known towers
+    citizen_threats = true,         -- the hurt spots: a site within 6 tiles of one (minerals: three) is dangerous for 2 min
+    hurt_seen_short = true,         -- a hurt with an enemy soldier in sight counts 20 s only
+    raid_held = 150,                -- percent: the town holds a raided site when its soldiers and towers there beat the raiders by this
     -- siege (attack.c attack_siege), settlement upgrades (garrison.c), counter-fire (counterfire.c)
     attack_siege = true,
     garrison_upgrades = true, gu_every = 20000, gu_wait = 60000, gu_batch = 10, gu_wood = 5000,
