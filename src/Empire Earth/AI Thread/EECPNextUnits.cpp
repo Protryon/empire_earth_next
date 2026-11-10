@@ -57,6 +57,9 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMessage.h"
+#include "ee/EEUCBuilding.h"
+#include "ee/EEUCGate.h"
+#include "ee/EEUnitUtilities.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
@@ -1297,9 +1300,9 @@ static int LuaStrength(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // Commands
 
-enum CmdReason { kOK, kBadArgument, kNotOwn, kNotSeen, kUnexplored, kCannotPlace, kCannotAfford, kCannotDo, kLimit, kFull };
+enum CmdReason { kOK, kBadArgument, kNotOwn, kNotSeen, kUnexplored, kCannotPlace, kCannotAfford, kCannotDo, kLimit, kFull, kNotInEpoch };
 const char* const kReasonNames[] = {"none", "bad_argument", "not_own", "not_seen", "unexplored", "cannot_place",
-                                    "cannot_afford", "cannot_do", "limit", "full"};
+                                    "cannot_afford", "cannot_do", "limit", "full", "not_in_epoch"};
 
 // the result: code, reason, n, id
 static int EECPUnitsResult(lua_State* L, long inReason, long inCount, long inID)
@@ -2769,6 +2772,221 @@ static int LuaCast(lua_State* L)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Walls, gates, diplomacy (Age of AI's defence.c walls, diplo.c): the human's messages, as the orders above
+
+bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits);   // EECPWallManager.cpp
+
+static bool EECPUnitsGatePiece(EEComplexUnit* c)
+{
+    return dynamic_cast<EEUCGate*>(c->GetUnitClass()) != NULL;
+}
+
+// ai.wall(ids, type, x1, y1, x2, y2): the citizens lay a straight wall of the class between the two tiles, as a
+// human's drag does (EEPlanWall: along the tiles or exactly diagonal); n = the citizens sent
+static int LuaWall(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    int r;
+    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "wall", r))
+        return r;
+    // the class: "wall" (or nil) is the epoch's wall as the classic wall manager takes it (GetWallClass)
+    long theType = (lua_type(L, 2) == LUA_TNIL || (lua_type(L, 2) == LUA_TSTRING && strcmp(lua_tostring(L, 2), "wall") == 0))
+        && me->mCivilizationManager != NULL ? me->mCivilizationManager->GetWallClass() : EECPUnitsClassArg(L, 2);
+    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
+        || !gUnitClassTable[theType]->mIsWall || !lua_isinteger(L, 3) || !lua_isinteger(L, 4) || !lua_isinteger(L, 5)
+        || !lua_isinteger(L, 6))
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    long x1 = (long)lua_tointeger(L, 3), y1 = (long)lua_tointeger(L, 4), x2 = (long)lua_tointeger(L, 5), y2 = (long)lua_tointeger(L, 6);
+    if (gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x1, (unsigned long)y1) == NULL
+        || gWorld.mMap->GetTile((unsigned long)x2, (unsigned long)y2) == NULL)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    // (no CanProduce: the classic wall manager sends the message as it is, EEPlanWall and EEBuildWall check the
+    // placement and pay the pieces; a wall tech is never "available" the production way for a computer player)
+    long theTech = gUnitClassTable[theType]->mTechnology;
+    EETechTreeNode* theNode = me->mTechnologies->Get(theTech);
+    if (theNode == NULL) {   // (the wall tech is never "available" the production way: the classic manager never asks)
+        EECPUnitsTraceCmd(me, s, "wall", kNotInEpoch, 0, theType, 0);
+        return EECPUnitsResult(L, kNotInEpoch, 0, 0);
+    }
+    if (!me->CanAfford(theNode, 0x20, 1)) {
+        EECPUnitsTraceCmd(me, s, "wall", kCannotAfford, 0, theType, x1);
+        return EECPUnitsResult(L, kCannotAfford, 0, 0);
+    }
+    EEMBuildWall theMessage(GE2DPoint((float)x1, (float)y1), GE2DPoint((float)x2, (float)y2), theTech, (long)me->mPlayerID);
+    EECPUnitsRun(me, s, theMessage, true);
+    EECPUnitsTraceCmd(me, s, "wall", kOK, (long)s->mIds2.size(), theType, x1 * 10000 + y1);
+    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
+}
+
+// ai.gate(type, x, y): a gate of the class over the finished wall pieces at the tile, there at once as the human's
+// gate button lays it (EEBuildGate: the five pieces turned into the gate's parts); the side is the first the gate
+// fits on, as the classic wall manager picks it. Refused cannot_place where no wall of five finished pieces lies
+static int LuaGate(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCommand);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    long theType = (lua_type(L, 1) == LUA_TNIL || (lua_type(L, 1) == LUA_TSTRING && strcmp(lua_tostring(L, 1), "gate") == 0))
+        && me->mCivilizationManager != NULL ? me->mCivilizationManager->GetGateClass() : EECPUnitsClassArg(L, 1);
+    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
+        || dynamic_cast<EEUCGate*>(gUnitClassTable[theType]) == NULL || !lua_isinteger(L, 2) || !lua_isinteger(L, 3))
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
+    if (gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) == NULL)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    long theTech = gUnitClassTable[theType]->mTechnology;
+    s->mIds2.clear();
+    EETechTreeNode* theNode = me->mTechnologies->Get(theTech);
+    if (theNode == NULL) {
+        EECPUnitsTraceCmd(me, s, "gate", kNotInEpoch, 0, theType, 0);
+        return EECPUnitsResult(L, kNotInEpoch, 0, 0);
+    }
+    std::vector<EEUnit*> theUnits;
+    EEGetUnitsOnTile(x, y, theUnits);
+    EEUnit* theWall = NULL;
+    for (unsigned long k = 0; k < theUnits.size() && theWall == NULL; k++)
+        if (theUnits[k]->GetUnitClass()->GetIsWall() && theUnits[k]->GetHitPoints() > 0 && theUnits[k]->mPlayer == me
+            && theUnits[k]->GetComplexUnit() != NULL && theUnits[k]->GetComplexUnit()->GetIsBuilt())
+            theWall = theUnits[k];
+    long theSide = 0;
+    if (theWall != NULL) {
+        long theWallType = theWall->GetUnitClass()->GetUnitType();
+        for (long side = 1; side <= 4 && theSide == 0; side++) {
+            theUnits.clear();
+            if (EEDoesWallGateFitOnUnit(static_cast<EEComplexUnit*>(theWall), side, theWallType, theUnits))
+                theSide = side;
+        }
+    }
+    if (theSide == 0) {
+        EECPUnitsTraceCmd(me, s, "gate", kCannotPlace, 0, theType, x * 10000 + y);
+        return EECPUnitsResult(L, kCannotPlace, 0, 0);
+    }
+    EEMBuildGate theMessage(GE2DPoint((float)x, (float)y), theTech, theSide, (long)me->mPlayerID);
+    theMessage.Execute();
+    EECPUnitsTraceCmd(me, s, "gate", kOK, 1, theType, x * 10000 + y);
+    return EECPUnitsResult(L, kOK, 1, 0);
+}
+
+// ai.lock(ids, on): the gates locked or unlocked (their three moving parts)
+static int LuaLock(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    int r;
+    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsGatePiece, "lock", r))
+        return r;
+    EEMLockUnlock theMessage(lua_toboolean(L, 2) != 0);
+    EECPUnitsRun(me, s, theMessage, false);
+    EECPUnitsTraceCmd(me, s, "lock", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
+    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
+}
+
+static long EECPUnitsOptAmount(lua_State* L, int inTable, const char* inKey)
+{
+    if (lua_type(L, inTable) != LUA_TTABLE)
+        return 0;
+    lua_getfield(L, inTable, inKey);
+    long v = lua_isinteger(L, -1) ? (long)lua_tointeger(L, -1) : 0;
+    lua_pop(L, 1);
+    return v < 0 ? 0 : v;
+}
+
+// ai.tribute(player, {food=, wood=, stone=, gold=, iron=}): the resources given to another player as a human's
+// tribute (EEMPayTribute's moves and ledger, without its chat line); refused cannot_afford when any amount is
+// beyond the stock, bad_argument for a player not in the game
+static int LuaTribute(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCommand);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    s->mIds2.clear();
+    long theOther = lua_isinteger(L, 1) ? (long)lua_tointeger(L, 1) : -1;
+    if (theOther <= 0 || (unsigned long)theOther >= gWorld.mNumPlayers || gWorld.mPlayers[theOther] == NULL
+        || gWorld.mPlayers[theOther] == me || lua_type(L, 2) != LUA_TTABLE)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    EEPlayer* theTo = gWorld.mPlayers[theOther];
+    static const char* const kKeys[5] = {"food", "wood", "stone", "gold", "iron"};
+    static const long kIndex[5] = {kResourceFood, kResourceWood, kResourceStone, kResourceGold, kResourceIron};
+    long theAmount[5], theTotal = 0;
+    for (int k = 0; k < 5; k++) {
+        theAmount[k] = EECPUnitsOptAmount(L, 2, kKeys[k]);
+        if (theAmount[k] > me->GetResource(kIndex[k])) {
+            EECPUnitsTraceCmd(me, s, "tribute", kCannotAfford, 0, theOther, theAmount[k]);
+            return EECPUnitsResult(L, kCannotAfford, 0, 0);
+        }
+        theTotal += theAmount[k];
+    }
+    if (theTotal <= 0)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    for (int k = 0; k < 5; k++)
+        if (theAmount[k] > 0) {
+            me->TakeResource(kIndex[k], theAmount[k]);
+            me->AddTribute(0, kIndex[k], theAmount[k]);
+            theTo->AddResource(kIndex[k], theAmount[k]);
+            theTo->AddTribute(1, kIndex[k], theAmount[k]);
+        }
+    EECPUnitsTraceCmd(me, s, "tribute", kOK, 1, theOther, theTotal);
+    return EECPUnitsResult(L, kOK, 1, 0);
+}
+
+// ai.trade(resource, "buy" or "sell", n): n lots of 100 of the resource bought with gold or sold for it at the
+// market's price (EEMExchangeResources: 1 or 5 lots a call)
+static int LuaTrade(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCommand);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    s->mIds2.clear();
+    long theResource = -1;
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        static const char* const kKeys[4] = {"food", "wood", "stone", "iron"};
+        static const long kIndex[4] = {kResourceFood, kResourceWood, kResourceStone, kResourceIron};
+        for (int k = 0; k < 4; k++)
+            if (strcmp(lua_tostring(L, 1), kKeys[k]) == 0)
+                theResource = kIndex[k];
+    }
+    const char* theWay = lua_type(L, 2) == LUA_TSTRING ? lua_tostring(L, 2) : "";
+    bool theSell = strcmp(theWay, "sell") == 0;
+    long n = lua_isinteger(L, 3) ? (long)lua_tointeger(L, 3) : 1;
+    if (theResource < 0 || (!theSell && strcmp(theWay, "buy") != 0) || (n != 1 && n != 5))
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    if (theSell ? me->GetResource(theResource) <= 0 : me->GetResource(kResourceGold) <= 0) {
+        EECPUnitsTraceCmd(me, s, "trade", kCannotAfford, 0, theResource, n);
+        return EECPUnitsResult(L, kCannotAfford, 0, 0);
+    }
+    EEMExchangeResources theMessage(theSell ? 1 : 0, theResource, n == 5 ? 1 : 0);
+    unsigned char theSlot = me->mSlot;
+    me->mSlot = kBorrowedSlot;
+    if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {
+        theMessage.SetOriginatingSlot(kBorrowedSlot);
+        theMessage.Execute();
+    }
+    me->mSlot = theSlot;
+    EECPUnitsTraceCmd(me, s, "trade", kOK, n, theResource, theSell ? 1 : 0);
+    return EECPUnitsResult(L, kOK, n, 0);
+}
+
+// ai.diplomacy(player, "ally" or "enemy"): the stance towards another player (EEWorld::SetDiplomaticStance, 0 the
+// ally: an alliance once both sides stand allied, broken when one turns)
+static int LuaDiplomacy(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCommand);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    s->mIds2.clear();
+    long theOther = lua_isinteger(L, 1) ? (long)lua_tointeger(L, 1) : -1;
+    const char* theStance = lua_type(L, 2) == LUA_TSTRING ? lua_tostring(L, 2) : "";
+    bool theAlly = strcmp(theStance, "ally") == 0;
+    if (theOther <= 0 || (unsigned long)theOther >= gWorld.mNumPlayers || gWorld.mPlayers[theOther] == NULL
+        || gWorld.mPlayers[theOther] == me || (!theAlly && strcmp(theStance, "enemy") != 0))
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    gWorld.SetDiplomaticStance(me->mPlayerID, theOther, theAlly ? 0 : 1);
+    EECPUnitsTraceCmd(me, s, "diplomacy", kOK, 1, theOther, theAlly ? 0 : 1);
+    return EECPUnitsResult(L, kOK, 1, 0);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
@@ -2791,6 +3009,8 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
         {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
+        {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
+        {"diplomacy", LuaDiplomacy},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
         lua_pushlightuserdata(L, inPlayer);
