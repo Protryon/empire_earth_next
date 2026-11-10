@@ -28,6 +28,7 @@
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GEMaterial.h"
+#include "rust/ee_rust.h"       // ee_ge_material_size_of (ee_ge texture.rs)
 
 // FUNCTION: LLE 0x10016b9b
 // Creates an untextured, opaque material with a texture slot per screen and a polygon range per detail level
@@ -73,8 +74,8 @@ void GEMaterial::SetTexture(GETexture* inTexture, unsigned long inScreen)
 // Returns the material's memory footprint: the object, its name, texture slots and per-level polygon ranges
 unsigned long GEMaterial::SizeOf()
 {
-    return sizeof(GEMaterial) - sizeof(UString) - 8 + this->mName.SizeOf() + this->mScreenCount * sizeof(GETexture*) +
-           this->mLODCount * 2 * sizeof(unsigned long);
+    return ee_ge_material_size_of(sizeof(GEMaterial), sizeof(UString), this->mName.SizeOf(), this->mScreenCount,
+                                  sizeof(GETexture*), this->mLODCount, sizeof(unsigned long));
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):

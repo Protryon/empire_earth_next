@@ -73,7 +73,7 @@ form `UString::Save` writes (no bytes after the NUL).
 | misc (`LoadMiscellaneousChunk`) | name | UString | read | the sub-model's role by prefix: `turret_` (EEGraphicObject), `orbital_cw_<speed>_`/`orbital_ccw_` (EEOrbital), the wheel name (EEWheel); roots are "Scene Root" |
 | | center | 3 f32 | read | `GetCenterPoint`: camera, picking (EEUnitPicker, GEPhysicalModel), effects (EEE3DVolcano, EEE3DDamageVent); close to but not always equal to the box centre `ComputeBoundingVolumes` gives (393 of 1212 models differ in the last bits, 2 by more than 1e-4) |
 | polygons (`LoadPolygonsChunk`) | per LOD: count, count × 3 u32 vertex indices | | read | `DX7Rasterizer::DrawModelHierarchy`: the root draws the LOD its on-screen size picks, sub-models LOD 0. **An index is relative to its material's first vertex** (the draw passes the material's vertex range as the vertex buffer) |
-| materials (`LoadMaterialsChunk`) | name | UString | read | compared with "player color": those materials take the player's colour (EEGraphicObject::CollectTagPoints, `GEModel LOD.cpp`); other names are labels |
+| materials (`LoadMaterialsChunk`) | name | UString | read | compared with "player color": those materials take the player's colour (EEGraphicObject::CollectTagPoints); other names are labels |
 | | textureIndex | u32 | read | the frame of the unit's (dbgraphics) texture the material shows (EEROUnits; past the frame count: frame 0) |
 | | per LOD: polygonStart, polygonCount | 2 u32 | read | the material's range of the LOD's polygon array (draw, picking) |
 | | vertexStart, vertexCount | 2 u32 | read | the material's vertex range (draw, picking); ranges may overlap (92 models) |

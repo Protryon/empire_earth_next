@@ -15,7 +15,6 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEModel.h"
-#include "lle/GELOD.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"

@@ -2513,7 +2513,8 @@ bool EECPResourceManager::UpdateWantedGatherers()
                 } else if (j != 3) {
                     theFound = 0;   // this resource's units only (was carried over from the earlier resources)
                     for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
-                        std::vector<EEUnit*> theUnits = thePlayer->GetResourceCenter(k)->mUnits;
+                        std::vector<EEUnit*> theUnits(thePlayer->GetResourceCenter(k)->mUnits.begin(),
+                                                      thePlayer->GetResourceCenter(k)->mUnits.end());
                         for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++)
                             if ((*it)->mResourceType == j)
                                 theFound++;
@@ -3071,7 +3072,7 @@ void EECPResourceManager::Update(unsigned long inTime)
         return;
     for (long j = 2; j < 7; j++)
         this->mB180[j] = false;
-    std::vector<EEComplexUnit*>::iterator it = this->mMines.begin();
+    std::vector<EEUnitHandle<EEComplexUnit> >::iterator it = this->mMines.begin();
     while (it != this->mMines.end()) {
         if (!(*it)->mIsValid || (*it)->mResourceAmount == 0) {
             (*it)->Dereference();

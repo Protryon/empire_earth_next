@@ -194,7 +194,7 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
     long the38 = theStrategy->GetNumSea();
     long the3C = theStrategy->GetNumLand();
     long the40 = theStrategy->GetNumSpace();
-    std::vector<EEUnit*>& theUnits = inGroup->mUnits;
+    std::vector<EEUnitHandle<EEUnit> >& theUnits = inGroup->mUnits;
     for (long i = theUnits.size() - 1; i >= 0; i--) {
         EEUnitClass* theClass = (theUnits[i])->GetClass();
         if (theClass->GetAIKind() == kAIKindHero || theClass->GetUnitType() == kUnitTypePriest || theClass->GetUnitType() == kUnitTypeProphet ||

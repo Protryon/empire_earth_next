@@ -257,7 +257,7 @@
 #include <vector>
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
-#include "lle/URandom.h"
+#include "lle/URandom.h"       // U2DFractal.h (the water grid's own URandom draws are Rust)
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
@@ -269,7 +269,8 @@
 #include "lle/FSFile.h"
 #include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
-#include "lle/U2DPolygon.h"
+// (lle/U2DPolygon.h: GetTileRowsInVolume's U2DConvexHull<float> is Rust now, ee_ge terrain_volume.rs; the
+// exe keeps its own U2DConvexHull<long>)
 #include "lle/U2DFractal.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
@@ -403,18 +404,15 @@ void GETerrainMesh::ComputeVertexNormal(unsigned long inX, unsigned long inY)
 }
 
 // FUNCTION: LLE 0x10027c53
-// Rebuilds the mesh as a flat diamond map of inWidth x inHeight tiles: tile and point rows, edge sums, map-edge planes,
-// every height 0 and every normal straight up
+// Rebuilds the mesh as a flat diamond map of inWidth x inHeight tiles: tile and point rows (their columns from Rust:
+// ee_ge terrain_mesh.rs, flat_mesh), edge sums, map-edge planes, every height 0 and every normal straight up
 void GETerrainMesh::CreateFlatMesh(long inWidth, long inHeight)
 {
     GEVector theUp(0.0f, 0.0f, 1.0f);
     GEVector* theNormal = theUp.GetQuantizedVersion();
-    unsigned long theBottomCount = 0;
-    unsigned long theTopCount = 0;
-    unsigned long theStart = inHeight - 1;
-    unsigned long theEnd = inHeight;
-    bool theStartFalling = true;
-    bool theEndRising = true;
+    std::vector<unsigned long> theTileSpans;
+    std::vector<unsigned long> thePointSpans;
+    long theEdges[4];
     unsigned long i;
     unsigned long j;
     delete[] this->mPointRows;
@@ -423,57 +421,20 @@ void GETerrainMesh::CreateFlatMesh(long inWidth, long inHeight)
     this->mPlayableWidth = inWidth;
     this->mPlayableHeight = inHeight;
     this->mTileRowCount = inWidth + inHeight;
-    this->mLeftEdge = inHeight - 1;
-    this->mTopEdge = inHeight;
-    this->mRightEdge = inWidth + inHeight - 1 + inWidth;
-    this->mBottomEdge = inHeight;
-    this->mTileRows = new GETMTileRow[this->mTileRowCount];
-    for (i = 0; i < this->mTileRowCount; i++) {
-        this->mTileRows[i].Initialize(theStart, theEnd);
-        if (theStartFalling) {
-            if (theStart != 0)
-                theStart--;
-            else
-                theStartFalling = false;
-        } else
-            theStart++;
-        if (theEndRising) {
-            if (theEnd != this->mTileRowCount - 1)
-                theEnd++;
-            else
-                theEndRising = false;
-        } else
-            theEnd--;
-    }
-    theStart = inHeight - 1;
-    theEnd = inHeight + 1;
-    theStartFalling = true;
-    theEndRising = true;
     this->mPointRowCount = inWidth + inHeight + 1;
+    theTileSpans.resize(2 * this->mTileRowCount);
+    thePointSpans.resize(2 * this->mPointRowCount);
+    ee_ge_terrain_flat_mesh(inWidth, inHeight, theTileSpans.data(), thePointSpans.data(), theEdges);
+    this->mLeftEdge = theEdges[0];
+    this->mTopEdge = theEdges[1];
+    this->mRightEdge = theEdges[2];
+    this->mBottomEdge = theEdges[3];
+    this->mTileRows = new GETMTileRow[this->mTileRowCount];
+    for (i = 0; i < this->mTileRowCount; i++)
+        this->mTileRows[i].Initialize(theTileSpans[2 * i], theTileSpans[2 * i + 1]);
     this->mPointRows = new GETMPointRow[this->mPointRowCount];
-    for (j = 0; j < this->mPointRowCount; j++) {
-        this->mPointRows[j].Initialize(theStart, theEnd, theNormal);
-        if (theStartFalling) {
-            if (theStart != 0)
-                theStart--;
-            else {
-                theBottomCount++;
-                if (theBottomCount == 2)
-                    theStartFalling = false;
-            }
-        } else
-            theStart++;
-        if (theEndRising) {
-            if (theEnd != this->mPointRowCount - 1)
-                theEnd++;
-            else {
-                theTopCount++;
-                if (theTopCount == 2)
-                    theEndRising = false;
-            }
-        } else
-            theEnd--;
-    }
+    for (j = 0; j < this->mPointRowCount; j++)
+        this->mPointRows[j].Initialize(thePointSpans[2 * j], thePointSpans[2 * j + 1], theNormal);
     this->InitializePlanes();
     this->mMinimumZ = 0.0f;
     this->mMaximumZ = 0.0f;
@@ -1315,59 +1276,23 @@ void GETerrainMesh::AddDenormalizedPointToList(const GEViewport& inViewport, GE3
 
 // FUNCTION: LLE 0x1002ac2d
 // Lists the tile rows (first and last column, clipped to the map) covered by the convex hull of the volume's points,
-// and returns their bounding box
+// and returns their bounding box (the hull, its scan lines and the clipping are Rust: ee_ge terrain_volume.rs; the
+// original's U2DConvexHull<float> instantiation went with them)
 void GETerrainMesh::GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
                                         std::vector<std::pair<long, std::pair<long, long> > >& outRows,
                                         U2DPoint<long>& outMinimum, U2DPoint<long>& outMaximum)
 {
-    std::map<long, std::pair<long, long> > theRows;
-    U2DConvexHull<float> theHull;
-    std::vector<U2DPoint<float> > thePoints;
-    long theRowCount = this->mTileRowCount;
-    U2DPoint<float> thePoint;
-    long theMinimumX = 0x7fffffff;
-    long theMinimumY = 0x7fffffff;
-    std::map<long, std::pair<long, long> >::iterator theIterator;
-    long theMaximumX = INT32_MIN;   // the 32-bit original's 0x80000000 (LP64: a positive long, so no row lowered it)
-    long theMaximumY = INT32_MIN;
-    unsigned long i;
-    long theY;
-    long theFirst;
-    long theLast;
-    long theRowStart;
-    long theRowEnd;
-    for (i = 0; i < inVolume.size(); i++) {
-        thePoint.mX = inVolume[i].GetX();
-        thePoint.mY = inVolume[i].GetY();
-        thePoints.push_back(thePoint);
-    }
-    theHull.SetPoints(thePoints, false);
-    theHull.GetScanLines(theRows);
-    for (theIterator = theRows.begin(); theIterator != theRows.end() && theIterator->first < theRowCount;
-         theIterator++) {
-        theY = theIterator->first;
-        if (theY < 0)
-            continue;
-        theFirst = theIterator->second.first;
-        theLast = theIterator->second.second;
-        theRowStart = this->mTileRows[theY].mStart;
-        if (theLast < theRowStart)
-            continue;
-        theRowEnd = theRowStart + this->mTileRows[theY].mCount - 1;
-        if (theFirst > theRowEnd)
-            continue;
-        theFirst = max(theFirst, theRowStart);
-        theLast = min(theLast, theRowEnd);
-        outRows.push_back(std::make_pair(theY, std::make_pair(theFirst, theLast)));
-        theMinimumX = min(theMinimumX, theFirst);
-        theMaximumX = max(theMaximumX, theLast);
-        theMinimumY = min(theMinimumY, theY);
-        theMaximumY = max(theMaximumY, theY);
-    }
-    outMinimum.mX = theMinimumX;
-    outMinimum.mY = theMinimumY;
-    outMaximum.mX = theMaximumX;
-    outMaximum.mY = theMaximumY;
+    std::vector<long> theRows(3 * this->mTileRowCount);   // at most one row per y
+    long theBounds[4];
+    size_t theCount = ee_ge_terrain_rows_in_volume(inVolume.empty() ? NULL : GERust(inVolume[0]), inVolume.size(),
+                                                   reinterpret_cast<const EeGeTmRow*>(this->mTileRows),
+                                                   this->mTileRowCount, theRows.data(), theBounds);
+    for (size_t i = 0; i < theCount; i++)
+        outRows.push_back(std::make_pair(theRows[3 * i], std::make_pair(theRows[3 * i + 1], theRows[3 * i + 2])));
+    outMinimum.mX = theBounds[0];
+    outMinimum.mY = theBounds[1];
+    outMaximum.mX = theBounds[2];
+    outMaximum.mY = theBounds[3];
 }
 
 // FUNCTION: LLE 0x1002ae1f
@@ -1411,12 +1336,10 @@ void GETerrainMesh::SetColorSet(unsigned long inX, unsigned long inY, unsigned l
 void GETerrainMesh::SetWaterColorSet(unsigned long inX, unsigned long inY)
 {
     GETMPointRow& theRow = this->mPointRows[inY];
-    unsigned long theSize = this->mRegisteredColorSets[this->mWaterColorSetID].size();
-    float theHeight = this->mWaterTextureScale * theRow.mPoints[inX - theRow.mStart].mZ;
-    unsigned long theIndex = (unsigned long)(theHeight * (theSize - 1));
-    if (theIndex >= this->mRegisteredColorSets[this->mWaterColorSetID].size())
-        theIndex = this->mRegisteredColorSets[this->mWaterColorSetID].size() - 1;
-    theRow.mPoints[inX - theRow.mStart].mColorTableIndex = (unsigned char)this->mRegisteredColorSets[this->mWaterColorSetID][theIndex];
+    const std::vector<unsigned long>& theSet = this->mRegisteredColorSets[this->mWaterColorSetID];
+    unsigned long theIndex =
+        ee_ge_terrain_water_color_index(this->mWaterTextureScale, theRow.mPoints[inX - theRow.mStart].mZ, theSet.size());
+    theRow.mPoints[inX - theRow.mStart].mColorTableIndex = (unsigned char)theSet[theIndex];
 }
 
 // FUNCTION: LLE 0x1002afc9
@@ -1437,15 +1360,12 @@ void GETerrainMesh::SetColorTable(std::vector<GEColor>& inColorTable)
 void GETerrainMesh::SetGlobalWaterState(unsigned long inWaterSetID, unsigned long inColorSetID,
                                         unsigned long inAnimationPeriod, float inTextureScale)
 {
-    URandom theRandom;
     GETMMaterial theMaterial;
     GETextureSet* theTextureSet;
     unsigned long theWidth;
     unsigned long theHeight;
     unsigned long i;
     unsigned long j;
-    long theCount;
-    long theIndex;
     this->mGlobalWaterSetID = inWaterSetID;
     this->mWaterColorSetID = inColorSetID;
     this->mWaterTextureScale = 1.0f / inTextureScale;
@@ -1460,15 +1380,8 @@ void GETerrainMesh::SetGlobalWaterState(unsigned long inWaterSetID, unsigned lon
             this->mWaterAnimationMaterialList.push_back(theMaterial);
         }
     }
-    theCount = theHeight * theWidth - 1;
-    for (i = 0; i < 33; i++) {
-        for (j = 0; j < 33; j++) {
-            theIndex = UMFloatToLong(theRandom.Generate() * (float)(theCount + 1));
-            if (theIndex == theCount + 1)
-                theIndex = theCount;
-            this->mWaterTextureIndices[i][j] = theIndex;
-        }
-    }
+    // the 33 x 33 grid's random texture indices (a fresh URandom, seed 1): Rust (ee_ge terrain_mesh.rs)
+    ee_ge_terrain_water_grid((long)(theHeight * theWidth), &this->mWaterTextureIndices[0][0]);
     for (j = 0; j < this->mPointRowCount; j++) {
         for (i = 0; i < this->mPointRows[j].mCount; i++) {
             if (this->mPointRows[j].mPoints[i].mZ < 0.0f)
@@ -1490,25 +1403,21 @@ void GETerrainMesh::UpdateFogOfWar(bool inAllVisible)
     ee_ge_terrain_fog(&theView, &theFog, &this->mVisibleWaterTilePercentage, &this->mVisibleSpaceTilePercentage);
 }
 
-static unsigned long sWaterElapsedTime;   // 0x1010fed0
+// (sWaterElapsedTime 0x1010fed0 was the last step's elapsed time, read by nothing else)
 static unsigned long sWaterLastTime;      // 0x1010fed4
 
 // FUNCTION: LLE 0x1002b83f
-// Advances the water animation by the whole periods elapsed since the last step and points every water material at
-// its new frame
+// Advances the water animation by the whole periods elapsed since the last step (the step is Rust: ee_ge
+// terrain_mesh.rs, water_animation_step) and points every water material at its new frame
 void GETerrainMesh::UpdateWaterAnimation()
 {
     unsigned long theFrameCount = this->mWaterAnimationMaterialList.size();
     GETextureSet* theTextureSet = this->mRegisteredTextureSets[this->mGlobalWaterSetID];
-    unsigned long theFrames;
     unsigned long i;
     GETexture* theTexture;
-    sWaterElapsedTime = TMGetTime() - sWaterLastTime;
-    if (!(sWaterElapsedTime >= this->mWaterAnimationPeriod))
+    if (!ee_ge_terrain_water_step(TMGetTime(), this->mWaterAnimationPeriod, theFrameCount, &this->mWaterAnimationFrame,
+                                  &sWaterLastTime))
         return;
-    theFrames = sWaterElapsedTime / this->mWaterAnimationPeriod;
-    this->mWaterAnimationFrame = (this->mWaterAnimationFrame + theFrames) % theFrameCount;
-    sWaterLastTime += this->mWaterAnimationPeriod * theFrames;
     for (i = 0; i < theFrameCount; i++) {
         theTexture = theTextureSet->GetTexture((this->mWaterAnimationFrame + i) % theFrameCount, 1);
         this->mWaterMaterialList[i].mTexture = theTexture;

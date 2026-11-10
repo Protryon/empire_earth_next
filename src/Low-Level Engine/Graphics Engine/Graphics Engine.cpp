@@ -37,6 +37,7 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/Graphics Engine.h"
+#include "rust/ee_rust.h"       // the pixel formats (ee_ge pixel.rs)
 
 void GEShutdown(bool inForced);
 
@@ -50,31 +51,11 @@ public:
     PIMModule* mModule;                     // +0x08
 };
 
-// Shift right, then left, per channel (red, green, blue, alpha) for each pixel format
-struct GEPixelFormat {
-    unsigned long mRedShift;
-    unsigned long mRedPosition;
-    unsigned long mGreenShift;
-    unsigned long mGreenPosition;
-    unsigned long mBlueShift;
-    unsigned long mBluePosition;
-    unsigned long mAlphaShift;
-    unsigned long mAlphaPosition;
-};
+// (GEPixelFormat and sPixelFormats (0x100d9eb8), the shift and position of each channel per pixel format, are in
+// Rust: ee_ge pixel.rs; GEPackColor and GEUnpack* forward)
 
 HINSTANCE__* GEScreen::sInstance;           // 0x1012d948 (.bss after this unit's U2D keys)
 static std::vector<RasterizerWrapper*> sRasterizerWrappers;     // 0x1012d8d8
-
-static GEPixelFormat sPixelFormats[] = {    // 0x100d9eb8
-    {0, 16, 0, 8, 0, 0, 0, 24},
-    {0, 16, 0, 8, 0, 0, 8, 0},
-    {4, 8, 4, 4, 4, 0, 4, 12},
-    {3, 10, 3, 5, 3, 0, 7, 15},
-    {3, 11, 3, 6, 3, 1, 7, 0},
-    {3, 10, 3, 5, 3, 0, 8, 0},
-    {3, 11, 3, 6, 3, 1, 8, 0},
-    {3, 11, 2, 5, 3, 0, 8, 0}
-};
 
 // FUNCTION: LLE 0x100386f5
 // Deletes every loaded rasterizer plug-in wrapper (unloading its module) and empties the list
@@ -129,14 +110,7 @@ RasterizerWrapper::RasterizerWrapper(PIMModule* inModule)
 // Packs a color and alpha (0..1 floats) into a pixel of the given format
 unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha)
 {
-    unsigned long theRed = UMFloatToLong(inColor.GetRed() * 255.0f);
-    unsigned long theGreen = UMFloatToLong(inColor.GetGreen() * 255.0f);
-    unsigned long theBlue = UMFloatToLong(inColor.GetBlue() * 255.0f);
-    unsigned long theAlpha = UMFloatToLong(inAlpha * 255.0f);
-    return theRed >> sPixelFormats[inFormat].mRedShift << sPixelFormats[inFormat].mRedPosition |
-           theGreen >> sPixelFormats[inFormat].mGreenShift << sPixelFormats[inFormat].mGreenPosition |
-           theBlue >> sPixelFormats[inFormat].mBlueShift << sPixelFormats[inFormat].mBluePosition |
-           theAlpha >> sPixelFormats[inFormat].mAlphaShift << sPixelFormats[inFormat].mAlphaPosition;
+    return ee_ge_pack_color_float(inFormat, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), inAlpha);
 }
 
 // FUNCTION: LLE 0x1003890c
@@ -144,10 +118,7 @@ unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float 
 unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen, unsigned long inBlue,
                           unsigned long inAlpha)
 {
-    return inAlpha >> sPixelFormats[inFormat].mAlphaShift << sPixelFormats[inFormat].mAlphaPosition |
-           inBlue >> sPixelFormats[inFormat].mBlueShift << sPixelFormats[inFormat].mBluePosition |
-           inGreen >> sPixelFormats[inFormat].mGreenShift << sPixelFormats[inFormat].mGreenPosition |
-           inRed >> sPixelFormats[inFormat].mRedShift << sPixelFormats[inFormat].mRedPosition;
+    return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha);
 }
 
 // FUNCTION: LLE 0x1003896b
@@ -162,28 +133,28 @@ void GEShutdown(bool inForced)
 // Returns a pixel's red channel scaled to 8 bits for the given format
 unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor)
 {
-    return inColor >> sPixelFormats[inFormat].mRedPosition << sPixelFormats[inFormat].mRedShift;
+    return ee_ge_unpack_red(inFormat, inColor);
 }
 
 // FUNCTION: LLE 0x10038996
 // Returns a pixel's green channel scaled to 8 bits for the given format
 unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor)
 {
-    return inColor >> sPixelFormats[inFormat].mGreenPosition << sPixelFormats[inFormat].mGreenShift;
+    return ee_ge_unpack_green(inFormat, inColor);
 }
 
 // FUNCTION: LLE 0x100389b2
 // Returns a pixel's blue channel scaled to 8 bits for the given format
 unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor)
 {
-    return inColor >> sPixelFormats[inFormat].mBluePosition << sPixelFormats[inFormat].mBlueShift;
+    return ee_ge_unpack_blue(inFormat, inColor);
 }
 
 // FUNCTION: LLE 0x100389ce
 // Returns a pixel's alpha channel scaled to 8 bits for the given format
 unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor)
 {
-    return inColor >> sPixelFormats[inFormat].mAlphaPosition << sPixelFormats[inFormat].mAlphaShift;
+    return ee_ge_unpack_alpha(inFormat, inColor);
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):

@@ -223,6 +223,16 @@ void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits
     }
 }
 
+// The same over the herd's own list (mUnits holds handles since R5a.4; the list is read live, as the reference was)
+void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUnit> >& inUnits)
+{
+    for (long i = inUnits.size() - 1; i >= 0; i--) {
+        EEUGAttackUnit* theGoal = new EEUGAttackUnit(inUnits[i], inTarget, true, false);
+        if (!this->GiveGoal(inUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
+            delete theGoal;
+    }
+}
+
 // FUNCTION: EXE 0x4a1e75
 // Returns whether an animal may stand on a tile: walkable terrain, passable units and no other herd member there
 bool EEHerd::CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile)
@@ -269,7 +279,7 @@ bool EEHerd::Chase()
     if (this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0) {
         theResult = true;
         EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
-        theUnits = this->mUnits;
+        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
         this->mTarget->GetPosition(thePosition);
         theFormation->mCenter.mX = thePosition.mX;
         theFormation->mCenter.mY = thePosition.mY;
@@ -327,7 +337,7 @@ bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
     }
     if ((unsigned long)inTile.mX < gMapWidth && (unsigned long)inTile.GetY() < gMapHeight &&
         gContinentManager.GetContinentID(inTile.mX, inTile.GetY()) == this->mContinent) {
-        theUnits = this->mUnits;
+        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
         theFormation->mCenter = theCenter;
         theFormation->mMinRadius = (float)inRadius;
         theFormation->Place(theUnits, theSlots);
@@ -641,7 +651,7 @@ void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
     if (!theAttacker->mUnitClass->CanBeAttacked() || !(gDamageTable[theSource][theTarget] > 0.0f))
         return;
     if (inAll)
-        theUnits = this->mUnits;
+        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
     else
         theUnits.push_back(inUnit);
     this->Attack(theAttacker, theUnits);
@@ -673,7 +683,7 @@ void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 bool EEHerd::FollowNearestHerd()
 {
     std::vector<EEHerd*> theHerds;
-    EEComplexUnit* theLeader = this->mLeader ? this->mLeader.Get() : this->mUnits[0];
+    EEComplexUnit* theLeader = this->mLeader ? this->mLeader.Get() : this->mUnits[0].Get();
     float theBest = 0.0f;
     EEHerd* theBestHerd = NULL;
     this->mPlayer->GetHerds(EEHerdOtherHerdFilter(this), theHerds);
@@ -816,12 +826,12 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
         theResult = inFile.Read(theCount);
     if (theResult != 0)
         return theResult;
-    this->mUnits.resize(theCount, 0);
+    this->mUnits.resize(theCount);
     for (unsigned long i = 0; i < theCount; i++) {
         theValue = 0;
         if (theResult == 0) {
             theResult = inFile.Read(theValue);
-            this->mUnits[i] = USavedPointer<EEComplexUnit>(theValue);
+            this->mUnits[i] = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);   // ids until RepairPointers
         }
     }
     if (theResult == 0)
@@ -897,7 +907,7 @@ void EEHerd::ReleaseTarget()
 bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
 {
     std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEComplexUnit*>::iterator theEntry = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
+    std::vector<EEUnitHandle<EEComplexUnit> >::iterator theEntry = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
     bool theResult = theEntry != this->mUnits.end();
     if (theEntry == this->mUnits.end())
         return theResult;
@@ -928,8 +938,8 @@ long EEHerd::RepairPointers(long, long)
     if (this->GetAnimal())
         this->mRadiusSquared = this->GetAnimal()->GetHerdRadius() * this->GetAnimal()->GetHerdRadius();
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        if (this->mUnits[i] != (EEComplexUnit*)-1) {
-            unsigned long theID = USavedID(this->mUnits[i]);
+        if (this->mUnits[i].GetSavedID() != 0xffffffff) {
+            unsigned long theID = this->mUnits[i].GetSavedID();
             this->mUnits[i] = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theID)));
             if (this->mUnits[i]) {
                 this->mUnits[i]->mReferenceCount++;
@@ -1088,7 +1098,7 @@ long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 // Makes herd animals graze at once: all of them, or the first inIndex after an optional shuffle
 void EEHerd::ResetGrazeTimes(long inIndex, bool inShuffle)
 {
-    std::vector<EEComplexUnit*> theUnits(this->mUnits);
+    std::vector<EEComplexUnit*> theUnits(this->mUnits.begin(), this->mUnits.end());
     if (inShuffle)
         EEAIRandomShuffle(theUnits.begin(), theUnits.end());
     if (inIndex >= 0 && inIndex < (long)theUnits.size())
@@ -1148,7 +1158,7 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
     GE3DPoint thePosition;
     GE3DPoint theUnitPosition;
     inTarget->GetPosition(thePosition);
-    theUnits = this->mUnits;
+    theUnits.assign(this->mUnits.begin(), this->mUnits.end());
     theFormation->SetCenter(thePosition);
     theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
     theFormation->Place(theUnits, theSlots);

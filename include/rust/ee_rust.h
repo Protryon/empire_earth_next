@@ -42,6 +42,9 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// The side of `SetGlobalWaterState`'s water texture grid.
+constexpr static const size_t WATER_GRID = 33;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -1267,6 +1270,29 @@ struct EeGeScaleRemoval {
   float x;
   float y;
   float z;
+};
+
+/// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
+struct EeGeStoreTarget {
+  unsigned long pixel_depth;
+  unsigned long pixel_format;
+  bool no_alpha;
+  unsigned long pixel_width;
+  unsigned long pixel_height;
+  unsigned long bytes_per_row;
+};
+
+/// `GETexture::Load`'s plan for frame format 0 (one texture per frame).
+struct EeGeTextureFramePlan {
+  long mip_levels;
+  long drop;
+  unsigned long surface_type;
+  long mip_level_count;
+  bool has_drop;
+  unsigned long drop_type;
+  long drop_mip_level_count;
+  unsigned long drop_width;
+  unsigned long drop_height;
 };
 
 /// `GXVIEWPORT`.
@@ -3712,6 +3738,130 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
 
+/// `CreateFlatMesh(width, height)`'s rows: `tile_rows` receives `width + height` (start, end) pairs and
+/// `point_rows` one more; the four edge sums go to `edges` (left, top, right, bottom).
+///
+/// # Safety
+/// `tile_rows` holds `2 * (width + height)` values, `point_rows` two more, `edges` four.
+void ee_ge_terrain_flat_mesh(long width,
+                             long height,
+                             unsigned long *tile_rows,
+                             unsigned long *point_rows,
+                             long *edges);
+
+/// `SetGlobalWaterState`'s 33 x 33 water texture grid over `texture_count` textures, row by row into `out`.
+///
+/// # Safety
+/// `out` holds 33 * 33 values.
+void ee_ge_terrain_water_grid(long texture_count,
+                              unsigned long *out);
+
+/// `SetWaterColorSet`'s colour set index of a point of height `z`.
+unsigned long ee_ge_terrain_water_color_index(float texture_scale, float z, unsigned long set_size);
+
+/// `UpdateWaterAnimation`'s step: false before a period has passed, else the new frame and last time are written.
+///
+/// # Safety
+/// `frame` and `last` are valid for reads and writes.
+bool ee_ge_terrain_water_step(unsigned long now,
+                              unsigned long period,
+                              unsigned long frame_count,
+                              unsigned long *frame,
+                              unsigned long *last);
+
+/// `GetTileRowsInVolume`: the tile rows under the convex hull of `volume` (`count` points), clipped to the mesh's
+/// `tile_row_count` tile rows, as (y, first x, last x) triples into `out_rows` (at most `tile_row_count` rows, one
+/// per y), and the bounding box as (min x, min y, max x, max y) into `bounds`; returns the row count.
+///
+/// # Safety
+/// `volume` holds `count` points, `tile_rows` `tile_row_count` rows, `out_rows` `3 * tile_row_count` values, `bounds`
+/// four.
+size_t ee_ge_terrain_rows_in_volume(const EeGe3DPoint *volume,
+                                    size_t count,
+                                    const EeGeTmRow *tile_rows,
+                                    unsigned long tile_row_count,
+                                    long *out_rows,
+                                    long *bounds);
+
+/// `GETextureStem`: the length of a texture's cache name within `name`.
+///
+/// # Safety
+/// `name` is NUL-terminated.
+size_t ee_ge_texture_stem(const char *name);
+
+/// `GETextureManager::SetTexturePack`.
+///
+/// # Safety
+/// `directory` is NULL or NUL-terminated.
+void ee_ge_texpack_set(const char *directory, long scale_shift, long mip_levels_to_drop);
+
+/// The pack's name of a texture (`GETexturePackName`; with `require_enabled`, `GetTexturePackName`): false and nothing
+/// written when there is none.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+bool ee_ge_texpack_name(const char *name,
+                        bool require_enabled,
+                        char *out,
+                        size_t capacity);
+
+/// Whether the pack is on (`sTexturePackEnabled`).
+bool ee_ge_texpack_enabled();
+
+/// `GetTexturePackLogicalShift`.
+long ee_ge_texpack_logical_shift();
+
+/// `GetTexturePackMipLevelsToDrop`.
+long ee_ge_texpack_mip_levels_to_drop();
+
+/// `LoadTexture`'s MIP decisions: the levels to drop and whether to build MIP levels; returns the pack's extra drop.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+long ee_ge_texpack_load_plan(bool create_mipmaps,
+                             long drop,
+                             bool from_pack,
+                             long *out_drop,
+                             bool *out_mipmaps);
+
+/// `SetTexturePackSizes`' arithmetic: the texture's new `mNumMipLevelsToDrop` and its logical shift.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+void ee_ge_texpack_sizes(unsigned long drop,
+                         long mip_levels,
+                         unsigned long *out_drop,
+                         unsigned long *out_shift);
+
+/// The surface description a texture description asks for: depth, format and `mNoAlpha`.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+void ee_ge_texture_surface_format(unsigned long pixel_depth,
+                                  bool has_alpha,
+                                  unsigned long *out_depth,
+                                  unsigned long *out_format,
+                                  bool *out_no_alpha);
+
+/// A manager's removal decision at reference count `count`: whether to remove and release; the result code.
+///
+/// # Safety
+/// `out_remove` is valid for a write.
+long ee_ge_manager_remove_decision(unsigned long count,
+                                   bool *out_remove);
+
+/// The next made texture's name (`MakeTexture`), into `out`.
+///
+/// # Safety
+/// `out` holds `capacity` bytes.
+size_t ee_ge_texman_made_name(char *out, size_t capacity);
+
+/// The next created model's name (`CreateModel`) from the caller's, into `out`.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+size_t ee_ge_modman_created_name(const char *name, char *out, size_t capacity);
+
 /// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
 ///
 /// # Safety
@@ -3819,6 +3969,137 @@ bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
                                 size_t index_count,
                                 const uint32_t *ranges,
                                 size_t range_count);
+
+/// `GEPackColor(format, red, green, blue, alpha)`.
+unsigned long ee_ge_pack_color(unsigned long format,
+                               unsigned long red,
+                               unsigned long green,
+                               unsigned long blue,
+                               unsigned long alpha);
+
+/// `GEPackColor(format, color, alpha)` with the colour's channels.
+unsigned long ee_ge_pack_color_float(unsigned long format,
+                                     float red,
+                                     float green,
+                                     float blue,
+                                     float alpha);
+
+/// `GEUnpackRed`.
+uint8_t ee_ge_unpack_red(unsigned long format, unsigned long color);
+
+/// `GEUnpackGreen`.
+uint8_t ee_ge_unpack_green(unsigned long format, unsigned long color);
+
+/// `GEUnpackBlue`.
+uint8_t ee_ge_unpack_blue(unsigned long format, unsigned long color);
+
+/// `GEUnpackAlpha`.
+uint8_t ee_ge_unpack_alpha(unsigned long format, unsigned long color);
+
+/// Whether a `width` x `height` frame fits the surface (else `GEStoreFrame` fails before locking).
+///
+/// # Safety
+/// `target` is valid.
+bool ee_ge_texture_frame_fits(const EeGeStoreTarget *target, uint32_t width, uint32_t height);
+
+/// Stores a decoded frame (`channels` 3 or 4, top row first) into the locked surface's `memory`.
+///
+/// # Safety
+/// `target` is valid, `memory` holds the surface's rows, `pixels` the frame's, and the frame fits
+/// (`ee_ge_texture_frame_fits`).
+void ee_ge_texture_store_frame(const EeGeStoreTarget *target,
+                               uint32_t width,
+                               uint32_t height,
+                               uint32_t channels,
+                               const uint8_t *pixels,
+                               uint8_t *memory);
+
+/// The frame surfaces' description for a `width` x `height` file with `drop` levels dropped.
+///
+/// # Safety
+/// `out` is valid for a write.
+void ee_ge_texture_frame_plan(uint32_t width,
+                              uint32_t height,
+                              bool create_mipmaps,
+                              long drop,
+                              EeGeTextureFramePlan *out);
+
+/// The frame grid of a one-surface texture (frame format 1): `mFramesPerRow` and `mFrameUVSize`.
+///
+/// # Safety
+/// The out pointers are valid for writes.
+void ee_ge_texture_grid_plan(uint32_t frame_count, unsigned long *frames_per_row, float *uv_size);
+
+/// Frame `frame`'s cell in the grid surface: left, top, right, bottom (`out[4]`) for a `mip_width` x `mip_height` level.
+///
+/// # Safety
+/// `out` holds four floats.
+void ee_ge_texture_grid_cell(unsigned long frame,
+                             unsigned long frames_per_row,
+                             unsigned long mip_width,
+                             unsigned long mip_height,
+                             float *out);
+
+/// `SetFrame`'s UV corner of frame `frame`.
+///
+/// # Safety
+/// `u` and `v` are valid for writes.
+void ee_ge_texture_frame_corner(unsigned long frame,
+                                unsigned long frames_per_row,
+                                float *u,
+                                float *v);
+
+/// `GETexture::Dereference`'s decision at reference count `count`: whether to drop a reference and whether to remove
+/// the texture from its manager.
+///
+/// # Safety
+/// `dereference` and `remove` are valid for writes.
+void ee_ge_texture_dereference_decision(unsigned long count,
+                                        bool managed,
+                                        bool *dereference,
+                                        bool *remove);
+
+/// `GETexture::GetAllocatedSize`.
+unsigned long ee_ge_texture_allocated_size(unsigned long surface_size,
+                                           unsigned long frame_format,
+                                           unsigned long frame_count);
+
+/// `SetStageMipFilterMode`'s mode after the texture pack's override.
+unsigned long ee_ge_texture_mip_filter_mode(unsigned long mode,
+                                            bool has_surface,
+                                            unsigned long logical_shift,
+                                            bool create_mipmaps);
+
+/// `GETextureSet`'s slot of tile (x, y): the texture column and row.
+///
+/// # Safety
+/// `out_x` and `out_y` are valid for writes.
+void ee_ge_texture_set_slot(unsigned long x,
+                            unsigned long y,
+                            unsigned long coverage,
+                            unsigned long width,
+                            unsigned long height,
+                            unsigned long *out_x,
+                            unsigned long *out_y);
+
+/// `GETextureSet::GetTextureCoordinate`.
+///
+/// # Safety
+/// `u` and `v` are valid for writes.
+void ee_ge_texture_set_coordinate(unsigned long x,
+                                  unsigned long y,
+                                  unsigned long coverage,
+                                  float *u,
+                                  float *v);
+
+/// `GEMaterial::SizeOf` from the C++'s sizes.
+unsigned long ee_ge_material_size_of(size_t object_size,
+                                     size_t string_size,
+                                     unsigned long name_size,
+                                     unsigned long screen_count,
+                                     size_t pointer_size,
+                                     unsigned long lod_count,
+                                     size_t ulong_size);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
@@ -5917,6 +6198,15 @@ void ee_ui_slider_set_range(void *slider,
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);
+
+/// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
+void ee_units_register(uint32_t id, void *unit);
+
+/// Clears `id`'s entry if it still names `unit` (`RTSUnit::FreeNode`); returns whether it did.
+bool ee_units_unregister(uint32_t id, void *unit);
+
+/// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
+void *ee_units_resolve(uint32_t id);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

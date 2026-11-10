@@ -11,6 +11,7 @@
 
 #include <map>
 #include <vector>
+#include "ee/EEUnitHandle.h"
 
 class EEComputerPlayer;
 class EECPCombatStrategy;
@@ -44,7 +45,7 @@ struct EECPUnitSelectionGroup {
     EECPAGTask mTask;                       // +0x30
     EEAIFOPAvailablePersonnelGatherer mGatherer;   // +0x64
     EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
-    std::vector<EEUnit*> mUnits;            // +0x74 the candidate units (referenced)
+    std::vector<EEUnitHandle<EEUnit> > mUnits;   // +0x74 the candidate units (referenced; handles since R5a.4, the vector's order kept)
     EECPILocation mLocation;                // +0x84
     EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x9c

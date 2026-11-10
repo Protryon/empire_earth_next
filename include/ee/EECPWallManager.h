@@ -61,7 +61,7 @@ public:
     bool ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo);  // 0x9e99b (ret 0xc)
 
     std::vector<EECPWMWall> mWalls;         // +0x04
-    std::vector<EEComplexUnit*> mGates;     // +0x14 (saved as unit ids)
+    std::vector<EEUnitHandle<EEComplexUnit> > mGates;   // +0x14 (referenced; saved as unit ids; handles since R5a.4, the vector's order kept)
     std::vector<RTSMapTileRun> mRuns;       // +0x24
     std::vector<U2DPoint<long> > mPath;     // +0x34
     U2DPoint<long> mGateTile;               // +0x44 (saved)

@@ -548,7 +548,7 @@ void DumpState(const std::string& inPath)
     fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
             (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
     {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
-        const std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+        const std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
         const char* theNames[3] = {"UPDATE", "ACTIVATE", "DEACTIVATE"};
         for (int l = 0; l < 3; l++) {
             fprintf(f, "%s %zu:", theNames[l], theLists[l]->size());
