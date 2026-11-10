@@ -173,4 +173,10 @@ return {
     -- skirmish: SK_ON's bits (1 the party, 2 the spotter); 0 upstream ("off until measured": level on the save
     -- "choke wolf" and on the wall test). Its numbers are upstream's defines (SK_N 8, SK_MIN 3, SK_RANGE 7 ...).
     skirmish = 0,
+    -- airstrike.c, stats.c
+    air_strike = true,              -- AS_ON (a compile-time switch upstream, no [ai_base] key; on since 2026-11-04):
+                                    -- the bombers held as a wing, trained while a position needs them, the bombing
+                                    -- run on the shooters' spot / the push's target / the target found too strong
+    fight_estimate = false,         -- [ai_base] fight_estimate=0: the fight decisions keep summed hit points x attack
+                                    -- (ai.strength); stats.lua's M.ratio is the estimate (PARTLY: no damage tables)
 }
