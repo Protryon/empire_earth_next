@@ -3395,6 +3395,7 @@ the model and texture managers (GEModel*, GETexture*, GEOpenFormats*) are anothe
   memory (`FSMemoryFile`), never read from a file. Handing them records instead is a per-loader change, not done.
 - **The Bash tool and backslashes:** `"\\n"` inside a quoted heredoc reached Python as a line break, and `"\\/"`
   as `"\/"`. Edit scripts with backslashes are written with the editor, not through a heredoc.
+
 ## The Linux cross build after the Rust port (branch rust-linux, 2026-11-09)
 
 The Linux and macOS builds had not been built since the first Rust crates landed; everything from R1.3 to R5b.2 and
