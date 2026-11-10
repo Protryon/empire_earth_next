@@ -3205,8 +3205,14 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         theResult = mAirTraffic[theAirport]->RepairPointers(inFirst, inSecond);
     this->mLoadedUnitIDs.clear();
     if (this->GetPlayerID() >= 1) {
+        // port (0.254 on, no format change): a building placed as a foundation joins its town when it is finished
+        // (UnitPlaced skips a foundation, UnitCompleted adds it; a farm is never a foundation), so the rebuilt towns
+        // leave the unfinished buildings out as the running game had them (seed 4's 600 s save: a town of the loaded
+        // game took a building under construction, grew a hull and made patrol points the saved game did not have)
         for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->GetComplexUnit() != NULL)
+            if (theUnit->GetComplexUnit() != NULL
+                && !(EESaveHasLiveState(inFirst, inSecond) && theUnit->mUnitClass->IsLandBuilding()
+                     && !theUnit->GetComplexUnit()->mIsBuilt && theUnit->mUnitClass->mUnitType != kUnitTypeFarm))
                 this->AddUnitToTown(theUnit->GetComplexUnit());
     }
     if (!this->mCivilization.GetNoPointsAdded() && this->mCivilization.GetAvailablePoints() != 0)
