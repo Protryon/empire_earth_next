@@ -62,12 +62,13 @@ function M.step(view, memory)
     AIR.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
-        print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d",
+        print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d wild=%d places=%d acc=%d",
             view.epoch, tostring(budget.saving), view.citizens, budget.citizens_wanted or 0, view.army_count, view.army_strength,
             E.tower_count(view), t.food or 0, t.wood or 0, t.stone or 0, t.gold or 0, t.iron or 0, view.stock.food, view.stock.wood,
             view.stock.stone, view.stock.gold, view.stock.iron, view.income.food, view.income.wood, view.income.stone,
             view.income.gold, view.income.iron, view.next_epoch_cost.food, view.next_epoch_cost.wood,
-            view.next_epoch_cost.stone, view.next_epoch_cost.gold, view.next_epoch_cost.iron, view.sol_missing))
+            view.next_epoch_cost.stone, view.next_epoch_cost.gold, view.next_epoch_cost.iron, view.sol_missing,
+            memory.eco.wild_food or -1, memory.eco.food_places or -1, (memory.eco.epoch_acc or {}).food or -1))
     end
     return orders
 end

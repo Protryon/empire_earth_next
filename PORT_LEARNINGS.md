@@ -1916,3 +1916,10 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   after it in that tick is skipped (the safety port cost 1,900-8,900 aborted ticks a 120-minute bench before it was
   rewritten). The shape that fits: one `ai.seen` of the enemy soldiers near home per step, their tiles read once with
   `ai.get`, the distances in Lua, and the engine asked about a site only when a Lua test has already singled it out.
+
+- **An income share accumulated a step at a time truncates to nothing (2026-11-10).** `income x dt x share // (60000 x
+  100)` with a one-second step and an income under 150 a minute is 0 every step: the Age of AI port's military account
+  never grew past its start share in any bench so far (`mil=240/225/240/30/30` in every trace), and the epoch account
+  of `copper_plan=next_epoch` filled only on income spikes - half of f6's games never left the Prehistoric for it.
+  Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
+  now do (econ.lua, navy.lua).

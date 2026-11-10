@@ -171,7 +171,11 @@ function M.reserve(view, mem)
         for _, k in ipairs(V.resources) do
             local acc = mem.epoch_acc[k] or 0
             if saving and dt > 0 and dt <= 5000 then
-                acc = acc + view.income[k] * dt * S.epoch_share // (60000 * 100)
+                -- the fraction carried (a step's share of a minute's income is under 1: it truncated to 0 before)
+                mem.acc_frac = mem.acc_frac or {}
+                local f = (mem.acc_frac[k] or 0) + view.income[k] * dt * S.epoch_share
+                acc = acc + f // (60000 * 100)
+                mem.acc_frac[k] = f % (60000 * 100)
             end
             mem.epoch_acc[k] = math.min(acc, view.next_epoch_cost[k])
         end
@@ -223,7 +227,12 @@ function M.accounts(view, mem, reserve, reserve_civ)
     mem.mil_t = view.time
     if dt > 0 and dt <= 5000 then
         for _, r in ipairs(V.resources) do
-            mil[r] = (mil[r] or 0) + view.income[r] * dt * share // (60000 * 100)
+            -- the fraction carried (a step's share of a minute's income is under 1: it truncated to 0 before, so the
+            -- account never grew past its start share)
+            mem.mil_frac = mem.mil_frac or {}
+            local f = (mem.mil_frac[r] or 0) + view.income[r] * dt * share
+            mil[r] = (mil[r] or 0) + f // (60000 * 100)
+            mem.mil_frac[r] = f % (60000 * 100)
         end
     end
     local avail, civil = {}, {}
@@ -338,6 +347,32 @@ function M.workers(view, mem, reserve, wants)
         end
         target[from] = target[from] - 1
         target.food = target.food + 1
+    end
+    -- before farms the food gatherers are capped by the gatherable places (ENGINE: this engine holds 6 to a patch,
+    -- the owner's rule; the original's resource manager sends any number to a bush): the claimed food sites' places
+    -- plus the game near home; the excess goes to wood, stone, gold and iron by the plan's floors (the next epochs'
+    -- metals come in through the shortfall once they are held)
+    if not late then
+        local places = 0
+        for _, st in ipairs(view.sites) do
+            if st.claimed and st.resource == "food" and st.units > 0 then
+                places = places + st.capacity
+            end
+        end
+        places = places + math.min(view.hunt or 0, 6)
+        mem.food_places = places
+        local excess = target.food - places
+        if excess > 0 then
+            target.food = places
+            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}
+            local given = 0
+            for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+                local n = excess * shares[r] // 100
+                target[r] = target[r] + n
+                given = given + n
+            end
+            target.gold = target.gold + (excess - given)
+        end
     end
     -- from farms: the mines' places near the drop sites get their workers from food beyond its floor and wood beyond
     -- its need (citizen_plan GOAL)
@@ -1159,10 +1194,14 @@ function M.step(view, memory, orders, army)
         -- unless the map's food runs out (econ.c): wild food is all there is before farms - the food sites within
         -- site_max_distance x wild_food_share short of the epoch's food less the account + 500 - then the epoch's
         -- food first, as the plan always did
+        -- ENGINE: counted as the gatherable places x what a place's bush still holds (this engine holds 6 to a
+        -- patch, the owner's rule, where the original's resource manager sends any number to a bush: a patch of
+        -- ten bushes with six places yields six bushes' food to the Stone Age), not the sites' whole amount
         local wild = 0
         for _, st in ipairs(view.sites) do
             if st.resource == "food" and st.units > 0 and st.distance <= S.site_max_distance then
-                wild = wild + (st.amount or 0)
+                local per_unit = (st.amount or 0) // st.units
+                wild = wild + math.min(st.amount or 0, per_unit * math.min(st.capacity or st.units, st.units))
             end
         end
         wild = wild * S.wild_food_share // 100

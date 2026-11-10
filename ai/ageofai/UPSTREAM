@@ -14,6 +14,9 @@ Per-file map (upstream dll/ai/<file> -> this folder). Each line says PORTED, PAR
 C++ helper of this engine stands in, nothing to port) or NOT STARTED.
 
   econ.c        PARTLY -> econ.lua (budget, workers, epoch), army.lua (choice). Ported: budget_reserve /
+                ENGINE (the forage places): wild_food counts the gatherable places x a bush's food and the worker plan
+                caps the food gatherers at the claimed patches' places before farms - this engine holds 6 to a
+                patch (the owner's rule), the original's manager sends any number to a bush.
                 copper_plan=next_epoch (the port's setting, DEVIATION forced by the epoch costs): the epoch account
                 of epoch_share, the citizens' hold and the engine's reserve are the account, the army's hold the
                 cost; the "map's food runs out" clause (wild_food) is not ported (no wild-food amount in the view).
