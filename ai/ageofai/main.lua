@@ -12,6 +12,7 @@ local T = require("ageofai.tactics")
 local TW = require("ageofai.towns")   -- [towns.c, expand.c]
 local DP = require("ageofai.diplo")   -- [diplo.c]
 local AIR = require("ageofai.air")   -- [airstrike.c]
+local W = require("ageofai.walls")   -- [defence.c walls, enclose]
 local V = require("lib.view")
 
 local M = {}
@@ -43,6 +44,9 @@ function M.step(view, memory)
     end
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)
+    -- [defence.c walls, enclose] the front walls and their gates, the ring round the town or the island's coast
+    -- (ageofai.walls; econ.lua reads the stone it owes and the ring's tower spots from memory.eco)
+    W.step(view, memory)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
     -- [diplo.c] the diplomacy (ageofai.diplo): every step (the stances and the pending answers), the blocks every
     -- 2 s, the world scan every 10 s, the initiative every 60 s from minute 10; the events for the hits and losses

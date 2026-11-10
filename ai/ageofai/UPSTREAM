@@ -28,11 +28,33 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   mines.c       PORTED -> econ.lua (settlements): mine_drops / wood_drops (a settlement at the unworked mine or
                 forest edge nearest a drop site).
   citizens.c    PORTED -> econ.lua (citizens): cz_targets (the citizens wanted from the mines' places, FEED).
-  defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers).
-                Ported: def_refresh (the fronts: towards the nearest enemy buildings known), defence_tick (towers at
-                the fronts and the outposts), home_guard, muster. Missing: WALLS (the 11-tile straight wall 3 tiles
-                before two towers at a front, the gate in its middle), ENCLOSE (the octagon round the town, the
-                coast's ring on an island), DOCK POCKETS; the engine has ai.wall / ai.gate / ai.lock for them.
+  defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers),
+                walls.lua (the walls). Ported: def_refresh (the fronts: towards the nearest enemy buildings known;
+                the fronts' wall state kept while a front stays within 2 tiles), defence_tick (towers at the fronts
+                and the outposts; WALLS: every 20 s, once 2 towers stand within 7 of a front an 11-tile wall 3 tiles
+                before them across the front at the nearest of 8 directions, 3 tries 3 minutes apart, 11 x the
+                wall's cost in stock, not under known defences or an enemy army, on land at both ends and the middle,
+                not with 8 pieces on the arc; the gate in its middle once gate_fits finds the 5 pieces finished, 20
+                looks, through ai.gate), home_guard, muster, ENCLOSE (encl_plan every minute: the home continent
+                flood-filled from the base, an island under 8000 tiles with no enemy building known on it, its ring
+                the coast; else the octagon 3 tiles beyond the farthest building within 30, at least
+                defence_distance + 2, 32 at most, never shrinking; open within 2 tiles of a dock; the ring nearest
+                the own buildings first; the tower spots 1 (2) tiles inside, 5 (6) apart, in econ.lua's towers while
+                the ring is on; encl_walls: from enclose_citizens citizens, the gates of the four sides, the
+                straight runs of up to 12 pieces the stock above 100 stone pays, enclose_runs a tick,
+                enclose_in_flight, the raiders' and the defences' checks, enclose_under_ships; encl_stone / encl_owed
+                into econ.lua's wants and the extra towers' wait; SAFE SPACE with enclose_safe_tiles), DOCK POCKETS
+                (enclose_dock_gates: the coast 4 tiles open by a dock, the pocket's square wall 5 tiles round it,
+                its gate towards the town). Deviations in the code: the builders are the port's pick (the 3 free
+                citizens nearest a front wall, 2 a ring run; upstream's wall manager chose them), the land and the
+                water are ai.tile, so the fill is fog-honest (a continent is an island only once all its land is
+                explored) and chunked over steps (600 tiles a step), a ring tile the placement refuses stays off 5
+                minutes and a tick tests 80 at most, route_covered is the threat layer along the way, the wall and gate
+                types are the engine's "wall" / "gate" aliases (the classic pick by the epoch: upstream's line from
+                Copper; a wall is never "available" the production way and ai.class has no cost, so a piece is 10
+                stone as the tech tree says). Missing: the diag logs (the open ring's objects), sf_stone (SITE
+                FORTS), game_walls (the next engine never runs the classic wall manager), ai.lock (upstream never
+                locks a gate).
   armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
                 attack time when it beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home
                 under AR_BACK_PCT twice running, the next building, the raid answered, the way home as a convoy).

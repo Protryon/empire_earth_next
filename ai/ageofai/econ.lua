@@ -651,6 +651,28 @@ local function core_spot(view, mem, tower, fx, fy, len)
     return nil
 end
 
+-- [defence.c enclose] a free spot of the ring's tower spots: no armed building within 2, placeable within 2
+local function ring_spot(mem, tower)
+    for _, p in ipairs(mem.ring_spots) do
+        local x, y = p[1], p[2]
+        local others = ai.units{category = "building", near = {x, y, 2}}
+        local taken = false
+        for _, id in ipairs(others) do
+            local u = ai.unit(id)
+            if u ~= nil and u.armed then
+                taken = true
+            end
+        end
+        if not taken then
+            local sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2})
+            if sx ~= nil then
+                return sx, sy
+            end
+        end
+    end
+    return nil
+end
+
 local function towers(view, mem, order, above)
     local tower = M.tower_class(view)
     if tower == nil or view.town_x < 0 then
@@ -679,7 +701,8 @@ local function towers(view, mem, order, above)
             or view.citizens < 8 then
         return stone_wanted
     end
-    if above.stone < cost.cost.stone + S.tower_stone_keep then
+    -- [defence.c enclose] encl_owed: the extra towers wait for the open ring's stone (up to 400; walls.lua)
+    if above.stone < cost.cost.stone + S.tower_stone_keep + math.min(mem.wall_owed or 0, 400) then
         return stone_wanted + cost.cost.stone
     end
     -- an outpost: a worked mineral site 12+ tiles from the town with no tower (3 tiles towards the front)
@@ -691,7 +714,15 @@ local function towers(view, mem, order, above)
             return stone_wanted
         end
     end
-    local x, y = front_spot(view, mem, tower, fx, fy, len)
+    -- [defence.c enclose] def_slot with the ring on: the slots are the spots along the ring (walls.lua writes
+    -- mem.ring_spots: on the coast 1 tile inland and 5 apart, in the octagon 2 inside and 6 apart), the outposts
+    -- above after them, no front slots
+    local x, y
+    if mem.ring_spots ~= nil then
+        x, y = ring_spot(mem, tower)
+    else
+        x, y = front_spot(view, mem, tower, fx, fy, len)
+    end
     if x ~= nil then
         order({verb = "build", type = tower, near = "tile", x = x, y = y})
         mem.tower_t = view.time
@@ -991,7 +1022,8 @@ function M.step(view, memory, orders, army)
     end
     if view.time - (mem.pass_t or 0) >= PASS_MS or (mem.pass_t or 0) == 0 then
         mem.pass_t = view.time
-        local wants = {citizens = want_citizens, tower_stone = mem.tower_stone or 0, fields = mem.fields or 0}
+        -- [defence.c enclose] encl_stone: the open ring's walls + 200 for repairs (walls.lua writes mem.wall_stone)
+        local wants = {citizens = want_citizens, tower_stone = (mem.tower_stone or 0) + (mem.wall_stone or 0), fields = mem.fields or 0}
         if army ~= nil and army.wants ~= nil then
             for _, r in ipairs(V.resources) do
                 wants[r] = (wants[r] or 0) + (army.wants[r] or 0)
