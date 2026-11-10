@@ -1,0 +1,10 @@
+[package]
+name = "ee_netmsg"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
