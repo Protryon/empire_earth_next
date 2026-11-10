@@ -11,20 +11,20 @@
 
 // the extra mouse pointers, loaded in this order into mLA8 (0x4be124: 14 pointers in .data) (provisional name)
 static const char* sPointerFiles[14] = {
-    "Textures\\Convert Pointer.tga",
-    "Textures\\Board Transport Pointer.tga",
-    "Textures\\Leave Transport Pointer.tga",
-    "Textures\\Calamity Pointer.tga",
-    "Textures\\Invalid Calamity Pointer.tga",
-    "Textures\\Rally Point Pointer.tga",
-    "Textures\\Protected Conversion Pointer.tga",
-    "Textures\\Protected Calamity Pointer.tga",
-    "Textures\\Heal.tga",
-    "Textures\\Invalid Heal.tga",
-    "Textures\\Patrol Pointer.tga",
-    "Textures\\Garrison Pointer.tga",
-    "Textures\\Flare Pointer.tga",
-    "Textures\\Attack Ground Pointer.tga",
+    "Textures\\Convert Pointer.png",
+    "Textures\\Board Transport Pointer.png",
+    "Textures\\Leave Transport Pointer.png",
+    "Textures\\Calamity Pointer.png",
+    "Textures\\Invalid Calamity Pointer.png",
+    "Textures\\Rally Point Pointer.png",
+    "Textures\\Protected Conversion Pointer.png",
+    "Textures\\Protected Calamity Pointer.png",
+    "Textures\\Heal.png",
+    "Textures\\Invalid Heal.png",
+    "Textures\\Patrol Pointer.png",
+    "Textures\\Garrison Pointer.png",
+    "Textures\\Flare Pointer.png",
+    "Textures\\Attack Ground Pointer.png",
 };
 
 // FUNCTION: EXE 0x50a9b0

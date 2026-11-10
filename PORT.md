@@ -457,11 +457,19 @@ State (2026-11-04):
    texture's `.png` as the binary bytes the loaders already read (the conversion is Rust: `rust/crates/ee_openformats`,
    gate `eemodel.py cppgate`). `eemodel.py install GAMEDIR` writes the open forms into a game copy.
 
-Next: the live gates (tour + an AI game on a copy with the installed open formats, screenshots against the binary
-data); then retire the binary readers' file paths from the game data (the converter keeps reading them); later, a
-native glTF loader once the engine's model class is rewritten (the in-memory conversion keeps the old loader as the
-only consumer for now). Not converted: the `.tga` files read outside the texture manager (pointers, palette, volcano,
-scenario pictures, backgrounds).
+4. **Open formats only** (owner, 2026-11-09: docs/RUST_PLAN.md D9). The game reads the open forms only. Done on the data
+   side (branch rust-d9-data): the db tables are read only as text (`EEDbFindFile` has no `.dat` fallback; the dead
+   `dbrandommap.dat` load is gone); the pictures read outside the texture manager (the 24 mouse pointers and the
+   texture pack's pointers, `ColorPalette`, `Volcano`, a scenario's map picture, the campaign map background) are
+   PNG files read by `GESurface::LoadPNG` (ee_openformats `png_to_picture`; `SaveAsTGA` and `GetTGAFileAttributes`
+   are deleted, `LoadTGA` stays for the texture manager's frames), pixel for pixel what `LoadTGA` made of the retail
+   `.tga`;
+   `tools/open_data.py` builds only the open tree (no `--binary`; no binary form goes into it), and the gates, the
+   simulation tools and the harness run on it. The converters keep reading the retail binary forms.
+   Left (another branch): the models and textures load natively (glTF -> GEModel, PNG -> texture) and the `.cem` and
+   `.sst`/`.tga` parsers of the model and texture managers are deleted; until then those managers still convert the
+   open files to the binary bytes in memory (`GEOpenFormatsFile.cpp`) and still find a binary file when no open one
+   is there.
 
 ## Other next steps
 

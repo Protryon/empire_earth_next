@@ -1264,6 +1264,34 @@ pub fn png_to_sst(frames: &[&[u8]]) -> Result<Vec<u8>, Failure> {
     Ok(out)
 }
 
+/// A PNG decoded for a picture the game reads outside the texture manager (pointers, the terrain palette, the volcano,
+/// a scenario's map, a campaign background): `width` x `height` pixels, top row first, each B, G, R, A (alpha 0xff
+/// when the PNG has none); `depth` is 32 when it has alpha (colour types 4 and 6 or a tRNS chunk), else 24. The
+/// channels are decided as by `png_to_sst`, so the pixels equal the Targa frame that function makes of the file.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Picture {
+    pub width: u32,
+    pub height: u32,
+    pub depth: u32,
+    pub bgra: Vec<u8>,
+}
+
+/// One PNG file -> its pixels as a `Picture` (or why it cannot be read).
+pub fn png_to_picture(data: &[u8]) -> Result<Picture, Failure> {
+    let Some((color, trns, _)) = scan_png(data) else { return fail("not a PNG file") };
+    let ch: usize = if color == 4 || color == 6 || trns { 4 } else { 3 };
+    let Some(img) = load_png(data, ch as i32) else {
+        let mut msg = b"PNG cannot be decoded: ".to_vec();
+        msg.extend_from_slice(&reason());
+        return Err(Failure(msg));
+    };
+    let mut bgra = Vec::with_capacity(img.w as usize * img.h as usize * 4);
+    for p in img.out.chunks_exact(ch) {
+        bgra.extend_from_slice(&[p[2], p[1], p[0], if ch == 4 { p[3] } else { 0xff }]);
+    }
+    Ok(Picture { width: img.w, height: img.h, depth: 8 * ch as u32, bgra })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1568,5 +1596,48 @@ mod tests {
         let (color, trns, surface) = scan_png(&p).unwrap();
         assert_eq!((color, trns, surface.as_slice()), (0, true, &b"2x2"[..]));
         assert!(scan_png(&p[..20]).is_none());
+    }
+
+    #[test]
+    fn a_picture_is_top_down_bgra() {
+        let raw = [0, 1, 2, 3, 4, 5, 6, 0, 7, 8, 9, 10, 11, 12];
+        let p = png(2, 2, &raw, plain(8, 2));
+        let pic = png_to_picture(&p).unwrap();
+        assert_eq!((pic.width, pic.height, pic.depth), (2, 2, 24));
+        assert_eq!(pic.bgra, vec![3, 2, 1, 255, 6, 5, 4, 255, 9, 8, 7, 255, 12, 11, 10, 255]);
+    }
+
+    #[test]
+    fn a_picture_keeps_alpha_and_trns() {
+        let p = png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6));
+        assert_eq!(png_to_picture(&p).unwrap(), Picture { width: 1, height: 1, depth: 32, bgra: vec![3, 2, 1, 200] });
+        let plte = [10, 20, 30, 40, 50, 60];
+        let p = png(2, 1, &[0, 0, 1], PngOpts { plte: Some(&plte), trns: Some(&[128]), ..plain(8, 3) });
+        let pic = png_to_picture(&p).unwrap();
+        assert_eq!((pic.depth, pic.bgra), (32, vec![30, 20, 10, 128, 60, 50, 40, 255]));
+    }
+
+    #[test]
+    fn a_picture_equals_the_sst_frame() {
+        // png_to_sst's Targa frame (bottom-up BGR(A)) holds the same pixels as the picture (top-down BGRA)
+        let raw = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 10, 11, 12, 13, 14, 15, 16];
+        let p = png(2, 2, &raw, plain(8, 6));
+        let pic = png_to_picture(&p).unwrap();
+        let sst = png_to_sst(&[&p]).unwrap();
+        let tga = &sst[15 + 18..];
+        let mut flipped = Vec::new();
+        for y in (0..2).rev() {
+            flipped.extend_from_slice(&tga[y * 8..y * 8 + 8]);
+        }
+        assert_eq!(pic.bgra, flipped);
+    }
+
+    #[test]
+    fn a_picture_refuses_what_is_not_a_png() {
+        assert_eq!(png_to_picture(b"not a png"), Err(Failure(b"not a PNG file".to_vec())));
+        let mut p = png(1, 1, &[0, 1, 2, 3], plain(8, 2));
+        assert_eq!(p[41], 0x78); // the IDAT's zlib header (after the signature, IHDR and the IDAT's length and type)
+        p[41] = 0x79;
+        assert_eq!(png_to_picture(&p), Err(Failure(b"PNG cannot be decoded: bad zlib header".to_vec())));
     }
 }
