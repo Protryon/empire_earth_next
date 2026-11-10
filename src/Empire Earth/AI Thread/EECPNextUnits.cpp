@@ -68,6 +68,13 @@
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
+#include "ee/EEEvent.h"
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGGather.h"
+#include "ee/EECPBehavior.h"
+#include "ee/EERandomMapIDs.h"
+#include "ee/EETechTreeTechID.h"
 #include "ee/EELuaApi.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
@@ -1017,6 +1024,21 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
         g->GetGoalLocation(thePlace);
         EECPUnitsSetInt(L, "tx", UMFloor(thePlace.GetX()));
         EECPUnitsSetInt(L, "ty", UMFloor(thePlace.GetY()));
+        // the goal's target unit (AI_LUA_UNITS §2.3 `target`): the resource gathered, the building built or repaired,
+        // the unit attacked; and a gatherer's resource kind
+        EEUnit* theTarget = NULL;
+        if (EEUGGather* theGather = dynamic_cast<EEUGGather*>(g)) {
+            theTarget = theGather->mResource;
+            long r = (long)c->mResourceType - kResourceFood;
+            static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
+            if (r >= 0 && r < 5)
+                EECPUnitsSetStr(L, "gathers", kKinds[r]);
+        } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g))
+            theTarget = theBuild->mTarget;
+        else if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(g))
+            theTarget = theAttack->mTarget;
+        if (theTarget != NULL && theTarget->mIsValid)
+            EECPUnitsSetInt(L, "target", (long)theTarget->mUnitID);
     }
     if (c->mContainer != NULL)
         EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
@@ -1214,6 +1236,7 @@ static int LuaClass(lua_State* L)
     EECPUnitsSetStr(L, "type", EECPUnitsName(s, theType));
     EECPUnitsSetStr(L, "category", EECPUnitsCategoryClass(c, false));
     EECPUnitsSetInt(L, "family", (long)c->GetFamily());
+    EECPUnitsSetInt(L, "tech", c->mTechnology);   // the class's own tech (what ai.train orders; ai.techs' id)
     {
         // the cost as the player pays it (the tech's cost scaled; 0 for a class the player's tree has no node for)
         EETechTreeNode* theNode = me->mTechnologies != NULL ? me->mTechnologies->Get(c->mTechnology) : NULL;
@@ -2377,9 +2400,15 @@ static int LuaFindSite(lua_State* L)
     theMin = theMin < 0 ? 0 : theMin;
     theMax = theMax > 30 ? 30 : theMax;
     bool theSafe = EECPUnitsOptBool(L, 4, "safe", false);
-    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * 4);   // the most it can test, before it does
+    // margin: the footprint grown by a tile on every side is free as well (the classic build manager's CanBuildAt
+    // inMargin, EEPlayerBlockTakes); far: the rings from max inward (FindBuildSite's production order)
+    bool theMargin = EECPUnitsOptBool(L, 4, "margin", false);
+    bool theFar = EECPUnitsOptBool(L, 4, "far", false);
+    long theSize = gUnitClassTable[theType]->GetTileSize();
+    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * (theMargin ? 6 : 4));   // the most it can test, before it does
     long theX = -1, theY = -1;
-    for (long r = theMin; r <= theMax && theX < 0; r++) {
+    for (long k = theMin; k <= theMax && theX < 0; k++) {
+        long r = theFar ? theMax - (k - theMin) : k;
         for (long dy = -r; dy <= r && theX < 0; dy++)
             for (long dx = -r; dx <= r; dx++) {
                 if (dx > -r && dx < r && dy > -r && dy < r)
@@ -2391,7 +2420,8 @@ static int LuaFindSite(lua_State* L)
                     continue;
                 if (theSafe && EECPUnitsDangerAt(s, tx, ty) > 0)
                     continue;
-                if (EECanPlaceOnTile(me, theType, tx, ty, false, 1)) {
+                if (EECanPlaceOnTile(me, theType, tx, ty, false, 1)
+                    && (!theMargin || EEPlayerBlockTakes(me, theType, tx - 1, ty - 1, theSize + 2, theSize + 2, 0))) {
                     theX = tx;
                     theY = ty;
                     break;
@@ -3067,6 +3097,430 @@ static int LuaDiplomacy(lua_State* L)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// The seat's tuning and the tech tree (the classic AI's data; docs/AI_LUA_UNITS.md §11, the classic port)
+
+// a float as an integer in thousandths (the interface carries integers only)
+static long EECPUnitsMilli(float inValue)
+{
+    return UMFloatToLong(inValue * 1000.0f);
+}
+
+// ai.tuning() -> what the classic computer player reads from data for this seat: the difficulty, whether it is a
+// deathmatch, the cheats on (gameoptions.yaml ai_cheats, EE_AI_CHEATS), the personality (aipersonalities.yaml, the
+// EE_AI_PERSONALITY override), the map's kind, the game's epoch span and the behaviour record values the computer
+// player copied in EEComputerPlayer::Init (dbcpbehavior). Floats are thousandths (keys ending in _k)
+static int LuaTuning(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall + 40 * kCostRecord / 10);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    lua_createtable(L, 0, 16);
+    EECPUnitsSetInt(L, "difficulty", (long)me->mDifficulty);
+    EECPUnitsSetBool(L, "deathmatch", me->IsDeathmatch());
+    EECPUnitsSetBool(L, "all_managers", gWorld.mGameOptions.mResources == 5);
+    EECPUnitsSetInt(L, "epoch_start", gWorld.mGameOptions.mEpochStart);
+    EECPUnitsSetInt(L, "epoch_end", gWorld.mGameOptions.mEpochEnd);
+    EEMap* theMap = gWorld.mMap;
+    unsigned long theKind = theMap != NULL ? theMap->mMapCharacteristics : 0;
+    EECPUnitsSetBool(L, "island", (theKind & kRMMapIslandMap) != 0);
+    EECPUnitsSetBool(L, "planets", (theKind & kRMMapPlanetsMap) != 0);
+    EECPUnitsSetBool(L, "waterless", (theKind & kRMMapWaterlessMap) != 0);
+    EECPUnitsSetBool(L, "space", theMap != NULL && theMap->mTerrainMesh.GetIsSpaceMap());
+    EECPUnitsSetInt(L, "population_limit", me->EEPlayer::GetPopulationLimit(0));   // the game's (the AI's cap: the view)
+    // the cheats
+    lua_createtable(L, 0, 7);
+    static const char* const kCheats[7] = {"cost", "reveal", "epochs", "extra", "popband", "catchup", "retire"};
+    for (long k = 0; k < 7; k++)
+        EECPUnitsSetBool(L, kCheats[k], EECPCheatOn(me, 1L << k));
+    lua_setfield(L, -2, "cheats");
+    // the personality (with the TEST ONLY experiments' switches the C++ classic honours)
+    const EEAIPersonalityRule& p = EECPPersonality(me);
+    lua_createtable(L, 0, 32);
+    EECPUnitsSetStr(L, "id", p.mID.c_str());
+    EECPUnitsSetInt(L, "epoch_pressure_start_k", EECPUnitsMilli(p.mEpochPressureStart));
+    EECPUnitsSetInt(L, "epoch_pressure_full_k", EECPUnitsMilli(p.mEpochPressureFull));
+    EECPUnitsSetInt(L, "stone_span_k", EECPUnitsMilli(EECPStoneSpan(me)));
+    EECPUnitsSetInt(L, "safe_bonus_k", EECPUnitsMilli(EECPSafeBonus(me)));
+    EECPUnitsSetInt(L, "surplus", p.mSurplus);
+    EECPUnitsSetInt(L, "surplus_cut_k", EECPUnitsMilli(p.mSurplusCut));
+    EECPUnitsSetInt(L, "low_stock", p.mLowStock);
+    lua_createtable(L, 0, 5);
+    static const char* const kNames[5] = {"food", "wood", "stone", "gold", "iron"};
+    for (long k = 0; k < 5; k++)
+        EECPUnitsSetInt(L, kNames[k], EECPUnitsMilli(p.mFloor[k]));
+    lua_setfield(L, -2, "floor_k");
+    EECPUnitsSetInt(L, "max_citizen_share_k", EECPUnitsMilli(p.mMaxCitizenShare));
+    EECPUnitsSetInt(L, "wood_slots", p.mWoodSlots);
+    EECPUnitsSetInt(L, "moves_per_cycle", p.mMovesPerCycle);
+    EECPUnitsSetBool(L, "demand_split", EECPDemandSplitOn(me));
+    EECPUnitsSetBool(L, "coast_fishing", EECPCoastFishingOn(me));
+    EECPUnitsSetBool(L, "forage_patches", EECPForagePatchesOn(me));
+    EECPUnitsSetBool(L, "claim_range", EECPClaimRangeOn(me));
+    EECPUnitsSetBool(L, "claim_needed", EECPClaimNeededOn(me));
+    EECPUnitsSetInt(L, "early_town_centers", EECPEarlyTownCenters(me));
+    EECPUnitsSetInt(L, "early_trainers", EECPEarlyTrainers(me));
+    EECPUnitsSetBool(L, "patch_expand", EECPPatchExpandOn(me));
+    EECPUnitsSetInt(L, "standing_army_k", EECPUnitsMilli(p.mStandingArmy));
+    EECPUnitsSetInt(L, "army_floor_k", EECPUnitsMilli(p.mArmyFloor));
+    EECPUnitsSetBool(L, "militia", EECPMilitiaOn(me));
+    EECPUnitsSetBool(L, "militia_towers", EECPMilitiaTowersOn(me));
+    EECPUnitsSetInt(L, "prehistoric_army", EECPPrehistoricArmy(me));
+    EECPUnitsSetBool(L, "prehistoric_attacks", !EECPPrehistoricPeaceOn(me));
+    EECPUnitsSetBool(L, "stone_attacks", !EECPStonePeaceOn(me));
+    EECPUnitsSetBool(L, "naval_flee", EECPNavalFleeOn(me));
+    lua_setfield(L, -2, "personality");
+    // the behaviour record values (EEComputerPlayer::Init; a scenario's SetAIVariable may have changed them)
+    lua_createtable(L, 0, 180);
+#define EE_TUNE_INT(name, field) EECPUnitsSetInt(L, name, (long)me->field)
+#define EE_TUNE_K(name, field) EECPUnitsSetInt(L, name, EECPUnitsMilli((float)me->field))
+    EE_TUNE_INT("assist_allies_delay_easy", mAssistAlliesDelayEasy);
+    EE_TUNE_INT("assist_allies_delay_medium", mAssistAlliesDelayMedium);
+    EE_TUNE_INT("assist_allies_delay_hard", mAssistAlliesDelayHard);
+    EE_TUNE_K("naval_unit_weight_k", mNavalUnitWeight);
+    EE_TUNE_K("air_unit_weight_k", mAirUnitWeight);
+    EE_TUNE_INT("max_flame_throwers", mMaxFlameThrowers);
+    EE_TUNE_K("unit_cost_medium_k", mUnitCostMedium);
+    EE_TUNE_INT("carrier_max_per_group", mCarrierMaxPerGroup);
+    EE_TUNE_K("carrier_pop_percentage_k", mCarrierPopPercentage);
+    EE_TUNE_K("carrier_chance_k", mCarrierChance);
+    EE_TUNE_INT("num_air_explorers", mNumAirExplorers);
+    EE_TUNE_K("computer_aggression_k", mComputerAggression);
+    EE_TUNE_INT("attack_enemy_chance", mAttackEnemyChance);
+    EE_TUNE_INT("attack_to_claim_resource_chance", mAttackToClaimResourceChance);
+    EE_TUNE_INT("attack_for_revenge_chance", mAttackForRevengeChance);
+    EE_TUNE_INT("attack_group_size_min", mAttackGroupSizeMin);
+    EE_TUNE_INT("attack_group_size_max", mAttackGroupSizeMax);
+    EE_TUNE_K("attack_frequency_per_epoch_k", mAttackFrequencyPerEpoch);
+    EE_TUNE_INT("attack_frequency_modifier_easy", mAttackFrequencyModifierEasy);
+    EE_TUNE_INT("attack_frequency_modifier_hard", mAttackFrequencyModifierHard);
+    EE_TUNE_INT("attack_frequency_floor", mAttackFrequencyFloor);
+    EE_TUNE_INT("attack_frequency_ceiling", mAttackFrequencyCeiling);
+    EE_TUNE_INT("attack_frequency_min", mAttackFrequencyMin);
+    EE_TUNE_INT("attack_frequency_max", mAttackFrequencyMax);
+    EE_TUNE_INT("initial_attack_delay_per_epoch", mInitialAttackDelayPerEpoch);
+    EE_TUNE_INT("attack_delay_modifier_easy", mAttackDelayModifierEasy);
+    EE_TUNE_INT("attack_delay_modifier_hard", mAttackDelayModifierHard);
+    EE_TUNE_INT("attack_delay_floor", mAttackDelayFloor);
+    EE_TUNE_INT("attack_delay_ceiling", mAttackDelayCeiling);
+    EE_TUNE_INT("initial_attack_delay_min", mInitialAttackDelayMin);
+    EE_TUNE_INT("initial_attack_delay_max", mInitialAttackDelayMax);
+    EE_TUNE_K("specialized_unit_percentage_k", mSpecializedUnitPercentage);
+    EE_TUNE_INT("attack_group_modifier_easy", mAttackGroupModifierEasy);
+    EE_TUNE_INT("attack_group_modifier_medium", mAttackGroupModifierMedium);
+    EE_TUNE_INT("attack_group_modifier_hard", mAttackGroupModifierHard);
+    EE_TUNE_K("rps_selection_non_islands_k", mRPSSelectionNonIslands);
+    EE_TUNE_K("rps_selection_islands_k", mRPSSelectionIslands);
+    EE_TUNE_K("specialized_unit_chance_k", mSpecializedUnitChance);
+    EE_TUNE_INT("bonzai_attack_level", mBonzaiAttackLevel);
+    EE_TUNE_INT("dm_early_attack_time", mDMEarlyAttackTime);
+    EE_TUNE_K("dm_early_attack_scale_k", mDMEarlyAttackScale);
+    EE_TUNE_K("town_guard_percentage_k", mTownGuardPercentage);
+    EE_TUNE_K("citizen_percentage_k", mCitizenPercentage);
+    EE_TUNE_INT("unit_cost_reduction_easy", mUnitCostReductionEasy);
+    EE_TUNE_INT("unit_cost_reduction_hard", mUnitCostReductionHard);
+    EE_TUNE_INT("defense_group_size_min", mDefenseGroupSizeMin);
+    EE_TUNE_INT("defense_group_size_max", mDefenseGroupSizeMax);
+    EE_TUNE_INT("epoch_frequency_min", mEpochFrequencyMin);
+    EE_TUNE_INT("epoch_frequency_max", mEpochFrequencyMax);
+    EE_TUNE_INT("epoch_catch_up_min", mEpochCatchUpMin);
+    EE_TUNE_INT("epoch_catch_up_max", mEpochCatchUpMax);
+    EE_TUNE_K("epoch_catch_up_easy_k", mEpochCatchUpEasy);
+    EE_TUNE_K("epoch_catch_up_hard_k", mEpochCatchUpHard);
+    EE_TUNE_K("epoch_catch_up_deathmatch_k", mEpochCatchUpDeathmatch);
+    EE_TUNE_INT("epoch_frequency_modifier_easy", mEpochFrequencyModifierEasy);
+    EE_TUNE_INT("epoch_frequency_modifier_hard", mEpochFrequencyModifierHard);
+    EE_TUNE_INT("expansion_timer_easy", mExpansionTimerEasy);
+    EE_TUNE_INT("expansion_timer_medium", mExpansionTimerMedium);
+    EE_TUNE_INT("expansion_timer_hard", mExpansionTimerHard);
+    EE_TUNE_K("guard_continent_percentage_k", mGuardContinentPercentage);
+    EE_TUNE_K("guard_chokepoint_air_percentage_k", mGuardChokepointAirPercentage);
+    EE_TUNE_K("guard_chokepoint_percentage_k", mGuardChokepointPercentage);
+    EE_TUNE_K("guard_high_ground_percentage_k", mGuardHighGroundPercentage);
+    EE_TUNE_K("guard_town_percentage_k", mGuardTownPercentage);
+    EE_TUNE_K("guard_town_land_percentage_k", mGuardTownLandPercentage);
+    EE_TUNE_K("guard_waterway_percentage_k", mGuardWaterwayPercentage);
+    EE_TUNE_INT("hero_max_per_group", mHeroMaxPerGroup);
+    EE_TUNE_K("hero_pop_percentage_k", mHeroPopPercentage);
+    EE_TUNE_K("hero_chance_k", mHeroChance);
+    EE_TUNE_INT("num_improved_unit_types", mNumImprovedUnitTypes);
+    EE_TUNE_INT("num_improved_attributes", mNumImprovedAttributes);
+    EE_TUNE_INT("replenish_delay_min", mReplenishDelayMin);
+    EE_TUNE_INT("replenish_delay_max", mReplenishDelayMax);
+    EE_TUNE_INT("num_land_explorers", mNumLandExplorers);
+    EE_TUNE_INT("num_sea_explorers", mNumSeaExplorers);
+    EE_TUNE_INT("num_choke_points_to_guard", mNumChokePointsToGuard);
+    EE_TUNE_INT("anti_air_max", mAntiAirMax);
+    EE_TUNE_INT("airport_max", mAirportMax);
+    EE_TUNE_INT("archery_range_max", mArcheryRangeMax);
+    EE_TUNE_INT("barracks_max", mBarracksMax);
+    EE_TUNE_INT("dock_max", mDockMax);
+    EE_TUNE_INT("granary_max", mGranaryMax);
+    EE_TUNE_INT("hospital_max", mHospitalMax);
+    EE_TUNE_INT("cyber_factory_max", mCyberFactoryMax);
+    EE_TUNE_INT("cyber_lab_max", mCyberLabMax);
+    EE_TUNE_INT("naval_yard_max", mNavalYardMax);
+    EE_TUNE_INT("university_max", mUniversityMax);
+    EE_TUNE_INT("siege_factory_max", mSiegeFactoryMax);
+    EE_TUNE_INT("space_dock_max", mSpaceDockMax);
+    EE_TUNE_INT("stable_max", mStableMax);
+    EE_TUNE_INT("tank_factory_max", mTankFactoryMax);
+    EE_TUNE_INT("temple_max", mTempleMax);
+    EE_TUNE_INT("tower_max", mTowerMax);
+    EE_TUNE_K("defensive_unit_cap_k", mDefensiveUnitCap);
+    EE_TUNE_K("siege_weapon_percentage_k", mSiegeWeaponPercentage);
+    EE_TUNE_K("max_attack_response_range_k", mMaxAttackResponseRange);
+    EE_TUNE_INT("min_military_buildings_easy", mMinMilitaryBuildingsEasy);
+    EE_TUNE_INT("min_military_buildings_easy_dm", mMinMilitaryBuildingsEasyDM);
+    EE_TUNE_INT("min_military_buildings_medium", mMinMilitaryBuildingsMedium);
+    EE_TUNE_INT("min_military_buildings_medium_dm", mMinMilitaryBuildingsMediumDM);
+    EE_TUNE_INT("min_military_buildings_hard", mMinMilitaryBuildingsHard);
+    EE_TUNE_INT("min_military_buildings_hard_dm", mMinMilitaryBuildingsHardDM);
+    EE_TUNE_K("military_pop_percentage_k", mMilitaryPopPercentage);
+    EE_TUNE_K("aid_threat_threshold_k", mAidThreatThreshold);
+    EE_TUNE_INT("pop_limit_adjustment_easy", mPopLimitAdjustmentEasy);
+    EE_TUNE_INT("pop_limit_adjustment_medium", mPopLimitAdjustmentMedium);
+    EE_TUNE_INT("pop_limit_adjustment_hard", mPopLimitAdjustmentHard);
+    EE_TUNE_INT("priest_max_per_group", mPriestMaxPerGroup);
+    EE_TUNE_K("priest_pop_percentage_k", mPriestPopPercentage);
+    EE_TUNE_K("priest_chance_k", mPriestChance);
+    EE_TUNE_INT("prophet_max_per_group", mProphetMaxPerGroup);
+    EE_TUNE_K("prophet_pop_percentage_k", mProphetPopPercentage);
+    EE_TUNE_K("prophet_chance_k", mProphetChance);
+    EE_TUNE_INT("research_frequency", mResearchFrequency);
+    EE_TUNE_INT("research_frequency_modifier_easy", mResearchFrequencyModifierEasy);
+    EE_TUNE_INT("research_frequency_modifier_hard", mResearchFrequencyModifierHard);
+    EE_TUNE_INT("drop_off_distance", mDropOffDistance);
+    EE_TUNE_INT("extra_resources", mExtraResources);
+    EE_TUNE_INT("town_center_upgrade_timer", mTownCenterUpgradeTimer);
+    EE_TUNE_INT("capitol_upgrade_timer", mCapitolUpgradeTimer);
+    EE_TUNE_INT("max_enabled_managers", mMaxEnabledManagers);
+    EE_TUNE_INT("manager_attack_wait", mManagerAttackWait);
+    EE_TUNE_INT("manager_epoch_advance_wait", mManagerEpochAdvanceWait);
+    EE_TUNE_INT("enable_stock_production", mEnableStockProduction);
+    EE_TUNE_INT("enable_stock_resource", mEnableStockResource);
+    EE_TUNE_INT("enable_stock_civilization", mEnableStockCivilization);
+    EE_TUNE_INT("enable_stock_exploration", mEnableStockExploration);
+    EE_TUNE_INT("enable_stock_defense", mEnableStockDefense);
+    EE_TUNE_INT("enable_stock_build", mEnableStockBuild);
+    EE_TUNE_INT("enable_stock_5", mLE80);
+    EE_TUNE_INT("enable_stock_research", mEnableStockResearch);
+    EE_TUNE_INT("enable_stock_combat", mEnableStockCombat);
+    EE_TUNE_K("enable_interval_k", mEnableInterval);
+    EE_TUNE_K("military_count_weight_k", mMilitaryCountWeight);
+    EE_TUNE_K("worker_count_weight_k", mWorkerCountWeight);
+    EE_TUNE_INT("units_per_anti_air", mUnitsPerAntiAirBuilding);
+    EE_TUNE_INT("units_per_airport", mUnitsPerAirport);
+    EE_TUNE_INT("units_per_archery_range", mUnitsPerArcheryRange);
+    EE_TUNE_INT("units_per_barracks", mUnitsPerBarracks);
+    EE_TUNE_INT("units_per_dock", mUnitsPerDock);
+    EE_TUNE_INT("units_per_granary", mUnitsPerGranary);
+    EE_TUNE_INT("units_per_hospital", mUnitsPerHospital);
+    EE_TUNE_INT("units_per_cyber_factory", mUnitsPerCyberFactory);
+    EE_TUNE_INT("units_per_cyber_lab", mUnitsPerCyberLab);
+    EE_TUNE_INT("units_per_naval_yard", mUnitsPerNavalYard);
+    EE_TUNE_INT("units_per_university", mUnitsPerUniversity);
+    EE_TUNE_INT("units_per_siege_factory", mUnitsPerSiegeFactory);
+    EE_TUNE_INT("units_per_space_dock", mUnitsPerSpaceDock);
+    EE_TUNE_INT("units_per_stable", mUnitsPerStable);
+    EE_TUNE_INT("units_per_tank_factory", mUnitsPerTankFactory);
+    EE_TUNE_INT("units_per_temple", mUnitsPerTemple);
+    EE_TUNE_INT("units_per_tower", mUnitsPerTower);
+    EE_TUNE_K("tower_spacing_k", mTowerSpacing);
+    EE_TUNE_INT("ships_to_maintain_dm_easy", mShipsToMaintainDMEasy);
+    EE_TUNE_INT("ships_to_maintain_dm_medium", mShipsToMaintainDMMedium);
+    EE_TUNE_INT("ships_to_maintain_dm_hard", mShipsToMaintainDMHard);
+    EE_TUNE_INT("ships_to_maintain_easy", mShipsToMaintainEasy);
+    EE_TUNE_INT("ships_to_maintain_medium", mShipsToMaintainMedium);
+    EE_TUNE_INT("ships_to_maintain_hard", mShipsToMaintainHard);
+    EE_TUNE_INT("ship_maintenance_timer", mShipMaintenanceTimer);
+    EE_TUNE_INT("defensive_unit_update_easy", mDefensiveUnitUpdateEasy);
+    EE_TUNE_INT("defensive_unit_update_medium", mDefensiveUnitUpdateMedium);
+    EE_TUNE_INT("defensive_unit_update_hard", mDefensiveUnitUpdateHard);
+    EE_TUNE_INT("dm_defensive_unit_update_easy", mDMDefensiveUnitUpdateEasy);
+    EE_TUNE_INT("dm_defensive_unit_update_medium", mDMDefensiveUnitUpdateMedium);
+    EE_TUNE_INT("dm_defensive_unit_update_hard", mDMDefensiveUnitUpdateHard);
+    EE_TUNE_INT("town_guard_update_easy", mTownGuardUpdateEasy);
+    EE_TUNE_INT("town_guard_update_medium", mTownGuardUpdateMedium);
+    EE_TUNE_INT("town_guard_update_hard", mTownGuardUpdateHard);
+    EE_TUNE_INT("dm_town_guard_update_easy", mDMTownGuardUpdateEasy);
+    EE_TUNE_INT("dm_town_guard_update_medium", mDMTownGuardUpdateMedium);
+    EE_TUNE_INT("dm_town_guard_update_hard", mDMTownGuardUpdateHard);
+    EE_TUNE_INT("island_expansion_timer_easy", mIslandExpansionTimerEasy);
+    EE_TUNE_INT("island_expansion_timer_medium", mIslandExpansionTimerMedium);
+    EE_TUNE_INT("island_expansion_timer_hard", mIslandExpansionTimerHard);
+    EE_TUNE_K("dm_attack_frequency_modifier_easy_k", mDMAttackFrequencyModifierEasy);
+    EE_TUNE_K("dm_attack_frequency_modifier_medium_k", mDMAttackFrequencyModifierMedium);
+    EE_TUNE_K("dm_attack_frequency_modifier_hard_k", mDMAttackFrequencyModifierHard);
+    EE_TUNE_K("dm_initial_attack_modifier_easy_k", mDMInitialAttackModifierEasy);
+    EE_TUNE_K("dm_initial_attack_modifier_medium_k", mDMInitialAttackModifierMedium);
+    EE_TUNE_K("dm_initial_attack_modifier_hard_k", mDMInitialAttackModifierHard);
+    EE_TUNE_INT("mining_limit", mMiningLimit);
+#undef EE_TUNE_INT
+#undef EE_TUNE_K
+    EECPUnitsSetInt(L, "epoch_advance_time_scale_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorEpochAdvanceTimeScale].mFloatValue));
+    EECPUnitsSetInt(L, "population_cap_own_weight_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorPopulationCapOwnWeight].mFloatValue));
+    EECPUnitsSetInt(L, "population_cap_other_weight_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorPopulationCapOtherWeight].mFloatValue));
+    lua_setfield(L, -2, "behavior");
+    return 1;
+}
+
+// the classic research manager's citizen test (EECPResearchManager::ChooseResearch): a tech whose researched event
+// improves a citizen's gathering (effect kind 2 on the citizen classes, attributes 0x1a-0x1d, 0x1f-0x21)
+static bool EECPUnitsCitizenUpgrade(EETechTreeNode* inNode)
+{
+    EEEvent* theEvent = EEEvent::Get(inNode->mData->mResearchedEvent);
+    if (theEvent == NULL)
+        return false;
+    for (unsigned long e = 0; e < theEvent->GetNumEffects(); e++) {
+        EEEventEffect* theEffect = EEEvent::GetEventEffect(theEvent->GetEffect(e));
+        if (theEffect != NULL && theEffect->mKind == 2 && (theEffect->mUnitClass == 0x20 || theEffect->mUnitClass == 0x1e0)
+            && (theEffect->mAttribute == 0x1a || theEffect->mAttribute == 0x1b || theEffect->mAttribute == 0x1c
+                || theEffect->mAttribute == 0x1d || theEffect->mAttribute == 0x20 || theEffect->mAttribute == 0x21
+                || theEffect->mAttribute == 0x1f))
+            return true;
+    }
+    return false;
+}
+
+static void EECPUnitsPushCost(lua_State* L, EEComputerPlayer* me, EETechTreeNode* inNode, long inUnitType)
+{
+    lua_createtable(L, 0, 5);
+    static const char* const kNames[5] = {"food", "wood", "stone", "gold", "iron"};
+    for (long i = 0; i < 5; i++) {
+        lua_pushinteger(L, (lua_Integer)me->ScaleCost(inNode->GetCost(kResourceFood + i, inUnitType, 1.0f)));
+        lua_setfield(L, -2, kNames[i]);
+    }
+    lua_setfield(L, -2, "cost");
+}
+
+// ai.techs{epoch = n, id = tech} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the
+// tree's order (EETechTree::GetEpochNodeIDs, the latest epoch first, as the classic research manager collects them):
+// id, name, epoch, kind, makes (the class made, by name), counts_toward_epoch, researched, available, obsolete,
+// obsolete_epoch, producers (the classes that research or train it), plain_producer (a producer is no citizen and
+// its own tech no epoch: the classic research manager's IsWanted),
+// cost (as the player pays it), producible (EEComputerPlayer::CanProduce without the cost), affordable (with it),
+// citizen_upgrade. With id: that node only. Fog does not apply (a human reads the tech tree)
+static int LuaTechs(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    EETechTree* theTree = me->mTechnologies;
+    if (theTree == NULL) {
+        lua_newtable(L);
+        return 1;
+    }
+    long theEpoch = theTree->mCurrentEpoch, theOnly = -1;
+    EECPUnitsOptInt(L, 1, "epoch", theEpoch);
+    EECPUnitsOptInt(L, 1, "id", theOnly);
+    std::vector<long> theIDs;
+    if (theOnly >= 0)
+        theIDs.push_back(theOnly);
+    else
+        for (long i = theEpoch < (long)theTree->mEpochs.size() ? theEpoch : (long)theTree->mEpochs.size() - 1; i >= 0; i--)
+            theTree->GetEpochNodeIDs(i, theIDs);
+    EECPUnitsCharge(L, kCostCall + (int64_t)theIDs.size() * kCostRecord);
+    lua_createtable(L, (int)theIDs.size(), 0);
+    long n = 0;
+    for (unsigned long k = 0; k < theIDs.size(); k++) {
+        EETechTreeNode* theNode = theTree->Get(theIDs[k]);
+        if (theNode == NULL || theNode->mData == NULL)
+            continue;
+        lua_createtable(L, 0, 18);
+        EECPUnitsSetInt(L, "id", theNode->mData->mID);
+        EECPUnitsSetStr(L, "name", EECPNextTechName(theNode->mData->mID).c_str());
+        EECPUnitsSetInt(L, "epoch", theNode->mEpoch);
+        EECPUnitsSetInt(L, "kind", theNode->mData->mKind);
+        long theClass = theNode->mData->mMakesUnit ? theNode->mData->mUnitClass : -1;
+        if (theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() && gUnitClassTable[theClass] != NULL)
+            EECPUnitsSetStr(L, "makes", EECPUnitsName(s, theClass));
+        else
+            theClass = -1;
+        EECPUnitsSetBool(L, "counts_toward_epoch", theNode->mData->mCountsTowardEpoch);
+        EECPUnitsSetBool(L, "researched", theNode->mIsResearched);
+        EECPUnitsSetBool(L, "available", theNode->GetIsAvailable());
+        EECPUnitsSetBool(L, "obsolete", theNode->GetIsObsolete());
+        EECPUnitsSetInt(L, "obsolete_epoch", theNode->mObsoleteEpoch);
+        lua_createtable(L, (int)theNode->GetNumUnitClasses(), 0);
+        bool thePlain = false;
+        long np = 0;
+        for (unsigned long i = 0; i < theNode->GetNumUnitClasses(); i++) {
+            long theProducer = theNode->GetUnitClass(i);
+            if (theProducer < 0 || (unsigned long)theProducer >= EEUnitClassCount() || gUnitClassTable[theProducer] == NULL)
+                continue;
+            lua_pushstring(L, EECPUnitsName(s, theProducer));
+            lua_rawseti(L, -2, (lua_Integer)++np);
+            EETechTreeNode* theOther = theTree->Get(gUnitClassTable[theProducer]->mTechnology);
+            if (theOther != NULL && theOther->mData != NULL && !EEIsEpochID(theOther->mData->mID)
+                && theProducer != 0x20 && theProducer != 0x1e0)
+                thePlain = true;
+        }
+        lua_setfield(L, -2, "producers");
+        EECPUnitsSetBool(L, "plain_producer", thePlain);
+        long theFirst = theNode->GetNumUnitClasses() > 0 ? theNode->GetUnitClass(0) : 0x20;
+        EECPUnitsPushCost(L, me, theNode, theClass >= 0 ? theClass : 0x20);
+        EECPUnitsSetBool(L, "producible", me->CanProduce(theNode->mData->mID, theFirst, 1, false, 3, NULL));
+        EECPUnitsSetBool(L, "affordable", me->CanProduce(theNode->mData->mID, theFirst, 1, true, 3, NULL));
+        EECPUnitsSetBool(L, "citizen_upgrade", EECPUnitsCitizenUpgrade(theNode));
+        lua_rawseti(L, -2, (lua_Integer)++n);
+    }
+    return 1;
+}
+
+// ai.gatherers() -> {[resource id] = n}: the player's own living citizens and boats whose gather goal is that resource
+// (walking there, waiting or working; whoever holds them: the runners' lists, which ai.resource's `workers` counts, do
+// not hold a script's units). One scan of the own units
+static int LuaGatherers(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    std::map<long, long> theCounts;
+    long theTested = 0;
+    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        theTested++;
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        if (c == NULL || !(theUnit->mHitPoints > 0) || !EECPUnitsCitizen(c))
+            continue;
+        EEUGGather* theGather = dynamic_cast<EEUGGather*>(c->GetGoalState());
+        if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mIsValid)
+            theCounts[(long)theGather->mResource->mUnitID]++;
+    }
+    EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)theCounts.size() * kCostId);
+    lua_createtable(L, 0, (int)theCounts.size());
+    for (std::map<long, long>::iterator it = theCounts.begin(); it != theCounts.end(); ++it) {
+        lua_pushinteger(L, (lua_Integer)it->second);
+        lua_rawseti(L, -2, (lua_Integer)it->first);
+    }
+    return 1;
+}
+
+// ai.epoch(n) -> epoch n's node: id, name, required_sol, current_sol, cost (as the player pays it), available,
+// researched; nil off the tree
+static int LuaEpoch(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostRecord);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EETechTree* theTree = me->mTechnologies;
+    long theIndex = lua_isinteger(L, 1) ? (long)lua_tointeger(L, 1) : -1;
+    if (theTree == NULL || theIndex < 0 || theIndex >= (long)theTree->mEpochs.size() || theIndex >= EEEpochCount()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    EETechTreeEpoch* theEpoch = &theTree->mEpochs[theIndex];
+    EETechTreeNode* theNode = theEpoch->mData != NULL ? theTree->Get(theEpoch->mData->mID) : NULL;
+    if (theNode == NULL) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_createtable(L, 0, 8);
+    EECPUnitsSetInt(L, "id", theNode->mData->mID);
+    EECPUnitsSetStr(L, "name", EECPNextTechName(theNode->mData->mID).c_str());
+    EECPUnitsSetInt(L, "required_sol", theEpoch->GetRequiredSOL());
+    EECPUnitsSetInt(L, "current_sol", theEpoch->GetCurrentSOL());
+    EECPUnitsPushCost(L, me, theNode, kUnitTypeTownCenter);
+    EECPUnitsSetBool(L, "available", theNode->GetIsAvailable());
+    EECPUnitsSetBool(L, "researched", theNode->mIsResearched);
+    return 1;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
@@ -3091,6 +3545,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
+        {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
         lua_pushlightuserdata(L, inPlayer);

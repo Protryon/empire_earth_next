@@ -181,6 +181,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
     v.Set("advancing", EECPLuaValue::Bool(inView.advancing != 0));
     v.Set("stock", EECPNextResources(inView.stock));
     v.Set("income", EECPNextResources(inView.income));
+    v.Set("income_total", EECPNextResources(inView.income_total));
     v.Set("reserve", EECPNextResources(inView.reserve));
     v.Set("gatherers", EECPNextResources(inView.gatherers));
     v.Set("wanted", EECPNextResources(inView.wanted));

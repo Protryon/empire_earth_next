@@ -911,6 +911,29 @@ player's stance towards me, `EEPlayer::GetEnemy`) and `allies` (the other player
 game's family number) and `cost` (the tech's cost as the player pays it, by resource; 0 for a class its tree has no
 node for). The view has `epoch2_cost` (the epoch after the next: the copper plan holds both before farms).
 
+**The classic port's queries (2026-11-10, `ai/classic_lua/`, its ORIGIN map):** what the classic computer player reads
+from data, so that a script can make its decisions with the same numbers:
+- `ai.tuning()` -> `difficulty` (0 easy .. 2 hard), `deathmatch`, `all_managers` (the resource setting 5),
+  `epoch_start` / `epoch_end`, the map's `island` / `planets` / `waterless` / `space`, `population_limit` (the game's;
+  the computer player's cap with popband is the view's `population_cap`); `cheats` (cost, reveal, epochs, extra,
+  popband, catchup, retire: whether each is on for the seat); `personality` (aipersonalities.yaml as EECPPersonality
+  picks it, with EE_AI_PERSONALITY and the TEST ONLY EE_AI_EXP switches folded in); `behavior` (every dbcpbehavior
+  value EEComputerPlayer::Init copies, by a snake_case name, plus the population cap weights, the epoch advance scale
+  and the mining limit). Floats are thousandths, under keys ending in `_k`.
+- `ai.techs{epoch = n, id = tech}` -> the tech tree's nodes of epochs n..0 (the current epoch by default), latest
+  epoch first as GetEpochNodeIDs collects them: `id`, `name`, `epoch`, `kind`, `makes` (the class), `counts_toward_epoch`,
+  `researched`, `available`, `obsolete`, `obsolete_epoch`, `producers` (class names), `plain_producer` (a producer that
+  is no citizen and whose own tech is no epoch: the classic research manager's IsWanted), `cost` (as the player pays
+  it), `producible` (CanProduce without the cost), `affordable` (with it), `citizen_upgrade` (the researched event
+  improves a citizen's gathering). Never fogged: a human reads the tech tree.
+- `ai.epoch(n)` -> epoch n's node: `id`, `name`, `required_sol`, `current_sol`, `cost`, `available`, `researched`.
+- `ai.find_site` takes `margin = true` (the footprint grown by a tile is free too: the classic's CanBuildAt inMargin)
+  and `far = true` (the rings from `max` inward).
+- `ai.class` has `tech` (the class's own tech id, what `ai.train` orders).
+- Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
+  repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
+- The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between
