@@ -927,6 +927,8 @@ from data, so that a script can make its decisions with the same numbers:
   it), `producible` (CanProduce without the cost), `affordable` (with it), `citizen_upgrade` (the researched event
   improves a citizen's gathering). Never fogged: a human reads the tech tree.
 - `ai.epoch(n)` -> epoch n's node: `id`, `name`, `required_sol`, `current_sol`, `cost`, `available`, `researched`.
+- `ai.gatherers()` -> `{[resource id] = n}`: the own citizens and boats whose gather goal is that resource, whoever
+  holds them (`ai.resource`'s `workers` counts the classic runners' lists, which never hold a script's units).
 - `ai.find_site` takes `margin = true` (the footprint grown by a tile is free too: the classic's CanBuildAt inMargin)
   and `far = true` (the rings from `max` inward).
 - `ai.class` has `tech` (the class's own tech id, what `ai.train` orders).
