@@ -1909,3 +1909,10 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   that the game's decisions never read (or the units' order), not the play. The suspects are the build message's
   field assignment round a granary (EEMBuildUnit: EEFindFreeFarm's order, the std::sort ties) and the helper's pick;
   a human placing a granary goes through the same message.
+
+- **The micro step's instruction budget (2026-11-10).** A per-unit module that queries the engine once per citizen
+  (`ai.seen` near each, `ai.units` round its site, `ai.unit` of the site) blows the 250 ms micro step's 300,000
+  instructions once the town has 100+ citizens: the step aborts with `instruction budget exceeded` and every module
+  after it in that tick is skipped (the safety port cost 1,900-8,900 aborted ticks a 120-minute bench before it was
+  rewritten). The shape that fits: one `ai.seen` of the enemy soldiers near home per step, their tiles read once with
+  `ai.get`, the distances in Lua, and the engine asked about a site only when a Lua test has already singled it out.

@@ -410,13 +410,12 @@ function M.militia(mem, events, now, epoch)
     if #release > 0 then
         ai.release(release)
     end
-    local cits = ai.units{category = "citizen", held = "engine"}
-    if #cits == 0 then
+    if #ai.units{category = "citizen", held = "engine", limit = 1} == 0 then
         return
     end
     -- the targets: enemy builders of a defence near ours; the attackers of ours (up to the Bronze Age)
     local targets = {}
-    for _, id in ipairs(ai.seen{enemy = true, category = "citizen", action = "build"}) do
+    for _, id in ipairs(ai.seen{enemy = true, category = "citizen", action = "build", limit = 8}) do
         local u = ai.unit(id)
         if u ~= nil and (#ai.units{category = "building", near = {u.x, u.y, 12}, limit = 1} > 0
                 or #ai.units{category = "citizen", near = {u.x, u.y, 12}, limit = 1} > 0) then
@@ -443,10 +442,12 @@ function M.militia(mem, events, now, epoch)
             break
         end
         local near = {}
-        for _, id in ipairs(ai.units{category = "citizen", held = "engine", near = {t.x, t.y, 10}}) do
+        local cand = ai.units{category = "citizen", held = "engine", near = {t.x, t.y, 10}, limit = 12}
+        local cc = #cand > 0 and ai.get(cand, {"action"}) or nil
+        for k, id in ipairs(cand) do
             if not used[id] and #near < 3 then
-                local u = ai.unit(id)
-                if u ~= nil and (u.action == "gather" or u.action == "idle" or u.action == "none") then
+                local act = cc.action[k]
+                if act == "gather" or act == "idle" or act == "none" then
                     near[#near + 1] = id
                 end
             end

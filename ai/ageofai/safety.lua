@@ -22,8 +22,30 @@ local function d2(ax, ay, bx, by)
     return (ax - bx) * (ax - bx) + (ay - by) * (ay - by)
 end
 
+-- the raiders this step: the enemy soldiers seen within 70 of the town, read once (the micro budget)
+local RAIDERS = {n = 0, x = {}, y = {}, id = {}}
+
+local function raiders_scan(hx, hy)
+    local ids = ai.seen{enemy = true, armed = true, category = "soldier", near = {hx, hy, 70}}
+    RAIDERS.n, RAIDERS.id = #ids, ids
+    if #ids > 0 then
+        local cols = ai.get(ids, {"x", "y"})
+        RAIDERS.x, RAIDERS.y = cols.x, cols.y
+    else
+        RAIDERS.x, RAIDERS.y = {}, {}
+    end
+end
+
+-- the raiders within r of x,y (their ids), from the step's list
 local function raiders_near(x, y, r)
-    return ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, r}, limit = 1}
+    local out = {}
+    for k = 1, RAIDERS.n do
+        local rx, ry = RAIDERS.x[k], RAIDERS.y[k]
+        if rx ~= nil and (rx - x) * (rx - x) + (ry - y) * (ry - y) <= r * r then
+            out[#out + 1] = RAIDERS.id[k]
+        end
+    end
+    return out
 end
 
 -- a spot still counting
@@ -49,13 +71,15 @@ function M.note(mem, events, now)
     end
     mem.hurt = mem.hurt or {}
     mem.hurt_at = mem.hurt_at or 0
+    local looked = 0
     for _, e in ipairs(events) do
-        if e.kind == "attacked" then
+        if e.kind == "attacked" and looked < 8 then
+            looked = looked + 1
             local v = ai.unit(e.unit)
             if v ~= nil and v.category == "citizen" then
                 local a = e.attacker ~= nil and ai.unit(e.attacker) or nil
                 if a == nil or a.category ~= "animal" then
-                    local seen = #raiders_near(v.x, v.y, 6) > 0
+                    local seen = #ai.seen{enemy = true, armed = true, category = "soldier", near = {v.x, v.y, 6}, limit = 1} > 0
                     local k = mem.hurt_at % HURT_N + 1
                     mem.hurt[k] = {x = v.x, y = v.y, t = now > 0 and now or 1, seen = seen}
                     mem.hurt_at = mem.hurt_at + 1
@@ -68,11 +92,11 @@ end
 
 -- the town holds there: own soldiers and towers within 8 beat the raiders within 8 by raid_held
 local function raid_held(x, y)
-    local foes = ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, 8}}
+    local foes = raiders_near(x, y, 8)
     if #foes == 0 then
         return true
     end
-    local own = ai.units{armed = true, near = {x, y, 8}}
+    local own = ai.units{armed = true, near = {x, y, 8}, limit = 40}
     local mine = #own > 0 and ai.strength(own) or 0
     return mine * 100 >= ai.strength(foes) * S.raid_held
 end
@@ -112,37 +136,66 @@ local function flee_point(x, y, rx, ry, map)
     return fx, fy
 end
 
--- the micro step every 4 s. memory: the script's memory (the muster's rally group, memory.army.mustering; the
--- claimed sites released through memory.eco.site_danger)
+-- the micro step: every 250 ms a sixteenth of the citizens (each looked at every 4 s, as upstream's tick; the
+-- whole town at once blew the micro step's instruction budget at 100+ citizens). memory: the script's memory (the
+-- muster's rally group, memory.army.mustering; the claimed sites released through memory.eco.site_danger)
+local SPOTS = {}
+
 function M.step(mem, memory, now)
     local army, eco = memory.army, memory.eco
     if not S.avoid_towers_citizens then
         return
     end
-    if now - (mem.t or 0) < EVERY and (mem.t or 0) > 0 then
-        return
-    end
-    mem.t = now
     mem.sent_back = mem.sent_back or {}
-    -- those sent back or fled earlier are released once their time is up
-    local release = {}
-    for _, id in ipairs(ai.keys(mem.sent_back)) do
-        if mem.sent_back[id] <= now or ai.unit(id) == nil then
-            if ai.unit(id) ~= nil then
-                release[#release + 1] = id
+    if now - (mem.scan_t or 0) >= 1000 or (mem.scan_t or 0) == 0 then
+        mem.scan_t = now
+        local town = ai.units{type = "b_town_center", built = true, limit = 1}
+        local hx, hy = 0, 0
+        if #town > 0 then
+            local t = ai.unit(town[1])
+            if t ~= nil then
+                hx, hy = t.x, t.y
             end
-            mem.sent_back[id] = nil
+        end
+        raiders_scan(hx, hy)
+        SPOTS = {}
+        for _, h in ipairs(mem.hurt or {}) do
+            if live(h, now) then
+                SPOTS[#SPOTS + 1] = h
+            end
+        end
+        -- those sent back or fled earlier are released once their time is up
+        local release = {}
+        for _, id in ipairs(ai.keys(mem.sent_back)) do
+            if mem.sent_back[id] <= now or ai.unit(id) == nil then
+                if ai.unit(id) ~= nil then
+                    release[#release + 1] = id
+                end
+                mem.sent_back[id] = nil
+            end
+        end
+        if #release > 0 then
+            ai.release(release)
         end
     end
-    if #release > 0 then
-        ai.release(release)
-    end
-    local sent, fled, held = 0, 0, 0
-    local rally = army ~= nil and army.mustering and G.role(memory, "rally") or nil
-    local citizens = ai.units{category = "citizen", held = "engine"}
-    if #citizens == 0 then
+    if RAIDERS.n == 0 and #SPOTS == 0 then
         return
     end
+    local spots = SPOTS
+    local sent, fled, held = 0, 0, 0
+    local rally = army ~= nil and army.mustering and G.role(memory, "rally") or nil
+    local all = ai.units{category = "citizen", held = "engine"}
+    if #all == 0 then
+        return
+    end
+    -- this tick's slice
+    local per = math.max(1, (#all + 15) // 16)
+    local cursor = (mem.cursor or 0) % #all
+    local citizens = {}
+    for k = 1, per do
+        citizens[k] = all[(cursor + k - 1) % #all + 1]
+    end
+    mem.cursor = (cursor + per) % #all
     local cols = ai.get(citizens, {"x", "y", "action", "tx", "ty", "inside"})
     local map = rally ~= nil and ai.map() or nil
     for k = 1, #citizens do
@@ -166,12 +219,21 @@ function M.step(mem, memory, now)
                 -- the site: where it gathers (its goal's tile; the citizen's own spot when none)
                 local sx, sy = cols.tx[k] or x, cols.ty[k] or y
                 local raided = #raiders_near(sx, sy, 6) > 0
-                local mineral = false
-                local site = ai.unit(ai.units{category = "resource", near = {sx, sy, 2}, limit = 1}[1] or -1)
-                if site ~= nil and site.kind ~= nil then
-                    mineral = site.kind == "stone" or site.kind == "gold" or site.kind == "iron"
+                local nh = 0
+                for _, h in ipairs(spots) do
+                    if math.abs(h.x - sx) <= 6 and math.abs(h.y - sy) <= 6 then
+                        nh = nh + 1
+                    end
                 end
-                local hurt = not raided and hurt_near(mem, sx, sy, now) >= (mineral and 3 or 1)
+                local mineral = false
+                if not raided and nh >= 1 then
+                    -- the site's resource only when a hurt spot is near (the budget): minerals take three spots
+                    local site = ai.unit(ai.units{category = "resource", near = {sx, sy, 2}, limit = 1}[1] or -1)
+                    if site ~= nil and site.kind ~= nil then
+                        mineral = site.kind == "stone" or site.kind == "gold" or site.kind == "iron"
+                    end
+                end
+                local hurt = not raided and nh >= (mineral and 3 or 1)
                 if (raided or hurt) then
                     if raid_held(sx, sy) then
                         held = held + 1
