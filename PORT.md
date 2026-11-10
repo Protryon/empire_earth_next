@@ -399,7 +399,7 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 
 | Header | Covers | Routed |
 |---|---|---|
-| PlatTime.h | millisecond clock, high-resolution counter, sleep, timer period, local time, system timers | Time Manager, TMPoll, TMTimer, all Sleep calls but RTSGraphics::Main's, GEModel Caching |
+| PlatTime.h | millisecond clock, high-resolution counter, sleep, timer period, local time, system timers | Time Manager, TMPoll, TMTimer, all Sleep calls but RTSGraphics::Main's |
 | PlatThread.h | recursive mutex, events (wait, wait-any), atomics, thread id, last native error, threads (create, priority, suspend/resume, exit code) | TSCriticalSection, TSEvent (+WaitAny), TSReadWriteLock, TSScheduler, TSThread (not its message queue), Thread System.cpp, the mixer lock, the NE/music/sound/TCP wait loops |
 | PlatString.h | _stricmp/_strnicmp/_itoa/_strdup and the 19 _mbs*/_ismb* multibyte functions | UString, UWideString, the UI text controls, the game (292 sites) |
 | PlatConfig.h | the settings file config.yaml (nested blocks of strings, integers and booleans; one implementation in src/Platform/Common) | UConfig (was URegistry; the registry is gone) |

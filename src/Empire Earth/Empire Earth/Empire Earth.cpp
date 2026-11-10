@@ -1729,9 +1729,6 @@ void EEGraphicsShutdown(bool inShutdown)
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EEMiniMap.h"
 
-class GELODPolygon;
-class GELODVertex;
-
 // FUNCTION: EXE 0x544295
 // Releases the particle and complex unit pools and logs the list node pools' statistics
 // (EEDeleteDatabase passes true; the argument is not read)
@@ -1742,8 +1739,6 @@ void EEReleaseGamePools(bool inShutdown)
     EEComplexUnit::ReleasePool();
     UList<EEMiniMapDot>::sNodePool.DumpStats(false);
     UList<EEMiniMapUnitDot>::sNodePool.DumpStats(false);
-    UList<GELODPolygon*>::sNodePool.DumpStats(false);
-    UList<GELODVertex*>::sNodePool.DumpStats(false);
     UList<EEComplexUnit*>::sNodePool.DumpStats(false);
 }
 

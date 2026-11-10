@@ -14,7 +14,6 @@ class GEModelManager;
 class GEPolygonArray;
 class GETexture;
 class GEVertexArray;
-class URandomIntegers;
 struct GETextureDescription;
 struct EeGeCemModel;   // a model read by Rust (rust/ee_rust.h)
 
@@ -82,11 +81,10 @@ public:
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with StoreLoaded)
     void ComputeBoundingVolumes();          // 0x1001f69a
-    void ComputeLODReduction(unsigned long inLOD);   // 0x1001ce5b
-    float ComputeMemoryLocalityEfficiency(unsigned long inLOD);   // 0x100173ba
+    // (ComputeLODReduction 0x1001ce5b, 'GEModel LOD.cpp', and the vertex cache optimiser of 'GEModel Caching.cpp'
+    // (ComputeOptimalDataOrdering 0x10017523, ComputeVertexCacheEfficiency 0x10017580,
+    // ComputeMemoryLocalityEfficiency 0x100173ba) had no caller in the game, the tools or the data path: deleted)
     void ComputeModelNormals();             // 0x1001f80c
-    void ComputeOptimalDataOrdering(long inA, long inB);   // 0x10017523
-    void ComputeVertexCacheEfficiency(unsigned long inLOD, float& outA, float& outB);   // 0x10017580
     // Hides UReferenceCounter::Dereference: GEPhysicalModel calls this one, GEModelManager calls the base explicitly
     // (0x10004370) when it drops its own reference.
     void Dereference();                     // 0x1001fa84
@@ -115,18 +113,6 @@ private:
     // ('GEModel Load.cpp')
     long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
     void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
-
-    // 'GEModel Caching.cpp' types (defined there; mangled as GEModel::<name>)
-    struct TriListGenome;
-    struct VertexListGenome;
-    void ComputeInitialTriOrdering(TriListGenome& ioGenome);   // 0x10016dd8
-    void ComputeInitialVertexOrdering(VertexListGenome& ioGenome, unsigned long inMaterial);   // 0x1001711c
-    unsigned long ComputeMemoryCoherency(const VertexListGenome& inGenome, unsigned long inMaterial);   // 0x1001720e
-    unsigned long ComputeVertexCacheMisses(const TriListGenome& inGenome);   // 0x10017686
-    void MutateTriGenes(TriListGenome& ioGenome, URandomIntegers& inRandom, unsigned long inA, unsigned long inB);   // 0x10017735
-    void MutateVertexGenes(VertexListGenome& ioGenome, URandomIntegers& inRandom, unsigned long inA, unsigned long inB);   // 0x1001784f
-    void OptimizeMemoryCoherency(long inMaterial);   // 0x10017912
-    void OptimizeVertexCaching(long inMaterial);     // 0x100180e1
 
     GETransformation mGraphicsPreModelTransform;    // +0x08
     GETransformation mGraphicsPostModelTransform;   // +0x48
@@ -164,10 +150,7 @@ private:
     // (+0x160..+0x188 held the version-1 data while 'GEModel Legacy.cpp' converted it; the reader is Rust now)
 };
 
-// The LOD helper classes follow GEModel (GEBoundingBox.cpp emits their inline members right after GEModel's)
-#ifndef LLE_EXE_HEADERS
-#include "lle/GELOD.h"
-#endif
+// (The LOD helper classes, lle/GELOD.h, followed GEModel here: deleted with 'GEModel LOD.cpp')
 
 // GEModel::SetClipToPlane plane index: GERasterizer::IsOrthographic/IsPerspectiveModelVisible test the viewport plane named here before each call
 enum GEClipPlane {

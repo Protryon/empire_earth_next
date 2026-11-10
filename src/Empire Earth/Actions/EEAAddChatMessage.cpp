@@ -44,7 +44,6 @@
 #include "lle/UIScrollBar.h"
 #include "lle/UMemoryPool.h"
 #include "lle/UList.h"
-#include "lle/GELOD.h"
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EmpireEarth.h"
