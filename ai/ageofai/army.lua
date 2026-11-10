@@ -155,7 +155,15 @@ local function train(view, memory, mem, order, budget)
     end
     target = math.max(target, seen * 2 // 3 + 2)
     if S.early_army and e == 0 then
-        return nil
+        -- the first epoch's soldiers only once enemy soldiers have shown up (the threats seen, or a raid answered):
+        -- a quiet map keeps the owner's opening, a raided one gets upstream's alternative
+        if view.threat_strength > 0 or (mem.raids or 0) > 0 then
+            mem.threat_seen_t = view.time
+        end
+        target = (mem.threat_seen_t ~= nil and view.time >= 300000) and (S.early_soldiers or 0) or 0
+        if target == 0 then
+            return nil
+        end
     end
     -- soldiers at home: the force's members within HOME_SCAN of the base, and those coming
     local home = 0
@@ -445,7 +453,8 @@ local function force_step(view, memory, mem, order)
                 local rx, ry = sx // n, sy // n
                 local foe_there = enemy_at(rx, ry, 12)
                 local cooled = mem.raid_cool == nil or now >= mem.raid_cool or d2(rx, ry, mem.raid_cx or -99, mem.raid_cy or -99) > 15 * 15
-                if cooled and own * 100 >= foe_there * 100
+                local far = d2(rx, ry, hx, hy) > 30 * 30
+                if cooled and own * 100 >= foe_there * 130 and (not far or n >= 5)
                         and (d2(rx, ry, hx, hy) > (S.ar_home_r + 2) * (S.ar_home_r + 2) or n >= S.ar_raid_band) then
                     force.task = "attack"
                     force.target = player
@@ -467,9 +476,17 @@ local function force_step(view, memory, mem, order)
     end
     -- the town threatened (enemy soldiers on the claimed land): the force holds the town, the claim range wide
     if view.threat_strength > 0 then
-        force.radius = math.max(view.claim_range, S.ar_home_r)
+        force.radius = 12
+        if force.task == "defend" and d2(force.x, force.y, tx, ty) > 36 then
+            force.x, force.y = tx, ty   -- the town itself, not the station
+            force.way_t = 0
+        end
     else
         force.radius = S.ar_home_r
+        if force.task == "defend" and (force.x ~= hx or force.y ~= hy) then
+            force.x, force.y = hx, hy
+            force.way_t = 0
+        end
     end
     -- the push at the attack time: the enemy building known nearest home, when the force beats what is there
     if now >= mem.next_attack and #force.units >= S.ar_min_launch then
@@ -565,7 +582,7 @@ local function muster(view, memory, mem)
     if view.time < (mem.muster_cool or 0) or mem.out then
         return
     end
-    if #foes >= 4 and foe_str * 100 > own * S.muster_ratio then
+    if #foes >= S.muster_enemies and foe_str * 100 > own * S.muster_ratio then
         fx, fy = fx // #foes, fy // #foes
         local dx, dy = tx - fx, ty - fy
         local len = isqrt(dx * dx + dy * dy)

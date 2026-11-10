@@ -96,6 +96,13 @@ function M.reserve(view, mem)
             -- the most harmful brake; the owner's build order grows to about 64 in the Stone Age)
             local at = view.epoch == 0 and S.min_workforce or S.stone_workforce
             saving = view.citizens >= at or age >= 18 * 60000
+            mem.peak = math.max(mem.peak or 0, view.citizens)
+            if view.citizens * 100 < (mem.peak or 0) * S.recover_share and view.citizens < at then
+                saving = false   -- the economy lost citizens: it grows again before it saves (recover_economy)
+            end
+            if view.income.food < 60 and view.citizens < at and view.stock.food < view.next_epoch_cost.food then
+                saving = false   -- no food coming in: saving starves the town (the raided patches); the citizens first
+            end
         elseif S.epoch_pacing == "rush" then
             saving = age >= 5 * 60000
         else
@@ -308,11 +315,18 @@ local function claims(view, mem, target, order)
         end
     end
     -- a site of each mineral the gatherers want: the nearest free, more while the claimed are full (mine_choice:
-    -- the free mine nearest a drop site; the engine's finders take the one nearest a drop site among the claimed)
+    -- the free mine nearest a drop site; the engine's finders take the one nearest a drop site among the claimed).
+    -- From the Copper Age the claim grows to its most while the mines are full (towns.c RESOURCE TOWNS: the home
+    -- continent's mines worked out, a town further off)
+    local late = view.epoch >= FARM_EPOCH
     for _, r in ipairs(MINERALS) do
         if target[r] > 0 then
             local n, room = claimed(view, r, false)
-            if n == 0 or (room <= 0 and n < 3) then
+            if late and room <= 0 and range < view.claim_range_max and view.time - (mem.range_t or 0) >= 60000 then
+                order({verb = "claim_range", range = range + view.claim_range_step})
+                mem.range_t = view.time
+            end
+            if n == 0 or (room <= 0 and n < (late and 5 or 3)) then
                 local site = nearest_free(view, r, false, range)
                 if site then
                     order({verb = "claim", site = site.index})
@@ -334,6 +348,70 @@ end
 -- drop sites (mines.c mine_drops, wood_drops, food.c CAMP; the engine's finders send gatherers only where a finished
 -- drop site stands, AI_RESEARCH §8.36): a settlement at every claimed site the gatherers want whose resource has no
 -- drop, food first, then wood, iron, gold, stone, nearest first; two going up at once; the forest edge too
+local function reserve_wood(view)
+    return view.reserve.wood or 0
+end
+
+-- a building at a spot of its own through the per-unit interface when the town's rings are full (an island town):
+-- ai.find_site's tile, the three citizens nearest it build it (idle first) and stay the script's until it stands
+-- (released at once, the runners took them back and the foundation stood empty: 17 granary foundations in one
+-- game); one such building at a time, three minutes at most. Returns true when ordered
+local function build_direct(view, mem, type)
+    mem.direct = mem.direct or {}
+    local d = mem.direct
+    if d.id ~= nil then
+        local u = ai.unit(d.id)
+        local done = u == nil or u.built or view.time - d.t > 180000
+        if not done then
+            -- a builder gone idle (the engine dropped the goal): on it again
+            local again = {}
+            for _, b in ipairs(d.builders) do
+                local bu = ai.unit(b)
+                if bu ~= nil and bu.action == "idle" then
+                    again[#again + 1] = b
+                end
+            end
+            if #again > 0 then
+                ai.repair(again, d.id)
+            end
+            return false
+        end
+        ai.release(d.builders)
+        mem.direct = {}
+        d = mem.direct
+    end
+    local gx, gy = ai.find_site(type, view.town_x, view.town_y, {min = 4, max = 20})
+    if gx == nil then
+        return false
+    end
+    local cits = ai.units{category = "citizen", idle = true, near = {gx, gy, 60}, limit = 3}
+    if #cits < 3 then
+        for _, id in ipairs(ai.units{category = "citizen", near = {gx, gy, 40}, limit = 8}) do
+            local have = false
+            for _, c in ipairs(cits) do
+                if c == id then
+                    have = true
+                end
+            end
+            local u = ai.unit(id)
+            if not have and #cits < 3 and u ~= nil and u.inside == nil and u.held == "engine" and u.action ~= "build" then
+                cits[#cits + 1] = id
+            end
+        end
+    end
+    if #cits == 0 then
+        return false
+    end
+    local code, reason, n, id = ai.build(cits, type, gx, gy)
+    if code == "ok" and id ~= nil then
+        d.id, d.t, d.builders, d.type = id, view.time, cits, type
+        print(string.format("build_direct type=%s at=%d,%d builders=%d id=%d", type, gx, gy, #cits, id))
+        return true
+    end
+    ai.release(cits)
+    return false
+end
+
 local function settlements(view, mem, target, order)
     if V.cost(view, "b_settlement") == nil then
         return
@@ -380,8 +458,15 @@ local function settlements(view, mem, target, order)
         local last = mem.settle[c.key] or 0
         if (view.time - last >= SETTLE_WAIT or last == 0) and (mem.settle_block[c.key] or 0) <= view.time then
             local at
+            -- a town centre instead of a settlement at a far mineral site from the Copper Age when the wood allows
+            -- (towns.c: a town with production of its own where the mines are)
+            local kind = "b_settlement"
+            if c.site ~= nil and view.epoch >= FARM_EPOCH and c.site.distance >= 30 and c.site.resource ~= "food"
+                    and V.cost(view, "b_town_center") ~= nil and view.stock.wood >= 600 + reserve_wood(view) then
+                kind = "b_town_center"
+            end
             if c.site ~= nil then
-                at = order({verb = "build", type = "b_settlement", near = "site", site = c.site.index})
+                at = order({verb = "build", type = kind, near = "site", site = c.site.index})
             else
                 at = order({verb = "build", type = "b_settlement", near = "tile", x = c.tile.x, y = c.tile.y})
             end
@@ -444,6 +529,9 @@ local function front_spot(view, mem, tower, fx, fy, len)
             end
             if not taken then
                 local sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2, safe = true})
+                if sx == nil then
+                    sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2})
+                end
                 if sx ~= nil then
                     return sx, sy
                 end
@@ -516,7 +604,7 @@ local function towers(view, mem, order, above)
     -- one is queued or going up
     local max_towers = 4 + S.towers_max_epoch * view.epoch
     if not S.defence_towers or busy or n >= max_towers or view.time - (mem.tower_t or 0) < 60000
-            or view.citizens < 12 then
+            or view.citizens < 8 then
         return stone_wanted
     end
     if above.stone < cost.cost.stone + S.tower_stone_keep then
@@ -576,7 +664,15 @@ local function production(view, mem, order, army, above)
                 ok = ok and above[r] >= c.cost[r]
             end
             if not going and V.total(have) < want[t] and ok then
-                order({verb = "build", type = t, near = "town"})
+                if (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
+                    if view.time - (mem.direct_t or 0) >= 30000 then
+                        mem.direct_t = view.time
+                        build_direct(view, mem, t)
+                    end
+                else
+                    mem.build_pending = mem.build_pending or {}
+                    mem.build_pending[#mem.build_pending + 1] = {at = order({verb = "build", type = t, near = "town"}), type = t}
+                end
             end
         end
     end
@@ -595,12 +691,24 @@ local function farms(view, mem, order, target, above)
     local want_gran = math.min(1 + (target.food or 0) // 8, 8)
     if V.cost(view, "b_granary") ~= nil and granaries < want_gran and (gran == nil or gran.unfinished + gran.queued == 0)
             and (view.gatherers.food + 6 <= (target.food or 0) or granaries == 0) and above.wood >= 100 then
-        order({verb = "build", type = "b_granary", near = "town"})
+        -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
+        -- building placed through the per-unit interface at a spot of its own
+        if (mem.nosite or {}).b_granary ~= nil and view.time - mem.nosite.b_granary < 600000 then
+            if view.time - (mem.direct_t or 0) >= 30000 then
+                mem.direct_t = view.time
+                build_direct(view, mem, "b_granary")
+            end
+        else
+            mem.build_pending = mem.build_pending or {}
+            mem.build_pending[#mem.build_pending + 1] = {at = order({verb = "build", type = "b_granary", near = "town"}), type = "b_granary"}
+        end
     end
     local fc = V.cost(view, "b_farm")
     local finished_gran = gran ~= nil and gran.finished or 0
     if fc ~= nil and finished_gran > 0 and fields < finished_gran * 8 and (farm == nil or farm.unfinished + farm.queued < 2)
             and above.wood >= fc.cost.wood + 50 then
+        -- a granary lays its eight fields as foundations: `near = town` finishes the next one (the classic FindSite
+        -- finds the foundations; rings round the granary are refused)
         order({verb = "build", type = "b_farm", near = "town"})
     end
     return fields
@@ -743,6 +851,25 @@ function M.step(view, memory, orders, army)
     end
 
     local target = mem.target
+    if mem.direct ~= nil and mem.direct.id ~= nil then
+        local u = ai.unit(mem.direct.id)
+        if u == nil or u.built or view.time - mem.direct.t > 180000 then
+            ai.release(mem.direct.builders)
+            if u ~= nil and u.built then
+                print(string.format("build_direct done type=%s", mem.direct.type))
+            end
+            mem.direct = {}
+        end
+    end
+    -- a building refused no_site near the town the step before: next time at a spot of its own (ai.find_site)
+    mem.nosite = mem.nosite or {}
+    for _, p in ipairs(mem.build_pending or {}) do
+        local r = view.results[p.at]
+        if r ~= nil and r.verb == "build" and r.reason == "no_site" then
+            mem.nosite[p.type] = view.time
+        end
+    end
+    mem.build_pending = {}
     -- a settlement refused no_site the step before: its spot is passed over for five minutes
     for _, p in ipairs(mem.settle_pending or {}) do
         local r = view.results[p.at]
@@ -792,6 +919,9 @@ function M.step(view, memory, orders, army)
             mem.target = target
             local hunt = claims(view, mem, target, order)
             hunt = hunt or (view.time - (mem.no_drop_t or -100000) < 30000 and view.hunt > 0)
+            -- the patches blocked or bare (the food gatherers at work far under the target and the income low): the
+            -- game near home (food_plan HUNT)
+            hunt = hunt or (view.hunt > 0 and view.gatherers.food * 2 < target.food and view.income.food < 90)
             local prefer = hunt and "hunt" or "patch"
             for _, r in ipairs(V.resources) do
                 if target[r] ~= view.wanted[r] or (r == "food" and prefer ~= (mem.prefer or "patch")) then

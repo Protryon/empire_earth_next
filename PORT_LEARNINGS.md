@@ -1850,6 +1850,10 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   moment the stock crosses the reserve and the gatherers walk to the next mine, then back. A standing margin (half
   `mineral_worker_margin`) and a hysteresis of 3 a pass stop the swing.
 - **The view's `sites[].resource` is a name,** not an index: `V.resources[s.resource + 1]` is an error.
+- **A sim bench shares the main checkout's open data tree.** `sim.py --data open` takes `build/open_data/tree` of
+  the main checkout when the worktree has none; while the main checkout's gates rebuild that tree every game fails
+  at start (`EETerrainColorTable.cpp (81) : Verification failure`, `rc 2147483651`, no report). A worktree that
+  benches builds its own tree.
 - **A bash heredoc over about 140 lines fails in the harness shell** ("unexpected EOF while looking for matching
   `''`"); long patch scripts go into a file first.
 
