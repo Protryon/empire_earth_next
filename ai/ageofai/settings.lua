@@ -22,10 +22,9 @@ return {
     epoch_min = 50, epoch_max = 70, -- minutes an epoch (timer pacing)
     -- the early game (early.c)
     early_towers = true,            -- two towers by the town centre in the first two epochs
-    direct_granary = false,         -- a granary through ai.build where the town's rings are full: off (the crash above)
-    replant_fields = false,         -- ai.replant on a granary placed through ai.build: off, it crashed the game once
-                                    -- (AI_RESEARCH 8.37, the sixth checkpoint); the fields come with the classic
-                                    -- build manager's granaries only
+    direct_granary = true,          -- a granary through ai.build where the town's rings are full (an island town)
+    replant_fields = true,          -- ai.replant lays such a granary's fields (both were off for a crash of the engine's
+                                    -- footprint code at the map's edge, fixed: PORT_LEARNINGS, AI_RESEARCH 8.37)
     tower_bait = true,              -- a citizen hit by a raider walks behind the nearest tower ...
     tower_bait_epoch = 2,           -- ... up to this epoch (upstream: up to the Bronze Age; every citizen near the
                                     -- raider in every epoch lost 4 of 16 games at 90 minutes: the economy stood still)
