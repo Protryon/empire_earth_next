@@ -76,6 +76,8 @@ mod tests {
 
     #[test]
     fn switches_start_off_and_have_c_layouts() {
+        // under the lock: message.rs's simulation_mode_writes_no_message_box sets gPlatSimMode for a moment
+        let _guard = test_globals();
         assert_eq!(gPlatSimMode.get(), 0);
         assert_eq!(gPlatSimRun.get(), 0);
         assert!(gPlatSimAfterTick.get().is_none());
@@ -88,6 +90,7 @@ mod tests {
 
     #[test]
     fn set_is_seen_by_get() {
+        let _guard = test_globals();
         gPlatSimSeedSet.set(1);
         assert_eq!(gPlatSimSeedSet.get(), 1);
         gPlatSimSeedSet.set(0);
