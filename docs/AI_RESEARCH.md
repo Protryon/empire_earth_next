@@ -2581,6 +2581,7 @@ their reason: the siege with the force (no waves from home), this engine's fishi
 | f4: + citizens' safety, the militia (f3, the same with the micro budget blown, is void) | 0 / 14 / 2 | 37.6, 7/16 at 68 | 39 / 41 / 19 | 0 / 14 / 2 | 8/16 at 46 | 10 | 1 / 2 / 13 | 135 vs 110 |
 | f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | 1 / 2 / 13 | 136 vs 109 |
 | f6: copper_plan next_epoch, the home guard's cap (166 / the own population) | 0 / 12 / 4 | 49.1 (8/16), 4/16 at 61 | 53 / 70 / 52 | 3 / 9 / 4 | 3/16 at 67 | 40 | 2 / 1 / 13 | 155 vs 109 |
+| f7: + the forage places cap the food gatherers and the wild food, the accounts' income fractions carried (a bug: they truncated to 0 a step) | 0 / 10 / 6 | 53.0 (14/16), 11/16 at 63 | 50 / 61 / 58 | 2 / 11 / 3 | 8/16 at 57 | 26 | 1 / 2 / 13 | 141 vs 107 |
 
 The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
 46 with 51 citizens all game and still wins the Prehistoric raids.
@@ -2638,6 +2639,20 @@ sends any number to a bush). So the rule's input differs here, not the rule. The
 34-49 on four seeds: no better. What would make upstream's input: count the wild food as places x what a place
 still yields before the citizens outgrow them (the wild-food clause binding at about 40 citizens on Small), or the
 tenth checkpoint's own rule (the citizens held at min_workforce before the Stone Age) as a marked deviation.
+
+**f7.** The income shares of the epoch, military and navy accounts were accumulated a step at a time with an integer
+division that truncates to 0 under 150 income a minute: the military account never grew past its start share in any
+bench so far (`mil=240/225/240/30/30` in every trace), and next_epoch's account filled only on spikes - f6's
+bimodality. With the fractions carried, the forage places capping the food gatherers (the excess to wood, stone,
+gold, iron by the plan's floors) and the wild food counted as places x a bush's food: 14 / 16 games reach the Stone
+Age against the improved classic (at 53 minutes), 15 / 16 against boom, 8 / 16 against the cheating classic (3 wiped
+out before 40 minutes, 5 alive in the Prehistoric at 120); W/L/C 0/10/6, 2/11/3, 1/2/13 against c10's 0/13/3, 2/11/3,
+6/2/8; the end citizens against the classic [0 x7, 10, 20, 37, 104, 125, 129, 165, 167, 169]. The Stone Age at
+48-57 minutes is next_epoch's own pace on these maps: 40% of a places-capped income of 60-100 a minute is 25-40 a
+minute into the account from minute 18, and the military account now takes its 40% as upstream's does. The wild-food
+clause by places x a bush's food still does not bind (12-19 places x 150 food > the epoch's 1,122 less the account +
+500); counted as places x what a place yields over the plan's horizon (a worker's 6 a minute over ten minutes) it
+would bind at once on Small and send the whole income to the epoch as c10's hold did.
 
 **Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
 build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream
