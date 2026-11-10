@@ -4,7 +4,8 @@
 //! engine's table trigonometry (`UMath.cpp`) and `GETerrainMesh`'s height, normal, closest-tile and line queries, its vertex normals, shorelines, fog of war and
 //! file codec, `GEPhysicalModel`'s per-triangle tests, and `GEModel`'s geometry (`model_geom.rs`) and the model it
 //! stores (`model_store.rs`, decoded from a glTF by `ee_openformats`; the `.cem` reader and writer were retired under
-//! D9).
+//! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
+//! `GETextureSet`'s grid (`texture.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -42,9 +43,14 @@ pub mod model_store;
 /// cbindgen:ignore
 pub mod physical;
 /// cbindgen:ignore
+pub mod pixel;
+/// cbindgen:ignore
 pub mod point;
 pub mod terrain;
 pub mod terrain_mesh;
+/// cbindgen:ignore
+pub mod texture;
+pub mod texture_ffi;
 /// cbindgen:ignore
 pub mod transform;
 pub mod types;
