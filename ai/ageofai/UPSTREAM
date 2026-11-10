@@ -235,8 +235,18 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 AIs upstream answered an offer at once (one process) - here it stands 2 minutes (OFFER_AI_MS) like
                 one to a human. DEVIATION: a vassal's tribute every 3 minutes of a quarter of each resource (the
                 language model's bounds made a rule).
-  spoils.c      NOT STARTED (a resigned player's units roam and its buildings change hands: an engine behaviour of
-                the player out of the game, to be weighed against this engine's defeat rule).
+  spoils.c      ENGINE -> nothing to port. Every part is the game's handling of a player out of the game, not a
+                decision of a living AI: sp_resigned (the out player at war with everyone, its fortresses and
+                airports let out), the roaming bands (the out player's own land fighters, an attack-move to the
+                nearest unit on their land, hook_target_ok: no buildings), the snapshots of the damage it took and
+                sp_hand_over (its buildings to whoever did 20% of that damage in the last 10 minutes, by their
+                value and nearness - unit_give, the scenario effect's owner change, which no ai.* call does). The
+                conquerors decide nothing (the shares fall out of the game's damage sums). This engine's defeat rule
+                (EEWorld::CheckGameOver, gameoptions.yaml defeat_without_recovery, docs/AI_RESEARCH.md): a player with
+                no unit that is not a building and no finished town centre it can train a citizen at is removed
+                from the game (RemovePlayerFromGame: observer mode), so no roaming army is left to spend waves on,
+                which was upstream's reason for the file (P4 out with 117 soldiers). Its buildings stay as they
+                are. resign_spoils is in settings.lua for the record.
   skirmish.c    PORTED -> skirmish.lua (SK_ON -> settings skirmish, 0 upstream: "off until measured"). The party
                 (bit 1): every 3 s with the force at home, 30 s after the last came home: a position that holds the
                 force's way (the shooters' spot: where a seen land unit hit ours from 7 tiles or more, a gun from 5,

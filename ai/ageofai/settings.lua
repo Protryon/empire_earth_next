@@ -184,4 +184,6 @@ return {
                                     -- (upstream's ini and rows.h: 1; the file's comment says "default 0 until
                                     -- measured" - the ini wins). Its numbers are upstream's defines (TB_R 32,
                                     -- TB_TOUCH 8, TB_BLOCK 14, TB_CLEAR_* 6/4/2/2) in packing.lua
+    resign_spoils = true,           -- spoils.c: ENGINE - a player out of the game is this engine's defeat rule
+                                    -- (EEWorld::CheckGameOver, defeat_without_recovery); nothing of the AI's to port
 }
