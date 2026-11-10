@@ -109,6 +109,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
+#include "ee/EEMessageCapture.h"
 static const float kDisbandRefund = 0.75f;   // EEMDisband (its own .rdata word: a named constant)
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
 static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
@@ -527,6 +528,7 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
         ESVERIFY_AT("Undefined message type" == NULL, 1275);
         break;
     }
+    EEMessageCaptureImport(theMessage, inMemory);   // TEST ONLY: the simulation capture's NMIM record (off by default)
     return theMessage;
      }
 
@@ -7200,6 +7202,15 @@ static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::
             i++;
         }
     } while (i != inSize);
+}
+
+// New (port), TEST ONLY: the two helpers above for the simulation capture's NMCU record (ee/EEMessageCapture.h)
+unsigned char EEMessageCaptureCompress(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
+                                       std::vector<long>& outUnits)
+{
+    unsigned char theSize = CompressUnits(inUnits, inOwner, outBuffer);
+    DecompressUnits(outBuffer, theSize, outUnits);
+    return theSize;
 }
 
 // FUNCTION: EXE 0x4c606b

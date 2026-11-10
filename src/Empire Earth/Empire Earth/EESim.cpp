@@ -109,6 +109,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEARemovePlayer.h"
 #include "ee/EEMessage.h"
+#include "ee/EEMessageCapture.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
@@ -775,6 +776,11 @@ void AfterTick()
         EEFormationCaptureSweep();
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+        static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
+        if (!sMessageSweepDone) {
+            sMessageSweepDone = true;
+            EEMessageCaptureSweep();
+        }
     }
     // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
     static long sNextCastMs = 300000;
