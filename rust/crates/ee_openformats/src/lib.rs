@@ -1,7 +1,9 @@
-//! The game's open forms: a glTF 2.0 model (.gltf/.glb) -> the .cem bytes the model loader reads, and PNG frames ->
-//! the .sst bytes of a texture (docs/MODEL_FORMATS.md, docs/RUST_PLAN.md R2.4). The Rust side of GEOpenFormats.cpp and
-//! its vendored readers (cgltf, stb_image): the gate is `eemodel.py cppgate`, byte parity with the Python converter
-//! over every exported model and texture and digests recorded from the C++.
+//! The game's models and textures (docs/MODEL_FORMATS.md, docs/RUST_PLAN.md R2.4 and D9): a glTF 2.0 model (.gltf/.glb)
+//! -> the model `GEModel::StoreLoaded` stores, and PNG frames -> the frames `GETexture::Load` stores (and one PNG ->
+//! the Targa a picture read as data gets). The Rust side of GEOpenFormats.cpp and its vendored readers (cgltf,
+//! stb_image): the gate is `eemodel.py cppgate`, the stored models and textures equal to digests recorded from the
+//! loaders before D9 (the .cem / .sst bytes and their readers, retired), and each case loaded or refused as the
+//! Python converter decides.
 //!
 //! The readers are hand ports, not the `gltf` and `png` crates: cgltf's and stb_image's acceptance rules decide which
 //! edited files load, and the gate compares them case by case. `cgltf.rs`, `jsmn.rs` and `png.rs` follow those
@@ -15,8 +17,8 @@ mod json;
 mod png;
 
 pub use ffi::*;
-pub use import::{gltf_to_cem, Resolver};
-pub use png::{png_to_picture, png_to_sst, Picture};
+pub use import::{gltf_to_model, Resolver};
+pub use png::{png_to_picture, png_to_texture, Picture, PngFrame, PngTexture};
 
 /// Why a conversion failed: the message (bytes, as names in it may not be UTF-8).
 #[derive(Debug, PartialEq, Eq)]

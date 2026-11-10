@@ -45,7 +45,6 @@
 #include "lle/GETransformation.h"
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
-#include "lle/FSMemoryFile.h"
 #include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
 #include "lle/GEColor.h"
@@ -58,19 +57,69 @@
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
+#include "lle/Graphics Engine.h"
+#include "rust/ee_rust.h"
 
-// The 14-byte header in front of a texture file's frames (Load reads it, Save writes it; ".tga" files have none).
-// Names PROVISIONAL.
-#pragma pack(push, 1)
+// The original's texture file header (.sst: 14 bytes in front of the frames; Load read it, Save wrote it). Since D9
+// a texture is its PNG frames (GEFindTextureFile), and Load fills this from them: not compressed, one MIP level, the
+// frame count and the surface size. Names PROVISIONAL.
 struct GETextureFileHeader {
-    unsigned char mIsCompressed;            // +0x00
-    unsigned char mMipLevelCount;           // +0x01 Save writes 1
-    uint32_t mFrameCount;                   // +0x02
-    uint32_t mWidth;                        // +0x06
-    uint32_t mHeight;                       // +0x0a
+    unsigned char mIsCompressed;
+    unsigned char mMipLevelCount;
+    uint32_t mFrameCount;
+    uint32_t mWidth;
+    uint32_t mHeight;
 };
-static_assert(sizeof(GETextureFileHeader) == 14, "on-disk record: 14 bytes on every target");
-#pragma pack(pop)
+
+// port (D9): stores one decoded frame (top row first, R, G, B(, A)) into a surface as the original's Targa reader
+// (GESurface::LoadTGA, removed) stored a texture file's frame: 32-bit surfaces get A8R8G8B8 whatever their
+// format, 16-bit ones GEPackColor of their format; no alpha (3 channels, or a surface without alpha) is 0xff. Each
+// row continues after the surface's row padding plus the surface's pixel width minus the frame's (LoadTGA's skip,
+// computed from the surface's pixel width); a frame larger than the surface is refused.
+static long GEStoreFrame(GESurface* inSurface, const EeOfTextureFrame& inFrame)
+{
+    unsigned long theFormat = inSurface->GetPixelFormat();
+    bool theNoAlpha = inSurface->GetSurfaceDescription().mNoAlpha;
+    unsigned long theBytesPerPixel = inFrame.channels;
+    if (inFrame.width > inSurface->GetPixelWidth() || inFrame.height > inSurface->GetPixelHeight())
+        return kErrorFailed;
+    long theResult = inSurface->Lock();
+    if (theResult != kErrorOK)
+        return theResult;
+    unsigned long theBytesPerRow = inSurface->GetBytesPerRow();
+    const unsigned char* theSource = inFrame.pixels;
+    unsigned long x, y;
+    if (inSurface->GetPixelDepth() == 32) {
+        unsigned long theSkip = (theBytesPerRow - inSurface->GetPixelWidth() * 4) / 4;
+        uint32_t* the32BitPixel = reinterpret_cast<uint32_t*>(inSurface->GetMemoryAddress());
+        for (y = 0; y < inFrame.height; y++) {
+            for (x = 0; x < inFrame.width; x++) {
+                unsigned char theRed = theSource[0];
+                unsigned char theGreen = theSource[1];
+                unsigned char theBlue = theSource[2];
+                unsigned char theAlpha = theBytesPerPixel == 4 && !theNoAlpha ? theSource[3] : 0xff;
+                theSource += theBytesPerPixel;
+                *the32BitPixel++ = (theAlpha << 24) | (theRed << 16) | (theGreen << 8) | theBlue;
+            }
+            the32BitPixel += theSkip;
+        }
+    } else {
+        unsigned long theSkip = (theBytesPerRow - inSurface->GetPixelWidth() * 2) / 2;
+        unsigned short* the16BitPixel = reinterpret_cast<unsigned short*>(inSurface->GetMemoryAddress());
+        for (y = 0; y < inFrame.height; y++) {
+            for (x = 0; x < inFrame.width; x++) {
+                unsigned char theRed = theSource[0];
+                unsigned char theGreen = theSource[1];
+                unsigned char theBlue = theSource[2];
+                unsigned char theAlpha = theBytesPerPixel == 4 && !theNoAlpha ? theSource[3] : 0xff;
+                theSource += theBytesPerPixel;
+                *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, theAlpha);
+            }
+            the16BitPixel += theSkip;
+        }
+    }
+    return inSurface->Unlock();
+}
 
 GERasterizer* GETexture::sRasterizer;
 
@@ -199,30 +248,27 @@ unsigned long GETexture::GetAllocatedSize()
 // theResult (declaration order has no effect). Tried: theResult initialised at the top, a separate counter per
 // loop (only the frame loop of format 0 as theFrame helps), store orders in format 1.
 // FUNCTION: LLE 0x10032ec4
-// Loads the texture (and its animation frames) from a texture or .tga file, building or dropping MIP levels
-// as asked; frames become separate textures (format 0) or cells of one grid surface (format 1)
-long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GEScreen* inScreen,
+// Loads the texture (and its animation frames) from its decoded PNG frames (port, D9: the original read a texture or
+// .tga file), building or dropping MIP levels as asked; frames become separate textures (format 0) or cells of one
+// grid surface (format 1)
+long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
                      bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat)
 {
-    FSMemoryFile theMemoryFile;
     GERectangle theSource;
     GESurfaceDescription theDescription;
     GESurfaceDescription theDropDescription;
-    bool theIsTGA = false;
     long theMipLevels = 0;
     GERectangle theDestination;
     bool theSuccess = true;
-    FSFileSpec* theFile;
-    unsigned long theLength;
     GETextureFileHeader theHeader;
+    EeOfTextureInfo theInfo;
+    EeOfTextureFrame theFrameData;
     long theResult;
     unsigned long i;
     unsigned long theFrame;
     long j;
     long theSize;
     unsigned long theGridSize;
-    const char* theName;
-    unsigned char theType;
     GESurface* theSurface;
     GESurface* theDropSurface;
     GESurface* theGrid;
@@ -232,11 +278,6 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
     float theX;
     unsigned long theRow;
 
-    if (!dynamic_cast<FSMemoryFile*>(&inFile) && inFile.GetLength(theLength) == kErrorOK) {
-        theMemoryFile.Load(inFile, theLength);
-        theFile = &theMemoryFile;
-    } else
-        theFile = &inFile;
     if (this->mSurface) {
         this->mSurface->Dereference();
         this->mSurface = NULL;
@@ -251,21 +292,14 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
     }
     this->mNumMipLevelsToDrop = inNumMipLevelsToDrop;
     this->mCreateMIPMaps = inCreateMIPMaps;
-    memset(&theHeader, 0, sizeof(theHeader));
-    theName = inFile.GetFile();
-    if (PlatStrICmp(theName + strlen(theName) - 4, ".tga") == 0) {
-        const unsigned char* theData = dynamic_cast<FSMemoryFile*>(theFile)->GetData();
-        theHeader.mIsCompressed = 0;
-        theHeader.mMipLevelCount = 0;
-        theHeader.mFrameCount = 1;
-        theHeader.mWidth = *(unsigned short*)(theData + 12);
-        theHeader.mHeight = *(unsigned short*)(theData + 14);
-        theIsTGA = true;
-        theResult = kErrorOK;
-        theLength = sizeof(theHeader);
-    } else
-        theResult = theFile->Read(reinterpret_cast<unsigned char*>(&theHeader), sizeof(theHeader), theLength);
-    if (theResult == kErrorOK && theLength == sizeof(theHeader)) {
+    ee_of_texture_info(inTexture, &theInfo);
+    theHeader.mIsCompressed = 0;
+    theHeader.mMipLevelCount = 1;
+    theHeader.mFrameCount = theInfo.frame_count;
+    theHeader.mWidth = theInfo.width;
+    theHeader.mHeight = theInfo.height;
+    theResult = kErrorOK;
+    {
         if (inFrameFormat == 0) {
             this->mFrameFormat = 0;
             this->mFrames = new GETexture*[theHeader.mFrameCount];
@@ -327,11 +361,8 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                 this->mFrameCount = theHeader.mFrameCount;
                 for (theFrame = 0; theFrame < theHeader.mFrameCount; theFrame++) {
                     if (inScreen->CreateSurface(theDescription, &theSurface) == kErrorOK) {
-                        if (theIsTGA)
-                            theType = 0;
-                        else if (theFile->Read(theType) != kErrorOK)
-                            goto drop;
-                        if (theSurface->Load(*theFile, theType) == kErrorOK) {
+                        ee_of_texture_frame(inTexture, (uint32_t)theFrame, &theFrameData);
+                        if (GEStoreFrame(theSurface, theFrameData) == kErrorOK) {
                             theMip = theSurface;
                             for (j = 1; j < theDescription.mMipLevelCount; j++) {
                                 theNext = theMip->GetAttachedSurface(0);
@@ -348,7 +379,6 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                         theResult = kErrorOutOfMemory;
                         continue;
                     }
-                drop:
                     if (inNumMipLevelsToDrop > 0) {
                         // Swap in the reduced surface only when it was created.
                         if (inScreen->CreateSurface(theDropDescription, &theDropSurface) == kErrorOK) {
@@ -409,14 +439,8 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                         theMip = theSurface;
                         theTarget = theGrid;
                         for (j = 0; j < theHeader.mMipLevelCount; j++) {
-                            if (theIsTGA)
-                                theType = 0;
-                            else {
-                                theResult = theFile->Read(theType);
-                                if (theResult != kErrorOK)
-                                    break;
-                            }
-                            theResult = theMip->Load(*theFile, theType);
+                            ee_of_texture_frame(inTexture, (uint32_t)i, &theFrameData);
+                            theResult = GEStoreFrame(theMip, theFrameData);
                             if (theResult != kErrorOK)
                                 break;
                             theSource.SetLeft(0.0f);
@@ -492,45 +516,8 @@ void GETexture::SetLogicalShift(unsigned long inShift)
                 this->mFrames[i]->mSurface->SetLogicalShift(inShift);
 }
 
-// FSBasicFile::GetFileAccess is header-inline (FSBasicFile.cpp defines it; its export is ICF-folded at 0x4c365)
-// FUNCTION: LLE 0x10033749
-// Writes the texture file header and every frame's surface to a file (opening it for writing if closed);
-// returns the first error
-long GETexture::Save(FSFileSpec& inFile, unsigned char inType, long inFrame)
-{
-    long theResult;
-    bool theWasOpen = inFile.GetIsOpen();
-    GETextureFileHeader theHeader;
-    unsigned long theWritten;
-    unsigned long i;
-    if (theWasOpen) {
-        if (inFile.GetFileAccess() != kFileAccessWrite)
-            return kErrorFailed;
-    } else {
-        theResult = inFile.Open(kFileAccessWrite);
-        if (theResult != kErrorOK)
-            return theResult;
-    }
-    theHeader.mWidth = this->mSurface->GetPixelWidth();     // port: the pixels written below
-    theHeader.mHeight = this->mSurface->GetPixelHeight();
-    theHeader.mIsCompressed = this->mIsCompressed;
-    theHeader.mMipLevelCount = 1;
-    theHeader.mFrameCount = this->mFrameCount;
-    theResult = inFile.Write(reinterpret_cast<const unsigned char*>(&theHeader), sizeof(theHeader), theWritten);
-    if (theResult == kErrorOK && theWritten == sizeof(theHeader)) {
-        for (i = 0; i < theHeader.mFrameCount; i++) {
-            theResult = inFile.Write(inType);
-            if (theResult != kErrorOK)
-                break;
-            theResult = this->GetFrameTexture(i)->GetSurface()->Save(inFile, inType);
-            if (theResult != kErrorOK)
-                break;
-        }
-    }
-    if (!theWasOpen)
-        theResult = inFile.Close();
-    return theResult;
-}
+// FUNCTION: LLE 0x10033749 (Save: wrote the texture file header and every frame's surface, a .sst; retired under
+// D9, the textures are PNG files)
 
 // FUNCTION: LLE 0x1003381c
 // Sets the alpha blend mode on every frame (or on the texture), marking changed ones

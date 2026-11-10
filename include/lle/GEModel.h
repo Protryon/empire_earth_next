@@ -21,6 +21,7 @@ struct EeGeCemModel;   // a model read by Rust (rust/ee_rust.h)
 class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
     friend class GEModelManager;
     friend class GEPhysicalModel;           // Intersects reads the const model's arrays (provisional name)
+    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
 public:
     // inline members in declaration order (the folded ones sit at other addresses)
     const GEBoundingBox& GetBoundingBox(unsigned long inLOD) const { return this->mBoundingBoxes[inLOD]; }
@@ -78,8 +79,8 @@ public:
     void SetTagPointName(const UString& inName, unsigned long inIndex) { this->mTagPointNames[inIndex] = inName; }
     void SetTextureFilename(const UString& inName, unsigned long inIndex) { this->mTextureFilenames[inIndex] = inName; }
 
-    // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp')
-    virtual long Load(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures, bool inLoadTextures);
+    // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
+    // retired under D9; GEModelManager::LoadModel stores a glTF's model with StoreLoaded)
     void ComputeBoundingVolumes();          // 0x1001f69a
     void ComputeLODReduction(unsigned long inLOD);   // 0x1001ce5b
     float ComputeMemoryLocalityEfficiency(unsigned long inLOD);   // 0x100173ba
@@ -92,8 +93,7 @@ public:
     long LoadTexturesForScreen(const GETextureDescription& inDescription, unsigned long inFlags);   // 0x1001cad5
     void PrepareTransforms();               // 0x1001fb1d
     void RemoveScale();                     // 0x1002004b
-    long Save(FSFileSpec& inFile);          // 0x1001e4e8
-    void SaveData(FSFileSpec& inFile);      // 0x1001eb5a
+    // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
     void SetFractionalFramePosition(float inPosition);   // 0x1002009b
     void SetGraphicsCurrentFrame(unsigned long inFrame);   // 0x100200d7
     void SetGraphicsNextFrame(unsigned long inFrame);   // 0x1002012f
@@ -111,7 +111,8 @@ private:
     void RemoveModelScale(unsigned long inFrame, const GETransformation& inParent, float inX, float inY, float inZ);   // 0x1001fc00
     void ComputeBoundingBoxes();            // 0x1001f544
     long AllocateInternalData(unsigned long inA, std::map<unsigned long, long>& ioTextures);   // 0x1001f080
-    // Stores a model read by Rust (ee_ge_model_load) as the chunk readers did ('GEModel Load.cpp')
+    // Stores a model decoded by Rust (a glTF: ee_of_gltf_to_model) as the original's .cem chunk readers stored it
+    // ('GEModel Load.cpp')
     long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
     void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
 
@@ -134,7 +135,7 @@ private:
     UString mName;                          // +0xd4 (CreateSubModel passes the parent's name)
     std::map<unsigned long, long> mSharedFrames;    // +0xe4 (provisional name; ~GEModel frees only frames not in it)
     GETransformation* mInternalTransforms;  // +0xf0 one per frame
-    GEModelManager* mManager;               // +0xf4 (LoadCurrentVersion: new GEModel(mManager))
+    GEModelManager* mManager;               // +0xf4 (StoreLoaded: new GEModel(mManager) per sub-model)
     GEModel* mParentModel;                  // +0xf8
     GEModel** mSubModels;                   // +0xfc
     GEPolygonArray** mPolygonArrays;        // +0x100 one per LOD
@@ -156,7 +157,7 @@ private:
     unsigned long mFrameCount;              // +0x140
     unsigned long mMaterialCount;           // +0x144
     unsigned long mPolygonCount;            // +0x148
-    unsigned long mVertexCount;             // +0x14c (SaveCountsChunk, SaveVertexSubChunk)
+    unsigned long mVertexCount;             // +0x14c
     unsigned long mTagPointCount;           // +0x150
     unsigned long mLODCount;                // +0x154
     bool mClipToPlane[6];                   // +0x158

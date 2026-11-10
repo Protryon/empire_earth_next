@@ -31,6 +31,7 @@ protected:
     virtual ~GEMaterial();
 private:
     friend class GEModel;                   // AllocateInternalData news materials
+    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     GEMaterial(unsigned long inScreenCount = 1, unsigned long inLODCount = 1);   // ??_F closure 0x10ed8: (1, 1)
 
     UString mName;                          // +0x08

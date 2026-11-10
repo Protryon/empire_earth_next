@@ -94,7 +94,6 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
     long LoadBMP(FSFileSpec& inFile);
     long LoadJPG(FSFileSpec& inFile);
     long LoadJPG2(FSFileSpec& inFile);
-    long LoadTGA(FSFileSpec& inFile);       // only the texture manager's .sst/.tga frames (GETexture.cpp)
     long LoadPNG(FSFileSpec& inFile);       // port: the pictures read outside the texture manager
     long SaveAsBMP(FSFileSpec& inFile);
     long SaveAsJPG(FSFileSpec& inFile);
@@ -115,17 +114,11 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
 
 // GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls
 enum GEImageFileType {
-    kImageFileTGA = 0,  // Load -> LoadTGA, only for the texture manager's frames; Save/attributes: removed (RUST_PLAN D9)
+    kImageFileTGA = 0,  // the original's Targa: no longer read or written (RUST_PLAN D9)
     kImageFileBMP = 1,  // GESurface switch case -> exported LoadBMP/SaveAsBMP/GetBMPFileAttributes
     kImageFileJPG = 2,  // GESurface switch case -> exported LoadJPG/SaveAsJPG/GetJPGFileAttributes
     kImageFileJPG2 = 3,  // GESurface switch case -> exported LoadJPG2/SaveAsJPG2/GetJPG2FileAttributes
     kImageFilePNG = 4,  // port: LoadPNG/GetPNGFileAttributes (no saver)
-};
-
-// GETGAHeader::mDescriptor (TGA header byte 17, the image descriptor): Truevision TGA spec bits 4 and 5 give the pixel order (GESurface::LoadTGA)
-enum GETGADescriptorFlag {
-    kTGADescriptorRightToLeft = 0x10,  // TGA spec: image descriptor bit 4 = pixels right to left (LoadTGA: theLeftToRight when clear)
-    kTGADescriptorTopToBottom = 0x20,  // TGA spec: image descriptor bit 5 = rows top to bottom (LoadTGA: theTopDown)
 };
 
 #endif

@@ -13,10 +13,6 @@ class GETexture;
 class TSCriticalSection;
 class UString;
 
-// A picture the caller loads as a Targa (GESurface::Load, kImageFileTGA): its .png in place of the .tga when the path
-// has one (GEOpenFormatsFile.cpp), else FSPath::FindFile
-long GEFindTargaFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
-
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
 // GETextureManager::LoadTexture (0x33cd4), which turns it into a GESurfaceDescription; (provisional names)
@@ -68,6 +64,7 @@ public:
     static long GetTexturePackMipLevelsToDrop();
 private:
     friend class GETexture;
+    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     long PromoteTexture(GETexture* inTexture);
     void SetTexturePackSizes(GETexture* inTexture, long inMipLevels);   // port
 

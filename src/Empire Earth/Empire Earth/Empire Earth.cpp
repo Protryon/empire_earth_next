@@ -1187,8 +1187,7 @@ void EEInitializeNetwork()
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
     theChecksum += EEGetFileChecksum(theFile, "*.tai", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Models\\");
-    theChecksum += EEGetFileChecksum(theFile, "*.cem", 0);
-    // the models' open forms (GEFindModelFile loads them in place of the .cem); 0 when there are none
+    // the models (glTF only since D9: GEFindModelFile)
     theChecksum += EEGetFileChecksum(theFile, "*.glb", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.gltf", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.bin", 0);
