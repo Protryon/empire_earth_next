@@ -7,8 +7,8 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicI32, AtomicPtr, AtomicU32, Ordering};
 use std::sync::Mutex;
 
-use ee_plat_ui::cp1252::{c_bytes, c_terminated, to_cp1252, to_utf8};
 use ee_plat_ui::event::*;
+use ee_plat_ui::font::{c_bytes, c_terminated};
 use ee_plat_ui::keys;
 use ee_plat_ui::window::*;
 
@@ -55,8 +55,9 @@ unsafe fn set_last_error_sdl() {
     set_last_error(CStr::from_ptr(SDL_GetError()).to_bytes());
 }
 
+/// The game's text for SDL: both UTF-8 (decision D6), so a terminated copy with any stray byte made U+FFFD.
 unsafe fn utf8_c(text: *const c_char) -> Vec<u8> {
-    c_terminated(&to_utf8(c_bytes(text)))
+    c_terminated(&ee_plat_core::utf8::lossy(c_bytes(text)))
 }
 
 unsafe fn window_of(id: u32) -> *mut c_void {
@@ -632,12 +633,11 @@ pub unsafe extern "C" fn PlatClipboardGetText() -> *mut c_char {
     if text.is_null() {
         return null_mut();
     }
-    let bytes = CStr::from_ptr(text).to_bytes();
-    let size = bytes.len() + 1;
-    let result = malloc(size) as *mut u8;
+    // SDL's clipboard text is UTF-8, as the game's (decision D6): a copy the caller frees
+    let bytes = c_terminated(CStr::from_ptr(text).to_bytes());
+    let result = malloc(bytes.len()) as *mut u8;
     if !result.is_null() {
-        let out = std::slice::from_raw_parts_mut(result, size);
-        to_cp1252(bytes, out);
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), result, bytes.len());
     }
     SDL_free(text.cast());
     result.cast()

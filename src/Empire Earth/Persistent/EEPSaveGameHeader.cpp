@@ -9,6 +9,7 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
+#include "ee/EESaveGameFiles.h"
 
 const UString EEPSaveGameHeader::sMajorVersion("EEPSaveGameHeader-MajorVersion");
 const UString EEPSaveGameHeader::sMinorVersion("EEPSaveGameHeader-MinorVersion");
@@ -34,8 +35,13 @@ EEPSaveGameHeader::EEPSaveGameHeader()
 long EEPSaveGameHeader::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult = this->LoadHeader(inFile);
-    if (theResult == kErrorOK)
+    if (theResult == kErrorOK) {
+        // port (decision D6): the body of a save older than 0.255 holds Windows-1252 text, converted as it loads
+        // (the name and description, read before the version, were converted by UString::Load's own test)
+        USetLegacyTextLoad(!EESaveTextIsUtf8(this->mMajorVersion, this->mMinorVersion));
         theResult = this->LoadBody(inFile);
+        USetLegacyTextLoad(false);
+    }
     return theResult;
 }
 

@@ -3985,3 +3985,54 @@ does not read text, so the sim oracle stays identical; menus with Latin-1 text r
    wrapping with multi-byte characters) in `ee_plat_core`, `ee_plat_ui`, `ee_ui`, `ee_won`, `ee_data`; `plat_test`,
    `font_test` and `wontest` updated. Gates per commit: both links 0/0, the sim oracle identical to `ref`, the Rust
    gate, `eedata check` and `cppgate`, `xbuild.py test`/`fonttest`/`wontest`.
+
+### As built
+
+- **One text module.** `ee_plat_core::utf8` (decode/encode, stepping both ways, the folded compares, the in-place case
+  change, the cp1252 table, UTF-16/UTF-32 conversions) and `string.rs` over it: the `PlatStrICmp`/`PlatMbs*`
+  family, `PlatUtf8Decode`/`Encode`, `PlatCp1252ByteOf`, `PlatUtf8IsValid`, `PlatUtf8ToWide`, `PlatWideToUtf8`,
+  `PlatCp1252ToUtf8`, the same code on every system. The CRT bindings, the POSIX single-byte port, its 932 and SBCS
+  goldens and `ee_plat_ui`'s `cp1252.rs` are gone; the 1,280 ASCII rows of the Win32 1252 golden still pin the
+  ASCII behaviour bit for bit. A stray byte decodes to `0xDC00 + byte` (so two texts compare equal only when their
+  bytes do, and every byte string round-trips through decode/encode); it is drawn and sent as U+FFFD.
+- **Who reads characters.** `GetMultiByteChar` is `PlatUtf8Decode`; `ee_ui`'s `text.rs` `Platform` answers from
+  `utf8` (and `Mbcs::char_at` replaced the byte arithmetic of `multi_byte_char`, whose original lead/trail form stays
+  the trait's default for the golden test doubles); `UString::ToLower`/`ToUpper` are `PlatMbsLwr`/`Upr`; the UI
+  thread sets `LC_CTYPE` back to "C" after the language's locale; the edit box gets one `UpdateTranslatedKey` per
+  character, WON's window manager one key event per UTF-16 unit; `EEWonNet::A2W`/`W2A`, `StringUtil.cpp` (through
+  `ee_won_wide_from_utf8`/`ee_won_utf8_from_wide`, `text.rs`), `PlatGUIFont`, `PlatClipboard` and the SDL
+  clipboard/text events carry UTF-8 unchanged; the lobby pages are read as UTF-8 (a page that is not is read as
+  1252). The AI manifest's names (`EECPEngine.cpp`) are kept as UTF-8 (strays to U+FFFD) where they were squeezed
+  into 1252.
+- **Fonts.** `PlatFont` renders U+0000..U+00FF at creation and any other code point on first use (a boxed glyph in a
+  locked map: the pointer outlives the lock). The bytes 0x80..0x9F of 1252 are now their own code points' glyphs (the
+  euro sign is U+20AC, rendered on first use), so the GDI-port goldens are compared through the cp1252 table and still
+  match. `GEFontBitmap` keeps its 256 cells (cell `b` holds the character 1252 gives `b`, as UTF-8) and maps a drawn
+  code point back with `PlatCp1252ByteOf`: Latin-1 and 1252 text draws exactly as before, other characters are
+  skipped there.
+- **Data.** The text compiler keeps a text cell's well-formed UTF-8 (`encode_text`), the content dump escapes code
+  points (a stray byte as `\udcXX`); `eedata`'s `load_db` converts retail's strings once (`binfmt.transcode_retail`:
+  the retail tables are ASCII, so `check` and `cppgate` see the same bytes as before: the exported text tree is
+  identical to rust's byte for byte); `scalars.encode_str`/`decode_str` are UTF-8, `decode_cp1252` is for retail
+  inputs (`gltf.py` reading a `.cem`). The glTF importer (`gltf.py`, `ee_openformats`' `game_name`) keeps a name's
+  UTF-8. `lang_strings.py` writes UTF-8 (five strings changed: `’` and `©`). `open_data.py` converts the 22 lobby
+  pages (one, `Help/loginhelp.html`, had a 1252 byte; the db part is unchanged, so no db release is needed for this;
+  the media part would carry the converted page).
+- **Saves.** 0.255. `USetLegacyTextLoad` is set by `EEPSaveGameHeader::Load` around the body and by `LoadGame` /
+  `EELoadPersistent` around the chunks when the version is older; `UString::Load`/`UWideString::Load` then convert
+  every string from 1252 (`UConvertLoadedText`, which also converts any loaded string that is not well-formed
+  UTF-8: the save name and description, read before the version, and files without a version such as old `.civ`
+  binaries).
+- **Tests.** `ee_plat_core` (utf8: 9, string: 4 including the ASCII golden), `ee_plat_ui` (font: code point
+  measure/draw, Latin-1 drawn the same as its 1252 bytes; event: the text golden through `text_into`), `ee_ui` (UTF-8
+  stepping, folding/sorting, `char_at`, wrapping by code point against the ASCII equivalent, the edit box typing,
+  deleting, selecting and limiting by characters), `ee_won` (both `wchar_t` widths, strays, lone surrogates),
+  `ee_data` (cells, quoting round trip, dump escapes), `ee_openformats` (names); `plat_test`'s "utf8" and "wide"
+  sections, `sdl_test`'s clipboard, `won_gui_test`'s accented line.
+- **Gates run (Windows):** both links 0/0, sim oracle identical to `ref` on seeds 2-7, Rust gate, `eedata check`
+  and `cppgate` PASS (the cppgate golden digests no longer match the data on rust either: Python-only comparison, as
+  before this branch). Menus were not looked at (no harness session): the lead's tours must confirm the pixels.
+- **Left:** the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK, so CJK input shows `?`);
+  `tools/rmap_gate/rmap_stubs.cpp` still maps `PlatMbs*` onto the CRT (a tool gate's stubs, ASCII inputs); campaign
+  archive tags are not converted; the harness writes `config.yaml` as cp1252 (its text is ASCII); `GEFontBitmap`
+  cannot draw characters outside 1252.

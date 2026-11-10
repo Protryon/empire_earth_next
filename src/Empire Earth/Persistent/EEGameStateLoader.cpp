@@ -298,9 +298,12 @@ bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
         this->mState->mMinorVersion = theHeader.mMinorVersion;
         this->mState->mGameOptions = theHeader.mGameOptions;
         theTags = theHeader.mChunkTypes;
+        // port (decision D6): the chunks of a save older than 0.255 hold Windows-1252 text, converted as it loads
+        USetLegacyTextLoad(!EESaveTextIsUtf8(theHeader.mMajorVersion, theHeader.mMinorVersion));
         if (this->RestorePersistents(theTags, inFile) == kErrorOK)
             theResult = true;
         this->mState->FinishLoad(theHeader.mMajorVersion, theHeader.mMinorVersion);
+        USetLegacyTextLoad(false);
     }
     if (!theResult) {
         EEReportLoadFailure("Load game file is corrupt.", false, NULL);
@@ -326,6 +329,8 @@ long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPer
             theMemory.Load(*theFile);
             theResult = theHeader.Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theMemory);
             theTags = theHeader.mChunkTypes;
+            // port (decision D6): a chunk of a save older than 0.255 holds Windows-1252 text
+            USetLegacyTextLoad(theResult == kErrorOK && !EESaveTextIsUtf8(theHeader.mMajorVersion, theHeader.mMinorVersion));
             for (unsigned long i = 0; i < theTags.size(); i++) {
                 FSChunk theChunk;
                 if (theTags[i] == inTagID) {
@@ -336,6 +341,7 @@ long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPer
                 }
                 theChunk.SkipChunk(theMemory);
             }
+            USetLegacyTextLoad(false);
         }
         delete theFile;
     }

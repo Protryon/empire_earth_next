@@ -1,12 +1,15 @@
-//! PlatFont (include/platform/PlatFont.h): GDI's metrics rebuilt from the font's tables, glyphs rendered once when the
-//! font is created, text drawn into pixel buffers. The port of `src/Platform/Common/PlatFont.cpp`; the bitmaps come
-//! from `ttf.rs`, the bytes stb_truetype made. Text is single-byte Windows-1252.
+//! PlatFont (include/platform/PlatFont.h): GDI's metrics rebuilt from the font's tables, glyphs rendered by code
+//! point (U+0020..U+00FF when the font is created, the others on first use), text drawn into pixel buffers. The port
+//! of `src/Platform/Common/PlatFont.cpp`; the bitmaps come from `ttf.rs`, the bytes stb_truetype made. Text is UTF-8
+//! (decision D6): a stray byte, a surrogate or a character the font lacks draws `?` (what the bytes Windows-1252
+//! leaves undefined drew before).
 
 use std::collections::BTreeMap;
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int, c_void, CStr};
 use std::sync::Mutex;
 
-use crate::cp1252::{c_bytes, codepoint_of};
+use ee_plat_core::utf8;
+
 use crate::ttf::{self, FontInfo};
 
 /// `PlatFontMetrics`: the C header's layout.
@@ -48,6 +51,26 @@ pub struct PlatFontRect {
 
 /// `PLAT_FONT_TARGET_PREMULTIPLIED`
 pub const TARGET_PREMULTIPLIED: u32 = 0x1;
+
+/// The bytes of a C string, empty for NULL.
+///
+/// # Safety
+/// `text` is NULL or a valid NUL-terminated string.
+pub unsafe fn c_bytes<'a>(text: *const c_char) -> &'a [u8] {
+    if text.is_null() {
+        &[]
+    } else {
+        CStr::from_ptr(text).to_bytes()
+    }
+}
+
+/// `text` as a NUL-terminated buffer; a NUL inside ends the C string there.
+pub fn c_terminated(text: &[u8]) -> Vec<u8> {
+    let end = text.iter().position(|&b| b == 0).unwrap_or(text.len());
+    let mut out = text[..end].to_vec();
+    out.push(0);
+    out
+}
 
 #[derive(Clone)]
 pub struct Face {
@@ -123,7 +146,7 @@ fn round(v: f32) -> i32 {
 }
 
 #[derive(Default)]
-struct Glyph {
+pub struct Glyph {
     advance: i32,
     x0: i32,
     y0: i32,
@@ -140,12 +163,47 @@ pub struct PlatFont {
     synthetic_bold: bool,
     underline_offset: i32,
     underline_thickness: i32,
+    /// U+0000..U+00FF, rendered when the font is made (as the GDI port rendered its 256 cells)
     glyphs: Vec<Glyph>,
+    /// every other code point, rendered on first use; a Box so that a reference survives the lock
+    extra: Mutex<BTreeMap<u32, Box<Glyph>>>,
+    info: FontInfo<'static>,
+    scale: f32,
     face: Vec<u8>,
     height: i32,
     bold: i32,
     italic: i32,
     scaled: Mutex<BTreeMap<i32, Box<PlatFont>>>,
+}
+
+/// The character a code point is drawn as: a stray byte or a surrogate is U+FFFD.
+fn drawn(cp: u32) -> u32 {
+    if (0xD800..=0xDFFF).contains(&cp) {
+        utf8::REPLACEMENT
+    } else {
+        cp
+    }
+}
+
+fn render(info: &FontInfo<'static>, scale: f32, synthetic_bold: bool, cp: u32) -> Glyph {
+    let mut index = info.find_glyph_index(cp as i32);
+    if index == 0 && cp >= 0x80 {
+        // no glyph: a question mark, as the GDI port drew the bytes Windows-1252 leaves undefined
+        index = info.find_glyph_index(b'?' as i32);
+    }
+    let mut g = Glyph::default();
+    let (advance, _bearing) = info.glyph_hmetrics(index);
+    g.advance = round(advance as f32 * scale) + i32::from(synthetic_bold);
+    let (x0, y0, x1, y1) = info.glyph_bitmap_box(index, scale, scale);
+    if x1 > x0 && y1 > y0 {
+        g.x0 = x0;
+        g.y0 = y0;
+        g.width = x1 - x0;
+        g.height = y1 - y0;
+        g.coverage = vec![0; g.width as usize * g.height as usize];
+        info.make_glyph_bitmap(&mut g.coverage, g.width, g.height, scale, scale, index);
+    }
+    g
 }
 
 fn create(
@@ -158,7 +216,7 @@ fn create(
     antialiased: i32,
 ) -> Option<Box<PlatFont>> {
     let face = registry.find_face(face_name, bold != 0, italic != 0)?;
-    let info = &face.info;
+    let info = face.info;
     let d = info.data;
     let units_per_em = u16_be(d, info.head as usize + 18);
     // usWinAscent / usWinDescent (OS/2), else hhea's ascender / descender
@@ -196,24 +254,10 @@ fn create(
     let thick = round(units_per_em as f32 * scale / 14.0);
     let mut glyphs: Vec<Glyph> = Vec::with_capacity(256);
     let mut max_advance = 0;
-    for c in 0..256 {
-        let mut g = Glyph::default();
-        if c >= m.first_char as i32 {
-            let index = info.find_glyph_index(codepoint_of(c as u8));
-            let (advance, _bearing) = info.glyph_hmetrics(index);
-            g.advance = round(advance as f32 * scale) + i32::from(synthetic_bold);
-            if g.advance > max_advance {
-                max_advance = g.advance;
-            }
-            let (x0, y0, x1, y1) = info.glyph_bitmap_box(index, scale, scale);
-            if x1 > x0 && y1 > y0 {
-                g.x0 = x0;
-                g.y0 = y0;
-                g.width = x1 - x0;
-                g.height = y1 - y0;
-                g.coverage = vec![0; g.width as usize * g.height as usize];
-                info.make_glyph_bitmap(&mut g.coverage, g.width, g.height, scale, scale, index);
-            }
+    for c in 0..256u32 {
+        let g = if c >= m.first_char as u32 { render(&info, scale, synthetic_bold, c) } else { Glyph::default() };
+        if g.advance > max_advance {
+            max_advance = g.advance;
         }
         glyphs.push(g);
     }
@@ -227,6 +271,9 @@ fn create(
         underline_offset: (m.descent + 1) / 2,
         underline_thickness: if thick > 0 { thick } else { 1 },
         glyphs,
+        extra: Mutex::new(BTreeMap::new()),
+        info,
+        scale,
         face: face_name.to_vec(),
         height,
         bold,
@@ -250,8 +297,21 @@ impl PlatFont {
         self.metrics
     }
 
+    /// The glyph of a code point, rendered on first use past U+00FF. The pointer stays valid while the font lives:
+    /// the extra glyphs are boxed and never removed.
+    pub fn glyph(&self, cp: u32) -> *const Glyph {
+        let cp = drawn(cp);
+        if cp < 0x100 {
+            return &self.glyphs[cp as usize];
+        }
+        let mut extra = self.extra.lock().unwrap_or_else(|e| e.into_inner());
+        let g = extra.entry(cp).or_insert_with(|| Box::new(render(&self.info, self.scale, self.synthetic_bold, cp)));
+        g.as_ref() as *const Glyph
+    }
+
     pub fn measure(&self, text: &[u8]) -> i32 {
-        text.iter().map(|&b| self.glyphs[b as usize].advance).sum()
+        // SAFETY: `glyph` gives a pointer that lives as long as `self`
+        utf8::chars(text).map(|(_, cp, _)| unsafe { (*self.glyph(cp)).advance }).sum()
     }
 
     fn scaled(&self, registry: &Registry, scale: f32) -> *const PlatFont {
@@ -381,8 +441,8 @@ pub unsafe fn draw(
     }
     let baseline = y + font.metrics.ascent;
     let mut pen = x;
-    for &b in text {
-        let g = &font.glyphs[b as usize];
+    for (_, cp, _) in utf8::chars(text) {
+        let g = &*font.glyph(cp);
         if g.width != 0 {
             draw_glyph(font, g, target, c, pen, baseline, color);
             if font.synthetic_bold {
@@ -539,6 +599,12 @@ mod tests {
         h
     }
 
+    /// The glyph the golden's cell `c` (a Windows-1252 byte of the GDI port's 256-cell table) holds.
+    fn cell(font: &PlatFont, c: usize) -> &Glyph {
+        // SAFETY: the pointer lives as long as `font`
+        unsafe { &*font.glyph(utf8::cp1252_to_codepoint(c as u8)) }
+    }
+
     fn check_font_block(label: &str, lines: &mut std::str::Lines<'_>) -> usize {
         // label "h-8_b0_i0_u0_a1"
         let v: Vec<i32> = label.split('_').map(|p| p[1..].parse().unwrap()).collect();
@@ -549,13 +615,14 @@ mod tests {
             if line.starts_with("measure ") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 assert_eq!(font.measure(b"ABCDE "), parts[1].parse::<i32>().unwrap(), "{label}");
-                assert_eq!(font.measure(&[0x80]), parts[2].parse::<i32>().unwrap(), "{label}");
+                // the golden measured the byte 0x80: the euro sign in Windows-1252
+                assert_eq!(font.measure("€".as_bytes()), parts[2].parse::<i32>().unwrap(), "{label}");
                 return count;
             }
             let p: Vec<&str> = line.split_whitespace().collect();
             assert_eq!(p[0], "g");
             let c: usize = p[1].parse().unwrap();
-            let g = &font.glyphs[c];
+            let g = cell(&font, c);
             assert_eq!(g.advance, p[2].parse::<i32>().unwrap(), "{label} advance {c}");
             assert_eq!(g.x0, p[3].parse::<i32>().unwrap(), "{label} x0 {c}");
             assert_eq!(g.y0, p[4].parse::<i32>().unwrap(), "{label} y0 {c}");
@@ -607,6 +674,39 @@ mod tests {
         assert!(glyphs >= 40, "only {glyphs} glyphs compared");
     }
 
+    #[test]
+    fn wide_of_every_byte_is_the_golden_table() {
+        // the Windows-1252 table the GDI port drew bytes with, from the C++ golden: now the conversion of old inputs
+        let line = GOLDEN.lines().find(|l| l.starts_with("wide ")).unwrap();
+        let values: Vec<u32> = line.split_whitespace().skip(1).map(|t| u32::from_str_radix(t, 16).unwrap()).collect();
+        assert_eq!(values.len(), 256);
+        for (i, &v) in values.iter().enumerate() {
+            assert_eq!(utf8::cp1252_to_codepoint(i as u8), v, "byte {i:#x}");
+        }
+    }
+
+    #[test]
+    fn text_is_measured_and_drawn_by_code_point() {
+        let f = make(-12, 0, 0, 0, 1);
+        // the same character, as a Windows-1252 byte once drew it and as UTF-8 now: the same glyph
+        let euro = cell(&f, 0x80);
+        assert_eq!(f.measure("€".as_bytes()), euro.advance);
+        assert_eq!(
+            f.measure("aé€".as_bytes()),
+            cell(&f, b'a' as usize).advance + cell(&f, 0xE9).advance + euro.advance
+        );
+        // a stray byte, a surrogate and a character the font lacks draw a question mark
+        let question = cell(&f, b'?' as usize).advance;
+        assert_eq!(f.measure(&[0xC3]), question);
+        assert_eq!(f.measure(&[0xED, 0xA0, 0x80]), 3 * question, "a surrogate's bytes are three strays");
+        assert_eq!(f.measure("\u{4E2D}".as_bytes()), question);
+        assert_eq!(f.measure("\u{81}".as_bytes()), question, "a C1 control, as the undefined byte 0x81 drew");
+        // a glyph past U+00FF is rendered once and kept
+        let a = f.glyph(0x20AC);
+        assert_eq!(f.glyph(0x20AC), a);
+        assert!(f.extra.lock().unwrap().contains_key(&0x20AC));
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn draw_case(
         text: &[u8],
@@ -646,6 +746,30 @@ mod tests {
         for (line, case) in draws.iter().zip(cases.iter()) {
             assert_eq!(format!("{:016x}", fnv(case)), hash(line), "{line}");
         }
+    }
+
+    #[test]
+    fn a_latin1_string_draws_the_same_as_its_cp1252_bytes_did() {
+        // what the GDI port drew for the bytes "caf\xe9 \x80" is what the UTF-8 text draws now
+        let font = make(-12, 0, 0, 0, 1);
+        let paint = |text: &[u8]| {
+            let mut buf = vec![0x55u8; 40 * 16 * 4];
+            let t = PlatFontTarget {
+                pixels: buf.as_mut_ptr().cast(),
+                pitch: 40 * 4,
+                width: 40,
+                height: 16,
+                flags: 0,
+                scale: 0.0,
+            };
+            unsafe { draw(&font, text, 1, 1, 0x102030, false, 0, None, &t) };
+            buf
+        };
+        let old: Vec<u8> = b"caf\xe9 \x80".iter().flat_map(|&b| utf8::from_cp1252(&[b])).collect();
+        assert_eq!(old, "café €".as_bytes());
+        let ink = paint(&old);
+        assert_ne!(ink, vec![0x55u8; 40 * 16 * 4]);
+        assert_eq!(ink, paint("café €".as_bytes()));
     }
 
     #[test]
@@ -737,6 +861,13 @@ mod tests {
         }
     }
 
+    #[test]
+    fn c_helpers() {
+        assert_eq!(unsafe { c_bytes(std::ptr::null()) }, b"");
+        assert_eq!(unsafe { c_bytes(c"hi".as_ptr()) }, b"hi");
+        assert_eq!(c_terminated(b"ab\0cd"), b"ab\0".to_vec());
+    }
+
     /// Run by hand against a dump of the C++ over the Liberation fonts:
     /// `EE_FONT_DUMP=<dump> EE_FONT_DIR=<toolchain/fonts> cargo test -p ee_plat_ui -- --ignored liberation`
     #[test]
@@ -789,7 +920,7 @@ mod tests {
                 }
                 let q: Vec<&str> = gl.split_whitespace().collect();
                 let c: usize = q[1].parse().unwrap();
-                let g = &f.glyphs[c];
+                let g = cell(&f, c);
                 assert_eq!(g.advance, q[2].parse::<i32>().unwrap(), "{} {c}", p[1]);
                 assert_eq!(g.x0, q[3].parse::<i32>().unwrap(), "{} {c}", p[1]);
                 assert_eq!(g.y0, q[4].parse::<i32>().unwrap(), "{} {c}", p[1]);

@@ -20,6 +20,12 @@ inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 254;
 }
+// port (decision D6): from 0.255 a save's strings are UTF-8; an older save's are Windows-1252 and are converted as
+// they load (USetLegacyTextLoad around the load: EEPSaveGameHeader::Load, EEGameStateLoader::LoadGame)
+inline bool EESaveTextIsUtf8(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 255;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

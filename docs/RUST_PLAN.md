@@ -44,6 +44,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R6 WON, the rest** | **Started** (`ee_won`, branch `rust-r6-won2`): the socket layer on the Rust platform layer (status names, NetStats, IPAddr, AsyncSocket's core, the ops' time left, length prefix, send and CR-LF loops; `won_ops_test`). Open: the AsyncOp / container / timer / socket-thread machinery (still C++), the LAN path (LobbyLanSocket, AuthContext, peer auth), the services (directory, routing, DB, HTTP, misc), FileReader/FileWriter, StringParser, the config objects, the lobby logic (WONLobby) and the GUI toolkit (WONGUI) |
 | **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
 | **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Then (branch `rust-r5a-handles2`): the registry is Rust (`ee_units`, a lock-free radix tree of atomic pointers, 9 tests), so any thread resolves handles; the UI portrait, the editor's undo records and selection, the camera's followed units, the improvement action, EEWorld's five containers (the stepped units, the queues, the active map, the resource users) and 12 of the AI's containers (vectors, deques and a type-keyed multimap of referenced units: their order is the elements' order) are handles; the prophet analyzers' members too (PORT_LEARNINGS "R5a.4, finished"). Open: `EECPUnitManager`'s class-keyed deques (the type reaches ~20 units through `GetUnits`/`CountUnits`), the function objects' containers (one call's life: left as pointers), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
+| D6 game text is UTF-8 | Done (branch `rust-d6-utf8`, a declared rebaseline; PORT_LEARNINGS "D6: game text is UTF-8"): `ee_plat_core::utf8` is the one text implementation (`PlatStrICmp`, the `PlatMbs*` family, the case folding, the wide conversions) on every system, the CRT and the POSIX single-byte port gone; `PlatFont` renders by code point (U+0020..U+00FF at creation, the rest on first use), `GEFontBitmap` keeps its Windows-1252 cells; `ee_ui`'s `text.rs`, SDL text input, the clipboard, WON's `StringUtil` (through `ee_won`'s `text.rs`), `PlatGUIFont`, `PlatClipboard` and the lobby's pages are UTF-8; the text compiler keeps UTF-8 in the records (the Python importer the same, retail transcoded once at load), the Language strings are UTF-8; saves are version 0.255, older saves and files without a version convert their strings from Windows-1252 on load. Sim oracle identical, the Rust gate, eedata check/cppgate, plat_test, font_test and the WON tests pass; the menus' pixels are for the lead's tours. Left: the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK), `GEFontBitmap` draws only what Windows-1252 has, `_mbs*` stubs in tools/rmap_gate, campaign archive tags are not converted |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera** (branch `rust-r5a-snap`; PORT_LEARNINGS "R5a.3", with the measured read table): FrameStarting under the existing read lock is the capture (`ee/EERenderSnapshot.h`, the render lists, the effects' `Queue`); after it the render phase reads no unit, player or physics state, and the unit picker holds ids, so the graphics thread takes no unit references. Left: the effects' own state (stepped by the tick while drawn), the terrain mesh's heights, the see-through flags written in the capture, the UI's CopyData. Sim oracle identical; no tour run |
 
 
@@ -239,13 +240,16 @@ commit, with a statistical gate (`sim_bench.py`, `ai_scorecard.py`) and new refe
 
 ### 2.3 Text
 
-`UString` is Windows-1252 bytes; CJK and the encoding decision are open (PORT.md step 6). Until that decision, Rust
-treats game text as bytes (`&[u8]`/`Vec<u8>`, or a `GameStr` newtype) and converts at the platform edge, which SDL3
-already does in UTF-8. Do not map `UString` to Rust `String`.
+`UString`, `UWideString` and the records' `char[]` fields hold UTF-8 (decision D6, done on branch `rust-d6-utf8`;
+PORT_LEARNINGS "D6: game text is UTF-8"). Rust keeps game text as bytes (`&[u8]`/`Vec<u8>`): a stray byte is one
+character of its own (`ee_plat_core::utf8`), so a `String` would refuse what the game must carry. Characters are code
+points everywhere a character is counted (`PlatMbs*`, the UI's stepping and wrapping, the fonts' glyphs); old
+Windows-1252 inputs (saves before 0.255, files without a version) are converted where they enter.
 
-WON's text is different: `GUIString` and `wchar_t` in memory, cp1252 at the platform calls, and UTF-16 LE code units
+WON's text is different: `GUIString` and `wchar_t` in memory, UTF-8 at the platform calls, and UTF-16 LE code units
 on the wire and in WON's files (`wchar_t` is 4 bytes on Linux and macOS, which is why `WideAppendUtf16LE` exists).
-Rust keeps those as `u16` units until they reach a display, because a name from the wire need not be valid UTF-16.
+Rust keeps those as `u16` units until they reach a display, because a name from the wire need not be valid UTF-16;
+the game's bytes meet them in `ee_won`'s `text.rs` (`StringUtil.cpp`).
 
 ### 2.4 Observability
 
@@ -535,8 +539,8 @@ Pre-work, whichever way D8 goes:
   files and in saves; Windows-1252 survives only as an import conversion for old inputs. It is a game change, done as
   its own track, not mixed into a port: the data converters write UTF-8, `UString` holds UTF-8, PlatFont and the
   text layout work in code points, saves get a version gate (older saves converted on load), and WON's UTF-16 wire
-  strings convert at the wire. Until that track lands, ported Rust keeps game text as bytes behind one text module,
-  so that the switch is a change in one place.
+  strings convert at the wire. **Done** (branch `rust-d6-utf8`, the Progress row "D6"; PORT_LEARNINGS "D6: game text
+  is UTF-8"): ported Rust keeps game text as bytes, now UTF-8 behind `ee_plat_core::utf8`.
 - **D7. Lockstep across systems:** with `-ffp-contract` unset, arm64 may already disagree with x86-64. Decide
   whether cross-system multiplayer is a goal; if so, set `-ffp-contract=off` now and add a Mac-vs-Windows sim trace
   comparison.

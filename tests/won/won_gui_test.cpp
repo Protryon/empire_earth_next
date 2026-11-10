@@ -181,7 +181,7 @@ int main(int argc, char** argv)
     theText->AddSegment("Underlined: ", 0);
     theText->AddSegment("www.example.com", 0x0000FF, theManager->GetDefaultFontMod(FontStyle_Underline));
     theText->LineBreak();
-    theText->AddSegment("Accents: \xE9t\xE9, na\xEFve, \x80 100");
+    theText->AddSegment("Accents: \xC3\xA9t\xC3\xA9, na\xC3\xAFve, \xE2\x82\xAC 100");   // UTF-8, the game's text (decision D6)
     theText->LineBreak();
     theRoot->AddChild(theText);
 

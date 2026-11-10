@@ -2504,6 +2504,12 @@ struct EeUiSliderFields {
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
+/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
 /// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
 struct EeWonMd5 {
   uint32_t state[4];
@@ -2520,9 +2526,6 @@ struct EeWonBlowfish {
   uint32_t key_len;
   uint32_t valid;
 };
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// An auth block's header and validity.
 struct EeWonAuthHeader {
@@ -6618,6 +6621,28 @@ void ee_won_utf16_from_wide(const void *wide,
                             size_t count,
                             EeWonUnitSink sink,
                             void *context);
+
+/// The game's text (UTF-8 bytes, decision D6) as `wchar_t` text (`wchar_size` 2: UTF-16 units; 4: code points),
+/// given to the sink once (`StringToWString`). A stray byte becomes U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `text` holds `length` bytes; the sink is called with `count` characters of `wchar_size` bytes.
+void ee_won_wide_from_utf8(const uint8_t *text,
+                           size_t length,
+                           uint32_t wchar_size,
+                           EeWonWideSink sink,
+                           void *context);
+
+/// `wchar_t` text as the game's text (UTF-8), given to the sink once (`WStringToString`). A lone surrogate becomes
+/// U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes.
+void ee_won_utf8_from_wide(const void *wide,
+                           uint32_t wchar_size,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
 uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);

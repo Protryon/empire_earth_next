@@ -215,7 +215,7 @@ Steps:
       **Done for Western text (branch xgame, 2026-11-05)**: no IMM call is left; the edit box shows the composition
       from TEXT_EDITING (SDL_HINT_IME_IMPLEMENTED_UI "composition"), the committed text is the result string, the
       system draws the candidate list, PlatTextInputCancel replaces CPS_CANCEL, the clipboard goes through
-      PlatClipboard*. CJK: not done (text is Windows-1252 through the window layer; the encoding decision is open),
+      PlatClipboard*. CJK input reaches the game as UTF-8 (decision D6, docs/RUST_PLAN.md; the built-in fonts have no CJK glyphs),
       and the IME paths are not exercised by the harness (no IME on the VM).
    7. **The POSIX game**: `xbuild.py game --target linux-x86_64|macos-arm64` links every unit with src/Platform/Posix,
       SDL and Common, SDL3 and wgpu (a macOS .app bundle: Contents/Resources is the data root); the platform

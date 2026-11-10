@@ -534,7 +534,7 @@ public:
     // 0xd14a9 (inline)
     std::string ToString(const std::wstring& inString)
     {
-        int theSize = inString.length() * 2 + 1;
+        int theSize = inString.length() * 4 + 1;   // UTF-8 (decision D6): up to four bytes a character
         if (theSize == 0)
             return std::string();
         char* theBuffer = new char[theSize];

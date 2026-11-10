@@ -1,5 +1,5 @@
 //! A multi-line `UITextLabel`'s word wrapping (was `UITextLabel::ReadWord`, `ReadLine` and the line loop of
-//! `SetText`): Windows-1252 (or the running code page's multibyte) bytes cut into lines that fit the text rectangle,
+//! `SetText`): UTF-8 bytes (decision D6; characters are code points) cut into lines that fit the text rectangle,
 //! by whole words, an over-wide first word cut by width.
 //!
 //! Text is bytes with a NUL terminator, stepped through the C runtime's multibyte functions ([`Mbcs`]), as the C++
@@ -356,5 +356,34 @@ mod tests {
         // two bytes, two units, per character; 5 wide: two characters fit
         split_lines(&DoubleByte, &mut |w: &[u8]| w.len() as f32, &t, 5.0, &mut |l: &[u8]| got.push(l.to_vec()));
         assert_eq!(got, [b"\x82\xa0\x82\xa2".to_vec(), b"\x82\xa4".to_vec()]);
+    }
+
+    #[test]
+    fn utf8_words_wrap_by_code_point() {
+        // one unit a character: the widths count code points, so a line holds as many accented letters as ASCII ones
+        let chars = |w: &[u8]| crate::text::char_len(&Platform, &terminated(w)) as f32;
+        let t = terminated("ab é€ 😀x\u{a0}y z".as_bytes());
+        let (count, word) = read_word(&Platform, &t);
+        assert_eq!((count, word), (3, b"ab ".to_vec()));
+        let (count, word) = read_word(&Platform, &t[3..]);
+        assert_eq!((count, word), (3, "é€ ".as_bytes().to_vec()), "three characters, six bytes");
+        // the lines are those of the same text in ASCII (one letter for each character, the spaces kept) on a
+        // single-byte page: the wrap counts code points
+        let ascii: Vec<u8> = "ab é€ 😀x\u{a0}y z".chars().map(|c| if c == ' ' { b' ' } else { b'q' }).collect();
+        for width in [3.0, 5.0, 6.0, 9.0] {
+            let (mut got, mut want) = (Vec::new(), Vec::new());
+            split_lines(&Platform, &mut |w: &[u8]| chars(w), &t, width, &mut |l: &[u8]| got.push(l.to_vec()));
+            split_lines(&SingleByte, &mut |w: &[u8]| w.len() as f32, &terminated(&ascii), width, &mut |l: &[u8]| {
+                want.push(l.len())
+            });
+            let got_chars: Vec<usize> = got.iter().map(|l| std::str::from_utf8(l).unwrap().chars().count()).collect();
+            assert_eq!(got_chars, want, "width {width}: {got:?}");
+        }
+        // an over-wide word is cut between characters, never inside one
+        let mut got = Vec::new();
+        let t = terminated("éééééé".as_bytes());
+        split_lines(&Platform, &mut |w: &[u8]| chars(w), &t, 4.0, &mut |l: &[u8]| got.push(l.to_vec()));
+        assert!(got.iter().all(|l| std::str::from_utf8(l).is_ok()), "{got:?}");
+        assert_eq!(got.concat(), "éééééé".as_bytes());
     }
 }

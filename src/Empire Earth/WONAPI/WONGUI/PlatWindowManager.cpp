@@ -416,16 +416,16 @@ void PlatWindowManager::HandlePlatEvent(const PlatInputEvent& inEvent)
         this->HandleKey(inEvent);
         break;
     case PLAT_EVENT_TEXT: {
-        // WM_CHAR: one character event per byte of the committed text
+        // WM_CHAR: one character event per character of the committed text (UTF-8, decision D6; a character past
+        // U+FFFF is two events on Windows, its UTF-16 units, as WM_CHAR delivered them)
         PlatGUIWindow* theTarget = this->mPlatFocusWindow;
         if (theTarget == NULL)
             break;
         int theMod = KeyModFromPlat(PlatModifiers());
-        for (const char* p = inEvent.mText.mText; *p != 0; p++) {
-            wchar_t theChar = 0;
-            if (PlatCp1252ToWide(p, 1, &theChar, 1) == 1)
-                theTarget->QueueEvent(new KeyEvent(InputEvent_KeyChar, (int)theChar, theMod));
-        }
+        wchar_t theWide[64];
+        uint32_t theCount = PlatUtf8ToWide(inEvent.mText.mText, PLAT_TEXT_TERMINATED, theWide, 64);
+        for (uint32_t i = 0; i < theCount; i++)
+            theTarget->QueueEvent(new KeyEvent(InputEvent_KeyChar, (int)theWide[i], theMod));
         break;
     }
     case PLAT_EVENT_FOCUS_GAINED:
@@ -663,7 +663,7 @@ void PlatWindowManager::Composite()
             const PlatFont* theFont = PlatFontScaled(this->GetCaptionFont(), k);
             if (theFont != NULL && cw > 4) {
                 std::wstring theWide = w->mTitle;
-                std::string theTitle = PlatGUIToCp1252(theWide.c_str(), (unsigned short)theWide.size());
+                std::string theTitle = PlatGUIToUtf8(theWide.c_str(), (unsigned short)theWide.size());
                 PlatFontMetrics theMetrics;
                 PlatFontGetMetrics(theFont, &theMetrics);
                 PlatFontTarget theTarget;
