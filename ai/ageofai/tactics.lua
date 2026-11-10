@@ -327,7 +327,8 @@ function M.counterfire(mem, events, now)
             local cands, str, on = {}, 0, 0
             local cols = ai.get(own, {"hp", "attack", "inside", "x", "y", "target"})
             for k = 1, #own do
-                if cols.hp[k] ~= nil and cols.inside[k] == nil then
+                -- [skirmish.c] the spotter is left alone (an attack order would give it away)
+                if cols.hp[k] ~= nil and cols.inside[k] == nil and own[k] ~= mem.sk_spotter then
                     local hits = false
                     for _, c in ipairs(cluster) do
                         if cols.target[k] == c then

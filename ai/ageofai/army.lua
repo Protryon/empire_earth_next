@@ -28,6 +28,9 @@ local S = require("ageofai.settings")
 local T = require("ageofai.tactics")
 local NV = require("ageofai.navy")
 local AT = require("ageofai.attack")   -- [attack.c] the weak spots, the breaches, the objective
+local MS = require("ageofai.mass")     -- [mass.c] the army as one: the reinforcements' rally, the wait, the tether
+local DT = require("ageofai.detach")   -- [armies.c det] the detachments, the raiders, the riders' look, the sites
+local SK = require("ageofai.skirmish") -- [skirmish.c] the sharpshooters' sorties, the spotter
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -299,6 +302,7 @@ local function go_home(view, memory, mem, force, why)
     mem.losing = 0
     mem.out_hp = 0
     mem.raid_x, mem.raid_y = -1, -1
+    mem.back_t = view.time   -- [armies.c det] the force came home: a site asked of it waits AR_DET_PAUSE
 end
 
 -- the force's hit points now
@@ -326,19 +330,18 @@ local function force_step(view, memory, mem, order)
             force = G.create(memory, {task = "defend", role = "force", x = hx, y = hy, radius = S.ar_home_r,
                                       home_x = hx, home_y = hy})
         end
-        if mem.out then
-            -- trained while the force is out: they gather at home (a defend group of their own that is folded in)
-            local wait = G.role(memory, "wait")
-            if wait == nil then
-                wait = G.create(memory, {task = "defend", role = "wait", x = hx, y = hy, radius = S.ar_home_r})
-            end
-            G.add(memory, wait, free)
-        else
+        if not mem.out then
             G.add(memory, force, free)
         end
     end
     if force == nil then
         return
+    end
+    mem.home_x, mem.home_y = hx, hy
+    if mem.out then
+        -- [mass.c] trained while the force is out: they gather at home (a defend group of their own that is folded
+        -- in); with army_mass GATHER at the rally by the towers, released together as a group
+        MS.gather(view, memory, mem, force, G.role(memory, "wait"), free)
     end
     local wait = G.role(memory, "wait")
     if wait ~= nil and not mem.out then
@@ -444,6 +447,25 @@ local function force_step(view, memory, mem, order)
         end
         return
     end
+    -- [skirmish.c] THE BAIT: the party's chasers near home - the force goes at them as at a raid (home again when
+    -- they are cleared)
+    local bait = SK.bait(mem, now)
+    if bait ~= nil then
+        force.task = "attack"
+        force.target = 0
+        force.x, force.y = bait.x, bait.y
+        force.way_t = 0
+        force.aims = {}
+        mem.out = true
+        mem.raid_x, mem.raid_y = bait.x, bait.y
+        mem.out_hp = force_hp(force)
+        mem.losing = 0
+        mem.raids = (mem.raids or 0) + 1
+        print(string.format("force bait_answer at=%d,%d n=%d own=%d", bait.x, bait.y, bait.n, own))
+        ai.move(force.units, bait.x, bait.y, {forced = false, formation = true})
+        force.way_t = now
+        return
+    end
     -- at home: a raid answered (an enemy band at an own building within reach)
     if now - (mem.raid_t or 0) >= 4000 then
         mem.raid_t = now
@@ -501,17 +523,32 @@ local function force_step(view, memory, mem, order)
             force.way_t = 0
         end
     end
+    -- [armies.c det] THE SITES' MEMORY: a defended mine (a detachment failed at it, or towers cover it) is the
+    -- force's without waiting for the attack time (ar_site_asked): AR_DET_MIN at home, asked every 30 s, AR_DET_PAUSE
+    -- after the force came home
+    local asked = nil
+    if S.mine_raids and #force.units >= 30 and now - (mem.ask_t or 0) >= 30000 and now - (mem.back_t or 0) >= 180000 then
+        mem.ask_t = now
+        asked = DT.site_asked(view, mem, hx, hy)
+    end
     -- the push at the attack time: the enemy building known nearest home, when the force beats what is there
-    if now >= mem.next_attack and #force.units >= S.ar_min_launch then
-        local target = nearest_building(hx, hy, 200)
+    if asked ~= nil or (now >= mem.next_attack and #force.units >= S.ar_min_launch) then
+        local target = asked or nearest_building(hx, hy, 200)
         if target == nil then
             mem.next_attack = now + 60000   -- nothing known yet: the scouts first
+            return
+        end
+        -- [mass.c] WAIT: the land army against the strongest enemy army known; the attack time moved on while weaker
+        if asked == nil and MS.wait(view, mem, ai.strength(ai.units{category = "soldier"})) then
+            mem.next_attack = now + 20000
             return
         end
         local ok, foe = beats(own, target.x, target.y, S.ar_go_pct)
         if not ok then
             mem.waits = (mem.waits or 0) + 1
             mem.next_attack = now + 30000   -- the force grows; asked again in 30 s
+            -- [skirmish.c] the target found too strong: the skirmishers' position (a->strong)
+            mem.strong_x, mem.strong_y, mem.strong_t = target.x, target.y, now
             if mem.waits % 10 == 1 then
                 print(string.format("force wait own=%d foe=%d at=%d,%d", own, foe, target.x, target.y))
             end
@@ -691,6 +728,16 @@ function M.step(view, memory, orders, budget, events)
     muster(view, memory, mem)
     if not mem.mustering then
         force_step(view, memory, mem, order)
+    end
+    -- [armies.c det, skirmish.c, mass.c] after the force: the detachments and the raiders, the skirmishers' party
+    -- and spotter (the shooters' spots from this step's attacked events), the tether and the summary
+    SK.note_hits(mem, events, view.time)
+    if not mem.mustering then
+        local force = G.role(memory, "force")
+        DT.step(view, memory, mem, force, order, budget)
+        SK.step(view, memory, mem, force, order)
+        MS.tether(view, mem, force)
+        MS.report(view, memory, mem, force)
     end
     scouts(view, memory, mem)
     NV.step(view, memory, orders, budget, G.role(memory, "force"))

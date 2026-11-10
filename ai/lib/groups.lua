@@ -146,6 +146,9 @@ function M.create(mem, opts)
         x = opts.x or -1, y = opts.y or -1, radius = opts.radius or 0, target = opts.target or 0,
         state = "forming", state_t = ai.time(), way_x = -1, way_y = -1, way_t = 0, created = ai.time(),
         lost = 0, started = 0, home_x = opts.home_x or -1, home_y = opts.home_y or -1,
+        -- [armies.c det, skirmish.c] a manual group: the module orders its members itself; the lib only keeps the
+        -- list (drops the dead, the centre and the strength)
+        manual = opts.manual == true,
     }
     mem.groups[id] = g
     if opts.units ~= nil and #opts.units > 0 then
@@ -475,8 +478,18 @@ local function fight(g, recs, cands)
             -- a ram takes no building while an enemy soldier guards it within 5 tiles (helpless against soldiers)
             local ram = string.find(u.type or "", "ram", 1, true) ~= nil and u.category == "soldier"
             local reach = (u.range or 0) // 100 + 3
+            -- [mass.c] TETHER (g.tether, the pack at g.tether_x/y; army_mass 16): no target more than tether tiles
+            -- from the pack unless within the unit's own range + 2; 128: buildings only
+            local tether = g.tether
+            local treach = (u.range or 0) // 100 + 2
             for _, c in ipairs(cands) do
                 local skip = c.u.category == "air" and d2(u.x, u.y, c.u.x, c.u.y) > reach * reach
+                if not skip and tether ~= nil and (not g.tether_buildings or c.kind == "building" or c.kind == "tower" or c.kind == "wall")
+                        and d2(c.u.x, c.u.y, g.tether_x, g.tether_y) > tether * tether
+                        and d2(c.u.x, c.u.y, u.x, u.y) > treach * treach then
+                    skip = true
+                    g.tethered = (g.tethered or 0) + 1
+                end
                 if not skip and ram and (c.kind == "building" or c.kind == "tower" or c.kind == "wall") then
                     for _, s in ipairs(cands) do
                         if s.kind == "soldier" and d2(s.u.x, s.u.y, c.u.x, c.u.y) <= 25 then
@@ -727,6 +740,9 @@ local function group_step(g, view, mem)
         return   -- every unit is carried or garrisoned
     end
     g.cx, g.cy, g.strength = cx, cy, str
+    if g.manual then
+        return   -- [armies.c det, skirmish.c] its module orders it
+    end
     if g.task == "scout" then
         scout_step(g, recs, cx, cy, view)
         return

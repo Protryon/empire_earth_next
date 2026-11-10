@@ -155,4 +155,22 @@ return {
                                     -- llm_constrained=1: once in 3 minutes, a quarter of each resource) made a rule
     -- stance_lines ("yours"): the game's stance line - not applicable (the trace's `diplo stance` stands in);
     -- [general] auto_victory: the game's own end - not applicable
+    -- mass.c, armies.c (detachments), skirmish.c
+    -- army_mass: the parts as bits (upstream's list: rally 1, wait_stronger 2, only_fighting 8, tether 16,
+    -- walk_back 32, to_pack 64, only_buildings 128; 4 was retreat, removed). Upstream: empty (0): rally lost fewer
+    -- and killed more head-to-head and against the base AI without the cheat, but killed fewer against the cheating
+    -- base AI (docs/economy.md "The army as one"). Only with an enemy town known on the own continent.
+    army_mass = 0,
+    army_mass_group = 5,            -- the held reinforcements go together once this many wait ...
+    army_mass_hold = 120,           -- ... or 3 after this many seconds, any after twice that
+    army_mass_ratio = 130,          -- wait_stronger: the push waits while the land army is under this percent of the
+                                    -- strongest enemy army known ...
+    army_mass_wait = 10,            -- ... for this many minutes at most
+    army_mass_tether = 12,          -- tether: no target more than this many tiles from the pack
+    -- mine_raids (above, towns' bit 512) switches armies.c's detachments on: MINE RAIDS, HIT AND RUN, THE RAIDERS,
+    -- THE RIDERS' LOOK and THE SITES' MEMORY (detach.lua; off upstream). Their numbers are upstream's defines
+    -- (AR_DET_SIZE 20, AR_DET_MIN 30, AR_DET_PAUSE 3 min, AR_DET_HOLD 15 min, AR_HIT_SIZE 12, AR_HIT_MIN 10 ...).
+    -- skirmish: SK_ON's bits (1 the party, 2 the spotter); 0 upstream ("off until measured": level on the save
+    -- "choke wolf" and on the wall test). Its numbers are upstream's defines (SK_N 8, SK_MIN 3, SK_RANGE 7 ...).
+    skirmish = 0,
 }
