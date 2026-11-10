@@ -299,6 +299,81 @@ function M.counterfire(mem, events, now)
     end
 end
 
+-- ---------------------------------------------------------------------------------------------------------------
+-- Tower bait (early.c tower_bait, the playtester's opening; here in every epoch): a citizen hit by a seen enemy
+-- soldier, and the citizens within 6 tiles of the attacker, walk to the spot 2 tiles behind the nearest own tower or
+-- town centre within 25 tiles (from the attacker), where the raiders that follow come under fire. They are the
+-- script's for 40 s (the runners would send them straight back), then released idle.
+
+function M.bait(mem, events, now, epoch)
+    if not S.tower_bait or (epoch or 0) > S.tower_bait_epoch then
+        return
+    end
+    mem.bait = mem.bait or {}
+    -- release those whose time is up
+    local release = {}
+    for _, id in ipairs(ai.keys(mem.bait)) do
+        if mem.bait[id] <= now then
+            release[#release + 1] = id
+            mem.bait[id] = nil
+        end
+    end
+    if #release > 0 then
+        ai.release(release)
+    end
+    local attackers = {}
+    for _, e in ipairs(events) do
+        if e.kind == "attacked" and e.attacker ~= nil then
+            local v = ai.unit(e.unit)
+            local a = ai.unit(e.attacker)
+            if v ~= nil and a ~= nil and v.category == "citizen" and a.category == "soldier" and a.player ~= v.player then
+                attackers[a.id] = a
+            end
+        end
+    end
+    for _, aid in ipairs(ai.keys(attackers)) do
+        local a = attackers[aid]
+        -- the citizens hit (upstream: with a soldier within 5 tiles or attacking it), not every citizen near
+        local pick = {}
+        for _, e in ipairs(events) do
+            if e.kind == "attacked" and e.attacker == aid and mem.bait[e.unit] == nil then
+                local v = ai.unit(e.unit)
+                if v ~= nil and v.category == "citizen" then
+                    pick[#pick + 1] = e.unit
+                    mem.bait[e.unit] = now   -- marked below
+                end
+            end
+        end
+        if #pick > 0 then
+            -- the nearest own tower or town centre to the attacker
+            local best, bd = nil, nil
+            for _, id in ipairs(ai.units{category = "building", armed = true, built = true, near = {a.x, a.y, 25}}) do
+                local b = ai.unit(id)
+                if b ~= nil then
+                    local d = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)
+                    if bd == nil or d < bd then
+                        best, bd = b, d
+                    end
+                end
+            end
+            if best ~= nil then
+                local dx, dy = best.x - a.x, best.y - a.y
+                local len = math.max(math.abs(dx), math.abs(dy), 1)
+                local tx, ty = best.x + dx * 2 // len, best.y + dy * 2 // len
+                ai.move(pick, tx, ty, {forced = true})
+                for _, id in ipairs(pick) do
+                    mem.bait[id] = now + 25000
+                end
+                mem.baits = (mem.baits or 0) + #pick
+            else
+                for _, id in ipairs(pick) do
+                    mem.bait[id] = nil
+                end
+            end
+        end
+    end
+end
+
 -- whether a unit is committed to a counter-fire sortie (the force's orders leave it alone)
 function M.committed(mem, id, now)
     return mem.cf ~= nil and mem.cf[id] ~= nil and mem.cf[id] > now
