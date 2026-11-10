@@ -10,8 +10,10 @@ pub mod button_variants;
 pub mod combo;
 pub mod controls_table;
 pub mod edit;
+pub mod font;
 pub mod form;
 pub mod form_state;
+pub mod hotkey;
 pub mod layout;
 pub mod list;
 pub mod manager;
@@ -42,6 +44,12 @@ mod form_ffi;
 // imports the C++ form's lists, members and calls (UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod form_state_ffi;
+// imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
+#[cfg(not(test))]
+mod font_ffi;
+// imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod hotkey_ffi;
 mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]

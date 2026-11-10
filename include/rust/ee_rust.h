@@ -506,6 +506,18 @@ constexpr static const long ERROR_OK = 0;
 
 constexpr static const long ERROR_FAILED = 9;
 
+/// `kFontStyleBold`, `kFontStyleItalic`, `kFontStyleUnderline`, `kFontStyleShadow`.
+constexpr static const unsigned long STYLE_BOLD = 1;
+
+constexpr static const unsigned long STYLE_ITALIC = 2;
+
+constexpr static const unsigned long STYLE_UNDERLINE = 4;
+
+constexpr static const unsigned long STYLE_SHADOW = 16;
+
+/// The screen's `LOGPIXELSY` as the game saw it (a DPI-unaware process): fonts are sized in game pixels.
+constexpr static const int64_t LOG_PIXELS_Y = 96;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
 
@@ -3269,6 +3281,32 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
+};
+
+/// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
+/// and size.
+struct EeUiFontEntry {
+  bool present;
+  unsigned long string_id;
+  unsigned long style;
+  unsigned long quality;
+  unsigned long size;
+};
+
+/// `UIDbDataFonts`: one font record of the UI database (0x80 bytes on every target).
+struct EeUiDbFont {
+  /// Empty: no font.
+  char font_name[108];
+  /// The face name's string-table ID.
+  uint32_t string_id;
+  uint32_t size;
+  uint32_t quality;
+  uint8_t bold;
+  uint8_t italic;
+  uint8_t underline;
+  uint8_t style10;
+  uint8_t style08;
+  char pad[3];
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -7751,6 +7789,39 @@ void ee_ui_form_set_all_controls_dirty(void *form);
 
 /// `UIForm::GetToolTipShadowRectangle(rect, out)`.
 EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
+
+/// `UIFontTable::Create`'s reading of one font record.
+EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
+
+/// `UIFontTable::CreateClosestFont`'s point size for a pixel height.
+long ee_ui_font_closest_size(unsigned long pixel_height);
+
+/// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
+size_t ee_ui_font_find_or_create(const void *query);
+
+/// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
+unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
+
+/// `UIHotKeySorter::operator()`.
+bool ee_ui_hotkey_before(bool left_always,
+                         unsigned long left_keys,
+                         bool right_always,
+                         unsigned long right_keys);
+
+/// `UIHotKey::GetHotKeyName`: the modifiers' names (NULL: no modifier) and the key's, as C strings -> the name in
+/// `out` (`capacity` bytes, NUL-terminated); returns its length. The C++ sizes `out` from the names' lengths.
+size_t ee_ui_hotkey_name(const char *m0,
+                         const char *m1,
+                         const char *m2,
+                         const char *key,
+                         uint8_t *out,
+                         size_t capacity);
+
+/// `UIHotKey::FireEvents` -> whether an event fired.
+bool ee_ui_hotkey_fire_events(void *key);
+
+/// `UIForm::UpdateKeyboard` -> its result.
+long ee_ui_form_update_keyboard(void *form);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);

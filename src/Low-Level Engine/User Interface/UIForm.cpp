@@ -66,11 +66,8 @@ public:
     virtual ~UIHotKeySorter() {}
     bool operator()(UIHotKey* const& inLeft, UIHotKey* const& inRight) const
     {
-        if (inLeft->GetAlwaysFire() && !inRight->GetAlwaysFire())
-            return false;
-        if (inRight->GetAlwaysFire() && !inLeft->GetAlwaysFire())
-            return true;
-        return inLeft->GetKeyCount() < inRight->GetKeyCount() ? true : false;
+        return ee_ui_hotkey_before(inLeft->GetAlwaysFire(), inLeft->GetKeyCount(), inRight->GetAlwaysFire(),
+                                   inRight->GetKeyCount());
     }
 };
 
@@ -224,6 +221,43 @@ struct UIFormRust {
     static float& FadeOpacity(void* inForm) { return Form(inForm)->mFadeOpacity; }
     static GERectangle& CopiedPopupRectangle(void* inForm) { return Form(inForm)->mCopiedPopupRectangle; }
     static UIControl*& DrawControl(void* inForm, long inIndex) { return Form(inForm)->mDrawControls[inIndex]; }
+    static std::vector<std::vector<UIHotKey*> >& HotKeys(void* inForm) { return Form(inForm)->mHotKeys; }
+    static unsigned long KeyboardValue(void* inForm, int inWhich, unsigned long inGroup)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inWhich) {
+        case 0:
+            return theForm->mKeyboardCaptured != NULL;
+        case 1:
+            return theForm->mKeyboardCaptured->GetIMEEnabled();
+        case 2:
+            return (unsigned long)theForm->mHotKeys.size();
+        case 3:
+            return (unsigned long)theForm->mHotKeys[inGroup].size();
+        default:
+            return theForm->mTabbingOn;
+        }
+    }
+    static long KeyboardCall(void* inForm, int inCall)
+    {
+        UIForm* theForm = Form(inForm);
+        switch (inCall) {
+        case 0:
+            return UIForm::sTabKey->JustPressed();
+        case 1:
+            return UIForm::sShiftKey->GetValue();
+        case 2:
+            theForm->ShiftTab();
+            return 0;
+        case 3:
+            theForm->Tab();
+            return 0;
+        case 4:
+            return theForm->mKeyboardCaptured->UpdateKeyboard();
+        default:
+            return theForm->mControls[theForm->mTabStop]->UpdateKeyboard();
+        }
+    }
 };
 
 // FUNCTION: LLE 0x1007072c
@@ -1668,52 +1702,25 @@ void UIForm::UpdateHelpText(bool inForce)
     }
 }
 
+// UIForm's keyboard pass (ee_ui hotkey.rs)
+extern "C" unsigned long ee_uicpp_form_keyboard_value(void* inForm, int inWhich, unsigned long inGroup)
+{
+    return UIFormRust::KeyboardValue(inForm, inWhich, inGroup);
+}
+extern "C" void* ee_uicpp_form_keyboard_hot_key(void* inForm, unsigned long inGroup, unsigned long inIndex)
+{
+    return UIFormRust::HotKeys(inForm)[inGroup][inIndex];
+}
+extern "C" bool ee_uicpp_form_keyboard_always_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->GetAlwaysFire(); }
+extern "C" bool ee_uicpp_form_keyboard_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->FireEvents(); }
+extern "C" long ee_uicpp_form_keyboard_call(void* inForm, int inCall) { return UIFormRust::KeyboardCall(inForm, inCall); }
+
 // FUNCTION: LLE 0x10073cfa
 // Fires hot keys (higher groups first; one non-always-fire key per frame), then Tab/Shift+Tab, else passes the
 // keyboard to the capturing control or the tab stop
 long UIForm::UpdateKeyboard()
 {
-    long theResult = kErrorOK;
-    std::vector<unsigned char> theGroupFired;
-    bool theFired = false;
-    bool theSkipGroup = false;
-    bool theHandled = false;
-    theGroupFired.resize(this->mHotKeys.size(), 0);
-    if (this->mKeyboardCaptured == NULL || !this->mKeyboardCaptured->GetIMEEnabled()) {
-        for (long i = this->mHotKeys.size() - 1; i >= 0; i--) {
-            theGroupFired[i] = 0;
-            if (i != this->mHotKeys.size() - 1 && (theSkipGroup || theGroupFired[i + 1]))
-                theSkipGroup = true;
-            else
-                theSkipGroup = false;
-            for (long j = this->mHotKeys[i].size() - 1; j >= 0 && !theSkipGroup; j--) {
-                UIHotKey* theHotKey = this->mHotKeys[i][j];
-                if ((theFired && !theHotKey->GetAlwaysFire()) || !theHotKey->FireEvents())
-                    continue;
-                theGroupFired[i] = 1;
-                if (!theHotKey->GetAlwaysFire())
-                    theFired = true;
-            }
-        }
-        if (theFired)
-            theHandled = true;
-        else if (this->mTabbingOn) {
-            if (UIForm::sTabKey->JustPressed() && UIForm::sShiftKey->GetValue()) {
-                this->ShiftTab();
-                theHandled = true;
-            } else if (UIForm::sTabKey->JustPressed()) {
-                this->Tab();
-                theHandled = true;
-            }
-        }
-    }
-    if (!theHandled) {
-        if (this->mKeyboardCaptured)
-            theResult = this->mKeyboardCaptured->UpdateKeyboard();
-        else if (this->mTabbingOn)
-            theResult = this->mControls[this->mTabStop]->UpdateKeyboard();
-    }
-    return theResult;
+    return ee_ui_form_update_keyboard(this);
 }
 
 // FUNCTION: LLE 0x10073efa

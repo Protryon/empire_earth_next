@@ -6,7 +6,9 @@
 // vector-delete helper COMDAT last. The inline members are emitted by UIEMouseWheelScroll.cpp (0x1006e075..).
 // UIIMECandidate.cpp's key chains start at 0x100774b9.
 #include <windows.h>
+#include <string.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
 #include "lle/Input System.h"
@@ -95,34 +97,26 @@ void UIHotKey::DeleteHotKeys()
 // Counts the key and modifiers the hot key uses
 void UIHotKey::CalculateKeyCount()
 {
-    this->mKeyCount = 0;
-    if (this->mKey)
-        this->mKeyCount = 1;
-    for (long i = 0; i < 3; i++) {
-        if (this->mModifiers[i])
-            this->mKeyCount++;
-    }
+    this->mKeyCount = ee_ui_hotkey_key_count(this->mKey != NULL, this->mModifiers[0] != NULL, this->mModifiers[1] != NULL,
+                                             this->mModifiers[2] != NULL);
 }
 
 // FUNCTION: LLE 0x1007713f
 // Builds the hot key's display name, e.g. "Ctrl + Shift + A" (key names without " key")
 void UIHotKey::GetHotKeyName(UWideString& outName)
 {
-    UString theModifierNames[3];
-    UString theKeyName;
-    UString theName;
+    const char* theNames[3];
+    unsigned long theLength = 1;
     for (long i = 0; i < 3; i++) {
-        if (this->mModifiers[i]) {
-            theModifierNames[i] = this->mModifiers[i]->GetName();
-            theModifierNames[i] = theModifierNames[i].GetSubstring(0, theModifierNames[i].Find(" key", 0));
-            theModifierNames[i] += " + ";
-        } else
-            theModifierNames[i] = "";
+        theNames[i] = this->mModifiers[i] ? (const char*)this->mModifiers[i]->GetName() : NULL;
+        if (theNames[i])
+            theLength += strlen(theNames[i]) + 3;
     }
-    theKeyName = this->mKey->GetName();
-    theKeyName = theKeyName.GetSubstring(0, theKeyName.Find(" key", 0));
-    theName = theModifierNames[0] + theModifierNames[1] + theModifierNames[2] + theKeyName;
-    outName = theName;
+    const char* theKey = this->mKey->GetName();
+    theLength += strlen(theKey);
+    std::vector<unsigned char> theName(theLength);
+    ee_ui_hotkey_name(theNames[0], theNames[1], theNames[2], theKey, &theName[0], theName.size());
+    outName = (const char*)&theName[0];
 }
 
 // FUNCTION: LLE 0x100772bf
@@ -194,32 +188,69 @@ void UIHotKey::SetModifier(unsigned long inKey, unsigned char inIndex)
     this->CalculateKeyCount();
 }
 
+// The Rust FireEvents' questions about the hot key, its keys and events (ee_ui hotkey.rs, docs/RUST_PLAN.md R6)
+struct UIHotKeyRust {
+    static UIHotKey* Key(void* inKey) { return static_cast<UIHotKey*>(inKey); }
+    static UIEvent* Event(void* inKey, int inEvent)
+    {
+        UIHotKey* theKey = Key(inKey);
+        switch (inEvent) {
+        case 0:
+            return theKey->mDoublePressedEvent;
+        case 1:
+            return theKey->mJustPressedEvent;
+        case 2:
+            return theKey->mPressedEvent;
+        default:
+            return theKey->mJustUnpressedEvent;
+        }
+    }
+    static unsigned long Value(void* inKey, int inWhich)
+    {
+        UIHotKey* theKey = Key(inKey);
+        switch (inWhich) {
+        case 0:
+            return theKey->mEnabled;
+        case 1:
+            return theKey->mModifierState;
+        case 2:
+            return gISKeyboard->GetModifierState();
+        case 3:
+            return ISKeyboard::ComputeModifierState(static_cast<ISKey*>(theKey->mKey)->GetIndex());
+        default:
+            return theKey->mModifiers[inWhich - 4] != NULL;
+        }
+    }
+    static long ModifierValue(void* inKey, int inIndex) { return Key(inKey)->mModifiers[inIndex]->GetValue(); }
+    static bool KeyTest(void* inKey, int inEvent)
+    {
+        ISEntity* theKey = Key(inKey)->mKey;
+        switch (inEvent) {
+        case 0:
+            return theKey->JustDoublePressed();
+        case 1:
+            return theKey->JustPressed();
+        case 2:
+            return theKey->GetValue() > 0;
+        default:
+            return theKey->JustUnpressed();
+        }
+    }
+    static void Process(void* inKey, int inEvent) { Event(inKey, inEvent)->ProcessEvent(Key(inKey)->mForm, Key(inKey)); }
+};
+
+extern "C" unsigned long ee_uicpp_hotkey_value(void* inKey, int inWhich) { return UIHotKeyRust::Value(inKey, inWhich); }
+extern "C" long ee_uicpp_hotkey_modifier_value(void* inKey, int inIndex) { return UIHotKeyRust::ModifierValue(inKey, inIndex); }
+extern "C" bool ee_uicpp_hotkey_has_event(void* inKey, int inEvent) { return UIHotKeyRust::Event(inKey, inEvent) != NULL; }
+extern "C" bool ee_uicpp_hotkey_key_test(void* inKey, int inEvent) { return UIHotKeyRust::KeyTest(inKey, inEvent); }
+extern "C" void ee_uicpp_hotkey_process(void* inKey, int inEvent) { UIHotKeyRust::Process(inKey, inEvent); }
+
 // FUNCTION: LLE 0x100773b6
 // Fires the first matching event (double press, press, held, release) when enabled and the modifiers are down;
 // true if one fired
 bool UIHotKey::FireEvents()
 {
-    bool theFired = false;
-    if (this->mEnabled && (!this->mModifiers[0] || this->mModifiers[0]->GetValue() != 0)
-        && (!this->mModifiers[1] || this->mModifiers[1]->GetValue() != 0) && (!this->mModifiers[2] || this->mModifiers[2]->GetValue() != 0)) {
-        unsigned long theState = gISKeyboard->GetModifierState();
-        if (theState == this->mModifierState || theState == ISKeyboard::ComputeModifierState(static_cast<ISKey*>(this->mKey)->GetIndex())) {
-            if (this->mDoublePressedEvent && this->mKey->JustDoublePressed()) {
-                this->mDoublePressedEvent->ProcessEvent(this->mForm, this);
-                theFired = true;
-            } else if (this->mJustPressedEvent && this->mKey->JustPressed()) {
-                this->mJustPressedEvent->ProcessEvent(this->mForm, this);
-                theFired = true;
-            } else if (this->mPressedEvent && this->mKey->GetValue() > 0) {
-                this->mPressedEvent->ProcessEvent(this->mForm, this);
-                theFired = true;
-            } else if (this->mJustUnpressedEvent && this->mKey->JustUnpressed()) {
-                this->mJustUnpressedEvent->ProcessEvent(this->mForm, this);
-                theFired = true;
-            }
-        }
-    }
-    return theFired;
+    return ee_ui_hotkey_fire_events(this);
 }
 
 // Compiler-generated: the static init chains, and the vector-delete COMDAT (names in analysis/lle/names.txt)
