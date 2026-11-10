@@ -1859,13 +1859,17 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   reserves and lays the eight field foundations; a granary built through the human's build message does not.
   `EEMReplantFarms` (the human's replant command, `ai.replant`) lays the missing ones; `build b_farm` only ever
   finishes a foundation that exists (the classic `FindSite` returns a farm foundation with 1 hit point).
-- **A human-placed granary can stay pending, and a builder's BeginRepair on it crashes the game.** `EEMBuildUnit`
-  for a granary lays its field markers with it; where one of them cannot be placed (an island town) the granary's
-  placement is skipped at the flush (`EE-UNITLIST: placement skips a removed unit (PathPoint ...)`), the foundation
-  stays in the pending list, and the citizen ordered to build it faults in `EEUGBuildRepair::BeginRepair` ->
-  `EEStepAsideFromSite` (0xc0000005, Small Islands seed 11 at 49 min, twice). The Age of AI port no longer places
-  granaries through `ai.build` (`direct_granary = false`); the engine guard (a site with no tile: give the goal up)
-  is still to do. `EEMReplantFarms` from the AI's update showed the same removed markers (`replant_fields = false`).
+- **A building site at the map's edge crashed the game when a builder arrived.** `EEUGBuildRepair::BeginRepair` ->
+  `ClearBuildSite` -> `EEStepAsideFromSite`, and `EEUGBuildRepair::IsFootprintClear` -> `EEGetMovableTileUnits`,
+  walk the site's footprint tiles and dereference `GetTile(x, y)`, which is NULL for a tile off the map. A granary
+  the Age of AI port placed through the human's build message (`ai.build`, placement by `EECanPlaceOnTile`) at an
+  island's edge had such a footprint (Small Islands seed 11 at 49 min, deterministic: `python -I
+  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts ai --engine ageofai,classic --maps "Small
+  Islands" --game-seconds 5400`; `EE-SIM FAULT c0000005` in the run's err.txt, the frames resolved against the
+  .map). A human's build order runs the same code. The three functions skip a NULL tile now (and `EEStepAsideFromSite`
+  a unit that is not valid, has no tile or no stats; `BeginRepair` clears no footprint for a site not placed yet).
+  The "placement skips a removed unit (PathPoint)" lines in the same seconds were the group move's path markers,
+  not the cause.
 - **A sim bench shares the main checkout's open data tree.** `sim.py --data open` takes `build/open_data/tree` of
   the main checkout when the worktree has none; while the main checkout's gates rebuild that tree every game fails
   at start (`EETerrainColorTable.cpp (81) : Verification failure`, `rc 2147483651`, no report). A worktree that

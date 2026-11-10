@@ -2402,6 +2402,27 @@ Landings in 6 of 10 island games (one of them twice); 4 games never board; 2 gam
 site's builder, granaries on crowded islands, enemy discovery in the 4 games, 0 defeats against classic Hard,
 expand.c.
 
+**The crash fixed (2026-11-09, the seventh checkpoint).** The fault of Small Islands seed 11 at 49 minutes is the
+engine's: a building site whose footprint reaches off the map (a granary at the island's edge, placed through the
+human's build message - `EECanPlaceOnTile` took the tile) makes `EEUGBuildRepair::BeginRepair` ->
+`EEStepAsideFromSite` and `IsFootprintClear` -> `EEGetMovableTileUnits` dereference `GetTile` = NULL when the
+builder arrives. A human's build order runs the same code: a game bug, not the AI's. Fixed in C++ (the three
+functions skip a tile off the map; `EEStepAsideFromSite` a unit that is not valid, has no tile or no stats;
+`BeginRepair` clears no footprint for a site not placed yet), reproduced with the seed-11 game before and after
+(PORT_LEARNINGS has the command). With it the port's direct granary and `ai.replant` are on again.
+
+| | Stone | Copper | citizens 30 / 40 | army 30 / 40 | end citizens / army | defeats |
+|---|---|---|---|---|---|---|
+| Small Islands, Age of AI against classic, 10 games, 90 min | 25.6 (10/10) | 59.4 (10/10) | 44 / 61 | 9.0 / 38.4 | 87 / 78 | 0 |
+| classic in those games | 41.0 (7/10) | 77.3 (3/10) | 21 / 22 | 9.7 / 14.8 | 30 / 32 | 0 |
+| Age of AI against classic Hard, 16 games, 90 min | 30.1 (15/16) | 62.2 (8/16) | 38 / 52 | 8.5 / 17.5 | 54 / 24 | 2 (1 wiped) |
+| Age of AI against boom, 16 games, 45 min | 24.6 | - | 46 / 60 | 9.9 / 17.8 | 63 / 19 | 0 (boom 22.8, 43 / 61, 65 / 20) |
+
+Islands: 10 of 10 games run (no fault), landings in 7 of 10, granaries in 8 of 10 with 2-17 farmers at the end; 3
+games still end with 32-49 idle citizens (one of them with no granary at all). Against classic Hard 2 defeats of
+16 as the round before (boom 2), 54 citizens and 24 soldiers at the end (boom 60 / 13). Open: the idle citizens of
+the island games, enemy discovery in the 3 games without a landing, 0 defeats, expand.c.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
