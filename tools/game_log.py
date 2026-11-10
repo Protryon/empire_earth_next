@@ -92,8 +92,7 @@ def main():
             sys.exit("no game log found: pass LOG or --data ROOT")
         logs = [found[-1]]
     out = []
-    colors = color_names([a.data or ROOT / "data", ROOT / "build" / "open_data" / "tree",
-                          ROOT / "build" / "open_data" / "tree-binary"])
+    colors = color_names([a.data or ROOT / "data", ROOT / "build" / "open_data" / "tree"])
     for path in logs:
         head, players, samples, epochs, end, ai_lines, chats = read(path)
         last = max((s[-1][0] for s in samples.values() if s), default=0)

@@ -72,12 +72,14 @@ Counts are AoC retail (`data.ssa` Timestamp 4035612). The % columns are bytes pe
 Not loaded although they are present or referenced:
 
 * `db\dbterraingraytextures.dat` is in `data.ssa` (59 rows), but no AoC code opens it. Only the key
-  `kDbTerrainGrayTexturesFile` exists. Its layout is decoded from the data in section 3.39.
-* `db\dbrandommap.dat` is "loaded" by `EERandomMapTable::Load` (0x4da47b), but the loader frames it wrongly (see
+  `kDbTerrainGrayTexturesFile` existed (removed with RUST_PLAN D9). Its layout is decoded from the data in section 3.39.
+* `db\dbrandommap.dat` was "loaded" by `EERandomMapTable::Load` (0x4da47b), but the loader frames it wrongly (see
   3.38). It reads the first dword as a count of 0x84-byte records and throws every record away. The file's real
-  layout is decoded from the data.
+  layout is decoded from the data. The port no longer loads it (RUST_PLAN D9: the game reads no binary db file, and
+  nothing reads the table); neither file has a text form, and `open_data.py build` leaves both out of the tree.
 * `db\dbterrainColor.dat` and `db\dbfonts.dat` are keys only. Neither file exists. Terrain colours come from the
-  pixels of `textures\ColorPalette.tga` (`EETerrainColorTable::Load` 0x4daec4, 256 entries, 16 per row). The UI fonts
+  pixels of `textures\ColorPalette.tga` (`EETerrainColorTable::Load` 0x4daec4, 256 entries, 16 per row; the port
+  reads `textures\ColorPalette.png`). The UI fonts
   come from `DB\dbuifonts.dat`.
 * The base game's archive also has `db\converteroutput.log`, `db\converterverification.log` and `db\copy of
   dbgamevariant.dat`. These are left over from SSS's database-to-binary converter. The logs name every source table
@@ -98,7 +100,8 @@ Not loaded although they are present or referenced:
   glTF, textures as PNG). The original game's install is no longer on the path; a `Data\data.ssa` is mounted only
   when present. With no archive mounted the checksum below gets no `Timestamp` (0): peers with the same tree agree.
 * Multiplayer consistency: `Empire Earth.cpp` (around line 1067) sums `EEGetFileChecksum` over every loose
-  `Data\Db\*.dat`, `Data\Unit AI Scripts\*.tai` and `Data\Models\*.cem` (file contents, sorted by name). For an
+  `Data\Db\*.dat`, `Data\Unit AI Scripts\*.tai` and `Data\Models\*.cem` (file contents, sorted by name; the port
+  sums the db tables' `*.csv`/`*.yaml` in place of the `*.dat`, and the models' glTF files too). For an
   archive it adds only its `Timestamp` tag (`data.ssa`: "4035612"). The sum becomes `gBinaryChecksum` and the
   `.%04d` suffix of the game version string. So changed db files change the version suffix, and peers must have the
   same files.
@@ -2404,13 +2407,13 @@ Unused, with the evidence (all named `mUnused*`; the guessed meaning is in the n
 
 ### 8.5 The game reads the text
 
-`EEDbFindFile` (`src/Empire Earth/Database/EEDataTextFile.cpp`) replaces `FSPath::FindFile` at the 38 db lookups
-(EEInitializeDatabase, EEUnitClass::CreateUnitClasses, UIManager::LoadDatabase). When `db\<table>.csv|.yaml` is on
-the data path, `EEDataText.cpp` compiles it to the binary record stream and serves it as an `FSMemoryFile`; the
+`EEDbFindFile` (`src/Empire Earth/Database/EEDataTextFile.cpp`) replaces `FSPath::FindFile` at every db lookup
+(EEInitializeDatabase, EEUnitClass::CreateUnitClasses, UIManager::LoadDatabase). It finds `db\<table>.csv|.yaml` on
+the data path, `EEDataText.cpp` compiles it to the table's record stream and serves it as an `FSMemoryFile`; the
 loaders are unchanged. Every record starts from the struct's base record (zero plus the defaults of unread fields),
-an unlisted row is the table's hole record (both generated into `EEDataTextSpecs.h`). A loose `Data\db\` file wins
-over the archive, and a text table over a loose .dat. A text that does not compile stops the game with its message
-(file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
+an unlisted row is the table's hole record (both generated into `EEDataTextSpecs.h`). The text is the only form the
+game reads (RUST_PLAN D9): it never opens a `.dat`, and a missing text table, a table with no text form or a text
+that does not compile stops the game with its message (file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
 checksum adds the loose `Data\Db\*.csv`/`*.yaml` (clean text gives a different checksum than retail; every peer
 needs the same tables).
 
@@ -2446,8 +2449,8 @@ when it first needs its ids. A later mod merge step feeds the Content merged ent
 (checked against the previous importer); `cppgate`: 37/37 tables compile in C++ to the Python bytes, 137 parity cases
 (ids, dangling references, row numbers where an id belongs, duplicates, new rows) agree, and G1: the content dump
 (`EEDataDump.cpp`: every game-read field of every row, floats as bits, rows the loaders skip as skipped) of the retail
-.dat files equals the dump of the text tables. The game writes the same dump of every table it loads, text or
-binary, with `EE_DUMP_CONTENT=<file>` (test use).
+.dat files equals the dump of the text tables. The game writes the same dump of every table it loads (all text)
+with `EE_DUMP_CONTENT=<file>` (test use).
 
 Saves keep integer unit and tech ids: runtime keys are deterministic (vanilla keeps the retail numbers, new rows go
 above in file order), so a save made with the same tables loads; a save made with other tables is not protected.
@@ -2523,8 +2526,7 @@ Named settings that were literals in the game code are data: four YAML documents
 `epochs.yaml` entry (`music`, `citizen`). The game reads them in `src/Empire Earth/Database/EERules.cpp`
 (`ee/EERules.h`, `EEGetRules()`), through the same `EEDataText::Content` as the tables, at the start of
 `EEInitializeDatabase` (`EELoadRules`); references are ids of the tables' rows, resolved to their keys. Every value
-has the original's literal as its default (a key left out keeps it; a document that is not there keeps them all:
-the binary db tree plays with the defaults). `tools/eedata/rules.py` writes the vanilla documents (`eedata.py
+has the original's literal as its default (a key left out keeps it; a document that is not there keeps them all). `tools/eedata/rules.py` writes the vanilla documents (`eedata.py
 export`, `install`, `open_data.py build`: `tables.export_tree`) from the same code constants, which it reads from the
 C++ headers (`kUnitType*`, `kTech*`, `kSound*`, `kGraphicEffect*`, `IDS_*`), and validates documents (`check`,
 `import`, `cppgate`). The game rejects an unknown key, a bad value or a dangling id with the place

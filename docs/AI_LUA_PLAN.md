@@ -431,7 +431,8 @@ that adds a row gives its scripts a name for it. A data tree without the tables'
 every class was then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name, and
 boom found no class it knew (AI_RESEARCH §8.36); since 2026-11-09 a binary tree carries `Data/db/dbobjects.ids` and
 `dbtechtree.ids` (`key id` lines, the ids tools/eedata would give the rows; `open_data.py build --binary` writes them,
-`open_data.py ids TREE` adds them to an older tree), read with the .dat (EEDataTextFile.cpp `EEReadIdsFile`).
+`open_data.py ids TREE` adds them to an older tree), read with the .dat (EEDataTextFile.cpp `EEReadIdsFile`). On the rust branch the binary tree is gone
+(RUST_PLAN D9: the db is read only as text), and the `.ids` files, their reader and `open_data.py ids` with it.
 `EECPNextClassByName` / `EECPNextClassName` (EECPNextLua.cpp) do the lookups, from the ids EEDbFindFile kept when
 it compiled the tables. `ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
 `total(entry)`, `sum(amounts)`.

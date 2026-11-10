@@ -335,7 +335,7 @@ struct EeFsArchive;
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
-/// A model as `GEModel::Load` leaves it.
+/// A model as `GEModel::StoreLoaded` takes it.
 struct EeGeCemModel;
 
 /// One storage (opaque to C++).
@@ -360,6 +360,9 @@ struct EeSoundManager;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
+
+/// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
+struct EeOfTexture;
 
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
@@ -1104,12 +1107,6 @@ struct EeGeTerrainLoad {
   bool compute_fractal;
 };
 
-/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
-struct EeGeSharedFrame {
-  uint32_t frame;
-  int32_t offset;
-};
-
 /// Borrowed bytes (no terminating NUL).
 struct EeGeBytes {
   const uint8_t *data;
@@ -1189,40 +1186,6 @@ struct EeGeScaleRemoval {
   float x;
   float y;
   float z;
-};
-
-/// One material for `ee_ge_model_save`: `ranges` holds the polygon start and length of each LOD.
-struct EeGeCemSaveMaterial {
-  EeGeBytes name;
-  uint32_t texture_index;
-  const uint32_t *ranges;
-  uint32_t vertex_start;
-  uint32_t vertex_length;
-  EeGeBytes texture_filename;
-};
-
-/// One frame for `ee_ge_model_save`: `vertices` holds per vertex the point, the normal and the texture coordinate
-/// (eight values).
-struct EeGeCemSaveFrame {
-  float radius;
-  const float *vertices;
-  const EeGe3DPoint *tag_points;
-  EeGeTransformation transform;
-  EeGe3DPoint bbox[2];
-};
-
-/// A model's own data for `ee_ge_model_save`. `counts`: polygons, vertices, tag points, materials, frames,
-/// sub-models, LODs; `lod_sizes` holds each LOD array's polygon count and `lod_indices` their indices one after
-/// the other; `materials`, `tag_point_names` and `frames` hold the counts' numbers of entries.
-struct EeGeCemSave {
-  uint32_t counts[7];
-  EeGeBytes name;
-  EeGe3DPoint center;
-  const uint32_t *lod_sizes;
-  const uint32_t *lod_indices;
-  const EeGeCemSaveMaterial *materials;
-  const EeGeBytes *tag_point_names;
-  const EeGeCemSaveFrame *frames;
 };
 
 /// `GXVIEWPORT`.
@@ -1822,13 +1785,44 @@ struct EeOfBytes {
 
 /// Reads an external file a glTF names (`uri`, its bytes, percent-decoded; relative to the .gltf). On success stores
 /// the bytes in `*out` with `ee_of_bytes_copy` and returns true; false when it cannot be found. `user` is the
-/// `resolve_user` given to `ee_of_gltf_to_cem`.
+/// `resolve_user` given to `ee_of_gltf_to_model`.
 using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOfBytes *out);
+
+/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
+struct EeGeSharedFrame {
+  uint32_t frame;
+  int32_t offset;
+};
 
 /// A byte buffer the caller owns (one PNG frame).
 struct EeOfSlice {
   const uint8_t *ptr;
   size_t len;
+};
+
+/// A texture's size and frame count (`ee_of_texture_info`).
+struct EeOfTextureInfo {
+  uint32_t width;
+  uint32_t height;
+  uint32_t frame_count;
+};
+
+/// One frame (`ee_of_texture_frame`): `width` x `height` pixels, top row first, `channels` (3 or 4) bytes per
+/// pixel, R, G, B(, A); `pixels` borrows from the texture.
+struct EeOfTextureFrame {
+  uint32_t width;
+  uint32_t height;
+  uint32_t channels;
+  const uint8_t *pixels;
+};
+
+/// A decoded picture (`png_to_picture`): `width` x `height` pixels, top row first, B, G, R, A each; `depth` 24 or 32
+/// (whether the PNG has alpha). `bgra` is freed with `ee_of_bytes_free`.
+struct EeOfPicture {
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+  EeOfBytes bgra;
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -3542,19 +3536,10 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
 
-/// Reads a model from the file's current position (`GEModel::Load` once the file is open): the header, the body
-/// by version, the sub-models; on failure the file is put back. Never null.
+/// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
 ///
 /// # Safety
-/// `io` is a valid field stream; `shared` holds `shared_count` entries sorted by frame (or is null when 0).
-EeGeCemModel *ee_ge_model_load(const EeGeFieldIo *io,
-                               const EeGeSharedFrame *shared,
-                               size_t shared_count);
-
-/// Frees a model read by `ee_ge_model_load` (not a sub-model's handle).
-///
-/// # Safety
-/// `model` came from `ee_ge_model_load` and is freed once.
+/// `model` came from `ee_of_gltf_to_model` and is freed once.
 void ee_ge_cem_free(EeGeCemModel *model);
 
 /// The model's result, counts and scalars.
@@ -3658,13 +3643,6 @@ bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
                                 size_t index_count,
                                 const uint32_t *ranges,
                                 size_t range_count);
-
-/// Writes a model's chunks (`GEModel::Save` from the header to the frames); the first failure's result.
-///
-/// # Safety
-/// `io` is a valid field stream and `model` a view as documented on [`EeGeCemSave`].
-long ee_ge_model_save(const EeGeFieldIo *io,
-                      const EeGeCemSave *model);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
@@ -4911,25 +4889,53 @@ EeOfBytes ee_of_bytes_copy(const uint8_t *data, size_t len);
 /// `bytes` came from this interface and is not used again.
 void ee_of_bytes_free(EeOfBytes bytes);
 
-/// `GEOpenFormats::GltfToCem`: a .gltf or .glb -> the .cem bytes in `*out`, or false with the message in `*err`.
+/// `GEFindModelFile`: a .gltf or .glb -> the model `GEModel::StoreLoaded` stores (free it with `ee_ge_cem_free`),
+/// with the frames the game shares (`shared`, sorted by frame: EEGraphicObject's map); null with the
+/// message in `*err` when the file does not convert.
 ///
 /// # Safety
-/// `data` is valid for `len` bytes, `out` and `err` for writing; `resolve`, if any, follows `EeOfResolve`'s contract.
-bool ee_of_gltf_to_cem(const uint8_t *data,
-                       size_t len,
-                       EeOfResolve resolve,
-                       void *resolve_user,
-                       EeOfBytes *out,
-                       EeOfBytes *err);
+/// `data` is valid for `len` bytes, `shared` for `shared_count` entries (or null when 0), `err` for writing;
+/// `resolve`, if any, follows `EeOfResolve`'s contract.
+EeGeCemModel *ee_of_gltf_to_model(const uint8_t *data,
+                                  size_t len,
+                                  EeOfResolve resolve,
+                                  void *resolve_user,
+                                  const EeGeSharedFrame *shared,
+                                  size_t shared_count,
+                                  EeOfBytes *err);
 
-/// `GEOpenFormats::PngToSst`: PNG frames -> the .sst bytes in `*out`, or false with the message in `*err`.
+/// `GETextureManager`: PNG frames -> the texture `GETexture::Load` stores (free it with `ee_of_texture_free`); null
+/// with the message in `*err` on the first problem.
 ///
 /// # Safety
-/// `frames` is valid for `count` slices, each slice for its bytes; `out` and `err` for writing.
-bool ee_of_png_to_sst(const EeOfSlice *frames,
-                      size_t count,
-                      EeOfBytes *out,
-                      EeOfBytes *err);
+/// `frames` is valid for `count` slices, each slice for its bytes; `err` for writing.
+EeOfTexture *ee_of_png_to_texture(const EeOfSlice *frames,
+                                  size_t count,
+                                  EeOfBytes *err);
+
+/// The texture's size and frame count.
+///
+/// # Safety
+/// `texture` came from `ee_of_png_to_texture` and is live; `out` is valid for writing.
+void ee_of_texture_info(const EeOfTexture *texture, EeOfTextureInfo *out);
+
+/// Frame `index` (below the frame count).
+///
+/// # Safety
+/// `texture` is live; `out` is valid for writing.
+void ee_of_texture_frame(const EeOfTexture *texture, uint32_t index, EeOfTextureFrame *out);
+
+/// Frees a texture from `ee_of_png_to_texture`.
+///
+/// # Safety
+/// `texture` came from `ee_of_png_to_texture` (or is null) and is freed once.
+void ee_of_texture_free(EeOfTexture *texture);
+
+/// `GESurface::LoadPNG`: a PNG file -> its pixels in `*out`, or false with the message in `*err`.
+///
+/// # Safety
+/// `data` is valid for `len` bytes, `out` and `err` for writing.
+bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
 
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);

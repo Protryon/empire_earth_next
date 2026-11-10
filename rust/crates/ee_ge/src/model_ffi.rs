@@ -1,16 +1,14 @@
-//! The C ABI of `GEModel`'s file reader (`model_file.rs`, `legacy.rs`), called by `GEModel::Load`
-//! ('GEModel Load.cpp'). Rust reads the whole model, its sub-models included, into a [`CemModel`]; the C++ then
-//! allocates the model's arrays from the counts and stores what was read, walking the result through the views
+//! The C ABI of the model `GEModel::StoreLoaded` stores (`model_store.rs`; 'GEModel Load.cpp') and of `GEModel`'s
+//! geometry (`model_geom.rs`). `ee_openformats` decodes a glTF into a [`CemModel`] (`ee_of_gltf_to_model`, sub-models
+//! included); the C++ allocates the model's arrays from the counts and stores the model, walking it through the views
 //! below. The views borrow from the handle (a `CemModel`, opaque to the C++ as `EeGeCemModel`), which the C++ frees
 //! with `ee_ge_cem_free` once it has copied them.
 
 use std::ffi::c_long;
 use std::ptr;
 
-use crate::io::{CppIo, EeGeFieldIo};
-use crate::model_file::{self, CemModel, SharedFrames};
 use crate::model_geom::{self, EeGeScaleRemoval};
-use crate::model_save;
+use crate::model_store::CemModel;
 use crate::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
@@ -100,33 +98,10 @@ fn bytes(b: &[u8]) -> EeGeBytes {
     EeGeBytes { data: b.as_ptr(), length: b.len() }
 }
 
-/// Reads a model from the file's current position (`GEModel::Load` once the file is open): the header, the body
-/// by version, the sub-models; on failure the file is put back. Never null.
+/// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
 ///
 /// # Safety
-/// `io` is a valid field stream; `shared` holds `shared_count` entries sorted by frame (or is null when 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_model_load(
-    io: *const EeGeFieldIo,
-    shared: *const EeGeSharedFrame,
-    shared_count: usize,
-) -> *mut CemModel {
-    let entries: Vec<(u32, i32)> = if shared_count == 0 {
-        Vec::new()
-    } else {
-        // SAFETY: the caller's contract
-        unsafe { std::slice::from_raw_parts(shared, shared_count) }.iter().map(|e| (e.frame, e.offset)).collect()
-    };
-    // SAFETY: the caller's contract
-    let mut file = CppIo(unsafe { *io });
-    let model = model_file::load(&mut file, SharedFrames(&entries));
-    Box::into_raw(Box::new(model))
-}
-
-/// Frees a model read by `ee_ge_model_load` (not a sub-model's handle).
-///
-/// # Safety
-/// `model` came from `ee_ge_model_load` and is freed once.
+/// `model` came from `ee_of_gltf_to_model` and is freed once.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_cem_free(model: *mut CemModel) {
     if !model.is_null() {
@@ -386,120 +361,4 @@ pub unsafe extern "C" fn ee_ge_model_frame_is_sound(
     let triples: Vec<[u32; 3]> = flat.as_chunks::<3>().0.to_vec();
     // SAFETY: the caller's contract
     unsafe { model_geom::frame_is_sound(slice(points, count), slice(indices, index_count), &triples) }
-}
-
-// ---- GEModel::Save's chunks (model_save.rs)
-
-/// One material for `ee_ge_model_save`: `ranges` holds the polygon start and length of each LOD.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeGeCemSaveMaterial {
-    pub name: EeGeBytes,
-    pub texture_index: u32,
-    pub ranges: *const u32,
-    pub vertex_start: u32,
-    pub vertex_length: u32,
-    pub texture_filename: EeGeBytes,
-}
-
-/// One frame for `ee_ge_model_save`: `vertices` holds per vertex the point, the normal and the texture coordinate
-/// (eight values).
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeGeCemSaveFrame {
-    pub radius: f32,
-    pub vertices: *const f32,
-    pub tag_points: *const Ge3DPoint,
-    pub transform: GeTransformation,
-    pub bbox: [Ge3DPoint; 2],
-}
-
-/// A model's own data for `ee_ge_model_save`. `counts`: polygons, vertices, tag points, materials, frames,
-/// sub-models, LODs; `lod_sizes` holds each LOD array's polygon count and `lod_indices` their indices one after
-/// the other; `materials`, `tag_point_names` and `frames` hold the counts' numbers of entries.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeGeCemSave {
-    pub counts: [u32; 7],
-    pub name: EeGeBytes,
-    pub center: Ge3DPoint,
-    pub lod_sizes: *const u32,
-    pub lod_indices: *const u32,
-    pub materials: *const EeGeCemSaveMaterial,
-    pub tag_point_names: *const EeGeBytes,
-    pub frames: *const EeGeCemSaveFrame,
-}
-
-/// # Safety
-/// `b` points at `length` bytes (or is empty).
-unsafe fn owned(b: EeGeBytes) -> Vec<u8> {
-    // SAFETY: the caller's contract
-    unsafe { slice(b.data, b.length) }.to_vec()
-}
-
-/// Writes a model's chunks (`GEModel::Save` from the header to the frames); the first failure's result.
-///
-/// # Safety
-/// `io` is a valid field stream and `model` a view as documented on [`EeGeCemSave`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_model_save(io: *const EeGeFieldIo, model: *const EeGeCemSave) -> c_long {
-    // SAFETY: the caller's contract covers every pointer of the view read below
-    let save = unsafe { save_view(&*model) };
-    // SAFETY: the caller's contract
-    let mut file = CppIo(unsafe { *io });
-    model_save::save(&mut file, &save)
-}
-
-/// Copies the view into a `SaveModel`.
-///
-/// # Safety
-/// The view's pointers hold the counts' numbers of entries (see [`EeGeCemSave`]).
-unsafe fn save_view(v: &EeGeCemSave) -> model_save::SaveModel {
-    let [_, vertices, tags, materials, frames, _, lods] = v.counts.map(|c| c as usize);
-    // SAFETY (for every block below): the function's contract
-    unsafe {
-        let sizes = slice(v.lod_sizes, lods);
-        let mut at = 0usize;
-        let mut lod_indices = Vec::with_capacity(lods);
-        for &size in sizes {
-            lod_indices.push(slice(v.lod_indices.wrapping_add(at), size as usize * 3).to_vec());
-            at += size as usize * 3;
-        }
-        let materials = slice(v.materials, materials)
-            .iter()
-            .map(|m| model_save::SaveMaterial {
-                name: owned(m.name),
-                texture_index: m.texture_index,
-                ranges: slice(m.ranges, lods * 2).as_chunks::<2>().0.iter().map(|p| (p[0], p[1])).collect(),
-                vertex_start: m.vertex_start,
-                vertex_length: m.vertex_length,
-                texture_filename: owned(m.texture_filename),
-            })
-            .collect();
-        let tag_point_names = slice(v.tag_point_names, tags).iter().map(|&b| owned(b)).collect();
-        let frames = slice(v.frames, frames)
-            .iter()
-            .map(|f| {
-                let values = slice(f.vertices, vertices * 8).as_chunks::<8>().0;
-                model_save::SaveFrame {
-                    radius: f.radius,
-                    points: values.iter().map(|c| Ge3DPoint::new(c[0], c[1], c[2])).collect(),
-                    normals: values.iter().map(|c| GeVector::new(c[3], c[4], c[5])).collect(),
-                    uvs: values.iter().map(|c| [c[6], c[7]]).collect(),
-                    tag_points: slice(f.tag_points, tags).to_vec(),
-                    transform: f.transform,
-                    bbox: f.bbox,
-                }
-            })
-            .collect();
-        model_save::SaveModel {
-            counts: v.counts,
-            name: owned(v.name),
-            center: v.center,
-            lods: lod_indices,
-            materials,
-            tag_point_names,
-            frames,
-        }
-    }
 }

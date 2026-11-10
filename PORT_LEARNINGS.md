@@ -3440,6 +3440,153 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
   (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
   of `GETerrainMesh` were not reached.
 
+## D9 at run time: glTF and PNG straight into GEModel and GETexture (branch rust-d9-load, 2026-11-09)
+
+The game's models and textures are glTF and PNG only (RUST_PLAN D9). `ee_openformats` decodes a glTF straight into
+the model `GEModel::StoreLoaded` stores (`ee_ge` model_store.rs's `CemModel`: `gltf_to_model`, `ee_of_gltf_to_model`)
+and PNG frames into the frames `GETexture::Load` stores (`png_to_texture`, `ee_of_png_to_texture`). Deleted: the `.cem`
+reader and writer (ee_ge model_file.rs's parsing, legacy.rs, model_save.rs, their goldens and FFI, `GEModel::Load`,
+`GEModel::Save`/`SaveData` and 'GEModel Save.cpp'), `GETexture`'s `.sst`/`.tga` reading and `GETexture::Save`,
+`ee_openformats`' `.cem` and `.sst` writers (`gltf_to_cem`, `png_to_sst`, `GEOpenFormats::GltfToCem`/`PngToSst`), and
+every lookup of a `.cem`, `.sst` or `.tga` file in the model and texture managers (and `*.cem` in the multiplayer
+checksum). After the merge with the data side (rust-d9-data, whose pictures load through `GESurface::LoadPNG`):
+`GESurface::LoadTGA` and the `GETGAHeader` record (their last caller was GETexture's frames, through `Load(file, 0)`
+with the type in a variable, so no grep found it) and `GEFindTargaFile` (no caller left) are deleted too, and the
+pictures' `png_to_picture` decodes through the textures' `decode_frame` (one PNG path; it now also refuses a bad
+`ee:surface` text, as `PngToSst` did for the pictures before D9).
+
+- **The decoded model is the reader's output, not the importer's.** `import.rs`'s `Model` matches `CemModel` field
+  for field, but the `.cem` reader added rules of its own that the stored model shows: a name ends at its first NUL
+  (`UString::Save`/`Load`); a model with no polygons, vertices, materials or frames fails before anything is stored;
+  and a failed sub-model put the file back where it started, so every later model in file order (its siblings, its
+  parent's later siblings) re-read the same bytes and failed the same way. `to_cem_model` carries a `poisoned` flag
+  through the depth-first walk for that. A later LOD stores whole triangles (`count * 3` indices; an index accessor of
+  another length desynchronised the old stream, never in the data). The shared frames' vertex and tag point arrays go
+  to the last frame, as `LoadFrameChunk` put them.
+- **A texture frame is stored where the Targa reader stored it.** `GEStoreFrame` (GETexture.cpp) is
+  `GESurface::LoadTGA`'s loop over top-down RGB(A) instead of a bottom-up BGR(A) file: 32-bit surfaces get A8R8G8B8
+  whatever their format, 16-bit ones `GEPackColor` of their format, no alpha is 0xff; each row continues after the
+  skip computed from the surface's *pixel* width (so a frame narrower than its surface lands as LoadTGA put it); a
+  frame larger than the surface is refused. `GETexture::Load` keeps its control flow and fills its old header struct
+  from the decoded texture (one MIP level, not compressed).
+- **The cache keys lost their extension; saves do not see them.** A model is cached under the name given
+  (`models\x`, was `models\x.cem`), a texture under its stem: the name as given, or without its last extension when
+  it contains `.sst` (`FindBackwards(".sst")`, as before), so `textures\x` and `textures\x.sst` stay one texture as
+  they were one cached `textures\x.sst`. `ReloadTexture(name)` looks the name up as given: the same textures as the
+  original's `name.tga`/`name.sst` lookups (a db button named `...sst` was never reloaded, and still is not). The texture
+  pack maps the stem. Nothing in a saved game, a scenario or the db names a cache key; the keys only show in
+  `DumpAllLoadedMedia` and `EE_TEXTURE_PACK_LOG` (now `textures\x`).
+- **A refused model used to crash on its destruction.** `GEModel(GEModelManager*)` left `mFrameCount`,
+  `mSubModelCount` and `mMaterials` unset and the destructor read `mPolygonArrays[0]` from a NULL array: the old path
+  crashed on `amb_rock.cem` (the 24-byte text stub, the tree's one `.cem`) in a driver whose memory was zeroed, and
+  read garbage in the game. Port fix: the constructor sets them and the destructor tests the array. The new path never
+  looks `amb_rock.cem` up (NULL model as before, without constructing one).
+- **The comparison came first (storegate).** `tools/eemodel/storegate.py` builds `storegate/` (a console driver)
+  against a game build's own objects (`lle`, `jpeg`, `default`, `tcp`, `mixer`, `dx7hrtnl` as one archive, so only
+  what is referenced links) and its Rust library; the renderer is memory objects (`fakes.h`: a surface with padded
+  rows and a halving MIP chain, nearest and box copies; vertex and polygon arrays that count out-of-range sets; the
+  rest of the 110 pure virtuals generated from the headers, preprocessed for `#ifdef LLE_EXE_HEADERS`). It loads every
+  model of the tree with three shared-frame maps (861 x 3) and every texture (2,505) with seven descriptions (frame
+  formats 0 and 1, 16/32 bits, alpha or not, MIP maps, one and two dropped levels, the texture pack's path), reloads
+  and refreshes, and digests the stored `GEModel` (every array, material, sub-model, shared array as its frame
+  number) and `GETexture` (every frame's surfaces and pixels) through `friend struct GEStoreDigest` (in GEModel,
+  GEMaterial, GETexture, GETextureManager). First driver: the build before the change (objects copied aside), 20,118
+  loads, 25,140 lines, twice identical. Then the new loaders: byte-identical output. Snags: `#define private public`
+  for the digests breaks the link (MSVC mangles access into static data and functions: `UString::sDefaultAllocationLength`),
+  hence the friend; `PIMModule.obj` drags the three plug-in tables in; every allocation is zero-filled
+  (`operator new` replaced) so that what a loader leaves unset reads the same in both builds.
+- **The decoder gate (cppgate) changed its goal.** It compared `.cem`/`.sst` bytes with the Python converter; now
+  `eemodel_gate` writes a digest of the stored model (three shared maps) or texture, the cases come from the open tree
+  itself (861 models, without EE_model, 34 as `.glb`, 2,568 edits; 2,505 textures, 275 PNG variants: 7,104 cases) and
+  each must load or be refused as the Python decides and equal `cppgate/golden_store.json`. Recorded with a temporary
+  `--old` mode that also ran the old path for each case (`gltf_to_cem` bytes through `model_file::load`; `png_to_sst`
+  bytes read back as GETexture::Load and LoadTGA read them): 7,104 of 7,104 equal. `golden_cpp.json` (the `.cem`
+  byte digests over tree-binary) is gone with the writers.
+- Gates: storegate PASS (25,140 lines), cppgate PASS (7,104 cases), the sim oracle identical on seeds 2-7 (models
+  feed it through `GEPhysicalModel` and the boxes), `gx_test`, `eedata check`. Not run: tours and screenshots (the
+  lead's).
+
+## D9, the data side: the game reads only the open forms (branch rust-d9-data, 2026-11-09)
+
+The owner's decision D9 (docs/RUST_PLAN.md): glTF, PNG and the text db only at run time. This branch did the data side;
+the model and texture managers (GEModel*, GETexture*, GEOpenFormats*) are another branch's.
+
+- **Every binary read and fallback the game had outside those managers, and what it is now:**
+  - `EEDbFindFile` (every db lookup: EEInitializeDatabase, EEUnitClass, UIManager::LoadDatabase): served the text when
+    there was one, else `FindFile` of the `.dat`. Now text only; a missing text table or one with no text form stops
+    the game with its name.
+  - `EERandomMapTable::Load` read `db\dbrandommap.dat` (no text form), every record dropped, the table never read:
+    the load, the function and the key `kDbRandomMapFile` are gone (and the unused `kDbTerrainGrayTexturesFile`).
+  - `EE_DUMP_CONTENT` also dumped a `.dat` when a table had no text: gone.
+  - The multiplayer checksum summed `Data\Db\*.dat`: now only the `*.csv`/`*.yaml` (it changes the version suffix
+    only for a tree that still had `.dat` files).
+  - `GEFindTargaFile` (pointers, `ColorPalette`, `Volcano`; the texture pack's pointers) served a `.png` as Targa
+    bytes, else the `.tga`; `EEUISCIFormManager::OpenMap` tried `.jpg` then `.tga`; `EEUIBMapBackground` loaded a
+    `.tga` or a `.jpg`. Now each reads a `.png` through `GESurface::LoadPNG` (ee_openformats `png_to_picture`), with
+    no `.tga` fallback. `GEFindTargaFile` has no caller left (it is in GEOpenFormatsFile.cpp, the other branch's).
+  - Not binary forms in D9's sense, so unchanged: saved games, scenarios and campaign archives (`.ssa`), `.civ`
+    files, the scenario editor's elevation `.dat` maps, sounds, music.
+- **The trap: `GESurface::LoadTGA` is the texture manager's too.** GETexture.cpp loads every `.sst`/`.tga` frame
+  with `GESurface::Load(file, type)`, type 0 = Targa, a variable, so a grep for `kImageFileTGA` or `LoadTGA(` finds no
+  caller. Deleting it compiles and links, and every texture fails to load at run time. It stays until the texture
+  loader goes; `SaveAsTGA` and `GetTGAFileAttributes` (no caller) are deleted.
+- **Pixels.** `png_to_picture` decides the channels as `png_to_sst` does (4 with colour types 4/6 or a tRNS chunk),
+  so its pixels are the Targa frame `GEFindTargaFile` served. Checked in a scratch program (LoadTGA's 32-bit path
+  ported line by line against LoadPNG's): the 25 retail `.tga` pictures the game reads (resolved on the data path as
+  `FindFile` did) against the tree's PNGs, with and without `mNoAlpha`: 50 of 50 equal; the old path (png_to_sst's
+  frame through LoadTGA) against the new one over every PNG of `Data\Textures` (2,666 files, the frames too): equal.
+- **The tree.** `open_data.py build` writes no binary form (`binary_form`: `.cem`, `.sst`, `.tga` anywhere, `db\*.dat`)
+  and lists the ones with no open form in `open_data.json` "dropped": `db\dbrandommap.dat`,
+  `db\dbterraingraytextures.dat`, `db\copy of dbgamevariant.dat` and `Models\amb_rock.cem` (24 bytes of hex text,
+  not a model; nothing names it). Otherwise the tree is byte-identical to the one before. `check` refuses any binary
+  form. The releases until now carried them: the media part `open-media-ddb67f1` (read from its zip's central
+  directory with a ranged download) has 5,721 entries, all open forms but `Data/Models/amb_rock.cem`; the db part
+  `open-db-ce3df9e` has the three `.dat` files. `fetch_data.py` and `make_play_dir.py` delete binary forms after
+  unzipping or copying, so an old release still plays.
+- **The converters' hash changes** with `open_data.py`: the harness rebuilds `build/open_data/tree` on its first run
+  after the merge (about 6 minutes) and `sim.py` warns until then. The new tree only lacks the four dropped files.
+- **What still reads binary records:** the loaders still parse a record stream; it is compiled from the text in
+  memory (`FSMemoryFile`), never read from a file. Handing them records instead is a per-loader change, not done.
+- **The Bash tool and backslashes:** `"\\n"` inside a quoted heredoc reached Python as a line break, and `"\\/"`
+  as `"\/"`. Edit scripts with backslashes are written with the editor, not through a heredoc.
+
+## The Linux cross build after the Rust port (branch rust-linux, 2026-11-09)
+
+The Linux and macOS builds had not been built since the first Rust crates landed; everything from R1.3 to R5b.2 and
+R6 (about 140 commits, 26 crates) went in on Windows only. Brought back here: the Linux game cross build, the census,
+the five test programs, clippy for the Linux and macOS targets. Linux cannot run on this machine; macOS was not built.
+
+- **One failure in 1,336 units, and it was the compiler flags.** `EETestFixture.cpp` includes `<atomic>`; libstdc++ 10's
+  `std::atomic<T>::is_always_lock_free` reads `__GCC_ATOMIC_<T>_LOCK_FREE`, which `-fms-compatibility` on a GNU target
+  hides (as it hid `__GCC_ATOMIC_TEST_AND_SET_TRUEVAL`, part 5). `xbuild.py` now defines the whole family for the
+  game's C++ units on Linux (`LINUX_GCC_ATOMIC_DEFINES`: the values clang defines for x86_64 in GNU mode, 2 =
+  always lock-free), for the game build and the census alike. macOS (libc++, `-fgnuc-version=4.2.1`) does not need it.
+- **The census stopped before compiling**: `cmd_census` still added `rust_build.WGPU_HEADERS` (the wgpu headers the
+  C++ GX included; GX is Rust since R4.1 and the attribute went with it). No C++ includes `wgpu.h` any more. Census
+  after the fix: 1,360/1,360 units in the ms dialect (the build's; the gnu dialect compiles 697, which is informational:
+  the game's units rely on the Microsoft extensions, `UReferenceContainer.h` and `EEPlayer.h` first).
+- **The LP64 mirrors held.** Every `#[repr(C)]` struct the C++ pins with `static_assert` (DX7Trampolines.cpp,
+  UITrampolines.cpp, the UI classes' offset tables, GERustTerrain.h, GERustMath.h, DrawTerrain) passed on the LP64
+  compile, and the link had no undefined or duplicate symbol: the one wrong width (ee_dx7's `TextRect`, `RECT`'s
+  `LONG`s as `c_long`) had been found and fixed by the previous Linux build. Rule confirmed by the audit of the
+  1,667 `c_long`/`c_ulong` uses: `c_long`/`c_ulong` mirror the game's own `long`/`unsigned long` (GX.h's `dw*`
+  fields, the UI members, the terrain rows, GXRESULT), which are 64-bit on LP64 on both sides; Win32 `LONG`/`DWORD`
+  (`wintypes.h`: `int32_t`/`uint32_t`) and the on-disk/wire `int32_t` fields are `i32`/`u32`. The `(unsigned long*)`
+  casts left in the C++ seams are no-ops (`EEGamePreferences::mGameWindowWidth` is `unsigned long`); the one true
+  8-byte read of a 4-byte field (`FindPatchOp.cpp`, `*(unsigned long*)data`) is in a WON unit the game does not build.
+- **A pointer-width mismatch cannot hide in these seams.** The C++ passes `int32_t*`/`uint32_t*` to the generated
+  header's `long*`/`unsigned long*` parameters nowhere (that is a compile error on LP64, and the build is clean); the
+  `View` records (`EeDx7TerrainMeshView`, `EeGeTerrainFog`, ...) are filled field by field, where a width only converts.
+  The hazard is confined to records that overlay C++ memory, and those are the pinned ones.
+- **Test programs**: `plat_test`, `font_test`, `lua_test`, `tcp_test` and the four `tests/won` programs build and link
+  for linux-x86_64 unchanged (the Rust library before SDL on the link line, as before). Not run: no Linux here.
+- **Rust**: `cargo clippy --workspace --all-targets -D warnings` is clean for `x86_64-unknown-linux-gnu` and
+  `aarch64-apple-darwin` (the macOS code paths type-check; `block v0.1.6` in wgpu's Metal path prints cargo's
+  future-incompatibility note, not a warning of ours). The Linux `libee_rust.a` builds in 1 m 45 s.
+- **Not proven here**: anything at run time on Linux or macOS (the Rust platform layer's POSIX halves against a real
+  SDL window, the mixer's Core Audio / ALSA backends, wgpu on Metal with the Rust GX, the ASan run). CLAUDE.md's macOS
+  checklist (full build, `--sanitize address`, an ASan `ai-game`) is the next step, on the Mac.
+
 ## The merge of main ce3df9e4 into the rust branch (AI manifest, settlement first; 2026-11-09)
 
 - **Main stores PORT_LEARNINGS.md with LF, this branch with CRLF**, so git saw the whole file as one conflict (the
@@ -3459,8 +3606,8 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
 - **No other semantic clash showed**: main's new AI code keeps unit pointers only within a call (finder locals, an
   address-keyed `std::map` used for lookups, not iterated into decisions), the improvement table fix
   (`EEUnitClassImprovementTable::mU00` pointer-sized) touches nothing ee_combat ported, `MoveControlsHorizontally`
-  builds on the C++ `UILayoutUtility` facade, and `EEReadIdsFile` (binary trees' `.ids`) sits beside ee_data's text
-  path. The oracle over the merge equalled main's own EE-SIM (refmain) on seeds 2-7 at once.
+  builds on the C++ `UILayoutUtility` facade, and main's `EEReadIdsFile` (binary trees' `.ids`) went with D9 (the
+  last bullet). The oracle over the merge equalled main's own EE-SIM (refmain) on seeds 2-7 at once.
 - **The capture goldens were rebaselined** (their C++ is gone): the merged game plays main's game, not the old one,
   so every A*, formation, combat and tech digest changed. Evidence: the oracle equal to refmain, two captures per
   profile equal, and `sim_capture.py replay` (the Rust leaves over the new captures) with no difference. The late,
@@ -3468,3 +3615,8 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
 - The main open tree has no `Data/ai/ais.json` (built before the manifest): EE-SIM logs "the lobby offers only
   classic and random". The oracle plays classic, so it does not matter there; a next-engine run on that tree needs
   `--ai-scripts ai` (or `open_data.py ai`, which edits the tree).
+- **D9 against main's binary-tree `.ids`** (at the merge of `rust` after it): main taught the binary tree row
+  names (`Data/db/dbobjects.ids`, `EEReadIdsFile`, `open_data.py ids`, `build --binary` writing them); `rust` had
+  retired the binary tree (D9). The C++ reader and the tool's `ids` command were dropped. Git merged open_data.py
+  without a conflict but left main's `if a.binary:` in `cmd_build`, an AttributeError on every build now that
+  `--binary` is gone. Main's `ai_files` (ais.json into a tree's Data/ai) kept.

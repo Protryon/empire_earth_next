@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\Database\EERandomMapTable.cpp (name from RTTI EERandomMapTable; no __FILE__). 0xda3be..
-// 0xda56d: the class static table's init chain, ctor, Load (db\dbrandommap.dat: the records are read and dropped),
+// 0xda56d: the class static table's init chain, ctor, Load (removed: see below),
 // Unload, ??_G. EEMusicObject.cpp ends at 0xda3be, EESoundObject.cpp's chains start at 0xda56d. Unit flags: the
 // exe's module set.
 
@@ -37,26 +37,8 @@ EERandomMapTable::EERandomMapTable()
 }
 
 // FUNCTION: EXE 0x4da47b
-// Reads db\dbrandommap.dat, creating one empty entry per record (the record contents are dropped); returns the
-// last read status
-long EERandomMapTable::Load(FSFileSpec* inFile)
-{
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    char theRecord[0x84];
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EERandomMapTable::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            EERandomMapTable* theTable = new EERandomMapTable;
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(theRecord), sizeof(theRecord), theRead);
-            EERandomMapTable::sTable[i] = theTable;
-        }
-    }
-    inFile->Close();
-    return theResult;
-}
+// (Load: read db\dbrandommap.dat, one empty entry per record with the record's contents dropped. Removed: nothing reads
+// the table, the file has no text form and the game reads no binary db file; RUST_PLAN D9)
 
 // FUNCTION: EXE 0x4da510
 // Destroys every random-map table entry and empties the table

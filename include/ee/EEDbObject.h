@@ -34,10 +34,8 @@ extern const UString kDbTerrainFile;            // 0x8e7eb0
 extern const UString kDbTerrainColorFile;       // 0x8e7ea0
 extern const UString kDbTerrainTypeFile;        // 0x8e7e90
 extern const UString kDbWorldFile;              // 0x8e7e80
-extern const UString kDbRandomMapFile;          // 0x8e7e70
 extern const UString kDbCivilizationFile;       // 0x8e7e60
 extern const UString kDbGfxEffectsFile;         // 0x8e7e50
-extern const UString kDbTerrainGrayTexturesFile;    // 0x8e7e40
 extern const UString kDbWeaponToHitFile;        // 0x8e7e30
 extern const UString kDbCalamityFile;           // 0x8e7e20
 extern const UString kDbUnitSetFile;            // 0x8e7e10

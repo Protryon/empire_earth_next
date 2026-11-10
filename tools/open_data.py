@@ -1,10 +1,13 @@
-"""open_data: the game's data as one loose Data tree (open formats where they exist) and the bundle a playthrough needs.
+"""open_data: the game's data as one loose Data tree in open formats only, and the bundle a playthrough needs.
 
-  python -I tools/open_data.py build OUT [--game DIR] [--base DIR] [--binary] [--force]
+  python -I tools/open_data.py build OUT [--game DIR] [--base DIR] [--force]
         OUT/Data: every file of both data.ssa archives and of both installs' loose Data, merged in the game's search
-        order; db tables as text (tools/eedata), models as glTF (tools/eemodel), textures as PNG (tools/eemodel);
-        OUT/Users (the install's), OUT/WONLobby.cfg, OUT/zzWONVersion.cfg, OUT/open_data.json (what was built).
-        --binary: the same tree with the binary forms (.dat, .cem, .sst/.tga) unconverted (a test variant).
+        order; db tables as text (tools/eedata), models as glTF (tools/eemodel), textures and the other Targa
+        pictures (pointers, palettes, volcano) as PNG (tools/eemodel); OUT/Users (the install's), OUT/WONLobby.cfg,
+        OUT/zzWONVersion.cfg, OUT/open_data.json (what was built). The game reads only these open forms (RUST_PLAN
+        D9): no binary form (.dat db file, .cem model, .sst/.tga texture) goes into the tree; one that has no open
+        form (a db file with no text form, a model that does not convert) is left out and listed in open_data.json
+        ("dropped").
   python -I tools/open_data.py pack OUT.zip [--part all|media|db] [--tree DIR] [--game DIR] [--base DIR]
         the bundle: the open tree (built into build/open_data/tree unless --tree names one), fonts/ (Liberation, with
         its LICENSE and AUTHORS) and README.txt. OUT must be under build/ or outside the repository.
@@ -17,12 +20,9 @@
   python -I tools/open_data.py ai TREE
         refresh a built tree's Data/ai from the repository's ai/ (the AI manifest ais.json and the next engine's Lua
         scripts; seconds, no rebuild) and record their hash in its open_data.json ("ai"). A build copies them too.
-  python -I tools/open_data.py ids TREE
-        write a binary tree's Data/db/dbobjects.ids and dbtechtree.ids (the row ids the text tables would carry, from
-        its .dat files; the computer players' scripts name classes and techs by them). A --binary build writes them.
   python -I tools/open_data.py check DIR
-        counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no binary file that has
-        an open replacement)
+        counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no Bink movie, no
+        binary form: .dat db file, .cem, .sst, .tga)
 
 The merge follows the original game's data path (EEShowSinglePlayerScreen; tools/eemodel/sources.py): this install's
 Data folder, the original game's Data folder, this install's data.ssa, the original game's data.ssa. The first place
@@ -111,6 +111,15 @@ SKIP_DIRS = {'dxm'}                       # Data\dxm: a community mod
 # Data\Campaigns; the original's were reachable only by name), merged in they would appear as custom campaigns
 BASE_ONLY_SKIP = {'campaigns'}
 SKIP_EXT = {'.bik'}                      # movies: converted by make_play_dir.py --movies
+BINARY_EXT = ('.cem', '.sst', '.tga')     # the binary forms the game no longer reads (RUST_PLAN D9), anywhere
+
+
+def binary_form(low):
+    """whether a file (its lower-case name in Data, backslashes) is a binary form the game does not read: a model,
+    texture or Targa picture, or a db\\*.dat file (the db tables are read as text only)"""
+    return low.endswith(BINARY_EXT) or (low.startswith('db\\') and low.endswith('.dat'))
+
+
 ROOT_FILES = ['WONLobby.cfg', 'zzWONVersion.cfg']
 # empty folders the game expects (it creates the user folders itself too)
 EMPTY_DIRS = ['Saved Games', 'Scenarios', 'Unit AI Scripts', 'Movies', 'Music']
@@ -236,29 +245,6 @@ def spell(name, dirs):
     return dirs['\\'.join(parts[:-1]).lower()] + '\\' + parts[-1]
 
 
-ID_TABLES = ('dbobjects', 'dbtechtree')   # the tables whose row ids the game reads from a binary tree (EEDbRowIds)
-
-
-def write_row_ids(tree):
-    """A binary tree's Data/db/<table>.ids for ID_TABLES: `key id` lines, the ids tools/eedata gives the rows when it
-    converts the tables (ids.generate), so the next engine's scripts name the same classes and techs on both trees
-    (docs/AI_RESEARCH.md 8.36). -> {table: rows}"""
-    import ids as idsmod
-    import tables
-    spec = db_tables()
-    db = pathlib.Path(tree) / 'Data' / 'db'
-    dbs = {t: (db / f'{t}.dat').read_bytes() for t in ID_TABLES}
-    generated = idsmod.generate(tables.parse_all(dbs, spec), spec)
-    out = {}
-    for t in ID_TABLES:
-        rows = sorted(generated[t].items())
-        head = f'# {t}: the row ids of the .dat (tools/open_data.py ids; key id)'
-        text = '\n'.join([head] + [f'{k} {v}' for k, v in rows]) + '\n'
-        (db / f'{t}.ids').write_bytes(text.encode('ascii'))
-        out[t] = len(rows)
-    return out
-
-
 def db_tables():
     spec = json.loads((ROOT / 'tools' / 'eedata' / 'specs.json').read_text(encoding='utf-8'))
     return spec
@@ -289,53 +275,59 @@ def cmd_build(a, out=None):
     spelled = canonical_dirs(plcs)
     data = out / 'Data'
     data.mkdir(parents=True)
-    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), binary=bool(a.binary), converters=converters_hash(),
+    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), converters=converters_hash(),
                   sources=[dict(place=p.label, files=len(p.names), tags=dict(p.tags)) for p in plcs],
                   shadowed={f'{k[1]} under {k[0]}': v for k, v in sorted(clashes.items())})
     converted = set()   # lower names replaced by an open form
-    if not a.binary:
-        # db tables -> text (tools/eedata): the 37 tables with a text form; the two without stay .dat
-        import tables
-        spec = db_tables()
-        (data / 'db').mkdir()
-        dbs = {}
-        for t in tables.binary_tables(spec):
-            name = f'db\\{t}.dat'
-            if name not in winner:
-                sys.exit(f'{name} is on no data path place')
-            dbs[t] = winner[name].read(name)
-        # all at once: the tables reference each other's rows by id (DATA_FORMATS.md 8.6)
-        for t, text in tables.export_tree(dbs, spec).items():   # + the rules documents (eedata rules.py)
-            (data / 'db' / f'{t}{tables.text_ext(spec, t)}').write_bytes(text)
-            converted.add(f'db\\{t}.dat')
-        print(f'db: {len(spec["tables"])} tables as text', flush=True)
-        # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)
-        import eemodel
-        ns = argparse.Namespace(game=a.game, base=a.base, names=None)
-        log = []
-        real_print = print
+    # db tables -> text (tools/eedata): the 37 tables with a text form. The other db files (dbrandommap.dat, which the
+    # game no longer loads, dbterraingraytextures.dat, which no AoC code opens) are binary forms: dropped below.
+    import tables
+    spec = db_tables()
+    (data / 'db').mkdir()
+    dbs = {}
+    for t in tables.binary_tables(spec):
+        name = f'db\\{t}.dat'
+        if name not in winner:
+            sys.exit(f'{name} is on no data path place')
+        dbs[t] = winner[name].read(name)
+    # all at once: the tables reference each other's rows by id (DATA_FORMATS.md 8.6)
+    for t, text in tables.export_tree(dbs, spec).items():   # + the rules documents (eedata rules.py)
+        (data / 'db' / f'{t}{tables.text_ext(spec, t)}').write_bytes(text)
+        converted.add(f'db\\{t}.dat')
+    print(f'db: {len(spec["tables"])} tables as text', flush=True)
+    # models -> glTF, textures and the Targa pictures -> PNG (tools/eemodel export: the same data path, resolved as
+    # the game does; every .tga and .sst of Data\Textures, which is where the retail data has its Targa files)
+    import eemodel
+    ns = argparse.Namespace(game=a.game, base=a.base, names=None)
+    log = []
+    real_print = print
 
-        def capture(*args, **kw):
-            log.append(' '.join(str(x) for x in args))
-            real_print(*args, **kw)
-        eemodel.print = capture
-        eemodel.cmd_export(ns, out=data)
-        eemodel.print = real_print
-        skipped = [ln for ln in log if ln.startswith('skipped ')]
-        report['models_skipped'] = skipped
-        models = {p.stem.lower() for p in (data / 'Models').glob('*.gltf')}
-        pngs = {p.stem.split('@')[0].lower() for p in (data / 'Textures').glob('*.png')}
-        for low in winner:
-            stem = low.rsplit('\\', 1)[-1].rsplit('.', 1)[0]
-            if low.startswith('models\\') and low.endswith('.cem') and '\\' not in low[7:] and stem in models:
-                converted.add(low)
-            if low.startswith('textures\\') and low.endswith(('.tga', '.sst')) and '\\' not in low[9:] and stem in pngs:
-                converted.add(low)
-        report['models_gltf'] = len(models)
-        report['textures_png'] = len(pngs)
+    def capture(*args, **kw):
+        log.append(' '.join(str(x) for x in args))
+        real_print(*args, **kw)
+    eemodel.print = capture
+    eemodel.cmd_export(ns, out=data)
+    eemodel.print = real_print
+    skipped = [ln for ln in log if ln.startswith('skipped ')]
+    report['models_skipped'] = skipped
+    models = {p.stem.lower() for p in (data / 'Models').glob('*.gltf')}
+    pngs = {p.stem.split('@')[0].lower() for p in (data / 'Textures').glob('*.png')}
+    for low in winner:
+        stem = low.rsplit('\\', 1)[-1].rsplit('.', 1)[0]
+        if low.startswith('models\\') and low.endswith('.cem') and '\\' not in low[7:] and stem in models:
+            converted.add(low)
+        if low.startswith('textures\\') and low.endswith(('.tga', '.sst')) and '\\' not in low[9:] and stem in pngs:
+            converted.add(low)
+    report['models_gltf'] = len(models)
+    report['textures_png'] = len(pngs)
+    # a binary form without an open one (a db file with no text form, a model that is not a model): left out
+    report['dropped'] = sorted(p.label + ':' + p.names[low] for low, p in winner.items()
+                               if low not in converted and binary_form(low))
+    for d in report['dropped']:
+        print(f'  dropped (binary form, no open form): {d}', flush=True)
     copied = collections.Counter()
     for low, p in sorted(winner.items()):
-        if low in converted:
+        if low in converted or binary_form(low):
             continue
         target = data / spell(p.names[low], spelled).replace('\\', os.sep)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -347,8 +339,6 @@ def cmd_build(a, out=None):
     for d in EMPTY_DIRS:
         (data / d).mkdir(exist_ok=True)
     report['ai'] = refresh_scripts(out)   # the next engine's scripts (the repository's, not retail data)
-    if a.binary:
-        report['ids'] = write_row_ids(out)   # the scripts' names for the .dat rows (EEDbRowIds)
     report['copied'] = dict(sorted(copied.items()))
     game = dirs[0]
     shutil.copytree(game / 'Users', out / 'Users')
@@ -392,15 +382,8 @@ def check_tree(root):
                 problems.append(f'{rel}: a data.ssa archive')
             if p.suffix.lower() == '.bik':
                 problems.append(f'{rel}: a Bink movie')
-            stem = p.stem.lower()
-            sib = p.with_suffix
-            if p.suffix.lower() == '.cem' and (sib('.gltf').exists() or sib('.glb').exists()):
-                problems.append(f'{rel}: a .cem next to its glTF')
-            if p.suffix.lower() in ('.sst', '.tga') and sib('.png').exists() and low[:2] == ['data', 'textures']:
-                problems.append(f'{rel}: a texture next to its PNG')
-            if p.suffix.lower() == '.dat' and (sib('.csv').exists() or sib('.yaml').exists()):
-                problems.append(f'{rel}: a db table next to its text')
-            del stem
+            if low[0] == 'data' and binary_form('\\'.join(low[1:])):
+                problems.append(f'{rel}: a binary form (the game reads only the open forms)')
     return problems
 
 
@@ -441,8 +424,8 @@ def cmd_pack(a):
         tree = pathlib.Path(a.tree)
     else:
         tree = TREE
-        if not (tree / 'open_data.json').exists() or json.loads((tree / 'open_data.json').read_text())['binary']:
-            a.force, a.binary = True, False
+        if not (tree / 'open_data.json').exists():
+            a.force = True
             cmd_build(a, out=tree)
     problems = check_tree(tree)
     if problems:
@@ -486,7 +469,6 @@ def main():
         p.add_argument('--game')
         p.add_argument('--base')
         if name == 'build':
-            p.add_argument('--binary', action='store_true')
             p.add_argument('--force', action='store_true')
         else:
             p.add_argument('--tree')
@@ -496,8 +478,6 @@ def main():
     p.add_argument('dir')
     p = sub.add_parser('ai')
     p.add_argument('tree')
-    p = sub.add_parser('ids')
-    p.add_argument('tree')
     a = ap.parse_args()
     if a.cmd == 'build':
         cmd_build(a)
@@ -506,11 +486,6 @@ def main():
         if not (pathlib.Path(a.tree) / 'Data').is_dir():
             sys.exit(f'{a.tree}: no Data folder')
         print(f'{a.tree}: Data/ai from {AI_SCRIPTS} ({refresh_scripts(a.tree)})')
-        return 0
-    if a.cmd == 'ids':
-        if not (pathlib.Path(a.tree) / 'Data' / 'db' / 'dbobjects.dat').is_file():
-            sys.exit(f'{a.tree}: no Data/db/dbobjects.dat (a binary tree)')
-        print(f'{a.tree}: {write_row_ids(a.tree)}')
         return 0
     return {'pack': cmd_pack, 'check': cmd_check}[a.cmd](a)
 

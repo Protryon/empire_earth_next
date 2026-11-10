@@ -214,8 +214,7 @@ def main():
         # the data tree once, before the parallel sessions: a tree made by other converter code is rebuilt, and
         # parallel sessions rebuilding the shared tree at once break it
         import exe_boot
-        text_db, open_assets = os.environ.get('EE_HARNESS_TEXT_DB'), os.environ.get('EE_HARNESS_OPEN_ASSETS')
-        exe_boot.data_tree('open' if os.environ.get('EE_HARNESS_OPEN_DATA') or (text_db and open_assets) else 'binary')
+        exe_boot.data_tree()
     if a.jobs <= 1:
         for n, run in enumerate(runs):
             results[n] = run_one(a, run, out)

@@ -1,15 +1,14 @@
-// EEDbFindFile: the game's seam for the text db tables (new unit, not in the original game). The database loaders
-// look their files up through this instead of FSPath::FindFile. When a table's text form (tools/eedata: the .dat's
-// name with .csv or .yaml) is on the path, it is compiled (the Rust compiler, rust/crates/ee_data) into the binary db file and served as an
-// FSMemoryFile, so the loaders read the same record stream as from the .dat; otherwise the .dat is found as before.
-// The path's own order applies: a loose Data\db\<table>.csv wins over the archive. When both the text and a .dat
-// are loose, the text wins.
+// EEDbFindFile: the game's seam for the db tables (new unit, not in the original game). The database loaders look
+// their files up through this instead of FSPath::FindFile. A table is read only in its text form (tools/eedata: the
+// .dat's name with .csv or .yaml): it is compiled (the Rust compiler, rust/crates/ee_data) into the table's record
+// stream and served as an FSMemoryFile, so the loaders read the records they always read. There is no binary db file
+// at run time (RUST_PLAN D9): a table without its text, or one with no text form, stops the game with its name.
+// The path's own order applies: a Data\db\<table>.csv earlier on the path wins.
 // The text tables reference each other's rows by id: one EEDataText::Content serves every table, reading the other
 // tables' texts through the same path when a reference needs their ids (each text is parsed once).
-// EE_DUMP_CONTENT=<file> (tests): every db table served, text or .dat, is appended to <file> as the content dump
+// EE_DUMP_CONTENT=<file> (tests): every db table served is appended to <file> as the content dump
 // (docs/MODDING_PLAN.md gate G1).
 #include <windows.h>
-#include <cstdlib>
 #include <set>
 #include <string>
 #include <vector>
@@ -107,38 +106,13 @@ bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds)
     return !outIds.empty();
 }
 
-// a binary tree's <table>.ids (tools/open_data.py ids: `key id` lines, # comments): the row ids the text tables would
-// carry, so that the computer player's scripts name the same classes and techs on both trees (docs/AI_RESEARCH.md
-// §8.36: without them every name was dbobjects_<n> and the boom AI found no class it knew)
-static void EEReadIdsFile(FSPath* inPath, const std::string& inName, std::map<long, std::string>& outIds)
+// A db table that cannot be served: stops the game with the place of the problem
+static long EEDbFailed(const std::string& inError, FSFileSpec*& outFile)
 {
-    FSFileSpec* theFile = NULL;
-    std::string theText;
-    if (inPath->FindFile(UString(inName.c_str()), theFile) != kErrorOK || theFile == NULL)
-        return;
-    bool theRead = EEReadWholeFile(*theFile, theText);
-    delete theFile;
-    if (!theRead)
-        return;
-    outIds.clear();
-    size_t thePos = 0;
-    while (thePos < theText.size()) {
-        size_t theEnd = theText.find('\n', thePos);
-        if (theEnd == std::string::npos)
-            theEnd = theText.size();
-        std::string theLine = theText.substr(thePos, theEnd - thePos);
-        thePos = theEnd + 1;
-        while (!theLine.empty() && (theLine.back() == '\r' || theLine.back() == ' '))
-            theLine.pop_back();
-        size_t theSpace = theLine.find(' ');
-        if (theLine.empty() || theLine[0] == '#' || theSpace == std::string::npos || theSpace == 0)
-            continue;
-        char* theStop = NULL;
-        long theKey = strtol(theLine.c_str(), &theStop, 10);
-        if (theStop != theLine.c_str() + theSpace)
-            continue;
-        outIds[theKey] = theLine.substr(theSpace + 1);
-    }
+    PlatMessageShow("Empire Earth: db text table", inError.c_str(), PLAT_MESSAGE_ERROR);
+    ESVerify(__FILE__, __LINE__, inError.c_str());
+    outFile = NULL;
+    return kErrorFailed;
 }
 
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
@@ -148,51 +122,34 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     size_t theSlash = theName.find_last_of("\\/");
     std::string theDirectory = theSlash == std::string::npos ? std::string() : theName.substr(0, theSlash + 1);
     std::string theStem = theName.substr(theDirectory.size());
-    if (theStem.size() > 4 && PlatStrICmp(theStem.c_str() + theStem.size() - 4, ".dat") == 0) {
+    if (theStem.size() > 4 && PlatStrICmp(theStem.c_str() + theStem.size() - 4, ".dat") == 0)
         theStem.resize(theStem.size() - 4);
-        for (char& c : theStem)
-            c = (char)(c >= 'A' && c <= 'Z' ? c + 32 : c);   // the loaders spell some names in mixed case
-        const char* theExtension = EEDataText::TextExtension(theStem.c_str());
-        FSFileSpec* theText = NULL;
-        if (theExtension != NULL &&
-            inPath->FindFile(UString((theDirectory + theStem + theExtension).c_str()), theText) == kErrorOK &&
-            theText != NULL) {
-            delete theText;
-            sTextPath = inPath;
-            sTextDirectory = theDirectory;
-            std::vector<unsigned char> theData;
-            std::string theError;
-            if (!EETextContent().Compile(theStem.c_str(), theData, theError))
-                theError = theDirectory + theStem + theExtension + ": " + theError;
-            if (!theError.empty()) {
-                // a broken text table stops the game, with the place of the problem
-                PlatMessageShow("Empire Earth: db text table", theError.c_str(), PLAT_MESSAGE_ERROR);
-                ESVerify(__FILE__, __LINE__, theError.c_str());
-                outFile = NULL;
-                return kErrorFailed;
-            }
-            if (theStem == "dbobjects" || theStem == "dbtechtree") {   // the ids the computer player's scripts name
-                std::string theIgnored;
-                EETextContent().Ids(theStem.c_str(), EERowIdsOf(theStem), theIgnored);
-            }
-            unsigned char* theBuffer = new unsigned char[theData.size() ? theData.size() : 1];
-            if (!theData.empty())
-                memcpy(theBuffer, &theData[0], theData.size());
-            EEDumpContent(theStem, theData.empty() ? NULL : &theData[0], theData.size());
-            outFile = new FSMemoryFile(theBuffer, (unsigned long)theData.size(), 1000, true);   // owns theBuffer
-            return kErrorOK;
-        }
-        if (theStem == "dbobjects" || theStem == "dbtechtree")
-            EEReadIdsFile(inPath, theDirectory + theStem + ".ids", EERowIdsOf(theStem));
-        if (getenv("EE_DUMP_CONTENT") != NULL && theExtension != NULL) {   // the binary load, for the dump
-            FSFileSpec* theDat = NULL;
-            std::string theBytes;
-            if (inPath->FindFile(inName, theDat) == kErrorOK && theDat != NULL && EEReadWholeFile(*theDat, theBytes))
-                EEDumpContent(theStem, reinterpret_cast<const unsigned char*>(theBytes.data()), theBytes.size());
-            delete theDat;
-        }
+    for (char& c : theStem)
+        c = (char)(c >= 'A' && c <= 'Z' ? c + 32 : c);   // the loaders spell some names in mixed case
+    const char* theExtension = EEDataText::TextExtension(theStem.c_str());
+    if (theExtension == NULL)
+        return EEDbFailed(theName + ": no text form of this db table", outFile);
+    FSFileSpec* theText = NULL;
+    if (inPath->FindFile(UString((theDirectory + theStem + theExtension).c_str()), theText) != kErrorOK ||
+        theText == NULL)
+        return EEDbFailed(theDirectory + theStem + theExtension + ": the db table is missing", outFile);
+    delete theText;
+    sTextPath = inPath;
+    sTextDirectory = theDirectory;
+    std::vector<unsigned char> theData;
+    std::string theError;
+    if (!EETextContent().Compile(theStem.c_str(), theData, theError))
+        return EEDbFailed(theDirectory + theStem + theExtension + ": " + theError, outFile);   // a broken text table
+    if (theStem == "dbobjects" || theStem == "dbtechtree") {   // the ids the computer player's scripts name
+        std::string theIgnored;
+        EETextContent().Ids(theStem.c_str(), EERowIdsOf(theStem), theIgnored);
     }
-    return inPath->FindFile(inName, outFile);
+    unsigned char* theBuffer = new unsigned char[theData.size() ? theData.size() : 1];
+    if (!theData.empty())
+        memcpy(theBuffer, &theData[0], theData.size());
+    EEDumpContent(theStem, theData.empty() ? NULL : &theData[0], theData.size());
+    outFile = new FSMemoryFile(theBuffer, (unsigned long)theData.size(), 1000, true);   // owns theBuffer
+    return kErrorOK;
 }
 
 #include "ee/EERules.h"

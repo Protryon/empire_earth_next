@@ -138,7 +138,7 @@ def main():
     ap.add_argument("--port-base", type=int, default=2000,
                     help="the first slot's port offset (64 more per slot); give benches run at the same time ranges apart, e.g. 2000 and 6000")
     ap.add_argument("--human-defeat", action="store_true", help="let the idle human be defeated")
-    ap.add_argument("--data", default="binary")
+    ap.add_argument("--data", default="open", help="open (default: build/open_data/tree) or a tree directory")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
     ap.add_argument("--sim-arg", action="append", default=[])
     ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS for every run (made absolute): the next "
