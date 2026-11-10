@@ -251,6 +251,12 @@ function M.accounts(view, mem, reserve, reserve_civ)
         mil[r] = math.min(mil[r] or 0, above + cap)   -- the account never outgrows what could be spent
         local free = math.max(above - cap, 0)
         avail[r] = math.min(above, (mil[r] or 0) + free)
+        if S.early_army and view.epoch < FARM_EPOCH then
+            -- early_army (docs/economy.md): before farms the military account belongs to the army - it pays out
+            -- whatever the epoch reserve is (the citizens never spend its food, above); f10's Stone Age army stayed
+            -- at 0 with the account under the Copper reserve
+            avail[r] = math.min(view.stock[r], mil[r] or 0)
+        end
         civil[r] = math.max(view.stock[r] - reserve_civ[r], 0)
         if S.early_army and r == "food" and (mem.early_epoch or 0) < FARM_EPOCH then
             civil[r] = math.max(civil[r] - (mil[r] or 0), 0)   -- early_army: the citizens never spend the army's food
@@ -379,7 +385,10 @@ function M.workers(view, mem, reserve, wants)
         local excess = target.food - places
         if excess > 0 then
             target.food = places
-            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}
+            -- the excess by the plan's floors: wood and the towers' stone first; gold and iron only a token before
+            -- the Stone Age (docs/STRATEGY_RESEARCH.md 4.2: the Copper Age's metals are not gathered before the
+            -- earlier goal - a DEVIATION from the port's first split of 37 / 37, not an upstream rule either way)
+            local shares = {wood = 55, stone = 25, gold = 10, iron = 10}
             local given = 0
             for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
                 local n = excess * shares[r] // 100
