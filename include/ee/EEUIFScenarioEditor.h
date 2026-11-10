@@ -11,6 +11,7 @@
 #ifndef EE_EEUIFSCENARIOEDITOR_H
 #define EE_EEUIFSCENARIOEDITOR_H
 #include "ee/EEScenarioEditorIDs.h"
+#include "ee/EEUnitHandle.h"
 
 class EEUIMiniMap;
 class EEUIEGrabScroll;
@@ -107,7 +108,7 @@ public:
     EESELoadThread* mLoadThread;            // +0x200 the loading thread (0 in the ctor)
     EEUIFSEMainButton** mTabButtons;        // +0x204 owned seven-button array (0x19eba9 new[7], ExitEditor checks [0])
     std::vector<EEUIFSEMainGroup*> mTabGroups;  // +0x208 the tab groups (indexed by the tab table 0x4c46d0)
-    std::vector<EEUnit*> mSelectedUnits;    // +0x218 the selected units
+    std::vector<EEUnitHandle<EEUnit> > mSelectedUnits;   // +0x218 the selected units (referenced; handles since R5a.4, the vector's order kept)
     UITextLabel* mLoadTextLabel;            // +0x228
     GEBitmap* mPanelBackground;             // +0x22c (the trigger tab's panel background: EESETriggerScreen 0x17c399)
     GETexture* mButtonTexture;              // +0x230 (LoadTexture, referenced)

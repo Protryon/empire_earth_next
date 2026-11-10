@@ -60,7 +60,7 @@ void EESEARotateUnits::Virtual4()
     EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
     unsigned long theCount = theEditor->GetSelectedUnitCount();
     for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit*& theUnit = theEditor->mSelectedUnits[i];
+        EEUnit* theUnit = theEditor->mSelectedUnits[i];
         EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
         if (theComplexUnit == NULL || !(theUnit->mUnitClass->mAngularAcceleration > 0.0f))
             continue;
