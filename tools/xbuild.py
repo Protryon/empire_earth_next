@@ -682,7 +682,6 @@ def cmd_census(a):
     # headers first; the platform layer's POSIX implementation replaces src/Platform/Win32 (compiled as units here)
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
-    inc.append(rust_build.WGPU_HEADERS / "include")
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
