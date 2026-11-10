@@ -1892,3 +1892,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   and a resource by the player's own finished drop site skips the visibility test.
 - **A resource centre can hold gold and iron 6 tiles apart.** A per-site `has_drop` from its first unit said the iron
   had a drop site; per-resource `drop`/`ready` in the view, and a settlement placed by the units that have none.
+
+- **A wall tech is never "available" to a computer player (2026-11-10).** `EEPlayer::CanProduce` (the human UI's test
+  before `EEMBuildWall`) says no for a computer player's wall and gate techs even in their epoch, and the classic wall
+  manager never asks it: it sends the message as it is, and `EEPlanWall` / `EEBuildWall` check the placement and pay the
+  pieces. The next engine's `ai.wall` / `ai.gate` therefore check the tech node and `CanAfford` only (the first version
+  refused every wall `cannot_afford`). `EECPCivilizationManager::GetWallClass` returns 0 before the Copper Age: the
+  `"wall"` alias is `bad_argument` there, a Prehistoric palisade goes by its class name.
+- **An intermittent units-hash divergence after a direct build (open, 2026-11-10).** Small Islands seed 11, the port
+  against classic Hard, two runs: identical traces for 65 minutes, then the `sim hash` units value differed (AI and RNG
+  equal) ten seconds after `ai.build` placed a granary with three held citizens (`build_direct`) and the classic
+  helper joined (`build.help sent=1`). The same pair rerun was identical to 70 minutes, and the navy port's agent saw
+  it once as well, also right after a direct granary. Not reproduced on demand; the suspects are the build message's
+  field assignment round a granary (EEMBuildUnit: EEFindFreeFarm's order, the std::sort ties) and the helper's pick.
