@@ -70,10 +70,12 @@ public:
     void SendMessageToClient(LobbyClient* inClient, const ByteBuffer* inBuffer);
     void SendMessageToCaptain(const ByteBuffer* inBuffer);
     void BroadcastMessage(const ByteBuffer* inBuffer, bool inFlag);
-    void HandleClientJoined(ReadBuffer& inBuffer);
-    void HandleClientLeft(ReadBuffer& inBuffer);
-    void HandleChatRequest(ReadBuffer& inBuffer, LobbyClient* inSender);
-    void HandleChatMessage(ReadBuffer& inBuffer);
+    void HandleClientJoined(unsigned short inId, const std::wstring& inName);
+    void HandleClientLeft(unsigned short inClientId);
+    void HandleChatRequest(unsigned short inFlags, const std::wstring& inText, unsigned short inTargetId,
+                           LobbyClient* inSender);
+    void HandleChatMessage(unsigned short inFlags, unsigned short inSenderId, const std::wstring& inText,
+                           unsigned short inTargetId);
     void HandleStagingMessage(ReadBuffer& inBuffer, LobbyClient* inSender);
     void HandleMessage(const ByteBuffer* inBuffer, LobbyClient* inClient);
     void ChangeLanName();
@@ -84,10 +86,10 @@ public:
     void BroadcastGameSummary(LobbyGame* inGame, const IPAddr& inAddress);
     void BroadcastGameKeepAlive(LobbyGame* inGame);
     void BroadcastGameRemoved(LobbyGame* inGame);
-    void HandleDiscoveryQuery(ReadBuffer&, const IPAddr&);
-    void HandleGameSummary(ReadBuffer&, const IPAddr&);
-    void HandleGameKeepAlive(ReadBuffer&, const IPAddr&);
-    void HandleGameRemoved(ReadBuffer&, const IPAddr&);
+    void HandleDiscoveryQuery(const IPAddr&);
+    void HandleGameSummary(unsigned short inPort, ReadBuffer& inSummary, const IPAddr&);
+    void HandleGameKeepAlive(unsigned short inPort, const IPAddr&);
+    void HandleGameRemoved(unsigned short inPort, const IPAddr&);
     void HandleDiscoveryTimer(AsyncOp* inOp);
     void StartDiscoveryTimer();
     void StopDiscovery();
@@ -99,7 +101,7 @@ public:
     void EnterLanScreen();
     void HandleRecvMsg(AsyncOp*); // receive completion
     void HandleNewSocketMessage(const ByteBuffer*,LobbyLanSocket*);
-    void HandleJoinRequest(ReadBuffer&,LobbyLanSocket*);
+    void HandleJoinRequest(const std::wstring& inName,const std::wstring& inPassword,LobbyLanSocket*);
     int ReadJoinReply(const ByteBuffer*,LobbyGame*);
     void ShowClientOptions(LobbyClient*,int);
     void AddPendingSocket(LobbyLanSocket*);

@@ -184,6 +184,52 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
 
+constexpr static const uint8_t JOIN_REQUEST = 1;
+
+constexpr static const uint8_t JOIN_REPLY = 2;
+
+constexpr static const uint8_t CLIENT_JOINED = 3;
+
+constexpr static const uint8_t CLIENT_LEFT = 4;
+
+constexpr static const uint8_t CHAT_REQUEST = 5;
+
+constexpr static const uint8_t CHAT_LINE = 6;
+
+constexpr static const uint8_t PING = 7;
+
+constexpr static const uint8_t STAGING = 8;
+
+constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
+
+constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
+
+constexpr static const uint8_t DISCOVERY_REMOVED = 3;
+
+constexpr static const uint8_t DISCOVERY_QUERY = 4;
+
+/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
+constexpr static const int16_t JOIN_OK = 0;
+
+constexpr static const int32_t JOIN_BAD_REPLY = 1;
+
+constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
+
+constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
+
+/// Chat flags: a whisper to the target, a line to the sender's team.
+constexpr static const uint16_t CHAT_WHISPER = 4;
+
+constexpr static const uint16_t CHAT_TEAM = 256;
+
+/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
+/// host re-sends its full summary instead of a keep-alive after this many.
+constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
+
+constexpr static const int64_t JOINER_PING_IDLE = 120;
+
+constexpr static const int64_t SUMMARY_REPEAT = 30;
+
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
   Hashed = 0,
@@ -399,6 +445,12 @@ struct EeSoundManager;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
+/// `AsyncOpContainer::mOpQueue`.
+struct EeWonOpQueue;
+
+/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
+struct EeWonOpSet;
+
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
 
@@ -418,6 +470,12 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
+
+/// `TimerThread`'s two maps: the deadlines of this tick-count era and, past the 32-bit wrap, of the next
+/// (`mTimerMap`, `mWrapAroundMap`), each in deadline order and, among equal deadlines, in insertion order (the
+/// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
+/// the first map, which left the ops' iterators dangling).
+struct EeWonTimerQueue;
 
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
@@ -2545,6 +2603,18 @@ struct EeWonCdKeyDecoded {
   uint8_t raw[8];
 };
 
+/// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
+/// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.
+struct EeWonLanMsg {
+  uint8_t kind;
+  uint16_t flags;
+  uint16_t id;
+  uint16_t target;
+};
+
+/// Receives one player of a join reply.
+using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *name, size_t count);
+
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
 
@@ -2572,6 +2642,43 @@ struct EeWonOpTiming {
   uint32_t start;
   uint32_t timeout;
 };
+
+/// `AsyncOp`'s run state: `mStatus`, `mRunMode`, `mStartTime`, `mTimeout`, `mCompletionPending`, `mKilled` and
+/// `mRunAsyncImmediately`, copied in and out by the C++ under the op's lock.
+struct EeWonOpState {
+  /// The `WONStatus` (a 32-bit `long` in the C++).
+  int32_t status;
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+  bool completion_pending;
+  bool killed;
+  bool run_async_immediately;
+};
+
+/// A sink for the ops a queue hands back.
+using EeWonOpSink = void(*)(void *context, void *op);
+
+/// `AsyncOpContainer::Pump`'s accounting: how many ops to run and how long to go on (a value the C++ keeps on its
+/// stack across the pump).
+struct EeWonPumpPlan {
+  uint32_t start;
+  uint32_t wait;
+  int32_t remaining;
+};
+
+/// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
+/// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
+/// 3 forget the repeat op.
+struct EeWonQueueDecision {
+  bool close;
+  int32_t completion;
+  int32_t next;
+  bool clear_current;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
@@ -6953,6 +7060,155 @@ void ee_won_cdkey_decrypt(const uint8_t *product,
 /// `raw` holds `length` bytes.
 bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
 
+/// The joiner's join request; `name` / `password` are UTF-16 LE bytes.
+///
+/// # Safety
+/// The byte arguments hold their lengths; `sink` takes the message.
+void ee_won_lan_join_request(const uint8_t *name,
+                             size_t name_len,
+                             const uint8_t *password,
+                             size_t password_len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's refusal of a join (`status` 2 wrong password, 3 another subnet).
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_join_refused(int16_t status, EeWonByteSink sink, void *context);
+
+/// The host's accepted join reply: `ids[i]` and the UTF-16 LE name `names` from `name_offsets[i]` (in bytes) to
+/// `name_offsets[i + 1]` (`count + 1` offsets).
+///
+/// # Safety
+/// `ids` holds `count` ids, `name_offsets` `count + 1` offsets into `names`; `sink` takes the message.
+void ee_won_lan_join_accepted(uint16_t captain,
+                              uint16_t you,
+                              size_t count,
+                              const uint16_t *ids,
+                              const uint8_t *names,
+                              const size_t *name_offsets,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a new player.
+///
+/// # Safety
+/// `name` holds `name_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_client_joined(uint16_t id,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a departed player.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_client_left(uint16_t id, EeWonByteSink sink, void *context);
+
+/// A player's chat request to the host.
+///
+/// # Safety
+/// `text` holds `text_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_chat_request(uint16_t flags,
+                             const uint8_t *text,
+                             size_t text_len,
+                             uint16_t target,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's relayed chat line.
+///
+/// # Safety
+/// As `ee_won_lan_chat_request`.
+void ee_won_lan_chat_line(uint16_t flags,
+                          uint16_t sender,
+                          const uint8_t *text,
+                          size_t text_len,
+                          uint16_t target,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// The joiner's ping.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_ping(EeWonByteSink sink, void *context);
+
+/// A staging message wrapped for the game channel.
+///
+/// # Safety
+/// `payload` holds `length` bytes; `sink` takes the message.
+void ee_won_lan_staging(const uint8_t *payload, size_t length, EeWonByteSink sink, void *context);
+
+/// A discovery packet's head (`kind` 1 summary, 2 keep-alive, 3 removed, 4 query).
+///
+/// # Safety
+/// `sink` takes the packet.
+void ee_won_lan_discovery(uint8_t kind, uint16_t port, EeWonByteSink sink, void *context);
+
+/// Reads a game-channel message (`skip` 2 for the host's own, else 0). The join request's name goes to
+/// `first`, its password to `second`; a joined player's name and a chat text go to `first`.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is valid; the sinks take the units.
+void ee_won_lan_read_game(const uint8_t *bytes,
+                          size_t length,
+                          size_t skip,
+                          EeWonLanMsg *out,
+                          EeWonUnitSink first,
+                          EeWonUnitSink second,
+                          void *context);
+
+/// Reads a join reply: returns `ReadJoinReply`'s status; `*captain` / `*you` are set and `true` returned through
+/// `have_captain` once the captain's id was read; each player read whole goes to `client`, in order.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid; `client` takes the players.
+int32_t ee_won_lan_read_join_reply(const uint8_t *bytes,
+                                   size_t length,
+                                   bool *have_captain,
+                                   uint16_t *captain,
+                                   uint16_t *you,
+                                   EeWonLanClientSink client,
+                                   void *context);
+
+/// Reads a discovery packet's head: true and its type and port, false when it is short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid.
+bool ee_won_lan_read_discovery(const uint8_t *bytes, size_t length, uint8_t *kind, uint16_t *port);
+
+/// `lan::join_status`: 0 accept, 2 wrong password, 3 another subnet.
+int16_t ee_won_lan_join_status(int32_t game_type,
+                               uint8_t peer0,
+                               uint8_t peer1,
+                               uint8_t local0,
+                               uint8_t local1,
+                               bool password_matches);
+
+/// `lan::next_client_id` over the C++ counter.
+///
+/// # Safety
+/// `next` is valid.
+uint16_t ee_won_lan_next_client_id(uint16_t *next);
+
+/// `lan::chat_route`: 0 everyone, 1 the whisper target and the sender, 2 the sender's team.
+int32_t ee_won_lan_chat_route(uint16_t flags);
+
+/// `lan::chat_line_flags`.
+uint16_t ee_won_lan_chat_line_flags(uint16_t flags);
+
+/// `lan::host_socket_stale`.
+bool ee_won_lan_host_socket_stale(int64_t now, int64_t last_message);
+
+/// `lan::joiner_ping_due`.
+bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
+
+/// `lan::summary_due`.
+bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
+
 /// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
 /// game-specific error) is written into `buffer` (`size` bytes), which is returned.
 ///
@@ -7224,6 +7480,320 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonOpTiming timing,
                          EeWonByteSink sink,
                          void *context);
+
+/// `AsyncOp::AsyncOp`'s state.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_state_init(EeWonOpState *state);
+
+/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
+/// 3 queue it in the container, 4 run blocking.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_run(EeWonOpState *state,
+                      int32_t mode,
+                      uint32_t timeout);
+
+/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_run_as_timer(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_force_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::Kill`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_kill(EeWonOpState *state, bool finish);
+
+/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_complete(EeWonOpState *state);
+
+/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_after_run_hook(const EeWonOpState *state);
+
+/// `AsyncOp::SetTimeout`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::SetMode`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
+
+EeWonTimerQueue *ee_won_timers_new();
+
+/// # Safety
+/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
+void ee_won_timers_destroy(EeWonTimerQueue *timers);
+
+/// The tick the wait times count from (`ThreadFunc`'s start).
+///
+/// # Safety
+/// `timers` is live.
+void ee_won_timers_set_last_tick(EeWonTimerQueue *timers);
+
+/// `TimerThread::AddTimerOp` now -> the entry's key.
+///
+/// # Safety
+/// `timers` is live; `op` stays alive while the entry exists.
+uint64_t ee_won_timers_add(EeWonTimerQueue *timers, uint32_t timeout, void *op);
+
+/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
+///
+/// # Safety
+/// `timers` is live.
+void *ee_won_timers_remove(EeWonTimerQueue *timers, uint64_t key);
+
+/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_pump(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+/// `TimerThread::GetWaitTime`.
+///
+/// # Safety
+/// `timers` is live.
+uint32_t ee_won_timers_wait_time(const EeWonTimerQueue *timers);
+
+/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_purge(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+EeWonOpQueue *ee_won_opqueue_new();
+
+/// # Safety
+/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
+void ee_won_opqueue_destroy(EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
+/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
+///
+/// # Safety
+/// `queue` is live; a queued `op` stays alive until popped.
+int32_t ee_won_opqueue_queue(EeWonOpQueue *queue,
+                             void *op,
+                             void *current,
+                             bool current_pending,
+                             bool purging);
+
+/// The front op, taken (null: none).
+///
+/// # Safety
+/// `queue` is live.
+void *ee_won_opqueue_pop(EeWonOpQueue *queue);
+
+/// # Safety
+/// `queue` is live.
+size_t ee_won_opqueue_len(const EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::Pump`'s accounting, started now.
+EeWonPumpPlan ee_won_pump_plan_new(uint32_t wait, int32_t max_ops, size_t queued);
+
+/// Whether to wait for the signal before pumping.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_should_wait(const EeWonPumpPlan *plan, size_t queued);
+
+/// After one op: whether to go on with the next.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_go_on(EeWonPumpPlan *plan);
+
+EeWonOpSet *ee_won_opset_new();
+
+/// # Safety
+/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
+void ee_won_opset_destroy(EeWonOpSet *set);
+
+/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_insert(EeWonOpSet *set, void *op);
+
+/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_remove(EeWonOpSet *set, void *op);
+
+/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `PurgeOps`: every op to the sink, the set emptied.
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
+bool ee_won_socket_op_finishes(long status);
+
+/// `SocketThreadSimple::Pump`'s wait.
+uint32_t ee_won_socket_pump_wait(uint32_t wait);
+
+/// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
+EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
+                                                long status,
+                                                bool killed,
+                                                bool close_queued,
+                                                bool queue_empty,
+                                                bool socket_valid,
+                                                bool datagram);
+
+/// `StringParser::GetChar(offset)` at `pos`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units (1, 2 or 4) and `pos + offset` inside it.
+uint8_t ee_won_parser_get_char(const void *text,
+                               uint32_t unit_size,
+                               int32_t pos,
+                               int32_t offset);
+
+/// `StringParser::GetWChar(offset)` at `pos`.
+///
+/// # Safety
+/// As `ee_won_parser_get_char`.
+uint32_t ee_won_parser_get_wchar(const void *text, uint32_t unit_size, int32_t pos, int32_t offset);
+
+/// `StringParser::SkipWhitespace`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units, `*pos` inside it.
+void ee_won_parser_skip_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::SkipNonWhitespace`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+void ee_won_parser_skip_non_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::CheckNextChar(ch)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+bool ee_won_parser_check_next_char(const void *text, uint32_t unit_size, int32_t *pos, int32_t ch);
+
+/// `StringParser::StartsWith(prefix)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `prefix` is NUL-terminated.
+bool ee_won_parser_starts_with(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               const char *prefix);
+
+/// `StringParser::Is(word)`.
+///
+/// # Safety
+/// As `ee_won_parser_starts_with`.
+bool ee_won_parser_is(const void *text, uint32_t unit_size, int32_t *pos, const char *word);
+
+/// `StringParser::ReadString(std::string&, stopAtWhitespace)`: the token to `sink` (always true in the C++).
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `sink` takes the bytes.
+void ee_won_parser_read_string(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               bool stop_at_whitespace,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `StringParser::ReadString(std::wstring&, stopAtWhitespace)`: the token's units to `sink`.
+///
+/// # Safety
+/// As `ee_won_parser_read_string`.
+void ee_won_parser_read_wstring(const void *text,
+                                uint32_t unit_size,
+                                int32_t *pos,
+                                bool stop_at_whitespace,
+                                EeWonWideSink sink,
+                                void *context);
+
+/// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `out` is valid.
+bool ee_won_parser_read_int(const void *text,
+                            uint32_t unit_size,
+                            int32_t *pos,
+                            int32_t *out);
+
+/// `StringParser::ReadValue(bool&)`: true and `*out` for a boolean word; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_read_int`.
+bool ee_won_parser_read_bool(const void *text,
+                             uint32_t unit_size,
+                             int32_t *pos,
+                             bool *out);
+
+/// `StringParser::ValueToString` of a signed integer (int, long, short, char, __int64): decimal to `sink`.
+///
+/// # Safety
+/// `sink` takes the bytes.
+void ee_won_parser_format_i64(int64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString` of an unsigned integer (unsigned long, unsigned char, unsigned __int64).
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_u64(uint64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString(const bool&)`: "True" or "False".
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_bool(bool value, EeWonByteSink sink, void *context);
+
+extern int isspace(int c);
+
+extern int isdigit(int c);
+
+extern int isxdigit(int c);
+
+extern int isalnum(int c);
+
+extern int toupper(int c);
+
+extern int tolower(int c);
 
 }  // extern "C"
 

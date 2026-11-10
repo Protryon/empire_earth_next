@@ -3928,3 +3928,155 @@ dispatch, the wheel's step), `UITriStateCheckBox` (state, bitmaps, label geometr
 - **Still C++ in R6's toolkit:** the drawing (`CopyData`'s rhombus/text copies, every `DrawPolygons`/`DrawTextA`),
   `UIManager`'s music and IME members, the edit box's key dispatch and repeat timers, `UIForm`'s Open/Close/dirty
   rectangle bookkeeping, the backgrounds, hot keys, `UIFontTable`, `UIBackgroundTable`, `UIEvent`.
+
+## R6: a LAN game through the lobby's own UI, and WON's async-op machinery in Rust (branch rust-r6-won3, 2026-11-10)
+
+### The two-instance LAN test: `tools/harness/lan_game.py`
+
+The first oracle for what the lobby must keep doing (RUST_PLAN R6 pre-work 1, PORT.md "Other next steps"): two
+instances of the test-profile exe on this machine, each under the UI fixture, host and join a LAN game through the
+WON lobby's own screens (main menu -> MultiPlayer -> Other Multiplayer -> Host Game / the LAN list -> Join -> Ready ->
+Start -> the connect dialog -> the game), and both play in lockstep for `--play-seconds`. `mp_game.py` bypassed the
+lobby; this does not. Run 3 (`build/lan_game/run3`): PASS, both ends at CT 199 after 60 s, PT 2736 / 2732, world
+players 3 (the two humans and Gaia), no GX error. So a LAN game through the lobby works on the current code, with
+the earlier `SendMsgOp` fix (the LAN join, the chat and the staging messages all go through it).
+
+- **The lobby owns the UI thread, so the fixture reaches it through its own message loop.** `EETestFixture.cpp`
+  posts a `UserEvent` to the lobby's `WindowManager` (`PostEvent` is thread-safe; `GetNextEvent` runs `ProcessEvents`
+  inside every nested dialog loop too); its `Deliver` runs on the lobby thread, executes the pending command and
+  takes a snapshot the fixture's poll copies into `ui-state.txt`: `lobby shown/screen/lan/login/modal/game/host/
+  clients/ready/allready/name`, one `wonctl <id> <x> <y> <w> <h> <enabled> <text>` per visible component with a control
+  id (root coordinates of the 1024x768 layout; a button's text), `wonlist <k> items <n> sel <i>` per visible list area,
+  `wontext <text>` per label of the modal dialog (a message box's message). Nothing of the lobby's is touched from the
+  fixture thread (the component tree is refcounted and relaid out on the lobby thread). The commands: `wonclick <id>`
+  (a mouse move, press and release at the component's centre through the window's event queue, the real button path;
+  the modal component is searched first), `wonactivate <id>` (`Button::Activate`), `wonkey <code>` (a typed
+  character to the focus: the dialogs' `RequestFocus` input), `wonselect <k> <item>` (`ListArea::SetSelItem` with its
+  event) and `wonclickat <x> <y>` (a tab, a list row). The verdict ("TEST UI lobby-clicked ...") comes from the lobby
+  thread; the fixture's own line says "lobby-posted". Components have no names at run time (the .cfg names live in
+  `ComponentConfig` during the load), so the control ids are the handles: `WONLobbyResourceGlobals.h`
+  `LobbyResourceCtrlId` (200009 Other Multiplayer, 200011 Host Game, 200013 Join, 200015 Start/Ready, 200016 Refresh,
+  200019 Add LAN name), `ID_Ok` 100001, and a `WONTabCtrl`'s tab buttons carry their index (the LAN tab's is 0: not
+  listed, clicked at the Direct Connect tab's left).
+- **Three things kept two instances apart on one machine, none of them the lobby's logic.** (1) The single-instance
+  mutex: the second game exited with 0 at once (`EECreateInstanceMutex`); under `EE_TEST_UI`, `EE_TEST_INSTANCE=<name>`
+  names the mutex per instance (TEST ONLY). (2) The LAN discovery socket was bound exclusively (`Fn2B0D90(port, 0)`),
+  so the second lobby's bind of 0.0.0.0:8585 failed and it neither saw nor advertised a game; it binds with address
+  reuse now (`LanLogic::StartDiscovery`): on Windows two reuse-bound UDP sockets both receive the limited broadcasts
+  (255.255.255.255, `IPAddr::GetBroadcastAddr`), a unicast reaches one of them (measured with a Python probe), and
+  the host's summary broadcasts (`AdvertiseGame` at creation, every 30 s from the discovery timer) are what the
+  joiner's list is built from. The listening socket (8888) is the host's alone; the lobby's UDP port (`LobbyBindUDPPort`)
+  already reused. (3) The default LAN name is "Unknown" plus a number made from the local IP address
+  (`GetDefaultLanName`: CRC-16 of the address), the same in both, and the host refuses a duplicate name ("The name you
+  have chosen is already being used by another player", read off the `wontext` dump): the driver sets a name per end
+  through the Options tab (Add -> the name dialog -> OK -> back to the LAN tab).
+- **What the driver waits for.** The lobby's snapshot stops with its message loop, so the end of the lobby is read
+  from the game's own forms: `EELobbyShowGameScreen` pushes form 30 before `EELobbyHide`, then the game form and the
+  telemetry (`wait_running`: a map and physics ticks). The game's port (33334, INADDR_ANY) is the host's only; the
+  joiner connects by the host's IP from the discovery packet (`GetMyLobbyGame()->mAddress`) and binds an ephemeral
+  port. Two games share one stage (data root): the game logs are named by the start second (the ends start 3 s
+  apart), `_wonlobbypersistent.dat` is written by both (harmless).
+- The lobby frames are captured through the fixture's read-back (1226x768 at this window size); the hit tests and
+  the dumped coordinates are the 1024x768 layout's, which `PlatWindowManager::ScaleToSurface` maps the real pointer to.
+
+### WON's async-op machinery in Rust (`ee_won/src/asyncop.rs`, `ffi_ops.rs`)
+
+`AsyncOp`'s run state and its transitions (`Run`, `RunAsTimer`, `Finish`, `ForceFinish`, `Kill`, `Complete`,
+`StartRunAsync`'s timer decision, `SetTimeout`, `SetMode`), `TimerThread`'s two deadline maps with the tick-wrap
+switch and the wait time, `AsyncOpContainer`'s queue and the pump's accounting (the max-ops and wait-time cut-offs),
+`SocketThreadSimple`'s op set (address order, as the `SmartPtr` comparator's), `SocketThread::DoOp`'s finish rule and
+`QueueSocket::OpCallback`'s decisions (which completion, close or not, the next queued op or the repeat op's rerun)
+are Rust. The C++ classes keep their objects, locks, threads, events, completions and virtual hooks.
+
+- **The op's members stay, Rust gets a copy.** `mStatus`, `mKilled`, `mCompletionPending` are read all over the WON
+  library, so `AsyncOp` keeps them and `GetState` / `SetState` copy them into an `EeWonOpState` under `mLock` around
+  each transition; the transition returns what to do (queue in the container, arm the timer, time out now, run
+  blocking, deliver the completion). `Kill` now takes the lock around its flag (the original set `mKilled` outside
+  it); nothing else changed order.
+- **Queues hold handles, the C++ holds the references.** The original queues were `std::list` / `std::multimap` /
+  `std::set` of `SmartPtr`s. The Rust queues hold the op's address; the C++ side `AddRef`s when it hands an op in and
+  `Release`s when the queue hands it back (the container's pop into `mCurPumpOp`, the timer's due and purged ops after
+  `Finish` / `Kill`, the socket thread's finished ops after `DoOp`). A sink callback delivers the ops only after the
+  queue's own borrow ended, so a sink may use the queue again; the socket thread's pump iterates a snapshot and
+  removes each finished op by value, as the original erased while iterating under its lock.
+- **A timer entry is a key, not an iterator.** `AsyncOp::mTimeoutMap` / `mTimeoutItr` became `mTimerQueue` /
+  `mTimerKey`. After a 32-bit tick wrap the original copied the wrap-around map over the current one, which left
+  every queued op's iterator dangling (a later `RemoveFromTimerMap(true)` erased through it); a key survives the
+  switch. The arithmetic is the original's: a deadline past the wrap is `timeout - (0xffffffff - now)` of the next
+  era, the wait with no timer `9 - lastTick` (unsigned).
+- **The container's `PurgeOps` leaves `mCurPumpOp` on the last op** (the original did); kept.
+- **Capture first:** `won_ops_test` gained scripted checks of the machinery (a hook that finishes with a scripted
+  status or stays pending: a blocking run, a zero timeout, `Run` while pending and while awaiting completion,
+  `ForceFinish` on an idle op and while the completion waits, `Kill(false)` then `Kill(true)`, the timeout frozen while
+  running, the container's completion order and `Pump(0, 2)`, a zero timer, a timer finished by hand). They were run
+  over the C++ machinery first (one expectation corrected: a blocking op's `TimeLeft` counts down from its run, it is
+  not 0), then over the port: PASS, with `won_socket_test`. 96 `ee_won` tests (the wrap, equal deadlines' order, the
+  pump plan's cut-offs, the decision table).
+- `SocketThreadWinsock2.cpp`, `SocketThreadEx_Windows.cpp` and their headers are deleted: never linked
+  (`units.WON_NOT_LINKED`), the game runs the polling `SocketThreadSimple`.
+
+### StringParser in Rust (`ee_won/src/parser.rs`, `ffi_parse.rs`)
+
+The cursor's reads (`ReadString` into narrow and wide strings: bare and quoted tokens, the escapes, `L"..."`,
+`"a"+ "b"`, the trailing-whitespace trim; `ReadValue` of integers and booleans), `SkipWhitespace`,
+`SkipNonWhitespace`, `CheckNextChar`, `StartsWith`, `Is`, `GetChar`/`GetWChar`/`EndOfString` and the decimal
+formats are Rust. The C++ `StringParser` keeps its text pointer, position and width; the list readers and the list
+formats (StringParserCollections.cpp, StringParserLists.cpp) stay C++ loops over these primitives.
+StringParserNumbers.cpp is folded into StringParser.cpp; StringParserFormat.cpp (never linked, a duplicate) is deleted.
+
+- **The ctype calls stay the C runtime's.** The game's UI thread runs `setlocale(LC_ALL, "English")`, and in that
+  locale `isspace(0xA0)` is true: the golden's `english` pass differs from the `C` pass there (a no-break space ends a
+  token). So `ffi_parse.rs` calls the CRT's `isspace` / `isdigit` / `isxdigit` / `isalnum` / `toupper` / `tolower`
+  with the original's exact arguments, including `isalnum` of a `toupper` result cast to `char` (a byte above 0x7f
+  arrives negative); the Rust tests use a C-locale `Ctype`. Superscript digits (0xB2, 0xB3, 0xB9) are not digits in
+  either locale.
+- **The text is read by index, not by length:** an escape at the end of a quoted string steps one past the
+  terminator and back, as the original did, so the Rust side reads the C string through a raw pointer
+  (`RawText`, units of 1, 2 or `sizeof(wchar_t)` bytes) instead of measuring it.
+- **The integer reads wrap in a 32-bit int**, the 64-bit read too (the SDK accumulated in an `int`).
+- **Behaviour change:** the header's sized `ReadValue` wrappers (`long`, `short`, `char`, ...) store only on success;
+  the original assigned an uninitialised `int` after a failed read (clang happened to leave the output alone, which
+  is what the golden recorded). On LP64 the `long` formats print the whole value (the original's `"%d"` of a `long`).
+- **Capture first:** `won_parse_test` runs every read and format over 53 inputs in both widths and both locales and
+  compares with `rust/crates/ee_won/src/golden_parse.txt`, recorded over the C++ before the port (3537 lines); the
+  Rust test `parser_golden` replays the C-locale pass and the formats line. `WStringToString` of a wide string with a
+  NUL stops at the NUL (`std::string(buffer)`), which the replay models.
+- The Bash tool of this session collapses `\\` to `\` in heredocs and inline Python: write files with backslashes
+  (C escapes, raw strings) through the editor, not the shell.
+
+### The LAN protocol in Rust (`ee_won/src/lan.rs`, `ffi_lan.rs`)
+
+LanLogic's messages are Rust: the game channel's (`WriteBuffer(2, true)`: join request, join reply refused and
+accepted, client joined and left, chat request and line, ping, the staging wrapper) and the discovery packets' heads
+(`WriteBuffer(0, true)`: summary, keep-alive, removed, query), both built and read, and the host's decisions: the join
+status (the subnet check of a LAN game, then the password), the chat route (whisper, team, everyone) and the shown
+flags, the network timer's stale-socket and ping rules, the discovery timer's summary-or-keep-alive rule, and
+`GetNextClientId`. The C++ keeps the objects, sockets, events and `LobbyGame::WriteSummary` / `ReadSummary` (the
+summary body) and the staging logic's own reads.
+
+- **A message is read whole before anything acts on it.** The handlers now take the decoded fields (the header's
+  `HandleJoinRequest`, `HandleClientJoined`, ... signatures changed). Every original handler read all its fields
+  before acting, so a short message still does nothing, except `ReadJoinReply`, which set the game's captain id and
+  added the players one by one as it read them: `read_join_reply` returns what had been applied before a short read
+  (the captain once read, the players read whole) and the C++ applies exactly that.
+- **`GetNextClientId` hands out 0 once after 0xffff** (it steps 0xffff to 0 and returns it); the comment said it
+  skipped both. Kept, documented.
+- The host delivers its own messages with their 2-byte prefix (`HandleMessage`'s offset); messages from sockets
+  (`RecvMsgOp`) come without it.
+- **Capture first:** `won_lan_test` builds every message with the original's `WriteBuffer` statements (copied from
+  LanLogic.cpp before the port) and through the Rust ABI and compares the bytes, then reads them back (a short
+  message, a reply cut inside a name). The LAN game (`lan_game.py`) passes over the port; the chat, the refusals and
+  the timers' rules are not exercised by it (only by the tests).
+
+### State and what is left
+
+- `lan_game.py` on the branch head before this work (the test-profile exe of the merged tree): **PASS**, host and
+  joiner both at PT 2795 / CT 205 after 60 s of play (`build/lan_game/baseline`). After the StringParser and LAN
+  ports: **PASS**, PT 2744 / 2757, CT 200 / 201 (`build/lan_game/ported`). The earlier `EE-SIM` fault on seed 4
+  (`NERecordPlayback::Process` from `NESynchronousServer::ProcessLocalUserInput` at the random-map screen, a null
+  record-playback object) did not repeat in the rerun; the oracle passed on seeds 2-7. It is a race in the sim's
+  start, not WON code; reported, not fixed.
+- Still C++ of WON: AuthContext, PeerAuthClient/Server and their ops (the LAN path uses peer auth only for direct
+  connect games with the CD-key check, `GetGameType() == 3`, so the LAN test does not reach it), LobbyLanSocket's
+  object, the directory, routing, DB, HTTP and misc ops, FileReader/FileWriter, the config objects (WONConfig), the
+  lobby logic (WONLobby) and WONGUI.

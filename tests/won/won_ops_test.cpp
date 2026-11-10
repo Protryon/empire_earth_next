@@ -10,6 +10,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <vector>
 #include <thread>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
@@ -250,6 +251,136 @@ static void AsyncOps(WONAPICore& inCore)
     aPair.mListener->Close();
 }
 
+// an op whose run hook finishes with a scripted status, or leaves it pending
+class ScriptedOp : public AsyncOp {
+public:
+    ScriptedOp(WONStatus inScript) : mScript(inScript), mRuns(0), mCleanups(0) {}
+    virtual void RunHook() { this->mRuns++; if (this->mScript != WS_Pending) this->Finish(this->mScript); }
+    virtual void CleanupHook() { this->mCleanups++; }
+    WONStatus mScript;
+    int mRuns, mCleanups;
+};
+
+// a completion that records the order the ops completed in
+class Order : public CompletionBase<AsyncOpPtr> {
+public:
+    virtual void Complete(AsyncOpPtr inOp) { this->mOps.push_back(inOp.get()); }
+    std::vector<AsyncOp*> mOps;
+};
+
+// The op machinery's transitions (AsyncOp's run state, the op container's queue and pump, the timer thread),
+// scripted so that every expectation is exact; the real C++ passed these before the machinery moved to Rust
+static void OpMachinery(WONAPICore& inCore)
+{
+    // a blocking run: the hook, the completion and the cleanup run in the call
+    {
+        SmartPtr<ScriptedOp> anOp = new ScriptedOp(WS_Success);
+        SmartPtr<Counter> aDone = new Counter;
+        anOp->SetCompletion(aDone);
+        CHECK(anOp->RunBlock(100));
+        CHECK(aDone->mCount == 1 && anOp->mRuns == 1 && anOp->mCleanups == 1);
+        CHECK_STATUS(anOp->GetStatus(), WS_Success);
+        CHECK(anOp->TimeLeft() <= 100 && anOp->Succeeded());   // a blocking op's time left counts down from its run
+        CHECK(anOp->RunBlock(100) && aDone->mCount == 2);   // runs again once completed
+    }
+    // an async run that stays pending with a zero timeout times out at its start; a second Run meanwhile says
+    // WS_Pending; after the completion it runs again
+    {
+        SmartPtr<ScriptedOp> anOp = new ScriptedOp(WS_Pending);
+        SmartPtr<Counter> aDone = new Counter;
+        anOp->SetCompletion(aDone);
+        anOp->RunAsync(0);
+        CHECK_STATUS(anOp->GetStatus(), WS_Pending);
+        CHECK_STATUS(anOp->Run(OP_MODE_ASYNC, 1), WS_Pending);
+        CHECK(anOp->mRuns == 0);
+        PumpUntil(inCore, aDone, 1, 2000);
+        CHECK(aDone->mCount == 1 && anOp->mRuns == 1 && anOp->mCleanups == 1);
+        CHECK_STATUS(aDone->mLast, WS_TimedOut);
+        CHECK(!anOp->Succeeded());
+        anOp->RunAsync(0);
+        PumpUntil(inCore, aDone, 2, 2000);
+        CHECK(aDone->mCount == 2 && anOp->mRuns == 2);
+    }
+    // ForceFinish on an idle op completes it; while the completion waits, Run says WS_AwaitingCompletion and a
+    // second ForceFinish is ignored; after the completion it finishes again
+    {
+        SmartPtr<ScriptedOp> anOp = new ScriptedOp(WS_Pending);
+        SmartPtr<Counter> aDone = new Counter;
+        anOp->SetCompletion(aDone);
+        anOp->ForceFinish(WS_Killed);
+        CHECK_STATUS(anOp->GetStatus(), WS_Killed);
+        CHECK_STATUS(anOp->Run(OP_MODE_ASYNC, 1), WS_AwaitingCompletion);
+        anOp->ForceFinish(WS_Success);
+        CHECK_STATUS(anOp->GetStatus(), WS_Killed);
+        PumpUntil(inCore, aDone, 1, 2000);
+        CHECK(aDone->mCount == 1 && anOp->mRuns == 0 && anOp->mCleanups == 1);
+        CHECK_STATUS(aDone->mLast, WS_Killed);
+        anOp->ForceFinish(WS_Success);
+        PumpUntil(inCore, aDone, 2, 2000);
+        CHECK(aDone->mCount == 2);
+        CHECK_STATUS(aDone->mLast, WS_Success);
+    }
+    // Kill(false) marks a pending op killed and leaves it running; Kill(true) completes it with WS_Killed; the
+    // timeout cannot change while it runs
+    {
+        SmartPtr<ScriptedOp> anOp = new ScriptedOp(WS_Pending);
+        SmartPtr<Counter> aDone = new Counter;
+        anOp->SetCompletion(aDone);
+        anOp->RunAsync(5000);
+        inCore.Pump(20);
+        CHECK(anOp->mRuns == 1);
+        CHECK_STATUS(anOp->GetStatus(), WS_Pending);
+        anOp->SetTimeout(7);
+        CHECK(anOp->GetTimeout() == 5000);
+        anOp->Kill(false);
+        CHECK(anOp->mKilled);
+        CHECK_STATUS(anOp->GetStatus(), WS_Pending);
+        inCore.Pump(20);
+        CHECK(aDone->mCount == 0);
+        anOp->Kill(true);
+        PumpUntil(inCore, aDone, 1, 2000);
+        CHECK(aDone->mCount == 1 && anOp->mCleanups == 1);
+        CHECK_STATUS(aDone->mLast, WS_Killed);
+        anOp->SetTimeout(7);
+        CHECK(anOp->GetTimeout() == 7);
+    }
+    // the container completes queued ops in their order; Pump(0, 2) runs two of three
+    {
+        SmartPtr<Order> anOrder = new Order;
+        SmartPtr<ScriptedOp> a = new ScriptedOp(WS_Success), b = new ScriptedOp(WS_Success), c = new ScriptedOp(WS_Success);
+        a->SetCompletion(anOrder);
+        b->SetCompletion(anOrder);
+        c->SetCompletion(anOrder);
+        a->RunAsync(100);
+        b->RunAsync(100);
+        c->RunAsync(100);
+        inCore.Pump(0, 2);
+        CHECK(anOrder->mOps.size() == 2 && anOrder->mOps[0] == a.get() && anOrder->mOps[1] == b.get());
+        inCore.Pump(0, 2);
+        CHECK(anOrder->mOps.size() == 3 && anOrder->mOps[2] == c.get());
+        CHECK(a->mCleanups == 1 && b->mCleanups == 1 && c->mCleanups == 1);
+    }
+    // a zero timer fires at once; starting a running timer again is ignored; a timer stopped early (finished by
+    // hand) completes once with its own status, not later with WS_TimedOut
+    {
+        SmartPtr<Counter> aDone = new Counter;
+        AsyncOpPtr aTimer = new AsyncOp;
+        aTimer->SetCompletion(aDone);
+        aTimer->RunAsTimer(0);
+        aTimer->RunAsTimer(0);
+        PumpUntil(inCore, aDone, 1, 2000);
+        inCore.Pump(50);
+        CHECK(aDone->mCount == 1);
+        CHECK_STATUS(aDone->mLast, WS_TimedOut);
+        aTimer->RunAsTimer(30);
+        aTimer->Finish(WS_Success);
+        PumpUntil(inCore, aDone, 2, 2000);
+        inCore.Pump(100);
+        CHECK(aDone->mCount == 2);
+        CHECK_STATUS(aDone->mLast, WS_Success);
+    }
+}
+
 int main(int argc, char** argv)
 {
     CHECK(AsyncSocket::StartWinsock() == 0);
@@ -265,6 +396,7 @@ int main(int argc, char** argv)
         aCore.SetDefaultFileDirectory(".");   // _wonapiversion.txt
         aCore.Startup();
         AsyncOps(aCore);
+        OpMachinery(aCore);
         aCore.Shutdown();
     }
 
