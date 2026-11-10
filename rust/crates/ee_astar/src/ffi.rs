@@ -1141,31 +1141,126 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
     graph::expand(s, &mut CGraphHost(unsafe { &*cb }))
 }
 
-// ---- the choke point pass (choke.rs) ----
+// ---- the continent manager's grid (continent_grid.rs) ----
 
-/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
+
+/// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
+pub struct EeContinentGrid(ContinentGrid);
+
+/// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
+/// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
+/// continents' categories by id (`next_id` of them).
 ///
 /// # Safety
-/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
+/// `ids`, `kinds` and `terrain` valid for `size * size` cells, `categories` for `next_id`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_choke_smooth(
-    prev: *const i32,
-    kinds: *mut i32,
-    serials: *mut u32,
-    flags: *mut u8,
-    width: i32,
-    height: i32,
-    first: bool,
-) {
-    let n = (width.max(0) as usize) * (height.max(0) as usize);
+pub unsafe extern "C" fn ee_astar_continent_grid_build(
+    size: i32,
+    ids: *const u16,
+    kinds: *const u8,
+    terrain: *const i32,
+    categories: *const u8,
+    next_id: i32,
+) -> *mut EeContinentGrid {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
     // SAFETY: the caller's contract
-    let (prev, kinds, serials, flags) = unsafe {
+    let (ids, kinds, terrain, categories) = unsafe {
         (
-            std::slice::from_raw_parts(prev, n),
-            std::slice::from_raw_parts_mut(kinds, n),
-            std::slice::from_raw_parts_mut(serials, n),
-            std::slice::from_raw_parts_mut(flags, n),
+            std::slice::from_raw_parts(ids, n),
+            std::slice::from_raw_parts(kinds, n),
+            std::slice::from_raw_parts(terrain, n),
+            std::slice::from_raw_parts(categories, next_id.max(0) as usize),
         )
     };
-    crate::choke::smooth(prev, kinds, serials, flags, width, height, first);
+    let fill: Vec<FillTile> = ids.iter().zip(kinds).map(|(&id, &kind)| FillTile { id, kind }).collect();
+    let grid = continent_grid::create_continent_grid(size, &fill, terrain, categories, next_id);
+    Box::into_raw(Box::new(EeContinentGrid(grid)))
+}
+
+/// Releases a grid.
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`, not freed yet.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_free(g: *mut EeContinentGrid) {
+    if !g.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(g) });
+    }
+}
+
+/// The tile-to-continent id grid (`size * size`, `x * size + y`).
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`; the pointer lives while `g` does.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_ids(g: *const EeContinentGrid, count: *mut usize) -> *const u16 {
+    let v = &unsafe { &*g }.0.ids;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The adjacency matrix (`next_id * next_id`, `[a * next_id + b]`, 0 or 1).
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_flags(g: *const EeContinentGrid, count: *mut usize) -> *const u8 {
+    let v = &unsafe { &*g }.0.flags;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The continents' neighbour pushes, in order.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_neighbors(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EeContinentNeighbor {
+    let v = &unsafe { &*g }.0.neighbors;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The manager's shore tiles, sorted and unique.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_shore(g: *const EeContinentGrid, count: *mut usize) -> *const EePoint {
+    let v = &unsafe { &*g }.0.shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The manager's ice shore tiles, sorted.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_ice_shore(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EePoint {
+    let v = &unsafe { &*g }.0.ice_shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// Every continent's shore tiles (sorted and unique per continent), grouped by continent id.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_continent_shore(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EeContinentShore {
+    let v = &unsafe { &*g }.0.continent_shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
 }

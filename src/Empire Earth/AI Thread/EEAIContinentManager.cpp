@@ -356,29 +356,6 @@ void EEAIContinentManager::AddRectangleArea(EEAIRectangleArea* inArea)
     this->AddArea(inArea);
 }
 
-// FUNCTION: EXE 0x41f3e0
-// Shore step from water tile inFrom: returns true when inTile is off the map, not on a land continent or shallow
-// water; otherwise collects inTile into outTiles and the continent's shore tiles (with inFrom) and returns false
-bool EEAIContinentManager::AddShoreTile(const EETileLocation& inTile, EETileLocation inFrom, std::vector<U2DPoint<long> >& outTiles)
-{
-    bool theResult = false;
-    long theX = inTile.mX;
-    long theY = inTile.mY;
-    if ((unsigned long)theX < gMapWidth && (unsigned long)theY < gMapHeight) {
-        EEAIContinent* theContinent = gContinentManager.GetContinentAt(theX, theY);
-        theResult = true;
-        if (theContinent && theContinent->mCategory == theResult) {
-            theResult = gWorld.mMap->GetTileAtLocation(inTile)->mTerrainType == kTerrainShallowWater;
-            if (!theResult) {
-                outTiles.push_back(inTile);
-                theContinent->mShoreTiles.push_back(inTile);
-                theContinent->mShoreTiles.push_back(inFrom);
-            }
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x41f45a
 // Fills ioAreas (indexed x * size + y) with the path area of every tile of inMap, NULL off the grid or the map
 void EEAIContinentManager::GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas)
@@ -620,17 +597,15 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
 // FUNCTION: EXE 0x41fa5c
 // Builds the tile-to-continent id grid, the continent adjacency matrix and neighbour lists from the fill, collects
 // the shore tiles (also onto each continent), then sorts the shore lists and every continent's tiles
+// (Rust: ee_astar continent_grid.rs create_continent_grid over the fill's tiles, every tile's terrain and the
+// continents' categories; this stores what it computed. The ice shore list and the continents' shore lists are
+// empty here: Reset cleared the one, the fill made the others)
 void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, EEMap* inMap)
 {
     long x;
     long y;
-    unsigned short theID;
-    EEAIContinent* theContinent;
-    unsigned short theOther;
-    EEAIContinent* theNeighbor;
-    long i;
-    long j;
-    U2DPoint<long> thePoint;
+    size_t i;
+    size_t theCount;
     EEMap* theMap = inMachine.mGoal.mMap;
     delete[] this->mTileFlags;
     delete[] this->mContinentIDs;
@@ -641,95 +616,43 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
     this->mFlagsWidth = inMachine.mGoal.mNextID;
     this->mTileFlags = new bool[this->mFlagsWidth * this->mFlagsWidth];
     memset(this->mTileFlags, 0, this->mFlagsWidth * this->mFlagsWidth);
-    long theWidth = inMachine.mWidth;
-    long theHeight = inMachine.mHeight;
-    for (x = 0; x < theWidth; x++) {
-        for (y = 0; y < theHeight; y++) {
-            theID = inMachine.mTiles60[inMachine.mWidth * x + y].mID;
-            this->mContinentIDs[this->mWidth * x + y] = theID;
-            theContinent = this->mContinents[theID];
-            if (theID == 0)
-                continue;
-            this->mTileFlags[this->mFlagsWidth * theID + theID] = true;
-            this->mTileFlags[this->mFlagsWidth * theID + theID] = true;
-            if (inMachine.mTiles60[inMachine.mWidth * x + y].mKind == 5)
-                continue;
-            if (x - 1 >= 0 && y >= 0) {
-                theOther = inMachine.mTiles60[inMachine.mWidth * (x - 1) + y].mID;
-                if (theOther != theID && theOther != 0 && inMachine.mTiles60[inMachine.mWidth * (x - 1) + y].mKind != 5) {
-                    this->mTileFlags[this->mFlagsWidth * theID + theOther] = true;
-                    this->mTileFlags[this->mFlagsWidth * theOther + theID] = true;
-                    theNeighbor = this->mContinents[theOther];
-                    if (!theContinent->HasNeighbor(theNeighbor)) {
-                        EEAIContinent* theEntry = theNeighbor;
-                        theContinent->mNeighbors.push_back(theEntry);
-                    }
-                    if (!theNeighbor->HasNeighbor(theContinent)) {
-                        EEAIContinent* theEntry = theContinent;
-                        theNeighbor->mNeighbors.push_back(theEntry);
-                    }
-                }
-            }
-            if (x >= 0 && y - 1 >= 0) {
-                theOther = inMachine.mTiles60[inMachine.mWidth * x + y - 1].mID;
-                if (theOther != theID && theOther != 0 && inMachine.mTiles60[inMachine.mWidth * x + y - 1].mKind != 5) {
-                    this->mTileFlags[this->mFlagsWidth * theID + theOther] = true;
-                    this->mTileFlags[this->mFlagsWidth * theOther + theID] = true;
-                    theNeighbor = this->mContinents[theOther];
-                    if (!theContinent->HasNeighbor(theNeighbor)) {
-                        EEAIContinent* theEntry = theNeighbor;
-                        theContinent->mNeighbors.push_back(theEntry);
-                    }
-                    if (!theNeighbor->HasNeighbor(theContinent)) {
-                        EEAIContinent* theEntry = theContinent;
-                        theNeighbor->mNeighbors.push_back(theEntry);
-                    }
-                }
-            }
-            this->AddTileValue(theMap, x, y);
+    long theSize = inMap->mSize;
+    std::vector<uint16_t> theIDs(theSize * theSize);
+    std::vector<uint8_t> theKinds(theSize * theSize);
+    std::vector<int32_t> theTerrain(theSize * theSize);
+    for (x = 0; x < theSize; x++) {
+        for (y = 0; y < theSize; y++) {
+            theIDs[x * theSize + y] = inMachine.mTiles60[inMachine.mWidth * x + y].mID;
+            theKinds[x * theSize + y] = inMachine.mTiles60[inMachine.mWidth * x + y].mKind;
+            EETile* theTile = theMap->GetTile(x, y);   // NULL outside the playable map: -1 in the grid
+            theTerrain[x * theSize + y] = theTile ? (int32_t)theTile->mTerrainType : -1;
         }
     }
-    for (i = this->mShoreTiles.size() - 1; i >= 0; i--) {
-        theContinent = this->GetContinentAt(this->mShoreTiles[i].mX, this->mShoreTiles[i].mY);
-        if (!theContinent)
-            continue;
-        theContinent->mShoreTiles.push_back(this->mShoreTiles[i]);
-        if (theContinent->mCategory != kContinentCategoryWater && theContinent->mCategory != kContinentCategorySpace)
-            continue;
-        thePoint.mY = this->mShoreTiles[i].mY;
-        thePoint.mX = this->mShoreTiles[i].mX - 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY + 1;
-        thePoint.mX = this->mShoreTiles[i].mX - 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY - 1;
-        thePoint.mX = this->mShoreTiles[i].mX - 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY;
-        thePoint.mX = this->mShoreTiles[i].mX + 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY + 1;
-        thePoint.mX = this->mShoreTiles[i].mX + 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY - 1;
-        thePoint.mX = this->mShoreTiles[i].mX + 1;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY - 1;
-        thePoint.mX = this->mShoreTiles[i].mX;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-        thePoint.mY = this->mShoreTiles[i].mY + 1;
-        thePoint.mX = this->mShoreTiles[i].mX;
-        this->AddShoreTile(thePoint, this->mShoreTiles[i], this->mShoreTiles);
-    }
-    std::sort(this->mShoreTiles.begin(), this->mShoreTiles.end());
-    std::vector<U2DPoint<long> >::iterator theEnd = std::unique(this->mShoreTiles.begin(), this->mShoreTiles.end());
-    if (theEnd != this->mShoreTiles.end())
-        this->mShoreTiles.erase(theEnd, this->mShoreTiles.end());
-    std::sort(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end());
-    for (j = this->mContinents.size() - 1; j > 0; j--) {
-        if (this->mContinents[j])
-            this->mContinents[j]->SortTiles(true);
-    }
+    std::vector<uint8_t> theCategories(this->mFlagsWidth);
+    for (i = 0; i < theCategories.size(); i++)
+        theCategories[i] = i < this->mContinents.size() && this->mContinents[i] ? this->mContinents[i]->mCategory : 0;
+    EeContinentGrid* theGrid = ee_astar_continent_grid_build((int32_t)theSize, theIDs.data(), theKinds.data(),
+                                                              theTerrain.data(), theCategories.data(), (int32_t)this->mFlagsWidth);
+    const uint16_t* theGridIDs = ee_astar_continent_grid_ids(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mContinentIDs[i] = theGridIDs[i];
+    const uint8_t* theFlags = ee_astar_continent_grid_flags(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mTileFlags[i] = theFlags[i] != 0;
+    const EeContinentNeighbor* theNeighbors = ee_astar_continent_grid_neighbors(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mContinents[theNeighbors[i].id]->mNeighbors.push_back(this->mContinents[theNeighbors[i].neighbor]);
+    const EePoint* theShore = ee_astar_continent_grid_shore(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mShoreTiles.push_back(U2DPoint<long>(theShore[i].x, theShore[i].y));
+    theShore = ee_astar_continent_grid_ice_shore(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mIceShoreTiles.push_back(U2DPoint<long>(theShore[i].x, theShore[i].y));
+    const EeContinentShore* theContinentShore = ee_astar_continent_grid_continent_shore(theGrid, &theCount);
+    for (i = 0; i < theCount; i++)
+        this->mContinents[theContinentShore[i].id]->mShoreTiles.push_back(
+            U2DPoint<long>(theContinentShore[i].tile.x, theContinentShore[i].tile.y));
+    ee_astar_continent_grid_free(theGrid);
 }
 
 // FUNCTION: EXE 0x4201f7
@@ -2717,105 +2640,6 @@ void EEAIContinentManager::RemoveSectorTiles(EEAIPathSector* inSector)
     std::map<unsigned short, std::vector<EETileCoordinate> >::iterator theTiles = this->mSectorTiles.find(inSector->mID);
     if (theTiles != this->mSectorTiles.end())
         this->mSectorTiles.erase(theTiles);
-}
-
-// FUNCTION: EXE 0x424fea
-// Records water or space tile (inX, inY) as a shore tile when a neighbour is land (not water, space or ice), else
-// as an ice-shore tile when a neighbour is ice
-void EEAIContinentManager::AddTileValue(EEMap* inMap, long inX, long inY)
-{
-    bool theIce = false;
-    EETile* theTile = inMap->GetTile(inX, inY);
-    if (!theTile)
-        return;
-    long theType = theTile->mTerrainType;
-    if (theType != kTerrainDeepWater && theType != kTerrainShallowWater && theType != kTerrainSpace)
-        return;
-    EETile* theOther;
-    long theOtherType;
-    bool theLand;
-    theOther = inMap->GetTile(inX - 1, inY);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX - 1, inY + 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX - 1, inY - 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX + 1, inY);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX + 1, inY + 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX + 1, inY - 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX, inY - 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    theOther = inMap->GetTile(inX, inY + 1);
-    if (theOther) {
-        theOtherType = theOther->mTerrainType;
-        theLand = theOtherType != 1 && theOtherType != 10 && theOtherType != 9 && theOtherType != 0xc;
-        theIce = theIce || !theLand && theOtherType == 9;
-        if (theLand) {
-            this->mShoreTiles.push_back(U2DPoint<long>(inX, inY));
-            return;
-        }
-    }
-    if (theIce)
-        this->mIceShoreTiles.push_back(U2DPoint<long>(inX, inY));
 }
 
 // NEAR: the original calls RTSMap::GetTile out of line for the first five tiles (inline budget)

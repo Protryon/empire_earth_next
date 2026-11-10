@@ -195,16 +195,14 @@ public:
     unsigned long GetNumContinents() { return this->mContinents.size(); }
     // (EEAIContinentManager.cpp; provisional names)
     void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);       // 0x1f1f3 (ret 4)
-    bool AddShoreTile(const EETileLocation& inTile, EETileLocation inFrom, std::vector<U2DPoint<long> >& outTiles);   // 0x1f3e0 (ret 0x10; this unused)
     void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);         // 0x1f45a (ret 8)
     void LinkSubSectors(std::vector<EEAIPathSubSector*>** inSubSectors, EEAIPathSubSector* inSubSector,
         const unsigned short* inID, bool inAdd, const std::pair<EEAIPathSubSector*, EEAIPathSubSector*>& inLink);   // 0x1f6b1 (ret 0x14; this unused)
     void Build(EEMap* inMap);               // 0x1f86b (ret 4)
     void CreateContinents(EEMap* inMap);    // 0x1f8ae (ret 4)
     void CreateContinentGrid(EEAIAStarMachine<EEAIAStarContinentStorage, EEAIAStarContinentGoal, EEMap>& inMachine,
-        EEMap* inMap);                      // 0x1fa5c (ret 8)
+        EEMap* inMap);                      // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
     void PruneChokePoints();                // 0x24b31
-    void AddTileValue(EEMap* inMap, long inX, long inY);              // 0x24fea (ret 0xc)
     void NumberContinentChains(EEMap* inMap, unsigned long inKind);   // 0x201f7 (ret 8; inMap not read)
     void CreateHills(EEMap* inMap);         // 0x2033f (ret 4)
     void CreatePathAreaKind(EEMap* inMap, long inKind);               // 0x204ea (ret 8)

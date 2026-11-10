@@ -12,6 +12,9 @@ constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 /// A tile of an area of its own (`0x36`).
 constexpr static const int32_t KIND_AREA = 54;
 
+/// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
+constexpr static const int32_t NO_TILE = -1;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -371,6 +374,9 @@ struct EeAStarGraphStorage;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
+
+/// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
+struct EeContinentGrid;
 
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
@@ -763,6 +769,24 @@ struct EeAStarGraphCallbacks {
   void (*tiles)(void *ctx, int32_t *out);
   void (*get_state)(void *ctx, EeAStarGraphMachineState *out);
   void (*set_state)(void *ctx, const EeAStarGraphMachineState *state);
+};
+
+/// A continent's neighbour (`mNeighbors.push_back`): continent `id` gets `neighbor`.
+struct EeContinentNeighbor {
+  uint16_t id;
+  uint16_t neighbor;
+};
+
+/// A tile (`U2DPoint<long>`).
+struct EePoint {
+  int32_t x;
+  int32_t y;
+};
+
+/// A continent's shore tile.
+struct EeContinentShore {
+  uint16_t id;
+  EePoint tile;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -2985,17 +3009,62 @@ bool ee_astar_graph_start(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *c
 /// As `ee_astar_graph_start`.
 void ee_astar_graph_expand(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
 
-/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+/// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
+/// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
+/// continents' categories by id (`next_id` of them).
 ///
 /// # Safety
-/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
-void ee_astar_choke_smooth(const int32_t *prev,
-                           int32_t *kinds,
-                           uint32_t *serials,
-                           uint8_t *flags,
-                           int32_t width,
-                           int32_t height,
-                           bool first);
+/// `ids`, `kinds` and `terrain` valid for `size * size` cells, `categories` for `next_id`.
+EeContinentGrid *ee_astar_continent_grid_build(int32_t size,
+                                               const uint16_t *ids,
+                                               const uint8_t *kinds,
+                                               const int32_t *terrain,
+                                               const uint8_t *categories,
+                                               int32_t next_id);
+
+/// Releases a grid.
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`, not freed yet.
+void ee_astar_continent_grid_free(EeContinentGrid *g);
+
+/// The tile-to-continent id grid (`size * size`, `x * size + y`).
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`; the pointer lives while `g` does.
+const uint16_t *ee_astar_continent_grid_ids(const EeContinentGrid *g, size_t *count);
+
+/// The adjacency matrix (`next_id * next_id`, `[a * next_id + b]`, 0 or 1).
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const uint8_t *ee_astar_continent_grid_flags(const EeContinentGrid *g, size_t *count);
+
+/// The continents' neighbour pushes, in order.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EeContinentNeighbor *ee_astar_continent_grid_neighbors(const EeContinentGrid *g,
+                                                             size_t *count);
+
+/// The manager's shore tiles, sorted and unique.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EePoint *ee_astar_continent_grid_shore(const EeContinentGrid *g, size_t *count);
+
+/// The manager's ice shore tiles, sorted.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EePoint *ee_astar_continent_grid_ice_shore(const EeContinentGrid *g, size_t *count);
+
+/// Every continent's shore tiles (sorted and unique per continent), grouped by continent id.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EeContinentShore *ee_astar_continent_grid_continent_shore(const EeContinentGrid *g,
+                                                                size_t *count);
 
 /// `UDataCompression::Compress`.
 ///
