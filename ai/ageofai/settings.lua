@@ -186,4 +186,11 @@ return {
                                     -- TB_TOUCH 8, TB_BLOCK 14, TB_CLEAR_* 6/4/2/2) in packing.lua
     resign_spoils = true,           -- spoils.c: ENGINE - a player out of the game is this engine's defeat rule
                                     -- (EEWorld::CheckGameOver, defeat_without_recovery); nothing of the AI's to port
+    bunker_reserve = true,          -- bunker.c RESERVE (upstream: a mask of players, 65535 = all): the map full,
+                                    -- idle soldiers at home go into a fortress; out on losses or enemies near
+    town_guards = false,            -- bunker.c TOWN GUARDS: off upstream; NOT PORTED (the front stations are
+                                    -- fronts.c's, which is not ported)
+    shelve_citizens = true,         -- bunker.c THE SHELF: at the cap with every resource at shelve_stock, idle
+                                    -- citizens into fortresses (no new ones trained) ...
+    shelve_stock = 5000,            -- ... food, wood, gold and iron each at this or more
 }

@@ -155,6 +155,9 @@ function M.reserve(view, mem)
             r[k] = r[k] + (mem.navy_hold[k] or 0)
         end
     end
+    -- [bunker.c] bunker_reserve: the wood a fortress waits for, held back from unit training (tactics.lua's
+    -- bunkers writes it the step before)
+    r.wood = r.wood + (mem.bunker_wood or 0)
     return r, saving
 end
 
@@ -960,6 +963,10 @@ function M.step(view, memory, orders, army)
     -- citizens: two at a time from each town centre while the civil budget keeps a citizen's food
     local citizen = V.cost(view, "citizen")
     local want_citizens = citizens_wanted(view, mem.target)
+    -- [bunker.c] shelf_wanted: while the shelf works or holds citizens, no more than there are (on the map or in it)
+    if memory.shelf_hold then
+        want_citizens = math.min(want_citizens, view.citizens)
+    end
     local making = citizen and citizen.in_production or 0
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting

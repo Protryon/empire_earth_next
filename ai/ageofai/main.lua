@@ -39,7 +39,9 @@ function M.step(view, memory)
         for _, r in ipairs(V.resources) do
             above[r] = math.max(view.stock[r] - (budget.reserve[r] or 0), 0)
         end
-        T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above)
+        -- [bunker.c] the shelter's fortress, the reserve and the shelf (memory: the shelf's hold on the citizens
+        -- wanted, memory.shelf_hold; the fortress's wood, memory.eco.bunker_wood)
+        T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above, memory)
     end
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)

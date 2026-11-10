@@ -82,9 +82,28 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 the most metal mines near).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
                 they win by 1.5 (the micro step, 250 ms for upstream's 2 s).
-  bunker.c      PARTLY -> tactics.lua (bunkers, shelter): a Fortress by the drop site nearest the base once
-                citizens were hurt three times in two minutes, the citizens hit shelter in it, let out when quiet.
-                Missing: the shelf (the fortress's own soldiers), bk_capacity's airport part.
+  bunker.c      PARTLY -> tactics.lua (bunkers, shelter). Ported: bk_build (a Fortress by the drop site nearest the
+                base once citizens were hurt three times in two minutes or enemy aircraft are possible - both sides
+                in World War I -, a second from 40 citizens, one for the reserve near the population cap, one more
+                for a full shelf up to 8; its wood held back from unit training while it waits, bunker_reserve ->
+                econ.lua's reserve), bk_shelter / bk_flush (the citizens hit go into the nearest finished fortress
+                within 15 with room; out after 45 s with nothing hurt within 10 tiles and no raiders within 10, two
+                quiet looks 8 s apart), bk_unload (3 tiles to a side on land, the next side when nobody came out),
+                bk_reserve_tick (RESERVE: every 10 s with the map full, up to 10 of the force's soldiers at home - 4
+                stay out - into the fortress with the most room; out when the population is 4 under the cap with
+                nothing loaded for a minute, or enemy soldiers within 20 tiles of it), shelf_tick (THE SHELF: every
+                10 s at the cap with units queued and food, wood, gold and iron each at shelve_stock, up to 20
+                gatherers of the richest resource first, then of any at twice shelve_stock, never under max(cap / 8,
+                40) left out; out a fortress at a time under half of shelve_stock or 3/4 of what is kept out; the
+                shelter and the reserve keep off the shelf's fortresses), shelf_wanted (econ.lua: no more citizens
+                than there are while the shelf works or holds). Missing: TOWN GUARDS (town_guards, off upstream: a
+                fortress at each front station - fronts.c), bk_builders (the engine's build runner takes a
+                foundation up; the port's fortress is a verb order), the "airport part" of an earlier UPSTREAM line
+                (bk_capacity at this commit is the Fortress class alone). Deviations: the free soldiers are the
+                force's at home while the force is home (upstream's: the game's in no group); the room is cap - the
+                view's population (which counts the units in production; upstream's bk_room left them out); a
+                fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
+                shelter flag after the first order).
   navy.c        PARTLY -> navy.lua, fleet.lua (the roles). Ported: navy_detect (the water map: enemies with
                 buildings known across the water, the strength; fog-honest, so looked at again every minute),
                 the navy account (navy_share x the strength of the wood, gold and iron income, 600 of each at
