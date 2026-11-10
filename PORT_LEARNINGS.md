@@ -3351,3 +3351,66 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
   optimiser): neither has a caller in the game, the tools or the data path. `GEModelManager` is a map and a lock
   (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
   of `GETerrainMesh` were not reached.
+
+## D9 at run time: glTF and PNG straight into GEModel and GETexture (branch rust-d9-load, 2026-11-09)
+
+The game's models and textures are glTF and PNG only (RUST_PLAN D9). `ee_openformats` decodes a glTF straight into
+the model `GEModel::StoreLoaded` stores (`ee_ge` model_store.rs's `CemModel`: `gltf_to_model`, `ee_of_gltf_to_model`)
+and PNG frames into the frames `GETexture::Load` stores (`png_to_texture`, `ee_of_png_to_texture`). Deleted: the `.cem`
+reader and writer (ee_ge model_file.rs's parsing, legacy.rs, model_save.rs, their goldens and FFI, `GEModel::Load`,
+`GEModel::Save`/`SaveData` and 'GEModel Save.cpp'), `GETexture`'s `.sst`/`.tga` reading and `GETexture::Save`,
+`ee_openformats`' `.cem` and `.sst` writers (`gltf_to_cem`, `png_to_sst`, `GEOpenFormats::GltfToCem`/`PngToSst`), and
+every lookup of a `.cem`, `.sst` or `.tga` file in the model and texture managers (and `*.cem` in the multiplayer
+checksum). `GEFindTargaFile` (the pictures read as Targa data around the texture manager: the data side's) still
+serves a PNG as a Targa, now through `png_to_tga`.
+
+- **The decoded model is the reader's output, not the importer's.** `import.rs`'s `Model` matches `CemModel` field
+  for field, but the `.cem` reader added rules of its own that the stored model shows: a name ends at its first NUL
+  (`UString::Save`/`Load`); a model with no polygons, vertices, materials or frames fails before anything is stored;
+  and a failed sub-model put the file back where it started, so every later model in file order (its siblings, its
+  parent's later siblings) re-read the same bytes and failed the same way. `to_cem_model` carries a `poisoned` flag
+  through the depth-first walk for that. A later LOD stores whole triangles (`count * 3` indices; an index accessor of
+  another length desynchronised the old stream, never in the data). The shared frames' vertex and tag point arrays go
+  to the last frame, as `LoadFrameChunk` put them.
+- **A texture frame is stored where the Targa reader stored it.** `GEStoreFrame` (GETexture.cpp) is
+  `GESurface::LoadTGA`'s loop over top-down RGB(A) instead of a bottom-up BGR(A) file: 32-bit surfaces get A8R8G8B8
+  whatever their format, 16-bit ones `GEPackColor` of their format, no alpha is 0xff; each row continues after the
+  skip computed from the surface's *pixel* width (so a frame narrower than its surface lands as LoadTGA put it); a
+  frame larger than the surface is refused. `GETexture::Load` keeps its control flow and fills its old header struct
+  from the decoded texture (one MIP level, not compressed).
+- **The cache keys lost their extension; saves do not see them.** A model is cached under the name given
+  (`models\x`, was `models\x.cem`), a texture under its stem: the name as given, or without its last extension when
+  it contains `.sst` (`FindBackwards(".sst")`, as before), so `textures\x` and `textures\x.sst` stay one texture as
+  they were one cached `textures\x.sst`. `ReloadTexture(name)` looks the name up as given: the same textures as the
+  original's `name.tga`/`name.sst` lookups (a db button named `...sst` was never reloaded, and still is not). The texture
+  pack maps the stem. Nothing in a saved game, a scenario or the db names a cache key; the keys only show in
+  `DumpAllLoadedMedia` and `EE_TEXTURE_PACK_LOG` (now `textures\x`).
+- **A refused model used to crash on its destruction.** `GEModel(GEModelManager*)` left `mFrameCount`,
+  `mSubModelCount` and `mMaterials` unset and the destructor read `mPolygonArrays[0]` from a NULL array: the old path
+  crashed on `amb_rock.cem` (the 24-byte text stub, the tree's one `.cem`) in a driver whose memory was zeroed, and
+  read garbage in the game. Port fix: the constructor sets them and the destructor tests the array. The new path never
+  looks `amb_rock.cem` up (NULL model as before, without constructing one).
+- **The comparison came first (storegate).** `tools/eemodel/storegate.py` builds `storegate/` (a console driver)
+  against a game build's own objects (`lle`, `jpeg`, `default`, `tcp`, `mixer`, `dx7hrtnl` as one archive, so only
+  what is referenced links) and its Rust library; the renderer is memory objects (`fakes.h`: a surface with padded
+  rows and a halving MIP chain, nearest and box copies; vertex and polygon arrays that count out-of-range sets; the
+  rest of the 110 pure virtuals generated from the headers, preprocessed for `#ifdef LLE_EXE_HEADERS`). It loads every
+  model of the tree with three shared-frame maps (861 x 3) and every texture (2,505) with seven descriptions (frame
+  formats 0 and 1, 16/32 bits, alpha or not, MIP maps, one and two dropped levels, the texture pack's path), reloads
+  and refreshes, and digests the stored `GEModel` (every array, material, sub-model, shared array as its frame
+  number) and `GETexture` (every frame's surfaces and pixels) through `friend struct GEStoreDigest` (in GEModel,
+  GEMaterial, GETexture, GETextureManager). First driver: the build before the change (objects copied aside), 20,118
+  loads, 25,140 lines, twice identical. Then the new loaders: byte-identical output. Snags: `#define private public`
+  for the digests breaks the link (MSVC mangles access into static data and functions: `UString::sDefaultAllocationLength`),
+  hence the friend; `PIMModule.obj` drags the three plug-in tables in; every allocation is zero-filled
+  (`operator new` replaced) so that what a loader leaves unset reads the same in both builds.
+- **The decoder gate (cppgate) changed its goal.** It compared `.cem`/`.sst` bytes with the Python converter; now
+  `eemodel_gate` writes a digest of the stored model (three shared maps) or texture, the cases come from the open tree
+  itself (861 models, without EE_model, 34 as `.glb`, 2,568 edits; 2,505 textures, 275 PNG variants: 7,104 cases) and
+  each must load or be refused as the Python decides and equal `cppgate/golden_store.json`. Recorded with a temporary
+  `--old` mode that also ran the old path for each case (`gltf_to_cem` bytes through `model_file::load`; `png_to_sst`
+  bytes read back as GETexture::Load and LoadTGA read them): 7,104 of 7,104 equal. `golden_cpp.json` (the `.cem`
+  byte digests over tree-binary) is gone with the writers.
+- Gates: storegate PASS (25,140 lines), cppgate PASS (7,104 cases), the sim oracle identical on seeds 2-7 (models
+  feed it through `GEPhysicalModel` and the boxes), `gx_test`, `eedata check`. Not run: tours and screenshots (the
+  lead's).

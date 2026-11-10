@@ -2,8 +2,8 @@
 
 The game's 3D models (`.cem`, tag "SSMF") and textures (`.sst`, `.tga`): what the files hold, what the game reads
 of them (with the reading code), and the open formats that replace them: glTF 2.0 for models, PNG for textures.
-`tools/eemodel` converts in both directions; the game loads the open forms in place of the binary ones
-(`GEOpenFormatsFile.cpp`). Sources: this repository's engine (`src/Low-Level Engine/Graphics Engine/`), the AoC
+`tools/eemodel` converts in both directions; the game reads the open forms only (`GEOpenFormatsFile.cpp`; RUST_PLAN.md
+D9): sections 2 and 3 describe the retail files the importers read, and the loaders that read them before D9. Sources: this repository's engine (`src/Low-Level Engine/Graphics Engine/`), the AoC
 install's `Data\data.ssa` and the original game's `Data\data.ssa` (the AoC exe searches both, section 1), parsed end to
 end by `eemodel.py check`.
 
@@ -37,8 +37,8 @@ campaign map backgrounds (EEUIBMapBackground). They read the `.tga` through `GES
 through `GEFindTargaFile`, which serves `<name>.png` as the Targa when the path has one; the scenario and campaign
 pictures come from scenario files and campaign archives, which are not converted.
 
-The multiplayer checksum (`EEInitializeNetwork`) sums the loose `Data\Models\*.cem`, and now `*.glb`, `*.gltf` and
-`*.bin` too (0 when there are none): models carry tag points and bounds the simulation uses.
+The multiplayer checksum (`EEInitializeNetwork`) sums the loose `Data\Models\*.glb`, `*.gltf` and `*.bin` (the original
+summed `*.cem`): models carry tag points and bounds the simulation uses.
 
 ---
 
@@ -60,7 +60,7 @@ The retail data: 855 files are version 2.0, 11 are 1.3 (original game: `air_ball
 carry bytes after the tree (`bld_tankfactory_10`, `bld_temple_02`, `nav_bismarck_10`; unread). Every string is in the
 form `UString::Save` writes (no bytes after the NUL).
 
-### 2.2 Version 2.0 (`GEModel Load.cpp`; writer `GEModel Save.cpp`)
+### 2.2 Version 2.0 (`GEModel Load.cpp` and the writer `GEModel Save.cpp` before D9)
 
 | Chunk | Field | Type | Class | Readers (what the game does with it) |
 |---|---|---|---|---|
@@ -96,7 +96,7 @@ polygon ranges tile each LOD (in 17 LODs not in material order); one model has N
 `LoadModel`'s map argument (`ioTextures`, really "shared frames", from dbgraphics' frame sharing) makes some frames
 reuse another frame's vertex array; the file is read the same way. The open form needs nothing for it.
 
-### 2.4 Versions 1.0-1.3 (`GEModel Legacy.cpp`)
+### 2.4 Versions 1.0-1.3 (`GEModel Legacy.cpp`, retired)
 
 Read by `LoadLegacyVersion`, then turned into the 2.0 model by `ConvertLegacyModel` (`tools/eemodel/legacy.py` is a
 step-by-step port; the converter writes the result as 2.0):
@@ -123,9 +123,9 @@ steps (the x64 build's arithmetic; the i686 build's x87 intermediates can differ
 
 ---
 
-## 3. Textures: `.sst` and `.tga` (`GETexture.cpp`, `GESurface.cpp`)
+## 3. Textures: `.sst` and `.tga` (`GETexture.cpp` before D9, `GESurface.cpp`)
 
-`GETexture::Load` reads a 14-byte header unless the file name ends in `.tga`:
+Before D9, `GETexture::Load` read a 14-byte header unless the file name ends in `.tga`:
 
 | Field | Type | Class | Reader |
 |---|---|---|---|
@@ -222,14 +222,27 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
 
 ## 6. The game reading the open forms (`GEOpenFormatsFile.cpp`)
 
-* `GEModelManager::LoadModel` looks up `<name>.cem` through `GEFindModelFile`: if `<name>.glb` or `<name>.gltf` is
-  on the data path, it is converted (`GEOpenFormats::GltfToCem`, Rust: `ee_openformats`) to the `.cem` bytes and served as an
-  `FSMemoryFile` named `<name>.cem`; external buffers are looked up on the path next to the `.gltf`.
-* `GETextureManager::LoadTexture`, `ReloadTexture`, `RefreshAllTextures` look up `<name>.tga` / `<name>.sst`
-  through `GEFindTextureFile`: if `<name>.png` is on the path, it and its `@<i>` frames are converted
-  (`GEOpenFormats::PngToSst`, Rust) and served as `<name>.sst`; the texture is cached under the `.sst` name.
-* An open-format file anywhere on the path wins over the binary one. A file that does not convert stops the game with
-  its message (`ESVerify`).
+Since D9 (RUST_PLAN.md) the game reads glTF models and PNG textures only; no `.cem`, `.sst` or `.tga` is looked up
+through the model and texture managers, and their readers and writers are gone (`GEModel::Load`/`Save`, the
+version-1 conversion, `GETexture`'s `.sst`/`.tga` reading and `Save`).
+
+* `GEModelManager::LoadModel("models\x", frames)` asks `GEFindModelFile` for `models\x.glb`, else `models\x.gltf`
+  (external buffers next to the `.gltf`, on the path). Rust (`ee_openformats`, `ee_of_gltf_to_model`) decodes it
+  straight into the model the `.cem` reader produced (counts, names, polygon lists, material ranges, frames with their
+  vertices, tag points, transforms and boxes, sub-models; the frames the caller shares go into the last frame's arrays
+  as `LoadFrameChunk` put them), and `GEModel::StoreLoaded` stores it as before. A model the reader refused (no
+  polygons, vertices, materials or frames) still fails, and a refused sub-model makes every later one in file order
+  fail as the `.cem` reader's rewind did. The cache key is the name as given (`models\x`; it was `models\x.cem`).
+* `GETextureManager::LoadTexture`, `ReloadTexture` and `RefreshAllTextures` ask `GEFindTextureFile` for `<stem>.png`
+  and its frames `<stem>@1.png`, ...; Rust (`ee_of_png_to_texture`) decodes them into the surface size and each frame's
+  RGB or RGBA pixels, and `GETexture::Load` stores them where the Targa reader stored a `.sst` frame (same surfaces,
+  MIP levels, dropped levels, frame formats and pixel packing). The stem and cache key is the name as given, or
+  without its last extension when it contains `.sst` (`textures\x` and `textures\x.sst` are one texture, as they
+  were one cached `textures\x.sst` before); the texture pack maps the stem (`textures-4x\x`).
+* `GEFindTargaFile` (pictures read as Targa data around the texture manager) still serves `<name>.png` as a Targa
+  (`ee_of_png_to_tga`), else the `.tga` file.
+* A file that does not convert stops the game with its message (`ESVerify`). Nothing in a saved game names a model or
+  texture file: the keys changed without a save format change.
 
 ---
 
@@ -250,14 +263,26 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
   the .gltf): identical pictures for static frames, the same picture up to sub-pixel differences for animated frames
   (TRS animation instead of the exact matrices).
 
-`cppgate` (about 6 minutes, streaming: batches of at most `--limit-mb`, default 300 MB of temporary files): the game's
-converter (the Rust crate `rust/crates/ee_openformats`, its `eemodel_gate` program; the C++ loader `GEOpenFormats.cpp`
-with cgltf and stb_image was retired for it) converts every case; its bytes must equal the Python converter's
-(`gltf.import_`, `sst.from_png`), or both must refuse, and each case's digest must equal `cppgate/golden_cpp.json`
-(recorded from the unmodified C++). Over `build/open_data/tree-binary` (`--tree`, 861 models and 2551 textures): 861/861
-models as exported, 861/861 without EE_model, 34/34 as `.glb`, 2568 edited models (TRS instead of matrices, `.NNN` names,
-no wrapper, broken EE_model data, animation-sampled transforms with STEP and LINEAR keys between frames: 1929 identical,
-639 refused by both: rotated wrappers, malformed `frameFixes`), 2551/2551 textures, 275 PNG variants (225 identical, 50
-refused by both: bad `ee:surface`, truncated files); 7150 cases in 8 batches, peak temporary use 279 MB. `--subset N` runs
-every Nth model and texture. The recorded digests apply to that tree and the current case generator: after a change,
-re-record from a Python-gated run, never from the Rust converter alone.
+`cppgate` (about 10 minutes; `tools/eemodel/cppgate.py`): what the game stores from the open tree (default the main
+checkout's `build/open_data/tree`, read only) equals what it stored before D9 (section 6):
+
+* the store gate (`storegate.py`, about 1 minute after its build): a console driver linked from a game build's own
+  objects (`python -I build.py` first; the renderer is memory objects, `storegate/fakes.h`) loads every model through
+  `GEModelManager::LoadModel` with three shared-frame maps (861 x 3) and every texture through
+  `GETextureManager::LoadTexture` with seven descriptions (2,505 x 7: frame formats 0 and 1, 16 and 32 bits, alpha or
+  not, MIP maps, dropped levels, the texture pack's path), then reloads and refreshes them, and digests the stored
+  `GEModel` (every array, material and sub-model) and `GETexture` (every frame's surfaces and pixels): 25,140 lines
+  equal to `storegate/digests.json`, recorded from the loaders before D9 (glTF -> `.cem` bytes -> `GEModel::Load`,
+  PNG -> `.sst` bytes -> `GETexture::Load`), which the native loaders matched line for line;
+* the decoder gate: the game's decoder (`ee_openformats`, its `eemodel_gate` program) over the tree's 861 models,
+  the same without EE_model, 34 as `.glb` and 2,568 edited models (TRS instead of matrices, `.NNN` names, no wrapper,
+  a rotated wrapper, broken EE_model data, animation-sampled transforms with STEP and LINEAR keys between frames: 1929
+  load, 639 refused), its 2,505 textures and 275 PNG variants (225 load, 50 refused: bad `ee:surface`, truncated
+  files); 7,104 cases, each loaded or refused as the Python converter (`gltf.import_`, `sst.from_png`) decides, and
+  its digest (the stored model with three shared-frame maps, the texture's frames, or the refusal message) equal to
+  `cppgate/golden_store.json`, recorded by a run that also decoded every case the old way (7,104 of 7,104 equal).
+
+`--subset N` runs every Nth model and texture (both parts), `--no-store` skips the store gate, `--build` names the
+game build. The recorded digests apply to that tree (its `open_data.json` hash) and the current case generator: a
+new tree or a deliberate change of what is stored needs `storegate.py --record` and `cppgate --record-golden FILE`,
+checked by hand against what changed.

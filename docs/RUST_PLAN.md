@@ -23,6 +23,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R1.4-R1.5 window, fonts | Done (`ee_plat_ui`, `ee_plat_sdl`): SDL3 kept (D4), stb_truetype ported line by line, 51,520 glyphs byte-equal |
 | R2.1-R2.3 rules schema, rustgen, text compiler | Done (`ee_data`) |
 | R2.4 glTF and PNG | Done (`ee_openformats`), 7,150 of 7,150 gate cases equal to the C++ digests |
+| D9 models and textures at run time | Done (branch `rust-d9-load`): glTF decoded straight into the model `GEModel::StoreLoaded` stores, PNG into the frames `GETexture::Load` stores; the `.cem` reader/writer, the `.sst`/`.tga` texture reading, `GETexture::Save` and the `.cem`/`.sst` writers deleted. Gates: `storegate.py` (the game's loaders over the whole open tree, 25,140 lines equal to the digests recorded from the pre-D9 loaders), `cppgate` (7,104 decoder cases equal to digests recorded with the old path checked alongside), the sim oracle |
 | R3.1-R3.3 mixer logic, compression, encryption, TCP | Done (`ee_mixer`, `ee_codec`, `ee_net_tcp`). miniaudio stays; no audio has been listened to through the Rust mixer |
 | R3.4 random maps | Done (`ee_rmap`), 2,088 of 2,088 maps equal to the C++ digests. The `.rmv` reader (`Unit10.cpp`) stays C++ |
 | R3.5 File System | Done (`ee_fs`) behind the C++ facades |
