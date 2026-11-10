@@ -328,6 +328,16 @@ impl GeTransformation {
     }
 }
 
+impl GeTransformation {
+    /// `MakeInverse` into a fresh transformation.
+    pub fn inverse(&self) -> GeTransformation {
+        let mut out = GeTransformation::default();
+        // SAFETY: two distinct valid transformations
+        unsafe { make_inverse_raw(self, &mut out) };
+        out
+    }
+}
+
 /// `MakeInverse(out)` exactly as the C++ runs it: the transposed rotation is stored element by element (so an output
 /// equal to `this` transposes through its own stores), then the negated position is rotated by the output.
 ///

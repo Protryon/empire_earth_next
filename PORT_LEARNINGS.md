@@ -4188,3 +4188,108 @@ does not read text, so the sim oracle stays identical; menus with Latin-1 text r
   `tools/rmap_gate/rmap_stubs.cpp` still maps `PlatMbs*` onto the CRT (a tool gate's stubs, ASCII inputs); campaign
   archive tags are not converted; the harness writes `config.yaml` as cp1252 (its text is ASCII); `GEFontBitmap`
   cannot draw characters outside 1252.
+
+## R4.3, fifth part: the visible terrain as a plan, the viewport's math, the model's viewport test, the bitmap and rhombus corners (ee_ge terrain_visible.rs, viewport.rs, bitmap.rs; branch rust-r4-ge5, 2026-11-10)
+
+`GETerrainMesh::UpdateVisibleTerrain` with `AddTilePolys`/`AddWaterPolys`/`AddCliffPolys` and the eight
+`Generate*EdgePolygons`, `GEViewport`'s matrices, clipping planes and frustum, `GEPhysicalModel::Intersects(viewport)`,
+`GEBitmap`'s and `GERhombus`'s corners and the stretched texture coordinates are Rust. The mesh, its render-vertex
+arrays, the material lists keyed by `GETexture*`, the reference counts, the polygon arrays, the viewport object and the
+bitmaps' vertex arrays stay C++. The graphics thread and the UI call all of it (not the simulation); the sim oracle is
+identical.
+
+- **Plan and fill.** The original built `std::map<GETexture*, unsigned long>` material maps, referenced textures and
+  filled polygon pointers into the mesh's arrays as it walked the visible tiles. Rust now computes the whole frame
+  into plain data (`terrain_visible.rs`, `VisiblePlan`): the visible rows, the two point-visibility arrays, the
+  materials as texture handles (`GETexture*` values; a material's index is its position, the untextured one first,
+  then on space maps one per cliff texture), every terrain and water polygon with its corners as references (a
+  terrain or water render vertex `[a][b]`, a skirt vertex, a cliff vertex), alphas, texture coordinates and material
+  index, the skirt and cliff world points, and per cliff vertex the terrain vertex whose visibility it follows.
+  `GETerrainMesh.cpp` reads it through `EeGeVisibleOut`, releases the last frame's materials as before, rebuilds the
+  map and list from the handles (one `Reference()` per non-null entry), creates the skirt and cliff
+  `GETMRenderVertex`es, maps the references to pointers (`FillPolygon`) and resizes the index lists. The texture sets
+  go in as flattened handle grids (`GETextureSet::GetTextureAt`); the 33 x 33 water texture grid in place.
+- **Quirks kept, now stated in the Rust.** A tile layer's "best" texture (the one drawn opaque) is the lowest
+  `GETexture*`: the original compared addresses, the Rust compares the handles as integers. A material map `insert`
+  keeps the first entry of a repeated texture while the list gets both (the cliff textures can repeat): the Rust's
+  `push_material` does the same, and `material_of` is the map's lookup. A skirt polygon never sets its texture
+  coordinates, so the slot keeps the previous frame's values (`uv_set` is false and the fill leaves them; the golden
+  test replays the 12,000 slots). `theQuad`'s alphas carry across a tile only where the original's did (every used
+  layer sets all four). The `(long)(x + 0.5f)` truncations, `theCliff % 8`, the `unsigned long` array indices that
+  wrap and the `0x7fffffff`/`0x80000000` empty bounds (which wrap through the span clip) are the C++'s.
+- **One declared difference: the polygon arrays' capacity.** `mTerrainPolygons` holds 12,000 polygons and
+  `mWaterPolygons` 5,000; the original wrote past them (into the render-vertex arrays) when a frame had more. The fill
+  stops at the capacity. The golden driver found 38 of its 1,280 frames over it (wide far cameras over large maps;
+  the game's zoom caps keep it below), printed as `skip` on the C++ side; the relinked driver prints the clamped
+  frames there and the same bytes everywhere else.
+- **Two defensive reads.** A tile's texture set id past the registered sets reads 0 (the C++ indexed past its
+  vector), and a space map without its 13 cliff textures gets handle 0 for the shoreline layer (the C++ read past the
+  vector; the renderer loads them before the first frame). The water material index is checked against the water
+  list (the C++ indexed unchecked; a mesh whose water state was never set has no water materials).
+- **`GEViewport` is a mirror** (`GeViewport`, 0x288 bytes, `GERustViewport.h` pins the offsets through a friend): the
+  constructors, `Compute{Orthographic,Perspective}Matrix`, `ComputePlanes`, `GetFrustrumWorldPoints`/`Planes` and the
+  setters run on the object itself; the header inlines (`SetCamera`, `SetOrthographicRectangle`, the normalizations)
+  stay and call the forwarded members, so they are bit-identical by construction. The default constructor is Rust
+  too (`GE3DPlane()` faces +z, the matrices are identity, the look-at vector is the identity's +y).
+- **`GEPhysicalModel::Intersects(viewport)`** is `physical::model_visible` over the placed model's values (location,
+  scale, the frame's internal transform, centre, radius, box).
+- **`GEPhysicalModel`'s walks** (`physical_walk.rs`, a later commit of this branch): `Intersects(line)` (sphere, box,
+  the triangles of LOD 0, the sub-models), the model scaled per axis (its hand-built inverse, the `max`/`min` macros'
+  operand order) and model against model (the reduced LODs through `lrintf(0.8f * count)`, the other model's
+  triangle boxes cached during the first triangle) are Rust over a callback table (`EeGePhysicalModels`) of
+  `GEModel*` handles: the C++ statics in `GEPhysicalModel.cpp` read the accessors, the virtual vertex and polygon
+  arrays and do the `unsigned long` index sum. Units test projectile lines against target models through these
+  (`EEUnitClass.cpp`), so RUST_PLAN 2.1 applies. The exact retry (a top model with no hit tests the line at its
+  smallest scale) builds a temporary `GEPhysicalModel`, whose constructor and destructor reference and release the
+  model (`GEModel::Dereference` can reach its manager): it stays a callback (`retry_line`) into the C++, so that side
+  effect is the original's. The FFI copies its inputs and writes the distance back once, so no Rust reference to a
+  C++ object lives across a callback. Golden (`build/physical_golden`, scratch): the whole `GEPhysicalModel.cpp` of
+  the commit before this work, over fake models in raw `GEModel`/`GEMaterial` storage (their constructors are not
+  linked; three references held so a release never reaches the manager) with fake vertex and polygon arrays, 4
+  worlds of 12 top models with sub-models to depth 2 (1 to 4 LODs, 1 to 3 materials, empty ranges, 1 to 3 frames),
+  12,000 line cases (scales 1, 0, 0.00005 and random; every LOD; exact or not) and 12,000 scaled cases (uniform,
+  per-axis and a zero axis): `golden_physical_walk.txt`, replayed by the Rust test from the same stream (hits at
+  every LOD: 2,191 / 1,937 / 1,316 line hits, 2,681 scaled hits); the driver over the forwarders printed the same
+  bytes.
+- **`GEBitmap`/`GERhombus`**: `ComputeRotation`'s corners and `ComputeStretchedCoordsAndScale`'s arithmetic
+  (`bitmap.rs`); the vertex arrays behind `GEVertexArray`'s virtuals and the textures stay C++. The original passed
+  the bottom-left corner as `SetTextureCoordinates`' third argument, which the header names `inBottomRight`; the
+  forwarder passes the same positions.
+- **The golden driver** (`build/visible_golden`, scratch): the unmodified `GETerrainMesh.cpp` and `GEViewport.cpp`
+  with the engine's math units and fake textures (`lle/GETexture.h` shadowed by a `/I` directory: a pool of 48
+  reference-counted stand-ins in an array, so their addresses rise with the index as the handles do in the test),
+  `#define private public` around `GETerrainMesh.h` only (around `GEViewport.h` too it re-mangled the private
+  members the header inlines call, `?ComputeOrthographicMatrix@GEViewport@@AEAA` became `QEAA`, and the link lost
+  them), `GEBoundingBox::ComputeDimensions` defined by the driver over the Rust (the unit drags the engine's static
+  objects in), `/FORCE:UNRESOLVED` for the file classes nothing calls. 40 meshes from an LCG (flat, hilly with water,
+  space with shorelines, hilly with random sets; 1 x 1 to 96 x 96; integer-hash value noise so the C++ and the Rust
+  draw the same heights with no `libm`), 24 cameras each (perspective and orthographic, near and far, `SetOrientationYPR`
+  and a look vector), the mesh dumped as decoded references (a vertex pointer located in the arrays or the vectors),
+  the material lists as indices, the fake textures' reference counts (`refs`, C++ only), the viewport's 162 words
+  after construction and after each setter, the frustum points and planes, `Intersects(viewport)` over random placed
+  models, and the bitmap functions' bodies compiled alone. 1,280 frames, 1,920 viewport cases, 1,920 model tests,
+  9,000 bitmap cases; `golden_visible.txt` is 230 KB (one line per frame, so a divergence names its mesh and camera).
+  The Rust test replays the stream through `GeViewport::new`, `update_visible_terrain`, `model_visible` and
+  `bitmap.rs`; the driver relinked over the forwarders printed the same file (the `refs` section included).
+- **The golden driver, checked again** (a second agent; `build/visible_golden`, `build.py --tree orig|cur`). The
+  first driver compiled whatever `src/` held, and its bitmap and model sections were copies of the function bodies
+  in the driver, so relinking it proved nothing about those forwarders. Now `--tree orig` compiles a `git archive` of
+  the commit before this work (its `src/`, `include/` and its own `rust/` workspace and `ee_rmap_gatelib`), `--tree
+  cur` the worktree; the member functions of `GEBitmap`, `GERhombus` and `GEPhysicalModel::Intersects(viewport)` are
+  copied out of the tree's own units (`extract_members.py`) and run on objects in raw storage with a fake vertex
+  array that records every `SetPoint`/`SetTextureCoordinate` (the `obj_*` sections: 4,000 cases each, 6,000 model
+  tests over four frames whose other frames are wrong on purpose). The orig driver reproduced `golden_visible.txt`
+  exactly (so the committed golden is the original's). **Real meshes:** 15 random maps from EE-SIM (`--save-at
+  1000`; every map type: Continental, Highlands, Large and Small Islands, Mediterranean, Plains, Tournament Islands
+  and the five Planets maps, Tiny to Gigantic, 42 x 42 to 220 x 220), the map chunk of each save unpacked by
+  `tools/harness/savefile.py dump` (PK01, DCL), the mesh found by a scan for `Save`'s layout (size, tiles, points) and
+  loaded through `GETerrainMesh::Load` over a memory file; 255 fake texture sets (the real ids reach 92), 48 cameras a
+  mesh (three of four game-like: pitched down, 8 to 55 away, small orthographic rectangles): 960 real frames, 851
+  within the arrays. `compare.py`: 4,412 lines equal, the 147 frames the original overran (38 synthetic, 109 real)
+  clamped by the Rust, no other difference.
+- **Gates run:** `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle identical on seeds 2-7, `rust_build.py gate`
+  PASS (1,250 tests; `ee_plat_core`'s scaled-wait timing test failed once under the oracle's load and passed alone),
+  `eedata check` PASS, `eemodel.py cppgate`, `gx_test --run`, the windowed-software test profile 0/0 (the numbers in
+  the final report). Not run: tours (the lead's; the visible terrain is what they check).
+- **Left in R4.3:** the fonts (`GEFont`, `GEFontBitmap`, `GEText`: UTF-8 first, D6), `GEBitmap`'s and `GERhombus`'s
+  vertex-array plumbing (no logic).

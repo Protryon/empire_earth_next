@@ -25,6 +25,8 @@ public:
                                this->mNumTexturesInHeight, &theX, &theY);
         return this->mTextures[theX][theY];
     }
+    // the texture in a grid slot (UpdateVisibleTerrain hands the grid to its plan)
+    GETexture* GetTextureAt(unsigned long inColumn, unsigned long inRow) { return this->mTextures[inColumn][inRow]; }
     void GetTextureCoordinate(unsigned long inX, unsigned long inY, GETextureCoordinate& outCoordinate)
     {
         ee_ge_texture_set_coordinate(inX, inY, this->mTextureTileCoverage, &outCoordinate.mU, &outCoordinate.mV);
