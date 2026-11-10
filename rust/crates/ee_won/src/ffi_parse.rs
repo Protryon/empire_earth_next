@@ -9,7 +9,7 @@ use crate::ffi::EeWonByteSink;
 use crate::parser::{self, Ctype, Parser, Text};
 
 /// Receives wide units (`wchar_t` values); valid only during the call.
-pub type EeWonWideSink = unsafe extern "C" fn(context: *mut c_void, units: *const u32, count: usize);
+pub type EeWonWideUnitSink = unsafe extern "C" fn(context: *mut c_void, units: *const u32, count: usize);
 
 struct RawText {
     text: *const c_void,
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn ee_won_parser_read_wstring(
     unit_size: u32,
     pos: *mut i32,
     stop_at_whitespace: bool,
-    sink: EeWonWideSink,
+    sink: EeWonWideUnitSink,
     context: *mut c_void,
 ) {
     let out = unsafe { with(text, unit_size, pos, |p| p.read_wstring(stop_at_whitespace)) };
