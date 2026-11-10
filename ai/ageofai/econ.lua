@@ -88,6 +88,10 @@ end
 function M.reserve(view, mem)
     local r = {}
     local saving = false
+    if mem.saving_epoch ~= view.epoch then
+        mem.saving_epoch = view.epoch
+        mem.saving_on = false
+    end
     if view.epoch < view.last_epoch and not view.advancing then
         local age = view.time - view.epoch_start
         if view.epoch < FARM_EPOCH then
@@ -109,9 +113,35 @@ function M.reserve(view, mem)
             local at = (mem.epoch_at or 0)
             saving = view.time >= at - S.reserve_window_min * 60000
         end
+        -- hysteresis: the saving, once started, goes on until the epoch is paid (seed 2 flipped it every few
+        -- minutes round min_workforce and never reached the Stone Age's 1122 food in 50 minutes); the recovery
+        -- rules above still stop it
+        if saving then
+            mem.saving_on = true
+        elseif mem.saving_on and view.epoch < FARM_EPOCH and view.citizens * 100 >= (mem.peak or 0) * S.recover_share
+                and view.income.food >= 60 then
+            saving = true
+        end
     end
     for _, k in ipairs(V.resources) do
         r[k] = saving and view.next_epoch_cost[k] or 0
+    end
+    if saving and view.epoch >= FARM_EPOCH then
+        -- reserve_plan (econ.c spend_reserve): food is renewable from farms, so each resource keeps only what its
+        -- income cannot bring back over the horizon: the slowest shortfall's time, 10 minutes at most
+        local h = 0
+        for _, k in ipairs(V.resources) do
+            local miss = r[k] - view.stock[k]
+            if miss > 0 then
+                local rate = view.income[k]
+                local t = rate > 1 and (miss * 10 + rate - 1) // rate or 100   -- tenths of a minute
+                h = math.max(h, math.min(t, 100))
+            end
+        end
+        for _, k in ipairs(V.resources) do
+            local more = view.income[k] * 8 * h // 100   -- 80% of the income over h tenths of a minute
+            r[k] = math.max(r[k] - more, 0)
+        end
     end
     return r, saving
 end
@@ -233,7 +263,7 @@ function M.workers(view, mem, reserve, wants)
     end
     -- the food floor: half the workers on food, up to food_floor, before farms (the citizens' own food); from farms
     -- the fields: at least their farmers (fields + 2) when the plan has them
-    local floor_food = late and math.min(total // 2, (wants.fields or 0) + 2)
+    local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
     while target.food < floor_food do
         local from = nil
@@ -307,6 +337,12 @@ local function claims(view, mem, target, order)
     -- forage patches with room for the food gatherers (two at least, four at most); the claim grows when none is
     -- left in it; the food gatherers hunt when no patch is left at all (the game near home first: food_plan HUNT)
     local most = view.epoch == 0 and 3 or 5
+    -- a deviation (food.c has no patch cap: upstream's citizens take the engine's nearest food): the Prehistoric
+    -- workforce of min_workforce outgrows three patches' places (seed 2 against classic: 18 places for 32 food
+    -- gatherers wanted, the claim never grew in 50 minutes), so the cap lifts while the patches' room is short
+    if view.epoch == 0 and patch_room < target.food - view.gatherers.food then
+        most = 5
+    end
     if patches < 2 or (patches < most and patch_room < target.food - view.gatherers.food + 2) then
         if free_patch then
             order({verb = "claim", site = free_patch.index})
@@ -708,7 +744,7 @@ local function farms(view, mem, order, target, above)
     local farm = V.buildings(view, "b_farm")
     local fields = V.total(farm)
     local granaries = V.total(gran)
-    local want_gran = math.min(1 + (target.food or 0) // 8, 8)
+    local want_gran = math.min(1 + math.max(target.food or 0, 8) // 8, 8)
     if V.cost(view, "b_granary") ~= nil and granaries < want_gran and (gran == nil or gran.unfinished + gran.queued == 0)
             and (view.gatherers.food + 6 <= (target.food or 0) or granaries == 0) and above.wood >= 100 then
         -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
@@ -958,6 +994,22 @@ function M.step(view, memory, orders, army)
                 sum = sum + target[r]
             end
             target.food = math.max(target.food + view.citizens - sum, 0)
+            -- the mines' places can outnumber the citizens from the Copper Age (seed 9: wood 16, stone 12, gold 19,
+            -- iron 30 for 70 citizens left food at 0 for 40 minutes): food keeps its floor, the largest other gives
+            local floor_late = math.min(view.citizens // 3, math.max((mem.fields or 0) + 2, 6))
+            while target.food < floor_late do
+                local from = nil
+                for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+                    if target[r] > 2 and (from == nil or target[r] > target[from]) then
+                        from = r
+                    end
+                end
+                if from == nil then
+                    break
+                end
+                target[from] = target[from] - 1
+                target.food = target.food + 1
+            end
         end
         if target ~= nil then
             mem.target = target
