@@ -374,6 +374,157 @@ function M.bait(mem, events, now, epoch)
     end
 end
 
+-- ---------------------------------------------------------------------------------------------------------------
+-- Bunkers (bunker.c): from the Copper Age a Fortress by the drop site nearest the base once citizens were hurt
+-- three times within two minutes (two fortresses from 40 citizens); a citizen hit by a seen soldier, and the
+-- citizens within 6 tiles of the attacker, go into the nearest finished fortress within 15 tiles with room
+-- (ai.load: the fortress is a transport class); a fortress quiet for 8 s (no citizen hit within 10 tiles) lets them
+-- out 3 tiles to a side, the next side when nobody came out, and they are released.
+
+-- the step's part: the fortress wanted and the quiet fortresses' unload
+function M.bunkers(view, mem, order, above)
+    if not S.bunkers or view.epoch < 2 or view.town_x < 0 then
+        return
+    end
+    mem.hurt = mem.hurt or {}
+    local keep = {}
+    for _, t in ipairs(mem.hurt) do
+        if view.time - t <= 120000 then
+            keep[#keep + 1] = t
+        end
+    end
+    mem.hurt = keep
+    local forts = ai.units{type = "b_fortress"}
+    local want = #mem.hurt >= 3 and (view.citizens >= 40 and 2 or 1) or 0
+    if #forts < want and view.time - (mem.fort_t or 0) >= 60000 and V.cost(view, "b_fortress") ~= nil then
+        local c = V.cost(view, "b_fortress")
+        if above.wood >= c.cost.wood and above.stone >= c.cost.stone then
+            local best, bd = nil, nil
+            for _, id in ipairs(ai.units{category = "building", built = true}) do
+                local u = ai.unit(id)
+                if u ~= nil and (u.type == "b_town_center" or u.type == "b_capitol" or u.type == "b_settlement") then
+                    local near = false
+                    for _, fid in ipairs(forts) do
+                        local f = ai.unit(fid)
+                        if f ~= nil and math.abs(f.x - u.x) <= 10 and math.abs(f.y - u.y) <= 10 then
+                            near = true
+                        end
+                    end
+                    local d = d2(u.x, u.y, view.town_x, view.town_y)
+                    if not near and (bd == nil or d < bd) then
+                        best, bd = u, d
+                    end
+                end
+            end
+            if best ~= nil then
+                local x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9, safe = true})
+                if x == nil then
+                    x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9})
+                end
+                if x ~= nil then
+                    order({verb = "build", type = "b_fortress", near = "tile", x = x, y = y})
+                    mem.fort_t = view.time
+                    mem.forts_ordered = (mem.forts_ordered or 0) + 1
+                    print(string.format("bunker fortress at=%d,%d hurt=%d forts=%d", x, y, #mem.hurt, #forts))
+                end
+            end
+        end
+    end
+    mem.shelter = mem.shelter or {}
+    for _, fid in ipairs(forts) do
+        local f = ai.unit(fid)
+        local sh = mem.shelter[fid]
+        if f ~= nil and f.built and (f.cargo or 0) > 0 and sh ~= nil then
+            local hits_near = false
+            for _, h in ipairs(mem.hurt_at or {}) do
+                if view.time - h.t < 8000 and math.abs(h.x - f.x) <= 10 and math.abs(h.y - f.y) <= 10 then
+                    hits_near = true
+                end
+            end
+            if not hits_near and view.time - sh.t >= 8000 then
+                local sides = {{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {3, 3}, {-3, 3}, {3, -3}, {-3, -3}}
+                sh.side = ((sh.side or 0) % #sides) + 1
+                local d = sides[sh.side]
+                ai.unload(fid, f.x + d[1], f.y + d[2])
+                sh.t = view.time
+                sh.outs = (sh.outs or 0) + 1
+                if sh.outs >= 8 then
+                    ai.release(sh.units or {})
+                    sh.units = {}
+                end
+            end
+        elseif f ~= nil and (f.cargo or 0) == 0 and sh ~= nil then
+            ai.release(sh.units or {})
+            mem.shelter[fid] = nil
+            mem.sheltered_out = (mem.sheltered_out or 0) + 1
+        end
+    end
+end
+
+-- the micro step's part: the citizens hit go into a fortress near
+function M.shelter(mem, events, now)
+    if not S.bunkers then
+        return
+    end
+    mem.hurt = mem.hurt or {}
+    mem.hurt_at = mem.hurt_at or {}
+    mem.shelter = mem.shelter or {}
+    local attackers = {}
+    for _, e in ipairs(events) do
+        if e.kind == "attacked" then
+            local v = ai.unit(e.unit)
+            if v ~= nil and v.category == "citizen" then
+                mem.hurt[#mem.hurt + 1] = now
+                mem.hurt_at[#mem.hurt_at + 1] = {x = v.x, y = v.y, t = now}
+                if #mem.hurt_at > 64 then
+                    table.remove(mem.hurt_at, 1)
+                end
+                if e.attacker ~= nil then
+                    local a = ai.unit(e.attacker)
+                    if a ~= nil and a.category == "soldier" and a.player ~= v.player then
+                        attackers[a.id] = a
+                    end
+                end
+            end
+        end
+    end
+    for _, aid in ipairs(ai.keys(attackers)) do
+        local a = attackers[aid]
+        local best, bd = nil, nil
+        for _, fid in ipairs(ai.units{type = "b_fortress", built = true, near = {a.x, a.y, 15}}) do
+            local f = ai.unit(fid)
+            local c = f ~= nil and ai.class(f.type) or nil
+            if f ~= nil and c ~= nil and (f.cargo or 0) < (c.transport or 0) then
+                local d = d2(f.x, f.y, a.x, a.y)
+                if bd == nil or d < bd then
+                    best, bd = f, d
+                end
+            end
+        end
+        if best ~= nil then
+            local pick = {}
+            for _, id in ipairs(ai.units{category = "citizen", near = {a.x, a.y, 6}}) do
+                local u = ai.unit(id)
+                if u ~= nil and u.inside == nil and (mem.bait == nil or mem.bait[id] == nil) then
+                    pick[#pick + 1] = id
+                end
+            end
+            if #pick > 0 then
+                local code, reason, n = ai.load(pick, best.id)
+                if code == "ok" then
+                    local sh = mem.shelter[best.id] or {units = {}, t = now}
+                    sh.t = now
+                    for _, id in ipairs(pick) do
+                        sh.units[#sh.units + 1] = id
+                    end
+                    mem.shelter[best.id] = sh
+                    mem.sheltered = (mem.sheltered or 0) + n
+                end
+            end
+        end
+    end
+end
+
 -- whether a unit is committed to a counter-fire sortie (the force's orders leave it alone)
 function M.committed(mem, id, now)
     return mem.cf ~= nil and mem.cf[id] ~= nil and mem.cf[id] > now

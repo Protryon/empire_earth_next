@@ -374,7 +374,9 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
 {
     long theReason;
     EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
-    if (theNode != NULL && (!gUnitClassTable[inType]->IsBuilding() || (gUnitClassTable[inType]->mIsWall && !gUnitClassTable[inType]->mIsTower)))
+    // (a fortress is a transport class by its category, a land building by its placement: IsLandBuilding)
+    if (theNode != NULL && ((!gUnitClassTable[inType]->IsBuilding() && !gUnitClassTable[inType]->IsLandBuilding())
+                            || (gUnitClassTable[inType]->mIsWall && !gUnitClassTable[inType]->mIsTower)))
         theReason = kNextReasonBadArgument;   // a unit (train it) or a wall (wall plans come later)
     if (theReason == kNextReasonNone && inNear != kNextNearTown && inNear != kNextNearSite && inNear != kNextNearTile)
         theReason = kNextReasonBadArgument;

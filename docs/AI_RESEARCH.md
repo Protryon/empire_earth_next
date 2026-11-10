@@ -2435,6 +2435,38 @@ manager gives up). Against boom at 45 minutes level as before (Stone 24.6 agains
 43 / 61, army 9.9 / 17.8 against 11.3 / 18.4, no defeats). Not advanced this round: 0 defeats against classic Hard
 at 90 minutes (2 of 16, as boom), expand.c (other islands).
 
+**The ninth checkpoint (2026-11-09): 120 minutes, and the bunkers.** The first 120-minute benches (Small, Hard, no
+cheats, seeds 2-17; the games that started after the bunker port below include it):
+
+| 120 minutes, 16 games | Stone | Copper | Bronze reached | end citizens / army | won / lost (wiped) |
+|---|---|---|---|---|---|
+| Age of AI against classic Hard | 30.1 (15/16) | 62.2 (8/16) | - | 38 / 19 | 0 / **7 (5)** |
+| classic Hard in those games | 25.4 (16/16) | 59.4 (16/16) | - | 173 / 31 | 0 / 0 |
+| Age of AI against boom | 24.6 (16/16) | 66.1 (16/16) | 12/16 (73-111 min) | **139 / 64** | 0 / 0 |
+| boom in those games | 22.8 (16/16) | 53.7 (15/16) | 13/16 (65-104 min) | 102 / 25 | 0 / 0 |
+
+- **Against boom the late game turns:** level to the Copper Age (boom's Copper 12 minutes earlier), the port ends
+  with 139 citizens and 64 soldiers against boom's 102 and 25 - upstream's growth (the mines' places, 65% of the
+  income to the army from the Copper Age) shows after 90 minutes. The force pushed 23 times in 16 games and
+  finished nothing: every game ran to the cap.
+- **Against classic Hard the port collapses between 90 and 120 minutes:** 7 of 16 lost (5 wiped out), 38 citizens
+  on average at the end against the classic's 173 and an army of 31. The classic Hard AI's Copper-Bronze waves
+  outgrow the home guard, the force never pushes (the classic base is 2-3 times the force at the nearest known
+  building, by upstream's 130% rule), and the economy dies at the outskirts.
+- **Bunkers** (bunker.c) ported: from the Copper Age a Fortress by the drop site nearest the base once citizens were
+  hurt three times in two minutes; the citizens hit go into the nearest finished fortress within 15 tiles
+  (`ai.load`: the fortress is a transport class, `IsTransport`), let out when it is quiet 8 s. The first bench found
+  the fortress refused by the build verb and `ai.build` (`bad_argument`: `EEUCFortress` derives from
+  `EEUCLandTransport`, `IsBuilding()` is false; `IsLandBuilding()` is what it answers): both accept it now, and
+  on seed 5 the fortress stood and sheltered the citizens hit five times (one unload). Without a fortress the
+  90-minute classic bench was byte-identical to the round before (2 lost of 16); with it not benched yet.
+- **What finishes a game:** nothing of the port yet. Upstream's own measures count kills, losses and buildings
+  razed, not games won; its pushes go at the nearest known building when the force beats what is there by 130%,
+  and against a base that outgrows the force this never comes. To decide games the port needs what upstream has
+  not got either at this population: a push rule that takes outposts and raids the economy when the main base is
+  too strong (the mine raids of armies.c, siege at the walls), and the army share of the economy raised once the
+  epoch pace is secured.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
