@@ -170,9 +170,38 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 view's sites (within the claim range), the trees of SPREAD's cells are the 1500 nearest the base.
   airstrike.c   NOT STARTED (the bombers held as a wing of AF_WING, trained while a position needs them, the
                 bombing run on the shooters' spot).
-  diplo.c       NOT STARTED (answer war, the blocks, the vassals, the tributes; the engine has ai.diplomacy and
-                ai.tribute for them; the human chat lines and peace offers through the diplomacy screen are not in
-                this engine's AI path).
+  diplo.c       PARTLY -> diplo.lua. Ported: diplo_tick (the first look takes the stances as they are; a player
+                turned hostile: opinion -40, a betrayal after 2 minutes of alliance -60, x (0.5 + pride/100);
+                ANSWER WAR 3-6 s later through ai.diplomacy; a player turned allied while at war: the peace offer
+                decided 4-8 s later and every 2 minutes while it stands; the standing offers and offer_off), the
+                opinion model (+20 allies / -10 enemies at the start, +10 a peace, the drift per minute: +loyalty/100
+                allied, -pride/200 at war, +0.5 a common enemy, a grudge fading by forgiveness/2000), peace_score
+                (mod/computer.eeai: opinion + 25 x log2 of the power ratio within +-40 + 0.4 x (50 - aggression)
+                - 0.3 x (pride - 50) + 15 against a common enemy; no peace within pride/20 minutes of his
+                declaration), world_scan every 10 s (power = soldiers' hit points + 30 a building, the pressure of
+                each enemy's soldiers within 20 tiles of the base x0.8 a scan), the blocks (blocks_compute,
+                blocks_pass every 2 s: the split with its side-taking - the lord, the direct ally, the opinion with
+                the attacked +10, surrender instead -, peace inside a block, the block peace offered to a human,
+                block_veto with the grudges), diplo_initiative every 60 s from minute 10 (seek_ally at 1.5 x, the
+                candidate's opinion above -20, pressure under 10, the 10/20/40-minute backoff, the veto; the
+                betrayal of an ally of 10+ minutes under half its power at opinion under 30 with chance
+                (100 - loyalty) x aggression / 100000, the victim's whole block), the vassals (is_vassal, the lord
+                kept, a lord who turns on it sets it free, vassal_rebellion with its traits, no diplomacy of its
+                own, "talk to my lord"), check_capitulation (5+ soldiers in the base and pressure 15+, 10% of the
+                peak buildings lost, the attacker 1.5 + pride/20 - caution/50 x its power, once in 10 minutes; the
+                promise 20% + caution/4 + (100 - greed)/4 of each resource paid through ai.tribute when he turns
+                allied, off at 3/4 of the ratio), check_surrender (the decision only), the kills by pair from the
+                died events (victor_of), the traits as persona.c's defaults (50). Not applicable: the human's
+                diplomacy screen, the lines (persona_say, sysf, block_line, stance_lines: the trace's `diplo`
+                lines stand in), the language model, the history for the texts, diplo_situations (lines only),
+                locked teams and scenarios, the victory over vassals, the save hooks. ENGINE GAPS (the module reads
+                the fields when they come): another player's stance towards me (ai.players()[k].hostile - the
+                proxy: two hits by an "ally" within a minute = turned hostile; an offer of peace is invisible), the
+                alliances between two other players (allies: a block is me and my direct allies), the other AIs'
+                opinions (the veto knows my own grudges), a tribute received (no event), ai.resign; between two
+                AIs upstream answered an offer at once (one process) - here it stands 2 minutes (OFFER_AI_MS) like
+                one to a human. DEVIATION: a vassal's tribute every 3 minutes of a quarter of each resource (the
+                language model's bounds made a rule).
   spoils.c      NOT STARTED (a resigned player's units roam and its buildings change hands: an engine behaviour of
                 the player out of the game, to be weighed against this engine's defeat rule).
   skirmish.c    NOT STARTED (the sharpshooters' sorties on a position that holds the force's way).

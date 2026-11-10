@@ -12,7 +12,7 @@
       "name": "Age of AI",
       "script": "ageofai.main",
       "random": false,
-      "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing. The navy, landings and diplomacy are not ported yet."
+      "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing; the navy, the landings and the towns; the diplomacy (war answered, opinions, peace, alliance blocks, vassals, capitulation)."
     }
   ]
 }

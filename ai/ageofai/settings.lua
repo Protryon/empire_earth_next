@@ -137,4 +137,22 @@ return {
     landing = true, landing_transports = 8,   -- the most transports (the size follows the beach)
     landing_citizens = 10,          -- citizens along for the forward base (0 / 3 / 6 / 10 by the transports)
     landing_waves = 3,              -- waves after the first while the bridgehead holds
+    -- diplo.c
+    diplomacy = true,               -- the module runs (the port's own switch: everything below)
+    answer_war = true,              -- whoever turns hostile towards an AI allied with him gets war back 3-6 s later
+    ai_diplomacy = true,            -- the AIs' own initiative from minute 10: alliances against a leader (1.5 x),
+                                    -- the betrayal of a weak ally, capitulation (the tribute 20% + caution/4 +
+                                    -- (100 - greed)/4 of each resource); peace offers are always judged
+    alliance_blocks = true,         -- the players linked by alliances are one block: peace inside it, a war inside
+                                    -- it splits it (every other AI takes a side), the veto (a grudge: a war declared
+                                    -- within pride/20 minutes, an opinion below -30)
+    surrender = true,               -- no citizens for 60 s and none trainable (or 3 minutes at all), the army under
+                                    -- half the strongest enemy's: it gives up. ENGINE GAP: no ai.resign - the
+                                    -- decision is traced, the player stays in
+    vassal_tribute_every = 3,       -- minutes between a vassal's tributes to its lord ...
+    vassal_tribute_share = 25,      -- ... percent of each resource at most. DEVIATION: upstream's rules pay only the
+                                    -- capitulation's promise; these are the language model's tribute bounds ([llm]
+                                    -- llm_constrained=1: once in 3 minutes, a quarter of each resource) made a rule
+    -- stance_lines ("yours"): the game's stance line - not applicable (the trace's `diplo stance` stands in);
+    -- [general] auto_victory: the game's own end - not applicable
 }

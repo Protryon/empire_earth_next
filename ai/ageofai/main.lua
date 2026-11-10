@@ -4,11 +4,13 @@
 -- The economy pays what a human pays and sees what a human sees: a budget with an epoch reserve and a military
 -- account, worker targets by shortfall and the measured rates, towers by the town centre first and at the fronts
 -- later, drop sites before gathering, the gathering upgrades; the land army is one force ordered as one through the
--- per-unit interface (ageofai.army). The navy, landings, other islands and diplomacy are not ported yet.
+-- per-unit interface (ageofai.army); the navy, landings and other islands (ageofai.navy, fleet, towns); the
+-- diplomacy (ageofai.diplo: war answered, opinions, peace, blocks, vassals, capitulation, surrender).
 local E = require("ageofai.econ")
 local A = require("ageofai.army")
 local T = require("ageofai.tactics")
 local TW = require("ageofai.towns")   -- [towns.c, expand.c]
+local DP = require("ageofai.diplo")   -- [diplo.c]
 local V = require("lib.view")
 
 local M = {}
@@ -41,6 +43,9 @@ function M.step(view, memory)
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
+    -- [diplo.c] the diplomacy (ageofai.diplo): every step (the stances and the pending answers), the blocks every
+    -- 2 s, the world scan every 10 s, the initiative every 60 s from minute 10; the events for the hits and losses
+    DP.step(view, memory, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
         print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d",
