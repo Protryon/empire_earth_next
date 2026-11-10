@@ -5,7 +5,9 @@
 // ??_E (this unit is the first includer of UITriStateCheckBox.h), the U2D key init chains (0x100806d4), then the ctor
 // and the out-of-line members (alphabetical, the protected CycleCheck last).
 #include <windows.h>
+#include <stddef.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -35,25 +37,138 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+// The Rust logic's view of this box (rust/crates/ee_ui/src/button_variants.rs, docs/RUST_PLAN.md R6): the record
+// from mTextLabel on, the rectangle and border it reads, and a SetText's label context. A friend of the class.
+struct UITriStateCheckBoxRust {
+    // a SetText's or SetLocation's label: where the box keeps it, the text and the font
+    struct Label {
+        UITextLabel** mLabel;
+        const UWideString* mText;
+        GEFont* mFont;
+    };
+    EeUiTriStateRefs mRefs;
+    UITriStateCheckBoxRust(UITriStateCheckBox* inBox, void* inContext)
+    {
+        static_assert(offsetof(UITriStateCheckBox, mCheckState) - offsetof(UITriStateCheckBox, mTextLabel) ==
+                          offsetof(EeUiTriStateFields, check_state),
+                      "ee_ui/src/button_variants.rs TriStateFields");
+        static_assert(offsetof(UITriStateCheckBox, mHasText) - offsetof(UITriStateCheckBox, mTextLabel) ==
+                          offsetof(EeUiTriStateFields, has_text),
+                      "ee_ui/src/button_variants.rs TriStateFields");
+        static_assert(sizeof(((UITriStateCheckBox*)0)->mBorderThickness) == sizeof(unsigned long), "ee_ui button_variants_ffi.rs");
+        this->mRefs.button = inBox;
+        this->mRefs.fields = reinterpret_cast<EeUiTriStateFields*>(&inBox->mTextLabel);
+        this->mRefs.rect = reinterpret_cast<const EeUiRect*>(&inBox->mRectangle);
+        this->mRefs.border = &inBox->mBorderThickness;
+        this->mRefs.ctx = inContext;
+    }
+    operator const EeUiTriStateRefs*() const { return &this->mRefs; }
+    static UITriStateCheckBox* Box(void* inBox) { return static_cast<UITriStateCheckBox*>(inBox); }
+    static UITextLabel*& TextLabel(void* inBox) { return Box(inBox)->mTextLabel; }
+    static EeUiRect Rect(const GERectangle& inRectangle)
+    {
+        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+    static EeUiPoint Point(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+    static GE2DPoint Point(const EeUiPoint& inPoint) { return GE2DPoint(inPoint.x, inPoint.y); }
+    // the constructor's UIButton rectangle: a box at most 19 pixels square
+    static GERectangle BoxRect(const GERectangle& inRectangle)
+    {
+        EeUiRect theRectangle = Rect(inRectangle);
+        return Rect(ee_ui_tristate_rect(&theRectangle));
+    }
+};
+
+extern "C" EeUiRect ee_uicpp_tristate_label_rect(void* inBox)
+{
+    return UITriStateCheckBoxRust::Rect(UITriStateCheckBoxRust::TextLabel(inBox)->GetRectangle());
+}
+extern "C" void ee_uicpp_tristate_label_set_rect(void* inBox, const EeUiRect* inRectangle)
+{
+    UITriStateCheckBoxRust::TextLabel(inBox)->SetRectangle(UITriStateCheckBoxRust::Rect(*inRectangle));
+}
+extern "C" void ee_uicpp_tristate_label_set_location(void* inBox, float inX, float inY)
+{
+    UITriStateCheckBoxRust::TextLabel(inBox)->SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_tristate_label_set_text(void* inBox, void* inLabel)
+{
+    UITriStateCheckBoxRust::Label* theLabel = static_cast<UITriStateCheckBoxRust::Label*>(inLabel);
+    (*theLabel->mLabel)->SetText(*theLabel->mText);   // the public SetText(text, true)
+}
+extern "C" void ee_uicpp_tristate_label_create(void* inBox, void* inLabel, const EeUiRect* inRectangle)
+{
+    UITriStateCheckBoxRust::Label* theLabel = static_cast<UITriStateCheckBoxRust::Label*>(inLabel);
+    UITriStateCheckBox* theBox = UITriStateCheckBoxRust::Box(inBox);
+    *theLabel->mLabel = new UITextLabel(*theLabel->mText, theLabel->mFont, theBox->GetId(), UITriStateCheckBoxRust::Rect(*inRectangle),
+                                        theBox->GetForm(), 0, theBox->GetIndex(), 0);
+}
+extern "C" void ee_uicpp_tristate_label_delete(void* inBox)
+{
+    delete UITriStateCheckBoxRust::TextLabel(inBox);   // the Rust side clears the pointer
+}
+extern "C" void ee_uicpp_tristate_base_set_rectangle(void* inBox, const EeUiRect* inRectangle)
+{
+    UITriStateCheckBoxRust::Box(inBox)->UIControl::SetRectangle(UITriStateCheckBoxRust::Rect(*inRectangle));
+}
+extern "C" void ee_uicpp_tristate_base_set_location(void* inBox, float inX, float inY)
+{
+    UITriStateCheckBoxRust::Box(inBox)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_tristate_set_dirty(void* inBox)
+{
+    UITriStateCheckBoxRust::Box(inBox)->SetDirty(true);
+}
+extern "C" void ee_uicpp_tristate_set_check_bitmaps(void* inBox, unsigned long inState)
+{
+    UITriStateCheckBox* theBox = UITriStateCheckBoxRust::Box(inBox);
+    UIManager* theManager = theBox->GetForm()->GetManager();
+    switch (inState) {
+    case kCheckStateOff:
+        theBox->SetNormalBitmap(theManager->GetCheckOff());
+        theBox->SetPressedBitmap(theManager->GetCheckDownOff());
+        break;
+    case kCheckStateOn:
+        theBox->SetNormalBitmap(theManager->GetCheckOn());
+        theBox->SetPressedBitmap(theManager->GetCheckDownOn());
+        break;
+    default:
+        theBox->SetNormalBitmap(theManager->GetCheckNot());
+        theBox->SetPressedBitmap(theManager->GetCheckDownNot());
+        break;
+    }
+}
+extern "C" void ee_uicpp_tristate_fire(void* inBox, unsigned long inEvent)
+{
+    UITriStateCheckBoxRust::Box(inBox)->FireTriggerEvent(inEvent);
+}
+extern "C" long ee_uicpp_tristate_copy_data(void* inBox, int inWhich)
+{
+    if (inWhich == 0)
+        return UITriStateCheckBoxRust::Box(inBox)->UIButton::CopyData();
+    return UITriStateCheckBoxRust::TextLabel(inBox)->CopyData();
+}
+
+#define EE_UI_TRI_REFS(label) UITriStateCheckBoxRust(this, label)
+
 // FUNCTION: LLE 0x100807f4
 // Creates a three-state check box (off, on, not) at most 19 pixels square with an optional text label beside it
 UITriStateCheckBox::UITriStateCheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont,
                                        const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                                        unsigned long inBorderThickness)
     : UIButton(inId, inForm->GetManager()->GetCheckOff(), NULL, inForm->GetManager()->GetCheckDownOff(),
-               GERectangle(inRectangle.GetTopLeft(),
-                           GE2DPoint(inRectangle.GetWidth() > kScrollBarWidth ? inRectangle.GetRight()
-                                                                               : inRectangle.GetLeft() + 19.0f,
-                                     inRectangle.GetHeight() > kScrollBarWidth ? inRectangle.GetBottom()
-                                                                                : inRectangle.GetTop() + 19.0f)),
-               inForm, inIndex, inBorderThickness)
+               UITriStateCheckBoxRust::BoxRect(inRectangle), inForm, inIndex, inBorderThickness)
 {
     this->mCheckState = 0;
     this->mTextLabel = NULL;
     this->mHasText = false;
-    float theHeight = inRectangle.GetHeight();
-    if (theHeight > kScrollBarWidth)
-        this->SetBitmapDrawOffset(GE2DPoint(0.0f, (theHeight - 2.0f * inBorderThickness) * 0.5f - 10.0f));
+    EeUiPoint theOffset;
+    if (ee_ui_tristate_bitmap_offset(inRectangle.GetHeight(), inBorderThickness, &theOffset))
+        this->SetBitmapDrawOffset(UITriStateCheckBoxRust::Point(theOffset));
     this->SetText(inText, inFont);
 }
 
@@ -61,29 +176,14 @@ UITriStateCheckBox::UITriStateCheckBox(unsigned long inId, const UWideString& in
 // Sets the check box width, shrinking the text label to fit beside the box
 void UITriStateCheckBox::ChangeWidth(unsigned long inWidth)
 {
-    GERectangle theRectangle;
-    if (this->mTextLabel) {
-        theRectangle = this->mTextLabel->GetRectangle();
-        theRectangle.SetRight(theRectangle.GetLeft() + inWidth - kScrollBarWidth);
-        this->mTextLabel->SetRectangle(theRectangle);
-    }
-    theRectangle = this->mRectangle;
-    theRectangle.SetRight(theRectangle.GetLeft() + inWidth - 1.0f);
-    UIControl::SetRectangle(theRectangle);
+    ee_ui_tristate_change_width(EE_UI_TRI_REFS(NULL), inWidth);
 }
 
 // FUNCTION: LLE 0x100809ab
 // Copies the draw state of the box and its label; deletes a label whose text was cleared
 long UITriStateCheckBox::CopyData()
 {
-    long theResult = UIButton::CopyData();
-    if (this->mHasText)
-        theResult = this->mTextLabel->CopyData();
-    else if (this->mTextLabel) {
-        delete this->mTextLabel;
-        this->mTextLabel = NULL;
-    }
-    return theResult;
+    return ee_ui_tristate_copy_data(EE_UI_TRI_REFS(NULL));
 }
 
 // FUNCTION: LLE 0x100809ec
@@ -110,66 +210,30 @@ long UITriStateCheckBox::DrawTextA()
 // Sets the check state, shows its bitmaps and fires the checked trigger (an unknown state only stores the value)
 void UITriStateCheckBox::SetCheckState(unsigned long inState)
 {
-    this->mCheckState = inState;
-    switch (inState) {
-    case kCheckStateOff:
-        this->SetNormalBitmap(this->mForm->GetManager()->GetCheckOff());
-        this->SetPressedBitmap(this->mForm->GetManager()->GetCheckDownOff());
-        break;
-    case kCheckStateOn:
-        this->SetNormalBitmap(this->mForm->GetManager()->GetCheckOn());
-        this->SetPressedBitmap(this->mForm->GetManager()->GetCheckDownOn());
-        break;
-    case kCheckStateNot:
-        this->SetNormalBitmap(this->mForm->GetManager()->GetCheckNot());
-        this->SetPressedBitmap(this->mForm->GetManager()->GetCheckDownNot());
-        break;
-    default:
-        return;
-    }
-    this->FireTriggerEvent(kControlTriggerChecked);
+    ee_ui_tristate_set_check_state(EE_UI_TRI_REFS(NULL), inState);
 }
 
 // FUNCTION: LLE 0x10080ac1
 // Moves the check box and its text label
 void UITriStateCheckBox::SetLocation(const GE2DPoint& inLocation)
 {
-    GE2DPoint theLocation;
-    UIControl::SetLocation(inLocation);
-    if (this->mTextLabel == NULL)
-        return;
-    theLocation.SetX(this->mRectangle.GetLeft() + this->mBorderThickness + kScrollBarWidth);
-    theLocation.SetY(this->mRectangle.GetTop() + this->mBorderThickness);
-    this->mTextLabel->SetLocation(theLocation);
+    UITriStateCheckBoxRust::Label theLabel = {&this->mTextLabel, NULL, NULL};
+    ee_ui_tristate_set_location(EE_UI_TRI_REFS(&theLabel), UITriStateCheckBoxRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x10080b1c
 // Sets the label text, creating the label on first use; empty text hides the label
 void UITriStateCheckBox::SetText(const UWideString& inText, GEFont* inFont)
 {
-    if (inText.GetLength() > 0) {
-        if (this->mTextLabel) {
-            this->mTextLabel->SetText(inText, true);
-            this->SetDirty(true);
-        } else
-            this->mTextLabel = new UITextLabel(inText, inFont, this->GetId(),
-                                         GERectangle(this->mRectangle.GetLeft() + this->mBorderThickness + kScrollBarWidth,
-                                                     this->mRectangle.GetTop() + this->mBorderThickness,
-                                                     this->mRectangle.GetRight() - this->mBorderThickness,
-                                                     this->mRectangle.GetBottom() - this->mBorderThickness),
-                                         this->GetForm(), 0, this->GetIndex(), 0);
-        this->mHasText = true;
-        this->SetDirty(true);
-    } else
-        this->mHasText = false;
+    UITriStateCheckBoxRust::Label theLabel = {&this->mTextLabel, &inText, inFont};
+    ee_ui_tristate_set_text(EE_UI_TRI_REFS(&theLabel), inText);
 }
 
 // FUNCTION: LLE 0x10080be6
 // Advances the check state off -> on -> not -> off
 void UITriStateCheckBox::CycleCheck()
 {
-    this->mCheckState = (this->mCheckState + 1) % 3;
-    this->SetCheckState(this->mCheckState);
+    ee_ui_tristate_cycle(EE_UI_TRI_REFS(NULL));
 }
 
 // Header-inline members first emitted here (bodies in lle/UITriStateCheckBox.h)
