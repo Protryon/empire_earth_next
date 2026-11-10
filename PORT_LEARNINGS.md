@@ -4071,7 +4071,8 @@ summary body) and the staging logic's own reads.
 ### State and what is left
 
 - `lan_game.py` on the branch head before this work (the test-profile exe of the merged tree): **PASS**, host and
-  joiner both at PT 2795 / CT 205 after 60 s of play (`build/lan_game/baseline`). The earlier `EE-SIM` fault on seed 4
+  joiner both at PT 2795 / CT 205 after 60 s of play (`build/lan_game/baseline`). After the StringParser and LAN
+  ports: **PASS**, PT 2744 / 2757, CT 200 / 201 (`build/lan_game/ported`). The earlier `EE-SIM` fault on seed 4
   (`NERecordPlayback::Process` from `NESynchronousServer::ProcessLocalUserInput` at the random-map screen, a null
   record-playback object) did not repeat in the rerun; the oracle passed on seeds 2-7. It is a race in the sim's
   start, not WON code; reported, not fixed.
