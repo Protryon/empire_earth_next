@@ -45,6 +45,12 @@ inline bool EESaveHasRegionOrder(unsigned long inMajorVersion, unsigned long inM
 {
     return inMajorVersion > 0 || inMinorVersion >= 257;
 }
+// port: from 0.258 a save holds the computer players' experiment timers (ee/EECPExperimentTimers.h, EEPWorldHelper):
+// they were function statics, 0 in a loaded game's new process
+inline bool EESaveHasExperimentTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 258;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

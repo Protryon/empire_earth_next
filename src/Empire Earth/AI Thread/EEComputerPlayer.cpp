@@ -73,6 +73,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPExperimentTimers.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -1089,12 +1090,72 @@ float EECPScheduleSpan(EEComputerPlayer* inPlayer)
     return 0.0f;
 }
 
+EECPExperimentTimers gCPExperimentTimers;
+
+template <class T>
+static long EECPSaveTimerArray(FSFile& outFile, const T (&inValues)[EECPExperimentTimers::kPlayers])
+{
+    long theResult = outFile.Write((unsigned long)EECPExperimentTimers::kPlayers);
+    for (long i = 0; i < EECPExperimentTimers::kPlayers && theResult == kErrorOK; i++)
+        theResult = outFile.Write(inValues[i]);
+    return theResult;
+}
+
+template <class T>
+static long EECPLoadTimerArray(FSFile& inFile, T (&outValues)[EECPExperimentTimers::kPlayers])
+{
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+        T theValue = 0;
+        theResult = inFile.Read(theValue);
+        if (i < (unsigned long)EECPExperimentTimers::kPlayers)
+            outValues[i] = theValue;
+    }
+    return theResult;
+}
+
+long EECPSaveExperimentTimers(FSFile& outFile)
+{
+    const EECPExperimentTimers& t = gCPExperimentTimers;
+    long theResult = EECPSaveTimerArray(outFile, t.mBoats);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mBoatHold);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mSettleLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mGuardLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mMilitiaLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mNavalFleeLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleEpoch);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleStart);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatChecked);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatUntil);
+    return theResult;
+}
+
+// read into a copy (zero where the file has fewer players), put in place at the loaded game's first tick
+long EECPLoadExperimentTimers(FSFile& inFile)
+{
+    EECPExperimentTimers t = {};
+    long theResult = EECPLoadTimerArray(inFile, t.mBoats);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mBoatHold);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mSettleLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mGuardLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mMilitiaLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mNavalFleeLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleEpoch);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleStart);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatChecked);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatUntil);
+    if (theResult == kErrorOK)
+        EEAfterLoad([t]() { gCPExperimentTimers = t; });
+    return theResult;
+}
+
 // the Prehistoric counts from the game's start; a later epoch from when the player was first seen in it (TEST ONLY
-// bookkeeping: not saved; the AI asks often enough that the lag is a few seconds)
+// bookkeeping; saved from 0.258, ee/EECPExperimentTimers.h; the AI asks often enough that the lag is a few seconds)
 unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
-    static long sEpoch[64];
-    static unsigned long sStart[64];
+    long (&sEpoch)[64] = gCPExperimentTimers.mScheduleEpoch;   // port: saved (ee/EECPExperimentTimers.h)
+    unsigned long (&sStart)[64] = gCPExperimentTimers.mScheduleStart;
     if (inPlayer->mTechnologies == NULL || inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
         return 0;
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
@@ -1185,8 +1246,8 @@ static long EECPCountSoldiers(EEComputerPlayer* inPlayer)
 
 static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
 {
-    static unsigned long sChecked[64];
-    static unsigned long sUntil[64];
+    unsigned long (&sChecked)[64] = gCPExperimentTimers.mThreatChecked;   // port: saved (ee/EECPExperimentTimers.h)
+    unsigned long (&sUntil)[64] = gCPExperimentTimers.mThreatUntil;
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
     unsigned long theNow = gPhysics->mGameTime;
     if (sChecked[theID] != 0 && theNow >= sChecked[theID] && theNow - sChecked[theID] < kCPThreatCheckMs)

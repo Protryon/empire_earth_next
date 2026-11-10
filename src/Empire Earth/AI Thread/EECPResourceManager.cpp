@@ -65,6 +65,7 @@
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPExperimentTimers.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
 // SYNTHETIC: EXE 0x48e702   (wrapper)
@@ -2013,8 +2014,8 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
         // the experiment "boatrush2" (docs/AI_RESEARCH.md §8.29): boatrush lost 29-45 boats a game to warships by 60
         // minutes and spent its wood rebuying them; after a boat is lost none is bought for kBoatHoldMs
         if (EECPExperiment(theManager->mPlayer, "boatrush2")) {
-            static long sBoats[64];
-            static unsigned long sHold[64];
+            long (&sBoats)[64] = gCPExperimentTimers.mBoats;   // port: saved (ee/EECPExperimentTimers.h)
+            unsigned long (&sHold)[64] = gCPExperimentTimers.mBoatHold;
             unsigned long theID = theManager->mPlayer->mPlayerID < 64 ? theManager->mPlayer->mPlayerID : 63;
             unsigned long theNow = gPhysics->mGameTime;
             if (sHold[theID] > theNow + kBoatHoldMs)
@@ -2267,7 +2268,7 @@ static const unsigned long kSettleMs = 20000;
 
 static void EECPRMSettlePatches(EECPResourceManager* inManager)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mSettleLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
@@ -2326,7 +2327,7 @@ static const float kGuardRange = 8.0f;
 
 static void EECPRMGuardSites(EECPResourceManager* inManager)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mGuardLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
@@ -2740,7 +2741,7 @@ static bool EECPRMNear(EEUnit* inUnit, long inX, long inY, long inRange)
 
 static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mMilitiaLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
     if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kMilitiaMs)
@@ -2901,7 +2902,7 @@ static const unsigned long kNavalFleeMs = 4000;
 
 void EECPRMNavalFlee(EECPResourceManager* inManager, EEUnit* inVictim, EEComplexUnit* inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mNavalFleeLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     if (inAttacker == NULL || !(inAttacker->mHitPoints > 0))
         return;

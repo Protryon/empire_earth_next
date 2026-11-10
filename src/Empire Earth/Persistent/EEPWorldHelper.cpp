@@ -68,6 +68,7 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
+#include "ee/EECPExperimentTimers.h"
 #include <algorithm>
 #include <vector>
 
@@ -551,8 +552,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.256): the path manager's history, regions, timers
             && EEAELoadRunningState(inFile) == kErrorOK   // port (0.256): the area effects' locations, the lists acting
             && LoadTileOrder(inFile) == kErrorOK   // port (0.256): the order of the units on each tile
-            && EESaveHasRegionOrder(inMajorVersion, inMinorVersion))
-            LoadRegionOrder(inFile);   // port (0.257): the order of the units in each map region
+            && EESaveHasRegionOrder(inMajorVersion, inMinorVersion)
+            && LoadRegionOrder(inFile) == kErrorOK   // port (0.257): the order of the units in each map region
+            && EESaveHasExperimentTimers(inMajorVersion, inMinorVersion))
+            EECPLoadExperimentTimers(inFile);   // port (0.258): the computer players' experiment timers
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -609,6 +612,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
             SaveTileOrder(outFile);   // port (0.256): the order of the units on each tile
             if (EESaveHasRegionOrder(inMajorVersion, inMinorVersion))
                 SaveRegionOrder(outFile);   // port (0.257): the order of the units in each map region
+            if (EESaveHasExperimentTimers(inMajorVersion, inMinorVersion))
+                EECPSaveExperimentTimers(outFile);   // port (0.258): the computer players' experiment timers
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

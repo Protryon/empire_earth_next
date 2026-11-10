@@ -865,8 +865,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // text (EESaveTextIsUtf8); 256 more of the running state (the AI's schedule, timers, targets and path requests, the
 // path manager, the area effects, contacts and tile order, ee/EESaveGameFiles.h EESaveHasRunningState)
 // 257 the units' order in each map region (EESaveHasRegionOrder)
+// 258 the computer players' experiment timers (EESaveHasExperimentTimers)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 257;
+const unsigned long kSaveGameMinorVersion = 258;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
