@@ -2423,6 +2423,18 @@ games still end with 32-49 idle citizens (one of them with no granary at all). A
 16 as the round before (boom 2), 54 citizens and 24 soldiers at the end (boom 60 / 13). Open: the idle citizens of
 the island games, enemy discovery in the 3 games without a landing, 0 defeats, expand.c.
 
+**The eighth checkpoint (2026-11-09): the islands' idle citizens, a smaller step.** A directly placed foundation
+that vanishes within a minute blocks its tile for ten minutes and a direct order comes at most every two (seed 11
+had ordered a second granary at the same tile 68 times); a granary queued at the build manager for three minutes
+with no foundation goes the direct way; the sea scout's fallback takes the far side of the map from the town
+first. Small Islands (10 games, 90 min): 10/10 run, landings in 6 (one fewer than the round before: the judge),
+0 defeats, 88 citizens and 82 soldiers at the end against the classic's 30 and 33; the direct granary churn is
+gone but a second granary still rarely stands, and seed 2 still ends with 49 idle citizens (its granary orders
+sit in the build manager's queue without a foundation, and the queue count the stall rule reads drops when the
+manager gives up). Against boom at 45 minutes level as before (Stone 24.6 against 22.8, citizens 46 / 60 against
+43 / 61, army 9.9 / 17.8 against 11.3 / 18.4, no defeats). Not advanced this round: 0 defeats against classic Hard
+at 90 minutes (2 of 16, as boom), expand.c (other islands).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

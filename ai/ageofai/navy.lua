@@ -127,7 +127,7 @@ function M.step(view, memory, orders, budget, force)
                                 end
                             end
                             if not skip then
-                                local d = d2(x, y, scout.x, scout.y) - d2(x, y, view.town_x, view.town_y) // 4
+                                local d = d2(x, y, scout.x, scout.y) // 4 - d2(x, y, view.town_x, view.town_y)
                                 if bd == nil or d < bd then
                                     best, bd = {x, y}, d
                                 end
