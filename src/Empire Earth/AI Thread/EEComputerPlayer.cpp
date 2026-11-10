@@ -4944,6 +4944,27 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mFavoriteSpaceType);
     }
+    // port (0.254 on, no format change): the favourite land, sea, air and space types and their history as saved. The
+    // load enters the player's epochs again (EnterEpoch), which picks new favourites at random after this Load, so the
+    // loaded game trained and costed another army (seed 2's 2100 s save: class 207 for the saved 24 at the first
+    // update); put back at the first tick (EEAfterLoad)
+    if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        EEComputerPlayer* theSelf = this;
+        unsigned long thePlayerID = this->mPlayerID;
+        unsigned long theLand = this->mFavoriteLandType, theSea = this->mFavoriteSeaType;
+        unsigned long theAir = this->mFavoriteAirType, theSpace = this->mFavoriteSpaceType;
+        std::vector<std::pair<unsigned long, long> > theHistory(this->mFavoriteTypeHistory.begin(), this->mFavoriteTypeHistory.end());
+        EEAfterLoad([theSelf, thePlayerID, theLand, theSea, theAir, theSpace, theHistory]() {
+            if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
+                return;   // not the world's computer player of that id any more
+            theSelf->mFavoriteLandType = theLand;
+            theSelf->mFavoriteSeaType = theSea;
+            theSelf->mFavoriteAirType = theAir;
+            theSelf->mFavoriteSpaceType = theSpace;
+            theSelf->mFavoriteTypeHistory.assign(theHistory.begin(), theHistory.end());
+        });
+    }
     // port (0.256): the running values the original saved otherwise or not at all (Save), put back at the first tick
     // after RepairPointers (which asks for a regroup) and before the first Update (EEAfterLoad): the pop cap
     // (WorkOutPopulation's), the enable-time flag (saved as false until now: Update set the time again), the regroup
