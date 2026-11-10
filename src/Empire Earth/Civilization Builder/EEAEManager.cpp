@@ -48,6 +48,8 @@
 #include "ee/EEAECloaking.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
+#include "ee/EESaveGameFiles.h"
+#include <memory>
 
 // The unit functors of the manager's passes (RTTI names; each > EEUUUnitFunctor, slot +0x04 only; their ??_G is
 // ICF-shared with EEPSuggestRecomputeAllAreaEffects's 0x16b555)
@@ -448,6 +450,198 @@ void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
     for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
          theIterator != inUnit->mAreaEffects.mItems.end(); ++theIterator)
         this->mEffects->Add(*theIterator);
+}
+
+// port (save version 0.255, EEPWorldHelper): the area effects' running state. The original saved none of it: a
+// loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)
+// and every unit's affecting list and the active list were empty until the next area-effect tick (up to 2 s: no
+// morale in the damage, no immunities, no cloaking). Saved: per unit, its own effects' location (and the
+// morale-from-buildings count), then the effects acting on it, each as its owner unit and index; then the active list
+// the same way. Put back at the loaded game's first tick (EEAfterLoad).
+namespace {
+struct EEAESavedRef {
+    unsigned long mOwner;                   // the owner unit's id ((unsigned long)-1: none)
+    long mIndex;                            // in the owner's mAreaEffects (-1: not there)
+};
+struct EEAESavedOwn {
+    float mX, mY;
+    bool mIsMorale;                         // an EEAEMoraleFromBuildings: mDirty, mCount
+    bool mDirty;
+    long mCount;
+};
+struct EEAESavedUnit {
+    unsigned long mID;
+    std::vector<EEAESavedOwn> mOwn;
+    std::vector<EEAESavedRef> mAffecting;
+};
+
+EEAESavedRef EEAERefOf(EEAreaEffect* inEffect)
+{
+    EEAESavedRef theRef = {(unsigned long)-1, -1};
+    EEComplexUnit* theOwner = inEffect->mUnit;
+    if (theOwner == NULL)
+        return theRef;
+    theRef.mOwner = theOwner->GetUnitID();
+    for (size_t i = 0; i < theOwner->mAreaEffects.mItems.size(); i++)
+        if (theOwner->mAreaEffects.mItems[i] == inEffect)
+            theRef.mIndex = (long)i;
+    return theRef;
+}
+
+EEAreaEffect* EEAEEffectOf(const EEAESavedRef& inRef)
+{
+    if (inRef.mIndex < 0)
+        return NULL;
+    EEUnit* theUnit = ::gWorld.GetUnit(inRef.mOwner);
+    EEComplexUnit* theOwner = theUnit != NULL ? theUnit->mComplexUnit : NULL;
+    if (theOwner == NULL || (size_t)inRef.mIndex >= theOwner->mAreaEffects.mItems.size())
+        return NULL;
+    return theOwner->mAreaEffects.mItems[inRef.mIndex];
+}
+
+void EEAEWriteRefs(FSFile& outFile, UReferenceContainer<EEAreaEffect*>& inList)
+{
+    outFile.Write((unsigned long)inList.mItems.size());
+    for (size_t i = 0; i < inList.mItems.size(); i++) {
+        EEAESavedRef theRef = EEAERefOf(inList.mItems[i]);
+        outFile.Write(theRef.mOwner);
+        outFile.Write(theRef.mIndex);
+    }
+}
+
+long EEAEReadRefs(FSFile& inFile, std::vector<EEAESavedRef>& outRefs)
+{
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        EEAESavedRef theRef = {(unsigned long)-1, -1};
+        theResult = inFile.Read(theRef.mOwner);
+        if (theResult == 0)
+            theResult = inFile.Read(theRef.mIndex);
+        outRefs.push_back(theRef);
+    }
+    return theResult;
+}
+
+EEComplexUnit* EEAEComplexUnit(unsigned long inID)
+{
+    EEUnit* theUnit = ::gWorld.GetUnit(inID);
+    return theUnit != NULL ? theUnit->mComplexUnit : NULL;
+}
+}
+
+void EEAESaveRunningState(FSFile& outFile)
+{
+    std::vector<EEComplexUnit*> theUnits;
+    for (unsigned long p = 1; p < ::gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = ::gWorld.mPlayers[p];
+        if (thePlayer == NULL)
+            continue;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex != NULL && (theComplex->mAreaEffects.mItems.size() > 0 || theComplex->mAffectingAreaEffects.mItems.size() > 0))
+                theUnits.push_back(theComplex);
+        }
+    }
+    outFile.Write((unsigned long)theUnits.size());
+    for (size_t u = 0; u < theUnits.size(); u++) {
+        EEComplexUnit* theUnit = theUnits[u];
+        outFile.Write((unsigned long)theUnit->GetUnitID());
+        outFile.Write((unsigned long)theUnit->mAreaEffects.mItems.size());
+        for (size_t i = 0; i < theUnit->mAreaEffects.mItems.size(); i++) {
+            EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
+            outFile.Write(theEffect->mLocation.mX);
+            outFile.Write(theEffect->mLocation.mY);
+            EEAEMoraleFromBuildings* theMorale = dynamic_cast<EEAEMoraleFromBuildings*>(theEffect);
+            bool theIsMorale = theMorale != NULL;
+            outFile.Write(theIsMorale);
+            if (theMorale != NULL) {
+                outFile.Write(theMorale->mDirty);
+                outFile.Write(theMorale->mCount);
+            }
+        }
+        EEAEWriteRefs(outFile, theUnit->mAffectingAreaEffects);
+    }
+    EEAEWriteRefs(outFile, gAEManager.mEffects);
+}
+
+long EEAELoadRunningState(FSFile& inFile)
+{
+    std::shared_ptr<std::vector<EEAESavedUnit> > theUnits = std::make_shared<std::vector<EEAESavedUnit> >();
+    std::shared_ptr<std::vector<EEAESavedRef> > theActive = std::make_shared<std::vector<EEAESavedRef> >();
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long u = 0; u < theCount && theResult == 0; u++) {
+        EEAESavedUnit theUnit;
+        unsigned long theOwn = 0;
+        theResult = inFile.Read(theUnit.mID);
+        if (theResult == 0)
+            theResult = inFile.Read(theOwn);
+        for (unsigned long i = 0; i < theOwn && theResult == 0; i++) {
+            EEAESavedOwn theSaved = {0.0f, 0.0f, false, false, 0};
+            theResult = inFile.Read(theSaved.mX);
+            if (theResult == 0)
+                theResult = inFile.Read(theSaved.mY);
+            if (theResult == 0)
+                theResult = inFile.Read(theSaved.mIsMorale);
+            if (theResult == 0 && theSaved.mIsMorale && (theResult = inFile.Read(theSaved.mDirty)) == 0)
+                theResult = inFile.Read(theSaved.mCount);
+            theUnit.mOwn.push_back(theSaved);
+        }
+        if (theResult == 0)
+            theResult = EEAEReadRefs(inFile, theUnit.mAffecting);
+        theUnits->push_back(theUnit);
+    }
+    if (theResult == 0)
+        theResult = EEAEReadRefs(inFile, *theActive);
+    if (theResult == 0)
+        EEAfterLoad([theUnits, theActive]() {
+            unsigned long theLost = 0;
+            for (size_t u = 0; u < theUnits->size(); u++) {
+                const EEAESavedUnit& theSaved = (*theUnits)[u];
+                EEComplexUnit* theUnit = EEAEComplexUnit(theSaved.mID);
+                if (theUnit == NULL || theUnit->mAreaEffects.mItems.size() != theSaved.mOwn.size()) {
+                    theLost++;
+                    continue;
+                }
+                for (size_t i = 0; i < theSaved.mOwn.size(); i++) {
+                    EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
+                    theEffect->mLocation.mX = theSaved.mOwn[i].mX;
+                    theEffect->mLocation.mY = theSaved.mOwn[i].mY;
+                    EEAEMoraleFromBuildings* theMorale = dynamic_cast<EEAEMoraleFromBuildings*>(theEffect);
+                    if (theMorale != NULL && theSaved.mOwn[i].mIsMorale) {
+                        theMorale->mDirty = theSaved.mOwn[i].mDirty;
+                        theMorale->mCount = theSaved.mOwn[i].mCount;
+                    }
+                }
+            }
+            // the effects acting on each unit (every list is empty after a load), in their saved order
+            for (size_t u = 0; u < theUnits->size(); u++) {
+                const EEAESavedUnit& theSaved = (*theUnits)[u];
+                EEComplexUnit* theUnit = EEAEComplexUnit(theSaved.mID);
+                if (theUnit == NULL)
+                    continue;
+                theUnit->mAffectingAreaEffects.Clear();
+                for (size_t i = 0; i < theSaved.mAffecting.size(); i++) {
+                    EEAreaEffect* theEffect = EEAEEffectOf(theSaved.mAffecting[i]);
+                    if (theEffect != NULL)
+                        theUnit->mAffectingAreaEffects.Add(theEffect);
+                    else
+                        theLost++;
+                }
+            }
+            gAEManager.ClearEffects();
+            for (size_t i = 0; i < theActive->size(); i++) {
+                EEAreaEffect* theEffect = EEAEEffectOf((*theActive)[i]);
+                if (theEffect != NULL)
+                    gAEManager.mEffects.Add(theEffect);
+                else
+                    theLost++;
+            }
+            if (theLost != 0)
+                ESDebugOut("EEAEManager: %lu saved area effects are not the loaded ones\n", theLost);
+        });
+    return theResult;
 }
 
 // Inline slots and template COMDATs emitted in this unit's range (first-reference order)

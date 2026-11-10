@@ -57,6 +57,7 @@
 #include "ee/EEAIForest.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEPathManager.h"
+#include "ee/EEAEManager.h"
 #include <algorithm>
 #include <vector>
 
@@ -371,8 +372,9 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
         if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
             && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.255): the computer players' schedule
-            && LoadAISchedule(inFile) == kErrorOK)
-            gPathManager.LoadRunningState(inFile);   // port (0.255): the path manager's history, regions, timers
+            && LoadAISchedule(inFile) == kErrorOK
+            && gPathManager.LoadRunningState(inFile) == kErrorOK)   // port (0.255): the path manager's history, regions, timers
+            EEAELoadRunningState(inFile);   // port (0.255): the area effects' locations, the lists acting
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -425,6 +427,7 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
         if (EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.255): the computer players' schedule
             SaveAISchedule(outFile);
             gPathManager.SaveRunningState(outFile);   // port (0.255): the path manager's history, regions and timers
+            EEAESaveRunningState(outFile);   // port (0.255): the area effects' locations and the lists of those acting
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

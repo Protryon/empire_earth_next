@@ -66,4 +66,9 @@ public:
 
 extern EEAEManager gAEManager;              // 0x52f638
 
+// port (save version 0.255, EEPWorldHelper): the units' own area effects' locations, the effects acting on each unit
+// and the active list (EEAEManager.cpp), which the original rebuilt only at the next area-effect tick
+void EEAESaveRunningState(FSFile& outFile);
+long EEAELoadRunningState(FSFile& inFile);
+
 #endif
