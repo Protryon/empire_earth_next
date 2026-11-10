@@ -13,6 +13,7 @@
 #include <deque>
 #include <algorithm>
 #include <string.h>
+#include <memory>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -66,6 +67,7 @@
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
@@ -1704,6 +1706,117 @@ void EEPathManager::DumpSim(FILE* inFile)
     fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
             this->mHistory.size(), this->mRegions.size(), this->mNextHistoryPruneTime, this->mNextRegionPruneTime,
             this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
+}
+
+// port (save version 0.255): the history (newest first), the region maps (by unit id, then tile) and the timers.
+// The original saved none of them: a loaded game gave a citizen's repeated request its full search budget
+// (SetGraphRevs), counted no repeated goal tiles (PruneHistory, PruneRegions: no stranded units) and pruned at its
+// first update, not 10 s / 30 s after the saved game's last prune.
+void EEPathManager::SaveRunningState(FSFile& outFile)
+{
+    outFile.Write((unsigned long)this->mHistory.size());
+    for (size_t i = 0; i < this->mHistory.size(); i++) {
+        const EEPathHistoryEntry& theEntry = this->mHistory[i];
+        outFile.Write(theEntry.mX);
+        outFile.Write(theEntry.mY);
+        outFile.Write(theEntry.mUnitID);
+        outFile.Write(theEntry.mTime);
+    }
+    outFile.Write((unsigned long)this->mRegions.size());
+    std::map<long, std::map<U2DPoint<long>, unsigned long>*>::iterator it;
+    for (it = this->mRegions.begin(); it != this->mRegions.end(); it++) {
+        outFile.Write(it->first);
+        outFile.Write((unsigned long)it->second->size());
+        std::map<U2DPoint<long>, unsigned long>::iterator theTile;
+        for (theTile = it->second->begin(); theTile != it->second->end(); theTile++) {
+            outFile.Write(theTile->first.mX);
+            outFile.Write(theTile->first.mY);
+            outFile.Write(theTile->second);
+        }
+    }
+    outFile.Write(this->mNextHistoryPruneTime);
+    outFile.Write(this->mNextRegionPruneTime);
+    outFile.Write(this->mLCC);
+    outFile.Write(this->mNextRequestID);
+    outFile.Write(this->mNextRegionTime);
+    outFile.Write(this->mIsUpdatingRegions);
+}
+
+long EEPathManager::LoadRunningState(FSFile& inFile)
+{
+    struct State {
+        std::deque<EEPathHistoryEntry> mHistory;
+        std::vector<std::pair<long, std::vector<std::pair<U2DPoint<long>, unsigned long> > > > mRegions;
+        long mNextHistoryPruneTime = 0, mNextRegionPruneTime = 0, mLCC = 0, mNextRequestID = 0;
+        unsigned long mNextRegionTime = 0;
+        bool mIsUpdatingRegions = false;
+    };
+    std::shared_ptr<State> theState = std::make_shared<State>();
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        EEPathHistoryEntry theEntry;
+        theResult = inFile.Read(theEntry.mX);
+        if (theResult == 0)
+            theResult = inFile.Read(theEntry.mY);
+        if (theResult == 0)
+            theResult = inFile.Read(theEntry.mUnitID);
+        if (theResult == 0)
+            theResult = inFile.Read(theEntry.mTime);
+        theState->mHistory.push_back(theEntry);
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        long theID = 0;
+        unsigned long theTiles = 0;
+        theResult = inFile.Read(theID);
+        if (theResult == 0)
+            theResult = inFile.Read(theTiles);
+        std::vector<std::pair<U2DPoint<long>, unsigned long> > theMap;
+        for (unsigned long t = 0; t < theTiles && theResult == 0; t++) {
+            U2DPoint<long> theTile;
+            unsigned long theValue = 0;
+            theResult = inFile.Read(theTile.mX);
+            if (theResult == 0)
+                theResult = inFile.Read(theTile.mY);
+            if (theResult == 0)
+                theResult = inFile.Read(theValue);
+            theMap.push_back(std::make_pair(theTile, theValue));
+        }
+        theState->mRegions.push_back(std::make_pair(theID, theMap));
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mNextHistoryPruneTime);
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mNextRegionPruneTime);
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mLCC);
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mNextRequestID);
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mNextRegionTime);
+    if (theResult == 0)
+        theResult = inFile.Read(theState->mIsUpdatingRegions);
+    if (theResult == 0)
+        EEAfterLoad([theState]() {
+            EEPathManager& theManager = gPathManager;
+            theManager.FreeRegions();
+            theManager.mHistory = theState->mHistory;
+            for (size_t i = 0; i < theState->mRegions.size(); i++) {
+                std::map<U2DPoint<long>, unsigned long>* theMap = new std::map<U2DPoint<long>, unsigned long>;
+                for (size_t t = 0; t < theState->mRegions[i].second.size(); t++)
+                    theMap->insert(theState->mRegions[i].second[t]);
+                theManager.mRegions.insert(std::make_pair(theState->mRegions[i].first, theMap));
+            }
+            theManager.mNextHistoryPruneTime = theState->mNextHistoryPruneTime;
+            theManager.mNextRegionPruneTime = theState->mNextRegionPruneTime;
+            theManager.mLCC = theState->mLCC;
+            theManager.mNextRequestID = theState->mNextRequestID;
+            theManager.mNextRegionTime = theState->mNextRegionTime;
+            theManager.mIsUpdatingRegions = theState->mIsUpdatingRegions;
+        });
+    return theResult;
 }
 
 // FUNCTION: EXE 0x4a8db8
