@@ -11,6 +11,7 @@ pub mod combo;
 pub mod controls_table;
 pub mod edit;
 pub mod form;
+pub mod form_state;
 pub mod layout;
 pub mod list;
 pub mod manager;
@@ -38,6 +39,9 @@ mod edit_ffi;
 // imports the C++ form questions (UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod form_ffi;
+// imports the C++ form's lists, members and calls (UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod form_state_ffi;
 mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]

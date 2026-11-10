@@ -509,6 +509,25 @@ constexpr static const long ERROR_FAILED = 9;
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
 
+/// `kDisplayModeHidden` / `kDisplayModeShown`.
+constexpr static const unsigned long HIDDEN = 0;
+
+constexpr static const unsigned long SHOWN = 1;
+
+/// `UIEntity::GetType` of a control (`kControlTypeButton`: every `UIControl` is entity type 1).
+constexpr static const unsigned long ENTITY_CONTROL = 1;
+
+/// `kDbControlHelpTextLabel`, `kDbControlMultiLineHelpTextLabel`.
+constexpr static const unsigned long DB_HELP_TEXT_LABEL = 24;
+
+constexpr static const unsigned long DB_MULTI_LINE_HELP_TEXT_LABEL = 25;
+
+/// `kToolTipShadowOffset`.
+constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
+
+/// `kFadeInRate`.
+constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -3564,6 +3583,12 @@ struct EeUiTrigger {
   void *event;
   void *form;
   void *entity;
+};
+
+/// `UIDirtyRectangle`: a rectangle and the surfaces it still has to be redrawn on.
+struct EeUiDirtyRect {
+  EeUiRect rect;
+  unsigned long surface_count;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -7697,6 +7722,35 @@ void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
 
 /// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
 bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
+
+/// `UIForm::AddCopyDirtyRectangle(rect)`.
+void ee_ui_form_add_copy_dirty_rectangle(void *form, const EeUiRect *rect);
+
+/// `UIForm::AddDirtyRectangle(rect)` after its popup test (`surfaces`: the manager's surface count).
+void ee_ui_form_add_dirty_rectangle(void *form,
+                                    const EeUiRect *rect,
+                                    unsigned long surfaces);
+
+/// `UIForm::CopyData` -> its result.
+long ee_ui_form_copy_data(void *form);
+
+/// `UIForm::Open`.
+void ee_ui_form_open(void *form);
+
+/// `UIForm::Close`.
+void ee_ui_form_close(void *form);
+
+/// `UIForm::SetPopup(control)`.
+void ee_ui_form_set_popup(void *form, void *control);
+
+/// `UIForm::RedrawIntersectControls(rect)`.
+void ee_ui_form_redraw_intersect_controls(void *form, const EeUiRect *rect);
+
+/// `UIForm::SetAllControlsDirty`.
+void ee_ui_form_set_all_controls_dirty(void *form);
+
+/// `UIForm::GetToolTipShadowRectangle(rect, out)`.
+EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);
