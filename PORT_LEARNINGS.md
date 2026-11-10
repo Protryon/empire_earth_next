@@ -4460,3 +4460,43 @@ choice, `PruneChokePoints`, `CreateScenarioAreas`, the area classes' hulls) stay
   `GetTilesNextTo` (its ring order is `EEGetSquareRingTiles`'), `CanGetTo`, and the area classes' geometry
   (`EEAIArea::Create`, the hulls, `GetClosestPoints`, `GetShoreInRegions`). Those sit on `U2DSparseArray` and
   `U2DPolygon<long>`, which would have to move first.
+
+## The gates' intermittent failures, each to its cause (branch rust-flakes, 2026-11-10)
+
+- **EE-SIM's start-up crash was a local server that was never published.** The fault (an access violation in
+  `NERecordPlayback::Process`+0xf, from `EEUIESPERandomMap::ProcessEvent` through
+  `NESynchronousServer::ProcessLocalUserInput`, seen once in 6-24 oracle and capture games) is the random-map screen's
+  first input to an `EEServer` whose `NEProtocol::Publish` failed: the server then keeps `mRecordPlayback` NULL and
+  starts no threads, and the original never checks. Publish fails when its datagram port (33334 + offset) or the shared
+  listen port (33335 + offset) is taken. EE-SIM chose the offset at start (a bind test from a pair the process id picks)
+  and the server binds it seconds later, at the random-map click: another sim's or bench's pair, or any connection's
+  ephemeral port (offsets past 15818 lay in Windows' dynamic range 49152-65535, about one game in eight) could take it
+  in between. A port held by another process reproduces the fault every time (`tools/sim.py resolve` on the FAULT
+  line). Now EE-SIM sets `gPlatSimPortOffset = kPlatSimAnyPort` (-1) unless `--port-offset` is given, and ee_net_tcp
+  then binds port 0 everywhere: the system picks a free port at the bind, so nothing can take it first. Note that
+  ee_net_tcp's `create_socket` restarts Winsock (`deactivate`/`activate`, as the C++ did) before each socket: with the
+  plug-in the only Winsock user, the count reaches 0 and Winsock resets every open socket, so a single-player server
+  has no game stream socket after its publish (netstat shows only the datagram port and the listen port). Harmless in
+  single player; worth knowing before a LAN game is debugged.
+- **A process-wide list read by a test that did not add to it.** ee_data's rules overrides (EE-SIM `--set`) are a
+  global list applied to every document a `Content` reads. `overrides_apply_and_report` adds
+  `combat.damage.minimum=8`; a gate test running at the same time loaded its broken `minimum: x` with the override in
+  place, so it compiled, `bad.out` was written instead of `bad.err`. Under `cfg(test)` the list is now per thread.
+- **WARP faults when a test process drives several devices at once.** The ee_gx access violation is in WARP's own
+  worker thread (d3d10warp.dll, reading freed heap memory) while the six device tests create, use and drop their own
+  wgpu devices in parallel: 3 of 45 runs of `gpu::tests::` faulted under load (all at the same instruction), 0 of 45 with one test thread. The game
+  has one device per process; the tests now take one device at a time (a lock held across the Gx's life).
+- **The same pattern elsewhere** (a test reading or breaking a global that other tests change):
+  `switches_start_off_and_have_c_layouts` read `gPlatSimMode` outside the test lock while a message test set it;
+  ee_won's `start_and_stop_count_users` stopped once more than it started, which ran `WSACleanup` (closing other
+  tests' sockets) whenever exactly one other test had started; ee_plat_sys's double close of a socket descriptor could,
+  on POSIX, close a file test's descriptor that had taken the number in between.
+- **Capture records carry simulation state only.** EVAT's raw upgrade bytes included `mMediaCount` and
+  `mButtonLoadCount` (presentation-side load counts that depend on when the loader runs); they are written as 0 now and
+  the EVAT digests were rebaselined (no other record's changed). The disk was full while the larger profiles ran
+  (a late or space capture is 1.6 GB a profile), so their captures went through a named pipe
+  (`EE_SIM_CAPTURE=\\.\pipe\<name>`; the game's `fopen(..., "wb")` opens a pipe) into a reader that digests the
+  stream: no capture file. That slows the physics thread to the reader's speed, and it showed one more record that
+  depends on timing: TCST (a node's or an epoch's `GetCost`) had 1,171,743 records against the golden's 1,174,010 in
+  oracle seed 2, every other digest equal. Something outside the simulation's own order calls `GetCost` (the
+  UI thread's status buttons, `EEUIFMGStatusButton.cpp`, are the suspect); a heavily loaded `check` could fail on it the way EVAT did.
