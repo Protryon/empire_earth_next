@@ -39,6 +39,12 @@ inline bool EESaveHasRunningState(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 256;
 }
+// port: from 0.257 a save holds the order of the units in each map region (EEMap::mUnitRegions, EEPWorldHelper): a
+// load added them in its own order, and the projectiles' impact test and the target searches take the first match
+inline bool EESaveHasRegionOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 257;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

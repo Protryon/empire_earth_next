@@ -67,6 +67,7 @@
 #include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
+#include "ee/RTSRegionTable.h"
 #include <algorithm>
 #include <vector>
 
@@ -417,6 +418,85 @@ static long LoadTileOrder(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.257): the order of the units in each map region (EEMap::mUnitRegions, RTSRegionTable: a unit
+// is appended when it enters a region and erased when it leaves). A load adds the units in its own order, and
+// EEUnitClass::FindImpactUnit and the target searches walk a region's units in this order, taking the first match
+// (seed 3's 600 s save: a projectile hit another unit in the loaded game). Saved: every region with two units or more,
+// by index, with its units' ids; put back at the first tick when the region holds the same units.
+static void SaveRegionOrder(FSFile& outFile)
+{
+    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
+    unsigned long theRegions = theTable != NULL ? theTable->mRegionsX * theTable->mRegionsY : 0;
+    unsigned long theCount = 0;
+    for (unsigned long r = 0; r < theRegions; r++)
+        theCount += theTable->mRegions[r].size() >= 2 ? 1 : 0;
+    outFile.Write(theCount);
+    for (unsigned long r = 0; r < theRegions; r++) {
+        RTSRegion<EEComplexUnit*>& theRegion = theTable->mRegions[r];
+        if (theRegion.size() < 2)
+            continue;
+        outFile.Write(r);
+        outFile.Write((unsigned long)theRegion.size());
+        for (size_t k = 0; k < theRegion.size(); k++)
+            outFile.Write(theRegion[k] != NULL ? (unsigned long)theRegion[k]->mUnitID : (unsigned long)-1);
+    }
+}
+
+static void RestoreRegionOrder(const std::vector<std::pair<unsigned long, std::vector<unsigned long> > >& inRegions)
+{
+    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
+    unsigned long theOther = 0;
+    for (size_t t = 0; t < inRegions.size(); t++) {
+        if (theTable == NULL || inRegions[t].first >= theTable->mRegionsX * theTable->mRegionsY)
+            break;
+        RTSRegion<EEComplexUnit*>& theRegion = theTable->mRegions[inRegions[t].first];
+        const std::vector<unsigned long>& theIDs = inRegions[t].second;
+        std::vector<EEComplexUnit*> theUnits;
+        std::vector<bool> theTaken(theRegion.size(), false);
+        for (size_t k = 0; k < theIDs.size() && theRegion.size() == theIDs.size(); k++) {
+            size_t n = 0;
+            while (n < theRegion.size() && (theTaken[n] || theRegion[n] == NULL || (unsigned long)theRegion[n]->mUnitID != theIDs[k]))
+                n++;
+            if (n == theRegion.size())
+                break;
+            theTaken[n] = true;
+            theUnits.push_back(theRegion[n]);
+        }
+        if (theUnits.size() != theRegion.size() || theUnits.size() != theIDs.size()) {
+            theOther++;
+            continue;
+        }
+        for (size_t n = 0; n < theUnits.size(); n++)
+            theRegion[n] = theUnits[n];
+    }
+    if (theOther != 0)
+        ESDebugOut("EEPWorldHelper: %lu map regions hold other units than the saved ones: their order is the load's\n", theOther);
+}
+
+static long LoadRegionOrder(FSFile& inFile)
+{
+    std::vector<std::pair<unsigned long, std::vector<unsigned long> > > theRegions;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long t = 0; t < theCount && theResult == kErrorOK; t++) {
+        unsigned long theIndex = 0;
+        unsigned long theUnits = 0;
+        theResult = inFile.Read(theIndex);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theUnits);
+        std::vector<unsigned long> theIDs;
+        for (unsigned long k = 0; k < theUnits && theResult == kErrorOK; k++) {
+            unsigned long theID = 0;
+            theResult = inFile.Read(theID);
+            theIDs.push_back(theID);
+        }
+        theRegions.push_back(std::make_pair(theIndex, theIDs));
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theRegions]() { RestoreRegionOrder(theRegions); });
+    return theResult;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -469,8 +549,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.256): the computer players' schedule
             && LoadAISchedule(inFile) == kErrorOK
             && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.256): the path manager's history, regions, timers
-            && EEAELoadRunningState(inFile) == kErrorOK)   // port (0.256): the area effects' locations, the lists acting
-            LoadTileOrder(inFile);   // port (0.256): the order of the units on each tile
+            && EEAELoadRunningState(inFile) == kErrorOK   // port (0.256): the area effects' locations, the lists acting
+            && LoadTileOrder(inFile) == kErrorOK   // port (0.256): the order of the units on each tile
+            && EESaveHasRegionOrder(inMajorVersion, inMinorVersion))
+            LoadRegionOrder(inFile);   // port (0.257): the order of the units in each map region
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -525,6 +607,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
             gPathManager.SaveRunningState(outFile);   // port (0.256): the path manager's history, regions and timers
             EEAESaveRunningState(outFile);   // port (0.256): the area effects' locations and the lists of those acting
             SaveTileOrder(outFile);   // port (0.256): the order of the units on each tile
+            if (EESaveHasRegionOrder(inMajorVersion, inMinorVersion))
+                SaveRegionOrder(outFile);   // port (0.257): the order of the units in each map region
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
