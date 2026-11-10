@@ -935,14 +935,14 @@ fn to_cem_model(m: &Model, shared: SharedFrames, poisoned: &mut bool) -> CemMode
         .collect();
     let frames = (0..fc as usize)
         .map(|f| {
-            let v = &m.vertices[f];
+            let v = m.vertices[f].as_chunks::<8>().0;
             CemFrame {
                 radius: Some(m.radii[f]),
                 target: if shared.get(f as u32).is_some() { fc - 1 } else { f as u32 },
-                points: v.chunks_exact(8).map(|c| to_point(&c[0..3])).collect(),
-                normals: v.chunks_exact(8).map(|c| GeVector { x: c[3], y: c[4], z: c[5] }).collect(),
-                uvs: v.chunks_exact(8).map(|c| [c[6], c[7]]).collect(),
-                tag_points: m.tags[f].chunks_exact(3).map(to_point).collect(),
+                points: v.iter().map(|c| to_point(&c[0..3])).collect(),
+                normals: v.iter().map(|c| GeVector { x: c[3], y: c[4], z: c[5] }).collect(),
+                uvs: v.iter().map(|c| [c[6], c[7]]).collect(),
+                tag_points: m.tags[f].as_chunks::<3>().0.iter().map(|c| to_point(c)).collect(),
                 transform: m.transforms[f].to_vec(),
                 bbox: m.boxes[f].to_vec(),
             }
@@ -1040,10 +1040,7 @@ mod tests {
         let doc = String::from_utf8(triangle_gltf())
             .unwrap()
             .replace("[1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1]", "[0.7,0.7,0,0,-0.7,0.7,0,0,0,0,1,0,0,0,0,1]");
-        assert_eq!(
-            refused(doc.as_bytes(), None),
-            b"the transform above the root model is not an axis change"
-        );
+        assert_eq!(refused(doc.as_bytes(), None), b"the transform above the root model is not an axis change");
     }
 
     #[test]
@@ -1067,10 +1064,7 @@ mod tests {
         let mut none = |_: &[u8]| -> Option<Vec<u8>> { None };
         assert_eq!(refused(doc, Some(&mut none)), b"buffer \"x.bin\" not found".to_vec());
         let mut short = |_: &[u8]| -> Option<Vec<u8>> { Some(vec![1]) };
-        assert_eq!(
-            refused(doc, Some(&mut short)),
-            b"buffer \"x.bin\" is shorter than its byteLength".to_vec()
-        );
+        assert_eq!(refused(doc, Some(&mut short)), b"buffer \"x.bin\" is shorter than its byteLength".to_vec());
     }
 
     #[test]

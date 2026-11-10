@@ -142,7 +142,11 @@ pub struct EeOfTextureFrame {
 /// # Safety
 /// `frames` is valid for `count` slices, each slice for its bytes; `err` for writing.
 #[no_mangle]
-pub unsafe extern "C" fn ee_of_png_to_texture(frames: *const EeOfSlice, count: usize, err: *mut EeOfBytes) -> *mut PngTexture {
+pub unsafe extern "C" fn ee_of_png_to_texture(
+    frames: *const EeOfSlice,
+    count: usize,
+    err: *mut EeOfBytes,
+) -> *mut PngTexture {
     if !err.is_null() {
         // SAFETY: the function's contract
         unsafe { *err = EeOfBytes::empty() };
@@ -269,14 +273,14 @@ mod tests {
         unsafe {
             let mut err = EeOfBytes::empty();
             let doc = b"not gltf";
-            let m = ee_of_gltf_to_model(doc.as_ptr(), doc.len(), None, std::ptr::null_mut(), std::ptr::null(), 0, &mut err);
+            let m =
+                ee_of_gltf_to_model(doc.as_ptr(), doc.len(), None, std::ptr::null_mut(), std::ptr::null(), 0, &mut err);
             assert!(m.is_null());
             assert_eq!(take(&mut err), b"not a glTF 2.0 file".to_vec());
 
             let frames = [EeOfSlice { ptr: doc.as_ptr(), len: doc.len() }];
             assert!(ee_of_png_to_texture(frames.as_ptr(), 1, &mut err).is_null());
             assert_eq!(take(&mut err), b"not a PNG file".to_vec());
-
         }
     }
 

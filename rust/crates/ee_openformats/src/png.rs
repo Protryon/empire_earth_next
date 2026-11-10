@@ -1457,7 +1457,10 @@ mod tests {
     #[test]
     fn interlaced_rgba_decodes() {
         // a 1x1 interlaced image: one pass with one pixel
-        assert_eq!(frame0(&png(1, 1, &[0, 1, 2, 3, 4], PngOpts { interlace: 1, ..plain(8, 6) })), (4, vec![1, 2, 3, 4]));
+        assert_eq!(
+            frame0(&png(1, 1, &[0, 1, 2, 3, 4], PngOpts { interlace: 1, ..plain(8, 6) })),
+            (4, vec![1, 2, 3, 4])
+        );
     }
 
     #[test]
@@ -1603,7 +1606,8 @@ mod tests {
         let p = png(2, 2, &raw, plain(8, 6));
         let pic = png_to_picture(&p).unwrap();
         let t = png_to_texture(&[&p]).unwrap();
-        let swapped: Vec<u8> = t.frames[0].pixels.chunks_exact(4).flat_map(|c| [c[2], c[1], c[0], c[3]]).collect();
+        let swapped: Vec<u8> =
+            t.frames[0].pixels.as_chunks::<4>().0.iter().flat_map(|c| [c[2], c[1], c[0], c[3]]).collect();
         assert_eq!(pic.bgra, swapped);
     }
 
