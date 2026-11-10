@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatString.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 std::string StringToUpperCase(const std::string& theStr)
 {
@@ -25,72 +26,58 @@ std::string StringToUpperCase(const std::string& theStr)
 }
 // The original converted with the ANSI code page (MultiByteToWideChar/WideCharToMultiByte), or with the code page
 // of the CRT locale's LC_CTYPE suffix (0x006a63e0/0x6a6570: none in the "C" locale, so the ANSI one again). The
-// game's narrow text is Windows-1252 on every system: every conversion here uses it.
-// 0x6a6250: converts at most count characters into a fixed buffer
-static wchar_t* StringUtilToWideBuffer(wchar_t* out,const char* in,int count)
+// game's narrow text is UTF-8 on every system (decision D6) and WON's wide text UTF-16 units (UTF-32 code points
+// where wchar_t is 4 bytes): this is where the two meet, and the conversions are ee_won's text module
+// (rust/crates/ee_won/src/text.rs). A stray byte or a lone surrogate becomes U+FFFD. Embedded NULs are kept.
+static void StringUtilWideSink(void* inContext, const void* inText, size_t inCount)
 {
-    if(out==NULL) return NULL;
-    *out=0;
-    if(in!=NULL) PlatCp1252ToWide(in,count,out,count);
-    return out;
+    std::wstring* theOut = static_cast<std::wstring*>(inContext);
+    theOut->assign(static_cast<const wchar_t*>(inText), inCount);
 }
-// 0x6a63a0: converts at most count characters into a fixed buffer -> the bytes written
-static unsigned int StringUtilToNarrowBuffer(char* out,const wchar_t* in,int count)
+static void StringUtilByteSink(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
-    if(out==NULL) return 0;
-    *out=0;
-    if(in==NULL) return 0;
-    return PlatWideToCp1252(in,count,out,count);
+    std::string* theOut = static_cast<std::string*>(inContext);
+    theOut->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static std::wstring StringUtilToWide(const char* in, size_t count)
+{
+    std::wstring result;
+    if(in!=NULL && count!=0)
+        ee_won_wide_from_utf8(reinterpret_cast<const uint8_t*>(in),count,sizeof(wchar_t),StringUtilWideSink,&result);
+    return result;
+}
+static std::string StringUtilToNarrow(const wchar_t* in, size_t count)
+{
+    std::string result;
+    if(in!=NULL && count!=0)
+        ee_won_utf8_from_wide(in,sizeof(wchar_t),count,StringUtilByteSink,&result);
+    return result;
 }
 // FUNCTION: WON 0x006a6130
 // Converts a string to wide, stopping at the first NUL
-// The raw buffer is not guarded while the result string is built
 std::wstring StringToWString(const std::string& in)
 {
-    int length=in.length();
-    if(length==0) return std::wstring();
-    wchar_t* buffer=new wchar_t[length+1];
-    StringUtilToWideBuffer(buffer,in.c_str(),length);
-    buffer[length]=0;
-    std::wstring result(buffer);
-    delete [] buffer;
-    return result;
+    return StringUtilToWide(in.c_str(),strlen(in.c_str()));
 }
 // FUNCTION: WON 0x006a6280
-// Converts a wide string to narrow into a buffer of one byte per character
-// (a UTF-16 surrogate pair becomes one '?': the text ends where the conversion did)
+// Converts a wide string to narrow, stopping at the first NUL
 std::string WStringToString(const std::wstring& in)
 {
-    unsigned int length=in.length();
-    if(length==0) return std::string();
-    char* buffer=new char[length+1];
-    unsigned int written=StringUtilToNarrowBuffer(buffer,in.c_str(),length);
-    buffer[written]=0;
-    std::string result(buffer);
-    delete [] buffer;
-    return result;
+    size_t length=0;
+    while(length<in.length() && in[length]!=0) length++;
+    return StringUtilToNarrow(in.c_str(),length);
 }
 // FUNCTION: WON 0x006a6410
-// Converts a wide string to narrow (any code page: Windows-1252), keeping embedded NULs
+// Converts a wide string to narrow (any code page: UTF-8), keeping embedded NULs
 std::string WStringToString(const std::wstring& in,int codePage)
 {
-    unsigned int count=PlatWideToCp1252(in.c_str(),in.length(),NULL,0);
-    std::string result;
-    result.reserve(count+1);
-    result.resize(count);
-    if(count!=0) PlatWideToCp1252(in.c_str(),in.length(),&result[0],count);
-    return result;
+    return StringUtilToNarrow(in.data(),in.length());
 }
 // FUNCTION: WON 0x006a6590
-// Converts a string to wide (any code page: Windows-1252), keeping embedded NULs
+// Converts a string to wide (any code page: UTF-8), keeping embedded NULs
 std::wstring StringToWString(const std::string& in,int codePage)
 {
-    unsigned int count=PlatCp1252ToWide(in.c_str(),in.length(),NULL,0);
-    std::wstring result;
-    result.reserve(count+1);
-    result.resize(count);
-    if(count!=0) PlatCp1252ToWide(in.c_str(),in.length(),&result[0],count);
-    return result;
+    return StringUtilToWide(in.data(),in.length());
 }
 }
 

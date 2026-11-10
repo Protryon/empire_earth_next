@@ -28,6 +28,7 @@
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
+#include "GERustMath.h"
 
 // FUNCTION: LLE 0x10024fc0
 // Creates a quad of four white, opaque, camera-facing vertices from the active rasterizer, unrotated
@@ -59,45 +60,18 @@ GERhombus::GERhombus()
 
 // FUNCTION: LLE 0x10025106
 // Recomputes the quad's corner vertices from its rectangle, rotated about the centre by its rotation angle
+// (the corners are Rust: ee_ge bitmap.rs)
 void GERhombus::ComputeRotation()
 {
-    GE2DPoint theTopLeft;
-    GE2DPoint theTopRight;
-    GE2DPoint theBottomLeft;
-    GE2DPoint theBottomRight;
-    GE2DPoint theCenter;
-    GE3DPoint theTopLeftPoint;
-    GE3DPoint theTopRightPoint;
-    GE3DPoint theBottomLeftPoint;
-    GE3DPoint theBottomRightPoint;
-    this->mVertices->GetPoint(theTopLeftPoint, 0);
-    this->mVertices->GetPoint(theTopRightPoint, 1);
-    this->mVertices->GetPoint(theBottomLeftPoint, 2);
-    this->mVertices->GetPoint(theBottomRightPoint, 3);
-    theTopLeft = this->mRectangle.GetTopLeft();
-    theTopRight = this->mRectangle.GetTopRight();
-    theBottomLeft = this->mRectangle.GetBottomLeft();
-    theBottomRight = this->mRectangle.GetBottomRight();
-    if (this->mRotation != 0.0f) {
-        theCenter.SetX((theTopRight.GetX() + theTopLeft.GetX()) * 0.5f);
-        theCenter.SetY((theTopLeft.GetY() + theBottomLeft.GetY()) * 0.5f);
-        theTopLeft.RotatePoint(this->mRotation, theCenter);
-        theTopRight.RotatePoint(this->mRotation, theCenter);
-        theBottomLeft.RotatePoint(this->mRotation, theCenter);
-        theBottomRight.RotatePoint(this->mRotation, theCenter);
+    GE2DPoint theCorners[4];
+    GE3DPoint thePoints[4];
+    ee_ge_rhombus_corners(GERust(this->mRectangle), this->mRotation, GERust(theCorners[0]));
+    for (int i = 0; i < 4; i++) {
+        this->mVertices->GetPoint(thePoints[i], i);
+        thePoints[i].SetX(theCorners[i].GetX());
+        thePoints[i].SetY(theCorners[i].GetY());
+        this->mVertices->SetPoint(thePoints[i], i);
     }
-    theTopLeftPoint.SetX(theTopLeft.GetX());
-    theTopLeftPoint.SetY(theTopLeft.GetY());
-    theTopRightPoint.SetX(theTopRight.GetX());
-    theTopRightPoint.SetY(theTopRight.GetY());
-    theBottomLeftPoint.SetX(theBottomLeft.GetX());
-    theBottomLeftPoint.SetY(theBottomLeft.GetY());
-    theBottomRightPoint.SetX(theBottomRight.GetX());
-    theBottomRightPoint.SetY(theBottomRight.GetY());
-    this->mVertices->SetPoint(theTopLeftPoint, 0);
-    this->mVertices->SetPoint(theTopRightPoint, 1);
-    this->mVertices->SetPoint(theBottomLeftPoint, 2);
-    this->mVertices->SetPoint(theBottomRightPoint, 3);
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):

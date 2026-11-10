@@ -861,9 +861,10 @@ static const float kWaterRippleAmplitude = 0.05f;
 // next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
 // 253 the next engine's AI id after each computer player's engine, EEPPlayerHelper, and the lobby choices' new
 // numbering in EEGameOptionsPlayer, ee/EECPEngine.h; 254 the running game's own values, ee/EESaveGameFiles.h
-// EESaveHasLiveState, docs/RUST_PLAN.md R5a.2: 253 on the rust branch until it merged main's 253)
+// EESaveHasLiveState, docs/RUST_PLAN.md R5a.2: 253 on the rust branch until it merged main's 253; 255 UTF-8 text,
+// ee/EESaveGameFiles.h EESaveTextIsUtf8, docs/RUST_PLAN.md D6: older saves' strings are converted from Windows-1252)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 254;
+const unsigned long kSaveGameMinorVersion = 255;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
@@ -1543,7 +1544,13 @@ static HANDLE sInstanceMutex;               // 0x5319dc
 bool EECreateInstanceMutex()
 {
 #ifdef _WIN32   // (the test harness finds the GetLastError call here: keep it direct)
-    sInstanceMutex = CreateMutex(NULL, FALSE, "MadDocSoftwarePresentsEmpireEarthExpansion");
+    // TEST ONLY: under the UI fixture (EE_TEST_UI), EE_TEST_INSTANCE=<name> names the mutex per instance, so that a
+    // two-instance test (tools/harness/lan_game.py) can run both games on one machine
+    std::string theName("MadDocSoftwarePresentsEmpireEarthExpansion");
+    const char* theInstance = getenv("EE_TEST_INSTANCE");
+    if (getenv("EE_TEST_UI") != NULL && theInstance != NULL && *theInstance != 0)
+        theName += std::string("-") + theInstance;
+    sInstanceMutex = CreateMutex(NULL, FALSE, theName.c_str());
     if (sInstanceMutex != NULL && GetLastError() == 0)
         return true;
     return false;

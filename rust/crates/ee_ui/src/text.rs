@@ -1,28 +1,42 @@
-//! Every place `ee_ui` interprets game text: character stepping, spaces, word ends and line ends. Game text is
-//! Windows-1252 bytes today, stepped by the running C runtime's multibyte functions as the C++ did; decision D6
-//! (UTF-8 throughout) is a later track, and switching it changes this module only: the widget code ([`crate::wrap`])
-//! asks [`Mbcs`] and the predicates below, never a byte value. Widths are not here: they come from the caller's font
-//! (`GEText`), per word.
+//! Every place `ee_ui` interprets game text: character stepping, spaces, word ends and line ends. Game text is UTF-8
+//! (decision D6, `ee_plat_core::utf8`): a character is one code point, a stray byte one character of its own. The
+//! widget code ([`crate::wrap`], the edit boxes, the lists) asks [`Mbcs`] and the predicates below, never a byte
+//! value, as it asked the C runtime's multibyte functions when the text was Windows-1252. Widths are not here: they
+//! come from the caller's font (`GEText`), per word.
 
 use core::ffi::{c_int, c_uint};
 
-/// The C runtime's multibyte stepping, on NUL-terminated byte slices (`s` includes the terminator).
+use ee_plat_core::utf8;
+
+/// The multibyte stepping of the C++'s `_mbs*` calls, on NUL-terminated byte slices (`s` includes the terminator).
 pub trait Mbcs {
     /// `_mbsinc`: the offset of the character after the one at `at`.
     fn inc(&self, s: &[u8], at: usize) -> usize;
     /// `_mbsninc`: `n` characters on from `at`, stopping at the terminator.
     fn ninc(&self, s: &[u8], at: usize, n: usize) -> usize;
-    /// `_ismbcspace`.
+    /// `_ismbcspace` of a character value (`multi_byte_char`'s).
     fn is_space(&self, c: c_uint) -> bool;
     /// `_ismbblead`.
     fn is_lead(&self, b: u8) -> bool;
-    /// `_ismbcdigit`.
+    /// `_ismbcdigit` of a character value.
     fn is_digit(&self, c: c_uint) -> bool;
     /// `_mbsicmp` of two NUL-terminated texts: their order with the case folded.
     fn compare_no_case(&self, a: &[u8], b: &[u8]) -> c_int;
+    /// `GetMultiByteChar`: the character at `s[0]`. The default is the original's, from *signed* chars (a byte above
+    /// 0x7f is negative, as the C++'s `char` was), a lead byte and its trail as `(lead << 8) + trail`.
+    fn char_at(&self, s: &[u8]) -> i32 {
+        let mut c = 0i32;
+        let mut s = s;
+        if self.is_lead(s[0]) {
+            c = (s[0] as i8 as i32) << 8;
+            s = &s[1..];
+        }
+        (s[0] as i8 as i32).wrapping_add(c)
+    }
 }
 
-/// A single-byte code page (Windows-1252, the game's): every byte a character, the C locale's spaces.
+/// A single-byte page: every byte a character, ASCII case folding, the C locale's spaces. The goldens recorded from
+/// the Windows-1252 C++ step this way, and ASCII steps the same under UTF-8; a test double, not the game's text.
 pub struct SingleByte;
 
 impl Mbcs for SingleByte {
@@ -50,7 +64,7 @@ impl Mbcs for SingleByte {
     }
     fn compare_no_case(&self, a: &[u8], b: &[u8]) -> c_int {
         // the UCRT's _mbsicmp in the C locale folds to lower case, as _stricmp does (the list box golden: '_' sorts
-        // before the letters; ee_plat_core's POSIX fallback folds to upper)
+        // before the letters)
         for (&x, &y) in a.iter().zip(b) {
             let (x, y) = (x.to_ascii_lowercase(), y.to_ascii_lowercase());
             if x != y {
@@ -64,51 +78,60 @@ impl Mbcs for SingleByte {
     }
 }
 
-/// The running C runtime's code page, through the platform layer (`PlatMbsInc`, ...; `ee_plat_core`), as the C++
-/// stepped. A step past the terminator (a lead byte before the NUL, if the runtime steps over it) stops at the
-/// terminator, where the C++ would have read on.
+/// The game's text: UTF-8 through `ee_plat_core::utf8`, what `PlatMbsInc`, `PlatMbsNInc`, `PlatIsMbcSpace` and
+/// `PlatMbsICmp` answer. A step never passes the terminator.
 pub struct Platform;
+
+/// The text before the terminator (`s` is NUL-terminated; a missing terminator counts as the end).
+fn body(s: &[u8]) -> &[u8] {
+    let end = s.iter().position(|&c| c == 0).unwrap_or(s.len());
+    &s[..end]
+}
 
 impl Mbcs for Platform {
     fn inc(&self, s: &[u8], at: usize) -> usize {
-        // SAFETY: `s` is NUL-terminated and `at` inside it
-        let next = unsafe { ee_plat_core::string::PlatMbsInc(s.as_ptr().add(at)).offset_from(s.as_ptr()) };
-        (next as usize).min(s.len() - 1)
+        if s[at] == 0 {
+            return at;
+        }
+        utf8::next(body(s), at)
     }
     fn ninc(&self, s: &[u8], at: usize, n: usize) -> usize {
-        // SAFETY: as above; `_mbsninc` stops at the terminator
-        let next = unsafe { ee_plat_core::string::PlatMbsNInc(s.as_ptr().add(at), n).offset_from(s.as_ptr()) };
-        (next as usize).min(s.len() - 1)
+        let b = body(s);
+        let mut at = at;
+        for _ in 0..n {
+            if at >= b.len() {
+                break;
+            }
+            at = utf8::next(b, at);
+        }
+        at
     }
     fn is_space(&self, c: c_uint) -> bool {
-        // SAFETY: a plain value
-        unsafe { ee_plat_core::string::PlatIsMbcSpace(c) != 0 }
+        utf8::is_space(c)
     }
     fn is_lead(&self, b: u8) -> bool {
-        // SAFETY: a plain value
-        unsafe { ee_plat_core::string::PlatIsMbbLead(b as c_uint) != 0 }
+        utf8::is_lead(b)
     }
     fn is_digit(&self, c: c_uint) -> bool {
-        // SAFETY: a plain value
-        unsafe { ee_plat_core::string::PlatIsMbcDigit(c) != 0 }
+        utf8::is_digit(c)
     }
     fn compare_no_case(&self, a: &[u8], b: &[u8]) -> c_int {
-        debug_assert!(a.last() == Some(&0) && b.last() == Some(&0));
-        // SAFETY: both NUL-terminated
-        unsafe { ee_plat_core::string::PlatMbsICmp(a.as_ptr(), b.as_ptr()) }
+        utf8::compare_folded(body(a), body(b))
+    }
+    /// The code point (a stray byte: `0xDC00 + byte`), as `PlatUtf8Decode` gives `GetMultiByteChar`; 0 at the end.
+    fn char_at(&self, s: &[u8]) -> i32 {
+        let b = body(s);
+        if b.is_empty() {
+            0
+        } else {
+            utf8::decode(b).0 as i32
+        }
     }
 }
 
-/// `GetMultiByteChar` (`lle/UIMultiByte.h`): the character at `s[0]` as `_ismbcspace` takes it, from *signed* chars
-/// (a byte above 0x7f is negative, as the C++'s `char` was).
+/// `GetMultiByteChar` (`lle/UIMultiByte.h`): the character at `s[0]` as `_ismbcspace` takes it ([`Mbcs::char_at`]).
 pub fn multi_byte_char(m: &impl Mbcs, s: &[u8]) -> i32 {
-    let mut c = 0i32;
-    let mut s = s;
-    if m.is_lead(s[0]) {
-        c = (s[0] as i8 as i32) << 8;
-        s = &s[1..];
-    }
-    (s[0] as i8 as i32).wrapping_add(c)
+    m.char_at(s)
 }
 
 /// The character `s[..]` (one character's bytes) ends a word: a newline, a space as the code page sees it, or a tab
@@ -159,8 +182,7 @@ pub fn from_bytes(bytes: &[u8]) -> Vec<u8> {
 /// `UWideString`'s `operator==`: `_mbscmp(a, b) == 0`, which compares character by character and so holds exactly
 /// when the bytes before the terminators are equal.
 pub fn equal(_m: &impl Mbcs, a: &[u8], b: &[u8]) -> bool {
-    let end = |s: &[u8]| s.iter().position(|&c| c == 0).unwrap_or(s.len());
-    a[..end(a)] == b[..end(b)]
+    body(a) == body(b)
 }
 
 /// `GetLength() == 0`: no character before the terminator (a missing terminator counts as the end).
@@ -196,12 +218,11 @@ pub fn tail<'a>(m: &impl Mbcs, s: &'a [u8], n: usize) -> &'a [u8] {
 /// `a += b` (`UWideString::operator+=`): `a` and `b` terminated.
 pub fn append(a: &mut Vec<u8>, b: &[u8]) {
     a.pop();
-    let end = b.iter().position(|&c| c == 0).unwrap_or(b.len());
-    a.extend_from_slice(&b[..end]);
+    a.extend_from_slice(body(b));
     a.push(0);
 }
 
-/// `_mbschr(s, '\n') != NULL`: the text holds a line end (a single-byte character; a double-byte one never matches).
+/// `_mbschr(s, '\n') != NULL`: the text holds a line end (a single-byte character; a trail byte never matches).
 pub fn has_line_end(m: &impl Mbcs, s: &[u8]) -> bool {
     let mut at = 0;
     while s[at] != 0 {
@@ -323,5 +344,60 @@ mod tests {
         assert!(is_space_at(&s, b"x\t\0", 1));
         assert!(starts_with(b"\r\0", 0, b'\r'));
         assert_eq!(SingleByte.inc(b"\0", 0), 0, "no step past the terminator");
+    }
+
+    #[test]
+    fn the_game_text_is_utf8() {
+        let p = Platform;
+        let t = "aé€😀\n".as_bytes();
+        let t = from_bytes(t);
+        assert_eq!(char_len(&p, &t), 5);
+        assert_eq!(p.inc(&t, 0), 1);
+        assert_eq!(p.inc(&t, 1), 3);
+        assert_eq!(p.inc(&t, 3), 6);
+        assert_eq!(p.inc(&t, 6), 10);
+        assert_eq!(p.inc(&t, 11), 11, "no step past the terminator");
+        assert_eq!(p.ninc(&t, 0, 3), 6);
+        assert_eq!(p.ninc(&t, 0, 99), 11);
+        assert_eq!(offset(&p, &t, 2), 3);
+        assert_eq!(prefix(&p, &t, 2), "aé\0".as_bytes());
+        assert_eq!(tail(&p, &t, 3), "😀\n\0".as_bytes());
+        assert_eq!(chars_in_bytes(&p, &t, 4), 3, "a character started inside the bytes counts");
+        assert!(has_line_end(&p, &t));
+        assert!(!has_line_end(&p, &from_bytes("é€".as_bytes())));
+        assert_eq!(multi_byte_char(&p, "€".as_bytes()), 0x20AC);
+        assert_eq!(multi_byte_char(&p, "😀".as_bytes()), 0x1F600);
+        assert_eq!(multi_byte_char(&p, b"a"), 0x61);
+        assert_eq!(multi_byte_char(&p, &[0xC3, 0]), 0xDCC3, "a stray byte is its own character");
+        assert_eq!(multi_byte_char(&p, &[0x80, 0]), 0xDC80, "a stray continuation byte too");
+        assert_eq!(multi_byte_char(&p, b" "), 0);
+        assert!(p.is_lead(0xC3) && p.is_lead(0xF0) && !p.is_lead(0x80) && !p.is_lead(b'a'));
+        // words end at the C locale's spaces only: no-break and ideographic spaces are letters to the wrapper
+        assert!(ends_word(&p, b" ") && ends_word(&p, b"\n") && ends_word(&p, b"\t"));
+        assert!(!ends_word(&p, "\u{a0}".as_bytes()) && !ends_word(&p, "\u{3000}".as_bytes()));
+        assert!(is_space_at(&p, "é \0".as_bytes(), 2));
+        assert!(is_digit_at(&p, b"7\0", 0) && !is_digit_at(&p, "٣\0".as_bytes(), 0));
+        // stray bytes: one character each
+        let junk = from_bytes(&[b'a', 0xC3, 0x80, 0xE2, 0x82]);
+        assert_eq!(char_len(&p, &junk), 4, "C3 80 is a character (U+00C0), E2 and 82 are strays");
+        assert_eq!(p.ninc(&junk, 0, 9), 5);
+    }
+
+    #[test]
+    fn the_game_text_sorts_with_unicode_folding() {
+        let p = Platform;
+        assert_eq!(p.compare_no_case(b"abc\0", b"ABC\0"), 0);
+        assert!(less_no_case(&p, b"Apple\0", b"banana\0"));
+        assert!(less_no_case(&p, b"ab\0", b"abc\0"), "a prefix sorts first");
+        assert!(less_no_case(&p, b"_\0", b"A\0"), "lower-case folding: '_' before the letters");
+        assert!(!less_no_case(&p, b"z\0", b"_\0"));
+        assert_eq!(p.compare_no_case("école\0".as_bytes(), "ÉCOLE\0".as_bytes()), 0);
+        assert!(less_no_case(&p, "Zoo\0".as_bytes(), "école\0".as_bytes()), "after folding, by code point");
+        assert!(less_no_case(&p, "Ärger\0".as_bytes(), "Öl\0".as_bytes()));
+        assert_ne!(p.compare_no_case("ß\0".as_bytes(), "ss\0".as_bytes()), 0, "simple folding only");
+        // the order is total and the equal strings are the folded-equal ones
+        let mut names: Vec<&[u8]> = vec!["Émile\0".as_bytes(), b"emil\0", b"Zed\0", b"_x\0", "émile\0".as_bytes()];
+        names.sort_by(|a, b| p.compare_no_case(a, b).cmp(&0));
+        assert_eq!(names, vec![&b"_x\0"[..], b"emil\0", b"Zed\0", "Émile\0".as_bytes(), "émile\0".as_bytes()]);
     }
 }

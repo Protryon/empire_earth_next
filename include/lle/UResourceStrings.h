@@ -5,7 +5,7 @@
 
 struct UResourceString {
     unsigned short mID;
-    const char* mText;                      // code page 1252 (what LoadStringA gave on a Western Windows)
+    const char* mText;                      // UTF-8 (decision D6; LoadStringA gave code page 1252)
 };
 
 extern const unsigned short gResourceStringsLanguage;   // the strings' Windows LANGID

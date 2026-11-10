@@ -305,33 +305,73 @@ static void TestStrings()
     CHECK(strcmp(reinterpret_cast<char*>(theText), "empire earth: aoc") == 0);
     CHECK(PlatIsMbcSpace(' ') && PlatIsMbcSpace('\t') && !PlatIsMbcSpace('x'));
     CHECK(PlatIsMbcDigit('7') && !PlatIsMbcDigit('a'));
-    CHECK(!PlatIsMbbLead('A'));
+    CHECK(!PlatIsMbbLead('A') && PlatIsMbbLead(0xC3) && !PlatIsMbbLead(0x80));
 
-    Section("cp1252");
-    // every byte round-trips (the five undefined ones as the C1 controls)
+    Section("utf8");
+    // characters are code points (decision D6): "aé€😀" is 4 characters in 10 bytes
+    const unsigned char* m = reinterpret_cast<const unsigned char*>("a\xc3\xa9\xe2\x82\xac\xf0\x9f\x98\x80");
+    CHECK(PlatMbsLen(m) == 4 && PlatMbsNBCnt(m, 2) == 3 && PlatMbsNBCnt(m, 9) == 10 && PlatMbsNCCnt(m, 4) == 3);
+    CHECK(PlatMbsInc(m + 1) == m + 3 && PlatMbsNInc(m, 3) == m + 6 && PlatMbsDec(m, m + 10) == m + 6
+          && PlatMbsDec(m, m + 2) == m + 1);
+    CHECK(PlatMbsICmp(m, reinterpret_cast<const unsigned char*>("A\xc3\x89\xe2\x82\xac\xf0\x9f\x98\x80")) == 0);
+    CHECK(PlatStrICmp("\xc3\x89" "cole", "\xc3\xa9" "COLE") == 0);
+    CHECK(PlatMbsChr(m, 0x20AC) == m + 3 && PlatMbsChr(m, 0x82) == NULL);
+    uint32_t theLength = 0;
+    CHECK(PlatUtf8Decode(reinterpret_cast<const char*>(m + 3), &theLength) == 0x20AC && theLength == 3);
+    CHECK(PlatUtf8Decode("", &theLength) == 0 && theLength == 0);
+    CHECK(PlatUtf8Decode("\xc3", &theLength) == 0xDCC3 && theLength == 1);   // a stray byte is one character
+    char theCodePoint[4];
+    CHECK(PlatUtf8Encode(0x1F600, theCodePoint) == 4 && memcmp(theCodePoint, "\xf0\x9f\x98\x80", 4) == 0);
+    CHECK(PlatCp1252ByteOf(0x2019) == 0x92 && PlatCp1252ByteOf('A') == 'A' && PlatCp1252ByteOf(0x4E2D) == -1);
+    unsigned char theCase[32];
+    strcpy(reinterpret_cast<char*>(theCase), "Caf\xc3\xa9 \xc3\x89" "cole \xc3\x9f");
+    PlatMbsUpr(theCase);
+    CHECK(strcmp(reinterpret_cast<char*>(theCase), "CAF\xc3\x89 \xc3\x89" "COLE \xc3\x9f") == 0);   // ß stays
+    PlatMbsLwr(theCase);
+    CHECK(strcmp(reinterpret_cast<char*>(theCase), "caf\xc3\xa9 \xc3\xa9" "cole \xc3\x9f") == 0);
+    unsigned char theCat[16] = "";
+    PlatMbsNBCat(theCat, m, 4);   // four bytes would split the euro sign: left out
+    CHECK(strcmp(reinterpret_cast<char*>(theCat), "a\xc3\xa9") == 0);
+
+    Section("wide");
+    // UTF-8 <-> wide (UTF-16 units on Windows, UTF-32 elsewhere), and the conversion of old Windows-1252 inputs
+    wchar_t theWide[260];
+    CHECK(PlatUtf8ToWide("caf\xc3\xa9 \xe2\x82\xac", PLAT_TEXT_TERMINATED, NULL, 0) == 6);
+    CHECK(PlatUtf8ToWide("caf\xc3\xa9 \xe2\x82\xac", PLAT_TEXT_TERMINATED, theWide, 260) == 6 && theWide[3] == 0xE9
+          && theWide[5] == 0x20AC && theWide[6] == 0);
+    // no room for the terminator: none written
+    CHECK(PlatUtf8ToWide("abcdef", PLAT_TEXT_TERMINATED, theWide, 3) == 3 && theWide[2] == L'c');
+    CHECK(PlatUtf8ToWide("a\xc3", PLAT_TEXT_TERMINATED, theWide, 260) == 2 && theWide[1] == 0xFFFD);   // a stray byte
+    char theBack[260];
+    const wchar_t theOdd[] = {L'x', 0x4E2D, 0x2122, 0x0153, L'y', 0};
+    CHECK(PlatWideToUtf8(theOdd, PLAT_TEXT_TERMINATED, theBack, 260) == 10
+          && strcmp(theBack, "x\xe4\xb8\xad\xe2\x84\xa2\xc5\x93y") == 0);
+    CHECK(PlatWideToUtf8(theOdd, PLAT_TEXT_TERMINATED, NULL, 0) == 10);
+    CHECK(PlatWideToUtf8(theOdd, PLAT_TEXT_TERMINATED, theBack, 2) == 2 && theBack[0] == 'x' && theBack[1] == '\xe4');
+    const wchar_t theLone[] = {L'a', static_cast<wchar_t>(0xDC00), L'b', 0};
+    CHECK(PlatWideToUtf8(theLone, PLAT_TEXT_TERMINATED, theBack, 260) == 5 && strcmp(theBack, "a\xef\xbf\xbd" "b") == 0);
+#if WCHAR_MAX <= 0xffff
+    const wchar_t thePair[] = {L'a', static_cast<wchar_t>(0xD83D), static_cast<wchar_t>(0xDE00), L'b', 0};
+    CHECK(PlatWideToUtf8(thePair, PLAT_TEXT_TERMINATED, theBack, 260) == 6 && strcmp(theBack, "a\xf0\x9f\x98\x80" "b") == 0);
+    CHECK(PlatUtf8ToWide("\xf0\x9f\x98\x80", PLAT_TEXT_TERMINATED, theWide, 260) == 2 && theWide[0] == 0xD83D
+          && theWide[1] == 0xDE00);
+#else
+    CHECK(PlatUtf8ToWide("\xf0\x9f\x98\x80", PLAT_TEXT_TERMINATED, theWide, 260) == 1 && theWide[0] == 0x1F600);
+#endif
+    // every Windows-1252 byte converts (the five undefined ones as the C1 controls); a wide text converts back
     char theAll[256];
     for (int i = 0; i < 256; i++)
         theAll[i] = static_cast<char>(i);
-    wchar_t theWide[260];
-    CHECK(PlatCp1252ToWide(theAll, 256, NULL, 0) == 256);
-    CHECK(PlatCp1252ToWide(theAll, 256, theWide, 260) == 256 && theWide[256] == 0);
-    CHECK(theWide[0] == 0 && theWide['A'] == L'A' && theWide[0x80] == 0x20AC && theWide[0x81] == 0x81
+    char theUtf8[600];
+    uint32_t theCount = PlatCp1252ToUtf8(theAll, 256, theUtf8, 600);
+    CHECK(theCount == 128 + 2 * 128 + 17 && theUtf8[theCount] == 0);
+    CHECK(PlatCp1252ToUtf8("caf\xe9 \x80 \x92", PLAT_TEXT_TERMINATED, theBack, 260) == 13
+          && strcmp(theBack, "caf\xc3\xa9 \xe2\x82\xac \xe2\x80\x99") == 0);
+    CHECK(PlatCp1252ToUtf8("\x81", PLAT_TEXT_TERMINATED, theBack, 260) == 2 && strcmp(theBack, "\xc2\x81") == 0);
+    CHECK(PlatUtf8ToWide(theUtf8, theCount, theWide, 260) == 256 && theWide[0x80] == 0x20AC && theWide[0x81] == 0x81
           && theWide[0x9F] == 0x0178 && theWide[0xE9] == 0xE9 && theWide[0xFF] == 0xFF);
-    char theBack[260];
-    CHECK(PlatWideToCp1252(theWide, 256, theBack, 260) == 256 && memcmp(theBack, theAll, 256) == 0
-          && theBack[256] == 0);
-    // terminated texts, capacity, unmappable characters
-    CHECK(PlatCp1252ToWide("caf\xe9 \x80", PLAT_TEXT_TERMINATED, theWide, 260) == 6 && theWide[3] == 0xE9
-          && theWide[5] == 0x20AC && theWide[6] == 0);
-    // no room for the terminator: none written
-    CHECK(PlatCp1252ToWide("abcdef", PLAT_TEXT_TERMINATED, theWide, 3) == 3 && theWide[2] == L'c');
-    const wchar_t theOdd[] = {L'x', 0x4E2D, 0x2122, 0x0153, L'y', 0};
-    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, theBack, 260) == 5
-          && strcmp(theBack, "x?\x99\x9cy") == 0);
-    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, NULL, 0) == 5);
-    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, theBack, 2) == 2 && theBack[0] == 'x' && theBack[1] == '?');
-    const wchar_t thePair[] = {L'a', static_cast<wchar_t>(0xD83D), static_cast<wchar_t>(0xDE00), L'b', 0};
-    CHECK(PlatWideToCp1252(thePair, PLAT_TEXT_TERMINATED, theBack, 260) == 3 && strcmp(theBack, "a?b") == 0);
+    char theRound[600];
+    CHECK(PlatWideToUtf8(theWide, 256, theRound, 600) == (uint32_t)theCount && memcmp(theRound, theUtf8, theCount) == 0);
 }
 
 // ---- files and paths

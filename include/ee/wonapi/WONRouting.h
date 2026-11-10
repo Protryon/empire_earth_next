@@ -37,9 +37,10 @@ template <class T> class CompletionBase;
 
 class AsyncOp;
 class AsyncOpContainer;
-typedef std::multimap<unsigned long, SmartPtr<AsyncOp> > AsyncOpTimeoutMap;
 
-// AsyncOp: 0x44 bytes; ctor 29ef80, dtor 29f000, three vtable slots
+// AsyncOp: 0x44 bytes; ctor 29ef80, dtor 29f000, three vtable slots. The run state's transitions are Rust's
+// (rust/crates/ee_won/src/asyncop.rs: GetState / SetState copy the members in and out under mLock); the timer
+// thread's entry of the op is a key into its Rust queue (mTimerQueue, mTimerKey: the original's multimap iterator)
 class AsyncOp : public RefCount {
 public:
     WONStatus Run(long inMode,unsigned long inTimeout);      //29f500, returns the status
@@ -64,8 +65,6 @@ public:
     void RunAsync(long inTimeout);          // 0x29f6d0
     void Kill(bool inFlag);                 // 0x29f1e0
     void SetRunAsyncImmediately(bool inFlag);  // 0x29f1d0
-    void AddToTimerMap(AsyncOpTimeoutMap&, unsigned long); //29f080, ret8
-    void RemoveFromTimerMap(bool); //29f160, ret4
     void QueueInOpContainer(); //29f200, queues the op in its container
     void Complete(); //29f3a0
     void StartRunAsync(); //29f4c0
@@ -77,6 +76,24 @@ public:
         EeWonOpTiming aTiming = {static_cast<int32_t>(this->mRunMode), this->mStartTime,
                                  static_cast<uint32_t>(this->mTimeout)};
         return aTiming;
+    }
+    // the run state for the Rust transitions (ee_won_op_*), copied in and out under mLock
+    EeWonOpState GetState() const
+    {
+        EeWonOpState aState = {static_cast<int32_t>(this->mStatus), static_cast<int32_t>(this->mRunMode),
+                               this->mStartTime, static_cast<uint32_t>(this->mTimeout), this->mCompletionPending,
+                               this->mKilled, this->mRunAsyncImmediately};
+        return aState;
+    }
+    void SetState(const EeWonOpState& inState)
+    {
+        this->mStatus = static_cast<WONStatus>(inState.status);
+        this->mRunMode = inState.run_mode;
+        this->mStartTime = inState.start;
+        this->mTimeout = inState.timeout;
+        this->mCompletionPending = inState.completion_pending;
+        this->mKilled = inState.killed;
+        this->mRunAsyncImmediately = inState.run_async_immediately;
     }
 
     CriticalSection mLock;                  // +0x08, originalInitialize/DeleteCriticalSection
@@ -93,8 +110,8 @@ public:
     bool mCompletionPending;                // +0x38
     bool mKilled;                           // +0x39
     bool mRunAsyncImmediately;              // +0x3a; byte3b is normalalignment
-    AsyncOpTimeoutMap* mTimeoutMap;         // +0x3c, nonowning
-    AsyncOpTimeoutMap::iterator mTimeoutItr; // +0x40, associateddeadline entry
+    EeWonTimerQueue* mTimerQueue;           // +0x3c, nonowning: the timer thread's queue holding the op (NULL: none)
+    uint64_t mTimerKey;                     // +0x40 the op's entry in it
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
@@ -121,7 +138,7 @@ public:
     void Pump(unsigned long,int inMaxOps=0); //29fad0
     CriticalSection mDataCrit; //04..1c
     Event mSignal; //1c..24
-    std::list<AsyncOpPtr> mOpQueue; //24..30
+    EeWonOpQueue* mOpQueue; //24..30 (the original's std::list<AsyncOpPtr>: Rust's, holding a reference per op)
     AsyncOpPtr mCurPumpOp; //30
     bool mPurging; //34; naturalpadding35..37
 };
@@ -2704,14 +2721,14 @@ public:
 };
 class SocketThreadSimple : public SocketThread {
 public:
-    typedef std::set<SmartPtr<SocketOp>,SmartPtr<SocketOp>::Comp> OpSet;
+    SocketThreadSimple();
     virtual ~SocketThreadSimple(); //2b61a0, explicit ownVT44cb44 and PurgeOps
     virtual void ThreadFunc(); //2b6890
     virtual void AddSocketOp(SocketOp*); //2b64f0
     virtual void RemoveSocketOp(SocketOp*); //2b6660
     virtual void Pump(unsigned long); //2b6760
     virtual void PurgeOps(); //2b6380
-    OpSet mOpSet; //38 allocator,3chead,40size; total44; nodes18 retainSocketOp0c
+    EeWonOpSet* mOpSet; //38 (the original's std::set<SmartPtr<SocketOp>> in address order: Rust's, a reference per op)
 };
 
 class ServerConnection : public BlockingSocket {

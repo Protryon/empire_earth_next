@@ -51,20 +51,21 @@ def ssa_path(a):
 
 
 def load_db(a, spec, names=None):
-    """{table: bytes} from --db DIR (loose .dat files) or the archive."""
+    """{table: bytes} from --db DIR (loose .dat files) or the archive: the retail tables, their strings converted
+    from Windows-1252 to UTF-8 (binfmt.transcode_retail; decision D6), so everything after reads the game's text."""
     names = names or tables.binary_tables(spec)
     out = {}
     if getattr(a, 'db', None):
         for n in names:
             out[n] = (pathlib.Path(a.db) / f'{n}.dat').read_bytes()
-        return out
-    entries, _, d = ssa.read_ssa(ssa_path(a))
-    for n in names:
-        key = f'db\\{n}.dat'
-        if key not in entries:
-            sys.exit(f'{key} is not in {ssa_path(a)}')
-        out[n] = ssa.entry_bytes(d, *entries[key])
-    return out
+    else:
+        entries, _, d = ssa.read_ssa(ssa_path(a))
+        for n in names:
+            key = f'db\\{n}.dat'
+            if key not in entries:
+                sys.exit(f'{key} is not in {ssa_path(a)}')
+            out[n] = ssa.entry_bytes(d, *entries[key])
+    return {n: binfmt.transcode_retail(n, b, spec) for n, b in out.items()}
 
 
 def ext(spec, name):

@@ -545,7 +545,7 @@ with the rest of `Data/ai`). Code: `include/ee/EECPEngine.h`, `src/Empire Earth/
 
 - `id`: 1-64 of `a-z`, `0-9`, `_`; unique; `classic`, `random` and `next` are reserved. The save and the traces name
   the AI by it (`engine=boom` in the trace's `cp start` line and the game log's player line).
-- `name`: the lobby's text (UTF-8; shown in Windows-1252, other characters as `?`; the id when missing).
+- `name`: the lobby's text (UTF-8; the id when missing).
 - `script`: the Lua module the seat runs, as `require` takes it (below).
 - `random`: whether the lobby's Random may pick it (default false). `description` is free text (not shown yet).
 - Unknown keys are logged and ignored. A bad entry (a wrong type, a bad or duplicate id, a bad module name, a script

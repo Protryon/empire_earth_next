@@ -6,7 +6,8 @@
 // Faces are TrueType data the caller registers (PlatFontRegister: the build embeds them, or they are read from the
 // data root). The game asks for "Arial" (and a few others): with Liberation Sans / Serif / Mono registered under the
 // names they are metric-compatible with ("Arial", "Times New Roman", "Courier New"), every advance width and line
-// height equals the Windows font's at the same size. Text is single-byte Windows-1252 (platform/PlatString.h).
+// height equals the Windows font's at the same size. Text is UTF-8 (platform/PlatString.h, decision D6): glyphs by
+// code point, U+0020..U+00FF rendered when the font is made, the others on first use; a missing glyph draws '?'.
 #ifndef PLATFORM_PLATFONT_H
 #define PLATFORM_PLATFONT_H
 
@@ -37,7 +38,7 @@ void PlatFontDestroy(PlatFont* inFont);
 const PlatFont* PlatFontScaled(const PlatFont* inFont, float inScale);
 
 // GDI's TEXTMETRIC subset the game reads: the cell (tmHeight = tmAscent + tmDescent), the leading, the widths and
-// the character range (Windows-1252: 0x20..0xFF).
+// the character range rendered at creation (0x20..0xFF, as GDI's Windows-1252 font gave it).
 typedef struct PlatFontMetrics {
     int32_t mHeight;
     int32_t mAscent;

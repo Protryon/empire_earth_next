@@ -309,8 +309,8 @@ public:
     int mHeight, mAscent, mDescent;
 };
 
-// wide text (GUIString) -> Windows-1252 bytes
-std::string PlatGUIToCp1252(const wchar_t* inText, unsigned short inLength);
+// wide text (GUIString) -> UTF-8 bytes (decision D6)
+std::string PlatGUIToUtf8(const wchar_t* inText, unsigned short inLength);
 
 } // namespace WONAPI
 

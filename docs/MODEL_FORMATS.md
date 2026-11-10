@@ -154,7 +154,7 @@ pixels (a TGA 2.0 footer in 299 files). Retail: all type 2, 24 or 32 bits, descr
 * Scene: node 0 "EE axes (Z up)", a rotation turning the game's Z-up axes into glTF's Y-up (the game's data is
   right-handed: 164,152 of 165,596 triangles wind counter-clockwise about their normals), parent of the root model.
 * One node per model, children: its sub-models (nodes with a mesh), then its tag points (nodes without a mesh, named
-  by the tag, translation = the frame 0 position). Names are the game's strings (CP-1252 as in tools/eedata).
+  by the tag, translation = the frame 0 position). Names are the game's strings (UTF-8, RUST_PLAN D6; a retail .cem's are CP-1252, converted when read).
 * Node transform: a model's frame transform as `matrix` when it is the same in every frame and the node is not
   animated; otherwise translation/rotation/scale (glTF forbids a matrix on an animated node) with the exact matrices
   in EE_model.

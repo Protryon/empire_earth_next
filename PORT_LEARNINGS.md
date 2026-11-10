@@ -3928,6 +3928,372 @@ dispatch, the wheel's step), `UITriStateCheckBox` (state, bitmaps, label geometr
 - **Still C++ in R6's toolkit:** the drawing (`CopyData`'s rhombus/text copies, every `DrawPolygons`/`DrawTextA`),
   `UIManager`'s music and IME members, the edit box's key dispatch and repeat timers, `UIForm`'s Open/Close/dirty
   rectangle bookkeeping, the backgrounds, hot keys, `UIFontTable`, `UIBackgroundTable`, `UIEvent`.
+
+## R6: a LAN game through the lobby's own UI, and WON's async-op machinery in Rust (branch rust-r6-won3, 2026-11-10)
+
+### The two-instance LAN test: `tools/harness/lan_game.py`
+
+The first oracle for what the lobby must keep doing (RUST_PLAN R6 pre-work 1, PORT.md "Other next steps"): two
+instances of the test-profile exe on this machine, each under the UI fixture, host and join a LAN game through the
+WON lobby's own screens (main menu -> MultiPlayer -> Other Multiplayer -> Host Game / the LAN list -> Join -> Ready ->
+Start -> the connect dialog -> the game), and both play in lockstep for `--play-seconds`. `mp_game.py` bypassed the
+lobby; this does not. Run 3 (`build/lan_game/run3`): PASS, both ends at CT 199 after 60 s, PT 2736 / 2732, world
+players 3 (the two humans and Gaia), no GX error. So a LAN game through the lobby works on the current code, with
+the earlier `SendMsgOp` fix (the LAN join, the chat and the staging messages all go through it).
+
+- **The lobby owns the UI thread, so the fixture reaches it through its own message loop.** `EETestFixture.cpp`
+  posts a `UserEvent` to the lobby's `WindowManager` (`PostEvent` is thread-safe; `GetNextEvent` runs `ProcessEvents`
+  inside every nested dialog loop too); its `Deliver` runs on the lobby thread, executes the pending command and
+  takes a snapshot the fixture's poll copies into `ui-state.txt`: `lobby shown/screen/lan/login/modal/game/host/
+  clients/ready/allready/name`, one `wonctl <id> <x> <y> <w> <h> <enabled> <text>` per visible component with a control
+  id (root coordinates of the 1024x768 layout; a button's text), `wonlist <k> items <n> sel <i>` per visible list area,
+  `wontext <text>` per label of the modal dialog (a message box's message). Nothing of the lobby's is touched from the
+  fixture thread (the component tree is refcounted and relaid out on the lobby thread). The commands: `wonclick <id>`
+  (a mouse move, press and release at the component's centre through the window's event queue, the real button path;
+  the modal component is searched first), `wonactivate <id>` (`Button::Activate`), `wonkey <code>` (a typed
+  character to the focus: the dialogs' `RequestFocus` input), `wonselect <k> <item>` (`ListArea::SetSelItem` with its
+  event) and `wonclickat <x> <y>` (a tab, a list row). The verdict ("TEST UI lobby-clicked ...") comes from the lobby
+  thread; the fixture's own line says "lobby-posted". Components have no names at run time (the .cfg names live in
+  `ComponentConfig` during the load), so the control ids are the handles: `WONLobbyResourceGlobals.h`
+  `LobbyResourceCtrlId` (200009 Other Multiplayer, 200011 Host Game, 200013 Join, 200015 Start/Ready, 200016 Refresh,
+  200019 Add LAN name), `ID_Ok` 100001, and a `WONTabCtrl`'s tab buttons carry their index (the LAN tab's is 0: not
+  listed, clicked at the Direct Connect tab's left).
+- **Three things kept two instances apart on one machine, none of them the lobby's logic.** (1) The single-instance
+  mutex: the second game exited with 0 at once (`EECreateInstanceMutex`); under `EE_TEST_UI`, `EE_TEST_INSTANCE=<name>`
+  names the mutex per instance (TEST ONLY). (2) The LAN discovery socket was bound exclusively (`Fn2B0D90(port, 0)`),
+  so the second lobby's bind of 0.0.0.0:8585 failed and it neither saw nor advertised a game; it binds with address
+  reuse now (`LanLogic::StartDiscovery`): on Windows two reuse-bound UDP sockets both receive the limited broadcasts
+  (255.255.255.255, `IPAddr::GetBroadcastAddr`), a unicast reaches one of them (measured with a Python probe), and
+  the host's summary broadcasts (`AdvertiseGame` at creation, every 30 s from the discovery timer) are what the
+  joiner's list is built from. The listening socket (8888) is the host's alone; the lobby's UDP port (`LobbyBindUDPPort`)
+  already reused. (3) The default LAN name is "Unknown" plus a number made from the local IP address
+  (`GetDefaultLanName`: CRC-16 of the address), the same in both, and the host refuses a duplicate name ("The name you
+  have chosen is already being used by another player", read off the `wontext` dump): the driver sets a name per end
+  through the Options tab (Add -> the name dialog -> OK -> back to the LAN tab).
+- **What the driver waits for.** The lobby's snapshot stops with its message loop, so the end of the lobby is read
+  from the game's own forms: `EELobbyShowGameScreen` pushes form 30 before `EELobbyHide`, then the game form and the
+  telemetry (`wait_running`: a map and physics ticks). The game's port (33334, INADDR_ANY) is the host's only; the
+  joiner connects by the host's IP from the discovery packet (`GetMyLobbyGame()->mAddress`) and binds an ephemeral
+  port. Two games share one stage (data root): the game logs are named by the start second (the ends start 3 s
+  apart), `_wonlobbypersistent.dat` is written by both (harmless).
+- The lobby frames are captured through the fixture's read-back (1226x768 at this window size); the hit tests and
+  the dumped coordinates are the 1024x768 layout's, which `PlatWindowManager::ScaleToSurface` maps the real pointer to.
+
+### WON's async-op machinery in Rust (`ee_won/src/asyncop.rs`, `ffi_ops.rs`)
+
+`AsyncOp`'s run state and its transitions (`Run`, `RunAsTimer`, `Finish`, `ForceFinish`, `Kill`, `Complete`,
+`StartRunAsync`'s timer decision, `SetTimeout`, `SetMode`), `TimerThread`'s two deadline maps with the tick-wrap
+switch and the wait time, `AsyncOpContainer`'s queue and the pump's accounting (the max-ops and wait-time cut-offs),
+`SocketThreadSimple`'s op set (address order, as the `SmartPtr` comparator's), `SocketThread::DoOp`'s finish rule and
+`QueueSocket::OpCallback`'s decisions (which completion, close or not, the next queued op or the repeat op's rerun)
+are Rust. The C++ classes keep their objects, locks, threads, events, completions and virtual hooks.
+
+- **The op's members stay, Rust gets a copy.** `mStatus`, `mKilled`, `mCompletionPending` are read all over the WON
+  library, so `AsyncOp` keeps them and `GetState` / `SetState` copy them into an `EeWonOpState` under `mLock` around
+  each transition; the transition returns what to do (queue in the container, arm the timer, time out now, run
+  blocking, deliver the completion). `Kill` now takes the lock around its flag (the original set `mKilled` outside
+  it); nothing else changed order.
+- **Queues hold handles, the C++ holds the references.** The original queues were `std::list` / `std::multimap` /
+  `std::set` of `SmartPtr`s. The Rust queues hold the op's address; the C++ side `AddRef`s when it hands an op in and
+  `Release`s when the queue hands it back (the container's pop into `mCurPumpOp`, the timer's due and purged ops after
+  `Finish` / `Kill`, the socket thread's finished ops after `DoOp`). A sink callback delivers the ops only after the
+  queue's own borrow ended, so a sink may use the queue again; the socket thread's pump iterates a snapshot and
+  removes each finished op by value, as the original erased while iterating under its lock.
+- **A timer entry is a key, not an iterator.** `AsyncOp::mTimeoutMap` / `mTimeoutItr` became `mTimerQueue` /
+  `mTimerKey`. After a 32-bit tick wrap the original copied the wrap-around map over the current one, which left
+  every queued op's iterator dangling (a later `RemoveFromTimerMap(true)` erased through it); a key survives the
+  switch. The arithmetic is the original's: a deadline past the wrap is `timeout - (0xffffffff - now)` of the next
+  era, the wait with no timer `9 - lastTick` (unsigned).
+- **The container's `PurgeOps` leaves `mCurPumpOp` on the last op** (the original did); kept.
+- **Capture first:** `won_ops_test` gained scripted checks of the machinery (a hook that finishes with a scripted
+  status or stays pending: a blocking run, a zero timeout, `Run` while pending and while awaiting completion,
+  `ForceFinish` on an idle op and while the completion waits, `Kill(false)` then `Kill(true)`, the timeout frozen while
+  running, the container's completion order and `Pump(0, 2)`, a zero timer, a timer finished by hand). They were run
+  over the C++ machinery first (one expectation corrected: a blocking op's `TimeLeft` counts down from its run, it is
+  not 0), then over the port: PASS, with `won_socket_test`. 96 `ee_won` tests (the wrap, equal deadlines' order, the
+  pump plan's cut-offs, the decision table).
+- `SocketThreadWinsock2.cpp`, `SocketThreadEx_Windows.cpp` and their headers are deleted: never linked
+  (`units.WON_NOT_LINKED`), the game runs the polling `SocketThreadSimple`.
+
+### StringParser in Rust (`ee_won/src/parser.rs`, `ffi_parse.rs`)
+
+The cursor's reads (`ReadString` into narrow and wide strings: bare and quoted tokens, the escapes, `L"..."`,
+`"a"+ "b"`, the trailing-whitespace trim; `ReadValue` of integers and booleans), `SkipWhitespace`,
+`SkipNonWhitespace`, `CheckNextChar`, `StartsWith`, `Is`, `GetChar`/`GetWChar`/`EndOfString` and the decimal
+formats are Rust. The C++ `StringParser` keeps its text pointer, position and width; the list readers and the list
+formats (StringParserCollections.cpp, StringParserLists.cpp) stay C++ loops over these primitives.
+StringParserNumbers.cpp is folded into StringParser.cpp; StringParserFormat.cpp (never linked, a duplicate) is deleted.
+
+- **The ctype calls stay the C runtime's.** The game's UI thread runs `setlocale(LC_ALL, "English")`, and in that
+  locale `isspace(0xA0)` is true: the golden's `english` pass differs from the `C` pass there (a no-break space ends a
+  token). So `ffi_parse.rs` calls the CRT's `isspace` / `isdigit` / `isxdigit` / `isalnum` / `toupper` / `tolower`
+  with the original's exact arguments, including `isalnum` of a `toupper` result cast to `char` (a byte above 0x7f
+  arrives negative); the Rust tests use a C-locale `Ctype`. Superscript digits (0xB2, 0xB3, 0xB9) are not digits in
+  either locale.
+- **The text is read by index, not by length:** an escape at the end of a quoted string steps one past the
+  terminator and back, as the original did, so the Rust side reads the C string through a raw pointer
+  (`RawText`, units of 1, 2 or `sizeof(wchar_t)` bytes) instead of measuring it.
+- **The integer reads wrap in a 32-bit int**, the 64-bit read too (the SDK accumulated in an `int`).
+- **Behaviour change:** the header's sized `ReadValue` wrappers (`long`, `short`, `char`, ...) store only on success;
+  the original assigned an uninitialised `int` after a failed read (clang happened to leave the output alone, which
+  is what the golden recorded). On LP64 the `long` formats print the whole value (the original's `"%d"` of a `long`).
+- **Capture first:** `won_parse_test` runs every read and format over 53 inputs in both widths and both locales and
+  compares with `rust/crates/ee_won/src/golden_parse.txt`, recorded over the C++ before the port (3537 lines); the
+  Rust test `parser_golden` replays the C-locale pass and the formats line. `WStringToString` of a wide string with a
+  NUL stops at the NUL (`std::string(buffer)`), which the replay models.
+- The Bash tool of this session collapses `\\` to `\` in heredocs and inline Python: write files with backslashes
+  (C escapes, raw strings) through the editor, not the shell.
+
+### The LAN protocol in Rust (`ee_won/src/lan.rs`, `ffi_lan.rs`)
+
+LanLogic's messages are Rust: the game channel's (`WriteBuffer(2, true)`: join request, join reply refused and
+accepted, client joined and left, chat request and line, ping, the staging wrapper) and the discovery packets' heads
+(`WriteBuffer(0, true)`: summary, keep-alive, removed, query), both built and read, and the host's decisions: the join
+status (the subnet check of a LAN game, then the password), the chat route (whisper, team, everyone) and the shown
+flags, the network timer's stale-socket and ping rules, the discovery timer's summary-or-keep-alive rule, and
+`GetNextClientId`. The C++ keeps the objects, sockets, events and `LobbyGame::WriteSummary` / `ReadSummary` (the
+summary body) and the staging logic's own reads.
+
+- **A message is read whole before anything acts on it.** The handlers now take the decoded fields (the header's
+  `HandleJoinRequest`, `HandleClientJoined`, ... signatures changed). Every original handler read all its fields
+  before acting, so a short message still does nothing, except `ReadJoinReply`, which set the game's captain id and
+  added the players one by one as it read them: `read_join_reply` returns what had been applied before a short read
+  (the captain once read, the players read whole) and the C++ applies exactly that.
+- **`GetNextClientId` hands out 0 once after 0xffff** (it steps 0xffff to 0 and returns it); the comment said it
+  skipped both. Kept, documented.
+- The host delivers its own messages with their 2-byte prefix (`HandleMessage`'s offset); messages from sockets
+  (`RecvMsgOp`) come without it.
+- **Capture first:** `won_lan_test` builds every message with the original's `WriteBuffer` statements (copied from
+  LanLogic.cpp before the port) and through the Rust ABI and compares the bytes, then reads them back (a short
+  message, a reply cut inside a name). The LAN game (`lan_game.py`) passes over the port; the chat, the refusals and
+  the timers' rules are not exercised by it (only by the tests).
+
+### State and what is left
+
+- `lan_game.py` on the branch head before this work (the test-profile exe of the merged tree): **PASS**, host and
+  joiner both at PT 2795 / CT 205 after 60 s of play (`build/lan_game/baseline`). After the StringParser and LAN
+  ports: **PASS**, PT 2744 / 2757, CT 200 / 201 (`build/lan_game/ported`). The earlier `EE-SIM` fault on seed 4
+  (`NERecordPlayback::Process` from `NESynchronousServer::ProcessLocalUserInput` at the random-map screen, a null
+  record-playback object) did not repeat in the rerun; the oracle passed on seeds 2-7. It is a race in the sim's
+  start, not WON code; reported, not fixed.
+- Still C++ of WON: AuthContext, PeerAuthClient/Server and their ops (the LAN path uses peer auth only for direct
+  connect games with the CD-key check, `GetGameType() == 3`, so the LAN test does not reach it), LobbyLanSocket's
+  object, the directory, routing, DB, HTTP and misc ops, FileReader/FileWriter, the config objects (WONConfig), the
+  lobby logic (WONLobby) and WONGUI.
+
+## D6: game text is UTF-8 (branch rust-d6-utf8, 2026-11-10)
+
+The owner's decision D6 (docs/RUST_PLAN.md): game text becomes UTF-8 in memory, in files and in saves. A declared
+rebaseline, done as its own track: outputs change where text was Windows-1252, old inputs are converted. The simulation
+does not read text, so the sim oracle stays identical; menus with Latin-1 text render pixel for pixel as before.
+
+### The plan (written before the work; the results follow in "As built")
+
+1. **Inventory.** Where text enters: the db tables' text cells and lead strings (already UTF-8 on disk: the converter
+   decoded retail's cp1252 bytes into UTF-8 YAML/CSV; the retail tables hold no byte above 0x7F), the Language strings
+   (`Language.rc`, five strings with `\x2019`/`\x00a9`, compiled into `LanguageStrings.cpp` as cp1252), `.rmv` scripts
+   (one `©` in a comment), scenario, campaign and civilization files (UString/UWideString `Load`: cp1252 bytes), saves
+   (0.254, the same), `config.yaml` (bytes), player-typed input (SDL: UTF-8, converted to cp1252 in `event.rs`), the
+   clipboard (the same), WON's wire and files (UTF-16 LE units; the lobby's `.cfg` are UTF-16 with a BOM, its help pages
+   cp1252), file names and paths (bytes to `CreateFileA`/`fopen`). Where it is interpreted: `UString` (byte operations,
+   `ToLower`/`ToUpper` through the CRT's `tolower`, which `setlocale(LC_ALL, "English")` makes code-page aware),
+   `UWideString` and the UI (`PlatMbs*`: the Windows CRT's `_mbs*` under the process code page, a single-byte port on
+   POSIX), `GetMultiByteChar` (`UIMultiByte.h`), `ee_ui`'s `text.rs` (stepping, spaces, digits, the case-folded sort),
+   `GEText`/`PlatFont` (glyphs by byte: cell `b` draws the code point cp1252 gives `b`), `GEFontBitmap` (a 256-cell atlas
+   by byte), WON's `StringUtil` (`PlatCp1252ToWide`/`PlatWideToCp1252`), `PlatGUIFont`, `PlatClipboard`,
+   `PlatWindowManager`'s `PLAT_EVENT_TEXT` (one wide character per byte), the edit box's `PLAT_EVENT_TEXT` loop (one
+   `UpdateTranslatedKey` per byte).
+2. **Representation.** `UString`, `UWideString`, the records' `char[]` fields and every `const char*` hold UTF-8. A
+   "character" of `UWideString`, the UI and the `PlatMbs*` functions is one code point; a byte that is not part of a
+   well-formed sequence is one character of its own (drawn as U+FFFD, '?' when the font lacks it), never a crash and
+   never a step past the terminator. Case folding is Unicode's simple lower-case mapping (Rust's `char::to_lowercase`
+   when it gives one character): `PlatStrICmp`, `PlatMbsICmp` and the list boxes' order fold the same way on every
+   system (the UCRT folded to lower case: `'_'` sorts before the letters, kept). In-place `ToLower`/`ToUpper` map only
+   where the mapping keeps the byte length (`É` <-> `é`, Greek, Cyrillic; `ı`/`ſ` and `ß` stay).
+3. **One implementation.** `ee_plat_core::utf8` holds the code point decoding/encoding and the `PlatMbs*`/`PlatStrICmp`
+   family over it on every system; the CRT bindings and the POSIX single-byte port (`sbcs`) and their goldens go
+   (the ASCII rows of the 1252 golden stay as the pin). `GetMultiByteChar` returns the code point (`PlatUtf8Decode`).
+   `PlatCp1252ToWide`/`PlatWideToCp1252` become `PlatUtf8ToWide`/`PlatWideToUtf8` (UTF-16 units on Windows, UTF-32
+   elsewhere), plus `PlatCp1252ToUtf8` for old inputs. `UString::ToLower`/`ToUpper` go through `PlatMbsLwr`/`Upr`; the
+   UI thread keeps `LC_CTYPE` in the "C" locale so no CRT `tolower` touches a byte above 0x7F.
+4. **Fonts.** `PlatFont` keys glyphs by code point: 0x20..0xFF rendered at creation (as before), others rendered on first
+   use under the font's lock. `measure`/`draw` decode UTF-8. `GEFontBitmap` keeps its 256 cells, each the glyph of the
+   code point cp1252 gives the byte, and maps a drawn code point back to its cell (code points outside cp1252 are
+   skipped, as bytes outside the font were). So a Latin-1 or cp1252-representable string renders exactly as before.
+5. **Data.** The text compiler (`ee_data`) stops encoding to cp1252: a text cell's UTF-8 is validated and kept. The Python
+   importer's intermediate `.dat` holds UTF-8 too (`scalars.encode_str`/`decode_str` are UTF-8; retail's cp1252 bytes
+   are converted once where they enter, `binfmt`'s retail parse), so `check` (b) compares the converted retail value
+   with the compiled one and `cppgate` compares two UTF-8 implementations. The content dump escapes code points, not
+   bytes. `lang_strings.py` writes UTF-8. The digests recorded from the C++ compiler apply to ASCII data unchanged; a
+   parity case whose text has a non-ASCII character gets its digest re-recorded against the Python importer and the
+   change is listed. `open_data.py` converts the lobby's cp1252 help pages to UTF-8 when it builds the tree.
+6. **Saves.** `kSaveGameMinorVersion` 255. A save, scenario or campaign file of version < 0.255 loads its strings through
+   a cp1252 -> UTF-8 conversion in `UString::Load`/`UWideString::Load`, switched on by the loader that read the header
+   (`ULegacyTextLoad`, a process-wide flag held while such a file loads). New files are written as UTF-8.
+7. **WON.** The game's bytes meet WON's `wchar_t` in `StringUtil.cpp`: those conversions go through `ee_won`'s `text.rs`
+   (`utf8 <-> UTF-16 units`, lone surrogates to U+FFFD on the way out). `PlatGUIFont`, `PlatClipboard` and
+   `PlatWindowManager` use `PlatUtf8ToWide`/`PlatWideToUtf8`; the lobby's text pages are read as UTF-8.
+8. **Tests and gates.** Unit tests for every conversion and operation (round trips, invalid UTF-8, folding, sorting,
+   wrapping with multi-byte characters) in `ee_plat_core`, `ee_plat_ui`, `ee_ui`, `ee_won`, `ee_data`; `plat_test`,
+   `font_test` and `wontest` updated. Gates per commit: both links 0/0, the sim oracle identical to `ref`, the Rust
+   gate, `eedata check` and `cppgate`, `xbuild.py test`/`fonttest`/`wontest`.
+
+### As built
+
+- **One text module.** `ee_plat_core::utf8` (decode/encode, stepping both ways, the folded compares, the in-place case
+  change, the cp1252 table, UTF-16/UTF-32 conversions) and `string.rs` over it: the `PlatStrICmp`/`PlatMbs*`
+  family, `PlatUtf8Decode`/`Encode`, `PlatCp1252ByteOf`, `PlatUtf8IsValid`, `PlatUtf8ToWide`, `PlatWideToUtf8`,
+  `PlatCp1252ToUtf8`, the same code on every system. The CRT bindings, the POSIX single-byte port, its 932 and SBCS
+  goldens and `ee_plat_ui`'s `cp1252.rs` are gone; the 1,280 ASCII rows of the Win32 1252 golden still pin the
+  ASCII behaviour bit for bit. A stray byte decodes to `0xDC00 + byte` (so two texts compare equal only when their
+  bytes do, and every byte string round-trips through decode/encode); it is drawn and sent as U+FFFD.
+- **Who reads characters.** `GetMultiByteChar` is `PlatUtf8Decode`; `ee_ui`'s `text.rs` `Platform` answers from
+  `utf8` (and `Mbcs::char_at` replaced the byte arithmetic of `multi_byte_char`, whose original lead/trail form stays
+  the trait's default for the golden test doubles); `UString::ToLower`/`ToUpper` are `PlatMbsLwr`/`Upr`; the UI
+  thread sets `LC_CTYPE` back to "C" after the language's locale; the edit box gets one `UpdateTranslatedKey` per
+  character, WON's window manager one key event per UTF-16 unit; `EEWonNet::A2W`/`W2A`, `StringUtil.cpp` (through
+  `ee_won_wide_from_utf8`/`ee_won_utf8_from_wide`, `text.rs`), `PlatGUIFont`, `PlatClipboard` and the SDL
+  clipboard/text events carry UTF-8 unchanged; the lobby pages are read as UTF-8 (a page that is not is read as
+  1252). The AI manifest's names (`EECPEngine.cpp`) are kept as UTF-8 (strays to U+FFFD) where they were squeezed
+  into 1252.
+- **Fonts.** `PlatFont` renders U+0000..U+00FF at creation and any other code point on first use (a boxed glyph in a
+  locked map: the pointer outlives the lock). The bytes 0x80..0x9F of 1252 are now their own code points' glyphs (the
+  euro sign is U+20AC, rendered on first use), so the GDI-port goldens are compared through the cp1252 table and still
+  match. `GEFontBitmap` keeps its 256 cells (cell `b` holds the character 1252 gives `b`, as UTF-8) and maps a drawn
+  code point back with `PlatCp1252ByteOf`: Latin-1 and 1252 text draws exactly as before, other characters are
+  skipped there.
+- **Data.** The text compiler keeps a text cell's well-formed UTF-8 (`encode_text`), the content dump escapes code
+  points (a stray byte as `\udcXX`); `eedata`'s `load_db` converts retail's strings once (`binfmt.transcode_retail`:
+  the retail tables are ASCII, so `check` and `cppgate` see the same bytes as before: the exported text tree is
+  identical to rust's byte for byte); `scalars.encode_str`/`decode_str` are UTF-8, `decode_cp1252` is for retail
+  inputs (`gltf.py` reading a `.cem`). The glTF importer (`gltf.py`, `ee_openformats`' `game_name`) keeps a name's
+  UTF-8. `lang_strings.py` writes UTF-8 (five strings changed: `’` and `©`). `open_data.py` converts the 22 lobby
+  pages (one, `Help/loginhelp.html`, had a 1252 byte; the db part is unchanged, so no db release is needed for this;
+  the media part would carry the converted page).
+- **Saves.** 0.255. `USetLegacyTextLoad` is set by `EEPSaveGameHeader::Load` around the body and by `LoadGame` /
+  `EELoadPersistent` around the chunks when the version is older; `UString::Load`/`UWideString::Load` then convert
+  every string from 1252 (`UConvertLoadedText`, which also converts any loaded string that is not well-formed
+  UTF-8: the save name and description, read before the version, and files without a version such as old `.civ`
+  binaries).
+- **Tests.** `ee_plat_core` (utf8: 9, string: 4 including the ASCII golden), `ee_plat_ui` (font: code point
+  measure/draw, Latin-1 drawn the same as its 1252 bytes; event: the text golden through `text_into`), `ee_ui` (UTF-8
+  stepping, folding/sorting, `char_at`, wrapping by code point against the ASCII equivalent, the edit box typing,
+  deleting, selecting and limiting by characters), `ee_won` (both `wchar_t` widths, strays, lone surrogates),
+  `ee_data` (cells, quoting round trip, dump escapes), `ee_openformats` (names); `plat_test`'s "utf8" and "wide"
+  sections, `sdl_test`'s clipboard, `won_gui_test`'s accented line.
+- **Gates run (Windows):** both links 0/0, sim oracle identical to `ref` on seeds 2-7, Rust gate, `eedata check`
+  and `cppgate` PASS (the cppgate golden digests no longer match the data on rust either: Python-only comparison, as
+  before this branch). Menus were not looked at (no harness session): the lead's tours must confirm the pixels.
+- **Left:** the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK, so CJK input shows `?`);
+  `tools/rmap_gate/rmap_stubs.cpp` still maps `PlatMbs*` onto the CRT (a tool gate's stubs, ASCII inputs); campaign
+  archive tags are not converted; the harness writes `config.yaml` as cp1252 (its text is ASCII); `GEFontBitmap`
+  cannot draw characters outside 1252.
+
+## R4.3, fifth part: the visible terrain as a plan, the viewport's math, the model's viewport test, the bitmap and rhombus corners (ee_ge terrain_visible.rs, viewport.rs, bitmap.rs; branch rust-r4-ge5, 2026-11-10)
+
+`GETerrainMesh::UpdateVisibleTerrain` with `AddTilePolys`/`AddWaterPolys`/`AddCliffPolys` and the eight
+`Generate*EdgePolygons`, `GEViewport`'s matrices, clipping planes and frustum, `GEPhysicalModel::Intersects(viewport)`,
+`GEBitmap`'s and `GERhombus`'s corners and the stretched texture coordinates are Rust. The mesh, its render-vertex
+arrays, the material lists keyed by `GETexture*`, the reference counts, the polygon arrays, the viewport object and the
+bitmaps' vertex arrays stay C++. The graphics thread and the UI call all of it (not the simulation); the sim oracle is
+identical.
+
+- **Plan and fill.** The original built `std::map<GETexture*, unsigned long>` material maps, referenced textures and
+  filled polygon pointers into the mesh's arrays as it walked the visible tiles. Rust now computes the whole frame
+  into plain data (`terrain_visible.rs`, `VisiblePlan`): the visible rows, the two point-visibility arrays, the
+  materials as texture handles (`GETexture*` values; a material's index is its position, the untextured one first,
+  then on space maps one per cliff texture), every terrain and water polygon with its corners as references (a
+  terrain or water render vertex `[a][b]`, a skirt vertex, a cliff vertex), alphas, texture coordinates and material
+  index, the skirt and cliff world points, and per cliff vertex the terrain vertex whose visibility it follows.
+  `GETerrainMesh.cpp` reads it through `EeGeVisibleOut`, releases the last frame's materials as before, rebuilds the
+  map and list from the handles (one `Reference()` per non-null entry), creates the skirt and cliff
+  `GETMRenderVertex`es, maps the references to pointers (`FillPolygon`) and resizes the index lists. The texture sets
+  go in as flattened handle grids (`GETextureSet::GetTextureAt`); the 33 x 33 water texture grid in place.
+- **Quirks kept, now stated in the Rust.** A tile layer's "best" texture (the one drawn opaque) is the lowest
+  `GETexture*`: the original compared addresses, the Rust compares the handles as integers. A material map `insert`
+  keeps the first entry of a repeated texture while the list gets both (the cliff textures can repeat): the Rust's
+  `push_material` does the same, and `material_of` is the map's lookup. A skirt polygon never sets its texture
+  coordinates, so the slot keeps the previous frame's values (`uv_set` is false and the fill leaves them; the golden
+  test replays the 12,000 slots). `theQuad`'s alphas carry across a tile only where the original's did (every used
+  layer sets all four). The `(long)(x + 0.5f)` truncations, `theCliff % 8`, the `unsigned long` array indices that
+  wrap and the `0x7fffffff`/`0x80000000` empty bounds (which wrap through the span clip) are the C++'s.
+- **One declared difference: the polygon arrays' capacity.** `mTerrainPolygons` holds 12,000 polygons and
+  `mWaterPolygons` 5,000; the original wrote past them (into the render-vertex arrays) when a frame had more. The fill
+  stops at the capacity. The golden driver found 38 of its 1,280 frames over it (wide far cameras over large maps;
+  the game's zoom caps keep it below), printed as `skip` on the C++ side; the relinked driver prints the clamped
+  frames there and the same bytes everywhere else.
+- **Two defensive reads.** A tile's texture set id past the registered sets reads 0 (the C++ indexed past its
+  vector), and a space map without its 13 cliff textures gets handle 0 for the shoreline layer (the C++ read past the
+  vector; the renderer loads them before the first frame). The water material index is checked against the water
+  list (the C++ indexed unchecked; a mesh whose water state was never set has no water materials).
+- **`GEViewport` is a mirror** (`GeViewport`, 0x288 bytes, `GERustViewport.h` pins the offsets through a friend): the
+  constructors, `Compute{Orthographic,Perspective}Matrix`, `ComputePlanes`, `GetFrustrumWorldPoints`/`Planes` and the
+  setters run on the object itself; the header inlines (`SetCamera`, `SetOrthographicRectangle`, the normalizations)
+  stay and call the forwarded members, so they are bit-identical by construction. The default constructor is Rust
+  too (`GE3DPlane()` faces +z, the matrices are identity, the look-at vector is the identity's +y).
+- **`GEPhysicalModel::Intersects(viewport)`** is `physical::model_visible` over the placed model's values (location,
+  scale, the frame's internal transform, centre, radius, box).
+- **`GEPhysicalModel`'s walks** (`physical_walk.rs`, a later commit of this branch): `Intersects(line)` (sphere, box,
+  the triangles of LOD 0, the sub-models), the model scaled per axis (its hand-built inverse, the `max`/`min` macros'
+  operand order) and model against model (the reduced LODs through `lrintf(0.8f * count)`, the other model's
+  triangle boxes cached during the first triangle) are Rust over a callback table (`EeGePhysicalModels`) of
+  `GEModel*` handles: the C++ statics in `GEPhysicalModel.cpp` read the accessors, the virtual vertex and polygon
+  arrays and do the `unsigned long` index sum. Units test projectile lines against target models through these
+  (`EEUnitClass.cpp`), so RUST_PLAN 2.1 applies. The exact retry (a top model with no hit tests the line at its
+  smallest scale) builds a temporary `GEPhysicalModel`, whose constructor and destructor reference and release the
+  model (`GEModel::Dereference` can reach its manager): it stays a callback (`retry_line`) into the C++, so that side
+  effect is the original's. The FFI copies its inputs and writes the distance back once, so no Rust reference to a
+  C++ object lives across a callback. Golden (`build/physical_golden`, scratch): the whole `GEPhysicalModel.cpp` of
+  the commit before this work, over fake models in raw `GEModel`/`GEMaterial` storage (their constructors are not
+  linked; three references held so a release never reaches the manager) with fake vertex and polygon arrays, 4
+  worlds of 12 top models with sub-models to depth 2 (1 to 4 LODs, 1 to 3 materials, empty ranges, 1 to 3 frames),
+  12,000 line cases (scales 1, 0, 0.00005 and random; every LOD; exact or not) and 12,000 scaled cases (uniform,
+  per-axis and a zero axis): `golden_physical_walk.txt`, replayed by the Rust test from the same stream (hits at
+  every LOD: 2,191 / 1,937 / 1,316 line hits, 2,681 scaled hits); the driver over the forwarders printed the same
+  bytes.
+- **`GEBitmap`/`GERhombus`**: `ComputeRotation`'s corners and `ComputeStretchedCoordsAndScale`'s arithmetic
+  (`bitmap.rs`); the vertex arrays behind `GEVertexArray`'s virtuals and the textures stay C++. The original passed
+  the bottom-left corner as `SetTextureCoordinates`' third argument, which the header names `inBottomRight`; the
+  forwarder passes the same positions.
+- **The golden driver** (`build/visible_golden`, scratch): the unmodified `GETerrainMesh.cpp` and `GEViewport.cpp`
+  with the engine's math units and fake textures (`lle/GETexture.h` shadowed by a `/I` directory: a pool of 48
+  reference-counted stand-ins in an array, so their addresses rise with the index as the handles do in the test),
+  `#define private public` around `GETerrainMesh.h` only (around `GEViewport.h` too it re-mangled the private
+  members the header inlines call, `?ComputeOrthographicMatrix@GEViewport@@AEAA` became `QEAA`, and the link lost
+  them), `GEBoundingBox::ComputeDimensions` defined by the driver over the Rust (the unit drags the engine's static
+  objects in), `/FORCE:UNRESOLVED` for the file classes nothing calls. 40 meshes from an LCG (flat, hilly with water,
+  space with shorelines, hilly with random sets; 1 x 1 to 96 x 96; integer-hash value noise so the C++ and the Rust
+  draw the same heights with no `libm`), 24 cameras each (perspective and orthographic, near and far, `SetOrientationYPR`
+  and a look vector), the mesh dumped as decoded references (a vertex pointer located in the arrays or the vectors),
+  the material lists as indices, the fake textures' reference counts (`refs`, C++ only), the viewport's 162 words
+  after construction and after each setter, the frustum points and planes, `Intersects(viewport)` over random placed
+  models, and the bitmap functions' bodies compiled alone. 1,280 frames, 1,920 viewport cases, 1,920 model tests,
+  9,000 bitmap cases; `golden_visible.txt` is 230 KB (one line per frame, so a divergence names its mesh and camera).
+  The Rust test replays the stream through `GeViewport::new`, `update_visible_terrain`, `model_visible` and
+  `bitmap.rs`; the driver relinked over the forwarders printed the same file (the `refs` section included).
+- **The golden driver, checked again** (a second agent; `build/visible_golden`, `build.py --tree orig|cur`). The
+  first driver compiled whatever `src/` held, and its bitmap and model sections were copies of the function bodies
+  in the driver, so relinking it proved nothing about those forwarders. Now `--tree orig` compiles a `git archive` of
+  the commit before this work (its `src/`, `include/` and its own `rust/` workspace and `ee_rmap_gatelib`), `--tree
+  cur` the worktree; the member functions of `GEBitmap`, `GERhombus` and `GEPhysicalModel::Intersects(viewport)` are
+  copied out of the tree's own units (`extract_members.py`) and run on objects in raw storage with a fake vertex
+  array that records every `SetPoint`/`SetTextureCoordinate` (the `obj_*` sections: 4,000 cases each, 6,000 model
+  tests over four frames whose other frames are wrong on purpose). The orig driver reproduced `golden_visible.txt`
+  exactly (so the committed golden is the original's). **Real meshes:** 15 random maps from EE-SIM (`--save-at
+  1000`; every map type: Continental, Highlands, Large and Small Islands, Mediterranean, Plains, Tournament Islands
+  and the five Planets maps, Tiny to Gigantic, 42 x 42 to 220 x 220), the map chunk of each save unpacked by
+  `tools/harness/savefile.py dump` (PK01, DCL), the mesh found by a scan for `Save`'s layout (size, tiles, points) and
+  loaded through `GETerrainMesh::Load` over a memory file; 255 fake texture sets (the real ids reach 92), 48 cameras a
+  mesh (three of four game-like: pitched down, 8 to 55 away, small orthographic rectangles): 960 real frames, 851
+  within the arrays. `compare.py`: 4,412 lines equal, the 147 frames the original overran (38 synthetic, 109 real)
+  clamped by the Rust, no other difference.
+- **Gates run:** `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle identical on seeds 2-7, `rust_build.py gate`
+  PASS (1,250 tests; `ee_plat_core`'s scaled-wait timing test failed once under the oracle's load and passed alone),
+  `eedata check` PASS, `eemodel.py cppgate`, `gx_test --run`, the windowed-software test profile 0/0 (the numbers in
+  the final report). Not run: tours (the lead's; the visible terrain is what they check).
+- **Left in R4.3:** the fonts (`GEFont`, `GEFontBitmap`, `GEText`: UTF-8 first, D6), `GEBitmap`'s and `GERhombus`'s
+  vertex-array plumbing (no logic).
+
 ||||||| Stash base
 
 ## R5b.1, the continent analysis, leaf by leaf: the continent grid, the tile values, the choke pass's grids, the sub sector link walks, the sector grid, the tile kind, the region fills' start tests, the path area repair's choice and the queries in Rust (ee_astar continent_grid.rs, tile_values.rs, choke.rs, sub_sector_links.rs, sectors.rs, tile_kind.rs, path_area_kind.rs, repair.rs, queries.rs; branch rust-r5b-cont, 2026-11-10)
@@ -4021,3 +4387,4 @@ choice, `PruneChokePoints`, `CreateScenarioAreas`, the area classes' hulls) stay
   `GetTilesNextTo` (its ring order is `EEGetSquareRingTiles`'), `CanGetTo`, and the area classes' geometry
   (`EEAIArea::Create`, the hulls, `GetClosestPoints`, `GetShoreInRegions`). Those sit on `U2DSparseArray` and
   `U2DPolygon<long>`, which would have to move first.
+||||||| 90d1cb21

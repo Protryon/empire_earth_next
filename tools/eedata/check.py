@@ -16,6 +16,7 @@ import pathlib
 import time
 
 import binfmt
+import scalars
 import specgen
 import tables
 
@@ -54,7 +55,7 @@ def hole_values(n, data, spec):
         if f['type'] == 'str':
             v, b = v[0], b[0]
             if v != b:
-                out[f['name']] = v.decode('latin-1')
+                out[f['name']] = scalars.decode_str(v)
             continue
         if v != b:
             if f['type'] == 'f32':

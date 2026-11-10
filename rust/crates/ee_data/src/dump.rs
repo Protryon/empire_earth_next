@@ -50,19 +50,58 @@ fn int_value(p: &[u8], ty: Type) -> i64 {
     }
 }
 
+/// The character at the start of `s` and its byte length: a byte that is not part of a well-formed sequence is one
+/// character of its own, `0xDC00 + the byte` (as `ee_plat_core::utf8::decode`, kept here so that the data crate
+/// stays free of the platform crate).
+fn decode_utf8(s: &[u8]) -> (u32, usize) {
+    let b0 = s[0];
+    let n = match b0 {
+        0x00..=0x7F => return (b0 as u32, 1),
+        0xC2..=0xDF => 2,
+        0xE0..=0xEF => 3,
+        0xF0..=0xF4 => 4,
+        _ => return (0xDC00 + b0 as u32, 1),
+    };
+    if s.len() < n {
+        return (0xDC00 + b0 as u32, 1);
+    }
+    let b1 = s[1];
+    let ok1 = match b0 {
+        0xE0 => (0xA0..=0xBF).contains(&b1),
+        0xED => (0x80..=0x9F).contains(&b1),
+        0xF0 => (0x90..=0xBF).contains(&b1),
+        0xF4 => (0x80..=0x8F).contains(&b1),
+        _ => (0x80..=0xBF).contains(&b1),
+    };
+    if !ok1 || s[2..n].iter().any(|&b| b & 0xC0 != 0x80) {
+        return (0xDC00 + b0 as u32, 1);
+    }
+    let mut cp = (b0 as u32) & (0x7F >> n);
+    for &b in &s[1..n] {
+        cp = (cp << 6) | (b & 0x3F) as u32;
+    }
+    (cp, n)
+}
+
 fn push_str(out: &mut Vec<u8>, p: &[u8], n: usize) {
     out.push(b'"');
-    for &c in p.iter().take(n) {
-        if c == 0 {
-            break;
-        }
-        if c == b'"' || c == b'\\' {
+    let end = p.iter().take(n).position(|&c| c == 0).unwrap_or(n.min(p.len()));
+    // the text is UTF-8 (decision D6): its characters as JSON escapes, exact and plain ASCII (a stray byte is its
+    // own character, U+DC00 + the byte, so the dump stays a function of the bytes; past U+FFFF a surrogate pair)
+    let mut at = 0;
+    while at < end {
+        let (cp, len) = decode_utf8(&p[at..end]);
+        at += len;
+        if cp == b'"' as u32 || cp == b'\\' as u32 {
             out.push(b'\\');
-            out.push(c);
-        } else if !(0x20..0x7f).contains(&c) {
-            out.extend_from_slice(format!("\\u{c:04x}").as_bytes()); // the byte (CP-1252), not decoded: exact and plain ASCII
+            out.push(cp as u8);
+        } else if (0x20..0x7f).contains(&cp) {
+            out.push(cp as u8);
+        } else if cp >= 0x10000 {
+            let v = cp - 0x10000;
+            out.extend_from_slice(format!("\\u{:04x}\\u{:04x}", 0xd800 + (v >> 10), 0xdc00 + (v & 0x3ff)).as_bytes());
         } else {
-            out.push(c);
+            out.extend_from_slice(format!("\\u{cp:04x}").as_bytes());
         }
     }
     out.push(b'"');
@@ -389,7 +428,17 @@ mod tests {
     fn strings_stop_at_nul_and_escape_non_ascii() {
         let mut out = Vec::new();
         push_str(&mut out, b"a\"\\\x01\xe9\0tail", 10);
-        assert_eq!(out, b"\"a\\\"\\\\\\u0001\\u00e9\"".to_vec());
+        assert_eq!(out, b"\"a\\\"\\\\\\u0001\\udce9\"".to_vec(), "a stray byte: U+DC00 + the byte");
+        out.clear();
+        push_str(&mut out, "é€😀x".as_bytes(), 10);
+        assert_eq!(out, b"\"\\u00e9\\u20ac\\ud83d\\ude00x\"".to_vec(), "code points; a surrogate pair past U+FFFF");
+        out.clear();
+        push_str(&mut out, "é€".as_bytes(), 3);
+        assert_eq!(out, b"\"\\u00e9\\udce2\"".to_vec(), "a sequence cut by the field's end is strays");
+        assert_eq!(decode_utf8(&[0xC0, 0x80]), (0xDCC0, 1));
+        assert_eq!(decode_utf8(&[0xED, 0xA0, 0x80]), (0xDCED, 1));
+        assert_eq!(decode_utf8(&[0xF4, 0x90, 0x80, 0x80]), (0xDCF4, 1));
+        assert_eq!(decode_utf8(&[0xF4, 0x8F, 0xBF, 0xBF]), (0x10FFFF, 4));
     }
 
     #[test]

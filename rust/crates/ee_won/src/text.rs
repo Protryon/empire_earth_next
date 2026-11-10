@@ -64,6 +64,27 @@ pub fn from_utf8(text: &str) -> Vec<u16> {
     text.encode_utf16().collect()
 }
 
+/// The game's text (UTF-8 bytes, decision D6) as UTF-16 units, where a `UString` meets a WON `wchar_t` string
+/// (`StringToWString`): a stray byte becomes U+FFFD.
+pub fn utf16_from_game(text: &[u8]) -> Vec<u16> {
+    ee_plat_core::utf8::to_utf16(text)
+}
+
+/// UTF-16 units as the game's text (`WStringToString`): a lone surrogate becomes U+FFFD.
+pub fn game_from_utf16(units: &[u16]) -> Vec<u8> {
+    ee_plat_core::utf8::from_utf16(units)
+}
+
+/// The game's text as UTF-32 code points (a `wchar_t` of 4 bytes): a stray byte becomes U+FFFD.
+pub fn utf32_from_game(text: &[u8]) -> Vec<u32> {
+    ee_plat_core::utf8::to_utf32(text)
+}
+
+/// UTF-32 code points as the game's text: a surrogate or a value past U+10FFFF becomes U+FFFD.
+pub fn game_from_utf32(text: &[u32]) -> Vec<u8> {
+    ee_plat_core::utf8::from_utf32(text)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,5 +127,21 @@ mod tests {
     fn round_trip_through_both_widths() {
         let text: Vec<u32> = vec![0x57, 0xe9, 0x1f600, 0xffff, 0];
         assert_eq!(utf32_from_utf16(&utf16_from_utf32(&text)), text);
+    }
+
+    #[test]
+    fn the_games_utf8_meets_wons_wide_text() {
+        let game = "Café €😀".as_bytes();
+        assert_eq!(utf16_from_game(game), vec![0x43, 0x61, 0x66, 0xe9, 0x20, 0x20ac, 0xd83d, 0xde00]);
+        assert_eq!(game_from_utf16(&utf16_from_game(game)), game);
+        assert_eq!(utf32_from_game(game), vec![0x43, 0x61, 0x66, 0xe9, 0x20, 0x20ac, 0x1f600]);
+        assert_eq!(game_from_utf32(&utf32_from_game(game)), game);
+        // a stray byte (an old Windows-1252 name) and a lone surrogate from the wire both show as U+FFFD
+        assert_eq!(utf16_from_game(b"caf\xe9"), vec![0x63, 0x61, 0x66, 0xfffd]);
+        assert_eq!(game_from_utf16(&[0x41, 0xdc00]), "A\u{fffd}".as_bytes());
+        assert_eq!(game_from_utf32(&[0x41, 0xd800, 0x110000]), "A\u{fffd}\u{fffd}".as_bytes());
+        // embedded zeros are characters
+        assert_eq!(utf16_from_game(b"a\0b"), vec![0x61, 0, 0x62]);
+        assert_eq!(game_from_utf16(&[0x61, 0, 0x62]), b"a\0b");
     }
 }

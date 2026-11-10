@@ -134,6 +134,8 @@ Before merging or pushing any code change, all of these are required:
    - a seeded 2-AI Hard Small game to the time cap (`--time-factor 32 --pt-rate 40`). Pass:
      `RESULT PASS ai-game outcome time-cap` with both AI players alive (`alive_computers [2, 3]`; units
      e.g. `[0, 30, 34]`, player 1 being the idle human). Unit counts vary a little between runs.
+   - a LAN game between two instances through the WON lobby (`tools/harness/lan_game.py`: host creates, the joiner
+     finds and joins it, both play 60 s). Pass: `RESULT PASS lan-game`.
    - The PT at the cap is the driver's poll (once a real second, about 1,300 PTs at 32 x), not the game: compare it
      only against the same build's spread. GX errors are in `summary.json` (`gx_errors`).
    - `bash tools/gates.sh --legacy` still runs the debugger harness (`game_session.py`, on the same open tree; pass:

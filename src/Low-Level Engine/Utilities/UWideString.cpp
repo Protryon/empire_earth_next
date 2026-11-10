@@ -538,6 +538,7 @@ long UWideString::Load(FSFile& inFile)
         theResult = inFile.Read(this->mString, theSize, theRead);
         if (theResult == kErrorOK) {
             strcpy(this->mString + theSize, "");
+            UConvertLoadedText(this->mString, this->mCapacity);   // port (D6): an old Windows-1252 string
             this->mLength = PlatMbsLen(MB((const char*)*this));
             this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
             if (theRead != theSize)
