@@ -3702,3 +3702,63 @@ and its subclasses) stay C++.
   `sim_capture.py check` PASS in the four profiles; the sim oracle identical on seeds 2-7 (against `ref` and against
   the C++ baseline); `rust_build.py gate` PASS (ee_astar: 60 tests, 19 for the graph storage and machine, 4 for the
   smoothing). Not run: `gates.sh`, `eedata check`/`cppgate` (no data change), any macOS or Linux build.
+
+## R4.3, fourth part: the pixel formats, GETexture's plans, the managers' decisions, the terrain's layout, water and visible rows; 'GEModel LOD.cpp' and 'GEModel Caching.cpp' deleted (ee_ge pixel.rs, texture.rs, managers.rs, terrain_volume.rs; branch rust-r4-ge4, 2026-11-09)
+
+The texture leaf, the two media managers' logic and three more pieces of `GETerrainMesh` are Rust behind the C++
+classes; the textures, surfaces, maps, locks and reference counts stay C++. None of it is simulation code (the graphics
+thread, the UI and the loaders call it), but the C++'s `f32` order and `unsigned long` arithmetic are kept throughout.
+
+- **Deleted, not ported: 'GEModel LOD.cpp' (`ComputeLODReduction`, the `GELOD*` edge-collapse classes of
+  `lle/GELOD.h`) and 'GEModel Caching.cpp'** (`ComputeOptimalDataOrdering`, the genetic vertex cache optimiser). No
+  caller in the game, the tools or the data path: the only mentions outside the two units were the `UList<GELOD*>`
+  node-pool statistics in `EEReleaseGamePools` and three units including the header for the pools' init chains. The
+  unit list (`link/lle/units.txt`) loses the two entries; `GEModel.h` the declarations and the `GELOD.h` include.
+- **The pixel formats** (`pixel.rs`): `sPixelFormats` (the shift and position per channel of the eight formats) and
+  `GEPackColor`/`GEUnpack*` ('Graphics Engine.cpp' forwards); `GETexture.cpp`'s `GEStoreFrame` pixel loop is
+  `store_frame` (the C++ keeps the size check before the lock, the lock and the unlock). The quirk stays: the row skip is
+  computed from the *surface's* pixel width, so a frame narrower than its surface puts its next row inside the first
+  row's padding (`a_narrower_frame_continues_after_the_skip_of_the_surface_width`); the storegate pins the pixels.
+- **`GETexture`'s plans** (`texture.rs`): `Load`'s MIP level count (how often the width halves to 0), the drop clamped to
+  it, the frames' surface type and level count, the reduced surface's description (three cases: everything dropped to
+  one pixel, a chain kept, one level kept), the frame grid of format 1 (the smallest power of four, `sqrt` in double,
+  `1.0f / framesPerRow`), a grid cell's rectangle and `SetFrame`'s UV corner in the C++'s `f32` order,
+  `Dereference`'s count decision, `GetAllocatedSize`, the texture pack's MIP filter override. `GETextureSet`'s grid
+  arithmetic (`GetTexture`, `GetTextureCoordinate`, `GetTextureIndices`) and `GEMaterial::SizeOf` (from the C++'s sizes)
+  are Rust too; the set's header inlines call it (not simulation code, a call per tile a frame).
+- **The managers** (`managers.rs`): a texture's cache name (`texture_stem`: the name, or without its last extension when
+  it holds ".sst"), the texture pack's settings (`TexturePack`: a `static Mutex`, the C++'s four statics; the
+  directory stays when the pack is turned off, a directory over 62 bytes turns it off as the original's buffer did), a
+  texture's pack name (case-insensitive "textures\\", the three data pictures refused), `LoadTexture`'s drop and MIP
+  decisions, `SetTexturePackSizes`' arithmetic, the surface description a texture description asks for (16 bits:
+  A4R4G4B4 with alpha else R5G6B5; else A8R8G8B8 with `mNoAlpha`), the removal decision (the manager's reference is the
+  last: remove and 0, else 5), and the made textures' and created models' names with their counters (`AtomicU32`s in
+  place of `sTextureNumber`/`sModelNumber`). `ReloadTexture`'s "not cached" 3 and the Close result stay C++.
+- **`GETerrainMesh`** (`terrain_mesh.rs`, `terrain_volume.rs`): `CreateFlatMesh`'s row columns and edge sums
+  (`flat_mesh`; the C++ allocates and `Initialize`s the rows), `SetGlobalWaterState`'s 33 x 33 texture grid (a fresh
+  `URandom`, seed 1 as the default constructor gives: deterministic, so a Rust test pins the first draw through
+  `ee_random`), `SetWaterColorSet`'s index (a negative product wraps through `i64` as the x86-64 conversion does, then
+  clamps to the last entry), `UpdateWaterAnimation`'s step, and `GetTileRowsInVolume` whole: `U2DConvexHull<float>`
+  (`operator<` sort, unique, Graham's scan with the pivot at the lowest point, `GetSide` in `double` of `float`
+  differences), `GetScanLines`/`AddScanLine` (the tile walk with its `(long)` truncations, a coordinate at or below 0
+  in the tile one less, the 2D crossing test with its -0.00001..1.0001 window) and the clipping to the map's rows with
+  the `0x7fffffff`/`0x80000000` empty bounds. `GETerrainMesh.cpp` no longer includes `U2DPolygon.h` (`URandom.h` stays:
+  `U2DFractal.h` needs it).
+- **One declared difference: the hull's collinear points.** The original sorted the points around the pivot with a
+  comparator (`GAAngleCompare`) that deleted the nearer of two collinear points as a side effect of the comparison, so
+  which collinear points survived depended on which pairs the STL's `std::sort` happened to compare. The Rust decides
+  every collinear pair up front (the farthest from the pivot survives; equal distances by index), which is what the
+  comparator meant and what the sort gave whenever it compared them. The frustum's eight ground points are never
+  collinear with the pivot in practice. A Graham stack of one point (the C++ indexed `size - 2` there) pushes the next
+  point instead of reading before the vector.
+- **Build order bites.** `build.py` stages each unit at compile time and reads the headers in place, and cargo builds
+  from `rust/` in place: a background build picks up every edit made while it runs (two of the three builds here were
+  mixes), and `cargo run -p xtask -- cbindgen` fails with "user-mapped section open" while the build's cargo holds the
+  target. Edit, regenerate the header, then build, and touch nothing until it ends.
+- **Gates run:** `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM), `rust_build.py gate` PASS, `eemodel.py cppgate` (the
+  store gate: 25,140 lines equal, 7,104 decoder cases), `eedata check`, `gx_test --run`, the sim oracle identical on
+  seeds 2-7, the windowed-software test profile 0/0 (the numbers in the final report). Not run: tours (the lead's).
+- **Left in R4.3:** `UpdateVisibleTerrain` with `AddTilePolys`/`AddWaterPolys`/`AddCliffPolys` and the eight
+  `Generate*EdgePolygons` (they build the C++ material lists keyed by `GETexture*` and fill polygon pointers into the
+  mesh's arrays: a plan-and-fill port with a golden driver over `GEViewport`), `GEPhysicalModel`'s walks and viewport
+  test, fonts, bitmaps, the viewport.
