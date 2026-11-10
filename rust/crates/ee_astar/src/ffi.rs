@@ -1144,6 +1144,7 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
 // ---- the continent manager's grid (continent_grid.rs) ----
 
 use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
+use crate::tile_values;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 pub struct EeContinentGrid(ContinentGrid);
@@ -1263,4 +1264,43 @@ pub unsafe extern "C" fn ee_astar_continent_grid_continent_shore(
     let v = &unsafe { &*g }.0.continent_shore;
     unsafe { *count = v.len() };
     v.as_ptr()
+}
+
+// ---- the continent manager's tile values (tile_values.rs) ----
+
+/// `EEAIContinentManager::UpdateTileValues` over a `size` x `size` map: `terrain` every tile's terrain type (-1
+/// where the map has none), `shore` and `ice_shore` the manager's sorted lists, `weights` every tile's
+/// `GetResourceWeight` (read only when `water` is false). `values` gets every tile's new value (0: unchanged),
+/// `bytes` the AI value to store with a changed one.
+///
+/// # Safety
+/// `terrain`, `values` and `bytes` valid for `size * size` cells, `weights` too unless `water`; `shore` and
+/// `ice_shore` for their counts.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_update_tile_values(
+    size: i32,
+    terrain: *const i32,
+    water: bool,
+    shore: *const EePoint,
+    shore_count: usize,
+    ice_shore: *const EePoint,
+    ice_count: usize,
+    weights: *const i32,
+    values: *mut i32,
+    bytes: *mut i8,
+) {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
+    // SAFETY: the caller's contract
+    let (terrain, shore, ice_shore, weights, values, bytes) = unsafe {
+        (
+            std::slice::from_raw_parts(terrain, n),
+            std::slice::from_raw_parts(shore, shore_count),
+            std::slice::from_raw_parts(ice_shore, ice_count),
+            std::slice::from_raw_parts(weights, if water { 0 } else { n }),
+            std::slice::from_raw_parts_mut(values, n),
+            std::slice::from_raw_parts_mut(bytes, n),
+        )
+    };
+    let world = tile_values::TileWorld { size, terrain, water, shore, ice_shore, weights };
+    tile_values::update_tile_values(&world, values, bytes);
 }

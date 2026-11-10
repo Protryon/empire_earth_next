@@ -10,8 +10,11 @@
 //!
 //! The graph searches (`EEAIAStarGraphMachine` over `EEAIAStarGraphStorage`: the sub sector paths and the
 //! continental chains) are `graph`: their node storage and machine, the goals and route planners staying C++ behind
-//! `ffi::EeAStarGraphCallbacks`. `choke` is the continent manager's choke point pass's grid smoothing,
-//! `continent_grid` its grid, adjacency and shore tiles from the continent fill.
+//! `ffi::EeAStarGraphCallbacks`.
+//!
+//! The continent manager's analysis, leaf by leaf (the C++ manager keeps its objects and stores what these
+//! compute): `choke` is the choke point pass's grid smoothing, `continent_grid` the grid, adjacency and shore tiles
+//! from the continent fill, `tile_values` the tile values.
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
@@ -28,6 +31,7 @@ pub mod machine;
 pub mod modifiers;
 pub mod path_goals;
 pub mod storage;
+pub mod tile_values;
 
 #[cfg(test)]
 mod tests;

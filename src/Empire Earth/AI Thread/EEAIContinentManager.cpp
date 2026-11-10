@@ -2065,50 +2065,47 @@ bool EEAIContinentManager::AllNeighborsOfKind(unsigned short inID, unsigned char
 // FUNCTION: EXE 0x4231d7
 // Computes the AI tile values (grid, and the map tile clamped to +-120); inWater: water and space tiles get 10 per
 // shore or ice-shore neighbour (negated, minus 10, on a shore tile); else land tiles get 10 per wood unit in 3x3
+// (Rust: ee_astar tile_values.rs over every tile's terrain, the shore lists and, for the land pass, every tile's
+// GetResourceWeight; this stores the values it computed)
 void EEAIContinentManager::UpdateTileValues(bool inWater)
 {
     EEMap* theMap = gWorld.GetMap();
-    for (long x = this->mWidth - 1; x >= 0; x--) {
-        for (long y = this->mHeight - 1; y >= 0; y--) {
-            EETile* theTile = theMap->GetTile(x, y);
-            if (!theTile)
-                continue;
-            long theType = theTile->GetTerrainType();
-            long theValue;
-            if (inWater) {
-                if (theType != kTerrainDeepWater && theType != kTerrainShallowWater && theType != kTerrainSpace)
-                    continue;
-                theValue = (this->IsShoreTile(x, y - 1) ? 10 : 0) + (this->IsShoreTile(x, y + 1) ? 10 : 0) +
-                    (this->IsShoreTile(x + 1, y - 1) ? 10 : 0) + (this->IsShoreTile(x + 1, y) ? 10 : 0) +
-                    (this->IsShoreTile(x + 1, y + 1) ? 10 : 0) + (this->IsShoreTile(x - 1, y - 1) ? 10 : 0) +
-                    (this->IsShoreTile(x - 1, y) ? 10 : 0) + (this->IsShoreTile(x - 1, y + 1) ? 10 : 0);
-                if (this->mIceShoreTiles.size() != 0) {
-                    theValue += (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x, y - 1)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x, y + 1)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x + 1, y - 1)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x + 1, y)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x + 1, y + 1)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x - 1, y - 1)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x - 1, y)) ? 10 : 0) +
-                        (std::binary_search(this->mIceShoreTiles.begin(), this->mIceShoreTiles.end(), U2DPoint<long>(x - 1, y + 1)) ? 10 : 0);
-                }
-                if (this->IsShoreTile(x, y))
-                    theValue = -10 - theValue;
-            } else {
-                if (theType == kTerrainDeepWater || theType == kTerrainShallowWater || theType == kTerrainSpace)
-                    continue;
-                theValue = this->GetResourceWeight(x, y) + this->GetResourceWeight(x, y + 1) + this->GetResourceWeight(x, y - 1) + this->GetResourceWeight(x + 1, y - 1) +
-                    this->GetResourceWeight(x + 1, y) + this->GetResourceWeight(x + 1, y + 1) + this->GetResourceWeight(x - 1, y - 1) + this->GetResourceWeight(x - 1, y) +
-                    this->GetResourceWeight(x - 1, y + 1);
-            }
+    long theSize = this->mWidth;
+    long theCount = theSize * theSize;
+    long x;
+    long y;
+    size_t i;
+    std::vector<int32_t> theTerrain(theCount);
+    std::vector<int32_t> theWeights(inWater ? 0 : theCount);
+    std::vector<int32_t> theValues(theCount);
+    std::vector<int8_t> theBytes(theCount);
+    for (x = theSize - 1; x >= 0; x--) {
+        for (y = theSize - 1; y >= 0; y--) {
+            EETile* theTile = theMap->GetTile(x, y);   // NULL outside the playable map: -1 in the grid
+            theTerrain[x * theSize + y] = theTile ? (int32_t)theTile->GetTerrainType() : -1;
+            if (!inWater)
+                theWeights[x * theSize + y] = (int32_t)this->GetResourceWeight(x, y);
+        }
+    }
+    std::vector<EePoint> theShore(this->mShoreTiles.size());
+    for (i = 0; i < theShore.size(); i++) {
+        theShore[i].x = (int32_t)this->mShoreTiles[i].mX;
+        theShore[i].y = (int32_t)this->mShoreTiles[i].mY;
+    }
+    std::vector<EePoint> theIce(this->mIceShoreTiles.size());
+    for (i = 0; i < theIce.size(); i++) {
+        theIce[i].x = (int32_t)this->mIceShoreTiles[i].mX;
+        theIce[i].y = (int32_t)this->mIceShoreTiles[i].mY;
+    }
+    ee_astar_update_tile_values((int32_t)theSize, theTerrain.data(), inWater, theShore.data(), theShore.size(),
+                                theIce.data(), theIce.size(), theWeights.data(), theValues.data(), theBytes.data());
+    for (x = theSize - 1; x >= 0; x--) {
+        for (y = theSize - 1; y >= 0; y--) {
+            long theValue = theValues[x * theSize + y];
             if (theValue == 0)
                 continue;
             this->mTileValues[this->mWidth * x + y] = theValue;
-            if (theValue <= -0x78)
-                theValue = -0x78;
-            if (theValue >= 0x78)
-                theValue = 0x78;
-            theTile->mAIValue = (char)theValue;
+            theMap->GetTile(x, y)->mAIValue = (char)theBytes[x * theSize + y];
         }
     }
     this->mIceShoreTiles.clear();

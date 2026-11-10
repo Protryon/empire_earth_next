@@ -3066,6 +3066,25 @@ const EePoint *ee_astar_continent_grid_ice_shore(const EeContinentGrid *g, size_
 const EeContinentShore *ee_astar_continent_grid_continent_shore(const EeContinentGrid *g,
                                                                 size_t *count);
 
+/// `EEAIContinentManager::UpdateTileValues` over a `size` x `size` map: `terrain` every tile's terrain type (-1
+/// where the map has none), `shore` and `ice_shore` the manager's sorted lists, `weights` every tile's
+/// `GetResourceWeight` (read only when `water` is false). `values` gets every tile's new value (0: unchanged),
+/// `bytes` the AI value to store with a changed one.
+///
+/// # Safety
+/// `terrain`, `values` and `bytes` valid for `size * size` cells, `weights` too unless `water`; `shore` and
+/// `ice_shore` for their counts.
+void ee_astar_update_tile_values(int32_t size,
+                                 const int32_t *terrain,
+                                 bool water,
+                                 const EePoint *shore,
+                                 size_t shore_count,
+                                 const EePoint *ice_shore,
+                                 size_t ice_count,
+                                 const int32_t *weights,
+                                 int32_t *values,
+                                 int8_t *bytes);
+
 /// `UDataCompression::Compress`.
 ///
 /// # Safety

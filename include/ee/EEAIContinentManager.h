@@ -225,7 +225,7 @@ public:
     unsigned short GetUnitContinentID(EEUnit* inUnit);   // 0x22f15 (ret 4)
     bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID);   // 0x22f5f (ret 0x10)
     bool AllNeighborsOfKind(unsigned short inID, unsigned char inKind);   // 0x2315c (ret 8)
-    void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4)
+    void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4; Rust: ee_astar tile_values.rs)
     void RepairPathArea(const U2DPoint<long>& inTile);  // 0x2372b (ret 4): the path areas after inTile changed kind (provisional name)
     void RemoveSubSectors(EEAIPathSector* inSector);   // 0x24dcf (ret 4)
     void RemoveForestTile(EEUnit* inUnit);  // 0x25325 (ret 4)
