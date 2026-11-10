@@ -4552,3 +4552,59 @@ written only by the constructor, and no other code creates a unit class. `EEGoal
   --stat` after a disk-full error.
 - **EVAT seed 2 is flaky** in the C++ alone: one capture of the unchanged build gave `f8db2871dac2a51c`, the next
   the golden `6388c675769c7b58` (the tech capture's EVAT record; not looked into).
+
+## R6: the form's bookkeeping, hot keys, fonts, music, IME and backgrounds in Rust (ee_ui, branch rust-r6-ui5, 2026-11-10)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; four headers gained a
+`friend struct`): `UIForm`'s `AddCopyDirtyRectangle`, `AddDirtyRectangle` (after its popup test), `CopyData`, `Open`,
+`Close`, `SetPopup`, `RedrawIntersectControls`, `SetAllControlsDirty`, `GetToolTipShadowRectangle` (`form_state.rs`);
+`UIHotKey::CalculateKeyCount`, `GetHotKeyName`, `FireEvents`, `UIHotKeySorter` and `UIForm::UpdateKeyboard`
+(`hotkey.rs`); `UIFontTable::Create`'s record reading, `CreateClosestFont`'s size and `FindOrCreateFont`'s search
+(`font.rs`); `UIManager::SetMusicVolume`, `StartMusic`, `StopMusic`, `UpdateUI`'s music step, the sound-instance
+members, the IME composition calls, the candidate window's change/open/close and `CopyData`'s part
+(`manager_media.rs`); the backgrounds' `DrawBackground` of every kind (bitmap, tiled, left-right, top-bottom,
+stretched, full screen), `DrawTiledBackground`, `UIBackground::Open`/`RelayoutBackground`'s screen rectangle,
+`SetRectangle`, `SetVisibility` and `UIForm::DrawBackground`'s tiling (`background.rs`).
+
+- **Nothing is cached across a host call.** A control's `SetDisplayMode`/`SetDirty` comes back into the form through
+  the manager's `AddDirtyRectangle`; the golden driver's fake manager does exactly that, so `CopyData`'s dirty queue
+  is re-entered mid-pass. The rectangle lists are reached a slot at a time; the controls, tables, events, hot keys and
+  sound instances are opaque handles.
+- **Virtual calls stay virtual.** `DrawTiledBackground` and `DrawStrectchedBackground` are virtual, so a tiling
+  class's `DrawBackground` asks Rust for a plan (`tiled_plan`) and calls its own `DrawTiledBackground`, which forwards
+  to the Rust tile loop and draws each tile through the virtual stretch. `FireEvents`, `GetIMEEnabled`, the forms' IME
+  members and `UpdateKeyboard` are called the same way.
+- **What stays C++:** the per-group hot-key lists and their `std::sort` (MSVC's is an insertion sort, stable, up to
+  32 elements: the replay uses a stable sort), the removals, `CreateHotKeys`; the shared `GEFont` list; the sound
+  manager; the lowercasing (`PlatMbsLwr`, a host call); `UIFullBackground::LoadBackground`'s file names;
+  `UIBackgroundTable`; every draw (`ComputeStretchedCoordsAndScale`, the texture coordinates, `Draw`).
+- **Kept quirks:** `Open` calls `SetTabbing` once per database record; `UpdateKeyboard` compares a group with the
+  hot-key list's size as it is after the previous group's events; `StartMusic` keeps the lower-cased name but loads
+  the name as given; `OpenIMECandidateWindow` asks the window's client origin twice; `CreateClosestFont` is
+  `height * 72 / 96 + 1` in 64 bits. The unsigned tile loops of the C++ never end when a last row or column is
+  `ULONG_MAX`; the Rust stops there (unreachable from real rectangles).
+- **Golden drivers, new traps.**
+  - A `calloc`ed object has no vptr: call the unit's virtuals qualified (`f->UIForm::CopyData()`), or give it its
+    class's vtable through an asm label, `extern "C" const char k[] __asm__("??_7UIManager@@6B@")` (`UpdateUI` calls
+    the virtual `UpdateKeyboard`).
+  - Members that look header-inline are not always: `GERhombus()` (GERhombus.cpp), `UILayoutUtility()`
+    (UITrampolines.cpp), `GERectangle::And` (GERectangle.cpp, linked as its object), `GERectangle::RoundToNearest`
+    (GEBitmap.cpp); under `/FORCE:UNRESOLVED` each is a call to address 0. Define them in the driver or link the
+    object.
+  - Abstract engine classes (the rasterizer, a surface) are faked as tables of stubs: every rasterizer slot the
+    traced `Draw(GEBitmap*)`, the surface's slot `N` returning `16 * (N + 1)`, and the driver prints the sizes it
+    reads, so the replay takes them from the golden.
+  - The Bash tool turned `"\n"` inside a quoted heredoc and a `sed` replacement into a real line break twice: write
+    driver edits with the editor or a Python file.
+- **Goldens:** `golden_form_state.txt` (24 forms x 30 operations, the form's whole state after each),
+  `golden_hotkey.txt` (60 names, 300 `FireEvents`, 75 forms of `AddHotKey`s and `UpdateKeyboard`s),
+  `golden_font.txt` (40 tables), `golden_media.txt` (30 managers x 30 operations), `golden_background.txt`
+  (200 backgrounds x 3 redraws, relayout, move, visibility). Each Rust test replays the whole file; each driver over
+  the forwarders prints the same file and equals the original on 3 or 4 more seeds at 10x the size.
+- **Gates run:** after each of the four commits `build.py -j 4 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle (seeds
+  2-7, the main checkout's open tree) identical to `ref`, `rust_build.py gate` PASS (ee_ui: 95 tests); the changed
+  units compiled alone before each full build. No tour, screenshot, LAN game or POSIX build was run.
+- **Only a tour exercises these** (EE-SIM draws no UI): every commit. `form_state` runs on every UI frame and at
+  every form's open and close; the hot keys on every keyboard update of a form (the game's shortcuts, Tab between
+  controls); the font table when the UI database loads and every scaled control; the music at every menu change and
+  the volume slider; the IME only with an IME; the backgrounds on every redraw of a menu or panel.
