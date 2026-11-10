@@ -53,6 +53,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/AI Thread/EEAIAStarView.cpp",
                        # TEST ONLY: the capture of the tile A* searches (EE_SIM_CAPTURE; ee/EEAIAStarCapture.h)
                        "Empire Earth/AI Thread/EEAIAStarCapture.cpp",
+                       # TEST ONLY: the capture of the continent manager's analysis (ee/EEAIContinentCapture.h)
+                       "Empire Earth/AI Thread/EEAIContinentCapture.cpp",
                        # the start of the Rust library (ee_rust_init)
                        "Empire Earth/Empire Earth/EERust.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)

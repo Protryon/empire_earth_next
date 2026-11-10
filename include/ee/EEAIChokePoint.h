@@ -3,6 +3,7 @@
 // EEAIArea serial of what EEAIContinentManager's lookup returns. Requires ee/EEAIArea.h.
 #ifndef EE_EEAICHOKEPOINT_H
 #define EE_EEAICHOKEPOINT_H
+#include <stdint.h>
 
 class EEAIChokePoint : public EEAIArea {
 public:
@@ -22,8 +23,8 @@ public:
 
 // EEAIChokePoint.cpp's terrain-pass arrays (.bss 0x4e5c44..0x4e5c54; one entry per tile, x * size + y;
 // EEAIAStarChokePointGoal::AcceptTile 0x10fcc reads them) (provisional names)
-extern long* gEEAIChokeTileKinds;           // 0x4e5c44 (0x36: a tile with a resource or an area of its own)
-extern unsigned long* gEEAIChokeTileSerials;        // 0x4e5c48 (the serial of the area the tile belongs to)
+extern int32_t* gEEAIChokeTileKinds;        // 0x4e5c44 (0x36: a tile with a resource or an area of its own; fixed-width: ee_astar choke.rs)
+extern uint32_t* gEEAIChokeTileSerials;     // 0x4e5c48 (the serial of the area the tile belongs to)
 extern unsigned char* gEEAIChokeTileFlags;  // 0x4e5c4c (set: a tile between two areas)
 extern long gEEAIChokeWidth;                // 0x4e5c50
 extern long gEEAIChokeHeight;               // 0x4e5c54

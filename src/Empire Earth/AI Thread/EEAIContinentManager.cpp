@@ -79,6 +79,7 @@
 #include "ee/EEAIAStarMachine.h"
 #include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"
+#include "ee/EEAIContinentCapture.h"   // TEST ONLY: the analysis' capture (EE_SIM_CAPTURE)
 
 // Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
 // 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
@@ -2582,6 +2583,7 @@ bool EEAIContinentManager::Rebuild()
     }
     this->mState = 0;
     this->ClearChecksum();
+    EEAIContinentCapture(kContinentCaptureRebuild);   // TEST ONLY
     return this->mSectorTiles.size() == 0;
 }
 
@@ -2606,6 +2608,7 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
     this->NumberContinentChains(inMap, kAIChainLandSpace);
     this->NumberContinentChains(inMap, kAIChainLandWaterSpace);
     this->NumberContinentChains(inMap, kAIChainLandCliffSpace);
+    EEAIContinentCapture(kContinentCaptureBuild);   // TEST ONLY: with the work grids still there
     delete this->mTileValues;
     this->mTileValues = NULL;
     if (inMap->mL195610 < 0x4b && gWorld.mNumPlayers < 5 && gWorld.mPopulationLimit < 1000) {

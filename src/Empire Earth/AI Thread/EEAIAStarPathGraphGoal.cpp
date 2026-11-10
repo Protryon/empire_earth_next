@@ -75,20 +75,21 @@ EEAIAStarPathGraphGoal::~EEAIAStarPathGraphGoal()
 // node, next to the goal tile, is the start sector
 void EEAIAStarPathGraphGoal::SearchDone(EEAIAStarGraphMachineBase* inMachine)
 {
+    // the current node and whether an open node is left, as the machine's hook noted them (the storage's lists are
+    // Rust's: ee_astar graph.rs)
     bool theFound = false;
-    EEAIAStarGraphNode* theNode = this->mStorage->mCurrentNode;
-    if (theNode == NULL) {
-        bool theOpen = this->mStorage->mOpenList != NULL || this->mStorage->mSortedOpen != NULL;
-        for (long i = this->mStorage->mBucketCount - 1; i >= 0 && !theOpen; i--)
-            theOpen = this->mStorage->mOpenTable[i] != NULL;
-        if (!theOpen) {
+    if (!this->mStorage->mHookHasCurrent) {
+        if (!this->mStorage->mHookHasOpen) {
             this->mSearchFailed = true;
             this->mTookNearest = this->mAcceptNearest;
         }
-    } else if (UMAbs(theNode->mTile.mX - this->mGoalTile.mX) <= 1 && UMAbs(theNode->mTile.mY - this->mGoalTile.mY) <= 1) {
-        this->mSearchFailed = false;
-        this->mTookNearest = this->mAcceptNearest;
-        theFound = theNode->mIndex == this->mStartSector;
+    } else {
+        const EEAIAStarGraphNode& theNode = this->mStorage->mHookCurrent;
+        if (UMAbs(theNode.mTile.mX - this->mGoalTile.mX) <= 1 && UMAbs(theNode.mTile.mY - this->mGoalTile.mY) <= 1) {
+            this->mSearchFailed = false;
+            this->mTookNearest = this->mAcceptNearest;
+            theFound = theNode.mIndex == this->mStartSector;
+        }
     }
     if (!this->mSearchFailed) {
         long theRevs;

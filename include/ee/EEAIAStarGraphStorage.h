@@ -3,27 +3,41 @@
 // 0x16070..0x16c0e): the twin of EEAIAStarStorage over graph nodes (an index per node instead of a tile): a closed list
 // (+0x0c), two hash tables of mBucketCount buckets (closed +0x04, open +0x08), a sorted open
 // list (+0x14/+0x18), a fast open list (+0x10), the found path (+0x1c, walked through mParent), and per node index a
-// flag byte (+0x28: 8 closed, 4 open) and the node (+0x2c). Nodes come from a static free list with counters. Derived:
-// EEAIAStarGraphTerrainStorage. Slots named by vtable offset; fields by offset (provisional names).
+// flag byte (+0x28: 8 closed, 4 open) and the node (+0x2c). Nodes came from a static free list with counters. Derived:
+// EEAIAStarGraphTerrainStorage. Slots named by vtable offset (provisional names).
+//
+// Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tables, the per-index arrays and the machine's search
+// steps are Rust (rust/crates/ee_astar/src/graph.rs, one EeAStarGraphStorage per storage). The class keeps its vtable
+// and forwards; the goals get the nodes the machine hands them (IsGoalNode, GetStepCost) and the current node
+// (SearchDone) as EEAIAStarGraphNode views built from the Rust node, and the lists' objects through ListObjects.
 // Requires ee/EETileCoordinate.h.
 #ifndef EE_EEAIASTARGRAPHSTORAGE_H
 #define EE_EEAIASTARGRAPHSTORAGE_H
+#include <vector>
 #include "ee/EEAIKindIDs.h"
+#include "rust/ee_rust.h"         // EeAStarGraphStorage, EeAStarGraphKind, EeAStarGraphList, EeAStarGraphNodeView
 
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 
-// A graph search node (0x28 bytes; NewNode 0x162b0 pops one off the free list or allocates one). Names are provisional.
+// A graph search node as the goals see one (0x28 bytes in the original; the links are Rust's now and stay NULL here:
+// the goals and the route planners read mObject, mIndex and mTile). Names are provisional.
 struct EEAIAStarGraphNode {
-    EEAIAStarGraphNode(const EETileCoordinate& inTile, long inIndex)
-        : mParent(NULL), mNext(NULL), mPrev(NULL), mIndex(inIndex), mCost(0), mPathCost(0), mEstimate(0), mTile(inTile)
+    EEAIAStarGraphNode()
+        : mObject(NULL), mParent(NULL), mNext(NULL), mPrev(NULL), mIndex(0), mCost(0), mPathCost(0), mEstimate(0), mTile(0, 0)
     {
     }
+    EEAIAStarGraphNode(const EETileCoordinate& inTile, long inIndex)
+        : mObject(NULL), mParent(NULL), mNext(NULL), mPrev(NULL), mIndex(inIndex), mCost(0), mPathCost(0), mEstimate(0), mTile(inTile)
+    {
+    }
+    // New (port): the view of a Rust node (EEAIAStarGraphStorage.cpp)
+    explicit EEAIAStarGraphNode(const EeAStarGraphNodeView& inView);
 
     AStarGraphableObjectBase* mObject;      // +0x00 (the graph object: EEAIContinent's base at +0x68)
-    EEAIAStarGraphNode* mParent;            // +0x04 (the path is walked through it)
-    EEAIAStarGraphNode* mNext;              // +0x08 (a hash bucket, a list; the free list)
-    EEAIAStarGraphNode* mPrev;              // +0x0c
+    EEAIAStarGraphNode* mParent;            // +0x04 (the path is walked through it: Rust's now, NULL here)
+    EEAIAStarGraphNode* mNext;              // +0x08 (a hash bucket, a list; the free list: Rust's now, NULL here)
+    EEAIAStarGraphNode* mPrev;              // +0x0c (NULL here)
     long mIndex;                            // +0x10 (the object's index: mFlags, mNodes)
     unsigned long mCost;                    // +0x14 (the sorted open list's key)
     long mPathCost;                         // +0x18
@@ -40,47 +54,28 @@ public:
     virtual bool Init(long inCount);        // +0x0c 0x16514 (sizes the storage, new hash tables)
     virtual void PrepareArrays(long inCount);  // +0x10 0x16af6 (the per-index arrays)
 
-    static void FreeNodePool();             // 0x16070 (deletes the free list)
-    static void ReleaseNode(EEAIAStarGraphNode* inNode);   // 0x1616b
-    void AddClosed(EEAIAStarGraphNode* inNode);             // 0x1613f
-    void AddOpen(EEAIAStarGraphNode* inNode);               // 0x1618a
-    long GetBucket(long inX, long inY);     // 0x16233 (out of line, unlike EEAIAStarStorage's)
+    static void FreeNodePool();             // 0x16070 (nothing to free: the Rust storages free their nodes with themselves)
     bool GetFirstPathNode(EETileCoordinate& outTile, long& outIndex);   // 0x16258
-    // 0x162b0 (thiscall: `ret 0x10`; this unused)
-    EEAIAStarGraphNode* NewNode(EETileCoordinate inTile, AStarGraphableObjectBase* inObject, long inIndex);
     bool GetNextPathNode(EETileCoordinate& outTile, long& outIndex);    // 0x1634f
-    void Clear();                           // 0x16394 (every node back to the free list)
-    void UpdateOpen(EEAIAStarGraphNode* inNode);            // 0x1656d
-    EEAIAStarGraphNode* RemoveNearestClosed(const EETileCoordinate& inTile);   // 0x1665f
-    EEAIAStarGraphNode* RemoveNearestOpen(const EETileCoordinate& inTile);     // 0x16771
-    EEAIAStarGraphNode* RemoveBestOpen();   // 0x16905
-    void RemoveClosed(EEAIAStarGraphNode* inNode);          // 0x16aa5
-    void InsertSorted(EEAIAStarGraphNode* inNode);          // 0x16b5b
-    void Push(EEAIAStarGraphNode* inNode);  // 0x16bb5 (in front of the fast open list)
-    EEAIAStarGraphNode* Pop();              // 0x16be1
-    // inline (COMDATs 0x28b6d / 0x28b87 after their first user, the chain machine's AddNode 0x28aa7; also the path
-    // machine's 0xab6c1): the index's node when it is open (flag 4) / closed (flag 8), else 0 (provisional names)
-    EEAIAStarGraphNode* GetOpenNode(long inIndex) { return this->mFlags[inIndex] & kAStarTileOpen ? this->mNodes[inIndex] : 0; }
-    EEAIAStarGraphNode* GetClosedNode(long inIndex) { return this->mFlags[inIndex] & kAStarTileClosed ? this->mNodes[inIndex] : 0; }
+    // New (port): the objects of a list's nodes in its order (the chain goal's NumberChain)
+    void ListObjects(EeAStarGraphList inList, std::vector<AStarGraphableObjectBase*>& outObjects);
     // New (port), TEST ONLY: the current and path nodes and every list's nodes in order into the A* capture
     // (ee/EEAIAStarCapture.h)
     void CaptureNodes(EEAIAStarCaptureRun& ioRun);
 
-    EEAIAStarGraphNode** mClosedTable;      // +0x04 (mBucketCount buckets; delete[] in the dtor)
-    EEAIAStarGraphNode** mOpenTable;        // +0x08 (mBucketCount buckets; delete[] in the dtor)
-    EEAIAStarGraphNode* mClosedList;        // +0x0c
-    EEAIAStarGraphNode* mOpenList;          // +0x10 (Push/Pop)
-    EEAIAStarGraphNode* mSortedOpen;        // +0x14 (ascending mCost)
-    EEAIAStarGraphNode* mSortedOpenTail;    // +0x18
-    EEAIAStarGraphNode* mPath;              // +0x1c
-    EEAIAStarGraphNode* mPathCursor;        // +0x20
-    EEAIAStarGraphNode* mCurrentNode;       // +0x24
-    unsigned char* mFlags;                  // +0x28 (one byte per index: 8 closed, 4 open)
-    EEAIAStarGraphNode** mNodes;            // +0x2c (one per index)
     long GetCount() const { return this->mCount; }
+
+    // New (port): what the goal reads of the storage during a search, set by the machine's SearchDone hook before it
+    // asks the goal: the current node (a view) and whether an open node is left
+    bool mHookHasCurrent;
+    EEAIAStarGraphNode mHookCurrent;
+    bool mHookHasOpen;
+
+    EeAStarGraphStorage* mCore;             // the Rust storage
     long mCount;                            // +0x30 the index count
-    long mBucketCount;                      // +0x34 (= 0x1b)
-    long mOldCount;                         // +0x38 (the count the arrays were sized for)
+
+protected:
+    explicit EEAIAStarGraphStorage(EeAStarGraphKind inKind);
 };
 
 #endif

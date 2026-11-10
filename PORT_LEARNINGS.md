@@ -3620,3 +3620,85 @@ the five test programs, clippy for the Linux and macOS targets. Linux cannot run
   retired the binary tree (D9). The C++ reader and the tool's `ids` command were dropped. Git merged open_data.py
   without a conflict but left main's `if a.binary:` in `cmd_build`, an AttributeError on every build now that
   `--binary` is gone. Main's `ai_files` (ais.json into a tree's Data/ai) kept.
+
+## The next computer player's towers and the epochs (2026-11-08)
+
+- **A computer player's towers upgrade by themselves.** The tower upgrades (`copper_tower_upgrade`,
+  `bronze_wall_and_tower_upgrade`, ...) are dbtechtree kind-7 techs with `mResearchedWithEpoch`, and
+  `EEComputerPlayer::EpochReached` -> `EnterEpoch` -> `EETechTreeEpoch::ResearchKind(7, true)` researches them
+  free the moment the epoch is reached, for the classic and the next engine alike; their events convert every tower
+  of the old class (dbeffects kind 19, `Fn1CACB4`) and obsolete its tech. Reading the scripts suggested the towers
+  "stay Prehistoric all game" (AI_RESEARCH §8.31); a trace of the view's `buildings[]` each minute showed the
+  opposite. Measure before fixing. The `research` verb answered such a tech `busy`; it is now `done` (n=0).
+- **A research started at a building leaves `mEpochIDs`** (TryResearch hands it to the producer's queue), so the
+  verb's busy check missed it and a second order queued it again; it now also looks at the producers' queues.
+- **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
+  then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
+  (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## R5b.1, the graph searches: EEAIAStarGraphStorage and EEAIAStarGraphMachine in Rust, the continent analysis captured (ee_astar graph.rs, branch rust-r5b-graph, 2026-11-09)
+
+The graph searches (`EEAIAStarGraphMachine<S, G, M>`: the sub sector paths of `EEPathManager` over
+`EEAIAStarGraphStorage`, the continental chains of `EEAIContinentManager::NumberContinentChains` over
+`EEAIAStarGraphTerrainStorage`) are Rust now: `rust/crates/ee_astar/src/graph.rs` holds the node storage (the closed
+list, the two hash tables of 27 buckets, the sorted and the fast open lists, the per-index flag and node arrays, the
+path cursor) and the machine's `Start`, `Expand`, `Restart`, `NextNode` and `AddNode`, line by line. The goals
+(`EEAIAStarPathGraphGoal`, `EEAIAStarGraphContinentalChainGoal`) and the route planners (`EEAIGraphPathGoalModifierBase`
+and its subclasses) stay C++.
+
+- **Node views instead of node pointers.** The goals take `EEAIAStarGraphNode*` (`IsGoalNode`, `GetStepCost`; the
+  route planners read `inFrom->mObject`, the goals `mIndex` and `mTile`) and `SearchDone` read the storage's current
+  node and open lists. The Rust machine hands the hooks an `EeAStarGraphNodeView` (tile, costs, index, object), which
+  the C++ hook turns into a stack `EEAIAStarGraphNode` with NULL links: nothing reads a node's `mParent`/`mNext` but
+  the storage itself. `SearchDone`'s reads are parked on the storage (`mHookHasCurrent`, `mHookCurrent`,
+  `mHookHasOpen`) by the hook before it calls the goal, as the tile machine's hooks do; `NumberChain` reads the
+  closed and fast open lists' objects through `ListObjects`.
+- **The objects are opaque handles.** A node's `mObject` is an `AStarGraphableObjectBase*`, at +0x68 inside
+  `EEAIContinent` (multiple inheritance) and at +0 inside `EEAIPathSubSector`. Rust stores the base pointer's bits
+  (`usize`) and never reads them; the hooks convert `M*` -> `AStarGraphableObjectBase*` -> `void*` and back the same
+  way (`static_cast` both times), so the base offset is applied and undone by the compiler. A `void*` -> `M*` cast
+  without the intermediate base type would be wrong for the continents.
+- **Kept quirks:** `RemoveNearestOpen` sets the sorted head from the removed node's (null) prev when it was the
+  tail; `RemoveBestOpen`'s 15-best refill counts a replacement as a seen node; the nearest removals clear a node's
+  flag but leave its node-array entry (the flag gates it); `AddNode` compares a node's `long` path cost with the new
+  `unsigned long` cost unsigned; `Restart`'s fallback node has index -1 and sits on no list. `Expand`'s
+  `theObject->mID != -1` test (an `unsigned short`, never -1) is asked once per node instead of per neighbour: a plain
+  read, no event.
+- **The capture gate found nothing to fix:** the six oracle games' 14,992 ASGR records and the late/space/calamity
+  profiles' (6,943/2,230, 2,597/3,345, 1,370/1,155/942 graph runs) equal the C++ digests at the first build, with
+  the sim oracle identical against the reference and against the C++ baseline exe on the same data tree.
+- **The profile goldens were incomplete.** `golden_cpp_late/space/calamity.txt` listed no ASGR lines (recorded before
+  that capture existed) and no CB** lines (the combat capture's; on this branch the combat formulas are already Rust,
+  so no C++ golden of them can be recorded here any more), which made `sim_capture.py check --profile ...` fail on
+  tags that simply had no golden. The ASGR lines are now recorded (from the C++ baseline exe of this branch, before
+  the port); `check` reports a tag the golden file does not list for a seed as "no golden" and compares the rest,
+  still failing on any line that differs or is missing. The CB** lines of the three profiles remain unrecorded.
+- **The continent analysis is captured (CNTB, CNTR; `ee/EEAIContinentCapture.h`).** One record after
+  `BuildRegions` (before it frees its work grids) and one after every `Rebuild`: the manager's counters, every tile's
+  continent and sub sector id and tile value, the continent adjacency matrix, every continent, path area, path
+  sector, sub sector, choke point, hill, forest and rectangle area with its tiles, ids and links, the shore tiles.
+  The oracle games make one build and 38-53 rebuilds each (late/space: 106-125). The goldens were recorded from the
+  C++ analysis with the graph machine already Rust (equal by ASGR and the oracle). A sub sector's `mNumTiles` is not
+  in the record: the C++ never sets it. Every field is widened to 32 bits so the record reads the same on LP64.
+- **The first leaf of the analysis is Rust:** the choke point pass's grid smoothing (`EEAIChokeSmooth`,
+  `ee_astar/src/choke.rs`), over the pass's grids, which became fixed-width (`int32_t`/`uint32_t`) for the C ABI.
+  The serial a tile takes is its last non-zero-kind neighbour's in the 3x3 walk, zero included: the C++'s
+  `(theSerial = serials[other]) != 0` assigns before it tests. The first port assigned only non-zero serials and
+  the sim oracle caught it at once (every seed diverged; the CNTB record would have too). Its `theSerial` lives
+  outside the tile loops but is only used after a non-zero kind was read, so nothing carries over. The later passes
+  skip the area tiles, so a one-tile gap between two areas is never flagged and a two-tile gap is; pinned by tests.
+  Gate: the CNTB and CNTR
+  digests equal to the C++ goldens in the four profiles, the sim oracle identical against both references.
+- **The shared data tree moved under the gates.** The `rust` branch took the D9 data merge while this branch was
+  being gated; the main checkout's `build/open_data/tree` was rebuilt by the newer converter and this branch's exe
+  could not load it (`Empire Earth.cpp (1074) : Verification failure` at start, after `sim: warning: ... was built by
+  other converter code`). The gates ran on a tree built by this worktree's own converter (`open_data.py build
+  build/open_data/tree`, about 4 minutes), with the C++ baseline exe's oracle traces on the same tree as a second
+  reference. A worktree should build its own tree whenever `sim.py` prints that warning.
+- **Text-mode Python converts line endings on Windows.** `Path.read_text()`/`write_text()` turned four LF files into
+  CRLF (two Rust files and `EEAIChokePoint.cpp`/`.h`), which `git diff --stat` showed as whole-file changes; restored
+  from `git show HEAD:` in bytes mode. Edit these files in bytes mode only.
+- **Gates run:** `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM) for the graph port and for the choke smoothing;
+  `sim_capture.py check` PASS in the four profiles; the sim oracle identical on seeds 2-7 (against `ref` and against
+  the C++ baseline); `rust_build.py gate` PASS (ee_astar: 60 tests, 19 for the graph storage and machine, 4 for the
+  smoothing). Not run: `gates.sh`, `eedata check`/`cppgate` (no data change), any macOS or Linux build.

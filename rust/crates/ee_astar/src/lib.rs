@@ -8,14 +8,20 @@
 //! space searches and the bounded one), their modifiers' costs and tile tests (`modifiers`), and the path area and
 //! path sector fills' tile tests (`area_goals`).
 //!
+//! The graph searches (`EEAIAStarGraphMachine` over `EEAIAStarGraphStorage`: the sub sector paths and the
+//! continental chains) are `graph`: their node storage and machine, the goals and route planners staying C++ behind
+//! `ffi::EeAStarGraphCallbacks`. `choke` is the continent manager's choke point pass's grid smoothing.
+//!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
 //! `tools/sim_capture.py`'s A* records: every search of the six oracle games, its goal calls and view answers and its
 //! storage afterwards, digested and compared with the digests of the C++ machine.
 
 pub mod area_goals;
+pub mod choke;
 pub mod ffi;
 pub mod goals;
+pub mod graph;
 pub mod machine;
 pub mod modifiers;
 pub mod path_goals;
@@ -25,5 +31,7 @@ pub mod storage;
 mod tests;
 #[cfg(test)]
 mod tests_areas;
+#[cfg(test)]
+mod tests_graph;
 #[cfg(test)]
 mod tests_paths;
