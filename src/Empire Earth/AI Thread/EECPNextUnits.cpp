@@ -1253,6 +1253,32 @@ static int LuaClass(lua_State* L)
     EECPUnitsSetInt(L, "garrison", c->mGarrisonCapacity);
     EECPUnitsSetInt(L, "transport", c->mTransportCapacity);
     EECPUnitsSetBool(L, "can_garrison", c->mCanGarrison);
+    // the class's military data (the classic unit selector's: its AI kind, the kinds it counters, its roles,
+    // its influence and epoch, its domain)
+    EECPUnitsSetInt(L, "ai_kind", (long)c->mAIKind);
+    lua_createtable(L, 3, 0);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind1);
+    lua_rawseti(L, -2, 1);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind2);
+    lua_rawseti(L, -2, 2);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind3);
+    lua_rawseti(L, -2, 3);
+    lua_setfield(L, -2, "counters");
+    EECPUnitsSetBool(L, "attack_unit", c->mIsAttackUnit);
+    EECPUnitsSetBool(L, "defense_unit", c->mIsDefenseUnit);
+    EECPUnitsSetBool(L, "medic", c->mIsMedic);
+    EECPUnitsSetBool(L, "converts", c->mHasCalamityPowers || c->mConversionRate != 0.0f);
+    EECPUnitsSetBool(L, "is_transport", c->IsTransport());
+    EECPUnitsSetBool(L, "mine", c->mFamily == kUnitFamilyMines);
+    EECPUnitsSetInt(L, "influence", c->mInfluence);
+    EECPUnitsSetInt(L, "epoch", c->mEpoch);
+    EECPUnitsSetInt(L, "pop", c->GetPopulationCost());
+    {
+        unsigned char d = c->GetDomains();
+        const char* theDomain = ((d & kMovementAir) && !c->FliesOver()) ? "air"
+            : (d & kMovementSea) ? "sea" : (d & kMovementSpace) ? "space" : "land";
+        EECPUnitsSetStr(L, "domain", theDomain);
+    }
     if ((unsigned long)theType < me->mUnitClassUpgrades.size() && me->mUnitClassUpgrades[theType] != NULL) {
         EEUnitClassUpgrade* u = me->mUnitClassUpgrades[theType];
         EECPUnitsSetInt(L, "hp", u->mMaxHitPoints);

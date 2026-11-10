@@ -932,6 +932,11 @@ from data, so that a script can make its decisions with the same numbers:
 - `ai.find_site` takes `margin = true` (the footprint grown by a tile is free too: the classic's CanBuildAt inMargin)
   and `far = true` (the rings from `max` inward).
 - `ai.class` has `tech` (the class's own tech id, what `ai.train` orders).
+- `ai.class` has the class's military data, which the classic unit selector reads (the db's, never fogged):
+  `ai_kind` (the AI kind: the counter families), `counters` (the three kinds it counters, 0 for none), `attack_unit`,
+  `defense_unit` (the attack and defence group roles), `medic`, `converts` (a priest's or calamity powers),
+  `is_transport`, `mine`, `influence` (its weight in the classic's strength sums), `epoch`, `pop` (its population cost)
+  and `domain` (`land`, `sea`, `air` or `space`).
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
