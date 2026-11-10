@@ -16,6 +16,7 @@
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
@@ -59,7 +60,7 @@ EECCCloaking::~EECCCloaking()
 // also makes the capitols grouped around it cast cloaking. Returns true
 bool EECCCloaking::Start(EECalamity* inCalamity)
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(inCalamity->GetCasterUnit());
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inCalamity->GetCasterUnit());
     EEAreaEffect* theEffect = gAEManager.CreateAreaEffect(0x2e, theUnit);
     theUnit->mAreaEffects.Add(theEffect);
     theEffect->Dereference();
@@ -81,7 +82,7 @@ bool EECCCloaking::Start(EECalamity* inCalamity)
 // Uncloaks the caster: removes its area effect of kind 8 and stops the sound
 void EECCCloaking::Stop(EECalamity* inCalamity)
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(inCalamity->GetCasterUnit());
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inCalamity->GetCasterUnit());
     theUnit->mAreaEffects.Remove(8);
     inCalamity->StopSound();
     theUnit->mCloaked = 0;
@@ -160,7 +161,7 @@ void EECCCloaking::CloakGroup(EECalamity* inCalamity, EEComplexUnit* inUnit, EEA
     do {
         theAdded = false;
         for (unsigned long i = 0; i < theCandidates.size(); i++) {
-            EEUnit* theCandidate = dynamic_cast<EEComplexUnit*>(theCandidates[i]);
+            EEUnit* theCandidate = EEUnitCast<EEComplexUnit>(theCandidates[i]);
             bool theFound = false;
             for (unsigned long j = 0; j < theGroup.size(); j++) {
                 if (theCandidate == theGroup[j]) {
@@ -186,7 +187,7 @@ void EECCCloaking::CloakGroup(EECalamity* inCalamity, EEComplexUnit* inUnit, EEA
         }
     } while (theAdded);
     for (unsigned long i = 0; i < theGroup.size(); i++) {
-        EEComplexUnit* theMember = dynamic_cast<EEComplexUnit*>(theGroup[i]);
+        EEComplexUnit* theMember = EEUnitCast<EEComplexUnit>(theGroup[i]);
         if (theMember != inUnit)
             this->CloakUnit(inCalamity, theMember);
     }

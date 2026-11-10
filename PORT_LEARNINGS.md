@@ -4608,3 +4608,49 @@ stretched, full screen), `DrawTiledBackground`, `UIBackground::Open`/`RelayoutBa
   every form's open and close; the hot keys on every keyboard update of a form (the game's shortcuts, Tab between
   controls); the font table when the UI database loads and every scaled control; the music at every menu change and
   the volume slider; the IME only with an IME; the backgrounds on every redraw of a menu or panel.
+## R5b.4, second round: the engine messages and the players' inputs in the codec, the message kind, the object kind (ee_netmsg engine.rs, ee_units kinds.rs; branch rust-r5b4-core, 2026-11-10)
+
+**The engine messages.** `rust/crates/ee_netmsg/src/engine.rs` holds the wire layout of `NEMessage.cpp`'s 28
+message classes (types 0x20..0x3c; 0x2c has none), with class ids after the game classes'. `NEMessage.cpp`'s
+`ExportSize`/`ExportMessage`/`ImportMessage` hand their members as slots, as the game messages do; the fixed classes'
+`ExportSize` is `ee_netmsg_fixed_size` (the old constants are the Rust table's sums, checked by a test), and
+`NEMessage::GetHeaderSlots` replaced `EEMessage`'s copy. Two new member kinds: `Raw(n)` (`NEMXferMessage`'s whole
+1 KB block) and `Inputs`, the players' inputs at the end of the two communications ticks (a u8 count, then each
+nested message, game or engine, in its own layout).
+
+- **The nested inputs' rules are Rust's:** only `(unsigned char)mPlayerInputs.size()` inputs travel (the count byte
+  and the loop both use it), and the import's walk (`walk_inputs`) builds each input where the last one ended and,
+  for a type no factory builds (`ConvertMemoryToMessage` returns NULL), stays where it is, so every later input is
+  tried at the same place and skipped too (the original's loop, kept). The C++ builds each input through a callback
+  (`ee_netmsg_inputs_import`; it returns the input's `ExportSize`, 0 for none); the inputs' own bytes are exported
+  by their own classes and handed over as an array of slots.
+- **The gate: NMNE**, a new capture record (ee/EEMessageCapture.h): every engine type over the sweep's edge payloads
+  (fixed bytes in nine patterns, strings of 0..300 bytes), and the ticks over seven input lists: none, one game
+  message, a chat with an engine message and a wall, an unknown type first (0x05), a known one then an unknown one
+  (0xfe), a tick inside a tick, 255 inputs. 549 records per game; the nested game inputs are recorded inside the
+  NMNE record (their own NMIM records are off during the engine sweep, so the older digests did not change). The
+  goldens came from the unchanged C++ engine codec (24 games, one digest), recorded as pure insertions; the Rust
+  codec gives them in all four profiles.
+- **The NM** goldens the first round left out** (late and space seeds 4-7, calamity 5-7): recorded from the tree
+  before the codec moved (27f8ffc2^, a scratch worktree with its own staging root), as pure insertions; the Rust
+  codec's captures equal them.
+
+**The message kind.** `ee_netmsg_message_kind(type)`: engine (the engine factory's types), game (0x41..0xfd, the
+types the game registers its factory for, which every `EEMessage` class takes: `EEMEndCinematic`'s 0x9d is one the
+factory does not build), none. A message object is an `EEMessage` exactly when its type is a game type (each
+constructor passes its type; the import constructors take the type the factory dispatched on), so
+`EEGameMessageCast` (ee/EEMessage.h) replaces the four `dynamic_cast<EEMessage*>` (`EEPhysics::DrainInput` twice,
+`EEServer::PrepareLocalInput`, `EEClient`'s local input stamp).
+
+**The object kind.** `RTSUnit::mObjectKind` (a byte in a non-copyable holder, so no implicit copy or assignment of a
+unit can carry another object's class: the build proves there is none) is set first thing by each constructor
+(`RTSUnit` 0, `EEUnit` 1, `EEComplexUnit` 2) and reset on entry by each destructor (`~EEUnit` 1, `~RTSUnit` 0), as
+the vptr is; pooled units keep theirs, as their vptr. `EEUnitCast<EEComplexUnit>(u)` (ee/EEUnitKind.h) reads
+`EE_UNIT_OBJECT_KINDS` (kinds.rs) and equals `dynamic_cast<EEComplexUnit*>(u)` from any `RTSUnit` (every `RTSUnit`
+is an `EEUnit`: no other class derives from it).
+
+- **Converted:** 28 casts in Units, Communications, Physics Thread, Calamities, Player and Scenario Manager.
+  **Left** (54 of the 82 sites, one of them in a header): the 17 of the load path (`EEComplexDoppelganger.cpp` 10, the `RepairPointers` of `EEUGAttackUnit`,
+  `EEUGCastCalamity`, `EEUGGather`, `EEUGPatrol` and `EEAirTrafficControl` 3: the save work's files), the AI's 31,
+  the graphics thread's 3, `EEPWorldHelper`, the UI's and `EESim.cpp`'s one each, and the 8 `dynamic_cast<EEUnit*>`.
+||||||| abb66a9f

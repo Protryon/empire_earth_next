@@ -5,11 +5,15 @@
 //! (checked against the layout: a wrong binding stops the game with the member's name). On export a string slot is
 //! its bytes and their count, a record slot its records (`data`, `size` = one record's size, `count`), a blob slot
 //! its bytes; on import the fixed members are written, and a string's, records' or blob's `offset`/`count` say
-//! where the C++ finds it (the blob is also copied into `data` when `size` holds it). No Rust reference outlives a
-//! call; the C++ keeps the objects.
+//! where the C++ finds it (the blob is also copied into `data` when `size` holds it). The players' inputs slot (the
+//! engine ticks' last member) is `data` = an array of `count` slots, one per input of the list (its bytes and their
+//! count; for a size alone the bytes may be NULL); on import its `offset` is the count byte's and `count` the count,
+//! and the C++ builds the inputs with `ee_netmsg_inputs_import`. Class ids: the game classes (`classes`), then the
+//! engine classes (`engine`). No Rust reference outlives a call; the C++ keeps the objects.
 
 use crate::classes::{CLASSES, CLASS_COUNT, TYPES};
-use crate::codec::{self, Error, Source, Span, Value};
+use crate::codec::{self, Error, Input, Source, Span, Value};
+use crate::engine::{EE_NETMSG_ENGINE_BASE, ENGINE_CLASSES, ENGINE_TYPES};
 use crate::schema::{Kind, MsgClass, HEADER_SIZE};
 use crate::units;
 
@@ -24,14 +28,48 @@ pub struct EeNetMsgSlot {
 }
 
 fn class(id: u32) -> &'static MsgClass {
-    match CLASSES.get(id as usize) {
+    let found = if id < EE_NETMSG_ENGINE_BASE {
+        CLASSES.get(id as usize)
+    } else {
+        ENGINE_CLASSES.get((id - EE_NETMSG_ENGINE_BASE) as usize)
+    };
+    match found {
         Some(c) => c,
-        None => panic!("ee_netmsg: no message class {id} (of {CLASS_COUNT})"),
+        None => panic!("ee_netmsg: no message class {id} (of {})", CLASS_COUNT + ENGINE_CLASSES.len()),
     }
 }
 
-/// The slots as values. Safety: every slot's `data` holds what the slot says (see the module comment).
-unsafe fn values<'a>(c: &MsgClass, slots: &'a [EeNetMsgSlot]) -> Vec<Value<'a>> {
+/// A players' inputs slot's list. Safety: `data` points to `count` slots, each with `size` bytes at its `data`
+/// (or a NULL `data` when `with_bytes` is false).
+unsafe fn input_list<'a>(slot: &EeNetMsgSlot, with_bytes: bool) -> Vec<Input<'a>> {
+    if slot.count == 0 {
+        return Vec::new();
+    }
+    let parts = std::slice::from_raw_parts(slot.data as *const EeNetMsgSlot, slot.count as usize);
+    parts
+        .iter()
+        .map(|p| Input {
+            size: p.size as usize,
+            bytes: if with_bytes && !p.data.is_null() {
+                Some(std::slice::from_raw_parts(p.data as *const u8, p.size as usize))
+            } else {
+                None
+            },
+        })
+        .collect()
+}
+
+/// The inputs of a class's inputs slot, if it has one.
+unsafe fn class_inputs<'a>(c: &MsgClass, slots: &[EeNetMsgSlot], with_bytes: bool) -> Vec<Input<'a>> {
+    match c.fields.iter().position(|f| f.kind == Kind::Inputs) {
+        Some(i) => input_list(&slots[HEADER_SIZE + i], with_bytes),
+        None => Vec::new(),
+    }
+}
+
+/// The slots as values (`inputs`: the inputs slot's list, from `class_inputs`). Safety: every slot's `data` holds
+/// what the slot says (see the module comment).
+unsafe fn values<'a>(c: &MsgClass, slots: &'a [EeNetMsgSlot], inputs: &'a [Input<'a>]) -> Vec<Value<'a>> {
     let bytes = |s: &EeNetMsgSlot, n: usize| -> &'a [u8] {
         if n == 0 {
             &[]
@@ -51,6 +89,7 @@ unsafe fn values<'a>(c: &MsgClass, slots: &'a [EeNetMsgSlot]) -> Vec<Value<'a>> 
                 Value::Records { count: s.count as usize, bytes: bytes(s, s.count as usize * n as usize) }
             }
             Kind::Blob => Value::Blob(bytes(s, s.size as usize)),
+            Kind::Inputs => Value::Inputs(inputs),
             k => {
                 let n = k.fixed_size().unwrap();
                 if s.size as usize != n {
@@ -83,7 +122,8 @@ pub unsafe extern "C" fn ee_netmsg_export_size(class_id: u32, slots: *const EeNe
     let c = class(class_id);
     check_arity(c, count);
     let slots = std::slice::from_raw_parts(slots, count);
-    match codec::encoded_size(c, &values(c, slots)) {
+    let inputs = class_inputs(c, slots, false);
+    match codec::encoded_size(c, &values(c, slots, &inputs)) {
         Ok(n) => n as u32,
         Err(e) => panic!("ee_netmsg: {}: {:?}", c.name, e),
     }
@@ -113,7 +153,8 @@ pub unsafe extern "C" fn ee_netmsg_export(
         *h = *s.data;
     }
     let out = std::slice::from_raw_parts_mut(out, out_size);
-    match codec::encode(c, header, &values(c, slots), out) {
+    let inputs = class_inputs(c, slots, true);
+    match codec::encode(c, header, &values(c, slots, &inputs), out) {
         Ok(n) => n as u32,
         Err(e) => panic!("ee_netmsg: {}: {:?}", c.name, e),
     }
@@ -150,7 +191,7 @@ pub unsafe extern "C" fn ee_netmsg_import(class_id: u32, data: *const u8, slots:
         s.offset = span.offset as u32;
         match f.kind {
             Kind::WStr => s.count = span.len as u32,
-            Kind::Records8(_) | Kind::Records32(_) => s.count = span.count as u32,
+            Kind::Records8(_) | Kind::Records32(_) | Kind::Inputs => s.count = span.count as u32,
             Kind::Blob => {
                 s.count = span.len as u32;
                 if span.len <= s.size as usize && span.len > 0 {
@@ -168,10 +209,83 @@ pub unsafe extern "C" fn ee_netmsg_import(class_id: u32, data: *const u8, slots:
     }
 }
 
-/// The class the game's factory builds for message type `message_type`, or `u32::MAX`.
+/// The class the game's or the engine's factory builds for message type `message_type`, or `u32::MAX`.
 #[no_mangle]
 pub extern "C" fn ee_netmsg_class_of_type(message_type: u8) -> u32 {
-    TYPES.iter().find(|t| t.0 == message_type).map_or(u32::MAX, |t| t.1)
+    TYPES.iter().chain(&ENGINE_TYPES).find(|t| t.0 == message_type).map_or(u32::MAX, |t| t.1)
+}
+
+/// No message has this type.
+pub const EE_NETMSG_KIND_NONE: u8 = 0;
+/// An engine message (`NEMessage::BuildNEMessage` builds it).
+pub const EE_NETMSG_KIND_ENGINE: u8 = 1;
+/// A game message: the types the game registers its factory for (`EEMessage::RegisterKnownMessages`, 0x41..0xfd),
+/// the types every `EEMessage` class takes (`EEMEndCinematic`'s 0x9d too, which the factory does not build).
+pub const EE_NETMSG_KIND_GAME: u8 = 2;
+
+/// The message kind of a type: engine, game, or none. A message object is an `EEMessage` exactly when its type is a
+/// game type: every class's constructor passes its type, and the import constructors take the type the factory
+/// dispatched on.
+#[no_mangle]
+pub extern "C" fn ee_netmsg_message_kind(message_type: u8) -> u8 {
+    if ENGINE_TYPES.iter().any(|t| t.0 == message_type) {
+        EE_NETMSG_KIND_ENGINE
+    } else if (0x41..=0xfd).contains(&message_type) {
+        EE_NETMSG_KIND_GAME
+    } else {
+        EE_NETMSG_KIND_NONE
+    }
+}
+
+/// `NEMPlayerInput::ExportSize`: the count byte and the travelling inputs' sizes (`inputs`: one slot per input of
+/// the list, its `size` its `ExportSize`).
+///
+/// # Safety
+/// `inputs` points to `count` slots.
+#[no_mangle]
+pub unsafe extern "C" fn ee_netmsg_inputs_size(inputs: *const EeNetMsgSlot, count: usize) -> u32 {
+    let slot = EeNetMsgSlot { data: inputs as *mut u8, size: 0, count: count as u32, offset: 0 };
+    codec::inputs_size(&input_list(&slot, false)) as u32
+}
+
+/// `NEMPlayerInput::ExportMessage`: the count byte and the travelling inputs' bytes into `out` (`out_size` bytes);
+/// returns the bytes written.
+///
+/// # Safety
+/// `inputs` points to `count` slots, each with its exported bytes; `out` holds `out_size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_netmsg_inputs_export(
+    inputs: *const EeNetMsgSlot,
+    count: usize,
+    out: *mut u8,
+    out_size: usize,
+) -> u32 {
+    let slot = EeNetMsgSlot { data: inputs as *mut u8, size: 0, count: count as u32, offset: 0 };
+    let out = std::slice::from_raw_parts_mut(out, out_size);
+    match codec::encode_inputs(&input_list(&slot, true), out) {
+        Ok(n) => n as u32,
+        Err(e) => panic!("ee_netmsg: NEMPlayerInput: {:?}", e),
+    }
+}
+
+/// Builds one nested input from the bytes at `data`: its `ExportSize`, or 0 when no message has its type.
+pub type EeNetMsgBuildInput = unsafe extern "C" fn(context: *mut std::ffi::c_void, data: *const u8) -> u32;
+
+/// `NEMPlayerInput::ImportMessage`: reads the count byte at `data` and has `build` make each input in turn
+/// (`codec::walk_inputs`); returns the offset after the last input built.
+///
+/// # Safety
+/// `data` holds a received inputs list; `build` is safe to call with `context` and a pointer into it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_netmsg_inputs_import(
+    data: *const u8,
+    build: EeNetMsgBuildInput,
+    context: *mut std::ffi::c_void,
+) -> u32 {
+    codec::walk_inputs(*data, |at| match build(context, data.add(at)) {
+        0 => None,
+        n => Some(n as usize),
+    }) as u32
 }
 
 /// `CompressUnits`: packs `count` ids for `owner` into `out` (256 bytes); returns the byte count.
@@ -285,8 +399,98 @@ mod tests {
             assert_eq!(ee_netmsg_class_of_type(t), c);
             assert!((c as usize) < CLASS_COUNT);
         }
-        assert_eq!(ee_netmsg_class_of_type(0x20), u32::MAX);
+        assert_eq!(ee_netmsg_class_of_type(0x20), crate::engine::EE_NETMSG_NE_ADD_PLAYER);
+        assert_eq!(ee_netmsg_class_of_type(0x2c), u32::MAX);
         assert_eq!(ee_netmsg_class_of_type(0x4c), classes::EE_NETMSG_ATTACK_UNIT);
+    }
+
+    #[test]
+    fn a_tick_with_inputs_round_trips_through_the_slots() {
+        use crate::engine::EE_NETMSG_NE_COMMUNICATIONS_TICK as TICK;
+        let mut h = [0u8, 0x26, 0xff, 3];
+        let hs = h.as_mut_ptr();
+        let header = |i: usize| EeNetMsgSlot { data: unsafe { hs.add(i) }, size: 1, count: 0, offset: 0 };
+        let (mut ct, mut perform, mut rate, mut sum, mut dump) = (0x1234u32, 2u8, 8u8, 1u8, 0u8);
+        let a = [0u8, 0x3a, 1, 2];
+        let b = [0u8, 0x41, 1, 2, 5];
+        let parts = [
+            EeNetMsgSlot { data: a.as_ptr() as *mut u8, size: 4, count: 0, offset: 0 },
+            EeNetMsgSlot { data: b.as_ptr() as *mut u8, size: 5, count: 0, offset: 0 },
+        ];
+        let slots = [
+            header(0),
+            header(1),
+            header(2),
+            header(3),
+            slot(&mut ct),
+            slot(&mut perform),
+            slot(&mut rate),
+            slot(&mut sum),
+            slot(&mut dump),
+            EeNetMsgSlot { data: parts.as_ptr() as *mut u8, size: 0, count: 2, offset: 0 },
+        ];
+        let n = unsafe { ee_netmsg_export_size(TICK, slots.as_ptr(), slots.len()) } as usize;
+        assert_eq!(n, 12 + 1 + 9);
+        // the size needs no bytes
+        let sized = [
+            EeNetMsgSlot { data: std::ptr::null_mut(), size: 4, count: 0, offset: 0 },
+            EeNetMsgSlot { data: std::ptr::null_mut(), size: 5, count: 0, offset: 0 },
+        ];
+        assert_eq!(unsafe { ee_netmsg_inputs_size(sized.as_ptr(), 2) }, 10);
+        let mut out = vec![0u8; n];
+        assert_eq!(unsafe { ee_netmsg_export(TICK, slots.as_ptr(), slots.len(), out.as_mut_ptr(), n) } as usize, n);
+        assert_eq!(&out[..13], &[0, 0x26, 0xff, 3, 0x34, 0x12, 0, 0, 2, 8, 1, 0, 2]);
+        assert_eq!(&out[13..], &[0, 0x3a, 1, 2, 0, 0x41, 1, 2, 5]);
+        let mut alone = [0u8; 10];
+        assert_eq!(unsafe { ee_netmsg_inputs_export(parts.as_ptr(), 2, alone.as_mut_ptr(), 10) }, 10);
+        assert_eq!(&alone[..], &out[12..]);
+
+        // back: the fixed members, then where the inputs are
+        let mut back = slots;
+        let (mut ct2, mut perform2, mut rate2, mut sum2, mut dump2) = (0u32, 0u8, 0u8, 0u8, 9u8);
+        back[4] = slot(&mut ct2);
+        back[5] = slot(&mut perform2);
+        back[6] = slot(&mut rate2);
+        back[7] = slot(&mut sum2);
+        back[8] = slot(&mut dump2);
+        unsafe { ee_netmsg_import(TICK, out.as_ptr(), back.as_mut_ptr(), back.len()) };
+        assert_eq!((ct2, perform2, rate2, sum2, dump2), (0x1234, 2, 8, 1, 0));
+        assert_eq!((back[9].offset, back[9].count), (12, 2));
+
+        // the walk over a C callback: sizes by type; an unknown type builds nothing
+        unsafe extern "C" fn build(context: *mut std::ffi::c_void, data: *const u8) -> u32 {
+            let seen = &mut *(context as *mut Vec<u8>);
+            seen.push(*data.add(1));
+            match *data.add(1) {
+                0x3a => 4,
+                0x41 => 5,
+                _ => 0,
+            }
+        }
+        let mut seen: Vec<u8> = Vec::new();
+        let end = unsafe {
+            ee_netmsg_inputs_import(out.as_ptr().add(12), build, &mut seen as *mut Vec<u8> as *mut std::ffi::c_void)
+        };
+        assert_eq!((end, seen.as_slice()), (10, &[0x3a, 0x41][..]));
+    }
+
+    #[test]
+    fn message_kinds() {
+        assert_eq!(ee_netmsg_message_kind(0x20), EE_NETMSG_KIND_ENGINE);
+        assert_eq!(ee_netmsg_message_kind(0x3c), EE_NETMSG_KIND_ENGINE);
+        assert_eq!(ee_netmsg_message_kind(0x2c), EE_NETMSG_KIND_NONE);
+        assert_eq!(ee_netmsg_message_kind(0x41), EE_NETMSG_KIND_GAME);
+        assert_eq!(ee_netmsg_message_kind(0xae), EE_NETMSG_KIND_GAME);
+        // EEMEndCinematic: a game message the factory does not build
+        assert_eq!(ee_netmsg_message_kind(0x9d), EE_NETMSG_KIND_GAME);
+        assert_eq!(ee_netmsg_class_of_type(0x9d), u32::MAX);
+        assert_eq!(ee_netmsg_message_kind(0xfd), EE_NETMSG_KIND_GAME);
+        for t in [0x00u8, 0x1f, 0x3d, 0x40, 0xfe, 0xff] {
+            assert_eq!(ee_netmsg_message_kind(t), EE_NETMSG_KIND_NONE, "{t:#x}");
+        }
+        assert_eq!(ee_netmsg_class_of_type(0x26), crate::engine::EE_NETMSG_NE_COMMUNICATIONS_TICK);
+        assert_eq!(ee_netmsg_fixed_size(crate::engine::EE_NETMSG_NE_XFER_MESSAGE), 1033);
+        assert_eq!(ee_netmsg_fixed_size(crate::engine::EE_NETMSG_NE_COMMUNICATIONS_TICK), 0);
     }
 
     #[test]
@@ -311,6 +515,6 @@ mod tests {
         let header = |i: usize| EeNetMsgSlot { data: unsafe { hs.add(i) }, size: 1, count: 0, offset: 0 };
         let slots =
             [header(0), header(1), header(2), header(3), slot(&mut sel), slot(&mut target), slot(&mut q), slot(&mut v)];
-        unsafe { values(c, &slots) };
+        unsafe { values(c, &slots, &[]) };
     }
 }

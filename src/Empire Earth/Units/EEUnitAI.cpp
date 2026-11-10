@@ -21,6 +21,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -88,7 +89,7 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
                 || theTarget->mStats->mAttack != 0.0f) {
                 bool theAttack = true;
                 if (inUnit->mUnitClass->mCategory == kUnitCategoryBuildingPriest) {
-                    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(theTarget);
+                    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(theTarget);
                     if (theUnit != NULL) {
                         bool theFlag;
                         if (!EECanConvert(inUnit, theUnit, theFlag) || theFlag)

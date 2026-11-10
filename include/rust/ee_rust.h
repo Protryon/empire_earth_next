@@ -463,6 +463,106 @@ constexpr static const uint32_t EE_NETMSG_ZOOM_INFO = 103;
 
 constexpr static const size_t CLASS_COUNT = 104;
 
+/// The first engine class id.
+constexpr static const uint32_t EE_NETMSG_ENGINE_BASE = (uint32_t)CLASS_COUNT;
+
+/// How many engine classes there are.
+constexpr static const size_t EE_NETMSG_ENGINE_CLASS_COUNT = 28;
+
+/// `NEMAddPlayer`
+constexpr static const uint32_t EE_NETMSG_NE_ADD_PLAYER = EE_NETMSG_ENGINE_BASE;
+
+/// `NEMAddPlayerResponse`
+constexpr static const uint32_t EE_NETMSG_NE_ADD_PLAYER_RESPONSE = (EE_NETMSG_ENGINE_BASE + 1);
+
+/// `NEMClientConnectionRequest`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST = (EE_NETMSG_ENGINE_BASE + 2);
+
+/// `NEMClientConnectionRequestResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST_RESPONSE = (EE_NETMSG_ENGINE_BASE + 3);
+
+/// `NEMClientDisconnectionNotification`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION = (EE_NETMSG_ENGINE_BASE + 4);
+
+/// `NEMClientDisconnectionNotificationResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION_RESPONSE = (EE_NETMSG_ENGINE_BASE + 5);
+
+/// `NEMClientReconnectionRequest`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST = (EE_NETMSG_ENGINE_BASE + 6);
+
+/// `NEMClientReconnectionRequestResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST_RESPONSE = (EE_NETMSG_ENGINE_BASE + 7);
+
+/// `NEMClientRequestPause`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_REQUEST_PAUSE = (EE_NETMSG_ENGINE_BASE + 8);
+
+/// `NEMCommunicationsTick`
+constexpr static const uint32_t EE_NETMSG_NE_COMMUNICATIONS_TICK = (EE_NETMSG_ENGINE_BASE + 9);
+
+/// `NEMCommunicationsTickResponse`
+constexpr static const uint32_t EE_NETMSG_NE_COMMUNICATIONS_TICK_RESPONSE = (EE_NETMSG_ENGINE_BASE + 10);
+
+/// `NEMPauseGame`
+constexpr static const uint32_t EE_NETMSG_NE_PAUSE_GAME = (EE_NETMSG_ENGINE_BASE + 11);
+
+/// `NEMPauseGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_PAUSE_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 12);
+
+/// `NEMPhysicsTick`
+constexpr static const uint32_t EE_NETMSG_NE_PHYSICS_TICK = (EE_NETMSG_ENGINE_BASE + 13);
+
+/// `NEMPlayerConnectionCheck`
+constexpr static const uint32_t EE_NETMSG_NE_PLAYER_CONNECTION_CHECK = (EE_NETMSG_ENGINE_BASE + 14);
+
+/// `NEMPlayerConnectionCheckResponse`
+constexpr static const uint32_t EE_NETMSG_NE_PLAYER_CONNECTION_CHECK_RESPONSE = (EE_NETMSG_ENGINE_BASE + 15);
+
+/// `NEMRemovePlayer`
+constexpr static const uint32_t EE_NETMSG_NE_REMOVE_PLAYER = (EE_NETMSG_ENGINE_BASE + 16);
+
+/// `NEMServerIsAlive`
+constexpr static const uint32_t EE_NETMSG_NE_SERVER_IS_ALIVE = (EE_NETMSG_ENGINE_BASE + 17);
+
+/// `NEMStartGame`
+constexpr static const uint32_t EE_NETMSG_NE_START_GAME = (EE_NETMSG_ENGINE_BASE + 18);
+
+/// `NEMStartGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_START_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 19);
+
+/// `NEMStopGame`
+constexpr static const uint32_t EE_NETMSG_NE_STOP_GAME = (EE_NETMSG_ENGINE_BASE + 20);
+
+/// `NEMStopGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_STOP_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 21);
+
+/// `NEMUnPauseGame`
+constexpr static const uint32_t EE_NETMSG_NE_UN_PAUSE_GAME = (EE_NETMSG_ENGINE_BASE + 22);
+
+/// `NEMUnPauseGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_UN_PAUSE_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 23);
+
+/// `NEMWorldDatabaseChecksum`
+constexpr static const uint32_t EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM = (EE_NETMSG_ENGINE_BASE + 24);
+
+/// `NEMWorldDatabaseChecksumResponse`
+constexpr static const uint32_t EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM_RESPONSE = (EE_NETMSG_ENGINE_BASE + 25);
+
+/// `NEMXferMessage`
+constexpr static const uint32_t EE_NETMSG_NE_XFER_MESSAGE = (EE_NETMSG_ENGINE_BASE + 26);
+
+/// `NEMXferStatus`
+constexpr static const uint32_t EE_NETMSG_NE_XFER_STATUS = (EE_NETMSG_ENGINE_BASE + 27);
+
+/// No message has this type.
+constexpr static const uint8_t EE_NETMSG_KIND_NONE = 0;
+
+/// An engine message (`NEMessage::BuildNEMessage` builds it).
+constexpr static const uint8_t EE_NETMSG_KIND_ENGINE = 1;
+
+/// A game message: the types the game registers its factory for (`EEMessage::RegisterKnownMessages`, 0x41..0xfd),
+/// the types every `EEMessage` class takes (`EEMEndCinematic`'s 0x9d too, which the factory does not build).
+constexpr static const uint8_t EE_NETMSG_KIND_GAME = 2;
+
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
@@ -664,6 +764,19 @@ constexpr static const uint64_t EE_CLASS_KIND_LAND_MILITARY_HERO = 8589934592;
 constexpr static const uint64_t EE_CLASS_KIND_SPACESHIP = 17179869184;
 
 constexpr static const uint64_t EE_CLASS_KIND_PLANET_SPACESHIP = 34359738368;
+
+/// The unit object classes (`EEUnit`, `EEComplexUnit`).
+constexpr static const uint32_t EE_OBJECT_KIND_UNIT = 1;
+
+constexpr static const uint32_t EE_OBJECT_KIND_COMPLEX_UNIT = 2;
+
+/// `RTSUnit::mObjectKind`'s values: an `RTSUnit` alone (only while its base part is built or destroyed), an
+/// `EEUnit`, an `EEComplexUnit`.
+constexpr static const uint8_t EE_OBJECT_RTS_UNIT = 0;
+
+constexpr static const uint8_t EE_OBJECT_UNIT = 1;
+
+constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -2764,6 +2877,9 @@ struct EeNetMsgSlot {
   uint32_t count;
   uint32_t offset;
 };
+
+/// Builds one nested input from the bytes at `data`: its `ExportSize`, or 0 when no message has its type.
+using EeNetMsgBuildInput = uint32_t(*)(void *context, const uint8_t *data);
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 struct EeOfBytes {
@@ -6918,8 +7034,40 @@ void ee_netmsg_import(uint32_t class_id,
                       EeNetMsgSlot *slots,
                       size_t count);
 
-/// The class the game's factory builds for message type `message_type`, or `u32::MAX`.
+/// The class the game's or the engine's factory builds for message type `message_type`, or `u32::MAX`.
 uint32_t ee_netmsg_class_of_type(uint8_t message_type);
+
+/// The message kind of a type: engine, game, or none. A message object is an `EEMessage` exactly when its type is a
+/// game type: every class's constructor passes its type, and the import constructors take the type the factory
+/// dispatched on.
+uint8_t ee_netmsg_message_kind(uint8_t message_type);
+
+/// `NEMPlayerInput::ExportSize`: the count byte and the travelling inputs' sizes (`inputs`: one slot per input of
+/// the list, its `size` its `ExportSize`).
+///
+/// # Safety
+/// `inputs` points to `count` slots.
+uint32_t ee_netmsg_inputs_size(const EeNetMsgSlot *inputs,
+                               size_t count);
+
+/// `NEMPlayerInput::ExportMessage`: the count byte and the travelling inputs' bytes into `out` (`out_size` bytes);
+/// returns the bytes written.
+///
+/// # Safety
+/// `inputs` points to `count` slots, each with its exported bytes; `out` holds `out_size` bytes.
+uint32_t ee_netmsg_inputs_export(const EeNetMsgSlot *inputs,
+                                 size_t count,
+                                 uint8_t *out,
+                                 size_t out_size);
+
+/// `NEMPlayerInput::ImportMessage`: reads the count byte at `data` and has `build` make each input in turn
+/// (`codec::walk_inputs`); returns the offset after the last input built.
+///
+/// # Safety
+/// `data` holds a received inputs list; `build` is safe to call with `context` and a pointer into it.
+uint32_t ee_netmsg_inputs_import(const uint8_t *data,
+                                 EeNetMsgBuildInput build,
+                                 void *context);
 
 /// `CompressUnits`: packs `count` ids for `owner` into `out` (256 bytes); returns the byte count.
 ///

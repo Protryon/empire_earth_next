@@ -14,6 +14,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -259,14 +260,14 @@ void EEAddCloakEffect(EEUnit* inUnit)
 {
     EEEffectHandle theHandle;
     if (gWorld.GetEffectManager()->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &theHandle, false, 0, 0) == 0)
-        dynamic_cast<EEComplexUnit*>(inUnit)->mCloaked = theHandle.mValue;
+        EEUnitCast<EEComplexUnit>(inUnit)->mCloaked = theHandle.mValue;
 }
 
 // FUNCTION: EXE 0x63d5c3
 // Destroys the unit's cloaking effect, if it has one, and clears its handle
 void EERemoveCloakEffect(EEUnit* inUnit)
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inUnit);
     if ((long)theUnit->mCloaked <= 0)
         return;
     EEEffectHandle theHandle;

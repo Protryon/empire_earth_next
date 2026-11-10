@@ -8,6 +8,11 @@
 //! - A unit class's C++ class follows from its category: `EEUnitClass::CreateUnitClasses` builds the class from the
 //!   record's category alone, and `EEUnitClass::mCategory` is written only by the constructor.
 //!
+//! - A unit object's class follows from `RTSUnit::mObjectKind`: each constructor (`RTSUnit`, `EEUnit`,
+//!   `EEComplexUnit`) sets its class's value first thing and each destructor resets its own on entry, as the vptr
+//!   is, and the member is not copyable. (`EEUnit::mComplexUnit` is not the class: `Init` sets it, `ResetEEUnit`
+//!   clears it, and the load path builds orphans of either class.)
+//!
 //! Each entry holds the class itself and its bases among the kinds, as `dynamic_cast` answers for a base.
 
 /// The goal classes (`EEUG*`).
@@ -142,6 +147,39 @@ const fn class_table() -> [u64; 256] {
     t
 }
 
+/// The unit object classes (`EEUnit`, `EEComplexUnit`).
+pub const EE_OBJECT_KIND_UNIT: u32 = 0x1;
+pub const EE_OBJECT_KIND_COMPLEX_UNIT: u32 = 0x2;
+
+/// `RTSUnit::mObjectKind`'s values: an `RTSUnit` alone (only while its base part is built or destroyed), an
+/// `EEUnit`, an `EEComplexUnit`.
+pub const EE_OBJECT_RTS_UNIT: u8 = 0;
+pub const EE_OBJECT_UNIT: u8 = 1;
+pub const EE_OBJECT_COMPLEX_UNIT: u8 = 2;
+
+/// The unit object classes of an `RTSUnit::mObjectKind` value; 0 for a value no constructor sets.
+pub const fn object_kinds_of(kind: u8) -> u32 {
+    match kind {
+        EE_OBJECT_UNIT => EE_OBJECT_KIND_UNIT,
+        EE_OBJECT_COMPLEX_UNIT => EE_OBJECT_KIND_COMPLEX_UNIT | EE_OBJECT_KIND_UNIT,
+        _ => 0,
+    }
+}
+
+const fn object_table() -> [u32; 256] {
+    let mut t = [0u32; 256];
+    let mut i = 0;
+    while i < 256 {
+        t[i] = object_kinds_of(i as u8);
+        i += 1;
+    }
+    t
+}
+
+/// The unit object classes by `RTSUnit::mObjectKind`, read by `EEUnitCast<T>` (ee/EEUnitKind.h).
+#[no_mangle]
+pub static EE_UNIT_OBJECT_KINDS: [u32; 256] = object_table();
+
 /// The goal kinds by `EEUnitGoal::mKind`, read by `EEGoalCast<T>` (ee/EEUnitKind.h).
 #[no_mangle]
 pub static EE_UNIT_GOAL_KINDS: [u32; 256] = goal_table();
@@ -153,6 +191,24 @@ pub static EE_UNIT_CLASS_KINDS: [u64; 256] = class_table();
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_object_kind_is_its_class_and_its_bases() {
+        // an EEComplexUnit is an EEUnit; an EEUnit is not complex; an RTSUnit alone is neither
+        assert_eq!(
+            EE_UNIT_OBJECT_KINDS[EE_OBJECT_COMPLEX_UNIT as usize],
+            EE_OBJECT_KIND_COMPLEX_UNIT | EE_OBJECT_KIND_UNIT
+        );
+        assert_eq!(EE_UNIT_OBJECT_KINDS[EE_OBJECT_UNIT as usize], EE_OBJECT_KIND_UNIT);
+        assert_eq!(EE_UNIT_OBJECT_KINDS[EE_OBJECT_RTS_UNIT as usize], 0);
+        for (k, kinds) in EE_UNIT_OBJECT_KINDS.iter().enumerate().skip(3) {
+            assert_eq!(*kinds, 0, "{k}");
+        }
+        // the dynamic_cast<EEComplexUnit*> answers: only the complex objects
+        let complex: Vec<u8> =
+            (0..=255u8).filter(|&k| EE_UNIT_OBJECT_KINDS[k as usize] & EE_OBJECT_KIND_COMPLEX_UNIT != 0).collect();
+        assert_eq!(complex, [EE_OBJECT_COMPLEX_UNIT]);
+    }
 
     #[test]
     fn every_goal_kind_is_its_class_and_its_bases() {

@@ -10,8 +10,88 @@
 #include "lle/UReferenceCounter.h"
 #include "lle/NEPlayer.h"
 #include "lle/NEMessage.h"
+#include "rust/ee_rust.h"   // ee_netmsg: the engine messages' wire layout
 
 NEMessage* (*NEMessage::sConstructors[256])(unsigned char*);
+
+// ---- the codec (ee_netmsg engine.rs, docs/RUST_PLAN.md R5b.4): each message hands its members to the Rust as slots
+// in wire order, the header's four first; the layout (sizes, order, the strings' and inputs' forms) is the Rust
+// table's ----
+static const size_t kNetMsgMaxSlots = 12;
+
+template <class T> static inline EeNetMsgSlot NetMsgField(T& inMember)
+{
+    EeNetMsgSlot theSlot = {(uint8_t*)&inMember, (uint32_t)sizeof(T), 0, 0};
+    return theSlot;
+}
+
+// a string's bytes (UWideString::Export's strlen); on import the Rust reports where the string is
+static inline EeNetMsgSlot NetMsgString(const UWideString& inString)
+{
+    const char* theBytes = inString;
+    EeNetMsgSlot theSlot = {(uint8_t*)theBytes, (uint32_t)strlen(theBytes), 0, 0};
+    return theSlot;
+}
+
+// the players' inputs: one slot per input of the list with its ExportSize, or (outBuffers given) its exported bytes,
+// which the caller frees with NetMsgFree; the Rust takes the first (unsigned char)size() of them
+static EeNetMsgSlot NetMsgInputs(std::vector<NEMessage*>& inInputs, std::vector<EeNetMsgSlot>& outParts,
+                                 std::vector<unsigned char*>* outBuffers)
+{
+    outParts.clear();
+    for (size_t i = 0; i < inInputs.size(); i++) {
+        EeNetMsgSlot thePart = {NULL, 0, 0, 0};
+        if (outBuffers != NULL) {
+            unsigned char* theData = NULL;
+            unsigned long theSize = 0;
+            inInputs[i]->ExportMessage(&theData, theSize);
+            outBuffers->push_back(theData);
+            thePart.data = theData;
+            thePart.size = (uint32_t)theSize;
+        } else {
+            thePart.size = (uint32_t)inInputs[i]->ExportSize();
+        }
+        outParts.push_back(thePart);
+    }
+    EeNetMsgSlot theSlot = {outParts.empty() ? NULL : (uint8_t*)&outParts[0], 0, (uint32_t)outParts.size(), 0};
+    return theSlot;
+}
+
+static void NetMsgFree(std::vector<unsigned char*>& ioBuffers)
+{
+    for (size_t i = 0; i < ioBuffers.size(); i++)
+        delete[] ioBuffers[i];
+    ioBuffers.clear();
+}
+
+// one nested input built from its bytes (ConvertMemoryToMessage) into the list: its ExportSize, 0 for a type nobody
+// builds (the walk then stays where it is, as the original's)
+static uint32_t NetMsgBuildInput(void* inList, const uint8_t* inData)
+{
+    NEMessage* theMessage = NEMessage::ConvertMemoryToMessage((unsigned char*)inData);
+    if (theMessage == NULL)
+        return 0;
+    static_cast<NEMPlayerInput*>(inList)->mPlayerInputs.push_back(theMessage);
+    return (uint32_t)theMessage->ExportSize();
+}
+
+// a new buffer of the message's size, filled by the Rust (the original's ExportMessage shape)
+static void NetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCount, unsigned char** outPayloadPointer,
+                         unsigned long& outMessageSize)
+{
+    unsigned long theMessageSize = ee_netmsg_export_size(inClass, inSlots, inCount);
+    *outPayloadPointer = new unsigned char[theMessageSize];
+    outMessageSize = ee_netmsg_export(inClass, inSlots, inCount, *outPayloadPointer, theMessageSize);
+}
+
+// New (port): the header's members (reserved, type, target slot, originating slot) as the codec's first four slots
+void NEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots)
+{
+    outSlots[0] = NetMsgField(this->mReserved);
+    outSlots[1] = NetMsgField(this->mType);
+    outSlots[2] = NetMsgField(this->mForSpecificSlot);
+    outSlots[3] = NetMsgField(this->mOriginatingSlot);
+}
 
 // FUNCTION: LLE 0x1003e05c
 // Builds a message from received bytes with the constructor registered for its type; NULL for an unknown type
@@ -95,28 +175,29 @@ NEMessage* NEMessage::BuildNEMessage(unsigned char* inData)
     return theMessage;
 }
 
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMAddPlayer* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mPlayerIndex);
+    outSlots[5] = NetMsgString(inMessage->mPlayerName);
+    return 6;
+}
+
 // FUNCTION: LLE 0x1003e751
 // Returns the exported size of an add-player message: header, player index and name
 unsigned long NEMAddPlayer::ExportSize()
 {
-    return this->mPlayerName.GetExportSize() + 5;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    return ee_netmsg_export_size(EE_NETMSG_NE_ADD_PLAYER, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003e75d
 // Exports an add-player message (player index and name) into a new buffer
 void NEMAddPlayer::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mPlayerIndex, sizeof(this->mPlayerIndex));
-    theLocation += sizeof(this->mPlayerIndex);
-    this->mPlayerName.Export(*outPayloadPointer + theLocation);
-    theLocation += this->mPlayerName.GetExportSize();
-    ESVERIFY_AT(theLocation == theMessageSize, 267);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_ADD_PLAYER, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003e7de
@@ -124,28 +205,29 @@ void NEMAddPlayer::ExportMessage(unsigned char** outPayloadPointer, unsigned lon
 void NEMAddPlayer::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 277);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mPlayerIndex, inPayloadPointer + theLocation, sizeof(this->mPlayerIndex));
-    theLocation += sizeof(this->mPlayerIndex);
-    this->mPlayerName.Import(inPayloadPointer + theLocation);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_ADD_PLAYER, inPayloadPointer, theSlots, Slots(this, theSlots));
+    this->mPlayerName.Import(inPayloadPointer + theSlots[5].offset);
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMAddPlayerResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    return 4;
 }
 
 unsigned long NEMAddPlayerResponse::ExportSize()   // header only (4 bytes); ICF-folded at 0x3fb10
 {
-    return 4;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_ADD_PLAYER_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003e829
 // Exports an add-player response (header only) into a new buffer
 void NEMAddPlayerResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    ESVERIFY_AT(theLocation == theMessageSize, 323);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_ADD_PLAYER_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003e873
@@ -153,35 +235,36 @@ void NEMAddPlayerResponse::ExportMessage(unsigned char** outPayloadPointer, unsi
 void NEMAddPlayerResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 333);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_ADD_PLAYER_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientConnectionRequest* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mIsBehindFirewall);
+    outSlots[5] = NetMsgString(inMessage->mVersion);
+    outSlots[6] = NetMsgString(inMessage->mPlayerName);
+    outSlots[7] = NetMsgField(inMessage->mBinaryChecksum);
+    return 8;
 }
 
 // FUNCTION: LLE 0x1003e8a3
 // Returns the exported size of a client connection request: firewall flag, version, player name and checksum
 unsigned long NEMClientConnectionRequest::ExportSize()
 {
-    return this->mVersion.GetExportSize() + this->mPlayerName.GetExportSize() + 9;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    return ee_netmsg_export_size(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003e8c0
 // Exports a client connection request (firewall flag, version, player name, binary checksum) into a new buffer
 void NEMClientConnectionRequest::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mIsBehindFirewall, sizeof(this->mIsBehindFirewall));
-    theLocation += sizeof(this->mIsBehindFirewall);
-    this->mVersion.Export(*outPayloadPointer + theLocation);
-    theLocation += this->mVersion.GetExportSize();
-    this->mPlayerName.Export(*outPayloadPointer + theLocation);
-    theLocation += this->mPlayerName.GetExportSize();
-    memcpy(*outPayloadPointer + theLocation, &this->mBinaryChecksum, sizeof(this->mBinaryChecksum));
-    theLocation += sizeof(this->mBinaryChecksum);
-    ESVERIFY_AT(theLocation == theMessageSize, 390);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003e971
@@ -189,42 +272,39 @@ void NEMClientConnectionRequest::ExportMessage(unsigned char** outPayloadPointer
 void NEMClientConnectionRequest::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 400);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mIsBehindFirewall, inPayloadPointer + theLocation, sizeof(this->mIsBehindFirewall));
-    theLocation += sizeof(this->mIsBehindFirewall);
-    theLocation += this->mVersion.Import(inPayloadPointer + theLocation);
-    theLocation += this->mPlayerName.Import(inPayloadPointer + theLocation);
-    memcpy(&this->mBinaryChecksum, inPayloadPointer + theLocation, sizeof(this->mBinaryChecksum));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST, inPayloadPointer, theSlots, Slots(this, theSlots));
+    this->mVersion.Import(inPayloadPointer + theSlots[5].offset);
+    this->mPlayerName.Import(inPayloadPointer + theSlots[6].offset);
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientConnectionRequestResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mError);
+    outSlots[5] = NetMsgField(inMessage->mUISlotNumber);
+    outSlots[6] = NetMsgField(inMessage->mSendToSlot);
+    outSlots[7] = NetMsgField(inMessage->mCurrentCT);
+    outSlots[8] = NetMsgString(inMessage->mVersion);
+    return 9;
 }
 
 // FUNCTION: LLE 0x1003e9e5
 // Returns the exported size of a connection response: error, UI slot, send-to slot, current tick and version
 unsigned long NEMClientConnectionRequestResponse::ExportSize()
 {
-    return this->mVersion.GetExportSize() + 14;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    return ee_netmsg_export_size(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST_RESPONSE, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003e9f1
 // Exports a connection response (error, UI slot, send-to slot, current tick, version) into a new buffer
 void NEMClientConnectionRequestResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mError, sizeof(this->mError));
-    theLocation += sizeof(this->mError);
-    memcpy(*outPayloadPointer + theLocation, &this->mUISlotNumber, sizeof(this->mUISlotNumber));
-    theLocation += sizeof(this->mUISlotNumber);
-    memcpy(*outPayloadPointer + theLocation, &this->mSendToSlot, sizeof(this->mSendToSlot));
-    theLocation += sizeof(this->mSendToSlot);
-    memcpy(*outPayloadPointer + theLocation, &this->mCurrentCT, sizeof(this->mCurrentCT));
-    theLocation += sizeof(this->mCurrentCT);
-    this->mVersion.Export(*outPayloadPointer + theLocation);
-    theLocation += this->mVersion.GetExportSize();
-    ESVERIFY_AT(theLocation == theMessageSize, 472);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003eaad
@@ -232,38 +312,34 @@ void NEMClientConnectionRequestResponse::ExportMessage(unsigned char** outPayloa
 void NEMClientConnectionRequestResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 482);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mError, inPayloadPointer + theLocation, sizeof(this->mError));
-    theLocation += sizeof(this->mError);
-    memcpy(&this->mUISlotNumber, inPayloadPointer + theLocation, sizeof(this->mUISlotNumber));
-    theLocation += sizeof(this->mUISlotNumber);
-    memcpy(&this->mSendToSlot, inPayloadPointer + theLocation, sizeof(this->mSendToSlot));
-    theLocation += sizeof(this->mSendToSlot);
-    memcpy(&this->mCurrentCT, inPayloadPointer + theLocation, sizeof(this->mCurrentCT));
-    theLocation += sizeof(this->mCurrentCT);
-    this->mVersion.Import(inPayloadPointer + theLocation);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST_RESPONSE, inPayloadPointer, theSlots,
+                     Slots(this, theSlots));
+    this->mVersion.Import(inPayloadPointer + theSlots[8].offset);
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientDisconnectionNotification* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mIsExiting);
+    return 5;
 }
 
 // FUNCTION: LLE 0x1003eb31
 // Returns the exported size of a client disconnection notice: header and exiting flag (5 bytes)
 unsigned long NEMClientDisconnectionNotification::ExportSize()
 {
-    return 5;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION);
 }
 
 // FUNCTION: LLE 0x1003eb35
 // Exports a client disconnection notice (exiting flag) into a new buffer
 void NEMClientDisconnectionNotification::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mIsExiting, sizeof(this->mIsExiting));
-    theLocation += sizeof(this->mIsExiting);
-    ESVERIFY_AT(theLocation == theMessageSize, 542);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003eb9e
@@ -271,28 +347,30 @@ void NEMClientDisconnectionNotification::ExportMessage(unsigned char** outPayloa
 void NEMClientDisconnectionNotification::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 552);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mIsExiting, inPayloadPointer + theLocation, sizeof(this->mIsExiting));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientDisconnectionNotificationResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mError);
+    return 5;
 }
 
 unsigned long NEMClientDisconnectionNotificationResponse::ExportSize()   // header and one long (8 bytes); ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003ebdf
 // Exports a disconnection response (error code) into a new buffer
 void NEMClientDisconnectionNotificationResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mError, sizeof(this->mError));
-    theLocation += sizeof(this->mError);
-    ESVERIFY_AT(theLocation == theMessageSize, 600);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003ec4a
@@ -300,30 +378,32 @@ void NEMClientDisconnectionNotificationResponse::ExportMessage(unsigned char** o
 void NEMClientDisconnectionNotificationResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 610);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mError, inPayloadPointer + theLocation, sizeof(this->mError));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION_RESPONSE, inPayloadPointer, theSlots,
+                     Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientReconnectionRequest* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mCurrentCT);
+    outSlots[5] = NetMsgField(inMessage->mPlayerNumber);
+    return 6;
 }
 
 unsigned long NEMClientReconnectionRequest::ExportSize()   // header and two longs (12 bytes); ICF-folded at 0x3fb8e
 {
-    return 12;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST);
 }
 
 // FUNCTION: LLE 0x1003ec8b
 // Exports a client reconnection request (current tick, player number) into a new buffer
 void NEMClientReconnectionRequest::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mCurrentCT, sizeof(this->mCurrentCT));
-    theLocation += sizeof(this->mCurrentCT);
-    memcpy(*outPayloadPointer + theLocation, &this->mPlayerNumber, sizeof(this->mPlayerNumber));
-    theLocation += sizeof(this->mPlayerNumber);
-    ESVERIFY_AT(theLocation == theMessageSize, 662);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003ed09
@@ -331,36 +411,34 @@ void NEMClientReconnectionRequest::ExportMessage(unsigned char** outPayloadPoint
 void NEMClientReconnectionRequest::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 672);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mCurrentCT, inPayloadPointer + theLocation, sizeof(this->mCurrentCT));
-    theLocation += sizeof(this->mCurrentCT);
-    memcpy(&this->mPlayerNumber, inPayloadPointer + theLocation, sizeof(this->mPlayerNumber));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientReconnectionRequestResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mError);
+    outSlots[5] = NetMsgField(inMessage->mNewSendToSlot);
+    outSlots[6] = NetMsgField(inMessage->mCurrentCT);
+    return 7;
 }
 
 // FUNCTION: LLE 0x1003ed5e
 // Returns the exported size of a reconnection response: header, error, new send-to slot and tick (13 bytes)
 unsigned long NEMClientReconnectionRequestResponse::ExportSize()
 {
-    return 13;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003ed62
 // Exports a reconnection response (error, new send-to slot, current tick) into a new buffer
 void NEMClientReconnectionRequestResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mError, sizeof(this->mError));
-    theLocation += sizeof(this->mError);
-    memcpy(*outPayloadPointer + theLocation, &this->mNewSendToSlot, sizeof(this->mNewSendToSlot));
-    theLocation += sizeof(this->mNewSendToSlot);
-    memcpy(*outPayloadPointer + theLocation, &this->mCurrentCT, sizeof(this->mCurrentCT));
-    theLocation += sizeof(this->mCurrentCT);
-    ESVERIFY_AT(theLocation == theMessageSize, 732);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003edf1
@@ -368,30 +446,29 @@ void NEMClientReconnectionRequestResponse::ExportMessage(unsigned char** outPayl
 void NEMClientReconnectionRequestResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 742);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mError, inPayloadPointer + theLocation, sizeof(this->mError));
-    theLocation += sizeof(this->mError);
-    memcpy(&this->mNewSendToSlot, inPayloadPointer + theLocation, sizeof(this->mNewSendToSlot));
-    theLocation += sizeof(this->mNewSendToSlot);
-    memcpy(&this->mCurrentCT, inPayloadPointer + theLocation, sizeof(this->mCurrentCT));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST_RESPONSE, inPayloadPointer, theSlots,
+                     Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMClientRequestPause* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    return 4;
 }
 
 unsigned long NEMClientRequestPause::ExportSize()   // header only (4 bytes); ICF-folded at 0x3fb10
 {
-    return 4;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_CLIENT_REQUEST_PAUSE);
 }
 
 // FUNCTION: LLE 0x1003ee55
 // Exports a client pause request (header only) into a new buffer
 void NEMClientRequestPause::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    ESVERIFY_AT(theLocation == theMessageSize, 792);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_CLIENT_REQUEST_PAUSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003ee9f
@@ -399,7 +476,8 @@ void NEMClientRequestPause::ExportMessage(unsigned char** outPayloadPointer, uns
 void NEMClientRequestPause::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 802);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_CLIENT_REQUEST_PAUSE, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003eecf
@@ -438,57 +516,33 @@ long NEMPlayerInput::GetPlayerInput(unsigned long inIndex, NEMessage*& outInput)
 // Returns the exported size of the player inputs: a count byte plus each input's size
 unsigned long NEMPlayerInput::ExportSize()
 {
-    unsigned char theCount = (unsigned char)this->mPlayerInputs.size();
-    unsigned long theSize = 1;
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        theSize += this->mPlayerInputs[i]->ExportSize();
-    return theSize;
+    std::vector<EeNetMsgSlot> theParts;
+    NetMsgInputs(this->mPlayerInputs, theParts, NULL);
+    return ee_netmsg_inputs_size(theParts.empty() ? NULL : &theParts[0], theParts.size());
 }
 
 // FUNCTION: LLE 0x1003efab
 // Writes the input count and each exported input into the caller's buffer (no header, no allocation)
 void NEMPlayerInput::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = NEMPlayerInput::ExportSize();
-    unsigned char theCount = (unsigned char)this->mPlayerInputs.size();
-    unsigned long theLocation;
-    unsigned long i;
-    unsigned char* theData;
-    unsigned long theSize;
     ESVERIFY_AT(this->mPlayerInputs.size() <= 255, 903);
     if (*outPayloadPointer == NULL)
         return;
-    theLocation = 1;
-
-    memcpy(*outPayloadPointer, &theCount, sizeof(theCount));
-    for (i = 0; i < theCount; i++) {
-        this->mPlayerInputs[i]->ExportMessage(&theData, theSize);
-        memcpy(*outPayloadPointer + theLocation, theData, theSize);
-        theLocation += theSize;
-        delete theData;
-    }
-    ESVERIFY_AT(theLocation == theMessageSize, 922);
-    outMessageSize = theMessageSize;
+    std::vector<EeNetMsgSlot> theParts;
+    std::vector<unsigned char*> theBuffers;
+    NetMsgInputs(this->mPlayerInputs, theParts, &theBuffers);
+    const EeNetMsgSlot* theInputs = theParts.empty() ? NULL : &theParts[0];
+    unsigned long theMessageSize = ee_netmsg_inputs_size(theInputs, theParts.size());
+    outMessageSize = ee_netmsg_inputs_export(theInputs, theParts.size(), *outPayloadPointer, theMessageSize);
+    NetMsgFree(theBuffers);
 }
 
 // FUNCTION: LLE 0x1003f08b
 // Reads the input count and rebuilds each input message; an unknown input type is skipped without advancing
 void NEMPlayerInput::ImportMessage(unsigned char* inPayloadPointer)
 {
-    unsigned char theCount;
-    unsigned long theLocation;
-    NEMessage* theMessage;
     ESVERIFY_AT(inPayloadPointer != NULL, 934);
-    theLocation = 1;
-    memcpy(&theCount, inPayloadPointer, sizeof(theCount));
-    for (; theCount > 0; theCount--) {
-        theMessage = NEMessage::ConvertMemoryToMessage(inPayloadPointer + theLocation);
-        if (theMessage != NULL) {
-            theLocation += theMessage->ExportSize();
-            this->mPlayerInputs.push_back(theMessage);
-        }
-    }
+    ee_netmsg_inputs_import(inPayloadPointer, NetMsgBuildInput, this);
 }
 
 // FUNCTION: LLE 0x1003f0fb
@@ -497,39 +551,39 @@ NEMCommunicationsTick::~NEMCommunicationsTick()
 {
 }
 
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMCommunicationsTick* inMessage, EeNetMsgSlot* outSlots, std::vector<EeNetMsgSlot>& outParts,
+                    std::vector<unsigned char*>* outBuffers)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mCurrentCommunicationsTick);
+    outSlots[5] = NetMsgField(inMessage->mPhysicsTicksToPerform);
+    outSlots[6] = NetMsgField(inMessage->mPhysicsTicksPerSecond);
+    outSlots[7] = NetMsgField(inMessage->mGenerateChecksum);
+    outSlots[8] = NetMsgField(inMessage->mDumpTheWorld);
+    outSlots[9] = NetMsgInputs(inMessage->mPlayerInputs, outParts, outBuffers);
+    return 10;
+}
+
 // FUNCTION: LLE 0x1003f106
 // Returns the exported size of a communications tick: header, tick fields and player inputs
 unsigned long NEMCommunicationsTick::ExportSize()
 {
-    return NEMPlayerInput::ExportSize() + 12;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    return ee_netmsg_export_size(EE_NETMSG_NE_COMMUNICATIONS_TICK, theSlots, Slots(this, theSlots, theParts, NULL));
 }
 
 // FUNCTION: LLE 0x1003f10f
 // Exports a communications tick (tick number, ticks to perform, rate, checksum/dump flags, inputs) into a new buffer
 void NEMCommunicationsTick::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    unsigned char* thePlayerInputs;
-    unsigned long thePlayerInputsSize;
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mCurrentCommunicationsTick, sizeof(this->mCurrentCommunicationsTick));
-    theLocation += sizeof(this->mCurrentCommunicationsTick);
-    memcpy(*outPayloadPointer + theLocation, &this->mPhysicsTicksToPerform, sizeof(this->mPhysicsTicksToPerform));
-    theLocation += sizeof(this->mPhysicsTicksToPerform);
-    memcpy(*outPayloadPointer + theLocation, &this->mPhysicsTicksPerSecond, sizeof(this->mPhysicsTicksPerSecond));
-    theLocation += sizeof(this->mPhysicsTicksPerSecond);
-    memcpy(*outPayloadPointer + theLocation, &this->mGenerateChecksum, sizeof(this->mGenerateChecksum));
-    theLocation += sizeof(this->mGenerateChecksum);
-    memcpy(*outPayloadPointer + theLocation, &this->mDumpTheWorld, sizeof(this->mDumpTheWorld));
-    theLocation += sizeof(this->mDumpTheWorld);
-    thePlayerInputs = *outPayloadPointer + theLocation;
-    NEMPlayerInput::ExportMessage(&thePlayerInputs, thePlayerInputsSize);
-    theLocation += thePlayerInputsSize;
-    ESVERIFY_AT(theLocation == theMessageSize, 1025);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    std::vector<unsigned char*> theBuffers;
+    NetMsgExport(EE_NETMSG_NE_COMMUNICATIONS_TICK, theSlots, Slots(this, theSlots, theParts, &theBuffers),
+                 outPayloadPointer, outMessageSize);
+    NetMsgFree(theBuffers);
 }
 
 // FUNCTION: LLE 0x1003f1df
@@ -537,18 +591,11 @@ void NEMCommunicationsTick::ExportMessage(unsigned char** outPayloadPointer, uns
 void NEMCommunicationsTick::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1035);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mCurrentCommunicationsTick, inPayloadPointer + theLocation, sizeof(this->mCurrentCommunicationsTick));
-    theLocation += sizeof(this->mCurrentCommunicationsTick);
-    memcpy(&this->mPhysicsTicksToPerform, inPayloadPointer + theLocation, sizeof(this->mPhysicsTicksToPerform));
-    theLocation += sizeof(this->mPhysicsTicksToPerform);
-    memcpy(&this->mPhysicsTicksPerSecond, inPayloadPointer + theLocation, sizeof(this->mPhysicsTicksPerSecond));
-    theLocation += sizeof(this->mPhysicsTicksPerSecond);
-    memcpy(&this->mGenerateChecksum, inPayloadPointer + theLocation, sizeof(this->mGenerateChecksum));
-    theLocation += sizeof(this->mGenerateChecksum);
-    memcpy(&this->mDumpTheWorld, inPayloadPointer + theLocation, sizeof(this->mDumpTheWorld));
-    theLocation += sizeof(this->mDumpTheWorld);
-    NEMPlayerInput::ImportMessage(inPayloadPointer + theLocation);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    ee_netmsg_import(EE_NETMSG_NE_COMMUNICATIONS_TICK, inPayloadPointer, theSlots,
+                     Slots(this, theSlots, theParts, NULL));
+    NEMPlayerInput::ImportMessage(inPayloadPointer + theSlots[9].offset);
 }
 
 // FUNCTION: LLE 0x1003f270
@@ -562,36 +609,37 @@ bool NEMCommunicationsTick::IsResponse(NEMessage* inMessage)
     return theResult;
 }
 
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMCommunicationsTickResponse* inMessage, EeNetMsgSlot* outSlots, std::vector<EeNetMsgSlot>& outParts,
+                    std::vector<unsigned char*>* outBuffers)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mLastCommunicationsTickProcessed);
+    outSlots[5] = NetMsgField(inMessage->mServersCommunicationTick);
+    outSlots[6] = NetMsgField(inMessage->mAveragePhysicsTickTime);
+    outSlots[7] = NetMsgInputs(inMessage->mPlayerInputs, outParts, outBuffers);
+    return 8;
+}
+
 // FUNCTION: LLE 0x1003f289
 // Returns the exported size of a tick response: header, tick numbers, physics time and player inputs
 unsigned long NEMCommunicationsTickResponse::ExportSize()
 {
-    return NEMPlayerInput::ExportSize() + 14;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    return ee_netmsg_export_size(EE_NETMSG_NE_COMMUNICATIONS_TICK_RESPONSE, theSlots, Slots(this, theSlots, theParts, NULL));
 }
 
 // FUNCTION: LLE 0x1003f292
 // Exports a tick response (last tick processed, server tick, average physics time, inputs) into a new buffer
 void NEMCommunicationsTickResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    unsigned char* thePlayerInputs;
-    unsigned long thePlayerInputsSize;
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mLastCommunicationsTickProcessed,
-           sizeof(this->mLastCommunicationsTickProcessed));
-    theLocation += sizeof(this->mLastCommunicationsTickProcessed);
-    memcpy(*outPayloadPointer + theLocation, &this->mServersCommunicationTick, sizeof(this->mServersCommunicationTick));
-    theLocation += sizeof(this->mServersCommunicationTick);
-    memcpy(*outPayloadPointer + theLocation, &this->mAveragePhysicsTickTime, sizeof(this->mAveragePhysicsTickTime));
-    theLocation += sizeof(this->mAveragePhysicsTickTime);
-    thePlayerInputs = *outPayloadPointer + theLocation;
-    NEMPlayerInput::ExportMessage(&thePlayerInputs, thePlayerInputsSize);
-    theLocation += thePlayerInputsSize;
-    ESVERIFY_AT(theLocation == theMessageSize, 1121);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    std::vector<unsigned char*> theBuffers;
+    NetMsgExport(EE_NETMSG_NE_COMMUNICATIONS_TICK_RESPONSE, theSlots, Slots(this, theSlots, theParts, &theBuffers),
+                 outPayloadPointer, outMessageSize);
+    NetMsgFree(theBuffers);
 }
 
 // FUNCTION: LLE 0x1003f343
@@ -599,37 +647,33 @@ void NEMCommunicationsTickResponse::ExportMessage(unsigned char** outPayloadPoin
 void NEMCommunicationsTickResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1131);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mLastCommunicationsTickProcessed, inPayloadPointer + theLocation,
-           sizeof(this->mLastCommunicationsTickProcessed));
-    theLocation += sizeof(this->mLastCommunicationsTickProcessed);
-    memcpy(&this->mServersCommunicationTick, inPayloadPointer + theLocation, sizeof(this->mServersCommunicationTick));
-    theLocation += sizeof(this->mServersCommunicationTick);
-    memcpy(&this->mAveragePhysicsTickTime, inPayloadPointer + theLocation, sizeof(this->mAveragePhysicsTickTime));
-    theLocation += sizeof(this->mAveragePhysicsTickTime);
-    NEMPlayerInput::ImportMessage(inPayloadPointer + theLocation);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    std::vector<EeNetMsgSlot> theParts;
+    ee_netmsg_import(EE_NETMSG_NE_COMMUNICATIONS_TICK_RESPONSE, inPayloadPointer, theSlots,
+                     Slots(this, theSlots, theParts, NULL));
+    NEMPlayerInput::ImportMessage(inPayloadPointer + theSlots[7].offset);
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMPauseGame* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mUniqueID);
+    outSlots[5] = NetMsgField(inMessage->mSendToAllAndWaitMessageID);
+    return 6;
 }
 
 unsigned long NEMPauseGame::ExportSize()   // ICF-folded at 0x3fb8e
 {
-    return 12;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_PAUSE_GAME);
 }
 
 // FUNCTION: LLE 0x1003f3b7
 // Exports a pause-game message (unique ID, wait message ID) into a new buffer
 void NEMPauseGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mUniqueID, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    memcpy(*outPayloadPointer + theLocation, &this->mSendToAllAndWaitMessageID, sizeof(this->mSendToAllAndWaitMessageID));
-    theLocation += sizeof(this->mSendToAllAndWaitMessageID);
-    ESVERIFY_AT(theLocation == theMessageSize, 1191);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_PAUSE_GAME, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f435
@@ -637,10 +681,8 @@ void NEMPauseGame::ExportMessage(unsigned char** outPayloadPointer, unsigned lon
 void NEMPauseGame::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1201);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mUniqueID, inPayloadPointer + theLocation, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    memcpy(&this->mSendToAllAndWaitMessageID, inPayloadPointer + theLocation, sizeof(this->mSendToAllAndWaitMessageID));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_PAUSE_GAME, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003f485
@@ -653,24 +695,25 @@ bool NEMPauseGame::IsResponse(NEMessage* inMessage)
     return theResult;
 }
 
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMPauseGameResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mUniqueID);
+    return 5;
+}
+
 unsigned long NEMPauseGameResponse::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_PAUSE_GAME_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003f49e
 // Exports a pause-game response (unique ID) into a new buffer
 void NEMPauseGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mUniqueID, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    ESVERIFY_AT(theLocation == theMessageSize, 1260);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_PAUSE_GAME_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f509
@@ -678,34 +721,32 @@ void NEMPauseGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsi
 void NEMPauseGameResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1270);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mUniqueID, inPayloadPointer + theLocation, sizeof(this->mUniqueID));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_PAUSE_GAME_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMPhysicsTick* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mNumberOfPlayerInputs);
+    outSlots[5] = NetMsgField(inMessage->mPhysicsTicksToPerform);
+    outSlots[6] = NetMsgField(inMessage->mGenerateChecksum);
+    outSlots[7] = NetMsgField(inMessage->mDumpTheWorld);
+    return 8;
 }
 
 unsigned long NEMPhysicsTick::ExportSize()   // ICF-folded at 0x3fb8e
 {
-    return 11;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_PHYSICS_TICK);
 }
 
 // FUNCTION: LLE 0x1003f54a
 // Exports a physics tick (input count, ticks to perform, checksum and dump flags) into a new buffer
 void NEMPhysicsTick::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mNumberOfPlayerInputs, sizeof(this->mNumberOfPlayerInputs));
-    theLocation += sizeof(this->mNumberOfPlayerInputs);
-    memcpy(*outPayloadPointer + theLocation, &this->mPhysicsTicksToPerform, sizeof(this->mPhysicsTicksToPerform));
-    theLocation += sizeof(this->mPhysicsTicksToPerform);
-    memcpy(*outPayloadPointer + theLocation, &this->mGenerateChecksum, sizeof(this->mGenerateChecksum));
-    theLocation += sizeof(this->mGenerateChecksum);
-    memcpy(*outPayloadPointer + theLocation, &this->mDumpTheWorld, sizeof(this->mDumpTheWorld));
-    theLocation += sizeof(this->mDumpTheWorld);
-    ESVERIFY_AT(theLocation == theMessageSize, 1331);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_PHYSICS_TICK, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f5e8
@@ -713,34 +754,30 @@ void NEMPhysicsTick::ExportMessage(unsigned char** outPayloadPointer, unsigned l
 void NEMPhysicsTick::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1341);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mNumberOfPlayerInputs, inPayloadPointer + theLocation, sizeof(this->mNumberOfPlayerInputs));
-    theLocation += sizeof(this->mNumberOfPlayerInputs);
-    memcpy(&this->mPhysicsTicksToPerform, inPayloadPointer + theLocation, sizeof(this->mPhysicsTicksToPerform));
-    theLocation += sizeof(this->mPhysicsTicksToPerform);
-    memcpy(&this->mGenerateChecksum, inPayloadPointer + theLocation, sizeof(this->mGenerateChecksum));
-    theLocation += sizeof(this->mGenerateChecksum);
-    memcpy(&this->mDumpTheWorld, inPayloadPointer + theLocation, sizeof(this->mDumpTheWorld));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_PHYSICS_TICK, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMPlayerConnectionCheck* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mPingTimeStart);
+    return 5;
 }
 
 unsigned long NEMPlayerConnectionCheck::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK);
 }
 
 // FUNCTION: LLE 0x1003f65d
 // Exports a connection check (ping start time) into a new buffer
 void NEMPlayerConnectionCheck::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mPingTimeStart, sizeof(this->mPingTimeStart));
-    theLocation += sizeof(this->mPingTimeStart);
-    ESVERIFY_AT(theLocation == theMessageSize, 1398);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f6c8
@@ -748,28 +785,30 @@ void NEMPlayerConnectionCheck::ExportMessage(unsigned char** outPayloadPointer, 
 void NEMPlayerConnectionCheck::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1408);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mPingTimeStart, inPayloadPointer + theLocation, sizeof(this->mPingTimeStart));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMPlayerConnectionCheckResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mPingTimeStart);
+    return 5;
 }
 
 unsigned long NEMPlayerConnectionCheckResponse::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003f709
 // Exports a connection check response (ping start time) into a new buffer
 void NEMPlayerConnectionCheckResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mPingTimeStart, sizeof(this->mPingTimeStart));
-    theLocation += sizeof(this->mPingTimeStart);
-    ESVERIFY_AT(theLocation == theMessageSize, 1456);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f774
@@ -777,34 +816,32 @@ void NEMPlayerConnectionCheckResponse::ExportMessage(unsigned char** outPayloadP
 void NEMPlayerConnectionCheckResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1466);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mPingTimeStart, inPayloadPointer + theLocation, sizeof(this->mPingTimeStart));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_PLAYER_CONNECTION_CHECK_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMRemovePlayer* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mPlayerIndex);
+    outSlots[5] = NetMsgField(inMessage->mPlayerIsOOS);
+    outSlots[6] = NetMsgField(inMessage->mGameIsExiting);
+    outSlots[7] = NetMsgField(inMessage->mWasBooted);
+    return 8;
 }
 
 unsigned long NEMRemovePlayer::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_REMOVE_PLAYER);
 }
 
 // FUNCTION: LLE 0x1003f7b5
 // Exports a remove-player message (player index, out-of-sync, game exiting and booted flags) into a new buffer
 void NEMRemovePlayer::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mPlayerIndex, sizeof(this->mPlayerIndex));
-    theLocation += sizeof(this->mPlayerIndex);
-    memcpy(*outPayloadPointer + theLocation, &this->mPlayerIsOOS, sizeof(this->mPlayerIsOOS));
-    theLocation += sizeof(this->mPlayerIsOOS);
-    memcpy(*outPayloadPointer + theLocation, &this->mGameIsExiting, sizeof(this->mGameIsExiting));
-    theLocation += sizeof(this->mGameIsExiting);
-    memcpy(*outPayloadPointer + theLocation, &this->mWasBooted, sizeof(this->mWasBooted));
-    theLocation += sizeof(this->mWasBooted);
-    ESVERIFY_AT(theLocation == theMessageSize, 1526);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_REMOVE_PLAYER, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f851
@@ -812,32 +849,28 @@ void NEMRemovePlayer::ExportMessage(unsigned char** outPayloadPointer, unsigned 
 void NEMRemovePlayer::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1536);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mPlayerIndex, inPayloadPointer + theLocation, sizeof(this->mPlayerIndex));
-    theLocation += sizeof(this->mPlayerIndex);
-    memcpy(&this->mPlayerIsOOS, inPayloadPointer + theLocation, sizeof(this->mPlayerIsOOS));
-    theLocation += sizeof(this->mPlayerIsOOS);
-    memcpy(&this->mGameIsExiting, inPayloadPointer + theLocation, sizeof(this->mGameIsExiting));
-    theLocation += sizeof(this->mGameIsExiting);
-    memcpy(&this->mWasBooted, inPayloadPointer + theLocation, sizeof(this->mWasBooted));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_REMOVE_PLAYER, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMServerIsAlive* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    return 4;
 }
 
 unsigned long NEMServerIsAlive::ExportSize()   // ICF-folded at 0x3fb10
 {
-    return 4;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_SERVER_IS_ALIVE);
 }
 
 // FUNCTION: LLE 0x1003f8c4
 // Exports a server-is-alive message (header only) into a new buffer
 void NEMServerIsAlive::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    ESVERIFY_AT(theLocation == theMessageSize, 1590);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_SERVER_IS_ALIVE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f90e
@@ -845,27 +878,29 @@ void NEMServerIsAlive::ExportMessage(unsigned char** outPayloadPointer, unsigned
 void NEMServerIsAlive::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1600);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_SERVER_IS_ALIVE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMStartGame* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mOffsetStartTime);
+    return 5;
 }
 
 unsigned long NEMStartGame::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_START_GAME);
 }
 
 // FUNCTION: LLE 0x1003f93e
 // Exports a start-game message (start time offset) into a new buffer
 void NEMStartGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mOffsetStartTime, sizeof(this->mOffsetStartTime));
-    theLocation += sizeof(this->mOffsetStartTime);
-    ESVERIFY_AT(theLocation == theMessageSize, 1645);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_START_GAME, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003f9a9
@@ -873,28 +908,29 @@ void NEMStartGame::ExportMessage(unsigned char** outPayloadPointer, unsigned lon
 void NEMStartGame::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1655);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mOffsetStartTime, inPayloadPointer + theLocation, sizeof(this->mOffsetStartTime));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_START_GAME, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMStartGameResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mApplicationTimeAtStart);
+    return 5;
 }
 
 unsigned long NEMStartGameResponse::ExportSize()   // ICF-folded at 0x3fc79
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_START_GAME_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003f9ea
 // Exports a start-game response (application time at start) into a new buffer
 void NEMStartGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mApplicationTimeAtStart, sizeof(this->mApplicationTimeAtStart));
-    theLocation += sizeof(this->mApplicationTimeAtStart);
-    ESVERIFY_AT(theLocation == theMessageSize, 1703);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_START_GAME_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fa55
@@ -902,26 +938,28 @@ void NEMStartGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsi
 void NEMStartGameResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1713);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mApplicationTimeAtStart, inPayloadPointer + theLocation, sizeof(this->mApplicationTimeAtStart));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_START_GAME_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMStopGame* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    return 4;
 }
 
 unsigned long NEMStopGame::ExportSize()   // ICF-folded at 0x3fb10
 {
-    return 4;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_STOP_GAME);
 }
 
 // FUNCTION: LLE 0x1003fa96
 // Exports a stop-game message (header only) into a new buffer
 void NEMStopGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    ESVERIFY_AT(theLocation == theMessageSize, 1758);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_STOP_GAME, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fae0
@@ -929,27 +967,30 @@ void NEMStopGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long
 void NEMStopGame::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1768);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_STOP_GAME, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMStopGameResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    return 4;
 }
 
 // FUNCTION: LLE 0x1003fb10
 // Returns the exported size of a stop-game response: the 4-byte header (shared by every header-only message)
 unsigned long NEMStopGameResponse::ExportSize()
 {
-    return 4;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_STOP_GAME_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003fb14
 // Exports a stop-game response (header only) into a new buffer
 void NEMStopGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    ESVERIFY_AT(theLocation == theMessageSize, 1809);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_STOP_GAME_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fb5e
@@ -957,31 +998,32 @@ void NEMStopGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsig
 void NEMStopGameResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1819);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_STOP_GAME_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMUnPauseGame* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mUniqueID);
+    outSlots[5] = NetMsgField(inMessage->mSendToAllAndWaitMessageID);
+    return 6;
 }
 
 // FUNCTION: LLE 0x1003fb8e
 // Returns the exported size of an unpause message: header and two longs (12 bytes; shared by other messages)
 unsigned long NEMUnPauseGame::ExportSize()
 {
-    return 12;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_UN_PAUSE_GAME);
 }
 
 // FUNCTION: LLE 0x1003fb92
 // Exports an unpause message (unique ID, wait message ID) into a new buffer
 void NEMUnPauseGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mUniqueID, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    memcpy(*outPayloadPointer + theLocation, &this->mSendToAllAndWaitMessageID, sizeof(this->mSendToAllAndWaitMessageID));
-    theLocation += sizeof(this->mSendToAllAndWaitMessageID);
-    ESVERIFY_AT(theLocation == theMessageSize, 1868);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_UN_PAUSE_GAME, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fc10
@@ -989,10 +1031,8 @@ void NEMUnPauseGame::ExportMessage(unsigned char** outPayloadPointer, unsigned l
 void NEMUnPauseGame::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1878);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mUniqueID, inPayloadPointer + theLocation, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    memcpy(&this->mSendToAllAndWaitMessageID, inPayloadPointer + theLocation, sizeof(this->mSendToAllAndWaitMessageID));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_UN_PAUSE_GAME, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003fc60
@@ -1005,26 +1045,28 @@ bool NEMUnPauseGame::IsResponse(NEMessage* inMessage)
     return theResult;
 }
 
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMUnPauseGameResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mUniqueID);
+    return 5;
+}
+
 // FUNCTION: LLE 0x1003fc79
 // Returns the exported size of an unpause response: header and one long (8 bytes; shared by other messages)
 unsigned long NEMUnPauseGameResponse::ExportSize()
 {
-    return 8;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_UN_PAUSE_GAME_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003fc7d
 // Exports an unpause response (unique ID) into a new buffer
 void NEMUnPauseGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mUniqueID, sizeof(this->mUniqueID));
-    theLocation += sizeof(this->mUniqueID);
-    ESVERIFY_AT(theLocation == theMessageSize, 1937);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_UN_PAUSE_GAME_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fce8
@@ -1032,32 +1074,33 @@ void NEMUnPauseGameResponse::ExportMessage(unsigned char** outPayloadPointer, un
 void NEMUnPauseGameResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 1947);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mUniqueID, inPayloadPointer + theLocation, sizeof(this->mUniqueID));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_UN_PAUSE_GAME_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMWorldDatabaseChecksum* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mPhysicsTickTrigger);
+    outSlots[5] = NetMsgField(inMessage->mDumpWorld);
+    return 6;
 }
 
 // FUNCTION: LLE 0x1003fd29
 // Returns the exported size of a world checksum request: header, trigger tick and dump flag (9 bytes)
 unsigned long NEMWorldDatabaseChecksum::ExportSize()
 {
-    return 9;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM);
 }
 
 // FUNCTION: LLE 0x1003fd2d
 // Exports a world checksum request (physics tick trigger, dump flag) into a new buffer
 void NEMWorldDatabaseChecksum::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mPhysicsTickTrigger, sizeof(this->mPhysicsTickTrigger));
-    theLocation += sizeof(this->mPhysicsTickTrigger);
-    memcpy(*outPayloadPointer + theLocation, &this->mDumpWorld, sizeof(this->mDumpWorld));
-    theLocation += sizeof(this->mDumpWorld);
-    ESVERIFY_AT(theLocation == theMessageSize, 1999);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fda9
@@ -1065,32 +1108,31 @@ void NEMWorldDatabaseChecksum::ExportMessage(unsigned char** outPayloadPointer, 
 void NEMWorldDatabaseChecksum::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 2009);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mPhysicsTickTrigger, inPayloadPointer + theLocation, sizeof(this->mPhysicsTickTrigger));
-    theLocation += sizeof(this->mPhysicsTickTrigger);
-    memcpy(&this->mDumpWorld, inPayloadPointer + theLocation, sizeof(this->mDumpWorld));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMWorldDatabaseChecksumResponse* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mCommunicationsTick);
+    outSlots[5] = NetMsgField(inMessage->mWorldDatabaseChecksum);
+    return 6;
 }
 
 unsigned long NEMWorldDatabaseChecksumResponse::ExportSize()   // ICF-folded at 0x3fb8e
 {
-    return 12;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM_RESPONSE);
 }
 
 // FUNCTION: LLE 0x1003fdf9
 // Exports a world checksum response (communications tick, checksum) into a new buffer
 void NEMWorldDatabaseChecksumResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mCommunicationsTick, sizeof(this->mCommunicationsTick));
-    theLocation += sizeof(this->mCommunicationsTick);
-    memcpy(*outPayloadPointer + theLocation, &this->mWorldDatabaseChecksum, sizeof(this->mWorldDatabaseChecksum));
-    theLocation += sizeof(this->mWorldDatabaseChecksum);
-    ESVERIFY_AT(theLocation == theMessageSize, 2064);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM_RESPONSE, theSlots, Slots(this, theSlots),
+                 outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003fe77
@@ -1098,41 +1140,38 @@ void NEMWorldDatabaseChecksumResponse::ExportMessage(unsigned char** outPayloadP
 void NEMWorldDatabaseChecksumResponse::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 2074);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mCommunicationsTick, inPayloadPointer + theLocation, sizeof(this->mCommunicationsTick));
-    theLocation += sizeof(this->mCommunicationsTick);
-    memcpy(&this->mWorldDatabaseChecksum, inPayloadPointer + theLocation, sizeof(this->mWorldDatabaseChecksum));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: LLE 0x1003fec7
 // Returns the exported size of any file transfer message: header, ID, data size and the full 1 KB data block
 unsigned long NEMXferMessage::StaticExportSize()
 {
-    return 4 + sizeof(unsigned char) + sizeof(uint32_t) + 0x400;   // the data size is 4 bytes on the wire
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_XFER_MESSAGE);
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMXferMessage* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mID);
+    outSlots[5] = NetMsgField(inMessage->mDataSize);
+    outSlots[6] = NetMsgField(inMessage->mData);
+    return 7;
 }
 
 unsigned long NEMXferMessage::ExportSize()
 {
-    return 4 + sizeof(this->mID) + sizeof(this->mDataSize) + sizeof(this->mData);
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_XFER_MESSAGE);
 }
 
 // FUNCTION: LLE 0x1003fecd
 // Exports a file transfer block (ID, data size, the whole 1 KB data) into a new buffer
 void NEMXferMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mID, sizeof(this->mID));
-    theLocation += sizeof(this->mID);
-    memcpy(*outPayloadPointer + theLocation, &this->mDataSize, sizeof(this->mDataSize));
-    theLocation += sizeof(this->mDataSize);
-    memcpy(*outPayloadPointer + theLocation, this->mData, sizeof(this->mData));
-    theLocation += sizeof(this->mData);
-    ESVERIFY_AT(theLocation == theMessageSize, 2143);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_XFER_MESSAGE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x1003ff68
@@ -1140,41 +1179,34 @@ void NEMXferMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned l
 void NEMXferMessage::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 2153);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mID, inPayloadPointer + theLocation, sizeof(this->mID));
-    theLocation += sizeof(this->mID);
-    memcpy(&this->mDataSize, inPayloadPointer + theLocation, sizeof(this->mDataSize));
-    theLocation += sizeof(this->mDataSize);
-    memset(this->mData, 0, sizeof(this->mData));
-    memcpy(this->mData, inPayloadPointer + theLocation, sizeof(this->mData));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_XFER_MESSAGE, inPayloadPointer, theSlots, Slots(this, theSlots));
+}
+
+// the codec's slots: the header, then the members in wire order (ee_netmsg engine.rs)
+static size_t Slots(NEMXferStatus* inMessage, EeNetMsgSlot* outSlots)
+{
+    inMessage->GetHeaderSlots(outSlots);
+    outSlots[4] = NetMsgField(inMessage->mClientSlot);
+    outSlots[5] = NetMsgField(inMessage->mPercentDone);
+    outSlots[6] = NetMsgField(inMessage->mXferID);
+    outSlots[7] = NetMsgField(inMessage->mStatusID);
+    return 8;
 }
 
 // FUNCTION: LLE 0x1003ffe0
 // Returns the exported size of a transfer status: header, client slot, percent, transfer ID and status (11 bytes)
 unsigned long NEMXferStatus::ExportSize()
 {
-    return 11;
+    return ee_netmsg_fixed_size(EE_NETMSG_NE_XFER_STATUS);
 }
 
 // FUNCTION: LLE 0x1003ffe4
 // Exports a transfer status (client slot, percent done, transfer ID, status) into a new buffer
 void NEMXferStatus::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->ExportSize();
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    if (*outPayloadPointer == NULL)
-        return;
-    unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
-    memcpy(*outPayloadPointer + theLocation, &this->mClientSlot, sizeof(this->mClientSlot));
-    theLocation += sizeof(this->mClientSlot);
-    memcpy(*outPayloadPointer + theLocation, &this->mPercentDone, sizeof(this->mPercentDone));
-    theLocation += sizeof(this->mPercentDone);
-    memcpy(*outPayloadPointer + theLocation, &this->mXferID, sizeof(this->mXferID));
-    theLocation += sizeof(this->mXferID);
-    memcpy(*outPayloadPointer + theLocation, &this->mStatusID, sizeof(this->mStatusID));
-    theLocation += sizeof(this->mStatusID);
-    ESVERIFY_AT(theLocation == theMessageSize, 2221);
-    outMessageSize = theMessageSize;
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    NetMsgExport(EE_NETMSG_NE_XFER_STATUS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: LLE 0x10040082
@@ -1182,14 +1214,8 @@ void NEMXferStatus::ExportMessage(unsigned char** outPayloadPointer, unsigned lo
 void NEMXferStatus::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 2231);
-    unsigned long theLocation = this->ImportHeader(inPayloadPointer);
-    memcpy(&this->mClientSlot, inPayloadPointer + theLocation, sizeof(this->mClientSlot));
-    theLocation += sizeof(this->mClientSlot);
-    memcpy(&this->mPercentDone, inPayloadPointer + theLocation, sizeof(this->mPercentDone));
-    theLocation += sizeof(this->mPercentDone);
-    memcpy(&this->mXferID, inPayloadPointer + theLocation, sizeof(this->mXferID));
-    theLocation += sizeof(this->mXferID);
-    memcpy(&this->mStatusID, inPayloadPointer + theLocation, sizeof(this->mStatusID));
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    ee_netmsg_import(EE_NETMSG_NE_XFER_STATUS, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
 // The trivial IsResponse overrides (no message answers these) fold into one body (0x3ed59; at the end, after the

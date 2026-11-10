@@ -186,6 +186,7 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
 EEComplexUnit::EEComplexUnit()
 {
+    this->mObjectKind.mValue = 2;   // New (port): an EEComplexUnit (ee/EEUnitKind.h)
     // none of the resets below sets the disable reason, which saved games store: start a new unit at 0
     // (a unit reused from the pool keeps its last reason, as before)
     this->mDisabledReason = 0;
@@ -906,7 +907,7 @@ void EEComplexUnit::DropPath()
 // Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
 void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
 {
-    EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUnitCast<EEComplexUnit>(inUnit);
     this->mProjectileStart = theOther->mProjectileStart;
     this->SetAnimationFrame(theOther->mPhysicalModel.GetFrame());
     this->SetAnimation(theOther->mAnimation, -1, 0);

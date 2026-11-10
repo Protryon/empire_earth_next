@@ -39,7 +39,8 @@ computer players stay in the first epochs and never cast a calamity, so --profil
 calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_<profile>.txt.
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
 bytes it came from, the bytes it exports again, its members as the import left them), NMSW the same for a sweep of
-every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing. Their
+every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE
+the engine messages over edge payloads (with the players' inputs nested in the communications ticks). Their
 golden lines come from the C++ codec (EEMessage.cpp's original ExportMessage/ImportMessage bodies).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).

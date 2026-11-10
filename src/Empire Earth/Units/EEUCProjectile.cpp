@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -161,7 +162,7 @@ void EEUCProjectile::ActionChanged(EEComplexUnit* inUnit)
         }
         if (inUnit->mUnitClass->mUnitType == kUnitTypeBombForSASExplosiveExpert && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit) {
             EEUnit* theUnit = static_cast<EEUGAttackUnit*>(inUnit->mGoalState)->mTarget;
-            EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theUnit);
+            EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(theUnit);
             if (theTarget != NULL)
                 theTarget->SetIsTinted(false);
         }
