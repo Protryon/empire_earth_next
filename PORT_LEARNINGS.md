@@ -1902,6 +1902,10 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **An intermittent units-hash divergence after a direct build (open, 2026-11-10).** Small Islands seed 11, the port
   against classic Hard, two runs: identical traces for 65 minutes, then the `sim hash` units value differed (AI and RNG
   equal) ten seconds after `ai.build` placed a granary with three held citizens (`build_direct`) and the classic
-  helper joined (`build.help sent=1`). The same pair rerun was identical to 70 minutes, and the navy port's agent saw
-  it once as well, also right after a direct granary. Not reproduced on demand; the suspects are the build message's
-  field assignment round a granary (EEMBuildUnit: EEFindFreeFarm's order, the std::sort ties) and the helper's pick.
+  helper joined (`build.help sent=1`). A second 90-minute pair diverged the same way ten seconds after the same
+  granary at the same tile (114,58), and the navy port's agent saw it once as well after a direct granary; a pair cut
+  at 70 minutes was identical. In both pairs only the units hash differs from then on: the RNG and AI hashes stay
+  equal to the end and the final states (citizens, army, epoch) are the same, so what differs is a hashed unit field
+  that the game's decisions never read (or the units' order), not the play. The suspects are the build message's
+  field assignment round a granary (EEMBuildUnit: EEFindFreeFarm's order, the std::sort ties) and the helper's pick;
+  a human placing a granary goes through the same message.

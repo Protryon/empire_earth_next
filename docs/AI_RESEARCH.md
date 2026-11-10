@@ -2520,8 +2520,9 @@ its own worktree, smoked (two runs of seeds 2 and 5, identical traces, no script
 any more; the PARTLY lines list what the interface does not carry yet (AI_LUA_UNITS §11 "Not built yet"). The merged
 whole: seeds 2 and 5 twice at 90 minutes and Small Islands seed 11 twice identical, no script errors (merged2 in
 build/sim/bench). One open engine item: a Small Islands seed-11 pair diverged once in the units hash at 65 minutes
-(the AI and RNG hashes equal until then) ten seconds after a direct granary (`ai.build`); the rerun of the same pair
-was identical, so it is intermittent and engine-side (PORT_LEARNINGS).
+ten seconds after a direct granary (`ai.build`), and a second pair the same way at the same granary; the RNG and
+AI hashes stay equal to the end and the final states are the same, so it is a hashed unit field the play never reads,
+engine-side (PORT_LEARNINGS).
 
 ### 8.9 Next
 
