@@ -617,6 +617,13 @@ def classify(msg):
 # initializers (Windows' long and unsigned long are both 32-bit; LP64's are not, the values are small)
 MS_DIALECT_LENIENCE = ["-Wno-address-of-temporary", "-Wno-c++11-narrowing"]
 
+# Linux: -fms-compatibility on a GNU target hides clang's __GCC_ATOMIC_* macros, which libstdc++ reads: atomic_flag
+# (reached through <memory>) wants __GCC_ATOMIC_TEST_AND_SET_TRUEVAL and <atomic>'s is_always_lock_free the
+# *_LOCK_FREE values (EETestFixture.cpp). These are what clang defines for x86_64 in GNU mode (2: always lock-free).
+LINUX_GCC_ATOMIC_DEFINES = ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"] + \
+    [f"-D__GCC_ATOMIC_{k}_LOCK_FREE=2" for k in ("BOOL", "CHAR", "CHAR8_T", "CHAR16_T", "CHAR32_T", "WCHAR_T",
+                                                  "SHORT", "INT", "LONG", "LLONG", "POINTER")]
+
 
 def census_flags(t, dialect):
     f = [*t.base_flags(), "-fsyntax-only", "-ferror-limit=0", "-fno-color-diagnostics", "-w",
@@ -624,8 +631,8 @@ def census_flags(t, dialect):
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
               "-fms-compatibility-version=19.44", *MS_DIALECT_LENIENCE, *MACOS_GNUC(t)]
-        if t.os == "linux":   # as the game build (game_dialect_flags): libstdc++'s atomic_flag needs it
-            f += ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"]
+        if t.os == "linux":   # as the game build (game_dialect_flags): libstdc++'s atomics need them
+            f += LINUX_GCC_ATOMIC_DEFINES
     elif dialect == "msext":   # the extensions without -fms-compatibility (which retypes va_list on Darwin)
         f += ["-fms-extensions", "-fdelayed-template-parsing"]
     return f
@@ -675,7 +682,6 @@ def cmd_census(a):
     # headers first; the platform layer's POSIX implementation replaces src/Platform/Win32 (compiled as units here)
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
-    inc.append(rust_build.WGPU_HEADERS / "include")
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
@@ -893,10 +899,9 @@ def game_dialect_flags(t, cxx_game):
     # -fms-compatibility does not define); otherwise it calls an out-of-line operator== the library does not export
     f = ["-fms-extensions", "-fdelayed-template-parsing", *MS_DIALECT_LENIENCE, "-D__GXX_TYPEINFO_EQUALITY_INLINE=1",
          "-fms-compatibility", "-fms-compatibility-version=19.44", *MACOS_GNUC(t)]
-    # Linux: -fms-compatibility also hides the __GCC_ATOMIC_* macros; libstdc++ 10's atomic_flag (reached through
-    # <memory>) needs __GCC_ATOMIC_TEST_AND_SET_TRUEVAL, which is 1 on x86_64
+    # Linux: -fms-compatibility also hides the __GCC_ATOMIC_* macros libstdc++ reads (LINUX_GCC_ATOMIC_DEFINES)
     if t.os == "linux":
-        f += ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"]
+        f += LINUX_GCC_ATOMIC_DEFINES
         # Linux: functions returning std::string mangle with libstdc++'s [abi:cxx11] tag or without it depending on
         # whether glibc's <string.h> came before <string> in the unit (in this dialect); units that include the
         # compat <windows.h> first get it first, units that start with <string> did not, and the two halves of a call

@@ -54,6 +54,8 @@ the chosen Rust path), PORT_LEARNINGS.md.
 
 
 
+
+
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
 played on. Linux: the game cross-compiles and links, but has not been run. macOS: Rust type-checks only; nothing was
