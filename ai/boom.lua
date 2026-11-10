@@ -10,6 +10,17 @@
 local V = require("lib.view")
 local G = require("lib.groups")
 local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
+local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
+local D = require("lib.demand")        -- the split's stock correction and the saving ramp (balanced's rules)
+
+-- the economy rules (docs/AI_RESEARCH.md §8.39): each one switchable for the bench
+local ECON = {
+    demand = true,          -- the stock correction of the gatherer split (lib.demand.correct)
+    unreachable = true,     -- no reserve for an advance with a short resource nobody can gather
+    ramp = true,            -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
+    tc = true,              -- a second town centre (the plan's town_centers, tc_at; lib.econ_units)
+    army_slack = false,     -- past the soldiers-first window the reserve waits for 3/4 of the light army only
+}
 
 local PLAN = {
     {   -- Prehistoric
@@ -36,6 +47,8 @@ local PLAN = {
                                 -- second home patch, iron, gold, stone, wood and a third patch)
         barracks = 1, ranges = 0,
         barracks_at = 28,       -- citizens: the first barracks stands when the Stone Age's army is trained
+        town_centers = 1,       -- town centres (balanced's early_town_centers: a settlement filled with citizens) ...
+        tc_at = 0,              -- ... from this many citizens
         boats = 0, docks = 0,
         claim_max = 30,
     },
@@ -43,6 +56,9 @@ local PLAN = {
         -- first 20 soldiers (spearmen from two barracks, one defend group at home), then the citizens (18 food, 12
         -- gold, 12-18 iron, 6 stone, 10-15 wood, the boats on top), then the Copper Age
         citizens = 64, citizens_max = 90, save_at = 60, save_after = 10,
+        -- (ECON.ramp: the reserve grows from nothing to the whole cost over these minutes into the epoch or these
+        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.39)
+        save_ramp = {from_min = 6, full_min = 14, from_cit = 52, full_cit = 64},
         floor = {wood = 10, stone = 6, gold = 12, iron = 12},
         cap = {wood = 15, stone = 6, gold = 12, iron = 18},
         bank = {wood = 150, stone = 0, gold = 100, iron = 100},
@@ -52,6 +68,7 @@ local PLAN = {
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
+        town_centers = 2, tc_at = 30,   -- (balanced: early_town_centers 2; research §4.2: a second citizen producer)
         towers = 7,
         settlements = 12,       -- (§8.36: every worked mine has its own)
         barracks = 2, ranges = 1,
@@ -62,6 +79,7 @@ local PLAN = {
     {   -- Copper and later (S5 extends it)
         -- the same, with 2-3 granaries of farms; 12-18 gold, 12-18 iron, 6 stone, 15-20 wood
         citizens = 90, citizens_max = 100, save_at = 95, save_after = 25,
+        save_ramp = {from_min = 15, full_min = 25, from_cit = 80, full_cit = 95},
         floor = {wood = 15, stone = 6, gold = 12, iron = 12},
         cap = {wood = 20, stone = 6, gold = 18, iron = 18},
         bank = {wood = 300, stone = 0, gold = 200, iron = 200},
@@ -76,6 +94,7 @@ local PLAN = {
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,
+        town_centers = 2, tc_at = 30,
         claim_max = 45,
     },
 }
@@ -497,9 +516,21 @@ function M.step(view, memory)
     local last = view.epoch >= view.last_epoch
     local saving = not last and not view.advancing
         and (view.citizens >= plan.save_at or in_epoch >= plan.save_after)
+    -- (lib.demand, balanced's epoch_pressure start/full) the reserve ramps up to the advance's cost
+    local pressure = saving and 100 or 0
+    if ECON.ramp and plan.save_ramp ~= nil and not last and not view.advancing then
+        pressure = D.pressure(plan.save_ramp, view.time - view.epoch_start, view.citizens)
+        saving = pressure > 0
+    end
     local cost = view.next_epoch_cost
     -- the light army comes before the reserve: what its missing soldiers cost is left out of it
     local missing = plan.soldiers - view.army_count
+    if ECON.army_slack and in_epoch >= ARMY_FIRST_MIN then
+        -- (§8.39) past the soldiers-first window the reserve leaves out only the first three quarters of the light
+        -- army: a town 2 soldiers short (iron-bound, 18 of 20) kept the reserve at 0 for 10 minutes, and the citizens
+        -- took the Copper Age's food
+        missing = plan.soldiers * 3 // 4 - view.army_count
+    end
     local soldier_cost = nil
     for _, c in ipairs(view.costs) do
         if not c.building and c.military and c.producer == "b_barracks"
@@ -519,12 +550,25 @@ function M.step(view, memory)
     local function guarded(r)
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
     end
+    -- (balanced's claim_needed) an advance with a resource short that no site the gatherers can reach holds and
+    -- nobody gathers reserves nothing: the town never stalls saving for what it cannot gather
+    local unreachable = false
+    for _, r in ipairs(V.resources) do
+        if ECON.unreachable and r ~= "food" and cost[r] > view.stock[r] and no_site[r] == true
+                and (view.gatherers[r] or 0) == 0 then
+            unreachable = true
+        end
+    end
     local reserve, differs = {}, false
     for _, r in ipairs(V.resources) do
         local want = 0
-        local kept = not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron")))
+        local kept = not last and not view.advancing and not unreachable
+            and (saving or (age >= 2 and (r == "gold" or r == "iron")))
         if kept then
             want = cost[r]
+            if pressure < 100 and not (age >= 2 and (r == "gold" or r == "iron")) then
+                want = cost[r] * pressure // 100 // 50 * 50   -- (in steps of 50: the reserve changes seldom)
+            end
             if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 and not guarded(r) then
                 -- the missing light army is never locked out by the reserve: at most the stock less what it costs
                 -- (in steps of 100, so the reserve changes seldom)
@@ -598,6 +642,10 @@ function M.step(view, memory)
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
     end
     ES.step(view, memory, view.citizens + making < cap)
+    memory.econ = memory.econ or {}
+    if ECON.tc then
+        EU.town_centers(view, memory.econ, {want = plan.town_centers, min_citizens = plan.tc_at, safe = not threatened})
+    end
 
     local tower = tower_class(view)
 
@@ -659,6 +707,20 @@ function M.step(view, memory)
         want.food = land - others
         if want.food < 0 then
             want.food = 0
+        end
+        -- (lib.demand, balanced's surplus / low_stock rules) half the gatherers off a resource piled past 1000, and a
+        -- floor share for one the plan wants that is under 150 (the Stone Age's wood sat at 0-50 for 30 minutes with
+        -- no gatherer: no boats, settlements or towers), taken from gold, stone and iron (iron kept while the army is
+        -- short), then from food down to 4 under its minimum (with food and the army's iron the whole town, nothing
+        -- else could give, §8.39); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
+        if ECON.demand then
+            local lacks = {wood = true}
+            for _, r in ipairs({"stone", "gold", "iron"}) do
+                lacks[r] = target[r] > view.stock[r]
+            end
+            D.correct(want, land, view.stock, reserve, {lacks = lacks, give = {"gold", "stone", "iron", "food"},
+                floor = {food = 10, wood = 15, stone = 5, gold = 5, iron = 5},
+                keep = {iron = army_short and want.iron or 0, food = math.max(food_min - 4, 0)}})
         end
         -- claims: forage patches for the food gatherers (the hunters take the rest), the minerals' nearest sites for
         -- theirs; the claim grows only when no patch is left in it, and never past the plan's reach. A mineral with no
