@@ -4,10 +4,17 @@
 -- The economy pays what a human pays and sees what a human sees: a budget with an epoch reserve and a military
 -- account, worker targets by shortfall and the measured rates, towers by the town centre first and at the fronts
 -- later, drop sites before gathering, the gathering upgrades; the land army is one force ordered as one through the
--- per-unit interface (ageofai.army). The navy, landings, other islands and diplomacy are not ported yet.
+-- per-unit interface (ageofai.army); the navy, landings and other islands (ageofai.navy, fleet, towns); the
+-- diplomacy (ageofai.diplo: war answered, opinions, peace, blocks, vassals, capitulation, surrender).
 local E = require("ageofai.econ")
 local A = require("ageofai.army")
 local T = require("ageofai.tactics")
+local TW = require("ageofai.towns")   -- [towns.c, expand.c]
+local DP = require("ageofai.diplo")   -- [diplo.c]
+local AIR = require("ageofai.air")   -- [airstrike.c]
+local W = require("ageofai.walls")   -- [defence.c walls, enclose]
+local FR = require("ageofai.fronts")   -- [fronts.c]
+local MT = require("ageofai.metal")   -- [metal.c]
 local V = require("lib.view")
 
 local M = {}
@@ -30,14 +37,23 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
-    do
-        local above = {}
-        for _, r in ipairs(V.resources) do
-            above[r] = math.max(view.stock[r] - (budget.reserve[r] or 0), 0)
-        end
-        T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above)
-    end
+    -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
+    T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, budget.build, memory)
+    -- [fronts.c] the territory, the border and the fronts every 10 s; station 1 is the force's home (army.lua)
+    FR.step(view, memory)
+    -- [metal.c] the 5-minute line of the metal plan (what it picked, cut and freed)
+    MT.tick(view, memory)
+    -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
+    TW.step(view, memory, orders, budget)
+    -- [defence.c walls, enclose] the front walls and their gates, the ring round the town or the island's coast
+    -- (ageofai.walls; econ.lua reads the stone it owes and the ring's tower spots from memory.eco)
+    W.step(view, memory)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
+    -- [diplo.c] the diplomacy (ageofai.diplo): every step (the stances and the pending answers), the blocks every
+    -- 2 s, the world scan every 10 s, the initiative every 60 s from minute 10; the events for the hits and losses
+    DP.step(view, memory, events)
+    -- [airstrike.c] the air force: the shooters' spots from the step's attacked events, the bombers' wing every 5 s
+    AIR.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
         print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d",

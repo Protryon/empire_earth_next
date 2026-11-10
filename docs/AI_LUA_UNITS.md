@@ -890,9 +890,28 @@ foundations in one island game). `ai.replant(granary)` (the human's replant comm
 foundations: a granary placed by a human's build order comes without them, and `build b_farm` (the classic FindSite)
 finishes only foundations that exist.
 
+**Walls, gates and diplomacy (2026-11-10):** `ai.wall(ids, class, x1, y1, x2, y2)` lays a straight wall as a human's
+drag (EEMBuildWall: EEPlanWall along the tiles or exactly diagonal, EEBuildWall with the citizens); `class` is a wall
+class name or `"wall"` for the epoch's wall as the classic wall manager picks it (EECPCivilizationManager::GetWallClass:
+nothing before the Copper Age, so `"wall"` is `bad_argument` there; a Prehistoric palisade goes by name). A wall tech is
+never "available" the production way (`EEPlayer::CanProduce` says no for every computer player, which the classic wall
+manager never asks), so the command checks the tech node and `CanAfford` only; `not_in_epoch` is a new reason. `ai.gate(class,
+x, y)` turns the five finished own pieces round a wall tile into a gate at once (EEMBuildGate: the side is the first
+`EEDoesWallGateFitOnUnit` accepts, as the classic manager picks it; `cannot_place` without such a run); `ai.lock(ids, on)`
+is the gates' lock. `ai.tribute(player, {food=, ...})` moves the resources with EEMPayTribute's ledger (without its chat
+line); `ai.trade(resource, "buy"|"sell", 1|5)` is EEMExchangeResources through the borrowed slot; `ai.diplomacy(player,
+"ally"|"enemy")` is `EEWorld::SetDiplomaticStance` (0 the ally; the alliance forms once both stand allied). The test
+`tests/ai_units/commands.lua` (seeds 2-3, 300 s) exercises them: the wall `ok n=3`, the tribute and the stances as
+ordered, the trade both ways, the gate `cannot_place` while no run of five finished pieces stands.
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
-- `patrol`, `wall` / `gate`, `tribute` / `trade` / `diplomacy` (their messages write chat lines);
+- `patrol` (EEMAddPatrolPoint has no constructor from a point);
+- what the port's modules asked for (UPSTREAM's interface gaps): the other players' stances towards me and the
+  teams (`ai.players` `hostile`, `allies`), a tribute-received event, an offer channel between AIs, `ai.resign`,
+  `ai.memory`'s `category`, `ai.class`'s family / damage class / hit factors / cost, `ai.reflex{militia=}`, aircraft
+  launched from their airport by `ai.attack`, `ai.resource(id)` (documented, not bound), `ai.tile`'s continent under
+  the fog;
 - the per-step command limits are counted per game ms, so a step and a micro in the same tick share them;
 - the deletion of `EECPNextArmy.cpp` once rush and balanced run on lib.groups; the engine's unload fixes (L6's
   gate on an Islands map is in AI_RESEARCH §8.37 once run).

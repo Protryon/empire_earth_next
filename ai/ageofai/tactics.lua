@@ -17,6 +17,9 @@
 -- goes. They are committed for 45 s (the force's orders leave them alone).
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local AT = require("ageofai.attack")   -- [attack.c] the siege's target and firing position
+local LA = require("lib.army")        -- [forces.c] goal_near
+local G = require("lib.groups")       -- [bunker.c] the reserve takes the force's soldiers at home
 local M = {}
 
 local SIEGE = {"gun_siege13_paladin_cannon", "gun_siege10_howitzer_cannon", "gun_siege09_serpentine_cannon",
@@ -70,6 +73,7 @@ function M.siege(view, mem, order, budget)
     end
     mem.siege_had = have
     if have >= want or view.time < (mem.siege_pause or 0) then
+        mem.special = nil   -- [priority.c] nothing wanted: the special row empty
         return
     end
     local factory = V.buildings(view, "b_siege_factory")
@@ -89,16 +93,93 @@ function M.siege(view, mem, order, budget)
             local n = want - have
             for _, r in ipairs(V.resources) do
                 if c.cost[r] > 0 then
-                    n = math.min(n, budget.avail[r] // c.cost[r])
+                    -- [attack.c] a priority order (g_priority_mil): the stock above the epoch reserve, not the
+                    -- military account alone. [priority.c] what the list leaves a priority order (budget.order)
+                    n = math.min(n, (budget.order or budget.civil)[r] // c.cost[r])
                 end
             end
             if n > 0 and c.requested + c.in_production == 0 then
                 order({verb = "train", type = t, n = n})
                 mem.siege_trained = (mem.siege_trained or 0) + n
+                mem.special = nil
                 return c
+            end
+            -- [priority.c] the special row (econ.c special_want SP_SIEGE): what it saves for is held from the
+            -- ordinary soldiers (and warships) for SP_KEEP
+            if n <= 0 then
+                mem.special = {type = t, n = want - have, t = view.time > 0 and view.time or 1}
             end
             return nil   -- the newest it can make: short of its price
         end
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- [attack.c] The siege's shelling (siege_tick): every siege_fire_every while the force is out, its siege weapons
+-- (the force's members of the siege types) take the target attack.lua names - the force's breach wall, else the
+-- nearest known defence they outrange, within siege_fire_near of the force's middle (the force is the escort;
+-- upstream's waves went from home with idle soldiers along) - from the firing position (range - 0.7 from it, out of
+-- every other known defence): those within 2 tiles of it attack the target, the rest move there (a forced move);
+-- held while enemy soldiers are seen within 8 tiles of the position ("enemy soldiers on the way"). They are
+-- committed for three looks (the force's orders leave them alone); the force home ends it (army.lua).
+
+function M.siege_fire(view, mem, force)
+    mem.shell = mem.shell or {}
+    local now = view.time
+    for _, id in ipairs(ai.keys(mem.shell)) do
+        if mem.shell[id] <= now then
+            mem.shell[id] = nil
+        end
+    end
+    if not S.attack_siege or force == nil or not mem.out or now - (mem.shell_t or 0) < S.siege_fire_every then
+        return
+    end
+    mem.shell_t = now
+    local siege = {}
+    for _, id in ipairs(force.units) do
+        local u = ai.unit(id)
+        if u ~= nil and SIEGE_SET[u.type] and u.inside == nil then
+            siege[#siege + 1] = u
+        end
+    end
+    if #siege == 0 then
+        return
+    end
+    local t, px, py, srange = AT.shelling(mem, siege)
+    if t == nil then
+        return
+    end
+    local cx, cy = force.cx or force.x, force.cy or force.y
+    if d2(t.x, t.y, cx, cy) > S.siege_fire_near * S.siege_fire_near then
+        return
+    end
+    local foes = ai.seen{enemy = true, category = "soldier", near = {px, py, 8}, limit = 1}
+    if #foes > 0 then
+        mem.shell_held = (mem.shell_held or 0) + 1
+        return
+    end
+    local fire, go = {}, {}
+    for _, u in ipairs(siege) do
+        if d2(u.x, u.y, px, py) <= 4 then
+            if u.target ~= t.id then
+                fire[#fire + 1] = u.id
+            end
+        elseif not (u.action == "move" and LA.goal_near(u, px, py, 2)) then   -- [forces.c] goal_near
+            go[#go + 1] = u.id
+        end
+        mem.shell[u.id] = now + S.siege_fire_every * 3
+    end
+    if #fire > 0 then
+        ai.attack(fire, t.id)
+    end
+    if #go > 0 then
+        ai.move(go, px, py, {forced = true})
+    end
+    if t.id ~= (mem.shell_target or 0) then
+        mem.shell_target = t.id
+        mem.shells = (mem.shells or 0) + 1
+        print(string.format("siege shell target=%s at=%d,%d from=%d,%d range=%d siege=%d", t.type, t.x, t.y, px, py,
+            srange // 100, #siege))
     end
 end
 
@@ -255,7 +336,8 @@ function M.counterfire(mem, events, now)
             local cands, str, on = {}, 0, 0
             local cols = ai.get(own, {"hp", "attack", "inside", "x", "y", "target"})
             for k = 1, #own do
-                if cols.hp[k] ~= nil and cols.inside[k] == nil then
+                -- [skirmish.c] the spotter is left alone (an attack order would give it away)
+                if cols.hp[k] ~= nil and cols.inside[k] == nil and own[k] ~= mem.sk_spotter then
                     local hits = false
                     for _, c in ipairs(cluster) do
                         if cols.target[k] == c then
@@ -375,90 +457,439 @@ function M.bait(mem, events, now, epoch)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
--- Bunkers (bunker.c): from the Copper Age a Fortress by the drop site nearest the base once citizens were hurt
--- three times within two minutes (two fortresses from 40 citizens); a citizen hit by a seen soldier, and the
--- citizens within 6 tiles of the attacker, go into the nearest finished fortress within 15 tiles with room
--- (ai.load: the fortress is a transport class); a fortress quiet for 8 s (no citizen hit within 10 tiles) lets them
--- out 3 tiles to a side, the next side when nobody came out, and they are released.
+-- Bunkers (bunker.c): the Fortress holds units like a transport (inside they are off the map and out of the
+-- population). THE SHELTER (bunkers): from the Copper Age a Fortress by the drop site nearest the base once citizens
+-- were hurt three times within two minutes or enemy aircraft are possible (both sides in World War I; two
+-- fortresses from 40 citizens); its wood is held back from unit training while it waits (bunker_reserve, econ.lua's
+-- reserve); a citizen hit by a seen soldier, and the citizens within 6 tiles of the attacker, go into the nearest
+-- finished fortress within 15 tiles with room (ai.load; the micro step); a fortress with nothing hurt within 10
+-- tiles for 45 s and no enemy soldiers seen within 10 lets them out after two quiet looks 8 s apart, 3 tiles to a
+-- side, the next side when nobody came out (the game takes an unload it cannot do and does nothing), and they are
+-- released. THE RESERVE (bunker_reserve): every 10 s with the map full (population at the cap - 1), up to 10 of the
+-- force's soldiers at home (within 25 tiles of the base, the force home; 4 stay out) go into the fortress with the
+-- most room and training fills the map again; once the population is 4 below the cap with nothing loaded for a
+-- minute (losses), or enemy soldiers come within 20 tiles of it, the fullest fortress lets everyone out (not one
+-- where citizens shelter) and they are the force's again. THE SHELF (shelve_citizens): every 10 s from the Copper
+-- Age, while the population stands at the cap (5 under at most, units queued) and food, wood, gold and iron each
+-- lie at shelve_stock or more, up to 20 citizens go into a fortress of the shelf - the nearest gatherers of the
+-- resource with the most in stock first, then of any resource at twice shelve_stock, never under max(cap / 8, 40)
+-- left out - and no new citizens are trained (econ.lua's citizens wanted); no room in the shelf: one more fortress
+-- (up to 8). Out again, a fortress at a time, once one of the four falls under half of shelve_stock or the citizens
+-- out are under 3/4 of what is kept out; enemies near keep them in. Not ported: TOWN GUARDS (town_guards, off
+-- upstream: a fortress at each front station - fronts.c is not ported). Deviations: the port's "free soldiers" are
+-- the force's at home (upstream's are the game's in no group); the room is the view's population (with the units
+-- in production, which upstream's room left out); the fortress's spot is ai.find_site by the drop site.
 
 -- the step's part: the fortress wanted and the quiet fortresses' unload
-function M.bunkers(view, mem, order, above)
+local SIDES = {{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {3, 3}, {-3, 3}, {3, -3}, {-3, -3}}
+
+local function raiders_near(x, y, r)
+    return #ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, r}, limit = 1} > 0
+end
+
+-- bk_unload: the holder lets everyone out 3 tiles to a side on land; holding as many at this unload as at the last,
+-- it tries the next side
+local function unload_fort(mem, f)
+    mem.bk_out = mem.bk_out or {}
+    local o = mem.bk_out[f.id] or {side = 1, held = -1}
+    if o.held == (f.cargo or 0) then
+        o.side = o.side % 8 + 1
+    end
+    o.held = f.cargo or 0
+    for _ = 1, 8 do
+        local d = SIDES[o.side]
+        local t = ai.tile(f.x + d[1], f.y + d[2])
+        if t ~= nil and (t.continent or 0) ~= 0 then
+            break
+        end
+        o.side = o.side % 8 + 1
+    end
+    mem.bk_out[f.id] = o
+    local d = SIDES[o.side]
+    local code = ai.unload(f.id, f.x + d[1], f.y + d[2])
+    return code == "ok"
+end
+
+-- the citizens hit within r tiles of (x, y) in the last ms (the micro step's hurt spots)
+local function hurt_near(mem, now, x, y, r, ms)
+    local n = 0
+    for _, h in ipairs(mem.hurt_at or {}) do
+        if now - h.t <= ms and math.abs(h.x - x) <= r and math.abs(h.y - y) <= r then
+            n = n + 1
+        end
+    end
+    return n
+end
+
+-- the units of a hold record (shelter, reserve, shelf) that are not inside go back to the engine; returns how many
+local function release_out(rec)
+    local keep, out = {}, {}
+    for _, id in ipairs(rec.units or {}) do
+        local u = ai.unit(id)
+        if u ~= nil and u.inside ~= nil then
+            keep[#keep + 1] = id
+        elseif u ~= nil then
+            out[#out + 1] = id
+        end
+    end
+    if #out > 0 then
+        ai.release(out)
+    end
+    rec.units = keep
+    return #out
+end
+
+local function take_from_group(g, ids)
+    local set = {}
+    for _, id in ipairs(ids) do
+        set[id] = true
+    end
+    local keep = {}
+    for _, id in ipairs(g.units) do
+        if not set[id] then
+            keep[#keep + 1] = id
+        else
+            g.aims[id] = nil
+        end
+    end
+    g.units = keep
+end
+
+-- a hold record's soldiers or citizens out again (after an unload, or not in within a minute of the load) are the
+-- engine's; an empty record is dropped
+local function hold_records(mem, recs, now)
+    for _, fid in ipairs(ai.keys(recs)) do
+        local rec = recs[fid]
+        local f = ai.unit(fid)
+        if f == nil then
+            if #(rec.units or {}) > 0 then
+                ai.release(rec.units)
+            end
+            recs[fid] = nil
+        else
+            if rec.unloading or now - (rec.in_t or 0) > 60000 then
+                release_out(rec)
+            end
+            if rec.unloading and (f.cargo or 0) == 0 then
+                rec.unloading = nil
+            end
+            if #rec.units == 0 and (f.cargo or 0) == 0 then
+                recs[fid] = nil
+            end
+        end
+    end
+end
+
+-- the step's part: the fortress wanted, the quiet fortresses' unload, the reserve and the shelf
+function M.bunkers(view, mem, order, above, memory)
     if not S.bunkers or view.epoch < 2 or view.town_x < 0 then
         return
     end
+    mem.bunker_wood = 0   -- [priority.c] the fortress row (bunker_reserve): the wood it cannot pay yet
+    local now = view.time
     mem.hurt = mem.hurt or {}
     local keep = {}
     for _, t in ipairs(mem.hurt) do
-        if view.time - t <= 120000 then
+        if now - t <= 120000 then
             keep[#keep + 1] = t
         end
     end
     mem.hurt = keep
-    local forts = ai.units{type = "b_fortress"}
-    local want = #mem.hurt >= 3 and (view.citizens >= 40 and 2 or 1) or 0
-    if #forts < want and view.time - (mem.fort_t or 0) >= 60000 and V.cost(view, "b_fortress") ~= nil then
+    mem.shelter = mem.shelter or {}
+    mem.reserve = mem.reserve or {}
+    mem.shelf = mem.shelf or {forts = {}}
+    local forts, nall = {}, 0
+    for _, fid in ipairs(ai.units{type = "b_fortress"}) do
+        local f = ai.unit(fid)
+        if f ~= nil then
+            nall = nall + 1
+            if f.built then
+                forts[#forts + 1] = f
+            end
+        end
+    end
+    -- THE FORTRESS WANTED (bk_build, once a minute): citizens hurt or aircraft possible, the reserve near the cap,
+    -- the shelf full
+    if now - (mem.fort_t or 0) >= 60000 then
+        mem.fort_t = now
+        local air = false
+        if view.epoch >= 9 then
+            for _, en in ipairs(view.enemies or {}) do
+                if (en.epoch or 0) >= 9 then
+                    air = true
+                end
+            end
+        end
+        local want = (air or #mem.hurt >= 3) and (view.citizens >= 40 and 2 or 1) or 0
+        local room = view.population_cap - view.population
+        if S.bunker_reserve and room <= 5 and want < 1 then
+            want = 1
+        end
+        if mem.shelf.want and want < nall + 1 then
+            want = math.min(nall + 1, 8)
+        end
         local c = V.cost(view, "b_fortress")
-        if above.wood >= c.cost.wood and above.stone >= c.cost.stone then
-            local best, bd = nil, nil
-            for _, id in ipairs(ai.units{category = "building", built = true}) do
-                local u = ai.unit(id)
-                if u ~= nil and (u.type == "b_town_center" or u.type == "b_capitol" or u.type == "b_settlement") then
-                    local near = false
-                    for _, fid in ipairs(forts) do
-                        local f = ai.unit(fid)
-                        if f ~= nil and math.abs(f.x - u.x) <= 10 and math.abs(f.y - u.y) <= 10 then
-                            near = true
+        memory.eco.bunker_wood = 0
+        if nall < want and c ~= nil then
+            if view.stock.wood < c.cost.wood then
+                memory.eco.bunker_wood = c.cost.wood   -- can't pay yet: saved for (bunker_reserve)
+                mem.bunker_wood = c.cost.wood          -- [priority.c] the fortress row reads it here
+            elseif require("ageofai.priority").refuses(view, memory, "b_fortress") == nil then   -- [priority.c]
+                -- the drop site nearest the base without a fortress within 10 tiles
+                local best, bd = nil, nil
+                for _, id in ipairs(ai.units{category = "building", built = true}) do
+                    local u = ai.unit(id)
+                    if u ~= nil and (u.type == "b_town_center" or u.type == "b_capitol" or u.type == "b_settlement") then
+                        local near = false
+                        for _, f in ipairs(forts) do
+                            if math.abs(f.x - u.x) <= 10 and math.abs(f.y - u.y) <= 10 then
+                                near = true
+                            end
+                        end
+                        local d = d2(u.x, u.y, view.town_x, view.town_y)
+                        if not near and (bd == nil or d < bd) then
+                            best, bd = u, d
                         end
                     end
-                    local d = d2(u.x, u.y, view.town_x, view.town_y)
-                    if not near and (bd == nil or d < bd) then
-                        best, bd = u, d
+                end
+                if best ~= nil then
+                    local x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9, safe = true})
+                    if x == nil then
+                        x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9})
+                    end
+                    if x ~= nil then
+                        order({verb = "build", type = "b_fortress", near = "tile", x = x, y = y})
+                        mem.forts_ordered = (mem.forts_ordered or 0) + 1
+                        print(string.format("bunker fortress at=%d,%d why=%s hurt=%d forts=%d citizens=%d", x, y,
+                            mem.shelf.want and "shelf" or air and "aircraft" or #mem.hurt >= 3 and "hurt" or "reserve",
+                            #mem.hurt, nall, view.citizens))
                     end
                 end
             end
-            if best ~= nil then
-                local x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9, safe = true})
-                if x == nil then
-                    x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9})
+        end
+    end
+    -- THE SHELTER's quiet release (bk_flush)
+    for _, f in ipairs(forts) do
+        local sh = mem.shelter[f.id]
+        if sh ~= nil then
+            if (f.cargo or 0) <= 0 then
+                if now - sh.t > 30000 then   -- empty, and nobody still walking in
+                    sh.unloading = true
                 end
-                if x ~= nil then
-                    order({verb = "build", type = "b_fortress", near = "tile", x = x, y = y})
-                    mem.fort_t = view.time
-                    mem.forts_ordered = (mem.forts_ordered or 0) + 1
-                    print(string.format("bunker fortress at=%d,%d hurt=%d forts=%d", x, y, #mem.hurt, #forts))
+            elseif hurt_near(mem, now, f.x, f.y, 10, 45000) > 0 or raiders_near(f.x, f.y, 10) then
+                sh.quiet = nil
+            elseif sh.quiet == nil then
+                sh.quiet = now
+            elseif now - sh.quiet >= 8000 then   -- two quiet looks
+                if unload_fort(mem, f) then
+                    sh.quiet = nil
+                    sh.unloading = true
+                    sh.outs = (sh.outs or 0) + 1
+                    mem.sheltered_out = (mem.sheltered_out or 0) + (f.cargo or 0)
+                    print(string.format("bunker quiet at=%d,%d out=%d outs=%d", f.x, f.y, f.cargo or 0, sh.outs))
                 end
             end
         end
     end
-    mem.shelter = mem.shelter or {}
-    for _, fid in ipairs(forts) do
-        local f = ai.unit(fid)
-        local sh = mem.shelter[fid]
-        if f ~= nil and f.built and (f.cargo or 0) > 0 and sh ~= nil then
-            local hits_near = false
-            for _, h in ipairs(mem.hurt_at or {}) do
-                if view.time - h.t < 8000 and math.abs(h.x - f.x) <= 10 and math.abs(h.y - f.y) <= 10 then
-                    hits_near = true
+    hold_records(mem, mem.shelter, now)
+    -- THE RESERVE (bunker_reserve): every 10 s with a finished fortress
+    if S.bunker_reserve and #forts > 0 and now - (mem.res_t or 0) >= 10000 then
+        mem.res_t = now
+        local room = view.population_cap - view.population
+        local threat = nil
+        for _, f in ipairs(forts) do
+            if threat == nil and mem.reserve[f.id] ~= nil and (f.cargo or 0) > 0 and mem.shelter[f.id] == nil
+                    and mem.shelf.forts[f.id] == nil and raiders_near(f.x, f.y, 20) then
+                threat = f
+            end
+        end
+        if room <= 1 and threat == nil then
+            -- the free soldiers at home: the force's members within 25 tiles of the base while the force is home
+            local force = G.role(memory, "force")
+            local cands = {}
+            if force ~= nil and not mem.out then
+                local cols = ai.get(force.units, {"x", "y", "inside", "speed"})
+                for k, id in ipairs(force.units) do
+                    if cols.x[k] ~= nil and cols.inside[k] == nil and (cols.speed[k] or 0) > 0 and id ~= mem.sk_spotter
+                            and not M.committed(mem, id, now) and d2(cols.x[k], cols.y[k], view.town_x, view.town_y) <= 625 then
+                        cands[#cands + 1] = {id = id, x = cols.x[k], y = cols.y[k]}
+                    end
                 end
             end
-            if not hits_near and view.time - sh.t >= 8000 then
-                local sides = {{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {3, 3}, {-3, 3}, {3, -3}, {-3, -3}}
-                sh.side = ((sh.side or 0) % #sides) + 1
-                local d = sides[sh.side]
-                ai.unload(fid, f.x + d[1], f.y + d[2])
-                sh.t = view.time
-                sh.outs = (sh.outs or 0) + 1
-                if sh.outs >= 8 then
-                    ai.release(sh.units or {})
-                    sh.units = {}
+            -- the fortress with the most room (not the shelf's)
+            local best, space = nil, 0
+            for _, f in ipairs(forts) do
+                local c = ai.class(f.type)
+                local rec = mem.reserve[f.id]
+                local walking = rec ~= nil and math.max(#rec.units - (f.cargo or 0), 0) or 0
+                local s = (c and c.transport or 0) - (f.cargo or 0) - walking
+                if s > space and mem.shelf.forts[f.id] == nil then
+                    best, space = f, s
                 end
             end
-        elseif f ~= nil and (f.cargo or 0) == 0 and sh ~= nil then
-            ai.release(sh.units or {})
-            mem.shelter[fid] = nil
-            mem.sheltered_out = (mem.sheltered_out or 0) + 1
+            local n = math.min(#cands - 4, 10, space)
+            if best ~= nil and n > 0 then
+                local fx, fy = best.x, best.y
+                table.sort(cands, function(a, b)
+                    local da, db = d2(a.x, a.y, fx, fy), d2(b.x, b.y, fx, fy)
+                    if da ~= db then
+                        return da < db
+                    end
+                    return a.id < b.id
+                end)
+                local ids = {}
+                for k = 1, n do
+                    ids[k] = cands[k].id
+                end
+                local code = ai.load(ids, best.id)
+                if code == "ok" then
+                    take_from_group(force, ids)
+                    local rec = mem.reserve[best.id] or {units = {}}
+                    for _, id in ipairs(ids) do
+                        rec.units[#rec.units + 1] = id
+                    end
+                    rec.in_t = now
+                    mem.reserve[best.id] = rec
+                    mem.res_load_t = now
+                    mem.res_in = (mem.res_in or 0) + n
+                    print(string.format("reserve in room=%d n=%d at=%d,%d holds=%d in=%d out=%d", room, n, fx, fy, best.cargo or 0,
+                        mem.res_in, mem.res_out or 0))
+                end
+            end
+        elseif threat ~= nil or (room >= 4 and (mem.res_load_t == nil or now - mem.res_load_t >= 60000)) then
+            local best, held = threat, threat ~= nil and (threat.cargo or 0) or 0
+            if threat == nil then
+                for _, f in ipairs(forts) do
+                    if mem.reserve[f.id] ~= nil and (f.cargo or 0) > held and mem.shelter[f.id] == nil and mem.shelf.forts[f.id] == nil then
+                        best, held = f, f.cargo
+                    end
+                end
+            end
+            if best ~= nil and unload_fort(mem, best) then
+                mem.reserve[best.id].unloading = true
+                mem.res_out = (mem.res_out or 0) + held
+                print(string.format("reserve out room=%d%s at=%d,%d n=%d in=%d out=%d", room, threat ~= nil and " enemies_near" or "",
+                    best.x, best.y, held, mem.res_in or 0, mem.res_out))
+            end
         end
     end
+    hold_records(mem, mem.reserve, now)
+    -- THE SHELF (shelve_citizens): every 10 s from the Copper Age
+    local shelf = mem.shelf
+    if S.shelve_citizens and now - (mem.shelf_t or 0) >= 10000 then
+        mem.shelf_t = now
+        local st = view.stock
+        local function rich(k)
+            return st.food >= k and st.wood >= k and st.gold >= k and st.iron >= k
+        end
+        local keep_out = math.max(view.population_cap // 8, 40)
+        local inside = 0   -- citizens in the fortresses (the shelf's and the shelter's)
+        for _, f in ipairs(forts) do
+            if shelf.forts[f.id] ~= nil or mem.shelter[f.id] ~= nil then
+                inside = inside + (f.cargo or 0)
+            end
+        end
+        local out = view.citizens - inside
+        local room = view.population_cap - view.population
+        local queued = 0
+        for _, c in ipairs(view.costs) do
+            if not c.building then
+                queued = queued + c.in_production
+            end
+        end
+        shelf.want = nil
+        if not rich(S.shelve_stock // 2) or out < keep_out * 3 // 4 then
+            -- out again: the fullest of the shelf's, if quiet
+            local best, held = nil, 0
+            for _, f in ipairs(forts) do
+                local rec = shelf.forts[f.id]
+                if rec ~= nil then
+                    if (f.cargo or 0) <= 0 and #rec.units == 0 then
+                        shelf.forts[f.id] = nil   -- empty: an ordinary fortress again
+                    elseif (f.cargo or 0) > held and not raiders_near(f.x, f.y, 15) then
+                        best, held = f, f.cargo
+                    end
+                end
+            end
+            if best ~= nil and unload_fort(mem, best) then
+                shelf.forts[best.id].unloading = true
+                shelf.n_out = (shelf.n_out or 0) + held
+                print(string.format("shelf out n=%d at=%d,%d out=%d keep=%d stock=%d/%d/%d/%d in=%d out_total=%d", held, best.x, best.y,
+                    out, keep_out, st.food, st.wood, st.gold, st.iron, shelf.n_in or 0, shelf.n_out))
+            end
+        elseif room <= 5 and queued >= 1 and rich(S.shelve_stock) and out > keep_out then
+            shelf.on_t = now
+            -- a fortress of the shelf with room, else an empty one (not the shelter's, not the reserve's)
+            local best, space = nil, 0
+            for _, f in ipairs(forts) do
+                local c = ai.class(f.type)
+                local rec = shelf.forts[f.id]
+                local walking = rec ~= nil and math.max(#rec.units - (f.cargo or 0), 0) or 0
+                local s = (c and c.transport or 0) - (f.cargo or 0) - walking
+                local skip = mem.shelter[f.id] ~= nil or (rec == nil and ((f.cargo or 0) > 0 or mem.reserve[f.id] ~= nil))
+                if not skip and s > space + (rec ~= nil and -1 or 0) then
+                    best, space = f, s
+                end
+            end
+            if best == nil or space < 5 then
+                shelf.want = true
+            else
+                local n = math.min(out - keep_out, 20, space)
+                local richest = "food"   -- the resource with the most in stock: its gatherers first
+                for _, k in ipairs({"wood", "stone", "gold", "iron"}) do
+                    if st[k] > st[richest] then
+                        richest = k
+                    end
+                end
+                local cands = ai.units{category = "citizen", action = "gather", near = {best.x, best.y, 60}, limit = 80}
+                local cols = ai.get(cands, {"x", "held", "inside", "target"})
+                local pick, picked, kinds = {}, {}, {}
+                for pass = 0, 1 do
+                    for k, id in ipairs(cands) do   -- nearest first
+                        if #pick >= n then
+                            break
+                        end
+                        if cols.x[k] ~= nil and cols.held[k] == "engine" and cols.inside[k] == nil and cols.target[k] ~= nil and not picked[id] then
+                            local kind = kinds[k]
+                            if kind == nil then
+                                local r = ai.unit(cols.target[k])
+                                kind = r ~= nil and r.kind or false
+                                kinds[k] = kind
+                            end
+                            -- never the scarce resource's gatherers (under twice shelve_stock)
+                            if kind and (pass == 0) == (kind == richest) and (st[kind] or 0) >= 2 * S.shelve_stock then
+                                pick[#pick + 1] = id
+                                picked[id] = true
+                            end
+                        end
+                    end
+                end
+                if #pick > 0 then
+                    local code = ai.load(pick, best.id)
+                    if code == "ok" then
+                        local rec = shelf.forts[best.id] or {units = {}}
+                        for _, id in ipairs(pick) do
+                            rec.units[#rec.units + 1] = id
+                        end
+                        rec.in_t = now
+                        shelf.forts[best.id] = rec
+                        shelf.n_in = (shelf.n_in or 0) + #pick
+                        print(string.format("shelf in room=%d n=%d at=%d,%d holds=%d out=%d keep=%d stock=%d/%d/%d/%d in=%d out_total=%d",
+                            room, #pick, best.x, best.y, best.cargo or 0, out, keep_out, st.food, st.wood, st.gold, st.iron, shelf.n_in, shelf.n_out or 0))
+                    end
+                end
+            end
+        end
+    end
+    hold_records(mem, shelf.forts, now)
+    -- shelf_wanted (econ.lua): while the shelf works or holds citizens, no more citizens than there are
+    local held = 0
+    for _, f in ipairs(forts) do
+        if shelf.forts[f.id] ~= nil then
+            held = held + (f.cargo or 0)
+        end
+    end
+    memory.shelf_hold = (shelf.on_t ~= nil and now - shelf.on_t < 30000) or held > 0
 end
 
 -- the micro step's part: the citizens hit go into a fortress near
@@ -494,7 +925,8 @@ function M.shelter(mem, events, now)
         for _, fid in ipairs(ai.units{type = "b_fortress", built = true, near = {a.x, a.y, 15}}) do
             local f = ai.unit(fid)
             local c = f ~= nil and ai.class(f.type) or nil
-            if f ~= nil and c ~= nil and (f.cargo or 0) < (c.transport or 0) then
+            -- not the shelf's fortresses (the shelter and the reserve keep off them)
+            if f ~= nil and c ~= nil and (f.cargo or 0) < (c.transport or 0) and (mem.shelf == nil or mem.shelf.forts[fid] == nil) then
                 local d = d2(f.x, f.y, a.x, a.y)
                 if bd == nil or d < bd then
                     best, bd = f, d
@@ -514,6 +946,9 @@ function M.shelter(mem, events, now)
                 if code == "ok" then
                     local sh = mem.shelter[best.id] or {units = {}, t = now}
                     sh.t = now
+                    sh.in_t = now
+                    sh.quiet = nil
+                    sh.unloading = nil
                     for _, id in ipairs(pick) do
                         sh.units[#sh.units + 1] = id
                     end

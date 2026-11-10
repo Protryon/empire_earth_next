@@ -8,7 +8,12 @@
 -- did for upstream. What a verb cannot say stays in Lua (the accounts, the targets, the plan).
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local P = require("ageofai.priority")   -- [priority.c] the list every spender asks
+local MT = require("ageofai.metal")     -- [metal.c] workers_to_metals
+local PK = require("ageofai.packing")   -- [packing.c] the production buildings packed against their kind
 local M = {}
+
+local cur_memory = nil   -- [priority.c] the memory of the step under way (the buildings ask the list)
 
 local FARM_EPOCH = 2                -- the Copper Age: farms make food renewable
 local PASS_MS = 10000               -- the worker plan, claims and buildings every 10 s
@@ -88,6 +93,10 @@ end
 function M.reserve(view, mem)
     local r = {}
     local saving = false
+    if mem.saving_epoch ~= view.epoch then
+        mem.saving_epoch = view.epoch
+        mem.saving_on = false
+    end
     if view.epoch < view.last_epoch and not view.advancing then
         local age = view.time - view.epoch_start
         if view.epoch < FARM_EPOCH then
@@ -109,16 +118,47 @@ function M.reserve(view, mem)
             local at = (mem.epoch_at or 0)
             saving = view.time >= at - S.reserve_window_min * 60000
         end
+        -- hysteresis: the saving, once started, goes on until the epoch is paid (seed 2 flipped it every few
+        -- minutes round min_workforce and never reached the Stone Age's 1122 food in 50 minutes); the recovery
+        -- rules above still stop it
+        if saving then
+            mem.saving_on = true
+        elseif mem.saving_on and view.epoch < FARM_EPOCH and view.citizens * 100 >= (mem.peak or 0) * S.recover_share
+                and view.income.food >= 60 then
+            saving = true
+        end
     end
     for _, k in ipairs(V.resources) do
         r[k] = saving and view.next_epoch_cost[k] or 0
     end
+    if saving and view.epoch >= FARM_EPOCH then
+        -- reserve_plan (econ.c spend_reserve): food is renewable from farms, so each resource keeps only what its
+        -- income cannot bring back over the horizon: the slowest shortfall's time, 10 minutes at most
+        local h = 0
+        for _, k in ipairs(V.resources) do
+            local miss = r[k] - view.stock[k]
+            if miss > 0 then
+                local rate = view.income[k]
+                local t = rate > 1 and (miss * 10 + rate - 1) // rate or 100   -- tenths of a minute
+                h = math.max(h, math.min(t, 100))
+            end
+        end
+        for _, k in ipairs(V.resources) do
+            local more = view.income[k] * 8 * h // 100   -- 80% of the income over h tenths of a minute
+            r[k] = math.max(r[k] - more, 0)
+        end
+    end
+    -- [priority.c] the epoch row of the list; the towns' reserve (towns.c, expand.c) and the navy's account (navy.c
+    -- navy_hold) are rows of their own there (priority.lua), each held from the spenders upstream names
+    mem.epoch_reserve = r
     return r, saving
 end
 
 -- the military account: a share of the start stock, then of every income; what it may spend now per resource
--- (within the stock above the reserve), the hoard above reserve + cap free for the army too
-function M.accounts(view, mem, reserve)
+-- (within the stock above what the list holds from a military unit), the hoard above reserve + cap free for the
+-- army too; civil: what a civilian unit (a citizen) sees. [priority.c] reserve: the list's hold from a military
+-- unit (S_MIL), reserve_civ: from a civilian one (0)
+function M.accounts(view, mem, reserve, reserve_civ)
     mem.mil = mem.mil or {}
     local mil = mem.mil
     if not mem.mil_init then
@@ -146,7 +186,7 @@ function M.accounts(view, mem, reserve)
         mil[r] = math.min(mil[r] or 0, above + cap)   -- the account never outgrows what could be spent
         local free = math.max(above - cap, 0)
         avail[r] = math.min(above, (mil[r] or 0) + free)
-        civil[r] = above
+        civil[r] = math.max(view.stock[r] - reserve_civ[r], 0)
     end
     return avail, civil
 end
@@ -233,8 +273,9 @@ function M.workers(view, mem, reserve, wants)
     end
     -- the food floor: half the workers on food, up to food_floor, before farms (the citizens' own food); from farms
     -- the fields: at least their farmers (fields + 2) when the plan has them
-    local floor_food = late and math.min(total // 2, (wants.fields or 0) + 2)
+    local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
+    mem.food_floor = floor_food   -- [metal.c] MIX keeps it (citizen_plan's FEED)
     while target.food < floor_food do
         local from = nil
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
@@ -307,6 +348,12 @@ local function claims(view, mem, target, order)
     -- forage patches with room for the food gatherers (two at least, four at most); the claim grows when none is
     -- left in it; the food gatherers hunt when no patch is left at all (the game near home first: food_plan HUNT)
     local most = view.epoch == 0 and 3 or 5
+    -- a deviation (food.c has no patch cap: upstream's citizens take the engine's nearest food): the Prehistoric
+    -- workforce of min_workforce outgrows three patches' places (seed 2 against classic: 18 places for 32 food
+    -- gatherers wanted, the claim never grew in 50 minutes), so the cap lifts while the patches' room is short
+    if view.epoch == 0 and patch_room < target.food - view.gatherers.food then
+        most = 5
+    end
     if patches < 2 or (patches < most and patch_room < target.food - view.gatherers.food + 2) then
         if free_patch then
             order({verb = "claim", site = free_patch.index})
@@ -355,8 +402,9 @@ end
 -- a building at a spot of its own through the per-unit interface when the town's rings are full (an island town):
 -- ai.find_site's tile, the three citizens nearest it build it (idle first) and stay the script's until it stands
 -- (released at once, the runners took them back and the foundation stood empty: 17 granary foundations in one
--- game); one such building at a time, three minutes at most. Returns true when ordered
-local function build_direct(view, mem, type)
+-- game); one such building at a time, three minutes at most. Returns true when ordered. [packing.c] sx, sy: a
+-- spot chosen already (a packed production building), no search
+local function build_direct(view, mem, type, sx, sy)
     mem.direct = mem.direct or {}
     local d = mem.direct
     if d.id ~= nil then
@@ -386,8 +434,8 @@ local function build_direct(view, mem, type)
     end
     -- a tile on the town's own land (an island's rings reach across the water: a foundation its builders cannot
     -- reach is cancelled by the engine, and the order came again every minute)
-    local gx, gy
-    for _, opt in ipairs({{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
+    local gx, gy = sx, sy
+    for _, opt in ipairs(gx ~= nil and {} or {{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
         for r = opt.min, opt.max, 3 do
             local x, y = ai.find_site(type, view.town_x, view.town_y, {min = r, max = math.min(r + 2, opt.max), safe = opt.safe})
             if x ~= nil and ai.reach(view.town_x, view.town_y, x, y)
@@ -449,8 +497,13 @@ local function settlements(view, mem, target, order)
     mem.settle_block = mem.settle_block or {}
     mem.settle_pending = mem.settle_pending or {}
     local cands = {}
+    -- [towns.c, expand.c] a site by a town or an outpost of ageofai.towns (going up or standing) is that town's: no
+    -- settlement of this pass there (one or the other issues the drop site's order); nor at a site across the water
+    -- (the claim range reaches over it; the coarse build sent a walker that never arrived)
+    local TW = require("ageofai.towns")
     for _, s in ipairs(view.sites) do
-        if s.claimed and s.units > 0 and s.danger == 0 and s.blocked ~= "tower" and s.blocked ~= "enemy_near" then
+        if s.claimed and s.units > 0 and s.danger == 0 and s.blocked ~= "tower" and s.blocked ~= "enemy_near"
+                and not TW.near_town(mem, s.x, s.y, 18) and ai.reach(view.town_x, view.town_y, s.x, s.y) then
             for _, r in ipairs(V.resources) do
                 if r ~= "wood" and (target[r] or 0) > 0 and (s.holds[r] or 0) > 0 and (s.drop[r] or 0) == 0 then
                     cands[#cands + 1] = {rank = SETTLE_RANK[r], dist = s.distance, site = s, key = s.x * 10000 + s.y}
@@ -461,6 +514,7 @@ local function settlements(view, mem, target, order)
     local wood = view.wood
     if wood ~= nil and (target.wood or 0) > 0 and not wood.ready and not wood.has_drop then
         cands[#cands + 1] = {rank = SETTLE_RANK.wood, dist = wood.distance, tile = wood, key = wood.x * 10000 + wood.y}
+        mem.wd_want_t = view.time   -- [priority.c] the forest row (mines.c wood_reserve: a Settlement wanted at the edge)
     end
     table.sort(cands, function(a, b)
         if a.rank ~= b.rank then
@@ -599,6 +653,28 @@ local function core_spot(view, mem, tower, fx, fy, len)
     return nil
 end
 
+-- [defence.c enclose] a free spot of the ring's tower spots: no armed building within 2, placeable within 2
+local function ring_spot(mem, tower)
+    for _, p in ipairs(mem.ring_spots) do
+        local x, y = p[1], p[2]
+        local others = ai.units{category = "building", near = {x, y, 2}}
+        local taken = false
+        for _, id in ipairs(others) do
+            local u = ai.unit(id)
+            if u ~= nil and u.armed then
+                taken = true
+            end
+        end
+        if not taken then
+            local sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2})
+            if sx ~= nil then
+                return sx, sy
+            end
+        end
+    end
+    return nil
+end
+
 local function towers(view, mem, order, above)
     local tower = M.tower_class(view)
     if tower == nil or view.town_x < 0 then
@@ -627,8 +703,12 @@ local function towers(view, mem, order, above)
             or view.citizens < 8 then
         return stone_wanted
     end
-    if above.stone < cost.cost.stone + S.tower_stone_keep then
+    -- [defence.c enclose] encl_owed: the extra towers wait for the open ring's stone (up to 400; walls.lua)
+    if above.stone < cost.cost.stone + S.tower_stone_keep + math.min(mem.wall_owed or 0, 400) then
         return stone_wanted + cost.cost.stone
+    end
+    if P.refuses(view, cur_memory, tower) ~= nil then   -- [priority.c] a row above holds its price
+        return stone_wanted
     end
     -- an outpost: a worked mineral site 12+ tiles from the town with no tower (3 tiles towards the front)
     for _, s in ipairs(view.sites) do
@@ -639,7 +719,15 @@ local function towers(view, mem, order, above)
             return stone_wanted
         end
     end
-    local x, y = front_spot(view, mem, tower, fx, fy, len)
+    -- [defence.c enclose] def_slot with the ring on: the slots are the spots along the ring (walls.lua writes
+    -- mem.ring_spots: on the coast 1 tile inland and 5 apart, in the octagon 2 inside and 6 apart), the outposts
+    -- above after them, no front slots
+    local x, y
+    if mem.ring_spots ~= nil then
+        x, y = ring_spot(mem, tower)
+    else
+        x, y = front_spot(view, mem, tower, fx, fy, len)
+    end
     if x ~= nil then
         order({verb = "build", type = tower, near = "tile", x = x, y = y})
         mem.tower_t = view.time
@@ -653,6 +741,92 @@ end
 -- the production buildings: a barracks early (the home guard), an archery range in epochs 1-3 (early_requirements),
 -- a stable from the Copper Age; army_plan BUILD: one more of the kind that trains the soldier picked when its
 -- producers are busy and the account holds 600, up to 2 + workers / 15
+-- [econ.c] IDLE CITIZENS HOME (citizens_home): every 3 s, a citizen the engine holds with no goal more than 15 tiles
+-- from its nearest finished town (Town Center, Capitol, Settlement), idle at the last look too (between two jobs is
+-- not), walks to the nearest finished town on its land with no enemy soldiers seen within 12 tiles (none safe: it
+-- stays), to the spot 4 tiles out on the citizen's side (the building's own tile is taken); then it is the
+-- engine's again (the assignment puts it to work). ENGINE: upstream's parts (1) and (3) - the base point moved to
+-- the biggest town (the game set it from the first unit it found) and the stacked foundations removed - are the
+-- original game's bugs, not this engine's (the town centre is view.town_x/y, the build runner lays one foundation);
+-- its (2) "walking to within 3 tiles of the base" is that base point's too. Citizens the script holds (a landing,
+-- an outpost's ferry, a new town) are not the engine's and are left alone.
+local TOWN_TYPES = {"b_settlement", "b_town_center", "b_capitol"}
+local function citizens_home(view, mem)
+    if not S.citizens_home or view.town_x < 0 or view.time - (mem.home_t or 0) < 3000 then
+        return
+    end
+    mem.home_t = view.time
+    local towns = {}
+    for _, id in ipairs(ai.units{type = TOWN_TYPES, built = true}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            towns[#towns + 1] = u
+        end
+    end
+    if #towns == 0 then
+        return   -- no town left
+    end
+    local idle = ai.units{category = "citizen", idle = true, held = "engine"}
+    local was = mem.home_was or {}
+    local now_idle, safe, sent, stay = {}, {}, 0, 0
+    local cols = ai.get(idle, {"x", "y", "inside"})
+    for k, id in ipairs(idle) do
+        local x, y = cols.x[k], cols.y[k]
+        if x ~= nil and cols.inside[k] == nil then
+            local nd = nil
+            for _, t in ipairs(towns) do
+                local d = d2(t.x, t.y, x, y)
+                if nd == nil or d < nd then
+                    nd = d
+                end
+            end
+            if nd > 15 * 15 then
+                now_idle[#now_idle + 1] = id
+                if was[id] then   -- idle away twice in a row
+                    local best, bd = nil, nil
+                    for i, t in ipairs(towns) do
+                        if ai.reach(t.x, t.y, x, y) then
+                            if safe[i] == nil then
+                                safe[i] = #ai.seen{enemy = true, armed = true, category = "soldier", near = {t.x, t.y, 12}, limit = 1} == 0
+                            end
+                            local d = d2(t.x, t.y, x, y)
+                            if safe[i] and (bd == nil or d < bd) then
+                                best, bd = t, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        stay = stay + 1
+                    else
+                        -- beside the town on the citizen's side: the building's own tile is taken
+                        local dx, dy = x - best.x, y - best.y
+                        local l = isqrt(dx * dx + dy * dy)
+                        local gx = best.x + (l > 0 and dx * 4 // l or 4)
+                        local gy = best.y + (l > 0 and dy * 4 // l or 0)
+                        local code = ai.move({id}, gx, gy)
+                        ai.release({id})
+                        if code == "ok" then
+                            sent = sent + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local set = {}
+    for _, id in ipairs(now_idle) do
+        set[id] = true
+    end
+    mem.home_was = set
+    if sent > 0 or stay > 0 then
+        mem.home_sent = (mem.home_sent or 0) + sent
+        if view.time - (mem.home_log_t or -100000) >= 60000 then
+            mem.home_log_t = view.time
+            print(string.format("citizens_home sent=%d stay=%d idle_away=%d towns=%d total=%d", sent, stay, #now_idle, #towns, mem.home_sent))
+        end
+    end
+end
+
 local function production(view, mem, order, army, above)
     local want = {}
     want.b_barracks = view.citizens >= 8 and 1 or 0
@@ -683,8 +857,22 @@ local function production(view, mem, order, army, above)
             for _, r in ipairs(V.resources) do
                 ok = ok and above[r] >= c.cost[r]
             end
-            if not going and V.total(have) < want[t] and ok then
-                if (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
+            if not going and V.total(have) < want[t] and ok and P.refuses(view, cur_memory, t) == nil then   -- [priority.c]
+                -- [packing.c] PACKED BUILDINGS (tight_build): a production building goes to the spot touching the
+                -- most of its kind nearest the base, through ai.build (the verb's placement keeps a tile free round
+                -- every building); no spot, or the direct build busy: the verb's search as before
+                local packed = false
+                if S.tight_build and PK.is_type(t) and view.time - ((mem.pack_t or {})[t] or -100000) >= 10000 then
+                    mem.pack_t = mem.pack_t or {}
+                    mem.pack_t[t] = view.time
+                    local px, py = PK.spot(view, mem, t)
+                    if px ~= nil then
+                        packed = build_direct(view, mem, t, px, py)
+                    end
+                end
+                if packed then
+                    mem.packed_built = (mem.packed_built or 0) + 1
+                elseif (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
                     if view.time - (mem.direct_t or 0) >= 30000 then
                         mem.direct_t = view.time
                         build_direct(view, mem, t)
@@ -700,6 +888,51 @@ end
 
 -- granaries and fields from the Copper Age (build_fields, more_granaries): a granary while the food workers wanted
 -- exceed the fields (8 a granary, fewer than 1 + target / 8, at most 8); the fields as the wood pays (50 kept each)
+-- [priority.c] THE SILOS' ROW (econ.c farm_plan, farm_first; the player 2026-11-09: "the second copper age starts
+-- researching the silo with its 525 wood should be put in the priority list and good is", "a second should follow
+-- soon after"). 525 wood: a Granary's 125 and 8 fields of 50. Due from the moment the Copper Age is saved for, one
+-- silo at a time, the second when the first's fields are built, whatever the food target says. What is still due
+-- stays held (mem.farm_hold; mem.fields_open: the fields going up, for field_wood). No progress for 6 minutes (no
+-- room for a silo, no builders): nothing held until there is some. Both silos' fields done: over for the game.
+local FARM_HOLD_MS = 360000
+local function farm_plan(view, mem, saving)
+    local gran, farm = V.buildings(view, "b_granary"), V.buildings(view, "b_farm")
+    local silos = V.total(gran)
+    local done, open = farm ~= nil and farm.finished or 0, farm ~= nil and farm.unfinished or 0
+    mem.fields_open = open
+    local due = S.farm_first and not mem.farm_over and (view.epoch >= FARM_EPOCH or (view.epoch == FARM_EPOCH - 1 and saving))
+    local hold = 0
+    local cg, cf = V.cost(view, "b_granary"), V.cost(view, "b_farm")
+    if due and cg ~= nil and cf ~= nil then
+        local gw, fw = cg.cost.wood, cf.cost.wood
+        local n = math.min(silos, 2)
+        local unlaid = math.max(8 * n - done - open, 0)   -- a silo's fields come as foundations when it stands
+        hold = fw * (unlaid + open)
+        if silos < 2 and open == 0 and unlaid == 0 then
+            hold = hold + gw + 8 * fw
+        end
+        if hold > gw + 8 * fw then
+            hold = gw + 8 * fw
+        end
+        if silos >= 2 and done >= 16 then
+            mem.farm_over = true
+            hold = 0
+        end
+    end
+    local key = silos * 256 + done   -- progress: a silo or a finished field
+    if not due or key ~= (mem.farm_key or -1) or (mem.farm_key_t or 0) == 0 then
+        mem.farm_key_t = view.time > 0 and view.time or 1
+    end
+    if hold > 0 and view.time - mem.farm_key_t > FARM_HOLD_MS then
+        hold = 0
+    end
+    if key ~= (mem.farm_key or -1) and silos <= 3 and hold ~= (mem.farm_hold or 0) then
+        print(string.format("priority farms silos=%d done=%d open=%d wood=%d held=%d", silos, done, open, view.stock.wood, hold))
+    end
+    mem.farm_key = key
+    mem.farm_hold = hold
+end
+
 local function farms(view, mem, order, target, above)
     if view.epoch < FARM_EPOCH then
         return 0
@@ -708,7 +941,7 @@ local function farms(view, mem, order, target, above)
     local farm = V.buildings(view, "b_farm")
     local fields = V.total(farm)
     local granaries = V.total(gran)
-    local want_gran = math.min(1 + (target.food or 0) // 8, 8)
+    local want_gran = math.min(1 + math.max(target.food or 0, 8) // 8, 8)
     if V.cost(view, "b_granary") ~= nil and granaries < want_gran and (gran == nil or gran.unfinished + gran.queued == 0)
             and (view.gatherers.food + 6 <= (target.food or 0) or granaries == 0) and above.wood >= 100 then
         -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
@@ -778,7 +1011,7 @@ local function sol(view, mem, order)
             end
         end
     end
-    if best ~= nil and not building then
+    if best ~= nil and not building and P.refuses(view, cur_memory, best.type) == nil then   -- [priority.c]
         order({verb = "build", type = best.type, near = "town"})
     end
 end
@@ -845,21 +1078,45 @@ end
 function M.step(view, memory, orders, army)
     memory.eco = memory.eco or {}
     local mem = memory.eco
+    cur_memory = memory
     mem.orders_ref = orders
     local function order(o)
         orders[#orders + 1] = o
         return #orders
     end
-    local reserve, saving = M.reserve(view, mem)
-    local avail, civil = M.accounts(view, mem, reserve)
-    -- the engine's reserve: the epoch's; the military account is Lua's own (the verbs see the stock above the reserve)
+    local epoch_reserve, saving = M.reserve(view, mem)
+    farm_plan(view, mem, saving)
+    -- [priority.c] the list: what each spender may touch. reserve: a civilian unit's hold (every row; the workers
+    -- gather for all of it); hold_mil: a military unit's; order: a priority order's stock (the siege, the bombers);
+    -- ship: a warship's (the stock but the rows marked apart - the navy row is its own); build / build_econ: a
+    -- building's (the silos' wood; an economy building passes it)
+    local reserve = P.hold(view, memory, 0)
+    local hold_mil, apart_mil = P.hold(view, memory, P.S_MIL)
+    for _, r in ipairs(V.resources) do
+        hold_mil[r] = hold_mil[r] + apart_mil[r]
+    end
+    local avail, civil = M.accounts(view, mem, hold_mil, reserve)
+    local order_vis = P.visible(view, memory, P.S_MIL | P.S_ORDER)
+    local ship_vis = P.visible(view, memory, P.S_MIL | P.S_SHIP)
+    local build_vis = P.visible(view, memory, P.S_BUILD)
+    local build_econ_vis = P.visible(view, memory, P.S_BUILD | P.S_BUILD_ECON)
+    -- the engine's reserve: the epoch's and the towns'; the military account is Lua's own (the verbs see the stock
+    -- above the reserve). [navy.c navy_earmarked] a warship spends the navy account through the epoch's reserve
+    -- (ai.train pays through the engine's check): the engine holds the epoch's less the account, Lua's budget the
+    -- epoch's plus the account. DEVIATION (priority.lua): the engine checks every verb against this, so a building
+    -- waits for the epoch and the towns too, where upstream's buildings spent them
+    local engine = {}
+    for _, r in ipairs(V.resources) do
+        local towns = (mem.towns_reserve ~= nil and mem.towns_reserve[r] or 0) + (mem.expand_hold ~= nil and mem.expand_hold[r] or 0)
+        engine[r] = math.max(epoch_reserve[r] + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
+    end
     local differs = false
     for _, r in ipairs(V.resources) do
-        differs = differs or reserve[r] ~= view.reserve[r]
+        differs = differs or engine[r] ~= view.reserve[r]
     end
     if differs then
-        order({verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone, gold = reserve.gold,
-               iron = reserve.iron})
+        order({verb = "reserve", food = engine.food, wood = engine.wood, stone = engine.stone, gold = engine.gold,
+               iron = engine.iron})
     end
     -- the epoch: the tower upgrade, then the advance as soon as it is paid (rush; the timer with timer pacing), the
     -- requirements asked for early (the SOL buildings while saving)
@@ -886,6 +1143,10 @@ function M.step(view, memory, orders, army)
     -- citizens: two at a time from each town centre while the civil budget keeps a citizen's food
     local citizen = V.cost(view, "citizen")
     local want_citizens = citizens_wanted(view, mem.target)
+    -- [bunker.c] shelf_wanted: while the shelf works or holds citizens, no more than there are (on the map or in it)
+    if memory.shelf_hold then
+        want_citizens = math.min(want_citizens, view.citizens)
+    end
     local making = citizen and citizen.in_production or 0
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting
@@ -933,7 +1194,8 @@ function M.step(view, memory, orders, army)
     end
     if view.time - (mem.pass_t or 0) >= PASS_MS or (mem.pass_t or 0) == 0 then
         mem.pass_t = view.time
-        local wants = {citizens = want_citizens, tower_stone = mem.tower_stone or 0, fields = mem.fields or 0}
+        -- [defence.c enclose] encl_stone: the open ring's walls + 200 for repairs (walls.lua writes mem.wall_stone)
+        local wants = {citizens = want_citizens, tower_stone = (mem.tower_stone or 0) + (mem.wall_stone or 0), fields = mem.fields or 0}
         if army ~= nil and army.wants ~= nil then
             for _, r in ipairs(V.resources) do
                 wants[r] = (wants[r] or 0) + (army.wants[r] or 0)
@@ -948,6 +1210,8 @@ function M.step(view, memory, orders, army)
             end
         end
         target = M.workers(view, mem, reserve, wants)
+        -- [metal.c] workers_to_metals (army.c MIX): from piled-up food to the wood, gold or iron the army lacks
+        MT.workers(view, memory, target, mem.food_floor, wants.places, epoch_reserve)
         if target ~= nil and mem.target ~= nil then
             -- hysteresis: a target moves by 5 a pass at most (the stock swings with every purchase); food takes the
             -- difference
@@ -958,6 +1222,22 @@ function M.step(view, memory, orders, army)
                 sum = sum + target[r]
             end
             target.food = math.max(target.food + view.citizens - sum, 0)
+            -- the mines' places can outnumber the citizens from the Copper Age (seed 9: wood 16, stone 12, gold 19,
+            -- iron 30 for 70 citizens left food at 0 for 40 minutes): food keeps its floor, the largest other gives
+            local floor_late = math.min(view.citizens // 3, math.max((mem.fields or 0) + 2, 6))
+            while target.food < floor_late do
+                local from = nil
+                for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+                    if target[r] > 2 and (from == nil or target[r] > target[from]) then
+                        from = r
+                    end
+                end
+                if from == nil then
+                    break
+                end
+                target[from] = target[from] - 1
+                target.food = target.food + 1
+            end
         end
         if target ~= nil then
             mem.target = target
@@ -993,25 +1273,24 @@ function M.step(view, memory, orders, army)
                 end
             end
             settlements(view, mem, target, order)
-            local above = {}
-            for _, r in ipairs(V.resources) do
-                above[r] = math.max(view.stock[r] - reserve[r], 0)   -- the buildings spend the stock above the reserve
-            end
+            -- [priority.c] the buildings spend what the list leaves a building (the silos' wood held from the ones
+            -- that are not food, houses, towns or docks); the engine's reserve holds the epoch's and the towns'
+            local above = build_vis
             mem.tower_stone = towers(view, mem, order, above)
             production(view, mem, order, army, above)
-            mem.fields = farms(view, mem, order, target, above)
+            mem.fields = farms(view, mem, order, target, build_econ_vis)
             if saving then
                 sol(view, mem, order)
             end
-            -- fishing from the Stone Age
-            local age = math.min(view.epoch, 2) + 1
-            if (S.boats[age] or 0) > 0 then
-                order({verb = "fish", boats = S.boats[age] + (mem.more_boats or 0), docks = S.docks[age]})
-            end
+            -- [navy.c] docks and fishing boats are the navy's (ageofai.navy: navy_docks, the fishing boat type and
+            -- count; mem.more_boats is read there)
         end
     end
     research(view, mem, order)
-    return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens}
+    citizens_home(view, mem)   -- [econ.c] the idle citizens away from the towns
+    -- [priority.c] hold: a military unit's hold (metal.lua's SPARE prices the stock above it)
+    return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens,
+            order = order_vis, ship = ship_vis, build = build_vis, build_econ = build_econ_vis, hold = hold_mil}
 end
 
 return M

@@ -2467,6 +2467,63 @@ cheats, seeds 2-17; the games that started after the bunker port below include i
   too strong (the mine raids of armies.c, siege at the walls), and the army share of the economy raised once the
   epoch pace is secured.
 
+**The tenth checkpoint (2026-11-10): the whole of upstream ported, performance later.** The owner's direction changed
+mid-round: port every remaining upstream file faithfully first, bench afterwards. Before that, the economy work of
+the 120-minute analysis went in (commit 67acc22): the reserve from farms keeps only what the income cannot bring back
+(econ.c spend_reserve), the saving holds once started, and the Prehistoric patch cap lifts while the patches' room is
+short (seed 2 against classic Hard had sat 50 minutes with 18 food places for 32 gatherers wanted and never reached
+the Stone Age; after the fix the Stone Age came at 23-26 minutes in both debug games). The reference bench of boom
+against classic Hard at 120 minutes (16 games): boom won 0, lost 5 (4 wiped out), 47 citizens at the end against
+classic's 169; the port with the fortress (aoa15, contaminated mid-run by a script edit): lost 8, 13 citizens at the
+end. The cheating-classic reference benches the owner asked for were started and stopped with the direction change:
+they run after the port is complete (`--set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra,
+popband, catchup, retire]" --cheats none/none/all --personality balanced,balanced,classic`).
+
+The engine side first: `ai.wall`, `ai.gate`, `ai.lock`, `ai.tribute`, `ai.trade`, `ai.diplomacy` (AI_LUA_UNITS §11;
+the wall tech is never "available" to a computer player the production way, the classic wall manager never asks, so
+the commands check the tech node and the cost only). Then the port, one upstream file (or group) per piece, each in
+its own worktree, smoked (two runs of seeds 2 and 5, identical traces, no script errors) and merged `--no-ff`:
+- expand.c and towns.c -> `towns.lua` (2,800 lines: resource towns, forward bases, the islands' outposts through
+  transports with the fog-honest scouting of an island by its transport; `expand_islands = 1` is the one deviation,
+  outposts on so the port settles free islands at all);
+- attack.c -> `attack.lua` (the weak spots, the breaches through a known wall away from the towers, the siege's
+  shelling target and firing position, wave_retarget, forces.c's enemy_objective; the leash, the aircraft and the
+  rams' rules in lib.groups' scorer);
+- navy.c, fleet.c, landing.c -> `navy.lua` rewritten and `fleet.lua` (navy_detect, the navy account, navy_pick's
+  warship mix, the docks, the fleet led as one: massing under the towers while weaker, the strike at crit and
+  1.25, the split at 1.5, hunters, raiders, patrol, the fishing boats guarded; the landing's plan, ships,
+  escorts, bridgehead, waves and return). On Small Islands seed 11 the fleet massed, struck at ratio 30 and split;
+  no landing came because the classic enemy's buildings were never sighted from the sea in 90 minutes;
+- diplo.c -> `diplo.lua` (answer war, the opinion model, peace_score, the blocks and their veto, the vassals, the
+  capitulation with its promise paid by ai.tribute, the surrender; the interface knows only my own stance, so a
+  player turning hostile is read from its units hitting mine: AI-to-AI peace needs `hostile`/`allies` on
+  `ai.players` and an offer channel);
+- mass.c, armies.c's detachments, skirmish.c -> `mass.lua`, `detach.lua`, `skirmish.lua` (all off as upstream:
+  army_mass 0, mine_raids false, skirmish 0; switched on in scratch runs they gathered reinforcements under the
+  rally tower and released them as groups, ran mine raids and hit-and-run end to end);
+- airstrike.c, stats.c -> `air.lua`, `stats.lua` (the bombers' wing of 8, trained while a position needs it, the
+  run on the shooters' spot shared with skirmish.lua; `tests/ai_units/airwing.lua` spawns an airport, Gothas, a
+  tower and an AA gun: the wing flew and took the tower to 75 hp, then its landed bombers could not be ordered out
+  again: `ai.attack` refuses an aircraft inside its airport - an engine gap; st_ratio with what `ai.class` exposes:
+  the damage-class and hit-factor tables are not);
+- defence.c's walls -> `walls.lua` (the front wall 3 tiles before two front towers with the 8-direction snap, the
+  gate, ENCLOSE's octagon and the island coast's ring, the dock pockets; `defence_walls` back to upstream's 1: on
+  Small seed 5 a 9-piece copper wall went up at 75 minutes; with enclose on, 33 of 39 ring tiles of the seed-11
+  island were walled in 8 minutes);
+- metal.c, priority.c, fronts.c -> `metal.lua`, `priority.lua`, `fronts.lua` (the priority list is now the one
+  place that says what each spender may touch: the epoch, farms, wants, landing, outpost, fortress, forest,
+  upgrades, navy and special rows; metal_plan 0 and front_army off as upstream);
+- the leftovers -> `packing.lua` (tight_build = 1 as upstream's ini has it), the bunkers' reserve and shelf,
+  forces.c's walk-and-fight record, citizens_home part 2; spoils.c and early_militia are engine behaviour here
+  (the defeat rule removes a player with nothing left; the militia reflex always runs).
+`ai/ageofai/UPSTREAM` says PORTED / PARTLY (what is missing) / ENGINE / NOT STARTED per file: nothing is NOT STARTED
+any more; the PARTLY lines list what the interface does not carry yet (AI_LUA_UNITS §11 "Not built yet"). The merged
+whole: seeds 2 and 5 twice at 90 minutes and Small Islands seed 11 twice identical, no script errors (merged2 in
+build/sim/bench). One open engine item: a Small Islands seed-11 pair diverged once in the units hash at 65 minutes
+ten seconds after a direct granary (`ai.build`), and a second pair the same way at the same granary; the RNG and
+AI hashes stay equal to the end and the final states are the same, so it is a hashed unit field the play never reads,
+engine-side (PORT_LEARNINGS).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
