@@ -117,6 +117,7 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "GeVisibleOut" = "EeGeVisibleOut"
 "VisiblePlan" = "EeGeVisiblePlan"
 "Stretch" = "EeGeBitmapStretch"
+"GePhysicalMaterial" = "EeGePhysicalMaterial"
 # ee_ui
 "UiRect" = "EeUiRect"
 "UiPoint" = "EeUiPoint"

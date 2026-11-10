@@ -1280,6 +1280,46 @@ struct EeGeScaleRemoval {
   float z;
 };
 
+/// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
+/// `GetPolygonRangeLength(lod)`.
+struct EeGePhysicalMaterial {
+  unsigned long vertex_start;
+  unsigned long polygon_start;
+  unsigned long polygon_length;
+};
+
+/// The callback table over `GEModel*` handles (`const GEModel*` as `*const c_void`).
+struct EeGePhysicalModels {
+  bool (*has_parent)(const void *model);
+  void (*internal_transform)(const void *model, unsigned long frame, EeGeTransformation *out);
+  void (*center)(const void *model, EeGe3DPoint *out);
+  float (*radius)(const void *model, unsigned long frame);
+  void (*bbox)(const void *model, unsigned long frame, EeGeBoundingBox *out);
+  unsigned long (*material_count)(const void *model);
+  void (*material)(const void *model,
+                   unsigned long index,
+                   unsigned long lod,
+                   EeGePhysicalMaterial *out);
+  void (*triangle)(const void *model,
+                   unsigned long frame,
+                   unsigned long lod,
+                   unsigned long polygon,
+                   unsigned long vertex_start,
+                   EeGe3DPoint *out);
+  unsigned long (*sub_model_count)(const void *model);
+  const void *(*sub_model)(const void *model, unsigned long index);
+  unsigned long (*lod_count)(const void *model);
+  unsigned long (*polygon_count)(const void *model, unsigned long lod);
+  /// `GEPhysicalModel theModel(model, location, scale); theModel.SetFrame(frame);
+  /// theModel.Intersects(line, lod, distance, true)`.
+  bool (*retry_line)(const void *model,
+                     const EeGeTransformation *location,
+                     unsigned long frame,
+                     float scale,
+                     const EeGe3DLine *line,
+                     unsigned long lod);
+};
+
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
   unsigned long pixel_depth;
@@ -4098,6 +4138,59 @@ bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
                                 size_t index_count,
                                 const uint32_t *ranges,
                                 size_t range_count);
+
+/// `GEPhysicalModel::Intersects(location, model, frame, line, lod, distance, exact)`; `scale` is the placed model's.
+///
+/// # Safety
+/// `table` holds valid callbacks; `model` is a live `GEModel*` or null; the other pointers are valid.
+bool ee_ge_physical_line_walk(const EeGePhysicalModels *table,
+                              float scale,
+                              const EeGeTransformation *location,
+                              const void *model,
+                              unsigned long frame,
+                              const EeGe3DLine *line,
+                              unsigned long lod,
+                              float *distance,
+                              bool exact);
+
+/// `GEPhysicalModel::Intersects(location, model, frame, line, exact, lod, x, y, z)` on the placed model
+/// (`this_location`, `this_model`, `this_scale`, `this_frame`).
+///
+/// # Safety
+/// As `ee_ge_physical_line_walk`; `model` and `this_model` are live `GEModel*`.
+bool ee_ge_physical_scaled_walk(const EeGePhysicalModels *table,
+                                const EeGeTransformation *this_location,
+                                const void *this_model,
+                                float this_scale,
+                                unsigned long this_frame,
+                                const EeGeTransformation *location,
+                                const void *model,
+                                unsigned long frame,
+                                const EeGe3DLine *line,
+                                bool exact,
+                                unsigned long lod,
+                                float x,
+                                float y,
+                                float z);
+
+/// `GEPhysicalModel::Intersects(location, model, otherLocation, otherInverse, scale, otherModel, frame, lod)` on
+/// the placed model (`this_location`, `this_model`, `this_scale`, `this_frame`).
+///
+/// # Safety
+/// As `ee_ge_physical_line_walk`; the models are live `GEModel*`.
+bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
+                               const EeGeTransformation *this_location,
+                               const void *this_model,
+                               float this_scale,
+                               unsigned long this_frame,
+                               const EeGeTransformation *location,
+                               const void *model,
+                               const EeGeTransformation *other_location,
+                               const EeGeTransformation *other_inverse,
+                               float other_scale,
+                               const void *other,
+                               unsigned long other_frame,
+                               unsigned long lod);
 
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,

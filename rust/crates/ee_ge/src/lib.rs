@@ -7,7 +7,8 @@
 //! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
 //! `GETextureSet`'s grid (`texture.rs`), and the texture and model managers' decisions, names and texture pack
 //! (`managers.rs`), `GEViewport`'s matrices, planes and frustum (`viewport.rs`), `UpdateVisibleTerrain` as a plan the
-//! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and `GEBitmap`'s and
+//! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and its walks over the C++ models
+//! (`physical_walk.rs`), `GEBitmap`'s and
 //! `GERhombus`'s corners and stretched coordinates (`bitmap.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
@@ -35,6 +36,8 @@ mod golden_model_geom;
 #[cfg(test)]
 mod golden_physical;
 #[cfg(test)]
+mod golden_physical_walk;
+#[cfg(test)]
 mod golden_terrain;
 #[cfg(test)]
 mod golden_terrain_mesh;
@@ -51,6 +54,7 @@ pub mod model_geom;
 pub mod model_store;
 /// cbindgen:ignore
 pub mod physical;
+pub mod physical_walk;
 /// cbindgen:ignore
 pub mod pixel;
 /// cbindgen:ignore
