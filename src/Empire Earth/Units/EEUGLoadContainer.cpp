@@ -140,7 +140,7 @@ void EEUGLoadContainer::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLoca
     std::vector<EETileCoordinate> theTiles;
     GE3DPoint theLocation;
     U2DPoint<long> theTile;
-    EEUCTransport* theClass = dynamic_cast<EEUCTransport*>(this->mContainer->GetUnitClass());
+    EEUCTransport* theClass = EEUnitClassCast<EEUCTransport>(this->mContainer->GetUnitClass());
     if (inUnit == this->mContainer)
         theTile = this->mContainerTile;
     else

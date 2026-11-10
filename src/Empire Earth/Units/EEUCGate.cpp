@@ -49,6 +49,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -633,7 +634,7 @@ void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
 void EEUCGate::UnitCreated(EEComplexUnit* inUnit)
 {
     EEUCBuilding::UnitCreated(inUnit);
-    EEUCGate* theGate = dynamic_cast<EEUCGate*>(inUnit->GetUnitClass());
+    EEUCGate* theGate = EEUnitClassCast<EEUCGate>(inUnit->GetUnitClass());
     if (inUnit->mPreviousPart == NULL && inUnit->mNextPart != NULL) {
         inUnit->StartAction(kActionClosed);
         this->ActionChanged(inUnit);

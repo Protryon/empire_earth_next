@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -58,10 +59,10 @@ void EEPMBuilding::Step2(EEComplexUnit* inUnit)
     theModel.SetLocation(theTransformation);
     if (inUnit->mUnitClass->mCategory != kUnitCategoryGate)
         return;
-    EEUCGate* theGate = dynamic_cast<EEUCGate*>(inUnit->mUnitClass);
+    EEUCGate* theGate = EEUnitClassCast<EEUCGate>(inUnit->mUnitClass);
     if (inUnit->mPreviousPart == NULL && inUnit->mNextPart != NULL) {
-        this->Step2(dynamic_cast<EEUCGate*>(inUnit->GetUnitClass())->GetLastLinkedCarrier(inUnit));
-        this->Step2(dynamic_cast<EEUCGate*>(inUnit->GetUnitClass())->GetLastLinked(inUnit));
+        this->Step2(EEUnitClassCast<EEUCGate>(inUnit->GetUnitClass())->GetLastLinkedCarrier(inUnit));
+        this->Step2(EEUnitClassCast<EEUCGate>(inUnit->GetUnitClass())->GetLastLinked(inUnit));
     }
 }
 

@@ -374,7 +374,7 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
                                 long inSizeY, GE3DPoint& outLocation)
 {
     std::vector<U2DPoint<long> > theTiles;
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     EEUGGather* theGather = EEGoalCast<EEUGGather>(inUnit->GetGoal());
     EEUGBuildRepair* theBuild = EEGoalCast<EEUGBuildRepair>(inUnit->GetGoal());
     long theUnitX = inUnit->mTileX;

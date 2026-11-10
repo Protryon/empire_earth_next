@@ -1857,7 +1857,7 @@ bool EEComplexUnit::IsPassableBy(EEComplexUnit* inUnit)
             theCarrier = theCarrier->mPreviousPart;
         if (theCarrier != NULL && theCarrier->mIsDisabled && !theCarrier->IsProtected())
             return false;
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(this->GetUnitClass());
+        EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->GetUnitClass());
         if (theGate->IsSidePart(this))
             return false;
         if ((this->mCommand ? this->mCommand->mType : 0) == kActionClosed) {
@@ -3139,7 +3139,7 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
     long theEvent = -1;
     EEUCTransport* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())
-        theTransportClass = dynamic_cast<EEUCTransport*>(this->GetUnitClass());
+        theTransportClass = EEUnitClassCast<EEUCTransport>(this->GetUnitClass());
     for (long i = this->mCargo.size() - 1; i >= 0; i--) {
         EEComplexUnit* theCargo = this->GetCargo(i);
         if (this->GetUnitClass()->IsTransport() && (theTransportClass == NULL
@@ -3243,7 +3243,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
     bool theResult = false;
     EEUCTransport* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())
-        theTransportClass = dynamic_cast<EEUCTransport*>(this->GetUnitClass());
+        theTransportClass = EEUnitClassCast<EEUCTransport>(this->GetUnitClass());
     long theIndex = this->mCargo.size() - 1;
     while (theIndex >= 0 && this->GetCargo(theIndex) != inCargo)
         theIndex--;

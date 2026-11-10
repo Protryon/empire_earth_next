@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -231,7 +232,7 @@ bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 {
     bool theResult = false;
     if (this->mTarget->mUnitClass->mCategory == kUnitCategoryGate) {
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(this->mTarget->GetUnitClass());
+        EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mTarget->GetUnitClass());
         EEComplexUnit* theComplexUnit = this->mTarget->mComplexUnit;
         if (!theGate->IsSidePart(theComplexUnit)) {
             EEComplexUnit* theCarrier = theComplexUnit;

@@ -113,7 +113,7 @@ void EEUGLoadTransport::ComputeLoadDistance()
 void EEUGLoadTransport::ComputeRendezvous()
 {
     std::vector<EEComplexUnit*>& theUnits = this->mUnits.mItems;
-    EEUCTransport* theClass = dynamic_cast<EEUCTransport*>(this->mContainer->GetUnitClass());
+    EEUCTransport* theClass = EEUnitClassCast<EEUCTransport>(this->mContainer->GetUnitClass());
     if (this->mUnits.GetSize() > 0)
         theClass->FindRendezvousTiles(&theUnits, this->mContainer, &this->mContainerTile, &this->mUnitTile);
     else
@@ -230,7 +230,7 @@ bool EEUGLoadTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned long i
 {
     EEUCTransport* theClass = NULL;
     if (this->mContainer != NULL && this->mContainer->mHitPoints > 0)
-        theClass = dynamic_cast<EEUCTransport*>(this->mContainer->GetUnitClass());
+        theClass = EEUnitClassCast<EEUCTransport>(this->mContainer->GetUnitClass());
     switch (inEvent) {
     case kTriggerGoalIsLoadContainer:
         return this->mKind == kGoalLoadTransport ? true : false;

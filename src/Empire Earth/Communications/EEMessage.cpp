@@ -3458,7 +3458,7 @@ void EEMImmediateCargoUnload::Execute()
         && theTransport->mComplexUnit->GetNumCargoUnits() > 0 && theTransport->GetComplexUnit()->HasCargo(theCargo->GetComplexUnit())
         && !theTransport->GetComplexUnit()->UnloadCargoNow(theCargo->GetComplexUnit())) {
         if (theTransport->mUnitClass->IsTransport())
-            theText = dynamic_cast<EEUCTransport*>(theTransport->GetUnitClass())->GetUnloadFailedTextID();
+            theText = EEUnitClassCast<EEUCTransport>(theTransport->GetUnitClass())->GetUnloadFailedTextID();
         U2DPoint<long> theTile(theTransport->mTileX, theTransport->mTileY);
         EEPlayer* theOwner = theTransport->mPlayer;
         theOwner->mEvents.AddEvent(theTile, 2, theOwner, theText, false);
@@ -4457,7 +4457,7 @@ void EEMLoadTransport::Execute()
         if (theUnit != NULL && theUnit->mHitPoints > 0)
             theUnits.push_back(theUnit);
     }
-    dynamic_cast<EEUCTransport*>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
+    EEUnitClassCast<EEUCTransport>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
     long theTileX;
     long theTileY;
     if (theUnits.size() != 0) {
@@ -4565,7 +4565,7 @@ void EEMLockUnlock::Execute()
         unsigned long theNumUnits = theGroup->GetNumUnits();
         for (unsigned long i = 0; i < theNumUnits; i++) {
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
+            EEUCGate* theGate = EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass());
             theUnit->SetLocked(this->mIsLocked);
             // a gate built as a single piece (scenario Create effect) has no second or fourth part
             EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);

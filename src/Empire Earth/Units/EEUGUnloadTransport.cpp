@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -154,8 +155,8 @@ bool EEUGUnloadTransport::IsInUnloadRange()
 // free)
 bool EEUGUnloadTransport::CanUnloadAtDestination()
 {
-    EEUCTransport* theTransportClass = dynamic_cast<EEUCTransport*>(this->mTransport->GetUnitClass());
-    EEUCAirplane* theAirplaneClass = dynamic_cast<EEUCAirplane*>(this->mTransport->GetUnitClass());
+    EEUCTransport* theTransportClass = EEUnitClassCast<EEUCTransport>(this->mTransport->GetUnitClass());
+    EEUCAirplane* theAirplaneClass = EEUnitClassCast<EEUCAirplane>(this->mTransport->GetUnitClass());
     if (theTransportClass != NULL)
         return theTransportClass->CanUnloadAt(this->mTransport, this->mDestination.GetX(), this->mDestination.GetY());
     return EEIsTileFree(this->mTransport, this->mDestination.GetX(), this->mDestination.GetY());
@@ -176,8 +177,8 @@ void EEUGUnloadTransport::FindUnloadTiles()
     U2DPoint<long> theTile;
     if (!this->CanUnloadAtDestination())
         return;
-    EEUCTransport* theTransportClass = dynamic_cast<EEUCTransport*>(this->mTransport->GetUnitClass());
-    EEUCAirplane* theAirplaneClass = dynamic_cast<EEUCAirplane*>(this->mTransport->GetUnitClass());
+    EEUCTransport* theTransportClass = EEUnitClassCast<EEUCTransport>(this->mTransport->GetUnitClass());
+    EEUCAirplane* theAirplaneClass = EEUnitClassCast<EEUCAirplane>(this->mTransport->GetUnitClass());
     if (theTransportClass != NULL)
         theTransportClass->FindUnloadTiles(this->mTransport, &this->mDestination, &this->mUnloadTile, &this->mFirstCargoTile, &theTile);
     else
@@ -300,8 +301,8 @@ void EEUGUnloadTransport::SetTransport(EEComplexUnit* inTransport)
 // to unload near the tile); others go to the common goal
 bool EEUGUnloadTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    EEUCTransport* theTransportClass = dynamic_cast<EEUCTransport*>(this->mTransport->GetUnitClass());
-    EEUCAirplane* theAirplaneClass = dynamic_cast<EEUCAirplane*>(this->mTransport->GetUnitClass());
+    EEUCTransport* theTransportClass = EEUnitClassCast<EEUCTransport>(this->mTransport->GetUnitClass());
+    EEUCAirplane* theAirplaneClass = EEUnitClassCast<EEUCAirplane>(this->mTransport->GetUnitClass());
     switch (inEvent) {
     case kTriggerGoalIsUnloadTransport:
         return this->mKind == kGoalUnloadTransport ? true : false;
@@ -347,11 +348,11 @@ bool EEUGUnloadTransport::Suits(EEUnit* inUnit)
 void EEUGUnloadTransport::Unload()
 {
     unsigned long theCount = this->mTransport->GetNumCargoUnits();
-    EEUCTransport* theTransportClass = dynamic_cast<EEUCTransport*>(this->mTransport->GetUnitClass());
+    EEUCTransport* theTransportClass = EEUnitClassCast<EEUCTransport>(this->mTransport->GetUnitClass());
     float theVolume;
     float thePan;
     float thePitch;
-    if (dynamic_cast<EEUCAirplane*>(this->mTransport->GetUnitClass()) != 0)
+    if (EEUnitClassCast<EEUCAirplane>(this->mTransport->GetUnitClass()) != 0)
         this->mTransport->mUnitClass->FireShot(this->mTransport);
     else
         theTransportClass->UnloadAt(this->mTransport, this->mDestination.mX, this->mDestination.mY);
