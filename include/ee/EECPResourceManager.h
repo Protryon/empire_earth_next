@@ -8,6 +8,7 @@
 
 #include <deque>
 #include <vector>
+#include "ee/EEUnitHandle.h"
 
 class EEComplexUnit;
 class EEUnit;
@@ -69,10 +70,13 @@ public:
     unsigned short GetForestsAt(unsigned long inIndex) const { return this->mForests[inIndex]; }
     std::vector<unsigned short> mForests;   // +0x74 (RefreshResources: the continent manager's forest ids)
     EEComplexUnit* GetMinesAt(unsigned long inIndex) const { return this->mMines[inIndex]; }
-    std::vector<EEComplexUnit*> mMines;     // +0x84 (referenced; nature's units of class 0x11)
+    std::vector<EEUnitHandle<EEComplexUnit> > mMines;   // +0x84 (referenced; nature's units of class 0x11; handles since R5a.4, the vector's order kept)
     EEComplexUnit* GetFishAt(unsigned long inIndex) const { return this->mFish[inIndex]; }
-    std::vector<EEComplexUnit*> mFish;      // +0x94 (referenced; nature's units of class 0x12)
-    std::deque<EEComplexUnit*> mGatherers[7];   // +0xa4 per resource (referenced)
+    std::vector<EEUnitHandle<EEComplexUnit> > mFish;    // +0x94 (referenced; nature's units of class 0x12; handles)
+    // +0xa4 per resource (referenced). Pointers, not handles (R5a.4): a new citizen reaches the idle list from
+    // EEUnitClass::CreateUnitAtPoint (ActionChanged -> EEComputerPlayer::UnitGoalDone -> AddIdleGatherer) before its
+    // player gives it an id, and a handle to a unit without an id resolves to nothing
+    std::deque<EEComplexUnit*> mGatherers[7];
     EECPCivilizationManager* GetManager() const { return this->mManager; }
     EECPCivilizationManager* mManager;      // +0x130 (the ctor argument)
     long mNeeds[7];                         // +0x134 per resource (Earn/Spend; Read/Write(long))

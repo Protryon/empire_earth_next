@@ -534,7 +534,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         // (mMiningLimit per unit); "centers" the resource centers
         unsigned long theSites[kResourceIron + 1] = {0};
         for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
-            std::vector<EEUnit*>& theUnits = inPlayer->GetResourceCenter(k)->mUnits;
+            std::vector<EEUnitHandle<EEUnit> >& theUnits = inPlayer->GetResourceCenter(k)->mUnits;
             for (unsigned long u = 0; u < theUnits.size(); u++) {
                 unsigned long theType = theUnits[u]->mResourceType;
                 if (theType >= kResourceFood && theType <= kResourceIron && theUnits[u]->mHitPoints > 0)
