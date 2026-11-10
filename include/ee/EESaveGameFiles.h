@@ -20,6 +20,12 @@ inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 254;
 }
+// port: from 0.255 a save holds the computer players' round-robin schedule (EEArtificialIntelligence's next player and
+// next update time, EEPWorldHelper); an older save's loaded game updated its first computer player at its first tick
+inline bool EESaveHasAISchedule(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 255;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

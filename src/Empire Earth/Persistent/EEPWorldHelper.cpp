@@ -55,6 +55,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIForest.h"
+#include "ee/EEArtificialIntelligence.h"
 #include <algorithm>
 #include <vector>
 
@@ -267,6 +268,35 @@ static long LoadForests(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.255): the computer players' round-robin schedule (EEArtificialIntelligence::Update: which
+// computer player updates next and when). A load's EEWorld::Restore calls CollectComputerPlayers, which starts the
+// round again at the first player at time 0, so a loaded game ran a computer player's Update at its first tick where
+// the saved game had it a few ticks later (the first divergent draw of every save: EEComputerPlayer::Update's). Put
+// back at the first tick; the interval (1000 ms / players) is the same on both sides.
+static void SaveAISchedule(FSFile& outFile)
+{
+    outFile.Write(gArtificialIntelligence->mNextPlayer);
+    outFile.Write(gArtificialIntelligence->mNextUpdateTime);
+}
+
+static long LoadAISchedule(FSFile& inFile)
+{
+    unsigned long theNextPlayer = 0;
+    unsigned long theNextUpdateTime = 0;
+    long theResult = inFile.Read(theNextPlayer);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theNextUpdateTime);
+    if (theResult == kErrorOK)
+        EEAfterLoad([theNextPlayer, theNextUpdateTime]() {
+            if (theNextPlayer < gArtificialIntelligence->mComputerPlayers.size()) {
+                gArtificialIntelligence->mNextPlayer = theNextPlayer;
+                gArtificialIntelligence->mNextUpdateTime = theNextUpdateTime;
+            } else
+                ESDebugOut("EEPWorldHelper: the loaded computer players are not the saved ones: their schedule is the load's\n");
+        });
+    return theResult;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -315,8 +345,9 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     else
         inFile.Read(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
-        if (LoadUnitOrder(inFile) == kErrorOK)
-            LoadForests(inFile);
+        if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
+            && EESaveHasAISchedule(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
+            LoadAISchedule(inFile);
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -366,6 +397,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     {
         SaveUnitOrder(outFile);
         SaveForests(outFile);
+        if (EESaveHasAISchedule(inMajorVersion, inMinorVersion))   // port (0.255): the computer players' schedule
+            SaveAISchedule(outFile);
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
     return gUIManager->mMainGameForm->Save(inMajorVersion, inMinorVersion, outFile);
