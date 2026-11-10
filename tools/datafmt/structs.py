@@ -38,8 +38,6 @@ SRC = {
     'UIDbDataEvents': r'src\Low-Level Engine\User Interface\UIEvent.cpp',
     'UIDbDataFonts': r'src\Low-Level Engine\User Interface\UIFontTable.cpp',
     'UIDbDataHotKeys': r'src\Low-Level Engine\User Interface\UIHotKey.cpp',
-    'GETextureFileHeader': r'src\Low-Level Engine\Graphics Engine\GETexture.cpp',
-    'GETGAHeader': r'src\Low-Level Engine\Graphics Engine\GESurface.cpp',
 }
 TYPES = {'char': ('s8', 1), 'unsigned char': ('u8', 1), 'bool': ('bool', 1), 'short': ('s16', 2),
          'unsigned short': ('u16', 2), 'long': ('s32', 4), 'unsigned long': ('u32', 4), 'int': ('s32', 4),

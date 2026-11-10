@@ -18,7 +18,7 @@ mod png;
 
 pub use ffi::*;
 pub use import::{gltf_to_model, Resolver};
-pub use png::{frame_to_tga, png_to_texture, png_to_tga, PngFrame, PngTexture};
+pub use png::{png_to_picture, png_to_texture, Picture, PngFrame, PngTexture};
 
 /// Why a conversion failed: the message (bytes, as names in it may not be UTF-8).
 #[derive(Debug, PartialEq, Eq)]

@@ -2,17 +2,19 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x1002534b..0x10026fde: GESurface's image-file members (the class itself is abstract and header-inline; the
-// renderer plug-ins implement it). Order: BMP, JPG, JPG2, TGA, then the type switches. JPEG goes through the
-// statically linked IJG libjpeg 6b (stdio source/destination on FSFileSpec's FOpen stream). No init chains.
+// renderer plug-ins implement it). Order: BMP, JPG, JPG2, (TGA: removed under D9), PNG, then the type switches.
+// JPEG goes through the statically linked IJG libjpeg 6b (stdio source/destination on FSFileSpec's FOpen stream).
+// No init chains.
 // GetBMPFileAttributes lives elsewhere (0x1003fd29).
 //
 // JPG2 (provisional names) = two JPEGs behind a two-word offset header (_putw/_getw): the colour image, then an
 // image carrying the alpha in all three channels (LoadJPG2 merges both). SaveAsJPG2 writes placeholder offsets
-// and patches them through FSFileSpec::Write after reopening; the TGA writer swaps the header width/height (as shipped).
+// and patches them through FSFileSpec::Write after reopening.
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -20,28 +22,12 @@
 #include "lle/FSFileSpec.h"
 #include "lle/GESurface.h"
 #include "lle/Graphics Engine.h"
+#include "rust/ee_rust.h"   // ee_of_png_to_picture (LoadPNG)
 
 extern "C" {
 #include "jpeglib/jpeglib.h"
 }
 
-// Targa file header (18 bytes, packed) (provisional names)
-#pragma pack(push, 1)
-struct GETGAHeader {
-    unsigned char mIDLength;            // +0x00
-    unsigned char mColorMapType;        // +0x01
-    unsigned char mImageType;           // +0x02: 2 = uncompressed true colour
-    unsigned short mColorMapOrigin;     // +0x03
-    unsigned short mColorMapLength;     // +0x05
-    unsigned char mColorMapDepth;       // +0x07
-    unsigned short mXOrigin;            // +0x08
-    unsigned short mYOrigin;            // +0x0a
-    unsigned short mWidth;              // +0x0c
-    unsigned short mHeight;             // +0x0e
-    unsigned char mPixelDepth;          // +0x10
-    unsigned char mDescriptor;          // +0x11: bit 4 right-to-left, bit 5 top-down
-};
-#pragma pack(pop)
 // _getw/_putw (the MSVC runtime's): a 4-byte int in the file's (little-endian) byte order; EOF on a short read
 static int GEGetWord(FILE* inStream)
 {
@@ -54,8 +40,6 @@ static void GEPutWord(int inWord, FILE* inStream)
     int32_t theWord = inWord;
     fwrite(&theWord, 4, 1, inStream);
 }
-
-static_assert(sizeof(GETGAHeader) == 18, "on-disk record: 18 bytes on every target");
 
 // FUNCTION: LLE 0x1002534b
 // Always fails: loading BMP files is not supported
@@ -681,330 +665,153 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x100267a1
-// Reads a Targa file's width, height and bit depth from its header
-// The original reads inFile+0x34 directly here, in LoadTGA, SaveAsTGA and SaveAsBMP (GetFileAccess is inline)
-long GESurface::GetTGAFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                     unsigned long& outDepth)
+// (0x100267a1 GetTGAFileAttributes, 0x10026816 LoadTGA and 0x10026c57 SaveAsTGA: removed under D9. The pictures the
+// game loaded as .tga outside the texture manager are PNG files, read by LoadPNG below; the texture manager's frames
+// are PNG too, stored by GETexture::Load (GETexture.cpp GEStoreFrame, LoadTGA's pixel loop).)
+
+// port: a PNG file's bytes, read whole from its start (an open file must be open for reading; it stays open, a closed
+// one is opened and closed again) -> kErrorOK
+static long GEReadPNGFile(FSFileSpec& inFile, std::vector<unsigned char>& outData)
 {
-    GETGAHeader theHeader;
-    unsigned long theRead;
     bool theWasOpen = inFile.GetIsOpen();
     long theResult;
-
-    if (theWasOpen) {
-        if (inFile.GetFileAccess() != kFileAccessRead)
-            return kErrorFailed;
-    } else {
+    if (theWasOpen)
+        theResult = inFile.GetFileAccess() != kFileAccessRead ? kErrorFailed
+                                                              : inFile.SetPosition(0, kFileOriginBegin, true);
+    else
         theResult = inFile.Open(kFileAccessRead);
-        if (theResult != kErrorOK)
-            return theResult;
+    if (theResult != kErrorOK)
+        return theResult;
+    unsigned long theLength = 0;
+    theResult = inFile.GetLength(theLength);
+    if (theResult == kErrorOK) {
+        outData.resize(theLength);
+        unsigned long theRead = 0;
+        if (theLength != 0) {
+            theResult = inFile.Read(&outData[0], theLength, theRead);
+            if (theResult == kErrorOK && theRead != theLength)
+                theResult = kErrorFailed;
+        }
     }
-    theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theHeader), sizeof(GETGAHeader), theRead);
-    if (theResult == kErrorOK && theRead == sizeof(GETGAHeader)) {
-        outWidth = theHeader.mWidth;
-        outHeight = theHeader.mHeight;
-        outDepth = theHeader.mPixelDepth;
+    if (!theWasOpen) {
+        long theCloseResult = inFile.Close();
+        if (theResult == kErrorOK)
+            theResult = theCloseResult;
     }
-    if (!theWasOpen)
-        theResult = inFile.Close();
     return theResult;
 }
 
-// FUNCTION: LLE 0x10026816
-// Loads an uncompressed 24/32-bit Targa into the surface, honouring its row and column order; short reads succeed
-// NEAR: register allocation rotated (original this=ebx, inFile=esi, bytes-per-pixel=edi; ours esi/edi/ebx), which
-// moves every spill; theSource/theData order and theSize reuse tried
-long GESurface::LoadTGA(FSFileSpec& inFile)
+// port: a PNG file decoded (rust/crates/ee_openformats png_to_picture: B, G, R, A per pixel, top row first)
+// -> kErrorOK; outDepth 32 when the file has alpha, else 24
+static long GEDecodePNGFile(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
+                            unsigned long& outDepth, std::vector<unsigned char>& outPixels)
+{
+    std::vector<unsigned char> theData;
+    long theResult = GEReadPNGFile(inFile, theData);
+    if (theResult != kErrorOK)
+        return theResult;
+    EeOfPicture thePicture;
+    EeOfBytes theError;
+    if (!ee_of_png_to_picture(theData.empty() ? NULL : &theData[0], theData.size(), &thePicture, &theError)) {
+        ee_of_bytes_free(theError);
+        return kErrorFailed;
+    }
+    outWidth = thePicture.width;
+    outHeight = thePicture.height;
+    outDepth = thePicture.depth;
+    outPixels.assign(thePicture.bgra.ptr, thePicture.bgra.ptr + thePicture.bgra.len);
+    ee_of_bytes_free(thePicture.bgra);
+    return kErrorOK;
+}
+
+// port: reads a PNG file's width, height and bit depth (24 or 32: whether it has alpha)
+long GESurface::GetPNGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
+                                     unsigned long& outDepth)
+{
+    std::vector<unsigned char> thePixels;
+    return GEDecodePNGFile(inFile, outWidth, outHeight, outDepth, thePixels);
+}
+
+// port: loads a PNG file into the surface's top left corner, as LoadTGA (removed) loaded the Targa it replaces: the file's alpha
+// (0xff without one, or when the surface has mNoAlpha), packed to the surface's pixel format; an image larger than
+// the surface is refused
+long GESurface::LoadPNG(FSFileSpec& inFile)
 {
     unsigned long theFormat = this->GetPixelFormat();
     bool theNoAlpha = this->GetSurfaceDescription().mNoAlpha;
-    bool theWasOpen = inFile.GetIsOpen();
-    long theResult;
-    GETGAHeader theHeader;
-    unsigned long theRead;
-    unsigned long theBytesPerPixel;
-    bool theLeftToRight;
-    bool theTopDown;
-    unsigned long theSize;
-    unsigned char* theData;
-    unsigned char* theSource;
-    unsigned long theBytesPerRow;
-    unsigned long theSourceRowSize;
-    unsigned long theSkip;
-    uint32_t* the32BitPixel;
-    unsigned short* the16BitPixel;
-    unsigned char theRed;
-    unsigned char theGreen;
-    unsigned char theBlue;
-    unsigned char theAlpha;
-    unsigned long x;
-    unsigned long y;
-
-    if (theWasOpen) {
-        if (inFile.GetFileAccess() != kFileAccessRead)
-            theResult = kErrorFailed;
-        else
-            theResult = kErrorOK;
-    } else
-        theResult = inFile.Open(kFileAccessRead);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theHeader), sizeof(GETGAHeader), theRead);
-        theBytesPerPixel = theHeader.mPixelDepth / 8;
-        theLeftToRight = (theHeader.mDescriptor & kTGADescriptorRightToLeft) == 0;
-        theTopDown = (theHeader.mDescriptor & kTGADescriptorTopToBottom) != 0;
-        if (theResult == kErrorOK && theRead == sizeof(GETGAHeader)) {
-            theResult = inFile.SetPosition(theHeader.mIDLength, kFileOriginCurrent, true);
-            if (theResult == kErrorOK) {
-                theSize = theHeader.mPixelDepth / 8 * theHeader.mWidth * theHeader.mHeight;
-                theSource = new unsigned char[theSize];
-                if (theSource) {
-                    theData = theSource;
-                    theResult = inFile.Read(theData, theSize, theRead);
-                    // port: an image larger than the surface (a texture pack's pointer into a 32x32 surface) is
-                    // refused instead of written past the surface's memory
-                    if (theResult == kErrorOK && theRead == theSize
-                        && (theHeader.mWidth > this->GetPixelWidth() || theHeader.mHeight > this->GetPixelHeight()))
-                        theResult = kErrorFailed;
-                    if (theResult == kErrorOK && theRead == theSize) {
-                        theResult = this->Lock();
-                        if (theResult == kErrorOK) {
-                            theBytesPerRow = this->GetBytesPerRow();
-                            theSourceRowSize = theHeader.mWidth * theBytesPerPixel;
-                            if (!theTopDown)
-                                theSource += (theHeader.mHeight - 1) * theSourceRowSize;
-                            if (!theLeftToRight)
-                                theSource += theSourceRowSize - theBytesPerPixel;
-                            if (this->GetPixelDepth() == 32) {
-                                theSkip = (theBytesPerRow - this->GetPixelWidth() * 4) / 4;
-                                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
-                                if (theBytesPerPixel == 4) {
-                                    for (y = 0; y < theHeader.mHeight; y++) {
-                                        for (x = 0; x < theHeader.mWidth; x++) {
-                                            theBlue = theSource[0];
-                                            theGreen = theSource[1];
-                                            theRed = theSource[2];
-                                            theAlpha = theSource[3];
-                                            if (theNoAlpha)
-                                                theAlpha = 0xff;
-                                            if (theLeftToRight)
-                                                theSource += 4;
-                                            else
-                                                theSource -= 4;
-                                            *the32BitPixel++ = (theAlpha << 24) | (theRed << 16) | (theGreen << 8) |
-                                                               theBlue;
-                                        }
-                                        the32BitPixel += theSkip;
-                                        if (!theLeftToRight)
-                                            theSource += theSourceRowSize * 2;
-                                        if (!theTopDown)
-                                            theSource -= theSourceRowSize * 2;
-                                    }
-                                } else {
-                                    for (y = 0; y < theHeader.mHeight; y++) {
-                                        for (x = 0; x < theHeader.mWidth; x++) {
-                                            theBlue = theSource[0];
-                                            theGreen = theSource[1];
-                                            theRed = theSource[2];
-                                            if (theLeftToRight)
-                                                theSource += 3;
-                                            else
-                                                theSource -= 3;
-                                            *the32BitPixel++ = 0xff000000 | (theRed << 16) | (theGreen << 8) |
-                                                               theBlue;
-                                        }
-                                        the32BitPixel += theSkip;
-                                        if (!theLeftToRight)
-                                            theSource += theSourceRowSize * 2;
-                                        if (!theTopDown)
-                                            theSource -= theSourceRowSize * 2;
-                                    }
-                                }
-                            } else {
-                                theSkip = (theBytesPerRow - this->GetPixelWidth() * 2) / 2;
-                                the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
-                                if (theBytesPerPixel == 4) {
-                                    for (y = 0; y < theHeader.mHeight; y++) {
-                                        for (x = 0; x < theHeader.mWidth; x++) {
-                                            theBlue = theSource[0];
-                                            theGreen = theSource[1];
-                                            theRed = theSource[2];
-                                            theAlpha = theSource[3];
-                                            if (theNoAlpha)
-                                                theAlpha = 0xff;
-                                            if (theLeftToRight)
-                                                theSource += 4;
-                                            else
-                                                theSource -= 4;
-                                            *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed,
-                                                                                           theGreen, theBlue,
-                                                                                           theAlpha);
-                                        }
-                                        the16BitPixel += theSkip;
-                                        if (!theLeftToRight)
-                                            theSource += theSourceRowSize * 2;
-                                        if (!theTopDown)
-                                            theSource -= theSourceRowSize * 2;
-                                    }
-                                } else {
-                                    for (y = 0; y < theHeader.mHeight; y++) {
-                                        for (x = 0; x < theHeader.mWidth; x++) {
-                                            theBlue = theSource[0];
-                                            theGreen = theSource[1];
-                                            theRed = theSource[2];
-                                            if (theLeftToRight)
-                                                theSource += 3;
-                                            else
-                                                theSource -= 3;
-                                            *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed,
-                                                                                           theGreen, theBlue, 0xff);
-                                        }
-                                        the16BitPixel += theSkip;
-                                        if (!theLeftToRight)
-                                            theSource += theSourceRowSize * 2;
-                                        if (!theTopDown)
-                                            theSource -= theSourceRowSize * 2;
-                                    }
-                                }
-                            }
-                            theResult = this->Unlock();
-                        }
-                    }
-                    delete[] theData;
-                } else
-                    theResult = kErrorNativeError;
-            }
+    unsigned long theWidth = 0, theHeight = 0, theDepth = 0;
+    std::vector<unsigned char> thePixels;
+    long theResult = GEDecodePNGFile(inFile, theWidth, theHeight, theDepth, thePixels);
+    if (theResult != kErrorOK)
+        return theResult;
+    if (theWidth > this->GetPixelWidth() || theHeight > this->GetPixelHeight())
+        return kErrorFailed;
+    theResult = this->Lock();
+    if (theResult != kErrorOK)
+        return theResult;
+    unsigned char* theRow = reinterpret_cast<unsigned char*>(this->GetMemoryAddress());
+    unsigned long theBytesPerRow = this->GetBytesPerRow();
+    const unsigned char* theSource = thePixels.empty() ? NULL : &thePixels[0];
+    for (unsigned long y = 0; y < theHeight; y++, theRow += theBytesPerRow) {
+        uint32_t* the32BitPixel = reinterpret_cast<uint32_t*>(theRow);
+        unsigned short* the16BitPixel = reinterpret_cast<unsigned short*>(theRow);
+        for (unsigned long x = 0; x < theWidth; x++, theSource += 4) {
+            unsigned char theBlue = theSource[0];
+            unsigned char theGreen = theSource[1];
+            unsigned char theRed = theSource[2];
+            unsigned char theAlpha = theNoAlpha ? 0xff : theSource[3];
+            if (this->GetPixelDepth() == 32)
+                *the32BitPixel++ = ((uint32_t)theAlpha << 24) | (theRed << 16) | (theGreen << 8) | theBlue;
+            else
+                *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, theAlpha);
         }
-        if (!theWasOpen)
-            theResult = inFile.Close();
     }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x10026c57
-// Saves the surface as a bottom-up 24-bit Targa
-// NEAR: the original loads theHeight into cx before the zero stores and puts theResult in the pixel pointer's slot
-// (-4); field order and chained zero stores tried
-long GESurface::SaveAsTGA(FSFileSpec& inFile)
-{
-    unsigned long theFormat = this->GetPixelFormat();
-    unsigned long theWidth = this->GetPixelWidth();
-    unsigned long theHeight = this->GetPixelHeight();
-    bool theWasOpen = inFile.GetIsOpen();
-    long theResult;
-    GETGAHeader theHeader;
-    unsigned long theRowSize;
-    unsigned char* theBuffer;
-    unsigned long theWritten;
-    unsigned long theBytesPerRow;
-    unsigned long thePitch;
-    uint32_t* the32BitPixel;
-    unsigned short* the16BitPixel;
-    unsigned long x;
-    unsigned long y;
-
-    if (theWasOpen) {
-        if (inFile.GetFileAccess() != kFileAccessWrite)
-            theResult = kErrorFailed;
-        else
-            theResult = kErrorOK;
-    } else
-        theResult = inFile.Open(kFileAccessWrite);
-    if (theResult == kErrorOK) {
-        theHeader.mYOrigin = theHeader.mXOrigin = theHeader.mColorMapOrigin = theHeader.mColorMapLength = 0;
-        theHeader.mDescriptor = theHeader.mIDLength = theHeader.mColorMapType = theHeader.mColorMapDepth = 0;
-        // Width and height go to their own fields, and Targa rows are not padded (both were BMP habits).
-        theHeader.mWidth = (unsigned short)theWidth;
-        theHeader.mPixelDepth = 24;
-        theHeader.mHeight = (unsigned short)theHeight;
-        theHeader.mImageType = 2;
-        theRowSize = theWidth * 3;
-        theBuffer = new unsigned char[theRowSize];
-        theResult = inFile.Write(reinterpret_cast<unsigned char*>(&theHeader), sizeof(GETGAHeader), theWritten);
-        if (theResult == kErrorOK) {
-            if (this->Lock() == kErrorOK) {
-                theBytesPerRow = this->GetBytesPerRow();
-                if (this->GetPixelDepth() == 32) {
-                    thePitch = theBytesPerRow / 4;
-                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
-                    for (y = 0; y < theHeight; y++) {
-                        for (x = 0; x < theWidth; x++) {
-                            theBuffer[x * 3] = GEUnpackBlue(theFormat, *the32BitPixel);
-                            theBuffer[x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
-                            theBuffer[x * 3 + 2] = GEUnpackRed(theFormat, *the32BitPixel);
-                            the32BitPixel++;
-                        }
-                        inFile.Write(theBuffer, theRowSize, theWritten);
-                        the32BitPixel -= thePitch + theWidth;
-                    }
-                } else {
-                    thePitch = theBytesPerRow / 2;
-                    the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
-                    for (y = 0; y < theHeight; y++) {
-                        for (x = 0; x < theWidth; x++) {
-                            theBuffer[x * 3] = GEUnpackBlue(theFormat, *the16BitPixel);
-                            theBuffer[x * 3 + 1] = GEUnpackGreen(theFormat, *the16BitPixel);
-                            theBuffer[x * 3 + 2] = GEUnpackRed(theFormat, *the16BitPixel);
-                            the16BitPixel++;
-                        }
-                        inFile.Write(theBuffer, theRowSize, theWritten);
-                        the16BitPixel -= thePitch + theWidth;
-                    }
-                }
-                // Unlock only a surface that was locked.
-                this->Unlock();
-            }
-            theResult = inFile.Write((unsigned short)0);
-        }
-        delete theBuffer;
-        if (!theWasOpen)
-            theResult = inFile.Close();
-    }
-    return theResult;
+    return this->Unlock();
 }
 
 // FUNCTION: LLE 0x10026eed
-// Reads an image file's width, height and depth by file type (TGA, BMP, JPG, JPG2); fails for other types
+// Reads an image file's width, height and depth by file type (BMP, JPG, JPG2, PNG); fails for other types (TGA: no
+// longer read)
 long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
                                        unsigned long& outHeight, unsigned long& outDepth)
 {
     switch (inType) {
-    case kImageFileTGA:
-        return GESurface::GetTGAFileAttributes(inFile, outWidth, outHeight, outDepth);
     case kImageFileBMP:
         return GESurface::GetBMPFileAttributes(inFile, outWidth, outHeight, outDepth);
     case kImageFileJPG:
         return GESurface::GetJPGFileAttributes(inFile, outWidth, outHeight, outDepth);
     case kImageFileJPG2:
         return GESurface::GetJPG2FileAttributes(inFile, outWidth, outHeight, outDepth);
+    case kImageFilePNG:
+        return GESurface::GetPNGFileAttributes(inFile, outWidth, outHeight, outDepth);
     }
     return kErrorFailed;
 }
 
 // FUNCTION: LLE 0x10026f56
-// Loads an image file into the surface by file type (TGA, BMP, JPG, JPG2); fails for other types
+// Loads an image file into the surface by file type (BMP, JPG, JPG2, PNG); fails for other types (TGA: no longer
+// read, D9)
 long GESurface::Load(FSFileSpec& inFile, unsigned char inType)
 {
     switch (inType) {
-    case kImageFileTGA:
-        return this->LoadTGA(inFile);
     case kImageFileBMP:
         return this->LoadBMP(inFile);
     case kImageFileJPG:
         return this->LoadJPG(inFile);
     case kImageFileJPG2:
         return this->LoadJPG2(inFile);
+    case kImageFilePNG:
+        return this->LoadPNG(inFile);
     }
     return kErrorFailed;
 }
 
 // FUNCTION: LLE 0x10026f9a
-// Saves the surface as an image file of the given type (TGA, BMP, JPG, JPG2); fails for other types
+// Saves the surface as an image file of the given type (BMP, JPG, JPG2); fails for other types (TGA: no longer
+// written)
 long GESurface::Save(FSFileSpec& inFile, unsigned char inType)
 {
     switch (inType) {
-    case kImageFileTGA:
-        return this->SaveAsTGA(inFile);
     case kImageFileBMP:
         return this->SaveAsBMP(inFile);
     case kImageFileJPG:

@@ -1205,14 +1205,8 @@ pub fn png_to_texture(frames: &[&[u8]]) -> Result<PngTexture, Failure> {
     }
     let mut out = PngTexture { width: 0, height: 0, frames: Vec::with_capacity(frames.len()) };
     for (f, d) in frames.iter().enumerate() {
-        let Some((color, trns, surface)) = scan_png(d) else { return fail("not a PNG file") };
-        let ch: i32 = if color == 4 || color == 6 || trns { 4 } else { 3 };
-        let Some(img) = load_png(d, ch) else {
-            let mut msg = b"PNG cannot be decoded: ".to_vec();
-            msg.extend_from_slice(&reason());
-            return Err(Failure(msg));
-        };
-        let (w, h) = (img.w, img.h);
+        let (frame, surface) = decode_frame(d)?;
+        let (w, h) = (frame.width, frame.height);
         // the size limit of the Targa frames the game read before D9 (its 16-bit sizes), kept
         if w > 65535 || h > 65535 {
             return fail("PNG larger than 65535 pixels (a Targa's limit)");
@@ -1239,35 +1233,47 @@ pub fn png_to_texture(frames: &[&[u8]]) -> Result<PngTexture, Failure> {
                 }
             }
         }
-        let mut pixels = img.out;
-        pixels.truncate(w as usize * h as usize * ch as usize);
-        out.frames.push(PngFrame { width: w, height: h, channels: ch as u32, pixels });
+        out.frames.push(frame);
     }
     Ok(out)
 }
 
-/// One frame as a type-2 Targa (an 18-byte header, bottom-up BGR(A) rows; sst.py `_tga_bytes`).
-pub fn frame_to_tga(frame: &PngFrame) -> Vec<u8> {
-    let (w, h, ch) = (frame.width as u16, frame.height as u16, frame.channels as usize);
-    let mut out = vec![0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    out.extend_from_slice(&[w as u8, (w >> 8) as u8, h as u8, (h >> 8) as u8, (8 * ch) as u8, if ch == 4 { 8 } else { 0 }]);
-    for y in (0..h as usize).rev() {
-        let row = &frame.pixels[y * w as usize * ch..(y + 1) * w as usize * ch];
-        for p in row.chunks_exact(ch) {
-            out.extend_from_slice(&[p[2], p[1], p[0]]);
-            if ch == 4 {
-                out.push(p[3]);
-            }
-        }
-    }
-    out
+/// One PNG -> its frame (RGB, or RGBA when it has alpha: a grey+alpha or RGBA colour type, or a tRNS chunk) and its
+/// "ee:surface" text: the one decoding path of the textures and the pictures.
+fn decode_frame(d: &[u8]) -> Result<(PngFrame, Vec<u8>), Failure> {
+    let Some((color, trns, surface)) = scan_png(d) else { return fail("not a PNG file") };
+    let ch: i32 = if color == 4 || color == 6 || trns { 4 } else { 3 };
+    let Some(img) = load_png(d, ch) else {
+        let mut msg = b"PNG cannot be decoded: ".to_vec();
+        msg.extend_from_slice(&reason());
+        return Err(Failure(msg));
+    };
+    let mut pixels = img.out;
+    pixels.truncate(img.w as usize * img.h as usize * ch as usize);
+    Ok((PngFrame { width: img.w, height: img.h, channels: ch as u32, pixels }, surface))
 }
 
-/// One PNG -> the Targa a picture read as a Targa outside the texture manager gets in its place (`GEFindTargaFile`;
-/// the frame `png_to_texture` decodes; an "ee:surface" text is checked but has no effect).
-pub fn png_to_tga(data: &[u8]) -> Result<Vec<u8>, Failure> {
-    let t = png_to_texture(&[data])?;
-    Ok(frame_to_tga(&t.frames[0]))
+/// A PNG decoded for a picture the game reads outside the texture manager (pointers, the terrain palette, the volcano,
+/// a scenario's map, a campaign background): `width` x `height` pixels, top row first, each B, G, R, A (alpha 0xff
+/// when the PNG has none); `depth` is 32 when it has alpha (colour types 4 and 6 or a tRNS chunk), else 24. The
+/// pixels are a texture frame's (`decode_frame`) as BGRA.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Picture {
+    pub width: u32,
+    pub height: u32,
+    pub depth: u32,
+    pub bgra: Vec<u8>,
+}
+
+/// One PNG file -> its pixels as a `Picture` (or why it cannot be read).
+pub fn png_to_picture(data: &[u8]) -> Result<Picture, Failure> {
+    let (f, _) = decode_frame(data)?;
+    let ch = f.channels as usize;
+    let mut bgra = Vec::with_capacity(f.width as usize * f.height as usize * 4);
+    for p in f.pixels.chunks_exact(ch) {
+        bgra.extend_from_slice(&[p[2], p[1], p[0], if ch == 4 { p[3] } else { 0xff }]);
+    }
+    Ok(Picture { width: f.width, height: f.height, depth: 8 * ch as u32, bgra })
 }
 
 #[cfg(test)]
@@ -1357,10 +1363,6 @@ mod tests {
         PngOpts { depth, color, interlace: 0, plte: None, trns: None, text: None }
     }
 
-    fn tga_header(w: u8, h: u8, ch: u8) -> Vec<u8> {
-        vec![0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, w, 0, h, 0, 8 * ch, if ch == 4 { 8 } else { 0 }]
-    }
-
     /// Frame 0's channels and pixels (top row first, R, G, B(, A)).
     fn frame0(png: &[u8]) -> (u32, Vec<u8>) {
         let t = png_to_texture(&[png]).unwrap();
@@ -1391,20 +1393,6 @@ mod tests {
         assert_eq!(t.frames[0].pixels, vec![1, 2, 3, 200]);
         assert_eq!(t.frames[1].channels, 3);
         assert_eq!(t.frames[1].pixels, vec![4, 5, 6]);
-    }
-
-    #[test]
-    fn a_targa_for_a_picture_read_as_data() {
-        // type 2, 18-byte header, bottom-up BGR rows (what GESurface::LoadTGA reads)
-        let tga = png_to_tga(&png(1, 2, &[0, 1, 2, 3, 0, 4, 5, 6], plain(8, 2))).unwrap();
-        let mut want = tga_header(1, 2, 3);
-        want.extend_from_slice(&[6, 5, 4, 3, 2, 1]);
-        assert_eq!(tga, want);
-        let tga = png_to_tga(&png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6))).unwrap();
-        let mut want = tga_header(1, 1, 4);
-        want.extend_from_slice(&[3, 2, 1, 200]);
-        assert_eq!(tga, want);
-        assert_eq!(png_to_tga(b"hello").unwrap_err().0, b"not a PNG file".to_vec());
     }
 
     #[test]
@@ -1587,5 +1575,44 @@ mod tests {
         let (color, trns, surface) = scan_png(&p).unwrap();
         assert_eq!((color, trns, surface.as_slice()), (0, true, &b"2x2"[..]));
         assert!(scan_png(&p[..20]).is_none());
+    }
+
+    #[test]
+    fn a_picture_is_top_down_bgra() {
+        let raw = [0, 1, 2, 3, 4, 5, 6, 0, 7, 8, 9, 10, 11, 12];
+        let p = png(2, 2, &raw, plain(8, 2));
+        let pic = png_to_picture(&p).unwrap();
+        assert_eq!((pic.width, pic.height, pic.depth), (2, 2, 24));
+        assert_eq!(pic.bgra, vec![3, 2, 1, 255, 6, 5, 4, 255, 9, 8, 7, 255, 12, 11, 10, 255]);
+    }
+
+    #[test]
+    fn a_picture_keeps_alpha_and_trns() {
+        let p = png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6));
+        assert_eq!(png_to_picture(&p).unwrap(), Picture { width: 1, height: 1, depth: 32, bgra: vec![3, 2, 1, 200] });
+        let plte = [10, 20, 30, 40, 50, 60];
+        let p = png(2, 1, &[0, 0, 1], PngOpts { plte: Some(&plte), trns: Some(&[128]), ..plain(8, 3) });
+        let pic = png_to_picture(&p).unwrap();
+        assert_eq!((pic.depth, pic.bgra), (32, vec![30, 20, 10, 128, 60, 50, 40, 255]));
+    }
+
+    #[test]
+    fn a_picture_equals_the_texture_frame() {
+        // the texture's frame (top-down RGB(A)) holds the same pixels as the picture (top-down BGRA)
+        let raw = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 10, 11, 12, 13, 14, 15, 16];
+        let p = png(2, 2, &raw, plain(8, 6));
+        let pic = png_to_picture(&p).unwrap();
+        let t = png_to_texture(&[&p]).unwrap();
+        let swapped: Vec<u8> = t.frames[0].pixels.chunks_exact(4).flat_map(|c| [c[2], c[1], c[0], c[3]]).collect();
+        assert_eq!(pic.bgra, swapped);
+    }
+
+    #[test]
+    fn a_picture_refuses_what_is_not_a_png() {
+        assert_eq!(png_to_picture(b"not a png"), Err(Failure(b"not a PNG file".to_vec())));
+        let mut p = png(1, 1, &[0, 1, 2, 3], plain(8, 2));
+        assert_eq!(p[41], 0x78); // the IDAT's zlib header (after the signature, IHDR and the IDAT's length and type)
+        p[41] = 0x79;
+        assert_eq!(png_to_picture(&p), Err(Failure(b"PNG cannot be decoded: bad zlib header".to_vec())));
     }
 }

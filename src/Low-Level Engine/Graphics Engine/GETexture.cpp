@@ -72,7 +72,7 @@ struct GETextureFileHeader {
 };
 
 // port (D9): stores one decoded frame (top row first, R, G, B(, A)) into a surface as the original's Targa reader
-// (GESurface::LoadTGA, kImageFileTGA) stored a texture file's frame: 32-bit surfaces get A8R8G8B8 whatever their
+// (GESurface::LoadTGA, removed) stored a texture file's frame: 32-bit surfaces get A8R8G8B8 whatever their
 // format, 16-bit ones GEPackColor of their format; no alpha (3 channels, or a surface without alpha) is 0xff. Each
 // row continues after the surface's row padding plus the surface's pixel width minus the frame's (LoadTGA's skip,
 // computed from the surface's pixel width); a frame larger than the surface is refused.

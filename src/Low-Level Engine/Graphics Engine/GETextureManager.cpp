@@ -72,7 +72,7 @@ void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift
 
 // The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\"
 // (or no pack directory), and for the pictures the game reads as data (their pixels are values, not art; they are
-// read through GEFindTargaFile, never the pack, but are refused here too)
+// read by GESurface::LoadPNG, never the pack, but are refused here too)
 static bool GETexturePackName(const UString& inName, UString& outName)
 {
     static const char kTextures[] = "textures\\";

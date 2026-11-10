@@ -13,6 +13,8 @@ Each part is released on its own, so a format change republishes only the db par
 gets them in that order; OUT/bundles.json records which release each came from, and a part already at its newest
 release is skipped. A part's newest release is the latest one whose tag has the part's prefix (--tag pins one).
 Downloads are kept in build/data_cache. Needs the gh CLI, logged in with access to the repository.
+The parts carry only the open forms the game reads (RUST_PLAN D9); a binary form an older release still has (its db
+.dat files, Data/Models/amb_rock.cem) is deleted from OUT after unzipping.
 """
 import argparse
 import json
@@ -125,6 +127,14 @@ def main():
     if "textures-4x" in a.without and have.pop("textures-4x", None) and (out / "Data" / "Textures-4x").exists():
         shutil.rmtree(out / "Data" / "Textures-4x")
     record.write_text(json.dumps(have, indent=2) + "\n", encoding="utf-8")
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # noqa: E402  (binary_form: what the game no longer reads)
+    gone = [p for p in (out / "Data").rglob("*") if p.is_file()
+            and open_data.binary_form("\\".join(p.relative_to(out / "Data").parts).lower())]
+    for p in gone:
+        p.unlink()
+    if gone:
+        print(f"{len(gone)} binary forms of an older release deleted (the game reads only the open forms)")
     print(f"data ready in {out}: run the game with EE_DATA_ROOT={out} (or make_play_dir.py --data {out})")
     return 0
 

@@ -18,7 +18,7 @@ public:
     void DeleteObjects();                   // 0x1e7205: deletes the four files (the post-game Open calls it)
     static EEUISCIFormManager* Get();       // 0x1e7270
     UWideString GetBriefing();              // 0x1e72cf (mMediaStrings.mInstructions)
-    bool OpenMap();                         // 0x1e72e4 (mMapFile + ".jpg", else ".tga", in "Scenarios\")
+    bool OpenMap();                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
     bool OpenMovie();                       // 0x1e73bd (mMovieFile + ".bik" in "Movies\")
     bool OpenScenario();                    // 0x1e7444 (mFile's own name, in "Scenarios\" or the data path)
     bool OpenSound();                       // 0x1e74dc (mSoundFile + ".mp3" in "Sounds\")

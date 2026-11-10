@@ -33,9 +33,8 @@ model: `EEROUnits` sets the dbgraphics texture on every material (`GEModel::SetT
 
 Other readers of `.tga` files go around the texture manager: `textures\ColorPalette.tga` (EETerrainColorTable),
 `textures\Volcano.tga` (EEE3DVolcano), the mouse pointers (RTSMouse), scenario pictures (EEUIEScenarioIntroEvents),
-campaign map backgrounds (EEUIBMapBackground). They read the `.tga` through `GESurface`. The first three look it up
-through `GEFindTargaFile`, which serves `<name>.png` as the Targa when the path has one; the scenario and campaign
-pictures come from scenario files and campaign archives, which are not converted.
+campaign map backgrounds (EEUIBMapBackground). The original read the `.tga` through `GESurface`; since D9 they are
+PNG files read by `GESurface::LoadPNG` (section 6).
 
 The multiplayer checksum (`EEInitializeNetwork`) sums the loose `Data\Models\*.glb`, `*.gltf` and `*.bin` (the original
 summed `*.cem`): models carry tag points and bounds the simulation uses.
@@ -239,8 +238,8 @@ version-1 conversion, `GETexture`'s `.sst`/`.tga` reading and `Save`).
   MIP levels, dropped levels, frame formats and pixel packing). The stem and cache key is the name as given, or
   without its last extension when it contains `.sst` (`textures\x` and `textures\x.sst` are one texture, as they
   were one cached `textures\x.sst` before); the texture pack maps the stem (`textures-4x\x`).
-* `GEFindTargaFile` (pictures read as Targa data around the texture manager) still serves `<name>.png` as a Targa
-  (`ee_of_png_to_tga`), else the `.tga` file.
+* The pictures read around the texture manager are PNG files read by `GESurface::LoadPNG` (`ee_of_png_to_picture`,
+  the same decoder as the textures'); `GESurface::LoadTGA` and `GEFindTargaFile` are gone.
 * A file that does not convert stops the game with its message (`ESVerify`). Nothing in a saved game names a model or
   texture file: the keys changed without a save format change.
 

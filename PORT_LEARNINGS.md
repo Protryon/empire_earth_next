@@ -3361,8 +3361,11 @@ reader and writer (ee_ge model_file.rs's parsing, legacy.rs, model_save.rs, thei
 `GEModel::Save`/`SaveData` and 'GEModel Save.cpp'), `GETexture`'s `.sst`/`.tga` reading and `GETexture::Save`,
 `ee_openformats`' `.cem` and `.sst` writers (`gltf_to_cem`, `png_to_sst`, `GEOpenFormats::GltfToCem`/`PngToSst`), and
 every lookup of a `.cem`, `.sst` or `.tga` file in the model and texture managers (and `*.cem` in the multiplayer
-checksum). `GEFindTargaFile` (the pictures read as Targa data around the texture manager: the data side's) still
-serves a PNG as a Targa, now through `png_to_tga`.
+checksum). After the merge with the data side (rust-d9-data, whose pictures load through `GESurface::LoadPNG`):
+`GESurface::LoadTGA` and the `GETGAHeader` record (their last caller was GETexture's frames, through `Load(file, 0)`
+with the type in a variable, so no grep found it) and `GEFindTargaFile` (no caller left) are deleted too, and the
+pictures' `png_to_picture` decodes through the textures' `decode_frame` (one PNG path; it now also refuses a bad
+`ee:surface` text, as `PngToSst` did for the pictures before D9).
 
 - **The decoded model is the reader's output, not the importer's.** `import.rs`'s `Model` matches `CemModel` field
   for field, but the `.cem` reader added rules of its own that the stored model shows: a name ends at its first NUL
@@ -3414,3 +3417,46 @@ serves a PNG as a Targa, now through `png_to_tga`.
 - Gates: storegate PASS (25,140 lines), cppgate PASS (7,104 cases), the sim oracle identical on seeds 2-7 (models
   feed it through `GEPhysicalModel` and the boxes), `gx_test`, `eedata check`. Not run: tours and screenshots (the
   lead's).
+## D9, the data side: the game reads only the open forms (branch rust-d9-data, 2026-11-09)
+
+The owner's decision D9 (docs/RUST_PLAN.md): glTF, PNG and the text db only at run time. This branch did the data side;
+the model and texture managers (GEModel*, GETexture*, GEOpenFormats*) are another branch's.
+
+- **Every binary read and fallback the game had outside those managers, and what it is now:**
+  - `EEDbFindFile` (every db lookup: EEInitializeDatabase, EEUnitClass, UIManager::LoadDatabase): served the text when
+    there was one, else `FindFile` of the `.dat`. Now text only; a missing text table or one with no text form stops
+    the game with its name.
+  - `EERandomMapTable::Load` read `db\dbrandommap.dat` (no text form), every record dropped, the table never read:
+    the load, the function and the key `kDbRandomMapFile` are gone (and the unused `kDbTerrainGrayTexturesFile`).
+  - `EE_DUMP_CONTENT` also dumped a `.dat` when a table had no text: gone.
+  - The multiplayer checksum summed `Data\Db\*.dat`: now only the `*.csv`/`*.yaml` (it changes the version suffix
+    only for a tree that still had `.dat` files).
+  - `GEFindTargaFile` (pointers, `ColorPalette`, `Volcano`; the texture pack's pointers) served a `.png` as Targa
+    bytes, else the `.tga`; `EEUISCIFormManager::OpenMap` tried `.jpg` then `.tga`; `EEUIBMapBackground` loaded a
+    `.tga` or a `.jpg`. Now each reads a `.png` through `GESurface::LoadPNG` (ee_openformats `png_to_picture`), with
+    no `.tga` fallback. `GEFindTargaFile` has no caller left (it is in GEOpenFormatsFile.cpp, the other branch's).
+  - Not binary forms in D9's sense, so unchanged: saved games, scenarios and campaign archives (`.ssa`), `.civ`
+    files, the scenario editor's elevation `.dat` maps, sounds, music.
+- **The trap: `GESurface::LoadTGA` is the texture manager's too.** GETexture.cpp loads every `.sst`/`.tga` frame
+  with `GESurface::Load(file, type)`, type 0 = Targa, a variable, so a grep for `kImageFileTGA` or `LoadTGA(` finds no
+  caller. Deleting it compiles and links, and every texture fails to load at run time. It stays until the texture
+  loader goes; `SaveAsTGA` and `GetTGAFileAttributes` (no caller) are deleted.
+- **Pixels.** `png_to_picture` decides the channels as `png_to_sst` does (4 with colour types 4/6 or a tRNS chunk),
+  so its pixels are the Targa frame `GEFindTargaFile` served. Checked in a scratch program (LoadTGA's 32-bit path
+  ported line by line against LoadPNG's): the 25 retail `.tga` pictures the game reads (resolved on the data path as
+  `FindFile` did) against the tree's PNGs, with and without `mNoAlpha`: 50 of 50 equal; the old path (png_to_sst's
+  frame through LoadTGA) against the new one over every PNG of `Data\Textures` (2,666 files, the frames too): equal.
+- **The tree.** `open_data.py build` writes no binary form (`binary_form`: `.cem`, `.sst`, `.tga` anywhere, `db\*.dat`)
+  and lists the ones with no open form in `open_data.json` "dropped": `db\dbrandommap.dat`,
+  `db\dbterraingraytextures.dat`, `db\copy of dbgamevariant.dat` and `Models\amb_rock.cem` (24 bytes of hex text,
+  not a model; nothing names it). Otherwise the tree is byte-identical to the one before. `check` refuses any binary
+  form. The releases until now carried them: the media part `open-media-ddb67f1` (read from its zip's central
+  directory with a ranged download) has 5,721 entries, all open forms but `Data/Models/amb_rock.cem`; the db part
+  `open-db-ce3df9e` has the three `.dat` files. `fetch_data.py` and `make_play_dir.py` delete binary forms after
+  unzipping or copying, so an old release still plays.
+- **The converters' hash changes** with `open_data.py`: the harness rebuilds `build/open_data/tree` on its first run
+  after the merge (about 6 minutes) and `sim.py` warns until then. The new tree only lacks the four dropped files.
+- **What still reads binary records:** the loaders still parse a record stream; it is compiled from the text in
+  memory (`FSMemoryFile`), never read from a file. Handing them records instead is a per-loader change, not done.
+- **The Bash tool and backslashes:** `"\\n"` inside a quoted heredoc reached Python as a line break, and `"\\/"`
+  as `"\/"`. Edit scripts with backslashes are written with the editor, not through a heredoc.

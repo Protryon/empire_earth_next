@@ -25,7 +25,7 @@ layer's clocks run F x real time and its sleeps, timers and wait timeouts 1/F, r
 `EE_TEST_SEED` (`gPlatSimSeed`, as `--seed`), `EE_TEST_NO_HUMAN_DEFEAT`; `--no-render` is GX's `EE_GX_NULL3D`.
 
 ```
-python -I tools/harness/fixture_game.py --exercise tour --input-check --play-seconds 120 [--data TREE | --tree open]
+python -I tools/harness/fixture_game.py --exercise tour --input-check --play-seconds 120 [--data TREE]
 python -I tools/harness/fixture_game.py --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard        --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 [--data TREE]
 ```
 
@@ -94,11 +94,11 @@ Requirements: the two game installs (Art of Conquest and the original Empire Ear
 `mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`; the debugger harness `exe_boot.exe`, the bridge and the time shim are
 built with it), pip `pefile capstone`.
 
-**Data and settings.** Every run stages the unified data tree of `tools/open_data.py` (built from the installs into
-`build/open_data/` the first time; hard links, the folders the game writes into are copied): by default the binary
-tree (`tree-binary`: the .dat/.cem/.sst/.tga as shipped, loose), with `EE_HARNESS_OPEN_DATA=1` (or
-`EE_HARNESS_TEXT_DB=1 EE_HARNESS_OPEN_ASSETS=1`) the open one (`tree`: db text, glTF, PNG; `EE_HARNESS_OPEN_DATA=DIR`
-names another tree). No data.ssa and no original install is staged. The game's settings are a fresh `config.yaml` in
+**Data and settings.** Every run stages the unified open data tree of `tools/open_data.py` (`build/open_data/tree`:
+db text, glTF, PNG; built from the installs the first time; hard links, the folders the game writes into are
+copied). `EE_HARNESS_OPEN_DATA=DIR` (and `fixture_game.py --data DIR`) names another tree. The game reads only these
+open forms (docs/RUST_PLAN.md D9): the binary tree (`tree-binary`) and the `EE_HARNESS_TEXT_DB` /
+`EE_HARNESS_OPEN_ASSETS` installs into it are retired. No data.ssa and no original install is staged. The game's settings are a fresh `config.yaml` in
 the stage per run, holding the run's pins (`audio.music.enabled=true`, `--pt-rate`; `config_yaml.py`); the file the game leaves is kept as
 `build/boot/<stage>.session.config.yaml`. The game uses no registry: `exe_boot.c` stops a run on any registry write.
 

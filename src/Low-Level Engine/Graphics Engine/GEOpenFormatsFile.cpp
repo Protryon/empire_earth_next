@@ -1,4 +1,4 @@
-// GEFindModelFile / GEFindTextureFile / GEFindTargaFile: the game's models and textures on the data path (new unit,
+// GEFindModelFile / GEFindTextureFile: the game's models and textures on the data path (new unit,
 // not in the original game; tools/eemodel writes the files). The models are glTF (.glb, .gltf) and the textures PNG
 // only (docs/RUST_PLAN.md D9): Rust (rust/crates/ee_openformats) decodes them into what GEModel::StoreLoaded and
 // GETexture::Load store; no .cem or .sst is read. The path's own order applies among the files found.
@@ -12,7 +12,6 @@
 #include "lle/UString.h"
 #include "lle/UWideString.h"
 #include "lle/FSFileSpec.h"
-#include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 
@@ -145,39 +144,4 @@ long GEFindTextureFile(FSPath* inPath, const UString& inName, EeOfTexture*& outT
     if (outTexture == NULL)
         return GEOpenFormatFailed(theName + ".png: " + GETakeMessage(theError));
     return kErrorOK;
-}
-
-// "textures\x.tga" -> "textures\", "x"
-static void GESplitName(const UString& inName, std::string& outDirectory, std::string& outStem)
-{
-    std::string theName = (const char*)inName;
-    outDirectory = GEDirectoryOf(theName);
-    outStem = theName.substr(outDirectory.size());
-    size_t theDot = outStem.rfind('.');
-    if (theDot != std::string::npos)
-        outStem.resize(theDot);
-}
-
-long GEFindTargaFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
-{
-    std::string theDirectory, theStem;
-    GESplitName(inName, theDirectory, theStem);
-    std::vector<unsigned char> theSource;
-    if (GEReadFromPath(inPath, theDirectory + theStem + ".png", theSource)) {
-        EeOfBytes theTarga, theError;
-        if (!ee_of_png_to_tga(theSource.empty() ? NULL : &theSource[0], theSource.size(), &theTarga, &theError)) {
-            outFile = NULL;
-            return GEOpenFormatFailed(theDirectory + theStem + ".png: " + GETakeMessage(theError));
-        }
-        // the Targa as an in-memory file named like the one the caller asked for
-        unsigned char* theBuffer = new unsigned char[theTarga.len ? theTarga.len : 1];
-        if (theTarga.len)
-            memcpy(theBuffer, theTarga.ptr, theTarga.len);
-        FSMemoryFile* theFile = new FSMemoryFile(theBuffer, (unsigned long)theTarga.len, 1000, true);   // owns theBuffer
-        ee_of_bytes_free(theTarga);
-        theFile->SetFile(UString((theStem + ".tga").c_str()));
-        outFile = theFile;
-        return kErrorOK;
-    }
-    return inPath->FindFile(inName, outFile);
 }
