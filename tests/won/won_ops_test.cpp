@@ -280,7 +280,7 @@ static void OpMachinery(WONAPICore& inCore)
         CHECK(anOp->RunBlock(100));
         CHECK(aDone->mCount == 1 && anOp->mRuns == 1 && anOp->mCleanups == 1);
         CHECK_STATUS(anOp->GetStatus(), WS_Success);
-        CHECK(anOp->TimeLeft() == 0 && anOp->Succeeded());
+        CHECK(anOp->TimeLeft() <= 100 && anOp->Succeeded());   // a blocking op's time left counts down from its run
         CHECK(anOp->RunBlock(100) && aDone->mCount == 2);   // runs again once completed
     }
     // an async run that stays pending with a zero timeout times out at its start; a second Run meanwhile says

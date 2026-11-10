@@ -91,10 +91,10 @@ WON_REPLACED = {"MSWindowManager.cpp", "MSWindow.cpp", "MSGraphics.cpp", "MSNati
                 "MSFont.cpp", "DisplayContext.cpp", "BMPDecoderPlatform.cpp", "Clipboard.cpp", "MSSound.cpp"}
 # WONAPI sources not linked: a reconstruction whose every function the original unit StringParser.cpp already defines
 # (same bodies; linking both is a duplicate symbol); WON SDK sources the original exe did not contain and nothing
-# references (the GameSpy query/report support, the Win32 open/save file dialog, the Winsock event-driven socket
-# thread backends: the game runs WON's polling SocketThreadSimple; WinSkin, the Windows desktop-theme reader)
-WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.cpp", "SocketThreadWinsock2.cpp",
-                  "SocketThreadEx_Windows.cpp", "WinSkin.cpp"}
+# references (the GameSpy query/report support, the Win32 open/save file dialog; WinSkin, the Windows desktop-theme
+# reader). The Winsock event-driven socket thread backends (SocketThreadWinsock2, SocketThreadEx) are deleted: the
+# game runs WON's polling SocketThreadSimple
+WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.cpp", "WinSkin.cpp"}
 
 
 EXTRA_UNITS["won"] = _won_extra_units()

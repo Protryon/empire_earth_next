@@ -121,46 +121,39 @@ void QueueSocket::StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)
 // FUNCTION: WON 0x006b4220
 // Handles a finished op: passes it to its completion, starts the next queued op or reruns the repeating op,
 // and closes the socket (reporting to the close completion) on failure or a finished queued close
+// The decisions are Rust's (rust/crates/ee_won/src/asyncop.rs queue_socket_callback); the completions, the ops and
+// the socket stay here
 void QueueSocket::OpCallback(SocketOp* inOp)
 {
     AutoCrit aCrit(this->mDataCrit);
-    bool aClose = false;
-    if ((inOp->GetStatus() != WS_Success && this->GetType() != 1) || !this->IsValid())
-        aClose = true;
+    int aKind = inOp == this->mQueueOp.get() ? 0 : inOp == this->mRepeatOp.get() ? 1 : 2;
+    EeWonQueueDecision aDecision = ee_won_queue_socket_callback(aKind, inOp->GetStatus(), inOp->mKilled,
+        this->mCloseQueued, this->mOpQueue.empty(), this->IsValid(), this->GetType() == 1);
+    bool aClose = aDecision.close;
     OpCompletionBasePtr aCompletion;
-    if (inOp == this->mQueueOp.get()) {
-        aCompletion = this->mCurQueueCompletion;
-        this->mCurQueueCompletion = NULL;
-        this->mQueueOp = NULL;
-        if (!aClose) {
-            if (this->mCloseQueued && this->mOpQueue.empty())
-                aClose = true;
-            else
-                this->RunQueueOp();
-        }
-    }
-    else if (inOp == this->mRepeatOp.get()) {
-        aCompletion = this->mRepeatCompletion;
-        if (inOp->mKilled)
-            aClose = true;
-        if (!aClose) {
-            // Duplicate (vtable slot 0x14) returns a SocketOp: AcceptOp (0x60 bytes), RecvBytesOp (0xac),
-            // RecvMsgOp (0xb4), the RecvFrom op (0x90) or NULL, all at base offset 0
-            this->mRepeatOp = static_cast<SocketOp*>(this->mRepeatOp->Duplicate());
-            this->RunRepeatOp();
-        }
-        else {
-            if (this->mCloseQueued && inOp->mKilled) {
-                aClose = false;
-                aCompletion = NULL;
-            }
-            this->mRepeatOp = NULL;
-        }
-    }
-    else {
+    switch (aDecision.completion) {
+    case 1: aCompletion = this->mCurQueueCompletion; break;
+    case 2: aCompletion = this->mRepeatCompletion; break;
+    case 3: {
         QueueOpFastCompletion* aFast = dynamic_cast<QueueOpFastCompletion*>(inOp->mCompletion.get());
         if (aFast != NULL)
             aCompletion = aFast->mOriginalCompletion;
+        break;
+    }
+    }
+    if (aDecision.clear_current) {
+        this->mCurQueueCompletion = NULL;
+        this->mQueueOp = NULL;
+    }
+    switch (aDecision.next) {
+    case 1: this->RunQueueOp(); break;
+    case 2:
+        // Duplicate (vtable slot 0x14) returns a SocketOp: AcceptOp (0x60 bytes), RecvBytesOp (0xac),
+        // RecvMsgOp (0xb4), the RecvFrom op (0x90) or NULL, all at base offset 0
+        this->mRepeatOp = static_cast<SocketOp*>(this->mRepeatOp->Duplicate());
+        this->RunRepeatOp();
+        break;
+    case 3: this->mRepeatOp = NULL; break;
     }
     OpCompletionBasePtr aCloseCompletion;
     if (aClose)

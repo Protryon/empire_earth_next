@@ -392,6 +392,12 @@ struct EeSoundManager;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
+/// `AsyncOpContainer::mOpQueue`.
+struct EeWonOpQueue;
+
+/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
+struct EeWonOpSet;
+
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
 
@@ -411,6 +417,12 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
+
+/// `TimerThread`'s two maps: the deadlines of this tick-count era and, past the 32-bit wrap, of the next
+/// (`mTimerMap`, `mWrapAroundMap`), each in deadline order and, among equal deadlines, in insertion order (the
+/// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
+/// the first map, which left the ops' iterators dangling).
+struct EeWonTimerQueue;
 
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
@@ -2383,6 +2395,40 @@ struct EeWonOpTiming {
   int32_t run_mode;
   uint32_t start;
   uint32_t timeout;
+};
+
+/// `AsyncOp`'s run state: `mStatus`, `mRunMode`, `mStartTime`, `mTimeout`, `mCompletionPending`, `mKilled` and
+/// `mRunAsyncImmediately`, copied in and out by the C++ under the op's lock.
+struct EeWonOpState {
+  /// The `WONStatus` (a 32-bit `long` in the C++).
+  int32_t status;
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+  bool completion_pending;
+  bool killed;
+  bool run_async_immediately;
+};
+
+/// A sink for the ops a queue hands back.
+using EeWonOpSink = void(*)(void *context, void *op);
+
+/// `AsyncOpContainer::Pump`'s accounting: how many ops to run and how long to go on (a value the C++ keeps on its
+/// stack across the pump).
+struct EeWonPumpPlan {
+  uint32_t start;
+  uint32_t wait;
+  int32_t remaining;
+};
+
+/// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
+/// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
+/// 3 forget the repeat op.
+struct EeWonQueueDecision {
+  bool close;
+  int32_t completion;
+  int32_t next;
+  bool clear_current;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -6861,6 +6907,198 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonOpTiming timing,
                          EeWonByteSink sink,
                          void *context);
+
+/// `AsyncOp::AsyncOp`'s state.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_state_init(EeWonOpState *state);
+
+/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
+/// 3 queue it in the container, 4 run blocking.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_run(EeWonOpState *state,
+                      int32_t mode,
+                      uint32_t timeout);
+
+/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_run_as_timer(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_force_finish(EeWonOpState *state, long status);
+
+/// `AsyncOp::Kill`, as `ee_won_op_finish`.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_kill(EeWonOpState *state, bool finish);
+
+/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
+///
+/// # Safety
+/// `state` is valid.
+bool ee_won_op_complete(EeWonOpState *state);
+
+/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_won_op_after_run_hook(const EeWonOpState *state);
+
+/// `AsyncOp::SetTimeout`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
+
+/// `AsyncOp::SetMode`.
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
+
+EeWonTimerQueue *ee_won_timers_new();
+
+/// # Safety
+/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
+void ee_won_timers_destroy(EeWonTimerQueue *timers);
+
+/// The tick the wait times count from (`ThreadFunc`'s start).
+///
+/// # Safety
+/// `timers` is live.
+void ee_won_timers_set_last_tick(EeWonTimerQueue *timers);
+
+/// `TimerThread::AddTimerOp` now -> the entry's key.
+///
+/// # Safety
+/// `timers` is live; `op` stays alive while the entry exists.
+uint64_t ee_won_timers_add(EeWonTimerQueue *timers, uint32_t timeout, void *op);
+
+/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
+///
+/// # Safety
+/// `timers` is live.
+void *ee_won_timers_remove(EeWonTimerQueue *timers, uint64_t key);
+
+/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_pump(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+/// `TimerThread::GetWaitTime`.
+///
+/// # Safety
+/// `timers` is live.
+uint32_t ee_won_timers_wait_time(const EeWonTimerQueue *timers);
+
+/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
+///
+/// # Safety
+/// `timers` is live during the call.
+void ee_won_timers_purge(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
+
+EeWonOpQueue *ee_won_opqueue_new();
+
+/// # Safety
+/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
+void ee_won_opqueue_destroy(EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
+/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
+///
+/// # Safety
+/// `queue` is live; a queued `op` stays alive until popped.
+int32_t ee_won_opqueue_queue(EeWonOpQueue *queue,
+                             void *op,
+                             void *current,
+                             bool current_pending,
+                             bool purging);
+
+/// The front op, taken (null: none).
+///
+/// # Safety
+/// `queue` is live.
+void *ee_won_opqueue_pop(EeWonOpQueue *queue);
+
+/// # Safety
+/// `queue` is live.
+size_t ee_won_opqueue_len(const EeWonOpQueue *queue);
+
+/// `AsyncOpContainer::Pump`'s accounting, started now.
+EeWonPumpPlan ee_won_pump_plan_new(uint32_t wait, int32_t max_ops, size_t queued);
+
+/// Whether to wait for the signal before pumping.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_should_wait(const EeWonPumpPlan *plan, size_t queued);
+
+/// After one op: whether to go on with the next.
+///
+/// # Safety
+/// `plan` is valid.
+bool ee_won_pump_plan_go_on(EeWonPumpPlan *plan);
+
+EeWonOpSet *ee_won_opset_new();
+
+/// # Safety
+/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
+void ee_won_opset_destroy(EeWonOpSet *set);
+
+/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_insert(EeWonOpSet *set, void *op);
+
+/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
+///
+/// # Safety
+/// `set` is live.
+bool ee_won_opset_remove(EeWonOpSet *set, void *op);
+
+/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `PurgeOps`: every op to the sink, the set emptied.
+///
+/// # Safety
+/// `set` is live during the call.
+void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
+
+/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
+bool ee_won_socket_op_finishes(long status);
+
+/// `SocketThreadSimple::Pump`'s wait.
+uint32_t ee_won_socket_pump_wait(uint32_t wait);
+
+/// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
+EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
+                                                long status,
+                                                bool killed,
+                                                bool close_queued,
+                                                bool queue_empty,
+                                                bool socket_valid,
+                                                bool datagram);
 
 }  // extern "C"
 
