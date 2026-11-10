@@ -769,7 +769,7 @@ void EEServer::PrepareLocalInput(NEMessage* inMessage)
 {
     switch (inMessage->GetType()) {
     default: {
-        EEMessage* theMessage = dynamic_cast<EEMessage*>(inMessage);
+        EEMessage* theMessage = EEGameMessageCast(inMessage);
         if (theMessage != NULL) {
             this->mFastSelectionLock->Enter();
             theMessage->mFastSelectionID = this->mFastSelectionID;

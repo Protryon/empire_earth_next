@@ -37,6 +37,16 @@ public:
     bool mCanSendWhenOut;                   // +0x0d
 };
 
+// New (port): dynamic_cast<EEMessage*>(inMessage) as the message kind of its type (ee_netmsg: a message is an
+// EEMessage exactly when its type is a game type, 0x41..0xfd); NULL stays NULL
+extern "C" uint8_t ee_netmsg_message_kind(uint8_t message_type);   // rust/ee_rust.h
+inline EEMessage* EEGameMessageCast(NEMessage* inMessage)
+{
+    return inMessage != NULL && ee_netmsg_message_kind(inMessage->GetType()) == 2 /* EE_NETMSG_KIND_GAME */
+               ? static_cast<EEMessage*>(inMessage)
+               : NULL;
+}
+
 // The local player changes the formation of the selected group (vtable 0x43de14). sizeof 0x18.
 class EEMChangeFormation : public EEMessage {
 public:
