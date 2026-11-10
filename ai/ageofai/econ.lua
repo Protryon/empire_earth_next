@@ -362,6 +362,10 @@ local function build_direct(view, mem, type)
     if d.id ~= nil then
         local u = ai.unit(d.id)
         local done = u == nil or u.built or view.time - d.t > 180000
+        if u == nil and view.time - d.t < 60000 and d.x ~= nil then
+            mem.direct_block = mem.direct_block or {}
+            mem.direct_block[d.x * 10000 + d.y] = view.time + 600000   -- the foundation vanished at once: not there again
+        end
         if not done then
             -- a builder gone idle (the engine dropped the goal): on it again
             local again = {}
@@ -387,6 +391,7 @@ local function build_direct(view, mem, type)
         for r = opt.min, opt.max, 3 do
             local x, y = ai.find_site(type, view.town_x, view.town_y, {min = r, max = math.min(r + 2, opt.max), safe = opt.safe})
             if x ~= nil and ai.reach(view.town_x, view.town_y, x, y)
+                    and ((mem.direct_block or {})[x * 10000 + y] or 0) <= view.time
                     and (type ~= "b_granary" or #ai.units{type = "b_granary", near = {x, y, 8}} == 0) then
                 gx, gy = x, y
                 break
@@ -419,7 +424,7 @@ local function build_direct(view, mem, type)
     end
     local code, reason, n, id = ai.build(cits, type, gx, gy)
     if code == "ok" and id ~= nil then
-        d.id, d.t, d.builders, d.type = id, view.time, cits, type
+        d.id, d.t, d.builders, d.type, d.x, d.y = id, view.time, cits, type, gx, gy
         print(string.format("build_direct type=%s at=%d,%d builders=%d id=%d", type, gx, gy, #cits, id))
         return true
     end
@@ -708,9 +713,15 @@ local function farms(view, mem, order, target, above)
             and (view.gatherers.food + 6 <= (target.food or 0) or granaries == 0) and above.wood >= 100 then
         -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
         -- building placed through the per-unit interface at a spot of its own
-        if (mem.nosite or {}).b_granary ~= nil and view.time - mem.nosite.b_granary < 600000 then
+        if gran ~= nil and gran.queued > 0 and gran.unfinished == 0 then
+            mem.gran_queued_t = mem.gran_queued_t or view.time
+        else
+            mem.gran_queued_t = nil
+        end
+        local stalled = mem.gran_queued_t ~= nil and view.time - mem.gran_queued_t > 180000
+        if ((mem.nosite or {}).b_granary ~= nil and view.time - mem.nosite.b_granary < 600000) or stalled then
             -- (S.direct_granary; the engine's footprint code faulted on a site at the map's edge, fixed)
-            if S.direct_granary and view.time - (mem.direct_t or 0) >= 30000 then
+            if S.direct_granary and view.time - (mem.direct_t or 0) >= 120000 then
                 mem.direct_t = view.time
                 build_direct(view, mem, "b_granary")
             end
