@@ -14,6 +14,11 @@ Per-file map (upstream dll/ai/<file> -> this folder). Each line says PORTED, PAR
 C++ helper of this engine stands in, nothing to port) or NOT STARTED.
 
   econ.c        PARTLY -> econ.lua (budget, workers, epoch), army.lua (choice). Ported: budget_reserve /
+                The fidelity pass: the copper plan as shipped (copper_plan=on: both early epochs' costs held from
+                min_workforce 40, the citizens ignore the reserve below it, no cap on them), RECOVERY (two thirds on
+                food, the whole stock for citizens, no soldiers unless enemies are in the base, from the Copper Age
+                under min_workforce), epoch_pacing independent (the timer from the Copper Age with the game's
+                catch-up when another player is ahead).
                 spend_reserve (the epoch reserve; from farms only what the income cannot bring back),
                 hook_add_resource (the military account and its income shares), econ_targets (the worker plan by
                 shortfall and rate), gather_research, early_requirements, the copper plan's epoch attempt,
@@ -41,6 +46,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 forest edge nearest a drop site).
   citizens.c    PORTED -> econ.lua (citizens): cz_targets (the citizens wanted from the mines' places, FEED).
   defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers),
+                CITIZEN MILITIA -> tactics.lua militia (the fidelity pass): every 2 s the enemy builders of a defence
+                within 12 and, to the Bronze Age, the attackers of ours within 10 of own citizens are attacked by the
+                gathering or idle citizens within 10, 3 per enemy, 6 enemies, at 3 x the enemies' strength within
+                6; the engine's militia reflex is off for the script (ai.reflex{militia = false}). The home guard's
+                room share counts in every epoch; the muster's numbers are upstream's (8 enemies, 2 x, 18 tiles).
                 walls.lua (the walls). Ported: def_refresh (the fronts: towards the nearest enemy buildings known;
                 the fronts' wall state kept while a front stays within 2 tiles), defence_tick (towers at the fronts
                 and the outposts; WALLS: every 20 s, once 2 towers stand within 7 of a front an 11-tile wall 3 tiles
@@ -68,6 +78,10 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 FORTS), game_walls (the next engine never runs the classic wall manager), ai.lock (upstream never
                 locks a gate).
   armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
+                The raid answer as upstream (the fidelity pass): every 4 s with 3 soldiers, the raider nearest home
+                with a band of 3 within 14 of an own building or one hitting ours, seen there twice running, the
+                force goes when it beats the enemy there by raid_answer 100%; the port's cooldown and band-5 rules
+                are gone.
                 attack time when it beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home
                 under AR_BACK_PCT twice running, the next building, the raid answered, the way home as a convoy).
                 The detachments (towns=...|mine_raids, off upstream; settings mine_raids) -> detach.lua: MINE RAIDS
@@ -111,7 +125,12 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 the leash, the aircraft out of reach, the rams held back (lib.groups' scorer), wave_retarget (on
                 here; 0 upstream), site_danger (the engine's blocked == "tower"). Not applicable: the route cost
                 hook (ai.route's avoid weight), the subgroup hooks (the force is lib.groups'), citizen_attacks (no
-                citizens in the force), the overlays, logs and test commands.
+                citizens in the force), the overlays, logs and test commands. citizens_safety -> safety.lua (the
+                fidelity pass): DAMAGE MEMORY (the hurt spots, 2 minutes), SEEN HURTS (20 s with the attacker in
+                sight), hurt_danger (one spot for food and wood, three for the minerals), raid_held, the send-back
+                to the nearest drop site with the claim released, flee_point while a muster is on; the engine's
+                30-second danger zones stay on underneath. Not ported: the stray's order, the danger map (ai.danger
+                stands in), the per-list logs.
   garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades (spare citizens into the drop site with
                 the most metal mines near).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
