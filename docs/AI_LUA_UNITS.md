@@ -883,6 +883,13 @@ took (`memory.hits`) for the raid answer.
 **The EENU save check (2026-11-09):** with `EE_AI_SAVE_CHECK=1` every save of the units block decodes into a fresh
 state and encodes it again; `next.savecheck units=same|DIFFERENT bytes= held= events= memory= trades=` in the trace.
 
+**Foundations and fields (2026-11-09):** `ai.build`'s foundation lives in the player's pending list until a builder
+reaches it (not in the world's unit lookup): `ai.unit(id)` now finds it there (the record says `pending = true`,
+`built = false`), so a script can wait for its building instead of ordering it again (17 empty granary
+foundations in one island game). `ai.replant(granary)` (the human's replant command) lays a granary's missing field
+foundations: a granary placed by a human's build order comes without them, and `build b_farm` (the classic FindSite)
+finishes only foundations that exist.
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - `patrol`, `wall` / `gate`, `tribute` / `trade` / `diplomacy` (their messages write chat lines);

@@ -2346,6 +2346,31 @@ site's drop (30+ tiles) is a town centre when the wood allows.
   (the finders have no food site for them until the fields stand); the 4 island games without a landing; hold_town
   and the citizens' shelter.
 
+**The vanishing foundation and the fields (2026-11-09, the fifth checkpoint).** The directly placed granary
+"vanished" because `ai.build`'s foundation is a *pending* unit of the player until a builder reaches it - not in
+the world's unit lookup, so `ai.unit(id)` was nil, the script released its builders and ordered another at the
+same tile (the pending one is not on the map, the placement test passed): the interface now finds pending units
+(the record says `pending = true`). Found next: a granary placed by a human's build order comes without its eight
+field foundations (the AI build manager lays them with its own granary), and `build b_farm` only finishes a
+foundation that exists; `ai.replant(granary)` (the human's replant command) lays them. The direct granary is the
+first one only, 8 tiles from any other. Also: the muster is upstream's hold_town now (6 tiles behind the base,
+1.3 x), idle citizens for want of a food site send the gatherers hunting, two more boats a minute and the claim
+wider.
+
+| | Stone | Copper | citizens 30 / 40 | army 30 / 40 | end citizens / army | defeats |
+|---|---|---|---|---|---|---|
+| Small Islands, Age of AI against classic, 10 games, 90 min | 25.6 (10/10) | 59.0 (10/10) | 44 / 61 | 9.4 / 38.9 | 87 / 80 | 0 |
+| classic in those games | 46.8 (9/10) | 78.8 (5/10) | 21 / 22 | 9.5 / 14.8 | 38 / 36 | 0 |
+| Age of AI against classic Hard, 16 games, 90 min | 28.8 (15/16) | 68.7 (10/16) | 37 / 49 | 7.9 / 17.9 | 49 / 22 | 1 (boom 2) |
+| Age of AI against boom, 16 games, 45 min | 24.6 | - | 46 / 58 | 9.6 / 17.4 | 62 / 19 | 0 (boom 22.8, 43 / 60, 67 / 20) |
+
+Landings in 5 of 10 island games (30/30, 30/30, 55/60 and a second wave of 22, 23/40, 10/10 ashore); farmers 0-21 a
+game at the end, but 4 games still end with 35-58 idle citizens (one granary of eight fields does not feed a
+hundred citizens; a second granary placed by the first vanished before the 8-tile rule - more granaries and the
+fish are the next step). Against classic Hard at 90 minutes: 1 defeat of 16 as before (boom 2), citizens 49 / army
+22 at the end (boom 60 / 13); the 45-minute pace against boom level. The targets (L6's 10/10 landings; no defeats
+and ahead of boom at 90 minutes) stay open.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

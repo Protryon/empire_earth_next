@@ -41,7 +41,9 @@ return {
     home_guard_share = 35,          -- ... or this percent of the military room (cap x (1 - citizen share))
     -- muster (defence.c)
     muster = true,
-    muster_enemies = 4, muster_ratio = 150, muster_strike = 130, muster_out = 18,   -- DEVIATION: 8 and 200 upstream
+    muster_enemies = 4, muster_ratio = 130, muster_strike = 130, muster_out = 6,   -- DEVIATION: 8, 200 and 18 upstream:
+                                    -- upstream's hold_town instead (the soldiers weaker than 1.2 x the enemy at the
+                                    -- town pull back 6 tiles behind the base and hold under the towers)
     -- defences (defence.c)
     defence_distance = 10,          -- the front's tower slots this far from the base
     defence_towers = true,

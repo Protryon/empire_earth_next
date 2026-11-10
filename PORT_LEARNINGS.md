@@ -1850,6 +1850,15 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   moment the stock crosses the reserve and the gatherers walk to the next mine, then back. A standing margin (half
   `mineral_worker_margin`) and a hysteresis of 3 a pass stop the swing.
 - **The view's `sites[].resource` is a name,** not an index: `V.resources[s.resource + 1]` is an error.
+- **A human-placed building is pending until a builder arrives.** `EEMBuildUnit` makes the foundation as a pending
+  unit of the player (`GetPendingUnit`), not in `gWorld`'s lookup: `GetUnit(id)` is NULL until it is placed. A
+  script that tests "is my foundation still there" through the world lookup sees it gone and orders another at the
+  same tile (the pending one is not on the map, so the placement test passes). The interface looks in the pending
+  list too.
+- **A human-placed granary has no fields.** The AI build manager's granary (`CanBuildAt(..., farm, size * 3)`)
+  reserves and lays the eight field foundations; a granary built through the human's build message does not.
+  `EEMReplantFarms` (the human's replant command, `ai.replant`) lays the missing ones; `build b_farm` only ever
+  finishes a foundation that exists (the classic `FindSite` returns a farm foundation with 1 hit point).
 - **A sim bench shares the main checkout's open data tree.** `sim.py --data open` takes `build/open_data/tree` of
   the main checkout when the worktree has none; while the main checkout's gates rebuild that tree every game fails
   at start (`EETerrainColorTable.cpp (81) : Verification failure`, `rc 2147483651`, no report). A worktree that
