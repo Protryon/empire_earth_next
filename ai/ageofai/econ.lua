@@ -93,43 +93,58 @@ end
 function M.reserve(view, mem)
     local r = {}
     local saving = false
-    if mem.saving_epoch ~= view.epoch then
-        mem.saving_epoch = view.epoch
-        mem.saving_on = false
+    -- RECOVERY (econ.c recovering): from the Copper Age, while the workforce is under min_workforce (5 of slack
+    -- once on), once it had min_workforce + 5 or from minute 30
+    if S.recover_economy and view.epoch >= FARM_EPOCH then
+        if view.citizens >= S.min_workforce + 5 then
+            mem.had_economy = true
+        end
+        local on = mem.recovering and view.citizens < S.min_workforce + 5 or view.citizens < S.min_workforce
+        if not mem.had_economy and view.time < 1800000 then
+            on = false
+        end
+        if (on or false) ~= (mem.recovering or false) then
+            print(string.format("recovery %s workforce=%d min=%d", on and "the economy first" or "over", view.citizens, S.min_workforce))
+        end
+        mem.recovering = on or nil
+    else
+        mem.recovering = nil
     end
+    local both = false
     if view.epoch < view.last_epoch and not view.advancing then
-        local age = view.time - view.epoch_start
         if view.epoch < FARM_EPOCH then
-            -- the copper plan: the economy first, then the saving; the Stone Age grows to stone_workforce first (a
-            -- deviation: upstream holds both epochs' costs from min_workforce on, which its own measurements call
-            -- the most harmful brake; the owner's build order grows to about 64 in the Stone Age)
-            local at = view.epoch == 0 and S.min_workforce or S.stone_workforce
-            saving = view.citizens >= at or age >= 18 * 60000
-            mem.peak = math.max(mem.peak or 0, view.citizens)
-            if view.citizens * 100 < (mem.peak or 0) * S.recover_share and view.citizens < at then
-                saving = false   -- the economy lost citizens: it grows again before it saves (recover_economy)
-            end
-            if view.income.food < 60 and view.citizens < at and view.stock.food < view.next_epoch_cost.food then
-                saving = false   -- no food coming in: saving starves the town (the raided patches); the citizens first
-            end
+            -- COPPER PLAN (copper_plan=on): from min_workforce on the full remaining cost of the Copper Age (both
+            -- epochs' costs in the first) is reserved against military spending; below it the citizens ignore the
+            -- reserve (the economy first) and no early advance
+            saving = view.citizens >= S.min_workforce
+            both = view.epoch == 0
         elseif S.epoch_pacing == "rush" then
-            saving = age >= 5 * 60000
+            saving = true
         else
+            -- the timer (epoch_min..max minutes from the epoch's start); "independent": the game's catch-up when
+            -- another player is ahead (EEComputerPlayer::CatchUpEpoch's 1..12 minutes x Hard's 70%) - no human here
+            if S.epoch_pacing == "independent" then
+                local ahead = false
+                for _, en in ipairs(view.enemies or {}) do
+                    if (en.epoch or 0) > view.epoch then
+                        ahead = true
+                    end
+                end
+                if ahead and (mem.catch_epoch or -1) ~= view.epoch then
+                    mem.catch_epoch = view.epoch
+                    local at = view.time + (S.catch_up_min + ai.random(0, S.catch_up_max - S.catch_up_min)) * 60000
+                    if (mem.epoch_at or 0) > at then
+                        mem.epoch_at = at
+                        print(string.format("epoch catch_up at=%d", at // 60000))
+                    end
+                end
+            end
             local at = (mem.epoch_at or 0)
             saving = view.time >= at - S.reserve_window_min * 60000
         end
-        -- hysteresis: the saving, once started, goes on until the epoch is paid (seed 2 flipped it every few
-        -- minutes round min_workforce and never reached the Stone Age's 1122 food in 50 minutes); the recovery
-        -- rules above still stop it
-        if saving then
-            mem.saving_on = true
-        elseif mem.saving_on and view.epoch < FARM_EPOCH and view.citizens * 100 >= (mem.peak or 0) * S.recover_share
-                and view.income.food >= 60 then
-            saving = true
-        end
     end
     for _, k in ipairs(V.resources) do
-        r[k] = saving and view.next_epoch_cost[k] or 0
+        r[k] = saving and (view.next_epoch_cost[k] + (both and (view.epoch2_cost or {})[k] or 0)) or 0
     end
     if saving and view.epoch >= FARM_EPOCH then
         -- reserve_plan (econ.c spend_reserve): food is renewable from farms, so each resource keeps only what its
@@ -275,6 +290,9 @@ function M.workers(view, mem, reserve, wants)
     -- the fields: at least their farmers (fields + 2) when the plan has them
     local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
+    if late and mem.recovering then
+        floor_food = total * 2 // 3   -- RECOVERY: two thirds on food, the fields filled
+    end
     mem.food_floor = floor_food   -- [metal.c] MIX keeps it (citizen_plan's FEED)
     while target.food < floor_food do
         local from = nil
@@ -1056,9 +1074,9 @@ local function citizens_wanted(view, target)
     local cap = view.population_cap
     local game = cap * S.citizen_share // 100
     if view.epoch < FARM_EPOCH then
-        -- the copper plan caps the workforce at min_workforce before the saving; the Stone Age grows further (the
-        -- owner's build order: about 32 in the Prehistoric, 64 in the Stone Age)
-        return math.min(game, view.epoch == 0 and S.min_workforce or S.min_workforce + 30)
+        -- before farms the game's own citizens wanted (citizens.c cz_targets runs from the Copper Age); min_workforce
+        -- is no cap: from it on the reserve holds the epochs' food and the citizens wait on what is left
+        return game
     end
     local places = 0
     for _, s in ipairs(view.sites) do
@@ -1134,7 +1152,7 @@ function M.step(view, memory, orders, army)
         for _, r in ipairs(V.resources) do
             paid = paid and view.stock[r] >= view.next_epoch_cost[r]
         end
-        local timer_ok = S.epoch_pacing == "rush" or view.time >= (mem.epoch_at or 0)
+        local timer_ok = S.epoch_pacing == "rush" or view.epoch < FARM_EPOCH or view.time >= (mem.epoch_at or 0)
         if paid and timer_ok then
             order({verb = "advance"})
         end
@@ -1150,8 +1168,9 @@ function M.step(view, memory, orders, army)
     local making = citizen and citizen.in_production or 0
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting
+    local cit_food = mem.recovering and view.stock.food or civil.food   -- RECOVERY: the whole stock for citizens
     if citizen and waiting == 0 and making < 2 * citizen.producers and planned < want_citizens
-            and view.population < view.population_cap and not view.advancing and civil.food >= citizen.cost.food then
+            and view.population < view.population_cap and not view.advancing and cit_food >= citizen.cost.food then
         order({verb = "train", type = "citizen", n = math.min(want_citizens - planned, 2)})
     end
 
