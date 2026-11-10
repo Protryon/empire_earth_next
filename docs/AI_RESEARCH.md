@@ -2371,6 +2371,37 @@ fish are the next step). Against classic Hard at 90 minutes: 1 defeat of 16 as b
 22 at the end (boom 60 / 13); the 45-minute pace against boom level. The targets (L6's 10/10 landings; no defeats
 and ahead of boom at 90 minutes) stay open.
 
+**The sixth checkpoint (2026-11-09): the bait, a crash, the islands.** The games lost against classic Hard at 90
+minutes lose their *citizens*, not their army: in seed 14 the force of 42 stood while 40 citizens died in 20
+minutes to bands of 2-5 raiders at the outskirts (the force answered 40 raids and came home each time). Upstream's
+`tower_bait` (early.c) ported into the micro step: a citizen hit by a seen enemy soldier walks to 2 tiles behind
+the nearest own tower or town centre within 25 tiles and is the script's for 25 s (the runners would send it
+straight back). A first version took every citizen within 6 tiles of the raider in every epoch: the two worst
+seeds kept 57 citizens instead of 9-12, but the 16-game bench lost 4 (the economy stood still, Stone 13/16). As
+upstream has it - the citizens hit, up to the Copper Age - it loses 2 of 16 (one wiped) with 52 citizens and 24
+soldiers at the end (the round before, without the bait: 1 lost, 49 / 22; boom's reference 2 lost, 60 / 13). The
+difference is one game either way; kept as upstream's.
+
+A crash found and avoided: a granary placed through the human's build message (`ai.build`) lays its field
+markers with it; where one of them cannot be placed (an island town) the granary stays a *pending* unit and the
+citizen sent to build it faults in `EEUGBuildRepair::BeginRepair` -> `EEStepAsideFromSite` (Small Islands seed 11
+at 49 minutes, twice; PORT_LEARNINGS). The port no longer places granaries that way (`direct_granary = false`,
+and `replant_fields = false`: `ai.replant` from the AI's update showed the same removed markers); the engine guard
+is still to do. The sea scout gets a warship from the Stone Age even before an enemy is known (the fishing boats
+sent to look were sunk).
+
+| | Stone | Copper | citizens 30 / 40 | army 30 / 40 | end citizens / army | defeats |
+|---|---|---|---|---|---|---|
+| Small Islands, Age of AI against classic, 10 games, 90 min | 25.6 (10/10) | 59.4 (10/10) | 44 / 61 | 9.0 / 38.4 | 84 / 80 | 0 |
+| classic in those games | 41.0 (7/10) | 78.0 (2/10) | 21 / 22 | 9.7 / 14.8 | 30 / 34 | 0 |
+| Age of AI against classic Hard, 16 games, 90 min | 30.1 (15/16) | 62.2 (8/16) | 38 / 52 | 8.5 / 17.5 | 52 / 24 | 2 (1 wiped) |
+| Age of AI against boom, 16 games, 45 min | 24.4 | - | 47 / 61 | 9.8 / 16.4 | 64 / 18 | 0 (boom 22.8, 43 / 61, 65 / 21) |
+
+Landings in 6 of 10 island games (one of them twice); 4 games never board; 2 games end with 35-49 idle citizens
+(no granary where the town's rings are full, now that the direct one is off). Open: the engine guard for a pending
+site's builder, granaries on crowded islands, enemy discovery in the 4 games, 0 defeats against classic Hard,
+expand.c.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

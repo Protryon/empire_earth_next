@@ -27,6 +27,7 @@ function M.step(view, memory)
         events[#events + 1] = e
     end
     memory.hits = {}
+    memory.epoch_now = view.epoch
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
@@ -53,6 +54,7 @@ function M.micro(info, memory)
     end
     memory.army = memory.army or {}
     T.counterfire(memory.army, events, info.time)
+    T.bait(memory.army, events, info.time, memory.epoch_now)
     return nil
 end
 

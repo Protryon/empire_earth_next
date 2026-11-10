@@ -197,11 +197,27 @@ function M.step(view, memory, orders, budget, force)
         print(string.format("landing over units=%d started=%d state=%s", #landed.units, landed.started or 0, landed.state))
         G.disband(memory, landed)
     end
+    -- a warship for the look over the water (the fishing boats as scouts were sunk) from the Stone Age with a dock
+    local dock = V.buildings(view, "b_dock")
+    if dock ~= nil and dock.finished > 0 and view.epoch >= 1 then
+        local war = warship_class(view)
+        local warships = ai.units{category = "ship", armed = true}
+        if war ~= nil and #warships == 0 and war.requested + war.in_production == 0 then
+            local n = 1
+            for _, r in ipairs(V.resources) do
+                if war.cost[r] > 0 then
+                    n = math.min(n, budget.avail[r] // war.cost[r])
+                end
+            end
+            if n > 0 then
+                order({verb = "train", type = war.type, n = 1})
+            end
+        end
+    end
     if target == nil or view.time - (mem.landing_t or 0) < 60000 then
         return
     end
     -- the dock and the transports
-    local dock = V.buildings(view, "b_dock")
     if V.total(dock) == 0 then
         if V.cost(view, "b_dock") ~= nil and view.time - (mem.dock_t or 0) >= 120000 then
             order({verb = "fish", boats = S.boats[math.min(view.epoch, 2) + 1] > 0 and S.boats[math.min(view.epoch, 2) + 1] or 2, docks = 1})

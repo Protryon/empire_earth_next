@@ -709,8 +709,10 @@ local function farms(view, mem, order, target, above)
         -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
         -- building placed through the per-unit interface at a spot of its own
         if (mem.nosite or {}).b_granary ~= nil and view.time - mem.nosite.b_granary < 600000 then
-            -- the first granary only (a second one placed by the first vanished: its fields' room)
-            if granaries == 0 and view.time - (mem.direct_t or 0) >= 30000 then
+            -- OFF (S.direct_granary): a granary placed through the human's build message lays its field markers;
+            -- where one of them cannot be placed the granary stays pending and a builder's BeginRepair on it
+            -- crashes the game (EEStepAsideFromSite: a Small Islands game at 49 min, twice) - an engine guard first
+            if S.direct_granary and view.time - (mem.direct_t or 0) >= 30000 then
                 mem.direct_t = view.time
                 build_direct(view, mem, "b_granary")
             end
@@ -724,7 +726,9 @@ local function farms(view, mem, order, target, above)
     -- a granary placed through ai.build comes without its field foundations: the replant command lays them (once
     -- every two minutes per granary while it has fewer than 8 fields within 5 tiles)
     mem.replant = mem.replant or {}
-    if finished_gran > 0 and view.time - (mem.replant_t or 0) >= 20000 then
+    -- OFF (S.replant_fields): the replant's field markers were removed again and a builder's BeginRepair on one
+    -- crashed the game (EEStepAsideFromSite; a Small Islands game at 49 min) - the message runs outside its safe point
+    if S.replant_fields and finished_gran > 0 and view.time - (mem.replant_t or 0) >= 20000 then
         mem.replant_t = view.time
         for _, id in ipairs(ai.units{type = "b_granary", built = true}) do
             local g = ai.unit(id)
