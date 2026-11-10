@@ -2633,26 +2633,28 @@ and 12 of them on food (12 bush places left, hunting over, no fish before the St
 with 875 wood idle; the next_epoch rule lets the citizens eat the 60% while the account creeps at 40% of a shrinking
 income. Upstream's "the map's food runs out" clause (the sites' remaining amount within 20 tiles x 60% short of the
 epoch's food + 500 -> the epoch's food first) is ported and does not bind: the patches still hold food, it is the
-gatherable places that are gone (this engine's 6 to a patch, the owner's rule; the original's resource manager
-sends any number to a bush). So the rule's input differs here, not the rule. The scaled-reserve alternative
+gatherable places that are gone. The 6 gatherers to a bush are the base game's rule, the same for upstream, whose
+food_bush skips a full bush and whose game search forages farther out and hunts; the port's claims (3-5 patches)
+were where its food gatherers could stand, and the gather verb queued the rest - wasted citizens, the wood piling
+up while the food income stood at 0: a port bug in the worker plan's input, not a rule of this engine. The scaled-reserve alternative
 (`copper_reserve_pct {76, 47}` with `copper_plan=on`, the reserve upstream's costs were) gave the Stone Age at
-34-49 on four seeds: no better. What would make upstream's input: count the wild food as places x what a place
-still yields before the citizens outgrow them (the wild-food clause binding at about 40 citizens on Small), or the
-tenth checkpoint's own rule (the citizens held at min_workforce before the Stone Age) as a marked deviation.
+34-49 on four seeds: no better. The fix (f7): the food target capped at the claimed patches' places plus the game, the claims growing while the
+places are short.
 
 **f7.** The income shares of the epoch, military and navy accounts were accumulated a step at a time with an integer
 division that truncates to 0 under 150 income a minute: the military account never grew past its start share in any
 bench so far (`mil=240/225/240/30/30` in every trace), and next_epoch's account filled only on spikes - f6's
 bimodality. With the fractions carried, the forage places capping the food gatherers (the excess to wood, stone,
-gold, iron by the plan's floors) and the wild food counted as places x a bush's food: 14 / 16 games reach the Stone
+gold, iron by the plan's floors; f7 also counted the wild food as places x a bush's food, reverted to upstream's
+amounts afterwards since it never bound): 14 / 16 games reach the Stone
 Age against the improved classic (at 53 minutes), 15 / 16 against boom, 8 / 16 against the cheating classic (3 wiped
 out before 40 minutes, 5 alive in the Prehistoric at 120); W/L/C 0/10/6, 2/11/3, 1/2/13 against c10's 0/13/3, 2/11/3,
 6/2/8; the end citizens against the classic [0 x7, 10, 20, 37, 104, 125, 129, 165, 167, 169]. The Stone Age at
 48-57 minutes is next_epoch's own pace on these maps: 40% of a places-capped income of 60-100 a minute is 25-40 a
 minute into the account from minute 18, and the military account now takes its 40% as upstream's does. The wild-food
-clause by places x a bush's food still does not bind (12-19 places x 150 food > the epoch's 1,122 less the account +
-500); counted as places x what a place yields over the plan's horizon (a worker's 6 a minute over ten minutes) it
-would bind at once on Small and send the whole income to the epoch as c10's hold did.
+clause does not bind on Small (the sites' amounts stay above the epoch's 1,122 less the account + 500 while the
+places run out); more patches claimed while the places are short (up to 8 before farms) is the port's stand-in for
+upstream's search farther out.
 
 **Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
 build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream

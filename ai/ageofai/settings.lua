@@ -22,10 +22,11 @@ return {
                                     -- our 1,584 / 844 / 844) with copper_plan = "on"; nil: the whole cost
     site_max_distance = 20,         -- tiles from the base within which the wild food (berries) counts before farms
     wild_food_share = 60,           -- percent of it the budget counts on (the rest walks, rots or goes to others)
-                                    -- ENGINE: the wild food is counted as the gatherable places x a bush's food (this
-                                    -- engine holds 6 to a patch, the owner's rule), and the food gatherers before
-                                    -- farms are capped at those places; the original's manager sends any number to
-                                    -- a bush, so upstream counts the sites' whole amount
+                                    -- (the sites' amounts, as upstream counts them). The food gatherers before farms
+                                    -- are capped at the claimed patches' places (the base game's 6 to a bush, the
+                                    -- same for upstream; a gatherer beyond the room queues and is wasted), and the
+                                    -- claims grow while the places are short - a port rule for upstream's game
+                                    -- search that forages farther out
     mineral_worker_margin = 300,    -- the minerals' demand beyond the reserve the workers follow at most
     food_floor = 18,                -- citizens on food at least before farms (food_share of the workers at most)
     food_share = 50,                -- percent of the workers on food at least before farms (half, up to food_floor)

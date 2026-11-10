@@ -348,10 +348,12 @@ function M.workers(view, mem, reserve, wants)
         target[from] = target[from] - 1
         target.food = target.food + 1
     end
-    -- before farms the food gatherers are capped by the gatherable places (ENGINE: this engine holds 6 to a patch,
-    -- the owner's rule; the original's resource manager sends any number to a bush): the claimed food sites' places
-    -- plus the game near home; the excess goes to wood, stone, gold and iron by the plan's floors (the next epochs'
-    -- metals come in through the shortfall once they are held)
+    -- before farms the food gatherers are capped by the places the gather verb can fill (the base game's 6 to a
+    -- bush, the same cap upstream's food_bush honours; a gatherer sent beyond the room queues and is wasted - the
+    -- wood piled up while the food income stood at 0): the claimed food sites' places plus the game near home. A
+    -- port rule, not upstream's: upstream's game sent the rest to bushes farther out and to the hunt (food_plan
+    -- NEAR, HUNT), which the claims stand in for (more patches and a wider claim while the places are short).
+    -- The excess goes to wood, stone, gold and iron by the plan's floors
     if not late then
         local places = 0
         for _, st in ipairs(view.sites) do
@@ -361,6 +363,7 @@ function M.workers(view, mem, reserve, wants)
         end
         places = places + math.min(view.hunt or 0, 6)
         mem.food_places = places
+        mem.food_want_raw = target.food   -- the claims grow on the uncapped want (more patches, a wider claim)
         local excess = target.food - places
         if excess > 0 then
             target.food = places
@@ -439,10 +442,11 @@ local function claims(view, mem, target, order)
     -- a deviation (food.c has no patch cap: upstream's citizens take the engine's nearest food): the Prehistoric
     -- workforce of min_workforce outgrows three patches' places (seed 2 against classic: 18 places for 32 food
     -- gatherers wanted, the claim never grew in 50 minutes), so the cap lifts while the patches' room is short
-    if view.epoch == 0 and patch_room < target.food - view.gatherers.food then
-        most = 5
+    local food_want = math.max(mem.food_want_raw or 0, target.food)
+    if view.epoch < 2 and patch_room < food_want - view.gatherers.food then
+        most = 8   -- the places short of the food gatherers wanted: more patches (upstream's "forage farther out")
     end
-    if patches < 2 or (patches < most and patch_room < target.food - view.gatherers.food + 2) then
+    if patches < 2 or (patches < most and patch_room < food_want - view.gatherers.food + 2) then
         if free_patch then
             order({verb = "claim", site = free_patch.index})
         elseif range < view.claim_range_max then
@@ -1194,14 +1198,13 @@ function M.step(view, memory, orders, army)
         -- unless the map's food runs out (econ.c): wild food is all there is before farms - the food sites within
         -- site_max_distance x wild_food_share short of the epoch's food less the account + 500 - then the epoch's
         -- food first, as the plan always did
-        -- ENGINE: counted as the gatherable places x what a place's bush still holds (this engine holds 6 to a
-        -- patch, the owner's rule, where the original's resource manager sends any number to a bush: a patch of
-        -- ten bushes with six places yields six bushes' food to the Stone Age), not the sites' whole amount
+        -- (econ.c wild_food: the explored forage sites' amounts within site_max_distance, the room not counted -
+        -- the game's bush cap of 6 gatherers is the base game's, the same for both; where the food gatherers can
+        -- stand is the claims' business)
         local wild = 0
         for _, st in ipairs(view.sites) do
             if st.resource == "food" and st.units > 0 and st.distance <= S.site_max_distance then
-                local per_unit = (st.amount or 0) // st.units
-                wild = wild + math.min(st.amount or 0, per_unit * math.min(st.capacity or st.units, st.units))
+                wild = wild + (st.amount or 0)
             end
         end
         wild = wild * S.wild_food_share // 100
