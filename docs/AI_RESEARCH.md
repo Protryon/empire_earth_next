@@ -2579,7 +2579,7 @@ their reason: the siege with the force (no waves from home), this engine's fishi
 | f1: settings reverted | 0 / 14 / 2 | 33.5, 7/16 at 71 | 40 / 41 / 17 | 0 / 11 / 5 | 13/16 at 52 | 22 | 1 / 3 / 12 | 129 vs 108 |
 | f2: + raid answer, home guard, no citizen cap, attack times | 0 / 13 / 3 | 33.9, 12/16 at 69 | 40 / 42 / 29 | 0 / 13 / 3 | 9/16 at 44 | 12 | 0 / 2 / 14 | 143 vs 111 |
 | f4: + citizens' safety, the militia (f3, the same with the micro budget blown, is void) | 0 / 14 / 2 | 37.6, 7/16 at 68 | 39 / 41 / 19 | 0 / 14 / 2 | 8/16 at 46 | 10 | 1 / 2 / 13 | 135 vs 110 |
-| f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | (running) | - |
+| f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | 1 / 2 / 13 | 136 vs 109 |
 
 The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
 46 with 51 citizens all game and still wins the Prehistoric raids.
