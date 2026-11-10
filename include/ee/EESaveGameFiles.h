@@ -67,6 +67,12 @@ inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVe
 // which gives the rebuilt towns their saved ids and order
 long EESaveTowns(FSFile& outFile);
 long EELoadTowns(FSFile& inFile);
+// port: from 0.261 a save holds the computer players' gatherer lists (EECPResourceManager): a load filed the citizens
+// again in its own order, most of them twice (their resource's list and the idle list)
+inline bool EESaveHasGathererOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 261;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

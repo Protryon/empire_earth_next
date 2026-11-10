@@ -868,8 +868,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 258 the computer players' experiment timers (EESaveHasExperimentTimers)
 // 259 their count of units in production (EESaveHasProductionCount)
 // 260 the towns' ids, order and counters (EESaveHasTowns)
+// 261 the computer players' gatherer lists as saved (EESaveHasGathererOrder)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 260;
+const unsigned long kSaveGameMinorVersion = 261;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
