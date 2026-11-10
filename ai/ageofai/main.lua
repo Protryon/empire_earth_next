@@ -8,6 +8,7 @@
 local E = require("ageofai.econ")
 local A = require("ageofai.army")
 local T = require("ageofai.tactics")
+local TW = require("ageofai.towns")   -- [towns.c, expand.c]
 local V = require("lib.view")
 
 local M = {}
@@ -37,6 +38,8 @@ function M.step(view, memory)
         end
         T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above)
     end
+    -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
+    TW.step(view, memory, orders, budget)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
