@@ -152,6 +152,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEAreaEffect.h"
 #include "ee/EEFormation.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -592,6 +593,20 @@ void DumpState(const std::string& inPath)
                     fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
+            // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects
+            fprintf(f, "\n  refs contacts=");
+            for (UListNode<EEComplexUnit*>* n = x->mContacts.mHead; n != NULL; n = n->mNext)
+                fprintf(f, "%lu,", n->mData != NULL ? (unsigned long)n->mData->GetUnitID() : 0UL);
+            fprintf(f, " attacker=%lu owner=%lu holder=%lu ae=%zu/%zu", x->mLastAttacker != NULL ? (unsigned long)x->mLastAttacker->GetUnitID() : 0UL,
+                    x->mOwner != NULL ? (unsigned long)x->mOwner->GetUnitID() : 0UL,
+                    x->mHolder != NULL ? (unsigned long)x->mHolder->GetUnitID() : 0UL,
+                    x->mAreaEffects.mItems.size(), x->mAffectingAreaEffects.mItems.size());
+            for (size_t a = 0; a < x->mAffectingAreaEffects.mItems.size(); a++) {
+                EEAreaEffect* e = x->mAffectingAreaEffects.mItems[a];
+                fprintf(f, " %lu", e->mUnit != NULL ? (unsigned long)e->mUnit->GetUnitID() : 0UL);
+            }
+            for (size_t a = 0; a < x->mAreaEffects.mItems.size(); a++)
+                fprintf(f, " own@%a,%a", (double)x->mAreaEffects.mItems[a]->mLocation.mX, (double)x->mAreaEffects.mItems[a]->mLocation.mY);
             fprintf(f, "\n  raw ");   // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
             for (size_t b = 0; b < sizeof(EEComplexUnit); b++)
                 fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);

@@ -41,6 +41,11 @@
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
+#include "ee/EECPILocation.h"
+#include "ee/EECPASTargetUnit.h"
+#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPAttackGroup.h"
+#include "ee/EEAutoPathRequest.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
@@ -707,6 +712,33 @@ void EECPOutOfSynchDump(FILE* inFile)
                     (unsigned long)theCP->mNextAttackTime, (long)theCP->mLastDamagedTime);
         }
         fprintf(inFile, "\n");
+        // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request
+        if (theCP != NULL && theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL) {
+            EECPAttackCommander* theCommander = theCP->mCombatManager->mAttackCommander;
+            for (size_t g = 0; g < theCommander->mGroups.size(); g++) {
+                EECPAttackGroup* theGroup = theCommander->mGroups[g];
+                for (size_t s = 0; theGroup != NULL && s < theGroup->mSubGroups.size(); s++) {
+                    EECPAttackSubGroup* theSub = theGroup->mSubGroups[s];
+                    fprintf(inFile, "ASG %lu g%zu s%zu id=%lu kind=%ld state=%lu scan=%lu upd=%lu b0=%lu b4=%lu follow=%lu bc=%lu task=%lu pos=%lu gather=%lu splits=%ld split=%ld units=%zu path=%zu u08=%zu u14=%zu ae=%d shore=%d req=%s targets=",
+                            (unsigned long)thePlayer->mPlayerID, g, s, (unsigned long)theSub->mID, (long)theSub->mKind,
+                            (unsigned long)theSub->mState, (unsigned long)theSub->mNextScanTime,
+                            (unsigned long)theSub->mNextUpdateTime, (unsigned long)theSub->mU1B0, (unsigned long)theSub->mU1B4,
+                            (unsigned long)theSub->mNextFollowTime, (unsigned long)theSub->mU1BC,
+                            (unsigned long)theSub->mNextTaskCheckTime, (unsigned long)theSub->mNextPositionTime,
+                            (unsigned long)theSub->mGatherDeadline, (long)theSub->mNumSplits, (long)theSub->mSplitKind,
+                            theSub->mUnits.size(), theSub->mPath.size(), theSub->mU08.size(), theSub->mU14.size(),
+                            theSub->mHasAreaEffect ? 1 : 0, theSub->mCanAttackShore ? 1 : 0,
+                            theSub->mPathRequest == NULL ? "none" : (theSub->mPathRequest->mIsDone ? "done" : "busy"));
+                    for (size_t t = 0; t < theSub->mTargets.size(); t++)
+                        fprintf(inFile, "%ld/%ld/%ld,", (long)theSub->mTargets[t]->mUnitID,
+                                (long)theSub->mTargets[t]->mNumNearbyTargets, (long)theSub->mTargets[t]->mNumAttackers);
+                    fprintf(inFile, " siege=");
+                    for (size_t t = 0; t < theSub->mSiegeTargets.size(); t++)
+                        fprintf(inFile, "%ld,", (long)theSub->mSiegeTargets[t]->mUnitID);
+                    fprintf(inFile, "\n");
+                }
+            }
+        }
     }
 }
 
