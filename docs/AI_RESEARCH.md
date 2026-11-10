@@ -2582,6 +2582,7 @@ their reason: the siege with the force (no waves from home), this engine's fishi
 | f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | 1 / 2 / 13 | 136 vs 109 |
 | f6: copper_plan next_epoch, the home guard's cap (166 / the own population) | 0 / 12 / 4 | 49.1 (8/16), 4/16 at 61 | 53 / 70 / 52 | 3 / 9 / 4 | 3/16 at 67 | 40 | 2 / 1 / 13 | 155 vs 109 |
 | f7: + the forage places cap the food gatherers and the wild food, the accounts' income fractions carried (a bug: they truncated to 0 a step) | 0 / 10 / 6 | 53.0 (14/16), 11/16 at 63 | 50 / 61 / 58 | 2 / 11 / 3 | 8/16 at 57 | 26 | 1 / 2 / 13 | 141 vs 107 |
+| f8: + the claims grow on the uncapped food want (up to 8 patches, a wider claim), the wild food as upstream's amounts | 0 / 11 / 5 | 48.5 (16/16), 11/16 at 64 | 50 / 60 / 57 | 2 / 9 / 5 | 9/16 at 57 | 36 | 2 / 2 / 12 | 148 vs 108 |
 
 The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
 46 with 51 citizens all game and still wins the Prehistoric raids.
@@ -2655,6 +2656,15 @@ minute into the account from minute 18, and the military account now takes its 4
 clause does not bind on Small (the sites' amounts stay above the epoch's 1,122 less the account + 500 while the
 places run out); more patches claimed while the places are short (up to 8 before farms) is the port's stand-in for
 upstream's search farther out.
+
+**f8.** The food target's cap at the places had also capped the claims' want (a circular rule): with the claims
+growing on the uncapped want the patches go to 25 places by minute 30 (19 before), the account to 838 food at 45
+minutes (513), and the Stone Age comes in 16 / 16 games against the improved classic (at 48.5 minutes; W/L/C
+0/11/5 for c10's 0/13/3, the end citizens [0 x6, 4, 34, 47, 59, 78, 98, 128, 139, 140, 181]), 15 / 16 against boom
+(2/2/12 for 6/2/8: the same losses, fewer wins, 148 citizens at the end against boom's 108), 9 / 16 against the
+cheating classic (2/9/5 for 2/11/3; 5 games wiped out before the Stone Age could come, the end citizens [0 x5, 5,
+14, 16, 22, 33, 37, 43, 47, 83, 132, 145]). What stands between f8 and the classic's 174 citizens at the end is the
+Stone Age at 48 against 26 - next_epoch's 40% of a places-bound income - and the losses to the waves after.
 
 **Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
 build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream
