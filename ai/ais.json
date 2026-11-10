@@ -13,6 +13,13 @@
       "script": "ageofai.main",
       "random": false,
       "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing; the navy, the landings and the towns; the diplomacy (war answered, opinions, peace, alliance blocks, vassals, capitulation)."
+    },
+    {
+      "id": "classic_lua",
+      "name": "Classic (Lua)",
+      "script": "classic_lua.main",
+      "random": false,
+      "description": "A port of the classic computer player's managers to Lua (ai/classic_lua/ORIGIN): the resource centres and the gatherer split, the request queues of units, buildings and research, the epoch timer, the building counts, the garrisons; the personality and difficulty from the rules data as the C++ classic reads them."
     }
   ]
 }
