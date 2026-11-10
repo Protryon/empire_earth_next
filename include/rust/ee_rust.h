@@ -395,6 +395,9 @@ struct EeRmapResult;
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
 
+/// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
+struct EeSubSectorLinks;
+
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
@@ -801,6 +804,25 @@ struct EeChokeTileInfo {
   bool forest;
   uint32_t forest_serial;
   int32_t forest_tiles;
+};
+
+/// The sub sectors as the link walk sees them: C function pointers over `ctx`.
+struct EeSubSectorGridCallbacks {
+  void *ctx;
+  /// the sub sector id at a tile (0 none)
+  uint16_t (*id_at)(void *ctx, int32_t x, int32_t y);
+  /// whether the manager lists a sub sector under `id`
+  bool (*present)(void *ctx, uint16_t id);
+};
+
+/// One `LinkSubSectors(sub, &other, add, (first, second))` call: `first` and `second` are the corner sub sectors
+/// of a diagonal link (both set when `add`, 0 otherwise).
+struct EeSubSectorLink {
+  uint16_t sub;
+  uint16_t other;
+  bool add;
+  uint16_t first;
+  uint16_t second;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -3110,6 +3132,29 @@ void ee_astar_choke_build_grids(int32_t size,
                                 int32_t *kinds,
                                 uint32_t *serials,
                                 uint8_t *flags);
+
+/// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
+/// grown sector): the `LinkSubSectors` calls to make, in order.
+///
+/// # Safety
+/// `cb` valid, its callbacks safe to call for the tiles of the walk and any id.
+EeSubSectorLinks *ee_astar_sub_sector_links(int32_t x0,
+                                            int32_t x_end,
+                                            int32_t y0,
+                                            int32_t y_end,
+                                            const EeSubSectorGridCallbacks *cb);
+
+/// The calls of a walk.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`; the pointer lives while `links` does.
+const EeSubSectorLink *ee_astar_sub_sector_links_get(const EeSubSectorLinks *links, size_t *count);
+
+/// Releases a walk's calls.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`, not freed yet.
+void ee_astar_sub_sector_links_free(EeSubSectorLinks *links);
 
 /// `UDataCompression::Compress`.
 ///

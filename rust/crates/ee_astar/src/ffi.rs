@@ -1145,6 +1145,7 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
 
 use crate::choke::EeChokeTileInfo;
 use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
+use crate::sub_sector_links::{self, EeSubSectorLink};
 use crate::tile_values;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
@@ -1333,4 +1334,74 @@ pub unsafe extern "C" fn ee_astar_choke_build_grids(
         )
     };
     crate::choke::build_grids(size, passes, infos, kinds, serials, flags);
+}
+
+// ---- the sub sector links (sub_sector_links.rs) ----
+
+/// The sub sectors as the link walk sees them: C function pointers over `ctx`.
+#[repr(C)]
+pub struct EeSubSectorGridCallbacks {
+    pub ctx: *mut c_void,
+    /// the sub sector id at a tile (0 none)
+    pub id_at: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> u16,
+    /// whether the manager lists a sub sector under `id`
+    pub present: extern "C" fn(ctx: *mut c_void, id: u16) -> bool,
+}
+
+struct CSubSectorGrid<'a>(&'a EeSubSectorGridCallbacks);
+
+impl sub_sector_links::Grid for CSubSectorGrid<'_> {
+    fn id_at(&mut self, x: i32, y: i32) -> u16 {
+        (self.0.id_at)(self.0.ctx, x, y)
+    }
+    fn present(&mut self, id: u16) -> bool {
+        (self.0.present)(self.0.ctx, id)
+    }
+}
+
+/// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
+pub struct EeSubSectorLinks(Vec<EeSubSectorLink>);
+
+/// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
+/// grown sector): the `LinkSubSectors` calls to make, in order.
+///
+/// # Safety
+/// `cb` valid, its callbacks safe to call for the tiles of the walk and any id.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links(
+    x0: i32,
+    x_end: i32,
+    y0: i32,
+    y_end: i32,
+    cb: *const EeSubSectorGridCallbacks,
+) -> *mut EeSubSectorLinks {
+    let mut out = Vec::new();
+    sub_sector_links::link_walk(&mut CSubSectorGrid(unsafe { &*cb }), x0, x_end, y0, y_end, &mut out);
+    Box::into_raw(Box::new(EeSubSectorLinks(out)))
+}
+
+/// The calls of a walk.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`; the pointer lives while `links` does.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links_get(
+    links: *const EeSubSectorLinks,
+    count: *mut usize,
+) -> *const EeSubSectorLink {
+    let v = &unsafe { &*links }.0;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// Releases a walk's calls.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`, not freed yet.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links_free(links: *mut EeSubSectorLinks) {
+    if !links.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(links) });
+    }
 }

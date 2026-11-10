@@ -44,6 +44,8 @@ class EEComplexUnit;
 class URandom;
 template <class S, class G, class M> class EEAIAStarMachine;
 
+struct EeSubSectorLinks;
+
 class EEAIContinentManager {
 public:
     EEAIContinentManager();                 // 0x1ef6b (Empire Earth.cpp's chain)
@@ -208,12 +210,13 @@ public:
     void CreatePathAreaKind(EEMap* inMap, long inKind);               // 0x204ea (ret 8)
     void CreatePathAreas(EEMap* inMap);     // 0x208cc (ret 4)
     void CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage);   // 0x20b48 (ret 8)
-    void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused)
+    void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
+    void ApplySubSectorLinks(EeSubSectorLinks* inLinks);   // new (port): the walk's LinkSubSectors calls, then frees it
     // inline (COMDAT 0x27604 in this unit's range; defined inline in EEAIContinentManager.cpp): mPathSectors[its id]
     void SetPathSector(EEAIPathSector* inSector);
     void CreateScenarioAreas(EEMap* inMap); // 0x2124c (ret 4; inMap unused)
     void RelinkSubSectors(std::map<unsigned short, std::vector<EETileCoordinate> >& inSectors,
-        std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8)
+        std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8; the walk in Rust: ee_astar sub_sector_links.rs)
     unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind);   // 0x21a18 (ret 0xc)
     bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const;   // 0x21ee2 (ret 4)
     bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind);   // 0x21f97 (ret 8)

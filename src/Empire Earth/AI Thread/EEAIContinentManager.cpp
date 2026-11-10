@@ -1009,87 +1009,59 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
     this->LinkSubSectorGrid(theMachine, inMap);
 }
 
-// FUNCTION: EXE 0x420ee1
-// Copies the fill's sub-sector ids into the id grid and links every pair of neighbouring sub-sectors; a diagonal
-// link carries the two corner sub-sectors when both are open
-void EEAIContinentManager::LinkSubSectorGrid(EEAIPathSectorMachine& inMachine, EEMap* inMap)
+// The link walks' view of the sub sectors (ee_astar sub_sector_links.rs): the id at a tile from the fill's grid
+// (LinkSubSectorGrid) or the manager's lookup (RelinkSubSectors), and whether the manager lists an id
+struct EEAISubSectorGridView {
+    EEAIContinentManager* mManager;
+    EEAIPathSectorMachine* mMachine;    // NULL: the manager's GetPathSubSectorID
+};
+
+static uint16_t EEAISubSectorIDAt(void* inView, int32_t inX, int32_t inY)
+{
+    EEAISubSectorGridView* theView = (EEAISubSectorGridView*)inView;
+    if (theView->mMachine)
+        return theView->mMachine->mSubSectorIDs[theView->mMachine->GetHeight() * inX + inY];
+    return theView->mManager->GetPathSubSectorID(inX, inY);
+}
+
+static bool EEAISubSectorPresent(void* inView, uint16_t inID)
+{
+    return ((EEAISubSectorGridView*)inView)->mManager->mPathSubSectors[inID] != NULL;
+}
+
+// Makes the LinkSubSectors calls of a walk, in its order
+void EEAIContinentManager::ApplySubSectorLinks(EeSubSectorLinks* inLinks)
 {
     std::vector<EEAIPathSubSector*>* theSubSectors = &this->mPathSubSectors;
-    std::pair<EEAIPathSubSector*, EEAIPathSubSector*> theLink(NULL, NULL);
-    unsigned short theOther = 0;
+    size_t theCount;
+    const EeSubSectorLink* theLinks = ee_astar_sub_sector_links_get(inLinks, &theCount);
+    for (size_t i = 0; i < theCount; i++) {
+        unsigned short theOther = theLinks[i].other;
+        std::pair<EEAIPathSubSector*, EEAIPathSubSector*> theLink(
+            theLinks[i].first ? (*theSubSectors)[theLinks[i].first] : NULL,
+            theLinks[i].second ? (*theSubSectors)[theLinks[i].second] : NULL);
+        this->LinkSubSectors(&theSubSectors, (*theSubSectors)[theLinks[i].sub], &theOther, theLinks[i].add, theLink);
+    }
+    ee_astar_sub_sector_links_free(inLinks);
+}
+
+// FUNCTION: EXE 0x420ee1
+// Copies the fill's sub-sector ids into the id grid and links every pair of neighbouring sub-sectors; a diagonal
+// link carries the two corner sub-sectors when both are open (Rust: ee_astar sub_sector_links.rs walks the grid and
+// lists the LinkSubSectors calls; the id grid is filled first, the walk reads the fill's grid)
+void EEAIContinentManager::LinkSubSectorGrid(EEAIPathSectorMachine& inMachine, EEMap* inMap)
+{
     delete[] this->GetPathSubSectorIDs();
     this->mPathSubSectorIDs = new unsigned short[this->GetHeight() * this->GetWidth()];
     long theWidth = inMachine.GetWidth();
     long theHeight = inMachine.GetHeight();
     for (long x = 0; x < theWidth; x++) {
-        for (long y = 0; y < theHeight; y++) {
-            unsigned short theID = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y];
-            this->mPathSubSectorIDs[this->GetWidth() * x + y] = theID;
-            theLink.first = NULL;
-            theLink.second = NULL;
-            if (theID == 0)
-                continue;
-            EEAIPathSubSector* theSubSector = this->GetPathSubSectorsAt(theID);
-            if (x - 1 >= 0 && y >= 0) {
-                theOther = inMachine.mSubSectorIDs[inMachine.GetHeight() * (x - 1) + y];
-                if (theOther != theID && theOther != 0)
-                    this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, false, theLink);
-            }
-            if (x >= 0 && y - 1 >= 0) {
-                theOther = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y - 1];
-                if (theOther != theID && theOther != 0)
-                    this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, false, theLink);
-            }
-            if (x - 1 >= 0 && y - 1 >= 0) {
-                theOther = inMachine.mSubSectorIDs[inMachine.GetHeight() * (x - 1) + y - 1];
-                if (theOther != theID && theOther != 0) {
-                    long theCount = 0;
-                    if (y >= 0) {
-                        unsigned short theFirst = inMachine.mSubSectorIDs[inMachine.GetHeight() * (x - 1) + y];
-                        if (theFirst != theID && theFirst != theOther && theFirst != 0 &&
-                            (theLink.first = (*theSubSectors)[theFirst]) != NULL) {
-                            theCount = 1;
-                            if (x >= 0) {
-                                unsigned short theSecond = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y - 1];
-                                if (theSecond != theID && theSecond != theOther && theSecond != 0 &&
-                                    (theLink.second = (*theSubSectors)[theSecond]) != NULL)
-                                    theCount = 2;
-                            }
-                        }
-                    }
-                    if (theCount != 2) {
-                        theLink.first = NULL;
-                        theLink.second = NULL;
-                    }
-                    this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, theCount == 2, theLink);
-                }
-            }
-            if (!(x + 1 < theWidth) || !(y - 1 >= 0))
-                continue;
-            theOther = inMachine.mSubSectorIDs[inMachine.GetHeight() * (x + 1) + y - 1];
-            if (theOther == theID || theOther == 0)
-                continue;
-            long theCount = 0;
-            if (y < theHeight) {
-                unsigned short theFirst = inMachine.mSubSectorIDs[inMachine.GetHeight() * (x + 1) + y];
-                if (theFirst != theID && theFirst != theOther && theFirst != 0 &&
-                    (theLink.first = (*theSubSectors)[theFirst]) != NULL) {
-                    theCount = 1;
-                    if (x >= 0) {
-                        unsigned short theSecond = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y - 1];
-                        if (theSecond != theID && theSecond != theOther && theSecond != 0 &&
-                            (theLink.second = (*theSubSectors)[theSecond]) != NULL)
-                            theCount = 2;
-                    }
-                }
-            }
-            if (theCount != 2) {
-                theLink.first = NULL;
-                theLink.second = NULL;
-            }
-            this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, theCount == 2, theLink);
-        }
+        for (long y = 0; y < theHeight; y++)
+            this->mPathSubSectorIDs[this->GetWidth() * x + y] = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y];
     }
+    EEAISubSectorGridView theView = { this, &inMachine };
+    EeSubSectorGridCallbacks theCallbacks = { &theView, EEAISubSectorIDAt, EEAISubSectorPresent };
+    this->ApplySubSectorLinks(ee_astar_sub_sector_links(0, (int32_t)theWidth, 0, (int32_t)theHeight, &theCallbacks));
 }
 
 // FUNCTION: EXE 0x42124c
@@ -1148,14 +1120,13 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
 
 // FUNCTION: EXE 0x4215dc
 // After a partial rebuild: writes the new sub-sectors into the id grid, then re-links the sub-sectors of every tile
-// of the sectors in inSectors (grown by one tile on each side)
+// of the sectors in inSectors (grown by one tile on each side) (Rust: ee_astar sub_sector_links.rs walks each
+// sector's tiles through the manager's lookup and lists the LinkSubSectors calls; the C++ also wrote each tile's id
+// back into the id grid it had just read it from, when the grid exists: a no-op, dropped)
 void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector<EETileCoordinate> >& inSectors,
     std::vector<EEAIPathSubSector*>& inSubSectors)
 {
-    std::vector<EEAIPathSubSector*>* theSubSectors = &this->mPathSubSectors;
-    std::pair<EEAIPathSubSector*, EEAIPathSubSector*> theLink(NULL, NULL);
     std::vector<U2DPoint<long> > theTiles;
-    unsigned short theOther = 0;
     long i;
     for (i = inSubSectors.size() - 1; i >= 0; i--) {
         EEAIPathSubSector* theSubSector = *(inSubSectors.begin() + i);
@@ -1167,6 +1138,8 @@ void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector
             this->mPathSubSectorIDs[theTiles[j].mX * this->mWidth + (theTiles.begin() + j)->mY] = theID;
         }
     }
+    EEAISubSectorGridView theView = { this, NULL };
+    EeSubSectorGridCallbacks theCallbacks = { &theView, EEAISubSectorIDAt, EEAISubSectorPresent };
     for (std::map<unsigned short, std::vector<EETileCoordinate> >::iterator theIt = inSectors.begin(); theIt != inSectors.end(); ++theIt) {
         EEAIPathSector* theSector = this->GetPathSectorByID(theIt->first);
         long theSize = gWorld.mMap->mSize;
@@ -1179,79 +1152,10 @@ void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector
         long x = theSector->mBounds.mLeft - 1;
         if (x < 1)
             x = 0;
-        for (; x < theEndX; x++) {
-            long y = theSector->mBounds.mTop - 1;
-            if (y < 1)
-                y = 0;
-            for (; y < theEndY; y++) {
-                unsigned short theID = this->GetPathSubSectorID(x, y);
-                if (this->mPathSubSectorIDs)
-                    this->mPathSubSectorIDs[this->mWidth * x + y] = theID;
-                theLink.first = NULL;
-                theLink.second = NULL;
-                if (theID == 0)
-                    continue;
-                EEAIPathSubSector* theSubSector = this->mPathSubSectors[theID];
-                if (x - 1 >= 0 && y >= 0) {
-                    theOther = this->GetPathSubSectorID(x - 1, y);
-                    if (theOther != theID && theOther != 0)
-                        this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, false, theLink);
-                }
-                if (x >= 0 && y - 1 >= 0) {
-                    theOther = this->GetPathSubSectorID(x, y - 1);
-                    if (theOther != theID && theOther != 0)
-                        this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, false, theLink);
-                }
-                if (x - 1 >= 0 && y - 1 >= 0) {
-                    theOther = this->GetPathSubSectorID(x - 1, y - 1);
-                    if (theOther != theID && theOther != 0) {
-                        long theCount = 0;
-                        if (y >= 0) {
-                            unsigned short theFirst = this->GetPathSubSectorID(x - 1, y);
-                            if (theFirst != theID && theFirst != theOther && theFirst != 0 &&
-                                (theLink.first = (*theSubSectors)[theFirst]) != NULL) {
-                                theCount = 1;
-                                if (x >= 0) {
-                                    unsigned short theSecond = this->GetPathSubSectorID(x, y - 1);
-                                    if (theSecond != theID && theSecond != theOther && theSecond != 0 &&
-                                        (theLink.second = (*theSubSectors)[theSecond]) != NULL)
-                                        theCount = 2;
-                                }
-                            }
-                        }
-                        if (theCount != 2) {
-                            theLink.first = NULL;
-                            theLink.second = NULL;
-                        }
-                        this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, theCount == 2, theLink);
-                    }
-                }
-                if (!(x + 1 < theEndX) || !(y - 1 >= 0))
-                    continue;
-                theOther = this->GetPathSubSectorID(x + 1, y - 1);
-                if (theOther == theID || theOther == 0)
-                    continue;
-                long theCount = 0;
-                if (y < theEndY) {
-                    unsigned short theFirst = this->GetPathSubSectorID(x + 1, y);
-                    if (theFirst != theID && theFirst != theOther && theFirst != 0 &&
-                        (theLink.first = (*theSubSectors)[theFirst]) != NULL) {
-                        theCount = 1;
-                        if (x >= 0) {
-                            unsigned short theSecond = this->GetPathSubSectorID(x, y - 1);
-                            if (theSecond != theID && theSecond != theOther && theSecond != 0 &&
-                                (theLink.second = (*theSubSectors)[theSecond]) != NULL)
-                                theCount = 2;
-                        }
-                    }
-                }
-                if (theCount != 2) {
-                    theLink.first = NULL;
-                    theLink.second = NULL;
-                }
-                this->LinkSubSectors(&theSubSectors, theSubSector, &theOther, theCount == 2, theLink);
-            }
-        }
+        long y = theSector->mBounds.mTop - 1;
+        if (y < 1)
+            y = 0;
+        this->ApplySubSectorLinks(ee_astar_sub_sector_links((int32_t)x, (int32_t)theEndX, (int32_t)y, (int32_t)theEndY, &theCallbacks));
     }
 }
 

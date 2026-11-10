@@ -14,7 +14,8 @@
 //!
 //! The continent manager's analysis, leaf by leaf (the C++ manager keeps its objects and stores what these
 //! compute): `choke` is the choke point pass's classification and smoothing, `continent_grid` the grid, adjacency
-//! and shore tiles from the continent fill, `tile_values` the tile values.
+//! and shore tiles from the continent fill, `tile_values` the tile values, `sub_sector_links` the sub sector link
+//! walks.
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
@@ -31,6 +32,7 @@ pub mod machine;
 pub mod modifiers;
 pub mod path_goals;
 pub mod storage;
+pub mod sub_sector_links;
 pub mod tile_values;
 
 #[cfg(test)]
