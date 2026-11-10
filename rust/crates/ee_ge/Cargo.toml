@@ -4,9 +4,11 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
-# The Graphics Engine (docs/RUST_PLAN.md R4.3) behind its C++ classes: the math and geometry first. No
-# dependencies: the random map generator (ee_rmap) uses its table trigonometry too.
+# The Graphics Engine (docs/RUST_PLAN.md R4.3) behind its C++ classes: the math and geometry first. Only the engine's
+# random generator as a dependency (the water texture grid draws from it): the random map generator (ee_rmap) uses
+# this crate's table trigonometry too.
 [lib]
 crate-type = ["rlib"]
 
 [dependencies]
+ee_random = { path = "../ee_random" }

@@ -10,6 +10,7 @@ use crate::io::{CppIo, EeGeFieldIo};
 use crate::physical;
 use crate::terrain::{edge_planes, GeTerrainView, GeTmRow};
 use crate::terrain_mesh::{self, GeTerrainFog, GeTerrainLoad};
+use crate::terrain_volume;
 use crate::transform::{make_inverse_raw, RotationOrder};
 use crate::types::{
     Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeOrientation, GeQuaternion, GeRectangle,
@@ -1075,4 +1076,142 @@ pub unsafe extern "C" fn ee_ge_physical_triangle_box(
 ) {
     // SAFETY: the function's contract
     unsafe { *out = physical::triangle_box(*p1, *p2, *p3) };
+}
+
+// ---- GETerrainMesh's layout, water state and visible rows (terrain_mesh.rs, terrain_volume.rs) ----
+
+/// `CreateFlatMesh(width, height)`'s rows: `tile_rows` receives `width + height` (start, end) pairs and
+/// `point_rows` one more; the four edge sums go to `edges` (left, top, right, bottom).
+///
+/// # Safety
+/// `tile_rows` holds `2 * (width + height)` values, `point_rows` two more, `edges` four.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_flat_mesh(
+    width: c_long,
+    height: c_long,
+    tile_rows: *mut c_ulong,
+    point_rows: *mut c_ulong,
+    edges: *mut c_long,
+) {
+    let m = terrain_mesh::flat_mesh(width, height);
+    for (k, (start, end)) in m.tile_rows.into_iter().enumerate() {
+        // SAFETY: the caller's contract
+        unsafe {
+            *tile_rows.add(2 * k) = start;
+            *tile_rows.add(2 * k + 1) = end;
+        }
+    }
+    for (k, (start, end)) in m.point_rows.into_iter().enumerate() {
+        // SAFETY: the caller's contract
+        unsafe {
+            *point_rows.add(2 * k) = start;
+            *point_rows.add(2 * k + 1) = end;
+        }
+    }
+    // SAFETY: the caller's contract
+    unsafe {
+        *edges = m.left_edge;
+        *edges.add(1) = m.top_edge;
+        *edges.add(2) = m.right_edge;
+        *edges.add(3) = m.bottom_edge;
+    }
+}
+
+/// `SetGlobalWaterState`'s 33 x 33 water texture grid over `texture_count` textures, row by row into `out`.
+///
+/// # Safety
+/// `out` holds 33 * 33 values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_water_grid(texture_count: c_long, out: *mut c_ulong) {
+    let grid = terrain_mesh::water_texture_indices(texture_count);
+    for (i, row) in grid.iter().enumerate() {
+        for (j, &index) in row.iter().enumerate() {
+            // SAFETY: the caller's contract
+            unsafe { *out.add(i * terrain_mesh::WATER_GRID + j) = index };
+        }
+    }
+}
+
+/// `SetWaterColorSet`'s colour set index of a point of height `z`.
+#[no_mangle]
+pub extern "C" fn ee_ge_terrain_water_color_index(texture_scale: f32, z: f32, set_size: c_ulong) -> c_ulong {
+    terrain_mesh::water_color_index(texture_scale, z, set_size)
+}
+
+/// `UpdateWaterAnimation`'s step: false before a period has passed, else the new frame and last time are written.
+///
+/// # Safety
+/// `frame` and `last` are valid for reads and writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_water_step(
+    now: c_ulong,
+    period: c_ulong,
+    frame_count: c_ulong,
+    frame: *mut c_ulong,
+    last: *mut c_ulong,
+) -> bool {
+    // SAFETY: the caller's contract
+    let step = unsafe { terrain_mesh::water_animation_step(now, *last, period, *frame, frame_count) };
+    match step {
+        Some((new_frame, new_last)) => {
+            // SAFETY: the caller's contract
+            unsafe {
+                *frame = new_frame;
+                *last = new_last;
+            }
+            true
+        }
+        None => false,
+    }
+}
+
+/// `GetTileRowsInVolume`: the tile rows under the convex hull of `volume` (`count` points), clipped to the mesh's
+/// `tile_row_count` tile rows, as (y, first x, last x) triples into `out_rows` (at most `tile_row_count` rows, one
+/// per y), and the bounding box as (min x, min y, max x, max y) into `bounds`; returns the row count.
+///
+/// # Safety
+/// `volume` holds `count` points, `tile_rows` `tile_row_count` rows, `out_rows` `3 * tile_row_count` values, `bounds`
+/// four.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_rows_in_volume(
+    volume: *const Ge3DPoint,
+    count: usize,
+    tile_rows: *const GeTmRow,
+    tile_row_count: c_ulong,
+    out_rows: *mut c_long,
+    bounds: *mut c_long,
+) -> usize {
+    // SAFETY: the caller's contract
+    let points = unsafe { slice_or_empty(volume, count) };
+    // SAFETY: the caller's contract
+    let (rows, min, max) = unsafe { terrain_volume::tile_rows_in_volume_raw(points, tile_rows, tile_row_count) };
+    for (k, (y, first, last)) in rows.iter().enumerate() {
+        // SAFETY: the caller's contract (one row per y below the row count)
+        unsafe {
+            *out_rows.add(3 * k) = *y;
+            *out_rows.add(3 * k + 1) = *first;
+            *out_rows.add(3 * k + 2) = *last;
+        }
+    }
+    // SAFETY: the caller's contract
+    unsafe {
+        *bounds = min.0;
+        *bounds.add(1) = min.1;
+        *bounds.add(2) = max.0;
+        *bounds.add(3) = max.1;
+    }
+    rows.len()
+}
+
+/// A slice over `count` elements at `data`, empty for a null pointer.
+///
+/// # Safety
+/// `data` is null or valid for `count` elements.
+unsafe fn slice_or_empty<'a, T>(data: *const T, count: usize) -> &'a [T] {
+    if data.is_null() || count == 0 {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, count) }
+    }
 }

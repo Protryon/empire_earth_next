@@ -221,6 +221,9 @@ dependencies = [
 [[package]]
 name = "ee_ge"
 version = "0.1.0"
+dependencies = [
+ "ee_random",
+]
 
 [[package]]
 name = "ee_gx"

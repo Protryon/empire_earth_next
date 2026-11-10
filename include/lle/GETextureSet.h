@@ -5,6 +5,7 @@
 #define LLE_GETEXTURESET_H
 
 #include <vector>
+#include "rust/ee_rust.h"       // the grid arithmetic (ee_ge texture.rs)
 
 class GETexture;
 class GETextureCoordinate;
@@ -18,19 +19,21 @@ public:
     unsigned long GetNumTexturesInWidth() { return this->mNumTexturesInWidth; }
     GETexture* GetTexture(unsigned long inX, unsigned long inY)
     {
-        return this->mTextures[(inX / this->mTextureTileCoverage) % this->mNumTexturesInWidth]
-                        [(inY / this->mTextureTileCoverage) % this->mNumTexturesInHeight];
+        unsigned long theX;
+        unsigned long theY;
+        ee_ge_texture_set_slot(inX, inY, this->mTextureTileCoverage, this->mNumTexturesInWidth,
+                               this->mNumTexturesInHeight, &theX, &theY);
+        return this->mTextures[theX][theY];
     }
     void GetTextureCoordinate(unsigned long inX, unsigned long inY, GETextureCoordinate& outCoordinate)
     {
-        outCoordinate.SetU((float)(inX % this->mTextureTileCoverage) / (float)this->mTextureTileCoverage);
-        outCoordinate.SetV((float)(inY % this->mTextureTileCoverage) / (float)this->mTextureTileCoverage);
+        ee_ge_texture_set_coordinate(inX, inY, this->mTextureTileCoverage, &outCoordinate.mU, &outCoordinate.mV);
     }
     // 0x124aa: only the X index reaches the caller (the Y index parameter is by value in the export's signature)
     void GetTextureIndices(unsigned long inX, unsigned long inY, unsigned long& outX, unsigned long outY)
     {
-        outX = (inX / this->mTextureTileCoverage) % this->mNumTexturesInWidth;
-        outY = (inY / this->mTextureTileCoverage) % this->mNumTexturesInHeight;
+        ee_ge_texture_set_slot(inX, inY, this->mTextureTileCoverage, this->mNumTexturesInWidth,
+                               this->mNumTexturesInHeight, &outX, &outY);
     }
     unsigned long GetTextureTileCoverage() { return this->mTextureTileCoverage; }
     void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture);
