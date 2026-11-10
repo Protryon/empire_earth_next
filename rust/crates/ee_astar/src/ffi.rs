@@ -1140,3 +1140,32 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
     let s = unsafe { gst(s) };
     graph::expand(s, &mut CGraphHost(unsafe { &*cb }))
 }
+
+// ---- the choke point pass (choke.rs) ----
+
+/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+///
+/// # Safety
+/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_smooth(
+    prev: *const i32,
+    kinds: *mut i32,
+    serials: *mut u32,
+    flags: *mut u8,
+    width: i32,
+    height: i32,
+    first: bool,
+) {
+    let n = (width.max(0) as usize) * (height.max(0) as usize);
+    // SAFETY: the caller's contract
+    let (prev, kinds, serials, flags) = unsafe {
+        (
+            std::slice::from_raw_parts(prev, n),
+            std::slice::from_raw_parts_mut(kinds, n),
+            std::slice::from_raw_parts_mut(serials, n),
+            std::slice::from_raw_parts_mut(flags, n),
+        )
+    };
+    crate::choke::smooth(prev, kinds, serials, flags, width, height, first);
+}

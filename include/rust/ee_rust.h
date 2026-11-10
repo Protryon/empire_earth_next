@@ -2965,6 +2965,18 @@ bool ee_astar_graph_start(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *c
 /// As `ee_astar_graph_start`.
 void ee_astar_graph_expand(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
 
+/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+///
+/// # Safety
+/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
+void ee_astar_choke_smooth(const int32_t *prev,
+                           int32_t *kinds,
+                           uint32_t *serials,
+                           uint8_t *flags,
+                           int32_t width,
+                           int32_t height,
+                           bool first);
+
 /// `UDataCompression::Compress`.
 ///
 /// # Safety

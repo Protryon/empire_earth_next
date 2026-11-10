@@ -59,11 +59,11 @@ long EEAIHasResourceUnit(EETile* inTile);
 long gEEAIChokeHeight;
 long gEEAIChokeWidth;
 unsigned char* gEEAIChokeTileFlags;
-unsigned long* gEEAIChokeTileSerials;
-long* gEEAIChokeTileKinds;
+uint32_t* gEEAIChokeTileSerials;   // (the pass's grids are fixed-width: the Rust smoothing reads them)
+int32_t* gEEAIChokeTileKinds;
 
-static void EEAIChokeSmooth(long* inKinds, long* ioKinds, long inWidth, long inHeight, bool inFirst);
-static void EEAIChokeGetKinds(EEMap* inMap, long* outKinds);
+static void EEAIChokeSmooth(int32_t* inKinds, int32_t* ioKinds, long inWidth, long inHeight, bool inFirst);
+static void EEAIChokeGetKinds(EEMap* inMap, int32_t* outKinds);
 static void EEAIChokeCreate(EEMap* inMap);
 static bool EEAIChokeGetTileSerial(EETile* inTile, long inX, long inY, long* outSerial);
 static void EEAIChokeDone();
@@ -84,43 +84,11 @@ void EEAIChokePoint::AddAreaSerials(const std::vector<unsigned long>& inSerials)
 // FUNCTION: EXE 0x41c78c
 // Runs one smoothing pass over the inner tiles: averages each non-area tile's kind over its 3x3 neighbourhood,
 // spreads a neighbour's area serial into it, and flags tiles that touch two different areas (or a flagged one)
-static void EEAIChokeSmooth(long* inKinds, long* ioKinds, long inWidth, long inHeight, bool inFirst)
+// (Rust: ee_astar choke.rs smooth, over the pass's grids)
+static void EEAIChokeSmooth(int32_t* inKinds, int32_t* ioKinds, long inWidth, long inHeight, bool inFirst)
 {
-    long theSerial = 0;
-    long theSize = inWidth * inHeight;
-    unsigned char* theFlags = new unsigned char[theSize];
-    memcpy(theFlags, gEEAIChokeTileFlags, theSize);
-    for (long i = 1; i < inWidth - 1; i++) {
-        for (long j = 1; j < inHeight - 1; j++) {
-            bool theBorder = false;
-            long theIndex = i * inWidth + j;
-            if (ioKinds[theIndex] == 0x36)
-                continue;
-            long theSum = 0;
-            long theCount = 0;
-            for (long x = i - 1; x <= i + 1; x++) {
-                for (long y = j - 1; y <= j + 1; y++) {
-                    long theOther = x * inWidth + y;
-                    long theKind = inKinds[theOther];
-                    if (theKind == 0x36 && !inFirst)
-                        continue;
-                    theSum += theKind;
-                    theCount++;
-                    if (theKind && (theSerial = gEEAIChokeTileSerials[theOther]) != 0 &&
-                        gEEAIChokeTileSerials[theIndex] &&
-                        (gEEAIChokeTileFlags[theOther] || theSerial != gEEAIChokeTileSerials[theIndex]))
-                        theBorder = true;
-                }
-            }
-            if (theBorder)
-                theFlags[theIndex] = 1;
-            if (theSum && gEEAIChokeTileSerials[theIndex] == 0)
-                gEEAIChokeTileSerials[theIndex] = theSerial;
-            ioKinds[theIndex] = theCount ? theSum / theCount : 0;
-        }
-    }
-    memcpy(gEEAIChokeTileFlags, theFlags, theSize);
-    delete[] theFlags;
+    ee_astar_choke_smooth(inKinds, ioKinds, gEEAIChokeTileSerials, gEEAIChokeTileFlags, (int32_t)inWidth,
+                          (int32_t)inHeight, inFirst);
 }
 
 // NEAR: the passes loop keeps its test at the top (jmp back); ours is rotated
@@ -131,13 +99,13 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
 {
     long theSize = inMap->mSize;
     long theCount = theSize * theSize;
-    long theBytes = theCount * sizeof(long);
-    long* theKinds = new long[theCount];
-    long* theSmoothed = new long[theCount];
+    long theBytes = theCount * sizeof(int32_t);
+    int32_t* theKinds = new int32_t[theCount];
+    int32_t* theSmoothed = new int32_t[theCount];
     delete[] gEEAIChokeTileKinds;
     gEEAIChokeTileKinds = NULL;
     delete[] gEEAIChokeTileSerials;
-    gEEAIChokeTileSerials = new unsigned long[theCount];
+    gEEAIChokeTileSerials = new uint32_t[theCount];
     memset(gEEAIChokeTileSerials, 0, theBytes);
     delete[] gEEAIChokeTileFlags;
     gEEAIChokeTileFlags = new unsigned char[theCount];
@@ -170,12 +138,12 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
 // FUNCTION: EXE 0x41ca7c
 // Copies the per-tile kind grid (0x36 for tiles in a water/space continent or big forest, else 0) into outKinds,
 // building it and the tile serials on first use
-static void EEAIChokeGetKinds(EEMap* inMap, long* outKinds)
+static void EEAIChokeGetKinds(EEMap* inMap, int32_t* outKinds)
 {
     long theWidth = inMap->mSize;
     long theHeight = inMap->mSize;
     if (gEEAIChokeTileKinds == NULL) {
-        gEEAIChokeTileKinds = new long[theWidth * theHeight];
+        gEEAIChokeTileKinds = new int32_t[theWidth * theHeight];
         for (long x = theWidth - 1; x >= 0; x--) {
             for (long y = theHeight - 1; y >= 0; y--) {
                 long theSerial;
@@ -190,7 +158,7 @@ static void EEAIChokeGetKinds(EEMap* inMap, long* outKinds)
             }
         }
     }
-    memcpy(outKinds, gEEAIChokeTileKinds, theHeight * theWidth * sizeof(long));
+    memcpy(outKinds, gEEAIChokeTileKinds, theHeight * theWidth * sizeof(int32_t));
 }
 
 // NEAR: the original calls the storage's Virtual0C through the vtable (an inline helper or a pointer: unknown) and
