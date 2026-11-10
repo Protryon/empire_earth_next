@@ -58,18 +58,54 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   bunker.c      PARTLY -> tactics.lua (bunkers, shelter): a Fortress by the drop site nearest the base once
                 citizens were hurt three times in two minutes, the citizens hit shelter in it, let out when quiet.
                 Missing: the shelf (the fortress's own soldiers), bk_capacity's airport part.
-  navy.c        PARTLY -> navy.lua, lib/navy.lua. Ported: the sea scout (a warship looks over the water from the
-                Stone Age), the navy account's share, transports and a warship from the account. Missing: the
-                fishing boat type, docks and fleet room (stage 1), the warship mix (navy_pick, stage 2).
-  fleet.c       NOT STARTED (the fleet led as one: massing under the towers while weaker, the strike once stronger,
-                the split when clearly stronger, the fishing boats guarded). lib/navy.lua's N.fleet_step is the
-                engine-side move helper only.
+  navy.c        PARTLY -> navy.lua, fleet.lua (the roles). Ported: navy_detect (the water map: enemies with
+                buildings known across the water, the strength; fog-honest, so looked at again every minute),
+                the navy account (navy_share x the strength of the wood, gold and iron income, 600 of each at
+                most, toward navy_share_max below the fleet's target; held from every other order through econ's
+                reserve, navy_hold; one pool for a warship, navy_paid), the fleet's size (navy_fleet_pop of the
+                cap x the strength), navy_docks (2, 3 on islands while a warship waits or 12+ boats, 2 + target / 8
+                at most 5), hook_fish_type (the newest fishing boat the dock makes), navy_pick (the roles from the
+                class names, the hit factors from docs/navy.md; the wanted shares from the enemy seen, the role
+                furthest below its share that is payable, the Lanchester score). Missing: navy_room_reserve (the
+                engine's train verb holds no room; the fleet trains through ai.train), navy_mines (the metal
+                workers for the missing warships: econ_targets), navy_nodes, the fishing boats' count (the game's
+                field passes; the engine's coast rule stands in: settings fishing_boats_*), the logs' kill
+                counts.
+  fleet.c       PORTED -> fleet.lua: the scan (the enemy's warships 5 minutes, prey 2, the coast), the danger
+                zones (known defences range + 2, siege 5 minutes; the engine's threat layer only through
+                ai.route), the strength ratio (Lanchester with the role factors), the guard point, the haven, the
+                rally under the most towers (re-chosen every 20 s), massing / the strike (crit = target / 4, 4 at
+                least; 1.0 and 1.25 with the 3/4 margins), the shelter (with navy_fleet_mass off), the split at
+                1.5 / 1.1 with 6+ ships, tf_sizes / tf_assign / k_tf_fit, the home guard's decision (support,
+                defend 0.8, the route cleared, the hunt at navy_fleet_raid with 60% hit points, gather, retreat
+                60 s), the hunters (1.2 groups), raiders (the weights), patrol (transports, the lane), scout
+                (the fishing grounds cleared 3 minutes, the shore, the sweep), the retreat 45 s, fleet_cover (to
+                a dock under half, until 80%; retreats under the towers), fl_boats (to the dock, released after a
+                minute), fl_move round a zone, fl_flee, fl_rally_tower (in navy.lua: the newest tower on the coast by
+                the dock farthest from the enemy, every 2 minutes, 3 a game). Missing: the kill / loss counters
+                and the losing-at-sea shelter (no kill events by target).
   transports.c  ENGINE -> C++ (the unload retries at the next shore tile; the stalled transport watchdog is the
-                engine's own transport goal). Nothing to port.
-  landing.c     PARTLY -> navy.lua (landing), lib/navy.lua (N.beach, N.plan, N.landing_step). Ported: the beach
-                (the weakest defended shore of the target's continent), the size (1.2 x of 1.4 x the beach's
-                strength), board / sail / unload with retries. Missing: the bridgehead (citizens, towers), the
-                landing's own fleet escort, the second wave, the return of the transports.
+                engine's own transport goal; the player's load split and unload spread are UI). Nothing to port.
+  landing.c     PORTED -> navy.lua (landing), lib/navy.lua (N.beach, N.plan, N.landing_step). Ported: ld_phase_plan
+                (every 30 s: the soldiers at home it can spare, one kept per enemy soldier at its door, 6 at least;
+                the transports it has or can pay + 1 up to landing_transports; the beach (the weakest shore, 1.4 x
+                what holds it), planned at 1.2 x the need; the size 1.5 x the larger of the beach and what is
+                within 40 tiles; the citizens by the transports, ld_cits_for; ld_sea_risk on the way from the dock),
+                ld_phase_ships (the missing transports trained one every 20 s as economy; after 3 minutes those
+                it has if they carry the need, after 6 given up for 10; the passengers nearest the dock, the
+                citizens within 25 tiles of the meeting point, up to 6 warships - those that hit the threats first),
+                ld_phase_board (lib: all aboard / 9 in 10 after a minute / 3 minutes, half at least; the last look:
+                the beach against what is aboard and the sea held - 3 minutes for the escorts, then called off),
+                ld_escorts (the threats to the transports off the beach, on the way, near itself; the beach's
+                defences and warships, what shoots at it, the soldiers on the beach), sail and unload (lib, the
+                retries), ld_phase_land (one lib.groups attack; a quarter left or nothing left: released, the
+                transports home), ld_bridgehead (the plan by the citizens' number, 3/2/5/2/3 builders, ai.find_site
+                safe first, a project unpayable for a minute dropped, the free ones help, done: released),
+                ld_capture (soldiers trained within 8 tiles of the base join), ld_wave (every 20 s while it holds:
+                the soldiers at home it can spare, 4 at least, on the transports back at the meeting point, up to
+                landing_waves; the sea held: no more waves). Missing: the switch to another beach at the sail
+                check, the staging at sea for 3+ transports (the lib sails in formation), landing_bombard (off
+                upstream), the raid targets ashore by kind (lib.groups' attack priorities stand in).
   expand.c      NOT STARTED (expansion to other islands: the empty continent with the most mines nearest the
                 base, the mining camp with a drop site, towers and a barracks, the outpost ferries).
   towns.c       PARTLY -> econ.lua (settlements: a town centre instead of a settlement at a far mineral site from

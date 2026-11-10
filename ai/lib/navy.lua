@@ -223,6 +223,16 @@ function M.landing_step(L, opts)
             if aboard * 2 < #L.soldiers and not all then
                 return "aborted", "too_few_aboard"
             end
+            -- the caller's last word before the commit (L.hold: the beach too strong for what is aboard, the sea on
+            -- the way held): the escorts get 3 minutes, then it is called off (landing.c ld_phase_board)
+            if L.hold ~= nil then
+                L.hold_t = L.hold_t or now
+                if now - L.hold_t >= 180000 then
+                    return "aborted", L.hold
+                end
+                return nil
+            end
+            L.hold_t = nil
             L.state = "sail"
             L.state_t = now
             L.order_t = 0
