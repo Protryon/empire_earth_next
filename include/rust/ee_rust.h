@@ -24,6 +24,19 @@ constexpr static const int32_t PATH_SPACE_REGION = 3;
 
 constexpr static const int32_t PATH_NON_SPACE = 4;
 
+/// `kAIChainLandCliff` .. `kAIChainLandCliffSpace` (ee/EEAIKindIDs.h).
+constexpr static const int32_t CHAIN_LAND_CLIFF = 1;
+
+constexpr static const int32_t CHAIN_LAND_WATER = 2;
+
+constexpr static const int32_t CHAIN_LAND_WATER_CLIFF = 3;
+
+constexpr static const int32_t CHAIN_LAND_SPACE = 4;
+
+constexpr static const int32_t CHAIN_LAND_WATER_SPACE = 5;
+
+constexpr static const int32_t CHAIN_LAND_CLIFF_SPACE = 6;
+
 /// The tile joins the largest matching area, the others merge into it.
 constexpr static const int32_t REPAIR_JOIN = 1;
 
@@ -927,6 +940,14 @@ struct EeRepairPlan {
   /// the areas merged into the joined one, in the C++'s order (`REPAIR_JOIN`)
   int32_t merged[8];
   int32_t merged_count;
+};
+
+/// A continent as `GetLargestContinent` reads it.
+struct EeContinentSize {
+  bool present;
+  uint8_t category;
+  /// `mTiles.Size()` (a `long`)
+  int32_t size;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -3330,6 +3351,28 @@ EeRepairPlan ee_astar_repair_plan(int32_t kind,
                                   uint16_t tile_continent,
                                   int32_t wall_id,
                                   const EeAreaTile *neighbours);
+
+/// `AreConnected`'s chain for crossing `flags`, -1 for none.
+int32_t ee_astar_connected_chain(int32_t flags);
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: continent `id`'s neighbours from the `width` x `width`
+/// adjacency matrix `flags` into `out` (room for `width` ids); returns their count.
+///
+/// # Safety
+/// `flags` valid for `width * width` bools, `out` writable for `width` ids.
+size_t ee_astar_adjacent_ids(const bool *flags,
+                             size_t width,
+                             uint16_t id,
+                             bool with_self,
+                             uint16_t *out);
+
+/// `GetLargestContinent`: the index of the largest of `continents` of category `kind` (0 any), -1 if none.
+///
+/// # Safety
+/// `continents` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_largest_continent(const EeContinentSize *continents,
+                                   size_t count,
+                                   int8_t kind);
 
 /// `UDataCompression::Compress`.
 ///

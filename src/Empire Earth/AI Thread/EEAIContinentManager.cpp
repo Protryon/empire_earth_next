@@ -1106,12 +1106,8 @@ void EEAIContinentManager::GetConnectedIDs(std::vector<unsigned short>& outIDs, 
     outIDs.clear();
     if (!(inID < this->mFlagsWidth))
         return;
-    for (long i = this->mFlagsWidth - 1; i >= 0; i--) {
-        if (this->mTileFlags[inID * this->mFlagsWidth + (unsigned short)i] && i != 0) {
-            unsigned short theID = (unsigned short)i;
-            outIDs.push_back(theID);
-        }
-    }
+    outIDs.resize(this->mFlagsWidth);   // Rust: ee_astar queries.rs over the matrix row
+    outIDs.resize(ee_astar_adjacent_ids(this->mTileFlags, this->mFlagsWidth, inID, true, outIDs.data()));
 }
 
 // FUNCTION: EXE 0x421e80
@@ -1121,12 +1117,8 @@ void EEAIContinentManager::GetAdjacentIDs(std::vector<unsigned short>& outIDs, u
     outIDs.clear();
     if (!(inID < this->mFlagsWidth))
         return;
-    for (long i = this->mFlagsWidth - 1; i >= 0; i--) {
-        if (this->mTileFlags[inID * this->mFlagsWidth + (unsigned short)i] && i != 0 && i != inID) {
-            unsigned short theID = (unsigned short)i;
-            outIDs.push_back(theID);
-        }
-    }
+    outIDs.resize(this->mFlagsWidth);   // Rust: ee_astar queries.rs over the matrix row
+    outIDs.resize(ee_astar_adjacent_ids(this->mTileFlags, this->mFlagsWidth, inID, false, outIDs.data()));
 }
 
 // FUNCTION: EXE 0x421ee2
@@ -1507,23 +1499,12 @@ bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* in
 bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* inSecond, long inFlags)
 {
     bool theResult = inFirst == inSecond && inFirst;
-    if (!theResult) {
-        if (inFlags != 0 && inFirst && inSecond) {
-            if (inFlags & 1) {
-                if (inFlags & 2)
-                    theResult = inFirst->mCounts[kAIChainLandWaterCliff] != 0 && inFirst->mCounts[kAIChainLandWaterCliff] == inSecond->mCounts[kAIChainLandWaterCliff];
-                else if (inFlags & 8)
-                    theResult = inFirst->mCounts[kAIChainLandCliffSpace] != 0 && inFirst->mCounts[kAIChainLandCliffSpace] == inSecond->mCounts[kAIChainLandCliffSpace];   // cliff + space (was the water + space chain)
-                else
-                    theResult = inFirst->mCounts[kAIChainLandCliff] != 0 && inFirst->mCounts[kAIChainLandCliff] == inSecond->mCounts[kAIChainLandCliff];
-            } else if (inFlags & 2) {
-                if (inFlags & 8)
-                    theResult = inFirst->mCounts[kAIChainLandWaterSpace] != 0 && inFirst->mCounts[kAIChainLandWaterSpace] == inSecond->mCounts[kAIChainLandWaterSpace];   // water + space (was the cliff + space chain)
-                else
-                    theResult = inFirst->mCounts[kAIChainLandWater] != 0 && inFirst->mCounts[kAIChainLandWater] == inSecond->mCounts[kAIChainLandWater];
-            } else if (inFlags & 8)
-                theResult = inFirst->mCounts[kAIChainLandSpace] != 0 && inFirst->mCounts[kAIChainLandSpace] == inSecond->mCounts[kAIChainLandSpace];
-        }
+    if (!theResult && inFirst && inSecond) {
+        // the chain the crossing flags need (Rust: ee_astar queries.rs; the cliff + space and water + space cases
+        // compare the chains named so, as before)
+        long theChain = ee_astar_connected_chain((int32_t)inFlags);
+        if (theChain >= 0)
+            theResult = inFirst->mCounts[theChain] != 0 && inFirst->mCounts[theChain] == inSecond->mCounts[theChain];
     }
     return theResult;
 }
@@ -1533,20 +1514,14 @@ bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* i
 long EEAIContinentManager::GetLargestContinent(long inKind)
 {
     unsigned short theResult = 0;
-    long theBest = -1;
-    for (long i = this->mContinents.size() - 1; i >= 0; i--) {
-        if (this->mContinents[i] == NULL)
-            continue;
-        if (theBest == -1) {
-            if ((char)inKind == kContinentCategoryNone || this->mContinents[i]->mCategory == (char)inKind)
-                theBest = i;
-        } else {
-            if ((char)inKind != kContinentCategoryNone && (*(this->mContinents.begin() + i))->mCategory != (char)inKind)
-                continue;
-            if (this->mContinents[theBest]->mTiles.Size() < (*(this->mContinents.begin() + i))->mTiles.Size())
-                theBest = i;
-        }
+    std::vector<EeContinentSize> theSizes(this->mContinents.size());   // Rust: ee_astar queries.rs
+    for (size_t i = 0; i < theSizes.size(); i++) {
+        EEAIContinent* theContinent = this->mContinents[i];
+        theSizes[i].present = theContinent != NULL;
+        theSizes[i].category = theContinent ? theContinent->mCategory : 0;
+        theSizes[i].size = theContinent ? (int32_t)theContinent->mTiles.Size() : 0;
     }
+    long theBest = ee_astar_largest_continent(theSizes.data(), theSizes.size(), (int8_t)(char)inKind);
     if (theBest != -1)
         theResult = this->mContinents[theBest]->mID;
     return theResult;

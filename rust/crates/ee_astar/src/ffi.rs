@@ -1545,3 +1545,52 @@ pub unsafe extern "C" fn ee_astar_repair_plan(
     let neighbours = unsafe { &*(neighbours as *const [EeAreaTile; 8]) };
     repair::repair_plan(kind, area_continent, tile_continent, wall_id, neighbours)
 }
+
+// ---- the manager's queries (queries.rs) ----
+
+use crate::queries::{self, EeContinentSize};
+
+/// `AreConnected`'s chain for crossing `flags`, -1 for none.
+#[no_mangle]
+pub extern "C" fn ee_astar_connected_chain(flags: i32) -> i32 {
+    queries::connected_chain(flags)
+}
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: continent `id`'s neighbours from the `width` x `width`
+/// adjacency matrix `flags` into `out` (room for `width` ids); returns their count.
+///
+/// # Safety
+/// `flags` valid for `width * width` bools, `out` writable for `width` ids.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_adjacent_ids(
+    flags: *const bool,
+    width: usize,
+    id: u16,
+    with_self: bool,
+    out: *mut u16,
+) -> usize {
+    if width == 0 {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let flags = unsafe { std::slice::from_raw_parts(flags, width * width) };
+    let ids = queries::adjacent_ids(flags, width, id, with_self);
+    // SAFETY: the caller's contract; at most `width - 1` ids
+    unsafe { std::ptr::copy_nonoverlapping(ids.as_ptr(), out, ids.len()) };
+    ids.len()
+}
+
+/// `GetLargestContinent`: the index of the largest of `continents` of category `kind` (0 any), -1 if none.
+///
+/// # Safety
+/// `continents` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_largest_continent(continents: *const EeContinentSize, count: usize, kind: i8) -> i32 {
+    let continents = if count == 0 || continents.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(continents, count) }
+    };
+    queries::largest_continent(continents, kind)
+}
