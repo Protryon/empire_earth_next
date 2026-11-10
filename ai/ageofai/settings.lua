@@ -60,7 +60,9 @@ return {
                                     -- Prehistoric army ignored, food first, about 20 spearmen in the Stone Age)
     early_soldiers = 0,             -- early.c early_soldiers (0 upstream): with early_army, N soldiers in the first
                                     -- epoch from minute 2 (the alternative to the bait; upstream's worst variant)
-    early_army_food_share = 10,     -- percent of the food income for the army before farms (early_army)
+    early_army_food_share = 40,     -- percent of the food income for the army before farms (early_army), at most
+                                    -- 300 held. DEVIATION (10 shipped): the owner's build order has about 20
+                                    -- spearmen in the Stone Age; at 10% the Stone Age army stayed at 0 (f9 smoke)
     recover_economy = true,         -- econ.c RECOVERY: from the Copper Age, while the workforce is under
                                     -- min_workforce, two thirds of the workers on food, the citizens spend the whole
                                     -- stock, no soldiers unless enemies are in the base
