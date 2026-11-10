@@ -439,11 +439,183 @@ pub unsafe fn load_body(
     result
 }
 
+// ---- CreateFlatMesh's layout and the water state ----
+
+/// `CreateFlatMesh`'s diamond of `width` x `height` tiles: each tile row's and point row's first and last map column
+/// (`GETMTileRow::Initialize(start, end)`), and the edge sums (`mLeftEdge` = x + y on the left edge, `mTopEdge` = y - x,
+/// `mRightEdge` = x + y, `mBottomEdge` = x - y).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FlatMesh {
+    pub tile_rows: Vec<(c_ulong, c_ulong)>,
+    pub point_rows: Vec<(c_ulong, c_ulong)>,
+    pub left_edge: c_long,
+    pub top_edge: c_long,
+    pub right_edge: c_long,
+    pub bottom_edge: c_long,
+}
+
+/// The rows of a diamond: `count` rows from (`height - 1`, `first_end`); the start falls to 0 and holds there `hold`
+/// times before it rises, the end rises to `count - 1` and holds there `hold` times before it falls.
+fn diamond_rows(height: c_long, count: c_ulong, first_end: c_ulong, hold: u32) -> Vec<(c_ulong, c_ulong)> {
+    let mut out = Vec::with_capacity(count as usize);
+    let mut start = (height as c_ulong).wrapping_sub(1);
+    let mut end = first_end;
+    let (mut falling, mut rising) = (true, true);
+    let (mut bottom, mut top) = (0u32, 0u32);
+    for _ in 0..count {
+        out.push((start, end));
+        if falling {
+            if start != 0 {
+                start = start.wrapping_sub(1);
+            } else {
+                bottom += 1;
+                if bottom == hold {
+                    falling = false;
+                }
+            }
+        } else {
+            start = start.wrapping_add(1);
+        }
+        if rising {
+            if end != count.wrapping_sub(1) {
+                end = end.wrapping_add(1);
+            } else {
+                top += 1;
+                if top == hold {
+                    rising = false;
+                }
+            }
+        } else {
+            end = end.wrapping_sub(1);
+        }
+    }
+    out
+}
+
+/// `CreateFlatMesh(width, height)`'s layout.
+pub fn flat_mesh(width: c_long, height: c_long) -> FlatMesh {
+    let tile_count = width.wrapping_add(height) as c_ulong;
+    let point_count = tile_count.wrapping_add(1);
+    FlatMesh {
+        tile_rows: diamond_rows(height, tile_count, height as c_ulong, 1),
+        point_rows: diamond_rows(height, point_count, (height as c_ulong).wrapping_add(1), 2),
+        left_edge: height.wrapping_sub(1),
+        top_edge: height,
+        right_edge: width.wrapping_add(height).wrapping_sub(1).wrapping_add(width),
+        bottom_edge: height,
+    }
+}
+
+/// The side of `SetGlobalWaterState`'s water texture grid.
+pub const WATER_GRID: usize = 33;
+
+/// `SetGlobalWaterState`'s 33 x 33 grid of water texture indices over `texture_count` textures: a fresh `URandom`
+/// (seed 1) draws one in 0..texture_count per cell, `UMFloatToLong` of `Generate() * count`, the count itself clamped
+/// to the last.
+pub fn water_texture_indices(texture_count: c_long) -> Vec<Vec<c_ulong>> {
+    let mut random = ee_random::URandom::new(0);
+    let last = texture_count.wrapping_sub(1);
+    let mut grid = vec![vec![0 as c_ulong; WATER_GRID]; WATER_GRID];
+    for row in grid.iter_mut() {
+        for cell in row.iter_mut() {
+            let mut index = lrintf(random.generate() * (last.wrapping_add(1)) as f32) as c_long;
+            if index == last.wrapping_add(1) {
+                index = last;
+            }
+            *cell = index as c_ulong;
+        }
+    }
+    grid
+}
+
+/// `SetWaterColorSet`'s colour set index of a point of height `z`: its scaled depth times the set's last index,
+/// truncated (a negative product wraps as the x86-64 conversion does) and clamped to the last entry.
+pub fn water_color_index(texture_scale: f32, z: f32, set_size: c_ulong) -> c_ulong {
+    let height = texture_scale * z;
+    let scaled = height * set_size.wrapping_sub(1) as f32;
+    let mut index = if scaled.is_nan() { 0 } else { scaled as i64 as c_ulong };
+    if index >= set_size {
+        index = set_size.wrapping_sub(1);
+    }
+    index
+}
+
+/// `UpdateWaterAnimation`'s step at clock `now`: the whole periods elapsed since `last` advance the frame (modulo the
+/// frame count) and the last time; `None` before a period has passed.
+pub fn water_animation_step(
+    now: c_ulong,
+    last: c_ulong,
+    period: c_ulong,
+    frame: c_ulong,
+    frame_count: c_ulong,
+) -> Option<(c_ulong, c_ulong)> {
+    let elapsed = now.wrapping_sub(last);
+    if elapsed < period {
+        return None;
+    }
+    let frames = elapsed / period;
+    Some((frame.wrapping_add(frames) % frame_count, last.wrapping_add(period.wrapping_mul(frames))))
+}
+
+use crate::um::lrintf;
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::io::{BufferIo, END_OF_FILE, FAILED};
     use crate::types::Ge3DPlane;
+
+    #[test]
+    fn the_flat_mesh_is_a_diamond() {
+        let m = flat_mesh(2, 3);
+        // 5 tile rows: the start falls 2, 1, 0, holds once, then rises; the end rises 3, 4, holds once, then falls
+        assert_eq!(m.tile_rows, vec![(2, 3), (1, 4), (0, 4), (0, 3), (1, 2)]);
+        // 6 point rows: the start holds at 0 twice, the end at 5 twice
+        assert_eq!(m.point_rows, vec![(2, 4), (1, 5), (0, 5), (0, 5), (0, 4), (1, 3)]);
+        assert_eq!((m.left_edge, m.top_edge, m.right_edge, m.bottom_edge), (2, 3, 6, 3));
+        let m = flat_mesh(1, 1);
+        assert_eq!(m.tile_rows, vec![(0, 1), (0, 1)]);
+        assert_eq!(m.point_rows, vec![(0, 2), (0, 2), (0, 2)]);
+        // the rows agree with the test corpus's diamonds (which the goldens built the way CreateFlatMesh does)
+        let d = diamond(5, 3, 1);
+        let m = flat_mesh(5, 3);
+        for (row, &(start, end)) in d.tile_rows.iter().zip(&m.tile_rows) {
+            assert_eq!((row.start, row.count), (start, end - start + 1));
+        }
+        for (row, &(start, end)) in d.point_rows.iter().zip(&m.point_rows) {
+            assert_eq!((row.start, row.count), (start, end - start + 1));
+        }
+    }
+
+    #[test]
+    fn the_water_grid_draws_from_a_fresh_generator_in_range() {
+        let g = water_texture_indices(6);
+        assert_eq!(g.len(), WATER_GRID);
+        assert!(g.iter().all(|r| r.len() == WATER_GRID && r.iter().all(|&i| i < 6)));
+        // URandom(1): the first draw is 0x343fd + 0x269ec3 over 2^31; its index at 6 textures
+        let mut r = ee_random::URandom::new(1);
+        let first = lrintf(r.generate() * 6.0) as c_ulong;
+        assert_eq!(g[0][0], first);
+        assert_eq!(water_texture_indices(6), g); // the same every time
+        assert!(water_texture_indices(1).iter().all(|r| r.iter().all(|&i| i == 0)));
+    }
+
+    #[test]
+    fn the_water_colour_index_is_the_scaled_depth_clamped() {
+        assert_eq!(water_color_index(-0.71428573, -1.0, 8), 5); // 0.714 * 7 = 5.0
+        assert_eq!(water_color_index(-0.71428573, -0.1, 8), 0);
+        assert_eq!(water_color_index(-0.71428573, -3.0, 8), 7); // past the end: the last
+        assert_eq!(water_color_index(-0.71428573, 1.0, 8), 7); // a negative product wraps, then clamps
+        assert_eq!(water_color_index(-0.71428573, -1.0, 1), 0);
+    }
+
+    #[test]
+    fn the_water_animation_advances_by_whole_periods() {
+        assert_eq!(water_animation_step(100, 50, 80, 0, 4), None);
+        assert_eq!(water_animation_step(130, 50, 80, 0, 4), Some((1, 130)));
+        assert_eq!(water_animation_step(300, 50, 80, 3, 4), Some((2, 290))); // 3 periods: frame (3 + 3) % 4
+        assert_eq!(water_animation_step(10, 0xffff_fff0, 80, 0, 4), None); // the clock wrapped: 26 elapsed
+    }
 
     /// A diamond mesh as `CreateFlatMesh` builds it, heights and tiles from a small LCG.
     pub(crate) struct Diamond {

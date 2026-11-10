@@ -42,6 +42,9 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// The side of `SetGlobalWaterState`'s water texture grid.
+constexpr static const size_t WATER_GRID = 33;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -3734,6 +3737,51 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p2,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
+
+/// `CreateFlatMesh(width, height)`'s rows: `tile_rows` receives `width + height` (start, end) pairs and
+/// `point_rows` one more; the four edge sums go to `edges` (left, top, right, bottom).
+///
+/// # Safety
+/// `tile_rows` holds `2 * (width + height)` values, `point_rows` two more, `edges` four.
+void ee_ge_terrain_flat_mesh(long width,
+                             long height,
+                             unsigned long *tile_rows,
+                             unsigned long *point_rows,
+                             long *edges);
+
+/// `SetGlobalWaterState`'s 33 x 33 water texture grid over `texture_count` textures, row by row into `out`.
+///
+/// # Safety
+/// `out` holds 33 * 33 values.
+void ee_ge_terrain_water_grid(long texture_count,
+                              unsigned long *out);
+
+/// `SetWaterColorSet`'s colour set index of a point of height `z`.
+unsigned long ee_ge_terrain_water_color_index(float texture_scale, float z, unsigned long set_size);
+
+/// `UpdateWaterAnimation`'s step: false before a period has passed, else the new frame and last time are written.
+///
+/// # Safety
+/// `frame` and `last` are valid for reads and writes.
+bool ee_ge_terrain_water_step(unsigned long now,
+                              unsigned long period,
+                              unsigned long frame_count,
+                              unsigned long *frame,
+                              unsigned long *last);
+
+/// `GetTileRowsInVolume`: the tile rows under the convex hull of `volume` (`count` points), clipped to the mesh's
+/// `tile_row_count` tile rows, as (y, first x, last x) triples into `out_rows` (at most `tile_row_count` rows, one
+/// per y), and the bounding box as (min x, min y, max x, max y) into `bounds`; returns the row count.
+///
+/// # Safety
+/// `volume` holds `count` points, `tile_rows` `tile_row_count` rows, `out_rows` `3 * tile_row_count` values, `bounds`
+/// four.
+size_t ee_ge_terrain_rows_in_volume(const EeGe3DPoint *volume,
+                                    size_t count,
+                                    const EeGeTmRow *tile_rows,
+                                    unsigned long tile_row_count,
+                                    long *out_rows,
+                                    long *bounds);
 
 /// `GETextureStem`: the length of a texture's cache name within `name`.
 ///

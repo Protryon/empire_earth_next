@@ -53,6 +53,8 @@ pub mod point;
 pub mod terrain;
 pub mod terrain_mesh;
 /// cbindgen:ignore
+pub mod terrain_volume;
+/// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;
 /// cbindgen:ignore
