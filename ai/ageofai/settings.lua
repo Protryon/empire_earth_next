@@ -193,4 +193,10 @@ return {
     shelve_citizens = true,         -- bunker.c THE SHELF: at the cap with every resource at shelve_stock, idle
                                     -- citizens into fortresses (no new ones trained) ...
     shelve_stock = 5000,            -- ... food, wood, gold and iron each at this or more
+    early_militia = true,           -- early.c / defence.c militia_answer: ENGINE - the engine's militia reflex
+                                    -- (EECPRMMilitia, aipersonalities military.militia) stands in: citizens and the
+                                    -- soldiers within 10 fight when, with the built towers within 12, they are 1.5 x
+                                    -- the raiders, else they run to the nearest tower; upstream's stricter rule
+                                    -- (under own tower cover or own soldiers, and no citizen lost on the estimate)
+                                    -- has no switch (ai.reflex takes no militia key: an interface gap)
 }

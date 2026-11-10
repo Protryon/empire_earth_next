@@ -21,8 +21,17 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 engine's finders keep citizens on safe sites), train_budget's priority rows (priority.c).
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 centre: the front and the citizens' side), the builders, tower_bait (the citizens hit lead the
-                raiders under the towers, epochs 1-2). Missing: early_militia (the engine's reflexes, ai.reflex,
-                stand in).
+                raiders under the towers, epochs 1-2). ENGINE: early_militia (defence.c militia_answer's early rule:
+                against soldiers the citizens fight only under own tower cover or with own soldiers within 12, and
+                only where the estimate loses no citizen) - the engine's militia reflex stands in (EECPRMMilitia,
+                aipersonalities.yaml military.militia / militia_towers: on a hit, the citizens within 10 tiles and
+                the soldiers within 10 not attacking fight when their hit points x attack, with the built towers
+                within 12, are 1.5 x the raiders' within 10; else the citizens run to the nearest tower, or the town
+                centre, or the drop site farthest from the attack; once every 4 s). The towers' part is upstream's
+                "cover" (a tower's strength counted makes the fight under it), the 1.5 x odds stand for upstream's
+                3 x and its no-loss estimate (stats.lua has no damage tables). The reflex has no switch for a script
+                (ai.reflex takes naval_flee, danger and memory_ms; the militia key of docs/AI_LUA_UNITS.md §4 is not
+                built): an interface gap. A Lua militia in the micro step would compete with the reflex's orders.
   food.c        PORTED -> econ.lua (workers, claims): food_plan_needs (the citizens' food, the real wood need), the
                 hunters, the patches (the engine's claims stand in for the site lists).
   mines.c       PORTED -> econ.lua (settlements): mine_drops / wood_drops (a settlement at the unworked mine or
