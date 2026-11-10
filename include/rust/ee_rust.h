@@ -45,6 +45,11 @@ constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 /// The side of `SetGlobalWaterState`'s water texture grid.
 constexpr static const size_t WATER_GRID = 33;
 
+/// `GETerrainMesh::mTerrainPolygons`' and `mWaterPolygons`' sizes.
+constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
+
+constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -476,6 +481,9 @@ struct EeDx7StdColorVertexArray;
 /// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
 /// the first map, which left the ops' iterators dangling).
 struct EeWonTimerQueue;
+
+/// The plan of one frame.
+struct EeGeVisiblePlan;
 
 /// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
 struct EeDataBytes {
@@ -1337,6 +1345,46 @@ struct EeGeScaleRemoval {
   float z;
 };
 
+/// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
+/// `GetPolygonRangeLength(lod)`.
+struct EeGePhysicalMaterial {
+  unsigned long vertex_start;
+  unsigned long polygon_start;
+  unsigned long polygon_length;
+};
+
+/// The callback table over `GEModel*` handles (`const GEModel*` as `*const c_void`).
+struct EeGePhysicalModels {
+  bool (*has_parent)(const void *model);
+  void (*internal_transform)(const void *model, unsigned long frame, EeGeTransformation *out);
+  void (*center)(const void *model, EeGe3DPoint *out);
+  float (*radius)(const void *model, unsigned long frame);
+  void (*bbox)(const void *model, unsigned long frame, EeGeBoundingBox *out);
+  unsigned long (*material_count)(const void *model);
+  void (*material)(const void *model,
+                   unsigned long index,
+                   unsigned long lod,
+                   EeGePhysicalMaterial *out);
+  void (*triangle)(const void *model,
+                   unsigned long frame,
+                   unsigned long lod,
+                   unsigned long polygon,
+                   unsigned long vertex_start,
+                   EeGe3DPoint *out);
+  unsigned long (*sub_model_count)(const void *model);
+  const void *(*sub_model)(const void *model, unsigned long index);
+  unsigned long (*lod_count)(const void *model);
+  unsigned long (*polygon_count)(const void *model, unsigned long lod);
+  /// `GEPhysicalModel theModel(model, location, scale); theModel.SetFrame(frame);
+  /// theModel.Intersects(line, lod, distance, true)`.
+  bool (*retry_line)(const void *model,
+                     const EeGeTransformation *location,
+                     unsigned long frame,
+                     float scale,
+                     const EeGe3DLine *line,
+                     unsigned long lod);
+};
+
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
   unsigned long pixel_depth;
@@ -1358,6 +1406,127 @@ struct EeGeTextureFramePlan {
   long drop_mip_level_count;
   unsigned long drop_width;
   unsigned long drop_height;
+};
+
+/// `GEViewport` (sizeof 0x288), in the C++'s member order.
+struct EeGeViewport {
+  EeGeRectangle orthographic_rectangle;
+  EeGeRectangle view_rectangle;
+  EeGe3DPlane front_plane;
+  EeGe3DPlane rear_plane;
+  EeGe3DPlane left_plane;
+  EeGe3DPlane right_plane;
+  EeGe3DPlane top_plane;
+  EeGe3DPlane bottom_plane;
+  EeGeTransformation camera;
+  EeGeTransformation camera_inverse;
+  EeGeTransformation orthographic_denormalization;
+  EeGeTransformation perspective_denormalization;
+  EeGeTransformation orthographic_projection;
+  EeGeTransformation perspective_projection;
+  EeGeVector camera_look_at_vector;
+  float orthographic_scale;
+  float orthographic_depth_scale;
+  float orthographic_depth_offset;
+  float perspective_scale;
+  float perspective_depth_scale;
+  float perspective_depth_offset;
+  float aspect_ratio;
+  float aspect_ratio_multiplier;
+  float field_of_view;
+  float field_of_view_multiplier;
+  float front_clipping_distance;
+  float half_height;
+  float half_width;
+  float rear_clipping_distance;
+  float x_center;
+  float y_center;
+  float y_clipping_plane;
+  float near_depth;
+  float far_depth;
+};
+
+/// A registered texture set as the plan reads it: its textures as handles (`GETexture*` values, 0 for none) in
+/// column-major order (`mTextures[x][y]` at `x * height + y`), its grid and its tile coverage.
+struct EeGeTextureSetView {
+  const size_t *textures;
+  unsigned long width;
+  unsigned long height;
+  unsigned long coverage;
+};
+
+/// What `UpdateVisibleTerrain` reads of a `GETerrainMesh`.
+struct EeGeVisibleInput {
+  EeGeTerrainView view;
+  unsigned long point_row_count;
+  long left_edge;
+  long top_edge;
+  long right_edge;
+  long bottom_edge;
+  unsigned long space_tile_count;
+  const EeGeTextureSetView *texture_sets;
+  size_t texture_set_count;
+  const size_t *space_cliff_textures;
+  size_t space_cliff_texture_count;
+  /// `mWaterTextureIndices[33][33]`, row-major.
+  const unsigned long *water_texture_indices;
+  /// `GETM_VISIBLE_POINTS`: the side of the visible point arrays.
+  unsigned long side;
+};
+
+/// A polygon corner: a render vertex of the terrain array (`kind` 0, `[a][b]`), of the water array (1), a skirt
+/// vertex (2, index `a`) or a cliff vertex (3, index `a`).
+struct EeGeVisibleVertex {
+  uint32_t kind;
+  uint32_t a;
+  uint32_t b;
+};
+
+/// A planned polygon: its corners, alphas, texture coordinates (left as the polygon slot had them when `uv_set` is
+/// false: the skirts) and material index.
+struct EeGeVisiblePolygon {
+  EeGeVisibleVertex vertices[3];
+  float alpha[3];
+  float uv[3][2];
+  uint32_t uv_set;
+  uint32_t material;
+};
+
+/// The plan's arrays, borrowed from the handle until `ee_ge_terrain_visible_free`.
+struct EeGeVisibleOut {
+  /// The visible tile rows, three values each (y, first x, last x).
+  size_t row_count;
+  const long *rows;
+  unsigned long bottom_left_x;
+  unsigned long bottom_left_y;
+  unsigned long tile_width;
+  unsigned long tile_height;
+  unsigned long num_visible_tiles;
+  unsigned long visible_poly_count;
+  /// `side * side` flags each, `[a][b]` at `a * side + b`.
+  const uint8_t *terrain_visible;
+  const uint8_t *water_visible;
+  /// The terrain materials' textures (0 for none), in list order.
+  size_t material_count;
+  const size_t *materials;
+  size_t terrain_polygon_count;
+  const EeGeVisiblePolygon *terrain_polygons;
+  size_t water_polygon_count;
+  const EeGeVisiblePolygon *water_polygons;
+  size_t edge_count;
+  const EeGe3DPoint *edge_points;
+  size_t cliff_count;
+  const EeGe3DPoint *cliff_points;
+  /// Per cliff vertex, the terrain render vertex (`a`, `b`) it follows.
+  const uint32_t *cliff_links;
+};
+
+/// `ComputeStretchedCoordsAndScale`'s result: the texture coordinates per corner (top left, top right, bottom left,
+/// bottom right) and the x and y scale.
+struct EeGeBitmapStretch {
+  float uv[4][2];
+  float x_scale;
+  float y_scale;
 };
 
 /// `GXVIEWPORT`.
@@ -4282,6 +4451,59 @@ bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
                                 const uint32_t *ranges,
                                 size_t range_count);
 
+/// `GEPhysicalModel::Intersects(location, model, frame, line, lod, distance, exact)`; `scale` is the placed model's.
+///
+/// # Safety
+/// `table` holds valid callbacks; `model` is a live `GEModel*` or null; the other pointers are valid.
+bool ee_ge_physical_line_walk(const EeGePhysicalModels *table,
+                              float scale,
+                              const EeGeTransformation *location,
+                              const void *model,
+                              unsigned long frame,
+                              const EeGe3DLine *line,
+                              unsigned long lod,
+                              float *distance,
+                              bool exact);
+
+/// `GEPhysicalModel::Intersects(location, model, frame, line, exact, lod, x, y, z)` on the placed model
+/// (`this_location`, `this_model`, `this_scale`, `this_frame`).
+///
+/// # Safety
+/// As `ee_ge_physical_line_walk`; `model` and `this_model` are live `GEModel*`.
+bool ee_ge_physical_scaled_walk(const EeGePhysicalModels *table,
+                                const EeGeTransformation *this_location,
+                                const void *this_model,
+                                float this_scale,
+                                unsigned long this_frame,
+                                const EeGeTransformation *location,
+                                const void *model,
+                                unsigned long frame,
+                                const EeGe3DLine *line,
+                                bool exact,
+                                unsigned long lod,
+                                float x,
+                                float y,
+                                float z);
+
+/// `GEPhysicalModel::Intersects(location, model, otherLocation, otherInverse, scale, otherModel, frame, lod)` on
+/// the placed model (`this_location`, `this_model`, `this_scale`, `this_frame`).
+///
+/// # Safety
+/// As `ee_ge_physical_line_walk`; the models are live `GEModel*`.
+bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
+                               const EeGeTransformation *this_location,
+                               const void *this_model,
+                               float this_scale,
+                               unsigned long this_frame,
+                               const EeGeTransformation *location,
+                               const void *model,
+                               const EeGeTransformation *other_location,
+                               const EeGeTransformation *other_inverse,
+                               float other_scale,
+                               const void *other,
+                               unsigned long other_frame,
+                               unsigned long lod);
+
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,
                                unsigned long red,
@@ -4412,6 +4634,143 @@ unsigned long ee_ge_material_size_of(size_t object_size,
                                      size_t pointer_size,
                                      unsigned long lod_count,
                                      size_t ulong_size);
+
+/// `GEViewport()`.
+///
+/// # Safety
+/// `out` is valid for a write.
+void ee_ge_viewport_default(EeGeViewport *out);
+
+/// `GEViewport(view, orthographic, camera, front, rear, fov)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_viewport_init(EeGeViewport *out,
+                         const EeGeRectangle *view,
+                         const EeGeRectangle *orthographic,
+                         const EeGeTransformation *camera,
+                         float front,
+                         float rear,
+                         float field_of_view);
+
+/// `GEViewport::ComputeOrthographicMatrix`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_orthographic_matrix(EeGeViewport *v);
+
+/// `GEViewport::ComputePerspectiveMatrix`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_perspective_matrix(EeGeViewport *v);
+
+/// `GEViewport::ComputePlanes`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_planes(EeGeViewport *v);
+
+/// `GEViewport::GetFrustrumWorldPoints(rectangle, points, orthographic)`: the eight corners into `out`.
+///
+/// # Safety
+/// `v` and `rectangle` are valid; `out` holds eight points.
+void ee_ge_viewport_frustum_points(const EeGeViewport *v,
+                                   const EeGeRectangle *rectangle,
+                                   bool orthographic,
+                                   EeGe3DPoint *out);
+
+/// `GEViewport::GetFrustrumWorldPlanes(rectangle, planes, orthographic)`: the six planes into `out`.
+///
+/// # Safety
+/// `v` and `rectangle` are valid; `out` holds six planes.
+void ee_ge_viewport_frustum_planes(const EeGeViewport *v,
+                                   const EeGeRectangle *rectangle,
+                                   bool orthographic,
+                                   EeGe3DPlane *out);
+
+/// `GEViewport::SetFieldOfView`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_set_field_of_view(EeGeViewport *v, float field_of_view);
+
+/// `GEViewport::SetFrontClippingDistance`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_set_front(EeGeViewport *v, float distance);
+
+/// `GEViewport::SetRearClippingDistance`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_set_rear(EeGeViewport *v, float distance);
+
+/// `GEViewport::SetViewRectangle`.
+///
+/// # Safety
+/// `v` is a live viewport; `rectangle` is valid.
+void ee_ge_viewport_set_view_rectangle(EeGeViewport *v, const EeGeRectangle *rectangle);
+
+/// `GEPhysicalModel::Intersects(viewport, orthographic)` with the placed model's values.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_physical_visible(const EeGeTransformation *location,
+                            float scale,
+                            const EeGeTransformation *internal,
+                            const EeGe3DPoint *center,
+                            float radius,
+                            const EeGeBoundingBox *bbox,
+                            const EeGeViewport *viewport,
+                            bool orthographic);
+
+/// `UpdateVisibleTerrain`'s plan for a viewport: returns the handle and fills `out` with its arrays.
+///
+/// # Safety
+/// `input` describes a live mesh; `viewport` and `out` are valid. The handle must be freed with
+/// `ee_ge_terrain_visible_free`, after which `out`'s pointers are dead.
+EeGeVisiblePlan *ee_ge_terrain_visible_plan(const EeGeVisibleInput *input,
+                                            const EeGeViewport *viewport,
+                                            bool orthographic,
+                                            EeGeVisibleOut *out);
+
+/// Frees a plan.
+///
+/// # Safety
+/// `plan` came from `ee_ge_terrain_visible_plan` and is freed once.
+void ee_ge_terrain_visible_free(EeGeVisiblePlan *plan);
+
+/// `GEBitmap::ComputeRotation`'s corners (top left, top right, bottom left, bottom right) into `out`.
+///
+/// # Safety
+/// `location` is valid; `out` holds four points.
+void ee_ge_bitmap_corners(const EeGe2DPoint *location,
+                          float width,
+                          float height,
+                          float x_scale,
+                          float y_scale,
+                          float rotation,
+                          EeGe2DPoint *out);
+
+/// `GERhombus::ComputeRotation`'s corners into `out`.
+///
+/// # Safety
+/// `rectangle` is valid; `out` holds four points.
+void ee_ge_rhombus_corners(const EeGeRectangle *rectangle, float rotation, EeGe2DPoint *out);
+
+/// `GEBitmap::ComputeStretchedCoordsAndScale`'s coordinates and scale.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_bitmap_stretch(const EeGeRectangle *texture,
+                          const EeGeRectangle *source,
+                          const EeGeRectangle *destination,
+                          unsigned long width,
+                          unsigned long height,
+                          unsigned long drop,
+                          EeGeBitmapStretch *out);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,

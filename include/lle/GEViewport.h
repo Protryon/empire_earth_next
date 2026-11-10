@@ -88,6 +88,7 @@ public:
     void SetRearClippingDistance(float inDistance);
     void SetViewRectangle(const GERectangle& inRectangle);
 private:
+    friend struct GERustViewportLayout;     // the Rust mirror's layout check (Graphics Engine/GERustViewport.h)
     void ComputeOrthographicMatrix();
     void ComputePerspectiveMatrix();
     void ComputePlanes();
