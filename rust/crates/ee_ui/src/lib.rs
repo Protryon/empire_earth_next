@@ -17,6 +17,7 @@ pub mod hotkey;
 pub mod layout;
 pub mod list;
 pub mod manager;
+pub mod manager_media;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
@@ -57,6 +58,9 @@ mod list_ffi;
 // imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
 #[cfg(not(test))]
 mod manager_ffi;
+// imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
+#[cfg(not(test))]
+mod manager_media_ffi;
 // imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrollbar_ffi;

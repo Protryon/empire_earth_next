@@ -7922,6 +7922,49 @@ void ee_ui_manager_process_all_events(void *manager);
 /// `UIManager::ProcessAllEventsForForm(form)`.
 void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
 
+/// `UIManager::SetMusicVolume(volume)`.
+void ee_ui_manager_set_music_volume(void *manager, float volume);
+
+/// `UIManager::StartMusic(name)` (the name as a C string).
+void ee_ui_manager_start_music(void *manager, const char *name);
+
+/// `UIManager::StopMusic`.
+void ee_ui_manager_stop_music(void *manager);
+
+/// `UIManager::SetSoundInstance(instance)`.
+void ee_ui_manager_set_sound_instance(void *manager, void *instance);
+
+/// `UIManager::RemoveSoundInstance`.
+void ee_ui_manager_remove_sound_instance(void *manager);
+
+/// `UIManager::RemoveAndStopSoundInstance`.
+void ee_ui_manager_remove_and_stop_sound_instance(void *manager);
+
+/// `UIManager::UpdateUI`'s music step (inside the lock).
+void ee_ui_manager_update_music(void *manager);
+
+/// `UIManager::AddIMEResultString` (call 0), `ChangeIMECompositionString` (1), `CloseIMECompositionString` (2),
+/// `OpenIMECompositionString` (3): `args` are the call's arguments for the host -> the form's result.
+long ee_ui_manager_ime_form_call(void *manager,
+                                 int call,
+                                 const void *args);
+
+/// `UIManager::ChangeIMECandidateWindow(list)`: `list` is the C++ list (for `SetCandidateList`), with its style and
+/// count.
+long ee_ui_manager_change_candidate_window(void *manager,
+                                           const void *list,
+                                           unsigned long style,
+                                           unsigned long count);
+
+/// `UIManager::OpenIMECandidateWindow`.
+long ee_ui_manager_open_candidate_window(void *manager);
+
+/// `UIManager::CloseIMECandidateWindow`.
+long ee_ui_manager_close_candidate_window(void *manager);
+
+/// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
+long ee_ui_manager_copy_candidate_window(void *manager, long result);
+
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
 
