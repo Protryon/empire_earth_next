@@ -5,6 +5,7 @@
 //! Text is UTF-8 bytes (`&[u8]`; decision D6, `text.rs`). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
+pub mod background;
 pub mod button;
 pub mod button_variants;
 pub mod combo;
@@ -24,6 +25,9 @@ pub mod slider;
 pub mod text;
 pub mod wrap;
 
+// imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod background_ffi;
 // imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
 #[cfg(not(test))]
 mod button_ffi;

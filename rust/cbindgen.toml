@@ -152,6 +152,7 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "BlinkShow" = "EeUiBlinkShow"
 "Slice" = "EeUiSlice"
 "DirtyRect" = "EeUiDirtyRect"
+"TilePlan" = "EeUiTilePlan"
 "DbFont" = "EeUiDbFont"
 "FontEntry" = "EeUiFontEntry"
 # ee_won

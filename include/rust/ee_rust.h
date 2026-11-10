@@ -2967,6 +2967,19 @@ struct EeUiRect {
   float top;
 };
 
+/// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
+/// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
+/// the tile size.
+struct EeUiTilePlan {
+  EeUiRect clip;
+  unsigned long first_row;
+  unsigned long last_row;
+  unsigned long first_column;
+  unsigned long last_column;
+  float w;
+  float h;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -7331,6 +7344,57 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
 
 /// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
 EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
+
+/// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
+long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
+
+/// The tiling classes' `DrawBackground(redraw)` up to `DrawTiledBackground`: `kind` 0 tiled, 1 left-right,
+/// 2 top-bottom, 3 stretched (`across` x `down` tiles) -> whether the redraw rectangle meets the background, the
+/// plan in `out`.
+bool ee_ui_background_tiled_plan(int kind,
+                                 float across,
+                                 float down,
+                                 EeUiRect rect,
+                                 EeUiRect texture,
+                                 EeUiRect redraw,
+                                 EeUiTilePlan *out);
+
+/// `UITiledBackground::DrawTiledBackground(clip, rows, columns, w, h)` (`rect`: the background's).
+long ee_ui_background_draw_tiled(void *background,
+                                 EeUiRect rect,
+                                 EeUiRect clip,
+                                 unsigned long first_row,
+                                 unsigned long last_row,
+                                 unsigned long first_column,
+                                 unsigned long last_column,
+                                 float w,
+                                 float h);
+
+/// `UIFullBackground::DrawBackground(redraw)`: the first tile's texture size, the window's, the designed screen's
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_full_draw(void *background,
+                                EeUiRect redraw,
+                                unsigned long texture_width,
+                                unsigned long texture_height,
+                                unsigned long window_width,
+                                unsigned long window_height,
+                                unsigned long designed_width,
+                                unsigned long designed_height,
+                                unsigned long columns,
+                                unsigned long rows);
+
+/// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
+/// `RelayoutBackground` (never exclusive) lay a background out in.
+EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
+
+/// `UIBackground::SetRectangle(rect)`.
+void ee_ui_background_set_rectangle(void *background, EeUiRect rect);
+
+/// `UIBackground::SetVisibility(visible)`.
+void ee_ui_background_set_visibility(void *background, bool visible);
+
+/// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
+void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
 
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);

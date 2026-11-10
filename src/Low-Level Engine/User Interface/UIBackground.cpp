@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <algorithm>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -34,6 +35,57 @@
 #include "lle/UIForm.h"
 #include "lle/UIEvent.h"
 #include "lle/UIManager.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top); guarded: a golden driver includes several
+// background units in one translation unit
+#ifndef UI_BACKGROUND_RECT_HELPERS
+#define UI_BACKGROUND_RECT_HELPERS
+static inline EeUiRect UIBgRect(const GERectangle& r) { return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop}; }
+static inline GERectangle UIBgRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+#endif
+
+// The Rust moves' and visibility changes' view of a background (ee_ui background.rs, docs/RUST_PLAN.md R6)
+struct UIBackgroundRust {
+    static UIBackground* Background(void* inBackground) { return static_cast<UIBackground*>(inBackground); }
+    static bool Value(void* inBackground, int inWhich)
+    {
+        UIBackground* theBackground = Background(inBackground);
+        if (inWhich == 0)
+            return theBackground->mIsVisible;
+        return theBackground->mForm == theBackground->mForm->GetManager()->GetCurrentForm();
+    }
+    static bool& Visible(void* inBackground) { return Background(inBackground)->mIsVisible; }
+    static GERectangle& Rectangle(void* inBackground) { return Background(inBackground)->mRectangle; }
+    static void Call(void* inBackground, int inCall, const EeUiRect* inRectangle)
+    {
+        UIForm* theForm = Background(inBackground)->mForm;
+        switch (inCall) {
+        case 0:
+            theForm->LockDrawBackground();
+            break;
+        case 1:
+            theForm->UnlockDrawBackground();
+            break;
+        case 2:
+            theForm->RedrawIntersectControls(UIBgRect(*inRectangle));
+            break;
+        default:
+            theForm->GetManager()->AddDirtyRectangle(UIBgRect(*inRectangle), theForm);
+            break;
+        }
+    }
+};
+extern "C" bool ee_uicpp_background_value(void* inBackground, int inWhich) { return UIBackgroundRust::Value(inBackground, inWhich); }
+extern "C" void ee_uicpp_background_set_visible(void* inBackground, bool inVisible) { UIBackgroundRust::Visible(inBackground) = inVisible; }
+extern "C" EeUiRect ee_uicpp_background_rect(void* inBackground) { return UIBgRect(UIBackgroundRust::Rectangle(inBackground)); }
+extern "C" void ee_uicpp_background_set_rect(void* inBackground, const EeUiRect* inRectangle)
+{
+    UIBackgroundRust::Rectangle(inBackground) = UIBgRect(*inRectangle);
+}
+extern "C" void ee_uicpp_background_call(void* inBackground, int inCall, const EeUiRect* inRectangle)
+{
+    UIBackgroundRust::Call(inBackground, inCall, inRectangle);
+}
 
 // FUNCTION: LLE 0x1005a76e
 // Creates a background with its layout and draw priority and adds it to the form
@@ -65,13 +117,9 @@ void UIBackground::Close()
 // Lays the background out against the window size and loads its textures
 void UIBackground::Open()
 {
-    GERectangle theScreenRectangle;
     GEWindow* theWindow = this->mForm->GetManager()->GetRasterizer()->GetWindow(this->mForm->GetManager()->GetScreen());
-    float theOffset = this->mForm->GetUseExclusiveCoords() ? 0.0f : 1.0f;
-    theScreenRectangle.SetLeft(0.0f);
-    theScreenRectangle.SetTop(0.0f);
-    theScreenRectangle.SetRight((float)theWindow->GetWidth() - theOffset);
-    theScreenRectangle.SetBottom((float)theWindow->GetHeight() - theOffset);
+    GERectangle theScreenRectangle =
+        UIBgRect(ee_ui_background_screen_rect(theWindow->GetWidth(), theWindow->GetHeight(), this->mForm->GetUseExclusiveCoords()));
     this->mLayout.CalculateRectangle(theScreenRectangle, this->mRectangle, this->mForm->GetUseExclusiveCoords());
     this->LoadBackground();
 }
@@ -80,12 +128,8 @@ void UIBackground::Open()
 // Recomputes the background rectangle from its layout against the window size
 void UIBackground::RelayoutBackground()
 {
-    GERectangle theScreenRectangle;
     GEWindow* theWindow = this->mForm->GetManager()->GetRasterizer()->GetWindow(this->mForm->GetManager()->GetScreen());
-    theScreenRectangle.SetLeft(0.0f);
-    theScreenRectangle.SetTop(0.0f);
-    theScreenRectangle.SetRight((float)theWindow->GetWidth() - 1.0f);
-    theScreenRectangle.SetBottom((float)theWindow->GetHeight() - 1.0f);
+    GERectangle theScreenRectangle = UIBgRect(ee_ui_background_screen_rect(theWindow->GetWidth(), theWindow->GetHeight(), false));
     this->mLayout.CalculateRectangle(theScreenRectangle, this->mRectangle, this->mForm->GetUseExclusiveCoords());
 }
 
@@ -93,31 +137,14 @@ void UIBackground::RelayoutBackground()
 // Moves the background, redrawing the old and new areas when its form is the current one
 void UIBackground::SetRectangle(const GERectangle& inRectangle)
 {
-    bool theIsCurrent = this->mIsVisible && this->mForm == this->mForm->GetManager()->GetCurrentForm();
-    this->mForm->LockDrawBackground();
-    if (theIsCurrent) {
-        this->mForm->RedrawIntersectControls(this->mRectangle);
-        this->mForm->GetManager()->AddDirtyRectangle(this->mRectangle, this->mForm);
-    }
-    this->mRectangle = inRectangle;
-    if (theIsCurrent) {
-        this->mForm->RedrawIntersectControls(this->mRectangle);
-        this->mForm->GetManager()->AddDirtyRectangle(this->mRectangle, this->mForm);
-    }
-    this->mForm->UnlockDrawBackground();
+    ee_ui_background_set_rectangle(this, UIBgRect(inRectangle));
 }
 
 // FUNCTION: LLE 0x1005a9cc
 // Shows or hides the background and redraws its area
 void UIBackground::SetVisibility(bool inVisible)
 {
-    if (inVisible == this->mIsVisible)
-        return;
-    this->mForm->LockDrawBackground();
-    this->mIsVisible = inVisible;
-    this->mForm->RedrawIntersectControls(this->mRectangle);
-    this->mForm->GetManager()->AddDirtyRectangle(this->mRectangle, this->mForm);
-    this->mForm->UnlockDrawBackground();
+    ee_ui_background_set_visibility(this, inVisible);
 }
 
 // Header-inline members first emitted here (declaration order; names in analysis/lle/names.txt)

@@ -805,38 +805,19 @@ long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, 
     return this->mManager->GetRasterizer()->Draw(inBitmap, this->mManager->GetScreen());
 }
 
+// A piece of the Rust tiling of a bitmap (ee_ui background.rs): drawn at its location
+extern "C" void ee_uicpp_form_tile_draw(void* inForm, void* inBitmap, const EeUiRect* inPiece, float inX, float inY)
+{
+    UIFormRust::Form(inForm)->DrawBackground(static_cast<GEBitmap*>(inBitmap), UIFormRust::Rect(*inPiece), GE2DPoint(inX, inY));
+}
+
 // FUNCTION: LLE 0x10071bee
 // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                             const GERectangle& inTileRectangle)
 {
-    GERectangle theTile;
-    GERectangle theClipped;
-    GE2DPoint theLocation;
-    if (inRectangle.And(inTileRectangle, theClipped)) {
-        unsigned long theTileWidth = UMFloor(inDrawRectangle.GetWidth());
-        unsigned long theTileHeight = UMFloor(inDrawRectangle.GetHeight());
-        unsigned long theFirstRow = UMFloor((theClipped.GetTop() - inTileRectangle.GetTop()) / theTileHeight);
-        unsigned long theLastRow = UMFloor((theClipped.GetBottom() - inTileRectangle.GetTop()) / theTileHeight);
-        unsigned long theFirstColumn = UMFloor((theClipped.GetLeft() - inTileRectangle.GetLeft()) / theTileWidth);
-        unsigned long theLastColumn = UMFloor((theClipped.GetRight() - inTileRectangle.GetLeft()) / theTileWidth);
-        for (unsigned long theRow = theFirstRow; theRow <= theLastRow; theRow++)
-            for (unsigned long theColumn = theFirstColumn; theColumn <= theLastColumn; theColumn++) {
-                GE2DPoint thePosition(inTileRectangle.GetLeft() + theColumn * theTileWidth,
-                                      inTileRectangle.GetTop() + theRow * theTileHeight);
-                theTile = GERectangle(thePosition, GE2DPoint(thePosition.GetX() + theTileWidth,
-                                                             thePosition.GetY() + theTileHeight));
-                if (!theTile.And(theClipped) || !(theTile.GetWidth() > 0.0f) || !(theTile.GetHeight() > 0.0f))
-                    continue;
-                theLocation = theTile.GetTopLeft();
-                GE2DPoint theOrigin(inDrawRectangle.GetTopLeft());
-                theTile.SetLeft(theTile.GetLeft() + theOrigin.GetX() - thePosition.GetX());
-                theTile.SetRight(theTile.GetRight() + theOrigin.GetX() - thePosition.GetX());
-                theTile.SetBottom(theOrigin.GetY() + theTile.GetBottom() - thePosition.GetY());
-                theTile.SetTop(theTile.GetTop() + theOrigin.GetY() - thePosition.GetY());
-                this->DrawBackground(inBitmap, theTile, theLocation);
-            }
-    }
+    ee_ui_form_draw_tiles(this, inBitmap, UIFormRust::Rect(inRectangle), UIFormRust::Rect(inDrawRectangle),
+                          UIFormRust::Rect(inTileRectangle));
     return kErrorOK;
 }
 
