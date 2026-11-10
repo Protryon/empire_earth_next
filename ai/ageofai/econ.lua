@@ -710,6 +710,92 @@ end
 -- the production buildings: a barracks early (the home guard), an archery range in epochs 1-3 (early_requirements),
 -- a stable from the Copper Age; army_plan BUILD: one more of the kind that trains the soldier picked when its
 -- producers are busy and the account holds 600, up to 2 + workers / 15
+-- [econ.c] IDLE CITIZENS HOME (citizens_home): every 3 s, a citizen the engine holds with no goal more than 15 tiles
+-- from its nearest finished town (Town Center, Capitol, Settlement), idle at the last look too (between two jobs is
+-- not), walks to the nearest finished town on its land with no enemy soldiers seen within 12 tiles (none safe: it
+-- stays), to the spot 4 tiles out on the citizen's side (the building's own tile is taken); then it is the
+-- engine's again (the assignment puts it to work). ENGINE: upstream's parts (1) and (3) - the base point moved to
+-- the biggest town (the game set it from the first unit it found) and the stacked foundations removed - are the
+-- original game's bugs, not this engine's (the town centre is view.town_x/y, the build runner lays one foundation);
+-- its (2) "walking to within 3 tiles of the base" is that base point's too. Citizens the script holds (a landing,
+-- an outpost's ferry, a new town) are not the engine's and are left alone.
+local TOWN_TYPES = {"b_settlement", "b_town_center", "b_capitol"}
+local function citizens_home(view, mem)
+    if not S.citizens_home or view.town_x < 0 or view.time - (mem.home_t or 0) < 3000 then
+        return
+    end
+    mem.home_t = view.time
+    local towns = {}
+    for _, id in ipairs(ai.units{type = TOWN_TYPES, built = true}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            towns[#towns + 1] = u
+        end
+    end
+    if #towns == 0 then
+        return   -- no town left
+    end
+    local idle = ai.units{category = "citizen", idle = true, held = "engine"}
+    local was = mem.home_was or {}
+    local now_idle, safe, sent, stay = {}, {}, 0, 0
+    local cols = ai.get(idle, {"x", "y", "inside"})
+    for k, id in ipairs(idle) do
+        local x, y = cols.x[k], cols.y[k]
+        if x ~= nil and cols.inside[k] == nil then
+            local nd = nil
+            for _, t in ipairs(towns) do
+                local d = d2(t.x, t.y, x, y)
+                if nd == nil or d < nd then
+                    nd = d
+                end
+            end
+            if nd > 15 * 15 then
+                now_idle[#now_idle + 1] = id
+                if was[id] then   -- idle away twice in a row
+                    local best, bd = nil, nil
+                    for i, t in ipairs(towns) do
+                        if ai.reach(t.x, t.y, x, y) then
+                            if safe[i] == nil then
+                                safe[i] = #ai.seen{enemy = true, armed = true, category = "soldier", near = {t.x, t.y, 12}, limit = 1} == 0
+                            end
+                            local d = d2(t.x, t.y, x, y)
+                            if safe[i] and (bd == nil or d < bd) then
+                                best, bd = t, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        stay = stay + 1
+                    else
+                        -- beside the town on the citizen's side: the building's own tile is taken
+                        local dx, dy = x - best.x, y - best.y
+                        local l = isqrt(dx * dx + dy * dy)
+                        local gx = best.x + (l > 0 and dx * 4 // l or 4)
+                        local gy = best.y + (l > 0 and dy * 4 // l or 0)
+                        local code = ai.move({id}, gx, gy)
+                        ai.release({id})
+                        if code == "ok" then
+                            sent = sent + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local set = {}
+    for _, id in ipairs(now_idle) do
+        set[id] = true
+    end
+    mem.home_was = set
+    if sent > 0 or stay > 0 then
+        mem.home_sent = (mem.home_sent or 0) + sent
+        if view.time - (mem.home_log_t or -100000) >= 60000 then
+            mem.home_log_t = view.time
+            print(string.format("citizens_home sent=%d stay=%d idle_away=%d towns=%d total=%d", sent, stay, #now_idle, #towns, mem.home_sent))
+        end
+    end
+end
+
 local function production(view, mem, order, army, above)
     local want = {}
     want.b_barracks = view.citizens >= 8 and 1 or 0
@@ -1105,6 +1191,7 @@ function M.step(view, memory, orders, army)
         end
     end
     research(view, mem, order)
+    citizens_home(view, mem)   -- [econ.c] the idle citizens away from the towns
     return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens}
 end
 

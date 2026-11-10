@@ -199,4 +199,7 @@ return {
                                     -- the raiders, else they run to the nearest tower; upstream's stricter rule
                                     -- (under own tower cover or own soldiers, and no citizen lost on the estimate)
                                     -- has no switch (ai.reflex takes no militia key: an interface gap)
+    citizens_home = true,           -- econ.c citizens_home part 2: an idle citizen 15+ tiles from its nearest
+                                    -- finished town, idle twice running, walks to the nearest safe town (parts 1 and
+                                    -- 3, the base point and the stacked foundations, are the original game's bugs)
 }

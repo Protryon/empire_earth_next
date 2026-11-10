@@ -17,8 +17,14 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 spend_reserve (the epoch reserve; from farms only what the income cannot bring back),
                 hook_add_resource (the military account and its income shares), econ_targets (the worker plan by
                 shortfall and rate), gather_research, early_requirements, the copper plan's epoch attempt,
-                substitute_soldier (the strongest affordable soldier), hoard caps. Missing: citizens_home (the
-                engine's finders keep citizens on safe sites), train_budget's priority rows (priority.c).
+                substitute_soldier (the strongest affordable soldier), hoard caps, citizens_home part 2 (every 3 s
+                an idle citizen the engine holds more than 15 tiles from its nearest finished town, idle at the last
+                look too, walks to the nearest finished town on its land with no enemy soldiers seen within 12, to
+                the spot 4 tiles out on its side, and is the engine's again). ENGINE: citizens_home parts 1 and 3
+                (the base point at sea or away from the towns moved to the biggest town; the foundations stacked on
+                one tile removed) are the original game's bugs, which this engine has not (the town centre tile is
+                the base, the build runner lays one foundation); part 2's "walking to within 3 tiles of the base"
+                is that base point's too. Missing: train_budget's priority rows (priority.c).
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 centre: the front and the citizens' side), the builders, tower_bait (the citizens hit lead the
                 raiders under the towers, epochs 1-2). ENGINE: early_militia (defence.c militia_answer's early rule:
