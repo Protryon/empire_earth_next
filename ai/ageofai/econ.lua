@@ -210,6 +210,7 @@ end
 -- army too; civil: what a civilian unit (a citizen) sees. [priority.c] reserve: the list's hold from a military
 -- unit (S_MIL), reserve_civ: from a civilian one (0)
 function M.accounts(view, mem, reserve, reserve_civ)
+    mem.early_epoch = view.epoch
     mem.mil = mem.mil or {}
     local mil = mem.mil
     if not mem.mil_init then
@@ -219,8 +220,16 @@ function M.accounts(view, mem, reserve, reserve_civ)
         end
     end
     local share = view.epoch >= FARM_EPOCH and S.military_income_share_farms or S.military_income_share
-    if S.early_army and view.epoch == 0 then
-        share = 0
+    -- early_army (econ.c hook_add_resource): no army in the first epoch (share 0 unless early_soldiers), then
+    -- food-free ranged soldiers: the army's food share small (early_army_food_share) and at most 300 held before
+    -- farms, so the citizens keep their food
+    local food_share = share
+    if S.early_army and view.epoch < FARM_EPOCH then
+        if view.epoch == 0 and (S.early_soldiers or 0) == 0 then
+            share, food_share = 0, 0
+        else
+            food_share = (mem.mil or {}).food ~= nil and mem.mil.food >= 300 and 0 or S.early_army_food_share
+        end
     end
     -- the income over the last 60 s, one second's worth a step
     local dt = math.max(view.time - (mem.mil_t or view.time), 0)
@@ -230,7 +239,7 @@ function M.accounts(view, mem, reserve, reserve_civ)
             -- the fraction carried (a step's share of a minute's income is under 1: it truncated to 0 before, so the
             -- account never grew past its start share)
             mem.mil_frac = mem.mil_frac or {}
-            local f = (mem.mil_frac[r] or 0) + view.income[r] * dt * share
+            local f = (mem.mil_frac[r] or 0) + view.income[r] * dt * (r == "food" and food_share or share)
             mil[r] = (mil[r] or 0) + f // (60000 * 100)
             mem.mil_frac[r] = f % (60000 * 100)
         end
@@ -242,7 +251,16 @@ function M.accounts(view, mem, reserve, reserve_civ)
         mil[r] = math.min(mil[r] or 0, above + cap)   -- the account never outgrows what could be spent
         local free = math.max(above - cap, 0)
         avail[r] = math.min(above, (mil[r] or 0) + free)
+        if S.early_army and view.epoch < FARM_EPOCH then
+            -- early_army (docs/economy.md): before farms the military account belongs to the army - it pays out
+            -- whatever the epoch reserve is (the citizens never spend its food, above); f10's Stone Age army stayed
+            -- at 0 with the account under the Copper reserve
+            avail[r] = math.min(view.stock[r], mil[r] or 0)
+        end
         civil[r] = math.max(view.stock[r] - reserve_civ[r], 0)
+        if S.early_army and r == "food" and (mem.early_epoch or 0) < FARM_EPOCH then
+            civil[r] = math.max(civil[r] - (mil[r] or 0), 0)   -- early_army: the citizens never spend the army's food
+        end
     end
     return avail, civil
 end
@@ -367,7 +385,10 @@ function M.workers(view, mem, reserve, wants)
         local excess = target.food - places
         if excess > 0 then
             target.food = places
-            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}
+            -- the excess by the plan's floors: wood and the towers' stone first; gold and iron only a token before
+            -- the Stone Age (docs/STRATEGY_RESEARCH.md 4.2: the Copper Age's metals are not gathered before the
+            -- earlier goal - a DEVIATION from the port's first split of 37 / 37, not an upstream rule either way)
+            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}   -- (55 / 25 / 10 / 10 in 8.38 f11: no gain)
             local given = 0
             for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
                 local n = excess * shares[r] // 100

@@ -2583,6 +2583,8 @@ their reason: the siege with the force (no waves from home), this engine's fishi
 | f6: copper_plan next_epoch, the home guard's cap (166 / the own population) | 0 / 12 / 4 | 49.1 (8/16), 4/16 at 61 | 53 / 70 / 52 | 3 / 9 / 4 | 3/16 at 67 | 40 | 2 / 1 / 13 | 155 vs 109 |
 | f7: + the forage places cap the food gatherers and the wild food, the accounts' income fractions carried (a bug: they truncated to 0 a step) | 0 / 10 / 6 | 53.0 (14/16), 11/16 at 63 | 50 / 61 / 58 | 2 / 11 / 3 | 8/16 at 57 | 26 | 1 / 2 / 13 | 141 vs 107 |
 | f8: + the claims grow on the uncapped food want (up to 8 patches, a wider claim), the wild food as upstream's amounts | 0 / 11 / 5 | 48.5 (16/16), 11/16 at 64 | 50 / 60 / 57 | 2 / 9 / 5 | 9/16 at 57 | 36 | 2 / 2 / 12 | 148 vs 108 |
+| f10 (tuning): epoch_share 60, early_army on (upstream's variant B; the army's food share 40 before farms) | 0 / 13 / 3 | 38.7 (15/16), 9/16 at 60 | 46 / 51 / 33 | 2 / 10 / 4 | 11/16 at 52 | 33 | 0 / 0 / 16 | 159 vs 110 |
+| f11: + early_army's account pays out before farms, the excess gatherers to wood and stone | 0 / 12 / 4 | 38.3 (15/16), 6/16 at 80 | 47 / 50 / 41 | 1 / 10 / 5 | 10/16 at 50 | 26 | 1 / 5 / 10 | 129 vs 107 |
 
 The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
 46 with 51 citizens all game and still wins the Prehistoric raids.
@@ -2665,6 +2667,29 @@ minutes (513), and the Stone Age comes in 16 / 16 games against the improved cla
 cheating classic (2/9/5 for 2/11/3; 5 games wiped out before the Stone Age could come, the end citizens [0 x5, 5,
 14, 16, 22, 33, 37, 43, 47, 83, 132, 145]). What stands between f8 and the classic's 174 citizens at the end is the
 Stone Age at 48 against 26 - next_epoch's 40% of a places-bound income - and the losses to the waves after.
+
+**The tuning round (f9-f11), as marked deviations.** Checked first: the military account takes 40% of every
+income from the first minute upstream too (hook_add_resource with `early_army` off); upstream's own notes give the
+copper plan's Stone Age at 17-23 minutes on Continental (10,000-16,000 forage within 30 tiles) and call next_epoch
+slower, with "epoch_share 60% and no cheat it does best" (docs/economy.md); docs/STRATEGY_RESEARCH.md §4.1-4.2 puts
+the Standard Small target at 16-20 minutes from 25-30 citizens and asks for the next epoch only, no Copper metals
+before the Stone Age, towers and fleeing as the Prehistoric defence. f9 (epoch_share 60, early_army with upstream's
+10% food share; smoked only): the Stone Age at 41 on seeds 2 and 5, the army 0 all game. f10 (the army's food share
+40 before farms, the owner's ~20 spearmen): the Stone Age at 38.7 in 15/16 games against the classic (48.5 at f8),
+the Copper Age 9/16 at 60, but the Stone Age army still 0 at 30 and 40 minutes - the army's budget was the stock
+above the whole Copper reserve, where upstream's variant B lets the account pay out whatever the reserve is - so
+0/13/3 with 4 wiped out, and 0/0/16 against boom (159 citizens to 110, no doubling). f11: the account pays out
+before farms as upstream's B does, and the food gatherers beyond the places go to wood and stone with a token to
+gold and iron. f11: the Stone Age at 38 again but the Stone Age army still 0 at 30 minutes and 5 at 40 (the
+account fills at 40% of a food income that the citizens' training leaves at 60-100 a minute), the Copper Age later
+(6/16 at 80: the army now spends what the epoch account does not take), 0/12/4, 1/10/5 and 1/5/10 against boom -
+worse than f8 in every matchup. The round's result: with next_epoch the epoch share buys the Stone Age minutes at the
+army's cost on these maps, and early_army delays the Stone Age army past the waves. f8's settings stay (epoch_share
+40, early_army off; the early_army code is in place and inactive). The structural gap to the classic's Stone Age at
+26 is the forage: the classic gathers 65-105 food a minute from 18 gatherers at 40 minutes while the port's 12-19
+places give 45-100 with 50 citizens; the model in STRATEGY_RESEARCH §4.1 reaches 16-20 minutes only from 25-30
+citizens with the whole income going to the epoch - the tenth checkpoint's hold at min_workforce, which the owner
+set aside for upstream's letter.
 
 **Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
 build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream
