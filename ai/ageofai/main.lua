@@ -12,6 +12,8 @@ local T = require("ageofai.tactics")
 local TW = require("ageofai.towns")   -- [towns.c, expand.c]
 local DP = require("ageofai.diplo")   -- [diplo.c]
 local AIR = require("ageofai.air")   -- [airstrike.c]
+local FR = require("ageofai.fronts")   -- [fronts.c]
+local MT = require("ageofai.metal")   -- [metal.c]
 local V = require("lib.view")
 
 local M = {}
@@ -34,13 +36,12 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
-    do
-        local above = {}
-        for _, r in ipairs(V.resources) do
-            above[r] = math.max(view.stock[r] - (budget.reserve[r] or 0), 0)
-        end
-        T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, above)
-    end
+    -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
+    T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, budget.build, memory)
+    -- [fronts.c] the territory, the border and the fronts every 10 s; station 1 is the force's home (army.lua)
+    FR.step(view, memory)
+    -- [metal.c] the 5-minute line of the metal plan (what it picked, cut and freed)
+    MT.tick(view, memory)
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan

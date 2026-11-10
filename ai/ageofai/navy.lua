@@ -48,6 +48,7 @@ local G = require("lib.groups")
 local N = require("lib.navy")
 local S = require("ageofai.settings")
 local F = require("ageofai.fleet")
+local MT = require("ageofai.metal")      -- [metal.c] the fleet's size by the enemy's, the calm sea's account
 local M = {}
 
 local ACC_CAP = 600
@@ -375,7 +376,8 @@ local function navy_pick(view, mem, budget)
         local c = best[r0]
         local pay, total = true, 0
         for _, r in ipairs(V.resources) do
-            if c.cost[r] > view.stock[r] then
+            -- [priority.c] a warship with a target sees the stock but the rows marked apart (budget.ship)
+            if c.cost[r] > ((budget and budget.ship) and budget.ship[r] or view.stock[r]) then
                 pay = false
             end
         end
@@ -1166,17 +1168,26 @@ local function ships_phase(view, mem, budget, force, memory)
         end
     end
     if #have < want then
+        -- [priority.c] the landing row (landing_reserve, phase 1): the missing transports' cost held from the
+        -- others; the landing's own order sees past it and the navy's account (g_landing_order)
+        mem.landing_hold = {}
+        for _, r in ipairs(V.resources) do
+            mem.landing_hold[r] = tr ~= nil and (want - #have) * tr.cost[r] or 0
+        end
         if view.time - P.since >= 360000 then
             mem.aborted = (mem.aborted or 0) + 1
             mem.next_try = view.time + 600000
             mem.prep = nil
+            mem.landing_hold = nil
             print("landing given_up why=no_transports")
             return
         end
         if tr ~= nil and view.time - P.trained_t >= (P.tr_got and 120000 or 20000) then
             P.trained_t = view.time
             P.tr_got = false
-            if affordable(tr, budget, memory.eco.navy_hold or {}) >= 1 and tr.in_production + tr.requested == 0 then
+            local PR = require("ageofai.priority")
+            local vis = PR.visible(view, memory, PR.S_MIL | PR.S_ORDER | PR.S_LANDING_ORDER)
+            if affordable(tr, {civil = vis}, {}) >= 1 and tr.in_production + tr.requested == 0 then
                 local docks = ai.units{type = "b_dock", built = true}
                 if #docks > 0 and ai.train(docks, tr.type, 1) == "ok" then
                     P.tr_got = true
@@ -1187,6 +1198,7 @@ local function ships_phase(view, mem, budget, force, memory)
         say(mem, view, "ships", string.format("landing waits_transports have=%d want=%d", #have, want))
         return
     end
+    mem.landing_hold = nil   -- [priority.c] the transports are there
     -- the passengers: the force's members at home, the nearest the dock first
     local home = home_force(view, force)
     if #home < 6 then
@@ -1390,13 +1402,21 @@ function M.step(view, memory, orders, budget, force)
     end
     detect(view, mem)
     count(view, mem)
+    if mem.prep == nil then
+        mem.landing_hold = nil   -- [priority.c] no landing getting its transports
+    end
     -- the fleet's size target (stage 4)
     if fleet_builds(mem) then
         mem.target = (view.population_cap * S.navy_fleet_pop * (mem.strength or 0) + 5000) // 10000
+        -- [metal.c] fleet_by_enemy: at most metal_fleet_pct of the enemy warships known + 6, at least metal_fleet_min
+        -- x the strength
+        mem.target = MT.fleet_target(view, memory, mem.target, mem.strength or 0)
     else
         mem.target = 0
     end
     account(view, mem)
+    -- [metal.c] calm_navy_cap: the sea calm for 3 minutes - the account keeps 100 gold and 100 iron at most
+    MT.calm(view, memory, mem, share(mem) > 0)
     hold(view, mem, memory)
     docks(view, mem, order)
     fishing(view, mem, budget, memory.eco.more_boats or 0)   -- econ's: citizens idle for want of a food site

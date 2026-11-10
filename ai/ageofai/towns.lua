@@ -144,6 +144,9 @@ local function water_by(x, y, sea)
     return nil
 end
 
+-- [priority.c] the memory of the step under way, for the list's refusals (prio_refuses: a town's building is a
+-- building like any other; towns.c tn_run asks it before each project)
+local prio_memory = nil
 local function can_pay(view, type)
     local c = V.cost(view, type)
     if c == nil then
@@ -153,6 +156,9 @@ local function can_pay(view, type)
         if view.stock[r] < c.cost[r] then
             return false
         end
+    end
+    if prio_memory ~= nil and require("ageofai.priority").refuses(view, prio_memory, type) ~= nil then
+        return false
     end
     return true
 end
@@ -2762,6 +2768,9 @@ end
 
 -- whether a tile lies within r of a town of the script's (econ.lua's settlements keep off them; eco_mem.town_spots
 -- is written by M.step)
+-- [metal.c] calm_navy_cap reads the sea as this module knows it
+M.sea_held = sea_held
+
 function M.near_town(eco_mem, x, y, r)
     for _, t in ipairs(eco_mem.town_spots or {}) do
         if d2(t.x, t.y, x, y) < r * r then
@@ -2782,10 +2791,14 @@ function M.step(view, memory, orders, budget)
     local function order(o)
         orders[#orders + 1] = o
     end
-    -- the reserve the economy's next step holds for the towns and the outpost (towns_reserve, expand_reserve)
-    local reserve = {}
+    -- the reserve the economy's next step holds for the towns and the outpost (towns_reserve, expand_reserve).
+    -- [priority.c] the outpost row reads the two apart: the towns' (towns_reserve) and the outpost's (expand_hold:
+    -- a building waits for it only with spend_tiers, a landing's order never)
+    prio_memory = memory
+    local reserve, ex_hold = {}, {}
     for _, r in ipairs(V.resources) do
         reserve[r] = 0
+        ex_hold[r] = 0
     end
     if view.town_x >= 0 then
         expand_act(mem, memory, view, order, budget, now)
@@ -2807,10 +2820,11 @@ function M.step(view, memory, orders, budget)
             end
             towns_reserve(mem, view, now, reserve)
         end
-        expand_hold(mem, view, now, reserve)
+        expand_hold(mem, view, now, ex_hold)
     end
     memory.eco = memory.eco or {}
     memory.eco.towns_reserve = reserve
+    memory.eco.expand_hold = ex_hold   -- [priority.c]
     local spots = {}
     for _, t in ipairs(mem.towns) do
         if t.state ~= 0 then

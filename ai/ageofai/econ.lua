@@ -8,7 +8,11 @@
 -- did for upstream. What a verb cannot say stays in Lua (the accounts, the targets, the plan).
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local P = require("ageofai.priority")   -- [priority.c] the list every spender asks
+local MT = require("ageofai.metal")     -- [metal.c] workers_to_metals
 local M = {}
+
+local cur_memory = nil   -- [priority.c] the memory of the step under way (the buildings ask the list)
 
 local FARM_EPOCH = 2                -- the Copper Age: farms make food renewable
 local PASS_MS = 10000               -- the worker plan, claims and buildings every 10 s
@@ -143,23 +147,17 @@ function M.reserve(view, mem)
             r[k] = math.max(r[k] - more, 0)
         end
     end
-    -- [towns.c, expand.c] towns_reserve / expand_reserve: the drop site a town waits for, its next tower, a forward
-    -- base's towers, an outpost's Settlement and tower (ageofai.towns writes it the step before)
-    for _, k in ipairs(V.resources) do
-        r[k] = r[k] + ((mem.towns_reserve or {})[k] or 0)
-    end
-    -- [navy.c navy_hold] the navy account (and the warship it waits for) is reserve for every other order
-    if mem.navy_hold ~= nil then
-        for _, k in ipairs(V.resources) do
-            r[k] = r[k] + (mem.navy_hold[k] or 0)
-        end
-    end
+    -- [priority.c] the epoch row of the list; the towns' reserve (towns.c, expand.c) and the navy's account (navy.c
+    -- navy_hold) are rows of their own there (priority.lua), each held from the spenders upstream names
+    mem.epoch_reserve = r
     return r, saving
 end
 
 -- the military account: a share of the start stock, then of every income; what it may spend now per resource
--- (within the stock above the reserve), the hoard above reserve + cap free for the army too
-function M.accounts(view, mem, reserve)
+-- (within the stock above what the list holds from a military unit), the hoard above reserve + cap free for the
+-- army too; civil: what a civilian unit (a citizen) sees. [priority.c] reserve: the list's hold from a military
+-- unit (S_MIL), reserve_civ: from a civilian one (0)
+function M.accounts(view, mem, reserve, reserve_civ)
     mem.mil = mem.mil or {}
     local mil = mem.mil
     if not mem.mil_init then
@@ -187,7 +185,7 @@ function M.accounts(view, mem, reserve)
         mil[r] = math.min(mil[r] or 0, above + cap)   -- the account never outgrows what could be spent
         local free = math.max(above - cap, 0)
         avail[r] = math.min(above, (mil[r] or 0) + free)
-        civil[r] = above
+        civil[r] = math.max(view.stock[r] - reserve_civ[r], 0)
     end
     return avail, civil
 end
@@ -276,6 +274,7 @@ function M.workers(view, mem, reserve, wants)
     -- the fields: at least their farmers (fields + 2) when the plan has them
     local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
+    mem.food_floor = floor_food   -- [metal.c] MIX keeps it (citizen_plan's FEED)
     while target.food < floor_food do
         local from = nil
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
@@ -513,6 +512,7 @@ local function settlements(view, mem, target, order)
     local wood = view.wood
     if wood ~= nil and (target.wood or 0) > 0 and not wood.ready and not wood.has_drop then
         cands[#cands + 1] = {rank = SETTLE_RANK.wood, dist = wood.distance, tile = wood, key = wood.x * 10000 + wood.y}
+        mem.wd_want_t = view.time   -- [priority.c] the forest row (mines.c wood_reserve: a Settlement wanted at the edge)
     end
     table.sort(cands, function(a, b)
         if a.rank ~= b.rank then
@@ -682,6 +682,9 @@ local function towers(view, mem, order, above)
     if above.stone < cost.cost.stone + S.tower_stone_keep then
         return stone_wanted + cost.cost.stone
     end
+    if P.refuses(view, cur_memory, tower) ~= nil then   -- [priority.c] a row above holds its price
+        return stone_wanted
+    end
     -- an outpost: a worked mineral site 12+ tiles from the town with no tower (3 tiles towards the front)
     for _, s in ipairs(view.sites) do
         if s.claimed and s.workers > 0 and not s.has_tower and s.distance >= 12 and s.resource ~= "food"
@@ -735,7 +738,7 @@ local function production(view, mem, order, army, above)
             for _, r in ipairs(V.resources) do
                 ok = ok and above[r] >= c.cost[r]
             end
-            if not going and V.total(have) < want[t] and ok then
+            if not going and V.total(have) < want[t] and ok and P.refuses(view, cur_memory, t) == nil then   -- [priority.c]
                 if (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
                     if view.time - (mem.direct_t or 0) >= 30000 then
                         mem.direct_t = view.time
@@ -752,6 +755,51 @@ end
 
 -- granaries and fields from the Copper Age (build_fields, more_granaries): a granary while the food workers wanted
 -- exceed the fields (8 a granary, fewer than 1 + target / 8, at most 8); the fields as the wood pays (50 kept each)
+-- [priority.c] THE SILOS' ROW (econ.c farm_plan, farm_first; the player 2026-11-09: "the second copper age starts
+-- researching the silo with its 525 wood should be put in the priority list and good is", "a second should follow
+-- soon after"). 525 wood: a Granary's 125 and 8 fields of 50. Due from the moment the Copper Age is saved for, one
+-- silo at a time, the second when the first's fields are built, whatever the food target says. What is still due
+-- stays held (mem.farm_hold; mem.fields_open: the fields going up, for field_wood). No progress for 6 minutes (no
+-- room for a silo, no builders): nothing held until there is some. Both silos' fields done: over for the game.
+local FARM_HOLD_MS = 360000
+local function farm_plan(view, mem, saving)
+    local gran, farm = V.buildings(view, "b_granary"), V.buildings(view, "b_farm")
+    local silos = V.total(gran)
+    local done, open = farm ~= nil and farm.finished or 0, farm ~= nil and farm.unfinished or 0
+    mem.fields_open = open
+    local due = S.farm_first and not mem.farm_over and (view.epoch >= FARM_EPOCH or (view.epoch == FARM_EPOCH - 1 and saving))
+    local hold = 0
+    local cg, cf = V.cost(view, "b_granary"), V.cost(view, "b_farm")
+    if due and cg ~= nil and cf ~= nil then
+        local gw, fw = cg.cost.wood, cf.cost.wood
+        local n = math.min(silos, 2)
+        local unlaid = math.max(8 * n - done - open, 0)   -- a silo's fields come as foundations when it stands
+        hold = fw * (unlaid + open)
+        if silos < 2 and open == 0 and unlaid == 0 then
+            hold = hold + gw + 8 * fw
+        end
+        if hold > gw + 8 * fw then
+            hold = gw + 8 * fw
+        end
+        if silos >= 2 and done >= 16 then
+            mem.farm_over = true
+            hold = 0
+        end
+    end
+    local key = silos * 256 + done   -- progress: a silo or a finished field
+    if not due or key ~= (mem.farm_key or -1) or (mem.farm_key_t or 0) == 0 then
+        mem.farm_key_t = view.time > 0 and view.time or 1
+    end
+    if hold > 0 and view.time - mem.farm_key_t > FARM_HOLD_MS then
+        hold = 0
+    end
+    if key ~= (mem.farm_key or -1) and silos <= 3 and hold ~= (mem.farm_hold or 0) then
+        print(string.format("priority farms silos=%d done=%d open=%d wood=%d held=%d", silos, done, open, view.stock.wood, hold))
+    end
+    mem.farm_key = key
+    mem.farm_hold = hold
+end
+
 local function farms(view, mem, order, target, above)
     if view.epoch < FARM_EPOCH then
         return 0
@@ -830,7 +878,7 @@ local function sol(view, mem, order)
             end
         end
     end
-    if best ~= nil and not building then
+    if best ~= nil and not building and P.refuses(view, cur_memory, best.type) == nil then   -- [priority.c]
         order({verb = "build", type = best.type, near = "town"})
     end
 end
@@ -897,19 +945,37 @@ end
 function M.step(view, memory, orders, army)
     memory.eco = memory.eco or {}
     local mem = memory.eco
+    cur_memory = memory
     mem.orders_ref = orders
     local function order(o)
         orders[#orders + 1] = o
         return #orders
     end
-    local reserve, saving = M.reserve(view, mem)
-    local avail, civil = M.accounts(view, mem, reserve)
-    -- the engine's reserve: the epoch's; the military account is Lua's own (the verbs see the stock above the reserve).
-    -- [navy.c navy_earmarked] a warship spends the navy account through the epoch's reserve (ai.train pays through the
-    -- engine's check): the engine holds the epoch's less the account, Lua's budget the epoch's plus the account
+    local epoch_reserve, saving = M.reserve(view, mem)
+    farm_plan(view, mem, saving)
+    -- [priority.c] the list: what each spender may touch. reserve: a civilian unit's hold (every row; the workers
+    -- gather for all of it); hold_mil: a military unit's; order: a priority order's stock (the siege, the bombers);
+    -- ship: a warship's (the stock but the rows marked apart - the navy row is its own); build / build_econ: a
+    -- building's (the silos' wood; an economy building passes it)
+    local reserve = P.hold(view, memory, 0)
+    local hold_mil, apart_mil = P.hold(view, memory, P.S_MIL)
+    for _, r in ipairs(V.resources) do
+        hold_mil[r] = hold_mil[r] + apart_mil[r]
+    end
+    local avail, civil = M.accounts(view, mem, hold_mil, reserve)
+    local order_vis = P.visible(view, memory, P.S_MIL | P.S_ORDER)
+    local ship_vis = P.visible(view, memory, P.S_MIL | P.S_SHIP)
+    local build_vis = P.visible(view, memory, P.S_BUILD)
+    local build_econ_vis = P.visible(view, memory, P.S_BUILD | P.S_BUILD_ECON)
+    -- the engine's reserve: the epoch's and the towns'; the military account is Lua's own (the verbs see the stock
+    -- above the reserve). [navy.c navy_earmarked] a warship spends the navy account through the epoch's reserve
+    -- (ai.train pays through the engine's check): the engine holds the epoch's less the account, Lua's budget the
+    -- epoch's plus the account. DEVIATION (priority.lua): the engine checks every verb against this, so a building
+    -- waits for the epoch and the towns too, where upstream's buildings spent them
     local engine = {}
     for _, r in ipairs(V.resources) do
-        engine[r] = math.max(reserve[r] - 2 * (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
+        local towns = (mem.towns_reserve ~= nil and mem.towns_reserve[r] or 0) + (mem.expand_hold ~= nil and mem.expand_hold[r] or 0)
+        engine[r] = math.max(epoch_reserve[r] + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
     end
     local differs = false
     for _, r in ipairs(V.resources) do
@@ -1006,6 +1072,8 @@ function M.step(view, memory, orders, army)
             end
         end
         target = M.workers(view, mem, reserve, wants)
+        -- [metal.c] workers_to_metals (army.c MIX): from piled-up food to the wood, gold or iron the army lacks
+        MT.workers(view, memory, target, mem.food_floor, wants.places, epoch_reserve)
         if target ~= nil and mem.target ~= nil then
             -- hysteresis: a target moves by 5 a pass at most (the stock swings with every purchase); food takes the
             -- difference
@@ -1067,13 +1135,12 @@ function M.step(view, memory, orders, army)
                 end
             end
             settlements(view, mem, target, order)
-            local above = {}
-            for _, r in ipairs(V.resources) do
-                above[r] = math.max(view.stock[r] - reserve[r], 0)   -- the buildings spend the stock above the reserve
-            end
+            -- [priority.c] the buildings spend what the list leaves a building (the silos' wood held from the ones
+            -- that are not food, houses, towns or docks); the engine's reserve holds the epoch's and the towns'
+            local above = build_vis
             mem.tower_stone = towers(view, mem, order, above)
             production(view, mem, order, army, above)
-            mem.fields = farms(view, mem, order, target, above)
+            mem.fields = farms(view, mem, order, target, build_econ_vis)
             if saving then
                 sol(view, mem, order)
             end
@@ -1082,7 +1149,9 @@ function M.step(view, memory, orders, army)
         end
     end
     research(view, mem, order)
-    return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens}
+    -- [priority.c] hold: a military unit's hold (metal.lua's SPARE prices the stock above it)
+    return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens,
+            order = order_vis, ship = ship_vis, build = build_vis, build_econ = build_econ_vis, hold = hold_mil}
 end
 
 return M

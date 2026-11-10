@@ -71,6 +71,7 @@ function M.siege(view, mem, order, budget)
     end
     mem.siege_had = have
     if have >= want or view.time < (mem.siege_pause or 0) then
+        mem.special = nil   -- [priority.c] nothing wanted: the special row empty
         return
     end
     local factory = V.buildings(view, "b_siege_factory")
@@ -91,14 +92,20 @@ function M.siege(view, mem, order, budget)
             for _, r in ipairs(V.resources) do
                 if c.cost[r] > 0 then
                     -- [attack.c] a priority order (g_priority_mil): the stock above the epoch reserve, not the
-                    -- military account alone
-                    n = math.min(n, budget.civil[r] // c.cost[r])
+                    -- military account alone. [priority.c] what the list leaves a priority order (budget.order)
+                    n = math.min(n, (budget.order or budget.civil)[r] // c.cost[r])
                 end
             end
             if n > 0 and c.requested + c.in_production == 0 then
                 order({verb = "train", type = t, n = n})
                 mem.siege_trained = (mem.siege_trained or 0) + n
+                mem.special = nil
                 return c
+            end
+            -- [priority.c] the special row (econ.c special_want SP_SIEGE): what it saves for is held from the
+            -- ordinary soldiers (and warships) for SP_KEEP
+            if n <= 0 then
+                mem.special = {type = t, n = want - have, t = view.time > 0 and view.time or 1}
             end
             return nil   -- the newest it can make: short of its price
         end
@@ -455,10 +462,11 @@ end
 -- out 3 tiles to a side, the next side when nobody came out, and they are released.
 
 -- the step's part: the fortress wanted and the quiet fortresses' unload
-function M.bunkers(view, mem, order, above)
+function M.bunkers(view, mem, order, above, memory)
     if not S.bunkers or view.epoch < 2 or view.town_x < 0 then
         return
     end
+    mem.bunker_wood = 0   -- [priority.c] the fortress row (bunker_reserve): the wood it cannot pay yet
     mem.hurt = mem.hurt or {}
     local keep = {}
     for _, t in ipairs(mem.hurt) do
@@ -471,7 +479,12 @@ function M.bunkers(view, mem, order, above)
     local want = #mem.hurt >= 3 and (view.citizens >= 40 and 2 or 1) or 0
     if #forts < want and view.time - (mem.fort_t or 0) >= 60000 and V.cost(view, "b_fortress") ~= nil then
         local c = V.cost(view, "b_fortress")
-        if above.wood >= c.cost.wood and above.stone >= c.cost.stone then
+        if view.stock.wood < c.cost.wood then
+            mem.bunker_wood = c.cost.wood   -- can't pay yet: saved for (bunker_reserve)
+        end
+        local P = require("ageofai.priority")
+        if above.wood >= c.cost.wood and above.stone >= c.cost.stone
+                and (memory == nil or P.refuses(view, memory, "b_fortress") == nil) then   -- [priority.c]
             local best, bd = nil, nil
             for _, id in ipairs(ai.units{category = "building", built = true}) do
                 local u = ai.unit(id)

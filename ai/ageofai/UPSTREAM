@@ -17,8 +17,9 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 spend_reserve (the epoch reserve; from farms only what the income cannot bring back),
                 hook_add_resource (the military account and its income shares), econ_targets (the worker plan by
                 shortfall and rate), gather_research, early_requirements, the copper plan's epoch attempt,
-                substitute_soldier (the strongest affordable soldier), hoard caps. Missing: citizens_home (the
-                engine's finders keep citizens on safe sites), train_budget's priority rows (priority.c).
+                substitute_soldier (the strongest affordable soldier), hoard caps, train_budget's priority rows
+                (priority.lua), farm_plan (THE SILOS' ROW). Missing: citizens_home (the engine's finders keep
+                citizens on safe sites).
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 centre: the front and the citizens' side), the builders, tower_bait (the citizens hit lead the
                 raiders under the towers, epochs 1-2). Missing: early_militia (the engine's reflexes, ai.reflex,
@@ -253,8 +254,22 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 Deviations: the shooters' spots from the attacked events (airstrike.c's list and intel.c's revealed
                 shooters are not ported), the ratio is hit points x attack (st_ratio's damage tables are stats.c),
                 the field guns by the class name.
-  metal.c       NOT STARTED (best_per_metal: the soldier that does most per gold + iron against the enemy's army;
-                surplus_cheap; workers_to_metals; fleet_by_enemy).
+  metal.c       PARTLY -> metal.lua (army.lua's training, econ.lua's worker plan, navy.lua's target and account:
+                marked blocks; settings metal_plan 0 as upstream, metal_cap 250, metal_fleet_pct 250,
+                metal_fleet_min 20). Ported: mt_plan (every bit from a population cap of metal_cap), VALUE /
+                best_per_metal (mt_values every 30 s: the trainable land soldiers' value against the enemy mix known
+                within 10 min (the mirror under 3), the ranged-behind-the-line 0.6, the share 1 / (1 + share),
+                mt_price gold + iron + food, wood / 4 + stone / 2; mt_choose: the port's strongest affordable is the
+                asked, the one 25% better per metal replaces it), SPARE / surplus_cheap (1500+ beyond the reserve x0.05,
+                under twice the price x1), FLEET / fleet_by_enemy (mt_fleet_target: the enemy warships and submarines
+                known x metal_fleet_pct + 6, at least metal_fleet_min x the strength), CALM / calm_navy_cap (mt_navy:
+                towns.lua's sea_held for 3 min: the account at 100 gold and 100 iron), army.c MIX / workers_to_metals
+                (settings, off: 12 samples of food above the reserve at army_mix_food, up to 8 of the food target to
+                the most refused of wood, gold, iron with room), the 5-minute "metal" line. Not applicable: NOWAIT /
+                no_waiting (the port never saves for a refused soldier), the "# metal:" payment and loss accounting
+                (autotest), mt_death. Deviations: a shot = the attack (no damage tables, stats.lua), the enemy's stats
+                are the reader's own class data, the lines by the producer and class-name patterns (no family
+                field), the refusals counted once per 10-s training look (threshold 5 for upstream's 10).
   mass.c        PORTED -> mass.lua (army_mass bits, 0 upstream; only with an enemy town known on the own continent),
                 army.lua's reinforcement path and push, lib/groups.lua's scorer (marked blocks). GATHER (1): the
                 reinforcements for the force out (the trained, a member at home within 25 while the pack is 30+ out)
@@ -269,12 +284,42 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 "# mass2" measurement lines (autotest); the refused orders (the held are the wait group's, which the
                 force's orders never reach). Without the plan the port's own flow stands: the trained wait at home
                 until the force is back (upstream's trickle, the commander's hand-off, is the game's).
-  fronts.c      NOT STARTED (the border cells: where its land meets land the enemy can walk over; the front armies).
+  fronts.c      PORTED -> fronts.lua (main.lua's step every 10 s; army.lua's station takes station 1 when out of
+                danger, as armies.c ar_home; settings front_army 0 as upstream, fronts_log). Ported: fronts_look (the
+                map in 8-tile cells, land once a game, the territory 3 cells round its buildings along land, the
+                enemy's round the buildings known, the border beside the enemy's territory or land on an enemy
+                building's land mass, the fronts joined within 2 cells and split in sections of 12 by farthest-first
+                seeds and two passes, threat (a soldier 2, a building 1) within 48 and value (own buildings) within
+                48, weight width x (1 + threat) x (1 + value) / 4, the shares), fa_stations (the heaviest front and a
+                second at half its weight, the tower nearest within 48 else the building, 4 tiles back toward the
+                base, merged within 20), front_army (off: the idle soldiers in groups of 5 to the station furthest
+                under its share, none within 6 of a lost fight, a unit once a minute). Consumers: army.lua (the
+                force's home), bunker.c's town guards' fortress at each front is not ported. Deviations: the walking
+                regions are the land masses (ai.tile's continent); a cell's land from 16 of its 64 tiles, explored
+                ones only (fog), 96 cells a look; front_army's second station fights lib.groups' one force (the
+                defend task walks them back) - off as upstream. Not ported: the overlay, the autotest log counts.
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
   packing.c     NOT STARTED (tight_build: production buildings placed touching their kind without cutting a way;
                 upstream default 0).
-  priority.c    NOT STARTED (the priority list: one row for each thing the AI saves for, every spender asks it).
+  priority.c    PORTED -> priority.lua (the rows in upstream's order and conditions: epoch, farms, wants, landing,
+                outpost, fortress, forest, upgrades, navy, special with their skip / only / apart; prio_hold ->
+                M.hold / M.visible, prio_refuses -> M.refuses with the "priority refused" line once a minute at
+                most). Wired where the port spends (marked [priority.c] blocks): econ.lua's budget (M.reserve is the
+                epoch row; budget.avail = the account within a military unit's hold, civil = a citizen's, order = a
+                priority order's, ship = a warship's (the stock but the rows apart), build / build_econ = a
+                building's; the engine's reserve verb = the epoch's + the towns' - the navy's as before), econ.lua's
+                towers, production and SOL buildings and farm_plan (THE SILOS' ROW, farm_first: the first two
+                Granaries and their fields, 525 wood, one at a time, 6 minutes without progress), econ.lua's
+                settlements (the forest row), army.lua's training (budget.avail), tactics.lua's siege (budget.order;
+                the special row from what it cannot pay, SP_KEEP 2 min) and bunkers (the fortress row, M.refuses),
+                navy.lua's warships (budget.ship), the landing's transports (the landing row; its own order sees
+                past it: S_LANDING_ORDER) and air.lua's bombers (budget.order), towns.lua (towns_reserve and
+                expand_hold apart for the outpost row; can_pay asks M.refuses; settings spend_tiers 0). Not
+                applicable: the personality's list (prio_wants_tick, the wants row: no personas), S_REQ (the SOL is
+                buildings), S_TR_ECON (transports_economy off), S_PLAN (army.c FLOAT not ported), the upgrades row's
+                hold (the engine's line upgrades come with the epoch). Deviation: the engine checks every verb
+                against the reserve verb, so a building waits for the epoch and the towns where upstream's spent them.
   forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat),
                 attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +
                 3 x the threat at it - the force's next target once its building is down). Missing: the

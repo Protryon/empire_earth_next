@@ -314,7 +314,8 @@ local function train(view, memory, s, order, budget, have, now)
             -- the siege controller's priority order (g_priority_mil): the stock above the epoch reserve
             for _, r in ipairs(V.resources) do
                 if c.cost[r] > 0 then
-                    n = math.min(n, (budget.civil and budget.civil[r] or 0) // c.cost[r])
+                    -- [priority.c] a priority order's stock: what the list leaves it (budget.order)
+                    n = math.min(n, ((budget.order or budget.civil) and (budget.order or budget.civil)[r] or 0) // c.cost[r])
                 end
             end
             if n > 0 then
