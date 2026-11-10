@@ -126,7 +126,9 @@ static EeDx7TextInfo DX7TextInfoOf(GEText* inText)
     EeDx7TextInfo theInfo;
     theInfo.font = theFont->GetOSFont();
     theInfo.text = inText->GetText();
-    theInfo.length = inText->GetText().GetLength();
+    // the text's bytes, as PlatFontMeasure/PlatFontDraw take it (GetLength counts characters: under UTF-8, decision
+    // D6, a multi-byte character made it short, and the text lost its last characters)
+    theInfo.length = inText->GetText().GetTCHARLength();
     theInfo.x = inText->GetLocation().GetX();
     theInfo.y = inText->GetLocation().GetY();
     theInfo.alignment = inText->GetAlignment();
