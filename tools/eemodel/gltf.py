@@ -28,7 +28,7 @@ from array import array
 import cem
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent / 'eedata'))   # after tools/eemodel: both have a cppgate.py
-from scalars import decode_str, encode_str   # noqa: E402
+from scalars import decode_cp1252, encode_str   # noqa: E402
 
 EXT = 'EE_model'
 FPS = 10.0                  # frame i is keyframe time i / FPS
@@ -196,8 +196,8 @@ def export(root, frames_per_second=FPS, display_texture=None):
         return times_acc[n]
 
     def material(mat):
-        name = decode_str(cem.cstr(mat.name))
-        tex = decode_str(cem.cstr(mat.texture))
+        name = decode_cp1252(cem.cstr(mat.name))
+        tex = decode_cp1252(cem.cstr(mat.texture))
         key = (name, tex, mat.texture_index)
         if key in mat_keys:
             return mat_keys[key]
@@ -217,7 +217,7 @@ def export(root, frames_per_second=FPS, display_texture=None):
 
     def add_model(m, parent):
         ni = len(doc['nodes'])
-        node = {'name': decode_str(cem.cstr(m.name))}
+        node = {'name': decode_cp1252(cem.cstr(m.name))}
         doc['nodes'].append(node)
         doc['nodes'][parent].setdefault('children', []).append(ni)
         vc, fc = m.vertex_count, len(m.frames)
@@ -338,7 +338,7 @@ def export(root, frames_per_second=FPS, display_texture=None):
         for ti, tn in enumerate(m.tag_names):
             tni = len(doc['nodes'])
             pos = [list(f.tags[3 * ti:3 * ti + 3]) for f in m.frames]
-            doc['nodes'].append({'name': decode_str(cem.cstr(tn)), 'translation': pos[0]})
+            doc['nodes'].append({'name': decode_cp1252(cem.cstr(tn)), 'translation': pos[0]})
             node.setdefault('children', []).append(tni)
             if any(p != pos[0] for p in pos):
                 out = array('f', [x for p in pos for x in p])
@@ -496,12 +496,12 @@ def _is_pair_list(r, n):
 
 
 def _name(s):
-    """A glTF name -> the game's bytes: Blender's duplicate suffix (.NNN) dropped, CP-1252 (eedata's mapping)."""
+    """A glTF name -> the game's bytes: Blender's duplicate suffix (.NNN) dropped, UTF-8 (eedata's mapping)."""
     s = _SUFFIX.sub('', s if isinstance(s, str) else '')
     try:
         return encode_str(s)
     except ValueError as e:
-        raise GltfError(f'name "{s}" has characters outside CP-1252') from e
+        raise GltfError(f'name "{s}" is not text') from e
 
 
 def _f32list(v, n):

@@ -4,8 +4,9 @@ r"""Text forms of the scalar values, shared by the CSV and YAML sides (and mirro
 * floats (f32): the shortest decimal that parses back (correctly rounded, as std::from_chars) to the same 32 bits;
   .inf / -.inf / .nan (0x7fc00000); any other NaN as 0x<8 hex digits> (the bit pattern).
 * bool: the raw byte (0, 1, or e.g. 204 for the 0xCC fill); input also takes true/false.
-* strings: CP-1252 bytes as Unicode text; the five bytes CP-1252 leaves undefined (0x81 0x8d 0x8f 0x90 0x9d) map to
-  the C1 code points of the same value, so every byte string has a text form.
+* strings: UTF-8 bytes as Unicode text (docs/RUST_PLAN.md decision D6: the game's text is UTF-8). The retail files'
+  strings are Windows-1252 and are converted once where they enter (binfmt.transcode_retail: the five bytes CP-1252
+  leaves undefined map to the C1 code points of the same value, so every retail byte string converts).
 * raw bytes (raw, pad, string tails): lower-case hex, empty = all zero (trailing zero bytes may be left out).
 """
 import decimal
@@ -153,18 +154,32 @@ for _b in range(256):
         _DEC.append(bytes([_b]).decode('cp1252'))
     except UnicodeDecodeError:
         _DEC.append(chr(_b))
-_ENC = {c: i for i, c in enumerate(_DEC)}
 
 
-def decode_str(b):
+def decode_cp1252(b):
+    """Windows-1252 bytes (a retail file's string) -> text."""
     return ''.join(_DEC[x] for x in b)
 
 
-def encode_str(s):
+def transcode_cp1252(b):
+    """Windows-1252 bytes -> the game's bytes (UTF-8)."""
+    return decode_cp1252(b).encode('utf-8')
+
+
+def decode_str(b):
+    """The game's bytes (UTF-8) -> text."""
     try:
-        return bytes(_ENC[c] for c in s)
-    except KeyError as e:
-        raise ValueError_(f'{s!r}: character {e.args[0]!r} has no CP-1252 byte') from None
+        return b.decode('utf-8')
+    except UnicodeDecodeError as e:
+        raise ValueError_(f'{b!r}: not UTF-8 text ({e.reason} at byte {e.start})') from None
+
+
+def encode_str(s):
+    """Text -> the game's bytes (UTF-8); a lone surrogate (a Python escape of a stray byte) has no form."""
+    try:
+        return s.encode('utf-8')
+    except UnicodeEncodeError as e:
+        raise ValueError_(f'{s!r}: character {s[e.start]!r} is not a character') from None
 
 
 # ---- bytes ----

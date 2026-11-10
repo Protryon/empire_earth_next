@@ -124,6 +124,43 @@ def _all_row_lists(t):
     return [e.nodes for e in t.epochs] if t.epochs is not None else [t.rows]
 
 
+def transcode_retail(name, data, spec):
+    """A retail db file's bytes with every string (the records' str fields, the lead strings) converted from
+    Windows-1252 to UTF-8 (decision D6: the game's text is UTF-8; retail is the old input). The retail tables are
+    ASCII, so this is the identity on them; a string that would not fit its field after the conversion is an error.
+    Hole rows (the converter's 0xCC fill) are left as they are: no string of theirs is text."""
+    t = parse(name, data, spec)
+    tspec = spec['tables'][name]
+    st = spec['structs'][tspec['struct']]
+    strs = [f for f in st['fields'] if f['type'] == 'str']
+    tmpl = retail_template(t)
+    rows = [t.epochs[i].epoch for i in range(len(t.epochs))] + [r for rows in _all_row_lists(t) for r in rows] \
+        if t.epochs is not None else list(t.rows)
+    for r in rows:
+        if r.rec == tmpl:
+            continue
+        r.lead = [transcode_cp1252_lead(s) for s in r.lead]
+        buf = None
+        for f in strs:
+            text, tail = field_value(f, r.rec)
+            if text.isascii():
+                continue
+            if buf is None:
+                buf = bytearray(r.rec)
+            new = scalars.transcode_cp1252(text)
+            if len(new) >= f['count']:
+                raise FormatError(f'{name}: {f["name"]}: {text!r} is {len(new)} bytes as UTF-8, char[{f["count"]}]')
+            # the bytes after the terminator (what the retail converter left there) make room for the longer text
+            put_field(f, buf, (new, tail[:f['count'] - len(new) - 1]))
+        if buf is not None:
+            r.rec = bytes(buf)
+    return serialize(t, spec)
+
+
+def transcode_cp1252_lead(s):
+    return s if s.isascii() else scalars.transcode_cp1252(s)
+
+
 def exported(fields):
     return [f for f in fields if f['cls'] in ('named', 'label')]
 

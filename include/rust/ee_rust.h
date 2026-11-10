@@ -2751,13 +2751,13 @@ bool ee_data_dump_table(const char *table_name,
                         EeDataBytes *out,
                         EeDataBytes *err);
 
-/// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8).
+/// The game's text (UTF-8) -> a double-quoted YAML scalar.
 ///
 /// # Safety
 /// `bytes` readable for `len` bytes, `out` writable.
 void ee_data_quote_text(const uint8_t *bytes, size_t len, EeDataBytes *out);
 
-/// Reads a keyed `.civ` text: its name as CP-1252 bytes (`name`), its upgrades through `visit` (the list's items in
+/// Reads a keyed `.civ` text: its name as UTF-8 bytes (`name`), its upgrades through `visit` (the list's items in
 /// order; only when the document is a mapping). The error (with `where_`) is in `err`: false on a parse problem or
 /// when the document is not a mapping ("<where>: not a civilization").
 ///

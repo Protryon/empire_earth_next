@@ -1135,7 +1135,6 @@ pub fn text_extension(name: &[u8]) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generated::specs_gen::CODE_PAGE;
     use std::collections::HashMap as Map;
 
     fn content_of(files: &[(&str, &str)]) -> Content {
@@ -1269,7 +1268,6 @@ mod tests {
         assert_eq!(text_extension(b"dbWorld"), Some(".csv"));
         assert_eq!(text_extension(b"combat"), Some(".yaml"));
         assert_eq!(text_extension(b"nope"), None);
-        assert_eq!(CODE_PAGE[0x80], 0x20ac);
     }
 
     #[test]

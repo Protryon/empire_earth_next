@@ -2122,7 +2122,7 @@ and the owner's decision for clean text only (2026-11-04), is section 8.
    positions. Because the game indexes by row position, keep the numeric index authoritative and the name as a
    comment or a checked alias. Rows that share a name (e.g. "Grass Tufts" twice in dbrandommap, many "x ..." units)
    make names unusable as keys.
-7. **Encoding:** the strings are ASCII/CP-1252. Use UTF-8 in YAML/CSV and convert back to CP-1252. Fail on
+7. **Encoding:** the retail strings are ASCII/CP-1252, converted once when the retail files are read; the game's strings are UTF-8 (RUST_PLAN D6), in YAML/CSV and in the records. Fail on
    characters that cannot be encoded, and on names longer than 99 bytes (or the field size minus 1).
 8. **Write-back target:** loose `Data\db\*.dat` (directories win over the archive). Optionally repack `data.ssa`:
    the loaders accept stored entries, so no implode is needed.
@@ -2233,7 +2233,7 @@ YAML files have `eedata`, `format`, `rows` at the top and `records:` (dbtechtree
 nodes: [...]`). Arrays are YAML flow sequences (trailing zeros left out) or CSV columns `name[i]` (pairs
 `name[i][j]`). A missing key or an empty cell is zero. Values: integers in decimal (0x... accepted as the bit
 pattern); floats as the shortest decimal that rounds back to the same bits, `.inf`/`-.inf`/`.nan`, other NaNs as
-`0x<8 hex>`; bools 0/1 (true/false accepted); strings as CP-1252 text (the five undefined bytes as the C1 code points
+`0x<8 hex>`; bools 0/1 (true/false accepted); strings as UTF-8 text (retail's CP-1252 converted once, its five undefined bytes as the C1 code points
 of the same value). YAML subset: block mappings and sequences, one-line flow sequences, plain/single/double-quoted
 scalars, comments; no anchors, aliases, tags, block scalars, flow mappings or multi-line scalars; duplicate keys and
 tabs in indentation are errors (`tools/eedata/textio.py`).
