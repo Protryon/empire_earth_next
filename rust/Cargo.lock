@@ -330,6 +330,7 @@ dependencies = [
  "ee_sound",
  "ee_tech",
  "ee_ui",
+ "ee_units",
  "ee_won",
 ]
 
@@ -353,6 +354,10 @@ version = "0.1.0"
 dependencies = [
  "ee_plat_core",
 ]
+
+[[package]]
+name = "ee_units"
+version = "0.1.0"
 
 [[package]]
 name = "ee_won"

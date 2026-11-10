@@ -59,6 +59,9 @@ use ee_plat_ui as _;
 // blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
 use ee_won as _;
 
+// the unit registry behind EEUnitHandle<T> (ee_units/src/ffi.rs), called by RTSUnit.cpp
+use ee_units as _;
+
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
 
