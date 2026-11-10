@@ -56,6 +56,9 @@ public:
     uint32_t mIncrement;                    // +0x0c
 };
 static_assert(sizeof(URandom) == 16, "URandom: four 32-bit words");
+// port, TEST ONLY: a hook called after every out-of-line Generate() (NULL in the game; EE-SIM's --rng-trace sets it to
+// write the physics stream's draws with their callers, the save/load fidelity hunt). It reads only.
+extern void (*gURandomTraceHook)(URandom* inRandom);
 
 class LLE_API URandomIntegers : public URandom {   // proven base: LLE Generate(long,long) 0xde5f calls
 public:                                             // URandom::Generate on the same this

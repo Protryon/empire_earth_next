@@ -89,6 +89,15 @@ public:
     bool mB180[7];                          // +0x180 per resource (Reset clears it)
     bool mInitialized;                      // +0x187 (Restore clears it)
     bool mSettlementsEnabled;               // +0x188
+    // port (save 0.256): the timers were loaded as the saved game had them; Update's re-initialisation (Restore clears
+    // mInitialized so the drop site classes and the resource lists are rebuilt) keeps them instead of resetting them
+    bool mLoadedTimers = false;
+    // port (save 0.256): the forest, animal and fish lists as saved (a forest by its first tile: the continent manager
+    // is rebuilt at load with its own ids); Update's re-initialisation takes them instead of RefreshResources' new ones
+    bool mLoadedLists = false;
+    std::vector<U2DPoint<long> > mLoadedForestTiles;
+    std::vector<unsigned long> mLoadedMines;
+    std::vector<unsigned long> mLoadedFish;
     // new (the experiment "flee"): where an enemy player's unit hit one of the citizens, and the game ms it did (not
     // saved: a loaded game starts with none)
     std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;

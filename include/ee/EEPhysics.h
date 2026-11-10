@@ -198,5 +198,10 @@ public:
 
 extern EEPhysics* gPhysics;                 // 0x5318f0 (provisional name)
 extern UString gPhysicsThreadName;          // 0x52a270 (RTSPhysics's thread name)
+// port, TEST ONLY: the unit EEPhysics::UpdateUnits is stepping (NULL outside the loop); EE-SIM's --rng-trace names it
+extern EEComplexUnit* gPhysicsSteppingUnit;
+// port, TEST ONLY: called by the headless simulation's loop (RTSPhysics::Main) after every physics tick, under the
+// world's write lock (NULL in the game); EE-SIM's --dump-tick
+extern void (*gPhysicsAfterTickHook)(void);
 
 #endif

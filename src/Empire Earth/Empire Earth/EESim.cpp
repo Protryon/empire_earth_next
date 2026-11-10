@@ -152,6 +152,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEAreaEffect.h"
 #include "ee/EEFormation.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -160,6 +161,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEPathManager.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EETechCapture.h"
@@ -298,6 +300,7 @@ Options sOptions;
 FILE* sTraceFile = NULL;
 FILE* sLogFile = NULL;
 FILE* sChecksumFile = NULL;
+FILE* sRngFile = NULL;                                   // --rng-trace (RngTraceHook, below)
 std::mutex sOutLock;
 std::chrono::steady_clock::time_point sStartWall;
 std::chrono::steady_clock::time_point sGameWall;
@@ -351,6 +354,8 @@ void DebugHandler(const char* inText)
             fflush(sLogFile);
         if (sChecksumFile)
             fflush(sChecksumFile);
+        if (sRngFile)
+            fflush(sRngFile);
     }
     EESimCaptureRecord::Flush();
 #ifdef _WIN32
@@ -544,6 +549,16 @@ void DumpState(const std::string& inPath)
     ChecksumFields(f);
     fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
             (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
+    {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
+        const std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+        const char* theNames[3] = {"UPDATE", "ACTIVATE", "DEACTIVATE"};
+        for (int l = 0; l < 3; l++) {
+            fprintf(f, "%s %zu:", theNames[l], theLists[l]->size());
+            for (size_t i = 0; i < theLists[l]->size(); i++)
+                fprintf(f, " %lu", (*theLists[l])[i]->mUnitID);
+            fprintf(f, "\n");
+        }
+    }
     for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
         EEPlayer* p = gWorld.GetPlayer(i);
         if (!p)
@@ -554,6 +569,8 @@ void DumpState(const std::string& inPath)
             fprintf(f, "%s%a", r ? "," : "", (double)p->mResourceCaps[kResourceFood + r]);
         fprintf(f, "\n");
     }
+    EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
+    gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
     for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
         EEUnit* u = static_cast<EEUnit*>(r);
         EEComplexUnit* c = dynamic_cast<EEComplexUnit*>(u);
@@ -562,17 +579,34 @@ void DumpState(const std::string& inPath)
                 (long)u->mTileY);
         if (c != NULL && c->mComplexUnit != NULL) {
             EEComplexUnit* x = c->mComplexUnit;
-            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx", (unsigned long)x->mTimesUpdated,
+            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx wp=%zu pathdone=%d arrived=%d vel=%a blocked=%lu",
+                    (unsigned long)x->mTimesUpdated,
                     x->mCommand ? (long)x->mCommand->mType : -1L, x->mActiveGroup != NULL,
                     (double)x->mPhysicalModel.GetLocation().GetX(), (double)x->mPhysicalModel.GetLocation().GetY(),
                     (double)x->mPhysicalModel.GetLocation().GetZ(), (double)x->mHeight,
-                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2));
+                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2),
+                    x->mWaypoints.size(), x->mIsPathDone ? 1 : 0, x->mHasArrived ? 1 : 0, (double)x->GetVelocity(),
+                    x->mBlockingUnit != NULL ? x->mBlockingUnit->mUnitID : 0UL);
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
                 std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
                     fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
+            // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects
+            fprintf(f, "\n  refs contacts=");
+            for (UListNode<EEComplexUnit*>* n = x->mContacts.mHead; n != NULL; n = n->mNext)
+                fprintf(f, "%lu,", n->mData != NULL ? (unsigned long)n->mData->GetUnitID() : 0UL);
+            fprintf(f, " attacker=%lu owner=%lu holder=%lu ae=%zu/%zu", x->mLastAttacker != NULL ? (unsigned long)x->mLastAttacker->GetUnitID() : 0UL,
+                    x->mOwner != NULL ? (unsigned long)x->mOwner->GetUnitID() : 0UL,
+                    x->mHolder != NULL ? (unsigned long)x->mHolder->GetUnitID() : 0UL,
+                    x->mAreaEffects.mItems.size(), x->mAffectingAreaEffects.mItems.size());
+            for (size_t a = 0; a < x->mAffectingAreaEffects.mItems.size(); a++) {
+                EEAreaEffect* e = x->mAffectingAreaEffects.mItems[a];
+                fprintf(f, " %lu", e->mUnit != NULL ? (unsigned long)e->mUnit->GetUnitID() : 0UL);
+            }
+            for (size_t a = 0; a < x->mAreaEffects.mItems.size(); a++)
+                fprintf(f, " own@%a,%a", (double)x->mAreaEffects.mItems[a]->mLocation.mX, (double)x->mAreaEffects.mItems[a]->mLocation.mY);
             fprintf(f, "\n  raw ");   // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
             for (size_t b = 0; b < sizeof(EEComplexUnit); b++)
                 fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);
@@ -597,6 +631,58 @@ void DumpState(const std::string& inPath)
 std::vector<std::pair<long, std::string>> sDumps;   // --dump-at MS=FILE, in game-ms order
 size_t sNextDump = 0;
 std::string sDumpLoad;                               // --dump-load FILE
+
+// --dump-tick MS=FILE (TEST ONLY): the state dump after the first physics tick at or after game ms MS, in a continued
+// game and in a loaded one alike (gPhysicsAfterTickHook, ee/EEPhysics.h: after every physics tick of the headless
+// loop, where --dump-at writes after a communications tick's last)
+std::vector<std::pair<long, std::string>> sTickDumps;   // in game-ms order
+size_t sNextTickDump = 0;
+
+void TickDumpHook()
+{
+    while (sNextTickDump < sTickDumps.size() && gPhysics->mGameTime >= sTickDumps[sNextTickDump].first)
+        DumpState(sTickDumps[sNextTickDump++].second);
+}
+
+// --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
+// MS (gURandomTraceHook, lle/URandom.h), one line each: the draw's number, the new seed, the game ms and the callers
+// as exe-relative addresses (tools/sim.py resolve adds the map's preferred base). The same MS in a continued game and
+// in the game loaded from its save at MS gives two traces whose first differing caller names the state that differs.
+// At most kRngTraceMax draws; the hook reads only.
+std::string sRngTraceFile;
+long sRngTraceMs = -1;
+unsigned long sRngLines = 0;
+const unsigned long kRngTraceMax = 50000;
+
+void RngTraceHook(URandom* inRandom)
+{
+    if (gPhysics == NULL || inRandom != &gPhysics->mRandom || gPhysics->mGameTime <= sRngTraceMs)
+        return;
+    if (sRngFile == NULL) {
+        sRngFile = fopen(sRngTraceFile.c_str(), "w");
+        if (sRngFile == NULL) {
+            gURandomTraceHook = NULL;
+            return;
+        }
+    }
+    if (++sRngLines > kRngTraceMax) {
+        fclose(sRngFile);
+        sRngFile = NULL;
+        gURandomTraceHook = NULL;
+        return;
+    }
+    void* theFrames[16];
+    unsigned short theCount = RtlCaptureStackBackTrace(1, 16, theFrames, NULL);
+    uintptr_t theBase = (uintptr_t)GetModuleHandleA(NULL);
+    fprintf(sRngFile, "%lu %08lx %ld u=%lu", sRngLines, (unsigned long)inRandom->GetSeed(), gPhysics->mGameTime,
+            gPhysicsSteppingUnit != NULL ? gPhysicsSteppingUnit->mUnitID : 0UL);   // the unit being stepped (0 outside UpdateUnits)
+    for (unsigned short i = 0; i < theCount; i++) {
+        uintptr_t theFrame = (uintptr_t)theFrames[i];
+        if (theFrame >= theBase)
+            fprintf(sRngFile, " %llx", (unsigned long long)(theFrame - theBase));
+    }
+    fprintf(sRngFile, "\n");
+}
 
 // the physics thread, after each communications tick, under the world's write lock
 // --save-at: the saves' names in data\Saved Games (the game's folder; copied out at the end of the run)
@@ -1354,6 +1440,10 @@ const char* kUsage =
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
+    "  --dump-tick MS=FILE    the same after the first physics tick at or after game ms MS (repeatable; --dump-at\n"
+    "                         writes after a communications tick's last physics tick)\n"
+    "  --rng-trace MS=FILE    every draw of the physics random stream after game ms MS with its callers (exe-relative\n"
+    "                         addresses, tools/sim.py resolve), at most 50,000 draws\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
@@ -1573,7 +1663,27 @@ int EESimMain(int argc, char** argv)
             sDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
         } else if (a == "--dump-load")
             sDumpLoad = Absolute(value());
-        else {
+        else if (a == "--dump-tick") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --dump-tick MS=FILE\n");
+                return 64;
+            }
+            sTickDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
+            gPhysicsAfterTickHook = TickDumpHook;
+        }
+        else if (a == "--rng-trace") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --rng-trace MS=FILE\n");
+                return 64;
+            }
+            sRngTraceMs = atol(v.substr(0, eq).c_str());
+            sRngTraceFile = Absolute(v.substr(eq + 1));
+            gURandomTraceHook = RngTraceHook;
+        } else {
             fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
             return 64;
         }

@@ -52,6 +52,7 @@
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
@@ -1542,6 +1543,36 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
         theResult = inFile.Read(this->mNextAssignGatherersTime);
     if (theResult == 0)
         theResult = inFile.Read(this->mNextResourceCheckTime);
+    // port (0.256): the fishing boat timer too (the original did not save it), and the timers stay as loaded (Update)
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
+        theResult = inFile.Read(this->mNextFishingBoatTime);
+        this->mLoadedTimers = theResult == 0;
+        // the forest, animal and fish lists (Update)
+        unsigned long theCount = 0;
+        this->mLoadedForestTiles.clear();
+        this->mLoadedMines.clear();
+        this->mLoadedFish.clear();
+        if (theResult == 0)
+            theResult = inFile.Read(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+            U2DPoint<long> theTile;
+            theResult = inFile.Read(theTile.mX);
+            if (theResult == 0)
+                theResult = inFile.Read(theTile.mY);
+            this->mLoadedForestTiles.push_back(theTile);
+        }
+        std::vector<unsigned long>* theLists[2] = {&this->mLoadedMines, &this->mLoadedFish};
+        for (int l = 0; l < 2 && theResult == 0; l++) {
+            theCount = 0;
+            theResult = inFile.Read(theCount);
+            for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+                unsigned long theID = 0;
+                theResult = inFile.Read(theID);
+                theLists[l]->push_back(theID);
+            }
+        }
+        this->mLoadedLists = theResult == 0;
+    }
     return theResult;
 }
 
@@ -1658,6 +1689,8 @@ long EECPResourceManager::Restore(unsigned long inMajorVersion, unsigned long in
     this->mNextWantedGatherersTime += theTime;
     this->mNextAssignGatherersTime += theTime;
     this->mNextResourceCheckTime += theTime;
+    if (this->mLoadedTimers)   // port (0.256)
+        this->mNextFishingBoatTime += theTime;
     return 0;
 }
 
@@ -1709,6 +1742,33 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
                     theResult = outFile.Write(theValue);
                 }
             }
+        }
+    }
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256): the fishing boat timer
+        unsigned long theValue = this->mNextFishingBoatTime - theTime;
+        theResult = outFile.Write(theValue);
+        // the forest, animal and fish lists: a forest by its first tile, the units by id
+        if (theResult == 0)
+            theResult = outFile.Write((unsigned long)this->mForests.size());
+        for (size_t i = 0; i < this->mForests.size() && theResult == 0; i++) {
+            U2DPoint<long> theTile(-10000, -10000);
+            unsigned short theID = this->mForests[i];
+            EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
+            if (theForest != NULL) {
+                std::vector<U2DPoint<long> > theTiles;
+                theForest->mTiles.BuildPointList(theTiles, 1);
+                if (!theTiles.empty())
+                    theTile = theTiles[0];
+            }
+            theResult = outFile.Write(theTile.mX);
+            if (theResult == 0)
+                theResult = outFile.Write(theTile.mY);
+        }
+        std::vector<EEUnitHandle<EEComplexUnit> >* theLists[2] = {&this->mMines, &this->mFish};
+        for (int l = 0; l < 2 && theResult == 0; l++) {
+            theResult = outFile.Write((unsigned long)theLists[l]->size());
+            for (size_t i = 0; i < theLists[l]->size() && theResult == 0; i++)
+                theResult = outFile.Write((unsigned long)(*theLists[l])[i]->mUnitID);
         }
     }
     return theResult;
@@ -3047,12 +3107,42 @@ void EECPResourceManager::Update(unsigned long inTime)
             if (theClass != NULL && (theClass->IsDropSite() || theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard))
                 this->mDropSiteClasses[theClass->mResourceType].push_back(i);
         }
-        this->RefreshResources();
-        this->mNextFishingBoatTime = inTime + 30000;
-        this->mTime170 = inTime + 20000;
-        this->mNextWantedGatherersTime = inTime + 5000;
-        this->mNextAssignGatherersTime = inTime + 10000;
-        this->mNextResourceCheckTime = inTime + 15000;
+        // port (0.256): a loaded manager takes its saved lists (RefreshResources made new ones: all the forests and
+        // nature's animals and fish of the load, sorted by distance, where the saved game kept its own)
+        if (this->mLoadedLists) {
+            this->mForests.clear();
+            for (size_t f = 0; f < this->mLoadedForestTiles.size(); f++) {
+                EEAIForest* theForest = this->mLoadedForestTiles[f].mX == -10000 ? NULL : gContinentManager.GetForestAt(this->mLoadedForestTiles[f]);
+                if (theForest != NULL)
+                    this->mForests.push_back(theForest->mID);
+            }
+            std::vector<EEUnitHandle<EEComplexUnit> >* theLists[2] = {&this->mMines, &this->mFish};
+            std::vector<unsigned long>* theIDs[2] = {&this->mLoadedMines, &this->mLoadedFish};
+            for (int l = 0; l < 2; l++) {
+                for (size_t k = 0; k < theLists[l]->size(); k++)
+                    (*theLists[l])[k]->Dereference();
+                theLists[l]->clear();
+                for (size_t k = 0; k < theIDs[l]->size(); k++) {
+                    EEUnit* theUnit = gWorld.GetUnit((*theIDs[l])[k]);
+                    if (theUnit == NULL || (l == 0 && theUnit->GetComplexUnit() == NULL))
+                        continue;
+                    theUnit->Reference();   // as RefreshResources: a fish is listed as itself
+                    theLists[l]->push_back(l == 0 ? theUnit->GetComplexUnit() : static_cast<EEComplexUnit*>(theUnit));
+                }
+            }
+            this->mLoadedLists = false;
+        } else
+            this->RefreshResources();
+        // port (0.256): a loaded manager keeps its saved timers (Load, Restore); the original's load rescheduled
+        // everything from the first update (gatherers assigned 10 s after the load, not when the saved game would)
+        if (!this->mLoadedTimers) {
+            this->mNextFishingBoatTime = inTime + 30000;
+            this->mTime170 = inTime + 20000;
+            this->mNextWantedGatherersTime = inTime + 5000;
+            this->mNextAssignGatherersTime = inTime + 10000;
+            this->mNextResourceCheckTime = inTime + 15000;
+        }
+        this->mLoadedTimers = false;
         this->mInitialized = true;
     }
     if (!thePlayer->mCanGather)

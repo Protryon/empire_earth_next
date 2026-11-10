@@ -55,6 +55,18 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIForest.h"
+#include "ee/EEArtificialIntelligence.h"
+#include "ee/EEPathManager.h"
+#include "ee/EEAEManager.h"
+#include "lle/GE2DPoint.h"
+#include "lle/GE3DPoint.h"
+#include "lle/GEVector.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GE3DLine.h"
+#include "lle/GETransformation.h"
+#include "lle/GEPhysicalModel.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEMap.h"
 #include <algorithm>
 #include <vector>
 
@@ -182,20 +194,43 @@ static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const st
         }
     } else
         ESDebugOut("EEPWorldHelper: the loaded units are not the saved ones: their order is the load's\n");
-    // the stepped units and the queues: the same units, in the saved order
+    // the stepped units and the queues: the saved units in the saved order. The load's RebuildActiveUnits steps
+    // every placed unit, where the saved game had some still queued for activation (a unit made in the save's
+    // last tick is stepped from the next tick on) or deactivated since, so the sets differ as well as the order;
+    // the lists are made the saved ones, with the references UpdateActiveUnits keeps (two per stepped unit, in
+    // mActiveUnits too; one per queued unit). A saved unit the load does not have is left out.
     std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
     for (int l = 0; l < 3; l++) {
         std::deque<EEUnitHandle<EEComplexUnit> > theOrder;
-        bool theFound = inLists[l].size() == theLists[l]->size();
-        for (size_t i = 0; i < inLists[l].size() && theFound; i++) {
+        for (size_t i = 0; i < inLists[l].size(); i++) {
             EEComplexUnit* theUnit = LoadedComplexUnit(inLists[l][i]);
-            theFound = theUnit != NULL && std::find(theLists[l]->begin(), theLists[l]->end(), theUnit) != theLists[l]->end();
-            theOrder.push_back(theUnit);
+            if (theUnit != NULL && std::find(theOrder.begin(), theOrder.end(), theUnit) == theOrder.end())
+                theOrder.push_back(theUnit);
+            else if (theUnit == NULL)
+                ESDebugOut("EEPWorldHelper: saved stepped unit %lu is not in the loaded game\n", inLists[l][i]);
         }
-        if (theFound)
-            *theLists[l] = theOrder;
-        else if (l == 0)
-            ESDebugOut("EEPWorldHelper: the loaded stepped units are not the saved ones: their order is the load's\n");
+        std::deque<EEUnitHandle<EEComplexUnit> >& theList = *theLists[l];
+        for (size_t i = 0; i < theList.size(); i++) {   // the load's units the saved game did not have
+            EEComplexUnit* theUnit = theList[i];
+            if (std::find(theOrder.begin(), theOrder.end(), theUnit) != theOrder.end())
+                continue;
+            theUnit->Dereference();
+            if (l == 0) {
+                theUnit->Dereference();
+                gWorld.mActiveUnits.erase(theUnit->mUnitID);
+            }
+        }
+        for (size_t i = 0; i < theOrder.size(); i++) {   // the saved units the load did not have
+            EEComplexUnit* theUnit = theOrder[i];
+            if (std::find(theList.begin(), theList.end(), theUnit) != theList.end())
+                continue;
+            theUnit->Reference();
+            if (l == 0) {
+                theUnit->Reference();
+                gWorld.mActiveUnits[theUnit->mUnitID] = theUnit;
+            }
+        }
+        theList = theOrder;
     }
 }
 
@@ -267,6 +302,121 @@ static long LoadForests(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.256): the computer players' round-robin schedule (EEArtificialIntelligence::Update: which
+// computer player updates next and when). A load's EEWorld::Restore calls CollectComputerPlayers, which starts the
+// round again at the first player at time 0, so a loaded game ran a computer player's Update at its first tick where
+// the saved game had it a few ticks later (the first divergent draw of every save: EEComputerPlayer::Update's). Put
+// back at the first tick; the interval (1000 ms / players) is the same on both sides.
+static void SaveAISchedule(FSFile& outFile)
+{
+    outFile.Write(gArtificialIntelligence->mNextPlayer);
+    outFile.Write(gArtificialIntelligence->mNextUpdateTime);
+}
+
+static long LoadAISchedule(FSFile& inFile)
+{
+    unsigned long theNextPlayer = 0;
+    unsigned long theNextUpdateTime = 0;
+    long theResult = inFile.Read(theNextPlayer);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theNextUpdateTime);
+    if (theResult == kErrorOK)
+        EEAfterLoad([theNextPlayer, theNextUpdateTime]() {
+            if (theNextPlayer < gArtificialIntelligence->mComputerPlayers.size()) {
+                gArtificialIntelligence->mNextPlayer = theNextPlayer;
+                gArtificialIntelligence->mNextUpdateTime = theNextUpdateTime;
+            } else
+                ESDebugOut("EEPWorldHelper: the loaded computer players are not the saved ones: their schedule is the load's\n");
+        });
+    return theResult;
+}
+
+// port (save version 0.256): the order of the units on each tile (RTSTile::mUnits, newest first). A load places the
+// units in its own order, so a tile with several units listed them otherwise, and EEComplexUnit::FindContacts, which
+// walks the tiles' lists, built the contact lists in another order (collisions resolved in another order). Saved:
+// every tile with two units or more, by index, with its units' ids; put back at the first tick by moving the units
+// between the tile's own nodes (each node keeps its reference) when the tile holds the same units.
+static void SaveTileOrder(FSFile& outFile)
+{
+    EEMap* theMap = gWorld.mMap;
+    std::vector<std::pair<unsigned long, std::vector<unsigned long> > > theTiles;
+    long theSize = theMap != NULL ? theMap->mSize : 0;
+    for (long i = 0; i < theSize * theSize; i++) {
+        EEMapTile* theTile = theMap->mTiles[i];
+        if (theTile == NULL || theTile->mUnits == NULL || theTile->mUnits->mNext == NULL)
+            continue;
+        std::vector<unsigned long> theIDs;
+        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
+            theIDs.push_back(theNode->mUnit != NULL ? (unsigned long)theNode->mUnit->mUnitID : (unsigned long)-1);
+        theTiles.push_back(std::make_pair((unsigned long)i, theIDs));
+    }
+    outFile.Write((unsigned long)theTiles.size());
+    for (size_t t = 0; t < theTiles.size(); t++) {
+        outFile.Write(theTiles[t].first);
+        outFile.Write((unsigned long)theTiles[t].second.size());
+        for (size_t k = 0; k < theTiles[t].second.size(); k++)
+            outFile.Write(theTiles[t].second[k]);
+    }
+}
+
+static void RestoreTileOrder(const std::vector<std::pair<unsigned long, std::vector<unsigned long> > >& inTiles)
+{
+    EEMap* theMap = gWorld.mMap;
+    unsigned long theOther = 0;
+    for (size_t t = 0; t < inTiles.size(); t++) {
+        if (theMap == NULL || inTiles[t].first >= (unsigned long)(theMap->mSize * theMap->mSize))
+            break;
+        EEMapTile* theTile = theMap->mTiles[inTiles[t].first];
+        const std::vector<unsigned long>& theIDs = inTiles[t].second;
+        std::vector<RTSTileUnitNode*> theNodes;
+        for (RTSTileUnitNode* theNode = theTile != NULL ? theTile->mUnits : NULL; theNode != NULL; theNode = theNode->mNext)
+            theNodes.push_back(theNode);
+        std::vector<EEUnit*> theUnits;
+        for (size_t k = 0; k < theIDs.size() && theNodes.size() == theIDs.size(); k++) {
+            EEUnit* theUnit = NULL;
+            for (size_t n = 0; n < theNodes.size() && theUnit == NULL; n++)
+                if (theNodes[n]->mUnit != NULL && (unsigned long)theNodes[n]->mUnit->mUnitID == theIDs[k]
+                    && std::find(theUnits.begin(), theUnits.end(), theNodes[n]->mUnit) == theUnits.end())
+                    theUnit = theNodes[n]->mUnit;
+            if (theUnit == NULL)
+                break;
+            theUnits.push_back(theUnit);
+        }
+        if (theUnits.size() != theNodes.size() || theUnits.size() != theIDs.size()) {
+            theOther++;
+            continue;
+        }
+        for (size_t n = 0; n < theNodes.size(); n++)
+            theNodes[n]->mUnit = theUnits[n];
+    }
+    if (theOther != 0)
+        ESDebugOut("EEPWorldHelper: %lu tiles hold other units than the saved ones: their order is the load's\n", theOther);
+}
+
+static long LoadTileOrder(FSFile& inFile)
+{
+    std::vector<std::pair<unsigned long, std::vector<unsigned long> > > theTiles;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long t = 0; t < theCount && theResult == kErrorOK; t++) {
+        unsigned long theIndex = 0;
+        unsigned long theUnits = 0;
+        theResult = inFile.Read(theIndex);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theUnits);
+        std::vector<unsigned long> theIDs;
+        for (unsigned long k = 0; k < theUnits && theResult == kErrorOK; k++) {
+            unsigned long theID = 0;
+            theResult = inFile.Read(theID);
+            theIDs.push_back(theID);
+        }
+        theTiles.push_back(std::make_pair(theIndex, theIDs));
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theTiles]() { RestoreTileOrder(theTiles); });
+    return theResult;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -315,8 +465,12 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     else
         inFile.Read(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
-        if (LoadUnitOrder(inFile) == kErrorOK)
-            LoadForests(inFile);
+        if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
+            && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.256): the computer players' schedule
+            && LoadAISchedule(inFile) == kErrorOK
+            && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.256): the path manager's history, regions, timers
+            && EEAELoadRunningState(inFile) == kErrorOK)   // port (0.256): the area effects' locations, the lists acting
+            LoadTileOrder(inFile);   // port (0.256): the order of the units on each tile
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -366,6 +520,12 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     {
         SaveUnitOrder(outFile);
         SaveForests(outFile);
+        if (EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256): the computer players' schedule
+            SaveAISchedule(outFile);
+            gPathManager.SaveRunningState(outFile);   // port (0.256): the path manager's history, regions and timers
+            EEAESaveRunningState(outFile);   // port (0.256): the area effects' locations and the lists of those acting
+            SaveTileOrder(outFile);   // port (0.256): the order of the units on each tile
+        }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
     return gUIManager->mMainGameForm->Save(inMajorVersion, inMinorVersion, outFile);

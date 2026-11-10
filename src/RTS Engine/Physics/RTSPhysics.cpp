@@ -194,6 +194,8 @@ unsigned long RTSPhysics::Main(void* inPointer)
                 thePhysics->Lock();
                 thePhysics->Tick();
                 thePhysics->mTicksRun++;
+                if (gPhysicsAfterTickHook)   // TEST ONLY: EE-SIM's per-tick state dumps (ee/EEPhysics.h)
+                    gPhysicsAfterTickHook();
                 bool theMore = theEEPhysics->mTicksToProcess > 0 && thePhysics->mTimerRunning && !thePhysics->mStopThread;
                 if (!theMore && gPlatSimAfterTick)
                     gPlatSimAfterTick();

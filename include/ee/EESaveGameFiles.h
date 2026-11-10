@@ -26,6 +26,19 @@ inline bool EESaveTextIsUtf8(unsigned long inMajorVersion, unsigned long inMinor
 {
     return inMajorVersion > 0 || inMinorVersion >= 255;
 }
+// port: from 0.256 a save holds more of the running state ("load equals continue", second round): the computer
+// players' round-robin schedule (EEArtificialIntelligence's next player and next update time, EEPWorldHelper; an older
+// save's loaded game updated its first computer player at its first tick), each computer player's own timers and
+// flags (EEComputerPlayer: pop cap, enable-time flag, regroup flag, population and damage times), and per unit the
+// contacts, the animation frame, the exact flight time, rotting time, research, last hit points, garrison and power
+// (EEComplexUnit; the original saved fractions or rebuilt them at load); the resource manager's timers and the
+// research manager's flags, the path manager's history, regions and timers, the area effects' locations and lists,
+// the units' order on each tile (EEPWorldHelper) and each attack sub group's targets, timers and path request
+// (EECPAttackSubGroup). 0.255 is the UTF-8 text (EESaveTextIsUtf8): a 0.255 save loads without these fields
+inline bool EESaveHasRunningState(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 256;
+}
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

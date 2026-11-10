@@ -4293,3 +4293,57 @@ identical.
   the final report). Not run: tours (the lead's; the visible terrain is what they check).
 - **Left in R4.3:** the fonts (`GEFont`, `GEFontBitmap`, `GEText`: UTF-8 first, D6), `GEBitmap`'s and `GERhombus`'s
   vertex-array plumbing (no logic).
+
+## R5a.2, second round: the AI's and the path manager's running state, area effects, tile order (save 0.256, branch rust-r5a-aisave, 2026-11-10)
+
+Continues "R5a.2: load equals continue". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`);
+the saves land at game ms 600250, 1350125 and 2100000 every run. The format of this round was 0.255 on the branch
+and became **0.256** when the D6 merge took 0.255 for UTF-8 text (`EESaveHasRunningState` is `>= 256`; a 0.255 save
+loads with these fields absent, as an older one).
+
+- **What 0.256 saves** (each put back at the loaded game's first tick through `EEAfterLoad` unless said):
+  - the computer players' round-robin schedule and each computer player's own timers and flags (previous agent);
+    the units' contacts, animation frame and exact counters (previous agent);
+  - the resource manager's timers (Update's first-update re-initialisation no longer reschedules them) and its
+    forest, animal and fish lists (RefreshResources made new ones at the first update, so gatherers were sent
+    elsewhere: one of player 3's gatherers at seed 2's 2100 s save, 9 ticks after the load). A forest is saved by its
+    first tile, because the continent manager is rebuilt at load with its own ids;
+  - the research manager's started and history flags;
+  - the path manager's request history, region maps and timers (`EEPathManager::SaveRunningState`);
+  - the area effects (`EEAESaveRunningState`): each unit's own effects' locations and morale-from-buildings count,
+    the effects acting on each unit as (owner, index), and the manager's active list. After a load these lists were
+    empty until the next area-effect tick (up to 2 s);
+  - the order of the units on each tile: a load placed them in its own order, and `EEComplexUnit::FindContacts` walks
+    the tile lists, so contact lists came out reversed within a few ticks. The units are moved between the tile's own
+    nodes, and each node keeps its reference;
+  - each attack sub group's targets and siege targets (made by Restore), `mNextPositionTime`, `mGatherDeadline`, the
+    area-effect and shore flags, and its path request. A finished request is rebuilt with its path. A running one is
+    asked again at the first tick with the saved ends (the A* state itself is not saved), and a land group no longer
+    falls back to "prepare travel" on a 0.256 load;
+  - no format change: RepairPointers' MakeAreaEffects no longer overwrites the loaded area-effect icon count.
+- **Tools** (TEST ONLY, committed): the state dumps now show each unit's contacts, last attacker, owner, holder and
+  area effects (`refs` line) and every attack sub group (`ASG` line). The scratch scripts under the worktree's
+  build/ (`pair.sh`, `ticks.sh`: a dump after each of the first N ticks of both games, `dumpdiff.py`, `rngdiff.py`)
+  are not committed. A temporary goal trace in `EEComplexUnit::SetGoal` (stack per SetGoal, like `--rng-trace`)
+  pinned the seed 3 divergence and was removed again.
+- **The numbers** (merged with rust f01127dc+, oracle identical to ref at every commit): still **0 of 18** saves
+  hold to the end, before and after. First divergent CT line after the load, before -> after: seed 2 4/14/0 -> 4/2/0,
+  seed 3 0/0/0 -> 0/0/0, seed 4 0/1/0 -> 0/1/0, seed 5 0/12/13 -> 0/11/12, seed 6 11/12/0 -> 20/11/0, seed 7
+  10/23/0 -> 3/22/1 (600/1350/2100 s; one CT line is 14 ticks). The lines are coarse. In the tick-by-tick dumps
+  (`ticks.sh`), seed 2's 2100 s save now matches unit by unit for 16 ticks, where before the first unit difference
+  came at tick 9. Seed 3's 600 s save matches for 4 ticks.
+- **Still different after a load** (the next causes, measured):
+  - *seed 2, 2100 s, tick 9*: player 3's build queue gets a drop site in the loaded game only (the `ai` part of the
+    first CT line of saves 2/4/6 at 2100 s). The saved resource lists did not remove it, so the cause is elsewhere
+    in the build or resource manager's derived state;
+  - *references to dead units*: the running game keeps a dead attacker in `mLastAttacker`, held alive by its
+    reference count. The save writes its id, and the load finds no unit. Triggers such as AttackerIsNotBuilding
+    read the dead unit's class, and the `refs` lines of every save differ there (5 units at seed 2's 2100 s);
+  - *seed 3, 600 s*: at the 5th tick after the load, `EEUCProjectile::EvaluateCondition` (ProjectileHitUnit) gives
+    four citizens attack goals in the loaded game only. The citizens' `ObstacleDetected` draws then go missing.
+    Not yet traced to the state behind FindImpactUnit;
+  - *seed 2, 2100 s*: at tick 17 a land sub group of player 3 moves its formation in the continued game and checks
+    its task in the loaded one. The ASG lines are equal up to there, so the cause is in state the dump does not
+    show;
+  - the continent manager and the AI's other derived state are still rebuilt at load, not saved; the path searches
+    in progress are asked again, not resumed.

@@ -1255,10 +1255,16 @@ unsigned long EEPhysics::UpdateUnits()
         if (gWorld.mPlayers[i] != NULL)
             gWorld.mPlayers[i]->UpdatePlayer();
     }
-    for (long j = gWorld.mUpdateUnits.size() - 1; j >= 0; j--)
+    for (long j = gWorld.mUpdateUnits.size() - 1; j >= 0; j--) {
+        gPhysicsSteppingUnit = gWorld.mUpdateUnits[j];   // TEST ONLY: named by EE-SIM's random-draw trace
         gWorld.mUpdateUnits[j]->Step();
+    }
+    gPhysicsSteppingUnit = NULL;
     return theCount;
 }
+
+EEComplexUnit* gPhysicsSteppingUnit = NULL;   // TEST ONLY (ee/EEPhysics.h)
+void (*gPhysicsAfterTickHook)(void) = NULL;   // TEST ONLY (ee/EEPhysics.h; RTSPhysics::Main's simulation loop)
 
 // FUNCTION: EXE 0x5540dc
 // (EEComplexUnit::Step: the inline COMDAT after its first user above)

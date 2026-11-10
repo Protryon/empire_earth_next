@@ -16,6 +16,7 @@
 #include "ee/EETileCoordinate.h"
 
 class UReferenceCounter;
+class FSFile;
 struct EECPASGFlags;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 class EEAutoPathRequest;                    // ee/EEAutoPathRequest.h
@@ -65,6 +66,11 @@ public:
     virtual ~EEPathManager();           // 0xa5e1c
     void CancelAutoPathRequest(UReferenceCounter* inRequest);  // 0xa896b (ret 4; EEHerd::Clear passes its path request; provisional name)
     void DumpOutOfSynch(FILE* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
+    void DumpSim(FILE* inFile);         // TEST ONLY (EE-SIM's state dumps): the searches in progress, pending requests, timers
+    // port (save version 0.256, EEPWorldHelper): the request history, the region maps and the timers, which the
+    // original did not save (a load started with none: other search budgets, no stranded units, other prune times)
+    void SaveRunningState(FSFile& outFile);
+    long LoadRunningState(FSFile& inFile);   // put back at the loaded game's first tick (EEAfterLoad)
     void Update();                      // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
     void Reset();                       // 0xa8778 (before a scenario starts; provisional name)
     void RequestPendingPaths(EEMap* inMap);  // 0xa8582 (EEWorld::StartGame; provisional name)
