@@ -44,9 +44,13 @@
 
 // FUNCTION: LLE 0x1000dde9
 // Advances the random generator one step and returns the new seed as a fraction in [0, 1)
+void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
+
 float URandom::Generate()
 {
     this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
+    if (gURandomTraceHook != NULL)
+        gURandomTraceHook(this);
     return (float)((double)this->mSeed / (double)this->mModulus);
 }
 

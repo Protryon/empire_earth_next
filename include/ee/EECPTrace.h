@@ -17,6 +17,7 @@
 #ifndef EE_EECPTRACE_H
 #define EE_EECPTRACE_H
 
+#include <stdio.h>
 #include "ee/EERules.h"
 
 class EEComputerPlayer;
@@ -50,6 +51,8 @@ struct EECPTraceScope {
 
 // the computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; not a trace: always on)
 unsigned long EECPOutOfSynchChecksum();
+// TEST ONLY (EE-SIM's state dumps): its parts per player and the computer players' own timers, one line each
+void EECPOutOfSynchDump(FILE* inFile);
 
 // the computer player's personality (aipersonalities.yaml; ee/EERules.h). TEST ONLY: EE_AI_PERSONALITY in the
 // environment names one for every computer player, or a comma list they take in turn by player id

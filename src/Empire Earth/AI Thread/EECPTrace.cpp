@@ -675,6 +675,41 @@ void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long lon
     sProfileCount[theID] = 0;
 }
 
+// TEST ONLY (EE-SIM's --dump-at / --dump-load): the parts of EECPOutOfSynchChecksum per player and the computer
+// player's own timers, one line each, so two dumps name the computer player and the part that differ
+void EECPOutOfSynchDump(FILE* inFile)
+{
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[i];
+        if (thePlayer == NULL)
+            continue;
+        fprintf(inFile, "AI %lu res=", thePlayer->mPlayerID);
+        for (long r = kResourceFood; r <= kResourceIron; r++)
+            fprintf(inFile, "%s%ld", r != kResourceFood ? "," : "", (long)thePlayer->mResourceCaps[r]);
+        EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
+        if (theCP != NULL) {
+            fprintf(inFile, " popcap=%ld", (long)theCP->mPopulationCap);
+            if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
+                fprintf(inFile, " epochadv=%lu", (unsigned long)theCiv->mNextEpochAdvanceTime);
+                if (theCiv->mBuildManager != NULL) {
+                    fprintf(inFile, " queues=");
+                    for (long e = 0; e < EEEpochCount(); e++)
+                        fprintf(inFile, "%s%lu", e ? "," : "", (unsigned long)theCiv->mBuildManager->mQueues[e].size());
+                }
+                if (theCiv->mUnitManager != NULL)
+                    fprintf(inFile, " waiting=%lu", (unsigned long)theCiv->mUnitManager->mNumWaiting);
+            }
+            if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
+                fprintf(inFile, " attackgroups=%lu", (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size());
+            fprintf(inFile, " started=%d enableset=%d regroup=%d nextenable=%lu nextpop=%ld nextexp=%lu nextattack=%lu lastdamaged=%ld",
+                    theCP->mIsStarted ? 1 : 0, theCP->mIsEnableTimeSet ? 1 : 0, theCP->mRegroupPending ? 1 : 0,
+                    (unsigned long)theCP->mNextEnableTime, (long)theCP->mNextPopulationTime, (unsigned long)theCP->mNextExpansionTime,
+                    (unsigned long)theCP->mNextAttackTime, (long)theCP->mLastDamagedTime);
+        }
+        fprintf(inFile, "\n");
+    }
+}
+
 // The computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; docs/AI_RESEARCH.md
 // Q2). The original's checksum covers the units, the map, the continents and the shared random seed, but none of the
 // AI's own state, so AI state that drifts between peers showed only later, through the random seed or the units.

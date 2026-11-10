@@ -298,6 +298,7 @@ Options sOptions;
 FILE* sTraceFile = NULL;
 FILE* sLogFile = NULL;
 FILE* sChecksumFile = NULL;
+FILE* sRngFile = NULL;                                   // --rng-trace (RngTraceHook, below)
 std::mutex sOutLock;
 std::chrono::steady_clock::time_point sStartWall;
 std::chrono::steady_clock::time_point sGameWall;
@@ -351,6 +352,8 @@ void DebugHandler(const char* inText)
             fflush(sLogFile);
         if (sChecksumFile)
             fflush(sChecksumFile);
+        if (sRngFile)
+            fflush(sRngFile);
     }
     EESimCaptureRecord::Flush();
 #ifdef _WIN32
@@ -554,6 +557,7 @@ void DumpState(const std::string& inPath)
             fprintf(f, "%s%a", r ? "," : "", (double)p->mResourceCaps[kResourceFood + r]);
         fprintf(f, "\n");
     }
+    EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
     for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
         EEUnit* u = static_cast<EEUnit*>(r);
         EEComplexUnit* c = dynamic_cast<EEComplexUnit*>(u);
@@ -597,6 +601,45 @@ void DumpState(const std::string& inPath)
 std::vector<std::pair<long, std::string>> sDumps;   // --dump-at MS=FILE, in game-ms order
 size_t sNextDump = 0;
 std::string sDumpLoad;                               // --dump-load FILE
+
+// --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
+// MS (gURandomTraceHook, lle/URandom.h), one line each: the draw's number, the new seed, the game ms and the callers
+// as exe-relative addresses (tools/sim.py resolve adds the map's preferred base). The same MS in a continued game and
+// in the game loaded from its save at MS gives two traces whose first differing caller names the state that differs.
+// At most kRngTraceMax draws; the hook reads only.
+std::string sRngTraceFile;
+long sRngTraceMs = -1;
+unsigned long sRngLines = 0;
+const unsigned long kRngTraceMax = 50000;
+
+void RngTraceHook(URandom* inRandom)
+{
+    if (gPhysics == NULL || inRandom != &gPhysics->mRandom || gPhysics->mGameTime <= sRngTraceMs)
+        return;
+    if (sRngFile == NULL) {
+        sRngFile = fopen(sRngTraceFile.c_str(), "w");
+        if (sRngFile == NULL) {
+            gURandomTraceHook = NULL;
+            return;
+        }
+    }
+    if (++sRngLines > kRngTraceMax) {
+        fclose(sRngFile);
+        sRngFile = NULL;
+        gURandomTraceHook = NULL;
+        return;
+    }
+    void* theFrames[16];
+    unsigned short theCount = RtlCaptureStackBackTrace(1, 16, theFrames, NULL);
+    uintptr_t theBase = (uintptr_t)GetModuleHandleA(NULL);
+    fprintf(sRngFile, "%lu %08lx %ld", sRngLines, (unsigned long)inRandom->GetSeed(), gPhysics->mGameTime);
+    for (unsigned short i = 0; i < theCount; i++) {
+        uintptr_t theFrame = (uintptr_t)theFrames[i];
+        if (theFrame >= theBase)
+            fprintf(sRngFile, " %llx", (unsigned long long)(theFrame - theBase));
+    }
+    fprintf(sRngFile, "\n");
+}
 
 // the physics thread, after each communications tick, under the world's write lock
 // --save-at: the saves' names in data\Saved Games (the game's folder; copied out at the end of the run)
@@ -1354,6 +1397,8 @@ const char* kUsage =
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
+    "  --rng-trace MS=FILE    every draw of the physics random stream after game ms MS with its callers (exe-relative\n"
+    "                         addresses, tools/sim.py resolve), at most 50,000 draws\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
@@ -1573,7 +1618,17 @@ int EESimMain(int argc, char** argv)
             sDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
         } else if (a == "--dump-load")
             sDumpLoad = Absolute(value());
-        else {
+        else if (a == "--rng-trace") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --rng-trace MS=FILE\n");
+                return 64;
+            }
+            sRngTraceMs = atol(v.substr(0, eq).c_str());
+            sRngTraceFile = Absolute(v.substr(eq + 1));
+            gURandomTraceHook = RngTraceHook;
+        } else {
             fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
             return 64;
         }
