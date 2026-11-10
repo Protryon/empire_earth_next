@@ -2696,6 +2696,79 @@ build message's field assignment (PORT_LEARNINGS). The next round is tuning, rep
 with their reason: the copper plan's brake (`next_epoch`), the raid answer's ratio and cooldown, the Bronze reserve
 against the waves.
 
+### 8.39 The classic computer player in Lua, first checkpoint (2026-11-10, EE-SIM)
+
+The classic AI (the C++ managers of `src/Empire Earth/AI Thread/`, with this repository's changes behind the
+personality switches) ported to the per-unit Lua interface as a baseline and a moddable start: `ai/classic_lua/`,
+manifest id `classic_lua` ("Classic (Lua)", not random). `ai/classic_lua/ORIGIN` maps every C++ file to its module
+(PORTED / PARTLY / ENGINE / NOT STARTED) with the deviations and the interface gaps. Both personalities run from the
+rules data: `ai.tuning()` returns what EEComputerPlayer::Init and EECPPersonality give the C++ seat (the difficulty,
+the cheats, the personality with EE_AI_PERSONALITY, every dbcpbehavior value).
+
+**What the first checkpoint ports.** The economy, the builds and the epochs whole: the per-epoch request queues of the
+unit, build and research managers, the citizens wanted, the resource centres and the needs ledger, both gatherer
+splits (the original's needs split with the stock correction; `balanced`'s demand split with its claimed patches,
+patch settlements and site towers), AssignGatherers' finders in order, the epoch timer with the personality's
+pressure and the catchup cheat, AttemptEpochAdvance with ResearchCheapest, the building counts, the garrisons,
+EEComputerPlayer::CanAfford's reserve, EnableManagers, the militia and the danger zones (militia.lua), the land
+explorers. The army is a first stage (combat.lua): the attack timer and target, the group size of
+ComputeGroupSize, one defend group at home, the groups on lib.groups.
+
+**Cheats on a Lua seat.** cost, reveal, extra, popband, retire and the epochs' payment act in the engine for any
+computer seat (ORIGIN lists where); catchup (the epoch timer's scale and CatchUpEpoch) and the free epoch's
+affordability are decisions, ported.
+
+**Problems met on the way** (PORT_LEARNINGS "The classic computer player in Lua"): a script's gatherers are invisible
+to `ai.resource`'s `workers` (all 15 food gatherers went to one bush: `ai.gatherers()`); a class's tech is
+`ai.class(t).tech`; the classic puts an epoch at the front of the town centre's queue (the port cancels and requeues
+the citizens behind it); AttemptEpochAdvance runs only while a later epoch's request stands (the future research
+sentinel); the engine's reflexes skip a script's units (militia.lua); a per-step cache keeps the step's charges
+bounded; the fog at the start (the C++ classic's forest finder reads the whole map: the port's idle citizens explore
+until something is known); a centre of the town centre alone (Regroup's), without which no tower or temple had a site.
+
+**The bench** (EE-SIM, Small, Hard, 2 AIs, seeds 2-17, 90 minutes, `--data open`, the scripts from a copy of `ai/`;
+`balanced` with no cheats; `classic` with the retail Hard cheats on both seats: `--set
+"gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" --cheats
+none/all/all`). Epochs: reached / median minute; citizens/army at 10/20/30/40 minutes; citizens lost by 20 minutes
+and in all; the citizens at 90 minutes and the seats wiped out. "C++ vs C++" is the reference (both seats the C++
+classic, 32 players).
+
+| Matchup | AI | Stone | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Citizens at 90 min (wiped) | Won-lost |
+|---|---|---|---|---|---|---|---|
+| balanced: C++ vs C++ | classic | 32/32, 25.3 | 21/32, 66.3 | 24.9/2.2 / 25.4/2.0 / 29.1/4.3 / 42.8/3.9 | 1.7 / 46.4 | 103 (3/32) | - |
+| balanced: Lua vs C++ | classic | 16/16, 25.2 | 15/16, 63.8 | 22.9/2.2 / 25.0/2.2 / 30.4/5.1 / 45.9/3.2 | 2.3 / 24.6 | 151 (0/16) | 12-1, 3 close |
+| balanced: Lua vs C++ | classic_lua | 16/16, 24.9 | 9/16, 64.6 | 23.4/2.3 / 27.2/3.2 / 38.0/6.3 / 48.2/7.1 | 2.1 / 95.4 | 45 (2/16) | 1-12, 3 close |
+| classic + cheats: C++ vs C++ | classic | 32/32, 46.5 | - | 24.3/6.7 / 47.3/5.6 / 49.8/6.5 / 49.4/5.9 | 15.0 / 91.4 | 50 (0/32) | - |
+| classic + cheats: Lua vs C++ | classic | 16/16, 45.6 | - | 27.9/6.4 / 51.1/9.2 / 50.9/13.7 / 50.8/8.6 | 2.6 / 26.1 | 51 (0/16) | 12-1, 3 close |
+| classic + cheats: Lua vs C++ | classic_lua | 16/16, 46.5 | - | 22.4/7.1 / 33.6/10.5 / 34.6/13.2 / 31.0/16.8 | 13.7 / 155.1 | 7 (4/16) | 1-12, 3 close |
+| balanced: C++ vs boom | boom | 16/16, 28.0 | 9/16, 65.5 | 23.6/0.0 / 32.4/0.0 / 31.3/3.0 / 41.4/14.2 | 3.7 / 59.2 | 64 (0/16) | 1-13, 2 close |
+| balanced: C++ vs boom | classic | 16/16, 25.0 | 16/16, 65.0 | 26.4/2.2 / 30.8/2.5 / 40.1/7.8 / 62.9/5.8 | 0.0 / 26.4 | 167 (0/16) | 13-1, 2 close |
+| balanced: Lua vs boom | boom | 15/16, 26.9 | 13/16, 65.4 | 20.7/0.0 / 28.0/0.0 / 29.6/2.8 / 44.9/10.6 | 7.2 / 14.9 | 100 (1/16) | 9-1, 6 close |
+| balanced: Lua vs boom | classic_lua | 15/16, 24.8 | 10/16, 61.3 | 24.2/2.4 / 30.0/2.9 / 38.8/6.8 / 51.6/8.4 | 0.1 / 63.9 | 62 (0/16) | 1-9, 6 close |
+| balanced: C++ vs Age of AI | ageofai | 13/15, 52.6 | 5/15, 58.1 | 21.5/5.4 / 34.0/7.3 / 45.1/9.3 / 54.7/10.5 | 1.2 / 67.7 | 43 (1/15) | 0-14, 1 close |
+| balanced: C++ vs Age of AI | classic | 15/15, 25.1 | 15/15, 61.8 | 26.0/2.3 / 29.1/1.5 / 35.5/4.1 / 56.0/2.8 | 1.1 / 22.5 | 172 (0/15) | 14-0, 1 close |
+| balanced: Lua vs Age of AI | ageofai | 16/16, 52.3 | 13/16, 67.1 | 20.9/5.3 / 33.2/7.6 / 46.7/10.7 / 55.4/8.4 | 1.7 / 30.0 | 102 (0/16) | 8-3, 5 close |
+| balanced: Lua vs Age of AI | classic_lua | 16/16, 25.0 | 9/16, 67.7 | 22.6/2.5 / 27.9/2.4 / 36.8/6.4 / 50.6/6.6 | 1.9 / 70.3 | 63 (0/16) | 3-8, 5 close |
+
+**Readings.**
+- **The economy, the builds and the first epoch match.** `balanced`: the Stone Age at 24.9 minutes (16/16) against the
+  C++ classic's 25.2 in the same games and 25.3 in its own; the citizens at 10-40 minutes within a few of the C++
+  (23.4/27.2/38.0/48.2 against 22.9/25.0/30.4/45.9). `classic` with the retail cheats: the Stone Age on the epoch timer
+  at 46.5 minutes (the C++ 45.6 in the same games, 46.5 in its own). Against boom the port reaches the Stone Age
+  earlier than boom (24.8 against 26.9) with more citizens to 40 minutes.
+- **The gap is the army.** After 40 minutes the port loses three to six times the citizens of the C++, reaches the
+  Copper Age in 9 of 16 games against 15 and loses most games; in the games it is not overrun it booms like the C++
+  (seed 3 of the first round: 111 citizens and the Bronze Age at 88 minutes). The attack groups' tasks, the
+  sub-groups, the aid packages' deployment, the counter units and the walls are the next stage (ORIGIN: PARTLY /
+  NOT STARTED); the first army stage defends the town as one group (34 tiles: MilitaryAidPackage::Deploy's reach)
+  and sends the attack groups on the C++ timer.
+- **The same opponents** say the same: the C++ classic beats boom 13-1 and Age of AI 14-0 (one Age of AI run failed
+  in the lobby); the port loses to boom 1-9 (6 close) and to Age of AI 3-8 (5 close), with the economy level with
+  theirs to 40 minutes and the Stone Age first in both.
+- **Determinism:** seeds 2 and 5, 60 minutes, `--repeat 2`: identical traces (5,982 and 4,855 lines); 0 script errors
+  in every bench. **The other engines are unchanged** by the interface additions: boom and Age of AI against the
+  classic, seed 2, 25 minutes, give the same traces on this build as on main's (1,887 and 2,541 lines).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

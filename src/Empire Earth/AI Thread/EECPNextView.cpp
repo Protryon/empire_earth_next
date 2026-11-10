@@ -510,6 +510,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     for (long i = 0; i < kNextResources; i++) {
         outView.stock[i] = inPlayer->mResourceCaps[kResourceFood + i];
         outView.income[i] = theState->mIncomeTotal[i] - theState->mIncomeRing[theSlot][i];
+        outView.income_total[i] = theState->mIncomeTotal[i];
         outView.reserve[i] = theState->mReserve[i];
         outView.gatherers[i] = 0;
         outView.wanted[i] = i == 0 ? theState->mFoodLand : (long)theResources->mWantedGatherers[kResourceFood + i];
