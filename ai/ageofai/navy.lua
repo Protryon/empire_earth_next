@@ -111,6 +111,36 @@ function M.step(view, memory, orders, budget, force)
                 mem.sea_skips[#mem.sea_skips + 1] = {mem.sea_goal_x, mem.sea_goal_y}
             end
             local gx, gy = ai.unexplored(scout.x, scout.y, {sea = true, grid = 8, away = {view.town_x, view.town_y}, skip = mem.sea_skips})
+            if gx == nil then
+                -- the water body's grid ran dry (its id differs from the boat's tile's near the coast): the unexplored
+                -- tiles of a coarse grid the boat can sail to (ai.route over the sea knows the map under the fog)
+                local map = ai.map()
+                local best, bd = nil, nil
+                for y = 6, map.height - 6, 12 do
+                    for x = 6, map.width - 6, 12 do
+                        local t = ai.tile(x, y)
+                        if t ~= nil and not t.explored then
+                            local skip = false
+                            for _, sk in ipairs(mem.sea_skips) do
+                                if d2(sk[1], sk[2], x, y) <= 64 then
+                                    skip = true
+                                end
+                            end
+                            if not skip then
+                                local d = d2(x, y, scout.x, scout.y) - d2(x, y, view.town_x, view.town_y) // 4
+                                if bd == nil or d < bd then
+                                    best, bd = {x, y}, d
+                                end
+                            end
+                        end
+                    end
+                end
+                if best ~= nil and ai.route(scout.x, scout.y, best[1], best[2], {sea = true, avoid = 0}) ~= nil then
+                    gx, gy = best[1], best[2]
+                elseif best ~= nil then
+                    mem.sea_skips[#mem.sea_skips + 1] = best   -- no water way there
+                end
+            end
             if gx ~= nil then
                 mem.sea_goal_x, mem.sea_goal_y = gx, gy
                 ai.move(scout.id, gx, gy, {forced = true})

@@ -2312,6 +2312,40 @@ and 54 idle citizens at the end for want of food sites. L6's gate stays open.
 fails every game at start (`EETerrainColorTable.cpp (81): Verification failure`, no report). A worktree keeps its own
 tree (`open_data.py build build/open_data/tree`, 5 minutes).
 
+**Islands, farms and towns (2026-11-09, the fourth checkpoint).** Found and changed: a granary lays its eight
+fields as foundations, so `build b_farm near=town` is right (the classic FindSite finishes them; rings round a
+granary are refused) - the island games had no fields because they had no *granary*: the town's rings were full
+and `near=town` refused it 50-180 times a game. A building refused `no_site` near the town now goes up through the
+per-unit interface (`build_direct`: `ai.find_site` 4-20 tiles from the town centre, the three nearest citizens
+build it through `ai.build` and stay the script's until it stands - released at once, the runners took them back
+and 17 granary foundations stood empty in one game). The sea scout falls back to the unexplored tiles of a coarse
+grid the boat can sail to (`ai.route{sea = true}`) when `ai.unexplored{sea = true}` runs dry. Towns (towns.c, a
+light port): from the Copper Age the claim grows to its most while the claimed mines are full, and a far mineral
+site's drop (30+ tiles) is a town centre when the wood allows.
+
+| | Stone | Copper | citizens 30 / 40 | army 30 / 40 | end citizens / army | defeats |
+|---|---|---|---|---|---|---|
+| Small Islands, Age of AI against classic, 10 games, 90 min | 25.6 (10/10) | 59.3 (10/10) | 44 / 61 | 9.4 / 38.8 | 84 / 74 | 0 (classic lost 1) |
+| classic in those games | 46.8 (9/10) | 80.8 (4/10) | 21 / 22 | 9.5 / 14.8 | 37 / 38 | 1 |
+| Age of AI against classic Hard, 16 games, 90 min | 29.6 (15/16) | 65.8 (9/16) | 37 / 48 | 7.9 / 17.2 | 48 / 23 | 1 (1 wiped) |
+| boom's reference (above) | 26.5 | 59.1 (12/16) | 37 / 46 | 6.7 / 13.3 | 60 / 13 | 2 |
+| Age of AI against boom, 16 games, 45 min | 24.6 | - | 46 / 59 | 9.6 / 17.3 | 62 / 19 | 0 |
+| boom in those games | 22.8 | 43.3 (3/16) | 43 / 60 | 11.4 / 17.1 | 67 / 20 | 0 |
+
+- **Landings:** 6 of 10 island games boarded and all 6 put their soldiers ashore (30/30, 55/60, 38/40, 10/10,
+  18/45, 30/30; the unload retry holds), and the classic AI lost one of those games - the port's first decided
+  game. 4 games never boarded (no enemy building found across the water, or the force never 1.4 x the beach).
+  Granaries stand in 8 of 10 island games now; 3 games still end with 25-41 idle citizens. L6's gate (10/10) is
+  not met.
+- **Against classic Hard at 90 minutes** the port loses 1 of 16 (boom's reference 2) with a larger army (23 against
+  13) and fewer citizens (48 against 60); the 45-minute pace against boom is level. The target (no defeats, ahead of
+  boom) is not reached: the classic Hard AI ends every game with 160+ citizens, and the port's economy under its
+  waves still shrinks where boom's holds.
+- **Left:** a directly placed foundation vanishes within 30 s in some games (seed 6: a new id at the same tile every
+  order - something removes an unbuilt foundation the build manager did not queue); the idle citizens on islands
+  (the finders have no food site for them until the fields stand); the 4 island games without a landing; hold_town
+  and the citizens' shelter.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
