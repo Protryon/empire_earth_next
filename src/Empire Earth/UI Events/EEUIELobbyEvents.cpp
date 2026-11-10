@@ -127,6 +127,7 @@ void LobbyShowHostRow(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& 
 bool LobbyIsColorUnique(long inColor);
 void LobbySetPlayerEvents(UIForm* inForm, long inSlot);
 void LobbySetHostEvents(UIForm* inForm);
+static void LobbyFillEngineBox(UIComboBox* inBox);   // port
 void LobbySetGameOptionEvents(UIForm* inForm);
 void LobbyOpen(UIForm* inForm);
 void LobbyUpdateForm();
@@ -336,8 +337,8 @@ long EEUIELEChangeCitizenBonus::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// port: sets a computer slot's engine (classic, next, random: the box's lines in EECPEngineKind's order) from its
-// engine box and sends the change (the host's; ee/EECPEngine.h)
+// port: sets a computer slot's engine (the box's lines: classic, random, then the AI manifest's entries; the index is
+// the choice, ee/EECPEngine.h EECPEngineChoice) from its engine box and sends the change (the host's)
 long EEUIELEChangeEngine::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     EEGameOptionsPlayer thePlayer;
@@ -345,7 +346,7 @@ long EEUIELEChangeEngine::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
     unsigned long theSelection;
     if (gCommunications->IsServer() == true && theBox->GetCurrentSelection(theSelection) == kErrorOK
-        && theSelection < kEECPEngineChoiceCount) {
+        && theSelection < EECPEngineChoiceCount()) {
         thePlayer = gWorld.GetLobbyOptions().GetPlayer(theBox->GetIndex() - kLobbyEngineCombo);
         if (thePlayer.mType == 0 && thePlayer.mEngine != theSelection) {
             thePlayer.mEngine = theSelection;
@@ -743,7 +744,7 @@ void LobbyOnPlayerTypeYes(UIForm* inForm)
     thePlayer.mName = "";
     thePlayer.mPing = 0.0f;
     thePlayer.mTeam = 0;
-    thePlayer.mEngine = kEECPEngineClassic;   // port
+    thePlayer.mEngine = kEECPChoiceClassic;   // port
     if (gWonNet)
         gWonNet->GetGameInfo(theInfo);
     if (thePlayer.mType != 0)
@@ -926,9 +927,11 @@ void LobbySetHostEvents(UIForm* inForm)
     for (i = 126; i < 142; i++)
         inForm->GetControl(i)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
-    theEvent = new EEUIELEChangeEngine;   // port: the computer slots' engine boxes
-    for (i = kLobbyEngineCombo; i < kLobbyEngineCombo + 16; i++)
+    theEvent = new EEUIELEChangeEngine;   // port: the computer slots' engine boxes (their lines: the AI manifest)
+    for (i = kLobbyEngineCombo; i < kLobbyEngineCombo + 16; i++) {
+        LobbyFillEngineBox(static_cast<UIComboBox*>(inForm->GetControl(i)));
         inForm->GetControl(i)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+    }
     theEvent->Dereference();
 }
 
@@ -1303,6 +1306,27 @@ long LobbyApplySavedGameOptions(EEPSaveGameHeader& inHeader)
     return 0;
 }
 
+// port: an engine choice's text (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name
+static void LobbyEngineText(unsigned long inChoice, UWideString& outText)
+{
+    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
+    if (theAI != NULL)
+        outText = UWideString(theAI->mName.c_str());
+    else
+        gResource->GetString(kLobbyEngineClassicString + (inChoice == kEECPChoiceRandom ? 1 : 0), outText);
+}
+
+// port: an engine box gets the AI manifest's names after its Classic and Random lines (the string table's), once
+static void LobbyFillEngineBox(UIComboBox* inBox)
+{
+    unsigned long theCount = EECPEngineChoiceCount();
+    for (unsigned long k = inBox->GetListBox()->GetLineCount(); k < theCount; k++) {
+        UWideString theText;
+        LobbyEngineText(k, theText);
+        inBox->AppendLine(theText);
+    }
+}
+
 // port: shows a slot's engine (ee/EECPEngine.h) in the engine column: only on a computer row; the host's box until
 // the host is ready on a new game (as the citizens box), the label otherwise
 static void LobbyShowEngine(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inHost)
@@ -1313,7 +1337,9 @@ static void LobbyShowEngine(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPl
         return;
     UIComboBox* theBox = static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineCombo));
     UITextLabel* theLabel = static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineLabel));
-    unsigned long theEngine = inPlayer.mEngine < kEECPEngineChoiceCount ? inPlayer.mEngine : kEECPEngineClassic;
+    unsigned long theEngine = inPlayer.mEngine < EECPEngineChoiceCount() ? inPlayer.mEngine
+                                                                          : (unsigned long)kEECPChoiceClassic;
+    LobbyFillEngineBox(theBox);
     if (inPlayer.mType != 0) {
         theBox->SetDisplayMode(kDisplayModeHidden);
         theLabel->SetDisplayMode(kDisplayModeHidden);
@@ -1327,7 +1353,7 @@ static void LobbyShowEngine(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPl
     unsigned long theSelection;
     if (theBox->GetCurrentSelection(theSelection) != kErrorOK || theSelection != theEngine)
         theBox->SetCurrentSelection(theEngine);
-    gResource->GetString(kLobbyEngineClassicString + theEngine, theText);
+    LobbyEngineText(theEngine, theText);
     theLabel->SetText(theText);
 }
 

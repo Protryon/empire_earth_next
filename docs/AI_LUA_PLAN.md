@@ -145,8 +145,8 @@ culling), CombatManager::Update and the wonder race.
 | gather | `EECPNextGather(p, resource 0..4, n, prefer = patch\|hunt)` | `mWantedGatherers` (food: n land gatherers plus the boats fishing); AssignGatherers, Rebalance, the finders, SendToGather; `hunt` puts all n food gatherers on the game near home first | done; bad_argument |
 | claim / release | `EECPNextClaim(p, site)`, `EECPNextRelease(p, site)` | `EECPResourceCenter::SetActive` | done (n=0 when it already was); bad_argument |
 | claim_range | `EECPNextClaimRange(p, tiles 25..45)` | the per-player `mClaimRange` (`EECPClaimRange` returns it for the next engine; ClaimExpand does nothing) | done; bad_argument |
-| build | `EECPNextBuild(p, type, near = town\|site\|tile, a1, a2)` | the site is found at order time: town = `FindSite` (the classic placement per class: shore, centre, tower, production site), site = the rings 2..5 round its resource (a settlement, as EECPRMPatchSite) or 2..7 (anything else), tile = the rings 0..6; then `QueueBuildingAt` and the build runner | queued (afford=0/1 in the trace); no_site, not_in_epoch, unknown_class, bad_argument (a unit or a wall) |
-| fish | `EECPNextFish(p, boats, docks)` | a dock (build near town) while fewer stand or are queued, then `RequestUnits(fishing boat)` up to the count | queued, done; no_producer (no dock built yet), the dock's refusal |
+| build | `EECPNextBuild(p, type, near = town\|site\|tile, a1, a2)` | the site is found at order time: town = `FindSite` (the classic placement per class: shore, centre, tower, production site), site = the rings 2..5 round its resource (a settlement, as EECPRMPatchSite; §8.35: a settlement or granary on the free tile nearest the centre's units, EECPNextAdjacentSite, most at a gap of 1) or 2..7 (anything else), tile = the rings 0..6; a tower with no room at its site, or one near=town that FindTowerSite cannot place, goes to the town: FindTowerSite, then the rings 3..12 round the town centre at least the tower's range from the other towers (trace `near=site>town`, `site>ring`, `town>ring`); then `QueueBuildingAt` and the build runner; §8.36: a settlement at a site goes by the centre's units with no drop yet, and when its rings find no tile (or one more than 2 tiles off) a citizen walks there and stands until the order comes again (a building goes only on tiles in sight) | queued (afford=0/1 in the trace), queued/unexplored (the walker); no_site, not_in_epoch, unknown_class, bad_argument (a unit or a wall) |
+| fish | `EECPNextFish(p, boats, docks)` | a dock (§8.35: by the nearest fish within 30 tiles of the town that no dock serves, EECPNextDockByFish; none without such fish; also for build near=town) while fewer stand or are queued, then `RequestUnits(fishing boat)` up to the count | queued, done; no_producer (no dock built yet), the dock's refusal |
 | train | `EECPNextTrain(p, type, n, town = 0)` | `RequestUnits` and the production runner (`StartProduction`: the least busy producer) | queued (afford in the trace); no_producer, not_in_epoch, unknown_class, bad_argument (a building, n out of 1..100) |
 | reserve | `EECPNextReserve(p, f, w, s, g, i)` | `EECPNextCanAfford`: the plain `EEPlayer::CanAfford`, then nothing but the epoch advance may spend below the reserve | done; bad_argument |
 | research | `EECPNextResearch(p, tech)` | `ResearchManager::Research` into mEpochIDs; TryResearch starts it when affordable | queued; done (n=0: already researched, e.g. an epoch's kind-7 tech); no_producer, busy (queued, or in a producer's queue), not_in_epoch, bad_argument (an epoch or a unit), unknown_class |
@@ -394,7 +394,7 @@ state's new fields, the save functions).
   (`EECPLuaReadFromFolder`);
 - `print` -> a `next.print` trace line (manager `next`; line breaks become ` | `);
 - `mCheckMemory` on: a step that leaves something unsaveable in the memory fails like an error;
-- the script: the personality's `next_script` (aipersonalities.yaml, default `test_opening`). TEST ONLY:
+- the script: the seat's AI's in the AI manifest (§3.3; until 2026-11-09 the personality's `next_script`). TEST ONLY:
   `EE_AI_NEXT_SCRIPT` names it per player (a comma list by player id from player 1, as `EE_AI_ENGINE`); `c++` there
   runs the C++ test opening instead (the gate's reference). A `next.script name=...` line records the choice.
 - A new game calls `init(view, memory)` (optional) and then `step(view, memory)` in the first tick; every later tick
@@ -411,7 +411,7 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 | `stock`, `income` (last 60 s), `reserve`, `gatherers` (land), `wanted`, `next_epoch_cost` | per-resource maps |
 | `idle`, `citizens`, `boats`, `population`, `population_cap` | |
 | `town_x`, `town_y` (-1: no town centre), `claim_range`, `claim_range_min`, `claim_range_max`, `claim_range_step` | tiles (25, 45, 5 today) |
-| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch`, `explored` (S3: the tile is visible to the player); `holds` (S3: the living units of each resource, a per-resource map: a centre may hold stone and gold); `blocked` (S3: why the classic gatherer finders would pass it over, `unexplored`, `enemy_near`, `danger` or `area`; nil when they would not) |
+| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `capacity` (§8.35: the gatherers it holds, a forage patch 6 in all, a mine the mining limit per unit), `workers` (§8.35: the gatherers sent there, walking, waiting or working), `room` (capacity less workers), `ready` and `drop` (§8.36, per-resource maps of 0/1: one of its units of that resource has a finished drop site at hand, or one finished or going up; the finders send gatherers only where `ready`), `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch`, `explored` (S3: the tile is visible to the player); `holds` (S3: the units of each resource with some left, a per-resource map: a centre may hold stone and gold; a worked mine's hit points are 0, so it counts by its amount, §8.34); `home` (§8.34: one of the start resources by the town, the nearest 2 gold, 2 iron, 1 stone and 2 forage patches within 20 tiles); `blocked` (why the gatherer finders would pass it over; nil when they would not): `unexplored`; `enemy_near` (enemy soldiers seen within 9 tiles in the last 20 s; a home site: seen there now); `tower` (an enemy tower or armed building seen and not seen destroyed whose range + 3 tiles covers it, or, §8.35, whose range + 1 tile covers the straight way to it from the town); `danger` (a danger zone: its gatherers attacked there lately); `area` (within 10 tiles of a non-enemy player's area). Home sites are never `tower`, `danger` or `area`. Fog-honest: never citizens, never what the player has not seen (§8.34; S3's `enemy_near` was BuildManager::HasEnemyNear, every armed unit not its own over up to 27 tiles, seen or not) |
 | `buildings[]` | `type`, `finished`, `unfinished`, `queued`, `busy`, `queue` |
 | `soldiers[]` | `type`, `count`, `strength`; and `army_count`, `army_strength` |
 | `threats[]` | `player`, `count`, `strength`, `x`, `y`, `distance`; and `threat_strength` |
@@ -420,13 +420,19 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 | `costs[]` | every class the player can make now: `type`, `cost` (per-resource map), `producer` (nil: none), `producers`, `requested`, `in_production`; booleans `building`, `military`, `counts_toward_epoch` |
 | `events[]` | `kind` (`unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`), `type`, `count` |
 | `groups` | (S4: the next engine's groups, §5 "S4 as built"; it was the attack commander's group count) |
-| `results[]` | the previous step's orders, index for index: `verb`, `code` (`done`, `queued`, `refused`), `reason` (`none`, `no_site`, `no_producer`, `cannot_afford`, `not_in_epoch`, `unknown_class`, `bad_argument`, `no_units`, `requirements`, `busy`), `count` |
+| `results[]` | the previous step's orders, index for index: `verb`, `code` (`done`, `queued`, `refused`), `reason` (`none`, `no_site`, `no_producer`, `cannot_afford`, `not_in_epoch`, `unknown_class`, `bad_argument`, `no_units`, `requirements`, `busy`, `unsafe` (§8.35: build, the builders would walk under a seen enemy tower or into soldiers seen there), `no_dropoff` (§8.36: gather, queued: fewer places by a finished drop site than gatherers wanted), `unexplored` (§8.36: build a settlement or granary near a site not explored yet, queued: a citizen walks there; give the order again)), `count` |
+| `hunt`, `hunters` | §8.35: the huntable animals seen within the claim range (at least 24 tiles) of the town centre and not blocked, and the land citizens hunting (the finder sends 3 an animal at most) |
+| `wood` | §8.35: the nearest forest edge to the town centre (`x`, `y`, `distance`, `has_drop`: a town centre or settlement within about 3 tiles; §8.36 `ready`: some forest edge has a finished drop site at hand, where the wood gatherers go); nil without one |
 
 **Classes and techs are named by their data ids:** dbobjects' `id` (`citizen`, `b_barracks`, `b_settlement`,
 `b_guard_tower_paleo`, `inf01_clubman`, `s02_fishing_boat_stone`) and dbtechtree's `id` for `research`. The id is
 the row's identity in the text tables (DATA_FORMATS §8.6), so a script keeps working when rows move, and a mod
 that adds a row gives its scripts a name for it. A data tree without the tables' text (the binary tree) has no ids:
-every class is then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name.
+every class was then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name, and
+boom found no class it knew (AI_RESEARCH §8.36); since 2026-11-09 a binary tree carries `Data/db/dbobjects.ids` and
+`dbtechtree.ids` (`key id` lines, the ids tools/eedata would give the rows; `open_data.py build --binary` writes them,
+`open_data.py ids TREE` adds them to an older tree), read with the .dat (EEDataTextFile.cpp `EEReadIdsFile`). On the rust branch the binary tree is gone
+(RUST_PLAN D9: the db is read only as text), and the `.ids` files, their reader and `open_data.py ids` with it.
 `EECPNextClassByName` / `EECPNextClassName` (EECPNextLua.cpp) do the lookups, from the ids EEDbFindFile kept when
 it compiled the tables. `ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
 `total(entry)`, `sum(amounts)`.
@@ -436,7 +442,7 @@ name or verb is refused `bad_argument` with a `next.order verb=... (why) result=
 
 | Order | Verb |
 |---|---|
-| `{verb="gather", resource="food", n=12, prefer="patch"}` (prefer `patch` or `hunt`) | `EECPNextGather` |
+| `{verb="gather", resource="food", n=12, prefer="patch"}` (prefer `patch` or `hunt`) | `EECPNextGather` (§8.36: the finders send gatherers only to a patch, mine or tree with a finished drop site at hand; `queued`/`no_dropoff` when the ready places are fewer than n; the rest help build the settlements and granaries going up, then go where there is room) |
 | `{verb="claim", site=3}`, `{verb="release", site=3}` (a `sites[].index`) | `EECPNextClaim` / `Release` |
 | `{verb="claim_range", range=30}` | `EECPNextClaimRange` |
 | `{verb="build", type="b_barracks", near="town"}`; `near="site", site=3`; `near="tile", x=, y=` | `EECPNextBuild` |
@@ -444,6 +450,7 @@ name or verb is refused `bad_argument` with a `next.order verb=... (why) result=
 | `{verb="train", type="citizen", n=2, town=0}` | `EECPNextTrain` |
 | `{verb="reserve", food=, wood=, stone=, gold=, iron=}` (each 0 when missing) | `EECPNextReserve` |
 | `{verb="research", tech="<dbtechtree id>"}` | `EECPNextResearch` |
+| `{verb="improve", type="b_guard_tower_paleo", what="range"}` (`what`: `range`, `attack`, `hit_points`, `speed`) | `EECPNextImprove` (§8.35: one level, paid and applied at once; `requirements` when no level is left, `cannot_afford` out of the stock above the reserve) |
 | `{verb="advance"}` | `EECPNextAdvance` |
 | `{verb="defend", n=4, x=-1, y=-1}` (-1: the town centre) | `EECPNextDefend` |
 | `{verb="attack", player=3, n=4}` | `EECPNextAttack` |
@@ -518,10 +525,76 @@ where clang fuses `a * b + c` by default; the Windows/macOS trace comparison sti
 
 **Open after S2:**
 - the scripts are not in the multiplayer checksum (`gBinaryChecksum` covers the db, .tai and .cem files): peers with
-  different `Data/ai` would diverge silently;
+  different `Data/ai` would diverge silently (done in §3.3: the AI folder's hash is in it);
 - the Windows/macOS trace gate (with `-ffp-contract=off` now on both);
 - reload on change (the developer loop) is not wired;
 - a real save-load-resume run of EE-SIM (it has no load path; the shadow check stands in).
+
+### 3.3 The AI manifest (2026-11-09)
+
+The lobby's per-seat AI choice comes from data: `Data/ai/ais.json` (written in the repository as `ai/ais.json`;
+`tools/open_data.py ai TREE` and every tree build install it with the scripts, and it ships in the db release part
+with the rest of `Data/ai`). Code: `include/ee/EECPEngine.h`, `src/Empire Earth/AI Thread/EECPEngine.cpp`.
+
+```json
+{"ais": [
+  {"id": "boom", "name": "Boom", "script": "boom", "random": true,
+   "description": "Builds its economy first ..."}
+]}
+```
+
+- `id`: 1-64 of `a-z`, `0-9`, `_`; unique; `classic`, `random` and `next` are reserved. The save and the traces name
+  the AI by it (`engine=boom` in the trace's `cp start` line and the game log's player line).
+- `name`: the lobby's text (UTF-8; shown in Windows-1252, other characters as `?`; the id when missing).
+- `script`: the Lua module the seat runs, as `require` takes it (below).
+- `random`: whether the lobby's Random may pick it (default false). `description` is free text (not shown yet).
+- Unknown keys are logged and ignored. A bad entry (a wrong type, a bad or duplicate id, a bad module name, a script
+  file that is not there) is skipped with an `EE-AI engine ...` log line; a missing or unreadable `ais.json` leaves
+  just Classic and Random. The manifest is read once per process (at the lobby's creation).
+
+**The choices.** The engine box's lines and `EEGameOptionsPlayer::mEngine` (the lobby's wire value, `EEMPlayerInformation`
+field 6): 0 Classic, 1 Random, 2 + k the manifest's entry k in file order. The box's open list is as tall as its lines
+(0.034 of the window each, up to 8; more scroll). Random resolves at the game's start (`EECPEngineResolve`, the
+seed and slot hash of S0) uniformly among Classic and the entries with `random: true`; with one such AI it is the old
+classic/next coin. A resolved seat gets `EEComputerPlayer::mEngine` = next and `EECPNextState::mAI` = the id.
+
+**Adding an AI.** Put its scripts in a folder of their own and list it:
+
+```
+Data/ai/ais.json                 {"id": "turtle", "name": "Turtle", "script": "turtle.main", "random": false}
+Data/ai/turtle/main.lua          return {init = ..., step = function(view, memory) ... end}
+Data/ai/turtle/plan.lua          require("turtle.plan")
+Data/ai/lib/view.lua             require("lib.view"): the shared helpers every AI may use
+```
+
+`require` names are relative to `Data/ai`, with dots as folders (`turtle.plan` is `Data/ai/turtle/plan.lua`); letters,
+digits and `_` only, so nothing outside `Data/ai` can be read. The sandbox is Â§3.1's: no `io`, `os`, `load` or
+`debug`, no libm transcendentals, `ai.random` for randomness, `each` for ordered iteration, a per-call instruction
+budget and a memory limit, and a memory that must hold only nil, booleans, integers, strings and tables.
+`EE_AI_SCRIPTS` (TEST ONLY) reads `ais.json` and the scripts from another folder first.
+
+**Starting a seat.** `EEComputerPlayer::Update`'s first tick calls `EECPNextPrepare` before anything else: it picks
+the script (the `EE_AI_NEXT_SCRIPT` override, TEST ONLY, else the AI's manifest entry) and loads it. If it does not
+load (a missing module, a syntax or top-level error: the `next.error` line says which), the seat plays the classic
+engine from that first tick (an `EE-AI engine` log line says so); nothing has been decided by either engine yet, and
+the start-up block is the same for both. A loaded game keeps the script its save names.
+
+**Multiplayer.** `EECPAIFolderHash` (FNV-1a over `ais.json` and every `.lua` under `Data/ai`, by relative path,
+carriage returns dropped) is added to `gBinaryChecksum` in `EEInitializeNetwork`, so a joiner whose AI folder differs
+from the host's is refused like any other data mismatch ("One or more of your files are not the correct version"). The
+hash is logged with the manifest.
+
+**Saves** (version 0.253): after each computer player's engine byte, a next seat's AI id (uint32 length, bytes). A
+save whose AI the manifest does not list fails to load, with an `EE-AI engine` log line naming the id. Older saves:
+an engine byte 1 is `boom`; the options' choices 0/1/2 (classic/next/random) become 0/2/1.
+
+**Personalities** no longer name a script: `next_script` is gone from `aipersonalities.yaml` (an older document's
+`next_script` is read and ignored). For now the manifest lists only boom; `ai/rush.lua` and `ai/balanced.lua` stay
+and run through `EE_AI_NEXT_SCRIPT` (TEST ONLY) or once listed.
+
+**EE-SIM and the tools.** `--engine` (and `EE_AI_ENGINE`) take `classic`, `random`, an AI's id, or `next` for the
+manifest's first AI (boom), so older bench commands still work; EE-SIM selects the box's line by index.
+`tools/game_log.py` and `tools/ai_scorecard.py --key engine` show the id.
 
 ## 4. The first scripts
 
@@ -623,7 +696,8 @@ step. A `plan` line each minute and a `sites` line every five (`next.print` in t
 **Tactics changes (economy side).**
 - **The view's sites** (EECPNextView.cpp, EECPNextLua.cpp): `holds` (units per resource), `explored` and
   `blocked`, the checks FindResourceTarget and FindFarm make in their order: not visible, an enemy near
-  (HasEnemyNear), a danger zone, another non-enemy player's area within 10 tiles.
+  (HasEnemyNear), a danger zone, another non-enemy player's area within 10 tiles. (§8.34 replaced the enemy check
+  for the next engine: `EECPNextSiteBlocked`, seen soldiers and towers in range, `home` sites; see `sites[]`.)
 - **The finders** (EECPResourceManager.cpp): for the next engine, FindResourceTarget and FindFarm send gatherers to
   a claimed site that is not visible. The next engine runs no explorers, and the larger mines 35-60 tiles out were
   never seen, so never gathered from. The view lists every resource centre and the strategy claims the ones it
@@ -698,7 +772,8 @@ Each stage ends on a gate. Each one is useful on its own, and the work can stop 
 
 *S0 as built* (2026-11-08). The owner's decision 2 replaced the `gameoptions.yaml` setting: the choice is the lobby's.
 - **The choice:** `EEGameOptionsPlayer::mEngine` per lobby slot, 0 classic (the default, and every reset of a slot),
-  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`).
+  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`). Since §3.3: 0 classic, 1 random, 2 + k the AI manifest's
+  entries.
 - **The lobby:** the engine column sits in the ping column, which a computer row leaves empty, widened to 0.428-0.520
   of the window. The controls are not in dbuicontrols; `EEUIManager`'s ctor adds them with
   `UIControlsTable::AddControlLike` (form 26):
@@ -856,6 +931,24 @@ army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for 
   d7d9bac) is reverted: fog of war is on for the next engine's gatherers again.
 
 **Results:** docs/AI_RESEARCH.md §8.31 (the matrix).
+
+*The citizens' losses* (2026-11-08, AI_RESEARCH §8.33).
+- **The reflexes run for the next engine** (they hang off EEComputerPlayer::DamageTaken: militia, flee, naval flee).
+  The next engine's group soldiers are detached, so the militia neither counts nor orders them.
+- **The fish finder** (FindFish, next engine only) skips fish within 12 tiles of an armed enemy ship the player sees
+  now (`EECPNextSeenWarships`, read from the world at the call). No verb or view field changed.
+- **The trace:** `next.death` (every citizen and boat lost) and `next.raid` (every incident of hits). Both are written
+  only while the trace is on, and the game reads neither.
+- **boom.lua:**
+  - the reserve never locks out the missing light army;
+  - the town scrambles under a threat while its army is below the light army;
+  - the advance's resources that are 70% paid, or have no site left, are never spent by the army;
+  - no boats are replaced while 3 or more were sunk in the last 5 minutes.
+
+  Its plan follows the owner's build order: no Prehistoric soldiers, all the food to citizens, 20 spearmen at the
+  Stone Age's start, then the citizens (§8.33 has its numbers).
+- **Tried and dropped:** a militia that runs from armies, honest militia odds, and a defend group that answers
+  attackers of the player's units first.
 
 **S5, later epochs.**
 - **Coverage:** Copper to Bronze (farms, the phalanx swarm), then the Middle Ages and on.

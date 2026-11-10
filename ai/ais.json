@@ -1,0 +1,11 @@
+{
+  "ais": [
+    {
+      "id": "boom",
+      "name": "Boom",
+      "script": "boom",
+      "random": true,
+      "description": "Builds its economy first: food, many citizens, towers at the town and its sites, a small defence that grows with the threat it sees, no attacks; advances an epoch once it is paid for."
+    }
+  ]
+}

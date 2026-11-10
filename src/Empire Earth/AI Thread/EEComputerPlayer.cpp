@@ -1388,6 +1388,8 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
         EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
     if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
+        if (this->mNextState != NULL && gCPTraceOn)
+            EECPNextTraceHit(this, inPlayer, inUnit);   // the next engine's losses trace (nothing the game reads)
         // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp
         // EECPRMNoteDanger; against computer players only with the experiment "flee": docs/AI_RESEARCH.md §8.22)
         if (inPlayer > 0 && theCategory == kUnitCategoryLandCitizen
@@ -5828,6 +5830,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     if (gCPTraceOn && !inSwapped)
         EECPTraceUnitLost(this, theUnit);
+    if (gCPTraceOn && !inSwapped && this->mNextState != NULL)
+        EECPNextTraceDeath(this, theUnit);   // the next engine's losses trace (nothing the game reads)
     if (this->mNextState != NULL && !inSwapped && theUnit->mUnitClass != NULL)
         EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
     if (this->mActive)
@@ -5913,12 +5917,18 @@ void EEComputerPlayer::Update(unsigned long inTime)
     UWideString theUnused2;
     EECPTraceScope theScope("cp");
     if (!this->mIsStarted) {
+        // port: the next engine's script loads first (ee/EECPEngine.h), so a seat whose AI cannot run plays the
+        // classic engine from its first decision instead of standing idle
+        if (!this->mObserverMode && EECPEngine(this) == kEECPEngineNext && !EECPNextPrepare(this)) {
+            this->mEngine = kEECPEngineClassic;
+            EECPNextDeleteState(this);
+        }
         if (EECPCheatOn(this, kAICheatReveal))
             gWorld.mMap->ExploreUnseen(this);
         EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d exp=%s engine=%s",
             this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(this), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
             EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression, EECPDemandSplitOn(this) ? 1 : 0, EECPExperimentNames(this),
-            EECPEngineName(EECPEngine(this)));
+            EECPEngineName(this).c_str());
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);
         this->SetNextAttackTime(inTime);

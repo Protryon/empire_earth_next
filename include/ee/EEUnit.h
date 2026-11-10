@@ -1062,9 +1062,13 @@ struct EEUnitClassImprovementEntry {
     float mStepFactor;
 };
 
+// It is EEUCUpgradeTable read through another type (EEUnitClass::EEUnitClass reinterpret_casts it), so its first member
+// stands for that class's vtable pointer: pointer-sized (a 4-byte `long` here put every entry 4 bytes off on 64-bit
+// Windows, and the maximum level read a step factor, 0: no improvement could be bought; docs/AI_RESEARCH.md §8.35).
+// mMaxLevel is `long` as EEUCUpgradeTable's is (8 bytes on LP64, both).
 struct EEUnitClassImprovementTable {
     long GetMaxLevel() const { return this->mMaxLevel; }  // (provisional name; inline-budget evidence: 0x563c6d)
-    long mU00;                              // +0x00
+    void* mU00;                             // +0x00 (EEUCUpgradeTable's vtable pointer)
     EEUnitClassImprovementEntry mEntries[16];   // +0x04
     long mMaxLevel;                         // +0x84
 };

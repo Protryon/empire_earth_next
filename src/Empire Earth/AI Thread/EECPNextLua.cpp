@@ -49,6 +49,8 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPEngine.h"
+#include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -203,18 +205,22 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("amount", EECPNextInt(s.amount));
         e.Set("room", EECPNextInt(s.room));
         e.Set("workers", EECPNextInt(s.workers));
+        e.Set("capacity", EECPNextInt(s.capacity));
         e.Set("x", EECPNextInt(s.x));
         e.Set("y", EECPNextInt(s.y));
         e.Set("distance", EECPNextInt(s.distance));
         e.Set("claimed", EECPLuaValue::Bool(s.claimed != 0));
         e.Set("has_drop", EECPLuaValue::Bool(s.has_drop != 0));
+        e.Set("ready", EECPNextResources(s.ready));   // §8.36: 1 by a finished drop site, by resource
+        e.Set("drop", EECPNextResources(s.drop));     // ... by one finished or going up
         e.Set("has_tower", EECPLuaValue::Bool(s.has_tower != 0));
         e.Set("danger", EECPNextInt(s.danger));
         e.Set("patch", EECPLuaValue::Bool(s.patch != 0));
         e.Set("holds", EECPNextResources(s.holds));
         e.Set("explored", EECPLuaValue::Bool(s.explored != 0));
-        static const char* const kBlocked[5] = {"", "unexplored", "enemy_near", "danger", "area"};
-        if (s.blocked > 0 && s.blocked <= 4)   // why the gatherer finders would pass it over (nil: they would not)
+        e.Set("home", EECPLuaValue::Bool(s.home != 0));   // a start resource by the town
+        static const char* const kBlocked[6] = {"", "unexplored", "enemy_near", "danger", "area", "tower"};
+        if (s.blocked > 0 && s.blocked <= kNextBlockedTower)   // why the gatherer finders would pass it over (nil: they would not)
             e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
         theSites.Push(e);
     }
@@ -330,6 +336,18 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
     v.Set("groups", theGroups);
     v.Set("free_soldiers", EECPNextInt(inView.free_soldiers));
     v.Set("free_strength", EECPNextInt(inView.free_strength));
+    // §8.35: the game near the town, the hunters, the worked forest edge
+    v.Set("hunt", EECPNextInt(inView.hunt));
+    v.Set("hunters", EECPNextInt(inView.hunters));
+    if (inView.wood_x >= 0) {
+        EECPLuaValue theWood = EECPLuaValue::NewMap();
+        theWood.Set("x", EECPNextInt(inView.wood_x));
+        theWood.Set("y", EECPNextInt(inView.wood_y));
+        theWood.Set("distance", EECPNextInt(inView.wood_distance));
+        theWood.Set("has_drop", EECPLuaValue::Bool(inView.wood_drop != 0));
+        theWood.Set("ready", EECPLuaValue::Bool(inView.wood_ready != 0));
+        v.Set("wood", theWood);
+    }
     EECPLuaValue theResults = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inResults.size(); k++) {
         EECPLuaValue e = EECPLuaValue::NewMap();
@@ -541,6 +559,21 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
             return EECPNextRefuse(inPlayer, v, "unknown tech " + theTech);
         return EECPNextResearch(inPlayer, theID);
     }
+    if (v == "improve") {
+        // {verb="improve", type="b_guard_tower_paleo", what="range"} (§8.35); what: attack, hit_points, range, speed
+        std::string theType = r.Str("type", "", true);
+        std::string theWhat = r.Str("what", "", true);
+        if (!r.Done())
+            return EECPNextRefuse(inPlayer, v, r.mProblem);
+        long theClass = EECPNextClassByName(theType);
+        if (theClass < 0)
+            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
+        long theKind = theWhat == "range" ? kImprovementRange : theWhat == "attack" ? kImprovementAttack
+            : theWhat == "hit_points" ? kImprovementHitPoints : theWhat == "speed" ? kImprovementSpeed : -1;
+        if (theKind < 0)
+            return EECPNextRefuse(inPlayer, v, "what " + theWhat);
+        return EECPNextImprove(inPlayer, theClass, theKind);
+    }
     if (v == "advance") {
         if (!r.Done())
             return EECPNextRefuse(inPlayer, v, r.mProblem);
@@ -748,13 +781,58 @@ static void EECPNextRunOrders(EEComputerPlayer* inPlayer, EECPNextState* inState
 static void EECPNextShadowStep(EEComputerPlayer* inPlayer, EECPNextState* s, const EECPLuaValue& inView,
     const EECPLuaValue& inOrders);
 
+// the script a seat runs (a new game; a loaded one has its saved script): EE_AI_NEXT_SCRIPT's (TEST ONLY), else its
+// AI's in the manifest (ee/EECPEngine.h) -> "" none
+static std::string EECPNextChooseScript(EEComputerPlayer* inPlayer, EECPNextState* inState)
+{
+    std::string theScript = EECPNextScriptOverride(inPlayer);
+    if (theScript.empty()) {
+        if (inState->mAI.empty())
+            inState->mAI = "boom";   // a seat given the next engine without an AI (none of today's paths)
+        const EECPAIEntry* theAI = EECPAIByID(inState->mAI);
+        if (theAI != NULL)
+            theScript = theAI->mScript;
+    }
+    return theScript;
+}
+
+bool EECPNextPrepare(EEComputerPlayer* inPlayer)
+{
+    EECPTraceScope theScope("next");
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    if (theState->mScript.empty()) {
+        theState->mScript = EECPNextChooseScript(inPlayer, theState);
+        if (theState->mScript.empty()) {
+            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat plays classic", inPlayer->mPlayerID,
+                          theState->mAI.c_str());
+            return false;
+        }
+        if (theState->mScript == "c++")
+            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
+    }
+    if (theState->mScript == "c++" || theState->mLua != NULL || theState->mFailed)
+        return true;
+    if (!EECPNextOpen(inPlayer, theState)) {
+        // the script does not load (a missing module, a syntax or top-level error: the next.error line says which):
+        // the seat plays the classic engine instead of standing idle. Safe here: the first tick, before either
+        // engine has made a decision (EEComputerPlayer::Update's start block runs the same for both)
+        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat plays classic", inPlayer->mPlayerID,
+                      theState->mAI.c_str(), theState->mScript.c_str());
+        return false;
+    }
+    return true;
+}
+
 void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
     if (theState->mScript.empty()) {
-        theState->mScript = EECPNextScriptOverride(inPlayer);
-        if (theState->mScript.empty())
-            theState->mScript = EECPPersonality(inPlayer).mNextScript;
+        theState->mScript = EECPNextChooseScript(inPlayer, theState);
+        if (theState->mScript.empty()) {
+            theState->mFailed = true;
+            EECPNextError(inPlayer, "load", kEECPLuaNoFile, "the AI '" + theState->mAI + "' is not in Data/ai/ais.json");
+            return;
+        }
         if (theState->mScript == "c++")
             EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
     }
@@ -971,7 +1049,7 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 2);
+    EECPNextPut(outBytes, 3);
     EECPNextPut(outBytes, s->mClaimRange);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mReserve[i]);
@@ -1015,6 +1093,9 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     }
     EECPNextPutString(outBytes, inMemory);
     EECPNextEncodeArmy(s, outBytes);
+    // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
+    EECPNextPutSpots(outBytes, s->mThreats);
+    EECPNextPut(outBytes, s->mThreatsTime);
 }
 
 // the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
@@ -1026,7 +1107,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion != 1 && theVersion != 2)
+    if (theVersion < 1 || theVersion > 3)
         return false;
     s->mClaimRange = g.Get();
     for (long i = 0; i < kNextResources; i++)
@@ -1081,6 +1162,12 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     std::string theMemory = g.GetString();
     if (theVersion >= 2)
         EECPNextDecodeArmy(s, g);   // (a version 1 block: no groups, no army memory)
+    s->mThreats.clear();
+    s->mThreatsTime = -1;
+    if (theVersion >= 3) {
+        EECPNextGetSpots(g, s->mThreats);
+        s->mThreatsTime = g.Get();
+    }
     if (!g.mOK || g.mOffset != inBytes.size())
         return false;
     delete s->mLua;

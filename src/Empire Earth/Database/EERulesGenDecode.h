@@ -201,7 +201,6 @@ static void Decode(const unsigned char*& p, EEEpochMedia& r)
 static void Decode(const unsigned char*& p, EEAIPersonalityRule& r)
 {
     r.mID = Str(p);
-    r.mNextScript = Str(p);
     r.mEpochPressureStart = Float(p);
     r.mEpochPressureFull = Float(p);
     r.mStoneSpan = Float(p);

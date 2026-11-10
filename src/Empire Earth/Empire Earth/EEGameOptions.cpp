@@ -107,7 +107,7 @@ EEGameOptionsPlayer::EEGameOptionsPlayer()
     this->mIsReady = false;
     this->mTransferID = 0;
     this->mB36 = true;
-    this->mEngine = kEECPEngineClassic;   // port (ee/EECPEngine.h)
+    this->mEngine = kEECPChoiceClassic;   // port (ee/EECPEngine.h)
 }
 
 // FUNCTION: EXE 0x52f526
@@ -153,12 +153,16 @@ long EEGameOptionsPlayer::Load(unsigned long inMajorVersion, unsigned long inMin
         theResult = inFile.Read(this->mIsReady);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mB36);
-    // port: the engine from version 0.251 (ee/EECPEngine.h); older saves and scenarios: classic
-    this->mEngine = kEECPEngineClassic;
+    // port: the engine choice from version 0.251 (ee/EECPEngine.h); older saves and scenarios: classic. Before 0.253
+    // the values were 0 classic, 1 next (now the manifest's first AI, boom), 2 random (now 1)
+    this->mEngine = kEECPChoiceClassic;
     if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 251)) {
         theResult = inFile.Read(this->mEngine);
-        if (this->mEngine >= kEECPEngineChoiceCount)
-            this->mEngine = kEECPEngineClassic;
+        if (inMajorVersion == 0 && inMinorVersion < 253)
+            this->mEngine = this->mEngine == 1 ? (unsigned long)kEECPChoiceFirstAI
+                          : this->mEngine == 2 ? (unsigned long)kEECPChoiceRandom : (unsigned long)kEECPChoiceClassic;
+        if (this->mEngine >= EECPEngineChoiceCount())
+            this->mEngine = kEECPChoiceClassic;
     }
     this->mLoadedType = this->mType;
     return theResult;

@@ -683,7 +683,7 @@ LoadFinalVersions:
         theResult = inFile.Read(this->mSight);
     if ((inMajorVersion != 0 || inMinorVersion >= 0xf5) && theResult == 0)
         theResult = inFile.Read(this->mU32C);
-    // port (0.253): the running state the original did not save (Save); put back at the first tick, after the load's
+    // port (0.254): the running state the original did not save (Save); put back at the first tick, after the load's
     // own rebuilding has set some of it again (EEAfterLoad)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         struct LiveState {
@@ -1278,7 +1278,7 @@ SaveFinalFields:
         && (theResult = outFile.Write(this->mIsSpecialAttack)) == 0 && (theResult = outFile.Write(this->mDisabledReason)) == 0
         && (theResult = outFile.Write(this->mPlanetID)) == 0 && (theResult = outFile.Write(this->mSight)) == 0)
         theResult = outFile.Write(this->mU32C);
-    // port (0.253): the running state the original did not save: the animation, collision and push, the AI state and
+    // port (0.254): the running state the original did not save: the animation, collision and push, the AI state and
     // trigger time, the targets ignored for now and the tiles a bounded path avoids (Load)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         if ((theResult = outFile.Write(this->mAnimationFraction)) == 0 && (theResult = outFile.Write(this->mNextFrame)) == 0

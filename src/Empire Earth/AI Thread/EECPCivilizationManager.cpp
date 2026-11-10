@@ -1081,7 +1081,7 @@ long EECPCivilizationManager::Save(unsigned long inMajorVersion, unsigned long i
         return theResult;
     // port: the original set mBuildingCountsChecked here before writing it, so saving changed the game (the next
     // Update skipped the building-count check and moved its timer; PORT_LEARNINGS "The headless simulation"). The
-    // file gets the running value (from save version 0.253; older saves have true): the loaded game checks its
+    // file gets the running value (from save version 0.254; older saves have true): the loaded game checks its
     // building counts when the game that was saved does (R5a.2, "load equals continue").
     theResult = outFile.Write(this->mBuildingCountsChecked);
     if (theResult != kErrorOK)

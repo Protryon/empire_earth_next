@@ -909,7 +909,7 @@ long EEUGGather::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     if (theResult != 0)
         return theResult;
     // port: the original cleared mGathering and mWaiting here without a valid resource, so saving changed the running
-    // goal (PORT_LEARNINGS "Saving without side effects"). The file gets the goal's own flags (from save version 0.253;
+    // goal (PORT_LEARNINGS "Saving without side effects"). The file gets the goal's own flags (from save version 0.254;
     // older saves have them cleared), so the loaded goal goes on as the saved one (R5a.2, "load equals continue").
     theResult = outFile.Write(this->mGathering);
     if (theResult != 0)

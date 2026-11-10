@@ -681,27 +681,6 @@ fn load_epochs(c: &mut Content, d: &Node, r: &mut Rules) -> Res<()> {
     Ok(())
 }
 
-/// A Lua module name as the runtime's require takes it: letters, digits and _, in segments separated by dots.
-fn next_script_name(name: &[u8]) -> bool {
-    if name.is_empty() || name.len() > 96 {
-        return false;
-    }
-    let mut start = true;
-    for &c in name {
-        if c == b'.' {
-            if start {
-                return false;
-            }
-            start = true;
-        } else if c.is_ascii_alphanumeric() || c == b'_' {
-            start = false;
-        } else {
-            return false;
-        }
-    }
-    !start
-}
-
 fn load_ai_personalities(d: &Node, r: &mut AIPersonalityRules) -> Res<()> {
     const DOC: &str = "aipersonalities";
     let mut m = Map::new(d, DOC, "the document")?;
@@ -711,18 +690,9 @@ fn load_ai_personalities(d: &Node, r: &mut AIPersonalityRules) -> Res<()> {
         for e in &v.items {
             let mut x = Map::new(e, DOC, "a personality")?;
             let mut p = AIPersonalityRule { id: entry_id(&mut x)?, ..AIPersonalityRule::default() };
-            if let Some(nv) = x.get("next_script") {
-                let t = node_scalar(Some(nv), &x.where_at(nv), "next_script")?;
-                p.next_script = t.to_vec();
-                if !next_script_name(t) {
-                    fail!(
-                        x.where_at(nv),
-                        ": next_script: '",
-                        t,
-                        "' is not a module name (letters, digits and _, in segments separated by dots)"
-                    );
-                }
-            }
+            // next_script: obsolete (the AI manifest Data/ai/ais.json names the next engine's scripts);
+            // read and ignored, so the documents of older data releases still load
+            let _ = x.get("next_script");
             if let Some(s) = x.sub("epoch_pressure")? {
                 let mut y = Map::new(s, DOC, "epoch_pressure")?;
                 y.float("start", &mut p.epoch_pressure_start)?;
@@ -1310,10 +1280,18 @@ mod tests {
     #[test]
     fn personalities_validation() {
         for (doc, want) in [
-            ("personalities:\n  - id: a\n    next_script: a..b\n", "aipersonalities line 3: next_script: 'a..b' is not a module name (letters, digits and _, in segments separated by dots)"),
-            ("personalities:\n  - id: a\n    epoch_pressure:\n      start: 0.5\n      full: 0.2\n", "aipersonalities line 4: epoch_pressure: 0 <= start < full"),
-            ("personalities:\n  - id: a\n    economy:\n      early_trainers: -1\n", "aipersonalities line 4: economy: early_town_centers and early_trainers must be 0 or more"),
-            ("personalities:\n  - id: a\n    military:\n      prehistoric_army: -1\n", "aipersonalities line 4: military: prehistoric_army must be 0 or more"),
+            (
+                "personalities:\n  - id: a\n    epoch_pressure:\n      start: 0.5\n      full: 0.2\n",
+                "aipersonalities line 4: epoch_pressure: 0 <= start < full",
+            ),
+            (
+                "personalities:\n  - id: a\n    economy:\n      early_trainers: -1\n",
+                "aipersonalities line 4: economy: early_town_centers and early_trainers must be 0 or more",
+            ),
+            (
+                "personalities:\n  - id: a\n    military:\n      prehistoric_army: -1\n",
+                "aipersonalities line 4: military: prehistoric_army must be 0 or more",
+            ),
             ("assign: [nope]\n", "aipersonalities line 1: assign: 'nope' is not a personality"),
         ] {
             let mut c = content(&[("aipersonalities", doc.to_string())]);
@@ -1322,15 +1300,13 @@ mod tests {
     }
 
     #[test]
-    fn next_script_names() {
-        assert!(next_script_name(b"boom"));
-        assert!(next_script_name(b"a.b_c9"));
-        assert!(!next_script_name(b""));
-        assert!(!next_script_name(b"a..b"));
-        assert!(!next_script_name(b".a"));
-        assert!(!next_script_name(b"a."));
-        assert!(!next_script_name(b"a-b"));
-        assert!(!next_script_name(&[b'a'; 97]));
+    fn next_script_is_obsolete_and_ignored() {
+        // the documents of older data releases name a script per personality; it loads and is ignored
+        let doc = "personalities:\n  - id: a\n    next_script: a..b\n".to_string();
+        let mut c = content(&[("aipersonalities", doc)]);
+        let mut r = Rules::default();
+        r.load(&mut c).unwrap();
+        assert_eq!(r.ai_personalities.personalities[0].id, b"a");
     }
 
     #[test]

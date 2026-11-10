@@ -375,7 +375,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                     thePlayer.mTeam = 0;
                     thePlayer.mB36 = false;
                     thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-                    thePlayer.mEngine = kEECPEngineClassic;   // port
+                    thePlayer.mEngine = kEECPChoiceClassic;   // port
                 }
                 EEMFullPlayerInformation* theInformation = new EEMFullPlayerInformation(thePlayer);
                 theInformation->SetOriginatingSlot(kSlotServer);

@@ -121,7 +121,7 @@ def cases(texts):
     # aipersonalities
     a = 'aipersonalities'
     add('a_ok', a, texts[a])
-    add('a_script_bad', a, _re(texts, a, r'next_script: \w+', 'next_script: a..b'))
+    add('a_script_obsolete', a, _re(texts, a, r'(  - id: \w+[^\n]*\n)', r'\1    next_script: a..b\n'))   # read and ignored
     add('a_pressure', a, _re(texts, a, r'start: \S+', 'start: 0.9'))
     add('a_pressure_order', a, _re(texts, a, r'full: \S+', 'full: 0.0'))
     add('a_span_neg', a, _re(texts, a, r'stone_span: \S+', 'stone_span: -1'))
