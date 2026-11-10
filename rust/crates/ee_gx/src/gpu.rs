@@ -889,6 +889,15 @@ mod tests {
     use crate::keys::BlitMode;
     use crate::modes::DisplayInfo;
 
+    /// One device at a time, as in the game (one per process): WARP (d3d10warp.dll, DX12 without a GPU) faulted in
+    /// its own worker thread (an access violation reading freed memory) when the device tests created, used and
+    /// dropped devices in parallel; 3 of 45 runs of these tests under load, none of 45 one at a time. The guard is
+    /// declared before the Gx, so the device is dropped while it is held.
+    fn device_lock() -> std::sync::MutexGuard<'static, ()> {
+        static DEVICE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        DEVICE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     fn try_start() -> Option<Gx<WgpuBackend, PlatformBase>> {
         let mut gx = Gx::new(WgpuBackend::default(), PlatformBase::default());
         // the plain path: the first working adapter (WARP on a machine without a GPU)
@@ -952,6 +961,7 @@ mod tests {
     /// A fill through the GPU and a read-back: real device, real shader, real map.
     #[test]
     fn device_gpu_fill_reads_back_exact() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         let dd = DirectDraw::new(&DisplayInfo::default());
         let id = target(&mut gx, &dd, 8, 8);
@@ -966,6 +976,7 @@ mod tests {
     /// The fixed-function pipeline on the device: an unlit triangle covering the target, fill colour from the vertices.
     #[test]
     fn device_draw_runs_the_fixed_function_shader() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         let dd = DirectDraw::new(&DisplayInfo::default());
         let id = target(&mut gx, &dd, 16, 16);
@@ -992,6 +1003,7 @@ mod tests {
     /// Blit with a colour key on the device: the keyed texel keeps the destination's pixels.
     #[test]
     fn device_keyed_blit_discards_the_key() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         let dd = DirectDraw::new(&DisplayInfo::default());
         let source_desc = GxSurfaceDesc {
@@ -1018,6 +1030,7 @@ mod tests {
 
     #[test]
     fn device_scaled_target_round_trips_through_the_cpu() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         gx.plat.pixels = Some((16, 16));
         let dd = DirectDraw { mode_width: 8, mode_height: 8, ..DirectDraw::new(&DisplayInfo::default()) };
@@ -1036,6 +1049,7 @@ mod tests {
     /// `create_bind_group` failed ("Not enough memory left"). The live count must stay within the bound.
     #[test]
     fn device_dropped_bind_groups_stay_bounded_when_the_gpu_lags() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         let dd = DirectDraw::new(&DisplayInfo::default());
         // a large target: each stretched blit is slow on a software adapter, so the CPU gets ahead
@@ -1091,6 +1105,7 @@ mod tests {
     /// A present waits for the work of the frame before the previous one.
     #[test]
     fn presents_keep_at_most_two_frames_in_flight() {
+        let _device = device_lock();
         let Some(mut gx) = try_start() else { return };
         let dd = DirectDraw::new(&DisplayInfo::default());
         let dst = target(&mut gx, &dd, 512, 512);
