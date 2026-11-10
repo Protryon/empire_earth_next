@@ -340,8 +340,8 @@ class Stream:
 
 
 def tree_fingerprint(tree):
-    f = tree / 'open_data.json'
-    return hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else None
+    import storegate
+    return storegate.tree_hash(tree)
 
 
 def run(a):

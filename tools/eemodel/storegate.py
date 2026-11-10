@@ -15,7 +15,7 @@ tree's Data folder and compares its output with the digests recorded in storegat
 
 The digests were recorded from the game's loaders before D9 (glTF -> .cem bytes -> GEModel::Load, PNG -> .sst bytes ->
 GETexture::Load) and the native loaders after it gave the same output (PORT_LEARNINGS.md "D9 at run time"). They hold
-for one tree (its open_data.json hash is recorded with them): another tree, or a deliberate change of what is stored,
+for one tree (a hash of its model and texture names and sizes is recorded with them): another tree, or a deliberate change of what is stored,
 needs --record. Only digests are kept; never retail data.
 """
 import argparse
@@ -151,8 +151,14 @@ def build(game_out, out):
 
 
 def tree_hash(tree):
-    meta = tree / "open_data.json"
-    return hashlib.sha256(meta.read_bytes()).hexdigest()[:16] if meta.exists() else "none"
+    """The models and textures a tree holds: their names and sizes (a rebuild of the same media keeps it; the digests
+    then check the contents)."""
+    h = hashlib.sha256()
+    for sub in ("Models", "Textures"):
+        folder = tree / "Data" / sub
+        for p in sorted(folder.iterdir()) if folder.is_dir() else []:
+            h.update(f"{sub}/{p.name}:{p.stat().st_size};".encode("utf-8", "surrogateescape"))
+    return h.hexdigest()[:16]
 
 
 def main():
