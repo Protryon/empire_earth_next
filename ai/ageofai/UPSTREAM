@@ -36,7 +36,12 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
                 attack time when it beats the enemy at the target by AR_GO_PCT, the judge every AR_JUDGE_EVERY, home
                 under AR_BACK_PCT twice running, the next building, the raid answered, the way home as a convoy).
-                Missing: the detachments (the raid parties on the enemy's economy and outposts).
+                Missing: the detachments (MINE RAIDS / HIT AND RUN, towns=...|mine_raids, off upstream: up to 20
+                soldiers from those at home for the nearest enemy drop site by a mine they beat, six citizens behind
+                them to found the town; behind, 10-12 cavalry on the least defended mine's citizens; the raiders
+                kept out of the force, the riders' look; attack.c does not use them), the force's own breach
+                (AR_BREACH, off upstream: the stand-off before a defended position; attack.lua's breach through a
+                wall is attack.c's).
   stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
   intel.c       ENGINE -> C++ (ai.memory, ai.seen): honest vision's memory (buildings until seen gone, soldiers
                 remembered 3 minutes).
@@ -45,12 +50,19 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   shiproute.c   ENGINE -> C++ ai.route (cells): danger-aware routes.
   army.c        PORTED -> econ.lua (buildings): army_plan BUILD (one more production building of the kind trained
                 when the producers are busy).
-  attack.c      PARTLY -> tactics.lua (siege), C++ ai.route (the routing round known defences). Ported: the siege
-                controller (siege_want / siege_train: 2 + a quarter of the known defences, at most 4, from a Siege
-                Factory, a pause after 3 lost in 10 minutes), site_danger (the engine's blocked == "tower").
-                Missing: the weak spots (the target's least defended side), the breaches (through a known wall away
-                from the towers), the commander's patches (the engine's attack groups are not used: the force is
-                the port's).
+  attack.c      PORTED -> attack.lua (the decisions), tactics.lua (siege), lib/groups.lua (marked blocks), C++
+                ai.route (the routing round known defences). Ported: the siege controller (siege_want / siege_train:
+                2 + a quarter of the known defences, at most 4, from a Siege Factory, a priority order from the stock
+                above the reserve, a pause after 3 lost in 10 minutes), siege_tick's target (the force's breach wall,
+                else the nearest known defence the siege outranges) and firing position (range - 0.7, turned by 15
+                degrees out of every other defence; the force is the escort: no waves from home), threat_refresh /
+                threat_at (the known defences, range + 6), find_weak_spot (the uncovered enemy building within 60 of
+                a goal inside known defences, nearest the force), wall_crossing / find_breach (the wall segment
+                outside known defences with the shortest detour; the force's focus), breach_note / breach_forget,
+                the leash, the aircraft out of reach, the rams held back (lib.groups' scorer), wave_retarget (on
+                here; 0 upstream), site_danger (the engine's blocked == "tower"). Not applicable: the route cost
+                hook (ai.route's avoid weight), the subgroup hooks (the force is lib.groups'), citizen_attacks (no
+                citizens in the force), the overlays, logs and test commands.
   garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades (spare citizens into the drop site with
                 the most metal mines near).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
@@ -94,8 +106,10 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   packing.c     NOT STARTED (tight_build: production buildings placed touching their kind without cutting a way;
                 upstream default 0).
   priority.c    NOT STARTED (the priority list: one row for each thing the AI saves for, every spender asks it).
-  forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat).
-                Missing: enemy_objective (an objective building of the target), the walk-and-fight record.
+  forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat),
+                attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +
+                3 x the threat at it - the force's next target once its building is down). Missing: the
+                walk-and-fight record (goal_near, unit_fighting: the engine's action field stands in).
   stats.c       NOT STARTED (fight_estimate: st_ratio from the game's damage tables; upstream default 0, the
                 summed hit points x attack of ai.strength stand in).
   settings.c    PORTED -> settings.lua: the [ai_base] defaults of config/ageofai.ini at that commit.

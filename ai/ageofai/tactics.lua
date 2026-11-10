@@ -17,6 +17,7 @@
 -- goes. They are committed for 45 s (the force's orders leave them alone).
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local AT = require("ageofai.attack")   -- [attack.c] the siege's target and firing position
 local M = {}
 
 local SIEGE = {"gun_siege13_paladin_cannon", "gun_siege10_howitzer_cannon", "gun_siege09_serpentine_cannon",
@@ -89,7 +90,9 @@ function M.siege(view, mem, order, budget)
             local n = want - have
             for _, r in ipairs(V.resources) do
                 if c.cost[r] > 0 then
-                    n = math.min(n, budget.avail[r] // c.cost[r])
+                    -- [attack.c] a priority order (g_priority_mil): the stock above the epoch reserve, not the
+                    -- military account alone
+                    n = math.min(n, budget.civil[r] // c.cost[r])
                 end
             end
             if n > 0 and c.requested + c.in_production == 0 then
@@ -99,6 +102,75 @@ function M.siege(view, mem, order, budget)
             end
             return nil   -- the newest it can make: short of its price
         end
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- [attack.c] The siege's shelling (siege_tick): every siege_fire_every while the force is out, its siege weapons
+-- (the force's members of the siege types) take the target attack.lua names - the force's breach wall, else the
+-- nearest known defence they outrange, within siege_fire_near of the force's middle (the force is the escort;
+-- upstream's waves went from home with idle soldiers along) - from the firing position (range - 0.7 from it, out of
+-- every other known defence): those within 2 tiles of it attack the target, the rest move there (a forced move);
+-- held while enemy soldiers are seen within 8 tiles of the position ("enemy soldiers on the way"). They are
+-- committed for three looks (the force's orders leave them alone); the force home ends it (army.lua).
+
+function M.siege_fire(view, mem, force)
+    mem.shell = mem.shell or {}
+    local now = view.time
+    for _, id in ipairs(ai.keys(mem.shell)) do
+        if mem.shell[id] <= now then
+            mem.shell[id] = nil
+        end
+    end
+    if not S.attack_siege or force == nil or not mem.out or now - (mem.shell_t or 0) < S.siege_fire_every then
+        return
+    end
+    mem.shell_t = now
+    local siege = {}
+    for _, id in ipairs(force.units) do
+        local u = ai.unit(id)
+        if u ~= nil and SIEGE_SET[u.type] and u.inside == nil then
+            siege[#siege + 1] = u
+        end
+    end
+    if #siege == 0 then
+        return
+    end
+    local t, px, py, srange = AT.shelling(mem, siege)
+    if t == nil then
+        return
+    end
+    local cx, cy = force.cx or force.x, force.cy or force.y
+    if d2(t.x, t.y, cx, cy) > S.siege_fire_near * S.siege_fire_near then
+        return
+    end
+    local foes = ai.seen{enemy = true, category = "soldier", near = {px, py, 8}, limit = 1}
+    if #foes > 0 then
+        mem.shell_held = (mem.shell_held or 0) + 1
+        return
+    end
+    local fire, go = {}, {}
+    for _, u in ipairs(siege) do
+        if d2(u.x, u.y, px, py) <= 4 then
+            if u.target ~= t.id then
+                fire[#fire + 1] = u.id
+            end
+        elseif not (u.action == "move" and u.tx ~= nil and math.abs(u.tx - px) < 2 and math.abs(u.ty - py) < 2) then
+            go[#go + 1] = u.id
+        end
+        mem.shell[u.id] = now + S.siege_fire_every * 3
+    end
+    if #fire > 0 then
+        ai.attack(fire, t.id)
+    end
+    if #go > 0 then
+        ai.move(go, px, py, {forced = true})
+    end
+    if t.id ~= (mem.shell_target or 0) then
+        mem.shell_target = t.id
+        mem.shells = (mem.shells or 0) + 1
+        print(string.format("siege shell target=%s at=%d,%d from=%d,%d range=%d siege=%d", t.type, t.x, t.y, px, py,
+            srange // 100, #siege))
     end
 end
 
