@@ -179,4 +179,9 @@ return {
                                     -- run on the shooters' spot / the push's target / the target found too strong
     fight_estimate = false,         -- [ai_base] fight_estimate=0: the fight decisions keep summed hit points x attack
                                     -- (ai.strength); stats.lua's M.ratio is the estimate (PARTLY: no damage tables)
+    -- packing.c, spoils.c, forces.c, bunker.c, early.c (leftovers)
+    tight_build = true,             -- packing.c: the production buildings packed against their kind near the base
+                                    -- (upstream's ini and rows.h: 1; the file's comment says "default 0 until
+                                    -- measured" - the ini wins). Its numbers are upstream's defines (TB_R 32,
+                                    -- TB_TOUCH 8, TB_BLOCK 14, TB_CLEAR_* 6/4/2/2) in packing.lua
 }

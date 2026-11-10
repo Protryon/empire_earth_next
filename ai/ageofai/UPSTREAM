@@ -272,8 +272,19 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   fronts.c      NOT STARTED (the border cells: where its land meets land the enemy can walk over; the front armies).
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
-  packing.c     NOT STARTED (tight_build: production buildings placed touching their kind without cutting a way;
-                upstream default 0).
+  packing.c     PORTED -> packing.lua (tb_spot: the arc rule round the footprint, the lane a tile wide, s + 2 walkable
+                tiles, TB_BLOCK rows, the drop sites', mines', trees' and gates' room, raiders within 12, the score
+                touch x TB_TOUCH - r), econ.lua's production (the spot built through ai.build with build_direct's
+                three held citizens: the build verb's placement keeps a tile free round every building, CanBuildAt's
+                margin; no spot: the verb). tight_build=1 as upstream's ini and rows.h (the file's comment says
+                "default 0 until measured"). Deviations: only the spots touching a kin building are tested (upstream
+                walks every tile of the rings 2..32; a non-touching spot scores -r and would beat a touching one only
+                8 rings further out), sorted by the score, at most 40 a call (the charge); a resource is one tile;
+                the enemy near the spot is the threat layer (ai.danger) for build_mgr_enemy_near; the walkable tile
+                is ai.tile's land id (a tile under a building, a tree or water has none) for rm_tile_ok. Not ported:
+                tb_layout (the log line). Measured in the 90-minute Small games: the first barracks has no kin, the
+                archery range's 15 touching spots all fell to the drop sites' box (the engine put the barracks by the
+                town centre) - the verb placed them.
   priority.c    NOT STARTED (the priority list: one row for each thing the AI saves for, every spender asks it).
   forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat),
                 attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +

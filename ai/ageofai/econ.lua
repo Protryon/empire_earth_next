@@ -8,6 +8,7 @@
 -- did for upstream. What a verb cannot say stays in Lua (the accounts, the targets, the plan).
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local PK = require("ageofai.packing")   -- [packing.c] the production buildings packed against their kind
 local M = {}
 
 local FARM_EPOCH = 2                -- the Copper Age: farms make food renewable
@@ -402,8 +403,9 @@ end
 -- a building at a spot of its own through the per-unit interface when the town's rings are full (an island town):
 -- ai.find_site's tile, the three citizens nearest it build it (idle first) and stay the script's until it stands
 -- (released at once, the runners took them back and the foundation stood empty: 17 granary foundations in one
--- game); one such building at a time, three minutes at most. Returns true when ordered
-local function build_direct(view, mem, type)
+-- game); one such building at a time, three minutes at most. Returns true when ordered. [packing.c] sx, sy: a
+-- spot chosen already (a packed production building), no search
+local function build_direct(view, mem, type, sx, sy)
     mem.direct = mem.direct or {}
     local d = mem.direct
     if d.id ~= nil then
@@ -433,8 +435,8 @@ local function build_direct(view, mem, type)
     end
     -- a tile on the town's own land (an island's rings reach across the water: a foundation its builders cannot
     -- reach is cancelled by the engine, and the order came again every minute)
-    local gx, gy
-    for _, opt in ipairs({{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
+    local gx, gy = sx, sy
+    for _, opt in ipairs(gx ~= nil and {} or {{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
         for r = opt.min, opt.max, 3 do
             local x, y = ai.find_site(type, view.town_x, view.town_y, {min = r, max = math.min(r + 2, opt.max), safe = opt.safe})
             if x ~= nil and ai.reach(view.town_x, view.town_y, x, y)
@@ -736,7 +738,21 @@ local function production(view, mem, order, army, above)
                 ok = ok and above[r] >= c.cost[r]
             end
             if not going and V.total(have) < want[t] and ok then
-                if (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
+                -- [packing.c] PACKED BUILDINGS (tight_build): a production building goes to the spot touching the
+                -- most of its kind nearest the base, through ai.build (the verb's placement keeps a tile free round
+                -- every building); no spot, or the direct build busy: the verb's search as before
+                local packed = false
+                if S.tight_build and PK.is_type(t) and view.time - ((mem.pack_t or {})[t] or -100000) >= 10000 then
+                    mem.pack_t = mem.pack_t or {}
+                    mem.pack_t[t] = view.time
+                    local px, py = PK.spot(view, mem, t)
+                    if px ~= nil then
+                        packed = build_direct(view, mem, t, px, py)
+                    end
+                end
+                if packed then
+                    mem.packed_built = (mem.packed_built or 0) + 1
+                elseif (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
                     if view.time - (mem.direct_t or 0) >= 30000 then
                         mem.direct_t = view.time
                         build_direct(view, mem, t)
