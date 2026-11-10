@@ -198,5 +198,7 @@ public:
 
 extern EEPhysics* gPhysics;                 // 0x5318f0 (provisional name)
 extern UString gPhysicsThreadName;          // 0x52a270 (RTSPhysics's thread name)
+// port, TEST ONLY: the unit EEPhysics::UpdateUnits is stepping (NULL outside the loop); EE-SIM's --rng-trace names it
+extern EEComplexUnit* gPhysicsSteppingUnit;
 
 #endif

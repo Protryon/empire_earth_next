@@ -547,6 +547,16 @@ void DumpState(const std::string& inPath)
     ChecksumFields(f);
     fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
             (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
+    {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
+        const std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+        const char* theNames[3] = {"UPDATE", "ACTIVATE", "DEACTIVATE"};
+        for (int l = 0; l < 3; l++) {
+            fprintf(f, "%s %zu:", theNames[l], theLists[l]->size());
+            for (size_t i = 0; i < theLists[l]->size(); i++)
+                fprintf(f, " %lu", (*theLists[l])[i]->mUnitID);
+            fprintf(f, "\n");
+        }
+    }
     for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
         EEPlayer* p = gWorld.GetPlayer(i);
         if (!p)
@@ -632,7 +642,8 @@ void RngTraceHook(URandom* inRandom)
     void* theFrames[16];
     unsigned short theCount = RtlCaptureStackBackTrace(1, 16, theFrames, NULL);
     uintptr_t theBase = (uintptr_t)GetModuleHandleA(NULL);
-    fprintf(sRngFile, "%lu %08lx %ld", sRngLines, (unsigned long)inRandom->GetSeed(), gPhysics->mGameTime);
+    fprintf(sRngFile, "%lu %08lx %ld u=%lu", sRngLines, (unsigned long)inRandom->GetSeed(), gPhysics->mGameTime,
+            gPhysicsSteppingUnit != NULL ? gPhysicsSteppingUnit->mUnitID : 0UL);   // the unit being stepped (0 outside UpdateUnits)
     for (unsigned short i = 0; i < theCount; i++) {
         uintptr_t theFrame = (uintptr_t)theFrames[i];
         if (theFrame >= theBase)
