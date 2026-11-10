@@ -50,7 +50,7 @@
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGBuildRepair.h"
 
-// port (save version 0.255): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
+// port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
 // without contacts skips its collision step), so the loaded units collided differently in their first tick. Put back
 // at the first tick in two passes over every unit (clear, then add): ClearContacts also removes the unit from its
@@ -726,7 +726,7 @@ LoadFinalVersions:
             unsigned long mNextTriggerTime;
             std::deque<EEComplexUnitAttacker> mIgnoredTargets;
             std::vector<U2DPoint<long> > mBoundedPathTiles;
-            // port (0.255): the model's frame (RepairPointers restarts an animation at its last frame), the counters
+            // port (0.256): the model's frame (RepairPointers restarts an animation at its last frame), the counters
             // the original saved as fractions (FinishLoad) or set at load (the rotting time, a builder's research)
             bool mRunning = false;
             unsigned long mFrame = 0;
@@ -755,7 +755,7 @@ LoadFinalVersions:
         }
         unsigned long theUnitID = this->mUnitID;
         EEComplexUnit* theSelf = this;   // only while it is the world's unit of that id (not a doppelganger, not freed)
-        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.255), see LiveState
+        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256), see LiveState
             theLive.mRunning = true;
             if ((theResult = inFile.Read(theLive.mFrame)) == 0 && (theResult = inFile.Read(theLive.mFlightTime)) == 0
                 && (theResult = inFile.Read(theLive.mRottingAwayTime)) == 0 && (theResult = inFile.Read(theLive.mCurrentResearch)) == 0
@@ -1079,7 +1079,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         this->mAreaEffects.Clear();
         this->mAreaEffects.mItems.clear();
     } else {
-        // port (0.255): the saved count stays (MakeAreaEffects counts the templates: a unit made by EEMakeUnitCopy,
+        // port (0.256): the saved count stays (MakeAreaEffects counts the templates: a unit made by EEMakeUnitCopy,
         // whose CopyFrom zeroes it, had 0 in the game that was saved and its templates' count after a load)
         unsigned long theCount = this->mNumAreaEffects;
         this->MakeAreaEffects();
@@ -1372,7 +1372,7 @@ SaveFinalFields:
             if ((theResult = outFile.Write(this->mBoundedPathTiles[k].mX)) == 0)
                 theResult = outFile.Write(this->mBoundedPathTiles[k].mY);
         }
-        // port (0.255): the model's frame, the exact counters the original saved as fractions or set at load, and the
+        // port (0.256): the model's frame, the exact counters the original saved as fractions or set at load, and the
         // contact list's unit ids, head first (Load; sLoadedContacts)
         if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
             if ((theResult = outFile.Write(this->mPhysicalModel.GetFrame())) == 0 && (theResult = outFile.Write(this->mFlightTime)) == 0

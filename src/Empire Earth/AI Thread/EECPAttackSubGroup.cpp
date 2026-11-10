@@ -1874,7 +1874,7 @@ long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMino
             }
         }
     }
-    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255)
+    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.256)
         theResult = this->LoadRunningState(inFile);
     return theResult;
 }
@@ -2096,7 +2096,7 @@ long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inM
     this->mRequest = (int32_t)USavedID(this->mRequest) != -1 ? this->mGroup->mCommander->GetPersonnel()->GetRequest((int32_t)USavedID(this->mRequest)) : 0;
     if (this->mRequest)
         this->mRequest->Reference();
-    // port (0.255): the saved targets, in their order (a target unit the load does not have is left out)
+    // port (0.256): the saved targets, in their order (a target unit the load does not have is left out)
     std::vector<EECPASTargetUnit*>* theTargetLists[2] = {&this->mTargets, &this->mSiegeTargets};
     for (int l = 0; l < 2; l++) {
         for (size_t t = 0; t < this->mLoadedTargets[l].size(); t++) {
@@ -2242,12 +2242,12 @@ long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMino
     theResult = outFile.Write(this->mMission);
     if (theResult == 0)
         theResult = outFile.Write(this->mSplitKind);
-    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.255)
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.256)
         theResult = this->SaveRunningState(outFile);
     return theResult;
 }
 
-// port (save version 0.255): the running state the original did not save. The targets and siege targets (by unit id,
+// port (save version 0.256): the running state the original did not save. The targets and siege targets (by unit id,
 // with their counts: a loaded sub group had none until its next scan, so it left the attack state or skipped it), the
 // formation's next position time (0 after a load: the formation moved at the first update), the gather deadline
 // (Restore set it 10 s after the load), the area-effect and shore flags, and the path request: a finished one with

@@ -1853,7 +1853,7 @@ long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
             }
         }
     }
-    // port (0.255): the running request is asked again as it was (EECPAttackSubGroup::LoadRunningState), so the state
+    // port (0.256): the running request is asked again as it was (EECPAttackSubGroup::LoadRunningState), so the state
     // stays the saved one; an older save resumes travel as the original did
     if (theFlag && !this->mUnits.empty() && !EESaveHasRunningState(inMajorVersion, inMinorVersion))
         this->mState = kASGStatePrepareTravel;

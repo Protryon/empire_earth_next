@@ -1708,7 +1708,7 @@ void EEPathManager::DumpSim(FILE* inFile)
             this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
 }
 
-// port (save version 0.255): the history (newest first), the region maps (by unit id, then tile) and the timers.
+// port (save version 0.256): the history (newest first), the region maps (by unit id, then tile) and the timers.
 // The original saved none of them: a loaded game gave a citizen's repeated request its full search budget
 // (SetGraphRevs), counted no repeated goal tiles (PruneHistory, PruneRegions: no stranded units) and pruned at its
 // first update, not 10 s / 30 s after the saved game's last prune.

@@ -89,7 +89,7 @@ public:
     bool mB180[7];                          // +0x180 per resource (Reset clears it)
     bool mInitialized;                      // +0x187 (Restore clears it)
     bool mSettlementsEnabled;               // +0x188
-    // port (save 0.255): the timers were loaded as the saved game had them; Update's re-initialisation (Restore clears
+    // port (save 0.256): the timers were loaded as the saved game had them; Update's re-initialisation (Restore clears
     // mInitialized so the drop site classes and the resource lists are rebuilt) keeps them instead of resetting them
     bool mLoadedTimers = false;
     // new (the experiment "flee"): where an enemy player's unit hit one of the citizens, and the game ms it did (not

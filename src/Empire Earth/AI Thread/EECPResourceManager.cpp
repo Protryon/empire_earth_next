@@ -1543,7 +1543,7 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
         theResult = inFile.Read(this->mNextAssignGatherersTime);
     if (theResult == 0)
         theResult = inFile.Read(this->mNextResourceCheckTime);
-    // port (0.255): the fishing boat timer too (the original did not save it), and the timers stay as loaded (Update)
+    // port (0.256): the fishing boat timer too (the original did not save it), and the timers stay as loaded (Update)
     if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
         theResult = inFile.Read(this->mNextFishingBoatTime);
         this->mLoadedTimers = theResult == 0;
@@ -1664,7 +1664,7 @@ long EECPResourceManager::Restore(unsigned long inMajorVersion, unsigned long in
     this->mNextWantedGatherersTime += theTime;
     this->mNextAssignGatherersTime += theTime;
     this->mNextResourceCheckTime += theTime;
-    if (this->mLoadedTimers)   // port (0.255)
+    if (this->mLoadedTimers)   // port (0.256)
         this->mNextFishingBoatTime += theTime;
     return 0;
 }
@@ -1719,7 +1719,7 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
             }
         }
     }
-    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.255): the fishing boat timer
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256): the fishing boat timer
         unsigned long theValue = this->mNextFishingBoatTime - theTime;
         theResult = outFile.Write(theValue);
     }
@@ -3060,7 +3060,7 @@ void EECPResourceManager::Update(unsigned long inTime)
                 this->mDropSiteClasses[theClass->mResourceType].push_back(i);
         }
         this->RefreshResources();
-        // port (0.255): a loaded manager keeps its saved timers (Load, Restore); the original's load rescheduled
+        // port (0.256): a loaded manager keeps its saved timers (Load, Restore); the original's load rescheduled
         // everything from the first update (gatherers assigned 10 s after the load, not when the saved game would)
         if (!this->mLoadedTimers) {
             this->mNextFishingBoatTime = inTime + 30000;

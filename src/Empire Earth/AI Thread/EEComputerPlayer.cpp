@@ -4883,7 +4883,7 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mFavoriteSpaceType);
     }
-    // port (0.255): the running values the original saved otherwise or not at all (Save), put back at the first tick
+    // port (0.256): the running values the original saved otherwise or not at all (Save), put back at the first tick
     // after RepairPointers (which asks for a regroup) and before the first Update (EEAfterLoad): the pop cap
     // (WorkOutPopulation's), the enable-time flag (saved as false until now: Update set the time again), the regroup
     // flag, the population time (unsaved: Update worked the population out at once) and the last damage time
@@ -5705,7 +5705,7 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         theResult = outFile.Write(this->mSpaceDockMax);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mFavoriteSpaceType);
-    // port (0.255): the running values (Load), without changing the running game
+    // port (0.256): the running values (Load), without changing the running game
     if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
         if ((theResult = outFile.Write(this->mPopulationCap)) == kErrorOK && (theResult = outFile.Write(this->mIsEnableTimeSet)) == kErrorOK
             && (theResult = outFile.Write(this->mRegroupPending)) == kErrorOK && (theResult = outFile.Write(this->mNextPopulationTime)) == kErrorOK)

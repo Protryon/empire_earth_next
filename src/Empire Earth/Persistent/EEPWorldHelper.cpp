@@ -302,7 +302,7 @@ static long LoadForests(FSFile& inFile)
     return theResult;
 }
 
-// port (save version 0.255): the computer players' round-robin schedule (EEArtificialIntelligence::Update: which
+// port (save version 0.256): the computer players' round-robin schedule (EEArtificialIntelligence::Update: which
 // computer player updates next and when). A load's EEWorld::Restore calls CollectComputerPlayers, which starts the
 // round again at the first player at time 0, so a loaded game ran a computer player's Update at its first tick where
 // the saved game had it a few ticks later (the first divergent draw of every save: EEComputerPlayer::Update's). Put
@@ -331,7 +331,7 @@ static long LoadAISchedule(FSFile& inFile)
     return theResult;
 }
 
-// port (save version 0.255): the order of the units on each tile (RTSTile::mUnits, newest first). A load places the
+// port (save version 0.256): the order of the units on each tile (RTSTile::mUnits, newest first). A load places the
 // units in its own order, so a tile with several units listed them otherwise, and EEComplexUnit::FindContacts, which
 // walks the tiles' lists, built the contact lists in another order (collisions resolved in another order). Saved:
 // every tile with two units or more, by index, with its units' ids; put back at the first tick by moving the units
@@ -466,11 +466,11 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         inFile.Read(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.254): the units' order
         if (LoadUnitOrder(inFile) == kErrorOK && LoadForests(inFile) == kErrorOK
-            && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.255): the computer players' schedule
+            && EESaveHasRunningState(inMajorVersion, inMinorVersion)   // port (0.256): the computer players' schedule
             && LoadAISchedule(inFile) == kErrorOK
-            && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.255): the path manager's history, regions, timers
-            && EEAELoadRunningState(inFile) == kErrorOK)   // port (0.255): the area effects' locations, the lists acting
-            LoadTileOrder(inFile);   // port (0.255): the order of the units on each tile
+            && gPathManager.LoadRunningState(inFile) == kErrorOK   // port (0.256): the path manager's history, regions, timers
+            && EEAELoadRunningState(inFile) == kErrorOK)   // port (0.256): the area effects' locations, the lists acting
+            LoadTileOrder(inFile);   // port (0.256): the order of the units on each tile
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -520,11 +520,11 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     {
         SaveUnitOrder(outFile);
         SaveForests(outFile);
-        if (EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.255): the computer players' schedule
+        if (EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256): the computer players' schedule
             SaveAISchedule(outFile);
-            gPathManager.SaveRunningState(outFile);   // port (0.255): the path manager's history, regions and timers
-            EEAESaveRunningState(outFile);   // port (0.255): the area effects' locations and the lists of those acting
-            SaveTileOrder(outFile);   // port (0.255): the order of the units on each tile
+            gPathManager.SaveRunningState(outFile);   // port (0.256): the path manager's history, regions and timers
+            EEAESaveRunningState(outFile);   // port (0.256): the area effects' locations and the lists of those acting
+            SaveTileOrder(outFile);   // port (0.256): the order of the units on each tile
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

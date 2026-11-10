@@ -452,7 +452,7 @@ void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
         this->mEffects->Add(*theIterator);
 }
 
-// port (save version 0.255, EEPWorldHelper): the area effects' running state. The original saved none of it: a
+// port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)
 // and every unit's affecting list and the active list were empty until the next area-effect tick (up to 2 s: no
 // morale in the damage, no immunities, no cloaking). Saved: per unit, its own effects' location (and the
