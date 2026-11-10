@@ -179,10 +179,24 @@ static EEUnit* EECPUnitsAlive(long inID)
     return theUnit;
 }
 
+// a foundation the player's builders have not reached yet: in the player's pending list, not in the world's lookup
+static EEUnit* EECPUnitsPending(EEComputerPlayer* inPlayer, long inID)
+{
+    for (unsigned long k = 0; k < inPlayer->GetNumPendingUnits(); k++) {
+        RTSUnit* thePending = inPlayer->GetPendingUnit(k);
+        if (thePending != NULL && (long)thePending->mUnitID == inID)
+            return static_cast<EEUnit*>(thePending);
+    }
+    return NULL;
+}
+
 static EEComplexUnit* EECPUnitsOwn(EEComputerPlayer* inPlayer, long inID)
 {
-    EEUnit* theUnit = EECPUnitsAlive(EECPUnitsForward(inPlayer->mUnitsState, inID));
-    if (theUnit == NULL || theUnit->mPlayer != inPlayer || theUnit->mComplexUnit == NULL)
+    long theID = EECPUnitsForward(inPlayer->mUnitsState, inID);
+    EEUnit* theUnit = EECPUnitsAlive(theID);
+    if (theUnit == NULL)
+        theUnit = EECPUnitsPending(inPlayer, theID);
+    if (theUnit == NULL || theUnit->mPlayer != inPlayer || theUnit->mComplexUnit == NULL || theUnit->mUnitClass == NULL)
         return NULL;
     return theUnit->mComplexUnit;
 }
@@ -923,7 +937,7 @@ static int LuaResources(lua_State* L)
 // one unit's record on the stack (the fields by what the player may know: AI_LUA_UNITS §2.3)
 static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsState* s, EEUnit* inUnit)
 {
-    bool theOwn = inUnit->mPlayer == me;
+    bool theOwn = inUnit->mPlayer == me || (inUnit->mPlayer == NULL && EECPUnitsPending(me, (long)inUnit->mUnitID) != NULL);
     bool theAlly = !theOwn && inUnit->mPlayer != NULL && inUnit->mPlayer != gWorld.mPlayers[0] && me->IsAlly(inUnit->mPlayer);
     EEComplexUnit* c = inUnit->mComplexUnit;
     lua_createtable(L, 0, 24);
@@ -958,6 +972,8 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
     if (c == NULL)
         return;
     EECPUnitsSetBool(L, "built", c->mIsBuilt);
+    if (!EECPUnitsOnMap(inUnit) && c->mUnitClass->IsBuilding() && !c->mIsBuilt)
+        EECPUnitsSetBool(L, "pending", true);   // a foundation the builders have not reached (ai.build's id)
     const char* theAction = EECPUnitsAction(c);
     if (!theOwn && !theAlly) {
         // what a human sees of another player's unit: moving, attacking or standing
@@ -1000,10 +1016,17 @@ static EEUnit* EECPUnitsKnown(EEComputerPlayer* me, long inID)
 {
     EEUnit* theUnit = EECPUnitsAlive(EECPUnitsForward(me->mUnitsState, inID));
     if (theUnit == NULL) {
+        theUnit = EECPUnitsPending(me, EECPUnitsForward(me->mUnitsState, inID));   // a foundation not placed yet (ai.build's id)
+        if (theUnit != NULL && theUnit->mUnitClass != NULL && theUnit->mComplexUnit != NULL)
+            return theUnit;   // the player's own (its owner field may still be unset)
+    }
+    if (theUnit == NULL) {
         theUnit = gWorld.GetUnit((unsigned long)inID);   // a resource is alive with hit points 0 (a worked mine)
         if (theUnit == NULL || !theUnit->mIsValid || !EECPUnitsIsResource(theUnit))
             return NULL;
     }
+    if (theUnit->mUnitClass == NULL)
+        return NULL;
     if (EECPUnitsIsResource(theUnit))
         return EECPUnitsExplored(me, theUnit) ? theUnit : NULL;
     if (EECPUnitsIsProjectile(theUnit))
@@ -2674,6 +2697,28 @@ static int LuaDropoff(lua_State* L)
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
 }
 
+// ai.replant(granary) -> ok: the granary's missing field foundations are laid again (the human's replant command;
+// a granary placed by a human's build order comes without its fields)
+static int LuaReplant(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    EECPUnitsCharge(L, kCostCommand);
+    long theID = lua_isinteger(L, 1) ? EECPUnitsForward(s, (long)lua_tointeger(L, 1)) : 0;
+    EEComplexUnit* theGranary = EECPUnitsOwn(me, theID);
+    if (theGranary == NULL || !theGranary->mIsBuilt || theGranary->mTileNode == NULL
+        || (theGranary->mUnitClass->mUnitType != kUnitTypeGranary && theGranary->mUnitClass->mUnitType != kUnitTypeGranaryImproved))
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    s->mIds2.clear();
+    s->mIds2.push_back(theID);
+    if (!EECPUnitsWithinLimits(s, 1))
+        return EECPUnitsResult(L, kLimit, 0, 0);
+    EEMReplantFarms theMessage(theID);
+    theMessage.Execute();
+    EECPUnitsTraceCmd(me, s, "replant", kOK, 1, theID, 0);
+    return EECPUnitsResult(L, kOK, 1, 0);
+}
+
 // ai.farm(ids, granary or farm, {queue}): the citizens farm by it (the free farms nearest first)
 static int LuaFarm(lua_State* L)
 {
@@ -2742,7 +2787,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"danger", LuaDanger}, {"danger_box", LuaDangerBox}, {"mark", LuaMark}, {"route", LuaRoute},
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
-        {"farm", LuaFarm}, {"cast", LuaCast},
+        {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
         {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {NULL, NULL}};

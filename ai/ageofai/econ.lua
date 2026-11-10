@@ -380,7 +380,22 @@ local function build_direct(view, mem, type)
         mem.direct = {}
         d = mem.direct
     end
-    local gx, gy = ai.find_site(type, view.town_x, view.town_y, {min = 4, max = 20})
+    -- a tile on the town's own land (an island's rings reach across the water: a foundation its builders cannot
+    -- reach is cancelled by the engine, and the order came again every minute)
+    local gx, gy
+    for _, opt in ipairs({{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
+        for r = opt.min, opt.max, 3 do
+            local x, y = ai.find_site(type, view.town_x, view.town_y, {min = r, max = math.min(r + 2, opt.max), safe = opt.safe})
+            if x ~= nil and ai.reach(view.town_x, view.town_y, x, y)
+                    and (type ~= "b_granary" or #ai.units{type = "b_granary", near = {x, y, 8}} == 0) then
+                gx, gy = x, y
+                break
+            end
+        end
+        if gx ~= nil then
+            break
+        end
+    end
     if gx == nil then
         return false
     end
@@ -694,7 +709,8 @@ local function farms(view, mem, order, target, above)
         -- the town's rings full (an island town: the verb found no site near the town nor round a tile): the
         -- building placed through the per-unit interface at a spot of its own
         if (mem.nosite or {}).b_granary ~= nil and view.time - mem.nosite.b_granary < 600000 then
-            if view.time - (mem.direct_t or 0) >= 30000 then
+            -- the first granary only (a second one placed by the first vanished: its fields' room)
+            if granaries == 0 and view.time - (mem.direct_t or 0) >= 30000 then
                 mem.direct_t = view.time
                 build_direct(view, mem, "b_granary")
             end
@@ -705,7 +721,24 @@ local function farms(view, mem, order, target, above)
     end
     local fc = V.cost(view, "b_farm")
     local finished_gran = gran ~= nil and gran.finished or 0
-    if fc ~= nil and finished_gran > 0 and fields < finished_gran * 8 and (farm == nil or farm.unfinished + farm.queued < 2)
+    -- a granary placed through ai.build comes without its field foundations: the replant command lays them (once
+    -- every two minutes per granary while it has fewer than 8 fields within 5 tiles)
+    mem.replant = mem.replant or {}
+    if finished_gran > 0 and view.time - (mem.replant_t or 0) >= 20000 then
+        mem.replant_t = view.time
+        for _, id in ipairs(ai.units{type = "b_granary", built = true}) do
+            local g = ai.unit(id)
+            if g ~= nil and #ai.units{type = "b_farm", near = {g.x + 1, g.y + 1, 5}} < 8
+                    and view.time - (mem.replant[id] or -1000000) >= 120000 then
+                ai.replant(id)
+                mem.replant[id] = view.time
+                mem.replants = (mem.replants or 0) + 1
+                break
+            end
+        end
+    end
+    -- the fields' foundations count as unfinished: the order finishes them (the classic FindSite takes a foundation)
+    if fc ~= nil and finished_gran > 0 and (farm == nil or farm.finished < finished_gran * 8) and (farm == nil or farm.queued < 2)
             and above.wood >= fc.cost.wood + 50 then
         -- a granary lays its eight fields as foundations: `near = town` finishes the next one (the classic FindSite
         -- finds the foundations; rings round the granary are refused)
@@ -922,6 +955,21 @@ function M.step(view, memory, orders, army)
             -- the patches blocked or bare (the food gatherers at work far under the target and the income low): the
             -- game near home (food_plan HUNT)
             hunt = hunt or (view.hunt > 0 and view.gatherers.food * 2 < target.food and view.income.food < 90)
+            -- citizens idle for want of a food site (an island with the patches bare): the game, more boats, the claim
+            if view.idle >= 5 and view.gatherers.food < target.food then
+                mem.idle_t = mem.idle_t or view.time
+                if view.time - mem.idle_t >= 60000 then
+                    hunt = hunt or view.hunt > 0
+                    mem.more_boats = math.min((mem.more_boats or 0) + 2, 12)
+                    if view.claim_range < view.claim_range_max and view.time - (mem.range_t or 0) >= 60000 then
+                        order({verb = "claim_range", range = view.claim_range + view.claim_range_step})
+                        mem.range_t = view.time
+                    end
+                    mem.idle_t = view.time
+                end
+            else
+                mem.idle_t = nil
+            end
             local prefer = hunt and "hunt" or "patch"
             for _, r in ipairs(V.resources) do
                 if target[r] ~= view.wanted[r] or (r == "food" and prefer ~= (mem.prefer or "patch")) then
@@ -947,7 +995,7 @@ function M.step(view, memory, orders, army)
             -- fishing from the Stone Age
             local age = math.min(view.epoch, 2) + 1
             if (S.boats[age] or 0) > 0 then
-                order({verb = "fish", boats = S.boats[age], docks = S.docks[age]})
+                order({verb = "fish", boats = S.boats[age] + (mem.more_boats or 0), docks = S.docks[age]})
             end
         end
     end
