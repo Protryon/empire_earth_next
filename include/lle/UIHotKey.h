@@ -23,6 +23,7 @@ class UIForm;
 
 class LLE_API UIHotKey : public UIEntity {
     friend class UIForm;                    // UIForm.cpp reads and writes the fields directly
+    friend struct UIHotKeyRust;             // UIHotKey.cpp: the Rust FireEvents' view (ee_ui hotkey.rs)
 public:
     // header-inline: emitted by the first includer, UIEMouseWheelScroll.cpp (0x1006e075..0x1006e2a9), in this order
     UIHotKey()

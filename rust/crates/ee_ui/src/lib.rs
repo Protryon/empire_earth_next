@@ -5,21 +5,29 @@
 //! Text is UTF-8 bytes (`&[u8]`; decision D6, `text.rs`). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
+pub mod background;
 pub mod button;
 pub mod button_variants;
 pub mod combo;
 pub mod controls_table;
 pub mod edit;
+pub mod font;
 pub mod form;
+pub mod form_state;
+pub mod hotkey;
 pub mod layout;
 pub mod list;
 pub mod manager;
+pub mod manager_media;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
 pub mod text;
 pub mod wrap;
 
+// imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod background_ffi;
 // imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
 #[cfg(not(test))]
 mod button_ffi;
@@ -38,6 +46,15 @@ mod edit_ffi;
 // imports the C++ form questions (UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod form_ffi;
+// imports the C++ form's lists, members and calls (UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod form_state_ffi;
+// imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
+#[cfg(not(test))]
+mod font_ffi;
+// imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod hotkey_ffi;
 mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
@@ -45,6 +62,9 @@ mod list_ffi;
 // imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
 #[cfg(not(test))]
 mod manager_ffi;
+// imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
+#[cfg(not(test))]
+mod manager_media_ffi;
 // imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrollbar_ffi;

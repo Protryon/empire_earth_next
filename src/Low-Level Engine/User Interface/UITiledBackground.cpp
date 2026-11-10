@@ -5,6 +5,7 @@
 // UITLScrolling.cpp's ctor starts at 0x1007fd7d.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -13,6 +14,14 @@
 #include "lle/GETexture.h"
 #include "lle/UIBitmapBackground.h"
 #include "lle/UITiledBackground.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top); guarded: a golden driver includes several
+// background units in one translation unit
+#ifndef UI_BACKGROUND_RECT_HELPERS
+#define UI_BACKGROUND_RECT_HELPERS
+static inline EeUiRect UIBgRect(const GERectangle& r) { return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop}; }
+static inline GERectangle UIBgRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+#endif
 
 // FUNCTION: LLE 0x1007fb46
 // Creates a tiled bitmap background from a texture file and layout
@@ -35,19 +44,12 @@ UITiledBackground::~UITiledBackground()
 // Draws the tiles that cover the part of the given rectangle inside the background; returns 0 when none overlap
 long UITiledBackground::DrawBackground(const GERectangle& inRectangle)
 {
-    GERectangle theClip;
-    long theResult = 0;
-    if (inRectangle.And(this->mRectangle, theClip)) {
-        float theWidth = this->mTextureRectangle.GetWidth() - 1.0f;
-        float theHeight = this->mTextureRectangle.GetHeight() - 1.0f;
-        long theFirstRow = UMFloor((theClip.GetTop() - this->mRectangle.GetTop()) / theHeight);
-        long theLastRow = UMFloor((theClip.GetBottom() - this->mRectangle.GetTop()) / theHeight);
-        long theFirstColumn = UMFloor((theClip.GetLeft() - this->mRectangle.GetLeft()) / theWidth);
-        long theLastColumn = UMFloor((theClip.GetRight() - this->mRectangle.GetLeft()) / theWidth);
-        theResult = this->DrawTiledBackground(theClip, theFirstRow, theLastRow, theFirstColumn, theLastColumn, theWidth,
-                                        theHeight);
-    }
-    return theResult;
+    EeUiTilePlan thePlan;
+    if (!ee_ui_background_tiled_plan(0, 0.0f, 0.0f, UIBgRect(this->mRectangle), UIBgRect(this->mTextureRectangle),
+                                     UIBgRect(inRectangle), &thePlan))
+        return 0;
+    return this->DrawTiledBackground(UIBgRect(thePlan.clip), thePlan.first_row, thePlan.last_row, thePlan.first_column,
+                                     thePlan.last_column, thePlan.w, thePlan.h);
 }
 
 // FUNCTION: LLE 0x1007fc8d
@@ -56,22 +58,6 @@ long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned 
                                             unsigned long inLastRow, unsigned long inFirstColumn,
                                             unsigned long inLastColumn, float inWidth, float inHeight)
 {
-    long theResult = 0;
-    GERectangle theTile;
-    GERectangle theClippedTile;
-    for (unsigned long theRow = inFirstRow; theRow <= inLastRow; theRow++) {
-        for (unsigned long theColumn = inFirstColumn; theColumn <= inLastColumn; theColumn++) {
-            GE2DPoint thePosition(theColumn * (inWidth + 1.0f) + this->mRectangle.GetLeft(),
-                                  this->mRectangle.GetTop() + (inHeight + 1.0f) * theRow);
-            theTile.SetTopLeft(thePosition);
-            theTile.SetRight(thePosition.GetX() + inWidth);
-            theTile.SetBottom(thePosition.GetY() + inHeight);
-            theTile.RoundToNearest();
-            if (theTile.And(inClip, theClippedTile)) {
-                theClippedTile.RoundToNearest();
-                theResult = this->DrawStrectchedBackground(theTile, theClippedTile);
-            }
-        }
-    }
-    return theResult;
+    return ee_ui_background_draw_tiled(this, UIBgRect(this->mRectangle), UIBgRect(inClip), inFirstRow, inLastRow, inFirstColumn,
+                                       inLastColumn, inWidth, inHeight);
 }
