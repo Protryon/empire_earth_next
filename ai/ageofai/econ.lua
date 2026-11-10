@@ -117,7 +117,7 @@ function M.reserve(view, mem)
             -- epochs' costs in the first) is reserved against military spending; below it the citizens ignore the
             -- reserve (the economy first) and no early advance
             saving = view.citizens >= S.min_workforce
-            both = view.epoch == 0
+            both = view.epoch == 0 and S.copper_plan ~= "next_epoch"   -- next_epoch: only the next epoch's cost
         elseif S.epoch_pacing == "rush" then
             saving = true
         else
@@ -145,6 +145,28 @@ function M.reserve(view, mem)
     end
     for _, k in ipairs(V.resources) do
         r[k] = saving and (view.next_epoch_cost[k] + (both and (view.epoch2_cost or {})[k] or 0)) or 0
+    end
+    -- copper_plan=next_epoch (econ.c hook_add_resource): from min_workforce on, epoch_share of the income goes into
+    -- the epoch account until it holds the next epoch's cost; the citizens spend the rest and never wait for the
+    -- epoch (the account is out of their reach: the civil budget and the engine's reserve below); the army sees
+    -- the whole cost held as before
+    if S.copper_plan == "next_epoch" and view.epoch < FARM_EPOCH then
+        if mem.acc_epoch ~= view.epoch then
+            mem.acc_epoch = view.epoch
+            mem.epoch_acc = {}
+        end
+        mem.epoch_acc = mem.epoch_acc or {}
+        local dt = math.max(view.time - (mem.acc_t or view.time), 0)
+        mem.acc_t = view.time
+        for _, k in ipairs(V.resources) do
+            local acc = mem.epoch_acc[k] or 0
+            if saving and dt > 0 and dt <= 5000 then
+                acc = acc + view.income[k] * dt * S.epoch_share // (60000 * 100)
+            end
+            mem.epoch_acc[k] = math.min(acc, view.next_epoch_cost[k])
+        end
+    else
+        mem.epoch_acc = nil
     end
     if saving and view.epoch >= FARM_EPOCH then
         -- reserve_plan (econ.c spend_reserve): food is renewable from farms, so each resource keeps only what its
@@ -1117,7 +1139,15 @@ function M.step(view, memory, orders, army)
     for _, r in ipairs(V.resources) do
         hold_mil[r] = hold_mil[r] + apart_mil[r]
     end
-    local avail, civil = M.accounts(view, mem, hold_mil, reserve)
+    -- copper_plan=next_epoch before farms: a citizen's hold is the epoch account, not the epoch's cost
+    local reserve_civ = reserve
+    if mem.epoch_acc ~= nil then
+        reserve_civ = {}
+        for _, r in ipairs(V.resources) do
+            reserve_civ[r] = math.max(reserve[r] - epoch_reserve[r] + (mem.epoch_acc[r] or 0), 0)
+        end
+    end
+    local avail, civil = M.accounts(view, mem, hold_mil, reserve_civ)
     local order_vis = P.visible(view, memory, P.S_MIL | P.S_ORDER)
     local ship_vis = P.visible(view, memory, P.S_MIL | P.S_SHIP)
     local build_vis = P.visible(view, memory, P.S_BUILD)
@@ -1130,7 +1160,8 @@ function M.step(view, memory, orders, army)
     local engine = {}
     for _, r in ipairs(V.resources) do
         local towns = (mem.towns_reserve ~= nil and mem.towns_reserve[r] or 0) + (mem.expand_hold ~= nil and mem.expand_hold[r] or 0)
-        engine[r] = math.max(epoch_reserve[r] + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
+        local ep = mem.epoch_acc ~= nil and (mem.epoch_acc[r] or 0) or epoch_reserve[r]   -- next_epoch: the account
+        engine[r] = math.max(ep + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
     end
     local differs = false
     for _, r in ipairs(V.resources) do

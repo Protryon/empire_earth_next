@@ -14,6 +14,9 @@ Per-file map (upstream dll/ai/<file> -> this folder). Each line says PORTED, PAR
 C++ helper of this engine stands in, nothing to port) or NOT STARTED.
 
   econ.c        PARTLY -> econ.lua (budget, workers, epoch), army.lua (choice). Ported: budget_reserve /
+                copper_plan=next_epoch (the port's setting, DEVIATION forced by the epoch costs): the epoch account
+                of epoch_share, the citizens' hold and the engine's reserve are the account, the army's hold the
+                cost; the "map's food runs out" clause (wild_food) is not ported (no wild-food amount in the view).
                 The fidelity pass: the copper plan as shipped (copper_plan=on: both early epochs' costs held from
                 min_workforce 40, the citizens ignore the reserve below it, no cap on them), RECOVERY (two thirds on
                 food, the whole stock for citizens, no soldiers unless enemies are in the base, from the Copper Age
@@ -50,6 +53,8 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 forest edge nearest a drop site).
   citizens.c    PORTED -> econ.lua (citizens): cz_targets (the citizens wanted from the mines' places, FEED).
   defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers),
+                home_guard's room (ENGINE): unit_limit is the cap that follows the human upstream; here the lobby's
+                limit, so the room counts home_guard_cap (166) at least and the own population when larger.
                 CITIZEN MILITIA -> tactics.lua militia (the fidelity pass): every 2 s the enemy builders of a defence
                 within 12 and, to the Bronze Age, the attackers of ours within 10 of own citizens are attacked by the
                 gathering or idle citizens within 10, 3 per enemy, 6 enemies, at 3 x the enemies' strength within

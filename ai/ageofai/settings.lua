@@ -8,8 +8,15 @@ return {
     military_income_share_farms = 65,   -- ... and from the Copper Age on
     hoard_cap = 3000,               -- stock above the reserve + this is free for the army too (food, wood)
     hoard_cap_mineral = 200,        -- ... stone, gold, iron
-    min_workforce = 40,             -- the citizens before the early epochs are saved for (the copper plan: both
-                                    -- epochs' costs held from here on; below it the citizens ignore the reserve)
+    min_workforce = 40,             -- the citizens before the early epochs are saved for (the copper plan; below it
+                                    -- the citizens ignore the reserve and there is no early advance)
+    -- copper_plan: "on" holds both early epochs' costs from min_workforce on; "next_epoch" (upstream's own option,
+    -- the one its notes recommend) holds the next epoch's only and puts epoch_share of the income into an epoch
+    -- account the citizens never touch. DEVIATION (forced by the epoch costs): "on" shipped, but our Copper Age
+    -- costs 1,584 food / 844 gold / 844 iron after the variant's factor where upstream quotes 750 / 400 / 400, so
+    -- "on" sent half the Prehistoric workers to gold and iron and put the Stone Age back 10-15 minutes (8.38)
+    copper_plan = "next_epoch",
+    epoch_share = 40,               -- percent of the income into the epoch account (copper_plan=next_epoch)
     mineral_worker_margin = 300,    -- the minerals' demand beyond the reserve the workers follow at most
     food_floor = 18,                -- citizens on food at least before farms (food_share of the workers at most)
     food_share = 50,                -- percent of the workers on food at least before farms (half, up to food_floor)
@@ -43,6 +50,10 @@ return {
     -- home guard (defence.c)
     home_guard = 4,                 -- soldiers an epoch (6 + 4 x epoch) ...
     home_guard_share = 35,          -- ... or this percent of the military room (cap x (1 - citizen share))
+    home_guard_cap = 166,           -- ENGINE: upstream's room counts unit_limit, the game's cap that follows the
+                                    -- human's population (about 166 in its games: 0.35 x 166 x 0.55 = 32 soldiers);
+                                    -- the view's cap is the lobby's limit (400: 77 soldiers from the first minute),
+                                    -- so the room counts this cap at least and the own population when larger
     -- muster (defence.c)
     muster = true,
     muster_enemies = 8, muster_ratio = 200, muster_strike = 130, muster_out = 18,   -- defence.c MUSTER: at least 8

@@ -156,8 +156,13 @@ local function train(view, memory, mem, order, budget)
     mem.train_t = view.time
     local e = view.epoch
     local target = 6 + S.home_guard * e
-    local room = view.population_cap * (100 - S.citizen_share) // 100 * S.home_guard_share // 100
-    target = math.max(target, room)   -- defence.c home_guard: max(6 + 4 x epoch, home_guard_share x military room)
+    -- defence.c home_guard: max(6 + 4 x epoch, home_guard_share x military room); the room from the cap upstream's
+    -- unit_limit means (the game's cap that follows the human's population, about 166 in its games): here the
+    -- lobby's limit (400) stands in the view, so the cap is home_guard_cap at least and the own population when
+    -- larger, never above the lobby's (ENGINE: see settings.lua)
+    local cap = math.min(view.population_cap, math.max(S.home_guard_cap, view.population))
+    local room = cap * (100 - S.citizen_share) // 100 * S.home_guard_share // 100
+    target = math.max(target, room)
     if memory.eco ~= nil and memory.eco.recovering and view.threat_strength == 0 then
         return nil   -- RECOVERY: no soldiers unless enemy soldiers are in the base
     end
