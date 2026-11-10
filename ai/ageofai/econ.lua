@@ -148,6 +148,12 @@ function M.reserve(view, mem)
     for _, k in ipairs(V.resources) do
         r[k] = r[k] + ((mem.towns_reserve or {})[k] or 0)
     end
+    -- [navy.c navy_hold] the navy account (and the warship it waits for) is reserve for every other order
+    if mem.navy_hold ~= nil then
+        for _, k in ipairs(V.resources) do
+            r[k] = r[k] + (mem.navy_hold[k] or 0)
+        end
+    end
     return r, saving
 end
 
@@ -898,14 +904,20 @@ function M.step(view, memory, orders, army)
     end
     local reserve, saving = M.reserve(view, mem)
     local avail, civil = M.accounts(view, mem, reserve)
-    -- the engine's reserve: the epoch's; the military account is Lua's own (the verbs see the stock above the reserve)
+    -- the engine's reserve: the epoch's; the military account is Lua's own (the verbs see the stock above the reserve).
+    -- [navy.c navy_earmarked] a warship spends the navy account through the epoch's reserve (ai.train pays through the
+    -- engine's check): the engine holds the epoch's less the account, Lua's budget the epoch's plus the account
+    local engine = {}
+    for _, r in ipairs(V.resources) do
+        engine[r] = math.max(reserve[r] - 2 * (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
+    end
     local differs = false
     for _, r in ipairs(V.resources) do
-        differs = differs or reserve[r] ~= view.reserve[r]
+        differs = differs or engine[r] ~= view.reserve[r]
     end
     if differs then
-        order({verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone, gold = reserve.gold,
-               iron = reserve.iron})
+        order({verb = "reserve", food = engine.food, wood = engine.wood, stone = engine.stone, gold = engine.gold,
+               iron = engine.iron})
     end
     -- the epoch: the tower upgrade, then the advance as soon as it is paid (rush; the timer with timer pacing), the
     -- requirements asked for early (the SOL buildings while saving)
@@ -1065,11 +1077,8 @@ function M.step(view, memory, orders, army)
             if saving then
                 sol(view, mem, order)
             end
-            -- fishing from the Stone Age
-            local age = math.min(view.epoch, 2) + 1
-            if (S.boats[age] or 0) > 0 then
-                order({verb = "fish", boats = S.boats[age] + (mem.more_boats or 0), docks = S.docks[age]})
-            end
+            -- [navy.c] docks and fishing boats are the navy's (ageofai.navy: navy_docks, the fishing boat type and
+            -- count; mem.more_boats is read there)
         end
     end
     research(view, mem, order)

@@ -79,10 +79,6 @@ return {
     counter_fire = true,
     -- scouting (armies.c ar_look, the game's scout)
     scout_at = 120000, scouts_max = 3,
-    -- the navy and landings (landing.c, navy.c)
-    landing = true, landing_transports = 8, navy_share = 25,
-    -- fishing and docks (fishing_boat=1, navy=1 upstream; the port's numbers)
-    boats = {0, 6, 10}, docks = {0, 1, 2},
     -- expand.c, towns.c
     -- expand_islands: the parts as bits (upstream's list: outposts 1, barracks 2, ally_islands 4, early 8,
     -- extra_citizens 16, more_islands 32, forward_outpost 64, hold_sea 128, fort 256, fort_guns 512)
@@ -123,4 +119,22 @@ return {
     siege_fire_every = 2000,        -- siege_tick: the shelling looked at every 2 s
     siege_fire_near = 40,           -- DEVIATION (upstream's waves go from home with escorts): the port's siege go
                                     -- with the force and shell a target within this of the force's middle
+    -- navy.c, fleet.c, landing.c
+    fishing_boat = true,            -- the newest fishing boat the dock can make (the game's pick is by epoch)
+    fishing_boats_per_fish = 2,     -- DEVIATION: upstream leaves the boats' count to the game's field passes (+0xEFA);
+    fishing_boats_max = 8,          -- this is the engine's own coast rule (EECPRMCoastBoatsWanted: 2 a fish within
+    fishing_boats_max_water = 16,   -- fishing_reach of the town, 8 at most; 16 on a water map, where upstream fished
+    fishing_reach = 45,             -- with 12-18 boats)
+    navy = true,                    -- the navy account on a water map
+    navy_share = 25,                -- percent of the wood, gold and iron income into it (x the map strength) ...
+    navy_share_max = 50,            -- ... toward this while the fleet is below its size
+    navy_fleet = "big",             -- the AI leads its warships and trains them up to navy_fleet_pop of the cap
+    navy_fleet_pop = 15,            -- percent of the population cap: the fleet's size
+    navy_fleet_mass = true,         -- mass under the towers while weaker than the enemy fleet known, strike at 1.25
+    navy_fleet_boats = true, navy_fleet_coast = true, navy_fleet_raid = 130,   -- [general] test keys at their defaults
+    fleet_cover = true,             -- cover.c fall_back fleet_cover: a warship under half its hit points to a dock until 80%
+    transports_economy = false,     -- the engine's own transport orders are not in this path (no crossings of its own)
+    landing = true, landing_transports = 8,   -- the most transports (the size follows the beach)
+    landing_citizens = 10,          -- citizens along for the forward base (0 / 3 / 6 / 10 by the transports)
+    landing_waves = 3,              -- waves after the first while the bridgehead holds
 }
