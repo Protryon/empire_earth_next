@@ -288,7 +288,7 @@ struct Options {
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
-    long mPortOffset = -1;                              // -1: a free pair found at start
+    long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
@@ -1444,44 +1444,11 @@ const char* kUsage =
     "                         writes after a communications tick's last physics tick)\n"
     "  --rng-trace MS=FILE    every draw of the physics random stream after game ms MS with its callers (exe-relative\n"
     "                         addresses, tools/sim.py resolve), at most 50,000 draws\n"
-    "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
+    "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: none fixed, the system picks a\n"
+    "                         free port at each bind)\n"
     "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --quiet                no progress on stderr\n";
-
-// a port offset whose TCP and UDP ports 33334/33335 are free now, from one the process id picks (the harness's
-// parallel games use 33334 + 16 k, k <= 32)
-long FreePortOffset()
-{
-#ifdef _WIN32
-    long theOffset = 2000 + 2 * (long)(GetCurrentProcessId() % 8000);
-    WSADATA theData;
-    if (WSAStartup(MAKEWORD(2, 2), &theData) != 0)
-        return theOffset;
-    for (int k = 0; k < 400; k++, theOffset = 2000 + (theOffset - 2000 + 2) % 16000) {
-        bool theFree = true;
-        for (int p = 0; p < 2 && theFree; p++)
-            for (int theType = SOCK_STREAM; theType <= SOCK_DGRAM && theFree; theType++) {
-                SOCKET s = socket(AF_INET, theType, 0);
-                if (s == INVALID_SOCKET)
-                    continue;
-                sockaddr_in a = {};
-                a.sin_family = AF_INET;
-                a.sin_port = htons((u_short)(33334 + p + theOffset));
-                a.sin_addr.s_addr = htonl(INADDR_ANY);
-                if (bind(s, (sockaddr*)&a, sizeof(a)) != 0)
-                    theFree = false;
-                closesocket(s);
-            }
-        if (theFree)
-            break;
-    }
-    WSACleanup();
-    return theOffset;
-#else
-    return 2000 + 2 * (long)(getpid() % 8000);
-#endif
-}
 
 // a path made absolute now (the game moves the current directory to its data root at start)
 std::string Absolute(const std::string& inPath)
@@ -1727,13 +1694,20 @@ int EESimMain(int argc, char** argv)
     gPlatSimSeedSet = sOptions.mLoadSave.empty() ? 1 : 0;   // a loaded game: the file's seed, as the game loads it
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
-    gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : (int)FreePortOffset();
+    // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
+    // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
+    // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)
+    gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : kPlatSimAnyPort;
     PlatDebugSetHandler(DebugHandler);
 #ifdef _WIN32
     AddVectoredExceptionHandler(1, EESimFault);
 #endif
-    Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
-         sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
+    if (gPlatSimPortOffset == kPlatSimAnyPort)
+        Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports any free", sOptions.mSeed, sOptions.mComputers,
+             sOptions.mGameSeconds);
+    else
+        Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
+             sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
 #ifdef _WIN32
     char theEmpty[1] = {0};
     EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
