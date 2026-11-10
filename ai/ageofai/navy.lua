@@ -46,6 +46,7 @@
 local V = require("lib.view")
 local G = require("lib.groups")
 local N = require("lib.navy")
+local LA = require("lib.army")   -- [forces.c] home_threat
 local S = require("ageofai.settings")
 local F = require("ageofai.fleet")
 local MT = require("ageofai.metal")      -- [metal.c] the fleet's size by the enemy's, the calm sea's account
@@ -1095,7 +1096,7 @@ local function plan_landing(view, mem, budget, force, target, h)
         return
     end
     local home = home_force(view, force)
-    local keep = #ai.seen{enemy = true, armed = true, near = {view.town_x, view.town_y, 30}, limit = 40}
+    local keep = LA.home_threat()   -- [forces.c] the enemy soldiers seen within 20 tiles of any own building
     local avail = #home - keep
     if avail < 6 then
         say(mem, view, "plan", string.format("landing none why=%s home=%d keep=%d", keep > 0 and "enemy_at_door" or "fewer_than_6", #home, keep))
@@ -1355,7 +1356,7 @@ local function waves(view, mem, force, landed)
     end
     W.t = view.time
     local home = home_force(view, force)
-    local keep = #ai.seen{enemy = true, armed = true, near = {view.town_x, view.town_y, 30}, limit = 40}
+    local keep = LA.home_threat()   -- [forces.c] home_threat
     local trs = N.transports()
     local carry, cap = {}, 0
     for _, t in ipairs(trs) do

@@ -20,10 +20,21 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 substitute_soldier (the strongest affordable soldier), hoard caps, train_budget's priority rows
                 (priority.lua), farm_plan (THE SILOS' ROW). Missing: citizens_home (the engine's finders keep
                 citizens on safe sites).
+                citizens_home part 2 ported (econ.lua: the idle citizens away from the towns walk home, every 3 s);
+                its parts 1 and 3 (the base point moved, stacked foundations) are the original's bugs: ENGINE.
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 centre: the front and the citizens' side), the builders, tower_bait (the citizens hit lead the
-                raiders under the towers, epochs 1-2). Missing: early_militia (the engine's reflexes, ai.reflex,
-                stand in).
+                raiders under the towers, epochs 1-2). ENGINE: early_militia (defence.c militia_answer's early rule:
+                against soldiers the citizens fight only under own tower cover or with own soldiers within 12, and
+                only where the estimate loses no citizen) - the engine's militia reflex stands in (EECPRMMilitia,
+                aipersonalities.yaml military.militia / militia_towers: on a hit, the citizens within 10 tiles and
+                the soldiers within 10 not attacking fight when their hit points x attack, with the built towers
+                within 12, are 1.5 x the raiders' within 10; else the citizens run to the nearest tower, or the town
+                centre, or the drop site farthest from the attack; once every 4 s). The towers' part is upstream's
+                "cover" (a tower's strength counted makes the fight under it), the 1.5 x odds stand for upstream's
+                3 x and its no-loss estimate (stats.lua has no damage tables). The reflex has no switch for a script
+                (ai.reflex takes naval_flee, danger and memory_ms; the militia key of docs/AI_LUA_UNITS.md §4 is not
+                built): an interface gap. A Lua militia in the micro step would compete with the reflex's orders.
   food.c        PORTED -> econ.lua (workers, claims): food_plan_needs (the citizens' food, the real wood need), the
                 hunters, the patches (the engine's claims stand in for the site lists).
   mines.c       PORTED -> econ.lua (settlements): mine_drops / wood_drops (a settlement at the unworked mine or
@@ -105,9 +116,28 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 the most metal mines near).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
                 they win by 1.5 (the micro step, 250 ms for upstream's 2 s).
-  bunker.c      PARTLY -> tactics.lua (bunkers, shelter): a Fortress by the drop site nearest the base once
-                citizens were hurt three times in two minutes, the citizens hit shelter in it, let out when quiet.
-                Missing: the shelf (the fortress's own soldiers), bk_capacity's airport part.
+  bunker.c      PARTLY -> tactics.lua (bunkers, shelter). Ported: bk_build (a Fortress by the drop site nearest the
+                base once citizens were hurt three times in two minutes or enemy aircraft are possible - both sides
+                in World War I -, a second from 40 citizens, one for the reserve near the population cap, one more
+                for a full shelf up to 8; its wood held back from unit training while it waits, bunker_reserve ->
+                econ.lua's reserve), bk_shelter / bk_flush (the citizens hit go into the nearest finished fortress
+                within 15 with room; out after 45 s with nothing hurt within 10 tiles and no raiders within 10, two
+                quiet looks 8 s apart), bk_unload (3 tiles to a side on land, the next side when nobody came out),
+                bk_reserve_tick (RESERVE: every 10 s with the map full, up to 10 of the force's soldiers at home - 4
+                stay out - into the fortress with the most room; out when the population is 4 under the cap with
+                nothing loaded for a minute, or enemy soldiers within 20 tiles of it), shelf_tick (THE SHELF: every
+                10 s at the cap with units queued and food, wood, gold and iron each at shelve_stock, up to 20
+                gatherers of the richest resource first, then of any at twice shelve_stock, never under max(cap / 8,
+                40) left out; out a fortress at a time under half of shelve_stock or 3/4 of what is kept out; the
+                shelter and the reserve keep off the shelf's fortresses), shelf_wanted (econ.lua: no more citizens
+                than there are while the shelf works or holds). Missing: TOWN GUARDS (town_guards, off upstream: a
+                fortress at each front station - fronts.c), bk_builders (the engine's build runner takes a
+                foundation up; the port's fortress is a verb order), the "airport part" of an earlier UPSTREAM line
+                (bk_capacity at this commit is the Fortress class alone). Deviations: the free soldiers are the
+                force's at home while the force is home (upstream's: the game's in no group); the room is cap - the
+                view's population (which counts the units in production; upstream's bk_room left them out); a
+                fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
+                shelter flag after the first order).
   navy.c        PARTLY -> navy.lua, fleet.lua (the roles). Ported: navy_detect (the water map: enemies with
                 buildings known across the water, the strength; fog-honest, so looked at again every minute),
                 the navy account (navy_share x the strength of the wood, gold and iron income, 600 of each at
@@ -258,8 +288,18 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 AIs upstream answered an offer at once (one process) - here it stands 2 minutes (OFFER_AI_MS) like
                 one to a human. DEVIATION: a vassal's tribute every 3 minutes of a quarter of each resource (the
                 language model's bounds made a rule).
-  spoils.c      NOT STARTED (a resigned player's units roam and its buildings change hands: an engine behaviour of
-                the player out of the game, to be weighed against this engine's defeat rule).
+  spoils.c      ENGINE -> nothing to port. Every part is the game's handling of a player out of the game, not a
+                decision of a living AI: sp_resigned (the out player at war with everyone, its fortresses and
+                airports let out), the roaming bands (the out player's own land fighters, an attack-move to the
+                nearest unit on their land, hook_target_ok: no buildings), the snapshots of the damage it took and
+                sp_hand_over (its buildings to whoever did 20% of that damage in the last 10 minutes, by their
+                value and nearness - unit_give, the scenario effect's owner change, which no ai.* call does). The
+                conquerors decide nothing (the shares fall out of the game's damage sums). This engine's defeat rule
+                (EEWorld::CheckGameOver, gameoptions.yaml defeat_without_recovery, docs/AI_RESEARCH.md): a player with
+                no unit that is not a building and no finished town centre it can train a citizen at is removed
+                from the game (RemovePlayerFromGame: observer mode), so no roaming army is left to spend waves on,
+                which was upstream's reason for the file (P4 out with 117 soldiers). Its buildings stay as they
+                are. resign_spoils is in settings.lua for the record.
   skirmish.c    PORTED -> skirmish.lua (SK_ON -> settings skirmish, 0 upstream: "off until measured"). The party
                 (bit 1): every 3 s with the force at home, 30 s after the last came home: a position that holds the
                 force's way (the shooters' spot: where a seen land unit hit ours from 7 tiles or more, a gun from 5,
@@ -322,8 +362,19 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 defend task walks them back) - off as upstream. Not ported: the overlay, the autotest log counts.
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
-  packing.c     NOT STARTED (tight_build: production buildings placed touching their kind without cutting a way;
-                upstream default 0).
+  packing.c     PORTED -> packing.lua (tb_spot: the arc rule round the footprint, the lane a tile wide, s + 2 walkable
+                tiles, TB_BLOCK rows, the drop sites', mines', trees' and gates' room, raiders within 12, the score
+                touch x TB_TOUCH - r), econ.lua's production (the spot built through ai.build with build_direct's
+                three held citizens: the build verb's placement keeps a tile free round every building, CanBuildAt's
+                margin; no spot: the verb). tight_build=1 as upstream's ini and rows.h (the file's comment says
+                "default 0 until measured"). Deviations: only the spots touching a kin building are tested (upstream
+                walks every tile of the rings 2..32; a non-touching spot scores -r and would beat a touching one only
+                8 rings further out), sorted by the score, at most 40 a call (the charge); a resource is one tile;
+                the enemy near the spot is the threat layer (ai.danger) for build_mgr_enemy_near; the walkable tile
+                is ai.tile's land id (a tile under a building, a tree or water has none) for rm_tile_ok. Not ported:
+                tb_layout (the log line). Measured in the 90-minute Small games: the first barracks has no kin, the
+                archery range's 15 touching spots all fell to the drop sites' box (the engine put the barracks by the
+                town centre) - the verb placed them.
   priority.c    PORTED -> priority.lua (the rows in upstream's order and conditions: epoch, farms, wants, landing,
                 outpost, fortress, forest, upgrades, navy, special with their skip / only / apart; prio_hold ->
                 M.hold / M.visible, prio_refuses -> M.refuses with the "priority refused" line once a minute at
@@ -342,10 +393,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 buildings), S_TR_ECON (transports_economy off), S_PLAN (army.c FLOAT not ported), the upgrades row's
                 hold (the engine's line upgrades come with the epoch). Deviation: the engine checks every verb
                 against the reserve verb, so a building waits for the epoch and the towns where upstream's spent them.
-  forces.c      PARTLY -> C++ ai.reach (the continents), army.lua (the enemy army in its territory as the threat),
-                attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +
-                3 x the threat at it - the force's next target once its building is down). Missing: the
-                walk-and-fight record (goal_near, unit_fighting: the engine's action field stands in).
+  forces.c      PORTED -> C++ ai.reach (area_id, cont_at, cont_ok: the continents), lib/army.lua (goal_near: the
+                unit's goal place within r, from the record's tx/ty and action; fighting (unit_fighting): an attack
+                on a target that lives; home_threat: the enemy soldiers and siege seen within 20 tiles of any own
+                building but walls - used by navy.lua's landing plan and waves for the soldiers kept at home, which
+                counted the enemies within 30 tiles of the town before), tactics.lua (the siege's move with
+                goal_near), attack.lua (enemy_objective: the target's known building on the force's land nearest by
+                distance + 3 x the threat at it - the force's next target once its building is down), army.lua (the
+                enemy army in its territory as the threat). Not applicable: asg_live (the game's attack subgroups),
+                is_aa (landing.c's anti-air stay home: the landing takes the force's land soldiers).
   stats.c       PARTLY -> stats.lua (M.ratio(own_ids, enemy_ids), M.estimate; fight_estimate = false as upstream:
                 the summed hit points x attack of ai.strength stand in everywhere). Ported: the fight by type
                 (st_side, the groups), st_shot_t's shape, the reload + ST_SHOT_OVERHEAD, stg_reaches (range: a unit

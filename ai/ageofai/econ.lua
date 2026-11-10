@@ -10,6 +10,7 @@ local V = require("lib.view")
 local S = require("ageofai.settings")
 local P = require("ageofai.priority")   -- [priority.c] the list every spender asks
 local MT = require("ageofai.metal")     -- [metal.c] workers_to_metals
+local PK = require("ageofai.packing")   -- [packing.c] the production buildings packed against their kind
 local M = {}
 
 local cur_memory = nil   -- [priority.c] the memory of the step under way (the buildings ask the list)
@@ -401,8 +402,9 @@ end
 -- a building at a spot of its own through the per-unit interface when the town's rings are full (an island town):
 -- ai.find_site's tile, the three citizens nearest it build it (idle first) and stay the script's until it stands
 -- (released at once, the runners took them back and the foundation stood empty: 17 granary foundations in one
--- game); one such building at a time, three minutes at most. Returns true when ordered
-local function build_direct(view, mem, type)
+-- game); one such building at a time, three minutes at most. Returns true when ordered. [packing.c] sx, sy: a
+-- spot chosen already (a packed production building), no search
+local function build_direct(view, mem, type, sx, sy)
     mem.direct = mem.direct or {}
     local d = mem.direct
     if d.id ~= nil then
@@ -432,8 +434,8 @@ local function build_direct(view, mem, type)
     end
     -- a tile on the town's own land (an island's rings reach across the water: a foundation its builders cannot
     -- reach is cancelled by the engine, and the order came again every minute)
-    local gx, gy
-    for _, opt in ipairs({{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
+    local gx, gy = sx, sy
+    for _, opt in ipairs(gx ~= nil and {} or {{min = 4, max = 20, safe = true}, {min = 4, max = 20}, {min = 2, max = 30}}) do
         for r = opt.min, opt.max, 3 do
             local x, y = ai.find_site(type, view.town_x, view.town_y, {min = r, max = math.min(r + 2, opt.max), safe = opt.safe})
             if x ~= nil and ai.reach(view.town_x, view.town_y, x, y)
@@ -739,6 +741,92 @@ end
 -- the production buildings: a barracks early (the home guard), an archery range in epochs 1-3 (early_requirements),
 -- a stable from the Copper Age; army_plan BUILD: one more of the kind that trains the soldier picked when its
 -- producers are busy and the account holds 600, up to 2 + workers / 15
+-- [econ.c] IDLE CITIZENS HOME (citizens_home): every 3 s, a citizen the engine holds with no goal more than 15 tiles
+-- from its nearest finished town (Town Center, Capitol, Settlement), idle at the last look too (between two jobs is
+-- not), walks to the nearest finished town on its land with no enemy soldiers seen within 12 tiles (none safe: it
+-- stays), to the spot 4 tiles out on the citizen's side (the building's own tile is taken); then it is the
+-- engine's again (the assignment puts it to work). ENGINE: upstream's parts (1) and (3) - the base point moved to
+-- the biggest town (the game set it from the first unit it found) and the stacked foundations removed - are the
+-- original game's bugs, not this engine's (the town centre is view.town_x/y, the build runner lays one foundation);
+-- its (2) "walking to within 3 tiles of the base" is that base point's too. Citizens the script holds (a landing,
+-- an outpost's ferry, a new town) are not the engine's and are left alone.
+local TOWN_TYPES = {"b_settlement", "b_town_center", "b_capitol"}
+local function citizens_home(view, mem)
+    if not S.citizens_home or view.town_x < 0 or view.time - (mem.home_t or 0) < 3000 then
+        return
+    end
+    mem.home_t = view.time
+    local towns = {}
+    for _, id in ipairs(ai.units{type = TOWN_TYPES, built = true}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            towns[#towns + 1] = u
+        end
+    end
+    if #towns == 0 then
+        return   -- no town left
+    end
+    local idle = ai.units{category = "citizen", idle = true, held = "engine"}
+    local was = mem.home_was or {}
+    local now_idle, safe, sent, stay = {}, {}, 0, 0
+    local cols = ai.get(idle, {"x", "y", "inside"})
+    for k, id in ipairs(idle) do
+        local x, y = cols.x[k], cols.y[k]
+        if x ~= nil and cols.inside[k] == nil then
+            local nd = nil
+            for _, t in ipairs(towns) do
+                local d = d2(t.x, t.y, x, y)
+                if nd == nil or d < nd then
+                    nd = d
+                end
+            end
+            if nd > 15 * 15 then
+                now_idle[#now_idle + 1] = id
+                if was[id] then   -- idle away twice in a row
+                    local best, bd = nil, nil
+                    for i, t in ipairs(towns) do
+                        if ai.reach(t.x, t.y, x, y) then
+                            if safe[i] == nil then
+                                safe[i] = #ai.seen{enemy = true, armed = true, category = "soldier", near = {t.x, t.y, 12}, limit = 1} == 0
+                            end
+                            local d = d2(t.x, t.y, x, y)
+                            if safe[i] and (bd == nil or d < bd) then
+                                best, bd = t, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        stay = stay + 1
+                    else
+                        -- beside the town on the citizen's side: the building's own tile is taken
+                        local dx, dy = x - best.x, y - best.y
+                        local l = isqrt(dx * dx + dy * dy)
+                        local gx = best.x + (l > 0 and dx * 4 // l or 4)
+                        local gy = best.y + (l > 0 and dy * 4 // l or 0)
+                        local code = ai.move({id}, gx, gy)
+                        ai.release({id})
+                        if code == "ok" then
+                            sent = sent + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local set = {}
+    for _, id in ipairs(now_idle) do
+        set[id] = true
+    end
+    mem.home_was = set
+    if sent > 0 or stay > 0 then
+        mem.home_sent = (mem.home_sent or 0) + sent
+        if view.time - (mem.home_log_t or -100000) >= 60000 then
+            mem.home_log_t = view.time
+            print(string.format("citizens_home sent=%d stay=%d idle_away=%d towns=%d total=%d", sent, stay, #now_idle, #towns, mem.home_sent))
+        end
+    end
+end
+
 local function production(view, mem, order, army, above)
     local want = {}
     want.b_barracks = view.citizens >= 8 and 1 or 0
@@ -770,7 +858,21 @@ local function production(view, mem, order, army, above)
                 ok = ok and above[r] >= c.cost[r]
             end
             if not going and V.total(have) < want[t] and ok and P.refuses(view, cur_memory, t) == nil then   -- [priority.c]
-                if (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
+                -- [packing.c] PACKED BUILDINGS (tight_build): a production building goes to the spot touching the
+                -- most of its kind nearest the base, through ai.build (the verb's placement keeps a tile free round
+                -- every building); no spot, or the direct build busy: the verb's search as before
+                local packed = false
+                if S.tight_build and PK.is_type(t) and view.time - ((mem.pack_t or {})[t] or -100000) >= 10000 then
+                    mem.pack_t = mem.pack_t or {}
+                    mem.pack_t[t] = view.time
+                    local px, py = PK.spot(view, mem, t)
+                    if px ~= nil then
+                        packed = build_direct(view, mem, t, px, py)
+                    end
+                end
+                if packed then
+                    mem.packed_built = (mem.packed_built or 0) + 1
+                elseif (mem.nosite or {})[t] ~= nil and view.time - mem.nosite[t] < 600000 then
                     if view.time - (mem.direct_t or 0) >= 30000 then
                         mem.direct_t = view.time
                         build_direct(view, mem, t)
@@ -1041,6 +1143,10 @@ function M.step(view, memory, orders, army)
     -- citizens: two at a time from each town centre while the civil budget keeps a citizen's food
     local citizen = V.cost(view, "citizen")
     local want_citizens = citizens_wanted(view, mem.target)
+    -- [bunker.c] shelf_wanted: while the shelf works or holds citizens, no more than there are (on the map or in it)
+    if memory.shelf_hold then
+        want_citizens = math.min(want_citizens, view.citizens)
+    end
     local making = citizen and citizen.in_production or 0
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting
@@ -1181,6 +1287,7 @@ function M.step(view, memory, orders, army)
         end
     end
     research(view, mem, order)
+    citizens_home(view, mem)   -- [econ.c] the idle citizens away from the towns
     -- [priority.c] hold: a military unit's hold (metal.lua's SPARE prices the stock above it)
     return {reserve = reserve, avail = avail, civil = civil, saving = saving, target = target, citizens_wanted = want_citizens,
             order = order_vis, ship = ship_vis, build = build_vis, build_econ = build_econ_vis, hold = hold_mil}

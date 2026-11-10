@@ -215,4 +215,27 @@ return {
                                     -- (0 upstream: no gain measured; the port's force is one group, fronts.lua)
     fronts_log = true,              -- DEVIATION: upstream's [autotest] fronts_log (0) - the fronts' trace line every
                                     -- 5 minutes is the port's only view of them
+    -- packing.c, spoils.c, forces.c, bunker.c, early.c (leftovers)
+    tight_build = true,             -- packing.c: the production buildings packed against their kind near the base
+                                    -- (upstream's ini and rows.h: 1; the file's comment says "default 0 until
+                                    -- measured" - the ini wins). Its numbers are upstream's defines (TB_R 32,
+                                    -- TB_TOUCH 8, TB_BLOCK 14, TB_CLEAR_* 6/4/2/2) in packing.lua
+    resign_spoils = true,           -- spoils.c: ENGINE - a player out of the game is this engine's defeat rule
+                                    -- (EEWorld::CheckGameOver, defeat_without_recovery); nothing of the AI's to port
+    bunker_reserve = true,          -- bunker.c RESERVE (upstream: a mask of players, 65535 = all): the map full,
+                                    -- idle soldiers at home go into a fortress; out on losses or enemies near
+    town_guards = false,            -- bunker.c TOWN GUARDS: off upstream; NOT PORTED (the front stations are
+                                    -- fronts.c's, which is not ported)
+    shelve_citizens = true,         -- bunker.c THE SHELF: at the cap with every resource at shelve_stock, idle
+                                    -- citizens into fortresses (no new ones trained) ...
+    shelve_stock = 5000,            -- ... food, wood, gold and iron each at this or more
+    early_militia = true,           -- early.c / defence.c militia_answer: ENGINE - the engine's militia reflex
+                                    -- (EECPRMMilitia, aipersonalities military.militia) stands in: citizens and the
+                                    -- soldiers within 10 fight when, with the built towers within 12, they are 1.5 x
+                                    -- the raiders, else they run to the nearest tower; upstream's stricter rule
+                                    -- (under own tower cover or own soldiers, and no citizen lost on the estimate)
+                                    -- has no switch (ai.reflex takes no militia key: an interface gap)
+    citizens_home = true,           -- econ.c citizens_home part 2: an idle citizen 15+ tiles from its nearest
+                                    -- finished town, idle twice running, walks to the nearest safe town (parts 1 and
+                                    -- 3, the base point and the stacked foundations, are the original game's bugs)
 }
