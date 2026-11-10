@@ -2619,6 +2619,9 @@ struct EeWonQueueDecision {
   bool clear_current;
 };
 
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const uint32_t *units, size_t count);
+
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
   uint32_t material_count;
@@ -7462,6 +7465,128 @@ EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
                                                 bool queue_empty,
                                                 bool socket_valid,
                                                 bool datagram);
+
+/// `StringParser::GetChar(offset)` at `pos`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units (1, 2 or 4) and `pos + offset` inside it.
+uint8_t ee_won_parser_get_char(const void *text,
+                               uint32_t unit_size,
+                               int32_t pos,
+                               int32_t offset);
+
+/// `StringParser::GetWChar(offset)` at `pos`.
+///
+/// # Safety
+/// As `ee_won_parser_get_char`.
+uint32_t ee_won_parser_get_wchar(const void *text, uint32_t unit_size, int32_t pos, int32_t offset);
+
+/// `StringParser::SkipWhitespace`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units, `*pos` inside it.
+void ee_won_parser_skip_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::SkipNonWhitespace`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+void ee_won_parser_skip_non_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::CheckNextChar(ch)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+bool ee_won_parser_check_next_char(const void *text, uint32_t unit_size, int32_t *pos, int32_t ch);
+
+/// `StringParser::StartsWith(prefix)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `prefix` is NUL-terminated.
+bool ee_won_parser_starts_with(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               const char *prefix);
+
+/// `StringParser::Is(word)`.
+///
+/// # Safety
+/// As `ee_won_parser_starts_with`.
+bool ee_won_parser_is(const void *text, uint32_t unit_size, int32_t *pos, const char *word);
+
+/// `StringParser::ReadString(std::string&, stopAtWhitespace)`: the token to `sink` (always true in the C++).
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `sink` takes the bytes.
+void ee_won_parser_read_string(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               bool stop_at_whitespace,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `StringParser::ReadString(std::wstring&, stopAtWhitespace)`: the token's units to `sink`.
+///
+/// # Safety
+/// As `ee_won_parser_read_string`.
+void ee_won_parser_read_wstring(const void *text,
+                                uint32_t unit_size,
+                                int32_t *pos,
+                                bool stop_at_whitespace,
+                                EeWonWideSink sink,
+                                void *context);
+
+/// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `out` is valid.
+bool ee_won_parser_read_int(const void *text,
+                            uint32_t unit_size,
+                            int32_t *pos,
+                            int32_t *out);
+
+/// `StringParser::ReadValue(bool&)`: true and `*out` for a boolean word; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_read_int`.
+bool ee_won_parser_read_bool(const void *text,
+                             uint32_t unit_size,
+                             int32_t *pos,
+                             bool *out);
+
+/// `StringParser::ValueToString` of a signed integer (int, long, short, char, __int64): decimal to `sink`.
+///
+/// # Safety
+/// `sink` takes the bytes.
+void ee_won_parser_format_i64(int64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString` of an unsigned integer (unsigned long, unsigned char, unsigned __int64).
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_u64(uint64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString(const bool&)`: "True" or "False".
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_bool(bool value, EeWonByteSink sink, void *context);
+
+extern int isspace(int c);
+
+extern int isdigit(int c);
+
+extern int isxdigit(int c);
+
+extern int isalnum(int c);
+
+extern int toupper(int c);
+
+extern int tolower(int c);
 
 }  // extern "C"
 

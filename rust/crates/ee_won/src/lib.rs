@@ -16,12 +16,14 @@ pub mod elgamal;
 pub mod ffi;
 pub mod ffi_net;
 pub mod ffi_ops;
+pub mod ffi_parse;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod md5;
 /// cbindgen:ignore
 pub mod netstats;
 pub mod ops;
+pub mod parser;
 pub mod plaintext;
 pub mod random;
 pub mod socket;
@@ -32,3 +34,5 @@ pub mod wire;
 
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod parser_golden;

@@ -386,10 +386,9 @@ WON_TESTS = {
                                                          "TimerThread.cpp", "Thread.cpp", "WONDebug.cpp",
                                                          "WONStatus.cpp")],
                      WON_SRC / "WONAPI.cpp"],
-    # StringParser (golden: rust/crates/ee_won/src/golden_parse.txt)
+    # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
-                                                          "StringParserLists.cpp", "StringParserNumbers.cpp",
-                                                          "StringUtil.cpp")],
+                                                          "StringParserLists.cpp", "StringUtil.cpp")],
 }
 
 
