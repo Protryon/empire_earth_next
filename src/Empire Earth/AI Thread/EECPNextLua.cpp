@@ -285,6 +285,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
     }
     v.Set("enemies", theEnemies);
     v.Set("next_epoch_cost", EECPNextResources(inView.next_epoch_cost));
+    v.Set("epoch2_cost", EECPNextResources(inView.epoch2_cost));
     v.Set("sol_missing", EECPNextInt(inView.sol_missing));
     EECPLuaValue theCosts = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.costs.size(); k++) {

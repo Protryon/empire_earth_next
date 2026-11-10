@@ -68,6 +68,20 @@ function P.step(view, mem)
             say("diplomacy_enemy", ai.diplomacy(other, "enemy"))
             say("diplomacy_bad", ai.diplomacy(other, "friend"))
         end
+        -- the players' stances both ways and the teams; a class's cost and category
+        for _, p in ipairs(ai.players()) do
+            print(string.format("commands player id=%d me=%s ally=%s enemy=%s hostile=%s allies=%d human=%s", p.id, tostring(p.me),
+                tostring(p.ally), tostring(p.enemy), tostring(p.hostile), #(p.allies or {}), tostring(p.human)))
+        end
+        local c = ai.class("inf01_clubman")
+        print(string.format("commands class type=%s category=%s family=%d cost=%d/%d/%d/%d/%d", c.type, tostring(c.category),
+            c.family or -1, c.cost.food, c.cost.wood, c.cost.stone, c.cost.gold, c.cost.iron))
+        print(string.format("commands memory_cat buildings=%d soldiers=%d", #ai.memory{category = "building"}, #ai.memory{category = "soldier"}))
+        -- a patrol of the citizens between two points by the town
+        local cits = ai.units{category = "citizen"}
+        local ids = {cits[#cits]}
+        say("patrol", ai.patrol(ids, {{tx + 4, ty}, {tx, ty + 4}, {tx - 4, ty}}))
+        say("patrol_bad", ai.patrol(ids, {{tx + 4, ty}}))
         say("trade_sell", ai.trade("wood", "sell", 1))
         say("trade_buy", ai.trade("stone", "buy", 1))
         say("trade_bad", ai.trade("gold", "buy", 1))

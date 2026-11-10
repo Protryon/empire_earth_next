@@ -289,6 +289,7 @@ struct EECPNextView {
     long threat_strength;       // the sum over threats
     std::vector<EECPNextEnemy> enemies;
     long next_epoch_cost[kNextResources];   // all 0 at the last epoch
+    long epoch2_cost[kNextResources];       // the epoch after the next (the copper plan holds both before farms); 0 when none
     long sol_missing;           // the next epoch's SOL still missing
     std::vector<EECPNextClassCost> costs;
     std::vector<EECPNextEvent> events;      // since the last step
