@@ -57,6 +57,7 @@ struct UIEventTrigger {
 #endif
 
 class LLE_API UIManager {
+    friend struct UIManagerRust;            // UIManager.cpp: the Rust form stack's view of the lists (ee_ui manager.rs)
 public:
     UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
               unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen);

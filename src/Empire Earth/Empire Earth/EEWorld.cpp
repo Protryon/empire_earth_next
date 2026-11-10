@@ -441,15 +441,15 @@ void EEWorld::Clear()
     gMiniMap = NULL;
     gPathManager.Reset();
     gLocalPlayerOut = false;
-    std::deque<EEComplexUnit*>::iterator it;
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
     for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
         (*it)->Dereference();
     for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
         (*it)->Dereference();
-    std::deque<EEComplexUnit*>::iterator ct;
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
     for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
         (*ct)->Dereference();
-    std::map<long, EEComplexUnit*>::iterator mt;
+    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
     for (mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
         mt->second->Dereference();
     this->mActivateQueue.clear();
@@ -612,7 +612,7 @@ void EEWorld::RebuildTeams()
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {
-    std::map<EEUnit*, unsigned long>::iterator it = this->mResourceUsers.find(inUnit);
+    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
     // an untracked unit has no count (the map's head node used to be decremented instead)
     if (it != this->mResourceUsers.end() && it->second > 0)
         it->second--;
@@ -789,7 +789,7 @@ EEContagionManager* EEWorld::GetContagionManager()
 // Returns how many gatherers use a resource unit, starting its count at 0 when it is not tracked yet
 unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit)
 {
-    std::map<EEUnit*, unsigned long>::iterator it = this->mResourceUsers.find(inUnit);
+    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
     unsigned long theResult = 0;
     if (it == this->mResourceUsers.end()) {
         this->mResourceUsers[inUnit] = 0;
@@ -862,7 +862,7 @@ EEComplexUnit* EEWorld::FindQueuedUnitAt(long inX, long inY, unsigned long inUni
 // Counts one more gatherer on a resource unit
 void EEWorld::AddResourceUser(EEUnit* inUnit)
 {
-    std::map<EEUnit*, unsigned long>::iterator it = this->mResourceUsers.find(inUnit);
+    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
     if (it == this->mResourceUsers.end())
         this->mResourceUsers[inUnit] = 1;
     else
@@ -1551,9 +1551,9 @@ void EEWorld::ClearContinents()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    std::deque<EEComplexUnit*>::iterator theFound;
-    std::deque<EEComplexUnit*>::iterator it;
-    std::map<long, EEComplexUnit*>::iterator mt;
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator theFound;
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
+    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
     if (this->mActivateQueue.size() != 0) {
         for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it) {
             long theID = (*it)->GetUnitID();
@@ -1594,7 +1594,7 @@ void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
     if (inUnit == NULL || UIsNone32(inUnit->mUnitID) || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
-    std::deque<EEComplexUnit*>::iterator it = std::find(this->mActivateQueue.begin(), this->mActivateQueue.end(), inUnit);
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mActivateQueue.begin(), this->mActivateQueue.end(), inUnit);
     if (it == this->mActivateQueue.end()) {
         inUnit->Reference();
         this->mActivateQueue.push_back(inUnit);
@@ -1607,7 +1607,7 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
 {
     if (inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
-    std::deque<EEComplexUnit*>::iterator it = std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), inUnit);
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), inUnit);
     if (it == this->mDeactivateQueue.end()) {
         this->mDeactivateQueue.push_back(inUnit);
         inUnit->Reference();
@@ -1621,15 +1621,15 @@ void EEWorld::RebuildActiveUnits()
 {
     EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst;
 
-    std::deque<EEComplexUnit*>::iterator it; for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it; for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
         (*it)->Dereference();
     for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
         (*it)->Dereference();
-    std::deque<EEComplexUnit*>::iterator ct;
+    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
     for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
         (*ct)->Dereference();
 
-    for (std::map<long, EEComplexUnit*>::iterator mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
+    for (std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
         mt->second->Dereference();
     this->mActivateQueue.clear();
     this->mDeactivateQueue.clear();

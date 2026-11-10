@@ -7,14 +7,16 @@
 #ifndef EE_EESEAMOVEUNIT_H
 #define EE_EESEAMOVEUNIT_H
 
+#include "ee/EEUnitHandle.h"
+
 class EEUnit;
 class EEComplexUnit;
 
 // one moved unit (sizeof 0x54: _Buy's 0x54 stride; the implicit copy ctor 0x1a817c and operator= 0x1a7946)
 struct EESEAMoveUnitEntry {
     GETransformation mTransformation;       // +0x00 where it is put down
-    EEUnit* mUnit;                          // +0x40 (referenced)
-    EEComplexUnit* mContainer;              // +0x44 the transport/building it is put into (referenced; 0 for none)
+    EEUnitHandle<EEUnit> mUnit;             // +0x40 (referenced; a handle since R5a.4: an undo record outlives ticks)
+    EEUnitHandle<EEComplexUnit> mContainer; // +0x44 the transport/building it is put into (referenced; 0 for none; a handle)
     long mTileX;                            // +0x48
     long mTileY;                            // +0x4c
     float mYaw;                             // +0x50

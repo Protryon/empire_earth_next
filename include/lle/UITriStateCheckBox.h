@@ -10,6 +10,7 @@
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
 class LLE_API UITriStateCheckBox : public UIButton {
+    friend struct UITriStateCheckBoxRust;   // UITriStateCheckBox.cpp: the Rust logic's view (ee_ui button_variants.rs)
 public:
     UITriStateCheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                        UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);

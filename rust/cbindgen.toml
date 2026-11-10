@@ -7,13 +7,13 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger"]
 
 # ee_rmap's generic names, kept unique in the shared header
 [export.rename]
@@ -132,6 +132,16 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "ComboRefs" = "EeUiComboRefs"
 "ComboPart" = "EeUiComboPart"
 "ComboKey" = "EeUiComboKey"
+"DbControl" = "EeUiDbControl"
+"TableFields" = "EeUiControlsTableFields"
+"TableRefs" = "EeUiControlsTableRefs"
+"TableKey" = "EeUiControlsTableKey"
+"Trigger" = "EeUiTrigger"
+"TriStateFields" = "EeUiTriStateFields"
+"TriStateRefs" = "EeUiTriStateRefs"
+"BlinkFields" = "EeUiBlinkFields"
+"BlinkShow" = "EeUiBlinkShow"
+"Slice" = "EeUiSlice"
 # ee_won
 "Md5" = "EeWonMd5"
 "Blowfish" = "EeWonBlowfish"
