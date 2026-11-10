@@ -168,8 +168,26 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 upstream. Deviations in the code: the miners cannot be told from the other gatherers (tn_free_cit),
                 tn_spot is ai.find_site (no way kept between the town's buildings), the free places are the
                 view's sites (within the claim range), the trees of SPREAD's cells are the 1500 nearest the base.
-  airstrike.c   NOT STARTED (the bombers held as a wing of AF_WING, trained while a position needs them, the
-                bombing run on the shooters' spot).
+  airstrike.c   PARTLY -> air.lua (army.lua: the target found too strong, memory.army.strong_x/y/t). Ported: HELD
+                (every bomber of the bomber family the script's, ai.take, up to AS_BOMBERS), TRAINED (af_train: the
+                wing of AF_WING or the last position's need up to AF_WING_MAX, less those it has and asked for, the
+                newest bomber the player can at most 4 a request every AF_TRAIN_EVERY while a position needed it
+                within AF_STRONG_MS, paid as the siege's priority orders; an Airport per AF_PER_AIRPORT of the wing up
+                to AF_AIRPORTS, AF_AIRPORT_TRIES without one more, one a minute, forward at the staging point when
+                AF_FORWARD or more from the base), THE SHOOTERS (as_shooters from the attacked events' seen
+                attackers: a land unit hitting from AF_SHOOT_D, a field gun from AF_GUN_D, spots joined within
+                AF_SHOOT_JOIN, alive AF_SHOOT_MS, the most hit from is the position; memory.army.shooters for
+                skirmish.lua), THE WING (the position: the shooters' spot, the push's destination, the target found
+                too strong; the anti-air within AS_AA_R seen or remembered, what holds it within AS_R - defences
+                with a ground attack, siege and artillery, the soldiers last, the long-range units first at the
+                shooters' spot; a flight of AF_FLIGHT per anti-air plus one; the ready at AF_READY_PCT launched
+                together, a flight at each anti-air, the rest at the defences; AS_AGAIN, AF_RUN_MS, one wing at a
+                time, the force's push judged again when the targets are down: memory.army.next_attack = now).
+                Missing: g_ar_breach's focus as the position (AR_BREACH off upstream, not ported), ar_price_clear
+                (no price in the port), the autotest variant. Deviations: a target that is a unit out of sight is
+                gone (fog-honest); a bomber landed in its airport is inside a container and ai.attack refuses it
+                (cannot_do) where upstream's game air order launched it - an interface gap (counted:
+                memory.air.refused).
   diplo.c       NOT STARTED (answer war, the blocks, the vassals, the tributes; the engine has ai.diplomacy and
                 ai.tribute for them; the human chat lines and peace offers through the diplomacy screen are not in
                 this engine's AI path).
@@ -190,8 +208,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 attack.lua (enemy_objective: the target's known building on the force's land nearest by distance +
                 3 x the threat at it - the force's next target once its building is down). Missing: the
                 walk-and-fight record (goal_near, unit_fighting: the engine's action field stands in).
-  stats.c       NOT STARTED (fight_estimate: st_ratio from the game's damage tables; upstream default 0, the
-                summed hit points x attack of ai.strength stand in).
+  stats.c       PARTLY -> stats.lua (M.ratio(own_ids, enemy_ids), M.estimate; fight_estimate = false as upstream:
+                the summed hit points x attack of ai.strength stand in everywhere). Ported: the fight by type
+                (st_side, the groups), st_shot_t's shape, the reload + ST_SHOT_OVERHEAD, stg_reaches (range: a unit
+                that cannot move never hits one that outranges it), st_close, st_kill_time, st_estimate, st_ratio
+                (the square root of the time ratio). Missing (ai.class exposes hp, attack, range, speed, reload
+                only): the damage-class table, the hit-factor table (weapon kind x target family: a by-name rule
+                stands in - anti-air hits aircraft only, only anti-air or aircraft hit aircraft), the armour per
+                class, the minimum range (stg_inside_min), the area effect (st_neighbours), the enemy's own stats
+                (ai.class reads the reader's upgrades), the test commands (cmd_stats).
   settings.c    PORTED -> settings.lua: the [ai_base] defaults of config/ageofai.ini at that commit.
 
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at that commit, with the deviations

@@ -137,4 +137,10 @@ return {
     landing = true, landing_transports = 8,   -- the most transports (the size follows the beach)
     landing_citizens = 10,          -- citizens along for the forward base (0 / 3 / 6 / 10 by the transports)
     landing_waves = 3,              -- waves after the first while the bridgehead holds
+    -- airstrike.c, stats.c
+    air_strike = true,              -- AS_ON (a compile-time switch upstream, no [ai_base] key; on since 2026-11-04):
+                                    -- the bombers held as a wing, trained while a position needs them, the bombing
+                                    -- run on the shooters' spot / the push's target / the target found too strong
+    fight_estimate = false,         -- [ai_base] fight_estimate=0: the fight decisions keep summed hit points x attack
+                                    -- (ai.strength); stats.lua's M.ratio is the estimate (PARTLY: no damage tables)
 }

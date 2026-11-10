@@ -512,6 +512,8 @@ local function force_step(view, memory, mem, order)
         if not ok then
             mem.waits = (mem.waits or 0) + 1
             mem.next_attack = now + 30000   -- the force grows; asked again in 30 s
+            -- [airstrike.c] the target found too strong, when: the air force bombs it (a->strong, strong_t)
+            mem.strong_x, mem.strong_y, mem.strong_t = target.x, target.y, now > 0 and now or 1
             if mem.waits % 10 == 1 then
                 print(string.format("force wait own=%d foe=%d at=%d,%d", own, foe, target.x, target.y))
             end

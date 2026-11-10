@@ -9,6 +9,7 @@ local E = require("ageofai.econ")
 local A = require("ageofai.army")
 local T = require("ageofai.tactics")
 local TW = require("ageofai.towns")   -- [towns.c, expand.c]
+local AIR = require("ageofai.air")   -- [airstrike.c]
 local V = require("lib.view")
 
 local M = {}
@@ -41,6 +42,8 @@ function M.step(view, memory)
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
     TW.step(view, memory, orders, budget)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
+    -- [airstrike.c] the air force: the shooters' spots from the step's attacked events, the bombers' wing every 5 s
+    AIR.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
         print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d",
