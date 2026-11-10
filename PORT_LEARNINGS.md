@@ -3351,3 +3351,40 @@ the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay
   optimiser): neither has a caller in the game, the tools or the data path. `GEModelManager` is a map and a lock
   (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
   of `GETerrainMesh` were not reached.
+
+## The Linux cross build after the Rust port (branch rust-linux, 2026-11-09)
+
+The Linux and macOS builds had not been built since the first Rust crates landed; everything from R1.3 to R5b.2 and
+R6 (about 140 commits, 26 crates) went in on Windows only. Brought back here: the Linux game cross build, the census,
+the five test programs, clippy for the Linux and macOS targets. Linux cannot run on this machine; macOS was not built.
+
+- **One failure in 1,336 units, and it was the compiler flags.** `EETestFixture.cpp` includes `<atomic>`; libstdc++ 10's
+  `std::atomic<T>::is_always_lock_free` reads `__GCC_ATOMIC_<T>_LOCK_FREE`, which `-fms-compatibility` on a GNU target
+  hides (as it hid `__GCC_ATOMIC_TEST_AND_SET_TRUEVAL`, part 5). `xbuild.py` now defines the whole family for the
+  game's C++ units on Linux (`LINUX_GCC_ATOMIC_DEFINES`: the values clang defines for x86_64 in GNU mode, 2 =
+  always lock-free), for the game build and the census alike. macOS (libc++, `-fgnuc-version=4.2.1`) does not need it.
+- **The census stopped before compiling**: `cmd_census` still added `rust_build.WGPU_HEADERS` (the wgpu headers the
+  C++ GX included; GX is Rust since R4.1 and the attribute went with it). No C++ includes `wgpu.h` any more. Census
+  after the fix: 1,360/1,360 units in the ms dialect (the build's; the gnu dialect compiles 697, which is informational:
+  the game's units rely on the Microsoft extensions, `UReferenceContainer.h` and `EEPlayer.h` first).
+- **The LP64 mirrors held.** Every `#[repr(C)]` struct the C++ pins with `static_assert` (DX7Trampolines.cpp,
+  UITrampolines.cpp, the UI classes' offset tables, GERustTerrain.h, GERustMath.h, DrawTerrain) passed on the LP64
+  compile, and the link had no undefined or duplicate symbol: the one wrong width (ee_dx7's `TextRect`, `RECT`'s
+  `LONG`s as `c_long`) had been found and fixed by the previous Linux build. Rule confirmed by the audit of the
+  1,667 `c_long`/`c_ulong` uses: `c_long`/`c_ulong` mirror the game's own `long`/`unsigned long` (GX.h's `dw*`
+  fields, the UI members, the terrain rows, GXRESULT), which are 64-bit on LP64 on both sides; Win32 `LONG`/`DWORD`
+  (`wintypes.h`: `int32_t`/`uint32_t`) and the on-disk/wire `int32_t` fields are `i32`/`u32`. The `(unsigned long*)`
+  casts left in the C++ seams are no-ops (`EEGamePreferences::mGameWindowWidth` is `unsigned long`); the one true
+  8-byte read of a 4-byte field (`FindPatchOp.cpp`, `*(unsigned long*)data`) is in a WON unit the game does not build.
+- **A pointer-width mismatch cannot hide in these seams.** The C++ passes `int32_t*`/`uint32_t*` to the generated
+  header's `long*`/`unsigned long*` parameters nowhere (that is a compile error on LP64, and the build is clean); the
+  `View` records (`EeDx7TerrainMeshView`, `EeGeTerrainFog`, ...) are filled field by field, where a width only converts.
+  The hazard is confined to records that overlay C++ memory, and those are the pinned ones.
+- **Test programs**: `plat_test`, `font_test`, `lua_test`, `tcp_test` and the four `tests/won` programs build and link
+  for linux-x86_64 unchanged (the Rust library before SDL on the link line, as before). Not run: no Linux here.
+- **Rust**: `cargo clippy --workspace --all-targets -D warnings` is clean for `x86_64-unknown-linux-gnu` and
+  `aarch64-apple-darwin` (the macOS code paths type-check; `block v0.1.6` in wgpu's Metal path prints cargo's
+  future-incompatibility note, not a warning of ours). The Linux `libee_rust.a` builds in 1 m 45 s.
+- **Not proven here**: anything at run time on Linux or macOS (the Rust platform layer's POSIX halves against a real
+  SDL window, the mixer's Core Audio / ALSA backends, wgpu on Metal with the Rust GX, the ASan run). CLAUDE.md's macOS
+  checklist (full build, `--sanitize address`, an ASan `ai-game`) is the next step, on the Mac.
