@@ -83,4 +83,26 @@ return {
     landing = true, landing_transports = 8, navy_share = 25,
     -- fishing and docks (fishing_boat=1, navy=1 upstream; the port's numbers)
     boats = {0, 6, 10}, docks = {0, 1, 2},
+    -- expand.c, towns.c
+    -- expand_islands: the parts as bits (upstream's list: outposts 1, barracks 2, ally_islands 4, early 8,
+    -- extra_citizens 16, more_islands 32, forward_outpost 64, hold_sea 128, fort 256, fort_guns 512)
+    expand_islands = 1,             -- DEVIATION (empty = off upstream: measured even against the base AI on the
+                                    -- test maps, one free island at most): outposts on, so the port settles the free
+                                    -- islands at all - the owner's direction that the AI must expand (towns.c SPREAD:
+                                    -- "if the AI can't expand everything else becomes moot"); the other parts off as
+                                    -- upstream has them
+    expand_citizens = 8,            -- citizens a trip (3..12)
+    expand_guard = 3,               -- land soldiers with them (0..4; 4 at least with hold_sea)
+    expand_minute = 8,              -- not before this minute (and the Copper Age)
+    expand_trips = 4,               -- trips to one island in all
+    expand_max = 3,                 -- islands besides home with more_islands (1..4)
+    rescue_citizens = true,         -- NOT PORTED (the stranded citizens' transport home): kept for the record
+    -- towns: the parts as bits (resource_towns 1, settlement 2, forward_production 4, forward_base 8, spread 16,
+    -- scout 32, grow 64, fort 128, take_mines 256, mine_raids 512); upstream "resource_towns, spread"
+    towns = 17,
+    towns_max = 3,                  -- resource towns at most (not with spread)
+    towns_citizens = 6,             -- citizens that found a town (a forward base: + 2; 12 at most)
+    towers_per_town = 2,            -- towers by a resource town (spread: 2 + one per 4 mines)
+    towns_remove_unbuilt = false,   -- a town going up whose citizens are all dead: its foundations removed
+    towns_care = true,              -- spread: the spot and its way safe (part 1; the other parts measured no gain)
 }

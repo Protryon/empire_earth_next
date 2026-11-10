@@ -143,6 +143,11 @@ function M.reserve(view, mem)
             r[k] = math.max(r[k] - more, 0)
         end
     end
+    -- [towns.c, expand.c] towns_reserve / expand_reserve: the drop site a town waits for, its next tower, a forward
+    -- base's towers, an outpost's Settlement and tower (ageofai.towns writes it the step before)
+    for _, k in ipairs(V.resources) do
+        r[k] = r[k] + ((mem.towns_reserve or {})[k] or 0)
+    end
     return r, saving
 end
 
@@ -485,8 +490,13 @@ local function settlements(view, mem, target, order)
     mem.settle_block = mem.settle_block or {}
     mem.settle_pending = mem.settle_pending or {}
     local cands = {}
+    -- [towns.c, expand.c] a site by a town or an outpost of ageofai.towns (going up or standing) is that town's: no
+    -- settlement of this pass there (one or the other issues the drop site's order); nor at a site across the water
+    -- (the claim range reaches over it; the coarse build sent a walker that never arrived)
+    local TW = require("ageofai.towns")
     for _, s in ipairs(view.sites) do
-        if s.claimed and s.units > 0 and s.danger == 0 and s.blocked ~= "tower" and s.blocked ~= "enemy_near" then
+        if s.claimed and s.units > 0 and s.danger == 0 and s.blocked ~= "tower" and s.blocked ~= "enemy_near"
+                and not TW.near_town(mem, s.x, s.y, 18) and ai.reach(view.town_x, view.town_y, s.x, s.y) then
             for _, r in ipairs(V.resources) do
                 if r ~= "wood" and (target[r] or 0) > 0 and (s.holds[r] or 0) > 0 and (s.drop[r] or 0) == 0 then
                     cands[#cands + 1] = {rank = SETTLE_RANK[r], dist = s.distance, site = s, key = s.x * 10000 + s.y}

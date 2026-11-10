@@ -70,12 +70,56 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 (the weakest defended shore of the target's continent), the size (1.2 x of 1.4 x the beach's
                 strength), board / sail / unload with retries. Missing: the bridgehead (citizens, towers), the
                 landing's own fleet escort, the second wave, the return of the transports.
-  expand.c      NOT STARTED (expansion to other islands: the empty continent with the most mines nearest the
-                base, the mining camp with a drop site, towers and a barracks, the outpost ferries).
-  towns.c       PARTLY -> econ.lua (settlements: a town centre instead of a settlement at a far mineral site from
-                the Copper Age). Missing: RESOURCE TOWNS (the richest free mine group 32-90 tiles out, its
-                towers_per_town towers, production), FORWARD BASES (the tactical operations centre near the enemy),
-                the towns' defences and walls.
+  expand.c      PARTLY -> towns.lua (the outpost). Ported: ex_plan (from the Copper Age and expand_minute, the home
+                mines half worked or minute 15, 25 workers, the army not outmatched, the dock's sea), ex_pick (the
+                island with the most explored mines: 10 a mine, a quarter a tile, 15 an enemy building known; no
+                enemy town, defence or 4+ buildings known, no ally's building, no more enemy soldiers known within
+                20 tiles than the guard, lost 3 times never), the ferry (ex_ferry_ship: the own idle empty transport
+                on that sea, the last trip's first, else trained; the passengers expand_citizens nearest the home
+                shore, builders last, and expand_guard free land soldiers; ex_ferry_board: to the home shore, the
+                load once the transport is there and 3 in 4 are near or after 2 minutes, again every 20 s, sails
+                when all are aboard, 7 in 10 after 90 s, or 3 citizens after 4 minutes, failed after 5; the sea
+                risk; ex_ferry_sail: the unload renewed every 2 s at the nearest shore tile, 6 minutes), ex_outpost
+                (the Settlement first and all on it, a tower between the mines and the sea and one by the drop site,
+                a barracks with bit 2, laid again 3 times, dropped after 30 unpaid looks, 2 builders a tower, the
+                citizens to the island's free mines, the guard by the drop site attacking what it sees within 14),
+                more citizens every 2 minutes up to the mine places and expand_trips, lost after 20 s empty (again
+                in 8 minutes, 3 losses never), ex_enemy_home, ex_holds and the held islands (MORE), ex_forward and
+                sea_held (FORWARD), ex_follow_no (FOLLOW), expand_hold (the Settlement and the tower; not the
+                transport: the engine's reserve would refuse its own order), ex_ferry_scout (phase 4: an island
+                with a mine seen and land not looked at is scouted first by the empty transport - here it sails
+                from one unexplored grid point of the island's shore to the next, ai.unexplored, then 10 s by the
+                mines as upstream, 4 minutes at most; upstream knew every mine from the zones, the port knows the
+                explored ones). Missing: EXTRA (the citizens' goal), FORT, FORT'S GUNS, the stranded citizens'
+                rescue (rs_look / rs_act), citizens_useful, the islands log (autotest). The sea risk is the enemy
+                warships known near the way against the own warships' strength (upstream's ld_sea_risk models the
+                crossing); the guard comes from the free soldiers, then the force at home (ar_take).
+  towns.c       PARTLY -> towns.lua (econ.lua's settlements keep off a town's sites). Ported: tn_plan (from the
+                Copper Age, 20 workers, no enemies in the base; a town going up at a time, towns_max, the army not
+                outmatched; with SPREAD 15 workers a town, one going up per 50, a surplus of towns_citizens idle
+                and twice a Town Center's price), tn_free_slots (the view's sites), tn_site (the richest explored
+                mine group 32-90 tiles out, n x 30 / (30 + d), no other drop site within 18, none of its own within
+                32, no enemy building within 22, no threat, no spot lost there), tn_site_spread (the 8-tile cells:
+                a mine 3, a bush 2, a tree 1, 12 trees a cell; the spot nearest its towns within 45 first, never 20
+                tiles ahead of its front town, the key dn x 4 - sc - df), tn_safe (towns_care part 1: no enemy
+                soldiers known within 20, out of the threat and the lost fights, the way clear of threats and of 22
+                tiles of enemy buildings), tn_found (a Town Center, a Settlement with bit 2; towers_per_town
+                towers, with SPREAD 2 + one per 4 mines and 5 houses; the forward base's two towers, Hospital,
+                production, two towers), tn_take_cits (the nearest free citizens, held), tn_run (the projects laid
+                in order every 8 s, two going up, the drop site alone first, laid again 3 times, dropped after 30
+                unpaid looks; the towers 5 tiles from the drop site to either side of the enemy it knows; all the
+                citizens on the drop site, 3 (4) on each other; the citizens to the town's free mines within 14,
+                released to the game when none is left; the town stands when all are up; lost when nothing of it
+                is left; unpaid after 3 minutes: that spot 5 minutes off), tn_lost (the spot 8 minutes off, 3
+                losses never), tn_army_spot and the staging point (FORWARD BASE, bit 8), tn_wall (11 tiles across
+                3 tiles before the two front towers, 8 directions, 3 tries 3 minutes apart, 11 x the wall's cost
+                in stock; a SPREAD town 60+ tiles out too; ai.wall), towns_reserve, towns_remove_unbuilt. Missing:
+                4 FORWARD PRODUCTION (towns_production: econ.lua's production builds near home), 32 SCOUT, 64 GROW,
+                128 FORT (defence.c's square and sf_walls, the garrison), 256 TAKE MINES and 512 MINE RAIDS (the
+                force's part in armies.c, the sites' memory, the crew), towns_care parts 2-16 are in but off as
+                upstream. Deviations in the code: the miners cannot be told from the other gatherers (tn_free_cit),
+                tn_spot is ai.find_site (no way kept between the town's buildings), the free places are the
+                view's sites (within the claim range), the trees of SPREAD's cells are the 1500 nearest the base.
   airstrike.c   NOT STARTED (the bombers held as a wing of AF_WING, trained while a position needs them, the
                 bombing run on the shooters' spot).
   diplo.c       NOT STARTED (answer war, the blocks, the vassals, the tributes; the engine has ai.diplomacy and
