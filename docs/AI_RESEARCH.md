@@ -2269,6 +2269,49 @@ min, army 8.9/11.0 against 8.8/14.2; against classic Stone 27.1, citizens 35/43,
   autosave (`next.savecheck units=same`); the Lua shadow step is skipped for scripts on the per-unit interface
   (their commands cannot run twice) - a real load stays a manual test.
 
+**Surviving the classic's waves (2026-11-09, the third checkpoint).** The 90-minute defeats against classic Hard
+came apart in the traces: half the lost seats died in the *Prehistoric* - a soldierless town (the `early_army`
+deviation) with two towers, raided from minute 3, its food income down to 15-30 a minute while the copper plan held
+the Stone Age's 1122 food (seed 4 reached 1095 at minute 50 and died with it); the rest fell in the Stone Age when
+the force answered raids at the outposts, came home "losing" and was ground down. Changes (settings.lua marks the
+deviations): the recovery rule (no saving while the citizens are under 75% of their most, or while the food income
+is under 60 a minute and the epoch not paid: recover_economy); hunting when the patches fail (food gatherers at work
+under half the target and the income under 90); upstream's `early_soldiers` alternative made reactive (four
+soldiers in the first epoch from minute 5 once enemy soldiers were seen: four from the start cost 2.5 minutes of
+the Stone Age on quiet maps, 26.0 against 23.6); the force holds the town itself at 12 tiles under a threat instead
+of the whole claimed land; raids answered only within 30 tiles of home (or a band of 5) when the force beats what
+is known there by 1.3; the muster at 4 enemies and 1.5 x (upstream 8 and 2 x); front towers from 8 citizens, an
+unsafe spot when no safe one.
+
+| 90 minutes against classic Hard, 16 games | Stone | Copper | citizens 30 / 40 | army 30 / 40 | citizens / army at the end | defeats |
+|---|---|---|---|---|---|---|
+| Age of AI, second checkpoint | 29.1 (15/16) | 64.0 (7/16) | 35 / 43 | 4.0 / 13.9 | 28 / 6 | 4 (1 wiped) |
+| Age of AI, four soldiers from minute 5 | 29.3 (15/16) | 67.8 (11/16) | 38 / 48 | 8.2 / 17.6 | 49 / 23 | 1 |
+| Age of AI, the four once enemies are seen (kept) | 29.1 (14/16) | 65.3 (10/16) | 38 / 47 | 8.1 / 15.6 | 42 / 22 | 2 |
+| boom (the reference) | 26.5 (16/16) | 59.1 (12/16) | 37 / 46 | 6.7 / 13.3 | 60 / 13 | 2 |
+| classic Hard in boom's games | 25.5 | 61.9 (16/16) | 36 / 53 | 12.6 / 11.8 | 157 / 12 | 0 |
+
+Against boom at 45 minutes the kept variant is level (Stone 23.3 against 22.7, citizens 47 / 60 against 43 / 62 at
+30 / 40 minutes, army 10 / 17 against 11 / 17, no defeats). The target - no defeats in 16 and ahead of boom at 90
+minutes - is not reached: the port now loses as often as boom (2 of 16) with a larger army and fewer citizens; the
+classic Hard AI ends with 160+ citizens either way. What is left here is upstream's hold_town / bunkers (the
+defenders drawn out one by one) and the citizens' shelter, and an economy that keeps growing under raids (the
+finders refuse raided sites; the idle citizens then wait).
+
+**Islands, the unload retries** (10 games, Small Islands, 90 min): a transport whose unload ended with cargo aboard
+is ordered again at once at the next shore tile (upstream's engine fix, done in `lib/navy.lua` without an engine
+change): the one landing that sailed put all 40 ashore (two had failed on the unload before). But only 2 of 10
+games boarded at all: in 7 the sea scout never found an enemy building - `ai.unexplored{sea = true}` runs out of
+points after a few (the grid's water body test; `ai.explore` on a boat then shows nothing) - and the landing's
+judge waited in the rest. The economy on islands is far ahead of the classic AI's (Stone 27.5 against 50.5, Copper
+10/10 against 2/10, 77 citizens and 82 soldiers against 31 and 32 at the end), with two faults seen: `b_farm` near
+the town is refused `no_site` on the island maps (229 times in one game; the farms need a granary-side placement),
+and 54 idle citizens at the end for want of food sites. L6's gate stays open.
+
+**A learning:** `--data open` falls back to the main checkout's tree; a bench that runs while that tree is rebuilt
+fails every game at start (`EETerrainColorTable.cpp (81): Verification failure`, no report). A worktree keeps its own
+tree (`open_data.py build build/open_data/tree`, 5 minutes).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

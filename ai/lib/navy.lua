@@ -258,16 +258,29 @@ function M.landing_step(L, opts)
         return nil
     end
     if L.state == "unload" then
-        if (now - (L.order_t or 0)) >= 2000 then
-            L.order_t = now
-            for k = 1, #L.ships do
-                if (cols.cargo[k] or 0) > 0 then
-                    -- each transport its own point, 4 tiles apart along the shore
-                    local ux, uy = ai.shore(L.site_x + (k - 1) * 4 - (#L.ships - 1) * 2, L.site_y, {sea = L.sea, max = 6})
+        -- each transport its own point along the shore; a transport whose unload ended with cargo still aboard (the
+        -- engine gives up when the spot is taken or unreachable) is ordered again at once at the next shore tile
+        -- (upstream's engine fix: the order renewed within 0.5 s at the nearest shore tile with room)
+        L.tries = L.tries or {}
+        local acts = ai.get(L.ships, {"action"})
+        local offsets = {0, 4, -4, 8, -8, 12, -12, 3, -3, 6, -6, 10, -10}
+        for k = 1, #L.ships do
+            if (cols.cargo[k] or 0) > 0 then
+                local idle = acts.action[k] ~= "unload"
+                local due = (now - (L.order_t or 0)) >= 2000
+                if idle or (due and (now - (L.try_t or 0)) >= 6000) then
+                    L.tries[k] = (L.tries[k] or 0) + (idle and 1 or 0)
+                    local off = offsets[(L.tries[k] + k - 1) % #offsets + 1]
+                    local ux, uy = ai.shore(L.site_x + off, L.site_y + (L.tries[k] % 3 - 1) * 3, {sea = L.sea, max = 8})
                     if ux == nil then
                         ux, uy = L.site_x, L.site_y
                     end
                     ai.unload(L.ships[k], ux, uy)
+                    L.order_t = now
+                    if idle then
+                        L.try_t = now
+                        L.retries = (L.retries or 0) + 1
+                    end
                 end
             end
         end

@@ -96,6 +96,13 @@ function M.reserve(view, mem)
             -- the most harmful brake; the owner's build order grows to about 64 in the Stone Age)
             local at = view.epoch == 0 and S.min_workforce or S.stone_workforce
             saving = view.citizens >= at or age >= 18 * 60000
+            mem.peak = math.max(mem.peak or 0, view.citizens)
+            if view.citizens * 100 < (mem.peak or 0) * S.recover_share and view.citizens < at then
+                saving = false   -- the economy lost citizens: it grows again before it saves (recover_economy)
+            end
+            if view.income.food < 60 and view.citizens < at and view.stock.food < view.next_epoch_cost.food then
+                saving = false   -- no food coming in: saving starves the town (the raided patches); the citizens first
+            end
         elseif S.epoch_pacing == "rush" then
             saving = age >= 5 * 60000
         else
@@ -444,6 +451,9 @@ local function front_spot(view, mem, tower, fx, fy, len)
             end
             if not taken then
                 local sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2, safe = true})
+                if sx == nil then
+                    sx, sy = ai.find_site(tower, x, y, {min = 0, max = 2})
+                end
                 if sx ~= nil then
                     return sx, sy
                 end
@@ -516,7 +526,7 @@ local function towers(view, mem, order, above)
     -- one is queued or going up
     local max_towers = 4 + S.towers_max_epoch * view.epoch
     if not S.defence_towers or busy or n >= max_towers or view.time - (mem.tower_t or 0) < 60000
-            or view.citizens < 12 then
+            or view.citizens < 8 then
         return stone_wanted
     end
     if above.stone < cost.cost.stone + S.tower_stone_keep then
@@ -792,6 +802,9 @@ function M.step(view, memory, orders, army)
             mem.target = target
             local hunt = claims(view, mem, target, order)
             hunt = hunt or (view.time - (mem.no_drop_t or -100000) < 30000 and view.hunt > 0)
+            -- the patches blocked or bare (the food gatherers at work far under the target and the income low): the
+            -- game near home (food_plan HUNT)
+            hunt = hunt or (view.hunt > 0 and view.gatherers.food * 2 < target.food and view.income.food < 90)
             local prefer = hunt and "hunt" or "patch"
             for _, r in ipairs(V.resources) do
                 if target[r] ~= view.wanted[r] or (r == "food" and prefer ~= (mem.prefer or "patch")) then

@@ -137,7 +137,7 @@ function M.step(view, memory, orders, budget, force)
         local L = mem.landing
         local result, detail = N.landing_step(L)
         if result == "landed" then
-            print(string.format("landing ashore n=%d at=%d,%d", #detail, L.site_x, L.site_y))
+            print(string.format("landing ashore n=%d at=%d,%d retries=%d", #detail, L.site_x, L.site_y, L.retries or 0))
             local g = G.create(memory, {task = "attack", role = "landed", x = L.tx, y = L.ty, target = L.target,
                                         home_x = L.site_x, home_y = L.site_y})
             G.add(memory, g, detail)

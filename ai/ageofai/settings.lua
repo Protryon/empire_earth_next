@@ -23,9 +23,15 @@ return {
     -- the early game (early.c)
     early_towers = true,            -- two towers by the town centre in the first two epochs
     early_core = 2, early_dist = 4,
-    early_army = true,              -- DEVIATION (off upstream): no soldiers in the first epoch, towers and the militia
-                                    -- hold the town (the owner's and upstream's playtester's opening); the home guard
-                                    -- from the Stone Age
+    early_army = true,              -- DEVIATION (off upstream): no home guard in the first epoch, towers and the
+                                    -- militia hold the town (the owner's and upstream's playtester's opening); the
+                                    -- home guard from the Stone Age ...
+    early_soldiers = 4,             -- ... but upstream's alternative once enemy soldiers were seen: this many in the
+                                    -- first epoch from minute 5 (the 90-minute games against classic Hard: a
+                                    -- soldierless town with two towers was raided to death in the Prehistoric; four
+                                    -- from the start cost 2.5 minutes of the Stone Age on quiet maps, AI_RESEARCH 8.37)
+    recover_share = 75,             -- the saving stops while the citizens are under this percent of their most
+                                    -- (recover_economy: a lost economy spends the whole stock on citizens)
     -- citizens (citizens.c)
     citizen_share = 45,             -- percent of the population cap the game wants as citizens
     citizen_army_share = 40,        -- from farms: the army's share of the cap the citizens' goal leaves
@@ -35,7 +41,7 @@ return {
     home_guard_share = 35,          -- ... or this percent of the military room (cap x (1 - citizen share))
     -- muster (defence.c)
     muster = true,
-    muster_enemies = 8, muster_ratio = 200, muster_strike = 130, muster_out = 18,
+    muster_enemies = 4, muster_ratio = 150, muster_strike = 130, muster_out = 18,   -- DEVIATION: 8 and 200 upstream
     -- defences (defence.c)
     defence_distance = 10,          -- the front's tower slots this far from the base
     defence_towers = true,
