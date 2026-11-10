@@ -2578,6 +2578,13 @@ struct EeUiControlsTableKey {
   long form_index;
 };
 
+/// One queued event (`UIEventTrigger`): the referenced event, its form and entity, C++'s.
+struct EeUiTrigger {
+  void *event;
+  void *form;
+  void *entity;
+};
+
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 
@@ -6036,6 +6043,44 @@ void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
 
 /// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
+
+/// `UIManager::AddDirtyRectangle(rect, form)`.
+void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);
+
+/// `UIManager::Pop`'s body (inside the locks).
+void ee_ui_manager_pop(void *manager);
+
+/// `UIManager::PopTo`'s body (inside the locks).
+void ee_ui_manager_pop_to(void *manager, void *form);
+
+/// `UIManager::Push`'s body (inside the locks).
+void ee_ui_manager_push(void *manager, void *form);
+
+/// `UIManager::SwapForm`'s body (inside the locks).
+void ee_ui_manager_swap_form(void *manager, void *form);
+
+/// `UIManager::RedrawAll`'s body (inside the lock).
+void ee_ui_manager_redraw_all(void *manager);
+
+/// `UIManager::RelayoutAllForms`.
+void ee_ui_manager_relayout_all_forms(void *manager,
+                                      unsigned long window_width,
+                                      unsigned long window_height);
+
+/// `UIManager::ResetClippedForms`.
+void ee_ui_manager_reset_clipped_forms(void *manager);
+
+/// `UIManager::GetFormByID` -> the form, or NULL.
+void *ee_ui_manager_form_by_id(void *manager, unsigned long id);
+
+/// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
+long ee_ui_manager_wheel_scroll_amount(long value);
+
+/// `UpdateUI`'s event loop.
+void ee_ui_manager_process_all_events(void *manager);
+
+/// `UIManager::ProcessAllEventsForForm(form)`.
+void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
 
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);

@@ -12,6 +12,7 @@ pub mod edit;
 pub mod form;
 pub mod layout;
 pub mod list;
+pub mod manager;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
@@ -37,6 +38,9 @@ mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
+// imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
+#[cfg(not(test))]
+mod manager_ffi;
 // imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrollbar_ffi;

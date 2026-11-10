@@ -9,6 +9,7 @@
 #include <mbstring.h>
 #include <algorithm>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"
@@ -59,6 +60,149 @@ ISEntity* UIManager::sLMouseButton;
 ISEntity* UIManager::sRMouseButton;
 ISEntity* UIManager::sMouseWheel;
 bool UIManager::sMouseLeftHanded;
+
+// The Rust form stack's view of the manager (rust/crates/ee_ui/src/manager.rs, docs/RUST_PLAN.md R6): its lists a
+// slot at a time, the forms as opaque handles, the calls on a form. A friend of UIManager and UIForm.
+struct UIManagerRust {
+    // 0 the stack, 1 the visible forms, 2 every form
+    static std::vector<UIForm*>& List(void* inManager, int inList)
+    {
+        UIManager* theManager = static_cast<UIManager*>(inManager);
+        switch (inList) {
+        case 0:
+            return theManager->mFormStack;
+        case 1:
+            return theManager->mVisibleForms;
+        default:
+            return theManager->mForms;
+        }
+    }
+    static UIManager* Manager(void* inManager) { return static_cast<UIManager*>(inManager); }
+    static std::vector<UIForm*>& Copied(void* inManager) { return Manager(inManager)->mCopiedForms; }
+    static std::deque<UIEventTrigger>& Events(void* inManager) { return Manager(inManager)->mEventsToTrigger; }
+    static UIForm* Form(void* inForm) { return static_cast<UIForm*>(inForm); }
+    static EeUiRect Rect(const GERectangle& inRectangle)
+    {
+        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+    static void FormCall(UIForm* inForm, int inCall)
+    {
+        switch (inCall) {
+        case 0:
+            inForm->Open();
+            break;
+        case 1:
+            inForm->Close();
+            break;
+        case 2:
+            inForm->Activate();
+            break;
+        case 3:
+            inForm->Deactivate();
+            break;
+        case 4:
+            inForm->ClearAllClipRectangles();
+            break;
+        default:
+            inForm->SetAllControlsDirty();
+            break;
+        }
+    }
+    static void FormRectCall(UIForm* inForm, int inCall, const GERectangle& inRectangle)
+    {
+        switch (inCall) {
+        case 0:
+            inForm->AddDirtyRectangle(inRectangle);
+            break;
+        case 1:
+            inForm->RedrawIntersectControls(inRectangle);
+            break;
+        case 2:
+            inForm->AddClipRectangle(inRectangle);
+            break;
+        default:
+            inForm->RelayoutForm(inRectangle);
+            break;
+        }
+    }
+};
+
+extern "C" unsigned long ee_uicpp_manager_len(void* inManager, int inList)
+{
+    return (unsigned long)UIManagerRust::List(inManager, inList).size();
+}
+extern "C" void* ee_uicpp_manager_at(void* inManager, int inList, unsigned long inIndex)
+{
+    return UIManagerRust::List(inManager, inList)[inIndex];
+}
+extern "C" void ee_uicpp_manager_push(void* inManager, int inList, void* inForm)
+{
+    UIManagerRust::List(inManager, inList).push_back(UIManagerRust::Form(inForm));
+}
+extern "C" void ee_uicpp_manager_pop(void* inManager, int inList)
+{
+    UIManagerRust::List(inManager, inList).pop_back();
+}
+extern "C" void ee_uicpp_manager_insert(void* inManager, int inList, unsigned long inIndex, void* inForm)
+{
+    std::vector<UIForm*>& theList = UIManagerRust::List(inManager, inList);
+    theList.insert(theList.begin() + inIndex, UIManagerRust::Form(inForm));
+}
+extern "C" void ee_uicpp_manager_erase(void* inManager, int inList, unsigned long inIndex)
+{
+    std::vector<UIForm*>& theList = UIManagerRust::List(inManager, inList);
+    theList.erase(theList.begin() + inIndex);
+}
+extern "C" void ee_uicpp_manager_copied_clear(void* inManager)
+{
+    UIManagerRust::Copied(inManager).clear();
+}
+extern "C" EeUiRect ee_uicpp_manager_form_rect(void* inForm)
+{
+    return UIManagerRust::Rect(UIManagerRust::Form(inForm)->GetRectangle());
+}
+extern "C" unsigned long ee_uicpp_manager_form_id(void* inForm)
+{
+    return UIManagerRust::Form(inForm)->GetFormID();
+}
+extern "C" void ee_uicpp_manager_form_call(void* inForm, int inCall)
+{
+    UIManagerRust::FormCall(UIManagerRust::Form(inForm), inCall);
+}
+extern "C" void ee_uicpp_manager_form_rect_call(void* inForm, int inCall, const EeUiRect* inRectangle)
+{
+    UIManagerRust::FormRectCall(UIManagerRust::Form(inForm), inCall, UIManagerRust::Rect(*inRectangle));
+}
+extern "C" bool ee_uicpp_manager_event_take(void* inManager, EeUiTrigger* outTrigger)
+{
+    std::deque<UIEventTrigger>& theQueue = UIManagerRust::Events(inManager);
+    if (theQueue.empty())
+        return false;
+    UIEventTrigger theTrigger = theQueue.front();
+    theQueue.pop_front();
+    outTrigger->event = theTrigger.mEvent;
+    outTrigger->form = theTrigger.mForm;
+    outTrigger->entity = theTrigger.mEntity;
+    return true;
+}
+extern "C" void ee_uicpp_manager_event_process(const EeUiTrigger* inTrigger)
+{
+    UIEvent* theEvent = static_cast<UIEvent*>(inTrigger->event);
+    theEvent->ProcessEvent(static_cast<UIForm*>(inTrigger->form), static_cast<UIEntity*>(inTrigger->entity));
+    theEvent->Dereference();
+}
+extern "C" void ee_uicpp_manager_event_push(void* inManager, const EeUiTrigger* inTrigger)
+{
+    UIEventTrigger theTrigger;
+    theTrigger.mEvent = static_cast<UIEvent*>(inTrigger->event);
+    theTrigger.mForm = static_cast<UIForm*>(inTrigger->form);
+    theTrigger.mEntity = static_cast<UIEntity*>(inTrigger->entity);
+    UIManagerRust::Events(inManager).push_back(theTrigger);
+}
 
 // FUNCTION: LLE 0x10078ee4
 // Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
@@ -261,82 +405,15 @@ UIManager::~UIManager()
     this->RemoveDatabase();
 }
 
-// FUNCTION: LLE 0x10079be5
-// Makes visible again every stacked form below the given visible form that only that form was covering
-void UIManager::AddClippedForms(unsigned long inIndex)
-{
-    std::vector<UIForm*> theForms;
-    unsigned long i;
-    for (i = 0; this->mFormStack[i] != this->mVisibleForms[inIndex]; i++)
-        if (this->mVisibleForms[inIndex]->GetRectangle().Contains(this->mFormStack[i]->GetRectangle())) {
-            unsigned long j;
-            for (j = i + 1; ; j++) {
-                if (this->mFormStack[j] == this->mVisibleForms[inIndex]) {
-                    theForms.push_back(this->mFormStack[i]);
-                    break;
-                }
-                if (this->mFormStack[j]->GetRectangle().Contains(this->mFormStack[i]->GetRectangle()))
-                    break;
-            }
-        }
-    for (unsigned long k = 0; k < theForms.size(); k++)
-        this->AddToVisibleForms(theForms[k]);
-}
-
-// FUNCTION: LLE 0x10079e1f
-// Inserts a stacked form into the visible list in stack order and opens it; returns its index (forms not on the
-// stack are not added)
-unsigned long UIManager::AddToVisibleForms(UIForm* inForm)
-{
-    unsigned long theIndex = 0;
-    if (this->mVisibleForms.size() == 0 && inForm == this->mFormStack.back()) {
-        // Fixed: compared mVisibleForms.back() of the empty list with the form here (a read before the list's
-        // start); an empty list never holds the form, so it is simply added below
-    } else {
-        unsigned long i;
-        for (i = 0; i < this->mFormStack.size(); i++) {
-            if (this->mFormStack[i] == inForm) {
-                if (this->mVisibleForms[theIndex] != inForm) {
-                    this->mVisibleForms.insert(this->mVisibleForms.begin() + theIndex, inForm);
-                    inForm->Open();
-                }
-                return theIndex;
-            }
-            if (this->mFormStack[i] != this->mVisibleForms[theIndex])
-                continue;
-            theIndex++;
-            if (theIndex == this->mVisibleForms.size())
-                break;
-        }
-        if (i == this->mFormStack.size())
-            return theIndex;
-    }
-    theIndex = this->mVisibleForms.size();
-    this->mVisibleForms.push_back(inForm);
-    inForm->Open();
-    return theIndex;
-}
+// FUNCTION: LLE 0x10079be5 (AddClippedForms) and 0x10079e1f (AddToVisibleForms): the bodies are Rust (ee_ui
+// manager.rs, inside Pop, SwapForm and Push); the members stay declared, with no C++ definition.
 
 // FUNCTION: LLE 0x10079f7f
 // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
 void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm)
 {
-    GERectangle theRectangle;
-    if (this->mFormStack.size() <= 0)
-        return;
-    if (inForm == this->mFormStack.back())
-        inForm->AddDirtyRectangle(inRectangle);
-    else {
-        for (unsigned long i = 0; i < this->mVisibleForms.size(); i++)
-            if (this->mVisibleForms[i] == inForm) {
-                for (; i < this->mVisibleForms.size(); i++)
-                    if (this->mVisibleForms[i]->GetRectangle().And(inRectangle, theRectangle) == true) {
-                        this->mVisibleForms[i]->AddDirtyRectangle(theRectangle);
-                        this->mVisibleForms[i]->RedrawIntersectControls(theRectangle);
-                    }
-                break;
-            }
-    }
+    EeUiRect theRectangle = UIManagerRust::Rect(inRectangle);
+    ee_ui_manager_add_dirty_rectangle(this, &theRectangle, inForm);
 }
 
 // FUNCTION: LLE 0x1007a03d
@@ -579,24 +656,15 @@ long UIManager::DrawTextA()
 // Returns the form with the given ID (NULL: none)
 UIForm* UIManager::GetFormByID(unsigned long inID) const
 {
-    unsigned long i;
-    for (i = 0; i < this->mForms.size(); i++)
-        if (this->mForms[i]->GetFormID() == inID)
-            break;
-    if (i == this->mForms.size())
-        return NULL;   // Fixed: an unknown ID used to return the word one past the end of the form list
-    return this->mForms[i];
+    // an unknown ID gives NULL (the original returned the word one past the end of the form list)
+    return static_cast<UIForm*>(ee_ui_manager_form_by_id(const_cast<UIManager*>(this), inID));
 }
 
 // FUNCTION: LLE 0x1007a766
 // Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
 long UIManager::GetMouseWheelScrollAmount()
 {
-    long theResult = 0;
-    long theValue = UIManager::sMouseWheel->GetNormalizedValue();
-    if (theValue)
-        theResult = theValue > 0 ? -1 : 1;
-    return theResult;
+    return ee_ui_manager_wheel_scroll_amount(UIManager::sMouseWheel->GetNormalizedValue());
 }
 
 // FUNCTION: LLE 0x1007a78a
@@ -720,66 +788,31 @@ long UIManager::Pop()
 {
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();
-    if (this->mFormStack.size() > 0) {
-        UIForm* theForm = this->mFormStack[this->mFormStack.size() - 1];
-        this->mCopiedForms.clear();
-        theForm->Deactivate();
-        theForm->Close();
-        this->AddClippedForms(this->mVisibleForms.size() - 1);
-        this->AddDirtyRectangle(theForm->GetRectangle(), this->mVisibleForms.front());
-        this->mFormStack.pop_back();
-        this->mVisibleForms.pop_back();
-        if (this->mFormStack.size() > 0)
-            this->mFormStack.back()->Activate();
-    }
-    this->ResetClippedForms();
+    ee_ui_manager_pop(this);
     this->mDrawCriticalSection->Leave();
     this->mCriticalSection->Leave();
     return kErrorOK;
 }
 
 // FUNCTION: LLE 0x1007adbe
-// Pops forms until the given one is on top, when it is on the stack; returns the first failure
+// Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
 long UIManager::PopTo(UIForm* inForm)
 {
-    long theResult = kErrorOK;
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();
-    if (std::find(this->mFormStack.begin(), this->mFormStack.end(), inForm) != this->mFormStack.end())
-        while (this->GetCurrentForm() != inForm) {
-            theResult = this->Pop();
-            if (theResult != kErrorOK)
-                break;
-        }
+    ee_ui_manager_pop_to(this, inForm);
     this->mDrawCriticalSection->Leave();
     this->mCriticalSection->Leave();
-    return theResult;
+    return kErrorOK;
 }
 
 // FUNCTION: LLE 0x1007ae53
 // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
 long UIManager::Push(UIForm* inForm)
 {
-    bool theFound = false;
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();
-    for (unsigned long i = 0; i < this->mFormStack.size(); i++)
-        if (this->mFormStack[i] == inForm) {
-            theFound = true;
-            break;
-        }
-    if (!theFound) {
-        this->mCopiedForms.clear();
-        if (this->mFormStack.size() > 0)
-            this->mFormStack.back()->Deactivate();
-        this->mFormStack.push_back(inForm);
-        this->mVisibleForms.push_back(inForm);
-        inForm->Open();
-        inForm->Activate();
-        this->RemoveClippedForms(this->mVisibleForms.size() - 1);
-        this->AddDirtyRectangle(inForm->GetRectangle(), inForm);
-        this->ResetClippedForms();
-    }
+    ee_ui_manager_push(this, inForm);
     this->mDrawCriticalSection->Leave();
     this->mCriticalSection->Leave();
     return kErrorOK;
@@ -790,75 +823,33 @@ long UIManager::Push(UIForm* inForm)
 void UIManager::RedrawAll()
 {
     this->mCriticalSection->Enter();
-    for (unsigned long i = 0; i < this->mVisibleForms.size(); i++) {
-        this->mVisibleForms[i]->AddDirtyRectangle(this->mVisibleForms[i]->GetRectangle());
-        this->mVisibleForms[i]->SetAllControlsDirty();
-    }
+    ee_ui_manager_redraw_all(this);
     this->mCriticalSection->Leave();
 }
 
-// FUNCTION: LLE 0x1007af90
-// Closes the visible forms below the given one that it fully covers, and the first form above that contains it
-// (when there is none, redraws the given form's area)
-void UIManager::RemoveClippedForms(unsigned long inIndex)
-{
-    GERectangle theRectangle = this->mVisibleForms[inIndex]->GetRectangle();
-    bool theRemoved = false;
-    long i;
-    for (i = inIndex + 1; i < (long)this->mVisibleForms.size(); i++)
-        if (this->mVisibleForms[i]->GetRectangle().Contains(theRectangle)) {
-            this->mVisibleForms[i]->Close();
-            this->mVisibleForms.erase(this->mVisibleForms.begin() + i);
-            theRemoved = true;
-            break;
-        }
-    if (!theRemoved)
-        this->AddDirtyRectangle(theRectangle, this->mVisibleForms[inIndex]);
-    for (i = inIndex - 1; i >= 0; i--)
-        if (theRectangle.Contains(this->mVisibleForms[i]->GetRectangle())) {
-            this->mVisibleForms[i]->Close();
-            this->mVisibleForms.erase(this->mVisibleForms.begin() + i);
-        }
-}
+// FUNCTION: LLE 0x1007af90 (RemoveClippedForms): the body is Rust (ee_ui manager.rs, inside Push and SwapForm); the
+// member stays declared, with no C++ definition.
 
 // FUNCTION: LLE 0x1007b147
 // Rebuilds each visible form's clip rectangles from the visible forms above it
 void UIManager::ResetClippedForms()
 {
-    for (unsigned long i = 0; i < this->mVisibleForms.size(); i++) {
-        this->mVisibleForms[i]->ClearAllClipRectangles();
-        for (unsigned long j = i + 1; j < this->mVisibleForms.size(); j++)
-            this->mVisibleForms[i]->AddClipRectangle(this->mVisibleForms[j]->GetRectangle());
-    }
+    ee_ui_manager_reset_clipped_forms(this);
 }
 
 // FUNCTION: LLE 0x1007b1a2
 // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
 void UIManager::RelayoutAllForms()
 {
-    GERectangle theRectangle(0.0f, 0.0f, (float)this->mRasterizer->GetWindow(this->mScreen)->GetWidth() - 1.0f,
-                             (float)this->mRasterizer->GetWindow(this->mScreen)->GetHeight() - 1.0f);
-    for (unsigned long i = 0; i < this->mFormStack.size(); i++)
-        this->mFormStack[i]->RelayoutForm(theRectangle);
-    this->ResetClippedForms();
+    GEWindow* theWindow = this->mRasterizer->GetWindow(this->mScreen);
+    ee_ui_manager_relayout_all_forms(this, theWindow->GetWidth(), theWindow->GetHeight());
 }
 
 // FUNCTION: LLE 0x1007b254
 // Runs and releases the queued events of one form; the other forms' events stay queued in order
 void UIManager::ProcessAllEventsForForm(UIForm* inForm)
 {
-    std::deque<UIEventTrigger> theOtherEvents;
-    while (this->mEventsToTrigger.size() != 0) {
-        UIEventTrigger theTrigger = this->mEventsToTrigger.front();
-        this->mEventsToTrigger.pop_front();
-        if (theTrigger.mForm != inForm)
-            theOtherEvents.push_back(theTrigger);
-        else {
-            theTrigger.mEvent->ProcessEvent(theTrigger.mForm, theTrigger.mEntity);
-            theTrigger.mEvent->Dereference();
-        }
-    }
-    this->mEventsToTrigger = theOtherEvents;
+    ee_ui_manager_process_all_events_for_form(this, inForm);
 }
 
 // FUNCTION: LLE 0x1007b2ec
@@ -905,38 +896,9 @@ void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
 // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
 long UIManager::SwapForm(UIForm* inForm)
 {
-    bool theFound = false;
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();
-    for (unsigned long i = 0; i < this->mFormStack.size(); i++)
-        if (this->mFormStack[i] == inForm) {
-            theFound = true;
-            break;
-        }
-    if (!theFound) {
-        this->mCopiedForms.clear();
-        if (this->mFormStack.size() > 0) {
-            UIForm* theForm = this->mFormStack.back();
-            theForm->Deactivate();
-            theForm->Close();
-            inForm->Open();
-            inForm->Activate();
-            if (!inForm->GetRectangle().Contains(this->mVisibleForms.back()->GetRectangle())) {
-                this->AddClippedForms(this->mVisibleForms.size() - 1);
-                this->AddDirtyRectangle(theForm->GetRectangle(), this->mVisibleForms.front());
-            }
-            this->mFormStack.pop_back();
-            this->mVisibleForms.pop_back();
-        } else {
-            inForm->Open();
-            inForm->Activate();
-        }
-        this->mFormStack.push_back(inForm);
-        this->mVisibleForms.push_back(inForm);
-        this->RemoveClippedForms(this->mVisibleForms.size() - 1);
-        this->AddDirtyRectangle(inForm->GetRectangle(), inForm);
-        this->ResetClippedForms();
-    }
+    ee_ui_manager_swap_form(this, inForm);
     this->mDrawCriticalSection->Leave();
     this->mCriticalSection->Leave();
     return kErrorOK;
@@ -1073,12 +1035,7 @@ long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
     long theResult = this->UpdateMouse(inMouseLocation);
     this->mForceUIUpdate = false;
     this->mCriticalSection->Enter();
-    while (this->mEventsToTrigger.size() != 0) {
-        UIEventTrigger theTrigger = this->mEventsToTrigger.front();
-        this->mEventsToTrigger.pop_front();
-        theTrigger.mEvent->ProcessEvent(theTrigger.mForm, theTrigger.mEntity);
-        theTrigger.mEvent->Dereference();
-    }
+    ee_ui_manager_process_all_events(this);
     if (this->mStopMusic == true) {
         this->RemoveAndStopSoundInstance();
         this->mStopMusic = false;
