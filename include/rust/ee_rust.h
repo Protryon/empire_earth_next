@@ -825,6 +825,22 @@ struct EeSubSectorLink {
   uint16_t second;
 };
 
+/// The sector and region sizes of a map (`CreatePathSectors`: `theSectorSize`, `gEEAIRegionSize`).
+struct EeSectorSizes {
+  int32_t sector_size;
+  int32_t region_size;
+};
+
+/// A sector's tile rectangle and its grid position (`EEAIPathSector::mBounds`, `mCenter`).
+struct EeSectorRect {
+  int32_t top;
+  int32_t left;
+  int32_t bottom;
+  int32_t right;
+  int32_t center_x;
+  int32_t center_y;
+};
+
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3155,6 +3171,18 @@ const EeSubSectorLink *ee_astar_sub_sector_links_get(const EeSubSectorLinks *lin
 /// # Safety
 /// `links` from `ee_astar_sub_sector_links`, not freed yet.
 void ee_astar_sub_sector_links_free(EeSubSectorLinks *links);
+
+/// `CreatePathSectors`' sector and region sizes by the map's size class.
+EeSectorSizes ee_astar_sector_sizes(int32_t size_class);
+
+/// `Build`'s number of choke point passes by the map's size class.
+int32_t ee_astar_choke_passes(int32_t size_class);
+
+/// `EEAIPathSectorRegionInformation::Init`'s sectors per side.
+int32_t ee_astar_sectors_per_side(int32_t map_size, int32_t sector_size);
+
+/// `CreatePathSectors`' rectangle of sector `(x, y)`.
+EeSectorRect ee_astar_sector_rect(int32_t x, int32_t y, int32_t sector_size, int32_t map_size);
 
 /// `UDataCompression::Compress`.
 ///

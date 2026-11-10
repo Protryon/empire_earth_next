@@ -134,12 +134,6 @@ typedef EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EE
 typedef EEAIAStarGraphMachine<EEAIAStarGraphTerrainStorage, EEAIAStarGraphContinentalChainGoal, EEAIContinent>
     EEAIContinentChainMachine;
 
-// 0x263cb (COMDAT; declared in ee/EEAIPathSectorRegionInformation.h)
-inline U2DPoint<long> EEAIPathSectorRegionInformation::GetSectorEnd(const U2DPoint<long>& inSector) const
-{
-    return U2DPoint<long>((inSector.mX + 1) * this->mSectorSize - 1, (inSector.mY + 1) * this->mSectorSize - 1);
-}
-
 // 0x27604 (COMDAT; declared in ee/EEAIContinentManager.h)
 inline void EEAIContinentManager::SetPathSector(EEAIPathSector* inSector)
 {
@@ -534,19 +528,11 @@ void EEAIContinentManager::ClearChecksum()
 }
 
 // FUNCTION: EXE 0x41f86b
-// Builds the choke points of inMap with a search size by map size (4 on small maps up to 7 on huge ones), then
-// drops those beside the map edge (PruneChokePoints)
+// Builds the choke points of inMap with a search size by map size (4 on small maps up to 7 on huge ones; Rust:
+// ee_astar sectors.rs choke_passes), then drops those beside the map edge (PruneChokePoints)
 void EEAIContinentManager::Build(EEMap* inMap)
 {
-    long theSize = inMap->mL195610;
-    long theKind = 7;
-    if (theSize <= 0x2a)
-        theKind = 4;
-    else if (theSize <= 0x3a)
-        theKind = 5;
-    else if (theSize <= 0x4b || theSize <= 0x69)
-        theKind = 6;
-    EEAIBuildChokePoints(inMap, theKind);
+    EEAIBuildChokePoints(inMap, ee_astar_choke_passes((int32_t)inMap->mL195610));   // Rust: ee_astar sectors.rs
     this->PruneChokePoints();
 }
 
@@ -912,32 +898,11 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
 {
     EEAIPathSectorMachine theMachine(0xf, inMap);
     U2DRectangle<long> theBounds;
-    U2DPoint<long> theSector;
-    long theSectorSize = 7;
     unsigned short theID = 1;
     this->DeletePathSectors();
-    long theSize = inMap->mL195610;
-    if (theSize <= 0x2a) {
-        theSectorSize = 7;
-        gEEAIRegionSize = 8;
-    } else if (theSize <= 0x3a) {
-        gEEAIRegionSize = 10;
-        theSectorSize = gEEAIRegionSize;
-    } else if (theSize <= 0x4b) {
-        gEEAIRegionSize = 0xc;
-        theSectorSize = gEEAIRegionSize;
-    } else if (theSize <= 0x69) {
-        theSectorSize = 0xf;
-        gEEAIRegionSize = 0xe;
-    } else if (theSize <= 0xa0) {
-        theSectorSize = 0x13;
-        gEEAIRegionSize = 0x10;
-    } else if (theSize <= 0xdc) {
-        theSectorSize = 0x15;
-        gEEAIRegionSize = 0x12;
-    } else {
-        gEEAIRegionSize = 0xe;
-    }
+    EeSectorSizes theSizes = ee_astar_sector_sizes((int32_t)inMap->mL195610);   // Rust: ee_astar sectors.rs
+    long theSectorSize = theSizes.sector_size;
+    gEEAIRegionSize = theSizes.region_size;
     EEAIPathSectorMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
     theStorage->Init(inMap->mSize, inMap->mSize);
     this->mRegionInformation.Init(inMap, theSectorSize);
@@ -945,25 +910,18 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
     for (long x = 0; x < this->mRegionInformation.mSectorsX; x++) {
         for (long y = 0; y < this->mRegionInformation.mSectorsY; y++) {
             EEAIPathSector* thePathSector = new EEAIPathSector;
-            theSector.mX = x;
-            theSector.mY = y;
             thePathSector->mID = theID;
-            theBounds.mTop = this->mRegionInformation.mSectorSize * y;
-            theBounds.mLeft = this->mRegionInformation.mSectorSize * x;
-            if (theBounds.mLeft < 0)
-                theBounds.mLeft = 0;
-            if (theBounds.mTop < 0)
-                theBounds.mTop = 0;
             theID++;
-            U2DPoint<long> theEnd = this->mRegionInformation.GetSectorEnd(theSector);
-            theBounds.mBottom = inMap->mSize - 1;
-            theBounds.mRight = theEnd.mX;
-            if (theBounds.mBottom <= theEnd.mX)
-                theBounds.mRight = theBounds.mBottom;
-            if (theEnd.mY < theBounds.mBottom)
-                theBounds.mBottom = theEnd.mY;
-            thePathSector->mCenter.mX = theSector.mX;
-            thePathSector->mCenter.mY = theSector.mY;
+            // the sector's rectangle, clipped to the map (Rust: ee_astar sectors.rs sector_rect, GetSectorEnd 0x263cb
+            // included)
+            EeSectorRect theRect = ee_astar_sector_rect((int32_t)x, (int32_t)y, (int32_t)this->mRegionInformation.mSectorSize,
+                                                       (int32_t)inMap->mSize);
+            theBounds.mTop = theRect.top;
+            theBounds.mLeft = theRect.left;
+            theBounds.mBottom = theRect.bottom;
+            theBounds.mRight = theRect.right;
+            thePathSector->mCenter.mX = theRect.center_x;
+            thePathSector->mCenter.mY = theRect.center_y;
             thePathSector->mBounds = theBounds;
             this->SetPathSector(thePathSector);
         }

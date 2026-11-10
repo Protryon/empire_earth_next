@@ -64,7 +64,7 @@ void EEAIPathSectorRegionInformation::Reset()
 // Sizes the sector grid for a map: square sectors of the given size, enough per side to cover the map
 void EEAIPathSectorRegionInformation::Init(EEMap* inMap, long inSectorSize)
 {
-    this->mSectorsX = UMCeil((float)inMap->mSize / inSectorSize);
+    this->mSectorsX = ee_astar_sectors_per_side((int32_t)inMap->mSize, (int32_t)inSectorSize);   // Rust: ee_astar sectors.rs
     this->mSectorsY = this->mSectorsX;
     this->mSectorSize = inSectorSize;
     this->mSectorArea = inSectorSize * inSectorSize;

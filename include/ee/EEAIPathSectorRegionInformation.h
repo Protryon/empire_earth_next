@@ -17,11 +17,10 @@ public:
     // 0x2bb84: every member 0 (the ctor and EEAIContinentManager 0x1f624 call it)
     void Reset();
     // 0x2bb93 (ret 8): mSectorSize = inSectorSize, mSectorArea = its square, mSectorsX = mSectorsY = the ceiling of
-    // inMap->mSize / inSectorSize (fild/fidiv/fistp; the manager's 0x20b48 passes 10/12/14/15 by map size)
+    // inMap->mSize / inSectorSize (fild/fidiv/fistp; the manager's 0x20b48 passes 10/12/14/15 by map size; the
+    // ceiling in Rust: ee_astar sectors.rs sectors_per_side)
     void Init(EEMap* inMap, long inSectorSize);
-    // 0x263cb (COMDAT in EEAIContinentManager.cpp's range; defined inline there): the last tile of sector inSector
-    // ((x + 1) * mSectorSize - 1, (y + 1) * mSectorSize - 1) (provisional name)
-    U2DPoint<long> GetSectorEnd(const U2DPoint<long>& inSector) const;
+    // GetSectorEnd 0x263cb (the last tile of a sector) is part of ee_astar sectors.rs sector_rect
 
     long mSectorSize;                       // +0x04 tiles per sector side (0x22bf8 divides the tile x, y by it)
     long mSectorArea;                       // +0x08 mSectorSize * mSectorSize

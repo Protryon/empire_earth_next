@@ -1145,6 +1145,7 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
 
 use crate::choke::EeChokeTileInfo;
 use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
+use crate::sectors::{self, EeSectorRect, EeSectorSizes};
 use crate::sub_sector_links::{self, EeSubSectorLink};
 use crate::tile_values;
 
@@ -1404,4 +1405,30 @@ pub unsafe extern "C" fn ee_astar_sub_sector_links_free(links: *mut EeSubSectorL
         // SAFETY: the caller's contract
         drop(unsafe { Box::from_raw(links) });
     }
+}
+
+// ---- the path sector grid (sectors.rs) ----
+
+/// `CreatePathSectors`' sector and region sizes by the map's size class.
+#[no_mangle]
+pub extern "C" fn ee_astar_sector_sizes(size_class: i32) -> EeSectorSizes {
+    sectors::sector_sizes(size_class)
+}
+
+/// `Build`'s number of choke point passes by the map's size class.
+#[no_mangle]
+pub extern "C" fn ee_astar_choke_passes(size_class: i32) -> i32 {
+    sectors::choke_passes(size_class)
+}
+
+/// `EEAIPathSectorRegionInformation::Init`'s sectors per side.
+#[no_mangle]
+pub extern "C" fn ee_astar_sectors_per_side(map_size: i32, sector_size: i32) -> i32 {
+    sectors::sectors_per_side(map_size, sector_size)
+}
+
+/// `CreatePathSectors`' rectangle of sector `(x, y)`.
+#[no_mangle]
+pub extern "C" fn ee_astar_sector_rect(x: i32, y: i32, sector_size: i32, map_size: i32) -> EeSectorRect {
+    sectors::sector_rect(x, y, sector_size, map_size)
 }
