@@ -3870,3 +3870,61 @@ outside the AI, the AI's containers), with no behaviour change (the sim oracle i
   by 40 % either way on this shared machine), so nothing the oracle or EE-SIM's clock can see got slower. After the
   merge of `rust` (667440fa, rust-r4-ge4; no conflicts; the generated header merged current): `build.py -j 3 --sim` 0/0 (556 s), its oracle identical on seeds 2-7, `rust_build.py gate` PASS, `--test-profile windowed-software` linked last (its result in the branch's report).
   Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.
+
+## R6: the controls table, the form stack and the last button subclasses in Rust (ee_ui, branch rust-r6-ui4, 2026-11-09)
+
+`UIControlsTable` (the record's fields, colours, layout and texture rectangles from the database record, `AddControlLike`'s
+searches and edits, `MoveControlsHorizontally`, the scaled font's size, the string-table range, the rectangles
+`CreateControl` lays a control out with), `UIManager`'s form stack (which forms are visible under which, `Push`, `Pop`,
+`PopTo`, `SwapForm`, the dirty and clip rectangles, `RedrawAll`, `RelayoutAllForms`, `GetFormByID`, the event queue's
+dispatch, the wheel's step), `UITriStateCheckBox` (state, bitmaps, label geometry), `UIBlinkingButton`'s fade and
+`UIScalableButton`'s three-slice draw moved to `rust/crates/ee_ui` (`controls_table.rs`, `manager.rs`,
+`button_variants.rs`). The C++ classes keep every member, vtable and exported name; `UIControlsTable.h`, `UIManager.h`,
+`UIForm.h` and `UITriStateCheckBox.h` each gained a `friend struct`. What stays C++: the file reads (`Create`), every
+`new` of a control, texture, bitmap or font, the locks, the IME and music members of `UIManager`, `UpdateKeyboard`/
+`UpdateMouse`'s input tests, `SetIsBlinking`, every `DrawPolygons`/`DrawTextA`.
+
+- **`#define private public` in a driver hides access errors.** The host functions (`extern "C"` free functions in the
+  unit reaching the class's protected lists) compiled in the driver TU, where the unit is included under the override,
+  and failed in the real build twice (`sUIControlsArray`, `mCopiedForms`, `mEventsToTrigger`). Reach such members
+  through the friend struct's static accessors, and compile the unit alone (`clang_build.py --only NAME lle`) before
+  the full build.
+- **The override also changes MSVC's mangling.** Access is part of a member's decorated name (`?x@C@@0KA` private
+  static, `@@2KA` public), so a TU under `#define private public` references a *different* symbol for a private static
+  defined in a normally compiled unit (`UString::sDefaultAllocationLength`), which `/FORCE:UNRESOLVED` leaves at
+  address 0: the driver died before `main`. Define the override only around the `#include` of the unit under test.
+- **The forms are opaque handles.** `manager.rs` never dereferences a `UIForm*`: the stack, the visible list and the
+  forms list stay the manager's `std::vector`s, read a slot at a time (`ee_uicpp_manager_len/at/push/pop/insert/erase`)
+  and the calls on a form go through two switches (`ee_uicpp_manager_form_call`, `..._form_rect_call`). `Open`/`Close`
+  may change what a form covers, so nothing is cached across a host call. The harness reads `mFormStack` by its
+  offsets from `layout.json` (`presentation_bridge.c` `EE_OFF_UIM_FORMS_FIRST/LAST`): the member is untouched.
+- **Two reads before the vector's start, guarded.** `AddClippedForms` with no visible form (`mVisibleForms[-1]`) and
+  `AddToVisibleForms` with a form not on the stack indexed before the lists' start; the Rust skips those steps. Neither
+  happens in a valid sequence (the top form is always visible), so the goldens never reach them.
+- **`AddClippedForms`/`AddToVisibleForms`/`RemoveClippedForms` have no C++ definition any more**: they are private
+  members only Push/Pop/SwapForm called; the declarations stay (no layout, vtable or export change).
+- **A manager without its constructor.** The manager driver `calloc`s the `UIManager`, placement-news its vectors and
+  deque, gives it `calloc`ed critical sections with no-op `Enter`/`Leave` bodies and a fake rasterizer; the vptr is
+  NULL, so it never calls a virtual (`UpdateUI` is not in the golden: its event loop is three lines, `process_all_events`,
+  over the same host calls `ProcessAllEventsForForm` exercises).
+- **The record of the controls database stays binary.** `EEDbFindFile` compiles the text table to the 860-byte record
+  stream; `DbControl` is that record in Rust (`#[repr(C)]`, bools as bytes), the C++ `UIDbControl` static-asserted
+  against it. A random record with a left or top offset type 5 (`kLayoutFromStartEdge`) recurses for ever in
+  `CalculateRectangle` (the original's hazard, PORT_LEARNINGS "first part"): the driver keeps type 5 for right/bottom.
+- **`UMSin` is the table cosine.** `UIBlinkingButton`'s fade calls `ee_ge::um::um_sin` (the `UMCos` table through
+  `UMCos(pi/2 - x)`), bit-equal to the C++'s `UMSin` inline; `ee_ui` now depends on `ee_ge` (no C++ imports there).
+- **Pure returns instead of host calls where the C++ only applies values:** the blinking button's `CopyData` returns the
+  four opacities (`EeUiBlinkShow`), the scalable button's `DrawPolygons` the three slices (`EeUiSlice`); the C++ sets
+  and draws them in the original order. The slices' arithmetic keeps the C++'s association (`(right - width) + 1`).
+- **`cbindgen` exports only what an exported function reaches**: a record used by the host calls alone
+  (`TableKey`, `Trigger`) goes into `[export] include`; a `pub const` named `BITMAP` would clash with wingdi's.
+- **Goldens:** `golden_controls.txt` (48 records, 24 `AddControlLike`, 10 moves, per table `SetupFont`,
+  `SetupStringArray`, `CreateControl`, `CreateControlEvent`, `RelayoutControl`; the replay checks the ported values
+  and the geometry of each `create`/`relayout` block as an ordered subsequence, the rest being C++ glue),
+  `golden_manager.txt` (7 forms whose rectangles nest, overlap and coincide; 400 operations), `golden_buttons2.txt`
+  (2 tri-state boxes, 2 blinking buttons, 2 scalable buttons; 600 operations). The three drivers over the forwarders
+  print the same files (`cmp`).
+- **Gates run:** `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM) after each of the three commits and the windowed-software profile at the end; the sim oracle (seeds 2-7, the main checkout's open tree) identical to `ref` after each commit; `rust_build.py gate` PASS after each (ee_ui: 79 tests, 8 for the controls table, 5 for the manager, 4 for the three subclasses); the five changed units compiled alone before each full build; the 26 names `presentation_bridge.c` resolves (the `UIListBox<UWideString>`, `UIEditBox`, `UIComboBox`, `UICheckBox` members and vtables, `UIControl::GetTriggerEvent`/`FireTriggerEvent`, `TSCriticalSection::Enter/Leave/TryEnter`, the `UWideString` members, `gUIManager`) present in the map. The `UIForm`/`UIManager` layouts are unchanged (friend declarations only). No tour, screenshot or live UI use was run; `gates.sh`, `eedata check` (no data change) and the POSIX builds were not run.
+- **Still C++ in R6's toolkit:** the drawing (`CopyData`'s rhombus/text copies, every `DrawPolygons`/`DrawTextA`),
+  `UIManager`'s music and IME members, the edit box's key dispatch and repeat timers, `UIForm`'s Open/Close/dirty
+  rectangle bookkeeping, the backgrounds, hot keys, `UIFontTable`, `UIBackgroundTable`, `UIEvent`.

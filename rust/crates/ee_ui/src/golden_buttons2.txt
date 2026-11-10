@@ -1,0 +1,3138 @@
+new tri 0
+  control 10 41200000 41a00000 41e80000 421c0000 border 1
+  button COFF - CDOFF
+  label-new 10 'Alpha' 41f80000 41a80000 41e00000 42180000 type 0 index 3 border 0
+  dirty 1
+  tri state 0 text 1 label 1 rect 41200000 41a00000 41e80000 421c0000 label-rect 41f80000 41a80000 41e00000 42180000 normal COFF pressed CDOFF
+new tri 1
+  control 11 42c80000 42480000 43960000 42dc0000 border 2
+  button COFF - CDOFF
+  draw-offset 00000000 41900000
+  tri state 0 text 0 label 0 rect 42c80000 42480000 43960000 42dc0000 normal COFF pressed CDOFF
+new blink 0
+  control 20 40a00000 40a00000 428a0000 42140000 border 1
+  button N0 F0 P0
+  poll-delay 250
+  blink phase 1 rate 250 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 0 state 0
+new blink 1
+  control 21 43480000 43480000 43940000 43680000 border 0
+  button N1 - -
+  poll-delay 5000
+  blink phase 1 rate 5000 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 0 state 0
+new blink 2
+  control 22 00000000 00000000 41200000 41200000 border 0
+  button - - P1
+  poll-delay 50
+  blink phase 1 rate 50 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 0 state 0
+new scalable
+  control 30 42c80000 43960000 43c80000 43a58000 border 0
+  button N0 F0 P0
+  scalable state 0 copied 00000000 00000000 00000000 00000000 draw 00000000 00000000 00000000 00000000
+new scalable 2
+  control 31 42480000 42480000 43150000 42a20000 border 0
+  button N1 - P1
+  scalable state 0 copied 00000000 00000000 00000000 00000000 draw 00000000 00000000 00000000 00000000
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 0 text 1 label 1 rect 41200000 41a00000 41e80000 421c0000 label-rect 41f80000 41a80000 41e00000 42180000 normal COFF pressed CDOFF
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 5000 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 1 state 0
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42480000 42480000 43150000 42a20000
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42480000 42480000 43150000 42a20000
+scalable 31 polygons
+  stretch N1 42480000 42480000 42700000 42a20000 | 42480000 42480000 42700000 42a20000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 42480000 42480000
+  draw N1
+  stretch N1 430c0000 42480000 43150000 42a20000 | 430c0000 42480000 43150000 42a20000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 430c0000 42480000
+  draw N1
+  stretch N1 42740000 42480000 430b0000 42a20000 | 42740000 42480000 430b0000 42a20000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 42740000 42480000
+  draw N1
+  = 7
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42480000 42480000 43150000 42a20000
+tri 11 text 'T32'
+  label-new 11 'T32' 42f40000 42500000 43950000 42d80000 type 0 index 4 border 0
+  dirty 1
+  tri state 0 text 1 label 1 rect 42c80000 42480000 43960000 42dc0000 label-rect 42f40000 42500000 43950000 42d80000 normal COFF pressed CDOFF
+scalable 31 location 43040000 439c0000
+  button-location
+  base-location 43040000 439c0000 43670000 43ab8000
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42480000 42480000 43150000 42a20000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 1 state 0
+tri 10 text 'T8'
+  label-text 'T8'
+  dirty 1
+  dirty 1
+  tri state 0 text 1 label 1 rect 41200000 41a00000 41e80000 421c0000 label-rect 41f80000 41a80000 41e00000 42180000 normal COFF pressed CDOFF
+blink 21 copy poll 1 left 4856 bg 00000000 border 3f000000
+  bg-opacity 3f3fcdab
+  border-opacity 3effbce4
+  opacity N1 3f7fbce4
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 width 157
+  label-rect 42f40000 42500000 43818000 42d80000
+  base-rect 42c80000 42480000 43800000 42dc0000
+  tri state 0 text 1 label 1 rect 42c80000 42480000 43800000 42dc0000 label-rect 42f40000 42500000 43818000 42d80000 normal COFF pressed CDOFF
+scalable 30 copy
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  scalable state 0 copied 40800000 00000000 426c0000 41f80000 draw 42c80000 43960000 43c80000 43a58000
+blink 20 state 2
+  blink phase 1 rate 250 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 0 state 2
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 31 state 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 00000000 00000000 00000000 00000000 saved 0 needs 1 blinking 1 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N1 43480000 43480000
+  draw N1
+  = 7 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 text ''
+  tri state 0 text 0 label 1 rect 41200000 41a00000 41e80000 421c0000 label-rect 41f80000 41a80000 41e00000 42180000 normal COFF pressed CDOFF
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N1 43480000 43480000
+  draw N1
+  = 7 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 polygons
+  stretch N1 43040000 439c0000 430e0000 43ab8000 | 43040000 439c0000 430e0000 43ab8000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43040000 439c0000
+  draw N1
+  stretch N1 435e0000 439c0000 43670000 43ab8000 | 435e0000 439c0000 43670000 43ab8000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 435e0000 439c0000
+  draw N1
+  stretch N1 430f0000 439c0000 435d0000 43ab8000 | 430f0000 439c0000 435d0000 43ab8000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 430f0000 439c0000
+  draw N1
+  = 7
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+tri 11 width 189
+  label-rect 42f40000 42500000 43918000 42d80000
+  base-rect 42c80000 42480000 43900000 42dc0000
+  tri state 0 text 1 label 1 rect 42c80000 42480000 43900000 42dc0000 label-rect 42f40000 42500000 43918000 42d80000 normal COFF pressed CDOFF
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 1 rect 41200000 41a00000 41e80000 421c0000 label-rect 41f80000 41a80000 41e00000 42180000 normal COFF pressed CDOFF
+blink 21 set 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 state 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 31 polygons
+  stretch N1 43040000 439c0000 430e0000 43ab8000 | 43040000 439c0000 430e0000 43ab8000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43040000 439c0000
+  draw N1
+  stretch N1 435e0000 439c0000 43670000 43ab8000 | 435e0000 439c0000 43670000 43ab8000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 435e0000 439c0000
+  draw N1
+  stretch N1 430f0000 439c0000 435d0000 43ab8000 | 430f0000 439c0000 435d0000 43ab8000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 430f0000 439c0000
+  draw N1
+  = 7
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 31 polygons
+  stretch N1 43040000 439c0000 430e0000 43ab8000 | 43040000 439c0000 430e0000 43ab8000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43040000 439c0000
+  draw N1
+  stretch N1 435e0000 439c0000 43670000 43ab8000 | 435e0000 439c0000 43670000 43ab8000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 435e0000 439c0000
+  draw N1
+  stretch N1 430f0000 439c0000 435d0000 43ab8000 | 430f0000 439c0000 435d0000 43ab8000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 430f0000 439c0000
+  draw N1
+  = 7
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+tri 11 location 43cb8000 42860000
+  base-location 43cb8000 42860000 4414c000 42fe0000
+  label-location 43d68000 428a0000
+  tri state 0 text 1 label 1 rect 43cb8000 42860000 4414c000 42fe0000 label-rect 43d68000 428a0000 44158000 42fa0000 normal COFF pressed CDOFF
+tri 10 location 43540000 43ad0000
+  base-location 43540000 43ad0000 43670000 43b68000
+  label-location 43690000 43ad8000
+  tri state 0 text 0 label 1 rect 43540000 43ad0000 43670000 43b68000 label-rect 43690000 43ad8000 43660000 43b60000 normal COFF pressed CDOFF
+blink 20 copy poll 0 left 147 bg 00000000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 state 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N1 43480000 43480000
+  draw N1
+  = 7 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  label-delete 'T8'
+  = 1
+  tri state 0 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal COFF pressed CDOFF
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 10 polygons
+  button-draw-polygons
+  = 4
+  tri state 0 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal COFF pressed CDOFF
+blink 20 state 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 30 copy
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  scalable state 0 copied 40800000 00000000 426c0000 41f80000 draw 42c80000 43960000 43c80000 43a58000
+blink 20 copy poll 1 left 89 bg 3f400000 border 3f000000
+  bg-opacity 3ecbb1c0
+  border-opacity 3e87cbd5
+  opacity P0 3f07cbd5
+  opacity N0 3f07cbd5
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 21 state 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 0 text 1 label 1 rect 43cb8000 42860000 4414c000 42fe0000 label-rect 43d68000 428a0000 44158000 42fa0000 normal COFF pressed CDOFF
+blink 21 set 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  = 1
+  tri state 0 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal COFF pressed CDOFF
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 30 polygons
+  stretch N0 42c80000 43960000 42d00000 43a58000 | 42c80000 43960000 42d00000 43a58000 | 00000000 00000000 40a00000 41f80000
+  bitmap-at N0 42c80000 43960000
+  draw N0
+  stretch N0 43c68000 43960000 43c80000 43a58000 | 43c68000 43960000 43c80000 43a58000 | 42700000 00000000 42800000 41f80000
+  bitmap-at N0 43c68000 43960000
+  draw N0
+  stretch N0 42d20000 43960000 43c60000 43a58000 | 42d20000 43960000 43c60000 43a58000 | 40800000 00000000 426c0000 41f80000
+  bitmap-at N0 42d20000 43960000
+  draw N0
+  = 7
+  scalable state 0 copied 40800000 00000000 426c0000 41f80000 draw 42c80000 43960000 43c80000 43a58000
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 31 location 43ed8000 42fe0000
+  button-location
+  base-location 43ed8000 42fe0000 440f8000 431e0000
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43040000 439c0000 43670000 43ab8000
+scalable 30 copy
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  scalable state 0 copied 40800000 00000000 426c0000 41f80000 draw 42c80000 43960000 43c80000 43a58000
+tri 10 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal CON pressed CDON
+blink 20 set 0
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 copy
+  button-copy state 0 bitmap CON
+  base-copy
+  = 1
+  tri state 1 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal CON pressed CDON
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 0 label 0 rect 43540000 43ad0000 43670000 43b68000 normal CNOT pressed CDNOT
+scalable 31 state 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+scalable 30 state 2
+  scalable state 2 copied 40800000 00000000 426c0000 41f80000 draw 42c80000 43960000 43c80000 43a58000
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 43cb8000 42860000 4414c000 42fe0000 label-rect 43d68000 428a0000 44158000 42fa0000 normal CON pressed CDON
+tri 11 copy
+  button-copy state 0 bitmap CON
+  base-copy
+  label-copy
+  = 11
+  tri state 1 text 1 label 1 rect 43cb8000 42860000 4414c000 42fe0000 label-rect 43d68000 428a0000 44158000 42fa0000 normal CON pressed CDON
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+blink 20 copy poll 1 left 47 bg 3f116873 border 3e9eb852
+  bg-opacity 3f116873
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+scalable 31 state 0
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 21 state 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 copy poll 0 left 1482 bg 3f400000 border 3effbce4
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 width 309
+  base-rect 43540000 43ad0000 44020000 43b68000
+  tri state 2 text 0 label 0 rect 43540000 43ad0000 44020000 43b68000 normal CNOT pressed CDNOT
+blink 21 set 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 1 text 1 label 1 rect 43cb8000 42860000 4414c000 42fe0000 label-rect 43d68000 428a0000 44158000 42fa0000 normal CON pressed CDON
+blink 21 copy poll 0 left 2035 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 state 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 width 57
+  label-rect 43d68000 428a0000 43e90000 42fa0000
+  base-rect 43cb8000 42860000 43e78000 42fe0000
+  tri state 1 text 1 label 1 rect 43cb8000 42860000 43e78000 42fe0000 label-rect 43d68000 428a0000 43e90000 42fa0000 normal CON pressed CDON
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 state 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 11 text ''
+  tri state 1 text 0 label 1 rect 43cb8000 42860000 43e78000 42fe0000 label-rect 43d68000 428a0000 43e90000 42fa0000 normal CON pressed CDON
+blink 21 copy poll 0 left 3986 bg 3f400000 border 3f000000
+  bg-opacity 3f36580c
+  border-opacity 3ef32010
+  opacity N1 3f732010
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 10 location 43dc8000 42b40000
+  base-location 43dc8000 42b40000 443b4000 42da0000
+  tri state 2 text 0 label 0 rect 43dc8000 42b40000 443b4000 42da0000 normal CNOT pressed CDNOT
+tri 10 location 438d8000 42a40000
+  base-location 438d8000 42a40000 4413c000 42ca0000
+  tri state 2 text 0 label 0 rect 438d8000 42a40000 4413c000 42ca0000 normal CNOT pressed CDNOT
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 10 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 0 label 0 rect 438d8000 42a40000 4413c000 42ca0000 normal COFF pressed CDOFF
+scalable 30 state 0
+  scalable state 0 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+tri 11 location 42da0000 43100000
+  base-location 42da0000 43100000 43250000 434c0000
+  label-location 43030000 43120000
+  tri state 1 text 0 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CON pressed CDON
+blink 20 state 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 30 polygons
+  stretch P0 42c80000 43960000 42d80000 43a58000 | 42c80000 43960000 42d80000 43a58000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 42c80000 43960000
+  draw P0
+  stretch P0 43c48000 43960000 43c80000 43a58000 | 43c48000 43960000 43c80000 43a58000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 43c48000 43960000
+  draw P0
+  stretch P0 42da0000 43960000 43c40000 43a58000 | 42da0000 43960000 43c40000 43a58000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 42da0000 43960000
+  draw P0
+  = 7
+  scalable state 0 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+scalable 30 state 1
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+blink 21 state 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 10 location 43590000 43980000
+  base-location 43590000 43980000 44034000 43a18000
+  tri state 0 text 0 label 0 rect 43590000 43980000 44034000 43a18000 normal COFF pressed CDOFF
+scalable 30 location 43c30000 437d0000
+  button-location
+  base-location 43c30000 437d0000 442c8000 438e0000
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 30 location 437d0000 434f0000
+  button-location
+  base-location 437d0000 434f0000 440a4000 436e0000
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42c80000 43960000 43c80000 43a58000
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  = 1
+  tri state 0 text 0 label 0 rect 43590000 43980000 44034000 43a18000 normal COFF pressed CDOFF
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 43590000 43980000 44034000 43a18000 normal COFF pressed CDOFF
+tri 11 text 'T99'
+  label-text 'T99'
+  dirty 1
+  dirty 1
+  tri state 1 text 1 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CON pressed CDON
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+blink 21 set 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 30 polygons
+  stretch F0 437d0000 434f0000 43818000 436e0000 | 437d0000 434f0000 43818000 436e0000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 437d0000 434f0000
+  draw F0
+  stretch F0 44090000 434f0000 440a4000 436e0000 | 44090000 434f0000 440a4000 436e0000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44090000 434f0000
+  draw F0
+  stretch F0 43820000 434f0000 4408c000 436e0000 | 43820000 434f0000 4408c000 436e0000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43820000 434f0000
+  draw F0
+  = 7
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+scalable 30 state 0
+  scalable state 0 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 20 state 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CNOT pressed CDNOT
+scalable 30 state 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+tri 10 drawtext
+  base-draw-text
+  = 3
+  tri state 0 text 0 label 0 rect 43590000 43980000 44034000 43a18000 normal COFF pressed CDOFF
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N1 43480000 43480000
+  draw N1
+  = 7 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 21 state 2
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+scalable 30 location 43c60000 43610000
+  button-location
+  base-location 43c60000 43610000 442e0000 43800000
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+scalable 30 state 0
+  scalable state 0 copied 40c00000 42000000 42640000 427c0000 draw 437d0000 434f0000 440a4000 436e0000
+blink 21 copy poll 0 left 297 bg 3f400000 border 3ef32010
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CNOT pressed CDNOT
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+scalable 30 copy
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  scalable state 0 copied 40800000 00000000 426c0000 41f80000 draw 43c60000 43610000 442e0000 43800000
+blink 21 copy poll 1 left 3381 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 location 43978000 40e00000
+  button-location
+  base-location 43978000 40e00000 43c90000 42180000
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 21 set 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 state 0
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 30 state 1
+  scalable state 1 copied 40800000 00000000 426c0000 41f80000 draw 43c60000 43610000 442e0000 43800000
+scalable 30 state 2
+  scalable state 2 copied 40800000 00000000 426c0000 41f80000 draw 43c60000 43610000 442e0000 43800000
+scalable 31 location 43ee0000 40e00000
+  button-location
+  base-location 43ee0000 40e00000 440fc000 42180000
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 10 location 42840000 43968000
+  base-location 42840000 43968000 43bb0000 43a00000
+  tri state 0 text 0 label 0 rect 42840000 43968000 43bb0000 43a00000 normal COFF pressed CDOFF
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CNOT pressed CDNOT
+tri 11 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43250000 434c0000 label-rect 43030000 43120000 43280000 434a0000 normal CNOT pressed CDNOT
+tri 10 location 43c20000 43560000
+  base-location 43c20000 43560000 442e0000 43690000
+  tri state 0 text 0 label 0 rect 43c20000 43560000 442e0000 43690000 normal COFF pressed CDOFF
+scalable 31 state 2
+  scalable state 2 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+tri 11 width 225
+  label-rect 43030000 43120000 43a80000 434a0000
+  base-rect 42da0000 43100000 43a68000 434c0000
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43a68000 434c0000 label-rect 43030000 43120000 43a80000 434a0000 normal CNOT pressed CDNOT
+blink 21 set 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 31 location 43910000 43818000
+  button-location
+  base-location 43910000 43818000 43c28000 43910000
+  scalable state 2 copied 41200000 00000000 42aa0000 41f80000 draw 43ed8000 42fe0000 440f8000 431e0000
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43910000 43818000 43c28000 43910000
+tri 10 location 43cf0000 43320000
+  base-location 43cf0000 43320000 44348000 43450000
+  tri state 0 text 0 label 0 rect 43cf0000 43320000 44348000 43450000 normal COFF pressed CDOFF
+tri 10 text ''
+  tri state 0 text 0 label 0 rect 43cf0000 43320000 44348000 43450000 normal COFF pressed CDOFF
+tri 10 polygons
+  button-draw-polygons
+  = 4
+  tri state 0 text 0 label 0 rect 43cf0000 43320000 44348000 43450000 normal COFF pressed CDOFF
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 1 label 1 rect 42da0000 43100000 43a68000 434c0000 label-rect 43030000 43120000 43a80000 434a0000 normal CNOT pressed CDNOT
+tri 11 location 42920000 43a88000
+  base-location 42920000 43a88000 43948000 43c68000
+  label-location 42be0000 43a98000
+  tri state 2 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+scalable 30 location 43b78000 43c38000
+  button-location
+  base-location 43b78000 43c38000 4426c000 43d30000
+  scalable state 2 copied 40800000 00000000 426c0000 41f80000 draw 43c60000 43610000 442e0000 43800000
+tri 11 setstate 3
+  tri state 3 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+scalable 30 location 43bb0000 43500000
+  button-location
+  base-location 43bb0000 43500000 44288000 436f0000
+  scalable state 2 copied 40800000 00000000 426c0000 41f80000 draw 43c60000 43610000 442e0000 43800000
+scalable 31 polygons
+  stretch P1 43910000 43818000 43970000 43910000 | 43910000 43818000 43970000 43910000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43910000 43818000
+  draw P1
+  stretch P1 43bd0000 43818000 43c28000 43910000 | 43bd0000 43818000 43c28000 43910000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 43bd0000 43818000
+  draw P1
+  stretch P1 43978000 43818000 43bc8000 43910000 | 43978000 43818000 43bc8000 43910000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43978000 43818000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43910000 43818000 43c28000 43910000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  = 1
+  tri state 0 text 0 label 0 rect 43cf0000 43320000 44348000 43450000 normal COFF pressed CDOFF
+tri 10 text 'T47'
+  label-new 10 'T47' 43d98000 43330000 44344000 43440000 type 0 index 3 border 0
+  dirty 1
+  tri state 0 text 1 label 1 rect 43cf0000 43320000 44348000 43450000 label-rect 43d98000 43330000 44344000 43440000 normal COFF pressed CDOFF
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 0 text 1 label 1 rect 43cf0000 43320000 44348000 43450000 label-rect 43d98000 43330000 44344000 43440000 normal COFF pressed CDOFF
+blink 21 copy poll 0 left 3024 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 text 'T22'
+  label-text 'T22'
+  dirty 1
+  dirty 1
+  tri state 3 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+blink 21 set 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 3 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+scalable 30 state 2
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+tri 10 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 43cf0000 43320000 44348000 43450000 label-rect 43d98000 43330000 44344000 43440000 normal CON pressed CDON
+scalable 30 state 0
+  scalable state 0 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+scalable 30 state 0
+  scalable state 0 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+scalable 31 location 43e78000 43c00000
+  button-location
+  base-location 43e78000 43c00000 440c8000 43cf8000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43910000 43818000 43c28000 43910000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 text 'T24'
+  label-text 'T24'
+  dirty 1
+  dirty 1
+  tri state 1 text 1 label 1 rect 43cf0000 43320000 44348000 43450000 label-rect 43d98000 43330000 44344000 43440000 normal CON pressed CDON
+scalable 30 state 1
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 43cf0000 43320000 44348000 43450000 label-rect 43d98000 43330000 44344000 43440000 normal CON pressed CDON
+tri 10 location 43140000 43b48000
+  base-location 43140000 43b48000 43e40000 43be0000
+  label-location 43290000 43b50000
+  tri state 1 text 1 label 1 rect 43140000 43b48000 43e40000 43be0000 label-rect 43290000 43b50000 43e38000 43bd8000 normal CON pressed CDON
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+tri 10 copy
+  button-copy state 0 bitmap CON
+  base-copy
+  label-copy
+  = 11
+  tri state 1 text 1 label 1 rect 43140000 43b48000 43e40000 43be0000 label-rect 43290000 43b50000 43e38000 43bd8000 normal CON pressed CDON
+scalable 30 polygons
+  stretch P0 43bb0000 43500000 43bf0000 436f0000 | 43bb0000 43500000 43bf0000 436f0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 43bb0000 43500000
+  draw P0
+  stretch P0 4426c000 43500000 44288000 436f0000 | 4426c000 43500000 44288000 436f0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 4426c000 43500000
+  draw P0
+  stretch P0 43bf8000 43500000 44268000 436f0000 | 43bf8000 43500000 44268000 436f0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43bf8000 43500000
+  draw P0
+  = 7
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+tri 11 text 'T82'
+  label-text 'T82'
+  dirty 1
+  dirty 1
+  tri state 2 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+tri 11 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal COFF pressed CDOFF
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 10 location 43eb8000 43c40000
+  base-location 43eb8000 43c40000 4442c000 43cd8000
+  label-location 43f60000 43c48000
+  tri state 1 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CON pressed CDON
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 30 state 2
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 1 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CON pressed CDON
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 1 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+scalable 31 polygons
+  stretch P1 43e78000 43c00000 43ed8000 43cf8000 | 43e78000 43c00000 43ed8000 43cf8000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43e78000 43c00000
+  draw P1
+  stretch P1 4409c000 43c00000 440c8000 43cf8000 | 4409c000 43c00000 440c8000 43cf8000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4409c000 43c00000
+  draw P1
+  stretch P1 43ee0000 43c00000 44098000 43cf8000 | 43ee0000 43c00000 44098000 43cf8000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43ee0000 43c00000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch P1 43e78000 43c00000 43ed8000 43cf8000 | 43e78000 43c00000 43ed8000 43cf8000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43e78000 43c00000
+  draw P1
+  stretch P1 4409c000 43c00000 440c8000 43cf8000 | 4409c000 43c00000 440c8000 43cf8000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4409c000 43c00000
+  draw P1
+  stretch P1 43ee0000 43c00000 44098000 43cf8000 | 43ee0000 43c00000 44098000 43cf8000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43ee0000 43c00000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+blink 21 set 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 30 location 43f50000 430a0000
+  button-location
+  base-location 43f50000 430a0000 44458000 43290000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 21 copy poll 0 left 199 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 set 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 copy poll 0 left 4806 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+scalable 30 state 1
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 43bb0000 43500000 44288000 436f0000
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43f50000 430a0000 44458000 43290000
+blink 21 copy poll 1 left 2369 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CNOT pressed CDNOT
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CNOT pressed CDNOT
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 43eb8000 43c40000 4442c000 43cd8000 label-rect 43f60000 43c48000 44428000 43cd0000 normal CNOT pressed CDNOT
+blink 21 copy poll 0 left 1805 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 text ''
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 location 42b60000 42a00000
+  base-location 42b60000 42a00000 43c78000 42c60000
+  label-location 42e00000 42a20000
+  tri state 2 text 1 label 1 rect 42b60000 42a00000 43c78000 42c60000 label-rect 42e00000 42a20000 43c70000 42c40000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch P1 43e78000 43c00000 43ed8000 43cf8000 | 43e78000 43c00000 43ed8000 43cf8000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43e78000 43c00000
+  draw P1
+  stretch P1 4409c000 43c00000 440c8000 43cf8000 | 4409c000 43c00000 440c8000 43cf8000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4409c000 43c00000
+  draw P1
+  stretch P1 43ee0000 43c00000 44098000 43cf8000 | 43ee0000 43c00000 44098000 43cf8000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43ee0000 43c00000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+blink 21 set 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 location 43a00000 41b00000
+  button-location
+  base-location 43a00000 41b00000 43d18000 42540000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 30 polygons
+  stretch F0 43f50000 430a0000 43f80000 43290000 | 43f50000 430a0000 43f80000 43290000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43f50000 430a0000
+  draw F0
+  stretch F0 44444000 430a0000 44458000 43290000 | 44444000 430a0000 44458000 43290000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44444000 430a0000
+  draw F0
+  stretch F0 43f88000 430a0000 44440000 43290000 | 43f88000 430a0000 44440000 43290000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43f88000 430a0000
+  draw F0
+  = 7
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43f50000 430a0000 44458000 43290000
+tri 11 text ''
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+blink 21 state 2
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 location 42ba0000 43960000
+  button-location
+  base-location 42ba0000 43960000 43400000 43a58000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 31 polygons
+  stretch P1 43e78000 43c00000 43ed8000 43cf8000 | 43e78000 43c00000 43ed8000 43cf8000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43e78000 43c00000
+  draw P1
+  stretch P1 4409c000 43c00000 440c8000 43cf8000 | 4409c000 43c00000 440c8000 43cf8000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4409c000 43c00000
+  draw P1
+  stretch P1 43ee0000 43c00000 44098000 43cf8000 | 43ee0000 43c00000 44098000 43cf8000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43ee0000 43c00000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+scalable 30 state 2
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43f50000 430a0000 44458000 43290000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CON pressed CDON
+scalable 30 polygons
+  stretch F0 43f50000 430a0000 43f80000 43290000 | 43f50000 430a0000 43f80000 43290000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43f50000 430a0000
+  draw F0
+  stretch F0 44444000 430a0000 44458000 43290000 | 44444000 430a0000 44458000 43290000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44444000 430a0000
+  draw F0
+  stretch F0 43f88000 430a0000 44440000 43290000 | 43f88000 430a0000 44440000 43290000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43f88000 430a0000
+  draw F0
+  = 7
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43f50000 430a0000 44458000 43290000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 42b60000 42a00000 43c78000 42c60000 label-rect 42e00000 42a20000 43c70000 42c40000 normal CNOT pressed CDNOT
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 set 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 30 location 43610000 42640000
+  button-location
+  base-location 43610000 42640000 44034000 42b00000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+scalable 31 location 42740000 42a00000
+  button-location
+  base-location 42740000 42a00000 43200000 42de0000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 30 polygons
+  stretch P0 43f50000 430a0000 43f90000 43290000 | 43f50000 430a0000 43f90000 43290000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 43f50000 430a0000
+  draw P0
+  stretch P0 4443c000 430a0000 44458000 43290000 | 4443c000 430a0000 44458000 43290000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 4443c000 430a0000
+  draw P0
+  stretch P0 43f98000 430a0000 44438000 43290000 | 43f98000 430a0000 44438000 43290000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43f98000 430a0000
+  draw P0
+  = 7
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal CNOT pressed CDNOT
+blink 20 state 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 1 label 1 rect 42b60000 42a00000 43c78000 42c60000 label-rect 42e00000 42a20000 43c70000 42c40000 normal CNOT pressed CDNOT
+blink 20 copy poll 0 left 262 bg 3f116873 border 3f000000
+  bg-opacity 3f116873
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 copy poll 0 left 204 bg 3f116873 border 3f000000
+  bg-opacity 3f116873
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 31 location 43770000 43260000
+  button-location
+  base-location 43770000 43260000 43ad0000 43450000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 31 polygons
+  stretch P1 43e78000 43c00000 43ed8000 43cf8000 | 43e78000 43c00000 43ed8000 43cf8000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43e78000 43c00000
+  draw P1
+  stretch P1 4409c000 43c00000 440c8000 43cf8000 | 4409c000 43c00000 440c8000 43cf8000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4409c000 43c00000
+  draw P1
+  stretch P1 43ee0000 43c00000 44098000 43cf8000 | 43ee0000 43c00000 44098000 43cf8000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43ee0000 43c00000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43e78000 43c00000 440c8000 43cf8000
+scalable 30 location 41700000 43b28000
+  button-location
+  base-location 41700000 43b28000 439d8000 43c20000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43770000 43260000 43ad0000 43450000
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43770000 43260000 43ad0000 43450000
+scalable 30 location 43060000 42780000
+  button-location
+  base-location 43060000 42780000 43d90000 42ba0000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+scalable 31 location 43dd8000 43480000
+  button-location
+  base-location 43dd8000 43480000 44078000 43670000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43770000 43260000 43ad0000 43450000
+scalable 30 location 43958000 435e0000
+  button-location
+  base-location 43958000 435e0000 4415c000 437d0000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43f50000 430a0000 44458000 43290000
+tri 10 text 'T68'
+  label-text 'T68'
+  dirty 1
+  dirty 1
+  tri state 2 text 1 label 1 rect 42b60000 42a00000 43c78000 42c60000 label-rect 42e00000 42a20000 43c70000 42c40000 normal CNOT pressed CDNOT
+blink 20 copy poll 0 left 87 bg 3f116873 border 3f000000
+  bg-opacity 3f116873
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 state 2
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal COFF pressed CDOFF
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+tri 11 text ''
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal COFF pressed CDOFF
+blink 21 set 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal COFF pressed CDOFF
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 30 location 42c80000 428c0000
+  button-location
+  base-location 42c80000 428c0000 43c80000 42ca0000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+tri 10 location 43af0000 43968000
+  base-location 43af0000 43968000 44248000 43a00000
+  label-location 43b98000 43970000
+  tri state 2 text 1 label 1 rect 43af0000 43968000 44248000 43a00000 label-rect 43b98000 43970000 44244000 439f8000 normal CNOT pressed CDNOT
+tri 10 location 43b40000 43c58000
+  base-location 43b40000 43c58000 44270000 43cf0000
+  label-location 43be8000 43c60000
+  tri state 2 text 1 label 1 rect 43b40000 43c58000 44270000 43cf0000 label-rect 43be8000 43c60000 4426c000 43ce8000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch P1 43dd8000 43480000 43e38000 43670000 | 43dd8000 43480000 43e38000 43670000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43dd8000 43480000
+  draw P1
+  stretch P1 4404c000 43480000 44078000 43670000 | 4404c000 43480000 44078000 43670000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4404c000 43480000
+  draw P1
+  stretch P1 43e40000 43480000 44048000 43670000 | 43e40000 43480000 44048000 43670000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43e40000 43480000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43948000 43c68000 label-rect 42be0000 43a98000 43960000 43c58000 normal COFF pressed CDOFF
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 2 text 1 label 1 rect 43b40000 43c58000 44270000 43cf0000 label-rect 43be8000 43c60000 4426c000 43ce8000 normal CNOT pressed CDNOT
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 43b40000 43c58000 44270000 43cf0000 label-rect 43be8000 43c60000 4426c000 43ce8000 normal CNOT pressed CDNOT
+tri 11 width 139
+  label-rect 42be0000 43a98000 43560000 43c58000
+  base-rect 42920000 43a88000 43530000 43c68000
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43530000 43c68000 label-rect 42be0000 43a98000 43560000 43c58000 normal COFF pressed CDOFF
+tri 10 location 43900000 43910000
+  base-location 43900000 43910000 44150000 439a8000
+  label-location 439a8000 43918000
+  tri state 2 text 1 label 1 rect 43900000 43910000 44150000 439a8000 label-rect 439a8000 43918000 4414c000 439a0000 normal CNOT pressed CDNOT
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 copy poll 1 left 3684 bg 3f400000 border 3f000000
+  bg-opacity 3f400000
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 location 436c0000 43c60000
+  base-location 436c0000 43c60000 44080000 43cf8000
+  label-location 43808000 43c68000
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+blink 21 set 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 30 state 2
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+scalable 31 location 43cd0000 437f0000
+  button-location
+  base-location 43cd0000 437f0000 43fe8000 438f0000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+blink 20 state 2
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 0 text 0 label 1 rect 42920000 43a88000 43530000 43c68000 label-rect 42be0000 43a98000 43560000 43c58000 normal COFF pressed CDOFF
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 0 label 1 rect 42920000 43a88000 43530000 43c68000 label-rect 42be0000 43a98000 43560000 43c58000 normal CON pressed CDON
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 0 label 1 rect 42920000 43a88000 43530000 43c68000 label-rect 42be0000 43a98000 43560000 43c58000 normal CNOT pressed CDNOT
+tri 11 text 'T73'
+  label-text 'T73'
+  dirty 1
+  dirty 1
+  tri state 2 text 1 label 1 rect 42920000 43a88000 43530000 43c68000 label-rect 42be0000 43a98000 43560000 43c58000 normal CNOT pressed CDNOT
+tri 10 setstate 3
+  tri state 3 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 3 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+scalable 30 location 42ee0000 438f0000
+  button-location
+  base-location 42ee0000 438f0000 43d18000 439e8000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+blink 20 state 2
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 3 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+scalable 30 polygons
+  stretch P0 43958000 435e0000 43998000 437d0000 | 43958000 435e0000 43998000 437d0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 43958000 435e0000
+  draw P0
+  stretch P0 44140000 435e0000 4415c000 437d0000 | 44140000 435e0000 4415c000 437d0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 44140000 435e0000
+  draw P0
+  stretch P0 439a0000 435e0000 4413c000 437d0000 | 439a0000 435e0000 4413c000 437d0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 439a0000 435e0000
+  draw P0
+  = 7
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+blink 20 set 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+blink 20 state 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+tri 10 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal COFF pressed CDOFF
+scalable 30 location 43cc8000 41980000
+  button-location
+  base-location 43cc8000 41980000 44314000 42480000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 width 53
+  label-rect 42be0000 43a98000 43000000 43c58000
+  base-rect 42920000 43a88000 42fa0000 43c68000
+  tri state 2 text 1 label 1 rect 42920000 43a88000 42fa0000 43c68000 label-rect 42be0000 43a98000 43000000 43c58000 normal CNOT pressed CDNOT
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal COFF pressed CDOFF
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 2 text 1 label 1 rect 42920000 43a88000 42fa0000 43c68000 label-rect 42be0000 43a98000 43000000 43c58000 normal CNOT pressed CDNOT
+tri 10 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CON pressed CDON
+tri 11 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 1 label 1 rect 42920000 43a88000 42fa0000 43c68000 label-rect 42be0000 43a98000 43000000 43c58000 normal CNOT pressed CDNOT
+tri 11 location 43888000 43bd8000
+  base-location 43888000 43bd8000 43a28000 43db8000
+  label-location 43938000 43be8000
+  tri state 2 text 1 label 1 rect 43888000 43bd8000 43a28000 43db8000 label-rect 43938000 43be8000 43a40000 43da8000 normal CNOT pressed CDNOT
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 text ''
+  tri state 2 text 0 label 1 rect 43888000 43bd8000 43a28000 43db8000 label-rect 43938000 43be8000 43a40000 43da8000 normal CNOT pressed CDNOT
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 2 text 0 label 1 rect 43888000 43bd8000 43a28000 43db8000 label-rect 43938000 43be8000 43a40000 43da8000 normal CNOT pressed CDNOT
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f400000 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CON pressed CDON
+tri 11 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-delete 'T73'
+  = 1
+  tri state 2 text 0 label 0 rect 43888000 43bd8000 43a28000 43db8000 normal CNOT pressed CDNOT
+blink 20 set 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 30 polygons
+  stretch P0 43958000 435e0000 43998000 437d0000 | 43958000 435e0000 43998000 437d0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 43958000 435e0000
+  draw P0
+  stretch P0 44140000 435e0000 4415c000 437d0000 | 44140000 435e0000 4415c000 437d0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 44140000 435e0000
+  draw P0
+  stretch P0 439a0000 435e0000 4413c000 437d0000 | 439a0000 435e0000 4413c000 437d0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 439a0000 435e0000
+  draw P0
+  = 7
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43958000 435e0000 4415c000 437d0000
+blink 21 copy poll 0 left 979 bg 3f228f5c border 3ec39581
+  bg-opacity 3f228f5c
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 polygons
+  stretch P1 43dd8000 43480000 43e38000 43670000 | 43dd8000 43480000 43e38000 43670000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43dd8000 43480000
+  draw P1
+  stretch P1 4404c000 43480000 44078000 43670000 | 4404c000 43480000 44078000 43670000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 4404c000 43480000
+  draw P1
+  stretch P1 43e40000 43480000 44048000 43670000 | 43e40000 43480000 44048000 43670000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43e40000 43480000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+blink 20 set 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CON pressed CDON
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 1 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CON pressed CDON
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+scalable 31 location 43ce0000 43b68000
+  button-location
+  base-location 43ce0000 43b68000 43ff8000 43c60000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43dd8000 43480000 44078000 43670000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43cc8000 41980000 44314000 42480000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43cc8000 41980000 44314000 42480000
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+scalable 30 location 43950000 42100000
+  button-location
+  base-location 43950000 42100000 44158000 42860000
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43cc8000 41980000 44314000 42480000
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43950000 42100000 44158000 42860000
+tri 11 width 210
+  base-rect 43888000 43bd8000 43f10000 43db8000
+  tri state 2 text 0 label 0 rect 43888000 43bd8000 43f10000 43db8000 normal CNOT pressed CDNOT
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+tri 11 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 0 label 0 rect 43888000 43bd8000 43f10000 43db8000 normal CON pressed CDON
+blink 20 set 0
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 copy
+  button-copy state 0 bitmap CON
+  base-copy
+  = 1
+  tri state 1 text 0 label 0 rect 43888000 43bd8000 43f10000 43db8000 normal CON pressed CDON
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 copy
+  button-copy state 0 bitmap CON
+  base-copy
+  = 1
+  tri state 1 text 0 label 0 rect 43888000 43bd8000 43f10000 43db8000 normal CON pressed CDON
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43950000 42100000 44158000 42860000
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 436c0000 43c60000 44080000 43cf8000 label-rect 43808000 43c68000 4407c000 43cf0000 normal CNOT pressed CDNOT
+scalable 30 polygons
+  stretch P0 43950000 42100000 43990000 42860000 | 43950000 42100000 43990000 42860000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 43950000 42100000
+  draw P0
+  stretch P0 4413c000 42100000 44158000 42860000 | 4413c000 42100000 44158000 42860000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 4413c000 42100000
+  draw P0
+  stretch P0 43998000 42100000 44138000 42860000 | 43998000 42100000 44138000 42860000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43998000 42100000
+  draw P0
+  = 7
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 43950000 42100000 44158000 42860000
+scalable 30 state 1
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 43950000 42100000 44158000 42860000
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+tri 11 location 43a58000 43c58000
+  base-location 43a58000 43c58000 44070000 43e38000
+  tri state 1 text 0 label 0 rect 43a58000 43c58000 44070000 43e38000 normal CON pressed CDON
+blink 21 copy poll 1 left 675 bg 3f228f5c border 3f000000
+  bg-opacity 3f228f5c
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 0 label 0 rect 43a58000 43c58000 44070000 43e38000 normal CNOT pressed CDNOT
+tri 10 location 43e50000 437b0000
+  base-location 43e50000 437b0000 443f8000 43870000
+  label-location 43ef8000 437c0000
+  tri state 2 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 state 2
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+blink 21 set 0
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f228f5c 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 drawtext
+  base-draw-text
+  = 3
+  tri state 2 text 0 label 0 rect 43a58000 43c58000 44070000 43e38000 normal CNOT pressed CDNOT
+blink 21 copy poll 0 left 3797 bg 3f445a1d border 3f2d9168
+  bg-opacity 3f445a1d
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f445a1d 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+tri 11 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 0 label 0 rect 43a58000 43c58000 44070000 43e38000 normal COFF pressed CDOFF
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 2 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f445a1d 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f445a1d 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 state 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 11 location 41500000 41a80000
+  base-location 41500000 41a80000 435e0000 42a20000
+  tri state 0 text 0 label 0 rect 41500000 41a80000 435e0000 42a20000 normal COFF pressed CDOFF
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 10 text 'T21'
+  label-text 'T21'
+  dirty 1
+  dirty 1
+  tri state 2 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+tri 11 location 433d0000 434e0000
+  base-location 433d0000 434e0000 43c70000 43850000
+  tri state 0 text 0 label 0 rect 433d0000 434e0000 43c70000 43850000 normal COFF pressed CDOFF
+scalable 30 state 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 433d0000 434e0000 43c70000 43850000 normal COFF pressed CDOFF
+scalable 30 state 2
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+scalable 30 polygons
+  stretch F0 43950000 42100000 43980000 42860000 | 43950000 42100000 43980000 42860000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43950000 42100000
+  draw F0
+  stretch F0 44144000 42100000 44158000 42860000 | 44144000 42100000 44158000 42860000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44144000 42100000
+  draw F0
+  stretch F0 43988000 42100000 44140000 42860000 | 43988000 42100000 44140000 42860000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43988000 42100000
+  draw F0
+  = 7
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 11 location 43280000 43828000
+  base-location 43280000 43828000 43bc8000 43a08000
+  tri state 0 text 0 label 0 rect 43280000 43828000 43bc8000 43a08000 normal COFF pressed CDOFF
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f445a1d 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CON pressed CDON
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+scalable 30 location 43940000 43ab0000
+  button-location
+  base-location 43940000 43ab0000 44150000 43ba8000
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 11 width 166
+  base-rect 43280000 43828000 43a68000 43a08000
+  tri state 0 text 0 label 0 rect 43280000 43828000 43a68000 43a08000 normal COFF pressed CDOFF
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CON pressed CDON
+scalable 30 polygons
+  stretch F0 43950000 42100000 43980000 42860000 | 43950000 42100000 43980000 42860000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43950000 42100000
+  draw F0
+  stretch F0 44144000 42100000 44158000 42860000 | 44144000 42100000 44158000 42860000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44144000 42100000
+  draw F0
+  stretch F0 43988000 42100000 44140000 42860000 | 43988000 42100000 44140000 42860000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43988000 42100000
+  draw F0
+  = 7
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+blink 21 copy poll 0 left 68 bg 3f3ba5e3 border 3f1eb852
+  bg-opacity 3f3ba5e3
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CON pressed CDON
+tri 11 location 43a68000 439a0000
+  base-location 43a68000 439a0000 43f90000 43b80000
+  tri state 0 text 0 label 0 rect 43a68000 439a0000 43f90000 43b80000 normal COFF pressed CDOFF
+scalable 31 polygons
+  stretch P1 43ce0000 43b68000 43d40000 43c60000 | 43ce0000 43b68000 43d40000 43c60000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43ce0000 43b68000
+  draw P1
+  stretch P1 43fa0000 43b68000 43ff8000 43c60000 | 43fa0000 43b68000 43ff8000 43c60000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 43fa0000 43b68000
+  draw P1
+  stretch P1 43d48000 43b68000 43f98000 43c60000 | 43d48000 43b68000 43f98000 43c60000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43d48000 43b68000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+tri 11 width 20
+  base-rect 43a68000 439a0000 43b00000 43b80000
+  tri state 0 text 0 label 0 rect 43a68000 439a0000 43b00000 43b80000 normal COFF pressed CDOFF
+scalable 30 location 41b80000 420c0000
+  button-location
+  base-location 41b80000 420c0000 43a18000 42840000
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+scalable 30 location 42ac0000 43900000
+  button-location
+  base-location 42ac0000 43900000 43c10000 439f8000
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+blink 20 copy poll 1 left 103 bg 3f116873 border 3f000000
+  bg-opacity 3eaf5648
+  border-opacity 3e9a5892
+  opacity P0 3f1a5892
+  opacity N0 3f1a5892
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 20 copy poll 0 left 184 bg 3f116873 border 3e9a5892
+  bg-opacity 3f051473
+  border-opacity 3eea4ba9
+  opacity P0 3f6a4ba9
+  opacity N0 3f6a4ba9
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 30 polygons
+  stretch F0 43950000 42100000 43980000 42860000 | 43950000 42100000 43980000 42860000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43950000 42100000
+  draw F0
+  stretch F0 44144000 42100000 44158000 42860000 | 44144000 42100000 44158000 42860000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44144000 42100000
+  draw F0
+  stretch F0 43988000 42100000 44140000 42860000 | 43988000 42100000 44140000 42860000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43988000 42100000
+  draw F0
+  = 7
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+scalable 30 state 0
+  scalable state 0 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 43a68000 439a0000 43b00000 43b80000 normal COFF pressed CDOFF
+tri 10 text ''
+  tri state 2 text 0 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch P1 43ce0000 43b68000 43d40000 43c60000 | 43ce0000 43b68000 43d40000 43c60000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 43ce0000 43b68000
+  draw P1
+  stretch P1 43fa0000 43b68000 43ff8000 43c60000 | 43fa0000 43b68000 43ff8000 43c60000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 43fa0000 43b68000
+  draw P1
+  stretch P1 43d48000 43b68000 43f98000 43c60000 | 43d48000 43b68000 43f98000 43c60000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43d48000 43b68000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+scalable 31 location 43d60000 424c0000
+  button-location
+  base-location 43d60000 424c0000 4403c000 42a40000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 0 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+scalable 31 state 0
+  scalable state 0 copied 41400000 42000000 42a60000 427c0000 draw 43ce0000 43b68000 43ff8000 43c60000
+scalable 30 location 43b68000 42040000
+  button-location
+  base-location 43b68000 42040000 44264000 42800000
+  scalable state 0 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 11 text ''
+  tri state 0 text 0 label 0 rect 43a68000 439a0000 43b00000 43b80000 normal COFF pressed CDOFF
+tri 11 location 42b40000 43940000
+  base-location 42b40000 43940000 42da0000 43b20000
+  tri state 0 text 0 label 0 rect 42b40000 43940000 42da0000 43b20000 normal COFF pressed CDOFF
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 2 text 0 label 1 rect 43e50000 437b0000 443f8000 43870000 label-rect 43ef8000 437c0000 443f4000 43868000 normal CNOT pressed CDNOT
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 30 state 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43950000 42100000 44158000 42860000
+tri 10 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-delete 'T21'
+  = 1
+  tri state 2 text 0 label 0 rect 43e50000 437b0000 443f8000 43870000 normal CNOT pressed CDNOT
+blink 20 set 0
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 31 polygons
+  stretch N1 43d60000 424c0000 43db0000 42a40000 | 43d60000 424c0000 43db0000 42a40000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43d60000 424c0000
+  draw N1
+  stretch N1 44018000 424c0000 4403c000 42a40000 | 44018000 424c0000 4403c000 42a40000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 44018000 424c0000
+  draw N1
+  stretch N1 43db8000 424c0000 44014000 42a40000 | 43db8000 424c0000 44014000 42a40000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 43db8000 424c0000
+  draw N1
+  = 7
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+tri 10 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 0 label 0 rect 43e50000 437b0000 443f8000 43870000 normal CON pressed CDON
+blink 20 state 2
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f116873 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 11 text 'T32'
+  label-new 11 'T32' 42e00000 43950000 42d60000 43b10000 type 0 index 4 border 0
+  dirty 1
+  tri state 0 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal COFF pressed CDOFF
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CON pressed CDON
+tri 10 text ''
+  tri state 1 text 0 label 0 rect 43e50000 437b0000 443f8000 43870000 normal CON pressed CDON
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b68000 42040000 44264000 42800000
+scalable 30 location 43370000 420c0000
+  button-location
+  base-location 43370000 420c0000 43f18000 42840000
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b68000 42040000 44264000 42800000
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43370000 420c0000 43f18000 42840000
+tri 10 location 43d60000 43130000
+  base-location 43d60000 43130000 44380000 43260000
+  tri state 1 text 0 label 0 rect 43d60000 43130000 44380000 43260000 normal CON pressed CDON
+tri 11 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 1 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CON pressed CDON
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 1 state 2
+scalable 31 location 420c0000 43430000
+  button-location
+  base-location 420c0000 43430000 43060000 43620000
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+tri 10 text 'T65'
+  label-new 10 'T65' 43e08000 43140000 4437c000 43250000 type 0 index 3 border 0
+  dirty 1
+  tri state 1 text 1 label 1 rect 43d60000 43130000 44380000 43260000 label-rect 43e08000 43140000 4437c000 43250000 normal CON pressed CDON
+tri 11 setstate 3
+  tri state 3 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CON pressed CDON
+tri 10 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 43d60000 43130000 44380000 43260000 label-rect 43e08000 43140000 4437c000 43250000 normal CNOT pressed CDNOT
+scalable 31 location 430c0000 43c40000
+  button-location
+  base-location 430c0000 43c40000 436f0000 43d38000
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+scalable 30 location 42980000 438c0000
+  button-location
+  base-location 42980000 438c0000 43bc0000 439b8000
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43370000 420c0000 43f18000 42840000
+scalable 31 state 2
+  scalable state 2 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 42980000 438c0000 43bc0000 439b8000
+scalable 30 state 0
+  scalable state 0 copied 40c00000 42000000 42640000 427c0000 draw 42980000 438c0000 43bc0000 439b8000
+scalable 31 polygons
+  stretch N1 43d60000 424c0000 43db0000 42a40000 | 43d60000 424c0000 43db0000 42a40000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43d60000 424c0000
+  draw N1
+  stretch N1 44018000 424c0000 4403c000 42a40000 | 44018000 424c0000 4403c000 42a40000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 44018000 424c0000
+  draw N1
+  stretch N1 43db8000 424c0000 44014000 42a40000 | 43db8000 424c0000 44014000 42a40000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 43db8000 424c0000
+  draw N1
+  = 7
+  scalable state 2 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CON pressed CDON
+blink 20 copy poll 0 left 173 bg 3dc49ba6 border 3d3020c5
+  bg-opacity 3dc49ba6
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 state 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CNOT pressed CDNOT
+scalable 30 state 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 42980000 438c0000 43bc0000 439b8000
+blink 20 state 2
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 state 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at P0 40a00000 40a00000
+  draw P0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch N1 43d60000 424c0000 43db0000 42a40000 | 43d60000 424c0000 43db0000 42a40000 | 00000000 00000000 41300000 41f80000
+  bitmap-at N1 43d60000 424c0000
+  draw N1
+  stretch N1 44018000 424c0000 4403c000 42a40000 | 44018000 424c0000 4403c000 42a40000 | 42ac0000 00000000 42c00000 41f80000
+  bitmap-at N1 44018000 424c0000
+  draw N1
+  stretch N1 43db8000 424c0000 44014000 42a40000 | 43db8000 424c0000 44014000 42a40000 | 41200000 00000000 42aa0000 41f80000
+  bitmap-at N1 43db8000 424c0000
+  draw N1
+  = 7
+  scalable state 2 copied 41200000 00000000 42aa0000 41f80000 draw 43d60000 424c0000 4403c000 42a40000
+tri 11 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 42b40000 43940000 42da0000 43b20000 label-rect 42e00000 43950000 42d60000 43b10000 normal CNOT pressed CDNOT
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 430c0000 43c40000 436f0000 43d38000
+scalable 31 polygons
+  stretch P1 430c0000 43c40000 43180000 43d38000 | 430c0000 43c40000 43180000 43d38000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 430c0000 43c40000
+  draw P1
+  stretch P1 43640000 43c40000 436f0000 43d38000 | 43640000 43c40000 436f0000 43d38000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 43640000 43c40000
+  draw P1
+  stretch P1 43190000 43c40000 43630000 43d38000 | 43190000 43c40000 43630000 43d38000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43190000 43c40000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 430c0000 43c40000 436f0000 43d38000
+scalable 30 location 42ee0000 42000000
+  button-location
+  base-location 42ee0000 42000000 43d18000 427c0000
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 42980000 438c0000 43bc0000 439b8000
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 location 3f800000 00000000
+  button-location
+  base-location 3f800000 00000000 42c80000 41f80000
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 430c0000 43c40000 436f0000 43d38000
+tri 11 width 92
+  label-rect 42e00000 43950000 43380000 43b10000
+  base-rect 42b40000 43940000 43350000 43b20000
+  tri state 2 text 1 label 1 rect 42b40000 43940000 43350000 43b20000 label-rect 42e00000 43950000 43380000 43b10000 normal CNOT pressed CDNOT
+tri 11 location 438a0000 43450000
+  base-location 438a0000 43450000 43b78000 43808000
+  label-location 43950000 43470000
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43b78000 43808000 label-rect 43950000 43470000 43b90000 437f0000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  stretch P1 430c0000 43c40000 43180000 43d38000 | 430c0000 43c40000 43180000 43d38000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 430c0000 43c40000
+  draw P1
+  stretch P1 43640000 43c40000 436f0000 43d38000 | 43640000 43c40000 436f0000 43d38000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 43640000 43c40000
+  draw P1
+  stretch P1 43190000 43c40000 43630000 43d38000 | 43190000 43c40000 43630000 43d38000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 43190000 43c40000
+  draw P1
+  = 7
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 430c0000 43c40000 436f0000 43d38000
+tri 10 location 433e0000 43640000
+  base-location 433e0000 43640000 43f90000 43770000
+  label-location 43530000 43650000
+  tri state 2 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal CNOT pressed CDNOT
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at P0 40a00000 40a00000
+  draw P0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 1 state 1
+blink 20 state 0
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3dc49ba6 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+tri 10 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 copy poll 0 left 220 bg 3f1020c5 border 3ebae148
+  bg-opacity 3f0d934b
+  border-opacity 3efb774b
+  opacity P0 3f7b774b
+  opacity N0 3f7b774b
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f1020c5 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 copy
+  button-copy state 0 bitmap CNOT
+  base-copy
+  label-copy
+  = 11
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43b78000 43808000 label-rect 43950000 43470000 43b90000 437f0000 normal CNOT pressed CDNOT
+tri 11 width 204
+  label-rect 43950000 43470000 43f10000 437f0000
+  base-rect 438a0000 43450000 43ef8000 43808000
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+scalable 31 copy
+  button-copy state 2 bitmap P1
+  base-copy
+  = 1
+  scalable state 2 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+blink 21 copy poll 1 left 4438 bg 3f3ba5e3 border 3f000000
+  bg-opacity 3f3ba5e3
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 30 state 2
+  scalable state 2 copied 40c00000 42000000 42640000 427c0000 draw 42980000 438c0000 43bc0000 439b8000
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N0 40a00000 40a00000
+  draw N0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f1020c5 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 copy poll 0 left 743 bg 3f3ba5e3 border 3f000000
+  bg-opacity 3f3ba5e3
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 30 copy
+  button-copy state 2 bitmap P0
+  base-copy
+  = 1
+  scalable state 2 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+blink 20 state 0
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f1020c5 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+tri 11 text 'T96'
+  label-text 'T96'
+  dirty 1
+  dirty 1
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+tri 11 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal COFF pressed CDOFF
+blink 21 set 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 copy poll 1 left 253 bg 3f795810 border 3e428f5c
+  bg-opacity bc95ecf1
+  border-opacity bc19ed7c
+  opacity P0 bc99ed7c
+  opacity N0 bc99ed7c
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f795810 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 state 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 31 state 1
+  scalable state 1 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+scalable 31 polygons
+  stretch P1 3f800000 00000000 41500000 41f80000 | 3f800000 00000000 41500000 41f80000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 3f800000 00000000
+  draw P1
+  stretch P1 42b20000 00000000 42c80000 41f80000 | 42b20000 00000000 42c80000 41f80000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 42b20000 00000000
+  draw P1
+  stretch P1 41600000 00000000 42b00000 41f80000 | 41600000 00000000 42b00000 41f80000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 41600000 00000000
+  draw P1
+  = 7
+  scalable state 1 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CON pressed CDON
+scalable 31 location 439b0000 42dc0000
+  button-location
+  base-location 439b0000 42dc0000 43cc8000 430d0000
+  scalable state 1 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+scalable 30 state 1
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+blink 21 set 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+scalable 30 location 43a38000 43958000
+  button-location
+  base-location 43a38000 43958000 441cc000 43a50000
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+scalable 31 polygons
+  stretch P1 3f800000 00000000 41500000 41f80000 | 3f800000 00000000 41500000 41f80000 | 00000000 42000000 41500000 427c0000
+  bitmap-at P1 3f800000 00000000
+  draw P1
+  stretch P1 42b20000 00000000 42c80000 41f80000 | 42b20000 00000000 42c80000 41f80000 | 42a80000 42000000 42c00000 427c0000
+  bitmap-at P1 42b20000 00000000
+  draw P1
+  stretch P1 41600000 00000000 42b00000 41f80000 | 41600000 00000000 42b00000 41f80000 | 41400000 42000000 42a60000 427c0000
+  bitmap-at P1 41600000 00000000
+  draw P1
+  = 7
+  scalable state 1 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+blink 20 copy poll 1 left 231 bg 3f795810 border bc19ed7c
+  bg-opacity 3f779122
+  border-opacity 3efe2ced
+  opacity P0 3f7e2ced
+  opacity N0 3f7e2ced
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f795810 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f3ba5e3 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 setstate 1
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  tri state 1 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CON pressed CDON
+blink 21 copy poll 1 left 4564 bg 3ea3d70a border 3f6e147b
+  bg-opacity 3ea24e94
+  border-opacity 3efd9ac8
+  opacity N1 3f7d9ac8
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3ea3d70a 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 copy poll 0 left 3153 bg 3f604189 border 3deb851f
+  bg-opacity 3f3b8dc6
+  border-opacity 3ed61a3f
+  opacity N1 3f561a3f
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 30 polygons
+  stretch P0 42ee0000 42000000 42fe0000 427c0000 | 42ee0000 42000000 42fe0000 427c0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 42ee0000 42000000
+  draw P0
+  stretch P0 43ce0000 42000000 43d18000 427c0000 | 43ce0000 42000000 43d18000 427c0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 43ce0000 42000000
+  draw P0
+  stretch P0 43000000 42000000 43cd8000 427c0000 | 43000000 42000000 43cd8000 427c0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43000000 42000000
+  draw P0
+  = 7
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+blink 20 copy poll 0 left 13 bg 3f347ae1 border 3f6a7efa
+  bg-opacity 3d6b9e0b
+  border-opacity 3d271ac1
+  opacity P0 3da71ac1
+  opacity N0 3da71ac1
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N1 43480000 43480000
+  draw N1
+  = 7 5
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 20 set 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 10 setstate 0
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+blink 21 copy poll 0 left 1459 bg 3f604189 border 3ed61a3f
+  bg-opacity 3ec66c4d
+  border-opacity 3e6282a5
+  opacity N1 3ee282a5
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 21 copy poll 1 left 4595 bg 3f604189 border 3e6282a5
+  bg-opacity 3f604189
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 11 drawtext
+  base-draw-text
+  label-draw-text
+  = 13
+  tri state 1 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CON pressed CDON
+scalable 30 location 43b18000 437d0000
+  button-location
+  base-location 43b18000 437d0000 4423c000 438e0000
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+tri 10 text ''
+  tri state 0 text 0 label 1 rect 433e0000 43640000 43f90000 43770000 label-rect 43530000 43650000 43f88000 43760000 normal COFF pressed CDOFF
+scalable 31 location 41a80000 42340000
+  button-location
+  base-location 41a80000 42340000 42f00000 42980000
+  scalable state 1 copied 41400000 42000000 42a60000 427c0000 draw 3f800000 00000000 42c80000 41f80000
+blink 20 copy poll 0 left 54 bg 3f347ae1 border 3d271ac1
+  bg-opacity 3e703513
+  border-opacity 3e2a5c1c
+  opacity P0 3eaa5c1c
+  opacity N0 3eaa5c1c
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N0 40a00000 40a00000
+  draw N0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+tri 11 buttonup
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  button-up
+  tri state 2 text 1 label 1 rect 438a0000 43450000 43ef8000 43808000 label-rect 43950000 43470000 43f10000 437f0000 normal CNOT pressed CDNOT
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 copy poll 0 left 3381 bg 3f604189 border 3f000000
+  bg-opacity 3f604189
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 copy
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 11 location 43cf8000 43bb0000
+  base-location 43cf8000 43bb0000 441a8000 43d90000
+  label-location 43da8000 43bc0000
+  tri state 2 text 1 label 1 rect 43cf8000 43bb0000 441a8000 43d90000 label-rect 43da8000 43bc0000 441b4000 43d80000 normal CNOT pressed CDNOT
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  label-delete 'T65'
+  = 1
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43f90000 43770000 normal COFF pressed CDOFF
+blink 20 state 0
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at N0 40a00000 40a00000
+  draw N0
+  = 7 5
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43f90000 43770000 normal COFF pressed CDOFF
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  = 1
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43f90000 43770000 normal COFF pressed CDOFF
+blink 20 copy poll 1 left 177 bg 3f347ae1 border 3e2a5c1c
+  bg-opacity 3e9fd05f
+  border-opacity 3e62afbc
+  opacity P0 3ee2afbc
+  opacity N0 3ee2afbc
+  button-copy state 0 bitmap N0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 0
+scalable 30 polygons
+  stretch P0 42ee0000 42000000 42fe0000 427c0000 | 42ee0000 42000000 42fe0000 427c0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 42ee0000 42000000
+  draw P0
+  stretch P0 43ce0000 42000000 43d18000 427c0000 | 43ce0000 42000000 43d18000 427c0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 43ce0000 42000000
+  draw P0
+  stretch P0 43000000 42000000 43cd8000 427c0000 | 43000000 42000000 43cd8000 427c0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43000000 42000000
+  draw P0
+  = 7
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+blink 21 state 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+scalable 31 location 42980000 435c0000
+  button-location
+  base-location 42980000 435c0000 432f0000 437b0000
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 10 setstate 0
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43f90000 43770000 normal COFF pressed CDOFF
+tri 10 width 313
+  base-rect 433e0000 43640000 43fb0000 43770000
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43fb0000 43770000 normal COFF pressed CDOFF
+blink 21 copy poll 0 left 2768 bg 3f604189 border 3f000000
+  bg-opacity 3f604189
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 1 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 polygons
+  button-draw-polygons
+  = 4
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43fb0000 43770000 normal COFF pressed CDOFF
+blink 20 state 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 10 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 0 label 0 rect 433e0000 43640000 43fb0000 43770000 normal CON pressed CDON
+scalable 31 location 42080000 434b0000
+  button-location
+  base-location 42080000 434b0000 43050000 436a0000
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 10 width 137
+  base-rect 433e0000 43640000 43a30000 43770000
+  tri state 1 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal CON pressed CDON
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 20 copy poll 1 left 249 bg 3f347ae1 border 3e62afbc
+  bg-opacity 3f347ae1
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 0 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 state 0
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 0
+tri 10 drawtext
+  base-draw-text
+  = 3
+  tri state 1 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal CON pressed CDON
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 0
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 0
+scalable 30 polygons
+  stretch P0 42ee0000 42000000 42fe0000 427c0000 | 42ee0000 42000000 42fe0000 427c0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 42ee0000 42000000
+  draw P0
+  stretch P0 43ce0000 42000000 43d18000 427c0000 | 43ce0000 42000000 43d18000 427c0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 43ce0000 42000000
+  draw P0
+  stretch P0 43000000 42000000 43cd8000 427c0000 | 43000000 42000000 43cd8000 427c0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43000000 42000000
+  draw P0
+  = 7
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+blink 20 copy poll 1 left 81 bg 3f347ae1 border 3f000000
+  bg-opacity 3f347ae1
+  border-opacity 3f000000
+  opacity P0 3f800000
+  opacity N0 3f800000
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 1 label 1 rect 43cf8000 43bb0000 441a8000 43d90000 label-rect 43da8000 43bc0000 441b4000 43d80000 normal CNOT pressed CDNOT
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 setstate 0
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 31 state 0
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+blink 21 copy poll 0 left 1503 bg 3f604189 border 3f000000
+  bg-opacity 3f604189
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+tri 10 drawtext
+  base-draw-text
+  = 3
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 1
+tri 11 location 43460000 43c28000
+  base-location 43460000 43c28000 43c88000 43e08000
+  label-location 435c0000 43c38000
+  tri state 2 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal CNOT pressed CDNOT
+tri 10 drawtext
+  base-draw-text
+  = 3
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+tri 11 buttonup
+  dirty 1
+  normal COFF
+  dirty 1
+  pressed CDOFF
+  fire 3e9
+  button-up
+  tri state 0 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal COFF pressed CDOFF
+scalable 31 state 1
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 0 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal COFF pressed CDOFF
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 0 state 2
+scalable 30 polygons
+  stretch P0 42ee0000 42000000 42fe0000 427c0000 | 42ee0000 42000000 42fe0000 427c0000 | 00000000 42800000 41100000 42be0000
+  bitmap-at P0 42ee0000 42000000
+  draw P0
+  stretch P0 43ce0000 42000000 43d18000 427c0000 | 43ce0000 42000000 43d18000 427c0000 | 42600000 42800000 42800000 42be0000
+  bitmap-at P0 43ce0000 42000000
+  draw P0
+  stretch P0 43000000 42000000 43cd8000 427c0000 | 43000000 42000000 43cd8000 427c0000 | 41000000 42800000 425c0000 42be0000
+  bitmap-at P0 43000000 42000000
+  draw P0
+  = 7
+  scalable state 1 copied 41000000 42800000 425c0000 42be0000 draw 42ee0000 42000000 43d18000 427c0000
+tri 10 drawtext
+  base-draw-text
+  = 3
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b18000 437d0000 4423c000 438e0000
+tri 10 text 'T55'
+  label-new 10 'T55' 43530000 43650000 43a28000 43760000 type 0 index 3 border 0
+  dirty 1
+  tri state 0 text 1 label 1 rect 433e0000 43640000 43a30000 43770000 label-rect 43530000 43650000 43a28000 43760000 normal COFF pressed CDOFF
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+scalable 31 polygons
+  = 0
+  scalable state 1 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+tri 10 text ''
+  tri state 0 text 0 label 1 rect 433e0000 43640000 43a30000 43770000 label-rect 43530000 43650000 43a28000 43760000 normal COFF pressed CDOFF
+scalable 30 polygons
+  stretch F0 43b18000 437d0000 43b48000 438e0000 | 43b18000 437d0000 43b48000 438e0000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43b18000 437d0000
+  draw F0
+  stretch F0 44228000 437d0000 4423c000 438e0000 | 44228000 437d0000 4423c000 438e0000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44228000 437d0000
+  draw F0
+  stretch F0 43b50000 437d0000 44224000 438e0000 | 43b50000 437d0000 44224000 438e0000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43b50000 437d0000
+  draw F0
+  = 7
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b18000 437d0000 4423c000 438e0000
+blink 20 set 0
+  poll-stop
+  always-dirty 0
+  dirty 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 0 state 1
+tri 11 setstate 3
+  tri state 3 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal COFF pressed CDOFF
+blink 21 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 2
+scalable 30 polygons
+  stretch F0 43b18000 437d0000 43b48000 438e0000 | 43b18000 437d0000 43b48000 438e0000 | 00000000 42000000 40e00000 427c0000
+  bitmap-at F0 43b18000 437d0000
+  draw F0
+  stretch F0 44228000 437d0000 4423c000 438e0000 | 44228000 437d0000 4423c000 438e0000 | 42680000 42000000 42800000 427c0000
+  bitmap-at F0 44228000 437d0000
+  draw F0
+  stretch F0 43b50000 437d0000 44224000 438e0000 | 43b50000 437d0000 44224000 438e0000 | 40c00000 42000000 42640000 427c0000
+  bitmap-at F0 43b50000 437d0000
+  draw F0
+  = 7
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b18000 437d0000 4423c000 438e0000
+tri 10 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 0 text 0 label 1 rect 433e0000 43640000 43a30000 43770000 label-rect 43530000 43650000 43a28000 43760000 normal COFF pressed CDOFF
+scalable 31 state 0
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 41a80000 42340000 42f00000 42980000
+blink 20 set 1
+  poll-stop
+  poll-start
+  always-dirty 1
+  dirty 1
+  display 1
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 1
+scalable 31 copy
+  button-copy state 0 bitmap N1
+  base-copy
+  = 1
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42080000 434b0000 43050000 436a0000
+tri 10 copy
+  button-copy state 0 bitmap COFF
+  base-copy
+  label-delete 'T55'
+  = 1
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+blink 20 state 2
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 21 state 2
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 text 'T61'
+  label-text 'T61'
+  dirty 1
+  dirty 1
+  tri state 3 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal COFF pressed CDOFF
+tri 11 setstate 3
+  tri state 3 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal COFF pressed CDOFF
+blink 21 copy poll 1 left 3998 bg 3f604189 border 3f000000
+  bg-opacity 3f604189
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 0 rate 5000 opacities 3f800000 3f800000 3f604189 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 buttonup
+  dirty 1
+  normal CON
+  dirty 1
+  pressed CDON
+  fire 3e9
+  button-up
+  tri state 1 text 1 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal CON pressed CDON
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 433e0000 43640000 43a30000 43770000 normal COFF pressed CDOFF
+tri 11 text ''
+  tri state 1 text 0 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal CON pressed CDON
+blink 21 copy poll 1 left 4210 bg 3e158106 border 3f245a1d
+  bg-opacity 3e158106
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3e158106 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 state 2
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 20 polygons
+  button-draw-text
+  base-draw-polygons
+  bitmap-at F0 40a00000 40a00000
+  draw F0
+  = 7 5
+  blink phase 1 rate 250 opacities 3f800000 3f800000 3f347ae1 3f000000 saved 0 needs 0 blinking 1 state 2
+blink 21 polygons
+  button-draw-text
+  base-draw-polygons
+  = 2 5
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3e158106 3f000000 saved 0 needs 0 blinking 1 state 2
+scalable 30 copy
+  button-copy state 1 bitmap F0
+  base-copy
+  = 1
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b18000 437d0000 4423c000 438e0000
+scalable 30 location 43ec8000 42f20000
+  button-location
+  base-location 43ec8000 42f20000 44414000 43180000
+  scalable state 1 copied 40c00000 42000000 42640000 427c0000 draw 43b18000 437d0000 4423c000 438e0000
+tri 11 setstate 2
+  dirty 1
+  normal CNOT
+  dirty 1
+  pressed CDNOT
+  fire 3e9
+  tri state 2 text 0 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal CNOT pressed CDNOT
+tri 10 location 435a0000 41200000
+  base-location 435a0000 41200000 43b10000 41e80000
+  tri state 0 text 0 label 0 rect 435a0000 41200000 43b10000 41e80000 normal COFF pressed CDOFF
+tri 10 type
+  = 12
+  tabbed-to
+  tabbed-from
+  tri state 0 text 0 label 0 rect 435a0000 41200000 43b10000 41e80000 normal COFF pressed CDOFF
+scalable 31 state 0
+  scalable state 0 copied 41200000 00000000 42aa0000 41f80000 draw 42080000 434b0000 43050000 436a0000
+tri 11 polygons
+  button-draw-polygons
+  label-draw-polygons
+  = 12
+  tri state 2 text 0 label 1 rect 43460000 43c28000 43c88000 43e08000 label-rect 435c0000 43c38000 43ca0000 43df8000 normal CNOT pressed CDNOT
+blink 21 copy poll 0 left 3267 bg 3e158106 border 3f000000
+  bg-opacity 3e158106
+  border-opacity 3f000000
+  opacity N1 3f800000
+  button-copy state 2 bitmap -
+  base-copy
+  = 1
+  blink phase 1 rate 5000 opacities 3f800000 3f800000 3e158106 3f000000 saved 0 needs 0 blinking 1 state 2
+tri 11 width 225
+  label-rect 435c0000 43c38000 43d48000 43df8000
+  base-rect 43460000 43c28000 43d30000 43e08000
+  tri state 2 text 0 label 1 rect 43460000 43c28000 43d30000 43e08000 label-rect 435c0000 43c38000 43d48000 43df8000 normal CNOT pressed CDNOT
+tri 10 width 261
+  base-rect 435a0000 41200000 43ef0000 41e80000
+  tri state 0 text 0 label 0 rect 435a0000 41200000 43ef0000 41e80000 normal COFF pressed CDOFF
+end

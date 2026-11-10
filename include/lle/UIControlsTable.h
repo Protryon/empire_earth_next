@@ -20,6 +20,7 @@ class UIManager;
 struct UIDbControl;
 
 class LLE_API UIControlsTable {
+    friend struct UIControlsTableRust;      // UIControlsTable.cpp: the Rust logic's view of the record (ee_ui controls_table.rs)
 public:
     UIControlsTable();
     UIControlsTable(const UIDbControl& inControl);
