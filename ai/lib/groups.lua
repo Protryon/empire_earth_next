@@ -31,6 +31,7 @@ M.MOVE_MS = 10000      -- a move is given again after this long
 M.SCOUT_STUCK_MS = 45000
 M.SCOUT_GRID = 8
 M.MAX_COUNT = 100
+M.committed = {}       -- unit ids the script has committed elsewhere this step: the groups give them no order
 
 local function d2(x1, y1, x2, y2)
     local dx, dy = x1 - x2, y1 - y2
@@ -402,6 +403,9 @@ local function fight(g, recs, cands)
     end
     local taken = {}
     for _, u in ipairs(recs) do
+      if M.committed[u.id] then
+        fighting = fighting + 1
+      else
         local ranged = (u.range or 0) >= 150
         local aim = g.aims[u.id]
         local keep = nil
@@ -437,6 +441,7 @@ local function fight(g, recs, cands)
         else
             g.aims[u.id] = nil
         end
+      end
     end
     for _, tid in ipairs(ai.keys(by_target)) do
         ai.attack(by_target[tid], tid)
@@ -515,9 +520,13 @@ local function move(g, cx, cy, x, y, forced)
     g.way_x, g.way_y, g.way_t = lx, ly, now
     local idle = {}
     for _, id in ipairs(g.units) do
-        idle[#idle + 1] = id
+        if not M.committed[id] then
+            idle[#idle + 1] = id
+        end
     end
-    ai.move(idle, lx, ly, {forced = forced and true or false})
+    if #idle > 0 then
+        ai.move(idle, lx, ly, {forced = forced and true or false})
+    end
 end
 
 local function scout_step(g, recs, cx, cy, view)

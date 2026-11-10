@@ -7,6 +7,7 @@
 -- per-unit interface (ageofai.army). The navy, landings, other islands and diplomacy are not ported yet.
 local E = require("ageofai.econ")
 local A = require("ageofai.army")
+local T = require("ageofai.tactics")
 local V = require("lib.view")
 
 local M = {}
@@ -20,8 +21,14 @@ end
 function M.step(view, memory)
     local orders = {}
     -- the army's plan from the last step tells the economy what the training wants (the workers gather for it)
-    local events = ai.events()
+    -- the events: the micro step takes them every 250 ms and keeps the attacks for the step (memory.hits)
+    local events = memory.hits or {}
+    for _, e in ipairs(ai.events()) do
+        events[#events + 1] = e
+    end
+    memory.hits = {}
     local budget = E.step(view, memory, orders, memory.army_plan)
+    T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
@@ -33,6 +40,20 @@ function M.step(view, memory)
             view.next_epoch_cost.stone, view.next_epoch_cost.gold, view.next_epoch_cost.iron, view.sol_missing))
     end
     return orders
+end
+
+-- every 250 game ms: the counter-fire on the attacks since the last call; the attacked events are kept for the step
+function M.micro(info, memory)
+    memory.hits = memory.hits or {}
+    local events = ai.events()
+    for _, e in ipairs(events) do
+        if e.kind == "attacked" then
+            memory.hits[#memory.hits + 1] = e
+        end
+    end
+    memory.army = memory.army or {}
+    T.counterfire(memory.army, events, info.time)
+    return nil
 end
 
 return M

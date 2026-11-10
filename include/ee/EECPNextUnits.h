@@ -28,6 +28,9 @@ bool EECPUnitsHoldsID(const EEComputerPlayer* inPlayer, long inID);
 void EECPUnitsHeld(const EEComputerPlayer* inPlayer, std::vector<long>& outIDs);
 // the reflexes the script left on (ai.reflex): "naval_flee", "danger" (the citizens' danger zones and militia)
 bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName);
+// whether the script has called the per-unit interface (then a save's shadow step cannot replay it: its commands
+// would run on the live player)
+bool EECPUnitsUsed(const EEComputerPlayer* inPlayer);
 
 // the events (EEComputerPlayer's handlers; nothing is decided there: they are queued for the script)
 void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit);

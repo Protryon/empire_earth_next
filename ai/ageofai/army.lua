@@ -25,6 +25,8 @@ local V = require("lib.view")
 local U = require("lib.units")
 local G = require("lib.groups")
 local S = require("ageofai.settings")
+local T = require("ageofai.tactics")
+local NV = require("ageofai.navy")
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -635,11 +637,20 @@ function M.step(view, memory, orders, budget, events)
     local fx, fy, len = E.front(view, memory.eco or {})
     mem.front_x, mem.front_y = fx, fy
     local plan = train(view, memory, mem, order, budget)
+    T.siege(view, mem, order, budget)
+    -- the counter-fire's committed units: the groups leave them alone
+    G.committed = {}
+    for _, id in ipairs(ai.keys(mem.cf or {})) do
+        if mem.cf[id] > view.time then
+            G.committed[id] = true
+        end
+    end
     muster(view, memory, mem)
     if not mem.mustering then
         force_step(view, memory, mem, order)
     end
     scouts(view, memory, mem)
+    NV.step(view, memory, orders, budget, G.role(memory, "force"))
     G.step(view, memory)
     if view.time % 60000 < 1000 then
         local force = G.role(memory, "force")

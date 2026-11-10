@@ -36,9 +36,15 @@ Per-file map (upstream dll/ai/<file> -> this folder):
   shiproute.c   danger-aware routes                                                     -> C++: ai.route (cells)
   army.c        army_plan BUILD (one more production building of the kind trained when the producers are busy)
                                                                         -> econ.lua (buildings)
+  attack.c      the siege controller (siege_want / siege_train: 2 + a quarter of the known defences, at most 4,
+                from a Siege Factory, a pause after 3 lost in 10 minutes)                  -> tactics.lua (siege)
+  garrison.c    the settlement upgrades (spare citizens into the drop site with the most metal mines near)
+                                                                        -> tactics.lua (garrison)
+  counterfire.c the shooters out of reach answered by the soldiers near when they win by 1.5 (the micro step, 250 ms
+                for upstream's 2 s)                                     -> tactics.lua (counterfire)
   Not ported yet (in order of value): landing.c, fleet.c, navy.c, transports.c (the navy and landings), expand.c,
-  towns.c (other islands, resource towns, forward bases), attack.c (siege, weak spots, the commander's patches),
-  bunker.c, garrison.c (garrison upgrades), counterfire.c, airstrike.c, diplo.c, spoils.c, skirmish.c, metal.c,
+  towns.c (other islands, resource towns, forward bases), the rest of attack.c (weak spots, breaches, the
+  commander's patches), bunker.c (fortresses, the shelf), airstrike.c, diplo.c, spoils.c, skirmish.c, metal.c,
   mass.c, fronts.c, sites.c, packing.c, priority.c, forces.c, stats.c.
 
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at that commit, with the deviations

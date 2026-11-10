@@ -119,6 +119,7 @@ struct EECPUnitsState {
     long mMemoryNext = 0;
     bool mReflexNavalFlee = true;
     bool mReflexDanger = true;
+    bool mUsed = false;                             // a binding was called (the save's shadow step cannot replay commands)
     long mMicroNext = -1;                           // -1: not started; 0x7fffffff: the script has no micro
     long mOrdersThisStep = 0, mUnitOrdersThisStep = 0;
     long mStepStamp = -1;                           // the game ms of the counters above
@@ -560,7 +561,13 @@ static EEComputerPlayer* EECPUnitsMe(lua_State* L)
 
 static void EECPUnitsCharge(lua_State* L, int64_t inAmount)
 {
+    EECPUnitsGet(EECPUnitsMe(L))->mUsed = true;
     EECPLuaState::From(L)->Charge(L, inAmount);
+}
+
+bool EECPUnitsUsed(const EEComputerPlayer* inPlayer)
+{
+    return inPlayer != NULL && inPlayer->mUnitsState != NULL && inPlayer->mUnitsState->mUsed;
 }
 
 static const char* EECPUnitsName(EECPUnitsState* s, long inType)
@@ -970,6 +977,7 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
     if (c->mContainer != NULL)
         EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
     EECPUnitsSetInt(L, "cargo", (long)c->GetNumCargoUnits());
+    EECPUnitsSetInt(L, "garrisoned", c->mGarrisonCount);   // citizens inside a town centre, capitol or settlement
     if (c->mUnitClass->IsBuilding()) {
         EECPUnitsSetInt(L, "queue", (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0));
         if (c->mCurrentResearch != 100000)
@@ -2419,7 +2427,7 @@ static int LuaShore(lua_State* L)
     return 0;
 }
 
-// ai.unexplored(x, y, {land = id, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
+// ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
 // point (every `grid` tiles) on the land mass nearest (x, y) (EECPNextArmy's scout), scored by its distance less
 // half its distance from `away` (further from the town first); points within grid of a skip entry are left out.
 // nil: nothing unexplored on that land
@@ -2433,6 +2441,7 @@ static int LuaUnexplored(lua_State* L)
     long theLand = 0, theGrid = 8, ax = x, ay = y;
     EECPUnitsOptInt(L, 3, "land", theLand);
     EECPUnitsOptInt(L, 3, "grid", theGrid);
+    long theKind = EECPUnitsOptBool(L, 3, "sea", false) ? kAIPathWaterBody : kAIPathLandMass;   // sea: over a water body
     theGrid = theGrid < 4 ? 4 : theGrid > 32 ? 32 : theGrid;
     s->mIds2.clear();
     if (lua_type(L, 3) == LUA_TTABLE) {
@@ -2467,7 +2476,7 @@ static int LuaUnexplored(lua_State* L)
         lua_pop(L, 1);
     }
     if (theLand == 0)
-        theLand = EECPUnitsAreaNear(x, y, kAIPathLandMass);
+        theLand = EECPUnitsAreaNear(x, y, theKind);
     long w, h;
     EECPUnitsMapSize(w, h);
     EECPUnitsCharge(L, kCostCall + (w / theGrid + 1) * (h / theGrid + 1) * 3);
@@ -2478,7 +2487,7 @@ static int LuaUnexplored(lua_State* L)
             EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)gx, (unsigned long)gy));
             if (theTile == NULL || theTile->GetVisibility(me->mPlayerID) > 0)
                 continue;
-            if (gContinentManager.GetContinent(U2DPoint<long>(gx, gy), kAIPathLandMass) != theLand)
+            if (gContinentManager.GetContinent(U2DPoint<long>(gx, gy), theKind) != theLand)
                 continue;
             bool theSkip = false;
             for (unsigned long k = 0; k + 1 < s->mIds2.size() && !theSkip; k += 2)
@@ -2804,12 +2813,8 @@ static void EECPUnitsPut(std::string& ioBytes, long inValue)
         ioBytes += (char)((v >> (8 * i)) & 0xff);
 }
 
-void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
+static void EECPUnitsSaveState(const EECPUnitsState* s, std::string& outBytes)
 {
-    outBytes.clear();
-    const EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL)
-        return;
     outBytes.append("EENU", 4);
     EECPUnitsPut(outBytes, 3);
     EECPUnitsPut(outBytes, (long)s->mHeld.size());
@@ -2900,10 +2905,8 @@ struct Getter {
 };
 }  // namespace
 
-bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
+static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
 {
-    if (inBytes.empty())
-        return true;
     if (inBytes.size() < 8 || inBytes.compare(0, 4, "EENU") != 0)
         return false;
     Getter g(inBytes);
@@ -2911,7 +2914,6 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
     long theVersion = g.Get();
     if (theVersion < 1 || theVersion > 3)
         return false;
-    EECPUnitsState* s = EECPUnitsGet(inPlayer);
     s->mHeld.clear();
     long n = g.Count(1 << 20);
     for (long k = 0; k < n && g.mOK; k++)
@@ -2989,4 +2991,43 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
     s->mThreat.clear();
     s->mDangerW = s->mDangerH = 0;   // rebuilt at the next game second
     return g.mOK && g.mOffset == inBytes.size();
+}
+
+// TEST ONLY (EE_AI_SAVE_CHECK=1, as EECPNextSaveCheck): the bytes decode into a fresh state that encodes to the same
+// bytes; `next.savecheck units=same|DIFFERENT` with the counts
+static void EECPUnitsSaveCheck(const EEComputerPlayer* inPlayer, const EECPUnitsState* s, const std::string& inBytes)
+{
+    static int sOn = -1;
+    if (sOn < 0) {
+        const char* theValue = getenv("EE_AI_SAVE_CHECK");
+        sOn = theValue != NULL && theValue[0] == '1' ? 1 : 0;
+    }
+    if (!sOn)
+        return;
+    EECPUnitsState theCopy;
+    std::string theAgain;
+    bool theDecoded = EECPUnitsLoadState(&theCopy, inBytes);
+    if (theDecoded)
+        EECPUnitsSaveState(&theCopy, theAgain);
+    EECPTraceScope theScope("next");
+    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "next.savecheck", "units=%s bytes=%lu held=%lu events=%lu memory=%lu trades=%lu",
+        theDecoded && theAgain == inBytes ? "same" : "DIFFERENT", (unsigned long)inBytes.size(), (unsigned long)s->mHeld.size(),
+        (unsigned long)s->mEvents.size(), (unsigned long)s->mMemory.size(), (unsigned long)s->mTrades.size());
+}
+
+void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
+{
+    outBytes.clear();
+    const EECPUnitsState* s = inPlayer->mUnitsState;
+    if (s == NULL)
+        return;
+    EECPUnitsSaveState(s, outBytes);
+    EECPUnitsSaveCheck(inPlayer, s, outBytes);
+}
+
+bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
+{
+    if (inBytes.empty())
+        return true;
+    return EECPUnitsLoadState(EECPUnitsGet(inPlayer), inBytes);
 }

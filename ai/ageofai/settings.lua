@@ -57,8 +57,14 @@ return {
     ar_bleed_pct = 50,              -- DEVIATION (0 upstream, measured as good on the fight): home once the force has
                                     -- lost this much of the hit points it went out with
     fight_memory_ms = 180000,       -- the enemy memory's life for soldiers (ai.config)
+    -- siege (attack.c attack_siege), settlement upgrades (garrison.c), counter-fire (counterfire.c)
+    attack_siege = true,
+    garrison_upgrades = true, gu_every = 20000, gu_wait = 60000, gu_batch = 10, gu_wood = 5000,
+    counter_fire = true,
     -- scouting (armies.c ar_look, the game's scout)
     scout_at = 120000, scouts_max = 3,
+    -- the navy and landings (landing.c, navy.c)
+    landing = true, landing_transports = 8, navy_share = 25,
     -- fishing and docks (fishing_boat=1, navy=1 upstream; the port's numbers)
     boats = {0, 6, 10}, docks = {0, 1, 2},
 }

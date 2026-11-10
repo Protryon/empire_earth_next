@@ -1230,6 +1230,11 @@ static void EECPNextShadowStep(EEComputerPlayer* inPlayer, EECPNextState* s, con
 {
     EECPLuaState* theShadow = s->mShadow;
     s->mShadow = NULL;
+    if (EECPUnitsUsed(inPlayer)) {   // a script on the per-unit interface: its commands cannot run twice (the state round trip above is the check)
+        EE_CP_TRACE(inPlayer, "next.savecheck", "step skipped=units_api");
+        delete theShadow;
+        return;
+    }
     EECPLuaValue theOrders;
     std::string theLive, theRestored;
     bool theOK = theShadow->Step(inView, theOrders) && theShadow->SaveMemory(theRestored) && s->mLua->SaveMemory(theLive);
