@@ -12,6 +12,40 @@ constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 /// A tile of an area of its own (`0x36`).
 constexpr static const int32_t KIND_AREA = 54;
 
+/// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
+constexpr static const int32_t NO_TILE = -1;
+
+/// `kAIPathWaterBody`, `kAIPathLandMass`, `kAIPathSpaceRegion`, `kAIPathNonSpace` (ee/EEAIKindIDs.h).
+constexpr static const int32_t PATH_WATER_BODY = 1;
+
+constexpr static const int32_t PATH_LAND_MASS = 2;
+
+constexpr static const int32_t PATH_SPACE_REGION = 3;
+
+constexpr static const int32_t PATH_NON_SPACE = 4;
+
+/// `kAIChainLandCliff` .. `kAIChainLandCliffSpace` (ee/EEAIKindIDs.h).
+constexpr static const int32_t CHAIN_LAND_CLIFF = 1;
+
+constexpr static const int32_t CHAIN_LAND_WATER = 2;
+
+constexpr static const int32_t CHAIN_LAND_WATER_CLIFF = 3;
+
+constexpr static const int32_t CHAIN_LAND_SPACE = 4;
+
+constexpr static const int32_t CHAIN_LAND_WATER_SPACE = 5;
+
+constexpr static const int32_t CHAIN_LAND_CLIFF_SPACE = 6;
+
+/// The tile joins the largest matching area, the others merge into it.
+constexpr static const int32_t REPAIR_JOIN = 1;
+
+/// The tile joins its one neighbour's area.
+constexpr static const int32_t REPAIR_SINGLE = 2;
+
+/// The tile gets a new area.
+constexpr static const int32_t REPAIR_NEW = 3;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -430,6 +464,9 @@ struct EeAStarGraphStorage;
 /// One storage (opaque to C++).
 struct EeAStarStorage;
 
+/// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
+struct EeContinentGrid;
+
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
 
@@ -446,6 +483,9 @@ struct EeRmapResult;
 
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
+
+/// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
+struct EeSubSectorLinks;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
@@ -836,6 +876,151 @@ struct EeAStarGraphCallbacks {
   void (*tiles)(void *ctx, int32_t *out);
   void (*get_state)(void *ctx, EeAStarGraphMachineState *out);
   void (*set_state)(void *ctx, const EeAStarGraphMachineState *state);
+};
+
+/// A continent's neighbour (`mNeighbors.push_back`): continent `id` gets `neighbor`.
+struct EeContinentNeighbor {
+  uint16_t id;
+  uint16_t neighbor;
+};
+
+/// A tile (`U2DPoint<long>`).
+struct EePoint {
+  int32_t x;
+  int32_t y;
+};
+
+/// A continent's shore tile.
+struct EeContinentShore {
+  uint16_t id;
+  EePoint tile;
+};
+
+/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
+/// tile (outside the playable rhombus it has none), its continent's category
+/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
+/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
+struct EeChokeTileInfo {
+  bool tile;
+  uint8_t category;
+  uint32_t continent_serial;
+  bool resource;
+  bool forest;
+  uint32_t forest_serial;
+  int32_t forest_tiles;
+};
+
+/// The sub sectors as the link walk sees them: C function pointers over `ctx`.
+struct EeSubSectorGridCallbacks {
+  void *ctx;
+  /// the sub sector id at a tile (0 none)
+  uint16_t (*id_at)(void *ctx, int32_t x, int32_t y);
+  /// whether the manager lists a sub sector under `id`
+  bool (*present)(void *ctx, uint16_t id);
+};
+
+/// One `LinkSubSectors(sub, &other, add, (first, second))` call: `first` and `second` are the corner sub sectors
+/// of a diagonal link (both set when `add`, 0 otherwise).
+struct EeSubSectorLink {
+  uint16_t sub;
+  uint16_t other;
+  bool add;
+  uint16_t first;
+  uint16_t second;
+};
+
+/// The sector and region sizes of a map (`CreatePathSectors`: `theSectorSize`, `gEEAIRegionSize`).
+struct EeSectorSizes {
+  int32_t sector_size;
+  int32_t region_size;
+};
+
+/// A sector's tile rectangle and its grid position (`EEAIPathSector::mBounds`, `mCenter`).
+struct EeSectorRect {
+  int32_t top;
+  int32_t left;
+  int32_t bottom;
+  int32_t right;
+  int32_t center_x;
+  int32_t center_y;
+};
+
+/// One unit of a tile's list as the classification reads it.
+struct EeTileUnit {
+  /// the class's resource type is wood
+  bool wood;
+  /// `mResourceAmount > 0`
+  bool has_amount;
+  /// the class's `mBlocksTile`
+  bool blocks;
+  /// the class's category is the gate's
+  bool gate;
+  /// the class's `mIsWall`
+  bool wall;
+  /// `IsFoundation()`
+  bool foundation;
+  /// `mHitPoints > 0`
+  bool alive;
+  /// a dock or navy yard (`CreatePathAreaKind`'s water body test)
+  bool dock;
+  /// a space dock, space turret or orbital space station (its space region test)
+  bool space_dock;
+  /// `mUnitID`
+  int32_t id;
+};
+
+/// The map's diagonal edge lines (`EEMap::mL195608`, `mL195610`, `mL19560C`).
+struct EeMapEdges {
+  int32_t sum_low;
+  int32_t half;
+  int32_t sum_high;
+};
+
+/// The tile's path area as the start test reads it.
+struct EePathAreaIDs {
+  /// the area exists
+  bool present;
+  int32_t kind;
+  uint16_t land_mass;
+  uint16_t water_body;
+  uint16_t space_region;
+  uint16_t surface_region;
+};
+
+/// One tile as the repair reads it: the map tile, then its path area (`GetPathAreaAt`; none without a map tile).
+struct EeAreaTile {
+  bool tile;
+  int32_t terrain;
+  bool area;
+  uint16_t id;
+  uint16_t continent;
+  int32_t kind;
+  int32_t unit_id;
+  /// `mTiles.Size()` (a `long`)
+  int32_t size;
+  uint16_t land_mass;
+  uint16_t water_body;
+  uint16_t space_region;
+  uint16_t surface_region;
+};
+
+/// What `RepairPathArea` does with the tile, as indices into `NEIGHBOURS`.
+struct EeRepairPlan {
+  /// `REPAIR_*`
+  int32_t action;
+  /// the joined area's neighbour (`REPAIR_JOIN`, `REPAIR_SINGLE`)
+  int32_t target;
+  /// the areas merged into the joined one, in the C++'s order (`REPAIR_JOIN`)
+  int32_t merged[8];
+  int32_t merged_count;
+};
+
+/// A continent as `GetLargestContinent` reads it.
+struct EeContinentSize {
+  bool present;
+  uint8_t category;
+  /// `mTiles.Size()` (a `long`)
+  int32_t size;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -3466,17 +3651,209 @@ bool ee_astar_graph_start(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *c
 /// As `ee_astar_graph_start`.
 void ee_astar_graph_expand(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
 
-/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+/// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
+/// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
+/// continents' categories by id (`next_id` of them).
 ///
 /// # Safety
-/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
-void ee_astar_choke_smooth(const int32_t *prev,
-                           int32_t *kinds,
-                           uint32_t *serials,
-                           uint8_t *flags,
-                           int32_t width,
-                           int32_t height,
-                           bool first);
+/// `ids`, `kinds` and `terrain` valid for `size * size` cells, `categories` for `next_id`.
+EeContinentGrid *ee_astar_continent_grid_build(int32_t size,
+                                               const uint16_t *ids,
+                                               const uint8_t *kinds,
+                                               const int32_t *terrain,
+                                               const uint8_t *categories,
+                                               int32_t next_id);
+
+/// Releases a grid.
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`, not freed yet.
+void ee_astar_continent_grid_free(EeContinentGrid *g);
+
+/// The tile-to-continent id grid (`size * size`, `x * size + y`).
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`; the pointer lives while `g` does.
+const uint16_t *ee_astar_continent_grid_ids(const EeContinentGrid *g, size_t *count);
+
+/// The adjacency matrix (`next_id * next_id`, `[a * next_id + b]`, 0 or 1).
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const uint8_t *ee_astar_continent_grid_flags(const EeContinentGrid *g, size_t *count);
+
+/// The continents' neighbour pushes, in order.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EeContinentNeighbor *ee_astar_continent_grid_neighbors(const EeContinentGrid *g,
+                                                             size_t *count);
+
+/// The manager's shore tiles, sorted and unique.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EePoint *ee_astar_continent_grid_shore(const EeContinentGrid *g, size_t *count);
+
+/// The manager's ice shore tiles, sorted.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EePoint *ee_astar_continent_grid_ice_shore(const EeContinentGrid *g, size_t *count);
+
+/// Every continent's shore tiles (sorted and unique per continent), grouped by continent id.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+const EeContinentShore *ee_astar_continent_grid_continent_shore(const EeContinentGrid *g,
+                                                                size_t *count);
+
+/// `EEAIContinentManager::UpdateTileValues` over a `size` x `size` map: `terrain` every tile's terrain type (-1
+/// where the map has none), `shore` and `ice_shore` the manager's sorted lists, `weights` every tile's
+/// `GetResourceWeight` (read only when `water` is false). `values` gets every tile's new value (0: unchanged),
+/// `bytes` the AI value to store with a changed one.
+///
+/// # Safety
+/// `terrain`, `values` and `bytes` valid for `size * size` cells, `weights` too unless `water`; `shore` and
+/// `ice_shore` for their counts.
+void ee_astar_update_tile_values(int32_t size,
+                                 const int32_t *terrain,
+                                 bool water,
+                                 const EePoint *shore,
+                                 size_t shore_count,
+                                 const EePoint *ice_shore,
+                                 size_t ice_count,
+                                 const int32_t *weights,
+                                 int32_t *values,
+                                 int8_t *bytes);
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
+/// `serials` and smooths `passes - 1` times into the `flags`.
+///
+/// # Safety
+/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
+void ee_astar_choke_build_grids(int32_t size,
+                                int32_t passes,
+                                const EeChokeTileInfo *infos,
+                                int32_t *kinds,
+                                uint32_t *serials,
+                                uint8_t *flags);
+
+/// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
+/// grown sector): the `LinkSubSectors` calls to make, in order.
+///
+/// # Safety
+/// `cb` valid, its callbacks safe to call for the tiles of the walk and any id.
+EeSubSectorLinks *ee_astar_sub_sector_links(int32_t x0,
+                                            int32_t x_end,
+                                            int32_t y0,
+                                            int32_t y_end,
+                                            const EeSubSectorGridCallbacks *cb);
+
+/// The calls of a walk.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`; the pointer lives while `links` does.
+const EeSubSectorLink *ee_astar_sub_sector_links_get(const EeSubSectorLinks *links, size_t *count);
+
+/// Releases a walk's calls.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`, not freed yet.
+void ee_astar_sub_sector_links_free(EeSubSectorLinks *links);
+
+/// `CreatePathSectors`' sector and region sizes by the map's size class.
+EeSectorSizes ee_astar_sector_sizes(int32_t size_class);
+
+/// `Build`'s number of choke point passes by the map's size class.
+int32_t ee_astar_choke_passes(int32_t size_class);
+
+/// `EEAIPathSectorRegionInformation::Init`'s sectors per side.
+int32_t ee_astar_sectors_per_side(int32_t map_size, int32_t sector_size);
+
+/// `CreatePathSectors`' rectangle of sector `(x, y)`.
+EeSectorRect ee_astar_sector_rect(int32_t x, int32_t y, int32_t sector_size, int32_t map_size);
+
+/// `EEAIGetTileKind` of a map tile: its continent's `category`, its `terrain`, its AI value `flag` and its units.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_tile_kind(uint8_t category,
+                           int32_t terrain,
+                           int32_t flag,
+                           const EeTileUnit *units,
+                           size_t count);
+
+/// `EEAIGetTileWallID` of a map tile's units: the first live finished blocker's or gate's id, -1 if none.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_tile_wall_id(const EeTileUnit *units,
+                              size_t count);
+
+/// A fill's `mCheckCorners` at `(x, y)`: not of terrain `no_corners` and off the map's diagonal edges.
+bool ee_astar_check_corners(int32_t terrain,
+                            int32_t no_corners,
+                            int32_t x,
+                            int32_t y,
+                            EeMapEdges edges);
+
+/// `CreatePathAreaKind`'s test of tile `(x, y)`: whether a fill of `kind` starts there; `flag` is the loop's
+/// `theFlag`, read and updated.
+///
+/// # Safety
+/// `area` and `flag` valid; `units` valid for `count` records (any pointer when `count` is 0).
+bool ee_astar_path_area_kind_starts(int32_t kind,
+                                    int32_t terrain,
+                                    int32_t x,
+                                    int32_t y,
+                                    EeMapEdges edges,
+                                    const EePathAreaIDs *area,
+                                    const EeTileUnit *units,
+                                    size_t count,
+                                    bool *flag);
+
+/// `GetAdjacentAreaID`: the `kind` region id next to `centre` from its eight neighbours (`repair::NEIGHBOURS`'
+/// order), 0 if none.
+///
+/// # Safety
+/// `centre` valid, `neighbours` valid for 8 records.
+uint16_t ee_astar_adjacent_area_id(int32_t kind,
+                                   int32_t area_kind,
+                                   const EeAreaTile *centre,
+                                   const EeAreaTile *neighbours);
+
+/// `RepairPathArea`'s choice for a tile of new kind `kind` from its eight neighbours (`repair::NEIGHBOURS`' order).
+///
+/// # Safety
+/// `neighbours` valid for 8 records.
+EeRepairPlan ee_astar_repair_plan(int32_t kind,
+                                  uint16_t area_continent,
+                                  uint16_t tile_continent,
+                                  int32_t wall_id,
+                                  const EeAreaTile *neighbours);
+
+/// `AreConnected`'s chain for crossing `flags`, -1 for none.
+int32_t ee_astar_connected_chain(int32_t flags);
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: continent `id`'s neighbours from the `width` x `width`
+/// adjacency matrix `flags` into `out` (room for `width` ids); returns their count.
+///
+/// # Safety
+/// `flags` valid for `width * width` bools, `out` writable for `width` ids.
+size_t ee_astar_adjacent_ids(const bool *flags,
+                             size_t width,
+                             uint16_t id,
+                             bool with_self,
+                             uint16_t *out);
+
+/// `GetLargestContinent`: the index of the largest of `continents` of category `kind` (0 any), -1 if none.
+///
+/// # Safety
+/// `continents` valid for `count` records (any pointer when `count` is 0).
+int32_t ee_astar_largest_continent(const EeContinentSize *continents,
+                                   size_t count,
+                                   int8_t kind);
 
 /// `UDataCompression::Compress`.
 ///

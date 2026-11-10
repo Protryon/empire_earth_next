@@ -4294,6 +4294,7 @@ identical.
 - **Left in R4.3:** the fonts (`GEFont`, `GEFontBitmap`, `GEText`: UTF-8 first, D6), `GEBitmap`'s and `GERhombus`'s
   vertex-array plumbing (no logic).
 
+
 ## R5a.2, second round: the AI's and the path manager's running state, area effects, tile order (save 0.256, branch rust-r5a-aisave, 2026-11-10)
 
 Continues "R5a.2: load equals continue". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`);
@@ -4368,3 +4369,94 @@ Both branches passed every non-harness gate (link, oracle, Rust gate, the golden
   the test lock the factor tests hold (fixed). `ee_data gate::tests::rules_batch_writes_err_for_a_broken_document`
   fails rarely, only in a whole-library run (the broken document loads without error); not yet explained.
 
+## R5b.1, the continent analysis, leaf by leaf: the continent grid, the tile values, the choke pass's grids, the sub sector link walks, the sector grid, the tile kind, the region fills' start tests, the path area repair's choice and the queries in Rust (ee_astar continent_grid.rs, tile_values.rs, choke.rs, sub_sector_links.rs, sectors.rs, tile_kind.rs, path_area_kind.rs, repair.rs, queries.rs; branch rust-r5b-cont, 2026-11-10)
+
+Nine leaves of `EEAIContinentManager`'s analysis are Rust, each a plain-data computation the C++ manager stores
+into its objects, as `ee_rmap` did with `EERandomMap`: the C++ classes keep every member; the flood fills (the
+machines and their C++ goal objects) and the object bookkeeping (`Rebuild`, the application of `RepairPathArea`'s
+choice, `PruneChokePoints`, `CreateScenarioAreas`, the area classes' hulls) stay C++.
+
+- **`CreateContinentGrid` whole** (`continent_grid.rs`, with `AddTileValue` 0x424fea and `AddShoreTile` 0x41f3e0,
+  both deleted from the C++): from the fill's ids and kinds, every tile's terrain and the continents' categories
+  it computes the id grid, the adjacency matrix, the neighbour pushes in the C++'s order (x, then y; the tile at
+  x - 1, then at y - 1; a map edge continent's tiles make none), the shore tiles (the water and space tiles next to
+  land, then the land tiles beside those, with the shore tile they were reached from on the land continent's list),
+  the ice shore tiles and every continent's shore list after `SortTiles(true)`. The lists the C++ sorted come out
+  sorted by `U2DPoint<long>::operator<` (the lower y first, then the *larger* x) and unique where the C++ made them
+  unique, so only the neighbour order had to be kept as a push sequence. The result is an opaque `EeContinentGrid`
+  with slice accessors; the C++ copies and frees it.
+- **The map has NULL tiles.** `RTSMap::GetTile` range-checks and then returns the tile pointer, which is NULL
+  outside the playable rhombus of a diagonal map. The first build read `mTerrainType` through one and every
+  capture game crashed at `StartGame`. Every terrain grid handed to Rust carries -1 (`NO_TILE`) for such a tile, and
+  the Rust treats it as the C++ treated a NULL tile: no shore, no value, and in the choke pass an area of its own
+  with serial -1 (`u32::MAX`), as `EEAIChokeGetTileSerial` returned.
+- **`UpdateTileValues`** (`tile_values.rs`): the C++ reads every tile's terrain and, for the land pass, every tile's
+  `GetResourceWeight` into grids (pure reads; the original read only the 3x3 blocks of land tiles), the Rust gives
+  every tile's value (0: unchanged) and the AI value byte (clamped to +-120); the C++ stores the non-zero ones. The
+  shore and ice shore searches are `std::binary_search` by the point order above (`contains_point`).
+- **The choke pass's grids** (`choke.rs` `build_grids`, `tile_serial`): the classification
+  (`EEAIChokeGetTileSerial`) decides from a per-tile record the C++ fills in the original's reading order (the
+  continent's category and serial; on land or cliff the resource, and only then the forest `GetForestAt` lists and
+  the manager's entry under its id), then the passes loop (`EEAIChokeGetKinds`, `EEAIChokeSmooth`): each pass
+  averages the *base* classification again from the previous pass's result, as the C++ re-copied the base grid
+  every round. The smoothed kinds are dropped as before; the pass's globals (kinds, serials, flags) are what Rust
+  fills and the flood goal's view reads. The `ee_astar_choke_smooth` export went with it.
+- **The sub sector link walks** (`sub_sector_links.rs`): `LinkSubSectorGrid` and `RelinkSubSectors` are the same
+  walk over a rectangle (the whole map; a sector grown by one tile, clipped to the map, with the walk's own end in
+  the `x + 1 < end` test), reading the id at a tile and whether the manager lists an id, and emitting the
+  `LinkSubSectors` calls in order (a diagonal link through its two corner sub sectors only when both exist and
+  differ from the pair). The objects' state never feeds the walk, only which sub sectors exist, so the C++ applies
+  the list afterwards (`ApplySubSectorLinks`); `LinkSubSectors` itself, which reads the objects, stays C++.
+  `RelinkSubSectors` also wrote each tile's id back into the grid it had just read it from (when the grid exists):
+  dropped as a no-op.
+- **The sector grid** (`sectors.rs`): the sector and region sizes by map class (the sector size stays 7 past the
+  largest class, the C++'s initial value), `Build`'s number of choke passes, `EEAIPathSectorRegionInformation::Init`'s
+  sectors per side (`UMCeil((float)size / sectorSize)`: `lrintf`, then up when short) and each sector's rectangle
+  (`GetSectorEnd` folded in; the C++ clips the right edge by comparing the map's last *row* with the sector's last
+  *column*, kept).
+- **`EEAIGetTileKind` and `EEAIGetTileWallID`** (`tile_kind.rs`): the C++ hands over the tile's continent category,
+  terrain, AI value and one record per unit of its list (wood, amount left, blocking, gate, wall, foundation, alive,
+  dock / space dock, id). These are pure member reads, `IsFoundation` included, so reading every unit where the C++
+  stopped at the first hit answers the same. `EEAIHasResourceUnit`'s test is a wood unit on a tile not of deep water.
+- **`CreatePathAreaKind`'s start test and the fills' corner test** (`path_area_kind.rs`): per tile, the terrain, the
+  place against the four diagonal edge lines, the area's kind and region ids and the unit records decide whether a
+  fill starts. The C++'s `theFlag` carries from one tile to the next (only kinds 1..4 come here, so it never matters;
+  kept). The corner test is the continent fill's (`kTerrainCliff`, 9) and the region fill's, which compares with the
+  literal *3*: kept as the original has it.
+- **`RepairPathArea`'s choice and `GetAdjacentAreaID`** (`repair.rs`): both read only the tile's eight neighbours
+  (`GetPathAreaAt` and the map tile: pure), so the C++ snapshots them in its push order and Rust returns a plan (join
+  the largest same-kind area and merge the others, in the C++'s order; join the one neighbour's area; or make a new
+  area) that the C++ applies to its objects. The diagonal test's two steps (`EEGetTileDirection`, then
+  `EETurnDirection` by one either way) always land on the two orthogonal neighbours beside the diagonal. That follows
+  from the direction table and the angles (a diagonal's sector value is n + 0.5, far from the truncation bounds), so
+  no trigonometry moved. Two quirks kept: `theOK` carries from one neighbour to the next, so a diagonal that fails its
+  steps makes every later (lower-index) non-obstacle neighbour fail too; and the single neighbour is compared with the
+  *tile's* continent, the matches with the *old area's*. Ties: the matches are sorted by id and walked from the highest
+  down, and the first strictly largest is kept (`mTiles.Size()` is a `long`).
+- **The queries** (`queries.rs`): `AreConnected`'s chain for the crossing flags (the cliff + space and water + space
+  cases keep their swapped chain names), the adjacency row walks of `GetConnectedIDs`/`GetAdjacentIDs` and
+  `GetLargestContinent`'s pick (`(char)inKind` against the unsigned category byte, as the C++ widens them).
+- **A capture flake, not a divergence:** one `sim_capture.py check` of the oracle profile failed on one EVAT digest
+  (seed 2), and the rerun of the same exe passed. The capture differed in 4 bytes, in two records of
+  `EETechCaptureUpgrade`'s raw upgrade bytes: `mMediaCount` and `mButtonLoadCount` (+0x154, +0x158), 22/21 against
+  21/20. They count media loads on the presentation side, so their value at a tech effect depends on timing; the sim
+  oracle and every other digest were equal. Leaving the two fields out of the EVAT record would remove the flake. A second one-off: one calamity-profile game
+  (seed 3) faulted three seconds in, at the main menu, in `NERecordPlayback::Process` (offset 0xf, from
+  `EEUIESPERandomMap::ProcessEvent` through `NESynchronousServer::ProcessLocalUserInput`). That was before any game
+  or continent code ran. The same exe's rerun and the merged build passed all six seeds.
+- **Not in this branch's scope, found while reading:** the continent manager's area objects hold no unit pointers
+  (`UpdateWallUnit` and `RemoveForestTile` take a unit and store nothing of it), so the handles branch and this one did
+  not meet in `EEAIContinent*`.
+- **Gates run:** three full builds (`build.py -j 3 --sim` 0/0, EE-AOC and EE-SIM): the five earlier leaves, then with
+  the next three, then everything after the merge of `rust` (with the queries leaf). On each, `sim_capture.py check`
+  passed in the four profiles: CNTB/CNTR (40-41 rebuilds a seed) and every other digest equal to the goldens, with
+  225/240/229/241 digests in the oracle, late, space and calamity profiles. The sim oracle was identical on seeds 2-7
+  (2,691-2,825 trace lines a seed). `rust_build.py gate` PASS (ee_astar: 92 tests, 17 new in this part); the
+  windowed-software test profile 0/0. Each leaf was committed with `cargo test`, clippy, rustfmt, the header and the
+  touched unit compiled alone. Not run: `gates.sh`, `eedata check`/`cppgate` (no data change), any macOS or Linux
+  build.
+- **Left in the analysis:** the object bookkeeping of `Rebuild` and `RepairPathArea` (the areas' tile lists, the
+  sectors and sub sectors), `PruneChokePoints` (it needs the areas' closest points), `CreateScenarioAreas`,
+  `GetTilesNextTo` (its ring order is `EEGetSquareRingTiles`'), `CanGetTo`, and the area classes' geometry
+  (`EEAIArea::Create`, the hulls, `GetClosestPoints`, `GetShoreInRegions`). Those sit on `U2DSparseArray` and
+  `U2DPolygon<long>`, which would have to move first.

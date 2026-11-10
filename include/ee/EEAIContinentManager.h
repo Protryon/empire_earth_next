@@ -44,6 +44,8 @@ class EEComplexUnit;
 class URandom;
 template <class S, class G, class M> class EEAIAStarMachine;
 
+struct EeSubSectorLinks;
+
 class EEAIContinentManager {
 public:
     EEAIContinentManager();                 // 0x1ef6b (Empire Earth.cpp's chain)
@@ -195,27 +197,26 @@ public:
     unsigned long GetNumContinents() { return this->mContinents.size(); }
     // (EEAIContinentManager.cpp; provisional names)
     void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);       // 0x1f1f3 (ret 4)
-    bool AddShoreTile(const EETileLocation& inTile, EETileLocation inFrom, std::vector<U2DPoint<long> >& outTiles);   // 0x1f3e0 (ret 0x10; this unused)
     void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);         // 0x1f45a (ret 8)
     void LinkSubSectors(std::vector<EEAIPathSubSector*>** inSubSectors, EEAIPathSubSector* inSubSector,
         const unsigned short* inID, bool inAdd, const std::pair<EEAIPathSubSector*, EEAIPathSubSector*>& inLink);   // 0x1f6b1 (ret 0x14; this unused)
     void Build(EEMap* inMap);               // 0x1f86b (ret 4)
     void CreateContinents(EEMap* inMap);    // 0x1f8ae (ret 4)
     void CreateContinentGrid(EEAIAStarMachine<EEAIAStarContinentStorage, EEAIAStarContinentGoal, EEMap>& inMachine,
-        EEMap* inMap);                      // 0x1fa5c (ret 8)
+        EEMap* inMap);                      // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
     void PruneChokePoints();                // 0x24b31
-    void AddTileValue(EEMap* inMap, long inX, long inY);              // 0x24fea (ret 0xc)
     void NumberContinentChains(EEMap* inMap, unsigned long inKind);   // 0x201f7 (ret 8; inMap not read)
     void CreateHills(EEMap* inMap);         // 0x2033f (ret 4)
     void CreatePathAreaKind(EEMap* inMap, long inKind);               // 0x204ea (ret 8)
     void CreatePathAreas(EEMap* inMap);     // 0x208cc (ret 4)
     void CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage);   // 0x20b48 (ret 8)
-    void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused)
+    void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
+    void ApplySubSectorLinks(EeSubSectorLinks* inLinks);   // new (port): the walk's LinkSubSectors calls, then frees it
     // inline (COMDAT 0x27604 in this unit's range; defined inline in EEAIContinentManager.cpp): mPathSectors[its id]
     void SetPathSector(EEAIPathSector* inSector);
     void CreateScenarioAreas(EEMap* inMap); // 0x2124c (ret 4; inMap unused)
     void RelinkSubSectors(std::map<unsigned short, std::vector<EETileCoordinate> >& inSectors,
-        std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8)
+        std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8; the walk in Rust: ee_astar sub_sector_links.rs)
     unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind);   // 0x21a18 (ret 0xc)
     bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const;   // 0x21ee2 (ret 4)
     bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind);   // 0x21f97 (ret 8)
@@ -227,7 +228,7 @@ public:
     unsigned short GetUnitContinentID(EEUnit* inUnit);   // 0x22f15 (ret 4)
     bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID);   // 0x22f5f (ret 0x10)
     bool AllNeighborsOfKind(unsigned short inID, unsigned char inKind);   // 0x2315c (ret 8)
-    void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4)
+    void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4; Rust: ee_astar tile_values.rs)
     void RepairPathArea(const U2DPoint<long>& inTile);  // 0x2372b (ret 4): the path areas after inTile changed kind (provisional name)
     void RemoveSubSectors(EEAIPathSector* inSector);   // 0x24dcf (ret 4)
     void RemoveForestTile(EEUnit* inUnit);  // 0x25325 (ret 4)

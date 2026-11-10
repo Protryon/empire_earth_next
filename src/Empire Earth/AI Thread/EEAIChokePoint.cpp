@@ -2,7 +2,7 @@
 // vtable 0x439d3c). 0x1c740..0x1d846 (EEAIAStarTerrainStorage.cpp ends at 0x1c740; EEAIContinent's ctor starts at
 // 0x1d846). The dtor, AddAreaSerials, then the choke point pass EEAIBuildChokePoints (EEAIContinentManager's terrain pass):
 // a per-tile area serial grid (continents and big forests are 0x36 "kinds"), smoothed inPasses - 1 times so that the
-// tiles between two areas get a flag, then a flood fill (EEAIAStarMachine<EEAIAStarChokePointStorage,
+// tiles between two areas get a flag (both in Rust: ee_astar choke.rs), then a flood fill (EEAIAStarMachine<EEAIAStarChokePointStorage,
 // EEAIAStarChokePointGoal, EEMap>) that turns each run of flagged tiles into an EEAIChokePoint of gContinentManager.
 // The machine's COMDATs follow (ctor, dtor, the inline slots, Run and its steps, EEAIAStarMachineBase's inline ctor).
 // File globals in .bss 0x4e5c44..0x4e5c54 (later definitions get lower addresses).
@@ -62,10 +62,8 @@ unsigned char* gEEAIChokeTileFlags;
 uint32_t* gEEAIChokeTileSerials;   // (the pass's grids are fixed-width: the Rust smoothing reads them)
 int32_t* gEEAIChokeTileKinds;
 
-static void EEAIChokeSmooth(int32_t* inKinds, int32_t* ioKinds, long inWidth, long inHeight, bool inFirst);
-static void EEAIChokeGetKinds(EEMap* inMap, int32_t* outKinds);
+static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTileInfo* outInfo);
 static void EEAIChokeCreate(EEMap* inMap);
-static bool EEAIChokeGetTileSerial(EETile* inTile, long inX, long inY, long* outSerial);
 static void EEAIChokeDone();
 
 // FUNCTION: EXE 0x41c740
@@ -81,51 +79,32 @@ void EEAIChokePoint::AddAreaSerials(const std::vector<unsigned long>& inSerials)
     this->mAreaSerials.insert(this->mAreaSerials.end(), inSerials.begin(), inSerials.end());
 }
 
-// FUNCTION: EXE 0x41c78c
-// Runs one smoothing pass over the inner tiles: averages each non-area tile's kind over its 3x3 neighbourhood,
-// spreads a neighbour's area serial into it, and flags tiles that touch two different areas (or a flagged one)
-// (Rust: ee_astar choke.rs smooth, over the pass's grids)
-static void EEAIChokeSmooth(int32_t* inKinds, int32_t* ioKinds, long inWidth, long inHeight, bool inFirst)
-{
-    ee_astar_choke_smooth(inKinds, ioKinds, gEEAIChokeTileSerials, gEEAIChokeTileFlags, (int32_t)inWidth,
-                          (int32_t)inHeight, inFirst);
-}
-
-// NEAR: the passes loop keeps its test at the top (jmp back); ours is rotated
 // FUNCTION: EXE 0x41c949
 // Builds the continent manager's choke points: classifies every tile by area serial, smooths inPasses - 1
 // times to flag the tiles between areas, flood-fills the flagged runs into choke points and frees the grids
+// (Rust: ee_astar choke.rs build_grids does the classification (EEAIChokeGetTileSerial 0x1ccd0 over what
+// EEAIChokeGetTileInfo reads of a tile) and the smoothing passes (EEAIChokeGetKinds 0x1ca7c, EEAIChokeSmooth
+// 0x1c78c) into the pass's grids)
 void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
 {
     long theSize = inMap->mSize;
     long theCount = theSize * theSize;
-    long theBytes = theCount * sizeof(int32_t);
-    int32_t* theKinds = new int32_t[theCount];
-    int32_t* theSmoothed = new int32_t[theCount];
     delete[] gEEAIChokeTileKinds;
-    gEEAIChokeTileKinds = NULL;
+    gEEAIChokeTileKinds = new int32_t[theCount];
     delete[] gEEAIChokeTileSerials;
     gEEAIChokeTileSerials = new uint32_t[theCount];
-    memset(gEEAIChokeTileSerials, 0, theBytes);
     delete[] gEEAIChokeTileFlags;
     gEEAIChokeTileFlags = new unsigned char[theCount];
-    memset(gEEAIChokeTileFlags, 0, theCount);
-    EEAIChokeGetKinds(inMap, theSmoothed);
-    long theLast = inPasses - 1;
-    inPasses = theLast;
-    while (true) {
-        if (inPasses <= 0)
-            break;
-        EEAIChokeGetKinds(inMap, theKinds);
-        EEAIChokeSmooth(theSmoothed, theKinds, theSize, theSize, inPasses == theLast);
-        memcpy(theSmoothed, theKinds, theBytes);
-        inPasses--;
+    std::vector<EeChokeTileInfo> theInfos(theCount);
+    for (long x = theSize - 1; x >= 0; x--) {
+        for (long y = theSize - 1; y >= 0; y--)
+            EEAIChokeGetTileInfo(inMap->GetTile(x, y), x, y, &theInfos[x * theSize + y]);
     }
+    ee_astar_choke_build_grids((int32_t)theSize, (int32_t)inPasses, theInfos.data(), gEEAIChokeTileKinds,
+                               gEEAIChokeTileSerials, gEEAIChokeTileFlags);
     gEEAIChokeWidth = theSize;
     gEEAIChokeHeight = theSize;
     EEAIChokeCreate(inMap);
-    delete[] theSmoothed;
-    delete[] theKinds;
     delete[] gEEAIChokeTileKinds;
     gEEAIChokeTileKinds = NULL;
     delete[] gEEAIChokeTileSerials;
@@ -133,32 +112,6 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
     delete[] gEEAIChokeTileFlags;
     gEEAIChokeTileFlags = NULL;
     EEAIChokeDone();
-}
-
-// FUNCTION: EXE 0x41ca7c
-// Copies the per-tile kind grid (0x36 for tiles in a water/space continent or big forest, else 0) into outKinds,
-// building it and the tile serials on first use
-static void EEAIChokeGetKinds(EEMap* inMap, int32_t* outKinds)
-{
-    long theWidth = inMap->mSize;
-    long theHeight = inMap->mSize;
-    if (gEEAIChokeTileKinds == NULL) {
-        gEEAIChokeTileKinds = new int32_t[theWidth * theHeight];
-        for (long x = theWidth - 1; x >= 0; x--) {
-            for (long y = theHeight - 1; y >= 0; y--) {
-                long theSerial;
-                long theIndex = x * theHeight + y;
-                if (EEAIChokeGetTileSerial(inMap->GetTile(x, y), x, y, &theSerial)) {
-                    gEEAIChokeTileSerials[theIndex] = theSerial;
-                    gEEAIChokeTileKinds[theIndex] = 0x36;
-                } else {
-                    gEEAIChokeTileSerials[theIndex] = 0;
-                    gEEAIChokeTileKinds[theIndex] = 0;
-                }
-            }
-        }
-    }
-    memcpy(outKinds, gEEAIChokeTileKinds, theHeight * theWidth * sizeof(int32_t));
 }
 
 // NEAR: the original calls the storage's Virtual0C through the vtable (an inline helper or a pointer: unknown) and
@@ -197,40 +150,33 @@ static void EEAIChokeCreate(EEMap* inMap)
     }
 }
 
-// NEAR: the original calls _Ptrit::operator+ out of line for mContinents[id] (Dinkum depth), which moves the registers
-// FUNCTION: EXE 0x41ccd0
-// Returns whether a tile belongs to a fixed area and its serial: a water/space/edge continent's, a forest's over
-// 6 tiles (0 for smaller ones), or the land continent's for resources outside a forest; no tile gives -1
-static bool EEAIChokeGetTileSerial(EETile* inTile, long inX, long inY, long* outSerial)
+// What EEAIChokeGetTileSerial 0x1ccd0 read of a tile, in its order: nothing of a missing tile; the continent's
+// category and serial; on land or cliff whether the tile has a wood resource, and then the forest the manager lists
+// at it (GetForestAt's id, then the manager's entry under that id) with its serial and tile count. Rust decides.
+static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTileInfo* outInfo)
 {
-    bool theResult = inTile == NULL;
-    *outSerial = 0;
-    if (!theResult) {
-        EEAIContinent* theContinent = gContinentManager.GetContinentFromID(gContinentManager.GetContinentID(inX, inY));
-        if (theContinent->GetCategory() != kContinentCategoryLand && theContinent->GetCategory() != kContinentCategoryCliff) {
-            theResult = true;
-            *outSerial = theContinent->mSerial;
-        } else {
-            theResult = false;
-            if (EEAIHasResourceUnit(inTile)) {
-                EETileLocation theTile(inX, inY);
-                EEAIForest* theForest = gContinentManager.GetForestAt(theTile);
-                unsigned short theID = theForest ? theForest->mID : 0;
-                const std::vector<EEAIForest*>& theForests = gContinentManager.mForests;
-                theForest = theForests[theID];
-                if (theForest) {
-                    if (theForest->mTiles.Size() > 6)
-                        *outSerial = theForest->mSerial;
-                    else
-                        *outSerial = 0;
-                } else
-                    *outSerial = theContinent->mSerial;
-                theResult = true;
-            }
-        }
-    } else
-        *outSerial = -1;
-    return theResult;
+    memset(outInfo, 0, sizeof(*outInfo));
+    if (!inTile)
+        return;
+    outInfo->tile = true;
+    EEAIContinent* theContinent = gContinentManager.GetContinentFromID(gContinentManager.GetContinentID(inX, inY));
+    outInfo->category = theContinent->GetCategory();
+    outInfo->continent_serial = (uint32_t)theContinent->mSerial;
+    if (outInfo->category != kContinentCategoryLand && outInfo->category != kContinentCategoryCliff)
+        return;
+    outInfo->resource = EEAIHasResourceUnit(inTile) != 0;
+    if (!outInfo->resource)
+        return;
+    EETileLocation theTile(inX, inY);
+    EEAIForest* theForest = gContinentManager.GetForestAt(theTile);
+    unsigned short theID = theForest ? theForest->mID : 0;
+    const std::vector<EEAIForest*>& theForests = gContinentManager.mForests;
+    theForest = theForests[theID];
+    if (theForest) {
+        outInfo->forest = true;
+        outInfo->forest_serial = (uint32_t)theForest->mSerial;
+        outInfo->forest_tiles = (int32_t)theForest->mTiles.Size();
+    }
 }
 
 // an empty function (ICF-folded into 0xe123d; called last by EEAIBuildChokePoints) (provisional name)

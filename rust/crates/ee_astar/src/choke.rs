@@ -1,4 +1,6 @@
-//! The choke point pass's grid smoothing (`EEAIChokeSmooth`, `EEAIChokePoint.cpp` 0x1c78c), line by line. The
+//! The choke point pass's grids (`EEAIBuildChokePoints`, `EEAIChokePoint.cpp` 0x1c949, up to its flood fills: the
+//! classification `EEAIChokeGetTileSerial` 0x1ccd0, the passes loop with `EEAIChokeGetKinds` 0x1ca7c, and the
+//! smoothing `EEAIChokeSmooth` 0x1c78c), line by line. The
 //! continent manager's choke point pass (`EEAIBuildChokePoints`) classifies every tile (`KIND_AREA` for a tile of a
 //! water, space or edge continent or of a big forest, else 0), then smooths that grid `passes - 1` times: each pass
 //! averages every non-area inner tile's kind over its 3x3 neighbourhood from the previous pass's grid, spreads a
@@ -69,6 +71,162 @@ pub fn smooth(
         }
     }
     flags[..size].copy_from_slice(&new_flags[..size]);
+}
+
+/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
+/// tile (outside the playable rhombus it has none), its continent's category
+/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
+/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeChokeTileInfo {
+    pub tile: bool,
+    pub category: u8,
+    pub continent_serial: u32,
+    pub resource: bool,
+    pub forest: bool,
+    pub forest_serial: u32,
+    pub forest_tiles: i32,
+}
+
+/// `EEAIContinentCategory`'s land and cliff.
+const CATEGORY_LAND: u8 = 1;
+const CATEGORY_CLIFF: u8 = 3;
+
+/// 0x41ccd0 `EEAIChokeGetTileSerial`: whether a tile belongs to a fixed area, and its serial: a water, space or edge
+/// continent's; on land or cliff with a resource, the forest's over 6 tiles (0 for a smaller one), or the
+/// continent's outside a listed forest. Where the map has no tile: an area with serial -1 (the C++'s `long` -1).
+pub fn tile_serial(info: &EeChokeTileInfo) -> Option<u32> {
+    if !info.tile {
+        Some(u32::MAX)
+    } else if info.category != CATEGORY_LAND && info.category != CATEGORY_CLIFF {
+        Some(info.continent_serial)
+    } else if info.resource {
+        if info.forest {
+            Some(if info.forest_tiles > 6 { info.forest_serial } else { 0 })
+        } else {
+            Some(info.continent_serial)
+        }
+    } else {
+        None
+    }
+}
+
+/// 0x41c949 `EEAIBuildChokePoints` up to the flood fills: classifies every tile of a `size` x `size` map
+/// (`infos` by `x * size + y`) into `kinds` (`KIND_AREA` for a tile of an area of its own, else 0) and `serials`,
+/// then smooths a copy of the kinds `passes - 1` times from the fresh classification each time (the C++ re-read the
+/// base grid every pass, averaging into it from the previous pass's result), which spreads the serials and sets the
+/// `flags` of the tiles between two areas. The smoothed kinds themselves are thrown away, as the C++ did.
+pub fn build_grids(
+    size: i32,
+    passes: i32,
+    infos: &[EeChokeTileInfo],
+    kinds: &mut [i32],
+    serials: &mut [u32],
+    flags: &mut [u8],
+) {
+    let n = (size * size) as usize;
+    assert!(infos.len() >= n && kinds.len() >= n && serials.len() >= n && flags.len() >= n);
+    for i in 0..n {
+        match tile_serial(&infos[i]) {
+            Some(serial) => {
+                serials[i] = serial;
+                kinds[i] = KIND_AREA;
+            }
+            None => {
+                serials[i] = 0;
+                kinds[i] = 0;
+            }
+        }
+    }
+    flags[..n].fill(0);
+    let mut smoothed = kinds[..n].to_vec();
+    let last = passes - 1;
+    let mut left = last;
+    while left > 0 {
+        let mut fresh = kinds[..n].to_vec();
+        smooth(&smoothed, &mut fresh, serials, flags, size, size, left == last);
+        smoothed = fresh;
+        left -= 1;
+    }
+}
+
+#[cfg(test)]
+mod build_tests {
+    use super::*;
+
+    fn area(serial: u32) -> EeChokeTileInfo {
+        EeChokeTileInfo { tile: true, category: 2, continent_serial: serial, ..Default::default() }
+    }
+
+    fn land() -> EeChokeTileInfo {
+        EeChokeTileInfo { tile: true, category: 1, continent_serial: 3, ..Default::default() }
+    }
+
+    #[test]
+    fn a_tiles_serial_is_its_continents_or_its_big_forests() {
+        assert_eq!(tile_serial(&area(5)), Some(5));
+        assert_eq!(tile_serial(&EeChokeTileInfo { category: 5, continent_serial: 9, ..area(0) }), Some(9));
+        assert_eq!(tile_serial(&EeChokeTileInfo::default()), Some(u32::MAX));
+        assert_eq!(tile_serial(&land()), None);
+        assert_eq!(tile_serial(&EeChokeTileInfo { category: 3, ..land() }), None);
+        let wood = EeChokeTileInfo { resource: true, ..land() };
+        assert_eq!(tile_serial(&wood), Some(3));
+        let small = EeChokeTileInfo { forest: true, forest_serial: 8, forest_tiles: 6, ..wood };
+        assert_eq!(tile_serial(&small), Some(0));
+        let big = EeChokeTileInfo { forest_tiles: 7, ..small };
+        assert_eq!(tile_serial(&big), Some(8));
+        // a forest listed at a tile of a cliff continent counts the same way
+        assert_eq!(tile_serial(&EeChokeTileInfo { category: 3, ..big }), Some(8));
+    }
+
+    #[test]
+    fn the_grids_classify_then_smooth_from_the_fresh_kinds_each_pass() {
+        // a 6 x 6 map: column x = 1 is area A (serial 7), column x = 4 is area B (serial 9), the rest land
+        let size = 6;
+        let mut infos = vec![land(); 36];
+        for y in 0..6 {
+            infos[(size + y) as usize] = area(7);
+            infos[(size * 4 + y) as usize] = area(9);
+        }
+        let mut kinds = vec![-1; 36];
+        let mut serials = vec![5u32; 36];
+        let mut flags = vec![2u8; 36];
+        // one pass: the classification alone, nothing smoothed, the flags cleared
+        build_grids(size, 1, &infos, &mut kinds, &mut serials, &mut flags);
+        assert_eq!(kinds[(size + 2) as usize], KIND_AREA);
+        assert_eq!(serials[(size + 2) as usize], 7);
+        assert_eq!(kinds[(size * 2 + 2) as usize], 0);
+        assert_eq!(serials[(size * 2 + 2) as usize], 0);
+        assert!(flags.iter().all(|&f| f == 0));
+        // three passes (two smoothings): the tiles between the areas took a serial and the second smoothing flagged
+        // them; the base kinds are untouched
+        build_grids(size, 3, &infos, &mut kinds, &mut serials, &mut flags);
+        assert_eq!(kinds[(size * 2 + 2) as usize], 0);
+        assert_eq!(serials[(size * 2 + 2) as usize], 7);
+        assert_eq!(serials[(size * 3 + 2) as usize], 9);
+        assert_eq!(flags[(size * 2 + 2) as usize], 1);
+        assert_eq!(flags[(size * 3 + 2) as usize], 1);
+        assert_eq!(flags[(size + 2) as usize], 0);
+        // the same as driving `smooth` by hand over the C++'s copies
+        let mut base = vec![0; 36];
+        let mut s2 = vec![0u32; 36];
+        let mut f2 = vec![0u8; 36];
+        for (i, info) in infos.iter().enumerate() {
+            if let Some(s) = tile_serial(info) {
+                base[i] = KIND_AREA;
+                s2[i] = s;
+            }
+        }
+        let mut smoothed = base.clone();
+        for first in [true, false] {
+            let mut fresh = base.clone();
+            smooth(&smoothed, &mut fresh, &mut s2, &mut f2, size, size, first);
+            smoothed = fresh;
+        }
+        assert_eq!(serials, s2);
+        assert_eq!(flags, f2);
+    }
 }
 
 #[cfg(test)]

@@ -1141,31 +1141,456 @@ pub unsafe extern "C" fn ee_astar_graph_expand(s: *mut EeAStarGraphStorage, cb: 
     graph::expand(s, &mut CGraphHost(unsafe { &*cb }))
 }
 
-// ---- the choke point pass (choke.rs) ----
+// ---- the continent manager's grid (continent_grid.rs) ----
 
-/// `EEAIChokeSmooth`: one smoothing pass over the choke point pass's grids (`width * height` cells each).
+use crate::choke::EeChokeTileInfo;
+use crate::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
+use crate::sectors::{self, EeSectorRect, EeSectorSizes};
+use crate::sub_sector_links::{self, EeSubSectorLink};
+use crate::tile_values;
+
+/// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
+pub struct EeContinentGrid(ContinentGrid);
+
+/// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
+/// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
+/// continents' categories by id (`next_id` of them).
 ///
 /// # Safety
-/// `prev`, `kinds`, `serials` and `flags` valid for `width * height` cells; `kinds`, `serials` and `flags` writable.
+/// `ids`, `kinds` and `terrain` valid for `size * size` cells, `categories` for `next_id`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_choke_smooth(
-    prev: *const i32,
+pub unsafe extern "C" fn ee_astar_continent_grid_build(
+    size: i32,
+    ids: *const u16,
+    kinds: *const u8,
+    terrain: *const i32,
+    categories: *const u8,
+    next_id: i32,
+) -> *mut EeContinentGrid {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
+    // SAFETY: the caller's contract
+    let (ids, kinds, terrain, categories) = unsafe {
+        (
+            std::slice::from_raw_parts(ids, n),
+            std::slice::from_raw_parts(kinds, n),
+            std::slice::from_raw_parts(terrain, n),
+            std::slice::from_raw_parts(categories, next_id.max(0) as usize),
+        )
+    };
+    let fill: Vec<FillTile> = ids.iter().zip(kinds).map(|(&id, &kind)| FillTile { id, kind }).collect();
+    let grid = continent_grid::create_continent_grid(size, &fill, terrain, categories, next_id);
+    Box::into_raw(Box::new(EeContinentGrid(grid)))
+}
+
+/// Releases a grid.
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`, not freed yet.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_free(g: *mut EeContinentGrid) {
+    if !g.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(g) });
+    }
+}
+
+/// The tile-to-continent id grid (`size * size`, `x * size + y`).
+///
+/// # Safety
+/// `g` from `ee_astar_continent_grid_build`; the pointer lives while `g` does.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_ids(g: *const EeContinentGrid, count: *mut usize) -> *const u16 {
+    let v = &unsafe { &*g }.0.ids;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The adjacency matrix (`next_id * next_id`, `[a * next_id + b]`, 0 or 1).
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_flags(g: *const EeContinentGrid, count: *mut usize) -> *const u8 {
+    let v = &unsafe { &*g }.0.flags;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The continents' neighbour pushes, in order.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_neighbors(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EeContinentNeighbor {
+    let v = &unsafe { &*g }.0.neighbors;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The manager's shore tiles, sorted and unique.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_shore(g: *const EeContinentGrid, count: *mut usize) -> *const EePoint {
+    let v = &unsafe { &*g }.0.shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// The manager's ice shore tiles, sorted.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_ice_shore(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EePoint {
+    let v = &unsafe { &*g }.0.ice_shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// Every continent's shore tiles (sorted and unique per continent), grouped by continent id.
+///
+/// # Safety
+/// As `ee_astar_continent_grid_ids`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_grid_continent_shore(
+    g: *const EeContinentGrid,
+    count: *mut usize,
+) -> *const EeContinentShore {
+    let v = &unsafe { &*g }.0.continent_shore;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+// ---- the continent manager's tile values (tile_values.rs) ----
+
+/// `EEAIContinentManager::UpdateTileValues` over a `size` x `size` map: `terrain` every tile's terrain type (-1
+/// where the map has none), `shore` and `ice_shore` the manager's sorted lists, `weights` every tile's
+/// `GetResourceWeight` (read only when `water` is false). `values` gets every tile's new value (0: unchanged),
+/// `bytes` the AI value to store with a changed one.
+///
+/// # Safety
+/// `terrain`, `values` and `bytes` valid for `size * size` cells, `weights` too unless `water`; `shore` and
+/// `ice_shore` for their counts.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_update_tile_values(
+    size: i32,
+    terrain: *const i32,
+    water: bool,
+    shore: *const EePoint,
+    shore_count: usize,
+    ice_shore: *const EePoint,
+    ice_count: usize,
+    weights: *const i32,
+    values: *mut i32,
+    bytes: *mut i8,
+) {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
+    // SAFETY: the caller's contract
+    let (terrain, shore, ice_shore, weights, values, bytes) = unsafe {
+        (
+            std::slice::from_raw_parts(terrain, n),
+            std::slice::from_raw_parts(shore, shore_count),
+            std::slice::from_raw_parts(ice_shore, ice_count),
+            std::slice::from_raw_parts(weights, if water { 0 } else { n }),
+            std::slice::from_raw_parts_mut(values, n),
+            std::slice::from_raw_parts_mut(bytes, n),
+        )
+    };
+    let world = tile_values::TileWorld { size, terrain, water, shore, ice_shore, weights };
+    tile_values::update_tile_values(&world, values, bytes);
+}
+
+// ---- the choke point pass's grids (choke.rs) ----
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
+/// `serials` and smooths `passes - 1` times into the `flags`.
+///
+/// # Safety
+/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_build_grids(
+    size: i32,
+    passes: i32,
+    infos: *const EeChokeTileInfo,
     kinds: *mut i32,
     serials: *mut u32,
     flags: *mut u8,
-    width: i32,
-    height: i32,
-    first: bool,
 ) {
-    let n = (width.max(0) as usize) * (height.max(0) as usize);
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
     // SAFETY: the caller's contract
-    let (prev, kinds, serials, flags) = unsafe {
+    let (infos, kinds, serials, flags) = unsafe {
         (
-            std::slice::from_raw_parts(prev, n),
+            std::slice::from_raw_parts(infos, n),
             std::slice::from_raw_parts_mut(kinds, n),
             std::slice::from_raw_parts_mut(serials, n),
             std::slice::from_raw_parts_mut(flags, n),
         )
     };
-    crate::choke::smooth(prev, kinds, serials, flags, width, height, first);
+    crate::choke::build_grids(size, passes, infos, kinds, serials, flags);
+}
+
+// ---- the sub sector links (sub_sector_links.rs) ----
+
+/// The sub sectors as the link walk sees them: C function pointers over `ctx`.
+#[repr(C)]
+pub struct EeSubSectorGridCallbacks {
+    pub ctx: *mut c_void,
+    /// the sub sector id at a tile (0 none)
+    pub id_at: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> u16,
+    /// whether the manager lists a sub sector under `id`
+    pub present: extern "C" fn(ctx: *mut c_void, id: u16) -> bool,
+}
+
+struct CSubSectorGrid<'a>(&'a EeSubSectorGridCallbacks);
+
+impl sub_sector_links::Grid for CSubSectorGrid<'_> {
+    fn id_at(&mut self, x: i32, y: i32) -> u16 {
+        (self.0.id_at)(self.0.ctx, x, y)
+    }
+    fn present(&mut self, id: u16) -> bool {
+        (self.0.present)(self.0.ctx, id)
+    }
+}
+
+/// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
+pub struct EeSubSectorLinks(Vec<EeSubSectorLink>);
+
+/// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
+/// grown sector): the `LinkSubSectors` calls to make, in order.
+///
+/// # Safety
+/// `cb` valid, its callbacks safe to call for the tiles of the walk and any id.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links(
+    x0: i32,
+    x_end: i32,
+    y0: i32,
+    y_end: i32,
+    cb: *const EeSubSectorGridCallbacks,
+) -> *mut EeSubSectorLinks {
+    let mut out = Vec::new();
+    sub_sector_links::link_walk(&mut CSubSectorGrid(unsafe { &*cb }), x0, x_end, y0, y_end, &mut out);
+    Box::into_raw(Box::new(EeSubSectorLinks(out)))
+}
+
+/// The calls of a walk.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`; the pointer lives while `links` does.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links_get(
+    links: *const EeSubSectorLinks,
+    count: *mut usize,
+) -> *const EeSubSectorLink {
+    let v = &unsafe { &*links }.0;
+    unsafe { *count = v.len() };
+    v.as_ptr()
+}
+
+/// Releases a walk's calls.
+///
+/// # Safety
+/// `links` from `ee_astar_sub_sector_links`, not freed yet.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links_free(links: *mut EeSubSectorLinks) {
+    if !links.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(links) });
+    }
+}
+
+// ---- the path sector grid (sectors.rs) ----
+
+/// `CreatePathSectors`' sector and region sizes by the map's size class.
+#[no_mangle]
+pub extern "C" fn ee_astar_sector_sizes(size_class: i32) -> EeSectorSizes {
+    sectors::sector_sizes(size_class)
+}
+
+/// `Build`'s number of choke point passes by the map's size class.
+#[no_mangle]
+pub extern "C" fn ee_astar_choke_passes(size_class: i32) -> i32 {
+    sectors::choke_passes(size_class)
+}
+
+/// `EEAIPathSectorRegionInformation::Init`'s sectors per side.
+#[no_mangle]
+pub extern "C" fn ee_astar_sectors_per_side(map_size: i32, sector_size: i32) -> i32 {
+    sectors::sectors_per_side(map_size, sector_size)
+}
+
+/// `CreatePathSectors`' rectangle of sector `(x, y)`.
+#[no_mangle]
+pub extern "C" fn ee_astar_sector_rect(x: i32, y: i32, sector_size: i32, map_size: i32) -> EeSectorRect {
+    sectors::sector_rect(x, y, sector_size, map_size)
+}
+
+// ---- a tile's AI kind and wall id (tile_kind.rs) ----
+
+use crate::tile_kind::{self, EeTileUnit};
+
+/// `EEAIGetTileKind` of a map tile: its continent's `category`, its `terrain`, its AI value `flag` and its units.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tile_kind(
+    category: u8,
+    terrain: i32,
+    flag: i32,
+    units: *const EeTileUnit,
+    count: usize,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let units = unsafe { unit_slice(units, count) };
+    tile_kind::tile_kind(category, terrain, flag, units)
+}
+
+/// `EEAIGetTileWallID` of a map tile's units: the first live finished blocker's or gate's id, -1 if none.
+///
+/// # Safety
+/// `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tile_wall_id(units: *const EeTileUnit, count: usize) -> i32 {
+    // SAFETY: the caller's contract
+    let units = unsafe { unit_slice(units, count) };
+    tile_kind::tile_wall_id(units)
+}
+
+/// # Safety
+/// `units` valid for `count` records unless `count` is 0.
+unsafe fn unit_slice<'a>(units: *const EeTileUnit, count: usize) -> &'a [EeTileUnit] {
+    if count == 0 || units.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(units, count) }
+    }
+}
+
+// ---- the region fills' start tests (path_area_kind.rs) ----
+
+use crate::path_area_kind::{self, EeMapEdges, EePathAreaIDs};
+
+/// A fill's `mCheckCorners` at `(x, y)`: not of terrain `no_corners` and off the map's diagonal edges.
+#[no_mangle]
+pub extern "C" fn ee_astar_check_corners(terrain: i32, no_corners: i32, x: i32, y: i32, edges: EeMapEdges) -> bool {
+    path_area_kind::check_corners(terrain, no_corners, x, y, &edges)
+}
+
+/// `CreatePathAreaKind`'s test of tile `(x, y)`: whether a fill of `kind` starts there; `flag` is the loop's
+/// `theFlag`, read and updated.
+///
+/// # Safety
+/// `area` and `flag` valid; `units` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_path_area_kind_starts(
+    kind: i32,
+    terrain: i32,
+    x: i32,
+    y: i32,
+    edges: EeMapEdges,
+    area: *const EePathAreaIDs,
+    units: *const EeTileUnit,
+    count: usize,
+    flag: *mut bool,
+) -> bool {
+    // SAFETY: the caller's contract
+    let (area, units, flag) = unsafe { (&*area, unit_slice(units, count), &mut *flag) };
+    path_area_kind::starts_fill(kind, terrain, x, y, &edges, area, units, flag)
+}
+
+// ---- the path area repair (repair.rs) ----
+
+use crate::repair::{self, EeAreaTile, EeRepairPlan};
+
+/// `GetAdjacentAreaID`: the `kind` region id next to `centre` from its eight neighbours (`repair::NEIGHBOURS`'
+/// order), 0 if none.
+///
+/// # Safety
+/// `centre` valid, `neighbours` valid for 8 records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_adjacent_area_id(
+    kind: i32,
+    area_kind: i32,
+    centre: *const EeAreaTile,
+    neighbours: *const EeAreaTile,
+) -> u16 {
+    // SAFETY: the caller's contract
+    let (centre, neighbours) = unsafe { (&*centre, &*(neighbours as *const [EeAreaTile; 8])) };
+    repair::adjacent_area_id(kind, area_kind, centre, neighbours)
+}
+
+/// `RepairPathArea`'s choice for a tile of new kind `kind` from its eight neighbours (`repair::NEIGHBOURS`' order).
+///
+/// # Safety
+/// `neighbours` valid for 8 records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_repair_plan(
+    kind: i32,
+    area_continent: u16,
+    tile_continent: u16,
+    wall_id: i32,
+    neighbours: *const EeAreaTile,
+) -> EeRepairPlan {
+    // SAFETY: the caller's contract
+    let neighbours = unsafe { &*(neighbours as *const [EeAreaTile; 8]) };
+    repair::repair_plan(kind, area_continent, tile_continent, wall_id, neighbours)
+}
+
+// ---- the manager's queries (queries.rs) ----
+
+use crate::queries::{self, EeContinentSize};
+
+/// `AreConnected`'s chain for crossing `flags`, -1 for none.
+#[no_mangle]
+pub extern "C" fn ee_astar_connected_chain(flags: i32) -> i32 {
+    queries::connected_chain(flags)
+}
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: continent `id`'s neighbours from the `width` x `width`
+/// adjacency matrix `flags` into `out` (room for `width` ids); returns their count.
+///
+/// # Safety
+/// `flags` valid for `width * width` bools, `out` writable for `width` ids.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_adjacent_ids(
+    flags: *const bool,
+    width: usize,
+    id: u16,
+    with_self: bool,
+    out: *mut u16,
+) -> usize {
+    if width == 0 {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let flags = unsafe { std::slice::from_raw_parts(flags, width * width) };
+    let ids = queries::adjacent_ids(flags, width, id, with_self);
+    // SAFETY: the caller's contract; at most `width - 1` ids
+    unsafe { std::ptr::copy_nonoverlapping(ids.as_ptr(), out, ids.len()) };
+    ids.len()
+}
+
+/// `GetLargestContinent`: the index of the largest of `continents` of category `kind` (0 any), -1 if none.
+///
+/// # Safety
+/// `continents` valid for `count` records (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_largest_continent(continents: *const EeContinentSize, count: usize, kind: i8) -> i32 {
+    let continents = if count == 0 || continents.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(continents, count) }
+    };
+    queries::largest_continent(continents, kind)
 }
