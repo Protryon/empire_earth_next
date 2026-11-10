@@ -231,7 +231,7 @@ local function econ_ok(view, memory, budget)
         return false
     end
     local eco = memory.eco or {}
-    if view.citizens * 100 < (eco.peak or 0) * S.recover_share then   -- recovering
+    if eco.recovering then   -- recovering (econ.c)
         return false
     end
     local goal = (budget and budget.citizens_wanted) or view.citizens

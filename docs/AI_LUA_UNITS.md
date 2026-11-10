@@ -904,14 +904,18 @@ line); `ai.trade(resource, "buy"|"sell", 1|5)` is EEMExchangeResources through t
 `tests/ai_units/commands.lua` (seeds 2-3, 300 s) exercises them: the wall `ok n=3`, the tribute and the stances as
 ordered, the trade both ways, the gate `cannot_place` while no run of five finished pieces stands.
 
+**The fidelity pass (2026-11-10):** `ai.patrol(ids, {{x, y}, ...})` (2..8 points: EEMAddPatrolPoint for each, as the
+human's patrol clicks; the message got a constructor from a point); `ai.players()` records carry `hostile` (the other
+player's stance towards me, `EEPlayer::GetEnemy`) and `allies` (the other players of the world's teams it is in);
+`ai.memory{category=}` filters the records by their class's category; `ai.class` has `category`, `family` (the
+game's family number) and `cost` (the tech's cost as the player pays it, by resource; 0 for a class its tree has no
+node for). The view has `epoch2_cost` (the epoch after the next: the copper plan holds both before farms).
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
-- `patrol` (EEMAddPatrolPoint has no constructor from a point);
-- what the port's modules asked for (UPSTREAM's interface gaps): the other players' stances towards me and the
-  teams (`ai.players` `hostile`, `allies`), a tribute-received event, an offer channel between AIs, `ai.resign`,
-  `ai.memory`'s `category`, `ai.class`'s family / damage class / hit factors / cost, `ai.reflex{militia=}`, aircraft
-  launched from their airport by `ai.attack`, `ai.resource(id)` (documented, not bound), `ai.tile`'s continent under
-  the fog;
+- what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between
+  AIs, `ai.resign`, `ai.class`'s damage class / hit factors, `ai.reflex{militia=}`, aircraft launched from their
+  airport by `ai.attack`, `ai.resource(id)` (documented, not bound), `ai.tile`'s continent under the fog;
 - the per-step command limits are counted per game ms, so a step and a micro in the same tick share them;
 - the deletion of `EECPNextArmy.cpp` once rush and balanced run on lib.groups; the engine's unload fixes (L6's
   gate on an Islands map is in AI_RESEARCH §8.37 once run).

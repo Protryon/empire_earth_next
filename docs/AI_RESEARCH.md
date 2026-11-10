@@ -2524,6 +2524,153 @@ ten seconds after a direct granary (`ai.build`), and a second pair the same way 
 AI hashes stay equal to the end and the final states are the same, so it is a hashed unit field the play never reads,
 engine-side (PORT_LEARNINGS).
 
+### 8.38 The Age of AI port's fidelity pass (2026-11-10, EE-SIM)
+
+The owner's call after the tenth checkpoint (§8.37): make the port behave like upstream's C before any tuning. The
+pass: every deviation in `settings.lua` back to upstream's default or its shipped ini, then the lost games traced
+path by path against upstream's code, each difference fixed as a port bug or built as an engine gap. The bench:
+Small, Hard, 2 AIs, 120 minutes, seeds 2-17, three matchups - the improved classic (no cheats, `balanced`), the
+original classic with retail-Hard cheats (`classicX`: `--cheats none/none/all --personality balanced,balanced,classic
+--set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]"`), and boom.
+Won / lost / close count a side with twice the other's citizens, or the other wiped out.
+
+**Reverted to upstream (commit 4ae48a2 and after).** `min_workforce` 40 (34), the copper plan as shipped
+(`copper_plan=on`: both early epochs' costs held from min_workforce, the citizens ignore the reserve below it, no
+cap on them - the port had capped them at min_workforce), `food_floor` 18 (24) / `food_share` 50 (60),
+`epoch_pacing` independent (rush: the first two epochs as soon as paid, from the Copper Age the 50-70 minute timer
+with the game's catch-up when another player is ahead - `EEComputerPlayer::CatchUpEpoch`'s 1-12 minutes x Hard's
+70%, the view's new `epoch2_cost`), no early army (the home guard of 6 + 4 x epoch from the first minute, the room
+share counted in every epoch), the muster at 8 enemies / 2 x / 18 tiles (4 / 1.3 / 6), no tower cap, `ar_bleed_pct`
+0 (50), `expand_islands` off, `attack_retarget` off, the vassal tribute off, `tower_bait` to the Bronze Age,
+RECOVERY as econ.c (two thirds on food, the whole stock for citizens, no soldiers unless enemies are in the base),
+the raid answer as armies.c (the raider nearest home seen twice running, `raid_answer` 100%; the port's cooldown
+and band-5 rules gone), the attack times the game's own at Hard as upstream's `first_attack 0` takes them (6-12
+minutes, then 13-15: `initial_attack_delay` 20-40 x 30%, `attack_frequency` 14-17 x 90%). Left as deviations with
+their reason: the siege with the force (no waves from home), this engine's fishing-boat rule, `direct_granary` /
+`replant_fields` (an engine difference).
+
+**Port bugs and engine gaps found by tracing.**
+- The engine's citizen militia reflex (`EECPRMMilitia`: citizens charge at 1.5 x odds counting the towers) ran for
+  the port instead of upstream's CITIZEN MILITIA (3 x the enemies' strength within 6, 3 citizens an enemy, 6
+  enemies, to the Bronze Age) - the reflex sent citizens to their deaths: seed 4 against the cheating classic lost
+  15 citizens near the town in minutes 10-20 and was wiped out at 19; with `ai.reflex{militia = false}` (new) and
+  the Lua militia (`tactics.lua`) it had 27 citizens at 25 minutes.
+- attack.c `citizens_safety` was not ported (the engine's 30-second danger zones stood in): now `safety.lua` (the
+  hurt spots for 2 minutes, 20 s with the attacker in sight; a site within 6 tiles of one - three for the minerals -
+  or raided is dangerous unless the town holds it at `raid_held` 150%; its gatherers go back to the drop site and
+  the claim is released; citizens near the enemy flee to the rally point while a muster is on).
+- The home guard's room share (35% of the military room) applied only from the Stone Age; the port added a rule
+  from the enemy army seen that upstream has not. Both fixed.
+- The tower bait baited only the citizens hit (a measured deviation of the eighth checkpoint); now upstream's rule
+  (a citizen with an enemy soldier within 5 tiles or attacking it, outside its own towers' reach, behind the
+  nearest shooting building). The micro modules looked the town up as `b_town_center`: the start building is a
+  Capitol, so the safety scanned the raiders round the map's corner; they take the view's town now.
+- The safety's first version queried the engine once per citizen and blew the micro step's 300,000-instruction
+  budget at 100+ citizens (1,900-8,900 aborted ticks a bench; PORT_LEARNINGS): one raider scan a second, the
+  citizens in sixteenth slices a tick (each every 4 s as upstream).
+- Engine gaps built: `ai.patrol`, `ai.players` `hostile` / `allies`, `ai.memory{category=}`, `ai.class` `category`
+  / `family` / `cost`, `ai.reflex{militia=}`, the view's `epoch2_cost` (AI_LUA_UNITS §11).
+
+**The benches.** c10 / c10b are the coordinator's from main aafe7d2 (the tenth checkpoint's settings).
+
+| Port state | vs balanced W/L/C | Stone, Copper | cit 30 / 40 / end | vs classicX W/L/C | Stone | cit end | vs boom W/L/C | cit end |
+|---|---|---|---|---|---|---|---|---|
+| c10 (checkpoint 10) | 0 / 13 / 3 | 27.7, 10/16 at 63 | 38 / 53 / 33 | 2 / 11 / 3 | 13/16 at 38.7 | 20 | 6 / 2 / 8 | 140 vs 97 |
+| f1: settings reverted | 0 / 14 / 2 | 33.5, 7/16 at 71 | 40 / 41 / 17 | 0 / 11 / 5 | 13/16 at 52 | 22 | 1 / 3 / 12 | 129 vs 108 |
+| f2: + raid answer, home guard, no citizen cap, attack times | 0 / 13 / 3 | 33.9, 12/16 at 69 | 40 / 42 / 29 | 0 / 13 / 3 | 9/16 at 44 | 12 | 0 / 2 / 14 | 143 vs 111 |
+| f4: + citizens' safety, the militia (f3, the same with the micro budget blown, is void) | 0 / 14 / 2 | 37.6, 7/16 at 68 | 39 / 41 / 19 | 0 / 14 / 2 | 8/16 at 46 | 10 | 1 / 2 / 13 | 135 vs 110 |
+| f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | 1 / 2 / 13 | 136 vs 109 |
+| f6: copper_plan next_epoch, the home guard's cap (166 / the own population) | 0 / 12 / 4 | 49.1 (8/16), 4/16 at 61 | 53 / 70 / 52 | 3 / 9 / 4 | 3/16 at 67 | 40 | 2 / 1 / 13 | 155 vs 109 |
+| f7: + the forage places cap the food gatherers and the wild food, the accounts' income fractions carried (a bug: they truncated to 0 a step) | 0 / 10 / 6 | 53.0 (14/16), 11/16 at 63 | 50 / 61 / 58 | 2 / 11 / 3 | 8/16 at 57 | 26 | 1 / 2 / 13 | 141 vs 107 |
+| f8: + the claims grow on the uncapped food want (up to 8 patches, a wider claim), the wild food as upstream's amounts | 0 / 11 / 5 | 48.5 (16/16), 11/16 at 64 | 50 / 60 / 57 | 2 / 9 / 5 | 9/16 at 57 | 36 | 2 / 2 / 12 | 148 vs 108 |
+
+The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
+46 with 51 citizens all game and still wins the Prehistoric raids.
+
+**What the traces say (f2, f4).** The safety and the militia change little in the counts: fewer wipe-outs against
+the cheating classic (2 for 6) and a few more citizens at the end against boom, fewer against the classic. Against the improved classic the port's citizens stand at 40-42 from minute 25 to 45:
+upstream's copper plan holds the Stone and Copper costs from 40 citizens on and the citizens wait on what is left
+- the brake upstream's own notes call the most harmful feature and replaced with `copper_plan=next_epoch`, which is
+not the shipped default. From the Copper Age (69 minutes) the timer pacing holds the Bronze reserve while the
+classic's waves grow; the games are lost at 60-120 minutes to pushes that take the gatherers (seed 9: 62 near and
+80 mid-range citizens lost in minutes 100-110 with 50 soldiers in the force). The raid answer at 100% with the
+force out every 4 s is upstream's rule and costs: 80-135 raid answers a game against the cheating classic with 10-41
+"losing" retreats (f1 with the port's 130% and cooldown: 1-39 and 0-14); seed 7 never left the Prehistoric in 120
+minutes while the force grew to 44 soldiers from the military account's 40% of every income. The economy itself
+gathers as boom does on the same seeds (seed 4: 45 food a minute from 9-10 gatherers at 8-12 minutes for both); the
+7 settlements by minute 12 (one at every claimed site without a drop) are the port's own, upstream's `mine_fill` DROP
+is off and the original game's AI built its settlements instead.
+
+**Why the Stone Age comes 10-15 minutes later than at the tenth checkpoint (the diagnosis).** Seed 2 against the
+improved classic, the 5-minute lines side by side: c10 saves from 34 citizens at minute 15 with the Stone cost alone
+held (1,122 food), the workers 21 / 9 / 4 / 0 / 1 on food / wood / stone / gold / iron, the food stock 263 -> 818 in
+five minutes, the Stone Age at 24; f1 saves from 40 citizens at minute 20 with both epochs' costs held (1,122 food,
+then 1,584 food + 844 gold + 844 iron for the Copper Age), econ_targets' "all arrive at the same time" sends 13-21 of
+41 workers to gold and iron (want 16 / 8 / 2 / 13 / 2, 23 / 3 / 0 / 7 / 7, 18 / 2 / 0 / 10 / 11), the food income
+falls from 135 to 30-90 and the 1,122 food take 15 minutes (419 -> 719 -> 814 -> 999), the Stone Age at 38. That is
+upstream's `copper_plan=on` to the letter (`budget_reserve`: "the full remaining cost of getting there", and the ini's
+`[ai_hard]` section overrides nothing), the brake its own notes measured as the most harmful feature and replaced
+with `copper_plan=next_epoch` - which it did not ship as the default. It costs more here because our Copper cost is
+1,584 / 844 / 844 after the game variant's epoch-cost factor (the data's 1,200 / 640 / 640 x 1.32; upstream's notes
+quote 750 / 400 / 400) and the mines lie 10-18 tiles out on Small maps: the gold and iron for an epoch two ages away
+are gathered before the Stone Age's food. Second, from f2 on, the home guard's room share counts in every epoch as
+upstream's does, but `unit_limit` is the lobby's 400 here (upstream's test games: a cap of 166 that follows the
+human's population, 0.35 x 166 x 0.55 = 32 soldiers) - 77 soldiers wanted from the first minute with the military
+account's 40% of every income: seed 2 (f4) trained 9 -> 19 soldiers between minutes 20 and 35 while the food stock
+stood at 1-30 and 28-33 citizens starved; c10 had `early_army` (no account share in the first epoch) and 4-6
+soldiers. Third, the attack times at Hard (6-12 minutes, then 13-15) send the first push of 8 at minute 6-12. The
+rules are upstream's; the engine's lobby cap and the map's mine distances make two of them cost two to three times
+what they cost upstream. The 1,900-8,900 aborted micro ticks a game (f3) were a real bug and are fixed in f4.
+
+**f6, and the next-biggest cause.** With upstream's `copper_plan=next_epoch` (the epoch account of 40% of the
+income, the citizens spend the rest) and the home guard's room from a cap of 166 (upstream's unit_limit follows the
+human; the lobby's 400 here), the counts come back to the tenth checkpoint's against the improved classic (0/12/4
+for 0/13/3) and past it against the cheating classic (3/9/4 for 2/11/3), with a different shape: 53 / 70 citizens
+at 30 / 40 minutes (38 / 53 at c10), and the games split in two - half reach the Stone Age at 34-38 and the Copper
+Age at 53-61 (faster than c10's 63) and end with 136-197 citizens, half never leave the Prehistoric in 120 minutes
+and are wiped out (seed 7: 102 citizens in the first epoch with the account still short). The cause, from the f6
+smoke's seed 2: the Small maps' forage runs out before the Stone Age is paid - at minute 40 the port has 68 citizens
+and 12 of them on food (12 bush places left, hunting over, no fish before the Stone Age), food income 0, 26 on wood
+with 875 wood idle; the next_epoch rule lets the citizens eat the 60% while the account creeps at 40% of a shrinking
+income. Upstream's "the map's food runs out" clause (the sites' remaining amount within 20 tiles x 60% short of the
+epoch's food + 500 -> the epoch's food first) is ported and does not bind: the patches still hold food, it is the
+gatherable places that are gone. The 6 gatherers to a bush are the base game's rule, the same for upstream, whose
+food_bush skips a full bush and whose game search forages farther out and hunts; the port's claims (3-5 patches)
+were where its food gatherers could stand, and the gather verb queued the rest - wasted citizens, the wood piling
+up while the food income stood at 0: a port bug in the worker plan's input, not a rule of this engine. The scaled-reserve alternative
+(`copper_reserve_pct {76, 47}` with `copper_plan=on`, the reserve upstream's costs were) gave the Stone Age at
+34-49 on four seeds: no better. The fix (f7): the food target capped at the claimed patches' places plus the game, the claims growing while the
+places are short.
+
+**f7.** The income shares of the epoch, military and navy accounts were accumulated a step at a time with an integer
+division that truncates to 0 under 150 income a minute: the military account never grew past its start share in any
+bench so far (`mil=240/225/240/30/30` in every trace), and next_epoch's account filled only on spikes - f6's
+bimodality. With the fractions carried, the forage places capping the food gatherers (the excess to wood, stone,
+gold, iron by the plan's floors; f7 also counted the wild food as places x a bush's food, reverted to upstream's
+amounts afterwards since it never bound): 14 / 16 games reach the Stone
+Age against the improved classic (at 53 minutes), 15 / 16 against boom, 8 / 16 against the cheating classic (3 wiped
+out before 40 minutes, 5 alive in the Prehistoric at 120); W/L/C 0/10/6, 2/11/3, 1/2/13 against c10's 0/13/3, 2/11/3,
+6/2/8; the end citizens against the classic [0 x7, 10, 20, 37, 104, 125, 129, 165, 167, 169]. The Stone Age at
+48-57 minutes is next_epoch's own pace on these maps: 40% of a places-capped income of 60-100 a minute is 25-40 a
+minute into the account from minute 18, and the military account now takes its 40% as upstream's does. The wild-food
+clause does not bind on Small (the sites' amounts stay above the epoch's 1,122 less the account + 500 while the
+places run out); more patches claimed while the places are short (up to 8 before farms) is the port's stand-in for
+upstream's search farther out.
+
+**f8.** The food target's cap at the places had also capped the claims' want (a circular rule): with the claims
+growing on the uncapped want the patches go to 25 places by minute 30 (19 before), the account to 838 food at 45
+minutes (513), and the Stone Age comes in 16 / 16 games against the improved classic (at 48.5 minutes; W/L/C
+0/11/5 for c10's 0/13/3, the end citizens [0 x6, 4, 34, 47, 59, 78, 98, 128, 139, 140, 181]), 15 / 16 against boom
+(2/2/12 for 6/2/8: the same losses, fewer wins, 148 citizens at the end against boom's 108), 9 / 16 against the
+cheating classic (2/9/5 for 2/11/3; 5 games wiped out before the Stone Age could come, the end citizens [0 x5, 5,
+14, 16, 22, 33, 37, 43, 47, 83, 132, 145]). What stands between f8 and the classic's 174 citizens at the end is the
+Stone Age at 48 against 26 - next_epoch's 40% of a places-bound income - and the losses to the waves after.
+
+**Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
+build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream
+with their reason: the copper plan's brake (`next_epoch`), the raid answer's ratio and cooldown, the Bronze reserve
+against the waves.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

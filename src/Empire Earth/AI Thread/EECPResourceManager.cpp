@@ -2915,8 +2915,8 @@ void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigne
     // running costs more work than it saves lives (docs/AI_RESEARCH.md §8.22)
     if (inAttacker == 0 || inAttacker >= gWorld.mNumPlayers || gWorld.mPlayers[inAttacker] == NULL)
         return;
-    if (EECPMilitiaOn(inManager->mManager->mPlayer)) {
-        EECPRMMilitia(inManager, inCitizen, inAttacker);
+    if (EECPMilitiaOn(inManager->mManager->mPlayer) && EECPUnitsReflexOn(inManager->mManager->mPlayer, "militia")) {
+        EECPRMMilitia(inManager, inCitizen, inAttacker);   // (ai.reflex{militia = false}: a script's own militia instead)
         return;
     }
     if (!gWorld.mPlayers[inAttacker]->IsHuman() && !EECPExperiment(inManager->mManager->mPlayer, "flee"))

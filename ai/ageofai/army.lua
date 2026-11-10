@@ -156,18 +156,16 @@ local function train(view, memory, mem, order, budget)
     mem.train_t = view.time
     local e = view.epoch
     local target = 6 + S.home_guard * e
-    local room = view.population_cap * (100 - S.citizen_share) // 100 * S.home_guard_share // 100
-    if e >= 1 then
-        target = math.max(target, room)
+    -- defence.c home_guard: max(6 + 4 x epoch, home_guard_share x military room); the room from the cap upstream's
+    -- unit_limit means (the game's cap that follows the human's population, about 166 in its games): here the
+    -- lobby's limit (400) stands in the view, so the cap is home_guard_cap at least and the own population when
+    -- larger, never above the lobby's (ENGINE: see settings.lua)
+    local cap = math.min(view.population_cap, math.max(S.home_guard_cap, view.population))
+    local room = cap * (100 - S.citizen_share) // 100 * S.home_guard_share // 100
+    target = math.max(target, room)
+    if memory.eco ~= nil and memory.eco.recovering and view.threat_strength == 0 then
+        return nil   -- RECOVERY: no soldiers unless enemy soldiers are in the base
     end
-    -- the strongest enemy army seen in the last five minutes asks for more (the scout's news; the threat at the town)
-    local seen = 0
-    for _, en in ipairs(view.enemies or {}) do
-        if en.last_seen > 0 and view.time - en.last_seen <= 300000 and en.seen_army > seen then
-            seen = en.seen_army
-        end
-    end
-    target = math.max(target, seen * 2 // 3 + 2)
     if S.early_army and e == 0 then
         -- the first epoch's soldiers only once enemy soldiers have shown up (the threats seen, or a raid answered):
         -- a quiet map keeps the owner's opening, a raided one gets upstream's alternative
@@ -487,46 +485,57 @@ local function force_step(view, memory, mem, order)
         force.way_t = now
         return
     end
-    -- at home: a raid answered (an enemy band at an own building within reach)
-    if now - (mem.raid_t or 0) >= 4000 then
+    -- at home: a raid answered (armies.c: every AR_RAID_EVERY with AR_MIN_RAID soldiers, the raider nearest home with
+    -- a band of ar_raid_band enemy fighters within ar_raid_r of an own building, or one hitting ours, seen there twice
+    -- running (within AR_RAID_SAME of the last look); the force goes when it beats the enemy there by raid_answer)
+    if now - (mem.raid_t or 0) >= 4000 and #force.units >= 3 then
         mem.raid_t = now
         local raiders = ai.seen{enemy = true, armed = true, category = "soldier", near = {hx, hy, S.ar_raid_reach}}
+        local rx, ry, rn, rplayer, rd = nil, nil, 0, 0, nil
         if #raiders > 0 then
             local cols = ai.get(raiders, {"x", "y", "player"})
-            local sx, sy, n, player, hitting = 0, 0, 0, 0, false
             for k = 1, #raiders do
                 local x, y = cols.x[k], cols.y[k]
                 if x ~= nil then
-                    local own_b = ai.units{category = "building", near = {x, y, S.ar_raid_r}, limit = 1}
-                    if #own_b > 0 then
-                        sx, sy, n = sx + x, sy + y, n + 1
-                        player = cols.player[k]
-                        hitting = hitting or (mem.hit_by[raiders[k]] == true)
+                    local d = d2(x, y, hx, hy)
+                    if rd == nil or d < rd then
+                        local own_b = ai.units{category = "building", near = {x, y, S.ar_raid_r}, limit = 1}
+                        if #own_b > 0 then
+                            local band = ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, S.ar_raid_r}}
+                            local hitting = false
+                            for _, id in ipairs(band) do
+                                hitting = hitting or (mem.hit_by[id] == true)
+                            end
+                            if #band >= S.ar_raid_band or hitting then
+                                rx, ry, rn, rplayer, rd = x, y, #band, cols.player[k], d
+                            end
+                        end
                     end
                 end
             end
-            if n >= S.ar_raid_band or (n > 0 and hitting) then
-                local rx, ry = sx // n, sy // n
-                local foe_there = enemy_at(rx, ry, 12)
-                local cooled = mem.raid_cool == nil or now >= mem.raid_cool or d2(rx, ry, mem.raid_cx or -99, mem.raid_cy or -99) > 15 * 15
-                local far = d2(rx, ry, hx, hy) > 30 * 30
-                if cooled and own * 100 >= foe_there * 130 and (not far or n >= 5)
-                        and (d2(rx, ry, hx, hy) > (S.ar_home_r + 2) * (S.ar_home_r + 2) or n >= S.ar_raid_band) then
-                    force.task = "attack"
-                    force.target = player
-                    force.x, force.y = rx, ry
-                    force.way_t = 0
-                    force.aims = {}
-                    mem.out = true
-                    mem.raid_x, mem.raid_y = rx, ry
-                    mem.out_hp = force_hp(force)
-                    mem.losing = 0
-                    mem.raids = (mem.raids or 0) + 1
-                    print(string.format("force raid_answer at=%d,%d n=%d own=%d foe=%d", rx, ry, n, own, foe_there))
-                    ai.move(force.units, rx, ry, {forced = false, formation = true})
-                    force.way_t = now
-                    return
-                end
+        end
+        local again = rx ~= nil and (mem.raid_c_t or 0) > 0 and now - mem.raid_c_t <= 8000
+            and d2(rx, ry, mem.raid_cx or -1000, mem.raid_cy or -1000) <= 10 * 10
+        mem.raid_cx, mem.raid_cy = rx or -1000, ry or -1000
+        mem.raid_c_t = rx ~= nil and now or 0
+        if again then
+            local foe_there = enemy_at(rx, ry, 12)
+            local need = math.max(S.ar_back_pct, S.raid_answer)
+            if own * 100 >= foe_there * need then
+                force.task = "attack"
+                force.target = rplayer
+                force.x, force.y = rx, ry
+                force.way_t = 0
+                force.aims = {}
+                mem.out = true
+                mem.raid_x, mem.raid_y = rx, ry
+                mem.out_hp = force_hp(force)
+                mem.losing = 0
+                mem.raids = (mem.raids or 0) + 1
+                print(string.format("force raid_answer at=%d,%d n=%d own=%d foe=%d", rx, ry, rn, own, foe_there))
+                ai.move(force.units, rx, ry, {forced = false, formation = true})
+                force.way_t = now
+                return
             end
         end
     end

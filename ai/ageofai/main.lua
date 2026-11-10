@@ -13,14 +13,19 @@ local TW = require("ageofai.towns")   -- [towns.c, expand.c]
 local DP = require("ageofai.diplo")   -- [diplo.c]
 local AIR = require("ageofai.air")   -- [airstrike.c]
 local W = require("ageofai.walls")   -- [defence.c walls, enclose]
+local SF = require("ageofai.safety")   -- [attack.c citizens_safety]
 local FR = require("ageofai.fronts")   -- [fronts.c]
 local MT = require("ageofai.metal")   -- [metal.c]
 local V = require("lib.view")
+local S = require("ageofai.settings")
 
 local M = {}
 
 function M.init(view, memory)
     memory.started = view.time
+    if S.citizen_militia and ai.reflex ~= nil then
+        ai.reflex{militia = false}   -- [defence.c citizen_militia] the script's militia instead of the engine's reflex
+    end
     print(string.format("ageofai init epoch=%d cap=%d town=%d,%d", view.epoch, view.population_cap, view.town_x, view.town_y))
     return {}
 end
@@ -35,6 +40,7 @@ function M.step(view, memory)
     end
     memory.hits = {}
     memory.epoch_now = view.epoch
+    memory.town_x, memory.town_y = view.town_x, view.town_y   -- the micro modules' town (no view there)
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
@@ -56,12 +62,13 @@ function M.step(view, memory)
     AIR.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
-        print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d",
+        print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d wild=%d places=%d acc=%d",
             view.epoch, tostring(budget.saving), view.citizens, budget.citizens_wanted or 0, view.army_count, view.army_strength,
             E.tower_count(view), t.food or 0, t.wood or 0, t.stone or 0, t.gold or 0, t.iron or 0, view.stock.food, view.stock.wood,
             view.stock.stone, view.stock.gold, view.stock.iron, view.income.food, view.income.wood, view.income.stone,
             view.income.gold, view.income.iron, view.next_epoch_cost.food, view.next_epoch_cost.wood,
-            view.next_epoch_cost.stone, view.next_epoch_cost.gold, view.next_epoch_cost.iron, view.sol_missing))
+            view.next_epoch_cost.stone, view.next_epoch_cost.gold, view.next_epoch_cost.iron, view.sol_missing,
+            memory.eco.wild_food or -1, memory.eco.food_places or -1, (memory.eco.epoch_acc or {}).food or -1))
     end
     return orders
 end
@@ -76,8 +83,13 @@ function M.micro(info, memory)
         end
     end
     memory.army = memory.army or {}
+    -- [attack.c citizens_safety] the hurt spots from the hits, the citizens sent back or fled every 4 s
+    memory.safety = memory.safety or {}
+    SF.note(memory.safety, events, info.time)
+    SF.step(memory.safety, memory, info.time)
     T.counterfire(memory.army, events, info.time)
-    T.bait(memory.army, events, info.time, memory.epoch_now)
+    T.militia(memory.army, events, info.time, memory.epoch_now)   -- [defence.c citizen_militia]
+    T.bait(memory.army, events, info.time, memory.epoch_now, memory.town_x, memory.town_y)
     T.shelter(memory.army, events, info.time)
     return nil
 end

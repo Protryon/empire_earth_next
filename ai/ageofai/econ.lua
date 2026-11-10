@@ -93,43 +93,94 @@ end
 function M.reserve(view, mem)
     local r = {}
     local saving = false
-    if mem.saving_epoch ~= view.epoch then
-        mem.saving_epoch = view.epoch
-        mem.saving_on = false
+    -- RECOVERY (econ.c recovering): from the Copper Age, while the workforce is under min_workforce (5 of slack
+    -- once on), once it had min_workforce + 5 or from minute 30
+    if S.recover_economy and view.epoch >= FARM_EPOCH then
+        if view.citizens >= S.min_workforce + 5 then
+            mem.had_economy = true
+        end
+        local on = mem.recovering and view.citizens < S.min_workforce + 5 or view.citizens < S.min_workforce
+        if not mem.had_economy and view.time < 1800000 then
+            on = false
+        end
+        if (on or false) ~= (mem.recovering or false) then
+            print(string.format("recovery %s workforce=%d min=%d", on and "the economy first" or "over", view.citizens, S.min_workforce))
+        end
+        mem.recovering = on or nil
+    else
+        mem.recovering = nil
     end
+    local both = false
     if view.epoch < view.last_epoch and not view.advancing then
-        local age = view.time - view.epoch_start
         if view.epoch < FARM_EPOCH then
-            -- the copper plan: the economy first, then the saving; the Stone Age grows to stone_workforce first (a
-            -- deviation: upstream holds both epochs' costs from min_workforce on, which its own measurements call
-            -- the most harmful brake; the owner's build order grows to about 64 in the Stone Age)
-            local at = view.epoch == 0 and S.min_workforce or S.stone_workforce
-            saving = view.citizens >= at or age >= 18 * 60000
-            mem.peak = math.max(mem.peak or 0, view.citizens)
-            if view.citizens * 100 < (mem.peak or 0) * S.recover_share and view.citizens < at then
-                saving = false   -- the economy lost citizens: it grows again before it saves (recover_economy)
-            end
-            if view.income.food < 60 and view.citizens < at and view.stock.food < view.next_epoch_cost.food then
-                saving = false   -- no food coming in: saving starves the town (the raided patches); the citizens first
-            end
+            -- COPPER PLAN (copper_plan=on): from min_workforce on the full remaining cost of the Copper Age (both
+            -- epochs' costs in the first) is reserved against military spending; below it the citizens ignore the
+            -- reserve (the economy first) and no early advance
+            saving = view.citizens >= S.min_workforce
+            both = view.epoch == 0 and S.copper_plan ~= "next_epoch"   -- next_epoch: only the next epoch's cost
         elseif S.epoch_pacing == "rush" then
-            saving = age >= 5 * 60000
+            saving = true
         else
+            -- the timer (epoch_min..max minutes from the epoch's start); "independent": the game's catch-up when
+            -- another player is ahead (EEComputerPlayer::CatchUpEpoch's 1..12 minutes x Hard's 70%) - no human here
+            if S.epoch_pacing == "independent" then
+                local ahead = false
+                for _, en in ipairs(view.enemies or {}) do
+                    if (en.epoch or 0) > view.epoch then
+                        ahead = true
+                    end
+                end
+                if ahead and (mem.catch_epoch or -1) ~= view.epoch then
+                    mem.catch_epoch = view.epoch
+                    local at = view.time + (S.catch_up_min + ai.random(0, S.catch_up_max - S.catch_up_min)) * 60000
+                    if (mem.epoch_at or 0) > at then
+                        mem.epoch_at = at
+                        print(string.format("epoch catch_up at=%d", at // 60000))
+                    end
+                end
+            end
             local at = (mem.epoch_at or 0)
             saving = view.time >= at - S.reserve_window_min * 60000
         end
-        -- hysteresis: the saving, once started, goes on until the epoch is paid (seed 2 flipped it every few
-        -- minutes round min_workforce and never reached the Stone Age's 1122 food in 50 minutes); the recovery
-        -- rules above still stop it
-        if saving then
-            mem.saving_on = true
-        elseif mem.saving_on and view.epoch < FARM_EPOCH and view.citizens * 100 >= (mem.peak or 0) * S.recover_share
-                and view.income.food >= 60 then
-            saving = true
-        end
     end
     for _, k in ipairs(V.resources) do
-        r[k] = saving and view.next_epoch_cost[k] or 0
+        r[k] = saving and (view.next_epoch_cost[k] + (both and (view.epoch2_cost or {})[k] or 0)) or 0
+    end
+    -- copper_reserve_pct: the early epochs' reserve scaled to what upstream's costs were (850 food for the Stone Age
+    -- against our 1,122; 750 / 400 / 400 for the Copper Age against 1,584 / 844 / 844): the reserve the workers
+    -- gather for and the army leaves alone is upstream's, the advance still waits for the whole cost (0: off)
+    if view.epoch < FARM_EPOCH and S.copper_reserve_pct ~= nil and S.copper_reserve_pct[view.epoch + 1] ~= nil then
+        local pct = S.copper_reserve_pct[view.epoch + 1]
+        local pct2 = S.copper_reserve_pct[view.epoch + 2] or pct
+        for _, k in ipairs(V.resources) do
+            r[k] = saving and (view.next_epoch_cost[k] * pct // 100 + (both and (view.epoch2_cost or {})[k] * pct2 // 100 or 0)) or 0
+        end
+    end
+    -- copper_plan=next_epoch (econ.c hook_add_resource): from min_workforce on, epoch_share of the income goes into
+    -- the epoch account until it holds the next epoch's cost; the citizens spend the rest and never wait for the
+    -- epoch (the account is out of their reach: the civil budget and the engine's reserve below); the army sees
+    -- the whole cost held as before
+    if S.copper_plan == "next_epoch" and view.epoch < FARM_EPOCH then
+        if mem.acc_epoch ~= view.epoch then
+            mem.acc_epoch = view.epoch
+            mem.epoch_acc = {}
+        end
+        mem.epoch_acc = mem.epoch_acc or {}
+        local dt = math.max(view.time - (mem.acc_t or view.time), 0)
+        mem.acc_t = view.time
+        for _, k in ipairs(V.resources) do
+            local acc = mem.epoch_acc[k] or 0
+            if saving and dt > 0 and dt <= 5000 then
+                -- the fraction carried (a step's share of a minute's income is under 1: it truncated to 0 before)
+                mem.acc_frac = mem.acc_frac or {}
+                local f = (mem.acc_frac[k] or 0) + view.income[k] * dt * S.epoch_share
+                acc = acc + f // (60000 * 100)
+                mem.acc_frac[k] = f % (60000 * 100)
+            end
+            mem.epoch_acc[k] = math.min(acc, view.next_epoch_cost[k])
+        end
+    else
+        mem.epoch_acc = nil
     end
     if saving and view.epoch >= FARM_EPOCH then
         -- reserve_plan (econ.c spend_reserve): food is renewable from farms, so each resource keeps only what its
@@ -176,7 +227,12 @@ function M.accounts(view, mem, reserve, reserve_civ)
     mem.mil_t = view.time
     if dt > 0 and dt <= 5000 then
         for _, r in ipairs(V.resources) do
-            mil[r] = (mil[r] or 0) + view.income[r] * dt * share // (60000 * 100)
+            -- the fraction carried (a step's share of a minute's income is under 1: it truncated to 0 before, so the
+            -- account never grew past its start share)
+            mem.mil_frac = mem.mil_frac or {}
+            local f = (mem.mil_frac[r] or 0) + view.income[r] * dt * share
+            mil[r] = (mil[r] or 0) + f // (60000 * 100)
+            mem.mil_frac[r] = f % (60000 * 100)
         end
     end
     local avail, civil = {}, {}
@@ -275,6 +331,9 @@ function M.workers(view, mem, reserve, wants)
     -- the fields: at least their farmers (fields + 2) when the plan has them
     local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
+    if late and mem.recovering then
+        floor_food = total * 2 // 3   -- RECOVERY: two thirds on food, the fields filled
+    end
     mem.food_floor = floor_food   -- [metal.c] MIX keeps it (citizen_plan's FEED)
     while target.food < floor_food do
         local from = nil
@@ -288,6 +347,35 @@ function M.workers(view, mem, reserve, wants)
         end
         target[from] = target[from] - 1
         target.food = target.food + 1
+    end
+    -- before farms the food gatherers are capped by the places the gather verb can fill (the base game's 6 to a
+    -- bush, the same cap upstream's food_bush honours; a gatherer sent beyond the room queues and is wasted - the
+    -- wood piled up while the food income stood at 0): the claimed food sites' places plus the game near home. A
+    -- port rule, not upstream's: upstream's game sent the rest to bushes farther out and to the hunt (food_plan
+    -- NEAR, HUNT), which the claims stand in for (more patches and a wider claim while the places are short).
+    -- The excess goes to wood, stone, gold and iron by the plan's floors
+    if not late then
+        local places = 0
+        for _, st in ipairs(view.sites) do
+            if st.claimed and st.resource == "food" and st.units > 0 then
+                places = places + st.capacity
+            end
+        end
+        places = places + math.min(view.hunt or 0, 6)
+        mem.food_places = places
+        mem.food_want_raw = target.food   -- the claims grow on the uncapped want (more patches, a wider claim)
+        local excess = target.food - places
+        if excess > 0 then
+            target.food = places
+            local shares = {wood = 20, stone = 6, gold = 37, iron = 37}
+            local given = 0
+            for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+                local n = excess * shares[r] // 100
+                target[r] = target[r] + n
+                given = given + n
+            end
+            target.gold = target.gold + (excess - given)
+        end
     end
     -- from farms: the mines' places near the drop sites get their workers from food beyond its floor and wood beyond
     -- its need (citizen_plan GOAL)
@@ -315,11 +403,14 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- Sites: the claims (what the finders may send gatherers to), the drop sites
 
-local function nearest_free(view, resource, patch, range)
+local SF = require("ageofai.safety")   -- [attack.c citizens_safety] the sites in danger by the hurt spots
+
+local function nearest_free(view, resource, patch, range, mem)
     local best = nil
     for _, s in ipairs(view.sites) do
         if not (s.claimed or s.resource ~= resource or s.units == 0 or s.danger > 0 or (patch and not s.patch)
-                or s.distance > range or s.blocked == "tower" or s.blocked == "enemy_near") then
+                or s.distance > range or s.blocked == "tower" or s.blocked == "enemy_near"
+                or (mem ~= nil and SF.site_dangerous(mem, s.x, s.y, view.time))) then
             -- the start resources by the town first (home), then the nearest
             if best == nil or (s.home and not best.home) or (s.home == best.home and s.distance < best.distance) then
                 best = s
@@ -344,17 +435,18 @@ end
 local function claims(view, mem, target, order)
     local range = view.claim_range
     local patches, patch_room = claimed(view, "food", true)
-    local free_patch = nearest_free(view, "food", true, range)
+    local free_patch = nearest_free(view, "food", true, range, mem)
     -- forage patches with room for the food gatherers (two at least, four at most); the claim grows when none is
     -- left in it; the food gatherers hunt when no patch is left at all (the game near home first: food_plan HUNT)
     local most = view.epoch == 0 and 3 or 5
     -- a deviation (food.c has no patch cap: upstream's citizens take the engine's nearest food): the Prehistoric
     -- workforce of min_workforce outgrows three patches' places (seed 2 against classic: 18 places for 32 food
     -- gatherers wanted, the claim never grew in 50 minutes), so the cap lifts while the patches' room is short
-    if view.epoch == 0 and patch_room < target.food - view.gatherers.food then
-        most = 5
+    local food_want = math.max(mem.food_want_raw or 0, target.food)
+    if view.epoch < 2 and patch_room < food_want - view.gatherers.food then
+        most = 8   -- the places short of the food gatherers wanted: more patches (upstream's "forage farther out")
     end
-    if patches < 2 or (patches < most and patch_room < target.food - view.gatherers.food + 2) then
+    if patches < 2 or (patches < most and patch_room < food_want - view.gatherers.food + 2) then
         if free_patch then
             order({verb = "claim", site = free_patch.index})
         elseif range < view.claim_range_max then
@@ -374,7 +466,7 @@ local function claims(view, mem, target, order)
                 mem.range_t = view.time
             end
             if n == 0 or (room <= 0 and n < (late and 5 or 3)) then
-                local site = nearest_free(view, r, false, range)
+                local site = nearest_free(view, r, false, range, mem)
                 if site then
                     order({verb = "claim", site = site.index})
                 elseif range < view.claim_range_max and n == 0 then
@@ -383,9 +475,10 @@ local function claims(view, mem, target, order)
             end
         end
     end
-    -- a claimed site with nothing left, or blocked for good, is released
+    -- a claimed site with nothing left, or blocked for good, or in danger by the hurt spots (citizens_safety: the
+    -- searches refuse it; claimed again once the spots are gone), is released
     for _, s in ipairs(view.sites) do
-        if s.claimed and (s.units == 0 or s.blocked == "tower") then
+        if s.claimed and (s.units == 0 or s.blocked == "tower" or SF.site_dangerous(mem, s.x, s.y, view.time)) then
             order({verb = "release", site = s.index})
         end
     end
@@ -1056,9 +1149,9 @@ local function citizens_wanted(view, target)
     local cap = view.population_cap
     local game = cap * S.citizen_share // 100
     if view.epoch < FARM_EPOCH then
-        -- the copper plan caps the workforce at min_workforce before the saving; the Stone Age grows further (the
-        -- owner's build order: about 32 in the Prehistoric, 64 in the Stone Age)
-        return math.min(game, view.epoch == 0 and S.min_workforce or S.min_workforce + 30)
+        -- before farms the game's own citizens wanted (citizens.c cz_targets runs from the Copper Age); min_workforce
+        -- is no cap: from it on the reserve holds the epochs' food and the citizens wait on what is left
+        return game
     end
     local places = 0
     for _, s in ipairs(view.sites) do
@@ -1095,7 +1188,32 @@ function M.step(view, memory, orders, army)
     for _, r in ipairs(V.resources) do
         hold_mil[r] = hold_mil[r] + apart_mil[r]
     end
-    local avail, civil = M.accounts(view, mem, hold_mil, reserve)
+    -- copper_plan=next_epoch before farms: a citizen's hold is the epoch account, not the epoch's cost
+    local reserve_civ = reserve
+    if mem.epoch_acc ~= nil then
+        reserve_civ = {}
+        for _, r in ipairs(V.resources) do
+            reserve_civ[r] = math.max(reserve[r] - epoch_reserve[r] + (mem.epoch_acc[r] or 0), 0)
+        end
+        -- unless the map's food runs out (econ.c): wild food is all there is before farms - the food sites within
+        -- site_max_distance x wild_food_share short of the epoch's food less the account + 500 - then the epoch's
+        -- food first, as the plan always did
+        -- (econ.c wild_food: the explored forage sites' amounts within site_max_distance, the room not counted -
+        -- the game's bush cap of 6 gatherers is the base game's, the same for both; where the food gatherers can
+        -- stand is the claims' business)
+        local wild = 0
+        for _, st in ipairs(view.sites) do
+            if st.resource == "food" and st.units > 0 and st.distance <= S.site_max_distance then
+                wild = wild + (st.amount or 0)
+            end
+        end
+        wild = wild * S.wild_food_share // 100
+        mem.wild_food = wild
+        if wild < view.next_epoch_cost.food - (mem.epoch_acc.food or 0) + 500 then
+            reserve_civ.food = reserve.food
+        end
+    end
+    local avail, civil = M.accounts(view, mem, hold_mil, reserve_civ)
     local order_vis = P.visible(view, memory, P.S_MIL | P.S_ORDER)
     local ship_vis = P.visible(view, memory, P.S_MIL | P.S_SHIP)
     local build_vis = P.visible(view, memory, P.S_BUILD)
@@ -1108,7 +1226,8 @@ function M.step(view, memory, orders, army)
     local engine = {}
     for _, r in ipairs(V.resources) do
         local towns = (mem.towns_reserve ~= nil and mem.towns_reserve[r] or 0) + (mem.expand_hold ~= nil and mem.expand_hold[r] or 0)
-        engine[r] = math.max(epoch_reserve[r] + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
+        local ep = mem.epoch_acc ~= nil and (mem.epoch_acc[r] or 0) or epoch_reserve[r]   -- next_epoch: the account
+        engine[r] = math.max(ep + towns - (mem.navy_hold ~= nil and mem.navy_hold[r] or 0), 0)
     end
     local differs = false
     for _, r in ipairs(V.resources) do
@@ -1134,7 +1253,7 @@ function M.step(view, memory, orders, army)
         for _, r in ipairs(V.resources) do
             paid = paid and view.stock[r] >= view.next_epoch_cost[r]
         end
-        local timer_ok = S.epoch_pacing == "rush" or view.time >= (mem.epoch_at or 0)
+        local timer_ok = S.epoch_pacing == "rush" or view.epoch < FARM_EPOCH or view.time >= (mem.epoch_at or 0)
         if paid and timer_ok then
             order({verb = "advance"})
         end
@@ -1150,8 +1269,9 @@ function M.step(view, memory, orders, army)
     local making = citizen and citizen.in_production or 0
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting
+    local cit_food = mem.recovering and view.stock.food or civil.food   -- RECOVERY: the whole stock for citizens
     if citizen and waiting == 0 and making < 2 * citizen.producers and planned < want_citizens
-            and view.population < view.population_cap and not view.advancing and civil.food >= citizen.cost.food then
+            and view.population < view.population_cap and not view.advancing and cit_food >= citizen.cost.food then
         order({verb = "train", type = "citizen", n = math.min(want_citizens - planned, 2)})
     end
 

@@ -8,18 +8,36 @@ return {
     military_income_share_farms = 65,   -- ... and from the Copper Age on
     hoard_cap = 3000,               -- stock above the reserve + this is free for the army too (food, wood)
     hoard_cap_mineral = 200,        -- ... stone, gold, iron
-    min_workforce = 34,             -- the citizens before the epoch is saved for (the copper plan). DEVIATION: 40
-                                    -- upstream; the owner's own build order saves from 32 (docs/AI_RESEARCH §8.37)
-    stone_workforce = 60,           -- DEVIATION: the Stone Age's workforce before the Copper Age is saved for
+    min_workforce = 40,             -- the citizens before the early epochs are saved for (the copper plan; below it
+                                    -- the citizens ignore the reserve and there is no early advance)
+    -- copper_plan: "on" holds both early epochs' costs from min_workforce on; "next_epoch" (upstream's own option,
+    -- the one its notes recommend) holds the next epoch's only and puts epoch_share of the income into an epoch
+    -- account the citizens never touch. DEVIATION (forced by the epoch costs): "on" shipped, but our Copper Age
+    -- costs 1,584 food / 844 gold / 844 iron after the variant's factor where upstream quotes 750 / 400 / 400, so
+    -- "on" sent half the Prehistoric workers to gold and iron and put the Stone Age back 10-15 minutes (8.38)
+    copper_plan = "next_epoch",
+    epoch_share = 40,               -- percent of the income into the epoch account (copper_plan=next_epoch)
+    copper_reserve_pct = nil,       -- the alternative for the epoch costs (8.38): {76, 47} holds, in the first two
+                                    -- epochs, the reserve upstream's costs were (850 of our 1,122; 750 / 400 / 400 of
+                                    -- our 1,584 / 844 / 844) with copper_plan = "on"; nil: the whole cost
+    site_max_distance = 20,         -- tiles from the base within which the wild food (berries) counts before farms
+    wild_food_share = 60,           -- percent of it the budget counts on (the rest walks, rots or goes to others)
+                                    -- (the sites' amounts, as upstream counts them). The food gatherers before farms
+                                    -- are capped at the claimed patches' places (the base game's 6 to a bush, the
+                                    -- same for upstream; a gatherer beyond the room queues and is wasted), and the
+                                    -- claims grow while the places are short - a port rule for upstream's game
+                                    -- search that forages farther out
     mineral_worker_margin = 300,    -- the minerals' demand beyond the reserve the workers follow at most
-    food_floor = 24,                -- citizens on food at least before farms (food_share of the workers at most)
-    food_share = 60,                -- DEVIATION (half upstream): percent of the workers on food at least before farms
+    food_floor = 18,                -- citizens on food at least before farms (food_share of the workers at most)
+    food_share = 50,                -- percent of the workers on food at least before farms (half, up to food_floor)
     reserve_window_min = 5,         -- from farms: the reserve grows to the epoch's cost over these minutes
-    -- epoch pacing: upstream "independent" (the timer, 50-70 minutes an epoch; a human's advance pulls the AIs
-    -- behind along). DEVIATION: "rush", as soon as the epoch is paid (our games are 45 minutes long, the owner
-    -- expects the port to beat boom's epoch pace); "timer" plays upstream's pacing
-    epoch_pacing = "rush",
+    -- epoch pacing: upstream "independent": the first two epochs as soon as they are paid (the copper plan), from
+    -- the Copper Age the timer (50-70 minutes an epoch) with the game's catch-up when another player is ahead (an
+    -- attempt catch_up_min..max minutes from now; no human here, so the human follow never applies); "rush" = as
+    -- soon as paid in every epoch, "timer" = the timer without the catch-up
+    epoch_pacing = "independent",
     epoch_min = 50, epoch_max = 70, -- minutes an epoch (timer pacing)
+    catch_up_min = 1, catch_up_max = 8,   -- the game's epoch_catch_up row (1..12 minutes, Hard's modifier 70%)
     -- the early game (early.c)
     early_towers = true,            -- two towers by the town centre in the first two epochs
     direct_granary = true,          -- a granary through ai.build where the town's rings are full (an island town)
@@ -28,18 +46,13 @@ return {
     bunkers = true,                 -- a Fortress by the drop site nearest the base from the Copper Age once citizens
                                     -- were hurt three times in two minutes; the citizens hit shelter in it (bunker.c)
     tower_bait = true,              -- a citizen hit by a raider walks behind the nearest tower ...
-    tower_bait_epoch = 2,           -- ... up to this epoch (upstream: up to the Bronze Age; every citizen near the
-                                    -- raider in every epoch lost 4 of 16 games at 90 minutes: the economy stood still)
+    tower_bait_epoch = 3,           -- ... up to this epoch (upstream: up to the Bronze Age)
     early_core = 2, early_dist = 4,
-    early_army = true,              -- DEVIATION (off upstream): no home guard in the first epoch, towers and the
-                                    -- militia hold the town (the owner's and upstream's playtester's opening); the
-                                    -- home guard from the Stone Age ...
-    early_soldiers = 4,             -- ... but upstream's alternative once enemy soldiers were seen: this many in the
-                                    -- first epoch from minute 5 (the 90-minute games against classic Hard: a
-                                    -- soldierless town with two towers was raided to death in the Prehistoric; four
-                                    -- from the start cost 2.5 minutes of the Stone Age on quiet maps, AI_RESEARCH 8.37)
-    recover_share = 75,             -- the saving stops while the citizens are under this percent of their most
-                                    -- (recover_economy: a lost economy spends the whole stock on citizens)
+    early_army = false,             -- off: the home guard from the first epoch (early.c's early_army, 0 upstream)
+    early_soldiers = 0,             -- early.c early_soldiers (0 upstream)
+    recover_economy = true,         -- econ.c RECOVERY: from the Copper Age, while the workforce is under
+                                    -- min_workforce, two thirds of the workers on food, the citizens spend the whole
+                                    -- stock, no soldiers unless enemies are in the base
     -- citizens (citizens.c)
     citizen_share = 45,             -- percent of the population cap the game wants as citizens
     citizen_army_share = 40,        -- from farms: the army's share of the cap the citizens' goal leaves
@@ -47,20 +60,26 @@ return {
     -- home guard (defence.c)
     home_guard = 4,                 -- soldiers an epoch (6 + 4 x epoch) ...
     home_guard_share = 35,          -- ... or this percent of the military room (cap x (1 - citizen share))
+    home_guard_cap = 166,           -- ENGINE: upstream's room counts unit_limit, the game's cap that follows the
+                                    -- human's population (about 166 in its games: 0.35 x 166 x 0.55 = 32 soldiers);
+                                    -- the view's cap is the lobby's limit (400: 77 soldiers from the first minute),
+                                    -- so the room counts this cap at least and the own population when larger
     -- muster (defence.c)
     muster = true,
-    muster_enemies = 4, muster_ratio = 130, muster_strike = 130, muster_out = 6,   -- DEVIATION: 8, 200 and 18 upstream:
-                                    -- upstream's hold_town instead (the soldiers weaker than 1.2 x the enemy at the
-                                    -- town pull back 6 tiles behind the base and hold under the towers)
+    muster_enemies = 8, muster_ratio = 200, muster_strike = 130, muster_out = 18,   -- defence.c MUSTER: at least 8
+                                    -- enemies at twice the strength of soldiers and towers; the rally point 18 tiles
+                                    -- beyond the base; the strike at 1.3 x
     -- defences (defence.c)
     defence_distance = 10,          -- the front's tower slots this far from the base
     defence_towers = true,
     defence_walls = true,           -- the wall in front of the towers, straight, with a gate in its middle (walls.lua)
     tower_stone_keep = 100,
-    towers_max_epoch = 3,           -- DEVIATION (a cap upstream has not): 4 + this x epoch towers at most
-    -- attacks (the game's timers upstream, dbcpbehavior: first 20-40 min, then every 20-25)
-    attack_first_min = 20, attack_first_max = 40,
-    attack_interval_min = 20, attack_interval_max = 25,
+    towers_max_epoch = 1000,        -- no cap (upstream has none): 4 + this x epoch towers at most
+    -- attacks: upstream's first_attack / attack_interval 0 = the game's own times, which at Hard are the dbcpbehavior
+    -- rows scaled by the difficulty (EEComputerPlayer::SetNextAttackTime: initial_attack_delay 20-40 minutes x the
+    -- Hard modifier 30% = 6-12, attack_frequency 14-17 x 90% = 13-15; the port plays Hard's)
+    attack_first_min = 6, attack_first_max = 12,
+    attack_interval_min = 13, attack_interval_max = 15,
     -- the force (armies.c)
     ar_min_launch = 8,              -- soldiers a push needs at least
     ar_go_pct = 130,                -- a push: the force beats the enemy at the target by this
@@ -69,10 +88,21 @@ return {
     ar_done = 8,                    -- the destination reached: a member within this of it
     ar_home_r = 10,
     ar_raid_r = 14, ar_raid_reach = 60, ar_raid_band = 3,
+    raid_answer = 100,              -- a raid answered when the force beats the enemy there by this (armies.c raid_answer 1.0)
     ar_route_avoid = 4, ar_route_avoid_lost = 4,   -- ai.route weights (AR_ROUTE_DANGER 40: a threat cell costs 4 cells)
-    ar_bleed_pct = 50,              -- DEVIATION (0 upstream, measured as good on the fight): home once the force has
-                                    -- lost this much of the hit points it went out with
+    ar_bleed_pct = 0,               -- 0 upstream: home once the force has lost this much of the hit points it went
+                                    -- out with (0: never for that)
     fight_memory_ms = 180000,       -- the enemy memory's life for soldiers (ai.config)
+    -- the citizen militia (defence.c CITIZEN MILITIA)
+    citizen_militia = true,         -- the citizens fight builders of a defence near them and, to the Bronze Age, the
+                                    -- attackers of ours, at 3 x the enemies' strength within 6 tiles
+    militia_estimate = false,       -- NOT PORTED (stats.c's estimate instead of hit points x attack; 0 upstream)
+    militia_caught_share = 100,     -- (with militia_estimate only)
+    -- the citizens' safety (attack.c citizens_safety, DAMAGE MEMORY, SEEN HURTS, raid_held)
+    avoid_towers_citizens = true,   -- citizens sent back from raided sites and sites behind known towers
+    citizen_threats = true,         -- the hurt spots: a site within 6 tiles of one (minerals: three) is dangerous for 2 min
+    hurt_seen_short = true,         -- a hurt with an enemy soldier in sight counts 20 s only
+    raid_held = 150,                -- percent: the town holds a raided site when its soldiers and towers there beat the raiders by this
     -- siege (attack.c attack_siege), settlement upgrades (garrison.c), counter-fire (counterfire.c)
     attack_siege = true,
     garrison_upgrades = true, gu_every = 20000, gu_wait = 60000, gu_batch = 10, gu_wood = 5000,
@@ -82,11 +112,7 @@ return {
     -- expand.c, towns.c
     -- expand_islands: the parts as bits (upstream's list: outposts 1, barracks 2, ally_islands 4, early 8,
     -- extra_citizens 16, more_islands 32, forward_outpost 64, hold_sea 128, fort 256, fort_guns 512)
-    expand_islands = 1,             -- DEVIATION (empty = off upstream: measured even against the base AI on the
-                                    -- test maps, one free island at most): outposts on, so the port settles the free
-                                    -- islands at all - the owner's direction that the AI must expand (towns.c SPREAD:
-                                    -- "if the AI can't expand everything else becomes moot"); the other parts off as
-                                    -- upstream has them
+    expand_islands = 0,             -- upstream's default: empty (off); the parts as bits above
     expand_citizens = 8,            -- citizens a trip (3..12)
     expand_guard = 3,               -- land soldiers with them (0..4; 4 at least with hold_sea)
     expand_minute = 8,              -- not before this minute (and the Copper Age)
@@ -110,9 +136,8 @@ return {
     attack_leash = true,            -- no enemy inside known defences as a target unless the goal lies in them too
     attack_breach = true,           -- a known wall on the way: through its segment outside the defences
     attack_ignore_air = true,       -- aircraft beyond range + 3 are no target (lib.groups)
-    attack_retarget = true,         -- DEVIATION (0 upstream): the target out of buildings known, the living enemy
-                                    -- whose building is nearest the force (the port's flow took any enemy's nearest
-                                    -- building before; kept)
+    attack_retarget = false,        -- 0 upstream: the target out of buildings known, the living enemy whose
+                                    -- building is nearest the force
     citizen_attacks = false,        -- not applicable: the force has no citizens (the game's groups took them)
     mine_raids = false,             -- armies.c MINE RAIDS / HIT AND RUN (towns=...|mine_raids, off upstream): the
                                     -- detachments are not ported (attack.c does not use them)
@@ -150,9 +175,8 @@ return {
                                     -- half the strongest enemy's: it gives up. ENGINE GAP: no ai.resign - the
                                     -- decision is traced, the player stays in
     vassal_tribute_every = 3,       -- minutes between a vassal's tributes to its lord ...
-    vassal_tribute_share = 25,      -- ... percent of each resource at most. DEVIATION: upstream's rules pay only the
-                                    -- capitulation's promise; these are the language model's tribute bounds ([llm]
-                                    -- llm_constrained=1: once in 3 minutes, a quarter of each resource) made a rule
+    vassal_tribute_share = 0,       -- ... percent of each resource at most (0: off, as upstream's rules pay only
+                                    -- the capitulation's promise; the 3 minutes / a quarter are the language model's bounds)
     -- stance_lines ("yours"): the game's stance line - not applicable (the trace's `diplo stance` stands in);
     -- [general] auto_victory: the game's own end - not applicable
     -- mass.c, armies.c (detachments), skirmish.c
@@ -213,7 +237,7 @@ return {
                                     -- of the priority list, one at a time, from the Copper Age's research
     front_army = false,             -- fronts.c: the idle soldiers stand at the heaviest fronts between attacks
                                     -- (0 upstream: no gain measured; the port's force is one group, fronts.lua)
-    fronts_log = true,              -- DEVIATION: upstream's [autotest] fronts_log (0) - the fronts' trace line every
+    fronts_log = false,             -- upstream's [autotest] fronts_log (0) - the fronts' trace line every
                                     -- 5 minutes is the port's only view of them
     -- packing.c, spoils.c, forces.c, bunker.c, early.c (leftovers)
     tight_build = true,             -- packing.c: the production buildings packed against their kind near the base

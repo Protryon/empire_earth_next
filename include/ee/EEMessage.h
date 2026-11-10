@@ -241,6 +241,7 @@ public:
 class EEMAddPatrolPoint : public EEMessage {
 public:
     EEMAddPatrolPoint(unsigned char* inData) { this->ImportMessage(inData); }
+    EEMAddPatrolPoint(const GE2DPoint& inPoint) : EEMessage(kMessageAddPatrolPoint, false) { this->mPoint = inPoint; }   // the next AI's ai.patrol
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);

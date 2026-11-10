@@ -61,6 +61,7 @@
 #include "ee/EEUCGate.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECPCivilizationManager.h"
+#include "ee/EETeam.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EEMessageID.h"
@@ -122,6 +123,7 @@ struct EECPUnitsState {
     long mMemoryNext = 0;
     bool mReflexNavalFlee = true;
     bool mReflexDanger = true;
+    bool mReflexMilitia = true;    // the engine's citizen militia (EECPRMMilitia); off when the script fights its own
     bool mUsed = false;                             // a binding was called (the save's shadow step cannot replay commands)
     long mMicroNext = -1;                           // -1: not started; 0x7fffffff: the script has no micro
     long mOrdersThisStep = 0, mUnitOrdersThisStep = 0;
@@ -239,16 +241,16 @@ static bool EECPUnitsIsProjectile(EEUnit* inUnit)
     return k == kUnitCategoryProjectile || k == kUnitCategoryBomb || k == kUnitCategoryMissile || k == kUnitCategoryTorpedo;
 }
 
-static const char* EECPUnitsCategory(EEUnit* inUnit)
+static const char* EECPUnitsCategoryClass(EEUnitClass* c, bool inHasResource)
 {
-    EEUnitClass* c = inUnit->mUnitClass;
-    if (EECPUnitsIsProjectile(inUnit))
+    long k = c->mCategory;
+    if (k == kUnitCategoryProjectile || k == kUnitCategoryBomb || k == kUnitCategoryMissile || k == kUnitCategoryTorpedo)
         return "projectile";
     switch (c->mCategory) {
     case kUnitCategoryLandCitizen: return "citizen";
     case kUnitCategoryNavalCitizen: return "boat";
     case kUnitCategoryResource: return "resource";
-    case kUnitCategoryAmbient: return inUnit->mResourceAmount > 0 ? "resource" : "ambient";
+    case kUnitCategoryAmbient: return inHasResource ? "resource" : "ambient";
     case kUnitCategoryAirplane: case kUnitCategoryHelicopter: return "air";
     case kUnitCategoryNaval: case kUnitCategorySubmergedNaval: return "ship";
     case kUnitCategoryLandTransport: case kUnitCategoryHelicopterTransport: case kUnitCategoryNavalTransport:
@@ -267,6 +269,11 @@ static const char* EECPUnitsCategory(EEUnit* inUnit)
     if (c->GetFamily() == kUnitFamilyAnimal)
         return "animal";
     return "soldier";
+}
+
+static const char* EECPUnitsCategory(EEUnit* inUnit)
+{
+    return EECPUnitsCategoryClass(inUnit->mUnitClass, inUnit->mResourceAmount > 0);
 }
 
 static bool EECPUnitsArmed(EEUnit* inUnit)
@@ -352,6 +359,8 @@ bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName)
         return inPlayer->mUnitsState->mReflexNavalFlee;
     if (strcmp(inName, "danger") == 0)
         return inPlayer->mUnitsState->mReflexDanger;
+    if (strcmp(inName, "militia") == 0)
+        return inPlayer->mUnitsState->mReflexMilitia;
     return true;
 }
 
@@ -750,6 +759,22 @@ static int LuaPlayers(lua_State* L)
         EECPUnitsSetBool(L, "me", theOther == me);
         EECPUnitsSetBool(L, "ally", theOther != me && me->IsAlly(theOther));
         EECPUnitsSetBool(L, "enemy", !me->IsAlly(theOther));
+        EECPUnitsSetBool(L, "hostile", theOther != me && theOther->GetEnemy(me->mPlayerID) != 0);   // their stance towards me
+        // the teams the player is in (EEWorld::AddAlliance: both sides allied): the other players of those teams
+        lua_newtable(L);
+        long na = 0;
+        for (unsigned long t = 0; t < gWorld.mTeams.size(); t++) {
+            if (!gWorld.mTeams[t].ContainsPlayer(theOther->mPlayerID))
+                continue;
+            for (unsigned long k = 0; k < gWorld.mTeams[t].GetNumPlayers(); k++) {
+                unsigned long q = gWorld.mTeams[t].GetPlayersAt(k);
+                if (q != theOther->mPlayerID && q > 0 && q < gWorld.mNumPlayers && gWorld.mPlayers[q] != NULL) {
+                    lua_pushinteger(L, (lua_Integer)q);
+                    lua_rawseti(L, -2, (lua_Integer)++na);
+                }
+            }
+        }
+        lua_setfield(L, -2, "allies");
         EECPUnitsSetBool(L, "alive", theOther->mFirstUnit != NULL);
         EECPUnitsSetBool(L, "human", theOther->IsHuman());
         lua_rawseti(L, -2, (lua_Integer)++n);
@@ -1112,6 +1137,9 @@ static int LuaMemory(lua_State* L)
         if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || (f.mType != -1 && r.mType != f.mType) || r.mSeen < theSince
             || (theBuildings >= 0 && r.mBuilding != theBuildings))
             continue;
+        if (f.mCategory != NULL && (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
+                || strcmp(EECPUnitsCategoryClass(gUnitClassTable[r.mType], false), f.mCategory) != 0))
+            continue;
         long long theKey = 0;
         if (f.mHasNear) {
             long d2 = EECPUnitsD2(r.mX, r.mY, f.mX, f.mY);
@@ -1182,8 +1210,21 @@ static int LuaClass(lua_State* L)
         return 1;
     }
     EEUnitClass* c = gUnitClassTable[theType];
-    lua_createtable(L, 0, 12);
+    lua_createtable(L, 0, 16);
     EECPUnitsSetStr(L, "type", EECPUnitsName(s, theType));
+    EECPUnitsSetStr(L, "category", EECPUnitsCategoryClass(c, false));
+    EECPUnitsSetInt(L, "family", (long)c->GetFamily());
+    {
+        // the cost as the player pays it (the tech's cost scaled; 0 for a class the player's tree has no node for)
+        EETechTreeNode* theNode = me->mTechnologies != NULL ? me->mTechnologies->Get(c->mTechnology) : NULL;
+        lua_newtable(L);
+        static const char* const kNames[5] = {"food", "wood", "stone", "gold", "iron"};
+        for (long i = 0; i < 5; i++) {
+            lua_pushinteger(L, theNode != NULL ? (lua_Integer)me->ScaleCost(theNode->GetCost(kResourceFood + i, kUnitTypeTownCenter, 1.0f)) : 0);
+            lua_setfield(L, -2, kNames[i]);
+        }
+        lua_setfield(L, -2, "cost");
+    }
     EECPUnitsSetBool(L, "building", c->IsBuilding());
     EECPUnitsSetInt(L, "size", c->GetTileSize());
     EECPUnitsSetInt(L, "garrison", c->mGarrisonCapacity);
@@ -1802,7 +1843,7 @@ static int LuaRelease(lua_State* L)
     return EECPUnitsHold(L, false);
 }
 
-// ai.reflex{naval_flee = false, danger = false, memory_ms = 180000}
+// ai.reflex{naval_flee = false, danger = false, militia = false, memory_ms = 180000}
 static int LuaReflex(lua_State* L)
 {
     EECPUnitsCharge(L, kCostCall);
@@ -1810,6 +1851,7 @@ static int LuaReflex(lua_State* L)
     EECPUnitsState* s = EECPUnitsGet(me);
     s->mReflexNavalFlee = EECPUnitsOptBool(L, 1, "naval_flee", s->mReflexNavalFlee);
     s->mReflexDanger = EECPUnitsOptBool(L, 1, "danger", s->mReflexDanger);
+    s->mReflexMilitia = EECPUnitsOptBool(L, 1, "militia", s->mReflexMilitia);
     long theMs;
     if (EECPUnitsOptInt(L, 1, "memory_ms", theMs) && theMs >= 0 && theMs <= 3600000)
         s->mMemoryMs = theMs;
@@ -2868,6 +2910,44 @@ static int LuaGate(lua_State* L)
     return EECPUnitsResult(L, kOK, 1, 0);
 }
 
+// ai.patrol(ids, {{x, y}, ...}): the mobile units patrol through 2..8 points (EEMAddPatrolPoint for each, as the
+// human's patrol clicks: the first makes the patrol goal, the others add points)
+static int LuaPatrol(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    int r;
+    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "patrol", r))
+        return r;
+    if (lua_type(L, 2) != LUA_TTABLE)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    long n = (long)lua_rawlen(L, 2);
+    if (n < 2 || n > 8)
+        return EECPUnitsResult(L, kBadArgument, 0, 0);
+    std::vector<GE2DPoint> thePoints;
+    for (long k = 1; k <= n; k++) {
+        lua_rawgeti(L, 2, k);
+        if (lua_type(L, -1) != LUA_TTABLE) {
+            lua_pop(L, 1);
+            return EECPUnitsResult(L, kBadArgument, 0, 0);
+        }
+        lua_rawgeti(L, -1, 1);
+        lua_rawgeti(L, -2, 2);
+        bool ok = lua_isinteger(L, -2) && lua_isinteger(L, -1);
+        long x = ok ? (long)lua_tointeger(L, -2) : -1, y = ok ? (long)lua_tointeger(L, -1) : -1;
+        lua_pop(L, 3);
+        if (!ok || gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) == NULL)
+            return EECPUnitsResult(L, kBadArgument, 0, 0);
+        thePoints.push_back(GE2DPoint((float)x, (float)y));
+    }
+    for (unsigned long k = 0; k < thePoints.size(); k++) {
+        EEMAddPatrolPoint theMessage(thePoints[k]);
+        EECPUnitsRun(me, s, theMessage, true);
+    }
+    EECPUnitsTraceCmd(me, s, "patrol", kOK, (long)s->mIds2.size(), n, (long)thePoints[0].GetX() * 10000 + (long)thePoints[0].GetY());
+    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
+}
+
 // ai.lock(ids, on): the gates locked or unlocked (their three moving parts)
 static int LuaLock(lua_State* L)
 {
@@ -3010,7 +3090,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
-        {"diplomacy", LuaDiplomacy},
+        {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
         lua_pushlightuserdata(L, inPlayer);

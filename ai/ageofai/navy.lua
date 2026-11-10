@@ -190,7 +190,10 @@ local function account(view, mem)
     if sh > 0 and dt > 0 and dt <= 5000 then
         for _, r in ipairs(NAVY_RES) do
             -- the account in hundredths (a step's share of a minute's income is under 1)
-            mem.acc[r] = math.min(mem.acc[r] + view.income[r] * dt * sh // (60000 * 100), ACC_CAP * 100)
+            mem.acc_frac = mem.acc_frac or {}
+            local f = (mem.acc_frac[r] or 0) + view.income[r] * dt * sh   -- the fraction carried (truncated to 0 a step before)
+            mem.acc_frac[r] = f % (60000 * 100)
+            mem.acc[r] = math.min(mem.acc[r] + f // (60000 * 100), ACC_CAP * 100)
         end
     end
 end
