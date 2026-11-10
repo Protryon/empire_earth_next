@@ -33,6 +33,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
+#include "GERustMath.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -584,89 +585,42 @@ GEBitmap::~GEBitmap()
 
 // FUNCTION: LLE 0x1000fbb9
 // Recomputes the four corner positions from location, frame size, scale and rotation (about the centre)
+// (the corners are Rust: ee_ge bitmap.rs)
 void GEBitmap::ComputeRotation()
 {
-    GE2DPoint theTopLeft;
-    GE2DPoint theTopRight;
-    GE2DPoint theBottomLeft;
-    GE2DPoint theBottomRight;
-    GE2DPoint theCenter;
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    this->mVertices->GetPoint(thePoint0, 0);
-    this->mVertices->GetPoint(thePoint1, 1);
-    this->mVertices->GetPoint(thePoint2, 2);
-    this->mVertices->GetPoint(thePoint3, 3);
-    theTopLeft.SetX(this->mLocation.GetX());
-    theTopLeft.SetY(this->mLocation.GetY());
-    theTopLeft.SetX(theTopLeft.GetX() - 0.5f);
-    theTopLeft.SetY(theTopLeft.GetY() - 0.5f);
-    theTopRight.SetX(this->mXScale * this->mWidth + theTopLeft.GetX());
-    theTopRight.SetY(theTopLeft.GetY());
-    theBottomLeft.SetX(theTopLeft.GetX());
-    theBottomLeft.SetY(this->mYScale * this->mHeight + theTopLeft.GetY());
-    theBottomRight.SetX(theTopRight.GetX());
-    theBottomRight.SetY(theBottomLeft.GetY());
-    if (this->mRotation != 0.0f) {
-        theCenter.SetX((theTopRight.GetX() + theTopLeft.GetX()) * 0.5f);
-        theCenter.SetY((theTopLeft.GetY() + theBottomLeft.GetY()) * 0.5f);
-        theTopLeft.RotatePoint(this->mRotation, theCenter);
-        theTopRight.RotatePoint(this->mRotation, theCenter);
-        theBottomLeft.RotatePoint(this->mRotation, theCenter);
-        theBottomRight.RotatePoint(this->mRotation, theCenter);
+    GE2DPoint theCorners[4];
+    GE3DPoint thePoints[4];
+    ee_ge_bitmap_corners(GERust(this->mLocation), this->mWidth, this->mHeight, this->mXScale, this->mYScale,
+                         this->mRotation, GERust(theCorners[0]));
+    for (int i = 0; i < 4; i++) {
+        this->mVertices->GetPoint(thePoints[i], i);
+        thePoints[i].SetX(theCorners[i].GetX());
+        thePoints[i].SetY(theCorners[i].GetY());
+        this->mVertices->SetPoint(thePoints[i], i);
     }
-    thePoint0.SetX(theTopLeft.GetX());
-    thePoint0.SetY(theTopLeft.GetY());
-    thePoint1.SetX(theTopRight.GetX());
-    thePoint1.SetY(theTopRight.GetY());
-    thePoint2.SetX(theBottomLeft.GetX());
-    thePoint2.SetY(theBottomLeft.GetY());
-    thePoint3.SetX(theBottomRight.GetX());
-    thePoint3.SetY(theBottomRight.GetY());
-    this->mVertices->SetPoint(thePoint0, 0);
-    this->mVertices->SetPoint(thePoint1, 1);
-    this->mVertices->SetPoint(thePoint2, 2);
-    this->mVertices->SetPoint(thePoint3, 3);
 }
 
 // 94.7: the original gives the dead parameter slots +0xc/+8 to theTextureYRange/theDestinationYRange (ours +8/+0x10)
 // and schedules the "+ 1.0f" before the unsigned conversion; the (double) divisors give its `fild qword; fdivp`
 // FUNCTION: LLE 0x1000fda1
 // Maps a source rectangle of the screen's texture onto texture coordinates and sets the matching X/Y scale
+// (the arithmetic is Rust: ee_ge bitmap.rs)
 void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle,
                                               const GERectangle& inSourceRectangle,
                                               const GERectangle& inDestinationRectangle, unsigned long inScreen)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
     GETexture* theTexture = this->mTextures[inScreen];
-    float theTextureWidth = (float)(theTexture->GetWidth() << theTexture->GetNumMipLevelsToDrop());
-    float theTextureHeight = (float)(theTexture->GetHeight() << theTexture->GetNumMipLevelsToDrop());
-    unsigned long theWidth = theTexture->GetWidth();
-    unsigned long theHeight = theTexture->GetHeight();
-    float theTextureXRange = inTextureRectangle.mRight - inTextureRectangle.mLeft + 1.0f;
-    float theDestinationXRange = inDestinationRectangle.mRight - inDestinationRectangle.mLeft;
-    theTopLeft.SetU(((inSourceRectangle.GetLeft() - inTextureRectangle.GetLeft()) / theTextureXRange *
-                     theDestinationXRange + inDestinationRectangle.GetLeft()) / theTextureWidth);
-    float theTextureYRange = inTextureRectangle.mBottom - inTextureRectangle.mTop + 1.0f;
-    float theDestinationYRange = inDestinationRectangle.mBottom - inDestinationRectangle.mTop;
-    theTopLeft.SetV(((inSourceRectangle.GetTop() - inTextureRectangle.GetTop()) / theTextureYRange *
-                     theDestinationYRange + inDestinationRectangle.GetTop()) / theTextureHeight);
-    theBottomRight.SetU(((inSourceRectangle.mRight + 1.0f - inTextureRectangle.GetLeft()) / theTextureXRange *
-                         theDestinationXRange + inDestinationRectangle.GetLeft()) / theTextureWidth);
-    theBottomRight.SetV(((inSourceRectangle.mBottom + 1.0f - inTextureRectangle.GetTop()) / theTextureYRange *
-                         theDestinationYRange + inDestinationRectangle.GetTop()) / theTextureHeight);
-    theTopRight.SetU(theBottomRight.GetU());
-    theBottomLeft.SetU(theTopLeft.GetU());
-    theTopRight.SetV(theTopLeft.GetV());
-    theBottomLeft.SetV(theBottomRight.GetV());
+    EeGeBitmapStretch theStretch;
+    ee_ge_bitmap_stretch(GERust(inTextureRectangle), GERust(inSourceRectangle), GERust(inDestinationRectangle),
+                         theTexture->GetWidth(), theTexture->GetHeight(), theTexture->GetNumMipLevelsToDrop(),
+                         &theStretch);
+    GETextureCoordinate theTopLeft(theStretch.uv[0][0], theStretch.uv[0][1]);
+    GETextureCoordinate theTopRight(theStretch.uv[1][0], theStretch.uv[1][1]);
+    GETextureCoordinate theBottomLeft(theStretch.uv[2][0], theStretch.uv[2][1]);
+    GETextureCoordinate theBottomRight(theStretch.uv[3][0], theStretch.uv[3][1]);
+    // (positionally as the original: the third argument is the bottom left corner)
     this->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    this->SetXYScale((inSourceRectangle.mRight - inSourceRectangle.mLeft + 1.0f) / (double)theWidth,
-               (inSourceRectangle.mBottom - inSourceRectangle.mTop + 1.0f) / (double)theHeight);
+    this->SetXYScale(theStretch.x_scale, theStretch.y_scale);
 }
 
 // FUNCTION: LLE 0x1000ff33
