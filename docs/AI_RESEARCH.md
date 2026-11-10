@@ -2580,6 +2580,7 @@ their reason: the siege with the force (no waves from home), this engine's fishi
 | f2: + raid answer, home guard, no citizen cap, attack times | 0 / 13 / 3 | 33.9, 12/16 at 69 | 40 / 42 / 29 | 0 / 13 / 3 | 9/16 at 44 | 12 | 0 / 2 / 14 | 143 vs 111 |
 | f4: + citizens' safety, the militia (f3, the same with the micro budget blown, is void) | 0 / 14 / 2 | 37.6, 7/16 at 68 | 39 / 41 / 19 | 0 / 14 / 2 | 8/16 at 46 | 10 | 1 / 2 / 13 | 135 vs 110 |
 | f5: + the tower bait as upstream, the micro modules' town | 0 / 16 / 0 | 38.0, 5/16 at 78 | 40 / 41 / 19 | 0 / 12 / 4 | 5/16 at 46 | 14 | 1 / 2 / 13 | 136 vs 109 |
+| f6: copper_plan next_epoch, the home guard's cap (166 / the own population) | 0 / 12 / 4 | 49.1 (8/16), 4/16 at 61 | 53 / 70 / 52 | 3 / 9 / 4 | 3/16 at 67 | 40 | (running) | - |
 
 The classic reaches the Stone Age at 26, the Copper Age at 63 and 175 citizens; the cheating classic the Stone Age at
 46 with 51 citizens all game and still wins the Prehistoric raids.
@@ -2618,6 +2619,25 @@ stood at 1-30 and 28-33 citizens starved; c10 had `early_army` (no account share
 soldiers. Third, the attack times at Hard (6-12 minutes, then 13-15) send the first push of 8 at minute 6-12. The
 rules are upstream's; the engine's lobby cap and the map's mine distances make two of them cost two to three times
 what they cost upstream. The 1,900-8,900 aborted micro ticks a game (f3) were a real bug and are fixed in f4.
+
+**f6, and the next-biggest cause.** With upstream's `copper_plan=next_epoch` (the epoch account of 40% of the
+income, the citizens spend the rest) and the home guard's room from a cap of 166 (upstream's unit_limit follows the
+human; the lobby's 400 here), the counts come back to the tenth checkpoint's against the improved classic (0/12/4
+for 0/13/3) and past it against the cheating classic (3/9/4 for 2/11/3), with a different shape: 53 / 70 citizens
+at 30 / 40 minutes (38 / 53 at c10), and the games split in two - half reach the Stone Age at 34-38 and the Copper
+Age at 53-61 (faster than c10's 63) and end with 136-197 citizens, half never leave the Prehistoric in 120 minutes
+and are wiped out (seed 7: 102 citizens in the first epoch with the account still short). The cause, from the f6
+smoke's seed 2: the Small maps' forage runs out before the Stone Age is paid - at minute 40 the port has 68 citizens
+and 12 of them on food (12 bush places left, hunting over, no fish before the Stone Age), food income 0, 26 on wood
+with 875 wood idle; the next_epoch rule lets the citizens eat the 60% while the account creeps at 40% of a shrinking
+income. Upstream's "the map's food runs out" clause (the sites' remaining amount within 20 tiles x 60% short of the
+epoch's food + 500 -> the epoch's food first) is ported and does not bind: the patches still hold food, it is the
+gatherable places that are gone (this engine's 6 to a patch, the owner's rule; the original's resource manager
+sends any number to a bush). So the rule's input differs here, not the rule. The scaled-reserve alternative
+(`copper_reserve_pct {76, 47}` with `copper_plan=on`, the reserve upstream's costs were) gave the Stone Age at
+34-49 on four seeds: no better. What would make upstream's input: count the wild food as places x what a place
+still yields before the citizens outgrow them (the wild-food clause binding at about 40 citizens on Small), or the
+tenth checkpoint's own rule (the citizens held at min_workforce before the Stone Age) as a marked deviation.
 
 **Open.** The units-hash divergence after a direct granary on Small Islands (§8.37) was not looked into beyond the
 build message's field assignment (PORT_LEARNINGS). The next round is tuning, reported as deviations from upstream
