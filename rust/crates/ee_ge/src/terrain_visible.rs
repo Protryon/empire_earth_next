@@ -259,11 +259,14 @@ impl Mesh<'_> {
     }
 
     /// `GETextureSet::GetTexture(x, y)` of a registered set (0 when the set is not registered, where the C++ read
-    /// past its vector).
+    /// past its vector, or its slot is empty: no textures, no width, height or coverage).
     unsafe fn set_texture(&self, id: c_ulong, x: c_long, y: c_long) -> usize {
         let Some(set) = self.sets.get(id as usize) else {
             return 0;
         };
+        if set.textures.is_null() || set.width == 0 || set.height == 0 || set.coverage == 0 {
+            return 0;
+        }
         let (tx, ty) = texture_set_slot(x as c_ulong, y as c_ulong, set.coverage, set.width, set.height);
         let index = (tx as usize) * (set.height as usize) + ty as usize;
         if set.textures.is_null() || index >= (set.width as usize) * (set.height as usize) {
@@ -1064,6 +1067,42 @@ mod tests {
         assert!(!s.has_back);
         track_space_edges(&mut s, &m, 4, 2);
         assert_eq!(s.back, [(4, 2), (5, 3)]);
+    }
+
+    #[test]
+    fn an_unregistered_texture_set_slot_gives_no_texture() {
+        let input = GeVisibleInput {
+            view: GeTerrainView {
+                point_rows: std::ptr::null(),
+                tile_rows: std::ptr::null(),
+                tile_row_count: 0,
+                planes: std::ptr::null(),
+            },
+            point_row_count: 0,
+            left_edge: 0,
+            top_edge: 0,
+            right_edge: 0,
+            bottom_edge: 0,
+            space_tile_count: 0,
+            texture_sets: std::ptr::null(),
+            texture_set_count: 0,
+            space_cliff_textures: std::ptr::null(),
+            space_cliff_texture_count: 0,
+            water_texture_indices: std::ptr::null(),
+            side: 257,
+        };
+        let textures: [usize; 6] = [11, 12, 13, 21, 22, 23];
+        // slot 0 is NULL in the C++ vector (an empty view), slot 1 a 2 x 3 set covering 4 tiles a texture
+        let sets = [
+            GeTextureSetView { textures: std::ptr::null(), width: 0, height: 0, coverage: 0 },
+            GeTextureSetView { textures: textures.as_ptr(), width: 2, height: 3, coverage: 4 },
+        ];
+        let m = Mesh { input: &input, sets: &sets, water_indices: &[] };
+        unsafe {
+            assert_eq!(m.set_texture(0, 5, 13), 0);
+            assert_eq!(m.set_texture(1, 5, 13), 21);
+            assert_eq!(m.set_texture(2, 5, 13), 0);
+        }
     }
 
     use crate::types::GeRectangle;

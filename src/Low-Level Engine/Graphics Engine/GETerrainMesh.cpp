@@ -710,6 +710,13 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
     size_t k;
     for (i = 0; i < theSets.size(); i++) {
         GETextureSet* theSet = this->mRegisteredTextureSets[i];
+        // an unregistered id's slot is NULL: an empty view (no textures; the plan reads none from it)
+        theSets[i].textures = NULL;
+        theSets[i].width = 0;
+        theSets[i].height = 0;
+        theSets[i].coverage = 0;
+        if (theSet == NULL)
+            continue;
         unsigned long theWidth = theSet->GetNumTexturesInWidth();
         unsigned long theHeight = theSet->GetNumTexturesInHeight();
         theSetTextures[i].resize(theWidth * theHeight);
