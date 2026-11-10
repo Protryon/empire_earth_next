@@ -1,16 +1,19 @@
 //! The game messages' wire codec (RUST_PLAN R5b.4, the first leaf of the world): the layout of every game message
 //! (`EEMessage.cpp`'s 104 classes with a codec of their own, 107 message types), encoding and decoding by it, and the
-//! box selection's compact unit list. The C++ classes keep their members, constructors and `Execute`; their
+//! box selection's compact unit list; and the engine messages' (`NEMessage.cpp`'s 28 classes) with the players'
+//! inputs nested in the communications ticks. The C++ classes keep their members, constructors and `Execute`; their
 //! `ExportSize`/`ExportMessage`/`ImportMessage` hand their members to `ffi` as slots in wire order.
 //!
 //! - `schema`: the member kinds and a class's layout;
-//! - `classes`: the table (written once from the original bodies; now the format);
+//! - `classes`: the game messages' table (written once from the original bodies; now the format);
+//! - `engine`: the engine messages' table (`NEMessage.cpp`; the players' inputs nested in the ticks);
 //! - `codec`: plain values in, bytes out, and bytes in, member spans out;
 //! - `units`: `CompressUnits`/`DecompressUnits`;
 //! - `ffi`: the C ABI.
 
 pub mod classes;
 pub mod codec;
+pub mod engine;
 pub mod ffi;
 pub mod schema;
 pub mod units;

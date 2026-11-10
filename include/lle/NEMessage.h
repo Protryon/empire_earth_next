@@ -14,6 +14,8 @@
 #include <vector>
 #include "lle/NEMessageID.h"
 
+struct EeNetMsgSlot;   // rust/ee_rust.h (the messages' codec)
+
 class LLE_API NEMessage : public UReferenceCounter {   // proven sizeof 0xc (NEMServerIsAlive adds nothing)
 public:
     // proven inline with all defaults: the exported default constructor closure 0x3bd20 passes 0xff, 0xff, 0xff, 0
@@ -43,6 +45,7 @@ public:
     static void RegisterKnownMessages();
     unsigned long ExportHeader(unsigned char* outData);
     unsigned long ImportHeader(unsigned char* inData);
+    void GetHeaderSlots(EeNetMsgSlot* outSlots);   // New (port): the header as the codec's first four slots
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe registers its game messages here (imports it; 0xb8cda)
     static NEMessage* (*sConstructors[256])(unsigned char*);   // ?sConstructors@NEMessage@@2PAP6APAV1@PAE@ZA (0x12d9cc)
 #endif

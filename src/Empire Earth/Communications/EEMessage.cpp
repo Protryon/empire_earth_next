@@ -256,14 +256,6 @@ static size_t Slots(EEMImproveUnit* inMessage, EeNetMsgSlot* outSlots);
 static size_t Slots(EEMZoomInfo* inMessage, EeNetMsgSlot* outSlots);
 static size_t Slots(EEMSetUnitBehavior* inMessage, EeNetMsgSlot* outSlots);
 
-// New (port): the header's members (reserved, type, target slot, originating slot) as the codec's first four slots
-void EEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots)
-{
-    outSlots[0] = EENetMsgField(this->mReserved);
-    outSlots[1] = EENetMsgField(this->mType);
-    outSlots[2] = EENetMsgField(this->mForSpecificSlot);
-    outSlots[3] = EENetMsgField(this->mOriginatingSlot);
-}
 // FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()

@@ -32,8 +32,6 @@ public:
     // 0x84, 0x96 record their selection id (mU0C) per player, the rest execute only when it is the current one
     void ExecuteSelectionMessage();                              // 0xb8cf7
     void ExecuteMessage();                                       // 0xb8e86
-    // New (port): the header's members as the codec's first four slots (ee_netmsg; EEMessage.cpp)
-    void GetHeaderSlots(EeNetMsgSlot* outSlots);
 
     unsigned char mFastSelectionID;         // +0x0c (provisional name; not set by the ctor; EEMSelectPlayerChatType 0x1d2b36 stores +0x0d)
     bool mCanSendWhenOut;                   // +0x0d

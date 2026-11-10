@@ -31,6 +31,59 @@ pub enum Value<'a> {
     Records { count: usize, bytes: &'a [u8] },
     /// a blob's bytes
     Blob(&'a [u8]),
+    /// the players' inputs, in list order (only the first `(u8)len()` travel)
+    Inputs(&'a [Input<'a>]),
+}
+
+/// One nested message of a players' inputs list: its wire size (its own `ExportSize`) and, to encode, its bytes.
+#[derive(Clone, Copy, Debug)]
+pub struct Input<'a> {
+    pub size: usize,
+    pub bytes: Option<&'a [u8]>,
+}
+
+/// How many of a list's inputs travel: the C++ `(unsigned char)mPlayerInputs.size()`, for the count byte and the loop.
+pub fn inputs_travelling(len: usize) -> usize {
+    len as u8 as usize
+}
+
+/// `NEMPlayerInput::ExportSize`: the count byte and each travelling input's size.
+pub fn inputs_size(inputs: &[Input]) -> usize {
+    inputs[..inputs_travelling(inputs.len())].iter().fold(1usize, |n, i| n.wrapping_add(i.size))
+}
+
+/// `NEMPlayerInput::ExportMessage`: the count byte, then each travelling input's bytes; returns the byte count.
+pub fn encode_inputs(inputs: &[Input], out: &mut [u8]) -> Result<usize, Error> {
+    let size = inputs_size(inputs);
+    if out.len() < size {
+        return Err(Error::Output);
+    }
+    let travelling = &inputs[..inputs_travelling(inputs.len())];
+    out[0] = travelling.len() as u8;
+    let mut at = 1;
+    for i in travelling {
+        match i.bytes {
+            Some(b) if b.len() == i.size => {
+                out[at..at + b.len()].copy_from_slice(b);
+                at += b.len();
+            }
+            _ => return Err(Error::Value("mPlayerInputs")),
+        }
+    }
+    Ok(at)
+}
+
+/// `NEMPlayerInput::ImportMessage`'s walk: `count` times, `build` makes the message at that offset from the list's
+/// start and says its size (its `ExportSize`), or `None` for a type nobody builds, which the original skips without
+/// advancing (so every later input is tried at the same place). Returns the offset after the last input built.
+pub fn walk_inputs(count: u8, mut build: impl FnMut(usize) -> Option<usize>) -> usize {
+    let mut at = 1usize;
+    for _ in 0..count {
+        if let Some(n) = build(at) {
+            at = at.wrapping_add(n);
+        }
+    }
+    at
 }
 
 /// Where a decoded member lies in the message.
@@ -64,6 +117,7 @@ pub fn encoded_size(class: &MsgClass, values: &[Value]) -> Result<usize, Error> 
             (Kind::Records8(_), Value::Records { count, bytes }) => 1 + check_records(f.kind, *count, bytes, f.name)?,
             (Kind::Records32(_), Value::Records { count, bytes }) => 4 + check_records(f.kind, *count, bytes, f.name)?,
             (Kind::Blob, Value::Blob(b)) => b.len(),
+            (Kind::Inputs, Value::Inputs(i)) => inputs_size(i),
             _ => return Err(Error::Value(f.name)),
         };
     }
@@ -107,6 +161,11 @@ pub fn encode(class: &MsgClass, header: [u8; HEADER_SIZE], values: &[Value], out
                 put(bytes);
             }
             (_, Value::Fixed(b)) | (_, Value::Blob(b)) => put(b),
+            (Kind::Inputs, Value::Inputs(i)) => {
+                let mut part = vec![0u8; inputs_size(i)];
+                let n = encode_inputs(i, &mut part)?;
+                put(&part[..n]);
+            }
             _ => unreachable!("encoded_size checked the kinds"),
         }
     }
@@ -151,6 +210,8 @@ pub fn decode<S: Source + ?Sized>(class: &MsgClass, src: &S, out: &mut Vec<Span>
                 Span { offset: at + 4, len, count }
             }
             Kind::Blob => Span { offset: at, len: previous_u8, count: previous_u8 },
+            // the count byte; the inputs' own bytes are read by their own imports (`walk_inputs`)
+            Kind::Inputs => Span { offset: at, len: 1, count: src.bytes(at, 1, f.name)?[0] as usize },
             k => {
                 let n = k.fixed_size().unwrap();
                 let b = src.bytes(at, n, f.name)?;
@@ -298,6 +359,68 @@ mod tests {
         let mut spans = Vec::new();
         decode(&SHORT_IMPORT, &out[..9], &mut spans).unwrap();
         assert_eq!(spans.len(), 2);
+    }
+
+    static TICK: MsgClass = MsgClass {
+        name: "Tick",
+        fields: &[Field::new("tick", U32), Field::new("raw", Raw(3)), Field::new("inputs", Inputs)],
+        import_fields: 3,
+    };
+
+    #[test]
+    fn inputs_are_a_count_then_each_message() {
+        let a = [0u8, 0x4c, 1, 2, 9];
+        let b = [0u8, 0x3a, 0xff, 0xfe];
+        let inputs = [Input { size: 5, bytes: Some(&a) }, Input { size: 4, bytes: Some(&b) }];
+        let tick = 7u32.to_le_bytes();
+        let values = [Value::Fixed(&tick), Value::Fixed(&[1, 2, 3]), Value::Inputs(&inputs)];
+        assert_eq!(encoded_size(&TICK, &values), Ok(4 + 4 + 3 + 1 + 9));
+        let mut out = [0u8; 32];
+        let n = encode(&TICK, [0, 0x26, 0xff, 1], &values, &mut out).unwrap();
+        assert_eq!(&out[..n], &[0, 0x26, 0xff, 1, 7, 0, 0, 0, 1, 2, 3, 2, 0, 0x4c, 1, 2, 9, 0, 0x3a, 0xff, 0xfe]);
+        let mut spans = Vec::new();
+        decode(&TICK, &out[..n], &mut spans).unwrap();
+        assert_eq!(spans[1], Span { offset: 8, len: 3, count: 0 });
+        assert_eq!(spans[2], Span { offset: 11, len: 1, count: 2 });
+        // the sizes alone are enough for the size, the bytes are needed to encode
+        let sized = [Input { size: 5, bytes: None }];
+        assert_eq!(inputs_size(&sized), 6);
+        assert_eq!(encode_inputs(&sized, &mut out), Err(Error::Value("mPlayerInputs")));
+        let wrong = [Input { size: 4, bytes: Some(&a) }];
+        assert_eq!(encode_inputs(&wrong, &mut out), Err(Error::Value("mPlayerInputs")));
+        assert_eq!(encode_inputs(&inputs, &mut out[..9]), Err(Error::Output));
+    }
+
+    #[test]
+    fn only_the_u8_count_of_inputs_travels() {
+        let b = [0u8, 0x3a, 0, 0];
+        let many = vec![Input { size: 4, bytes: Some(&b) }; 257];
+        assert_eq!(inputs_travelling(257), 1);
+        assert_eq!(inputs_size(&many), 5);
+        let mut out = [0u8; 16];
+        assert_eq!(encode_inputs(&many, &mut out), Ok(5));
+        assert_eq!(out[0], 1);
+        assert_eq!(inputs_size(&many[..256]), 1);
+        assert_eq!(inputs_size(&many[..255]), 1 + 4 * 255);
+        assert_eq!(inputs_size(&[]), 1);
+    }
+
+    #[test]
+    fn the_walk_skips_an_unbuilt_input_without_advancing() {
+        // sizes by offset: 1 -> 5, 6 -> nothing builds there
+        let mut seen = Vec::new();
+        let end = walk_inputs(3, |at| {
+            seen.push(at);
+            if at == 1 {
+                Some(5)
+            } else {
+                None
+            }
+        });
+        assert_eq!(end, 6);
+        assert_eq!(seen, [1, 6, 6]);
+        assert_eq!(walk_inputs(0, |_| panic!("no inputs")), 1);
+        assert_eq!(walk_inputs(255, |_| Some(4)), 1 + 255 * 4);
     }
 
     #[test]
