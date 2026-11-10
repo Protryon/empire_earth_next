@@ -260,21 +260,16 @@ EEWonNet::~EEWonNet()
 }
 
 // FUNCTION: EXE 0x4cd794
-// Converts inLength multibyte characters to wide into the caller's buffer
+// Converts inLength characters (UTF-8, decision D6) to wide into the caller's buffer of inLength units (the original
+// converted with the ANSI code page)
 wchar_t* EEWonNet::A2W(wchar_t* outString, const char* inString, int inLength)
 {
     int theBytes = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>(inString), inLength);
     if (outString == NULL)
         return NULL;
     outString[0] = 0;
-    if (inString != NULL) {
-#ifdef _WIN32
-        MultiByteToWideChar(CP_ACP, 0, inString, theBytes, outString, inLength);
-#else   // the WON lobby is gone: byte by byte (Latin-1) is enough for its stand-ins
-        for (int i = 0; i < theBytes && i < inLength; i++)
-            outString[i] = (unsigned char)inString[i];
-#endif
-    }
+    if (inString != NULL)
+        PlatUtf8ToWide(inString, theBytes, outString, inLength);
     return outString;
 }
 
@@ -1613,15 +1608,10 @@ char* EEWonNet::W2A(char* outString, int inSize, const wchar_t* inString, int in
     outString[0] = 0;
     if (inString == NULL)
         return outString;
-#ifdef _WIN32
-    unsigned long theLength = WideCharToMultiByte(CP_ACP, 0, inString, inLength, outString, inSize, NULL, NULL);
-#else   // the WON lobby is gone: byte by byte (Latin-1, '?' beyond) is enough for its stand-ins
-    unsigned long theLength = 0;
-    for (int i = 0; (inLength < 0 ? inString[i] != 0 : i < inLength) && (int)theLength + 1 < inSize; i++)
-        outString[theLength++] = inString[i] < 0x100 ? (char)inString[i] : '?';
-#endif
-    if (theLength > 0)
-        outString[theLength] = 0;
+    // UTF-8 (decision D6; the original converted with the ANSI code page): at most inSize - 1 bytes, terminated
+    unsigned long theLength = PlatWideToUtf8(inString, inLength < 0 ? PLAT_TEXT_TERMINATED : (uint32_t)inLength,
+                                             outString, inSize > 0 ? (uint32_t)inSize - 1 : 0);
+    outString[theLength] = 0;
     return outString;
 }
 

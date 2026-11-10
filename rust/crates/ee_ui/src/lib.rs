@@ -2,7 +2,7 @@
 //! classes (docs/RUST_PLAN.md R6, a faithful port). The C++ classes keep their members, vtables and exported names
 //! (the harness hooks some of them); their bodies forward to the algorithms here (`UITrampolines.cpp`).
 //!
-//! Text stays Windows-1252 bytes (`&[u8]`; decision D6 is open). Each module's behaviour is pinned by golden values
+//! Text is UTF-8 bytes (`&[u8]`; decision D6, `text.rs`). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
 pub mod button;

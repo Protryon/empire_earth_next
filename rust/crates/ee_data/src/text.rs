@@ -6,9 +6,8 @@ use crate::msg;
 use crate::msg::Part;
 use crate::node::{Bytes, Kind, Node};
 use crate::spec::Type;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::rc::Rc;
-use std::sync::OnceLock;
 
 /// A problem in a text, with its place ("combat line 12: minimum: 'x' is not an integer").
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -870,66 +869,30 @@ pub fn parse_f32(text: &[u8]) -> Res<u32> {
     Ok(if neg { bits | 0x80000000 } else { bits })
 }
 
-fn code_page_inverse() -> &'static HashMap<u16, u8> {
-    static MAP: OnceLock<HashMap<u16, u8>> = OnceLock::new();
-    MAP.get_or_init(|| {
-        let mut m = HashMap::new();
-        for b in 0..256usize {
-            m.insert(crate::generated::specs_gen::CODE_PAGE[b], b as u8);
-        }
-        m
-    })
-}
-
-/// UTF-8 text -> CP-1252 bytes.
+/// A text cell's bytes as the game keeps them: UTF-8 (decision D6), checked to be well-formed (no overlong form,
+/// no surrogate, nothing past U+10FFFF).
 pub fn encode_text(text: &[u8]) -> Res<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len());
     encode_text_into(text, &mut out)?;
     Ok(out)
 }
 
-/// UTF-8 text -> CP-1252 bytes appended to `out` (a reused buffer).
+/// `encode_text` appended to `out` (a reused buffer).
 pub fn encode_text_into(text: &[u8], out: &mut Vec<u8>) -> Res<()> {
-    let inverse = code_page_inverse();
-    let mut i = 0;
-    while i < text.len() {
-        let c = text[i];
-        let (mut cp, n): (u32, usize) = if c < 0x80 {
-            (c as u32, 1)
-        } else if c & 0xe0 == 0xc0 {
-            ((c & 0x1f) as u32, 2)
-        } else if c & 0xf0 == 0xe0 {
-            ((c & 0x0f) as u32, 3)
-        } else if c & 0xf8 == 0xf0 {
-            ((c & 0x07) as u32, 4)
-        } else {
-            fail!("not UTF-8 text");
-        };
-        if i + n > text.len() {
-            fail!("not UTF-8 text");
-        }
-        for k in 1..n {
-            let d = text[i + k];
-            if d & 0xc0 != 0x80 {
-                fail!("not UTF-8 text");
-            }
-            cp = (cp << 6) | (d & 0x3f) as u32;
-        }
-        i += n;
-        match cp.try_into().ok().and_then(|cp16: u16| inverse.get(&cp16)) {
-            Some(b) => out.push(*b),
-            None => fail!("character U+", cp as i64, " has no CP-1252 byte"),
-        }
+    if std::str::from_utf8(text).is_err() {
+        fail!("not UTF-8 text");
     }
+    out.extend_from_slice(text);
     Ok(())
 }
 
-/// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8): what `encode_text` reads back.
+/// The game's text (UTF-8) -> a double-quoted YAML scalar: what `encode_text` reads back. A byte that is not part of
+/// a well-formed sequence is written as U+FFFD.
 pub fn quote_text(bytes: &[u8]) -> Vec<u8> {
     let mut out = vec![b'"'];
-    for &b in bytes {
-        let cp = crate::generated::specs_gen::CODE_PAGE[b as usize] as u32;
-        if cp == b'"' as u32 || cp == b'\\' as u32 {
+    for ch in String::from_utf8_lossy(bytes).chars() {
+        let cp = ch as u32;
+        if ch == '"' || ch == '\\' {
             out.push(b'\\');
             out.push(cp as u8);
         } else if cp < 0x20 {
@@ -1101,7 +1064,7 @@ pub fn number<W: Part + ?Sized>(field: &str, ty: Type, v: Option<&Node>, where_:
     })
 }
 
-/// A string field: empty when missing, encoded as CP-1252.
+/// A string field: empty when missing, UTF-8 checked.
 pub fn text_value<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<Vec<u8>> {
     let Some(v) = v else { return Ok(Vec::new()) };
     let t = scalar_text(v, where_, name, "a string")?;
@@ -1145,7 +1108,7 @@ pub fn node_bool<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> 
     parse_int(t, Type::Bool).map(|x| x != 0).map_err(|e| Failure::new(msg!(where_, ": ", name, ": ", &e.text)))
 }
 
-/// A string of a document as CP-1252 bytes; a missing one is empty (`NodeText`).
+/// A string of a document as UTF-8 bytes; a missing one is empty (`NodeText`).
 pub fn node_text<W: Part + ?Sized>(v: Option<&Node>, where_: &W, name: &str) -> Res<Vec<u8>> {
     match v {
         Some(n) if !n.is_missing() => text_value(Some(n), where_, name),
@@ -1345,7 +1308,7 @@ b: [1]
         .unwrap();
         let mut buf = b"old".to_vec();
         text_value_into(n.find(b"a"), b"w", "a", &mut buf).unwrap();
-        assert_eq!(buf, vec![b'c', b'a', b'f', 0xe9]);
+        assert_eq!(buf, "café".as_bytes());
         text_value_into(None, b"w", "a", &mut buf).unwrap();
         assert!(buf.is_empty());
         assert_eq!(
@@ -1355,17 +1318,25 @@ b: [1]
     }
 
     #[test]
-    fn encode_text_maps_utf8_to_cp1252() {
-        assert_eq!(encode_text("€é".as_bytes()).unwrap(), vec![0x80, 0xe9]);
-        assert_eq!(encode_text(b"\xC2\x81").unwrap(), vec![0x81]); // a C1 control maps to its byte
-        assert_eq!(encode_text("中".as_bytes()).unwrap_err().text, b"character U+20013 has no CP-1252 byte".to_vec());
+    fn encode_text_keeps_well_formed_utf8() {
+        assert_eq!(encode_text("€é".as_bytes()).unwrap(), "€é".as_bytes());
+        assert_eq!(encode_text(b"\xC2\x81").unwrap(), b"\xC2\x81"); // a C1 control is a character too
+        assert_eq!(encode_text("中😀".as_bytes()).unwrap(), "中😀".as_bytes()); // any character (decision D6)
         assert_eq!(encode_text(b"\xC3").unwrap_err().text, b"not UTF-8 text".to_vec());
         assert_eq!(encode_text(b"\xFF").unwrap_err().text, b"not UTF-8 text".to_vec());
+        assert_eq!(encode_text(b"\xC0\x80").unwrap_err().text, b"not UTF-8 text".to_vec()); // an overlong form
+        assert_eq!(encode_text(b"\xED\xA0\x80").unwrap_err().text, b"not UTF-8 text".to_vec());
+        // a surrogate
     }
 
     #[test]
     fn quote_text_round_trips() {
-        assert_eq!(quote_text(b"a\"b\\c\x01\xe9"), "\"a\\\"b\\\\c\\x01é\"".as_bytes().to_vec());
+        assert_eq!(quote_text("a\"b\\c\x01é€".as_bytes()), "\"a\\\"b\\\\c\\x01é€\"".as_bytes().to_vec());
+        // what quote_text writes, the reader gives back as the same bytes
+        let n = yaml(&format!("k: {}\n", String::from_utf8(quote_text("x\"\\\n\té😀".as_bytes())).unwrap())).unwrap();
+        assert_eq!(text_value(n.find(b"k"), b"w", "k").unwrap(), "x\"\\\n\té😀".as_bytes());
+        // a stray byte is written as U+FFFD
+        assert_eq!(quote_text(b"a\xe9"), "\"a\u{fffd}\"".as_bytes().to_vec());
     }
 
     #[test]

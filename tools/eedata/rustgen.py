@@ -266,13 +266,6 @@ def generate(spec):
         o.append('    },')
     o.append('];')
     o.append('')
-    o.append('/// CP-1252 byte -> Unicode code point (the five undefined bytes map to the C1 code point of the same value).')
-    o.append('pub static CODE_PAGE: [u16; 256] = [')
-    cps = [ord(scalars.decode_str(bytes([b]))) for b in range(256)]
-    for i in range(0, 256, 16):
-        o.append('    ' + ', '.join(f'0x{c:04x}' for c in cps[i:i + 16]) + ',')
-    o.append('];')
-    o.append('')
     o.append('pub mod records {')
     for sname, st in structs.items():
         o += ['    ' + x if x else x for x in gen_mirror(sname, st)]

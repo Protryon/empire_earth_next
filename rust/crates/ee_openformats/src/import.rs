@@ -91,13 +91,6 @@ fn is_signed_permutation(g: &Matrix) -> bool {
         && g[15] == 1.0
 }
 
-// CP-1252 for the bytes 0x80..0x9f (eedata's mapping: the five undefined ones are their C1 code points)
-const CP1252_HIGH: [u32; 32] = [
-    0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d, 0x17d,
-    0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d,
-    0x17e, 0x178,
-];
-
 fn bad_json_string(raw: &[u8]) -> Failure {
     let mut m = b"bad JSON string \"".to_vec();
     m.extend_from_slice(raw);
@@ -112,7 +105,8 @@ fn not_utf8(s: &[u8]) -> Failure {
     Failure(m)
 }
 
-// gltf.py _name: Blender's ".NNN" duplicate suffix dropped, UTF-8 -> CP-1252. A missing name is empty.
+// gltf.py _name: Blender's ".NNN" duplicate suffix dropped; the name is the game's text, UTF-8 (decision D6), checked
+// to be well-formed. A missing name is empty.
 fn game_name(raw: Option<&[u8]>) -> Result<Vec<u8>, Failure> {
     let raw = raw.unwrap_or(b"");
     // the C API's string: up to a NUL
@@ -123,47 +117,10 @@ fn game_name(raw: Option<&[u8]>) -> Result<Vec<u8>, Failure> {
     if n >= 4 && s[n - 4] == b'.' && s[n - 3..].iter().all(u8::is_ascii_digit) {
         s.truncate(n - 4);
     }
-    let mut out = Vec::with_capacity(s.len());
-    let mut i = 0;
-    while i < s.len() {
-        let c = s[i];
-        let (mut code, len) = if c < 0x80 {
-            (c as u32, 1)
-        } else if (c & 0xe0) == 0xc0 {
-            ((c & 0x1f) as u32, 2)
-        } else if (c & 0xf0) == 0xe0 {
-            ((c & 0x0f) as u32, 3)
-        } else if (c & 0xf8) == 0xf0 {
-            ((c & 0x07) as u32, 4)
-        } else {
-            return Err(not_utf8(&s));
-        };
-        if i + len > s.len() {
-            return Err(not_utf8(&s));
-        }
-        for k in 1..len {
-            if s[i + k] & 0xc0 != 0x80 {
-                return Err(not_utf8(&s));
-            }
-            code = (code << 6) | (s[i + k] & 0x3f) as u32;
-        }
-        i += len;
-        let byte = if code < 0x80 || (0xa0..=0xff).contains(&code) {
-            Some(code as u8)
-        } else {
-            CP1252_HIGH.iter().position(|&c| c == code).map(|k| 0x80 + k as u8)
-        };
-        match byte {
-            Some(b) => out.push(b),
-            None => {
-                let mut m = b"name \"".to_vec();
-                m.extend_from_slice(&s);
-                m.extend_from_slice(b"\" has characters outside CP-1252");
-                return Err(Failure(m));
-            }
-        }
+    if std::str::from_utf8(&s).is_err() {
+        return Err(not_utf8(&s));
     }
-    Ok(out)
+    Ok(s)
 }
 
 struct Sampler {
@@ -1072,11 +1029,12 @@ mod tests {
         assert_eq!(game_name(Some(b"abc.001")).unwrap(), b"abc".to_vec());
         assert_eq!(game_name(Some(b"abc.01")).unwrap(), b"abc.01".to_vec());
         assert_eq!(game_name(None).unwrap(), Vec::<u8>::new());
-        assert_eq!(game_name(Some(b"caf\xc3\xa9")).unwrap(), vec![b'c', b'a', b'f', 0xe9]);
-        assert_eq!(game_name(Some(b"\xe2\x82\xac")).unwrap(), vec![0x80]); // the euro sign in CP-1252
+        assert_eq!(game_name(Some(b"caf\xc3\xa9")).unwrap(), "caf\u{e9}".as_bytes()); // UTF-8 kept (decision D6)
+        assert_eq!(game_name(Some(b"\xe2\x82\xac")).unwrap(), "\u{20ac}".as_bytes());
         assert_eq!(game_name(Some(br"a\tb")).unwrap(), b"a\tb".to_vec());
         assert!(game_name(Some(b"\xff")).unwrap_err().0.ends_with(b"is not UTF-8"));
-        assert!(game_name(Some("\u{4e2d}".as_bytes())).unwrap_err().0.ends_with(b"has characters outside CP-1252"));
+        assert_eq!(game_name(Some("\u{4e2d}".as_bytes())).unwrap(), "\u{4e2d}".as_bytes());
+        assert!(game_name(Some(b"\xed\xa0\x80")).unwrap_err().0.ends_with(b"is not UTF-8"), "a surrogate");
     }
 
     #[test]
@@ -1116,7 +1074,7 @@ mod tests {
         assert_eq!(m.lods[0].indices, vec![0, 1, 2]);
         // texture index, (start, length) of LOD 0, vertex start, vertex length
         assert_eq!(m.materials[0].values, vec![7, 0, 1, 0, 3]);
-        assert_eq!(m.materials[0].name, vec![b'm', 0xe9]);
+        assert_eq!(m.materials[0].name, "m\u{e9}".as_bytes(), "UTF-8 (decision D6)");
         assert_eq!(m.materials[0].texture_filename, b"tex a".to_vec());
         assert_eq!(m.tag_point_names, vec![b"tag".to_vec()]);
         assert_eq!(m.frames.len(), 2);

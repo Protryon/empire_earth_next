@@ -3,8 +3,22 @@
 
 use std::ffi::{c_char, c_void, CStr};
 
-use crate::cp1252::to_cp1252;
 use crate::keys::{find_scan_code, modifiers_of, virtual_key_of};
+
+/// SDL's UTF-8 text into the event's fixed buffer: whole characters only, terminated (decision D6: the game's text
+/// is UTF-8, so nothing is converted; a text longer than the buffer loses its tail).
+pub fn text_into(bytes: &[u8], out: &mut [u8; 64]) {
+    let mut n = 0;
+    while n < bytes.len() {
+        let next = ee_plat_core::utf8::next(bytes, n);
+        if next >= out.len() {
+            break;
+        }
+        n = next;
+    }
+    out[..n].copy_from_slice(&bytes[..n]);
+    out[n] = 0;
+}
 
 pub const SDL_EVENT_QUIT: u32 = 0x100;
 pub const SDL_EVENT_WINDOW_EXPOSED: u32 = 0x204;
@@ -330,14 +344,14 @@ pub unsafe fn translate(e: &SdlEvent, host: &impl Host, out: &mut PlatInputEvent
             out.event_type = PLAT_EVENT_TEXT;
             out.window = host.window_of(e.text.window_id);
             let bytes = CStr::from_ptr(e.text.text).to_bytes();
-            to_cp1252(bytes, &mut out.data.text.text);
+            text_into(bytes, &mut out.data.text.text);
             true
         }
         SDL_EVENT_TEXT_EDITING => {
             out.event_type = PLAT_EVENT_TEXT_EDITING;
             out.window = host.window_of(e.edit.window_id);
             let bytes = CStr::from_ptr(e.edit.text).to_bytes();
-            to_cp1252(bytes, &mut out.data.text.text);
+            text_into(bytes, &mut out.data.text.text);
             out.data.text.cursor = e.edit.start;
             out.data.text.length = e.edit.length;
             true
@@ -611,6 +625,19 @@ mod tests {
                 assert_eq!(out.event_type as i64, num(20), "type {line}");
                 assert_eq!(out.time as i64, num(21), "time {line}");
                 assert_eq!(out.window as i64, num(23), "win {line}");
+                if event_type == SDL_EVENT_TEXT_INPUT || event_type == SDL_EVENT_TEXT_EDITING {
+                    // the golden's text is the C++'s Windows-1252 conversion; the game's text is UTF-8 now (D6),
+                    // so the event carries SDL's bytes (whole characters only), which alias the other union fields
+                    let mut want = [0u8; 64];
+                    text_into(&unhex(p[16]), &mut want);
+                    unsafe {
+                        assert_eq!(text_of(&out.data.text.text), text_of(&want), "{line}");
+                        assert_eq!(out.data.text.cursor as i64, num(40), "{line}");
+                        assert_eq!(out.data.text.length as i64, num(41), "{line}");
+                    }
+                    compared += 1;
+                    continue;
+                }
                 unsafe {
                     assert_eq!(out.data.key.scan_code as i64, num(25), "{line}");
                     assert_eq!(out.data.key.virtual_key as i64, num(26), "{line}");

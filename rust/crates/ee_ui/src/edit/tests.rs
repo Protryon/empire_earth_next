@@ -5,7 +5,7 @@
 //! forwarders (`UIEditBox.cpp` today) and `ee_rust.lib`, printed the same file.
 
 use super::*;
-use crate::text::SingleByte;
+use crate::text::{Platform, SingleByte};
 
 const GOLDEN: &str = include_str!("../golden_edit.txt");
 
@@ -129,6 +129,14 @@ impl Fake {
 
     fn run<R>(&mut self, op: impl FnOnce(&mut Edit<SingleByte, Fake>) -> R) -> R {
         let mut e = Edit::new(&SingleByte, self);
+        let r = op(&mut e);
+        e.finish();
+        r
+    }
+
+    /// `run` over the game's text (UTF-8, decision D6): what the forwarders use.
+    fn run_utf8<R>(&mut self, op: impl FnOnce(&mut Edit<Platform, Fake>) -> R) -> R {
+        let mut e = Edit::new(&Platform, self);
         let r = op(&mut e);
         e.finish();
         r
@@ -437,4 +445,53 @@ fn typing_repeats_and_selection_replaces() {
     assert_eq!(f.lines[0], b"zqz\0");
     assert!(!f.s.f.is_text_selected);
     assert_eq!(f.run(|e| e.selected_text()), None);
+}
+
+#[test]
+fn utf8_characters_are_typed_stepped_and_deleted_whole() {
+    // the caret and the indices count code points (decision D6); a multi-byte character is never split
+    let mut f = single(20, false);
+    f.run_utf8(|e| e.type_key("é\0".as_bytes(), 1));
+    f.run_utf8(|e| e.type_key("€\0".as_bytes(), 2));
+    f.run_utf8(|e| e.type_key(b"a\0", 1));
+    assert_eq!((f.lines[0].as_slice(), f.s.f.caret_index), ("é€€a\0".as_bytes(), 4));
+    f.run_utf8(|e| e.decrement_caret_pos());
+    f.run_utf8(|e| e.back_space_char());
+    assert_eq!((f.lines[0].as_slice(), f.s.f.caret_index), ("é€a\0".as_bytes(), 2));
+    f.run_utf8(|e| e.delete_char());
+    assert_eq!((f.lines[0].as_slice(), f.s.f.caret_index), ("é€\0".as_bytes(), 2));
+    f.run_utf8(|e| e.home_key());
+    f.run_utf8(|e| e.increment_caret_pos(1));
+    assert_eq!(f.s.f.caret_index, 1);
+    f.run_utf8(|e| e.type_key("😀\0".as_bytes(), 1));
+    assert_eq!(f.lines[0], "é😀€\0".as_bytes());
+    f.run_utf8(|e| e.select(3, 1, 0, 0));
+    assert_eq!(f.run_utf8(|e| e.selected_text()), Some("😀€\0".as_bytes().to_vec()));
+    f.run_utf8(|e| e.type_key(b"x\0", 1));
+    assert_eq!((f.lines[0].as_slice(), f.s.f.caret_index), ("éx\0".as_bytes(), 2));
+    // the box's limit is characters, not bytes
+    let mut f = single(3, false);
+    let read = f.run_utf8(|e| e.add_char("ééééé\0".as_bytes()));
+    assert_eq!((f.lines[0].as_slice(), read), ("ééé\0".as_bytes(), 6), "three characters, six bytes read");
+}
+
+#[test]
+fn a_multi_line_box_wraps_utf8_text_at_its_spaces() {
+    // the fake's widths are per byte, so the accented words are wider than ASCII ones: wherever the lines break
+    // (at a space, which starts the next line when it is the one that overflows, as in the C++), it is between
+    // characters
+    let mut f = Fake::new(true, 99, false, false, 100.0, 60.0, 1);
+    let all = "àààà ëëëë öööö üüüü";
+    f.run_utf8(|e| e.set_text(format!("{all}\0").as_bytes()));
+    assert_eq!(f.lines.len(), 3, "{:?}", f.lines);
+    assert_eq!(f.lines[0], "àààà ëëëë ".as_bytes());
+    for (i, l) in f.lines.iter().enumerate() {
+        let l = &l[..l.len() - 1];
+        assert!(std::str::from_utf8(l).is_ok(), "line {i} {l:?}");
+    }
+    let joined: Vec<u8> = f.lines.iter().flat_map(|l| l[..l.len() - 1].to_vec()).collect();
+    assert_eq!(joined, all.as_bytes());
+    let last = f.lines.len() as c_ulong - 1;
+    let text = f.run_utf8(|e| e.text(0, last, 0, 99));
+    assert_eq!(text, format!("{all}\0").as_bytes());
 }

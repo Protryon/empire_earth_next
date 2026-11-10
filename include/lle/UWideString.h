@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UWideString.h (RECONSTRUCTION; UWideString.cpp 0x838f7..0x847e1). A multibyte
-// (MBCS) string: lengths through _mbslen/_mbsnbcnt. Capacity grows in blocks of sDefaultAllocationLength.
+// (MBCS) string: lengths through _mbslen/_mbsnbcnt; UTF-8 since decision D6 (platform/PlatString.h). Capacity grows in blocks of sDefaultAllocationLength.
 #ifndef LLE_UWIDESTRING_H
 #define LLE_UWIDESTRING_H
 #include "platform/PlatString.h"

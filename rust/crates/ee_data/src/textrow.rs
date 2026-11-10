@@ -27,7 +27,7 @@ pub fn raw(g: &mut Getter, key: &str) -> Res<Option<Vec<u8>>> {
     }
 }
 
-/// A text key, encoded to CP-1252.
+/// A text key, UTF-8 checked.
 pub fn text(g: &mut Getter, key: &str) -> Res<Option<Vec<u8>>> {
     match raw(g, key)? {
         None => Ok(None),
@@ -198,7 +198,7 @@ mod tests {
     fn text_keys_are_encoded() {
         let n = parse_yaml("label: \"caf\u{e9}\"\n".as_bytes()).unwrap();
         let r = DbsoundsText::from_node(&n, b"w").unwrap();
-        assert_eq!(r.label.as_deref(), Some(&b"caf\xe9"[..]));
+        assert_eq!(r.label.as_deref(), Some("caf\u{e9}".as_bytes()));
     }
 
     #[test]

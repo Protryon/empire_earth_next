@@ -10,6 +10,14 @@
 
 class FSFile;
 
+// port (decision D6): game text is UTF-8. A string a file gives UString::Load or UWideString::Load is converted from
+// Windows-1252 when it is not well-formed UTF-8, or always while a file written before the switch loads (a save of
+// version < 0.255: the loader that read the version sets the flag around the load). The buffer is replaced when the
+// text grows; ioCapacity follows.
+LLE_API void USetLegacyTextLoad(bool inLegacy);
+LLE_API bool UIsLegacyTextLoad();
+LLE_API void UConvertLoadedText(char*& ioString, unsigned long& ioCapacity);
+
 class LLE_API UString {                    // proven sizeof 0x10 (TCP DetectedGame: UStrings at +0x20, +0x30)
 public:
     UString();
@@ -44,16 +52,10 @@ public:
     static void SetDefaultAllocationLength(unsigned long inLength);
 #endif
     unsigned long SizeOf() { return this->mCapacity + 3 * sizeof(unsigned long); }  // 0x1220: mCapacity + 0xc
-    void ToLower()
-    {
-        for (unsigned long i = 0; i < this->mLength; i++)
-            this->mString[i] = tolower(this->mString[i]);
-    }
-    void ToUpper()
-    {
-        for (unsigned long i = 0; i < this->mLength; i++)
-            this->mString[i] = toupper(this->mString[i]);
-    }
+    // port: the text is UTF-8 (decision D6), so the case change is the platform's (the original's byte-wise tolower/
+    // toupper would have broken a multi-byte character under a code-page locale)
+    void ToLower() { PlatMbsLwr(reinterpret_cast<unsigned char*>(this->mString)); }
+    void ToUpper() { PlatMbsUpr(reinterpret_cast<unsigned char*>(this->mString)); }
     char operator[](int inIndex) const;
     UString& operator+=(const UString& inString);
     UString& operator+=(const char* inString);

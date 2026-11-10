@@ -13,6 +13,32 @@
 
 unsigned long UString::sDefaultAllocationLength = 256;
 
+// port (decision D6): the conversion of old Windows-1252 inputs (UString.h)
+static bool gULegacyTextLoad = false;
+
+void USetLegacyTextLoad(bool inLegacy)
+{
+    gULegacyTextLoad = inLegacy;
+}
+
+bool UIsLegacyTextLoad()
+{
+    return gULegacyTextLoad;
+}
+
+void UConvertLoadedText(char*& ioString, unsigned long& ioCapacity)
+{
+    unsigned long theLength = strlen(ioString);
+    if (!gULegacyTextLoad && PlatUtf8IsValid(ioString, theLength))
+        return;
+    uint32_t theNeeded = PlatCp1252ToUtf8(ioString, theLength, NULL, 0);
+    char* theText = new char[theNeeded + 1];
+    PlatCp1252ToUtf8(ioString, theLength, theText, theNeeded + 1);
+    delete[] ioString;
+    ioString = theText;
+    ioCapacity = theNeeded + 1;
+}
+
 // FUNCTION: LLE 0x10082c43
 // Returns a new string holding the left string followed by the right one
 UString operator+(const UString& inLeft, const UString& inRight)
@@ -432,6 +458,7 @@ long UString::Load(FSFile& inFile)
         theResult = inFile.Read(this->mString, theLength, theRead);
         if (theResult == kErrorOK && theRead == theLength) {
             this->mString[theLength] = 0;
+            UConvertLoadedText(this->mString, this->mCapacity);   // port (D6): an old Windows-1252 string
             this->mLength = strlen(this->mString);
         } else {
             if (theResult == kErrorOK)

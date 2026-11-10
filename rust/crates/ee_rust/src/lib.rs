@@ -48,7 +48,7 @@ use ee_plat_core as _;
 // The platform layer's PlatFile, PlatThread and PlatSocket: `#[no_mangle]` exports, as above.
 use ee_plat_sys as _;
 
-// The window (PlatWindow.h on SDL3) and the fonts (PlatFont.h, the Windows-1252 conversions): `#[no_mangle]` exports. Two
+// The window (PlatWindow.h on SDL3) and the fonts (PlatFont.h): `#[no_mangle]` exports. Two
 // crates so that a program using only text does not pull in an object file that references SDL (the linker pulls whole
 // objects); ee_plat_sdl's exports are compiled out of `cargo test`, whose binaries do not link SDL.
 #[cfg(not(test))]

@@ -120,6 +120,23 @@ def binary_form(low):
     return low.endswith(BINARY_EXT) or (low.startswith('db\\') and low.endswith('.dat'))
 
 
+def lobby_page(low):
+    """whether a file is one of the lobby's text pages (shown as plain text: PORT_LEARNINGS "The lobby without
+    HTML"), Windows-1252 in the retail data; the lobby's .cfg files are UTF-16 and stay as they are"""
+    return low.startswith('wonlobby resources\\') and low.endswith(('.html', '.htm', '.txt'))
+
+
+def page_utf8(raw):
+    """a lobby page's bytes as UTF-8: Windows-1252 converted (the five undefined bytes as the C1 controls); a page
+    that already is UTF-8 is left alone"""
+    try:
+        raw.decode('utf-8')
+        return raw
+    except UnicodeDecodeError:
+        return ''.join(chr(b) if 0x80 <= b <= 0x9f and bytes([b]).decode('cp1252', 'ignore') == '' else
+                       bytes([b]).decode('cp1252') for b in raw).encode('utf-8')
+
+
 ROOT_FILES = ['WONLobby.cfg', 'zzWONVersion.cfg']
 # empty folders the game expects (it creates the user folders itself too)
 EMPTY_DIRS = ['Saved Games', 'Scenarios', 'Unit AI Scripts', 'Movies', 'Music']
@@ -331,7 +348,13 @@ def cmd_build(a, out=None):
             continue
         target = data / spell(p.names[low], spelled).replace('\\', os.sep)
         target.parent.mkdir(parents=True, exist_ok=True)
-        if p.folder is not None:
+        if lobby_page(low):
+            # the lobby's text pages (help, news, the message of the day) are Windows-1252 in the retail data: the
+            # game's text is UTF-8 (RUST_PLAN D6), so they are converted
+            raw = (p.folder / p.names[low].replace('\\', os.sep)).read_bytes() if p.folder is not None else p.read(low)
+            target.write_bytes(page_utf8(raw))
+            report['lobby_pages'] = report.get('lobby_pages', 0) + 1
+        elif p.folder is not None:
             shutil.copy2(p.folder / p.names[low].replace('\\', os.sep), target)
         else:
             target.write_bytes(p.read(low))
