@@ -194,4 +194,25 @@ return {
                                     -- walled pocket and a gate towards the town (0: 2 tiles open, no wall)
     enclose_safe_tiles = 0,         -- with enclose, on an island: no coast wall with this many tiles beyond a ship's
                                     -- reach (9) of the sea (0: the coast always)
+    -- metal.c, priority.c, fronts.c
+    -- metal_plan: the parts as bits (upstream's list: best_per_metal 1, no_waiting 2, surplus_cheap 4,
+    -- fleet_by_enemy 8, calm_navy_cap 16). Upstream: empty (0) - on the large island maps fleet_by_enemy (+ calm)
+    -- gave 60-90 more soldiers trained and more kills - losses without the cheat, but against the cheating base AI
+    -- the kills - losses fell on two maps; best_per_metal cost wins on small Continental (docs/economy.md "Gold and
+    -- iron"). no_waiting is not applicable here (the port never saves for a refused soldier: metal.lua).
+    metal_plan = 0,
+    metal_cap = 250,                -- the bits act only from this population cap (the metal limits the army there)
+    metal_fleet_pct = 250,          -- fleet_by_enemy: the fleet at most this percent of the enemy warships known + 6 ...
+    metal_fleet_min = 20,           -- ... and at least this many x the map strength
+    workers_to_metals = false,      -- army.c MIX (army_plan's part workers_to_metals, not in upstream's default list):
+                                    -- workers from piled-up food to the wood, gold or iron the army lacks (metal.lua)
+    army_mix_food = 500,            -- ... while the 2-minute low of food above the reserve is at least this
+    spend_tiers = false,            -- priority.c: buildings wait for an outpost's Settlement and tower too
+                                    -- (expand_hold; "default 0 until measured")
+    farm_first = true,              -- econ.c THE SILOS' ROW: the first two Granaries and their 8 fields each are a row
+                                    -- of the priority list, one at a time, from the Copper Age's research
+    front_army = false,             -- fronts.c: the idle soldiers stand at the heaviest fronts between attacks
+                                    -- (0 upstream: no gain measured; the port's force is one group, fronts.lua)
+    fronts_log = true,              -- DEVIATION: upstream's [autotest] fronts_log (0) - the fronts' trace line every
+                                    -- 5 minutes is the port's only view of them
 }

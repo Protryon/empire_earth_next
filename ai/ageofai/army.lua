@@ -31,6 +31,8 @@ local AT = require("ageofai.attack")   -- [attack.c] the weak spots, the breache
 local MS = require("ageofai.mass")     -- [mass.c] the army as one: the reinforcements' rally, the wait, the tether
 local DT = require("ageofai.detach")   -- [armies.c det] the detachments, the raiders, the riders' look, the sites
 local SK = require("ageofai.skirmish") -- [skirmish.c] the sharpshooters' sorties, the spotter
+local MT = require("ageofai.metal")    -- [metal.c] the soldier that does most per gold + iron
+local FR = require("ageofai.fronts")   -- [fronts.c] the front station
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -108,10 +110,18 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- Home: the station
 
-local function station(view, mem)
+local function station(view, mem, memory)
     local tx, ty = view.town_x, view.town_y
     if tx < 0 then
         return nil
+    end
+    -- [fronts.c] armies.c ar_home: the first front's station (its tower nearest the heaviest front, FA_BEHIND back
+    -- towards the base) when it is out of danger; else as below
+    if memory ~= nil then
+        local sx, sy = FR.station(memory, 1)
+        if sx ~= nil and ai.danger(sx, sy) == 0 then
+            return sx, sy
+        end
     end
     -- the own tower nearest the front, 3 tiles back towards the town
     local fx, fy = mem.front_x or 0, mem.front_y or 0
@@ -194,6 +204,14 @@ local function train(view, memory, mem, order, budget)
         return mem.plan
     end
     local pick, n = M.pick_soldier(view, budget.avail, math.min(target - home, 5))
+    -- [metal.c] best_per_metal: the soldier asked for (the strongest affordable) is trained as the one that does most
+    -- against the enemy army known per gold + iron, when that one is 25% better (mt_choose; the budget pays as before)
+    do
+        local alt, an = MT.choose(view, memory, pick, budget.avail, view.stock, budget.hold or {}, math.min(target - home, 5))
+        if alt ~= nil then
+            pick, n = alt, an
+        end
+    end
     if pick == nil then
         -- what the cheapest soldier costs: the workers gather for it
         local cheap = nil
@@ -208,9 +226,12 @@ local function train(view, memory, mem, order, budget)
                 want[r] = cheap.cost[r] * math.min(target - home, 5)
             end
         end
+        -- [metal.c] MIX counts what the refused order was short of (the cheapest soldier's price against the account)
+        MT.note_short(view, memory, cheap ~= nil and cheap.cost or nil, budget.avail)
         mem.plan = {producer = mem.last_producer, busy = false, wants = want}
         return mem.plan
     end
+    MT.note_short(view, memory, nil, budget.avail)   -- [metal.c] the minute's window rolls
     -- the producers' queues: train_queue at most each
     local b = V.buildings(view, pick.producer)
     local busy = b ~= nil and b.finished > 0 and pick.requested + pick.in_production >= S.train_queue * b.finished
@@ -320,7 +341,7 @@ local function force_step(view, memory, mem, order)
     if tx < 0 then
         return
     end
-    local hx, hy = station(view, mem)
+    local hx, hy = station(view, mem, memory)
     mem.home_x, mem.home_y = hx, hy
     local force = G.role(memory, "force")
     local free = G.free_soldiers(tx, ty)
