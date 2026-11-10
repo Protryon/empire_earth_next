@@ -151,14 +151,19 @@ public:
     GEVector mMoonDirection;                // +0x980
     GEVector mSunDirection;                 // +0x98c
     GEVector mWindDirection;                // +0x998 (10 readers each of +0x998/+0x99c/+0x9a0)
-    std::map<EEUnit*, unsigned long> mResourceUsers; // +0x9a4 (unsigned: ReleaseResourceUser's `jbe`, GetResourceUsers's return) (keyed by the unit: ReleaseResourceUser/GetResourceUsers/AddResourceUser; dtor 0x13ce79)
+    // +0x9a4 (unsigned: ReleaseResourceUser's `jbe`, GetResourceUsers's return) (keyed by the unit:
+    // ReleaseResourceUser/GetResourceUsers/AddResourceUser; dtor 0x13ce79). Keyed by handles since R5a.4: looked up only,
+    // never iterated, so its order (by id now, by address before) is not observable; an entry of a freed unit stays
+    // unmatched (the address could be reused by another unit)
+    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> > mResourceUsers;
     std::vector<EETeam> mTeams;             // +0x9b0 ("TheTeams"; dtor 0x13dc94, element dtor 0x131b02)
     std::vector<EEGhostUnit*> mGhostUnits;  // +0x9c0 the ghost units (EERenderObject 0x10c952; vector<long>'s _Buy/_Tidy are the ICF twins)
     EECameraControl mCameraControl;         // +0x9d0 (0x531710; wheel zoom, hot-key selection)
-    std::map<long, EEComplexUnit*> mActiveUnits;  // +0xad0 (unit id -> referenced unit: UpdateActiveUnits/RebuildActiveUnits; dtor 0x88750)
-    std::deque<EEComplexUnit*> mUpdateUnits;  // +0xadc (EEPhysics 0x15401e calls EEComplexUnit::Step on each; dtor 0x2003a4 for all three)
-    std::deque<EEComplexUnit*> mActivateQueue;  // +0xaf0 (units pushed and Reference()d by ActivateUnit)
-    std::deque<EEComplexUnit*> mDeactivateQueue;  // +0xb04 (DeactivateUnit)
+    // the stepped units (handles since R5a.4; each referenced; the deques keep their order, the map is keyed by id)
+    std::map<long, EEUnitHandle<EEComplexUnit> > mActiveUnits;  // +0xad0 (unit id -> referenced unit: UpdateActiveUnits/RebuildActiveUnits; dtor 0x88750)
+    std::deque<EEUnitHandle<EEComplexUnit> > mUpdateUnits;  // +0xadc (EEPhysics 0x15401e calls EEComplexUnit::Step on each; dtor 0x2003a4 for all three)
+    std::deque<EEUnitHandle<EEComplexUnit> > mActivateQueue;  // +0xaf0 (units pushed and Reference()d by ActivateUnit)
+    std::deque<EEUnitHandle<EEComplexUnit> > mDeactivateQueue;  // +0xb04 (DeactivateUnit)
     TSCriticalSection* mGhostUnitsLock;     // +0xb18 (CreateCriticalSection in the ctor)
     EEEffectManager* GetEffectManager() { return this->mEffectManager; }  // inline (callers load it before the arguments)
     EEEffectManager* mEffectManager;        // +0xb1c (0x53185c: what ee/EEEffectManager.h calls gEffectManager)

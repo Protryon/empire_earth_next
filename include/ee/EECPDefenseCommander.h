@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <map>
+#include "ee/EEUnitHandle.h"
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EEAIFOGatherUnits;
@@ -71,7 +72,7 @@ public:
     void FreePackages();                    // 0x78d7b: deletes every package, then clears the map
     void Retaliate(EEPlayer* inPlayer);     // 0x78dc8 (ret 4)
     // 0x792ec (ret 8): the defending groups' units that inGatherer accepts, appended to ioUnits
-    void CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, std::vector<EEUnit*>& ioUnits);
+    void CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, std::vector<EEUnitHandle<EEUnit> >& ioUnits);   // (EECPUnitSelectionGroup::mUnits)
     // 0x79382 (ret 0x10): the threat to inTown (0..1) from the enemy armies near it, the main attacker's id
     float ComputeTownThreat(EETown* inTown, long& outPlayerID, std::map<U2DPoint<long>, EECPDCTownThreat>* ioMap, bool inFill);
     long GetUnitAllowance();                // 0x799fa: how many units the defense may still take

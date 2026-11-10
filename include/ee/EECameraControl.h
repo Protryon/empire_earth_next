@@ -8,6 +8,7 @@
 #include "lle/GETransformation.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEQuaternion.h"
+#include "ee/EEUnitHandle.h"
 
 class GE3DPoint;
 class EEUnit;
@@ -82,8 +83,8 @@ public:
     GE3DPoint mEndFocus;                    // +0x078
     GETransformation mView;                 // +0x084
     GE3DPoint mTargetPoint;                 // +0x0c4 (x = -10000: none; ClearUnitB resets it)
-    EEUnit* mUnitA;                  // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name)
-    EEUnit* mUnitB;                  // +0x0d4 (referenced; ClearUnitB)
+    EEUnitHandle<EEUnit> mUnitA;            // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name; a handle since R5a.4: read on the graphics and physics threads)
+    EEUnitHandle<EEUnit> mUnitB;            // +0x0d4 (referenced; ClearUnitB; a handle)
     float mFraction;                        // +0x0d8
     float mRate;                            // +0x0dc
     float mZoom;                            // +0x0e0 (SetZoom stores it; the wheel zoom reads it)

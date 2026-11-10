@@ -147,7 +147,7 @@ static void SaveUnitOrder(FSFile& outFile)
     long theResult = outFile.Write((unsigned long)theIDs.size());
     for (size_t i = 0; i < theIDs.size() && theResult == kErrorOK; i++)
         theResult = outFile.Write(theIDs[i]);
-    const std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+    const std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
     for (int l = 0; l < 3 && theResult == kErrorOK; l++) {
         theResult = outFile.Write((unsigned long)theLists[l]->size());
         for (size_t i = 0; i < theLists[l]->size() && theResult == kErrorOK; i++)
@@ -183,9 +183,9 @@ static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const st
     } else
         ESDebugOut("EEPWorldHelper: the loaded units are not the saved ones: their order is the load's\n");
     // the stepped units and the queues: the same units, in the saved order
-    std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+    std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
     for (int l = 0; l < 3; l++) {
-        std::deque<EEComplexUnit*> theOrder;
+        std::deque<EEUnitHandle<EEComplexUnit> > theOrder;
         bool theFound = inLists[l].size() == theLists[l]->size();
         for (size_t i = 0; i < inLists[l].size() && theFound; i++) {
             EEComplexUnit* theUnit = LoadedComplexUnit(inLists[l][i]);

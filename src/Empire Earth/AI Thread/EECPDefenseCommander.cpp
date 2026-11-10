@@ -981,7 +981,7 @@ void EECPDefenseCommander::Retaliate(EEPlayer* inEnemy)
 
 // FUNCTION: EXE 0x4792ec
 // Appends the combat manager's defending units that the gatherer accepts
-void EECPDefenseCommander::CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, std::vector<EEUnit*>& ioUnits)
+void EECPDefenseCommander::CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, std::vector<EEUnitHandle<EEUnit> >& ioUnits)
 {
     std::vector<EEComplexUnit*> theUnits;
     this->mPlayer->mCombatManager->CollectDefendingUnits(theUnits);

@@ -6199,6 +6199,15 @@ void ee_ui_slider_set_range(void *slider,
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);
 
+/// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
+void ee_units_register(uint32_t id, void *unit);
+
+/// Clears `id`'s entry if it still names `unit` (`RTSUnit::FreeNode`); returns whether it did.
+bool ee_units_unregister(uint32_t id, void *unit);
+
+/// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
+void *ee_units_resolve(uint32_t id);
+
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
 ///
