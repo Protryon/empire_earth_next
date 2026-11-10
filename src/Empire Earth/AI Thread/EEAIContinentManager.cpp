@@ -1044,72 +1044,57 @@ void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector
     }
 }
 
+// A tile as ee_astar repair.rs reads it: the map tile, its terrain and its path area (GetPathAreaAt: pure reads)
+static EEAIPathArea* EEAIAreaTileAt(EEAIContinentManager& inManager, EEMap* inMap, long inX, long inY, EeAreaTile& outTile)
+{
+    EETile* theTile = inMap->GetTile(inX, inY);
+    EEAIPathArea* theArea = NULL;
+    memset(&outTile, 0, sizeof(outTile));
+    outTile.tile = theTile != NULL;
+    if (theTile) {
+        outTile.terrain = (int32_t)theTile->mTerrainType;
+        theArea = inManager.GetPathAreaAt(EETileLocation(inX, inY));
+    }
+    outTile.area = theArea != NULL;
+    if (theArea) {
+        outTile.id = theArea->mID;
+        outTile.continent = theArea->GetContinentID();
+        outTile.kind = (int32_t)theArea->GetKind();
+        outTile.unit_id = (int32_t)theArea->mUnitID;
+        outTile.size = (int32_t)theArea->mTiles.Size();
+        outTile.land_mass = theArea->GetLandMassID();
+        outTile.water_body = theArea->GetWaterBodyID();
+        outTile.space_region = theArea->GetSpaceRegionID();
+        outTile.surface_region = theArea->GetSurfaceRegionID();
+    }
+    return theArea;
+}
+
+// The eight neighbours of inTile in the C++'s order (x - 1, x, x + 1; y - 1 before y + 1) and their areas
+static void EEAIAreaNeighbours(EEAIContinentManager& inManager, EEMap* inMap, const EETileLocation& inTile,
+                               EeAreaTile* outTiles, EEAIPathArea** outAreas)
+{
+    static const long kOffsets[8][2] = { { -1, -1 }, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 } };
+    for (long i = 0; i < 8; i++)
+        outAreas[i] = EEAIAreaTileAt(inManager, inMap, inTile.mX + kOffsets[i][0], inTile.mY + kOffsets[i][1], outTiles[i]);
+}
+
 // FUNCTION: EXE 0x421a18
 // Returns the inKind region id (land mass, water body, space or surface region) of a fitting path area next to
-// inTile, 0 if none; land mass skips water, cliff..forest and map-edge areas unless of kind inAreaKind
+// inTile, 0 if none; land mass skips water, cliff..forest and map-edge areas unless of kind inAreaKind (Rust: ee_astar
+// repair.rs)
 unsigned short EEAIContinentManager::GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind)
 {
-    std::vector<U2DPoint<long> > theTiles;
     unsigned short theResult = 0;
     EEMap* theMap = gWorld.mMap;
     if (theMap) {
-        if (inKind == kAIPathLandMass) {
-            theTiles.reserve(8);
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY));
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY + 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX, inTile.mY + 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY + 1));
-            for (long i = theTiles.size() - 1; i >= 0; i--) {
-                if (!theMap->GetTile(theTiles[i].GetX(), theTiles[i].mY))
-                    continue;
-                EEAIPathArea* theArea = this->GetPathAreaAt(theTiles[i]);
-                if (theArea && theArea->mKind != kAITileWater &&
-                    (theArea->mKind < kAITileCliff || theArea->mKind > kAITileForest && theArea->mKind != kAITileMapEdge || inAreaKind == theArea->mKind)) {
-                    theResult = theArea->mLandMassID;
-                    i = -1;
-                }
-            }
-        } else if (theMap->GetTile(inTile.mX, inTile.mY) &&
-                   (inKind == kAIPathWaterBody ? theMap->GetTile(inTile.mX, inTile.mY)->mTerrainType == kTerrainDeepWater ||
-                                  theMap->GetTile(inTile.mX, inTile.mY)->mTerrainType == kTerrainShallowWater
-                                : inKind == kAIPathSpaceRegion && theMap->GetTile(inTile.mX, inTile.mY)->mTerrainType == kTerrainSpace ||
-                                  inKind == kAIPathNonSpace && theMap->GetTile(inTile.mX, inTile.mY)->mTerrainType != kTerrainSpace)) {
-            theTiles.reserve(8);
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY));
-            theTiles.push_back(U2DPoint<long>(inTile.mX - 1, inTile.mY + 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX, inTile.mY + 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY - 1));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY));
-            theTiles.push_back(U2DPoint<long>(inTile.mX + 1, inTile.mY + 1));
-            for (long i = theTiles.size() - 1; i >= 0; i--) {
-                if (!theMap->GetTileAtLocation(theTiles[i]))
-                    continue;
-                if (inKind == kAIPathWaterBody) {
-                    EETile* theTile = theMap->GetTileAtLocation(theTiles[i]);
-                    if (theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainShallowWater)
-                        continue;
-                } else if (!(inKind == kAIPathSpaceRegion && theMap->GetTileAtLocation(theTiles[i])->mTerrainType == kTerrainSpace)) {
-                    if (inKind != kAIPathNonSpace || theMap->GetTileAtLocation(theTiles[i])->mTerrainType == kTerrainSpace)
-                        continue;
-                }
-                EEAIPathArea* theArea = this->GetPathAreaAt(theTiles[i]);
-                if (!theArea)
-                    continue;
-                if (inKind == kAIPathWaterBody)
-                    theResult = theArea->mWaterBodyID;
-                else if (inKind == kAIPathSpaceRegion)
-                    theResult = theArea->mSpaceRegionID;
-                else
-                    theResult = theArea->mSurfaceRegionID;
-                break;
-            }
-        }
+        // Rust: ee_astar repair.rs over the tile and its eight neighbours
+        EeAreaTile theCentre;
+        EeAreaTile theAround[8];
+        EEAIPathArea* theAreas[8];
+        EEAIAreaTileAt(*this, theMap, inTile.mX, inTile.mY, theCentre);
+        EEAIAreaNeighbours(*this, theMap, inTile, theAround, theAreas);
+        theResult = ee_astar_adjacent_area_id((int32_t)inKind, (int32_t)inAreaKind, &theCentre, theAround);
     }
     return theResult;
 }
@@ -1918,42 +1903,18 @@ void EEAIContinentManager::Clear(EEMap* inMap)
     this->CreateHills(inMap);
 }
 
-// The path-area entries of RepairPathArea: a neighbour tile and its path area. Ordered and made unique by the area's id
-// (std::sort 0x26bcc / std::unique 0x26c87 with these predicates: +0x7a word compares) (provisional names)
-struct EEAIPathAreaEntryLess {
-    bool operator()(const std::pair<U2DPoint<long>, EEAIPathArea*>& inFirst,
-        const std::pair<U2DPoint<long>, EEAIPathArea*>& inSecond) const
-    {
-        return inFirst.second->mID < inSecond.second->mID;
-    }
-};
-
-struct EEAIPathAreaEntryEqual {
-    bool operator()(const std::pair<U2DPoint<long>, EEAIPathArea*>& inFirst,
-        const std::pair<U2DPoint<long>, EEAIPathArea*>& inSecond) const
-    {
-        return inFirst.second->mID == inSecond.second->mID;
-    }
-};
-
 // FUNCTION: EXE 0x42372b
 // Re-files tile inTile after its AI kind changed: it joins the largest same-kind neighbouring area (merging the
 // others into it), its single neighbour's area or a new path area; sectors and sub-sectors follow the new id
+// (Rust: ee_astar repair.rs chooses from the eight neighbours; the areas, their tiles and the sectors stay here)
 void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
 {
-    std::vector<std::pair<U2DPoint<long>, EEAIPathArea*> > theNeighbours;
-    std::vector<std::pair<U2DPoint<long>, EEAIPathArea*> > theMatches;
-    std::vector<EEAIPathArea*> theUnused;
     std::vector<EEAIPathArea*> theMerged;
     std::vector<U2DPoint<long> > theTiles;
     std::vector<U2DPoint<long> > theOtherTiles;
     std::vector<unsigned short> theSectorIDs;
-    U2DPoint<long> theNeighbour;
-    U2DPoint<long> theStep;
     long i;
     long j;
-    long theDirection;
-    EEAIPathArea* theNeighbourArea;
     EEAIPathSector* theSector;
     EEAIPathSubSector* theSubSector = this->GetPathSubSectorAt(inTile.GetX(), inTile.GetY());
     EEAIPathArea* theBest = NULL;
@@ -1963,120 +1924,34 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
     long theKind = EEAIGetTileKind(inTile);
     unsigned short theContinent = gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY());
     unsigned short theNewID = 0;
-    bool theOK = true;
     if (theArea && theArea->GetKind() != theKind) {
         if (theSubSector)
             theSubSector->mIsStale = true;
         if (theTile) {
-            theNeighbours.reserve(8);
-            theNeighbour.mX = inTile.GetX() - 1;
-            theNeighbour.mY = inTile.GetY() - 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX() - 1;
-            theNeighbour.mY = inTile.GetY();
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX() - 1;
-            theNeighbour.mY = inTile.GetY() + 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX();
-            theNeighbour.mY = inTile.GetY() - 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX();
-            theNeighbour.mY = inTile.GetY() + 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX() + 1;
-            theNeighbour.mY = inTile.GetY() - 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX() + 1;
-            theNeighbour.mY = inTile.GetY();
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            theNeighbour.mX = inTile.GetX() + 1;
-            theNeighbour.mY = inTile.GetY() + 1;
-            theNeighbourArea = this->GetPathAreaAt(theNeighbour);
-            if (theNeighbourArea)
-                theNeighbours.push_back(std::pair<U2DPoint<long>, EEAIPathArea*>(theNeighbour, theNeighbourArea));
-            if (theNeighbours.size() > 1) {
-                for (i = theNeighbours.size() - 1; i >= 0; i--) {
-                    if (theNeighbours[i].second->GetKind() != theKind ||
-                        theNeighbours[i].second->GetContinentID() != theArea->GetContinentID())
-                        continue;
-                    if (theKind == kAITileUnitObstacle)
-                        theOK = theNeighbours[i].second->mUnitID == EEAIGetTileWallID(inTile);   // the neighbour's wall (was the old area's)
-                    if (!theOK)
-                        continue;
-                    // a diagonal neighbour joins only through two same-kind orthogonal steps
-                    if (inTile.GetX() != theNeighbours[i].first.GetX() &&
-                        inTile.GetY() != theNeighbours[i].first.GetY()) {
-                        switch (theKind) {
-                        case kAITileCliff:
-                        case kAITileGaiaObstacle:
-                        case kAITileMapEdge:
-                        case kAITileUnitObstacle:
-                        case kAITileWall:
-                        case kAITileGate:
-                            theOK = true;
-                            break;
-                        default:
-                            theDirection = EEGetTileDirection(inTile.GetX(), inTile.GetY(), theNeighbours[i].first.GetX(),
-                                theNeighbours[i].first.GetY());
-                            EEGetNextTile(inTile, theStep, EETurnDirection(theDirection, 1, true), 1);
-                            theNeighbourArea = this->GetPathAreaAt(theStep);
-                            if (theNeighbourArea && theNeighbourArea->GetKind() == theKind) {
-                                EEGetNextTile(inTile, theStep, EETurnDirection(theDirection, 1, false), 1);
-                                theNeighbourArea = this->GetPathAreaAt(theStep);
-                                theOK = theNeighbourArea && theNeighbourArea->GetKind() == theKind;
-                            } else {
-                                theOK = false;
-                            }
-                            break;
-                        }
-                    } else {
-                        theOK = true;
-                    }
-                    if (theOK)
-                        theMatches.push_back(theNeighbours[i]);
+            // the choice (Rust: ee_astar repair.rs over the eight neighbours): the largest same-kind area to join and
+            // the others to merge into it (std::sort/std::unique by id, walked from the highest id down), the one
+            // neighbour's area, or a new area
+            EeAreaTile theAround[8];
+            EEAIPathArea* theAreas[8];
+            EEAIAreaNeighbours(*this, gWorld.GetMap(), inTile, theAround, theAreas);
+            long theWallID = theKind == kAITileUnitObstacle ? EEAIGetTileWallID(inTile) : -1;   // the neighbours' wall test
+            EeRepairPlan thePlan = ee_astar_repair_plan((int32_t)theKind, theArea->GetContinentID(), theContinent,
+                                                        (int32_t)theWallID, theAround);
+            if (thePlan.action == 1) {
+                theBest = theAreas[thePlan.target];
+                theBest->mTiles.BuildPointList(theTiles, 1);
+                theBest->mTiles.Insert(inTile);
+                theTiles.push_back(inTile);
+                for (i = 0; i < thePlan.merged_count; i++) {
+                    EEAIPathArea* theOther = theAreas[thePlan.merged[i]];
+                    theMerged.push_back(theOther);
+                    theOther->mTiles.BuildPointList(theOtherTiles, 1);
+                    theTiles.insert(theTiles.end(), theOtherTiles.begin(), theOtherTiles.end());
                 }
-            } else if (theNeighbours.size() == 1) {
-                if (theKind == theNeighbours.front().second->GetKind() &&
-                    theContinent == theNeighbours.front().second->GetContinentID())
-                    theSingle = theNeighbours.front().second;
-            }
-            std::sort(theMatches.begin(), theMatches.end(), EEAIPathAreaEntryLess());
-            theMatches.erase(std::unique(theMatches.begin(), theMatches.end(), EEAIPathAreaEntryEqual()), theMatches.end());
-            if (theMatches.size() > 0) {
-                for (i = theMatches.size() - 1; i >= 0; i--) {
-                    if (theBest == NULL || theMatches[i].second->mTiles.Size() > theBest->mTiles.Size())
-                        theBest = theMatches[i].second;
-                }
-                if (theBest) {
-                    theBest->mTiles.BuildPointList(theTiles, 1);
-                    theBest->mTiles.Insert(inTile);
-                    theTiles.push_back(inTile);
-                    for (i = theMatches.size() - 1; i >= 0; i--) {
-                        if (theMatches[i].second == theBest)
-                            continue;
-                        theMerged.push_back(theMatches[i].second);
-                        theMatches[i].second->mTiles.BuildPointList(theOtherTiles, 1);
-                        theTiles.insert(theTiles.end(), theOtherTiles.begin(), theOtherTiles.end());
-                    }
-                    theBest->Create(theTiles);
-                    theNewID = theBest->mID;
-                }
-            } else if (theSingle) {
+                theBest->Create(theTiles);
+                theNewID = theBest->mID;
+            } else if (thePlan.action == 2) {
+                theSingle = theAreas[thePlan.target];
                 theSingle->mTiles.BuildPointList(theTiles, 1);
                 theTiles.push_back(inTile);
                 theSingle->Create(theTiles);

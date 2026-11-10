@@ -1507,3 +1507,41 @@ pub unsafe extern "C" fn ee_astar_path_area_kind_starts(
     let (area, units, flag) = unsafe { (&*area, unit_slice(units, count), &mut *flag) };
     path_area_kind::starts_fill(kind, terrain, x, y, &edges, area, units, flag)
 }
+
+// ---- the path area repair (repair.rs) ----
+
+use crate::repair::{self, EeAreaTile, EeRepairPlan};
+
+/// `GetAdjacentAreaID`: the `kind` region id next to `centre` from its eight neighbours (`repair::NEIGHBOURS`'
+/// order), 0 if none.
+///
+/// # Safety
+/// `centre` valid, `neighbours` valid for 8 records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_adjacent_area_id(
+    kind: i32,
+    area_kind: i32,
+    centre: *const EeAreaTile,
+    neighbours: *const EeAreaTile,
+) -> u16 {
+    // SAFETY: the caller's contract
+    let (centre, neighbours) = unsafe { (&*centre, &*(neighbours as *const [EeAreaTile; 8])) };
+    repair::adjacent_area_id(kind, area_kind, centre, neighbours)
+}
+
+/// `RepairPathArea`'s choice for a tile of new kind `kind` from its eight neighbours (`repair::NEIGHBOURS`' order).
+///
+/// # Safety
+/// `neighbours` valid for 8 records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_repair_plan(
+    kind: i32,
+    area_continent: u16,
+    tile_continent: u16,
+    wall_id: i32,
+    neighbours: *const EeAreaTile,
+) -> EeRepairPlan {
+    // SAFETY: the caller's contract
+    let neighbours = unsafe { &*(neighbours as *const [EeAreaTile; 8]) };
+    repair::repair_plan(kind, area_continent, tile_continent, wall_id, neighbours)
+}

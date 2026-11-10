@@ -24,6 +24,15 @@ constexpr static const int32_t PATH_SPACE_REGION = 3;
 
 constexpr static const int32_t PATH_NON_SPACE = 4;
 
+/// The tile joins the largest matching area, the others merge into it.
+constexpr static const int32_t REPAIR_JOIN = 1;
+
+/// The tile joins its one neighbour's area.
+constexpr static const int32_t REPAIR_SINGLE = 2;
+
+/// The tile gets a new area.
+constexpr static const int32_t REPAIR_NEW = 3;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -890,6 +899,34 @@ struct EePathAreaIDs {
   uint16_t water_body;
   uint16_t space_region;
   uint16_t surface_region;
+};
+
+/// One tile as the repair reads it: the map tile, then its path area (`GetPathAreaAt`; none without a map tile).
+struct EeAreaTile {
+  bool tile;
+  int32_t terrain;
+  bool area;
+  uint16_t id;
+  uint16_t continent;
+  int32_t kind;
+  int32_t unit_id;
+  /// `mTiles.Size()` (a `long`)
+  int32_t size;
+  uint16_t land_mass;
+  uint16_t water_body;
+  uint16_t space_region;
+  uint16_t surface_region;
+};
+
+/// What `RepairPathArea` does with the tile, as indices into `NEIGHBOURS`.
+struct EeRepairPlan {
+  /// `REPAIR_*`
+  int32_t action;
+  /// the joined area's neighbour (`REPAIR_JOIN`, `REPAIR_SINGLE`)
+  int32_t target;
+  /// the areas merged into the joined one, in the C++'s order (`REPAIR_JOIN`)
+  int32_t merged[8];
+  int32_t merged_count;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -3273,6 +3310,26 @@ bool ee_astar_path_area_kind_starts(int32_t kind,
                                     const EeTileUnit *units,
                                     size_t count,
                                     bool *flag);
+
+/// `GetAdjacentAreaID`: the `kind` region id next to `centre` from its eight neighbours (`repair::NEIGHBOURS`'
+/// order), 0 if none.
+///
+/// # Safety
+/// `centre` valid, `neighbours` valid for 8 records.
+uint16_t ee_astar_adjacent_area_id(int32_t kind,
+                                   int32_t area_kind,
+                                   const EeAreaTile *centre,
+                                   const EeAreaTile *neighbours);
+
+/// `RepairPathArea`'s choice for a tile of new kind `kind` from its eight neighbours (`repair::NEIGHBOURS`' order).
+///
+/// # Safety
+/// `neighbours` valid for 8 records.
+EeRepairPlan ee_astar_repair_plan(int32_t kind,
+                                  uint16_t area_continent,
+                                  uint16_t tile_continent,
+                                  int32_t wall_id,
+                                  const EeAreaTile *neighbours);
 
 /// `UDataCompression::Compress`.
 ///
