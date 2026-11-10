@@ -21,6 +21,18 @@ struct RTSUnitLink {
     RTSUnit* mPrev;                         // +0x04 (an RTSUnit, or the list's RTSDummyUnit head)
 };
 
+// New (port): a unit object's C++ class as data (ee/EEUnitKind.h, docs/RUST_PLAN.md R5b.4; the values are
+// ee_units' EE_OBJECT_*): each constructor sets its class's value first thing and each destructor its own on entry,
+// as the vptr is. Not copyable: a copy would carry the other object's class.
+struct RTSUnitObjectKind {
+    RTSUnitObjectKind() : mValue(0) {}
+    unsigned char mValue;
+
+private:
+    RTSUnitObjectKind(const RTSUnitObjectKind&);
+    RTSUnitObjectKind& operator=(const RTSUnitObjectKind&);
+};
+
 class RTSUnit : public UReferenceCounter {
 public:
     // inline (COMDAT 0x1db4 in EEACalamity.cpp's range, after its first user: count above 1 ->
@@ -78,6 +90,7 @@ public:
     bool mIsNodeFreed;                      // +0x2a (= true after the ctor)
     bool GetIsValid() const { return this->mIsValid; }
     bool mIsValid;                          // +0x2b (named by the asserts "this->mIsValid == true")
+    RTSUnitObjectKind mObjectKind;          // New (port): RTSUnit 0, EEUnit 1, EEComplexUnit 2 (EEUnitCast<T>)
 };
 
 #endif

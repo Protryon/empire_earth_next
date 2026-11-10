@@ -1070,7 +1070,7 @@ long EEPlayer::GetNumHeroes(bool inFirst, bool inSecond)
 // Clears every goal queue of a complex unit leaving the player
 void EEPlayer::UnitRemoved(RTSUnit* inUnit)
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inUnit);
     if (theUnit != NULL) {
         for (unsigned long i = 0; i < theUnit->GetNumGoalQueues(); i++)
             theUnit->ClearGoalQueue(i);

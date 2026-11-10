@@ -157,7 +157,7 @@ void EEUGBuildRepair::UpdateTargetCenter()
 // Destroys the goal: takes the unit off the building's builder count if it was counted and releases the building
 EEUGBuildRepair::~EEUGBuildRepair()
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(this->mTarget);
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(this->mTarget);
     if (this->mTarget != NULL) {
         if (this->mWorkerCountIncremented && theUnit->mNumBuilders > 0)
             theUnit->mNumBuilders--;
@@ -202,7 +202,7 @@ bool EEUGBuildRepair::IsAtBuildSite(EEComplexUnit* inUnit)
 // panel refresh); if this is the unit's goal, also fills other parts, starts mines, uncounts the builder; returns that
 bool EEUGBuildRepair::FinishBuilding(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(this->mTarget);
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(this->mTarget);
     EEPlayer* thePlayer = inUnit->mPlayer;
     bool theResult = false;
     EEComplexUnit* theTarget = theUnit;
@@ -868,7 +868,7 @@ void EEUGBuildRepair::ClearBuildSite(EEComplexUnit* inUnit)
 bool EEUGBuildRepair::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     GE3DPoint thePosition;
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(this->mTarget);
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(this->mTarget);
     bool theResult = false;
     switch (inEvent) {
     case kTriggerBuildingDestroyed:

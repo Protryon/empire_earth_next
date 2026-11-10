@@ -1472,7 +1472,7 @@ void EEMCastCalamity::Execute()
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     bool theCast = false;
     EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    EEComplexUnit* theCaster = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(this->mCasterID));
+    EEComplexUnit* theCaster = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(this->mCasterID));
     if (theCaster == NULL || theCaster->mHitPoints <= 0)
         return;
     EETechTreeNode* theNode = thePlayer->mTechnologies->Get(this->mTechnology);
@@ -2157,7 +2157,7 @@ void EEMDropoffResource::Execute()
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     EEComplexUnit* theUnit = theGroup->GetFirstUnit();
     unsigned long theID = this->mDropoffID;
-    EEComplexUnit* theDropoff = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
+    EEComplexUnit* theDropoff = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theID));
     EEActiveGroup* theActiveGroup = NULL;
     if (theUnit && theDropoff) {
         theActiveGroup = new EEActiveGroup(thePlayer);
@@ -3775,7 +3775,7 @@ void EEMKillUnit::Execute()
     EEGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup) {
         if (!this->mAllUnits) {
-            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(theGroup->GetFirstUnit());
+            EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(theGroup->GetFirstUnit());
             if (theUnit && (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint || theUnit->mHitPoints > 0) && theUnit->CanDelete()) {
                 if (IsRefundable(theUnit)) {
                     EETechnology* theTechnology = theUnit->GetPlayer()->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
@@ -4954,7 +4954,7 @@ void EEMPatrol::Execute()
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     EEComplexUnit* theUnit = theGroup->GetFirstUnit();
     unsigned long theTargetID = this->mTargetID;
-    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theTargetID));
+    EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theTargetID));
     unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
     if (theUnit && this->mTargetID == -1) {
         EETown* theSite = theUnit->FindNearestTown();
@@ -6486,7 +6486,7 @@ void EEMSelectPatrolGroup::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     unsigned long theID = this->mUnitID;
-    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
+    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theID));
     if (theUnit)
         theUnit->mPatrolGroup->Select(thePlayer, true);
 }
@@ -7428,7 +7428,7 @@ void EEMSmartFarmers::Execute()
     EESelectedGroup* theSelection = thePlayer->mActiveGroup;
     EEComplexUnit* theFirstUnit = theSelection->GetFirstUnit();
     long theTargetID = this->mTargetID;
-    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theTargetID));
+    EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theTargetID));
     long theIndex = 1;
     if (theFirstUnit == NULL || theTarget == NULL)
         return;

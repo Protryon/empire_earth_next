@@ -17,6 +17,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -253,7 +254,7 @@ long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long 
     this->mPatrolPoints.clear();
     for (unsigned long j = 0; j < theIDs.size() && theResult == 0; j++) {
         long theID = theIDs[j];
-        theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(theID));
+        theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(theID));
         if (theUnit != NULL) {
             // port: a point without a group is this group's too (path points are saved from 0.254 on)
             if (theUnit->GetPatrolGroup() != this)

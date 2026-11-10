@@ -2,7 +2,9 @@
 // reads of the kind tables ee_units owns (rust/crates/ee_units/src/kinds.rs):
 //   EEGoalCast<EEUGAttackUnit>(theGoal)          == dynamic_cast<EEUGAttackUnit*>(theGoal)
 //   EEUnitClassCast<EEUCGate>(theClass)          == dynamic_cast<EEUCGate*>(theClass)
-// A goal's class follows from EEUnitGoal::mKind and a unit class's from EEUnitClass::mCategory (kinds.rs says why);
+//   EEUnitCast<EEComplexUnit>(theUnit)           == dynamic_cast<EEComplexUnit*>(theUnit)   (from any RTSUnit)
+// A goal's class follows from EEUnitGoal::mKind, a unit class's from EEUnitClass::mCategory and a unit object's from
+// RTSUnit::mObjectKind (kinds.rs says why);
 // NULL stays NULL. Include it after the goal and class headers of the classes a file tests.
 #ifndef EE_EEUNITKIND_H
 #define EE_EEUNITKIND_H
@@ -16,6 +18,7 @@
 extern "C" {
 extern const uint32_t EE_UNIT_GOAL_KINDS[256];    // the goal classes of each EEUnitGoal::mKind
 extern const uint64_t EE_UNIT_CLASS_KINDS[256];   // the unit classes of each EEUnitClass::mCategory (below 256)
+extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of each RTSUnit::mObjectKind
 }
 
 class EEUnitGoal;
@@ -160,6 +163,30 @@ template <class T, class C> inline T* EEUnitClassCast(C* inClass)
 template <class T, class C> inline const T* EEUnitClassCast(const C* inClass)
 {
     return inClass != NULL && EEUnitClassIs<T>(inClass) ? static_cast<const T*>(inClass) : NULL;
+}
+
+class EEUnit;
+class EEComplexUnit;
+
+// each unit object class's bit
+template <class T> struct EEUnitObjectKindBit;
+template <> struct EEUnitObjectKindBit<EEUnit> { static const uint32_t kBit = EE_OBJECT_KIND_UNIT; };
+template <> struct EEUnitObjectKindBit<EEComplexUnit> { static const uint32_t kBit = EE_OBJECT_KIND_COMPLEX_UNIT; };
+
+// whether inUnit (an RTSUnit or derived, not NULL) is a T
+template <class T, class U> inline bool EEUnitIs(const U* inUnit)
+{
+    return (EE_UNIT_OBJECT_KINDS[inUnit->mObjectKind.mValue] & EEUnitObjectKindBit<T>::kBit) != 0;
+}
+
+// dynamic_cast<T*>(inUnit) for the unit object classes
+template <class T, class U> inline T* EEUnitCast(U* inUnit)
+{
+    return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<T*>(inUnit) : NULL;
+}
+template <class T, class U> inline const T* EEUnitCast(const U* inUnit)
+{
+    return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<const T*>(inUnit) : NULL;
 }
 
 #endif

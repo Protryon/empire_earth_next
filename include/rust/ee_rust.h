@@ -734,6 +734,19 @@ constexpr static const uint64_t EE_CLASS_KIND_SPACESHIP = 17179869184;
 
 constexpr static const uint64_t EE_CLASS_KIND_PLANET_SPACESHIP = 34359738368;
 
+/// The unit object classes (`EEUnit`, `EEComplexUnit`).
+constexpr static const uint32_t EE_OBJECT_KIND_UNIT = 1;
+
+constexpr static const uint32_t EE_OBJECT_KIND_COMPLEX_UNIT = 2;
+
+/// `RTSUnit::mObjectKind`'s values: an `RTSUnit` alone (only while its base part is built or destroyed), an
+/// `EEUnit`, an `EEComplexUnit`.
+constexpr static const uint8_t EE_OBJECT_RTS_UNIT = 0;
+
+constexpr static const uint8_t EE_OBJECT_UNIT = 1;
+
+constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 

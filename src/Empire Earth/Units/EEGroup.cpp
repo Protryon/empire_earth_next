@@ -23,6 +23,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/GERectangle.h"
 
+#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -387,7 +388,7 @@ void EEGroup::MoveAlong(EEGroupPathRequest* inRequest)
     EETileLocation theLocation;
 
     for (long i = (long)inRequest->mUnitIDs.size() - 1; i >= 0; i--) {
-        theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(inRequest->mUnitIDs[i]));
+        theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(inRequest->mUnitIDs[i]));
         if (theUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mIsDisabled != false
             || theUnit->mTile == NULL || !this->Contains(theUnit))
             continue;

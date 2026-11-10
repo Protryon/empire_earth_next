@@ -80,6 +80,7 @@ const UString EEUnit::sData("EEUnit-Data");
 // Creates an empty unit with no class, player, resources or hit points and no references
 EEUnit::EEUnit()
 {
+    this->mObjectKind.mValue = 1;   // New (port): an EEUnit (ee/EEUnitKind.h)
     this->Reset();
     this->ResetEEUnit();
     this->mReferenceCount = 0;
@@ -115,6 +116,7 @@ void EEUnit::Clear()
 // Destroys the unit, freeing its tile node
 EEUnit::~EEUnit()
 {
+    this->mObjectKind.mValue = 1;   // New (port): an EEUnit again (ee/EEUnitKind.h)
     this->FreeNode();
 }
 
