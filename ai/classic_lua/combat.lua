@@ -10,7 +10,7 @@ local G = require("lib.groups")
 
 local M = {}
 
-local DEFEND_RADIUS = 25
+local DEFEND_RADIUS = 34   -- (MilitaryAidPackage::Deploy: the groups within squared distance 1200 of the town hull answer its threats)
 
 local function army(memory)
     memory.army = memory.army or {}
