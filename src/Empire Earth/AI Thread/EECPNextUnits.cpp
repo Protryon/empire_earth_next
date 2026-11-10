@@ -123,6 +123,7 @@ struct EECPUnitsState {
     long mMemoryNext = 0;
     bool mReflexNavalFlee = true;
     bool mReflexDanger = true;
+    bool mReflexMilitia = true;    // the engine's citizen militia (EECPRMMilitia); off when the script fights its own
     bool mUsed = false;                             // a binding was called (the save's shadow step cannot replay commands)
     long mMicroNext = -1;                           // -1: not started; 0x7fffffff: the script has no micro
     long mOrdersThisStep = 0, mUnitOrdersThisStep = 0;
@@ -358,6 +359,8 @@ bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName)
         return inPlayer->mUnitsState->mReflexNavalFlee;
     if (strcmp(inName, "danger") == 0)
         return inPlayer->mUnitsState->mReflexDanger;
+    if (strcmp(inName, "militia") == 0)
+        return inPlayer->mUnitsState->mReflexMilitia;
     return true;
 }
 
@@ -1840,7 +1843,7 @@ static int LuaRelease(lua_State* L)
     return EECPUnitsHold(L, false);
 }
 
-// ai.reflex{naval_flee = false, danger = false, memory_ms = 180000}
+// ai.reflex{naval_flee = false, danger = false, militia = false, memory_ms = 180000}
 static int LuaReflex(lua_State* L)
 {
     EECPUnitsCharge(L, kCostCall);
@@ -1848,6 +1851,7 @@ static int LuaReflex(lua_State* L)
     EECPUnitsState* s = EECPUnitsGet(me);
     s->mReflexNavalFlee = EECPUnitsOptBool(L, 1, "naval_flee", s->mReflexNavalFlee);
     s->mReflexDanger = EECPUnitsOptBool(L, 1, "danger", s->mReflexDanger);
+    s->mReflexMilitia = EECPUnitsOptBool(L, 1, "militia", s->mReflexMilitia);
     long theMs;
     if (EECPUnitsOptInt(L, 1, "memory_ms", theMs) && theMs >= 0 && theMs <= 3600000)
         s->mMemoryMs = theMs;

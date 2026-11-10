@@ -17,11 +17,15 @@ local SF = require("ageofai.safety")   -- [attack.c citizens_safety]
 local FR = require("ageofai.fronts")   -- [fronts.c]
 local MT = require("ageofai.metal")   -- [metal.c]
 local V = require("lib.view")
+local S = require("ageofai.settings")
 
 local M = {}
 
 function M.init(view, memory)
     memory.started = view.time
+    if S.citizen_militia and ai.reflex ~= nil then
+        ai.reflex{militia = false}   -- [defence.c citizen_militia] the script's militia instead of the engine's reflex
+    end
     print(string.format("ageofai init epoch=%d cap=%d town=%d,%d", view.epoch, view.population_cap, view.town_x, view.town_y))
     return {}
 end
@@ -82,6 +86,7 @@ function M.micro(info, memory)
     SF.note(memory.safety, events, info.time)
     SF.step(memory.safety, memory, info.time)
     T.counterfire(memory.army, events, info.time)
+    T.militia(memory.army, events, info.time, memory.epoch_now)   -- [defence.c citizen_militia]
     T.bait(memory.army, events, info.time, memory.epoch_now)
     T.shelter(memory.army, events, info.time)
     return nil

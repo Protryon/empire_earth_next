@@ -382,6 +382,97 @@ function M.counterfire(mem, events, now)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
+-- Citizen militia (defence.c CITIZEN MILITIA, citizen_militia): every 2 s - enemy citizens building a defence within 12
+-- tiles of own buildings or citizens (any epoch), and up to the Bronze Age the enemy units attacking a unit of ours
+-- within 10 tiles of own citizens (the step's attacked events) - are attacked by the gathering or idle citizens
+-- within 10, at most 3 per enemy and against at most 6, only when those citizens' strength (hit points x attack) is
+-- three times that of the enemies within 6 tiles of the target. The engine's own militia reflex (1.5 x, the towers
+-- counted) is off while this runs (ai.reflex{militia = false}); the citizens go back to work after 10 s.
+
+function M.militia(mem, events, now, epoch)
+    if not S.citizen_militia then
+        return
+    end
+    if mem.militia_t ~= nil and now - mem.militia_t < 2000 then
+        return
+    end
+    mem.militia_t = now
+    mem.militia = mem.militia or {}
+    local release = {}
+    for _, id in ipairs(ai.keys(mem.militia)) do
+        if mem.militia[id] <= now or ai.unit(id) == nil then
+            if ai.unit(id) ~= nil then
+                release[#release + 1] = id
+            end
+            mem.militia[id] = nil
+        end
+    end
+    if #release > 0 then
+        ai.release(release)
+    end
+    local cits = ai.units{category = "citizen", held = "engine"}
+    if #cits == 0 then
+        return
+    end
+    -- the targets: enemy builders of a defence near ours; the attackers of ours (up to the Bronze Age)
+    local targets = {}
+    for _, id in ipairs(ai.seen{enemy = true, category = "citizen", action = "build"}) do
+        local u = ai.unit(id)
+        if u ~= nil and (#ai.units{category = "building", near = {u.x, u.y, 12}, limit = 1} > 0
+                or #ai.units{category = "citizen", near = {u.x, u.y, 12}, limit = 1} > 0) then
+            targets[#targets + 1] = u
+        end
+    end
+    if (epoch or 0) <= 3 then
+        local seen = {}
+        for _, e in ipairs(events) do
+            if e.kind == "attacked" and e.attacker ~= nil and not seen[e.attacker] then
+                seen[e.attacker] = true
+                local a = ai.unit(e.attacker)
+                if a ~= nil and a.category ~= "building" and a.category ~= "animal"
+                        and #ai.units{category = "citizen", near = {a.x, a.y, 10}, limit = 1} > 0 then
+                    targets[#targets + 1] = a
+                end
+            end
+        end
+    end
+    local used = {}
+    local n = 0
+    for _, t in ipairs(targets) do
+        if n >= 6 then
+            break
+        end
+        local near = {}
+        for _, id in ipairs(ai.units{category = "citizen", held = "engine", near = {t.x, t.y, 10}}) do
+            if not used[id] and #near < 3 then
+                local u = ai.unit(id)
+                if u ~= nil and (u.action == "gather" or u.action == "idle" or u.action == "none") then
+                    near[#near + 1] = id
+                end
+            end
+        end
+        if #near > 0 then
+            local foes = ai.seen{enemy = true, armed = true, near = {t.x, t.y, 6}}
+            local foe = #foes > 0 and ai.strength(foes) or 0
+            if ai.strength(near) >= 3 * foe then
+                local code = ai.attack(near, t.id)
+                if code == "ok" then
+                    for _, id in ipairs(near) do
+                        used[id] = true
+                        mem.militia[id] = now + 10000
+                    end
+                    n = n + 1
+                    mem.militias = (mem.militias or 0) + #near
+                    if (mem.militias or 0) <= 30 or now % 60000 < 250 then
+                        print(string.format("militia n=%d target=%d own=%d foe=%d militias=%d", #near, t.id, ai.strength(near), foe, mem.militias))
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
 -- Tower bait (early.c tower_bait, the playtester's opening; here in every epoch): a citizen hit by a seen enemy
 -- soldier, and the citizens within 6 tiles of the attacker, walk to the spot 2 tiles behind the nearest own tower or
 -- town centre within 25 tiles (from the attacker), where the raiders that follow come under fire. They are the

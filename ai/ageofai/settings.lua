@@ -72,6 +72,11 @@ return {
     ar_bleed_pct = 0,               -- 0 upstream: home once the force has lost this much of the hit points it went
                                     -- out with (0: never for that)
     fight_memory_ms = 180000,       -- the enemy memory's life for soldiers (ai.config)
+    -- the citizen militia (defence.c CITIZEN MILITIA)
+    citizen_militia = true,         -- the citizens fight builders of a defence near them and, to the Bronze Age, the
+                                    -- attackers of ours, at 3 x the enemies' strength within 6 tiles
+    militia_estimate = false,       -- NOT PORTED (stats.c's estimate instead of hit points x attack; 0 upstream)
+    militia_caught_share = 100,     -- (with militia_estimate only)
     -- the citizens' safety (attack.c citizens_safety, DAMAGE MEMORY, SEEN HURTS, raid_held)
     avoid_towers_citizens = true,   -- citizens sent back from raided sites and sites behind known towers
     citizen_threats = true,         -- the hurt spots: a site within 6 tiles of one (minerals: three) is dangerous for 2 min
