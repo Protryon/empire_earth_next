@@ -1264,6 +1264,7 @@ unsigned long EEPhysics::UpdateUnits()
 }
 
 EEComplexUnit* gPhysicsSteppingUnit = NULL;   // TEST ONLY (ee/EEPhysics.h)
+void (*gPhysicsAfterTickHook)(void) = NULL;   // TEST ONLY (ee/EEPhysics.h; RTSPhysics::Main's simulation loop)
 
 // FUNCTION: EXE 0x5540dc
 // (EEComplexUnit::Step: the inline COMDAT after its first user above)

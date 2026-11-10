@@ -1679,6 +1679,33 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
     return theResult;
 }
 
+// TEST ONLY (EE-SIM's state dumps): the searches in progress, the pending requests and the timers, one line each
+void EEPathManager::DumpSim(FILE* inFile)
+{
+    fprintf(inFile, "PATHS %zu:", this->mPaths.size());
+    for (size_t i = 0; i < this->mPaths.size(); i++) {
+        EEPathManagerNode* theNode = this->mPaths[i];
+        EEAIAStarMachineBase* theMachine = theNode->mPathMachine;
+        fprintf(inFile, " u%lu@%ld,%ld/p%ld/s%ld/f%d", theNode->mUnit != NULL ? theNode->mUnit->mUnitID : 0UL, theNode->mTile.mX,
+                theNode->mTile.mY, theNode->mPasses, theMachine != NULL ? (long)theMachine->mSteps : -1L,
+                theMachine != NULL && theMachine->mFound ? 1 : 0);
+    }
+    fprintf(inFile, "\nAUTOPATHS %zu:", this->mAutoPaths.size());
+    for (size_t i = 0; i < this->mAutoPaths.size(); i++) {
+        EEPathManagerNode* theNode = this->mAutoPaths[i];
+        EEGraphPathMachine* theMachine = theNode->mGraphMachine;
+        fprintf(inFile, " u%lu@%ld,%ld/p%ld/s%ld/f%d", theNode->mUnit != NULL ? theNode->mUnit->mUnitID : 0UL, theNode->mTile.mX,
+                theNode->mTile.mY, theNode->mPasses, theMachine != NULL ? (long)theMachine->mSteps : -1L,
+                theMachine != NULL && theMachine->mFound ? 1 : 0);
+    }
+    fprintf(inFile, "\nPENDING %zu:", this->mPending.size());
+    for (size_t i = 0; i < this->mPending.size(); i++)
+        fprintf(inFile, " u%lu@%ld,%ld", this->mPending[i].mUnitID, this->mPending[i].mTile.mX, this->mPending[i].mTile.mY);
+    fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
+            this->mHistory.size(), this->mRegions.size(), this->mNextHistoryPruneTime, this->mNextRegionPruneTime,
+            this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
+}
+
 // FUNCTION: EXE 0x4a8db8
 // Advances the queued graph and tile searches and the region rebuild, when there are any
 void EEPathManager::Update()

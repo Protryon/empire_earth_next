@@ -160,6 +160,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEPathManager.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EETechCapture.h"
@@ -568,6 +569,7 @@ void DumpState(const std::string& inPath)
         fprintf(f, "\n");
     }
     EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
+    gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
     for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
         EEUnit* u = static_cast<EEUnit*>(r);
         EEComplexUnit* c = dynamic_cast<EEComplexUnit*>(u);
@@ -576,11 +578,14 @@ void DumpState(const std::string& inPath)
                 (long)u->mTileY);
         if (c != NULL && c->mComplexUnit != NULL) {
             EEComplexUnit* x = c->mComplexUnit;
-            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx", (unsigned long)x->mTimesUpdated,
+            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx wp=%zu pathdone=%d arrived=%d vel=%a blocked=%lu",
+                    (unsigned long)x->mTimesUpdated,
                     x->mCommand ? (long)x->mCommand->mType : -1L, x->mActiveGroup != NULL,
                     (double)x->mPhysicalModel.GetLocation().GetX(), (double)x->mPhysicalModel.GetLocation().GetY(),
                     (double)x->mPhysicalModel.GetLocation().GetZ(), (double)x->mHeight,
-                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2));
+                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2),
+                    x->mWaypoints.size(), x->mIsPathDone ? 1 : 0, x->mHasArrived ? 1 : 0, (double)x->GetVelocity(),
+                    x->mBlockingUnit != NULL ? x->mBlockingUnit->mUnitID : 0UL);
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
                 std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
@@ -611,6 +616,18 @@ void DumpState(const std::string& inPath)
 std::vector<std::pair<long, std::string>> sDumps;   // --dump-at MS=FILE, in game-ms order
 size_t sNextDump = 0;
 std::string sDumpLoad;                               // --dump-load FILE
+
+// --dump-tick MS=FILE (TEST ONLY): the state dump after the first physics tick at or after game ms MS, in a continued
+// game and in a loaded one alike (gPhysicsAfterTickHook, ee/EEPhysics.h: after every physics tick of the headless
+// loop, where --dump-at writes after a communications tick's last)
+std::vector<std::pair<long, std::string>> sTickDumps;   // in game-ms order
+size_t sNextTickDump = 0;
+
+void TickDumpHook()
+{
+    while (sNextTickDump < sTickDumps.size() && gPhysics->mGameTime >= sTickDumps[sNextTickDump].first)
+        DumpState(sTickDumps[sNextTickDump++].second);
+}
 
 // --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
 // MS (gURandomTraceHook, lle/URandom.h), one line each: the draw's number, the new seed, the game ms and the callers
@@ -1408,6 +1425,8 @@ const char* kUsage =
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
+    "  --dump-tick MS=FILE    the same after the first physics tick at or after game ms MS (repeatable; --dump-at\n"
+    "                         writes after a communications tick's last physics tick)\n"
     "  --rng-trace MS=FILE    every draw of the physics random stream after game ms MS with its callers (exe-relative\n"
     "                         addresses, tools/sim.py resolve), at most 50,000 draws\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
@@ -1629,6 +1648,16 @@ int EESimMain(int argc, char** argv)
             sDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
         } else if (a == "--dump-load")
             sDumpLoad = Absolute(value());
+        else if (a == "--dump-tick") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --dump-tick MS=FILE\n");
+                return 64;
+            }
+            sTickDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
+            gPhysicsAfterTickHook = TickDumpHook;
+        }
         else if (a == "--rng-trace") {
             std::string v = value();
             size_t eq = v.find('=');
