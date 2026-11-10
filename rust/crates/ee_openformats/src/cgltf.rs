@@ -2081,7 +2081,7 @@ fn fixup(d: &mut Data) -> R<()> {
     Ok(())
 }
 
-/// `cgltf_parse`, as `GltfToCem` calls it (type autodetected).
+/// `cgltf_parse`, as the original `GltfToCem` called it (type autodetected).
 pub(crate) fn parse(data: &[u8]) -> R<Data<'_>> {
     const GLB_MAGIC: u32 = 0x4654_6c67;
     if data.len() < 12 {

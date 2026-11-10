@@ -1,6 +1,7 @@
-//! PNG -> .sst: the texture reader of GEOpenFormats.cpp (`PngToSst`, `ScanPng`) over a port of stb_image 2.30's PNG
-//! path (zlib inflate, the chunk walk, unfiltering, de-interlacing, the failure reasons). A hand port, not the `png`
-//! crate, so that truncated and malformed files are accepted or refused and give the bytes exactly as before: stb
+//! PNG -> the texture the game stores: the texture reader of GEOpenFormats.cpp (`PngToSst`, `ScanPng`) over a port of
+//! stb_image 2.30's PNG path (zlib inflate, the chunk walk, unfiltering, de-interlacing, the failure reasons). A hand
+//! port, not the `png` crate, so that truncated and malformed files are accepted or refused and give the pixels exactly
+//! as before: stb
 //! ignores CRCs, tolerates extra bytes after the image data and fills short files with zeros, which `png` does not.
 #![allow(clippy::needless_range_loop)]
 
@@ -1122,7 +1123,7 @@ fn convert_format(data: &[u8], img_n: i32, req_comp: i32, pixels: usize) -> Vec<
     out
 }
 
-// ---------------------------------------------------------------------------------------------- PngToSst --
+// --------------------------------------------------------------------------------------------- the texture --
 
 fn be_u32(p: &[u8]) -> u32 {
     u32::from_be_bytes([p[0], p[1], p[2], p[3]])
@@ -1178,14 +1179,31 @@ fn parse_size(s: &[u8]) -> Option<u32> {
     Some(v as u32)
 }
 
-/// PNG files (frame 0, 1, ...) -> the bytes of the .sst (14-byte header, one type-0 Targa per frame) the game would
-/// load in their place (MODEL_FORMATS.md 5).
-pub fn png_to_sst(frames: &[&[u8]]) -> Result<Vec<u8>, Failure> {
+/// One frame of a texture as the game stores it: `width` x `height` pixels, top row first, `channels` (3 or 4) bytes
+/// per pixel in R, G, B(, A) order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PngFrame {
+    pub width: u32,
+    pub height: u32,
+    pub channels: u32,
+    pub pixels: Vec<u8>,
+}
+
+/// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PngTexture {
+    pub width: u32,
+    pub height: u32,
+    pub frames: Vec<PngFrame>,
+}
+
+/// PNG files (frame 0, 1, ...) -> the texture `GETexture::Load` stores (MODEL_FORMATS.md 5): RGB, or RGBA when the
+/// PNG has alpha (a grey+alpha or RGBA colour type, or a tRNS chunk).
+pub fn png_to_texture(frames: &[&[u8]]) -> Result<PngTexture, Failure> {
     if frames.is_empty() {
         return fail("no frames");
     }
-    let mut body = Vec::new();
-    let (mut width, mut height) = (0u32, 0u32);
+    let mut out = PngTexture { width: 0, height: 0, frames: Vec::with_capacity(frames.len()) };
     for (f, d) in frames.iter().enumerate() {
         let Some((color, trns, surface)) = scan_png(d) else { return fail("not a PNG file") };
         let ch: i32 = if color == 4 || color == 6 || trns { 4 } else { 3 };
@@ -1195,12 +1213,13 @@ pub fn png_to_sst(frames: &[&[u8]]) -> Result<Vec<u8>, Failure> {
             return Err(Failure(msg));
         };
         let (w, h) = (img.w, img.h);
+        // the size limit of the Targa frames the game read before D9 (its 16-bit sizes), kept
         if w > 65535 || h > 65535 {
             return fail("PNG larger than 65535 pixels (a Targa's limit)");
         }
         if f == 0 {
-            width = w;
-            height = h;
+            out.width = w;
+            out.height = h;
             if !surface.is_empty() {
                 let parsed = surface
                     .iter()
@@ -1208,8 +1227,8 @@ pub fn png_to_sst(frames: &[&[u8]]) -> Result<Vec<u8>, Failure> {
                     .and_then(|x| Some((parse_size(&surface[..x])?, parse_size(&surface[x + 1..])?)));
                 match parsed {
                     Some((sw, sh)) => {
-                        width = sw;
-                        height = sh;
+                        out.width = sw;
+                        out.height = sh;
                     }
                     None => {
                         let mut msg = b"bad ee:surface \"".to_vec();
@@ -1220,48 +1239,35 @@ pub fn png_to_sst(frames: &[&[u8]]) -> Result<Vec<u8>, Failure> {
                 }
             }
         }
-        // sst.py _tga_bytes: type 0, an 18-byte Targa header, bottom-up BGR(A) rows
-        body.push(0);
-        let (w8, h8) = (w as u16, h as u16);
-        body.extend_from_slice(&[
-            0,
-            0,
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            w8 as u8,
-            (w8 >> 8) as u8,
-            h8 as u8,
-            (h8 >> 8) as u8,
-            (8 * ch) as u8,
-            if ch == 4 { 8 } else { 0 },
-        ]);
-        let ch = ch as usize;
-        for y in (0..h as usize).rev() {
-            let row = &img.out[y * w as usize * ch..(y + 1) * w as usize * ch];
-            for p in row.chunks_exact(ch) {
-                body.extend_from_slice(&[p[2], p[1], p[0]]);
-                if ch == 4 {
-                    body.push(p[3]);
-                }
+        let mut pixels = img.out;
+        pixels.truncate(w as usize * h as usize * ch as usize);
+        out.frames.push(PngFrame { width: w, height: h, channels: ch as u32, pixels });
+    }
+    Ok(out)
+}
+
+/// One frame as a type-2 Targa (an 18-byte header, bottom-up BGR(A) rows; sst.py `_tga_bytes`).
+pub fn frame_to_tga(frame: &PngFrame) -> Vec<u8> {
+    let (w, h, ch) = (frame.width as u16, frame.height as u16, frame.channels as usize);
+    let mut out = vec![0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    out.extend_from_slice(&[w as u8, (w >> 8) as u8, h as u8, (h >> 8) as u8, (8 * ch) as u8, if ch == 4 { 8 } else { 0 }]);
+    for y in (0..h as usize).rev() {
+        let row = &frame.pixels[y * w as usize * ch..(y + 1) * w as usize * ch];
+        for p in row.chunks_exact(ch) {
+            out.extend_from_slice(&[p[2], p[1], p[0]]);
+            if ch == 4 {
+                out.push(p[3]);
             }
         }
     }
-    let mut out = Vec::with_capacity(14 + body.len());
-    out.push(0); // not compressed (unread)
-    out.push(1); // one mip level (unread)
-    out.extend_from_slice(&(frames.len() as u32).to_le_bytes());
-    out.extend_from_slice(&width.to_le_bytes());
-    out.extend_from_slice(&height.to_le_bytes());
-    out.extend_from_slice(&body);
-    Ok(out)
+    out
+}
+
+/// One PNG -> the Targa a picture read as a Targa outside the texture manager gets in its place (`GEFindTargaFile`;
+/// the frame `png_to_texture` decodes; an "ee:surface" text is checked but has no effect).
+pub fn png_to_tga(data: &[u8]) -> Result<Vec<u8>, Failure> {
+    let t = png_to_texture(&[data])?;
+    Ok(frame_to_tga(&t.frames[0]))
 }
 
 #[cfg(test)]
@@ -1351,50 +1357,70 @@ mod tests {
         PngOpts { depth, color, interlace: 0, plte: None, trns: None, text: None }
     }
 
-    fn sst_header(frames: u32, w: u32, h: u32) -> Vec<u8> {
-        let mut v = vec![0, 1];
-        v.extend_from_slice(&frames.to_le_bytes());
-        v.extend_from_slice(&w.to_le_bytes());
-        v.extend_from_slice(&h.to_le_bytes());
-        v
-    }
-
     fn tga_header(w: u8, h: u8, ch: u8) -> Vec<u8> {
         vec![0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, w, 0, h, 0, 8 * ch, if ch == 4 { 8 } else { 0 }]
     }
 
+    /// Frame 0's channels and pixels (top row first, R, G, B(, A)).
+    fn frame0(png: &[u8]) -> (u32, Vec<u8>) {
+        let t = png_to_texture(&[png]).unwrap();
+        (t.frames[0].channels, t.frames[0].pixels.clone())
+    }
+
+    fn refused(frames: &[&[u8]]) -> Vec<u8> {
+        png_to_texture(frames).unwrap_err().0
+    }
+
     #[test]
-    fn rgb_8_bit_is_bottom_up_bgr() {
+    fn the_stored_texture_is_top_down_rgb() {
         let raw = [0, 1, 2, 3, 4, 5, 6, 0, 7, 8, 9, 10, 11, 12];
-        let p = png(2, 2, &raw, plain(8, 2));
-        let sst = png_to_sst(&[&p]).unwrap();
-        let mut want = sst_header(1, 2, 2);
-        want.push(0);
-        want.extend_from_slice(&tga_header(2, 2, 3));
-        want.extend_from_slice(&[9, 8, 7, 12, 11, 10, 3, 2, 1, 6, 5, 4]);
-        assert_eq!(sst, want);
+        let t = png_to_texture(&[&png(2, 2, &raw, plain(8, 2))]).unwrap();
+        assert_eq!((t.width, t.height, t.frames.len()), (2, 2, 1));
+        let f = &t.frames[0];
+        assert_eq!((f.width, f.height, f.channels), (2, 2, 3));
+        assert_eq!(f.pixels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    }
+
+    #[test]
+    fn the_stored_texture_keeps_alpha_frames_and_the_surface_size() {
+        let a = png(1, 1, &[0, 1, 2, 3, 200], PngOpts { text: Some((b"ee:surface", b"4x8")), ..plain(8, 6) });
+        let b = png(1, 1, &[0, 4, 5, 6], plain(8, 2));
+        let t = png_to_texture(&[&a, &b]).unwrap();
+        assert_eq!((t.width, t.height), (4, 8));
+        assert_eq!(t.frames[0].channels, 4);
+        assert_eq!(t.frames[0].pixels, vec![1, 2, 3, 200]);
+        assert_eq!(t.frames[1].channels, 3);
+        assert_eq!(t.frames[1].pixels, vec![4, 5, 6]);
+    }
+
+    #[test]
+    fn a_targa_for_a_picture_read_as_data() {
+        // type 2, 18-byte header, bottom-up BGR rows (what GESurface::LoadTGA reads)
+        let tga = png_to_tga(&png(1, 2, &[0, 1, 2, 3, 0, 4, 5, 6], plain(8, 2))).unwrap();
+        let mut want = tga_header(1, 2, 3);
+        want.extend_from_slice(&[6, 5, 4, 3, 2, 1]);
+        assert_eq!(tga, want);
+        let tga = png_to_tga(&png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6))).unwrap();
+        let mut want = tga_header(1, 1, 4);
+        want.extend_from_slice(&[3, 2, 1, 200]);
+        assert_eq!(tga, want);
+        assert_eq!(png_to_tga(b"hello").unwrap_err().0, b"not a PNG file".to_vec());
     }
 
     #[test]
     fn rgba_keeps_alpha() {
-        let p = png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6));
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(&sst[15 + 18..], &[3, 2, 1, 200]);
-        assert_eq!(sst[15 + 16], 32);
+        assert_eq!(frame0(&png(1, 1, &[0, 1, 2, 3, 200], plain(8, 6))), (4, vec![1, 2, 3, 200]));
     }
 
     #[test]
     fn grey_4_bit_scales_by_17() {
-        let p = png(2, 1, &[0, 0xf1], plain(4, 0));
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(&sst[15 + 18..], &[0xff, 0xff, 0xff, 0x11, 0x11, 0x11]);
+        assert_eq!(frame0(&png(2, 1, &[0, 0xf1], plain(4, 0))), (3, vec![0xff, 0xff, 0xff, 0x11, 0x11, 0x11]));
     }
 
     #[test]
     fn sixteen_bit_keeps_the_high_byte() {
         let p = png(1, 1, &[0, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc], plain(16, 2));
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(&sst[15 + 18..], &[0x9a, 0x56, 0x12]);
+        assert_eq!(frame0(&p), (3, vec![0x12, 0x56, 0x9a]));
     }
 
     #[test]
@@ -1402,76 +1428,69 @@ mod tests {
         let plte = [10, 20, 30, 40, 50, 60];
         let trns = [128];
         let p = png(2, 1, &[0, 0, 1], PngOpts { plte: Some(&plte), trns: Some(&trns), ..plain(8, 3) });
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(sst[15 + 16], 32);
-        assert_eq!(&sst[15 + 18..], &[30, 20, 10, 128, 60, 50, 40, 255]);
+        assert_eq!(frame0(&p), (4, vec![10, 20, 30, 128, 40, 50, 60, 255]));
     }
 
     #[test]
     fn grey_trns_makes_alpha_from_colour_match() {
         let trns = [0, 77];
         let p = png(2, 1, &[0, 77, 78], PngOpts { trns: Some(&trns), ..plain(8, 0) });
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(sst[15 + 16], 32); // tRNS -> 4 channels
-        assert_eq!(&sst[15 + 18..], &[77, 77, 77, 0, 78, 78, 78, 255]);
+        // tRNS -> 4 channels
+        assert_eq!(frame0(&p), (4, vec![77, 77, 77, 0, 78, 78, 78, 255]));
     }
 
     #[test]
     fn grey_alpha_expands() {
-        let p = png(1, 1, &[0, 200, 100], plain(8, 4));
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(&sst[15 + 18..], &[200, 200, 200, 100]);
+        assert_eq!(frame0(&png(1, 1, &[0, 200, 100], plain(8, 4))), (4, vec![200, 200, 200, 100]));
     }
 
     #[test]
-    fn surface_text_sets_the_header_size() {
+    fn surface_text_sets_the_surface_size() {
         let p = png(1, 1, &[0, 1, 2, 3], PngOpts { text: Some((b"ee:surface", b"64x128")), ..plain(8, 2) });
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(sst[6..14], [64, 0, 0, 0, 128, 0, 0, 0]);
+        let t = png_to_texture(&[&p]).unwrap();
+        assert_eq!((t.width, t.height, t.frames[0].width, t.frames[0].height), (64, 128, 1, 1));
     }
 
     #[test]
     fn a_bad_surface_text_is_refused() {
         let p = png(1, 1, &[0, 1, 2, 3], PngOpts { text: Some((b"ee:surface", b"64 x128")), ..plain(8, 2) });
-        assert_eq!(png_to_sst(&[&p]).unwrap_err().0, b"bad ee:surface \"64 x128\"".to_vec());
+        assert_eq!(refused(&[&p]), b"bad ee:surface \"64 x128\"".to_vec());
     }
 
     #[test]
     fn two_frames_use_the_first_ones_size() {
         let a = png(1, 1, &[0, 1, 2, 3], plain(8, 2));
-        let b = png(1, 1, &[0, 4, 5, 6], plain(8, 2));
-        let sst = png_to_sst(&[&a, &b]).unwrap();
-        assert_eq!(u32::from_le_bytes([sst[2], sst[3], sst[4], sst[5]]), 2);
-        assert_eq!(sst.len(), 14 + 2 * (1 + 18 + 3));
+        let b = png(2, 1, &[0, 4, 5, 6, 7, 8, 9], plain(8, 2));
+        let t = png_to_texture(&[&a, &b]).unwrap();
+        assert_eq!((t.width, t.height, t.frames.len()), (1, 1, 2));
+        assert_eq!((t.frames[1].width, t.frames[1].pixels.len()), (2, 6));
     }
 
     #[test]
     fn interlaced_rgba_decodes() {
         // a 1x1 interlaced image: one pass with one pixel
-        let p = png(1, 1, &[0, 1, 2, 3, 4], PngOpts { interlace: 1, ..plain(8, 6) });
-        let sst = png_to_sst(&[&p]).unwrap();
-        assert_eq!(&sst[15 + 18..], &[3, 2, 1, 4]);
+        assert_eq!(frame0(&png(1, 1, &[0, 1, 2, 3, 4], PngOpts { interlace: 1, ..plain(8, 6) })), (4, vec![1, 2, 3, 4]));
     }
 
     #[test]
     fn filters_are_undone() {
         // sub (1), up (2), average (3), paeth (4) over two rows of two grey pixels
         let raw = [1, 10, 5, 2, 1, 1, 3, 2, 2, 4, 1, 1];
-        let p = png(2, 3, &raw, plain(8, 0));
-        let sst = png_to_sst(&[&p]).unwrap();
+        let (ch, data) = frame0(&png(2, 3, &raw, plain(8, 0)));
+        assert_eq!(ch, 3);
         // rows: [10, 15], [11, 16], then average [7+2=(11>>1)+2=7, (7+16)>>1+2=13]; check grey values
-        let data = &sst[15 + 18..];
-        assert_eq!(&data[0..3], &[7, 7, 7]);
-        assert_eq!(&data[3..6], &[13, 13, 13]);
+        assert_eq!(&data[0..3], &[10, 10, 10]);
+        assert_eq!(&data[3..6], &[15, 15, 15]);
         assert_eq!(&data[6..9], &[11, 11, 11]);
         assert_eq!(&data[9..12], &[16, 16, 16]);
-        assert_eq!(&data[12..15], &[10, 10, 10]);
+        assert_eq!(&data[12..15], &[7, 7, 7]);
+        assert_eq!(&data[15..18], &[13, 13, 13]);
     }
 
     #[test]
     fn not_a_png() {
-        assert_eq!(png_to_sst(&[b"hello"]).unwrap_err().0, b"not a PNG file".to_vec());
-        assert_eq!(png_to_sst(&[]).unwrap_err().0, b"no frames".to_vec());
+        assert_eq!(refused(&[b"hello"]), b"not a PNG file".to_vec());
+        assert_eq!(refused(&[]), b"no frames".to_vec());
     }
 
     #[test]
@@ -1480,13 +1499,13 @@ mod tests {
         // cut inside the IDAT chunk
         let idat = p.windows(4).position(|w| w == b"IDAT").unwrap();
         let cut = &p[..idat + 8];
-        assert_eq!(png_to_sst(&[cut]).unwrap_err().0, b"PNG cannot be decoded: outofdata".to_vec());
+        assert_eq!(refused(&[cut]), b"PNG cannot be decoded: outofdata".to_vec());
     }
 
     #[test]
     fn missing_pixels_are_refused() {
         let p = png(1, 2, &[0, 1, 2, 3], plain(8, 2));
-        assert_eq!(png_to_sst(&[&p]).unwrap_err().0, b"PNG cannot be decoded: not enough pixels".to_vec());
+        assert_eq!(refused(&[&p]), b"PNG cannot be decoded: not enough pixels".to_vec());
     }
 
     #[test]
@@ -1495,15 +1514,15 @@ mod tests {
         let n = p.len();
         p[n - 1] ^= 0xff; // the IEND crc
         p[n - 12 - 1] ^= 0xff; // the IDAT crc
-        assert!(png_to_sst(&[&p]).is_ok());
+        assert!(png_to_texture(&[&p]).is_ok());
     }
 
     #[test]
     fn extra_rows_of_data_are_tolerated_and_a_bad_filter_is_not() {
         let p = png(1, 1, &[0, 1, 2, 3, 99, 99, 99, 99], plain(8, 2));
-        assert_eq!(&png_to_sst(&[&p]).unwrap()[15 + 18..], &[3, 2, 1]);
+        assert_eq!(frame0(&p), (3, vec![1, 2, 3]));
         let bad = png(1, 1, &[9, 1, 2, 3], plain(8, 2));
-        assert_eq!(png_to_sst(&[&bad]).unwrap_err().0, b"PNG cannot be decoded: invalid filter".to_vec());
+        assert_eq!(refused(&[&bad]), b"PNG cannot be decoded: invalid filter".to_vec());
     }
 
     #[test]
@@ -1513,13 +1532,13 @@ mod tests {
         let mut extra = Vec::new();
         chunk(&mut extra, b"aaAa", b"xy"); // ancillary: skipped
         p.splice(iend..iend, extra);
-        assert!(png_to_sst(&[&p]).is_ok());
+        assert!(png_to_texture(&[&p]).is_ok());
         let mut q = png(1, 1, &[0, 1, 2, 3], plain(8, 2));
         let iend = q.windows(4).position(|w| w == b"IEND").unwrap() - 4;
         let mut extra = Vec::new();
         chunk(&mut extra, b"ABCD", b"");
         q.splice(iend..iend, extra);
-        assert_eq!(png_to_sst(&[&q]).unwrap_err().0, b"PNG cannot be decoded: ABCD PNG chunk not known".to_vec());
+        assert_eq!(refused(&[&q]), b"PNG cannot be decoded: ABCD PNG chunk not known".to_vec());
     }
 
     #[test]

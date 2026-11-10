@@ -8,6 +8,7 @@ use std::ffi::{c_long, c_void};
 /// `kErrorOK`.
 pub(crate) const OK: c_long = 0;
 /// `kErrorFailed` (`LowLevelEngineCore.h`).
+#[cfg(test)]
 pub(crate) const FAILED: c_long = 9;
 
 /// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).

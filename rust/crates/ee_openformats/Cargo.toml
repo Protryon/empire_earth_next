@@ -4,8 +4,9 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
-# glTF -> .cem and PNG -> .sst (docs/RUST_PLAN.md R2.4). Hand ports of cgltf's and stb_image's readers, so that the
-# accept/refuse decisions and the bytes stay those of the C++ loader (tools/eemodel cppgate); no glTF or PNG crates.
+# glTF and PNG -> the models and textures the game stores (docs/RUST_PLAN.md R2.4, D9). Hand ports of cgltf's and
+# stb_image's readers, so that the accept/refuse decisions and the results stay those of the C++ loader
+# (tools/eemodel cppgate); no glTF or PNG crates. ee_ge: the model's types (model_store.rs).
 [lib]
 crate-type = ["rlib"]
 
@@ -15,3 +16,4 @@ name = "eemodel_gate"
 path = "src/bin/eemodel_gate.rs"
 
 [dependencies]
+ee_ge = { path = "../ee_ge" }

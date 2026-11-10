@@ -2,8 +2,9 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x1001c294..0x1001cd3b: GEModel's current-format loader (Load, LoadCurrentVersion, Load*Chunk) (file name inferred).
-// The .cem reader is Rust (rust/crates/ee_ge model_file.rs, both formats and the sub-models; legacy.rs, the version-1
-// conversion that was 'GEModel Legacy.cpp'): GEModel::Load hands it the file and stores what it read (StoreLoaded).
+// The game's models are glTF files only (docs/RUST_PLAN.md D9): Rust decodes one (rust/crates/ee_openformats,
+// ee_of_gltf_to_model) into the model the .cem chunk readers stored, and StoreLoaded stores it. The .cem reader
+// (Load) and the version-1 conversion ('GEModel Legacy.cpp') are retired.
 #include <windows.h>
 #include <vector>
 
@@ -34,7 +35,7 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "GERustMath.h"
-#include "GERustIO.h"
+#include "rust/ee_rust.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -72,43 +73,9 @@ static UString GERustString(const EeGeBytes& inBytes)
     return UString(&theText[0]);
 }
 
-// FUNCTION: LLE 0x1001c3b4
-// Loads a .cem model (through a memory copy when preloading), legacy or current format by header version;
-// on failure rewinds the file to where it started. The reading is Rust's (ee_ge_model_load).
-long GEModel::Load(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures, bool inPreload)
-{
-    FSMemoryFile theMemoryFile;
-    FSFileSpec* theFile = &inFile;
-    long theResult = kErrorOK;
-    unsigned long theLength;
-    if (inPreload == true && dynamic_cast<FSMemoryFile*>(&inFile) == NULL) {
-        inFile.GetLength(theLength);
-        theMemoryFile.Load(inFile, theLength);
-        theMemoryFile.SetPosition(0, kFileOriginBegin, false);
-        theFile = &theMemoryFile;
-    }
-    if (theFile->GetIsOpen() == true) {
-        std::vector<EeGeSharedFrame> theShared;
-        for (std::map<unsigned long, long>::iterator theIterator = ioTextures.begin(); theIterator != ioTextures.end();
-             theIterator++) {
-            EeGeSharedFrame theEntry;
-            theEntry.frame = (uint32_t)theIterator->first;
-            theEntry.offset = (int32_t)theIterator->second;
-            theShared.push_back(theEntry);
-        }
-        EeGeFieldIo theIO = GERustFieldIO(*theFile);
-        EeGeCemModel* theModel = ee_ge_model_load(&theIO, theShared.empty() ? NULL : &theShared[0], theShared.size());
-        theResult = this->StoreLoaded(theModel, ioTextures);
-        ee_ge_cem_free(theModel);
-        if (theResult == kErrorNativeError)
-            ESGetNativeError();
-    }
-    return theResult;
-}
-
-// Allocates the model's arrays from the counts read (AllocateInternalData, as the counts chunk did) and stores
-// what was read where the C++ chunk readers stored it, then creates and fills the sub-models; returns the load's
-// result. A model whose counts were not read is left as constructed.
+// Allocates the model's arrays from the counts (AllocateInternalData, as the counts chunk did) and stores the model
+// where the original's chunk readers stored it, then creates and fills the sub-models; returns the model's result
+// (a sub-model's is ignored, as the original's). A model whose counts the reader refused is left as constructed.
 long GEModel::StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures)
 {
     EeGeCemInfo theInfo;

@@ -13,10 +13,11 @@
   python -I tools/eemodel/eemodel.py install [--game DIR] [--base DIR] GAMEDIR
         write the open-format models and textures into GAMEDIR/Data (a COPY of the game; refuses the installs and
         the repository outside build/)
-  python -I tools/eemodel/eemodel.py cppgate [--out DIR] [--tree DIR] [--subset N] [--limit-mb 300] [--golden FILE]
-        build the game's open-format converter (rust/crates/ee_openformats) and run it over every exported model and
-        texture in temporary batches of at most --limit-mb; byte parity with the Python converter and, with
-        --golden tools/eemodel/cppgate/golden_cpp.json, the digests the C++ loader recorded
+  python -I tools/eemodel/eemodel.py cppgate [--tree DIR] [--build OUT] [--subset N] [--limit-mb 300] [--no-store]
+        the models and textures the game stores from an open tree (default the main checkout's build/open_data/tree)
+        equal the recorded digests (cppgate.py): the store gate (storegate.py, the game's loaders linked from a game
+        build) and the decoder over every model and texture and their edited variants (cppgate/golden_store.json),
+        each loaded or refused as the Python converter decides
 
 Game data is never written into the repository (outside build/). --game defaults to $EE_GAME_DIR, else the AoC
 install; --base to $EE_BASE_GAME_DIR, else the original game's install (the AoC exe searches its data second).
@@ -406,11 +407,13 @@ def main():
         if name == 'cppgate':
             p.add_argument('--out', help='build folder (default build/eemodel-cppgate)')
             p.add_argument('--exe', help='a built gate program to run instead of building one')
-            p.add_argument('--tree', help="a built tree (its Data folder's .cem/.sst/.tga) instead of the game installs")
+            p.add_argument('--tree', help='an open tree (read only; default: build/open_data/tree of the main checkout)')
+            p.add_argument('--build', help='the game build the store gate links (default build/clang)')
+            p.add_argument('--no-store', action='store_true', help='skip the store gate')
             p.add_argument('--limit-mb', type=float, default=300, help='cap on the temporary folder (default 300 MB)')
             p.add_argument('--subset', type=int, default=1, help='every Nth model and texture (default: all)')
             p.add_argument('--record-golden', metavar='FILE', help='write the digests of this run to FILE')
-            p.add_argument('--golden', metavar='FILE', help='compare with recorded digests')
+            p.add_argument('--golden', metavar='FILE', help='compare with these digests (default cppgate/golden_store.json)')
     p = sub.add_parser('convert')
     p.add_argument('input')
     p.add_argument('output')

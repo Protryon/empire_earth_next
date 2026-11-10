@@ -10,6 +10,7 @@ class GESurface;
 class GETexture;
 class GETextureManager;
 struct GESurfaceDescription;
+struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_rust.h)
 
 struct GETStage {                           // sizeof 0x20 (copied with rep movsd in GETexture's copy ctor)
     GETexture* mTexture;                    // +0x00 (GetStageTexture)
@@ -64,7 +65,7 @@ public:
     unsigned long GetAllocatedSize();
     long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow);
     long Recreate(GEScreen* inScreen);
-    long Save(FSFileSpec& inFile, unsigned char inType, long inFrame);
+    // (Save 0x10033749 wrote a texture file (.sst): retired under D9)
     void SetFrame(unsigned long inFrame);
     void SetStageAlphaMode(unsigned long inMode, unsigned long inStage);
     void SetStageColorMode(unsigned long inMode, unsigned long inStage);
@@ -80,11 +81,13 @@ protected:
     virtual ~GETexture();                   // ??1GETexture@@MAE@XZ (protected: released through Dereference)
 private:
     friend class GETextureManager;
+    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     GETexture(GETextureManager* inManager);                         // ??0GETexture@@AAE@PAVGETextureManager@@@Z
     GETexture(GESurface* inSurface, GETextureManager* inManager);   // private too (AAE)
     unsigned long GetFrameFormat() const { return this->mFrameFormat; }  // ?GetFrameFormat@GETexture@@ABEKXZ
-    long Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GEScreen* inScreen, bool inCreateMIPMaps,
-              long inNumMipLevelsToDrop, unsigned long inFrameFormat);
+    // port (D9): the frames of a texture's PNG files, decoded by Rust (GEFindTextureFile), in place of a texture file
+    long Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
+              bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat);
     void SetIsPromoted(bool inIsPromoted) { this->mIsPromoted = inIsPromoted; }
     // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
     void SetLogicalShift(unsigned long inShift);

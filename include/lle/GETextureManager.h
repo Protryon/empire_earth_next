@@ -68,6 +68,7 @@ public:
     static long GetTexturePackMipLevelsToDrop();
 private:
     friend class GETexture;
+    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     long PromoteTexture(GETexture* inTexture);
     void SetTexturePackSizes(GETexture* inTexture, long inMipLevels);   // port
 

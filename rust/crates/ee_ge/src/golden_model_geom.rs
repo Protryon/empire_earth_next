@@ -1,5 +1,5 @@
 //! `GEModel`'s geometry against golden values from the real C++ (`golden_model_geom.txt`). The scratch driver of
-//! `golden_model.rs` built 500 models in memory with the original `GEModel.cpp` (one to six triangles, three to
+//! R4.3's model reader (PORT_LEARNINGS.md "R4.3, third part") built 500 models in memory with the original `GEModel.cpp` (one to six triangles, three to
 //! eight vertices, up to three tag points, one or two materials, one to three frames, an LCG seeded 11 drawing the
 //! points, a repeated point now and then, normals, tag points and names, transforms, the graphics scale and frame),
 //! ran `ComputeBoundingVolumes`, `ComputeModelNormals`, `PrepareTransforms`, `Verify`, `SortTagPoints` and
@@ -7,7 +7,6 @@
 //! runs the C++'s loops over `model_geom`'s functions (what the forwarders in `GEModel.cpp` do). The driver relinked
 //! over the forwarders printed the same lines, and so did it over every model of the game data, sub-models included.
 
-use crate::golden_model::Fnv;
 use crate::model_geom::frame_is_sound;
 use crate::model_geom::{
     center, frame_box, graphics_transform, radius, scale_removal, tag_point_order, vertex_normals,
@@ -15,6 +14,31 @@ use crate::model_geom::{
 use crate::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 const GOLDEN: &str = include_str!("golden_model_geom.txt");
+
+/// FNV-1a 64, the driver's digest.
+struct Fnv(u64);
+
+impl Fnv {
+    fn new() -> Fnv {
+        Fnv(0xcbf2_9ce4_8422_2325)
+    }
+    fn b(&mut self, bytes: &[u8]) {
+        for &c in bytes {
+            self.0 ^= c as u64;
+            self.0 = self.0.wrapping_mul(0x100000001b3);
+        }
+    }
+    fn u(&mut self, v: u64) {
+        self.b(&v.to_le_bytes());
+    }
+    fn f(&mut self, v: f32) {
+        self.u(v.to_bits() as u64);
+    }
+    fn s(&mut self, text: &[u8]) {
+        self.u(text.len() as u64);
+        self.b(text);
+    }
+}
 
 struct Gen(u32);
 

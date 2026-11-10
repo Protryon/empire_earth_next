@@ -1,23 +1,25 @@
-"""The open-format gate (eemodel.py cppgate): build the game's converter (rust/crates/ee_openformats, the
-eemodel_gate program) and run it over
+"""The open-format gate (eemodel.py cppgate; docs/RUST_PLAN.md D9): the models and textures the game stores from
+the open tree equal what the game stored before D9.
 
-* every model on the data path as eemodel exports it (.gltf + .bin), the same without the EE_model extension (what an
-  editor that drops it leaves), and every 25th as .glb;
-* edited models: TRS instead of matrices, Blender's ".NNN" name suffixes, no Z-up wrapper, a rotated wrapper (an
-  error), broken EE_model data (frame fixes: an error; LODs: dropped), frame transforms from the node animation
-  (STEP and, with stretched key times, LINEAR);
-* every texture as PNG, and PNG variants an editor may write (grey 8/4-bit, grey+alpha, palette with tRNS, 16-bit,
-  RGB with tRNS, interlaced, the ee:surface text, a bad ee:surface text and a truncated file: errors);
+1. The store gate (storegate.py): the game's own GEModelManager / GETextureManager code, linked from a game build,
+   loads every model and texture of the open tree and digests the stored GEModel / GETexture (every array and
+   pixel); the digests were recorded from the loaders before D9 (glTF -> .cem bytes -> GEModel::Load, PNG -> .sst
+   bytes -> GETexture::Load) and the native loaders gave the same.
+2. The decoder gate: the game's decoder (rust/crates/ee_openformats, the eemodel_gate program) over every model and
+   texture of the open tree as files, the same models without the EE_model extension (what an editor that drops it
+   leaves), every 25th as .glb, edited models (TRS instead of matrices, Blender's ".NNN" name suffixes, no Z-up
+   wrapper, a rotated wrapper: an error, broken EE_model data: frame fixes an error, LODs dropped, frame transforms
+   from the node animation, STEP and with stretched key times LINEAR) and PNG variants an editor may write (grey
+   8/4-bit, grey+alpha, palette with tRNS, 16-bit, RGB with tRNS, interlaced, the ee:surface text, a bad ee:surface
+   text and a truncated file: errors). Each case's result (a digest of the model with three shared-frame maps, of
+   the texture's frames, or the refusal message) must equal the recorded one (golden_store.json, --golden), and the
+   case must load or be refused as the Python converter (gltf.import_, sst.from_png, an independent implementation)
+   decides. golden_store.json was recorded before D9's deletion by a run that also decoded each case the old way (the
+   .cem / .sst bytes through the readers, the gate program's former --old) and found every digest equal.
 
-The converter's result must equal the Python converter's (gltf.import_ + cem.write, sst.from_png + sst.write) byte for byte,
-or both must refuse (the Python is an independent implementation; the C++ is gone). A second, recorded reference:
-the digest of every case's result as the C++ gave it (golden_cpp.json, --golden; recorded for tree-binary at subset 1,
-valid while that tree and the case generator stay the same: re-record against the Python, never from the Rust alone).
-
-Streaming: the cases are exported to a temporary folder in batches of at most --limit-mb (default 300 MB, inputs and
-estimated outputs together); each batch is converted, compared and deleted before the next is written, so the
-whole set runs in a bounded temporary folder. --subset N takes every Nth model and every Nth texture; --tree reads a
-built tree's Data folder (.cem/.sst/.tga files) instead of the game installs.
+Streaming: the cases are written to a temporary folder in batches of at most --limit-mb (default 300 MB); each batch
+is decoded, compared and deleted before the next. --subset N takes every Nth model and every Nth texture (the store
+gate then compares that subset). The tree is read only (default: the main checkout's build/open_data/tree).
 """
 import copy
 import hashlib
@@ -29,25 +31,22 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import zlib
 from array import array
 
 import cem
 import gltf
 import png
-import sources
 import sst
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
-GE = ROOT / 'src' / 'Low-Level Engine' / 'Graphics Engine'
-
+GOLDEN = HERE / 'cppgate' / 'golden_store.json'
 
 def build(out):
-    """The Rust converter's gate program (rust/crates/ee_openformats, src/bin/eemodel_gate.rs), built for the host. The
-    C++ loader it replaced is gone (docs/RUST_PLAN.md R2.4); the comparison is the Python converter and, for the
-    recorded data, the digests the C++ gave (golden_cpp.json)."""
+    """The game's decoder's gate program (rust/crates/ee_openformats, src/bin/eemodel_gate.rs), built for the host."""
     from rust_build import TARGET_DIR
     env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
     r = subprocess.run(['cargo', 'build', '-p', 'ee_openformats', '--bin', 'eemodel_gate', '--release', '--offline'],
@@ -231,56 +230,46 @@ def _digest(result):
     return hashlib.sha256(data).hexdigest()[:12]
 
 
-def iter_cases(srcs, subset):
-    """Yield (kind, file, stem, group, {file name: bytes}, estimated output bytes) for every case, in a fixed order."""
-    n = 0
-    for src in srcs:
-        for name in src.names('models\\'):
-            if not name.endswith('.cem'):
-                continue
-            raw = src.read(name)
-            try:
-                m = cem.read(raw)
-            except cem.CemError:
-                continue
-            n += 1
-            if (n - 1) % subset:
-                continue
-            doc, binary = gltf.export(m)
-            stem = f'm{n:04d}'
-            est = len(raw) + 4096
-            yield ('model', stem + '.gltf', stem, 'models', _gltf_files(stem, doc, binary), est)
-            core = copy.deepcopy(doc)
-            for nd in core['nodes']:
-                nd.pop('extensions', None)
-            core.pop('extensionsUsed', None)
-            yield ('model', stem + '_core.gltf', stem + '_core', 'models without EE_model',
-                   _gltf_files(stem + '_core', core, binary), est)
-            if n % 25 == 0:
-                yield ('model', stem + '_glb.glb', stem + '_glb', 'models as .glb',
-                       {stem + '_glb.glb': gltf.glb(doc, binary)}, est)
-            exts = [x['extensions']['EE_model'] for x in doc['nodes'] if 'extensions' in x]
-            if n % 10 == 0 or any(len(e.get('radii', [])) > 1 or e.get('frameFixes') for e in exts):
-                for suffix, (d, b) in model_edits(doc, binary).items():
-                    s = f'{stem}_{suffix}'
-                    yield ('model', s + '.gltf', s, 'edited models', _gltf_files(s, d, b), est)
-    t = 0
-    for src in srcs:
-        for name in src.names('textures\\'):
-            if not name.endswith(('.sst', '.tga')):
-                continue
-            t += 1
-            if (t - 1) % subset:
-                continue
-            tex = sst.read(src.read(name), name)
-            stem = f't{t:04d}'
-            est = 64 + sum(f.width * f.height * f.channels + 32 for f in tex.frames)
-            files = {stem + suffix: data for suffix, data in sst.to_png(tex)}
-            yield ('texture', stem + '.png', stem, 'textures', files, est)
-            if t % 100 == 0:
-                for suffix, data in png_variants(tex.frames[0]).items():
-                    s = f'{stem}_{suffix}'
-                    yield ('texture', s + '.png', s, 'PNG variants', {s + '.png': data}, 4096)
+def iter_cases(tree, subset):
+    """Yield (kind, file, stem, group, {file name: bytes}) for every case, in a fixed order."""
+    models = sorted(p for p in (tree / 'Data' / 'Models').iterdir() if p.suffix.lower() == '.gltf')
+    for n, path in enumerate(models, 1):
+        if (n - 1) % subset:
+            continue
+        doc = json.loads(path.read_bytes())
+        binary = (path.parent / urllib.parse.unquote(doc['buffers'][0]['uri'])).read_bytes()
+        stem = f'm{n:04d}'
+        yield ('model', stem + '.gltf', stem, 'models', _gltf_files(stem, doc, binary))
+        core = copy.deepcopy(doc)
+        for nd in core['nodes']:
+            nd.pop('extensions', None)
+        core.pop('extensionsUsed', None)
+        yield ('model', stem + '_core.gltf', stem + '_core', 'models without EE_model',
+               _gltf_files(stem + '_core', core, binary))
+        if n % 25 == 0:
+            yield ('model', stem + '_glb.glb', stem + '_glb', 'models as .glb',
+                   {stem + '_glb.glb': gltf.glb(dict(doc, buffers=[{'byteLength': len(binary)}]), binary)})
+        exts = [x['extensions']['EE_model'] for x in doc['nodes'] if 'extensions' in x]
+        if n % 10 == 0 or any(len(e.get('radii', [])) > 1 or e.get('frameFixes') for e in exts):
+            for suffix, (d, b) in model_edits(doc, binary).items():
+                s = f'{stem}_{suffix}'
+                yield ('model', s + '.gltf', s, 'edited models', _gltf_files(s, d, b))
+    folder = tree / 'Data' / 'Textures'
+    textures = sorted(p for p in folder.iterdir() if p.suffix.lower() == '.png' and '@' not in p.stem)
+    for t, path in enumerate(textures, 1):
+        if (t - 1) % subset:
+            continue
+        stem = f't{t:04d}'
+        files = {stem + '.png': path.read_bytes()}
+        k = 1
+        while (folder / f'{path.stem}@{k}.png').is_file():
+            files[f'{stem}@{k}.png'] = (folder / f'{path.stem}@{k}.png').read_bytes()
+            k += 1
+        yield ('texture', stem + '.png', stem, 'textures', files)
+        if t % 100 == 0:
+            for suffix, data in png_variants(sst.from_png([files[stem + '.png']]).frames[0]).items():
+                s = f'{stem}_{suffix}'
+                yield ('texture', s + '.png', s, 'PNG variants', {s + '.png': data})
 
 
 def _gltf_files(name, doc, binary):
@@ -299,17 +288,17 @@ def _clear(folder):
 
 
 class Stream:
-    """Converts cases in bounded batches: flush() runs the converter on the batch, compares it and deletes it."""
+    """Decodes cases in bounded batches: flush() runs the decoder on the batch, compares it and deletes it."""
 
     def __init__(self, exe, folder, limit):
         self.exe, self.folder, self.limit = exe, folder, limit
         self.batch, self.used = [], 0
         self.groups, self.bad = {}, 0
-        self.digests, self.peak, self.batches = [], 0, 0
+        self.digests, self.names, self.peak, self.batches = [], [], 0, 0
 
     def add(self, case):
-        kind, file, stem, group, files, est = case
-        cost = sum(len(v) for v in files.values()) + est
+        kind, file, stem, group, files = case
+        cost = sum(len(v) for v in files.values()) + 4096
         if self.batch and self.used + cost > self.limit:
             self.flush()
         for name, data in files.items():
@@ -323,7 +312,7 @@ class Stream:
         (self.folder / 'cases.txt').write_bytes(''.join(f'{k} {f}\n' for k, f, _, _ in self.batch).encode())
         r = subprocess.run([str(self.exe), str(self.folder)], stdout=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit(f'the converter failed with exit status {r.returncode:#x}')
+            sys.exit(f'the decoder failed with exit status {r.returncode:#x}')
         self.peak = max(self.peak, _folder_size(self.folder))
         self.batches += 1
         for kind, file, stem, group in self.batch:
@@ -336,19 +325,16 @@ class Stream:
             else:
                 got = None
             g = self.groups.setdefault(group, [0, 0, 0])
-            if isinstance(want, bytes) and isinstance(got, bytes):
-                ok = want == got
-                g[1] += ok
-            else:
-                ok = not isinstance(want, bytes) and isinstance(got, str)
-                g[2] += ok
+            ok = got is not None and isinstance(want, bytes) == isinstance(got, bytes)
+            g[1 if isinstance(got, bytes) else 2] += ok
             g[0] += 1
             self.digests.append(_digest(got) if got is not None else 'none')
+            self.names.append(stem)
             if not ok:
                 self.bad += 1
                 if self.bad <= 20:
-                    show = lambda v: f'{len(v)} bytes' if isinstance(v, bytes) else f'error: {v}'
-                    print(f'  {file:28s} DIFFERS  Python {show(want)}  |  converter {show(got)}')
+                    show = lambda v: 'loads' if isinstance(v, bytes) else f'error: {v}'
+                    print(f'  {file:28s} DIFFERS  Python {show(want)}  |  decoder {show(got)}')
         _clear(self.folder)
         self.batch, self.used = [], 0
 
@@ -360,47 +346,53 @@ def tree_fingerprint(tree):
 
 def run(a):
     t0 = time.time()
+    import storegate
     out = pathlib.Path(a.out or ROOT / 'build' / 'eemodel-cppgate').resolve()
-    exe = pathlib.Path(a.exe) if a.exe else build(out)
-    if a.tree:
-        tree = pathlib.Path(a.tree).resolve()
-        srcs = [sources.Source(tree.name, folder=tree / 'Data')]
-        fingerprint = tree_fingerprint(tree)
-    else:
-        srcs = sources.sources(a.game, a.base)
-        fingerprint = None
+    tree = pathlib.Path(a.tree).resolve() if a.tree else storegate.DEFAULT_TREE
     subset = max(1, a.subset)
+    bad = 0
+    if not a.no_store:
+        print('--- the store gate (storegate.py): the GEModel / GETexture the game stores', flush=True)
+        cmd = [sys.executable, '-I', str(HERE / 'storegate.py'), '--tree', str(tree), '--subset', str(subset)]
+        if a.build:
+            cmd += ['--build', str(a.build)]
+        bad += subprocess.run(cmd).returncode != 0
+    exe = pathlib.Path(a.exe) if a.exe else build(out)
+    fingerprint = tree_fingerprint(tree)
     limit = int(a.limit_mb * 1_000_000)
-    print(f'--- streaming over {"all" if subset == 1 else f"every {subset}th"} model/texture, '
+    print(f'--- the decoder gate over {"all" if subset == 1 else f"every {subset}th"} model/texture of {tree}, '
           f'temporary folder capped at {a.limit_mb} MB', flush=True)
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='eemodel-', dir=out) as tmp:
         stream = Stream(exe, pathlib.Path(tmp), limit)
-        for case in iter_cases(srcs, subset):
+        for case in iter_cases(tree, subset):
             stream.add(case)
         stream.flush()
-    for gname, (total, same, both) in stream.groups.items():
-        print(f'  {gname:26s} {total:5} cases: {same} identical bytes, {both} refused by both')
+    for gname, (total, loads, refused) in stream.groups.items():
+        print(f'  {gname:26s} {total:5} cases: {loads} loaded, {refused} refused (as the Python decides)')
     print(f'{sum(g[0] for g in stream.groups.values())} cases in {stream.batches} batches; '
           f'peak temporary use {stream.peak / 1e6:.1f} MB')
-    bad = stream.bad
+    bad += stream.bad
     if a.record_golden:
+        if subset != 1:
+            sys.exit('--record-golden needs the whole tree (no --subset)')
         pathlib.Path(a.record_golden).write_text(json.dumps(
-            {'tree': fingerprint, 'subset': subset, 'count': len(stream.digests),
-             'digests': ' '.join(stream.digests)}, indent=1) + '\n')
+            {'tree': fingerprint, 'count': len(stream.digests),
+             'digests': ' '.join(f'{n}={d}' for n, d in zip(stream.names, stream.digests))}, indent=1) + '\n')
         print(f'golden recorded: {a.record_golden} ({len(stream.digests)} digests)')
-    if a.golden:
-        g = json.loads(pathlib.Path(a.golden).read_text())
-        if g.get('subset') != subset or g.get('count') != len(stream.digests) or g.get('tree') != fingerprint:
-            print(f'golden NOT compared: it records subset {g.get("subset")}, {g.get("count")} cases, tree '
-                  f'{g.get("tree")}; this run is subset {subset}, {len(stream.digests)} cases, tree {fingerprint}')
+    golden = a.golden or (None if a.record_golden else GOLDEN)
+    if golden:
+        g = json.loads(pathlib.Path(golden).read_text())
+        recorded = dict(item.split('=', 1) for item in g['digests'].split(' '))
+        if g.get('tree') != fingerprint:
+            print(f'golden NOT compared: it records tree {g.get("tree")}, this one is {fingerprint}')
             bad += 1
         else:
-            want = g['digests'].split(' ')
-            diffs = [i for i, (x, y) in enumerate(zip(want, stream.digests)) if x != y]
-            print(f'golden digests: {len(want) - len(diffs)}/{len(want)} equal')
+            diffs = [(n, recorded.get(n), d) for n, d in zip(stream.names, stream.digests) if recorded.get(n) != d]
+            print(f'golden digests: {len(stream.digests) - len(diffs)}/{len(stream.digests)} equal '
+                  f'({g["count"]} recorded)')
             bad += len(diffs)
-            for i in diffs[:20]:
-                print(f'  case #{i}: golden {want[i]}, got {stream.digests[i]}')
+            for n, w, d in diffs[:20]:
+                print(f'  case {n}: golden {w}, got {d}')
     print(f'{"PASS" if bad == 0 else f"FAIL ({bad} cases differ)"} ({time.time() - t0:.0f} s)')
     return 1 if bad else 0

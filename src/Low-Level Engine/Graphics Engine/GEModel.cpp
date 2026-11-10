@@ -120,6 +120,13 @@ GEModel::GEModel(GEModelManager* inManager)
     this->mTagPointCount = 0;
     this->mLODCount = 1;
     this->mManager = inManager;
+    // port: the counts and arrays the destructor reads, for a model whose load stored nothing (the original left
+    // them unset, and destroying such a model read garbage: a refused glTF model or sub-model)
+    this->mFrameCount = 0;
+    this->mSubModelCount = 0;
+    this->mMaterials = NULL;
+    this->mTagPoints = NULL;
+    this->mGraphicsBoundingBox = NULL;
 }
 
 // FUNCTION: LLE 0x1001edb9
@@ -162,7 +169,7 @@ GEModel::~GEModel()
         if (this->mFrameTagPoints[i])
             delete[] this->mFrameTagPoints[i];
     }
-    for (i = 0; i < this->mLODCount; i++) {
+    for (i = 0; i < this->mLODCount && this->mPolygonArrays; i++) {   // port: none allocated, see the constructor
         if (this->mPolygonArrays[i])
             delete this->mPolygonArrays[i];
     }

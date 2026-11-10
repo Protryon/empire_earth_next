@@ -21,15 +21,10 @@
 #include "lle/FSPath.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf in place of its .cem
+#include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf
+#include "rust/ee_rust.h"       // ee_ge_cem_free
 
 static unsigned long sModelNumber = 1;      // 0x100d953c: appended to created models' names
-// Release-build trace of a model file that failed to load or close: compiled out, but its arguments (the file's
-// volume, directory and name) are still evaluated (provisional name).
-inline void GEReportModelFile(const UString& inVolume, const UString& inDirectory, const UString& inFile)
-{
-}
-
 //
 // FUNCTION: LLE 0x100206c7
 // Creates the model manager with a model search path and its lock
@@ -96,34 +91,29 @@ void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 }
 
 // FUNCTION: LLE 0x100208b0
-// Returns the loaded model of that name (".cem" added), else finds, loads and registers it; NULL on failure
+// Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
+// name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
+// original's was "<name>.cem")
 GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long, long>& ioTextures)
 {
-    UString theFileName = inName + ".cem";
-    FSFileSpec* theFile = NULL;
+    EeGeCemModel* theFile = NULL;
     GEModel* theModel = NULL;
     std::map<UString, GEModel*>::iterator theIter;
     TSScheduler::GetCurrentThreadIndex();
     this->mCriticalSection->Enter();
-    theIter = this->mModels.find(theFileName);
+    theIter = this->mModels.find(inName);
     if (theIter != this->mModels.end())
         theModel = theIter->second;
-    else if (GEFindModelFile(this->mPath, theFileName, theFile) == kErrorOK) {   // the open format first
-        if (theFile->Open(kFileAccessRead) == kErrorOK) {
-            theModel = new GEModel(this);
-            if (theModel->Load(*theFile, ioTextures, true) == kErrorOK) {
-                this->mModels[theFileName] = theModel;
-                this->mMemoryFootprint += theModel->SizeOf();
-            } else {
-                GEReportModelFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-                theModel->UReferenceCounter::Dereference();
-                theModel = NULL;
-            }
-            if (theFile->Close() != kErrorOK)
-                GEReportModelFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-        } else
-            GEReportModelFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
-        delete theFile;
+    else if (GEFindModelFile(this->mPath, inName, ioTextures, theFile) == kErrorOK) {
+        theModel = new GEModel(this);
+        if (theModel->StoreLoaded(theFile, ioTextures) == kErrorOK) {
+            this->mModels[inName] = theModel;
+            this->mMemoryFootprint += theModel->SizeOf();
+        } else {
+            theModel->UReferenceCounter::Dereference();
+            theModel = NULL;
+        }
+        ee_ge_cem_free(theFile);
     }
     this->mCriticalSection->Leave();
     TSScheduler::GetCurrentThreadIndex();
