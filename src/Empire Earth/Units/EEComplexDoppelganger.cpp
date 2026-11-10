@@ -1078,8 +1078,14 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->GetHitPoints() < 1) {
         this->mAreaEffects.Clear();
         this->mAreaEffects.mItems.clear();
-    } else
+    } else {
+        // port (0.255): the saved count stays (MakeAreaEffects counts the templates: a unit made by EEMakeUnitCopy,
+        // whose CopyFrom zeroes it, had 0 in the game that was saved and its templates' count after a load)
+        unsigned long theCount = this->mNumAreaEffects;
         this->MakeAreaEffects();
+        if (EESaveHasRunningState(inMajorVersion, inMinorVersion))
+            this->mNumAreaEffects = theCount;
+    }
     this->RefreshGoals();
     this->RefreshActiveGoal();
     if (theAutoWaypoint) {
