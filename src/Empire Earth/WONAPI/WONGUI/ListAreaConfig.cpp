@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
 // FUNCTION: WON 0x0078d5d0
@@ -17,9 +20,10 @@ namespace WONAPI {
 ListSortType ListAreaConfig::ReadSortType()
 {
     GUIString name=this->ReadString(false);
-    if(name.CompareNoCase("ASCENDING")==0) return ListSortType_Ascending;
-    if(name.CompareNoCase("DESCENDING")==0) return ListSortType_Descending;
-    if(name.CompareNoCase("NONE")==0) return ListSortType_None;
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_LISTAREACONFIG_READSORTTYPE_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_name==0) return ListSortType_Ascending;
+    if(aNameIdx_name==1) return ListSortType_Descending;
+    if(aNameIdx_name==2) return ListSortType_None;
     throw ConfigObjectException("Invalid list sort type.");
 }
 
@@ -34,19 +38,20 @@ void ListAreaConfig::ReadListFlags(ComponentConfig* inConfig,ListArea* inArea)
         GUIString name=inConfig->ReadFlag(&on);
         if(name.length()==0) break;
         unsigned long flags;
-        if(name.CompareNoCase("SelOver")==0) flags=2;
-        else if(name.CompareNoCase("SelOnlyWhenOver")==0) flags=4;
-        else if(name.CompareNoCase("ToggleSel")==0) flags=8;
-        else if(name.CompareNoCase("FullRowSelect")==0) flags=0x10;
-        else if(name.CompareNoCase("HilightIcons")==0) flags=0x20;
-        else if(name.CompareNoCase("ScrollFullLine")==0) flags=0x40;
-        else if(name.CompareNoCase("ShowPartialLines")==0) flags=0x80;
-        else if(name.CompareNoCase("ClickEventOnMouseUp")==0) flags=0x100;
-        else if(name.CompareNoCase("ItemWidthCheckOnSel")==0) flags=0x200;
-        else if(name.CompareNoCase("MultiSelect")==0) flags=0x400;
-        else if(name.CompareNoCase("KeyMoveWrapAround")==0) flags=0x800;
-        else if(name.CompareNoCase("NoAutoAdjustScrollPos")==0) flags=0x1000;
-        else if(name.CompareNoCase("DoListItemToolTip")==0) flags=0x2000;
+        const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_LISTAREACONFIG_READLISTFLAGS_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_name==0) flags=2;
+        else if(aNameIdx_name==1) flags=4;
+        else if(aNameIdx_name==2) flags=8;
+        else if(aNameIdx_name==3) flags=0x10;
+        else if(aNameIdx_name==4) flags=0x20;
+        else if(aNameIdx_name==5) flags=0x40;
+        else if(aNameIdx_name==6) flags=0x80;
+        else if(aNameIdx_name==7) flags=0x100;
+        else if(aNameIdx_name==8) flags=0x200;
+        else if(aNameIdx_name==9) flags=0x400;
+        else if(aNameIdx_name==10) flags=0x800;
+        else if(aNameIdx_name==11) flags=0x1000;
+        else if(aNameIdx_name==12) flags=0x2000;
         else throw ConfigObjectException("Unknown list flag: "+(std::string)name);
         inArea->SetListFlags(flags,on);
     }
@@ -57,8 +62,9 @@ void ListAreaConfig::ReadListFlags(ComponentConfig* inConfig,ListArea* inArea)
 // the scroll area config
 bool ListAreaConfig::Virtual24(const std::string& inInstruction)
 {
-    if(inInstruction=="LISTFLAGS") ListAreaConfig::ReadListFlags(this,this->mListArea);
-    else if(inInstruction=="TEXTITEM")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_LISTAREACONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) ListAreaConfig::ReadListFlags(this,this->mListArea);
+    else if(aKeyIdx==1)
     {
         while(!this->EndOfString())
         {
@@ -66,10 +72,10 @@ bool ListAreaConfig::Virtual24(const std::string& inInstruction)
             if(!this->EndOfString()) this->EnsureComma();
         }
     }
-    else if(inInstruction=="FONT") this->mListArea->SetFont(this->ReadFont());
-    else if(inInstruction=="TEXTCOLOR") this->mListArea->mTextColor=this->ReadColor();
-    else if(inInstruction=="SELCOLOR") this->mListArea->mSelColor=this->ReadSelectionColor();
-    else if(inInstruction=="LISTSORTTYPE") this->mListArea->SetSortType(this->ReadSortType());
+    else if(aKeyIdx==2) this->mListArea->SetFont(this->ReadFont());
+    else if(aKeyIdx==3) this->mListArea->mTextColor=this->ReadColor();
+    else if(aKeyIdx==4) this->mListArea->mSelColor=this->ReadSelectionColor();
+    else if(aKeyIdx==5) this->mListArea->SetSortType(this->ReadSortType());
     else return ScrollAreaConfig::Virtual24(inInstruction);
     return true;
 }

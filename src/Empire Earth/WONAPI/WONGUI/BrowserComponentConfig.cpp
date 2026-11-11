@@ -23,6 +23,9 @@ ComponentConfig* BrowserComponentConfig::CfgFactory()
 }
 
 #include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x0078f960
 // Binds the config to the browser component it configures
@@ -35,7 +38,8 @@ void BrowserComponentConfig::SetComponent(Component* component)
 // Resolves HTMLVIEW to the page view's text area (configured as a scroll area); other names go to the container
 bool BrowserComponentConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
-    if(name=="HTMLVIEW")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME,name.data(),name.size());
+    if(aKeyIdx==0)
     {
         config=new ScrollAreaConfig;
         component=this->mBrowserComponent->GetHTMLView();
@@ -48,19 +52,21 @@ bool BrowserComponentConfig::GetPredefinedComponent(const std::string& name,Comp
 // In the original TRANSPARENT takes no boolean argument and there is no BACKGROUND instruction
 bool BrowserComponentConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="TRANSPARENT")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0)
         this->mBrowserComponent->SetTransparent(true);
-    else if(instruction=="SCROLLER")
+    else if(aKeyIdx==1)
         this->mBrowserComponent->SetScroller(SafeConfigGetComponent<Scroller*>(this->ReadComponent(),"Scroller"));
-    else if(instruction=="FONTSIZE")
+    else if(aKeyIdx==2)
     {
         HTMLFontSize size;
         GUIString value=this->ReadString(false);
-        if(value.CompareNoCase("Smallest")==0) size=HTMLFontSize_Smallest;
-        else if(value.CompareNoCase("Small")==0) size=HTMLFontSize_Small;
-        else if(value.CompareNoCase("Medium")==0) size=HTMLFontSize_Medium;
-        else if(value.CompareNoCase("Large")==0) size=HTMLFontSize_Large;
-        else if(value.CompareNoCase("Largest")==0) size=HTMLFontSize_Largest;
+        const int aNameIdx_value=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_BROWSERCOMPONENTCONFIG_VIRTUAL24_VALUE,value.mData->mText,value.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_value==0) size=HTMLFontSize_Smallest;
+        else if(aNameIdx_value==1) size=HTMLFontSize_Small;
+        else if(aNameIdx_value==2) size=HTMLFontSize_Medium;
+        else if(aNameIdx_value==3) size=HTMLFontSize_Large;
+        else if(aNameIdx_value==4) size=HTMLFontSize_Largest;
         else throw ConfigObjectException("Invalid font size: "+std::string(value));
         this->mBrowserComponent->SetFontSize(size);
     }

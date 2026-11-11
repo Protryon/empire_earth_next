@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 #include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 
 namespace WONAPI {
 // FUNCTION: WON 0x0078d2b0
@@ -18,14 +21,15 @@ namespace WONAPI {
 // ADJUSTHEIGHTTOFITTEXT; passes other keys to the base configuration
 bool LabelConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="TEXT") this->mLabel->SetText(this->ReadString(false),true);
-    else if(instruction=="FONT") this->mLabel->SetFont(this->ReadFont());
-    else if(instruction=="TEXTCOLOR") this->mLabel->SetTextColor(this->ReadColor());
-    else if(instruction=="BACKGROUND") this->mLabel->SetBackground(this->ReadBackground());
-    else if(instruction=="VERTALIGN") this->mLabel->SetVertAlign(this->ReadVertAlign());
-    else if(instruction=="HORZALIGN") this->mLabel->SetHorzAlign(this->ReadHorzAlign());
-    else if(instruction=="WRAP") this->mLabel->SetWrap(this->ReadBool());
-    else if(instruction=="ADJUSTHEIGHTTOFITTEXT") this->mLabel->SetAdjustHeightToFitText(this->ReadBool());
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) this->mLabel->SetText(this->ReadString(false),true);
+    else if(aKeyIdx==1) this->mLabel->SetFont(this->ReadFont());
+    else if(aKeyIdx==2) this->mLabel->SetTextColor(this->ReadColor());
+    else if(aKeyIdx==3) this->mLabel->SetBackground(this->ReadBackground());
+    else if(aKeyIdx==4) this->mLabel->SetVertAlign(this->ReadVertAlign());
+    else if(aKeyIdx==5) this->mLabel->SetHorzAlign(this->ReadHorzAlign());
+    else if(aKeyIdx==6) this->mLabel->SetWrap(this->ReadBool());
+    else if(aKeyIdx==7) this->mLabel->SetAdjustHeightToFitText(this->ReadBool());
     else return ComponentConfig::Virtual24(instruction);
     return true;
 }

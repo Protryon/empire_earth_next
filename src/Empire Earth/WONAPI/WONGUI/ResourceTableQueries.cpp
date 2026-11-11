@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00793e50
 // Returns the named resource group; throws "Resource group not found: <name>" when it is missing
@@ -133,8 +136,9 @@ void ResourceConfigTable::ClearAll()
 // Handles BACKGROUND and BORDERPADDING (left,top,right,bottom) for a scroll area; else defers to the container parser
 bool ScrollAreaConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="BACKGROUND") this->mScrollArea->SetBackground(this->ReadBackground());
-    else if(instruction=="BORDERPADDING")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) this->mScrollArea->SetBackground(this->ReadBackground());
+    else if(aKeyIdx==1)
     {
         int left=this->ReadInt();this->EnsureComma();
         int top=this->ReadInt();this->EnsureComma();
@@ -149,7 +153,8 @@ bool ScrollAreaConfig::Virtual24(const std::string& instruction)
 // Handles SCROLLAREA, attaching the named scroll area (throws if it is not one); else defers to the container parser
 bool ScrollerConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="SCROLLAREA")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0)
     {
         ScrollArea* area=dynamic_cast<ScrollArea*>(this->ReadComponent());
         if(area==NULL) throw ConfigObjectException("Expecting ScrollArea");
@@ -163,16 +168,18 @@ bool ScrollerConfig::Virtual24(const std::string& instruction)
 ScrollbarCondition ScrollbarScrollerConfig::GetScrollbarCondition()
 {
     GUIString condition=this->ReadString(false);
-    if(condition.CompareNoCase("DISABLE")==0) return ScrollbarCondition_Disable;
-    if(condition.CompareNoCase("ENABLE")==0) return ScrollbarCondition_Enable;
-    if(condition.CompareNoCase("CONDITIONAL")==0) return ScrollbarCondition_Conditional;
+    const int aNameIdx_condition=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SCROLLBARSCROLLERCONFIG_GETSCROLLBARCONDITION_CONDITION,condition.mData->mText,condition.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_condition==0) return ScrollbarCondition_Disable;
+    if(aNameIdx_condition==1) return ScrollbarCondition_Enable;
+    if(aNameIdx_condition==2) return ScrollbarCondition_Conditional;
     throw ConfigObjectException("Invalid scrollbar condition: "+(std::string)condition);
 }
 // FUNCTION: WON 0x007948a0
 // Handles SCROLLBARCONDITIONS (horizontal,vertical); else defers to the scroller parser
 bool ScrollbarScrollerConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="SCROLLBARCONDITIONS")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0)
     {
         ScrollbarCondition horz=this->GetScrollbarCondition();this->EnsureComma();
         ScrollbarCondition vert=this->GetScrollbarCondition();
@@ -187,13 +194,14 @@ bool ScrollbarScrollerConfig::Virtual24(const std::string& instruction)
 ScrollButtonCondition ButtonScrollerConfig::GetScrollButtonCondition()
 {
 	GUIString aStr = this->ReadString(false);
-	if(aStr.CompareNoCase("DISABLE")==0)
+	const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_BUTTONSCROLLERCONFIG_GETSCROLLBUTTONCONDITION_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+	if(aNameIdx_aStr==0)
 		return ScrollButtonCondition_Disable;
-	else if(aStr.CompareNoCase("ENABLE")==0)
+	else if(aNameIdx_aStr==1)
 		return ScrollButtonCondition_Enable;
-	else if(aStr.CompareNoCase("CONDITIONAL")==0)
+	else if(aNameIdx_aStr==2)
 		return ScrollButtonCondition_Conditional;
-	else if(aStr.CompareNoCase("PARTIALCONDITIONAL")==0)
+	else if(aNameIdx_aStr==3)
 		return ScrollButtonCondition_PartialConditional;
 	else
 		throw ConfigObjectException("Invalid scrollbar condition: " + (std::string)aStr);
@@ -203,7 +211,8 @@ ScrollButtonCondition ButtonScrollerConfig::GetScrollButtonCondition()
 ///////////////////////////////////////////////////////////////////////////////
 bool ButtonScrollerConfig::Virtual24(const std::string &theInstruction)
 {
-	if(theInstruction=="SCROLLBARCONDITIONS")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BUTTONSCROLLERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 	{
 		ScrollButtonCondition horz, vert;
 		horz = this->GetScrollButtonCondition(); this->EnsureComma();

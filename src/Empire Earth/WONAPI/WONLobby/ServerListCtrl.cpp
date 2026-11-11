@@ -20,6 +20,9 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/EELobbyGameCode.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // Filter combo box row that offers to add or remove the typed filter text (RTTI .?AVFilterListItem@@, global
 // namespace); a TextListItem (0x28 bytes) with no new virtual functions, 0x38 bytes in all
@@ -839,40 +842,44 @@ void ServerListCtrlConfig::SetComponent(Component* inComponent)
 // Answers NUMCOLUMNS with the list's column count, else asks the base config
 bool ServerListCtrlConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
-    if(inName=="NUMCOLUMNS") { outValue=this->mServerList->mColumnInfo.size();return true; }
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
+    if(aKeyIdx==0) { outValue=this->mServerList->mColumnInfo.size();return true; }
     return ComponentConfig::GetNamedValue(inName,outValue);
 }
 // FUNCTION: WON 0x007c8c30
 // Handles the LISTID, ADDCOLUMN, DEFAULTFILTER, NUMCOLUMNS and SETCOLUMNFILTERTYPE layout instructions
 bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
     if(ContainerConfig::Virtual24(inInstruction)) return true;
-    if(inInstruction=="LISTID")
+    if(aKeyIdx==0)
     {
         GUIString aType=this->ReadString(false);
-        if(aType.CompareNoCase("net")==0) this->mServerList->SetGameType(2);
-        else if(aType.CompareNoCase("lan")==0) this->mServerList->SetGameType(1);
-        else if(aType.CompareNoCase("direct")==0) this->mServerList->SetGameType(3);
+        const int aNameIdx_aType=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE,aType.mData->mText,aType.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_aType==0) this->mServerList->SetGameType(2);
+        else if(aNameIdx_aType==1) this->mServerList->SetGameType(1);
+        else if(aNameIdx_aType==2) this->mServerList->SetGameType(3);
         else throw ConfigObjectException("Invalid server list id: "+static_cast<std::string>(aType));
     }
-    else if(inInstruction=="ADDCOLUMN") this->HandleAddColumn();
-    else if(inInstruction=="DEFAULTFILTER")
+    else if(aKeyIdx==1) this->HandleAddColumn();
+    else if(aKeyIdx==2)
     {
         GUIString aColumn=this->ReadString(false);
         this->EnsureComma();
         GUIString aFilters=this->ReadString(false);
         ServerListCtrl::AddDefaultFilters(aColumn,aFilters,false);
     }
-    else if(inInstruction=="NUMCOLUMNS") this->mServerList->SetNumColumns(this->ReadInt());
-    else if(inInstruction=="SETCOLUMNFILTERTYPE")
+    else if(aKeyIdx==3) this->mServerList->SetNumColumns(this->ReadInt());
+    else if(aKeyIdx==4)
     {
         this->ReadInt();
         this->EnsureComma();
         GUIString aType=this->ReadString(false);
         // The filter type is only validated; ReadInt's column and the type are not kept.
-        if(aType.CompareNoCase("int")==0) {}
-        else if(aType.CompareNoCase("string")==0) {}
-        else if(aType.CompareNoCase("player")==0) {}
+        const int aNameIdx_aType=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE,aType.mData->mText,aType.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_aType==3) {}
+        else if(aNameIdx_aType==4) {}
+        else if(aNameIdx_aType==5) {}
         else throw ConfigObjectException("Unknown filter type: "+static_cast<std::string>(aType));
     }
     else return false;

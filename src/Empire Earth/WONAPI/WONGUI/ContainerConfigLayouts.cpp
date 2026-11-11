@@ -13,6 +13,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyLayout.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00788e20
 // Reads a component list into a layout that gives them the same width and/or height
@@ -107,10 +110,11 @@ bool ContainerConfig::HandleNoOverlapLayout()
 		if(aStr.length()==0)
 			break;
 
-		if(aStr.CompareNoCase("Above")==0) instructions |= 0x100;
-		else if(aStr.CompareNoCase("Below")==0) instructions |= 0x200;
-		else if(aStr.CompareNoCase("Right")==0) instructions |= 0x400;
-		else if(aStr.CompareNoCase("Left")==0) instructions |= 0x800;
+		const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+		if(aNameIdx_aStr==0) instructions |= 0x100;
+		else if(aNameIdx_aStr==1) instructions |= 0x200;
+		else if(aNameIdx_aStr==2) instructions |= 0x400;
+		else if(aNameIdx_aStr==3) instructions |= 0x800;
 		else 
 			throw ConfigObjectException("Unknown no overlap instruction: " + (std::string)aStr);
 	}

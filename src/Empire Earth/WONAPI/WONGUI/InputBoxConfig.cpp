@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
 // FUNCTION: WON 0x0078cd60
@@ -17,21 +20,22 @@ namespace WONAPI {
 // icon, colours, select-on-focus, history size, cursor blink rate); passes other keys to the base configuration
 bool InputBoxConfig::Virtual24(const std::string& inInstruction)
 {
-    if(inInstruction=="TEXT") this->mInputBox->SetText(this->ReadString(false),true);
-    else if(inInstruction=="PASSWORDCHAR") this->mInputBox->SetPasswordChar(this->ReadChar());
-    else if(inInstruction=="ALLOWSELECTION") this->mInputBox->SetAllowSelection(this->ReadBool());
-    else if(inInstruction=="MAXCHARS") this->mInputBox->mMaxChars=this->ReadInt();
-    else if(inInstruction=="CHARWIDTH") this->mInputBox->SetCharWidth(this->ReadInt());
-    else if(inInstruction=="BACKGROUND") this->mInputBox->SetBackground(this->ReadBackground());
-    else if(inInstruction=="DISABLEDBACKGROUND") this->mInputBox->SetDisabledBackground(this->ReadBackground());
-    else if(inInstruction=="ICON") this->mInputBox->SetIcon(this->ReadImage(false).get());
-    else if(inInstruction=="TEXTCOLOR") this->mInputBox->mTextColor=this->ReadColor();
-    else if(inInstruction=="DISABLEDTEXTCOLOR") this->mInputBox->mDisabledTextColor=this->ReadColor();
-    else if(inInstruction=="SELCOLOR") this->mInputBox->mSelColor=this->ReadSelectionColor();
-    else if(inInstruction=="SELONFOCUS") this->mInputBox->mSelectOnFocus=this->ReadBool();
-    else if(inInstruction=="MAXINPUTHISTORY") this->mInputBox->mMaxInputHistory=this->ReadInt();
-    else if(inInstruction=="USEDISABLEDCOLORS") this->mInputBox->mUseDisabledColors=this->ReadBool();
-    else if(inInstruction=="CURSORBLINKRATE")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_INPUTBOXCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) this->mInputBox->SetText(this->ReadString(false),true);
+    else if(aKeyIdx==1) this->mInputBox->SetPasswordChar(this->ReadChar());
+    else if(aKeyIdx==2) this->mInputBox->SetAllowSelection(this->ReadBool());
+    else if(aKeyIdx==3) this->mInputBox->mMaxChars=this->ReadInt();
+    else if(aKeyIdx==4) this->mInputBox->SetCharWidth(this->ReadInt());
+    else if(aKeyIdx==5) this->mInputBox->SetBackground(this->ReadBackground());
+    else if(aKeyIdx==6) this->mInputBox->SetDisabledBackground(this->ReadBackground());
+    else if(aKeyIdx==7) this->mInputBox->SetIcon(this->ReadImage(false).get());
+    else if(aKeyIdx==8) this->mInputBox->mTextColor=this->ReadColor();
+    else if(aKeyIdx==9) this->mInputBox->mDisabledTextColor=this->ReadColor();
+    else if(aKeyIdx==10) this->mInputBox->mSelColor=this->ReadSelectionColor();
+    else if(aKeyIdx==11) this->mInputBox->mSelectOnFocus=this->ReadBool();
+    else if(aKeyIdx==12) this->mInputBox->mMaxInputHistory=this->ReadInt();
+    else if(aKeyIdx==13) this->mInputBox->mUseDisabledColors=this->ReadBool();
+    else if(aKeyIdx==14)
     {
         int on=this->ReadInt();
         int off;

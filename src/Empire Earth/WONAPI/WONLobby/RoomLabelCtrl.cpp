@@ -14,6 +14,9 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x007c32b0
 // Creates the room label showing the server name, for no room kind yet
@@ -104,22 +107,23 @@ namespace WONAPI {
 // Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
 bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey)
 {
-    if(inKey=="PREFIX")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_ROOMLABELCTRLCONFIG_VIRTUAL24_INKEY,inKey.data(),inKey.size());
+    if(aKeyIdx==0)
     {
         this->mRoomLabel->SetPrefix(this->ReadString(false));
     }
-    else if(inKey=="GROUPTYPE")
+    else if(aKeyIdx==1)
     {
         GUIString aGroup=this->ReadString(false);
         if(aGroup.CompareNoCase("CHAT",0)==0) this->mRoomLabel->SetRoomSpecFlags(1);
         else if(aGroup.CompareNoCase("GAME",0)==0) this->mRoomLabel->SetRoomSpecFlags(2);
         else throw ConfigObjectException("Invalid Group Type: "+(std::string)aGroup);
     }
-    else if(inKey=="SHOWUSERCOUNT")
+    else if(aKeyIdx==2)
     {
         this->mRoomLabel->SetShowUserCount(this->ReadBool());
     }
-    else if(inKey=="SHOWSERVER")
+    else if(aKeyIdx==3)
     {
         this->mRoomLabel->SetShowServer(this->ReadBool());
     }
