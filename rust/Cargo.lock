@@ -230,6 +230,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_gfx"
+version = "0.1.0"
+dependencies = [
+ "ee_ge",
+]
+
+[[package]]
 name = "ee_gx"
 version = "0.1.0"
 dependencies = [
@@ -331,6 +338,7 @@ dependencies = [
  "ee_formations",
  "ee_fs",
  "ee_ge",
+ "ee_gfx",
  "ee_gx",
  "ee_mixer",
  "ee_net_tcp",

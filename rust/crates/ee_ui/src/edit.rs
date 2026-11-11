@@ -168,7 +168,7 @@ impl<'a, M: Mbcs, H: EditHost> Edit<'a, M, H> {
     }
 
     /// `mLines[i].GetLength()`.
-    fn len(&self, i: c_ulong) -> c_ulong {
+    pub(crate) fn len(&self, i: c_ulong) -> c_ulong {
         char_len(self.m, &self.line(i)) as c_ulong
     }
 

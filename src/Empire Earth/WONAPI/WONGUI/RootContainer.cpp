@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The window drag's start, place and end and the cursor component's place are ee_won's guievent module
+// (rust/crates/ee_won/src/guievent.rs); this unit keeps the root, the cursor component, the backgrounds and the calls.
 using namespace WONAPI;
 
 // FUNCTION: WON 0x007040d0
@@ -147,7 +150,7 @@ void RootContainer::MouseMove(int x, int y)
 		return;
 	int mx,my;
 	this->mCurrentCursor->GetComponent(mx,my);
-	x-=mx; y-=my; 
+	x = ee_won_gui_root_cursor_place(x, y, mx, my, &y);
 
 	this->mCursorComponent->Invalidate();
 	this->mCursorComponent->SetPos(x,y);
@@ -166,7 +169,7 @@ void RootContainer::MouseDrag(int x, int y)
 		{
 			int mx,my;
 			this->mCurrentCursor->GetComponent(mx,my);
-			x-=mx; y-=my; 
+			x = ee_won_gui_root_cursor_place(x, y, mx, my, &y);
 
 			this->mCursorComponent->Invalidate();
 			this->mCursorComponent->SetPos(x,y);
@@ -176,15 +179,16 @@ void RootContainer::MouseDrag(int x, int y)
 	}
 	else
 	{
-		int aNewX = this->Left() + (x - this->mDragX);
-		int aNewY = this->Top() + (y - this->mDragY);
-		if(aNewX==this->Left() && aNewY==this->Top())
+		int aNewX, aNewY;
+		if(!ee_won_gui_root_drag_place(this->Left(), this->Top(), x, y, this->mDragX, this->mDragY, &aNewX, &aNewY))
 			return;
 
 		Window *aWindow = this->mWindow;
 		WONRectangle r;
 		aWindow->GetRect(r,false);
-		aWindow->SetPosSize(r.x+aNewX,r.y+aNewY,-1,-1);
+		int aWindowY;
+		int aWindowX = ee_won_gui_root_drag_window(r.x, r.y, aNewX, aNewY, &aWindowY);
+		aWindow->SetPosSize(aWindowX,aWindowY,-1,-1);
 	}
 }
 
@@ -202,7 +206,7 @@ void RootContainer::MouseDown(int x, int y, int theButton)
 
 	if(aMouseChild==NULL)
 		return;
-	if(!aMouseChild->ComponentFlagSet(ComponentFlag_ParentDrag))
+	if(!ee_won_gui_root_drag_starts(theButton, this->mAllowDrag, aMouseChild->ComponentFlagSet(ComponentFlag_ParentDrag)))
 		return;
 	this->mDragging = true;
 	this->mDragX = x;
@@ -232,7 +236,7 @@ void RootContainer::MouseUp(int x, int y, int theButton)
 {
 	Container::MouseUp(x,y,theButton);
 
-	if(theButton==0)
+	if(ee_won_gui_root_drag_ends(theButton))
 		this->mDragging = false;
 }
 
@@ -282,8 +286,8 @@ void RootContainer::SetCursor(Cursor *theCursor)
 			aComponent->SetComponentFlags(0x100 | 0x800 | 0x1000, true);
 			aComponent->SetVisible(true);
 			
-			int x = this->mWindow->mMouseX-mx;
-			int y = this->mWindow->mMouseY-my;
+			int y;
+			int x = ee_won_gui_root_cursor_place(this->mWindow->mMouseX, this->mWindow->mMouseY, mx, my, &y);
 			aComponent->SetPos(x,y);
 
 			this->AddChild(aComponent);

@@ -131,14 +131,18 @@ ComponentConfig* GameBrowserCtrlConfig::CfgFactory()
 }
 
 #include "ee/wonapi/WONURL.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x007bc450
 // Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
 bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEBROWSERCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
     if(ContainerConfig::Virtual24(instruction))
         return true;
-    if(instruction=="HOMELOCATION")
+    if(aKeyIdx==0)
     {
         std::string path=this->ReadString(false);
         URL url=path;

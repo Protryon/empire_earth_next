@@ -4,8 +4,13 @@
 // 0x1007fd7d..0x100805c4: the ctor, the dtor, then the out-of-line members in alphabetical order. No key init chains
 // (the unit does not include the rasterizer header) and no COMDATs: the inline members, the implicit copy members
 // and ??_E are emitted by UIControlsTable.cpp. UITriStateCheckBox.cpp starts at 0x100805c4.
+//
+// The scroll's timing and offsets are Rust (rust/crates/ee_ui/src/scrolling.rs, docs/RUST_PLAN.md R6): CopyData's
+// scroll and snapshot, both ScrollTexts, Pause/Resume/StopScrolling and DrawTextA's line places. The timers, the
+// lines, the trigger and the draws stay here (UITLScrollingRust answers the Rust's questions).
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
@@ -59,56 +64,152 @@ UITLScrolling::~UITLScrolling()
         delete this->mDrawText;
 }
 
+// The Rust scroll's view of the label (ee_ui scrolling.rs)
+struct UITLScrollingRust {
+    static UITLScrolling* L(void* inLabel) { return static_cast<UITLScrolling*>(inLabel); }
+    static TMPoll* Poll(UITLScrolling* l, int inPoll)
+    {
+        return inPoll == 0 ? l->mScrollPoll : inPoll == 1 ? l->mStartPoll : l->mEndPoll;
+    }
+    static unsigned long Value(void* inLabel, int inWhich)
+    {
+        UITLScrolling* l = L(inLabel);
+        switch (inWhich) {
+        case 0:
+            return l->GetGEText()->GetFont()->GetHeight();
+        case 1:
+            return l->GetBorderThickness();
+        case 2:
+            return l->GetLineCount();
+        default:
+            return l->GetNumberLinesDisplayed();
+        }
+    }
+    static EeUiRect Rect(void* inLabel, int inWhich)
+    {
+        const GERectangle& r = inWhich == 0 ? L(inLabel)->mRectangle : L(inLabel)->GetTextRectangle();
+        return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop};
+    }
+    static unsigned long Get(void* inLabel, int inField)
+    {
+        UITLScrolling* l = L(inLabel);
+        switch (inField) {
+        case 0:
+            return l->mStartingLine;
+        case 1:
+            return l->mDrawStartingLine;
+        case 2:
+            return l->mEndOffset;
+        case 3:
+            return l->mDrawLineCount;
+        case 4:
+            return (unsigned long)l->mPixelStartingOffset;
+        case 5:
+            return l->mDrawPixelOffset;
+        default:
+            return l->mScrolling;
+        }
+    }
+    static void Set(void* inLabel, int inField, unsigned long inValue)
+    {
+        UITLScrolling* l = L(inLabel);
+        switch (inField) {
+        case 0:
+            l->mStartingLine = inValue;
+            break;
+        case 1:
+            l->mDrawStartingLine = inValue;
+            break;
+        case 2:
+            l->mEndOffset = inValue;
+            break;
+        case 3:
+            l->mDrawLineCount = inValue;
+            break;
+        case 4:
+            l->mPixelStartingOffset = (long)inValue;
+            break;
+        case 5:
+            l->mDrawPixelOffset = inValue;
+            break;
+        default:
+            l->mScrolling = inValue != 0;
+            break;
+        }
+    }
+    static unsigned long PollCall(void* inLabel, int inPoll, int inCall, unsigned long inArg)
+    {
+        TMPoll* p = Poll(L(inLabel), inPoll);
+        switch (inCall) {
+        case 0:
+            return p->GetIsRunning();
+        case 1:
+            return p->Poll();
+        case 2:
+            p->Start();
+            return 0;
+        case 3:
+            p->Stop();
+            return 0;
+        case 4:
+            p->Pause();
+            return 0;
+        case 5:
+            p->Resume();
+            return 0;
+        default:
+            p->SetTimeDelay(inArg);
+            return 0;
+        }
+    }
+    static long Call(void* inLabel, int inCall, unsigned long inA, unsigned long inB)
+    {
+        UITLScrolling* l = L(inLabel);
+        switch (inCall) {
+        case 0:
+            if (l->mDrawLines.size() != inA)
+                l->mDrawLines.resize(inA);
+            return 0;
+        case 1:
+            l->mDrawRectangle = l->GetTextRectangle();
+            return 0;
+        case 2:
+            l->mDrawLines[inA] = l->GetText(inB);
+            return 0;
+        case 3:
+            return l->UIControl::CopyData();
+        case 4:
+            l->FireTriggerEvent(kControlTriggerScrollingFinished);
+            return 0;
+        default:
+            l->SetDirty(true);
+            return 0;
+        }
+    }
+};
+extern "C" unsigned long ee_uicpp_scrolling_value(void* inLabel, int inWhich) { return UITLScrollingRust::Value(inLabel, inWhich); }
+extern "C" EeUiRect ee_uicpp_scrolling_rect(void* inLabel, int inWhich) { return UITLScrollingRust::Rect(inLabel, inWhich); }
+extern "C" unsigned long ee_uicpp_scrolling_get(void* inLabel, int inField) { return UITLScrollingRust::Get(inLabel, inField); }
+extern "C" void ee_uicpp_scrolling_set(void* inLabel, int inField, unsigned long inValue)
+{
+    UITLScrollingRust::Set(inLabel, inField, inValue);
+}
+extern "C" unsigned long ee_uicpp_scrolling_poll(void* inLabel, int inPoll, int inCall, unsigned long inArg)
+{
+    return UITLScrollingRust::PollCall(inLabel, inPoll, inCall, inArg);
+}
+extern "C" long ee_uicpp_scrolling_call(void* inLabel, int inCall, unsigned long inA, unsigned long inB)
+{
+    return UITLScrollingRust::Call(inLabel, inCall, inA, inB);
+}
+
 // FUNCTION: LLE 0x1007ff7c
 // Advances the scroll by elapsed time and snapshots the visible lines; fires scrolling-finished after the end delay
+// (ee_ui scrolling.rs)
 long UITLScrolling::CopyData()
 {
     *this->mDrawText = *this->GetGEText();
-    unsigned long theHeight = this->mDrawText->GetFont()->GetHeight();
-    float theLineHeight = theHeight;
-    long theLines = UMFloor((this->mRectangle.GetHeight() - 2 * this->GetBorderThickness()) / theLineHeight) + 2;
-    if (this->mDrawLines.size() != theLines)
-        this->mDrawLines.resize(theLines);
-    this->mDrawRectangle = this->GetTextRectangle();
-    if (this->mScrollPoll->GetIsRunning())
-        this->mPixelStartingOffset -= this->mScrollPoll->Poll();
-    if (this->mStartPoll->GetIsRunning() && this->mStartPoll->Poll() > 0) {
-        this->mStartPoll->Stop();
-        this->mScrollPoll->Start();
-    }
-    while (this->mPixelStartingOffset < this->mRectangle.GetTop() + this->GetBorderThickness() + 1.0f - theLineHeight) {
-        this->mPixelStartingOffset += theHeight;
-        this->mStartingLine++;
-    }
-    if (this->mStartingLine < this->GetLineCount()) {
-        this->mDrawPixelOffset = this->mPixelStartingOffset;
-        this->mDrawStartingLine = this->mStartingLine;
-        unsigned long i = 0;
-        long theBottom = UMFloor(this->mRectangle.GetBottom() - this->GetBorderThickness());
-        for (unsigned long y = this->mPixelStartingOffset; y < theBottom; y += theHeight) {
-            if (this->mStartingLine + i >= this->GetLineCount())
-                break;
-            this->mDrawLines[i] = this->GetText(this->mStartingLine + i);
-            i++;
-        }
-        this->mDrawLineCount = i;
-        if (this->mScrollPoll->GetIsRunning() == true && this->mStartingLine + i >= this->GetLineCount() &&
-            i * theHeight + (this->mPixelStartingOffset - this->mRectangle.GetTop() + (this->GetBorderThickness() + 1.0f)) < this->mEndOffset) {
-            this->mScrollPoll->Stop();
-            this->mEndPoll->Start();
-        }
-    } else if (this->mScrolling == true) {
-        this->mScrollPoll->Stop();
-        this->mEndPoll->Start();
-    }
-    long theResult = UIControl::CopyData();
-    if (this->mEndPoll->GetIsRunning() && this->mEndPoll->Poll() > 0) {
-        this->mScrolling = false;
-        this->mEndPoll->Stop();
-        this->FireTriggerEvent(kControlTriggerScrollingFinished);
-    } else if (this->mScrolling == true)
-        this->SetDirty(true);
-    return theResult;
+    return ee_ui_scrolling_copy_data(this);
 }
 
 // FUNCTION: LLE 0x10080261
@@ -119,7 +220,9 @@ long UITLScrolling::DrawTextA()
     unsigned long theOffset = this->mDrawPixelOffset;
     for (unsigned long i = 0; i < this->mDrawLineCount; i++) {
         this->mDrawText->SetText(this->mDrawLines[i]);
-        this->mDrawText->SetLocation(GE2DPoint(this->mDrawRectangle.GetLeft(), this->mDrawText->GetFont()->GetHeight() * i + theOffset));
+        EeUiPoint theAt = ee_ui_scrolling_line_at(this->mDrawRectangle.GetLeft(), this->mDrawText->GetFont()->GetHeight(),
+                                                  i, theOffset);
+        this->mDrawText->SetLocation(GE2DPoint(theAt.x, theAt.y));
         theResult = this->GetForm()->DrawClippedText(this->mDrawRectangle, this->mDrawText, this);
     }
     return theResult;
@@ -129,78 +232,33 @@ long UITLScrolling::DrawTextA()
 // Pauses the running scroll timer
 void UITLScrolling::PauseScrolling()
 {
-    if (!this->mScrolling)
-        return;
-    if (this->mEndPoll->GetIsRunning())
-        this->mEndPoll->Pause();
-    else if (this->mStartPoll->GetIsRunning())
-        this->mStartPoll->Pause();
-    else if (this->mScrollPoll->GetIsRunning())
-        this->mScrollPoll->Pause();
+    ee_ui_scrolling_pause(this, false);
 }
 
 // FUNCTION: LLE 0x10080345
 // Resumes the paused scroll timer and redraws
 void UITLScrolling::ResumeScrolling()
 {
-    if (!this->mScrolling)
-        return;
-    if (this->mEndPoll->GetIsRunning())
-        this->mEndPoll->Resume();
-    else if (this->mStartPoll->GetIsRunning())
-        this->mStartPoll->Resume();
-    else if (this->mScrollPoll->GetIsRunning())
-        this->mScrollPoll->Resume();
-    this->SetDirty(true);
+    ee_ui_scrolling_pause(this, true);
 }
 
 // FUNCTION: LLE 0x10080383
 // Starts scrolling at a speed in lines per second after a start delay; stops an end delay after the end offset
 void UITLScrolling::ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset)
 {
-    float theDelay = 1000.0f / (this->GetGEText()->GetFont()->GetHeight() * inSpeed);
-    if (theDelay < 1.0f)
-        theDelay = 1.0f;
-    this->mScrollPoll->Stop();
-    this->mScrollPoll->SetTimeDelay(UMFloor(theDelay));
-    this->mEndPoll->Stop();
-    this->mEndPoll->SetTimeDelay(inEndDelay);
-    this->mStartPoll->Stop();
-    this->mStartPoll->SetTimeDelay(inStartDelay);
-    this->mStartPoll->Start();
-    this->mPixelStartingOffset = UMFloor(this->GetBorderThickness() + this->mRectangle.GetTop() + inStartOffset + 1.0f);
-    this->mEndOffset = inEndOffset;
-    this->mStartingLine = 0;
-    this->mScrolling = true;
-    this->SetDirty(true);
+    ee_ui_scrolling_scroll_text(this, inSpeed, inStartDelay, inEndDelay, inStartOffset, inEndOffset);
 }
 
 // FUNCTION: LLE 0x1008048d
 // Starts scrolling to fill a total time at half a line per second, with start and end delays from the line count
 void UITLScrolling::ScrollText(unsigned long inTime, unsigned long inEndDelay)
 {
-    unsigned long theStartDelay;
-    unsigned long theEndDelay = inEndDelay;
-    if (this->GetLineCount() > this->GetNumberLinesDisplayed()) {
-        theStartDelay = UMFloatToLong(inTime / this->GetLineCount() * (this->GetNumberLinesDisplayed() * 0.5f));
-        theEndDelay = inTime -
-                      UMFloatToLong(((this->GetLineCount() - this->GetTextRectangle().GetHeight() /
-                                                           this->GetGEText()->GetFont()->GetHeight()) * 2) * 1000.0f) -
-                      theStartDelay;
-    } else
-        theStartDelay = inTime;
-    this->ScrollText(0.5f, theStartDelay, theEndDelay, 0, UMFloor(this->mRectangle.GetHeight()));
+    ee_ui_scrolling_scroll_text_for(this, inTime, inEndDelay);
 }
 
 // FUNCTION: LLE 0x10080590
 // Stops scrolling and fires the scrolling-finished trigger
 void UITLScrolling::StopScrolling()
 {
-    if (!this->mScrolling)
-        return;
-    this->mScrolling = false;
-    this->mEndPoll->Stop();
-    this->mScrollPoll->Stop();
-    this->mStartPoll->Stop();
-    this->FireTriggerEvent(kControlTriggerScrollingFinished);
+    ee_ui_scrolling_stop(this);
 }

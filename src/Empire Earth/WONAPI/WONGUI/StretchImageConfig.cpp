@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x0078b4e0
 // Creates a stretch image config holding a new empty stretch image
@@ -24,15 +27,16 @@ StretchImageConfig::StretchImageConfig()
 // Reads SRC, TILE, BORDERS, SKIPCENTER and the EXPORT keys, which add copies with other images to the parent
 bool StretchImageConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="SRC") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) {
         this->mStretchImage->SetImage(this->ReadRawImage().get());
     }
-    else if(instruction=="TILE") {
+    else if(aKeyIdx==1) {
         bool horz=this->ReadBool();this->EnsureComma();
         bool vert=this->ReadBool();
         this->mStretchImage->SetTile(horz,vert);
     }
-    else if(instruction=="BORDERS") {
+    else if(aKeyIdx==2) {
         int left=this->ReadInt();this->EnsureComma();
         int top=this->ReadInt();this->EnsureComma();
         int right=this->ReadInt();this->EnsureComma();
@@ -44,10 +48,10 @@ bool StretchImageConfig::Virtual24(const std::string& instruction)
             this->mStretchImage->SetTile(horz,vert);
         }
     }
-    else if(instruction=="SKIPCENTER") {
+    else if(aKeyIdx==3) {
         this->mStretchImage->SetSkipCenter(this->ReadBool());
     }
-    else if(instruction=="MULTIEXPORT") {
+    else if(aKeyIdx==4) {
         int count=this->ReadInt();this->EnsureComma();
         std::string imagePrefix=this->ReadRawString(false);this->EnsureComma();
         std::string configPrefix=this->ReadRawString(false);
@@ -68,7 +72,7 @@ bool StretchImageConfig::Virtual24(const std::string& instruction)
             parent->AddChildToConfigMap(configName,child.get());
         }
     }
-    else if(instruction=="MULTICROPEXPORT") {
+    else if(aKeyIdx==5) {
         int count=this->ReadInt();this->EnsureComma();
         SmartPtr<RawImage> image=this->ReadRawImage();this->EnsureComma();
         std::string configPrefix=this->ReadRawString(false);
@@ -87,7 +91,7 @@ bool StretchImageConfig::Virtual24(const std::string& instruction)
             parent->AddChildToConfigMap(configName,child.get());
         }
     }
-    else if(instruction=="EXPORT") {
+    else if(aKeyIdx==6) {
         GUIString name=this->ReadString(false);this->EnsureComma();
         SmartPtr<StretchImageConfig> child=new StretchImageConfig;
         child->mStretchImage->CopyAttributes(this->mStretchImage);
@@ -111,8 +115,9 @@ StretchCenterImageConfig::StretchCenterImageConfig()
 // Reads the STRETCHIMAGE and CENTERIMAGE keys; other keys go to the image config
 bool StretchCenterImageConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="STRETCHIMAGE") this->mStretchCenterImage->SetStretchImage(this->ReadImage(false).get());
-    else if(instruction=="CENTERIMAGE") this->mStretchCenterImage->SetCenterImage(this->ReadImage(false).get());
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) this->mStretchCenterImage->SetStretchImage(this->ReadImage(false).get());
+    else if(aKeyIdx==1) this->mStretchCenterImage->SetCenterImage(this->ReadImage(false).get());
     else return ImageConfig::Virtual24(instruction);
     return true;
 }

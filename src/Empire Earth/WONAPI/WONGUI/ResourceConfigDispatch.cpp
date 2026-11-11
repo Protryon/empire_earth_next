@@ -10,19 +10,23 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00793350
 // Routes a STRING/IMAGE/SOUND/FONT/COLOR/BACKGROUND resource line to its handler, ignores CONTROLID,
 // and passes other keys to the config object
 bool ResourceConfig::HandleValueInstruction(ConfigParser* parser,const std::string& key,StringParser& value)
 {
-    if(key=="STRING" || key=="CODESTRING") return this->HandleString(value);
-    else if(key=="IMAGE" || key=="CODEIMAGE") return this->HandleImage(value);
-    else if(key=="SOUND" || key=="CODESOUND") return this->HandleSound(value);
-    else if(key=="FONT") return this->HandleFont(value);
-    else if(key=="COLOR") return this->HandleColor(value);
-    else if(key=="BACKGROUND") return this->HandleBackground(value);
-    else if(key=="CONTROLID") return true;
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_RESOURCECONFIG_HANDLEVALUEINSTRUCTION_KEY,key.data(),key.size());
+    if(aKeyIdx==0 || aKeyIdx==1) return this->HandleString(value);
+    else if(aKeyIdx==2 || aKeyIdx==3) return this->HandleImage(value);
+    else if(aKeyIdx==4 || aKeyIdx==5) return this->HandleSound(value);
+    else if(aKeyIdx==6) return this->HandleFont(value);
+    else if(aKeyIdx==7) return this->HandleColor(value);
+    else if(aKeyIdx==8) return this->HandleBackground(value);
+    else if(aKeyIdx==9) return true;
     else return ConfigObject::HandleValueInstruction(parser,key,value);
 }
 }
