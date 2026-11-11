@@ -5980,3 +5980,104 @@ mouse events, a control's press, release and double-click dispatch and its butto
   `UILBString::UpdateTranslatedKey` runs only when a person types a letter into a focused string list (a combo
   box's drop-down). The edit box fix changes only what a person's typing during a drag, or Shift + keypad Del with
   an arrow, does.
+
+## R6: the post-game graphs, UIBFull's tiles, the IME candidate window, the hot keys' setters, the tool tip's place and the toolkit's audit (ee_ui graph.rs, background.rs, ime.rs, hotkey.rs, form_state.rs; branch rust-r6-ui9, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIGraph.h`, `UIBFull.h`
+and `UIIMECandidate.h` gained a `friend struct`): `UIGraph::CopyData`'s layout of the title, the axis labels and
+the grid values' margins and its range copy, `ZoomIn`/`ZoomOut`, `DrawPolygons`' inner border and grid lines,
+`DrawGridText`'s value places, `DrawTextA`'s choice of labels, `UILineGraph::DrawPolygons`' series choice and
+`DrawSeries`' skip, clip and scale (`graph.rs`; `UILGClipSegment` deleted from the C++); `UIBFull::DrawBackground`'s
+tile placement and `LoadBackground`'s names (`background.rs` `bfull_draw`, round 7's `full_tile_name`);
+`UIIMECandidate::OpenCandidateWindow`'s rectangle, `SetCandidateList`'s page, numbers and width, `DrawPolygons`'
+selection bar and border lines and `DrawTextA`'s rows (`ime.rs`); `UIHotKey`'s four event setters, `SetModifier`
+and `CreateHotKeys`' record loop (`hotkey.rs`); `UIForm::SetHelpTextPopupLocation` (`form_state.rs`
+`help_popup_location`). The texts (the graphs' formats are virtual: the post-game summary prints times and counts),
+the candidate strings' walk, the bitmaps, lines, rhombi and every draw stay C++, reached through host calls in the
+C++'s order.
+
+- **Behaviour:** one divergence, where the original crashed: `SetCandidateList` into a candidate window lower than a
+  line (its rectangle is still the constructor's zeros before the first `OpenCandidateWindow`) divided by a page size
+  of 0; the Rust page is empty (no line, the selection kept). The driver skips those calls (the C++ would fault).
+- **Kept quirks:** the graph's grid values are measured on the displayed range's maxima before `CopyData` copies the
+  graph's range; `DrawSeries` scales with the live `mGraphRectangle` and the displayed range (not the copies); a
+  vertical segment is skipped at or left of the series' minimum x compared unsigned; `UMCeilFloat(0 / zoom)` is 0
+  so 0 divisions draw one NaN-spaced line; `UIBFull`'s redraw rectangle is clipped to the form in place, so a redraw
+  that misses the form draws the whole form; `SetCandidateList` walks past the list's strings when the selection's
+  page starts after its count (reads only, no line is made); setting a hot key's event to the one it holds
+  releases it before referencing it again (an event held only there is deleted first); a hot key record whose read
+  fails keeps the previous record's bytes.
+- **Original hazards found, left as they were:** `UIIMECandidate`'s constructor leaves `mSelection` and
+  `mCopySelection` uninitialised (a `DrawPolygons` before the first `CopyData` reads garbage; the driver sets -1);
+  `CreateHotKeys`' record buffer is uninitialised when the first record's read fails (the C++ reads stack bytes,
+  the Rust zeros; the driver never fails the first record read).
+- **Round 8's two undetected mutations, now covered:** the scroll driver (`build/ui_scroll_golden`) gained 30
+  labels on whole pixels scrolled one pixel a frame to the end, so the end offset's comparison meets equality
+  (`<` -> `<=` now fails the replay); the label driver (`build/ui_label_golden`) gained 40 one-line fitted labels
+  whose rectangles a search picked so that the vertical centring, `(height * 0.5 + top) - text * 0.5`, rounds
+  (`RoundToNearest`) differently from either reassociation (both now fail). Both goldens grew at the end only (the
+  first 150 / 120 labels are byte for byte the old file); both drivers relinked over the round-8 forwarders print
+  the same.
+- **Golden drivers, new traps.**
+  - `UGraphSeries::AddDataPoint` sorts the points by x and replaces a repeated last x: log the stored points, not
+    the inputs.
+  - An x64 vtable's slots go by declaration order (one slot for the deleting destructor; overloads in reverse):
+    `GESurface::GetWidth` is slot 24, `GetHeight` 12, not the header's 32-bit offsets / 4. The numbered-stub trick
+    (`template <int N>` logging N) found it in one run.
+  - A unit's static object with an out-of-line constructor (`UIHotKey::sPressedPoll`, a `TMPoll`) runs at start-up:
+    an unresolved constructor under `/FORCE:UNRESOLVED` faults before `main`; define it in the stubs.
+  - An inline constructor calling a private member (`UIHotKey()` -> `CalculateKeyCount`) must be instantiated in a
+    unit compiled without `#define private public` (the stubs file), or it links to the public decoration.
+  - An `extern "C"` host function is no friend: private members go through the friend struct's statics.
+  - Do not reuse an existing golden's file name (`golden_hotkey.txt` was round 5's: this round's is
+    `golden_hotkey_setters.txt`).
+- **Goldens:** `golden_graph.txt` (120 graphs x 30 operations), `golden_bfull.txt` (150 backgrounds x 12),
+  `golden_ime.txt` (150 windows x 20), `golden_hotkey_setters.txt` (150 hot keys x 12, 200 files), `golden_help.txt`
+  (3,000 tips); each replays whole in Rust, each driver (`build/u9_golden/build.py PIECE orig|cur`) relinked over the
+  forwarders printed the same, and the same on seeds 2 and 3 at ten times the size (the Rust replays pass on those,
+  `EE_UI_GOLDEN=<file> cargo test -- --ignored`). Mutations checked: the grid values' row loop `<` -> `<=`, the
+  vertical skip's `<=` -> `<` (after adding vertical segments at the minimum), the y-label rectangle's
+  reassociation and the title's left each fail the graph replay.
+- **What a real game exercises (EE-SIM has no UI):** the graphs are the post-game summary's line graph
+  (`EEUIPGSLineGraph`): only the summary screen after a game reaches them (zoom from its buttons). `UIBFull` is a
+  full-form background of the UI database (type 9's grid of textures): every menu load whose form has one draws it
+  (the tour). `SetHelpTextPopupLocation` places every tool tip: a tour's hover over a button with help text (the
+  main game overrides it with an empty body). The hot keys' `CreateHotKeys` runs once at start-up (every hot key
+  of every menu comes from it), the setters on every form open that copies a hot key; `SetModifier` only from
+  game code that builds a hot key. The IME candidate window only appears with an IME composing (a person typing
+  Japanese, Chinese or Korean into an edit box): only a person reaches it.
+
+**The toolkit's audit (round 9).** `build/u9_golden/census.py` lists every function body of the 46 units
+(`src/Low-Level Engine/User Interface/*.cpp`; the headers' inline bodies are accessors, the inline constructors and
+the `UMCeilFloat`/`GetBorderColors` helpers): 552 bodies, 5,780 lines. By kind: 243 forwarders to Rust (1,913 lines,
+including the host glue the Rust calls back), 75 constructors and destructors (1,275), 12 platform calls (295: the
+file lists' directory search, the clipboard, the database files, the texture loads), 78 pure call sequences (408)
+and 144 bodies with a branch (1,888). Of those 144, by what the branch decides:
+- *object lifetime and ownership* (the bulk): `UIControlsTable::Create*` (which class a record makes and its
+  constructor's arguments, 300 lines), `UIManager::CreateBackgrounds` (the background class per type),
+  `LoadDatabase`, the `Set*Event` member setters of `UIForm` (16 x 12 lines: the hot keys' pattern, release the
+  old event and take the new one), `SetFormEvent`'s switch, `AddHotKey`/`RemoveHotKey*`, `AddBackground`,
+  `RemoveBackground`, `ReserveControlIndex`, `DeleteAll`s, `UIGraph::SetFont`, the radio button's bitmap setters,
+  `UIButtonRust::RadioSwap` (reference counts);
+- *NULL checks before a draw or a copy* (`DrawPolygons`/`DrawTextA`/`CopyData`/`ChangeFont`/`SetText` of the
+  status bar, text label, check boxes, buttons, bitmap, movie, combo box, form and manager);
+- *lookups in the C++ containers* (`GetControlById`, `GetBackgroundByID`, `GetEntityGroupById`,
+  `GetAvailableIndex`);
+- *dispatch to a virtual or a captured control* (`UIManager::UpdateKeyboard`/`UpdateMouse`/`UpdateTranslatedKey`,
+  the forms' IME pass-throughs, the events' `ProcessEvent`s, the text label's mouse handlers to its scroll bar);
+- *state that is still C++ and small*: `UIForm::SetTabStop`/`SetTabbing`/`SetMouseOverControl`/`Deactivate`/
+  `RelayoutForm`/`UpdateHelpText`/`UpdateHelpString` (flags and calls in order), `UIControl::SetDisplayMode`/
+  `SetDirty`/`SetLocation`/`SetRectangle`/`SetTriggerEvent`, `UIBlinkingButton::SetIsBlinking`,
+  `UIEditBox::MouseLButtonDown/Up/DoublePressed` (capture and dispatch to the Rust text model),
+  `UITextLabel::RecomputeDisplayRange` (one line count, then the Rust label calls), `UIManager::SetMouseLeftHanded`
+  (a swap).
+Every layout, placement, tiling, scroll, wrap, selection, hit test, timer rule and text model is Rust; the only
+arithmetic left in C++ is the constructors' first rectangles (the status bar's fill, the text label's text and
+scroll bar areas, the scroll bar's parts), `UITextLabel::RecomputeDisplayRange`'s line count (one `UMFloor`, as
+`label_fit.rs` computes it elsewhere) and `GetAvailableIndex`' scan. What is left decides which C++ object to make, call, keep or release, or
+whether a pointer is set; moving it means moving the objects (the classes wholly), which is the next stage, not
+more leaves.
+- **Gates run:** the full build (`build.py -j 3 --sim`, 0/0 for EE-AOC and EE-SIM) after the hot keys' commit and on
+  the merged result, `rust_build.py gate`, the sim oracle (see the report); the test-profile build at the end. The
+  per-commit oracle was not run for each commit (the lighter gates of the overloaded machine: one build for the
+  first four commits). No tour, screenshot, LAN game or POSIX build was run.
