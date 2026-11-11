@@ -874,8 +874,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 264 the attack sub groups' positions (EESaveHasSubGroupPosition)
 // 265 the computer players' claim ranges and danger zones (EESaveHasResourceState)
 // 266 the order of the units their unit managers track (EESaveHasUnitManagerOrder)
+// 267 their repair and site timers (EESaveHasCivilizationTimers)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 266;
+const unsigned long kSaveGameMinorVersion = 267;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

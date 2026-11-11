@@ -105,6 +105,12 @@ inline bool EESaveHasUnitManagerOrder(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 266;
 }
+// port: from 0.267 a save holds the computer players' repair, airport site and space dock site timers
+// (EECPCivilizationManager): a load started them at 0
+inline bool EESaveHasCivilizationTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 267;
+}
 long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
 long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
 // whether the save being loaded has the block (EEWorld::StartGame of a loaded game)
