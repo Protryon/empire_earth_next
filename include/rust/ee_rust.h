@@ -179,6 +179,9 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// `kBarFraction`: the filled part's share of a bar's own width.
+constexpr static const float BAR_FRACTION = 0.75;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -3555,6 +3558,43 @@ struct EeGfxCameraStep {
 struct EeGfxOrthoView {
   EeGeTransformation view;
   float size;
+};
+
+/// What `Update`'s move did: the new position (clamped) when the mouse moved, and whether each smallest move
+/// changed (the C++'s debug lines).
+struct EeGfxMouseMove {
+  EeGe2DPoint position;
+  /// the mouse moved: `position` is the new one (else it is the old one, unclamped as before)
+  bool moved;
+  bool min_x_changed;
+  bool min_y_changed;
+};
+
+/// The pointer's inputs for `Update`'s move.
+struct EeGfxMouseInput {
+  EeGe2DPoint position;
+  EeGeRectangle bounds;
+  uint32_t desktop_width;
+  uint32_t desktop_height;
+  float sensitivity;
+  /// the axes' `GetNormalizedValue`
+  int32_t move_x;
+  int32_t move_y;
+};
+
+/// The bars' size for a frame (`sBarWidth`, `sBarHeight`, `sBarStep`).
+struct EeGfxBarSizes {
+  uint32_t width;
+  float height;
+  float step;
+};
+
+/// A bar's rectangles, in the C++'s order of use. `kind` 0: full (fill, back), 1: partial (fill, its back, the
+/// rest, the rest's back), 2: empty (the rest, its back); `count` rectangles are set.
+struct EeGfxBarRects {
+  uint32_t kind;
+  uint32_t count;
+  EeGeRectangle rects[4];
 };
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
@@ -8655,6 +8695,59 @@ int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
 /// # Safety
 /// `focus` is valid.
 EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
+
+/// `RTSMouse::ClampPosition`: `*position` kept inside `*bounds`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_mouse_clamp(EeGe2DPoint *position, const EeGeRectangle *bounds);
+
+/// `RTSMouse::Update`'s move (not frozen): `min_x`/`min_y` are the unit's smallest moves (`sMinXValue`/`sMinYValue`).
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxMouseMove ee_gfx_mouse_update_move(const EeGfxMouseInput *input,
+                                        int32_t *min_x,
+                                        int32_t *min_y);
+
+/// `GetScreenPoint` (`EEROUnits.cpp`): `*point` to window coordinates in the game view `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_units_screen_point(const EeGeViewport *viewport,
+                               bool orthographic,
+                               const EeGe3DPoint *point,
+                               EeGe2DPoint *out);
+
+/// `DrawBars`' bar sizes from the window's size.
+EeGfxBarSizes ee_gfx_units_bar_sizes(uint32_t window_width, uint32_t window_height);
+
+/// `DrawBar`'s rectangles: the unit's bar tag (`bar` scaled by `scale` through `*transformation`) projected through
+/// `*viewport`, moved to row `row` and split by `fraction`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_unit_bar(const EeGeViewport *viewport,
+                                    bool orthographic,
+                                    const EeGeTransformation *transformation,
+                                    const EeGe3DPoint *bar,
+                                    float scale,
+                                    float fraction,
+                                    int32_t row,
+                                    const EeGfxBarSizes *sizes);
+
+/// `DrawObjectBars`' rectangles: the object's bar tag (`*location` plus `bar` scaled by `scale`) projected through
+/// `*viewport` and split by `health`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_object_bar(const EeGeViewport *viewport,
+                                      bool orthographic,
+                                      const EeGe3DPoint *location,
+                                      const EeGe3DPoint *bar,
+                                      float scale,
+                                      float health,
+                                      const EeGfxBarSizes *sizes);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
