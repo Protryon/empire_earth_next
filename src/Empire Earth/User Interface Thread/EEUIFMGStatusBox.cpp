@@ -1116,7 +1116,7 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
         if (inUnit->GetUnitClass()->mCategory == kUnitCategoryLandCitizen || inUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
             sprintf(theText, "%ld/%ld", (long)((float)inUnit->mResourceAmount + 0.5f), (long)((float)theStats->mCarryAmount + 0.5f));
         else
-            sprintf(theText, "%ld", inUnit->mResourceAmount);
+            sprintf(theText, "%ld", inUnit->mResourceAmount.Get());
         static_cast<EEUIBUpgrade*>(this->mIcons[this->mAttributeCount])->UpdateCost(theText);
     } else if (this->mIsResourceShown) {
         this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);
