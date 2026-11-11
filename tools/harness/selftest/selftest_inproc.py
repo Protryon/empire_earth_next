@@ -274,6 +274,16 @@ def fixture(arch, d):
         if pre["form"] != 7 or pre["civ_chosen"] != 1:
             problems.append(f"preempt {pre}")
         tel = fixture_driver.wait_running(g, 4)
+        boxes = fixture_driver.box_select(g, 11)
+        steps = [(r["step"], r["selection"]) for r in boxes["steps"]]
+        every = list(range(101, 110))
+        if steps != [("select", every), ("select-left", every[:5]), ("add-right", every), ("dead", every[1:])]                 or boxes["steps"][3]["dead"] != 101 or not boxes["grew"]:
+            problems.append(f"box select {steps} dead {boxes['steps'][3]['dead']}")
+        seq = g.command("boxselect 11 7 0 0 1 1")
+        g.wait(lambda s: s["command"] >= seq, "a rejected box", 10)
+        time.sleep(0.3)
+        if g.verdict(seq) != "rejected":
+            problems.append(f"rejected box verdict {g.verdict(seq)}")
         if tel.get("clock") != [1, 1] or tel.get("paused") != 0 or tel["players"][2].get("stock") != [1, 2, 3, 4, 5]:
             problems.append(f"telemetry {tel}")
         played = fixture_driver.play(g, types.SimpleNamespace(max_game_seconds=40, play_seconds=None, capture_every=0),
@@ -291,4 +301,4 @@ def fixture(arch, d):
     log = fixture_driver.copy_game_logs(out / "root", out)
     if not log or [p["kind"] for p in log["players"].values()].count("computer") != 2 or 3 not in log["last_sample"]:
         problems.append(f"game log {log}")
-    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, time cap, telemetry, game log"
+    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, time cap, telemetry, game log"

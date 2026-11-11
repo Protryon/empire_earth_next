@@ -6719,6 +6719,10 @@ bool EEMSelectUnit::IsResponse(NEMessage* inMessage)
     return false;
 }
 
+// New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
+// decoded ids as its message is built on the UI thread; NULL otherwise
+void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
+
 // FUNCTION: EXE 0x4c5d7f
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores
 // them compressed (and decoded)
@@ -6732,6 +6736,8 @@ EEMSelectUnits::EEMSelectUnits(const GERectangle& inRectangle, long inUnitType, 
     long thePlayerID = gWorld.GetCurrentPlayer()->mPlayerID;
     this->mBufferSize = CompressUnits(theUnits, thePlayerID, this->mBuffer);
     DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
+    if (gEESelectUnitsTestHook != NULL)   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
+        gEESelectUnitsTestHook(this->mUnitIDs);
 }
 
 // The selection on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1 or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids.
