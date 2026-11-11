@@ -152,42 +152,50 @@ unsigned long EEFamilyCount()
 
 // FUNCTION: EXE 0x4dbf11
 // Loads every row of 0x44 damage factors (percent to fraction; the original: up to 60 rows) and builds the two twin
-// tables scaled by world constant 0x59's two values; returns the last read status (the rows: EECombatDamageRow)
+// tables scaled by world constant 0x59's two values; returns the last read status (new: the tables are ee_combat's,
+// damage_table.rs; gDamageTable and its twins point at its rows)
 long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 {
     unsigned long theCount = 0;
     unsigned long theRead = 0;
     EEDamageTableRecord theRecord;
-    std::vector<EEDamageTableRecord> theRecords;  // read whole, then one Rust row each
+    std::vector<int32_t> thePercents;       // read whole, then the Rust tables
     if (gDamageTable != NULL || gDamageTableScaled1 != NULL || gDamageTableScaled2 != NULL)
         EETerrainTypeTable::ClearDamageTables();
     inFile->Open(kFileAccessRead);
     long theResult = inFile->Read(theCount);
     if (theResult == kErrorOK) {
+        unsigned long i;
+        for (i = 0; i < theCount; i++) {
+            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
+            thePercents.insert(thePercents.end(), theRecord.mDamage, theRecord.mDamage + EE_COMBAT_DAMAGE_COLUMNS);
+        }
+        float theScale = kHeightEpsilon;
+        float theTwin1 = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale);
+        float theTwin2 = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale);
+        ee_combat_damage_table_load(thePercents.empty() ? NULL : (const int32_t(*)[EE_COMBAT_DAMAGE_COLUMNS])&thePercents[0],
+                                    (uint32_t)theCount, theScale, theTwin1, theTwin2);
         gDamageTableRowCount = theCount;
+        gDamageTableColumnCount = theCount != 0 ? EE_COMBAT_DAMAGE_COLUMNS : 0;
         gDamageTable = new float*[theCount];
         gDamageTableScaled1 = new float*[theCount];
         gDamageTableScaled2 = new float*[theCount];
-        unsigned long i;
         for (i = 0; i < theCount; i++) {
-            gDamageTable[i] = new float[0x44];
-            gDamageTableScaled2[i] = new float[0x44];
-            gDamageTableScaled1[i] = new float[0x44];
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            gDamageTableColumnCount = 0x44;
-            theRecords.push_back(theRecord);
-        }
-        EeCombatDamageRowIn theIn;
-        EeCombatDamageRowOut theOut;
-        theIn.scale = kHeightEpsilon;
-        theIn.twin1 = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale);
-        theIn.twin2 = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale);
-        for (i = 0; i < theCount; i++) {
-            memcpy(theIn.percent, theRecords[i].mDamage, sizeof(theIn.percent));
-            EECombatDamageRow(theIn, theOut);
-            memcpy(gDamageTable[i], theOut.base, sizeof(theOut.base));
-            memcpy(gDamageTableScaled1[i], theOut.scaled1, sizeof(theOut.scaled1));
-            memcpy(gDamageTableScaled2[i], theOut.scaled2, sizeof(theOut.scaled2));
+            gDamageTable[i] = const_cast<float*>(ee_combat_damage_table_row(EE_COMBAT_DAMAGE_BASE, (uint32_t)i));
+            gDamageTableScaled1[i] = const_cast<float*>(ee_combat_damage_table_row(EE_COMBAT_DAMAGE_SCALED1, (uint32_t)i));
+            gDamageTableScaled2[i] = const_cast<float*>(ee_combat_damage_table_row(EE_COMBAT_DAMAGE_SCALED2, (uint32_t)i));
+            if (EESimCaptureRecord::Active()) {
+                EeCombatDamageRowIn theIn;
+                EeCombatDamageRowOut theOut;
+                memcpy(theIn.percent, &thePercents[i * EE_COMBAT_DAMAGE_COLUMNS], sizeof(theIn.percent));
+                theIn.scale = theScale;
+                theIn.twin1 = theTwin1;
+                theIn.twin2 = theTwin2;
+                memcpy(theOut.base, gDamageTable[i], sizeof(theOut.base));
+                memcpy(theOut.scaled1, gDamageTableScaled1[i], sizeof(theOut.scaled1));
+                memcpy(theOut.scaled2, gDamageTableScaled2[i], sizeof(theOut.scaled2));
+                EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'T'), theIn, theOut);
+            }
         }
     }
     inFile->Close();
@@ -196,28 +204,13 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 
 
 // FUNCTION: EXE 0x4dc5bb
-// Frees the three damage tables and zeroes their sizes
+// Frees the three damage tables and zeroes their sizes (the rows are ee_combat's)
 void EETerrainTypeTable::ClearDamageTables()
 {
-    unsigned long i;
-    if (gDamageTable != NULL) {
-        for (i = 0; i < gDamageTableRowCount; i++)
-            if (gDamageTable[i] != NULL)
-                delete[] gDamageTable[i];
-        delete[] gDamageTable;
-    }
-    if (gDamageTableScaled1 != NULL) {
-        for (i = 0; i < gDamageTableRowCount; i++)
-            if (gDamageTableScaled1[i] != NULL)
-                delete[] gDamageTableScaled1[i];
-        delete[] gDamageTableScaled1;
-    }
-    if (gDamageTableScaled2 != NULL) {
-        for (i = 0; i < gDamageTableRowCount; i++)
-            if (gDamageTableScaled2[i] != NULL)
-                delete[] gDamageTableScaled2[i];
-        delete[] gDamageTableScaled2;
-    }
+    delete[] gDamageTable;
+    delete[] gDamageTableScaled1;
+    delete[] gDamageTableScaled2;
+    ee_combat_damage_table_clear();
     gDamageTable = NULL;
     gDamageTableScaled1 = NULL;
     gDamageTableScaled2 = NULL;

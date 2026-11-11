@@ -104,6 +104,15 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// The base table (`gDamageTable`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_BASE = 0;
+
+/// The first difficulty twin (`gDamageTableScaled1`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_SCALED1 = 1;
+
+/// The second difficulty twin (`gDamageTableScaled2`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_SCALED2 = 2;
+
 /// `EEFindDropLocation`'s point kinds (`EeCombatDropIn::kind`).
 /// The goal's location (the C++ asks the goal; not computed here).
 constexpr static const int32_t EE_COMBAT_DROP_KIND_GOAL = 0;
@@ -7972,6 +7981,31 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         size_t capacity,
                         EeCodecSink sink,
                         void *context);
+
+/// Loads the tables from `count` rows of percentages (replacing any loaded ones); returns the row count.
+///
+/// # Safety
+/// `percent` must point to `count` rows (or be NULL with `count` 0). Every row pointer handed out before is invalid
+/// afterwards.
+uint32_t ee_combat_damage_table_load(const int32_t (*percent)[EE_COMBAT_DAMAGE_COLUMNS],
+                                     uint32_t count,
+                                     float scale,
+                                     float twin1,
+                                     float twin2);
+
+/// Frees the tables (`ClearDamageTables`). Every row pointer handed out before is invalid afterwards.
+void ee_combat_damage_table_clear();
+
+/// The loaded row count (0 when none).
+uint32_t ee_combat_damage_table_rows();
+
+/// Row `row` of table `table` (`EE_COMBAT_DAMAGE_*`): `DAMAGE_COLUMNS` floats, valid until the next load or clear;
+/// NULL out of range.
+const float *ee_combat_damage_table_row(uint32_t table,
+                                        uint32_t row);
+
+/// `gDamageTable[row][column]` (the base table): 0 out of range or before a load.
+float ee_combat_damage_factor(int32_t row, int32_t column);
 
 /// `EEToHitTable::GetAttackFactor`.
 ///
