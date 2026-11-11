@@ -36,6 +36,9 @@ M.opts = {
     home_r = 6,           -- units further than this from the post walk back while nothing is fought
     building_r = 10,      -- a raid this near an own building is in the zone
     focus_hits = 3,       -- a target takes units until their attack x this reaches its hit points
+    fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
+                          -- centre, where the citizens run, instead of holding its post (no garrison: a town
+                          -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
     deny = true,          -- the enemy citizens in the zone are hunted while no raid is on ...
     deny_n = 4,           -- ... at most this many at once
 }
@@ -498,17 +501,21 @@ function M.step(view, mem, opts)
             g.hurt = {}
         end
         g.aims = {}
-        if g.state ~= "arrived" or now - (g.home_t or 0) >= 10000 then
+        local hx, hy = g.post_x, g.post_y
+        if #raids > 0 and M.opts.fallback then
+            hx, hy = view.town_x, view.town_y + 2
+        end
+        if g.state ~= "arrived" or now - (g.home_t or 0) >= 10000 or hx ~= g.post_x then
             g.home_t = now
             local strays = {}
             for _, u in ipairs(recs) do
-                if d2(u.x, u.y, g.post_x, g.post_y) > M.opts.home_r * M.opts.home_r
-                        and (u.action == "idle" or u.action == "attack" or g.state ~= "arrived") then
+                if d2(u.x, u.y, hx, hy) > M.opts.home_r * M.opts.home_r
+                        and (u.action == "idle" or u.action == "attack" or g.state ~= "arrived" or hx ~= g.post_x) then
                     strays[#strays + 1] = u.id
                 end
             end
             if #strays > 0 then
-                ai.move(strays, g.post_x, g.post_y, {forced = #raids > 0})
+                ai.move(strays, hx, hy, {forced = #raids > 0})
             end
             g.state = "arrived"
         end
