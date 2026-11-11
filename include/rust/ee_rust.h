@@ -1075,6 +1075,9 @@ struct EeSoundManager;
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
+/// The secret list (opaque): `AuthContext::mSecrets`.
+struct EeWonAuthSecrets;
+
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
@@ -3554,6 +3557,24 @@ struct EeUiSliderFields {
   bool is_dragging;
 };
 
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
+/// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
+/// data).
+struct EeWonAuthEntry {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *value;
+  size_t value_len;
+  const uint8_t *bytes;
+  size_t bytes_len;
+  const uint8_t *extra;
+  size_t extra_len;
+  bool present;
+};
+
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
 struct EeWonFileReader {
@@ -3571,9 +3592,6 @@ struct EeWonConfigIo {
   int32_t *line;
   bool unicode;
 };
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// Receives wide units (`wchar_t` values); valid only during the call.
 using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
@@ -8335,6 +8353,81 @@ bool ee_units_unregister(uint32_t id, void *unit);
 
 /// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
 void *ee_units_resolve(uint32_t id);
+
+EeWonAuthSecrets *ee_won_auth_secrets_new();
+
+/// # Safety
+/// `s` is from `ee_won_auth_secrets_new` (or NULL), not used afterwards.
+void ee_won_auth_secrets_free(EeWonAuthSecrets *s);
+
+/// `LoadSecretList`: the list emptied, then read from the file; false when it cannot open.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_load(EeWonAuthSecrets *s, const char *path);
+
+/// `SaveSecretList`: false when the file cannot be created.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_save(EeWonAuthSecrets *s, const char *path);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+void ee_won_auth_secrets_add(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+bool ee_won_auth_secrets_remove(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list.
+bool ee_won_auth_secrets_commit(EeWonAuthSecrets *s, int64_t auth_time, int64_t duration);
+
+/// # Safety
+/// `s` is a list.
+size_t ee_won_auth_secrets_count(EeWonAuthSecrets *s);
+
+/// `AppendLoginSecrets`' bytes, to the sink.
+///
+/// # Safety
+/// `s` is a list.
+void ee_won_auth_secrets_login(EeWonAuthSecrets *s, EeWonByteSink sink, void *context);
+
+/// `AppendCommunityData`'s block, to the sink. `communities[i].bytes` is the community's valid CD key's bytes
+/// (`present` false without one).
+///
+/// # Safety
+/// Each array holds its count of entries, each entry's pointers their lengths; `s` is a list.
+void ee_won_auth_community_data(const EeWonAuthEntry *communities,
+                                size_t community_count,
+                                const EeWonAuthEntry *joins,
+                                size_t join_count,
+                                const EeWonAuthEntry *user_data,
+                                size_t user_data_count,
+                                const EeWonAuthEntry *nicknames,
+                                size_t nickname_count,
+                                EeWonAuthSecrets *s,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `AppendHashes`' block, to the sink: per community its name, its file hash in `bytes` and its section hashes in
+/// `extra`.
+///
+/// # Safety
+/// `communities` holds `count` entries; `challenge` its length.
+void ee_won_auth_hashes(const EeWonAuthEntry *communities,
+                        size_t count,
+                        const uint8_t *challenge,
+                        size_t challenge_len,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `StartAutoRefresh`'s decision: the wait in seconds, or -1 for no timer.
+int64_t ee_won_auth_auto_refresh_wait(bool enabled,
+                                      bool force,
+                                      bool peer_valid,
+                                      int64_t expire_delta);
 
 EeWonConfigLexer *ee_won_config_new();
 

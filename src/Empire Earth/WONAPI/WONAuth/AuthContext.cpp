@@ -78,6 +78,7 @@ bool AuthContext::mCheckedVerifierFile=false;
 void AuthContext::Init()
 {
     this->mSessionCleanItr=this->mSessionMap.begin();
+    this->mSecrets=ee_won_auth_secrets_new();
     this->mPeerData=new AuthPeerData;
     this->mLoginSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
     this->mServerContext=new ServerContext;
@@ -97,6 +98,7 @@ AuthContext::AuthContext()
 // Destroys the auth context (members only)
 AuthContext::~AuthContext()
 {
+    ee_won_auth_secrets_free(this->mSecrets);
 }
 
 // FUNCTION: WON 0x006deeb0
@@ -187,15 +189,13 @@ void AuthContext::StartAutoRefresh(bool force)
 {
     AutoCrit lock(this->mDataCrit);
     this->StopAutoRefresh();
-    if(this->mDoAutoRefresh) {
-        bool refreshTimer=force;
-        time_t wait=300;
-        if(this->mPeerData->IsValid()) {
-            wait=this->mPeerData->GetExpireDelta()-120;
-            if(wait<120) wait=120;
-            refreshTimer=true;
-        }
-        if(refreshTimer) {
+    // the wait (ee_won authctx.rs): two minutes before a valid certificate expires, at least two, or five when forced
+    bool valid=this->mDoAutoRefresh && this->mPeerData->IsValid();
+    long long aWait=ee_won_auth_auto_refresh_wait(this->mDoAutoRefresh,force,valid,
+                                                  valid?(long long)this->mPeerData->GetExpireDelta():0);
+    if(aWait>=0) {
+        time_t wait=(time_t)aWait;
+        {
             this->mAutoRefreshOp=new AsyncOp;
             this->mAutoRefreshOp->mCompletion=
                 new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(&AuthContext::StaticAutoRefreshCallback,this);
@@ -205,72 +205,42 @@ void AuthContext::StartAutoRefresh(bool force)
 }
 
 
-inline AuthContext::SecretData::SecretData() : mExpireTime(0) {}
-inline AuthContext::SecretData::SecretData(time_t expires,const ByteBuffer* secret)
-    : mExpireTime(expires),mSecret(secret) {}
+// The login secrets are ee_won's (rust/crates/ee_won/src/authctx.rs): their file (_wonlogin.ks: a count byte, then
+// a 32-bit expiry and 8 bytes each), the order and the commit rule; the lock stays here.
+static void AuthAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
 
 // FUNCTION: WON 0x006e1240
 // Reads the saved login secrets (expiry + 8 bytes each) from the secret file; false when it cannot open
 bool AuthContext::LoadSecretList()
 {
     AutoCrit lock(this->mDataCrit);
-    this->mSecretList.clear();
-    FILE* file=PlatFOpen(this->mLoginSecretFile.c_str(),"rb");
-    if(file==NULL) return false;
-    unsigned char count=static_cast<unsigned char>(fgetc(file));
-    int i=0;
-    while(!feof(file) && i<count) {
-        int32_t expires=0;                  // the file's expiry is 32-bit (the original's time_t)
-        fread(&expires,sizeof(expires),1,file);
-        char* raw=new char[8];
-        fread(raw,1,8,file);
-        this->mSecretList.push_back(SecretData(expires,new ByteBuffer(raw,8,true)));
-        ++i;
-    }
-    fclose(file);
-    return true;
+    return ee_won_auth_secrets_load(this->mSecrets,this->mLoginSecretFile.c_str());
 }
 // FUNCTION: WON 0x006e1460
 // Writes the login secrets to the secret file; false when it cannot be created
 bool AuthContext::SaveSecretList()
 {
     AutoCrit lock(this->mDataCrit);
-    FILE* file=PlatFOpen(this->mLoginSecretFile.c_str(),"wb");
-    if(file==NULL) return false;
-    unsigned char count=static_cast<unsigned char>(this->mSecretList.size());
-    fwrite(&count,1,1,file);
-    for(SecretList::iterator next=this->mSecretList.begin();next!=this->mSecretList.end();++next) {
-        int32_t expires=static_cast<int32_t>(next->mExpireTime);   // 32-bit in the file
-        fwrite(&expires,sizeof(expires),1,file);
-        fwrite(next->mSecret.get()!=NULL?next->mSecret->data():NULL,1,
-               next->mSecret.get()!=NULL?next->mSecret->length():0,file);
-    }
-    fclose(file);
-    return true;
+    return ee_won_auth_secrets_save(this->mSecrets,this->mLoginSecretFile.c_str());
 }
 // FUNCTION: WON 0x006e1560
 // Appends a count byte and every login secret to the login request
 void AuthContext::AppendLoginSecrets(WriteBuffer& output)
 {
     AutoCrit lock(this->mDataCrit);
-    SecretList::iterator next=this->mSecretList.begin();
-    unsigned long countPosition=output.mLength;
-    unsigned char count=0;
-    output.SkipBytes(1);
-    while(next!=this->mSecretList.end() && count<256) {
-        output.AppendBytes(next->mSecret.get()!=NULL?next->mSecret->data():NULL,
-                           next->mSecret.get()!=NULL?next->mSecret->length():0);
-        ++count;
-        ++next;
-    }
-    output.SetByte(countPosition,count);
+    std::string aBytes;
+    ee_won_auth_secrets_login(this->mSecrets,AuthAppendBytes,&aBytes);
+    output.AppendBytes(aBytes.data(),aBytes.length());
 }
 // FUNCTION: WON 0x006e1650
 // Adds a new uncommitted 8-byte login secret at the front and saves the list
 void AuthContext::AddSecret(const void* secret)
 {
     AutoCrit lock(this->mDataCrit);
-    this->mSecretList.insert(this->mSecretList.begin(),SecretData(0,new ByteBuffer(secret,8,false)));
+    ee_won_auth_secrets_add(this->mSecrets,static_cast<const uint8_t*>(secret));
     this->SaveSecretList();
 }
 // FUNCTION: WON 0x006e1790
@@ -278,35 +248,16 @@ void AuthContext::AddSecret(const void* secret)
 void AuthContext::RemoveSecret(const void* secret)
 {
     AutoCrit lock(this->mDataCrit);
-    SecretList::iterator next=this->mSecretList.begin();
-    while(next!=this->mSecretList.end()) {
-        if(next->mExpireTime==0) {
-            const ByteBuffer* buffer=next->mSecret.get();
-            if(memcmp(buffer!=NULL?buffer->data():NULL,secret,8)==0) {
-                this->mSecretList.erase(next);
-                this->SaveSecretList();
-                return;
-            }
-        }
-        ++next;
-    }
+    if(ee_won_auth_secrets_remove(this->mSecrets,static_cast<const uint8_t*>(secret)))
+        this->SaveSecretList();
 }
 // FUNCTION: WON 0x006e1890
 // Gives uncommitted secrets an expiry, drops expired ones, caps the list below 256 entries and saves it
 void AuthContext::CommitSecrets(time_t authTime,time_t duration)
 {
     AutoCrit lock(this->mDataCrit);
-    if(this->mSecretList.empty()) return;
-    SecretList::iterator next=this->mSecretList.begin();
-    while(next!=this->mSecretList.end()) {
-        if(next->mExpireTime==0) {
-            next->mExpireTime=static_cast<time_t>(static_cast<unsigned long>(authTime)+static_cast<unsigned long>(duration)+120UL);
-            ++next;
-        } else if(next->mExpireTime<=authTime) this->mSecretList.erase(next++);
-        else ++next;
-    }
-    while(this->mSecretList.size()>=256) this->mSecretList.pop_back();
-    this->SaveSecretList();
+    if(ee_won_auth_secrets_commit(this->mSecrets,(int64_t)authTime,(int64_t)duration))
+        this->SaveSecretList();
 }
 // FUNCTION: WON 0x006e19e0
 // Returns the current peer data (certificate and keys) under the lock
@@ -333,117 +284,108 @@ void AuthContext::SetPeerData(const AuthPeerData* data)
 }
 
 
+// The login's two blocks are built by ee_won (authctx.rs) from the maps, in their order; the texts cross as UTF-16
+// LE bytes.
+struct AuthEntryText {
+    std::string mName, mValue, mBytes, mExtra;
+};
+static EeWonAuthEntry AuthEntry(AuthEntryText& ioText, bool inPresent)
+{
+    EeWonAuthEntry anEntry;
+    anEntry.name=reinterpret_cast<const uint8_t*>(ioText.mName.data());
+    anEntry.name_len=ioText.mName.size();
+    anEntry.value=reinterpret_cast<const uint8_t*>(ioText.mValue.data());
+    anEntry.value_len=ioText.mValue.size();
+    anEntry.bytes=reinterpret_cast<const uint8_t*>(ioText.mBytes.data());
+    anEntry.bytes_len=ioText.mBytes.size();
+    anEntry.extra=reinterpret_cast<const uint8_t*>(ioText.mExtra.data());
+    anEntry.extra_len=ioText.mExtra.size();
+    anEntry.present=inPresent;
+    return anEntry;
+}
+static std::string AuthUtf16(const std::wstring& inText)
+{
+    std::string aBytes;
+    WideAppendUtf16LE(aBytes,inText);
+    return aBytes;
+}
+static std::string AuthRaw(const ByteBuffer* inBuffer)
+{
+    return inBuffer!=NULL?std::string(inBuffer->data(),inBuffer->length()):std::string();
+}
+static std::string AuthRaw(const RawBuffer& inBuffer)
+{
+    return std::string(reinterpret_cast<const char*>(inBuffer.data()),inBuffer.size());
+}
+static const EeWonAuthEntry* AuthEntries(const std::vector<EeWonAuthEntry>& inEntries)
+{
+    return inEntries.empty()?NULL:&inEntries[0];
+}
+
 // FUNCTION: WON 0x006e0c50
 // Appends each hashed community's file hash and its hash keyed with the server challenge
 void AuthContext::AppendHashes(WriteBuffer& output,const RawBuffer& challenge)
 {
     AutoCrit lock(this->mDataCrit);
-    int count=0;
-    unsigned long countPosition=output.mLength;
-    output.SkipBytes(1);
-    std::map<std::wstring,AuthLoginCommunityData>::iterator next=this->mCommunityMap.begin();
-    while(next!=this->mCommunityMap.end()) {
-        AuthLoginCommunityData& data=next->second;
-        if(!data.mSimpleHash.empty()) {
-            MD5Digest keyedHash;
-            keyedHash.update(challenge);
-            keyedHash.update(data.mKeyedHashData);
-            RawBuffer keyed=keyedHash.digest();
-            output.AppendByte(1);
-            output.AppendWString(next->first,2);
-            output.AppendBytes(data.mSimpleHash.data(),data.mSimpleHash.length());
-            output.AppendBytes(keyed.data(),keyed.length());
-            ++count;
-        }
-        ++next;
+    std::vector<AuthEntryText> aTexts(this->mCommunityMap.size());
+    std::vector<EeWonAuthEntry> anEntries;
+    size_t anIndex=0;
+    for(std::map<std::wstring,AuthLoginCommunityData>::iterator next=this->mCommunityMap.begin();
+        next!=this->mCommunityMap.end();++next,++anIndex) {
+        AuthEntryText& aText=aTexts[anIndex];
+        aText.mName=AuthUtf16(next->first);
+        aText.mBytes=AuthRaw(next->second.mSimpleHash);
+        aText.mExtra=AuthRaw(next->second.mKeyedHashData);
+        anEntries.push_back(AuthEntry(aText,true));
     }
-    output.SetByte(countPosition,static_cast<unsigned char>(count));
+    std::string aBytes;
+    ee_won_auth_hashes(AuthEntries(anEntries),anEntries.size(),challenge.data(),challenge.size(),AuthAppendBytes,
+                       &aBytes);
+    output.AppendBytes(aBytes.data(),aBytes.length());
 }
 // FUNCTION: WON 0x006e0e50
 // Appends the login's community names and typed records (CD keys, joins, user data, secrets, nicknames)
 void AuthContext::AppendCommunityData(WriteBuffer& output)
 {
     AutoCrit lock(this->mDataCrit);
-    output.AppendByte(0);
-    output.AppendByte(static_cast<unsigned char>(this->mCommunityMap.size()));
-    std::map<std::wstring,AuthLoginCommunityData>::iterator community=this->mCommunityMap.begin();
-    while(community!=this->mCommunityMap.end()) {
-        output.AppendWString(community->first,2);
-        ++community;
+    std::vector<AuthEntryText> aTexts(this->mCommunityMap.size()+this->mCDKeyCommunityJoinMap.size()+
+                                      this->mSetCommunityUserDataMap.size()+this->mNicknameMap.size());
+    std::vector<EeWonAuthEntry> aCommunities,aJoins,aUserData,aNicknames;
+    size_t anIndex=0;
+    for(std::map<std::wstring,AuthLoginCommunityData>::iterator next=this->mCommunityMap.begin();
+        next!=this->mCommunityMap.end();++next,++anIndex) {
+        AuthEntryText& aText=aTexts[anIndex];
+        aText.mName=AuthUtf16(next->first);
+        const CDKey& aKey=next->second.mCDKey;
+        aText.mBytes=AuthRaw(aKey.mKey.get());
+        aCommunities.push_back(AuthEntry(aText,aKey.mValid && aKey.mKey.get()!=NULL));
     }
-    unsigned long countPosition=output.length();
-    output.SkipBytes(2);
-    int count=0;
-    community=this->mCommunityMap.begin();
-    while(community!=this->mCommunityMap.end()) {
-        if(community->second.mCDKey.mValid) {
-            ConstSmartPtr<ByteBuffer> key(community->second.mCDKey.mKey.get());
-            if(key.get()!=NULL) {
-                output.AppendByte(1);
-                output.AppendShort(static_cast<short>(WideUtf16Length(community->first)*2+key->length()+2));
-                output.AppendWString(community->first,2);
-                output.AppendBytes(key->data(),key->length());
-                ++count;
-            }
-        }
-        ++community;
+    for(std::map<std::wstring,CDKey>::iterator next=this->mCDKeyCommunityJoinMap.begin();
+        next!=this->mCDKeyCommunityJoinMap.end();++next,++anIndex) {
+        AuthEntryText& aText=aTexts[anIndex];
+        aText.mName=AuthUtf16(next->first);
+        aText.mBytes=AuthRaw(next->second.mKey.get());
+        aJoins.push_back(AuthEntry(aText,next->second.mKey.get()!=NULL));
     }
-    std::map<std::wstring,CDKey>::iterator joined=this->mCDKeyCommunityJoinMap.begin();
-    while(joined!=this->mCDKeyCommunityJoinMap.end()) {
-        ConstSmartPtr<ByteBuffer> key(joined->second.mKey.get());
-        if(key.get()!=NULL) {
-            output.AppendByte(7);
-            output.AppendShort(static_cast<short>(WideUtf16Length(joined->first)*2+6+key->length()));
-            output.AppendWString(joined->first,2);
-            output.AppendLong(0);
-            output.AppendBytes(key->data(),key->length());
-            ++count;
-        }
-        ++joined; //the original advances the iterator before the held key temporary is destroyed
+    for(std::map<std::wstring,ConstSmartPtr<ByteBuffer> >::iterator next=this->mSetCommunityUserDataMap.begin();
+        next!=this->mSetCommunityUserDataMap.end();++next,++anIndex) {
+        AuthEntryText& aText=aTexts[anIndex];
+        aText.mName=AuthUtf16(next->first);
+        aText.mBytes=AuthRaw(next->second.get());
+        aUserData.push_back(AuthEntry(aText,next->second.get()!=NULL));
     }
-    std::map<std::wstring,ConstSmartPtr<ByteBuffer> >::iterator userData=this->mSetCommunityUserDataMap.begin();
-    while(userData!=this->mSetCommunityUserDataMap.end()) {
-        const ByteBuffer* data=userData->second.get();
-        if(data!=NULL) {
-            output.AppendByte(8);
-            output.AppendShort(static_cast<short>(WideUtf16Length(userData->first)*2+6+data->length()));
-            output.AppendWString(userData->first,2);
-            output.AppendLong(0);
-            output.AppendBuffer(data,0);
-            ++count;
-        }
-        ++userData;
+    for(std::map<std::wstring,std::wstring>::iterator next=this->mNicknameMap.begin();
+        next!=this->mNicknameMap.end();++next,++anIndex) {
+        AuthEntryText& aText=aTexts[anIndex];
+        aText.mName=AuthUtf16(next->first);
+        aText.mValue=AuthUtf16(next->second);
+        aNicknames.push_back(AuthEntry(aText,true));
     }
-    if(this->mSecretList.size()>0) {
-        output.AppendByte(6);
-        unsigned long position=output.length();
-        output.SkipBytes(2);
-        this->AppendLoginSecrets(output);
-        output.SetShort(position,output.length()-position-2);
-        ++count;
-    }
-    std::map<std::wstring,std::wstring>::iterator nickname=this->mNicknameMap.begin();
-    while(nickname!=this->mNicknameMap.end()) {
-        const std::wstring& key=nickname->first;
-        const std::wstring& value=nickname->second;
-        output.AppendByte(4);
-        unsigned long position=output.length();
-        output.SkipBytes(2);
-        output.AppendWString(key,2);
-        output.SetShort(position,output.length()-position-2);
-        ++count;
-        if(!value.empty()) {
-            output.AppendByte(3);
-            position=output.length();
-            output.SkipBytes(2);
-            output.AppendWString(key,2);
-            output.AppendWString(value,2);
-            output.SetShort(position,output.length()-position-2);
-            ++count;
-        }
-        ++nickname;
-    }
-    output.SetShort(countPosition,static_cast<short>(count));
+    std::string aBytes;
+    ee_won_auth_community_data(AuthEntries(aCommunities),aCommunities.size(),AuthEntries(aJoins),aJoins.size(),
+                               AuthEntries(aUserData),aUserData.size(),AuthEntries(aNicknames),aNicknames.size(),
+                               this->mSecrets,AuthAppendBytes,&aBytes);
+    output.AppendBytes(aBytes.data(),aBytes.length());
 }
 
 // FUNCTION: WON 0x006de560

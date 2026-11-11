@@ -398,6 +398,9 @@ WON_TESTS = {
     "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
                         *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                              "StringUtil.cpp")]],
+    # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
+    "won_auth_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                      WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
 }
 
 

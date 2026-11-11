@@ -6,6 +6,7 @@
 
 pub mod asyncop;
 pub mod auth;
+pub mod authctx;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
