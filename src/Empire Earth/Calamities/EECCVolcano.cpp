@@ -149,6 +149,7 @@ bool EECCVolcano::Start(EECalamity* inCalamity)
     inCalamity->GetTargetLocation(theLocation);
     theLocation.SetX(theLocation.GetX() - 0.5f);
     theLocation.SetY(theLocation.GetY() - 1.5f);
+    EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
     gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect1, NULL);
     inCalamity->mHeight = this->GetMaximumHeight(theLocation) + this->mGraphicEffect1->GetSize();
     this->PlaySound(inCalamity);

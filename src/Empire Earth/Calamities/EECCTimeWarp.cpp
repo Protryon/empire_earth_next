@@ -89,6 +89,7 @@ bool EECCTimeWarp::Start(EECalamity* inCalamity)
             if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
                 theUnit->GetPosition(theLocation);
                 theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
+                EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
                 gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, &theEffectHandle,
                                              0);
                 inCalamity->mEffectHandle = theEffectHandle;

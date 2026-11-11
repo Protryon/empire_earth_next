@@ -298,6 +298,16 @@ bool EETechTreeNode::GetIsObsolete()
 // Tells whether the node makes a building or mine whose media this game needs
 bool EETechTreeNode::NeedsUnitMedia()
 {
+    bool theResult = this->NeedsUnitMediaUncaptured();
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theUnitClass = this->mData->mUnitClass;
+    EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
+    EETechCaptureWalk(10, NULL, this, theUnitClass, theClass != NULL ? theClass->mFamily : -1, theResult ? 1 : 0);
+    return theResult;
+}
+
+bool EETechTreeNode::NeedsUnitMediaUncaptured()
+{
     long theUnitClass = this->mData->mUnitClass;
     if (theUnitClass <= 0)
         return false;
@@ -496,21 +506,27 @@ void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
 // Makes the node obsolete (obsolete event, unloading its unit media unless kept) or clears the flag
 void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
 {
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theAction = 0;   // TNWK (TEST ONLY): 1 obsoleted, 2 its media unloaded, 4 cleared
     if (inValue) {
         if (this->mIsObsolete == false) {
+            theAction |= 1;
             this->mIsObsolete = true;
             EEEvent::Trigger(this->mData->mObsoleteEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
             this->mTree->UpdateInterface(false);
             if (!inKeepMedia) {
                 if (this->NeedsUnitMedia() == true && this->mIsUnitMediaLoaded == true) {
+                    theAction |= 2;
                     this->mTree->GetPlayer()->UnloadUnitClassMedia(this->mData->mUnitClass);
                     this->mIsUnitMediaLoaded = false;
                 }
             }
         }
     } else {
+        theAction |= 4;
         this->mIsObsolete = false;
     }
+    EETechCaptureWalk(5, this->mTree, this, inValue ? 1 : 0, inKeepMedia ? 1 : 0, theAction);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cfc72

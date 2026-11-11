@@ -26,6 +26,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
 
 extern EEEffectManager*& gEffectManager;
 extern EEWorld gWorld;
@@ -99,6 +100,7 @@ void EEAreaEffectFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
 // Plays the target effect at the calamity's target on the ground (at height 0 on water terrain types 1 and 10)
 void EEAreaEffectFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     GE3DPoint theLocation;
     inCalamity->GetTargetLocation(theLocation);
     long theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))->mTerrainType;
@@ -124,6 +126,7 @@ void EEAreaEffectFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity*
         return;
     if (this->mEffect3 != NULL)
         gEffectManager->CreateUnitEffect(inUnit, this->mEffect3, NULL, false, 0, 0);
+    EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
     inUnit->TakeHit(theCaster, theDamage, inCalamity->mPlayerNumber, this->mMode);
 }
 

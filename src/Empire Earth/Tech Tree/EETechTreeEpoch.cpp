@@ -98,10 +98,13 @@ long EETechTreeEpoch::GetCurrentSOL()
 long EETechTreeEpoch::GetBuildTime()
 {
     long theResult;
-    if (this->mTree->GetPlayer()->IsHuman() == 1)
+    long theHuman = this->mTree->GetPlayer()->IsHuman();   // (TNWK, TEST ONLY: asked once, as the test did)
+    if (theHuman == 1)
         theResult = this->mData->mBuildTime;
     else
         theResult = this->mData->mBuildTime / 2;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    EETechCaptureWalk(6, NULL, NULL, theHuman, this->mData->mBuildTime, theResult);   // TNWK (TEST ONLY)
     return theResult;
 }
 
@@ -322,17 +325,24 @@ void EETechTreeEpoch::LoadMediaOfKind(long inKind)
 // Makes a node of the epoch obsolete, or the epoch itself when it is still ahead (its obsolete event fires)
 void EETechTreeEpoch::MakeObsolete(long inID)
 {
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theAction = 0;   // TNWK (TEST ONLY): 0 no node, 1 the node's SetObsolete, 2 the epoch obsoleted, 3 nothing
     if (inID != this->mData->mID) {
         std::map<long, EETechTreeNode*>::iterator theNode = this->mNodes.find(inID);
-        if (theNode != this->mNodes.end())
+        if (theNode != this->mNodes.end()) {
+            theAction = 1;
             theNode->second->SetObsolete(true, false);
+        }
     } else {
+        theAction = 3;
         if (this->mIsObsolete == false && this->mTree->mCurrentEpoch < inID) {
+            theAction = 2;
             this->mIsObsolete = true;
             EEEvent::Trigger(this->mData->mObsoleteEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
             this->mTree->UpdateInterface(false);
         }
     }
+    EETechCaptureWalk(4, this->mTree, this, inID, 0, theAction);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ce6e9
@@ -341,13 +351,17 @@ void EETechTreeEpoch::ObsoleteOutdatedNodes()
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
     long theEpoch = this->mTree->mCurrentEpoch;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
         EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->mIsObsolete == false && theTreeNode->mObsoleteEpoch < theEpoch)
+        bool theOutdated = theTreeNode->mIsObsolete == false && theTreeNode->mObsoleteEpoch < theEpoch;
+        EETechCaptureWalkStep(theNode->first, theOutdated ? 1 : 0);   // TNWK (TEST ONLY)
+        if (theOutdated)
             theTreeNode->SetObsolete(true, false);
         ++theNode;
     }
+    EETechCaptureWalk(3, this->mTree, this, theEpoch, 0, 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ce738
@@ -364,6 +378,7 @@ void EETechTreeEpoch::SetPrerequisite(long inID, long inPrerequisite)
 void EETechTreeEpoch::Unlock()
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     this->mIsObsolete = false;
     this->mCurrentSOL = this->mRequiredSOL;
     this->mIsAvailable = true;
@@ -371,13 +386,18 @@ void EETechTreeEpoch::Unlock()
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
         if (!theNode->second->GetIsObsolete()) {
-            if (theNode->second->mData->mAvailableWithEpoch)
+            if (theNode->second->mData->mAvailableWithEpoch) {
+                EETechCaptureWalkStep(theNode->first, 1);   // TNWK (TEST ONLY)
                 theNode->second->MakeAvailable();
-            else
+            } else {
+                EETechCaptureWalkStep(theNode->first, 2);   // TNWK (TEST ONLY)
                 theNode->second->SetPrerequisite(this->mData->mID);
-        }
+            }
+        } else
+            EETechCaptureWalkStep(theNode->first, 0);   // TNWK (TEST ONLY)
         ++theNode;
     }
+    EETechCaptureWalk(0, this->mTree, this, this->mData->mID, 0, 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ce7db
@@ -432,14 +452,18 @@ long EETechTreeEpoch::ResearchNode(EEComplexUnit* inUnit)
 void EETechTreeEpoch::ResearchAll(bool inAllNodes)
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     this->ResearchSelf();
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
         EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->mData->mResearchedWithEpoch || inAllNodes == true)
+        bool theTakes = theTreeNode->mData->mResearchedWithEpoch || inAllNodes == true;
+        EETechCaptureWalkStep(theNode->first, theTakes ? 1 : 0);   // TNWK (TEST ONLY)
+        if (theTakes)
             theTreeNode->ResearchNode(NULL);
         ++theNode;
     }
+    EETechCaptureWalk(1, this->mTree, this, this->mData->mID, inAllNodes ? 1 : 0, 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ce8c5
@@ -447,13 +471,17 @@ void EETechTreeEpoch::ResearchAll(bool inAllNodes)
 void EETechTreeEpoch::ResearchKind(long inKind, bool inEpochOnly)
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
         EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->mData->mKind == inKind && (!inEpochOnly || theTreeNode->mData->mResearchedWithEpoch))
+        bool theTakes = theTreeNode->mData->mKind == inKind && (!inEpochOnly || theTreeNode->mData->mResearchedWithEpoch);
+        EETechCaptureWalkStep(theNode->first, theTakes ? 1 : 0);   // TNWK (TEST ONLY)
+        if (theTakes)
             theTreeNode->ResearchNode(NULL);
         ++theNode;
     }
+    EETechCaptureWalk(2, this->mTree, this, inKind, inEpochOnly ? 1 : 0, 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ce918

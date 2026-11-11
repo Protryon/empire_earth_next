@@ -29,6 +29,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEUnit.h"
+#include "ee/EETechCapture.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUnitSetManager.h"
@@ -70,12 +71,14 @@ bool EECCDropObject::Start(EECalamity* inCalamity)
 
     if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
         theLocation = inCalamity->mTargetLocation;
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
         gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, &theEffectHandle, 0);
     }
     if (this->mSound == NULL)
         return true;
     EEComputeSoundParameters(this->mSound->GetVolume(), theLocation, theVolume, thePan, thePitch,
                              kCalamitySoundFalloff);
+    EECalamityCaptureStartEvent(kCalamityStartSound, 0, 0, theVolume, thePan);   // CALT (TEST ONLY)
     inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), theVolume, thePan,
                                                                     thePitch, this->mSound->GetLooping(), NULL));
     if (inCalamity->mSound != NULL)

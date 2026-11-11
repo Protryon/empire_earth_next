@@ -510,9 +510,11 @@ EEPlayer* EETechTree::GetPlayer()
 void EETechTree::AdvanceEpoch()
 {
     long theEpoch = this->mCurrentEpoch + 1;
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     if (theEpoch <= this->mEndEpoch) {
         this->SetEpoch(theEpoch);
     }
+    EETechCaptureWalk(8, this, NULL, theEpoch, this->mEndEpoch, theEpoch <= this->mEndEpoch ? 1 : 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ccb4a
@@ -836,12 +838,16 @@ void EETechTree::SetEpoch(long inEpoch)
         EETechCaptureTree(theRecord, this);
         theRecord.Commit();
     }
-    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < this->mEpochs.size()) || !(inEpoch >= this->mCurrentEpoch))
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < this->mEpochs.size()) || !(inEpoch >= this->mCurrentEpoch)) {
+        EETechCaptureWalk(7, this, NULL, inEpoch, 0, 0);   // TNWK (TEST ONLY)
         return;
+    }
     this->mCurrentEpoch = inEpoch;
     if (inEpoch != kTechEpochPrehistoric)
         this->mPlayer->mSavedGroups.Set(0xc, inEpoch);
     this->ResearchToEpoch(inEpoch);
+    EETechCaptureWalk(7, this, NULL, inEpoch, 0, 1);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cd2ed
@@ -876,9 +882,12 @@ void EETechTree::ResetEpochRange(long inStart, long inEnd)
 void EETechTree::SetNodeAvailable(long inID, bool inValue)
 {
     EETechTreeNode* theNode = this->Get(inID);
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theAction = theNode == NULL ? 0 : theNode->mResearchDelay == 0 ? 1 : 2;   // TNWK (TEST ONLY)
     if (theNode != NULL && theNode->mResearchDelay == 0) {
         theNode->mIsAvailable = inValue;
     }
+    EETechCaptureWalk(9, this, theNode, inID, inValue ? 1 : 0, theAction);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cd358

@@ -96,7 +96,7 @@ long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTim
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inHelperID);
         EECalamityCaptureEvent(kCalamityOpHelperUpdate, inHelperID, theHelper != NULL);   // CALW (TEST ONLY)
         if (theHelper != NULL)
-            theHelper->Update(inElapsedTime);
+            EECalamityCaptureContagion(theHelper, inElapsedTime);   // CONT (TEST ONLY): theHelper->Update
     }
     inCalamity->mTimeAlive = theAge.time_alive;
     return theAge.done ? 7 : 0;

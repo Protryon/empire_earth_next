@@ -93,6 +93,7 @@ bool EECCAreaEffect::Start(EECalamity* inCalamity)
         else
             theLocation.SetZ(0.0f);
         EEEffectHandle theEffectHandle;
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
         gEffectManager->CreateEffect(inCalamity->GetCasterUnit(), theLocation, this->mGraphicEffect1, &theEffectHandle, 0);
         inCalamity->SetEffectHandle(theEffectHandle);
         if (this->mSound != NULL) {

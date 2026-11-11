@@ -72,6 +72,7 @@ bool EECCHurricane::Start(EECalamity* inCalamity)
     if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
         theLocation = inCalamity->mTargetLocation;
         theLocation.SetZ(theLocation.GetZ() + inCalamity->GetHeight());
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
         gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, NULL, 0);
     }
     return true;

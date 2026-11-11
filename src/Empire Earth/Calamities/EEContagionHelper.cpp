@@ -26,6 +26,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EETechCapture.h"
 
 const UString EEContagionHelper::mNumUnitsStringID("ContagionHelperNumUnits-StringID");
 const UString EEContagionHelper::mUnitIDStringID("ContagionHelperUnitID-StringID");
@@ -271,6 +272,7 @@ void EEContagionHelper::Spread(float inElapsedTime)
     std::vector<EEComplexUnit*> theNearUnits;
     float theRadius = this->mFunctor->GetRadius();
     float theRadiusSquared = theRadius * theRadius;
+    EECalamityCaptureContagionEvent(kContagionSpread, 0, 0, inElapsedTime, theChance);   // CONT (TEST ONLY)
     for (std::vector<EEUnit*>::iterator theIterator = this->mUnits.begin(); theIterator != this->mUnits.end(); ++theIterator) {
         EEComplexUnit* theUnit = (*theIterator)->mComplexUnit;
         if (theUnit == NULL)
@@ -283,11 +285,24 @@ void EEContagionHelper::Spread(float inElapsedTime)
                 continue;
             long theCategory = theNearUnit->mUnitClass->GetCategory();
             long theUnitType = theNearUnit->mUnitClass->GetUnitType();
-            if (this->mFunctor->CanInfectType(theCategory, theUnitType) &&
-                (!this->mFunctor->InfectsAlliesOnly() || theUnit->mPlayer == theNearUnit->mPlayer ||
-                 theNearUnit->mPlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0) &&
-                gPhysics->mRandom.Generate() <= theChance &&
-                theUnit->mPhysicalModel.GetLocation().DistanceSquaredTo(theNearUnit->mPhysicalModel.GetLocation()) <= theRadiusSquared)
+            // (the C++'s one test, its parts in order: the type, the allies, the draw, the distance; CONT TEST ONLY)
+            bool theTypeOK = this->mFunctor->CanInfectType(theCategory, theUnitType);
+            bool theAllyOK = theTypeOK && (!this->mFunctor->InfectsAlliesOnly() || theUnit->mPlayer == theNearUnit->mPlayer ||
+                                           theNearUnit->mPlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0);
+            float theDraw = -1.0f;
+            float theDistance = -1.0f;
+            bool theTake = false;
+            if (theAllyOK) {
+                theDraw = gPhysics->mRandom.Generate();
+                if (theDraw <= theChance) {
+                    theDistance = theUnit->mPhysicalModel.GetLocation().DistanceSquaredTo(theNearUnit->mPhysicalModel.GetLocation());
+                    theTake = theDistance <= theRadiusSquared;
+                }
+            }
+            EECalamityCaptureContagionEvent(kContagionCandidate, theNearUnit->mUnitID,
+                                            (theTypeOK ? 1 : 0) | (theAllyOK ? 2 : 0) | (theTake ? 4 : 0), theDraw,
+                                            theDistance);   // CONT (TEST ONLY)
+            if (theTake)
                 theNewUnits.push_back(theNearUnit);
         }
         theNearUnits.clear();
@@ -296,14 +311,19 @@ void EEContagionHelper::Spread(float inElapsedTime)
         EEUnit* theNewUnit = *theNew;
         theComplexUnit = theNewUnit->mComplexUnit;
         theFound = std::find(this->mUnits.begin(), this->mUnits.end(), theComplexUnit);
-        if (theComplexUnit == NULL || theFound != this->mUnits.end())
+        if (theComplexUnit == NULL || theFound != this->mUnits.end()) {
+            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 3);   // CONT (TEST ONLY)
             continue;
+        }
         theEffect = NULL;
         if (this->mCalamity->mClass->mIsBlockedByImmunity && theComplexUnit->GetEffect(3, theEffect)) {
+            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 2);   // CONT (TEST ONLY)
             if (theEffect != NULL)
                 gEffectManager->CreateUnitEffect(theComplexUnit, theEffect, NULL, 0, 0, 0);
-        } else
+        } else {
+            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 1);   // CONT (TEST ONLY)
             this->AddUnit(theNewUnit, true);
+        }
     }
 }
 
@@ -330,19 +350,25 @@ void EEContagionHelper::Update(float inElapsedTime)
         this->mTimeSinceLastSpread -= theSpreadTime;
         if (!this->mFunctor->SkipsSpread())
             this->Spread(this->mTimeSinceLastUpdate);
-        else
+        else {
+            EECalamityCaptureContagionEvent(kContagionUpdateUnits);   // CONT (TEST ONLY)
             this->mFunctor->UpdateUnits(&this->mUnits);
+        }
         this->mTimeSinceLastUpdate = 0.0f;
     } else
         this->mTimeSinceLastUpdate += inElapsedTime;
+    EECalamityCaptureContagionEvent(kContagionFunctorUpdate);   // CONT (TEST ONLY)
     this->mFunctor->Update(inElapsedTime, this->mCalamity);
     std::vector<EEUnit*>::iterator theIterator = this->mUnits.begin();
     while (theIterator != this->mUnits.end())
         if ((*theIterator)->mHitPoints > 0) {
+            EECalamityCaptureContagionEvent(kContagionApply, (*theIterator)->mUnitID);   // CONT (TEST ONLY)
             this->mFunctor->Apply(*theIterator, inElapsedTime, this->mCalamity);
             ++theIterator;
-        } else
+        } else {
+            EECalamityCaptureContagionEvent(kContagionRemove, (*theIterator)->mUnitID);   // CONT (TEST ONLY)
             theIterator = this->RemoveUnit(theIterator, true);
+        }
 }
 
 // SYNTHETIC: EXE 0x4b5b7d

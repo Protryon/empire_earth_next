@@ -20,6 +20,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
 
 // FUNCTION: EXE 0x4b6fb1
 // Creates the plague functor with its radius, chance, damage, damage time, unit set and hit mode
@@ -68,8 +69,10 @@ void EEPlagueFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
 // Damages the unit per elapsed period and keeps it from being deleted
 void EEPlagueFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
 {
-    if (this->mUpdates > 0)
+    if (this->mUpdates > 0) {
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, this->mDamage * this->mUpdates);   // CONT (TEST ONLY)
         inUnit->TakeHit(inCalamity->mCasterUnit, this->mDamage * this->mUpdates, inCalamity->mPlayerNumber, this->mMode);
+    }
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
     if (theComplexUnit != NULL)
         theComplexUnit->SetIsDeletable(false);
@@ -79,6 +82,7 @@ void EEPlagueFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inC
 // Shows the unit class's plague effect on the unit and keeps it from being deleted
 void EEPlagueFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEGraphicEffect* theEffect = inUnit->mUnitClass->mPlagueEffect;
     if (theEffect != NULL)
         gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, 0, 0, 0);
@@ -91,6 +95,7 @@ void EEPlagueFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 // Restores the unit's deletable flag from its class
 void EEPlagueFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionCure, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
     if (theComplexUnit != NULL)
         theComplexUnit->SetIsDeletable(inUnit->mUnitClass->mIsDeletable);

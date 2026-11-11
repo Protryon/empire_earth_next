@@ -23,6 +23,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EETechCapture.h"
 
 // FUNCTION: EXE 0x4b6bd1
 // Creates the fire functor with its burning effect (referenced), burn, radius, chance, damage, spread time, unit set
@@ -110,14 +111,17 @@ void EEFireFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCal
     if (!(this->mUpdates > 0))
         return;
     theDamage = this->mDamage * this->mUpdates;
-    if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit)
+    if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit) {
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
         inUnit->TakeHit(theCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
+    }
 }
 
 // FUNCTION: EXE 0x4b6d2c
 // Sets the unit alight: burning effect once, then burn percent of its maximum hit points as damage unless carried
 void EEFireFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEUnit* theCasterUnit = inCalamity->mCasterUnit;
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
     long theDamage = UMFloatToLong((this->mBurn * 0.01f) * inUnit->mStats->mMaxHitPoints);
@@ -128,14 +132,17 @@ void EEFireFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
         gEffectManager->CreateUnitEffect(theComplexUnit, this->mEffect, &theEffectHandle, 0, 0, 0);
         theComplexUnit->mFireEffect = theEffectHandle;
     }
-    if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit)
+    if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit) {
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
         inUnit->TakeHit(theCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
+    }
 }
 
 // FUNCTION: EXE 0x4b6dec
 // Puts out the fire: restores the unit's deletable flag and finishes or removes its burning effect
 void EEFireFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionCure, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
     if (theComplexUnit == NULL)
         return;

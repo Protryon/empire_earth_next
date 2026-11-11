@@ -90,7 +90,7 @@ bool CommonCall(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCa
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCall.index);
         EECalamityCaptureEvent(kCalamityOpHelperUpdate, inCall.index, theHelper != NULL);   // CALW (TEST ONLY)
         if (theHelper != NULL)
-            theHelper->Update(inCall.x);
+            EECalamityCaptureContagion(theHelper, inCall.x);   // CONT (TEST ONLY): theHelper->Update
         return true;
     }
     case EeCalamityOp::Sound:
