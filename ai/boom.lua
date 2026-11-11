@@ -26,6 +26,7 @@ local ECON = {
     parallel = false,       -- the Stone Age's citizens and soldiers in parallel (the owner: no citizen stop for the army)
     full_target = true,     -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
     food_dry = true,        -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
+    wood_floor = true,      -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
 }
 
 local PLAN = {
@@ -715,6 +716,12 @@ function M.step(view, memory)
                 local spare = want[r] - needed[r]
                 if army_short and r == "iron" then
                     spare = -1000000
+                end
+                -- (§8.42) nor wood up to its floor while the wood is under 150: in the Stone Age the settlements by
+                -- the gold and iron mines were queued for minutes unpaid (wood 5-55), so the Copper Age's metals had
+                -- no drop site and no gatherer
+                if ECON.wood_floor and r == "wood" and view.stock.wood < 150 and want.wood <= plan.floor.wood then
+                    spare = -999999
                 end
                 if want[r] > 0 and (big_n == nil or spare > big_n) then
                     big, big_n = r, spare
