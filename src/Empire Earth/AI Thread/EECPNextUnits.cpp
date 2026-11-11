@@ -803,8 +803,11 @@ static int LuaMap(lua_State* L)
 }
 
 // the filters of ai.units / ai.seen / ai.resources
+static const long kUnitsMaxTypes = 16;   // class names in one filter's `type` list
 struct EECPUnitsFilter {
-    long mType = -1;
+    long mType = -1;   // -1 any class, -2 an unknown name (nothing), -3 the list mTypes
+    long mTypes[kUnitsMaxTypes] = {0};
+    long mTypeCount = 0;
     const char* mCategory = NULL;
     bool mHasNear = false;
     long mX = 0, mY = 0, mR = 0;
@@ -822,10 +825,24 @@ static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
     if (lua_type(L, inTable) != LUA_TTABLE)
         return;
     lua_getfield(L, inTable, "type");
-    if (!lua_isnil(L, -1))
-        f.mType = EECPUnitsClassArg(L, lua_gettop(L));
-    if (!lua_isnil(L, -1) && f.mType < 0)
-        f.mType = -2;   // an unknown name: matches nothing
+    if (lua_type(L, -1) == LUA_TTABLE) {
+        // a list of class names (or ids): any of them; the unknown ones are left out (none known: nothing)
+        int theList = lua_gettop(L);
+        lua_Integer theLength = (lua_Integer)lua_rawlen(L, theList);
+        for (lua_Integer k = 1; k <= theLength && f.mTypeCount < kUnitsMaxTypes; k++) {
+            lua_rawgeti(L, theList, k);
+            long theType = EECPUnitsClassArg(L, lua_gettop(L));
+            lua_pop(L, 1);
+            if (theType >= 0)
+                f.mTypes[f.mTypeCount++] = theType;
+        }
+        f.mType = -3;
+    } else {
+        if (!lua_isnil(L, -1))
+            f.mType = EECPUnitsClassArg(L, lua_gettop(L));
+        if (!lua_isnil(L, -1) && f.mType < 0)
+            f.mType = -2;   // an unknown name: matches nothing
+    }
     lua_pop(L, 1);
     f.mCategory = EECPUnitsOptString(L, inTable, "category");
     f.mHasNear = EECPUnitsOptNear(L, inTable, f.mX, f.mY, f.mR);
@@ -858,10 +875,23 @@ static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
         f.mKind = 99;
 }
 
+// a class against a filter's `type` (one class, a list, or any)
+static bool EECPUnitsTypeMatch(const EECPUnitsFilter& f, long inType)
+{
+    if (f.mType == -1)
+        return true;
+    if (f.mType != -3)
+        return inType == f.mType;
+    for (long k = 0; k < f.mTypeCount; k++)
+        if (f.mTypes[k] == inType)
+            return true;
+    return false;
+}
+
 // the common tests of a filter; outKey the sort key (the squared distance with near, else 0)
 static bool EECPUnitsPasses(EEUnit* inUnit, const EECPUnitsFilter& f, long long& outKey)
 {
-    if (f.mType != -1 && inUnit->mUnitClass->mUnitType != f.mType)
+    if (!EECPUnitsTypeMatch(f, inUnit->mUnitClass->mUnitType))
         return false;
     if (f.mCategory != NULL && strcmp(EECPUnitsCategory(inUnit), f.mCategory) != 0)
         return false;
@@ -1156,7 +1186,7 @@ static int LuaMemory(lua_State* L)
     s->mSorted.clear();
     for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
         const Remembered& r = it->second;
-        if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || (f.mType != -1 && r.mType != f.mType) || r.mSeen < theSince
+        if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || !EECPUnitsTypeMatch(f, r.mType) || r.mSeen < theSince
             || (theBuildings >= 0 && r.mBuilding != theBuildings))
             continue;
         if (f.mCategory != NULL && (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
