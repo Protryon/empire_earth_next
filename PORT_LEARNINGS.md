@@ -5367,3 +5367,59 @@ on seeds 2-7, the Rust gate, sim_capture's four profiles PASS) and measured with
   - *seed 2 2100 s, tick 16* and *seed 7 2100 s, tick 20*: a sub group picks another task / a unit another attack
     destination; the trace's "income" and other `cp` statistics lines differ at once after a load (trace statics,
     not game state).
+
+## R4.3, sixth part: the text: GEText's extent, GEFontBitmap's cells, alpha pass and draws (ee_ge font.rs, font_ffi.rs; branch rust-r4-ge6, 2026-11-11)
+
+`GEText::ComputeTextExtent`, `GEFontBitmap`'s glyph atlas layout (the constructor's row and texture decisions),
+`CreateSurfaceAlpha` and both `GEFontBitmap::Draw`s (the walk over the UTF-8 text, the Windows-1252 cell lookup,
+the pen, and the clipped form's whole / cut / skipped decision with its cut rectangles) are Rust. `GEFont`, `GEText`
+and `GEFontBitmap` stay the C++ classes (members, reference counts, exported names); no class moved wholly, so no
+C++ file was deleted. `GEFont` has no logic of its own (its constructor passes the style bits to `PlatFontCreate`),
+and the DX7 text draw (`DX7Rasterizer Draw2D.cpp`, R4.2's `ee_dx7` `draw2d.rs`) was already Rust: with this part the
+Graphics Engine owns no text logic in C++. There is no line breaking in the engine (the UI's `ee_ui` text.rs does it).
+
+- **Plans, not callbacks.** The C++ hands Rust plain data and runs the side effects itself, in the original's order:
+  the constructor asks `ee_ge_font_cell_place` (a `GeFontPacker` it keeps on its stack) for each cell and creates,
+  unlocks and alpha-passes the textures and renders each glyph when told; a draw gets a vector of `GeGlyphDraw`
+  (cell, location, and for a cut glyph the destination and source rectangles) and makes the bitmap calls
+  (`SetTexture` also for a skipped glyph, as the original did; `ComputeStretchedCoordsAndScale(destination,
+  destination, source)` for a cut one). `GEBitmap`'s own arithmetic was already Rust (fifth part).
+- **No platform dependency in ee_ge.** The decoding and stepping are the platform's (`PlatUtf8Decode`,
+  `PlatMbsNInc`, `PlatCp1252ByteOf`) and the measure is `PlatFontMeasure`: the C++ passes them in a function table
+  (`GeTextOps`, `GERustText.h`). Linking `ee_plat_core` into `ee_ge` would have put its exported `PlatMbs*` into the
+  random map gate's static library next to `tools/rmap_gate/rmap_stubs.cpp`'s own. `ee_plat_core` is a
+  dev-dependency: the tests run the same functions the game passes.
+- **Quirks kept.** The extent is measured in chunks of 256 *characters* (`GetLength`, D6) and each chunk's integer
+  width is added as a float; the atlas starts a new row when a cell would reach x = 256 (`>=`: a cell may end at
+  255, not 256) and a new texture when it would reach y = 256; a new texture does not reset the row height (only a
+  new row does); the row height is an `unsigned long` the cell heights are truncated into; the pen advances by
+  `(right - left) + x`, not by the width; a clipped glyph is inside when its inclusive rectangle (width and height
+  less one) is, and a glyph fully outside still advances the pen and still sets the bitmap's texture.
+- **A heap overrun D6 left in `UWideString(const char*)`** (its own commit). The constructor allotted two bytes a
+  character plus two: under Windows-1252 always enough, under UTF-8 not for text of 3- and 4-byte characters ("€€"
+  needs 7 bytes, got 6; 64 x "aé€😀" needs 641, got 514), and `strcpy` wrote past the buffer. The golden driver
+  crashed on it at its first long emoji text. The room is now at least the bytes and the terminator; text of 1- and
+  2-byte characters keeps the original's capacity (so every Latin-1 string allocates as before). Only the
+  `const char*` constructor sized by characters; the assignments and `CopyString` size by bytes.
+- **The golden driver** (`build/font_golden`, scratch, `build.py orig|cur`): `GEText.cpp`, `GEFont.cpp` and
+  `GEFontBitmap.cpp` of `d3707423` (`git show`, unmodified) or of the worktree, their includes replaced by
+  `fake_ge.h` (the `GERust*.h` seams kept), with the real `UWideString.cpp`, `GE2DPoint.h`, `GERectangle.h`,
+  `GEText.h`, `GEFont.h`, `GEFontBitmap.h`, and a scratch Rust staticlib of `ee_ge` + `ee_plat_core`. Fakes: fonts
+  (seven: a hash advance per code point times a scale, one pixel more per measured run so a chunked measure differs
+  from a whole one, zero-width glyphs, character ranges 0..255, 32..126, 65..90, 32..255, one without a `PlatFont`),
+  a rasterizer that writes a pattern into the surfaces with some zero greens, screens with row padding 0..2 and one
+  dropped MIP level, textures, and a `GEBitmap` that logs every call and stretches through the Rust. Inputs: 26
+  texts (empty, one glyph, ASCII, the copyright line, Latin-1, all the 1252 specials, the three C1 controls 1252
+  leaves undefined, Greek, CJK, emoji, a stray byte, a truncated sequence, controls below the font, 255..1,000
+  characters around the 256-character chunks, a chunk ending inside multi-byte characters), 182 extents (each text in
+  each font, again after `SetFont`), 6 atlases (1 or 2 textures; a cell ending exactly at 256 occurs), 234 unclipped
+  and 1,872 clipped draws (containing, exactly the text's cell, cut on every side, half, outside, one point,
+  fractional, inverted) and 60 alpha surfaces (width and height 0, 1, odd pads). Each case's log is in
+  `golden_font.txt` as its line count and FNV-1a 64 digest under a header carrying its inputs (2,387 cases, 236 KB);
+  `golden_font.rs` replays every case through `font.rs` with the same fakes. The driver relinked over the forwarders
+  printed the same file byte for byte (and the same 3.9 MB full log). Mutations checked: `>` for the row test's `>=`,
+  `<` for the containment's `<=` and a chunk of 255 each fail the test.
+- **What only a tour shows.** Every menu, tooltip, chat line and in-game label is measured through
+  `ComputeTextExtent`; the bitmap font draws the status bar (`EEUIFMGStatusBar`), the fonts `UIControlsTable` gives
+  a bitmap and any clipped draw of a text whose font has one. The goldens use fake fonts; the real `PlatFont` is
+  unchanged. The lead's tour must compare the menu captures pixel for pixel against the build before this branch.
