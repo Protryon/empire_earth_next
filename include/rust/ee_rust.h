@@ -49,6 +49,23 @@ constexpr static const int32_t REPAIR_SINGLE = 2;
 /// The tile gets a new area.
 constexpr static const int32_t REPAIR_NEW = 3;
 
+/// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
+constexpr static const unsigned long GE_FONT_ATLAS_FORMAT = 2;
+
+/// The glyph atlas textures' side in pixels (`CreateNewFontTexture`).
+constexpr static const float GE_FONT_ATLAS_SIZE = 256.0;
+
+/// `ComputeTextExtent` measures a long text in chunks of this many characters (GDI's limit once).
+constexpr static const unsigned long GE_TEXT_MEASURE_CHUNK = 256;
+
+/// A glyph draw's kind: the cell's own coordinates and scale, a part of it stretched, or nothing drawn (the texture
+/// is still set and the pen still advances).
+constexpr static const uint32_t GE_GLYPH_FULL = 0;
+
+constexpr static const uint32_t GE_GLYPH_CLIPPED = 1;
+
+constexpr static const uint32_t GE_GLYPH_SKIPPED = 2;
+
 /// The side of `SetGlobalWaterState`'s water texture grid.
 constexpr static const size_t WATER_GRID = 33;
 
@@ -2144,6 +2161,46 @@ struct EeGeTerrainLoad {
   unsigned long fractal_seed;
   /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
   bool compute_fractal;
+};
+
+/// The platform's text functions and the font's measure (`PlatUtf8Decode`, `PlatMbsNInc`, `PlatCp1252ByteOf`,
+/// `PlatFontMeasure`).
+struct EeGeTextOps {
+  uint32_t (*decode)(const char *text, uint32_t *out_length);
+  uint8_t *(*next_chars)(const uint8_t *text, size_t characters);
+  int (*cp1252_byte_of)(uint32_t character);
+  int32_t (*measure)(const void *font, const char *text, uint32_t length);
+};
+
+/// The glyph atlas layout of `GEFontBitmap`'s constructor: the pen in the current texture and the row's height so far.
+/// Starts zeroed (no texture yet).
+struct EeGeFontPacker {
+  float x;
+  float y;
+  /// the tallest cell of the row (`unsigned long`: the cell heights are truncated into it)
+  unsigned long row_height;
+  bool has_texture;
+};
+
+/// `GEFBCharacter` (the C++ keeps it; only the rectangle is read here).
+struct EeGeFbCharacter {
+  float top_left[2];
+  float bottom_right[2];
+  EeGeRectangle rect;
+  void *texture;
+  float x_scale;
+  float y_scale;
+};
+
+/// One glyph of `GEFontBitmap::Draw`: the cell (an index into `mCharacters`), where the bitmap goes (`location`, the
+/// destination's top left), and for a clipped glyph the destination and source rectangles of
+/// `ComputeStretchedCoordsAndScale(destination, destination, source)`.
+struct EeGeGlyphDraw {
+  uint32_t kind;
+  uint32_t cell;
+  EeGe2DPoint location;
+  EeGeRectangle destination;
+  EeGeRectangle source;
 };
 
 /// Borrowed bytes (no terminating NUL).
@@ -6204,6 +6261,50 @@ size_t ee_ge_terrain_rows_in_volume(const EeGe3DPoint *volume,
                                     unsigned long tile_row_count,
                                     long *out_rows,
                                     long *bounds);
+
+/// `GEText::ComputeTextExtent` with the font (`PlatFont*`, not NULL), its cell height and the text's character count.
+///
+/// # Safety
+/// The pointers are valid; `text` is NUL-terminated.
+void ee_ge_text_extent(const EeGeTextOps *ops,
+                       const void *font,
+                       const char *text,
+                       unsigned long characters,
+                       int32_t height,
+                       EeGeRectangle *out);
+
+/// `GEFontBitmap`'s next glyph cell of the given extent: writes the cell, returns whether it starts a new texture.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_font_cell_place(EeGeFontPacker *packer,
+                           float width,
+                           float height,
+                           EeGeRectangle *out);
+
+/// `GEFontBitmap::CreateSurfaceAlpha` on a locked surface's memory.
+///
+/// # Safety
+/// `pixels` covers `height` rows of `bytes_per_row` bytes (the last row's padding may be missing).
+void ee_ge_font_surface_alpha(uint16_t *pixels,
+                              unsigned long width,
+                              unsigned long height,
+                              unsigned long bytes_per_row);
+
+/// `GEFontBitmap::Draw`'s glyphs (`clip` NULL: unclipped) into `out` (room for `capacity`; a text has at most one
+/// glyph per byte) -> the count written.
+///
+/// # Safety
+/// The pointers are valid (`cells` for `count`, `out` for `capacity`, `clip` may be NULL); `text` is NUL-terminated.
+size_t ee_ge_font_draw_plan(const EeGeTextOps *ops,
+                            const char *text,
+                            unsigned long first_character,
+                            const EeGeFbCharacter *cells,
+                            size_t count,
+                            const EeGe2DPoint *location,
+                            const EeGeRectangle *clip,
+                            EeGeGlyphDraw *out,
+                            size_t capacity);
 
 /// `GETextureStem`: the length of a texture's cache name within `name`.
 ///
