@@ -21,7 +21,6 @@ local REQUEST_MS = 600000        -- EECPPersonnelRequest's deadline
 local GATHER_MS = 30000          -- EECPAttackSubGroup::HasGathered: the longest wait at the rally point
 local DROP_MS = 45000            -- EECPAttackCommander::DropSpentGroups' period
 local REGION = 9                 -- EEInfluenceTable's region size (tiles)
-local TOWN_JOIN = 20             -- a building this near a town building belongs to its town (DEVIATION: EETown's tiles)
 local ARMY_JOIN2 = 144           -- EECPIArmy::mJoinDistanceSq
 local OWN_ARMY_RANGE2 = 225      -- kDCOwnArmyRange (and 1 / kDCOwnArmyFactor)
 local DEPLOY_RANGE2 = 1200       -- MilitaryAidPackage::Deploy: groups this near the town's hull answer
@@ -181,10 +180,11 @@ local function random_enemy()
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
--- Towns (EETown, DEVIATION: a town is a town centre, capitol or settlement and the own buildings within 20 tiles of
--- it; its hull is their bounding box)
+-- Towns (EETown, EEPlayer::AddUnitToTown): the own land buildings (no walls) clustered, a building joining a town
+-- whose hull (DEVIATION: the bounding box) it lies in or within 16 tiles of (mReach 256), towns it joins merged;
+-- a town's id is its lowest building id, its value its building count
 
-local TOWN_KINDS = {b_town_center = true, b_capitol = true, b_settlement = true}
+local TOWN_REACH2 = 256
 
 local function towns()
     return R.memo("army_towns", function()
@@ -195,32 +195,46 @@ local function towns()
         end
         local cols = ai.get(ids, {"x", "y", "type"})
         for k = 1, #ids do
-            if cols.x[k] ~= nil and TOWN_KINDS[cols.type[k]] then
-                out[#out + 1] = {id = ids[k], x = cols.x[k], y = cols.y[k], l = cols.x[k], r = cols.x[k], t = cols.y[k],
-                                 b = cols.y[k], value = 0}
-            end
-        end
-        for k = 1, #ids do
             local x, y = cols.x[k], cols.y[k]
-            if x ~= nil then
-                local best, bd = nil, TOWN_JOIN * TOWN_JOIN + 1
+            local ty = cols.type[k]
+            if x ~= nil and not ty:find("wall") and not ty:find("gate") then
+                local joined = nil
                 for _, tw in ipairs(out) do
-                    local d = d2(x, y, tw.x, tw.y)
-                    if d < bd then
-                        best, bd = tw, d
+                    if not tw.dead then
+                        local px = math.max(tw.l, math.min(tw.r, x))
+                        local py = math.max(tw.t, math.min(tw.b, y))
+                        if d2(px, py, x, y) <= TOWN_REACH2 then
+                            if joined == nil then
+                                joined = tw
+                            else
+                                joined.l, joined.r = math.min(joined.l, tw.l), math.max(joined.r, tw.r)
+                                joined.t, joined.b = math.min(joined.t, tw.t), math.max(joined.b, tw.b)
+                                joined.value = joined.value + tw.value
+                                joined.id = math.min(joined.id, tw.id)
+                                tw.dead = true
+                            end
+                        end
                     end
                 end
-                if best ~= nil then
-                    best.l, best.r = math.min(best.l, x), math.max(best.r, x)
-                    best.t, best.b = math.min(best.t, y), math.max(best.b, y)
-                    best.value = best.value + 1
+                if joined == nil then
+                    out[#out + 1] = {id = ids[k], l = x, r = x, t = y, b = y, value = 1}
+                else
+                    joined.l, joined.r = math.min(joined.l, x), math.max(joined.r, x)
+                    joined.t, joined.b = math.min(joined.t, y), math.max(joined.b, y)
+                    joined.value = joined.value + 1
+                    joined.id = math.min(joined.id, ids[k])
                 end
             end
         end
+        local keep = {}
         for _, tw in ipairs(out) do
-            tw.cx, tw.cy = (tw.l + tw.r) // 2, (tw.t + tw.b) // 2
+            if not tw.dead then
+                tw.cx, tw.cy = (tw.l + tw.r) // 2, (tw.t + tw.b) // 2
+                keep[#keep + 1] = tw
+            end
         end
-        return out
+        table.sort(keep, function(p, q) return p.id < q.id end)
+        return keep
     end)
 end
 

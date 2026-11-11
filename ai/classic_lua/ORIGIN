@@ -102,10 +102,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
                 other players' area hull test; HasEnemyNear counts the armed enemies seen or remembered (ai.memory) in the
-                influence regions round the tile (up to 27 tiles), not every player's influence; BuildSettlementFor
-                (the gather goal's storage search asks the AI for a
-                settlement when the drop site is far: a hook a script cannot get) - the patch settlements of
-                forage_patches stand in. NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
+                influence regions round the tile (up to 27 tiles), not every player's influence. BuildSettlementFor (the gather goal's
+                storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
+                seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
+                gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
                 CitizenLost's re-cost.
   EECPResourceCenter.cpp
                 PORTED -> resource.lua (update_groups, flag_group, centre_middle, find_resource_unit) and build.lua
@@ -171,9 +171,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 (defensive_unit_cap), ComputeTownThreat (the Hard 55-tile range; the armies inside the hull twice,
                 outside by distance; the own armies' cover; over the own land strength), GetWorstThreats,
                 FindThreatenedTown, AssignSubGroupTask (a forest within 35 tiles 80% for foot soldiers, a threatened
-                town by guard_town_percentage, a random point of the group's land). DEVIATIONS: a town is a town
-                centre, capitol or settlement with the own buildings within 20 tiles, its hull their bounding box
-                (EETown's tiles); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
+                town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
+                EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
+                bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
                 the hills and choke points of the ladder (no query), AidAllies, CheckRaids / Retaliate, BuildUp
                 (deathmatch), CheckNaval, CheckSpace, CheckSpecials.
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
@@ -205,5 +205,5 @@ influence, epoch, pop, domain), the own units' `target` and `gathers`, the view'
 lists only, which never hold a script's units).
 
 Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
-choke points and hills; the water site tiles; the gather goal's storage-search hook (BuildSettlementFor); the epoch's
+choke points and hills; the water site tiles; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.
