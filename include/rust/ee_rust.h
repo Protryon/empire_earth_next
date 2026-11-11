@@ -1056,6 +1056,12 @@ constexpr static const uint32_t LINE_HAS_SEGS = 2;
 
 constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
 
+/// `ComponentEvent_ButtonPressed` (WONLobbyGUI.h's event numbers).
+constexpr static const int32_t EVENT_BUTTON_PRESSED = 15;
+
+/// The control id of a tree row's expand button.
+constexpr static const int32_t EXPAND_BUTTON_ID = 100003;
+
 constexpr static const int32_t POPUP_WANT_INPUT = 128;
 
 constexpr static const int32_t POPUP_IS_MODAL = 256;
@@ -4761,6 +4767,23 @@ struct EeWonFormatOp {
   int32_t a;
   int32_t b;
 };
+
+/// The C++'s answers and steps over its items (each `node` a `TreeItem*`).
+struct EeWonTreeOps {
+  void *ctx;
+  void *(*parent)(void *ctx, void *node);
+  int32_t (*index)(void *ctx, void *node);
+  size_t (*count)(void *ctx, void *node);
+  void *(*child)(void *ctx, void *node, size_t i);
+  bool (*is_open)(void *ctx, void *node);
+  /// `InsertChildren`'s step: the item's row at a list position.
+  void (*insert)(void *ctx, void *node, int32_t pos);
+  /// `CloseAll`'s step: the item marked closed.
+  void (*close)(void *ctx, void *node);
+};
+
+/// The C++'s `Contains` of the remembered (0) or the new (1) wrapped item at the mouse.
+using EeWonTreeContains = bool(*)(void *ctx, int32_t which);
 
 /// One line break: the line ends at `pos`, the next starts at `next`; the line is `width` wide.
 struct EeWonBreak {
@@ -13003,6 +13026,72 @@ size_t ee_won_gui_text_format(const void *text,
                               bool line_break,
                               EeWonFormatOp *out,
                               size_t room);
+
+bool ee_won_gui_tree_is_last(int32_t index, size_t count);
+
+bool ee_won_gui_tree_child_in_range(int32_t pos, size_t count);
+
+/// `next_non_child`: the item, or NULL.
+///
+/// # Safety
+/// `ops` is valid and its callbacks answer for live items, `node` among them.
+void *ee_won_gui_tree_next_non_child(const EeWonTreeOps *ops, void *node);
+
+/// `insert_children` through `ops.insert`.
+///
+/// # Safety
+/// As `ee_won_gui_tree_next_non_child`; the steps leave the children vectors as they are.
+void ee_won_gui_tree_insert_children(const EeWonTreeOps *ops, void *node, int32_t pos);
+
+/// `close_all` through `ops.close`.
+///
+/// # Safety
+/// As `ee_won_gui_tree_insert_children`.
+void ee_won_gui_tree_close_all(const EeWonTreeOps *ops, void *node);
+
+uint8_t ee_won_gui_tree_set_open_action(bool open, bool want, bool no_children);
+
+/// `open_scroll`: whether to scroll, the offset into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tree_open_scroll(int32_t total_height,
+                                 bool has_sibling,
+                                 int32_t sibling_top,
+                                 int32_t vert_offset,
+                                 int32_t view_height,
+                                 int32_t item_top,
+                                 int32_t *out);
+
+uint8_t ee_won_gui_tree_insert_row(bool parent_open, bool on_end);
+
+uint8_t ee_won_gui_tree_remove_plan(bool child_open, bool parent_open, size_t count_before);
+
+uint8_t ee_won_gui_tree_sort_plan(bool sort_none, bool is_root, bool open, int32_t row);
+
+/// `mouse_item`.
+///
+/// # Safety
+/// `contains` is callable with `ctx`.
+uint8_t ee_won_gui_tree_mouse_item(bool has_col,
+                                   bool same,
+                                   bool has_new,
+                                   EeWonTreeContains contains,
+                                   void *ctx);
+
+bool ee_won_gui_tree_can_select(bool selectable, int32_t x, int32_t indent);
+
+/// `local_x`: whether right of the indent, the x into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tree_local_x(int32_t x, int32_t indent, int32_t *out);
+
+int32_t ee_won_gui_tree_row_width(int32_t indent, int32_t item_width);
+
+bool ee_won_gui_tree_is_expand_press(int32_t event_type, int32_t control_id);
+
+int32_t ee_won_gui_tree_flags(int32_t flags, int32_t which, bool on);
 
 /// `popup_adjust`: the `SetPos` calls into `out` (room for 4), their count.
 ///

@@ -436,6 +436,9 @@ WON_TESTS = {
     # WONGUI's multi-column lists and tree rows (the column resizes and places, the header's buttons, sorts and
     # resize edges, the tree's +/- box and child places), the original's statements against ee_won's guimulti module
     "won_guimulti_test": [],
+    # WONGUI's tree list (the walks over the items, the range, last-child, open, scroll, insert, remove, sort and
+    # mouse rules), the original's statements against ee_won's guitree module
+    "won_guitree_test": [],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],
