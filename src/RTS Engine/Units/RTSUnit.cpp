@@ -286,6 +286,7 @@ void RTSUnit::Link(RTSUnit* inUnit)
     }
     if (gRTSCheckUnitList)
         RTSCheckNeighbours(this, "RTSUnit::Link (after)");
+    EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
 }
 
 // FUNCTION: EXE 0x63db49
@@ -352,6 +353,7 @@ void RTSUnit::Unlink()
     }
     this->mTileNode->mNext = NULL;
     this->mTileNode->mPrev = NULL;
+    EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
 }
 
 // FUNCTION: EXE 0x63dc3a

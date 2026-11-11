@@ -25,6 +25,12 @@ mod sys {
             tile: *const UiRect,
             clipped: *const UiRect,
         ) -> c_long;
+        pub fn ee_uicpp_background_bfull_draw(
+            background: *mut c_void,
+            index: c_ulong,
+            tile: *const UiRect,
+            clipped: *const UiRect,
+        ) -> c_long;
         pub fn ee_uicpp_form_tile_draw(form: *mut c_void, bitmap: *mut c_void, piece: *const UiRect, x: f32, y: f32);
         // value: 0 mIsVisible, 1 its form is the current form
         pub fn ee_uicpp_background_value(background: *mut c_void, which: c_int) -> bool;
@@ -49,6 +55,15 @@ impl TileHost for Raw {
 impl FullHost for Raw {
     fn draw(&mut self, index: c_ulong, tile: UiRect, clipped: UiRect) -> c_long {
         unsafe { sys::ee_uicpp_background_full_draw(self.0, index, &tile, &clipped) }
+    }
+}
+
+/// A `UIBFull` (its tiles go back to `UIBFull.cpp`).
+struct BFull(*mut c_void);
+
+impl FullHost for BFull {
+    fn draw(&mut self, index: c_ulong, tile: UiRect, clipped: UiRect) -> c_long {
+        unsafe { sys::ee_uicpp_background_bfull_draw(self.0, index, &tile, &clipped) }
     }
 }
 
@@ -165,6 +180,30 @@ pub unsafe extern "C" fn ee_ui_background_full_draw(
         (texture_width, texture_height),
         (window_width, window_height),
         (designed_width, designed_height),
+        (columns, rows),
+    )
+}
+
+/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
+/// and the grid (columns, rows) -> the last draw's result.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_ui_background_bfull_draw(
+    background: *mut c_void,
+    form: UiRect,
+    redraw: UiRect,
+    texture_width: c_ulong,
+    texture_height: c_ulong,
+    texture_rect: UiRect,
+    columns: c_ulong,
+    rows: c_ulong,
+) -> c_long {
+    background::bfull_draw(
+        &mut BFull(background),
+        form,
+        redraw,
+        (texture_width, texture_height),
+        texture_rect,
         (columns, rows),
     )
 }

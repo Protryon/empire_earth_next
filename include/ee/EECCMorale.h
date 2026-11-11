@@ -8,6 +8,9 @@
 
 class EEGraphicEffect;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCMorale : public EEUnitCalamityClass {
 public:
     EECCMorale();                           // 0xb2ba3
@@ -19,6 +22,8 @@ public:
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xb2d6d
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 0xb2ed2
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb2d9c
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);  // +0x4c 0xb2efd
 
 protected:

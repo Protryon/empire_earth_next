@@ -6196,6 +6196,260 @@ the music's start at the first game frame (`EEWorld.cpp` 1053), every song chang
 the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
 volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
 
+## R5b.2, second round: the conversion and heal tests, the drop point, the line of fire, splash victims and the new target search in Rust (ee_combat decide.rs, walks.rs; branch rust-combat2, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| can a priest convert a target | `EECanConvert` (`EEUCBasicPriest.cpp`) | `decide::can_convert` | CBCN |
+| can a unit heal a target | `EECanHeal` | `decide::can_heal` | CBCH |
+| the drop point on a target (model point, tile) | `EEFindDropLocation` | `decide::drop_point` | CBDP |
+| the line of fire | `EEIsLineToUnitBlocked` | `walks::line_blocked` over `EeCombatLineHost` | CBLB |
+| splash damage's victims | `EEUnitClass::ApplyAreaDamage` | `walks::area_victims` over `EeCombatAreaHost` | CBAD |
+| the new target search | `EEFindNewTarget` (+ the deleted `EEUUGetUnitsInArea`) | `walks::units_in_area`, `walks::choose_target` over `EeCombatTargetHost` | CBFT |
+
+- **Golden first, then the move.** Commit b96a53c2 wrapped the unmodified C++ (renamed `...Original`) with capture
+  probes: the decisions' inputs gathered exactly as the Rust records later take them, the walks' observable results
+  (units by `mUnitID`: the victims in hit order, the candidates in order and the chosen one, the line's result, last
+  tile and blocker). Its digests are the new lines of the four golden files; the moved build gives the same records.
+  The walks' records are not replayable without a world: `check` gates them, the unit tests pin the order.
+- **Out flags that are not always written.** `EECanConvert` writes `outFlag` only on its last branch, and several
+  callers declare `bool theFlag;` uninitialized and read it after a true result (a cyber priest's): the Rust result
+  says `flag_written`, and the C++ writes the flag only then. Likewise `EEIsTileTopAbove` writes the blocker on every
+  call but `EEIsLineToUnitBlocked` may make none: the golden wrapper detected that with a sentinel pointer, the host
+  writes the caller's pointer directly.
+- **Eager reads where the original was lazy**, all pure: the adaptation power, the shield, the damage table cell, a
+  building priest's distance, the unit set. Two guards: the damage table is read only for an ammo column >= 0, the unit
+  set only for a set below the manager's size (`EEUnitSetManager::Contains` indexes `mSets` unchecked; the original
+  only reached it after every other test passed).
+- **Walks with C++ mutations inside.** `ApplyAreaDamage` hits each victim (TakeHit, kills, food) before reading the
+  tile node's `mNext`, as the original did: the host's `hit` runs inside the walk and `node_next` is asked after it.
+  `IsTargetIgnored` erases expired entries, so `choose_target` asks each test lazily, in the original's order
+  (`TARGET_TEST_*`); the technology kind keeps its last answer across candidates (asked only without `inArg6`).
+- **Handles, not references.** Units and tile nodes cross as `uint64_t` (the pointers); Rust compares them (the
+  victims' "hit once" list) and hands them back. The sort of `EESortUnique` is by `mUnitID` through `unit_id`;
+  equal ids are one unit, so the stable Rust sort gives the C++'s order. The tile line crosses as a C++-owned pair
+  array copied before the next host call.
+- **Coverage.** The AI games never heal: EE-SIM's capture sweep (`EECombatCaptureSweep`) calls `EECanHeal` over its
+  pairs both ways, a unit and itself, and the previous player's newest unit; CBCH's golden came from that sweep over
+  the C++ test (oracle profile). CBCN comes from priests in the oracle's seed 6 and the late and space games, CBFT
+  from a few dozen calls a game.
+- **A generic type name in a crate breaks another crate's header type.** `rust/cbindgen.toml` renames `Handle` to
+  `EeDx7Handle` (ee_dx7's `*mut c_void`); a `pub type Handle = u64` in ee_combat was renamed to the same C name and
+  replaced it (`using EeDx7Handle = uint64_t`), and only the DX7 rasterizer units failed to compile. The Rust gate's
+  header check passed (the header was current). Name exported aliases uniquely (`EeCombatHandle`).
+- **What stays C++:** the weapon tag point and the target model's top (model data), `EEGetTileLine`, the walls'
+  `EEIsTileTopAbove`, the region table, the screens' `Virtual08`, every target test, `EERetargetAttack`, the goal's
+  location in `EEFindDropLocation`, the hits themselves.
+
+## R4.4, second round: the free camera's pitch held past zoom 1, the pointer's arithmetic, the units' screen point and bars in Rust, a scroll check (ee_gfx mouse.rs, units.rs; branch rust-gfx8, 2026-11-11)
+
+- **Behaviour change (the owner's call): the free camera holds its pitch past |zoom| 1.** Mode 3's `GetPitch` was
+  `pow(1 - |zoom|, 0.5)`, NaN past zoom 1 (the port's `gCameraMaxZoom` is 2), and the table cosine faults on a NaN
+  angle (round one's hazard). `camera::pitch` now clamps |zoom| to 1 in mode 3 as modes 0 and 1 do (the sign kept:
+  the far pitch, negated for a negative zoom). Of the camera golden's 14,424 lines exactly the 71 GetPitch cases of
+  mode 3 with |zoom| > 1 changed (each had a NaN output before); they were re-recorded from the driver over the
+  fixed unit, every other line is still the original's. `free_pitch_holds_past_zoom_one` failed before the fix and
+  passes after. The camera's other cases never had a mode-3 zoom past 1, and the simulation (EE-SIM) never enters
+  mode 3: the oracle cannot see it; a cinematic after a far zoom-out can (only a person or a scenario reaches it).
+- **The pointer (`mouse.rs`, `RTSMouse.cpp`).** `ClampPosition` and `Update`'s move: the raw axes scaled by the
+  bounds over the desktop, the sensitivity and the smallest move seen. The smallest moves stay the unit's file
+  statics (passed in and out, 32-bit: a mouse axis never reaches past it); the C++ keeps the entity reads in their
+  order (x then y), the "MinXValue now" debug lines (the result says when a minimum changed), the frozen test and
+  the wheel. `x < 0 ? -x : x` of `LONG_MIN` is `wrapping_neg` (the C++'s wrap).
+- **The units' render object (`units.rs`, `EEROUnits.cpp`).** `GetScreenPoint` (over `ee_ge`'s `GeViewport` mirror
+  of `gU4E8F08`), `DrawBars`' sizes from the window, `DrawBar`'s tag point, origin and rectangle split (full: two
+  rectangles; partial: four, each at least a pixel wide; empty: two) and `DrawObjectBars`' (one or two). The C++
+  keeps every rhombus call (SetRectangle, the colours, the draws) in the original's order by the result's `kind`.
+  Not moved: the selection rings' size choice and the area-effect ring's colours (trivial, but no golden covers
+  them: their models' members are private and the fakes were not worth it), the labels, the placement footprint.
+- **The golden drivers** (`build/gfx8_golden`, scratch: `build.py LEAF orig|cur [seed [scale [full]]]`, BASE
+  9635b89c). New trick: the driver `#include`s the unit (`EE_UNIT`, its absolute path, as a define) to reach its
+  file statics (`sFGBar`, `sBarWidth`), and calls its private passes through explicit template instantiations
+  (`template struct Rob<Tag, &EEROUnits::DrawBars>`: an explicit instantiation may name a private member). The
+  rasterizer and the vertex arrays are fake objects whose vtable is 160/40 template stubs that log their slot (and
+  the bar or colour argument); `GERhombus::ComputeRotation` (private, out of line) logs the rectangle just set. The
+  rasterizer's inline getters dereference its screen states: the fake's words all point at a block of words that
+  point at themselves, so any such chain reads harmlessly. Mouse: a fake `ISDevice` subclass stands in for
+  `gISMouse` (`GetEntity` is the base's first slot), fake entities log each read, `ESDebugOut` logs its text.
+  Results: mouse 4,000 cases, rounits 4,344; the relinked drivers printed the same files, and the same on seeds 2
+  and 3 at four times the size (16,000 and 17,376 lines). Mutations (24.5 for 24 in the bar width, 0.0626 for
+  0.0625 in the y move) fail the replays.
+- **Python on Windows writes CRLF** (`Path.write_text` in text mode): a quick scripted edit of a Rust file turned
+  it CRLF and showed a whole-file diff. Edit through `read_bytes`/`write_bytes`.
+- **The scroll check (TEST ONLY).** The fixture writes a `camera` telemetry line (the focus now and the move's
+  target in tiles, the zoom, the mode, whether each is a point of the mesh, the map size) and takes `key <form>
+  <dik> <ms>` (a key held through `ISHandleEvent`, the entry the window layer feeds a key press to: the window
+  message -> SDL -> event path itself is what `--input-check`'s F3 proves) and `wheel <form> <0|1> <n>`.
+  `fixture_game.py --scroll-check` scrolls by an arrow key (the opposite one when the first is at the map's edge)
+  and by the pointer at the window's left (else right) edge, requires each move of at least half a tile with the
+  camera still on the map, then sets zoom 1 and requires the zoom hot keys (`]` in, `[` out) and the wheel to change
+  it each way; `--zoom-captures P ...` is posix_game's. The self test's stand-in covers both, including a FAIL with
+  its numbers. Not run against the game here (no harness sessions for agents).
+- **Only a tour, a scroll/zoom run or a person reaches:** every change of this round draws or reads input on the
+  UI and render threads: the bars and the screen point (any frame with a selected unit), the pointer's move (any
+  mouse motion), the mode-3 pitch past zoom 1 (a cinematic or the free camera after a far zoom-out; a person or a
+  scenario), the fixture's new commands (the scroll check). EE-SIM touches none of them.
+
+## The C++ object cache: incremental builds shared by every worktree (tools/objcache.py; branch rust-objcache, 2026-11-11)
+
+- **Problem:** `build.py` compiled every one of the 1,364 jobs from scratch on every build (`compile_all` -> `compile_one` -> `compile_to`, no reuse), and `--test-profile` compiled them all again into `build/clang-test`. With nine agents on 12 cores, a `-j 3 --sim` build took 34-40 minutes, 27-33 of them compiling.
+- **Fix:** a content-addressed object cache in `compile_to`, two-level like ccache's direct mode. The manifest key is the schema, clang-cl's identity (path, size, mtime), every command-line argument and the INCLUDE path with the three per-worktree roots (staging root, repository root, toolchain directory) replaced by tokens, the unit's staged name and the content of the source as compiled (after an overlay). The manifest (zlib JSON, up to 8 entries newest first) holds the dependency sets seen for that key: every file clang's `-MD` list names (headers, the `#embed` fonts too), each with its content hash, and the object's key. A lookup re-hashes the recorded files (once per file per build). A missing file or object is a miss. Nothing is keyed on a source's mtime. The store is `C:\EEX-objcache-store` (`EE_OBJ_CACHE` moves it, `=off` disables it). Every write is a unique temp file plus `os.replace`, and a lost rename is dropped. Lookups copy the object (no hard link: a later miss must never write through into the store). Least-recently-used pruning to `EE_OBJ_CACHE_MAX_GB` (default 4) runs at the end of each build, and a hit touches its object and manifest. `/Zs`-style compiles (no object) bypass it.
+- **Embedded paths:** `__FILE__` held the staging root (`C:\EEX-objcache\...`), and a test-profile overlay unit held its temporary copy's name (`Empire Earth.test18536-23464.cpp`, 5 such strings in a test exe). Every compile, cached or not, now maps the staging root to `C:\EEX`, the repository root to `C:\EE-ROOT`, the toolchain to `C:\EE-TOOLCHAIN` and an overlay copy to its unit's own name (`/clang:-ffile-prefix-map`; clang tries the longest prefix first). Every compile is also `/Brepro`: clang-cl's objects otherwise carry a time stamp, and that was the only difference between two compiles. The objects have no debug info (no `/Z7`), so `__FILE__` was the only path in them. Effect on the exe: none for a build staged at the default `C:\EEX` (its 131 `C:\EEX\...` strings are unchanged). A build staged elsewhere now embeds `C:\EEX\...` too, and the test exe names the overlay units by their real names.
+- **Measured** (12 cores shared with eight agents, `-j 3 --sim`): clean with the cache off, 1600 s compile / 40 min total; clean with a cold cache, 1979 s / 34 min (heavier load at the time); from a full cache, 32 s compile / 2 min 16 s total (the two links are most of it now); one `.cpp` touched, 1 compile, 2 min 37 s total; `include/ee/EEWorld.h` touched, 427 compiles in 506 s (`--compile-only`); reverted, 1363/1363 hits. The test profile after a normal build: 8 misses (the 8 overlay units: the window/bit-depth rules and the harness hooks), the rest hits, then 1363/1363 on its second build. A second worktree at the same commit (another staging root, another repository root) got 1363/1363 hits. 24 of the jobs are libjpeg compiled twice (modules `jpeg` and `exeimg`; the link skips `exeimg`'s copy). They now cost nothing.
+- **Identity:** EE-AOC.exe and EE-SIM.exe from a clean cache-off build, a cold-cache build and a full-cache build differ only in lld's link time stamp (the PE header's TimeDateStamp and the debug directory's: 4 bytes). The PDBs are byte-identical. sim_oracle seeds 2-7 identical to `ref` on the full-cache build.
+- **Limits:** like ccache's direct mode, a header newly added earlier in an include search path (shadowing one a unit used) is not noticed. Staging never deletes, so this needs a new file in a staging or include directory with the name of a header another directory provides. `EE_OBJ_CACHE=off` or `objcache.py clear` covers it. The Rust library is separate (cargo, one target dir per worktree). `RUSTC_WRAPPER=sccache` shares its compiles where sccache is installed.
+
+## R5b.4, eighth round: the fixture's gather scout, the store's on-the-map flag and the checksum's flag 1, Dropoff Resource, Build Wall and Unload Transport in Rust (ee_units store.rs, group.rs; branch rust-r5b4-core8, 2026-11-11)
+
+- **The fixture's gather had no target** (the lead's two `--orders` runs: `ORDER gather: skipped (no-target)`). Not a
+  filter bug: the captures show an arctic start and a grass start with no tree or mine in the view, and the mini
+  map's explored area is the view itself (the human's citizens idle; the start's line of sight is short).
+  `CanGather` also wants the resource's tile visible now (`IsVisibleTo`), as the real right click does. The fixture
+  now scouts: with nothing in view it takes the world player's resource nearest the first citizen that the citizen
+  could gather were it seen (`CanGather(.., true, false)`) and can reach (`CanGetTo`), selects the group, posts an
+  `EEMPathTo` there, polls until the player sees the tile (60 s at most), centres the camera on it
+  (`EEACenterCamera`, the mini map's own action, posted outside the world's lock) and scans the new view. A failed
+  scout is "scout-unseen" / "scout-no-pick", which the driver fails (they are not skips). The driver waits 120 s for
+  gather. The self test's stand-in scouts (phase 1, note "scouting", 1.5 s) and refuses its second gather
+  "scout-unseen" (the driver must raise). Not run here: only the lead's harness run shows it in the game.
+- **The on-the-map flag.** The out-of-sync checksum walks `gWorld.mUnits`, one x-sorted chain through `mTileNode`
+  (not the tiles' lists). A unit is in it when `mTileNode->mPrev` is set (`Link` puts the head or a unit there,
+  `Unlink` clears it); `RTSUnit::Link` and `Unlink` report the flag (`EEUnitStoreLinked`), the insert seeds it.
+  USCK now also walks the chain at every check: each chain unit must have a record of that object with the flag, and
+  the records with the flag must be the chain (`Store::check_on_map`); and the checksum's flag 1 over the chain
+  (`GetChecksum(1)`) must equal the store's sum (`Store::checksum_flag1`). A difference counts as a mismatch, so the
+  USCK records (and their digests) are unchanged while there is none.
+- **Flag 1 over the store.** `EEPhysics::GetOutOfSynchChecksum` adds `ee_units_store_checksum_flag1()` for flag 1
+  and walks the chain only for the other unit flags (2, 0x20, 8), with flag 1 masked off; the sums wrap and commute,
+  so the total is the original's (the oracle's `oos=` is identical). The game's own lockstep check (flag 1 alone,
+  `EEPhysics.cpp` DrainInput) now walks no unit. The sum is a wrapping 64-bit sum of the C++ `long`s: its low 32
+  bits equal the Windows `unsigned long` sum, all 64 bits the LP64 one.
+- **Dropoff Resource** (`group::dropoff_resource`): the existing host calls (Fill, the pending list, the tile spread,
+  a Gather goal with no resource and the drop-off, the action, Plan, the draw). **Build Wall** (`group::build_wall`):
+  three new host calls (`wall_plan`: `EEPlanWall(.., true, false, pieces)` into a list the host owns; `wall_build`:
+  `EEBuildWall`; `wall_release`), and `EEActiveGroup::KeepCitizens`' test over the store (`keeps_citizen`; its
+  three callers: Build Unit, Build Wall, Smart Farmers). The dry plan places nothing: it logs and answers two pieces.
+  Build Wall is the one goal-giving body a capture game sends (the late profile's computer players' walls), so the
+  late captures run its live path; the others only through the USGC sweep (cases added: Dropoff at the player's own
+  first unit, the next player's, its path point and no unit; Build Wall eight tiles east of the first unit and a
+  one-tile wall at the map's centre).
+- **Unload Transport** (`group::unload_transport`): five new host calls (`group_spread_for_unload`; `unit_can_unload`,
+  the class's transport or paratrooper-bomber flag and the cargo, read on the object; the unload goal's
+  `SetTransport` and `CanUnloadAtDestination` before it is given; the "cannot unload there" event) and two goal
+  constructors (`new EEUGUnloadTransport(first's complex unit, x, y, false)`; the move `new EEUGLocation(x, y, 0,
+  false, true, false, 0, false, 0)`). The cargo walk keeps the original's shape: it stops at the first loaded
+  transport, and when none is found the walk's last unit is the one that acknowledges (and is tested again for the
+  event). The dry goal answers "can unload" yes. No capture game unloads: the sweep (the first unit's tile and the
+  map's centre) and mock-host tests are the coverage; only a played game runs the world calls.
+- **The patrol-point mode the UI lacks (round 7):** not a reconstruction bug. In the retail `EE-AOC.exe` the only
+  store of `EEMAddPatrolPoint`'s vtable (0x83df18) is its import constructor (0x4ba47b): the game never builds one to
+  send. The only `EEMPatrol` sender (its constructor COMDAT 0x66fa28) is called from 0x66f5c8, the status button's
+  command 0x12, with `push -1`. The main game form's mouse-mode table (its constructor) has no patrol mode: state
+  0x10 is `EEModeHeal` (the "StartPatrol" name at 0x66681d, buttons 0x1b/0x22, is the heal mode). So the Art of
+  Conquest UI patrols only the nearest town's route; `EEMAddPatrolPoint` and the path points' routes come from
+  elsewhere (the scenario side, saves, the AI's towns).
+
+## R6: the post-game graphs, UIBFull's tiles, the IME candidate window, the hot keys' setters, the tool tip's place and the toolkit's audit (ee_ui graph.rs, background.rs, ime.rs, hotkey.rs, form_state.rs; branch rust-r6-ui9, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIGraph.h`, `UIBFull.h`
+and `UIIMECandidate.h` gained a `friend struct`): `UIGraph::CopyData`'s layout of the title, the axis labels and
+the grid values' margins and its range copy, `ZoomIn`/`ZoomOut`, `DrawPolygons`' inner border and grid lines,
+`DrawGridText`'s value places, `DrawTextA`'s choice of labels, `UILineGraph::DrawPolygons`' series choice and
+`DrawSeries`' skip, clip and scale (`graph.rs`; `UILGClipSegment` deleted from the C++); `UIBFull::DrawBackground`'s
+tile placement and `LoadBackground`'s names (`background.rs` `bfull_draw`, round 7's `full_tile_name`);
+`UIIMECandidate::OpenCandidateWindow`'s rectangle, `SetCandidateList`'s page, numbers and width, `DrawPolygons`'
+selection bar and border lines and `DrawTextA`'s rows (`ime.rs`); `UIHotKey`'s four event setters, `SetModifier`
+and `CreateHotKeys`' record loop (`hotkey.rs`); `UIForm::SetHelpTextPopupLocation` (`form_state.rs`
+`help_popup_location`). The texts (the graphs' formats are virtual: the post-game summary prints times and counts),
+the candidate strings' walk, the bitmaps, lines, rhombi and every draw stay C++, reached through host calls in the
+C++'s order.
+
+- **Behaviour:** one divergence, where the original crashed: `SetCandidateList` into a candidate window lower than a
+  line (its rectangle is still the constructor's zeros before the first `OpenCandidateWindow`) divided by a page size
+  of 0; the Rust page is empty (no line, the selection kept). The driver skips those calls (the C++ would fault).
+- **Kept quirks:** the graph's grid values are measured on the displayed range's maxima before `CopyData` copies the
+  graph's range; `DrawSeries` scales with the live `mGraphRectangle` and the displayed range (not the copies); a
+  vertical segment is skipped at or left of the series' minimum x compared unsigned; `UMCeilFloat(0 / zoom)` is 0
+  so 0 divisions draw one NaN-spaced line; `UIBFull`'s redraw rectangle is clipped to the form in place, so a redraw
+  that misses the form draws the whole form; `SetCandidateList` walks past the list's strings when the selection's
+  page starts after its count (reads only, no line is made); setting a hot key's event to the one it holds
+  releases it before referencing it again (an event held only there is deleted first); a hot key record whose read
+  fails keeps the previous record's bytes.
+- **Original hazards found, left as they were:** `UIIMECandidate`'s constructor leaves `mSelection` and
+  `mCopySelection` uninitialised (a `DrawPolygons` before the first `CopyData` reads garbage; the driver sets -1);
+  `CreateHotKeys`' record buffer is uninitialised when the first record's read fails (the C++ reads stack bytes,
+  the Rust zeros; the driver never fails the first record read).
+- **Round 8's two undetected mutations, now covered:** the scroll driver (`build/ui_scroll_golden`) gained 30
+  labels on whole pixels scrolled one pixel a frame to the end, so the end offset's comparison meets equality
+  (`<` -> `<=` now fails the replay); the label driver (`build/ui_label_golden`) gained 40 one-line fitted labels
+  whose rectangles a search picked so that the vertical centring, `(height * 0.5 + top) - text * 0.5`, rounds
+  (`RoundToNearest`) differently from either reassociation (both now fail). Both goldens grew at the end only (the
+  first 150 / 120 labels are byte for byte the old file); both drivers relinked over the round-8 forwarders print
+  the same.
+- **Golden drivers, new traps.**
+  - `UGraphSeries::AddDataPoint` sorts the points by x and replaces a repeated last x: log the stored points, not
+    the inputs.
+  - An x64 vtable's slots go by declaration order (one slot for the deleting destructor; overloads in reverse):
+    `GESurface::GetWidth` is slot 24, `GetHeight` 12, not the header's 32-bit offsets / 4. The numbered-stub trick
+    (`template <int N>` logging N) found it in one run.
+  - A unit's static object with an out-of-line constructor (`UIHotKey::sPressedPoll`, a `TMPoll`) runs at start-up:
+    an unresolved constructor under `/FORCE:UNRESOLVED` faults before `main`; define it in the stubs.
+  - An inline constructor calling a private member (`UIHotKey()` -> `CalculateKeyCount`) must be instantiated in a
+    unit compiled without `#define private public` (the stubs file), or it links to the public decoration.
+  - An `extern "C"` host function is no friend: private members go through the friend struct's statics.
+  - Do not reuse an existing golden's file name (`golden_hotkey.txt` was round 5's: this round's is
+    `golden_hotkey_setters.txt`).
+- **Goldens:** `golden_graph.txt` (120 graphs x 30 operations), `golden_bfull.txt` (150 backgrounds x 12),
+  `golden_ime.txt` (150 windows x 20), `golden_hotkey_setters.txt` (150 hot keys x 12, 200 files), `golden_help.txt`
+  (3,000 tips); each replays whole in Rust, each driver (`build/u9_golden/build.py PIECE orig|cur`) relinked over the
+  forwarders printed the same, and the same on seeds 2 and 3 at ten times the size (the Rust replays pass on those,
+  `EE_UI_GOLDEN=<file> cargo test -- --ignored`). Mutations checked: the grid values' row loop `<` -> `<=`, the
+  vertical skip's `<=` -> `<` (after adding vertical segments at the minimum), the y-label rectangle's
+  reassociation and the title's left each fail the graph replay.
+- **What a real game exercises (EE-SIM has no UI):** the graphs are the post-game summary's line graph
+  (`EEUIPGSLineGraph`): only the summary screen after a game reaches them (zoom from its buttons). `UIBFull` is a
+  full-form background of the UI database (type 9's grid of textures): every menu load whose form has one draws it
+  (the tour). `SetHelpTextPopupLocation` places every tool tip: a tour's hover over a button with help text (the
+  main game overrides it with an empty body). The hot keys' `CreateHotKeys` runs once at start-up (every hot key
+  of every menu comes from it), the setters on every form open that copies a hot key; `SetModifier` only from
+  game code that builds a hot key. The IME candidate window only appears with an IME composing (a person typing
+  Japanese, Chinese or Korean into an edit box): only a person reaches it.
+
+**The toolkit's audit (round 9).** `build/u9_golden/census.py` lists every function body of the 46 units
+(`src/Low-Level Engine/User Interface/*.cpp`; the headers' inline bodies are accessors, the inline constructors and
+the `UMCeilFloat`/`GetBorderColors` helpers): 552 bodies, 5,780 lines. By kind: 243 forwarders to Rust (1,913 lines,
+including the host glue the Rust calls back), 75 constructors and destructors (1,275), 12 platform calls (295: the
+file lists' directory search, the clipboard, the database files, the texture loads), 78 pure call sequences (408)
+and 144 bodies with a branch (1,888). Of those 144, by what the branch decides:
+- *object lifetime and ownership* (the bulk): `UIControlsTable::Create*` (which class a record makes and its
+  constructor's arguments, 300 lines), `UIManager::CreateBackgrounds` (the background class per type),
+  `LoadDatabase`, the `Set*Event` member setters of `UIForm` (16 x 12 lines: the hot keys' pattern, release the
+  old event and take the new one), `SetFormEvent`'s switch, `AddHotKey`/`RemoveHotKey*`, `AddBackground`,
+  `RemoveBackground`, `ReserveControlIndex`, `DeleteAll`s, `UIGraph::SetFont`, the radio button's bitmap setters,
+  `UIButtonRust::RadioSwap` (reference counts);
+- *NULL checks before a draw or a copy* (`DrawPolygons`/`DrawTextA`/`CopyData`/`ChangeFont`/`SetText` of the
+  status bar, text label, check boxes, buttons, bitmap, movie, combo box, form and manager);
+- *lookups in the C++ containers* (`GetControlById`, `GetBackgroundByID`, `GetEntityGroupById`,
+  `GetAvailableIndex`);
+- *dispatch to a virtual or a captured control* (`UIManager::UpdateKeyboard`/`UpdateMouse`/`UpdateTranslatedKey`,
+  the forms' IME pass-throughs, the events' `ProcessEvent`s, the text label's mouse handlers to its scroll bar);
+- *state that is still C++ and small*: `UIForm::SetTabStop`/`SetTabbing`/`SetMouseOverControl`/`Deactivate`/
+  `RelayoutForm`/`UpdateHelpText`/`UpdateHelpString` (flags and calls in order), `UIControl::SetDisplayMode`/
+  `SetDirty`/`SetLocation`/`SetRectangle`/`SetTriggerEvent`, `UIBlinkingButton::SetIsBlinking`,
+  `UIEditBox::MouseLButtonDown/Up/DoublePressed` (capture and dispatch to the Rust text model),
+  `UITextLabel::RecomputeDisplayRange` (one line count, then the Rust label calls), `UIManager::SetMouseLeftHanded`
+  (a swap).
+Every layout, placement, tiling, scroll, wrap, selection, hit test, timer rule and text model is Rust; the only
+arithmetic left in C++ is the constructors' first rectangles (the status bar's fill, the text label's text and
+scroll bar areas, the scroll bar's parts), `UITextLabel::RecomputeDisplayRange`'s line count (one `UMFloor`, as
+`label_fit.rs` computes it elsewhere) and `GetAvailableIndex`' scan. What is left decides which C++ object to make, call, keep or release, or
+whether a pointer is set; moving it means moving the objects (the classes wholly), which is the next stage, not
+more leaves.
+- **Gates run:** the full build (`build.py -j 3 --sim`, 0/0 for EE-AOC and EE-SIM) after the hot keys' commit and on
+  the merged result, `rust_build.py gate`, the sim oracle (see the report); the test-profile build at the end. The
+  per-commit oracle was not run for each commit (the lighter gates of the overloaded machine: one build for the
+  first four commits). No tour, screenshot, LAN game or POSIX build was run.
+
 ## R6: WONGUI's drawing as plans the C++ executes (ee_won guidraw.rs; branch rust-r6-won11, 2026-11-11)
 
 Round 11 of R6 (RUST_PLAN "R6 WON, the rest"). The paints' decisions and arithmetic moved to `rust/crates/ee_won`
@@ -6274,6 +6528,55 @@ one.
   underline caret. Nothing reaches `TextImage` (`TextArea::AddImage` has no caller). EE-SIM draws no lobby: the gates
   below cannot see a drawing fault; the lead's LAN game and a lobby tour must compare captures against the build
   before this branch.
+
+## R5b.2, second round: the calamity classes' updates, CanCastAt, ResearchToEpoch and the effects' unit walks in Rust (ee_tech calamity_update.rs, calamity_cast.rs; branch rust-tech2, 2026-11-11)
+
+Every calamity class's `Update`, `CanCastAt` with every class's `IsValidTarget`/`IsValidLocation`, the steps of
+`EETechTree::ResearchToEpoch` and which units an effect walks applies to (with the values it writes) are Rust. The
+C++ keeps the classes, their members, vtables and object lifetimes, and every world effect.
+
+- **Capture first, from the unmodified C++** (commits fcb0f0bb, 9b084b41; `ee/EETechCapture.h`): CALW (one record per
+  calamity update: the calamity's numeric state before and after, the elapsed time, the result, and the update's
+  world calls in order: damage with unit, amount, player and mode, immunity, strikes, cracks, camera shakes, every
+  physics random draw with its value, storms, meteors, volcanoes, the time warp's, teleport's and logic bomb's steps,
+  helpers, placed and destroyed effects, morale, the special orders), CCAS (every outermost `CanCastAt` of the game
+  and a sweep every five game minutes over every calamity class, every player's first living unit, six points
+  (its tile, a target's, the map centre, an offset, a far unit's, off the map) and four targets, checked and not),
+  TRTE (ResearchToEpoch's steps and the tree after), EVUN (the line of sight, hit point, flight time, area effect
+  and conversion walks: per unit its view, whether the effect applies, the value). In the same runs every existing
+  digest of the four profiles equalled its golden. Counts: CALW 13,802-63,259 updates in the calamity games, 8,503
+  in late seed 2 (a computer player casting by itself); CCAS 41,364 sweep records per oracle game (49,061-55,152 in
+  late, with the prophets' own calls); EVUN only where effects rescale or convert (late: about 1,000 a game).
+- **The updates over a host.** `calamity_update::update` dispatches on the class enum; each class's body is the
+  C++'s, with every world effect an `EeCalamityOp` call (`EeCalamityCall`/`EeCalamityReply`). The calamity's
+  members travel as `EeCalamityState` (time alive, the float, int and bool placeholders, the target, the epicenter
+  factor, the effect handle): the C++ copies it into the `EECalamity` before every host call and back after it, so a
+  world step that reads or changes the calamity (`Depart` writes four of its members, `CreateStorm` its target) sees
+  and leaves what the C++ update saw. The shared calls (helpers, sounds, units near, the damage loops' unit views,
+  `TakeHit`, the three physics draws, the target and caster) are `EECalamityUpdate.cpp`'s; a class's own steps (its
+  effects, units, orders, file statics such as the time warp's colours and the logic bomb's `AdjustLocation`) are
+  its static `UpdateStep` in its own unit. The unit views ask in the C++'s short-circuit order and stop where the C++
+  stopped (the continent of a unit that is no land building is never asked).
+- **Kept quirks.** `min`/`max` are the Windows macros (`(a < b) ? a : b`: the second for NaN). The earthquake's
+  damage is the C cast of `factor * damage * ticks` (float); the hurricane's tick count is `lrintf(time / tick)` and
+  its remainder `lrintf(time - tick * ticks)`; unsigned members (`mTickTime`, `mDuration`, `mTime1`, the effect
+  delays) are converted to float as the C++ compares them. The earthquake's `UpdateEpicenterFactor`,
+  `UpdateQuakeSound` and `ShakeCamera` are gone (the camera distance and the shake itself are host calls).
+- **CanCastAt.** `calamity_cast::can_cast_at` is the base test and the five overrides' compositions (global 0, the
+  location's and unit's extra test, the special attack's 2 allowed); `IsValidLocation`/`IsValidTarget` are virtual
+  and asked through the host, and the overrides (area effects and leprosy, earthquake, hurricane, meteor storm,
+  volcano, teleport, special location; conscription, drop object, logic bomb, morale, special attack, time warp)
+  are forwarders into `valid_location`/`valid_target` over `EECalamityCast.cpp`. The fire's and the plague's
+  `IsValidTarget` stay their functor's `CanInfect` (no decision of their own). `GetCost()` is asked up front (no
+  class overrides it).
+- **ResearchToEpoch** asks Rust for its steps (unlock, research all, research self, research kind 7, show the name)
+  and runs them; **the effects' walks** take `ee_tech_unit_step` (hit points, pending hit points, flight time: whether
+  the unit is rescaled, whether the value is written, the value), `ee_tech_sight_applies`,
+  `ee_tech_area_effect_applies`, `ee_tech_conversion` and `ee_tech_conversion_unit` (a carried unit on a tile is kept,
+  and the previous new unit's behaviour is set again, as the C++ did).
+- **Only the calamity profile and late exercise most of this**: no oracle game casts a calamity or runs CanCastAt
+  except the sweep; the prophets (late, space) call CanCastAt; CALW covers every class in the calamity profile. The
+  media effects, `Unlock`, `ResearchAll` and saves stay C++. Nothing here draws: no change is tour-only.
 
 ## R6: WON's first whole classes: the buffers, WONStatus, Thread, TimerThread and AsyncOpContainer as Rust objects (ee_won buffer.rs, thread.rs; branch rust-r6-won12, 2026-11-11)
 

@@ -94,6 +94,30 @@ pub unsafe extern "C" fn ee_units_store_check(objects: *const EeUnitRecord, coun
     unsafe { *out = result };
 }
 
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+#[no_mangle]
+pub extern "C" fn ee_units_store_checksum_flag1() -> u64 {
+    with_store(|s| s.checksum_flag1())
+}
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_check_on_map(ids: *const u32, objects: *const u64, count: usize) -> u32 {
+    let chain: Vec<(u32, u64)> = if count == 0 {
+        Vec::new()
+    } else {
+        // SAFETY: the caller's contract
+        let (ids, objects) =
+            unsafe { (std::slice::from_raw_parts(ids, count), std::slice::from_raw_parts(objects, count)) };
+        ids.iter().copied().zip(objects.iter().copied()).collect()
+    };
+    with_store(|s| s.check_on_map(&chain))
+}
+
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
 ///
@@ -251,6 +275,52 @@ pub extern "C" fn ee_units_gather(player: *mut c_void, selection: *mut c_void, t
 pub extern "C" fn ee_units_repair(player: *mut c_void, selection: *mut c_void, target: u32, queued: bool) {
     let mut host = crate::host::game::GameHost;
     crate::group::repair(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target, queued);
+}
+
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+#[no_mangle]
+pub extern "C" fn ee_units_keeps_citizen(id: u32) -> bool {
+    with_store(|s| crate::group::keeps_citizen(s.get(id)))
+}
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_build_wall(
+    player: *mut c_void,
+    selection: *mut c_void,
+    technology: i32,
+    start_x: f32,
+    start_y: f32,
+    end_x: f32,
+    end_y: f32,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::build_wall(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        technology,
+        (start_x, start_y),
+        (end_x, end_y),
+    );
+}
+
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_unload_transport(player: *mut c_void, selection: *mut c_void, x: i64, y: i64) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::unload_transport(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), x, y);
+}
+
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_dropoff_resource(player: *mut c_void, selection: *mut c_void, dropoff: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::dropoff_resource(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), dropoff);
 }
 
 #[cfg(test)]

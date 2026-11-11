@@ -9,6 +9,9 @@
 
 class EESoundObject;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCMeteorStorm : public EELocationCalamityClass {
 public:
     EECCMeteorStorm();                      // 0xb2634
@@ -22,6 +25,8 @@ public:
     virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);       // (the volcano reads inUnit->mPlayer) +0x30 (empty: ICF-folded 0xac98e)
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 0xb277a
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb2abe
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb2b62
 
 protected:

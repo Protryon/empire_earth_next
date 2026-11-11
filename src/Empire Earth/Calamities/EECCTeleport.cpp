@@ -16,6 +16,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -215,33 +217,38 @@ void EECCTeleport::UnloadMedia(EEPlayer* inPlayer)
 // returns 7 once the caster is dead
 long EECCTeleport::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    EEUnit* theCaster = inCalamity->mCasterUnit;
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    if (this->mSecondarySound != NULL)
-        this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, false);
-    if (theCaster->mHitPoints > 0) {
-        if (inCalamity->GetTimeAlive() >= this->mHoldTime && !inCalamity->mBoolPlaceHolder1) {
-            this->HoldCaster(inCalamity);
-            inCalamity->mBoolPlaceHolder1 = true;
-        }
-        if (inCalamity->GetTimeAlive() >= this->mLifeTime - this->mHoldTime && !inCalamity->mBoolPlaceHolder2) {
-            if (inCalamity->mCasterUnit != NULL)
-                this->Teleport(inCalamity);
-            inCalamity->mBoolPlaceHolder2 = true;
-        }
-    } else
-        theResult = 7;
-    return theResult;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    theParams.teleport_hold_time = (int32_t)this->mHoldTime;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, this->mSecondarySound, &EECCTeleport::UpdateStep);
+}
+
+// New (port): EECCTeleport's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCTeleport::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCTeleport* theClass = static_cast<EECCTeleport*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::Hold: {
+        EECalamityCaptureEvent(kCalamityOpHold);   // CALW (TEST ONLY)
+        theClass->HoldCaster(theCalamity);
+        return true;
+    }
+    case EeCalamityOp::Teleport: {
+        EECalamityCaptureEvent(kCalamityOpTeleport);   // CALW (TEST ONLY)
+        theClass->Teleport(theCalamity);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b3aac
 // Accepts a land tile whose surrounding area is on the map
 bool EECCTeleport::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    bool theResult = !::gWorld.IsTileBlocked(inX, inY);
-    if (theResult)
-        theResult = ::gWorld.mMap->IsAreaOnMap(inX, inY, 2);
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

@@ -15304,3 +15304,2643 @@ op scroll 418f3333 1487 547 0 70
 op scroll 40200000 908 574 48 174
   start start
   state start 0 dstart 0 end 174 dcount 2 off 160 doff 106 scrolling 1 dirty 1 polls 010 17 908 574 lines 20 draw 3 trig 0 rect 43bdc000 42de0000 4428e000 43068000 drect 43be4000 42e00000 4428a000 43058000 636166c3a9 43726564697473
+label 120 font 2 border 1 trigger 1 shown 1 r 439e8000 43660000 43e18000 43850000 t 439f8000 43680000 43e08000 43840000 off 232 lines 1 636166c3a9
+  state start 0 dstart 0 end 0 dcount 0 off 232 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 3 6
+  start start
+  state start 0 dstart 0 end 6 dcount 0 off 235 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 235 doff 235 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 234 doff 234 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 233 doff 233 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 232 doff 232 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 231 doff 231 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 230 doff 230 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 229 doff 229 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 228 doff 228 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 227 doff 227 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 226 doff 226 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 225 doff 225 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 224 doff 224 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 223 doff 223 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 222 doff 222 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 221 doff 221 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 220 doff 220 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 219 doff 219 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 218 doff 218 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 217 doff 217 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 216 doff 216 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 215 doff 215 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 214 doff 214 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 213 doff 213 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 212 doff 212 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 211 doff 211 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 6 dcount 1 off 210 doff 210 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 1 rect 439e8000 43660000 43e18000 43850000 drect 439f8000 43680000 43e08000 43840000 636166c3a9
+label 121 font 2 border 3 trigger 1 shown 1 r 43930000 422c0000 43c70000 425c0000 t 43950000 423c0000 43c50000 424c0000 off 47 lines 3 - 636166c3a9 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 47 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 21
+  start start
+  state start 0 dstart 0 end 21 dcount 0 off 52 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 3 draw 0 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 21 dcount 0 off 52 doff 52 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 51 doff 51 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 50 doff 50 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 49 doff 49 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 48 doff 48 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 47 doff 47 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 46 doff 46 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 45 doff 45 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 44 doff 44 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 43 doff 43 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 42 doff 42 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 41 doff 41 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 40 doff 40 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 39 doff 39 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 38 doff 38 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 37 doff 37 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 36 doff 36 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 35 doff 35 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 34 doff 34 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 33 doff 33 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 32 doff 32 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 31 doff 31 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 30 doff 30 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 1 off 29 doff 29 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 2 off 28 doff 28 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 - 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 2 off 27 doff 27 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 - 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 2 off 26 doff 26 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 - 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 2 off 25 doff 25 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 - 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 21 dcount 2 off 24 doff 24 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 - 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 46 doff 46 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 45 doff 45 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 44 doff 44 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 43 doff 43 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 42 doff 42 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 41 doff 41 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 40 doff 40 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 39 doff 39 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 38 doff 38 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 37 doff 37 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 36 doff 36 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 35 doff 35 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 34 doff 34 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 33 doff 33 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 32 doff 32 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 31 doff 31 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 30 doff 30 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 1 off 29 doff 29 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 2 off 28 doff 28 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 2 off 27 doff 27 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 2 off 26 doff 26 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 2 off 25 doff 25 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 21 dcount 2 off 24 doff 24 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 46 doff 46 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 45 doff 45 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 44 doff 44 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 43 doff 43 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 42 doff 42 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 41 doff 41 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 40 doff 40 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 39 doff 39 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 38 doff 38 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 37 doff 37 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 2 trig 0 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 2 dstart 2 end 21 dcount 1 off 36 doff 36 scrolling 0 dirty 0 polls 000 21 1 1 lines 3 draw 2 trig 1 rect 43930000 422c0000 43c70000 425c0000 drect 43950000 423c0000 43c50000 424c0000 456d70697265204561727468
+label 122 font 0 border 1 trigger 1 shown 2 r 43be0000 43ac0000 440fc000 43b68000 t 43bf0000 43ad0000 440f4000 43b58000 off 346 lines 3 e697a5e69cac 636166c3a9 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 346 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 27
+  start start
+  state start 0 dstart 0 end 27 dcount 0 off 350 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 3 draw 0 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 350 doff 350 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 349 doff 349 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 348 doff 348 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 3 off 347 doff 347 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 3 off 346 doff 346 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 3 off 345 doff 345 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 3 off 344 doff 344 scrolling 0 dirty 0 polls 000 62 1 1 lines 3 draw 4 trig 1 rect 43be0000 43ac0000 440fc000 43b68000 drect 43bf0000 43ad0000 440f4000 43b58000 e697a5e69cac 636166c3a9 e697a5e69cac
+label 123 font 0 border 3 trigger 0 shown 4 r 43800000 43770000 43e60000 438f8000 t 43820000 437b0000 43e40000 438d8000 off 251 lines 1 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 251 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43800000 43770000 43e60000 438f8000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 27
+  start start
+  state start 0 dstart 0 end 27 dcount 0 off 256 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 1 draw 0 trig 0 rect 43800000 43770000 43e60000 438f8000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 1 off 256 doff 256 scrolling 0 dirty 0 polls 000 62 1 1 lines 1 draw 6 trig 0 rect 43800000 43770000 43e60000 438f8000 drect 43820000 437b0000 43e40000 438d8000 43726564697473
+label 124 font 0 border 0 trigger 1 shown 6 r 43900000 43bd8000 43fc8000 43d90000 t 43908000 43be0000 43fc0000 43d88000 off 380 lines 3 - 636166c3a9 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 380 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43900000 43bd8000 43fc8000 43d90000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 2 26
+  start start
+  state start 0 dstart 0 end 26 dcount 0 off 382 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 3 draw 0 trig 0 rect 43900000 43bd8000 43fc8000 43d90000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 26 dcount 3 off 382 doff 382 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43900000 43bd8000 43fc8000 43d90000 drect 43908000 43be0000 43fc0000 43d88000 - 636166c3a9 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 3 off 381 doff 381 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43900000 43bd8000 43fc8000 43d90000 drect 43908000 43be0000 43fc0000 43d88000 - 636166c3a9 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 3 off 380 doff 380 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43900000 43bd8000 43fc8000 43d90000 drect 43908000 43be0000 43fc0000 43d88000 - 636166c3a9 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 3 off 379 doff 379 scrolling 0 dirty 0 polls 000 62 1 1 lines 3 draw 8 trig 1 rect 43900000 43bd8000 43fc8000 43d90000 drect 43908000 43be0000 43fc0000 43d88000 - 636166c3a9 43726564697473
+label 125 font 0 border 3 trigger 1 shown 2 r 43500000 43970000 43e98000 43a48000 t 43540000 43990000 43e78000 43a28000 off 306 lines 3 456d70697265204561727468 636166c3a9 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 306 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 1
+  start start
+  state start 0 dstart 0 end 1 dcount 0 off 310 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 3 draw 0 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 310 doff 310 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 309 doff 309 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 308 doff 308 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 307 doff 307 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 306 doff 306 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 305 doff 305 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 304 doff 304 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 303 doff 303 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 302 doff 302 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 301 doff 301 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 300 doff 300 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 299 doff 299 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 3 off 298 doff 298 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 456d70697265204561727468 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 305 doff 305 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 304 doff 304 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 303 doff 303 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 302 doff 302 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 301 doff 301 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 300 doff 300 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 299 doff 299 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 2 off 298 doff 298 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 636166c3a9 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 305 doff 305 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 304 doff 304 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 303 doff 303 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 302 doff 302 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 301 doff 301 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 300 doff 300 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 299 doff 299 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 1 dcount 1 off 298 doff 298 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 3 dstart 2 end 1 dcount 1 off 305 doff 298 scrolling 0 dirty 0 polls 000 62 1 1 lines 3 draw 4 trig 1 rect 43500000 43970000 43e98000 43a48000 drect 43540000 43990000 43e78000 43a28000 e697a5e69cac
+label 126 font 2 border 0 trigger 1 shown 1 r 43420000 438b8000 438e8000 43908000 t 43430000 438c0000 438e0000 43900000 off 280 lines 1 78
+  state start 0 dstart 0 end 0 dcount 0 off 280 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 17
+  start start
+  state start 0 dstart 0 end 17 dcount 0 off 285 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 285 doff 285 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 284 doff 284 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 283 doff 283 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 282 doff 282 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 281 doff 281 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 280 doff 280 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 279 doff 279 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 278 doff 278 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 277 doff 277 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 276 doff 276 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 275 doff 275 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 274 doff 274 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 273 doff 273 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 272 doff 272 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 2 trig 0 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 17 dcount 1 off 271 doff 271 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 2 trig 1 rect 43420000 438b8000 438e8000 43908000 drect 43430000 438c0000 438e0000 43900000 78
+label 127 font 2 border 0 trigger 1 shown 1 r 437b0000 41b80000 43a08000 42080000 t 437c0000 41c00000 43a00000 42040000 off 24 lines 2 456d70697265204561727468 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 24 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 3
+  start start
+  state start 0 dstart 0 end 3 dcount 0 off 28 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 2 draw 0 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 28 doff 28 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 27 doff 27 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 26 doff 26 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 25 doff 25 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 24 doff 24 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 23 doff 23 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 22 doff 22 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 21 doff 21 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 20 doff 20 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 19 doff 19 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 18 doff 18 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 17 doff 17 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 16 doff 16 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 15 doff 15 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 14 doff 14 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 13 doff 13 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 12 doff 12 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 1 off 11 doff 11 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 10 doff 10 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 9 doff 9 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 8 doff 8 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 7 doff 7 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 6 doff 6 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 5 doff 5 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 4 doff 4 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 3 doff 3 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 2 doff 2 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 3 dcount 2 off 1 doff 1 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 456d70697265204561727468 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 23 doff 23 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 22 doff 22 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 21 doff 21 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 20 doff 20 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 19 doff 19 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 18 doff 18 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 17 doff 17 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 16 doff 16 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 15 doff 15 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 14 doff 14 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 13 doff 13 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 12 doff 12 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 11 doff 11 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 10 doff 10 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 9 doff 9 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 8 doff 8 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 7 doff 7 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 6 doff 6 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 5 doff 5 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 4 doff 4 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 3 doff 3 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 2 doff 2 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 2 trig 0 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 1 dstart 1 end 3 dcount 1 off 1 doff 1 scrolling 0 dirty 0 polls 000 21 1 1 lines 2 draw 2 trig 1 rect 437b0000 41b80000 43a08000 42080000 drect 437c0000 41c00000 43a00000 42040000 43726564697473
+label 128 font 0 border 3 trigger 1 shown 1 r 40e00000 43380000 424c0000 43450000 t 41300000 433c0000 423c0000 43410000 off 188 lines 1 636166c3a9
+  state start 0 dstart 0 end 0 dcount 0 off 188 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 0 9
+  start start
+  state start 0 dstart 0 end 9 dcount 0 off 188 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 1 draw 0 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 188 doff 188 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 187 doff 187 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 186 doff 186 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 185 doff 185 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 184 doff 184 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 183 doff 183 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 182 doff 182 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 181 doff 181 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 2 trig 0 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 180 doff 180 scrolling 0 dirty 0 polls 000 62 1 1 lines 1 draw 2 trig 1 rect 40e00000 43380000 424c0000 43450000 drect 41300000 433c0000 423c0000 43410000 636166c3a9
+label 129 font 0 border 0 trigger 1 shown 4 r 43d48000 42dc0000 44018000 43150000 t 43d50000 42de0000 44014000 43140000 off 111 lines 2 456d70697265204561727468 78
+  state start 0 dstart 0 end 0 dcount 0 off 111 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 13
+  start start
+  state start 0 dstart 0 end 13 dcount 0 off 116 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 2 draw 0 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 116 doff 116 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 115 doff 115 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 114 doff 114 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 113 doff 113 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 112 doff 112 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 111 doff 111 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 110 doff 110 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 109 doff 109 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 108 doff 108 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 107 doff 107 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 106 doff 106 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 6 trig 0 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 13 dcount 2 off 105 doff 105 scrolling 0 dirty 0 polls 000 62 1 1 lines 2 draw 6 trig 1 rect 43d48000 42dc0000 44018000 43150000 drect 43d50000 42de0000 44014000 43140000 456d70697265204561727468 78
+label 130 font 2 border 0 trigger 0 shown 1 r 43910000 43c20000 43d88000 43d48000 t 43918000 43c28000 43d80000 43d40000 off 389 lines 1 -
+  state start 0 dstart 0 end 0 dcount 0 off 389 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 2 0
+  start start
+  state start 0 dstart 0 end 0 dcount 0 off 391 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 391 doff 391 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 390 doff 390 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 389 doff 389 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 388 doff 388 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 387 doff 387 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 386 doff 386 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 385 doff 385 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 384 doff 384 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 383 doff 383 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 382 doff 382 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 381 doff 381 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 380 doff 380 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 379 doff 379 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 378 doff 378 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 377 doff 377 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 376 doff 376 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 375 doff 375 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 374 doff 374 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 373 doff 373 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 372 doff 372 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 371 doff 371 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 370 doff 370 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 369 doff 369 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 368 doff 368 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 367 doff 367 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 1 off 366 doff 366 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 1 dstart 0 end 0 dcount 1 off 388 doff 366 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 0 rect 43910000 43c20000 43d88000 43d48000 drect 43918000 43c28000 43d80000 43d40000 -
+label 131 font 2 border 0 trigger 1 shown 1 r 42de0000 43c48000 43380000 43db0000 t 42e00000 43c50000 43370000 43da8000 off 394 lines 2 456d70697265204561727468 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 394 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 28
+  start start
+  state start 0 dstart 0 end 28 dcount 0 off 398 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 2 draw 0 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 398 doff 398 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 397 doff 397 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 396 doff 396 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 395 doff 395 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 394 doff 394 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 393 doff 393 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 392 doff 392 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 391 doff 391 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 390 doff 390 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 389 doff 389 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 388 doff 388 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 387 doff 387 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 386 doff 386 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 385 doff 385 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 384 doff 384 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 383 doff 383 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 382 doff 382 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 381 doff 381 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 380 doff 380 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 379 doff 379 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 378 doff 378 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 377 doff 377 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 376 doff 376 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 375 doff 375 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 374 doff 374 scrolling 1 dirty 1 polls 100 21 1 1 lines 2 draw 3 trig 0 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 28 dcount 2 off 373 doff 373 scrolling 0 dirty 0 polls 000 21 1 1 lines 2 draw 3 trig 1 rect 42de0000 43c48000 43380000 43db0000 drect 42e00000 43c50000 43370000 43da8000 456d70697265204561727468 456d70697265204561727468
+label 132 font 0 border 0 trigger 0 shown 3 r 42800000 43b98000 43810000 43c90000 t 42820000 43ba0000 43808000 43c88000 off 372 lines 2 43726564697473 78
+  state start 0 dstart 0 end 0 dcount 0 off 372 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 19
+  start start
+  state start 0 dstart 0 end 19 dcount 0 off 377 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 2 draw 0 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 377 doff 377 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 376 doff 376 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 375 doff 375 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 374 doff 374 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 373 doff 373 scrolling 1 dirty 1 polls 100 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 19 dcount 2 off 372 doff 372 scrolling 0 dirty 0 polls 000 62 1 1 lines 2 draw 5 trig 0 rect 42800000 43b98000 43810000 43c90000 drect 42820000 43ba0000 43808000 43c88000 43726564697473 78
+label 133 font 2 border 0 trigger 1 shown 1 r 42680000 434f0000 439a8000 437b0000 t 426c0000 43500000 439a0000 437a0000 off 208 lines 1 78
+  state start 0 dstart 0 end 0 dcount 0 off 208 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 1 16
+  start start
+  state start 0 dstart 0 end 16 dcount 0 off 209 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 209 doff 209 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 208 doff 208 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 207 doff 207 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 206 doff 206 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 205 doff 205 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 204 doff 204 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 203 doff 203 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 202 doff 202 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 201 doff 201 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 200 doff 200 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 199 doff 199 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 198 doff 198 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 1 rect 42680000 434f0000 439a8000 437b0000 drect 426c0000 43500000 439a0000 437a0000 78
+label 134 font 2 border 0 trigger 1 shown 1 r 43280000 40400000 43968000 422c0000 t 43290000 40800000 43960000 42280000 off 4 lines 1 78
+  state start 0 dstart 0 end 0 dcount 0 off 4 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43280000 40400000 43968000 422c0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 0 10
+  start start
+  state start 0 dstart 0 end 10 dcount 0 off 4 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 43280000 40400000 43968000 422c0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 10 dcount 1 off 4 doff 4 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 1 off 3 doff 3 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 1 off 2 doff 2 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 1 off 1 doff 1 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 1 off 0 doff 0 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -1 doff 4294967295 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -2 doff 4294967294 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -3 doff 4294967293 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -4 doff 4294967292 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -5 doff 4294967291 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -6 doff 4294967290 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -7 doff 4294967289 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -8 doff 4294967288 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -9 doff 4294967287 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -10 doff 4294967286 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -11 doff 4294967285 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -12 doff 4294967284 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -13 doff 4294967283 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -14 doff 4294967282 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -15 doff 4294967281 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -16 doff 4294967280 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -17 doff 4294967279 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -18 doff 4294967278 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 10 dcount 0 off -19 doff 4294967277 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 1 dstart 0 end 10 dcount 0 off 3 doff 4294967277 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 1 rect 43280000 40400000 43968000 422c0000 drect 43290000 40800000 43960000 42280000
+label 135 font 2 border 0 trigger 1 shown 1 r 43ab0000 43120000 441f8000 43350000 t 43ab8000 43130000 441f4000 43340000 off 147 lines 1 78
+  state start 0 dstart 0 end 0 dcount 0 off 147 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43ab0000 43120000 441f8000 43350000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 1 26
+  start start
+  state start 0 dstart 0 end 26 dcount 0 off 148 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 43ab0000 43120000 441f8000 43350000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 148 doff 148 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43ab0000 43120000 441f8000 43350000 drect 43ab8000 43130000 441f4000 43340000 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 147 doff 147 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 1 rect 43ab0000 43120000 441f8000 43350000 drect 43ab8000 43130000 441f4000 43340000 78
+label 136 font 0 border 0 trigger 1 shown 2 r 43ca0000 43bb8000 44260000 43c48000 t 43ca8000 43bc0000 4425c000 43c40000 off 376 lines 3 - 43726564697473 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 376 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 22
+  start start
+  state start 0 dstart 0 end 22 dcount 0 off 380 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 3 draw 0 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 380 doff 380 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 379 doff 379 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 378 doff 378 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 377 doff 377 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 376 doff 376 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 375 doff 375 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 374 doff 374 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 373 doff 373 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 372 doff 372 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 4 trig 0 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 371 doff 371 scrolling 0 dirty 0 polls 000 62 1 1 lines 3 draw 4 trig 1 rect 43ca0000 43bb8000 44260000 43c48000 drect 43ca8000 43bc0000 4425c000 43c40000 - 43726564697473 e697a5e69cac
+label 137 font 2 border 0 trigger 1 shown 1 r 43838000 43580000 43cd8000 43820000 t 43840000 43590000 43cd0000 43818000 off 217 lines 1 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 217 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 26
+  start start
+  state start 0 dstart 0 end 26 dcount 0 off 221 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 221 doff 221 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 43840000 43590000 43cd0000 43818000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 220 doff 220 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 43840000 43590000 43cd0000 43818000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 219 doff 219 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 43840000 43590000 43cd0000 43818000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 218 doff 218 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 3 trig 0 rect 43838000 43580000 43cd8000 43820000 drect 43840000 43590000 43cd0000 43818000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 1 off 217 doff 217 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 3 trig 1 rect 43838000 43580000 43cd8000 43820000 drect 43840000 43590000 43cd0000 43818000 43726564697473
+label 138 font 2 border 0 trigger 1 shown 2 r 439a8000 42a60000 44180000 43040000 t 439b0000 42a80000 4417c000 43030000 off 84 lines 1 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 84 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 1 16
+  start start
+  state start 0 dstart 0 end 16 dcount 0 off 85 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 1 draw 0 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 85 doff 85 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 84 doff 84 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 83 doff 83 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 82 doff 82 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 81 doff 81 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 80 doff 80 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 79 doff 79 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 78 doff 78 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 77 doff 77 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 76 doff 76 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 75 doff 75 scrolling 1 dirty 1 polls 100 21 1 1 lines 1 draw 4 trig 0 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 16 dcount 1 off 74 doff 74 scrolling 0 dirty 0 polls 000 21 1 1 lines 1 draw 4 trig 1 rect 439a8000 42a60000 44180000 43040000 drect 439b0000 42a80000 4417c000 43030000 456d70697265204561727468
+label 139 font 1 border 0 trigger 1 shown 3 r 43e60000 43a18000 44044000 43b90000 t 43e68000 43a20000 44040000 43b88000 off 324 lines 2 456d70697265204561727468 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 324 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 4 25
+  start start
+  state start 0 dstart 0 end 25 dcount 0 off 328 doff 0 scrolling 1 dirty 1 polls 010 41 1 1 lines 2 draw 0 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 328 doff 328 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 327 doff 327 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 326 doff 326 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 325 doff 325 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 324 doff 324 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 323 doff 323 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 5 trig 0 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 25 dcount 2 off 322 doff 322 scrolling 0 dirty 0 polls 000 41 1 1 lines 2 draw 5 trig 1 rect 43e60000 43a18000 44044000 43b90000 drect 43e68000 43a20000 44040000 43b88000 456d70697265204561727468 e697a5e69cac
+label 140 font 2 border 0 trigger 1 shown 1 r 439e0000 00000000 43c30000 41f80000 t 439e8000 3f800000 43c28000 41f00000 off 1 lines 3 78 e697a5e69cac 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 1 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 0 26
+  start start
+  state start 0 dstart 0 end 26 dcount 0 off 1 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 3 draw 0 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 26 dcount 2 off 1 doff 1 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 2 off 0 doff 0 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -1 doff 4294967295 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -2 doff 4294967294 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -3 doff 4294967293 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -4 doff 4294967292 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -5 doff 4294967291 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -6 doff 4294967290 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -7 doff 4294967289 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -8 doff 4294967288 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -9 doff 4294967287 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -10 doff 4294967286 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -11 doff 4294967285 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -12 doff 4294967284 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -13 doff 4294967283 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -14 doff 4294967282 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -15 doff 4294967281 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -16 doff 4294967280 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -17 doff 4294967279 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -18 doff 4294967278 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -19 doff 4294967277 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -20 doff 4294967276 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -21 doff 4294967275 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 26 dcount 0 off -22 doff 4294967274 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 2 off 0 doff 0 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000 e697a5e69cac 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -1 doff 4294967295 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -2 doff 4294967294 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -3 doff 4294967293 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -4 doff 4294967292 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -5 doff 4294967291 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -6 doff 4294967290 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -7 doff 4294967289 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -8 doff 4294967288 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -9 doff 4294967287 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -10 doff 4294967286 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -11 doff 4294967285 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -12 doff 4294967284 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -13 doff 4294967283 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -14 doff 4294967282 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -15 doff 4294967281 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -16 doff 4294967280 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -17 doff 4294967279 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -18 doff 4294967278 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -19 doff 4294967277 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -20 doff 4294967276 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -21 doff 4294967275 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 26 dcount 0 off -22 doff 4294967274 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 2 dstart 2 end 26 dcount 1 off 0 doff 0 scrolling 0 dirty 0 polls 000 21 1 1 lines 3 draw 3 trig 1 rect 439e0000 00000000 43c30000 41f80000 drect 439e8000 3f800000 43c28000 41f00000 456d70697265204561727468
+label 141 font 2 border 1 trigger 1 shown 1 r 43720000 43838000 43ff0000 439b0000 t 43740000 43848000 43fe0000 439a0000 off 265 lines 3 456d70697265204561727468 e697a5e69cac e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 265 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 2 22
+  start start
+  state start 0 dstart 0 end 22 dcount 0 off 267 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 3 draw 0 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 267 doff 267 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 266 doff 266 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 265 doff 265 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 264 doff 264 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 2 off 263 doff 263 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 262 doff 262 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 261 doff 261 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 260 doff 260 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 259 doff 259 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 258 doff 258 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 257 doff 257 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 256 doff 256 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 255 doff 255 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 254 doff 254 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 253 doff 253 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 252 doff 252 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 251 doff 251 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 250 doff 250 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 249 doff 249 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 248 doff 248 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 247 doff 247 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 246 doff 246 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 245 doff 245 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 244 doff 244 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 243 doff 243 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 3 off 242 doff 242 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 456d70697265204561727468 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 264 doff 264 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 263 doff 263 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 262 doff 262 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 261 doff 261 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 260 doff 260 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 259 doff 259 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 258 doff 258 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 257 doff 257 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 256 doff 256 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 255 doff 255 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 254 doff 254 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 253 doff 253 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 252 doff 252 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 251 doff 251 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 250 doff 250 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 249 doff 249 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 248 doff 248 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 247 doff 247 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 246 doff 246 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 245 doff 245 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 244 doff 244 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 243 doff 243 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 22 dcount 2 off 242 doff 242 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 264 doff 264 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 263 doff 263 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 262 doff 262 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 261 doff 261 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 260 doff 260 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 2 dstart 2 end 22 dcount 1 off 259 doff 259 scrolling 0 dirty 0 polls 000 21 1 1 lines 3 draw 3 trig 1 rect 43720000 43838000 43ff0000 439b0000 drect 43740000 43848000 43fe0000 439a0000 e697a5e69cac
+label 142 font 1 border 2 trigger 0 shown 2 r 43430000 42a20000 43d68000 42e20000 t 43460000 42a80000 43d50000 42dc0000 off 84 lines 1 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 84 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43430000 42a20000 43d68000 42e20000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 3 20
+  start start
+  state start 0 dstart 0 end 20 dcount 0 off 87 doff 0 scrolling 1 dirty 1 polls 010 41 1 1 lines 1 draw 0 trig 0 rect 43430000 42a20000 43d68000 42e20000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 20 dcount 1 off 87 doff 87 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 4 trig 0 rect 43430000 42a20000 43d68000 42e20000 drect 43460000 42a80000 43d50000 42dc0000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 20 dcount 1 off 86 doff 86 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 4 trig 0 rect 43430000 42a20000 43d68000 42e20000 drect 43460000 42a80000 43d50000 42dc0000 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 20 dcount 1 off 85 doff 85 scrolling 0 dirty 0 polls 000 41 1 1 lines 1 draw 4 trig 0 rect 43430000 42a20000 43d68000 42e20000 drect 43460000 42a80000 43d50000 42dc0000 43726564697473
+label 143 font 1 border 3 trigger 1 shown 2 r 41300000 439f8000 43360000 43af0000 t 41700000 43a18000 43320000 43ad0000 off 323 lines 2 636166c3a9 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 323 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 2 1
+  start start
+  state start 0 dstart 0 end 1 dcount 0 off 325 doff 0 scrolling 1 dirty 1 polls 010 41 1 1 lines 2 draw 0 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 325 doff 325 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 324 doff 324 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 323 doff 323 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 322 doff 322 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 321 doff 321 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 320 doff 320 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 319 doff 319 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 318 doff 318 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 317 doff 317 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 316 doff 316 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 315 doff 315 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 314 doff 314 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 313 doff 313 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 312 doff 312 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 1 dcount 2 off 311 doff 311 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 636166c3a9 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 322 doff 322 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 321 doff 321 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 320 doff 320 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 319 doff 319 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 318 doff 318 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 317 doff 317 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 316 doff 316 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 315 doff 315 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 314 doff 314 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 313 doff 313 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 312 doff 312 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 1 dcount 1 off 311 doff 311 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 2 dstart 1 end 1 dcount 1 off 322 doff 311 scrolling 0 dirty 0 polls 000 41 1 1 lines 2 draw 4 trig 1 rect 41300000 439f8000 43360000 43af0000 drect 41700000 43a18000 43320000 43ad0000 456d70697265204561727468
+label 144 font 0 border 0 trigger 1 shown 5 r 43f40000 43520000 44390000 437e0000 t 43f48000 43530000 4438c000 437d0000 off 211 lines 1 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 211 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43f40000 43520000 44390000 437e0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 22
+  start start
+  state start 0 dstart 0 end 22 dcount 0 off 216 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 1 draw 0 trig 0 rect 43f40000 43520000 44390000 437e0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 22 dcount 1 off 216 doff 216 scrolling 0 dirty 0 polls 000 62 1 1 lines 1 draw 7 trig 1 rect 43f40000 43520000 44390000 437e0000 drect 43f48000 43530000 4438c000 437d0000 e697a5e69cac
+label 145 font 1 border 0 trigger 0 shown 3 r 43ad8000 429c0000 43dd8000 42e60000 t 43ae0000 429e0000 43dd0000 42e40000 off 79 lines 1 78
+  state start 0 dstart 0 end 0 dcount 0 off 79 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 0 9
+  start start
+  state start 0 dstart 0 end 9 dcount 0 off 79 doff 0 scrolling 1 dirty 1 polls 010 41 1 1 lines 1 draw 0 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 79 doff 79 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 78 doff 78 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 77 doff 77 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 76 doff 76 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 75 doff 75 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 74 doff 74 scrolling 1 dirty 1 polls 100 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 9 dcount 1 off 73 doff 73 scrolling 0 dirty 0 polls 000 41 1 1 lines 1 draw 5 trig 0 rect 43ad8000 429c0000 43dd8000 42e60000 drect 43ae0000 429e0000 43dd0000 42e40000 78
+label 146 font 2 border 0 trigger 1 shown 1 r 43160000 43a20000 43b58000 43b20000 t 43170000 43a28000 43b50000 43b18000 off 325 lines 3 456d70697265204561727468 78 e697a5e69cac
+  state start 0 dstart 0 end 0 dcount 0 off 325 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 0
+  start start
+  state start 0 dstart 0 end 0 dcount 0 off 330 doff 0 scrolling 1 dirty 1 polls 010 21 1 1 lines 3 draw 0 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 330 doff 330 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 329 doff 329 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 328 doff 328 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 327 doff 327 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 326 doff 326 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 325 doff 325 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 324 doff 324 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 323 doff 323 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 322 doff 322 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 321 doff 321 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 320 doff 320 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 319 doff 319 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 318 doff 318 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 317 doff 317 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 316 doff 316 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 315 doff 315 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 314 doff 314 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 313 doff 313 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 312 doff 312 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 311 doff 311 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 2 off 310 doff 310 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 309 doff 309 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 308 doff 308 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 307 doff 307 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 306 doff 306 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 305 doff 305 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 304 doff 304 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 303 doff 303 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 0 dcount 3 off 302 doff 302 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 456d70697265204561727468 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 324 doff 324 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 323 doff 323 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 322 doff 322 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 321 doff 321 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 320 doff 320 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 319 doff 319 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 318 doff 318 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 317 doff 317 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 316 doff 316 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 315 doff 315 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 314 doff 314 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 313 doff 313 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 312 doff 312 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 311 doff 311 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 310 doff 310 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 309 doff 309 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 308 doff 308 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 307 doff 307 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 306 doff 306 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 305 doff 305 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 304 doff 304 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 303 doff 303 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 0 dcount 2 off 302 doff 302 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 78 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 324 doff 324 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 323 doff 323 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 322 doff 322 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 321 doff 321 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 320 doff 320 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 319 doff 319 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 318 doff 318 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 317 doff 317 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 316 doff 316 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 315 doff 315 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 314 doff 314 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 313 doff 313 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 312 doff 312 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 311 doff 311 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 310 doff 310 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 309 doff 309 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 308 doff 308 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 307 doff 307 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 306 doff 306 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 305 doff 305 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 304 doff 304 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 303 doff 303 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 2 dstart 2 end 0 dcount 1 off 302 doff 302 scrolling 1 dirty 1 polls 100 21 1 1 lines 3 draw 3 trig 0 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 3 dstart 2 end 0 dcount 1 off 324 doff 302 scrolling 0 dirty 0 polls 000 21 1 1 lines 3 draw 3 trig 1 rect 43160000 43a20000 43b58000 43b20000 drect 43170000 43a28000 43b50000 43b18000 e697a5e69cac
+label 147 font 0 border 0 trigger 1 shown 4 r 43a50000 43c58000 43c58000 43d60000 t 43a58000 43c60000 43c50000 43d58000 off 396 lines 1 456d70697265204561727468
+  state start 0 dstart 0 end 0 dcount 0 off 396 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 1 draw 0 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 0 2
+  start start
+  state start 0 dstart 0 end 2 dcount 0 off 396 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 1 draw 0 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 396 doff 396 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 395 doff 395 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 394 doff 394 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 393 doff 393 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 392 doff 392 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 391 doff 391 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 390 doff 390 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 389 doff 389 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 2 dcount 1 off 388 doff 388 scrolling 1 dirty 1 polls 100 62 1 1 lines 1 draw 6 trig 0 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 1 dstart 0 end 2 dcount 1 off 395 doff 388 scrolling 0 dirty 0 polls 000 62 1 1 lines 1 draw 6 trig 1 rect 43a50000 43c58000 43c58000 43d60000 drect 43a58000 43c60000 43c50000 43d58000 456d70697265204561727468
+label 148 font 1 border 0 trigger 1 shown 2 r 43ef0000 43530000 4430c000 436b0000 t 43ef8000 43540000 44308000 436a0000 off 212 lines 2 e697a5e69cac 43726564697473
+  state start 0 dstart 0 end 0 dcount 0 off 212 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 2 draw 0 trig 0 rect 43ef0000 43530000 4430c000 436b0000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 2 27
+  start start
+  state start 0 dstart 0 end 27 dcount 0 off 214 doff 0 scrolling 1 dirty 1 polls 010 41 1 1 lines 2 draw 0 trig 0 rect 43ef0000 43530000 4430c000 436b0000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 214 doff 214 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 43ef0000 43530000 4430c000 436b0000 drect 43ef8000 43540000 44308000 436a0000 e697a5e69cac 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 213 doff 213 scrolling 1 dirty 1 polls 100 41 1 1 lines 2 draw 4 trig 0 rect 43ef0000 43530000 4430c000 436b0000 drect 43ef8000 43540000 44308000 436a0000 e697a5e69cac 43726564697473
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 0 dstart 0 end 27 dcount 2 off 212 doff 212 scrolling 0 dirty 0 polls 000 41 1 1 lines 2 draw 4 trig 1 rect 43ef0000 43530000 4430c000 436b0000 drect 43ef8000 43540000 44308000 436a0000 e697a5e69cac 43726564697473
+label 149 font 0 border 0 trigger 1 shown 6 r 43f10000 43520000 443f4000 43810000 t 43f18000 43530000 443f0000 43808000 off 211 lines 3 e697a5e69cac 636166c3a9 636166c3a9
+  state start 0 dstart 0 end 0 dcount 0 off 211 doff 0 scrolling 0 dirty 0 polls 000 1000 1000 1000 lines 3 draw 0 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 00000000 00000000 00000000 00000000
+op scroll 40000000 0 0 5 14
+  start start
+  state start 0 dstart 0 end 14 dcount 0 off 216 doff 0 scrolling 1 dirty 1 polls 010 62 1 1 lines 3 draw 0 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 00000000 00000000 00000000 00000000
+op copy 1 1 1
+  start poll 1
+  scroll start
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 216 doff 216 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 215 doff 215 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 214 doff 214 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 213 doff 213 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 212 doff 212 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 211 doff 211 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 210 doff 210 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 209 doff 209 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 208 doff 208 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 207 doff 207 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 206 doff 206 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 205 doff 205 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 204 doff 204 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 0 dstart 0 end 14 dcount 3 off 203 doff 203 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 e697a5e69cac 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 14 dcount 2 off 210 doff 210 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 14 dcount 2 off 209 doff 209 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 14 dcount 2 off 208 doff 208 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  = 0
+  state start 1 dstart 1 end 14 dcount 2 off 207 doff 207 scrolling 1 dirty 1 polls 100 62 1 1 lines 3 draw 8 trig 0 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 636166c3a9 636166c3a9
+op copy 1 1 1
+  scroll poll 1
+  end start
+  end poll 1
+  = 0
+  state start 1 dstart 1 end 14 dcount 2 off 206 doff 206 scrolling 0 dirty 0 polls 000 62 1 1 lines 3 draw 8 trig 1 rect 43f10000 43520000 443f4000 43810000 drect 43f18000 43530000 443f0000 43808000 636166c3a9 636166c3a9

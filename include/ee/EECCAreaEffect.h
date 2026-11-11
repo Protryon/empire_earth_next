@@ -11,6 +11,9 @@ class EEAreaEffectFunctor;
 class EEGraphicEffect;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCAreaEffect : public EELocationCalamityClass {
 public:
     EECCAreaEffect();                       // 0xaf1ce
@@ -23,6 +26,8 @@ public:
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xaf5f2 (loads the effects and the sound)
     virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 0xaf632 (unloads them)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xaf669
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     // +0x4c 0xaf8a3: whether the area around (inX, inY) is on the map
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
     // +0x50, new here (ICF-folded 0xac9f3: false; ApplyEffect asks it for the caster's own units)

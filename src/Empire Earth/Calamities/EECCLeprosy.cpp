@@ -17,6 +17,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -181,13 +183,26 @@ void EECCLeprosy::UnloadMedia(EEPlayer* inPlayer)
 // Ages the calamity with its contagion helper, infects the area once the effect has played and updates the sound
 long EECCLeprosy::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, inCalamity->mIntPlaceHolder1);
-    if (inCalamity->GetTimeAlive() >= this->mEffect1Duration && !inCalamity->mBoolPlaceHolder1) {
-        this->ApplyEffect(inCalamity);
-        inCalamity->mBoolPlaceHolder1 = true;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.area_delay = (uint32_t)this->mEffect1Duration;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCLeprosy::UpdateStep);
+}
+
+// New (port): EECCLeprosy's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCLeprosy::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCLeprosy* theClass = static_cast<EECCLeprosy*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::ApplyEffect: {
+        EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
+        theClass->ApplyEffect(theCalamity);
+        return true;
     }
-    this->UpdateSound(inCalamity, this->mSound, -1.0f, 4.0f, true);
-    return theResult;
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b1cca
@@ -243,5 +258,8 @@ void EECCLeprosy::ApplyEffect(EECalamity* inCalamity)
 // Accepts a tile whose surrounding area (half the radius, rounded up) is on the map
 bool EECCLeprosy::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    return ::gWorld.mMap->IsAreaOnMap(inX, inY, (this->mRadius + 1) / 2);
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.radius = (uint32_t)this->mRadius;
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

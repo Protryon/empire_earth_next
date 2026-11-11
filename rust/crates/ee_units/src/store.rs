@@ -39,6 +39,9 @@ pub const EE_UNIT_FIELD_FORMATION_SLOT: u32 = 13;
 pub const EE_UNIT_FIELD_CAN_ATTACK_GROUND: u32 = 14;
 /// `EEUnit::mResourceAmount` (what a resource has left)
 pub const EE_UNIT_FIELD_RESOURCE_AMOUNT: u32 = 15;
+/// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
+/// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
+pub const EE_UNIT_FIELD_ON_MAP: u32 = 16;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -89,6 +92,8 @@ pub struct EeUnitRecord {
     pub formation_slot: i64,
     /// `EEUnit::mResourceAmount`
     pub resource_amount: i64,
+    /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
+    pub on_map: u8,
 }
 
 impl EeUnitRecord {
@@ -110,6 +115,7 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_FORMATION_SLOT => self.formation_slot = value,
             EE_UNIT_FIELD_CAN_ATTACK_GROUND => self.can_attack_ground = value as u8,
             EE_UNIT_FIELD_RESOURCE_AMOUNT => self.resource_amount = value,
+            EE_UNIT_FIELD_ON_MAP => self.on_map = value as u8,
             _ => return false,
         }
         true
@@ -141,6 +147,7 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_FORMATION_SLOT, self.formation_slot == other.formation_slot),
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, self.can_attack_ground == other.can_attack_ground),
             (EE_UNIT_FIELD_RESOURCE_AMOUNT, self.resource_amount == other.resource_amount),
+            (EE_UNIT_FIELD_ON_MAP, self.on_map == other.on_map),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -237,6 +244,33 @@ impl Store {
         self.records.is_empty()
     }
 
+    /// The out-of-sync checksum's flag 1 (`EEComplexUnit::GetChecksum`: hit points + tile y + tile x; 0 for a unit
+    /// that is not complex) summed over the units on the map, wrapping (the C++ `long`s and `unsigned long` sum:
+    /// the low 32 bits equal on every data model, all 64 where `long` has 64). The sum commutes, so the records' id
+    /// order gives the chain walk's value.
+    pub fn checksum_flag1(&self) -> u64 {
+        self.records
+            .values()
+            .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .fold(0u64, |sum, r| sum.wrapping_add(r.hit_points.wrapping_add(r.tile_y).wrapping_add(r.tile_x) as u64))
+    }
+
+    /// TEST ONLY: the world's unit chain (its units' ids and objects, in the chain's order) against the records'
+    /// on-map flags: the chain's units with no record of that object or one not on the map, plus the records on the
+    /// map the chain does not hold. 0: the two domains are the same.
+    pub fn check_on_map(&self, chain: &[(u32, u64)]) -> u32 {
+        let mut mismatches = 0u32;
+        let mut found = 0usize;
+        for &(id, object) in chain {
+            match self.records.get(&id) {
+                Some(r) if r.object == object && r.on_map != 0 => found += 1,
+                _ => mismatches += 1,
+            }
+        }
+        let on_map = self.records.values().filter(|r| r.on_map != 0).count();
+        mismatches + on_map.saturating_sub(found) as u32
+    }
+
     /// TEST ONLY: compares every object's fields (filled by C++ from every player's list) with the records; the
     /// records no object named count as mismatches too.
     pub fn check(&self, objects: &[EeUnitRecord]) -> EeUnitStoreCheck {
@@ -313,6 +347,7 @@ mod tests {
             commandable: 1,
             formation_slot: 3,
             resource_amount: 0,
+            on_map: 1,
         }
     }
 
@@ -352,6 +387,7 @@ mod tests {
             (EE_UNIT_FIELD_FORMATION_SLOT, 0xffff_ffff),
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, 0),
             (EE_UNIT_FIELD_RESOURCE_AMOUNT, 1500),
+            (EE_UNIT_FIELD_ON_MAP, 0),
         ] {
             let before = r;
             assert!(r.set(f, v));
@@ -408,6 +444,43 @@ mod tests {
         // a record no object names
         let c = s.check(&objects[..4]);
         assert_eq!((c.mismatches, c.first_id, c.first_field), (1, u32::MAX, 0xff));
+    }
+
+    #[test]
+    fn the_checksum_flag1_sums_the_complex_units_on_the_map() {
+        let mut s = Store::new();
+        s.insert(EeUnitRecord { hit_points: 100, tile_x: 5, tile_y: 6, ..rec(1, 1) });
+        s.insert(EeUnitRecord { hit_points: -3, tile_x: -10000, tile_y: -10000, ..rec(2, 1) });
+        // not on the map, not complex: not summed
+        s.insert(EeUnitRecord { on_map: 0, hit_points: 7, ..rec(3, 1) });
+        s.insert(EeUnitRecord { object_kind: crate::kinds::EE_OBJECT_UNIT, hit_points: 9, ..rec(4, 0) });
+        let sum = s.checksum_flag1();
+        assert_eq!(sum, (111i64 + (-20003i64)) as u64);
+        assert_eq!(sum as u32, (111i32).wrapping_add(-20003) as u32);
+        // a wrap in 32 bits gives the same low word
+        s.insert(EeUnitRecord { hit_points: i64::from(i32::MAX), tile_x: 1, tile_y: 0, ..rec(5, 1) });
+        let low = s.checksum_flag1() as u32;
+        assert_eq!(low, (111i32).wrapping_add(-20003).wrapping_add(i32::MAX).wrapping_add(1) as u32);
+    }
+
+    #[test]
+    fn check_on_map_names_both_differences() {
+        let mut s = Store::new();
+        for i in 0..4 {
+            s.insert(rec(i, 1));
+        }
+        s.insert(EeUnitRecord { on_map: 0, ..rec(9, 1) });
+        let chain: Vec<_> = (0..4).map(|i| (i, 0x1000 + i as u64)).collect();
+        assert_eq!(s.check_on_map(&chain), 0);
+        // a record on the map the chain lacks
+        assert_eq!(s.check_on_map(&chain[..3]), 1);
+        // a chain unit off the map in the store, and one of another object
+        let mut more = chain.clone();
+        more.push((9, 0x1009));
+        assert_eq!(s.check_on_map(&more), 1);
+        more[0].1 = 0x7777;
+        assert_eq!(s.check_on_map(&more), 3);
+        assert_eq!(s.check_on_map(&[]), 4);
     }
 
     #[test]

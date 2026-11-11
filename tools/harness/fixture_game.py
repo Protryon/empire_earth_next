@@ -10,6 +10,8 @@ fixture_driver.py's, shared with posix_game.py.
   python -I tools/harness/fixture_game.py --exercise tour [--play-seconds 120] [--input-check]
   python -I tools/harness/fixture_game.py --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard \\
          --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40
+  python -I tools/harness/fixture_game.py --exercise random-game --play-seconds 20 --scroll-check \\
+         --zoom-captures 50 100 200
   options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...]
 
   menu         the main menu reached and its frame captured
@@ -23,7 +25,11 @@ fixture_driver.py's, shared with posix_game.py.
                the release); each selected group must equal the original rule over the box's ids; --orders then
                gives orders through the real input path (fixture_driver.orders: citizens right-click a resource
                and a damaged building, plain and with Shift; the Patrol and Attack Ground buttons; a move) and
-               judges every unit of each group by the original's rule after the message executed
+               judges every unit of each group by the original's rule after the message executed; --scroll-check
+               then scrolls the camera by an arrow key and by the screen edge and zooms it by the hot keys and the
+               wheel (fixture_driver.scroll_check: each move checked through the fixture's camera telemetry to change
+               the camera and keep it on the map; "SCROLL CHECK PASS|FAIL ..."), and --zoom-captures P ... captures
+               the game at each zoom percent (as posix_game.py)
   random-game  the tour without the settings
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
@@ -244,6 +250,10 @@ def tour(g, a, summary):
     if a.orders:
         summary['orders'] = fixture_driver.orders(g, GAME)
         g.note(f'ORDERS PASS: ran {summary["orders"]["ran"]} skipped {summary["orders"]["skipped"]}')
+    if a.scroll_check:
+        summary['scroll_check'] = fixture_driver.scroll_check(g, GAME)
+    if a.zoom_captures:
+        summary['zoom_captures'] = fixture_driver.zoom_captures(g, GAME, a.zoom_captures)
     (g.out / 'rendering.json').write_text(json.dumps([r['rendering'] for r in results if 'rendering' in r],
                                                      indent=2) + '\n')
     summary['result'] = 'PASS'
@@ -358,6 +368,12 @@ def main():
                     help='tour/random-game: box selections in the game view (select, add with Shift, a dead unit)')
     ap.add_argument('--orders', action='store_true',
                     help='tour/random-game: orders through the real input path, each unit judged (fixture_driver.orders)')
+    ap.add_argument('--scroll-check', action='store_true',
+                    help='tour/random-game: the camera scrolled by arrow key and screen edge and zoomed by hot key and '
+                         'wheel, each checked through the camera telemetry (fixture_driver.scroll_check)')
+    ap.add_argument('--zoom-captures', type=int, nargs='*', default=[], metavar='P',
+                    help='tour/random-game: once in the game set the camera zoom to each percent (100 = the original '
+                         'farthest) and capture (as posix_game.py)')
     ap.add_argument('--ai-players', type=int, default=2)
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')

@@ -5,8 +5,12 @@
 // and UIBitmapBackground.cpp), so it emits UITextureBackground's inline members first (0x1005c84e..0x1005c9f9), then
 // UIBFull's (GetBackgroundBitmap, the copy ctor, ??_E; operator= is ICF-folded at 0x10078dda), the U2D key init
 // chains, the ctor and the out-of-line members. UIBitmap.cpp starts at 0x1005d3a1.
+//
+// DrawBackground's tile placement and LoadBackground's tile names are Rust (rust/crates/ee_ui/src/background.rs
+// bfull_draw, full_tile_name; docs/RUST_PLAN.md R6); the bitmaps, textures and draws stay here.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -24,6 +28,30 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIBFull.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top)
+static inline EeUiRect UIBFullRect(const GERectangle& r) { return EeUiRect{r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()}; }
+static inline GERectangle UIBFullRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+
+// The Rust tile placement's draw (ee_ui background.rs bfull_draw): one tile stretched onto its clipped part
+struct UIBFullRust {
+    static long Draw(UIBFull* inBackground, unsigned long inIndex, const GERectangle& inTile, const GERectangle& inClipped)
+    {
+        unsigned long theScreen = inBackground->mForm->GetManager()->GetScreen();
+        GEBitmap* theBitmap = inBackground->mBitmaps[inIndex];
+        GERectangle theTextureRectangle(0.0f, 0.0f, (float)inBackground->mBitmaps[0]->GetTexture(theScreen)->GetWidth(),
+                                        (float)inBackground->mBitmaps[0]->GetTexture(theScreen)->GetHeight());
+        theBitmap->ComputeStretchedCoordsAndScale(inTile, inClipped, theTextureRectangle, theScreen);
+        theBitmap->SetLocation(inClipped.GetTopLeft());
+        theBitmap->SetOpacity(inBackground->mForm->GetFadeOpacity());
+        return inBackground->mForm->GetManager()->GetRasterizer()->Draw(theBitmap, theScreen);
+    }
+};
+extern "C" long ee_uicpp_background_bfull_draw(void* inBackground, unsigned long inIndex, const EeUiRect* inTile,
+                                               const EeUiRect* inClipped)
+{
+    return UIBFullRust::Draw(static_cast<UIBFull*>(inBackground), inIndex, UIBFullRect(*inTile), UIBFullRect(*inClipped));
+}
 
 // FUNCTION: LLE 0x1005cbc2
 // Creates a full-screen background tiled from a grid of bitmaps (columns x rows)
@@ -54,56 +82,11 @@ UIBFull::~UIBFull()
 // Draws the tiles that overlap the given rectangle, each stretched to its share of the form and clipped
 long UIBFull::DrawBackground(const GERectangle& inRectangle)
 {
-    GERectangle theClipped;
-    long theResult = kErrorOK;
-    GERectangle theDrawRectangle;
-    GERectangle theTileRectangle;
-    GERectangle theTextureRectangle;
-    unsigned long theScreen;
-    float theTileWidth;
-    float theTileHeight;
-    float theLeft;
-    float theTop;
-    unsigned long theFirstRow;
-    unsigned long theLastRow;
-    unsigned long theFirstColumn;
-    unsigned long theLastColumn;
-    unsigned long theRow;
-    unsigned long theColumn;
-    theDrawRectangle = this->mForm->GetRectangle();
-    theDrawRectangle.And(inRectangle);
-    theScreen = this->mForm->GetManager()->GetScreen();
-    GEScreen* theScreenObject = this->mForm->GetManager()->GetRasterizer()->GetScreen(theScreen);
-    float theTextureWidth = (float)this->mBitmaps[0]->GetTexture(theScreen)->GetWidth();
-    float theTextureHeight = (float)this->mBitmaps[0]->GetTexture(theScreen)->GetHeight();
-    theTextureRectangle = GERectangle(0.0f, 0.0f, theTextureWidth, theTextureHeight);
-    theTileWidth = (this->mForm->GetRectangle().GetWidth() + 1.0f) / this->mTextureRectangle.GetWidth() * theTextureWidth;
-    theTileHeight = (this->mForm->GetRectangle().GetHeight() + 1.0f) / this->mTextureRectangle.GetHeight() * theTextureHeight;
-    theLeft = this->mForm->GetRectangle().GetLeft();
-    theTop = this->mForm->GetRectangle().GetTop();
-    theFirstRow = UMFloor((theDrawRectangle.GetTop() - theTop) / theTileHeight);
-    theLastRow = UMFloor((theDrawRectangle.GetBottom() - theTop) / theTileHeight);
-    theFirstColumn = UMFloor((theDrawRectangle.GetLeft() - theLeft) / theTileWidth);
-    theLastColumn = UMFloor((theDrawRectangle.GetRight() - theLeft) / theTileWidth);
-    if (theLastRow >= this->mRows)
-        theLastRow = this->mRows - 1;
-    if (theLastColumn >= this->mColumns)
-        theLastColumn = this->mColumns - 1;
-    for (theRow = theFirstRow; theRow <= theLastRow; theRow++) {
-        for (theColumn = theFirstColumn; theColumn <= theLastColumn; theColumn++) {
-            unsigned long theIndex = this->mColumns * theRow + theColumn;
-            theTileRectangle = GERectangle(GE2DPoint(theColumn * theTileWidth + theLeft, theRow * theTileHeight + theTop),
-                                           theTileWidth, theTileHeight);
-            if (!theDrawRectangle.And(theTileRectangle, theClipped))
-                continue;
-            this->mBitmaps[theIndex]->ComputeStretchedCoordsAndScale(theTileRectangle, theClipped, theTextureRectangle,
-                                                               theScreen);
-            this->mBitmaps[theIndex]->SetLocation(theClipped.GetTopLeft());
-            this->mBitmaps[theIndex]->SetOpacity(this->mForm->GetFadeOpacity());
-            theResult = this->mForm->GetManager()->GetRasterizer()->Draw(this->mBitmaps[theIndex], theScreen);
-        }
-    }
-    return theResult;
+    unsigned long theScreen = this->mForm->GetManager()->GetScreen();
+    GETexture* theTexture = this->mBitmaps[0]->GetTexture(theScreen);
+    return ee_ui_background_bfull_draw(this, UIBFullRect(this->mForm->GetRectangle()), UIBFullRect(inRectangle),
+                                       theTexture->GetWidth(), theTexture->GetHeight(),
+                                       UIBFullRect(this->mTextureRectangle), this->mColumns, this->mRows);
 }
 
 // FUNCTION: LLE 0x1005cfe0
@@ -111,28 +94,13 @@ long UIBFull::DrawBackground(const GERectangle& inRectangle)
 long UIBFull::LoadBackground()
 {
     GETextureDescription theDescription = this->mTextureDescription;
-    UString theColumnString;
-    UString theRowString;
     UString theFileName;
     unsigned long theScreen = this->mForm->GetManager()->GetScreen();
     GETextureManager* theManager = this->mForm->GetManager()->GetRasterizer()->GetTextureManager(theScreen);
     for (unsigned long theRow = 0; theRow < this->mRows; theRow++) {
-        char theNumber[4];
-        PlatIToA(theRow + 1, theNumber, 10);
-        theRowString = theNumber;
         for (unsigned long theColumn = 0; theColumn < this->mColumns; theColumn++) {
             unsigned long theIndex = this->mColumns * theRow + theColumn;
-            PlatIToA(theColumn + 1, theNumber, 10);
-            theColumnString = theNumber;
-            const char* theExtension = strrchr(this->mTextureFileName, '.');
-            if (theExtension) {
-                char theBuffer[256];
-                memcpy(theBuffer, (const char*)this->mTextureFileName, theExtension - (const char*)this->mTextureFileName);
-                sprintf(theBuffer + (theExtension - (const char*)this->mTextureFileName), "_%ld_%ld%s", theRow + 1,
-                        theColumn + 1, theExtension);
-                theFileName = theBuffer;
-            } else
-                theFileName = this->mTextureFileName + "_" + theRowString + "_" + theColumnString;
+            ee_ui_background_full_tile_name(this->mTextureFileName, theRow, theColumn, &theFileName);   // Rust: the name
             GETexture* theTexture = theManager->LoadTexture(theFileName, theDescription);
             theTexture->SetStageAlphaMode(kStageOpModulate, -1);
             theTexture->SetStageColorMode(kStageOpModulate, -1);
