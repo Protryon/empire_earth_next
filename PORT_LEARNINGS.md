@@ -4970,3 +4970,67 @@ id and the sound.
 - **Only a played game reaches the game call** (the local human's selection, `EEMSelectUnits`): EE-SIM's idle human
   never selects, so USPK's game records are empty in every capture and the sweep is the coverage. A tour or a played
   game must show box selection working (select, add, re-select a group with a dead unit).
+
+## R5b.1, finishing: the sparse point set, the manager's last loops and the path manager's splicing in Rust (ee_astar sparse.rs, manager.rs, path_splice.rs; branch rust-r5b-cont2, 2026-11-10)
+
+The map of what was left in the A* layer and the continent analysis went into RUST_PLAN's R5b.1 row first; this
+round moved the pieces that need neither the unit store nor the hulls, each its own commit.
+
+- **New capture records first, from the unchanged C++:** CNTN (every `GetTilesNextTo`: the tile, the id, the
+  result, the tiles) and PMSP (every `TrimPath`, `AppendWaypoints`, `JoinPaths`, `FinishFailedPath` detour search
+  and the bounded searches' revolutions and bounds, with a kind, the inputs and the outputs). `FinishFailedPath`'s
+  detour search became its own static function for this (same code). The goldens were recorded with that commit's
+  build in the four profiles, in the same runs that showed every older digest equal to its golden, and only the new
+  tags' lines were inserted (`merge_golden`-style: (seed, tag) order kept; the CNTN counts are 600-900 a game,
+  PMSP 12,000-21,000).
+- **`U2DSparseArrayPointContainer` whole** (`sparse.rs`; `U2DSparseArray.cpp` is forwarders). The tile sets of
+  every AI area (continents, path areas, hills, forests, choke points, rectangle areas), of the path sub sectors
+  and the explore goal's bad tiles. The C++ class keeps its name, vtable and API and owns one `EeSparseArray`
+  handle; the run node class, the column list header and their `UList` node pool (`SetPoolSize`,
+  `DumpPoolStats`) are gone: nothing outside the class used them. Kept from the C++: the point lists walk the
+  columns from the last and each column's runs upwards, `operator[]` from the first column, `GetClosestPoint` keeps
+  the last tie walking the list from its end (`<=`), `Insert` ignores a point left of the array with x <= 0, a
+  column emptied by `Remove` is deleted but the array keeps its size, and `GetRandomPoint` calls back into the
+  caller's `URandom::Generate()` in the C++'s order and number (16 column tries, then a run, then a y) with the
+  float expression `(long)(Generate() * (max + 1 - min) + min)` (a C cast: truncation, so `as` is right here).
+  Changed: the copy constructor shared the source's column pointers, so both destructors freed them; a copy now owns
+  its points. `Size()` is out of line.
+- **A capture read uninitialised memory, and the smaller areas changed it.** After the sparse array moved, ASGR
+  differed in all six oracle games with the same record counts and an identical oracle. A field diff of the two
+  captures (one seed, both exes) put every difference in four bytes of ten records: `mStartSector` of the continental
+  chain machine (type 7), a stack object in `NumberContinentChains` whose goal never sets it. The graph goal base's
+  ctor left `mGoalSector`/`mStartSector` unset (only `Reset` zeroed them), and the golden happened to see 0. The
+  ctor now sets both to 0; nothing reads them before `SetStart`/`SetGoal`. A record that reads a member the code
+  never sets is a trap for every later layout change: such fields should be initialised, not left out.
+- **`near` is a macro on Windows** (`windef.h`): a cbindgen struct field named `near` broke every unit including
+  `ee_rust.h`. The prune host's callback is `is_near`. (The `near`/`far` parameter names in `ee_dx7`'s exports
+  compile only because a parameter name may vanish.)
+- **The manager's last loops** (`manager.rs`): `GetTilesNextTo` walks the ring of `EEGetSquareRingTiles(x, y, 1)`
+  from its last tile, with the manager's `GetContinentID` as a callback (the id grid is freed in small games and the
+  lookup then searches the sub sectors, so a snapshot of nine ids would cost the calls the C++ skipped);
+  `PruneChokePoints`' loop asks the C++ objects through `EePruneCallbacks` in the C++'s order (the closest points
+  are the areas' C++ geometry, the deletion the C++'s); `theCount >= mAreaSerials.size() - 1` is unsigned, so a
+  choke point without areas never goes. `CreateScenarioAreas`' choice: the set areas with a positive height and
+  width, from the last, ids from 1, the sides truncated as the `(long)` casts (no oracle game has scenario areas:
+  only the unit test covers it).
+- **The path manager's splicing** (`path_splice.rs`): `TrimPath`'s cut, `AppendWaypoints`' points, `JoinPaths`'
+  test, the detour search, `TryShortPath`'s revolutions and the bounds of both bounded searches, and
+  `SetGraphRevs`/`SetPathRevs`' budgets (ASRN and ASGR record the max revs). The path history's walk for the repeat
+  stays C++ (saved state, branch rust-r5a-aisave3's). Points pass as `EePathPoint` over `GE3DPoint` (layout
+  asserted) and compare by tile through `UMFloor` (`lrintf`, then one down when that went up). `MergeWaypoints` has
+  no caller and stays as it was.
+- **Left** (RUST_PLAN's row): the hulls (`U2DPolygon<long>`/`U2DConvexHull<long>`: float math with `Normalize`,
+  shared with the float users) and the area geometry on them; the object bookkeeping of `Rebuild`/`RepairPathArea`
+  and the object queries, after the objects; `CanGetTo`, the goals' unit reads and the path manager's request
+  handling, after the unit store (the store's first stage on `rust` has owner, kind, tile, category, type, built,
+  goal kind; `CanGetTo` would add the class's domains and `CanMoveOnTerrain`, the planet id with its lazy write and
+  the footprint continent); the history and regions, saved state.
+- **Gates** (on the merge of `rust` 4d136f16, the unit store's first stage; the merge needed no resolution, the
+  header was current): `build.py -j 4 --sim` 0/0 for EE-AOC and EE-SIM; the sim oracle identical on seeds 2-7
+  (2,691-2,825 lines a seed); `sim_capture.py check` PASS in the four profiles with no tag ungated (285, 300, 289
+  and 301 digests in oracle, late, space and calamity, CNTB/CNTR/CNTN/PMSP/ASRN/ASGR among them); `rust_build.py
+  gate` PASS (1,462 tests; ee_astar 108, 16 new); the windowed-software test profile 0/0. Before the merge the
+  three leaves were built together (0/0, oracle identical) and each commit was checked with `cargo test`, clippy,
+  rustfmt and the header; the intermediate commits were not linked one by one. Not run: `gates.sh` or any harness
+  session, `eedata check`/`cppgate` (no data change), macOS or Linux builds. Nothing here is drawn: the sparse array
+  is read by the renderer only through the AI's areas (no draw path), so no tour-only risk is known.
