@@ -31,6 +31,9 @@ local ECON = {
     wood_floor = false,     -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
     account = false,        -- from the Copper Age the reserve is an epoch account of a share of the income (Age of AI)
     wood_surplus = false,   -- wood piled past what the plan spends soon: its gatherers down to WOOD_SURPLUS_KEEP (§8.51)
+    places = false,         -- from the Copper Age the plan's `places` overrides: more mines, farms and metal gatherers
+    paid_go = false,        -- from the Copper Age the next epoch is saved for (and its buildings built) once the stock
+                            -- holds its cost, whatever the citizens or the minutes (§8.51)
 }
 
 local PLAN = {
@@ -113,6 +116,9 @@ local PLAN = {
         epoch_share = 50,       -- (ECON.account) percent of the income into the epoch account (Age of AI's 40, its army 65)
         town_centers = 2, tc_at = 30,
         claim_max = 45,
+        -- (ECON.places, §8.51: from the Copper Age 12-20 citizens past the plan's places stood on wood, 30-40 on it
+        -- against 18-20 wanted, while the next epoch waited on gold and iron) more places for them
+        places = {mine_sites = 5, farms = 36, cap = {wood = 20, stone = 6, gold = 24, iron = 24}},
     },
 }
 
@@ -470,6 +476,16 @@ function M.step(view, memory)
     end
     local age = view.epoch < 2 and view.epoch + 1 or 3
     local plan = PLAN[age]
+    if ECON.places and plan.places ~= nil then
+        local p = {}
+        for k, v in pairs(plan) do
+            p[k] = v
+        end
+        for k, v in pairs(plan.places) do
+            p[k] = v
+        end
+        plan = p
+    end
     if plan.army_per ~= nil then
         plan = GD.scaled(plan, view.citizens)   -- (the light army by the workers, balanced's rule: lib.guard)
     end
@@ -539,6 +555,15 @@ function M.step(view, memory)
     local last = view.epoch >= view.last_epoch
     local saving = not last and not view.advancing
         and (view.citizens >= plan.save_at or in_epoch >= plan.save_after)
+    -- (§8.51, seed 2 against Age of AI: 20 minutes into the Copper Age the stock held the Bronze Age's cost twice over,
+    -- 4284 food, 1296 gold and iron, and the town waited for save_after) a cost the stock already holds is saved for
+    if ECON.paid_go and age >= 3 and not last and not view.advancing and not saving then
+        local holds = true
+        for _, r in ipairs(V.resources) do
+            holds = holds and view.stock[r] >= view.next_epoch_cost[r]
+        end
+        saving = holds
+    end
     -- (lib.demand, balanced's epoch_pressure start/full) the reserve ramps up to the advance's cost
     local pressure = saving and 100 or 0
     if ECON.ramp and plan.save_ramp ~= nil and not last and not view.advancing then
@@ -863,7 +888,7 @@ function M.step(view, memory)
                     unsettled_r[s.index] = true
                 end
             end
-            local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range, unsettled_r)
+            local places, c = claim_sites(view, order, keep, r, false, want[r], plan.mine_sites or 3, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
