@@ -20,6 +20,9 @@ local ECON = {
     ramp = false,           -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
     tc = true,              -- a second town centre (the plan's town_centers, tc_at; lib.econ_units)
     army_slack = false,     -- past the soldiers-first window the reserve waits for 3/4 of the light army only
+    ratchet = true,         -- the epoch reserve never shrinks while kept (the army's margin cannot eat it)
+    parallel = false,       -- the Stone Age's citizens and soldiers in parallel (the owner: no citizen stop for the army)
+    full_target = true,     -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
 }
 
 local PLAN = {
@@ -561,12 +564,14 @@ function M.step(view, memory)
         end
     end
     local reserve, differs = {}, false
+    local epoch_need = {}   -- the advance's whole cost of each resource kept (the gatherers' target, ECON.full_target)
     for _, r in ipairs(V.resources) do
         local want = 0
         local kept = not last and not view.advancing and not unreachable
             and (saving or (age >= 2 and (r == "gold" or r == "iron")))
         if kept then
             want = cost[r]
+            epoch_need[r] = cost[r]
             if pressure < 100 and not (age >= 2 and (r == "gold" or r == "iron")) then
                 want = cost[r] * pressure // 100 // 50 * 50   -- (in steps of 50: the reserve changes seldom)
             end
@@ -580,9 +585,21 @@ function M.step(view, memory)
         if scramble and r ~= "stone" and not (kept and guarded(r)) then
             want = 0
         end
+        -- (§8.40) the epoch's reserve never shrinks while it is kept: the missing light army's cap follows the stock,
+        -- so with the army short of iron (18 of 20) the food reserve went to 0 for 10 minutes and the citizens ate the
+        -- Copper Age's food. Ratcheted, what came in stays saved; the soldiers (and citizens) share only the margin
+        -- of the missing soldiers' cost above it
+        memory.res_floor = memory.res_floor or {}
+        if ECON.ratchet then
+            if kept and want > 0 and not scramble and memory.res_epoch == view.epoch then
+                want = math.max(want, math.min(memory.res_floor[r] or 0, cost[r]))
+            end
+            memory.res_floor[r] = (kept and not scramble) and want or 0
+        end
         reserve[r] = want
         differs = differs or reserve[r] ~= view.reserve[r]
     end
+    memory.res_epoch = view.epoch
     if differs then
         order("reserve", {verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone,
                           gold = reserve.gold, iron = reserve.iron})
@@ -603,7 +620,7 @@ function M.step(view, memory)
     if planned >= cap and view.stock.food >= reserve.food + 100 then
         cap = plan.citizens_max
     end
-    if plan.army_first then
+    if plan.army_first and not ECON.parallel then
         -- the soldiers first: while the army and the soldiers coming are short of the plan, the citizens are only
         -- replaced up to the last epoch's count (for ARMY_FIRST_MIN minutes at most)
         local coming = 0
@@ -626,7 +643,7 @@ function M.step(view, memory)
     -- soldiers-first window, while the light army is short and the food gatherers fill the food places, a citizen is
     -- trained only from the food above what two soldiers cost, when the soldiers' other resource is in stock (the
     -- citizens took every 50 food as it came in, and the army was 5 at 30 minutes)
-    if plan.army_first and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
+    if plan.army_first and not ECON.parallel and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
             and view.gatherers.food >= ((memory.want or {}).food or 0) then
         local soldiers_payable = true
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
@@ -658,7 +675,17 @@ function M.step(view, memory)
         -- next epoch's first minutes), within the plan's floor and cap; food takes the rest and never less than its
         -- share (less once the advance's food is paid: food is finite until the farms)
         local land = view.citizens
-        local target = stock_targets(view, plan, reserve, towers, soldiers_wanted)
+        -- (§8.40) the gatherers aim at the advance's whole cost, not at the reserve the missing army has lowered: with
+        -- the light army short of iron the iron reserve was 0, the stock above the bank, no iron gatherer was wanted
+        -- and the army and the Copper Age both waited on iron for the rest of the game
+        local aim = reserve
+        if ECON.full_target then
+            aim = {}
+            for _, r in ipairs(V.resources) do
+                aim[r] = math.max(reserve[r], epoch_need[r] or 0)
+            end
+        end
+        local target = stock_targets(view, plan, aim, towers, soldiers_wanted)
         local want = {}
         local others = 0
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
