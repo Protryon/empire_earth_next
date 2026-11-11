@@ -948,6 +948,8 @@ from data, so that a script can make its decisions with the same numbers:
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind), and `waiting` (a gatherer waiting for
   room at its resource, which the classic resource manager's AssignGatherers takes as idle).
+- `ai.used()` -> used, budget: the instructions and helper charges the current call has used so far and its budget
+  (a script's own profiling; it changes nothing).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
 - `ai.water_sites(x, y, {max = 64})` -> `{{x, y}, ...}`: the dock sites, nearest (x, y) first, at most `max` (512):
   the largest water body's shore tiles next to the land mass at (x, y) and the water tiles round them, explored ones

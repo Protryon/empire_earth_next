@@ -177,6 +177,7 @@ public:
     EECPLuaStatus LastStatus() const { return this->mStatus; }
     const std::string& LastError() const { return this->mError; }
     int64_t LastInstructions() const { return this->mUsed; }    // the last call's count (a multiple of the hook step)
+    int64_t Budget() const { return this->mConfig.mBudget; }    // the instructions a call may use
     size_t MemoryUsed() const { return this->mBytes; }
     size_t MemoryPeak() const { return this->mPeak; }
     uint64_t RngState() const { return this->mRng; }

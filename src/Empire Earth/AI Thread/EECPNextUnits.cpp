@@ -2984,6 +2984,16 @@ static int LuaConfig(lua_State* L)
     return 1;
 }
 
+// ai.used() -> the instructions and charges this call has used so far (a multiple of the hook step, plus the helpers'
+// charges), against the budget (ai.used's second value): a script's own profiling; it changes nothing
+static int LuaUsed(lua_State* L)
+{
+    EECPLuaState* s = EECPLuaState::From(L);
+    lua_pushinteger(L, (lua_Integer)s->LastInstructions());
+    lua_pushinteger(L, (lua_Integer)s->Budget());
+    return 2;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // More commands (batch 2)
 
@@ -3914,7 +3924,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
         {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
-        {"config", LuaConfig},
+        {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
