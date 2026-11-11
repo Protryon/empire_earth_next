@@ -10,6 +10,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The last focused child's pick and the focus ids are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x006f6030
 // Takes focus from the focused child and gives it to the child focused most recently before it (by focus id)
@@ -23,19 +25,15 @@ void Container::SetFocusToLastFocusChild()
         this->mFocusChild=NULL;
         skipCurrent=true;
     }
-    Component* last=NULL;
-    unsigned char minimum=0;
+    std::vector<Component*> aChildren;
+    std::vector<unsigned char> anIds;
     for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin();i!=this->mChildList.end();++i) {
-        Component* child=i->get();
-        unsigned char id=child->mFocusId;
-        if(id==0 || (id==current && skipCurrent)) continue;
-        // The difference is compared as a signed int before it is stored as a byte (as in the original)
-        if(minimum==0 || int(current)-int(id)<int(minimum)) {
-            minimum=(unsigned char)(current-id);
-            last=child;
-        }
+        aChildren.push_back(i->get());
+        anIds.push_back((*i)->mFocusId);
     }
-    if(last!=NULL) last->RequestFocus();
+    // the byte difference is compared as a signed int before it is kept as a byte (as in the original)
+    long long aPick=ee_won_gui_last_focus_child(current,skipCurrent,anIds.empty()?NULL:&anIds[0],anIds.size());
+    if(aPick>=0) aChildren[(size_t)aPick]->RequestFocus();
 }
 // FUNCTION: WON 0x006f6f60
 // Makes sure one child is drawn above another, moving the other one just beneath it if needed
@@ -53,7 +51,7 @@ void Container::EnsureOnTopOf(Component* bottom,Component* top)
 // Returns the next focus id for a child, skipping 0 when the byte wraps
 unsigned char Container::GetNextFocusId()
 {
-    if(++this->mNextFocusId==0) ++this->mNextFocusId;
+    this->mNextFocusId=ee_won_gui_next_focus_id(this->mNextFocusId);
     return this->mNextFocusId;
 }
 }

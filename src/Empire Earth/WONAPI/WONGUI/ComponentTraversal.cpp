@@ -11,6 +11,8 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// WantFocus's rule is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x006f5230
 // Returns the next or previous sibling in the parent's child list, optionally wrapping (NULL without a parent)
@@ -62,10 +64,8 @@ void Component::RootToChild(int& x,int& y)
 // Returns whether the component can take focus: focusable, visible, enabled, and not blocked by a modal parent
 bool Component::WantFocus()
 {
-    if(!this->ComponentFlagSet(ComponentFlag_WantFocus)) return false;
-    if(!this->IsVisible() || this->IsDisabled()) return false;
-    if(this->mParent!=NULL && this->mParent->mModalCount>0 && !this->ComponentFlagSet(0x8000)) return false;
-    return true;
+    return ee_won_gui_want_focus((uint32_t)this->mComponentBits,this->IsVisible(),this->IsDisabled(),
+                                 this->mParent!=NULL && this->mParent->mModalCount>0);
 }
 }
 

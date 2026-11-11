@@ -421,6 +421,9 @@ WON_TESTS = {
     # WONGUI's list lines and selection (the line at a y, visibility, stacking, the selectable walk, the keys, the
     # scrolls of inserts, refreshes and deletes), the original's statements against ee_won's guilist module
     "won_guilist_test": [],
+    # WONGUI's focus rules, hit-test verdict and buttons' state machine, the original's statements against ee_won's
+    # guifocus module
+    "won_guifocus_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

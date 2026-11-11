@@ -968,6 +968,14 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+/// The component flags these rules read.
+constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
+
+constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
+
+/// A child a modal state does not block.
+constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
 constexpr static const uint8_t JOIN_REPLY = 2;
@@ -1253,6 +1261,32 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
+};
+
+/// What `ButtonUp` does.
+enum class EeWonButtonUp {
+  /// Still held (or not pressed): nothing.
+  Ignore = 0,
+  /// Released: a repeating button stops its timer.
+  StopRepeat = 1,
+  /// Released without activating.
+  Release = 2,
+  /// Released and activated.
+  Activate = 3,
+};
+
+/// What `Button::KeyDown` does.
+enum class EeWonButtonKey {
+  /// Not handled (false).
+  None = 0,
+  /// Enter on the default button: activate (true).
+  Activate = 1,
+  /// Space: held down and pressed (true).
+  Press = 2,
+  /// An arrow in a radio group: the previous radio activated and focused (true).
+  RadioBack = 3,
+  /// The next radio.
+  RadioForward = 4,
 };
 
 /// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
@@ -11404,6 +11438,68 @@ int32_t ee_won_gui_drag_scroll_end(int32_t char_pos,
                                    int32_t m_width,
                                    int32_t rect_width,
                                    int32_t horz_offset);
+
+bool ee_won_gui_want_focus(uint32_t flags, bool visible, bool disabled, bool parent_modal);
+
+bool ee_won_gui_hit_child(bool disabled, bool modal, uint32_t flags);
+
+uint8_t ee_won_gui_next_focus_id(uint8_t id);
+
+/// `last_focus_child` over `count` ids: the index, or -1.
+///
+/// # Safety
+/// `ids` holds `count` bytes (or is NULL with 0).
+int64_t ee_won_gui_last_focus_child(uint8_t current,
+                                    bool skip_current,
+                                    const uint8_t *ids,
+                                    size_t count);
+
+int32_t ee_won_gui_tab_focus_start(bool want_focus,
+                                   bool init,
+                                   bool isolate,
+                                   uint32_t flags,
+                                   bool has_children);
+
+bool ee_won_gui_tab_focus_done(uint64_t count, size_t children);
+
+EeWonButtonUp ee_won_gui_button_up(uint32_t flags,
+                                   int32_t mouse_down_state,
+                                   bool key_down,
+                                   bool activate);
+
+int32_t ee_won_gui_button_drag(int32_t mouse_down_state,
+                               int32_t x,
+                               int32_t y,
+                               int32_t width,
+                               int32_t height);
+
+EeWonButtonKey ee_won_gui_button_key(int32_t key, bool is_default, bool key_down, bool radio);
+
+/// `button_repeat`: the new delay into `out_delay`, fire returned.
+///
+/// # Safety
+/// `out_delay` is writable.
+bool ee_won_gui_button_repeat(int32_t delay, int32_t delta, int32_t *out_delay);
+
+/// `button_state`: the state into `out_state`, the checked column returned.
+///
+/// # Safety
+/// `out_state` is writable.
+int32_t ee_won_gui_button_state(bool disabled,
+                                uint32_t flags,
+                                bool is_default,
+                                bool has_check,
+                                int32_t *out_state);
+
+/// `button_state_cells`: cell `index` (0, 1, 2) into the outs; false past the last.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_button_state_cell(int32_t state,
+                                  int32_t checked,
+                                  int32_t index,
+                                  int32_t *out_state,
+                                  int32_t *out_checked);
 
 /// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
 ///
