@@ -26,6 +26,7 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EEUnitKind.h"
 
 const UString EEUGCastCalamity::sData("EEUGCastCalamity-Data");
 // SYNTHETIC: EXE 0x620986   (wrapper)
@@ -308,7 +309,7 @@ long EEUGCastCalamity::RepairPointers(unsigned long inFirst, unsigned long inSec
 {
     long theResult = 3;
     if (USavedID(this->mSource) != -1) {
-        this->mSource = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mSource)));
+        this->mSource = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mSource)));
         if (this->mSource != NULL) {
             this->mSource->Reference();
             theResult = 0;

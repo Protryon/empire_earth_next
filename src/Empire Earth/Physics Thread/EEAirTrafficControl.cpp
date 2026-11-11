@@ -23,6 +23,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAirTrafficControl.h"
+#include "ee/EEUnitKind.h"
 
 const UString EEAirTrafficControl::sData("EEAirTrafficControl Data");
 // SYNTHETIC: EXE 0x54e839   (wrapper)
@@ -594,13 +595,13 @@ long EEAirTrafficControl::RepairPointers(unsigned long inMajorVersion, unsigned 
 {
     std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
     while (theSlot != this->mSlots.end()) {
-        EEComplexUnit* theAirport = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(theSlot->mAirport)));
+        EEComplexUnit* theAirport = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(theSlot->mAirport)));
         if (theAirport != NULL) {
             theSlot->mAirport = theAirport;
             theAirport->Reference();
             std::deque<EEATCItem>::iterator theItem = theSlot->mLanding.begin();
             while (theItem != theSlot->mLanding.end()) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
+                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
                 if (theUnit != NULL) {
                     (*theItem).mUnit = theUnit;
                     theUnit->Reference();
@@ -611,7 +612,7 @@ long EEAirTrafficControl::RepairPointers(unsigned long inMajorVersion, unsigned 
             }
             theItem = theSlot->mTakeoff.begin();
             while (theItem != theSlot->mTakeoff.end()) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
+                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
                 if (theUnit != NULL) {
                     (*theItem).mUnit = theUnit;
                     theUnit->Reference();

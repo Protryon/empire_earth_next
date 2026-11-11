@@ -852,7 +852,7 @@ long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->mGathering = false;
     }
     if (theResult == 0 && USavedID(this->mStorage) != -1) {
-        this->mStorage = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mStorage)));
+        this->mStorage = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mStorage)));
         if (this->mStorage != NULL)
             this->mStorage->Reference();
         else
