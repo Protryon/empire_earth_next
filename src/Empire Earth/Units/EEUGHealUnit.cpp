@@ -114,7 +114,7 @@ void EEUGHealUnit::GetDebugText(UWideString& ioText)
     long theHitPoints = this->mTarget->mHitPoints;
     long theMaxHitPoints = this->mTarget->mStats->mMaxHitPoints;
     sprintf(theText, "Target Unit: %s at (%ld,%ld)\nTarget Health: %ld/%ld (%.2f%%)\n", (const char*)this->mTarget->mUnitClass->mName,
-            this->mTarget->mTileX, this->mTarget->mTileY, theHitPoints, theMaxHitPoints,
+            this->mTarget->mTileX.Get(), this->mTarget->mTileY.Get(), theHitPoints, theMaxHitPoints,
             100.0f * theHitPoints / theMaxHitPoints);   // a percentage (the raw fraction used to be printed)
     ioText += theText;
 }

@@ -87,6 +87,8 @@
 #include "ee/EECPTrace.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEMessageCapture.h"
+#include "ee/EESimCapture.h"
+#include "ee/EEUnitStore.h"
 #include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -733,6 +735,8 @@ void EEPhysics::Idle()
 // NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
 void EEPhysics::Tick()
 {
+    if (EESimCaptureRecord::Active())   // TEST ONLY: the unit store equals the objects (ee/EEUnitStore.h)
+        EEUnitStoreCheck(0);
     if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
         sLoadedSeedPending = false;
         this->mRandom.SetSeed(sLoadedSeed);
@@ -939,6 +943,8 @@ void EEPhysics::DrainInput()
             if (theInput->GetForSpecificSlot() == kSlotNone)
                 this->mInputMessagesProcessed++;
             EEMessageCaptureExecuted(theInput);   // TEST ONLY: the simulation capture's NMEX record (off by default)
+            if (EESimCaptureRecord::Active())   // TEST ONLY: the unit store equals the objects before the message
+                EEUnitStoreCheck(theInput->GetType());
             switch (theInput->GetType()) {
             case kNetMessageRemovePlayer: {
                 NEMRemovePlayer* theRemove = static_cast<NEMRemovePlayer*>(theInput);
