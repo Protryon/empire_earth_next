@@ -94,6 +94,30 @@ pub unsafe extern "C" fn ee_units_store_check(objects: *const EeUnitRecord, coun
     unsafe { *out = result };
 }
 
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+#[no_mangle]
+pub extern "C" fn ee_units_store_checksum_flag1() -> u64 {
+    with_store(|s| s.checksum_flag1())
+}
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_check_on_map(ids: *const u32, objects: *const u64, count: usize) -> u32 {
+    let chain: Vec<(u32, u64)> = if count == 0 {
+        Vec::new()
+    } else {
+        // SAFETY: the caller's contract
+        let (ids, objects) =
+            unsafe { (std::slice::from_raw_parts(ids, count), std::slice::from_raw_parts(objects, count)) };
+        ids.iter().copied().zip(objects.iter().copied()).collect()
+    };
+    with_store(|s| s.check_on_map(&chain))
+}
+
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
 ///

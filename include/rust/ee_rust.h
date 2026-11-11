@@ -923,6 +923,10 @@ constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
 /// `EEUnit::mResourceAmount` (what a resource has left)
 constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 
+/// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
+/// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
+constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -4334,6 +4338,8 @@ struct EeUnitRecord {
   int64_t formation_slot;
   /// `EEUnit::mResourceAmount`
   int64_t resource_amount;
+  /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
+  uint8_t on_map;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -10301,6 +10307,18 @@ uint32_t ee_units_store_count();
 void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
+
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+uint64_t ee_units_store_checksum_flag1();
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+uint32_t ee_units_store_check_on_map(const uint32_t *ids,
+                                     const uint64_t *objects,
+                                     size_t count);
 
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
