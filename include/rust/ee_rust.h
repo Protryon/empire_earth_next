@@ -1056,6 +1056,22 @@ constexpr static const uint32_t LINE_HAS_SEGS = 2;
 
 constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
 
+constexpr static const int32_t POPUP_WANT_INPUT = 128;
+
+constexpr static const int32_t POPUP_IS_MODAL = 256;
+
+constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
+
+constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
+
+constexpr static const int32_t POPUP_ADDITIONAL = 4096;
+
+constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
+
+constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
+
+constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
+
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
 constexpr static const uint8_t JOIN_REPLY = 2;
@@ -12952,6 +12968,78 @@ size_t ee_won_gui_text_format(const void *text,
                               bool line_break,
                               EeWonFormatOp *out,
                               size_t room);
+
+/// `popup_adjust`: the `SetPos` calls into `out` (room for 4), their count.
+///
+/// # Safety
+/// `out` has room for 4 pairs (8 ints).
+size_t ee_won_gui_popup_adjust(EeWonRect4 popup, EeWonRect4 bounds, EeWonRect4 avoid, int32_t *out);
+
+bool ee_won_gui_popup_additional(int32_t flags, bool open);
+
+/// `popup_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_popup_place(int32_t x,
+                               int32_t y,
+                               int32_t mouse_x,
+                               int32_t mouse_y,
+                               int32_t *out_y);
+
+bool ee_won_gui_popup_own_window(int32_t flags, bool default_);
+
+bool ee_won_gui_rect_contains(EeWonRect4 r, int32_t x, int32_t y);
+
+/// `popup_window_at` over `count` rectangles: the index, or -1.
+///
+/// # Safety
+/// `rects` holds `count` rectangles (or is NULL with 0).
+int64_t ee_won_gui_popup_window_at(const EeWonRect4 *rects, size_t count, int32_t x, int32_t y);
+
+bool ee_won_gui_popup_click_ends(int32_t flags, int32_t button);
+
+uint32_t ee_won_gui_modality(bool popups_open, int32_t flags, bool has_dialog);
+
+bool ee_won_gui_window_modal(bool is_dialog_window, bool popup_up, bool dialog_is_root, bool modal);
+
+bool ee_won_gui_ends_dialog(bool window_given,
+                            bool window_is_modal,
+                            bool dialog_given,
+                            bool dialog_is_modal);
+
+/// `menu_timer`: the new total into `acc`, the check into `out_check`, whether the timer stays.
+///
+/// # Safety
+/// `acc` and `out_check` are writable.
+bool ee_won_gui_menu_timer(bool keyboard, int32_t *acc, int32_t delta, bool *out_check);
+
+/// `menu_mouse_up`: the count in place, whether the release goes on.
+///
+/// # Safety
+/// `count` is writable.
+bool ee_won_gui_menu_mouse_up(int32_t button, int32_t *count);
+
+/// `menu_mouse_move`: -1 ignore the move, 1 leave keyboard mode first, 0 track it.
+int32_t ee_won_gui_menu_mouse_move(bool keyboard,
+                                   int32_t x,
+                                   int32_t y,
+                                   int32_t last_x,
+                                   int32_t last_y);
+
+/// `menu_item_size` in place.
+///
+/// # Safety
+/// `width` and `height` are writable.
+void ee_won_gui_menu_item_size(int32_t *width, int32_t *height);
+
+/// `submenu_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_submenu_place(int32_t view_width, int32_t item_top, int32_t *out_y);
+
+EeWonRect4 ee_won_gui_submenu_avoid(int32_t root_x, int32_t view_width);
 
 /// `wrap` over a `GUIString`'s units with their widths: the first `room` breaks into `out` (`2 * len + 1` is
 /// enough: a unit breaks at most twice, once inside a word and once more when it alone is wider than the line),

@@ -35,6 +35,7 @@ pub mod guimulti;
 pub mod guiscroll;
 pub mod guistring;
 pub mod guitext;
+pub mod guiwin;
 pub mod guiwrap;
 /// cbindgen:ignore
 pub mod ipaddr;
