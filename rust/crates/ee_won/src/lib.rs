@@ -29,6 +29,7 @@ pub mod guistring;
 pub mod ipaddr;
 pub mod lan;
 pub mod md5;
+pub mod model;
 /// cbindgen:ignore
 pub mod netstats;
 pub mod ops;

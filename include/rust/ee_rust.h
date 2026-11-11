@@ -4171,6 +4171,50 @@ struct EeWonFileWriter {
   void *file;
 };
 
+/// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
+struct EeWonSyncStep {
+  uint8_t kind;
+  uint32_t existing;
+  uint32_t incoming;
+};
+
+/// A server's population as `SyncGroups`, `AddClientToGroup` and `RemoveClientFromGroup` count it.
+struct EeWonPopulation {
+  /// The people in chat rooms (`mNumChatClients`).
+  int32_t chat;
+  /// The people in all rooms (`mNumClients`).
+  int32_t total;
+};
+
+/// What a client's flags say (`IsAnonymous`, `IsAway`, `IsAdmin`, `IsModerator`, `IsMuted`).
+struct EeWonClientStatus {
+  bool anonymous;
+  bool away;
+  bool admin;
+  bool moderator;
+  /// Muted server-wide or in the chat room / in the game.
+  bool muted_chat;
+  bool muted_game;
+};
+
+/// What a room's flags say.
+struct EeWonGroupKind {
+  bool password;
+  bool invite_only;
+  bool ask_to_join;
+  /// A chat room; otherwise a game.
+  bool chat;
+  /// A chat room anyone may enter: no password, invitation or approval.
+  bool public_chat;
+};
+
+/// A game member as `AreAllReady` sees it.
+struct EeWonMemberReady {
+  bool has_player;
+  bool game_captain;
+  bool ready;
+};
+
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
 struct EeWonTextList {
   const void *data;
@@ -10791,6 +10835,69 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
+///
+/// # Safety
+/// The id arrays hold their counts; `out` has room for both counts' sum.
+size_t ee_won_model_sync_plan(const uint16_t *existing,
+                              size_t existing_count,
+                              const uint16_t *incoming,
+                              size_t incoming_count,
+                              EeWonSyncStep *out);
+
+/// `EeWonPopulation::add_group` (0), `joined` (1) or `left` (2) in place.
+///
+/// # Safety
+/// `p` is valid and writable.
+void ee_won_model_population(EeWonPopulation *p, int32_t what, uint32_t flags, uint32_t members);
+
+int32_t ee_won_model_server_num_clients(bool connected, uint32_t live, int32_t listed);
+
+EeWonClientStatus ee_won_model_client_status(uint32_t flags,
+                                             uint8_t chat_member,
+                                             uint8_t game_member);
+
+EeWonGroupKind ee_won_model_group_kind(uint32_t flags);
+
+uint8_t ee_won_model_friend_status(bool in_chat, bool in_game);
+
+uint8_t ee_won_model_friend_start_locate();
+
+uint8_t ee_won_model_friend_end_locate(uint8_t flags);
+
+bool ee_won_model_game_pinging(uint16_t ping);
+
+bool ee_won_model_game_querying(uint16_t ping);
+
+bool ee_won_model_game_stale(int64_t now, int32_t last_seen, int32_t max_age);
+
+bool ee_won_model_game_list_by_id(int32_t game_type);
+
+bool ee_won_model_same_game(int32_t type_a,
+                            int32_t type_b,
+                            uint16_t group_a,
+                            uint16_t group_b,
+                            bool same_address);
+
+/// `status_text`: the text's index, or -1.
+int32_t ee_won_model_status_text(int16_t status);
+
+/// `all_ready` over `count` members.
+///
+/// # Safety
+/// `members` holds `count` entries (or is NULL with 0).
+bool ee_won_model_all_ready(const EeWonMemberReady *members, size_t count);
+
+/// `dir_object`: 1 a population (into `out_count`), 2 the address list, 0 anything else. `data` NULL: no data.
+///
+/// # Safety
+/// `kind` holds `kind_length` bytes, `data` `data_length` (or is NULL); `out_count` is writable.
+int32_t ee_won_model_dir_object(const uint8_t *kind,
+                                size_t kind_length,
+                                const uint8_t *data,
+                                size_t data_length,
+                                uint16_t *out_count);
 
 /// `SetFilePath`'s separators.
 ///
