@@ -12,7 +12,7 @@ use crate::auth::{AuthBlock, Body, Kind};
 use crate::blowfish::Blowfish;
 use crate::elgamal::ElGamal;
 use crate::md5::Md5;
-use crate::{cdkey, crc16, text, wire};
+use crate::{cdkey, crc16, text};
 
 /// Receives bytes; valid only during the call.
 pub type EeWonByteSink = unsafe extern "C" fn(context: *mut c_void, bytes: *const u8, length: usize);
@@ -216,86 +216,7 @@ pub unsafe extern "C" fn ee_won_utf8_from_wide(
     unsafe { give(sink, context, &out) }
 }
 
-// ---- WriteBuffer / ReadBuffer
-
-/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
-#[no_mangle]
-pub extern "C" fn ee_won_write_grow(capacity: u64, length: u64, add: u64) -> u64 {
-    wire::grown_capacity(capacity, length, add).unwrap_or(0)
-}
-
-/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
-#[no_mangle]
-pub extern "C" fn ee_won_write_chunk(capacity: u64, total: u64, max: u64) -> u64 {
-    wire::chunk_capacity(capacity, total, max).unwrap_or(0)
-}
-
-/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
-///
-/// # Safety
-/// `out` has 4 bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_encode_length(length: u32, size: u8, out: *mut u8) -> usize {
-    unsafe { copy_out(&wire::encode_length(length, size), out, 4) }
-}
-
-/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
-///
-/// # Safety
-/// `out` has 6 bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_length_prefix(
-    field_size: u8,
-    includes_field: bool,
-    length: u32,
-    out: *mut u8,
-) -> usize {
-    unsafe { copy_out(&wire::length_prefix(field_size, includes_field, length), out, 6) }
-}
-
-/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
-///
-/// # Safety
-/// `pos` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_read_take(length: u64, pos: *mut i64, amount: u64) -> bool {
-    let p = unsafe { *pos };
-    if length.wrapping_sub(p as u64) < amount {
-        return false;
-    }
-    unsafe { *pos = p.wrapping_add(amount as i64) };
-    true
-}
-
-/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
-///
-/// # Safety
-/// `data` holds `length` bytes; `pos` and `out` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_read_length(
-    data: *const u8,
-    length: u64,
-    pos: *mut i64,
-    size: u8,
-    out: *mut u32,
-) -> bool {
-    let all = unsafe { bytes(data, length as usize) };
-    let p = unsafe { *pos } as usize;
-    if p > all.len() {
-        return false;
-    }
-    let mut r = wire::Reader::new(&all[p..]);
-    match r.read_length(size) {
-        Ok(v) => {
-            unsafe {
-                *out = v;
-                *pos += r.pos() as i64;
-            }
-            true
-        }
-        Err(_) => false,
-    }
-}
+// (WriteBuffer / ReadBuffer: the objects are `buffer`'s)
 
 // ---- CRC16, MD5
 
@@ -1020,25 +941,7 @@ mod tests {
     }
 
     #[test]
-    fn buffer_helpers() {
-        let mut out = [0u8; 6];
-        assert_eq!(unsafe { ee_won_length_prefix(2, false, 0x10000, out.as_mut_ptr()) }, 6);
-        assert_eq!(out, [0xff, 0xff, 0, 0, 1, 0]);
-        assert_eq!(unsafe { ee_won_encode_length(0x1234, 2, out.as_mut_ptr()) }, 2);
-        assert_eq!(&out[..2], &[0x34, 0x12]);
-        assert_eq!(ee_won_write_grow(0, 0, 5), 32);
-        assert_eq!(ee_won_write_grow(32, 0, 5), 0);
-        assert_eq!(ee_won_write_chunk(32, 100, 0), 128);
-        let mut pos = 2i64;
-        assert!(unsafe { ee_won_read_take(4, &mut pos, 2) });
-        assert_eq!(pos, 4);
-        assert!(!unsafe { ee_won_read_take(4, &mut pos, 1) });
-        let data = [0xff, 0xff, 7];
-        let (mut pos, mut v) = (0i64, 0u32);
-        assert!(unsafe { ee_won_read_length(data.as_ptr(), 3, &mut pos, 2, &mut v) });
-        assert_eq!((pos, v), (2, 0xffff_ffff));
-        assert!(!unsafe { ee_won_read_length(data.as_ptr(), 3, &mut pos, 4, &mut v) });
-        assert_eq!(pos, 2);
+    fn crc16_through_the_abi() {
         assert_eq!(unsafe { ee_won_crc16_put(0, b"123456789".as_ptr(), 9) }, 0xfee8);
     }
 
@@ -1103,7 +1006,7 @@ mod tests {
 
         // a key block holding the public key, signed by it
         let public = crate::der::insert(&[&p, &q, &g, &y]);
-        let mut w = wire::Writer::new(0, false);
+        let mut w = crate::wire::Writer::new(0, false);
         w.append_bytes(&[3, 0, 1, 0, 0, 0, 2, 0, 0, 0, 17, 0, 1, 0]);
         w.append_short(public.len() as i16);
         w.append_bytes(&public);

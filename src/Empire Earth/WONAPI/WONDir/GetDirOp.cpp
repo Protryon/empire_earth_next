@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006f1190
 // Sets 4-byte length fields and creates the entity request
@@ -35,12 +36,12 @@ void GetDirOp::Reset()
 // Builds the get-directory message from the path, flags and data types
 WONStatus GetDirOp::GetNextRequest()
 {
-    WriteBuffer message(this->mLengthFieldSize,true);
-    message.AppendByte(5);
-    message.AppendShort(2);
-    message.AppendShort(103);
-    this->mGetEntityRequest->Pack(&message,GetEntityRequest::Pack_GetDirOp);
-    this->mRequest=message.ToByteBuffer(true);
+    // the message's bytes are Rust's (ee_won dirops.rs)
+    DirRequestFields aFields(0, true);
+    aFields.mReq.flags = this->mGetEntityRequest->GetFlags();
+    aFields.mReq.path = aFields.Text(this->mGetEntityRequest->GetPath());
+    aFields.Types(this->mGetEntityRequest->GetDataTypes());
+    this->mRequest = aFields.Build(this->mLengthFieldSize);
     return (WONStatus)WS_ServerReq_Recv;
 }
 // FUNCTION: WON 0x006f14e0

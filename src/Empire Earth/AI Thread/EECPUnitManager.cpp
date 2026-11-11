@@ -654,23 +654,32 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                 EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
                 if (theCP == NULL || theCP->mCivilizationManager == NULL || theCP->mCivilizationManager->mUnitManager != theSelf)
                     return;   // not that player's unit manager any more
-                for (size_t c = 0; c < theOrder.size(); c++) {
-                    std::deque<EEComplexUnit*>* theUnits = theSelf->GetUnits(theOrder[c].first);
+                // every class the load tracks: the saved units in the saved order. A unit the running game did not
+                // track (AddAllUnits takes every unit of the player) is let go, with the reference UnitAdded took: seed
+                // 3's 1350 s save tracked one citizen more, so GetNumWorkers and the demand for soldiers were higher
+                for (std::map<long, std::deque<EEComplexUnit*>*>::iterator theClass = theSelf->mUnits.begin();
+                     theClass != theSelf->mUnits.end(); ++theClass) {
+                    std::deque<EEComplexUnit*>* theUnits = theClass->second;
                     if (theUnits == NULL)
                         continue;
+                    static const std::vector<unsigned long> kNone;
+                    const std::vector<unsigned long>* theSaved = &kNone;
+                    for (size_t c = 0; c < theOrder.size(); c++)
+                        if (theOrder[c].first == theClass->first)
+                            theSaved = &theOrder[c].second;
                     std::vector<bool> theTaken(theUnits->size(), false);
                     std::deque<EEComplexUnit*> theSorted;
-                    for (size_t k = 0; k < theOrder[c].second.size(); k++)
+                    for (size_t k = 0; k < theSaved->size(); k++)
                         for (size_t u = 0; u < theUnits->size(); u++)
-                            if (!theTaken[u] && (*theUnits)[u] != NULL && (*theUnits)[u]->mUnitID == theOrder[c].second[k]) {
+                            if (!theTaken[u] && (*theUnits)[u] != NULL && (*theUnits)[u]->mUnitID == (*theSaved)[k]) {
                                 theTaken[u] = true;
                                 theSorted.push_back((*theUnits)[u]);
                                 break;
                             }
                     for (size_t u = 0; u < theUnits->size(); u++)
-                        if (!theTaken[u])
-                            theSorted.push_back((*theUnits)[u]);
-                    theUnits->swap(theSorted);   // the same units (and references), in the saved order
+                        if (!theTaken[u] && (*theUnits)[u] != NULL)
+                            (*theUnits)[u]->Dereference();
+                    theUnits->swap(theSorted);   // the saved units (and their references), in the saved order
                 }
             });
         }

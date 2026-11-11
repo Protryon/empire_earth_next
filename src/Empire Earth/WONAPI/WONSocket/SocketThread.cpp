@@ -21,7 +21,7 @@ SocketThread::~SocketThread() {}
 // Pumps the socket ops with a 1-second wait until the thread is stopped
 void SocketThread::ThreadFunc()
 {
-    while(!this->mStopped) this->Pump(1000);
+    while(!this->IsStopped()) this->Pump(1000);
 }
 // FUNCTION: WON 0x006b6160
 // Continues a pending op and finishes it unless it is still waiting (Rust decides: ee_won_socket_op_finishes);
@@ -101,13 +101,13 @@ void SocketThreadSimple::Pump(unsigned long inWaitTime)
     }
     aCrit.Leave();
     inWaitTime=ee_won_socket_pump_wait(static_cast<uint32_t>(inWaitTime));
-    if(inWaitTime>0) this->mSignalEvent.WaitFor(inWaitTime);
+    if(inWaitTime>0) this->WaitForSignal(inWaitTime);
 }
 // FUNCTION: WON 0x006b6890
 // Pumps the socket ops every 20 ms until the thread is stopped
 void SocketThreadSimple::ThreadFunc()
 {
-    while(!this->mStopped) this->Pump(20);
+    while(!this->IsStopped()) this->Pump(20);
 }
 }
 

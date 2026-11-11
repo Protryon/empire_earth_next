@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
+#include "ee/wonapi/WONDirRequest.h"
 namespace WONAPI {
 // The original inlines the default constructor into AddPath and CheckResponse
 
@@ -20,19 +21,16 @@ GetEntityRequest::~GetEntityRequest() {}
 // Appends the query (flags, path, data types) to a get-directory or multi-get message
 void GetEntityRequest::Pack(WriteBuffer* message,PACKFLAG mode)
 {
-    DWORD flags=this->mFlags;
-    bool aNoDirs=(flags&2)==0;
-    if(!aNoDirs && (flags&5)!=0)
-        flags|=0x10;
-    message->AppendLong(flags);
-    if(mode==Pack_GetDirOp)
-        message->AppendShort(0);
-    else if(mode==Pack_GetMultiDirOp)
-        message->AppendByte(0x44);
-    message->AppendWString(this->mPath,2);
-    message->AppendShort(static_cast<short>(this->mDataTypes.size()));
+    // the query's bytes are Rust's (ee_won dirops.rs)
+    std::string aPath, aBytes;
+    WideAppendUtf16LE(aPath,this->mPath);
+    std::vector<EeWonDirBytes> aTypes;
     for(DirDataTypeSet::iterator i=this->mDataTypes.begin();i!=this->mDataTypes.end();++i)
-        message->AppendString(*i,1);
+        aTypes.push_back(DirRequestFields::Narrow(*i));
+    EeWonDirQuery aQuery={static_cast<uint32_t>(this->mFlags),DirRequestFields::Narrow(aPath),
+                          aTypes.empty()?NULL:&aTypes[0],aTypes.size()};
+    ee_won_dir_pack_query(&aQuery,mode==Pack_GetMultiDirOp,DirRequestFields::Append,&aBytes);
+    message->AppendBytes(aBytes.data(),(unsigned long)aBytes.length());
 }
 // FUNCTION: WON 0x6f1070
 // Forgets the received entities and their per-path grouping
@@ -55,49 +53,31 @@ WONStatus GetEntityRequest::ParseMultiEntityReply(const void* data,unsigned long
 
 // No original address identified: WON SDK lazy grouping of the entities by directory path
 namespace WONAPI {
+static void GroupKey(void* inKeys, const uint8_t* inBytes, size_t inLength)
+{
+	std::vector<std::wstring>* aKeys = static_cast<std::vector<std::wstring>*>(inKeys);
+	aKeys->push_back(std::wstring());
+	for(size_t i = 0; i + 1 < inLength; i += 2)
+		WideAppendUtf16Unit(aKeys->back(), (uint16_t)(inBytes[i] | (inBytes[i + 1] << 8)));
+}
 const DirEntityMap& GetEntityRequest::GetDirEntityMap()
 {
 	if(!this->mDirEntityMap.empty())
 		return this->mDirEntityMap;
-
-	DirEntityList::iterator aListItr = this->mDirEntityList.begin();
-	DirEntityMap::iterator aMapItr = this->mDirEntityMap.insert(DirEntityMap::value_type(this->mPath,DirEntityList())).first;
-
-	std::wstring currentDir = this->mPath;
-	while(aListItr!=this->mDirEntityList.end())
+	// the grouping is Rust's (ee_won dirops.rs): each entity's directory
+	DirRequestFields aFields(0, true);
+	std::vector<EeWonDirListed> aList;
+	for(DirEntityList::iterator i = this->mDirEntityList.begin(); i!=this->mDirEntityList.end(); ++i)
 	{
-		DirEntity *anEntity = aListItr->get();
-		const std::wstring &aPath = anEntity->mPath;
-
-		bool mapInsert = false;
-		if((anEntity->mType=='D'))
-		{
-			if(aPath.empty())
-				currentDir = this->mPath;
-			else
-				currentDir = aPath;
-			
-			if(currentDir.empty() || currentDir[currentDir.length()-1]!=L'/')
-				currentDir+=L'/';
-
-			currentDir += anEntity->mName;
-			
-			mapInsert = true;
-		}
-		else if(!aPath.empty() && aPath!=currentDir)
-		{
-			currentDir = aPath;
-			mapInsert = true;
-		}
-
-		if(mapInsert)
-			aMapItr = this->mDirEntityMap.insert(aMapItr,DirEntityMap::value_type(currentDir,DirEntityList()));
-
-		aMapItr->second.push_back(anEntity);
-
-		++aListItr;
+		EeWonDirListed anEntity = { (uint8_t)(*i)->mType, aFields.Text((*i)->mPath), aFields.Text((*i)->mName) };
+		aList.push_back(anEntity);
 	}
-
+	std::vector<std::wstring> aKeys;
+	ee_won_dir_group_keys(aFields.Text(this->mPath), aList.empty() ? NULL : &aList[0], aList.size(), GroupKey, &aKeys);
+	this->mDirEntityMap.insert(DirEntityMap::value_type(this->mPath,DirEntityList()));
+	size_t k = 0;
+	for(DirEntityList::iterator i = this->mDirEntityList.begin(); i!=this->mDirEntityList.end(); ++i, ++k)
+		this->mDirEntityMap[aKeys[k]].push_back(*i);
 	return this->mDirEntityMap;
 }
 }

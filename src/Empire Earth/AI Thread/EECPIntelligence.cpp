@@ -58,6 +58,8 @@
 #include "ee/EEInfluenceTable.h"
 #include "ee/EECPIArmy.h"
 #include "ee/EECPILocation.h"
+#include "ee/EESaveGameFiles.h"
+#include <string.h>
 #include "ee/EEDeleteVectorContents.h"
 #include "ee/EECPIntelligence.h"
 
@@ -786,3 +788,252 @@ bool EECPITargetRegionLess::operator()(const std::pair<EEComplexUnit*, long>& in
 // TEMPLATE: EXE 0x484ba6
 // TEMPLATE: EXE 0x482d66
 // TEMPLATE: EXE 0x484b20
+
+// port (save 0.271, ee/EESaveGameFiles.h EESaveHasIntelligence): the files as they are. The original never saved them:
+// a loaded player made each file again from the world at its first use, where the running game's file held what it
+// had seen up to 30 s before (its armies, counts and strengths): the defence commander's threatened town differed
+// (seed 7's 2100 s save: another town to guard). The bytes: the file count, then per file the player id and every
+// field in member order, the armies with their area as the continent block writes one (EEWriteAreaBytes) and their
+// own fields.
+namespace {
+struct EECPIBytes {
+    std::vector<unsigned char> mBytes;
+    size_t mAt;
+    bool mOK;
+    EECPIBytes() : mAt(0), mOK(true) {}
+    template <class T> void Put(const T& inValue)
+    {
+        const unsigned char* theData = reinterpret_cast<const unsigned char*>(&inValue);
+        this->mBytes.insert(this->mBytes.end(), theData, theData + sizeof(T));
+    }
+    template <class T> void Get(T& outValue)
+    {
+        if (!this->mOK || this->mAt + sizeof(T) > this->mBytes.size()) {
+            this->mOK = false;
+            return;
+        }
+        memcpy(&outValue, &this->mBytes[this->mAt], sizeof(T));
+        this->mAt += sizeof(T);
+    }
+};
+
+void EECPIPutFile(EECPIBytes& ioOut, const EECPIntelligencePlayerFile& inFile)
+{
+    ioOut.Put((uint32_t)inFile.mUnitTypes.size());
+    for (size_t i = 0; i < inFile.mUnitTypes.size(); i++) {
+        ioOut.Put((int32_t)inFile.mUnitTypes[i].mCount);
+        ioOut.Put((uint32_t)inFile.mUnitTypes[i].mUnitType);
+        ioOut.Put((int32_t)inFile.mUnitTypes[i].mFamily);
+    }
+    ioOut.Put((uint32_t)inFile.mFamilies.size());
+    for (size_t i = 0; i < inFile.mFamilies.size(); i++) {
+        ioOut.Put((int32_t)inFile.mFamilies[i].mCount);
+        ioOut.Put((int32_t)inFile.mFamilies[i].mFamily);
+    }
+    ioOut.Put((int32_t)inFile.mBounds.mLeft);
+    ioOut.Put((int32_t)inFile.mBounds.mTop);
+    ioOut.Put((int32_t)inFile.mBounds.mRight);
+    ioOut.Put((int32_t)inFile.mBounds.mBottom);
+    ioOut.Put(inFile.mStrength);
+    const unsigned long theU[6] = {inFile.mSeaStrength, inFile.mLandStrength, inFile.mAirStrength, inFile.mSpaceStrength,
+                                   inFile.mNextUpdate, inFile.mNumGatherers};
+    for (int i = 0; i < 6; i++)
+        ioOut.Put((uint32_t)theU[i]);
+    const long theL[11] = {inFile.mL64, inFile.mL68, inFile.mL6C, inFile.mNumBuildings, inFile.mNumSeaUnits,
+                           inFile.mNumAirUnits, inFile.mNumLandUnits, inFile.mNumSpaceUnits, inFile.mVictoryPercent,
+                           inFile.mL8C, inFile.mTotalAttack};
+    for (int i = 0; i < 11; i++)
+        ioOut.Put((int32_t)theL[i]);
+    for (int r = 0; r < 7; r++)
+        ioOut.Put((int32_t)inFile.mResources[r]);
+    ioOut.Put((int32_t)inFile.mLB0);
+    ioOut.Put((uint32_t)inFile.mArmies.size());
+    for (size_t a = 0; a < inFile.mArmies.size(); a++) {
+        const EECPIArmy* theArmy = inFile.mArmies[a];
+        ioOut.Put((uint8_t)(theArmy != NULL ? 1 : 0));
+        if (theArmy == NULL)
+            continue;
+        std::vector<unsigned char> theArea;
+        EEWriteAreaBytes(*theArmy, theArea);
+        ioOut.Put((uint32_t)theArea.size());
+        ioOut.mBytes.insert(ioOut.mBytes.end(), theArea.begin(), theArea.end());
+        ioOut.Put((int32_t)theArmy->mL68);
+        ioOut.Put((int32_t)theArmy->mL6C);
+        ioOut.Put((uint16_t)theArmy->mContinentID);
+        ioOut.Put((int32_t)theArmy->mL74);
+        ioOut.Put((uint32_t)theArmy->mStrength);
+        ioOut.Put((int32_t)theArmy->mL7C);
+        ioOut.Put((int32_t)theArmy->mJoinDistanceSq);
+        ioOut.Put((uint8_t)(theArmy->mB84 ? 1 : 0));
+    }
+}
+
+bool EECPIGetFile(EECPIBytes& ioIn, EECPIntelligencePlayerFile& outFile)
+{
+    uint32_t theCount = 0;
+    ioIn.Get(theCount);
+    for (uint32_t i = 0; i < theCount && ioIn.mOK; i++) {
+        int32_t theNumber = 0, theFamily = 0;
+        uint32_t theType = 0;
+        ioIn.Get(theNumber);
+        ioIn.Get(theType);
+        ioIn.Get(theFamily);
+        EECPIUnitTypeCount theEntry;
+        theEntry.mCount = theNumber;
+        theEntry.mUnitType = theType;
+        theEntry.mFamily = theFamily;
+        outFile.mUnitTypes.push_back(theEntry);
+    }
+    theCount = 0;
+    ioIn.Get(theCount);
+    for (uint32_t i = 0; i < theCount && ioIn.mOK; i++) {
+        int32_t theNumber = 0, theFamily = 0;
+        ioIn.Get(theNumber);
+        ioIn.Get(theFamily);
+        EECPIFamilyCount theEntry;
+        theEntry.mCount = theNumber;
+        theEntry.mFamily = theFamily;
+        outFile.mFamilies.push_back(theEntry);
+    }
+    int32_t theRect[4] = {};
+    for (int i = 0; i < 4; i++)
+        ioIn.Get(theRect[i]);
+    outFile.mBounds.mLeft = theRect[0];
+    outFile.mBounds.mTop = theRect[1];
+    outFile.mBounds.mRight = theRect[2];
+    outFile.mBounds.mBottom = theRect[3];
+    ioIn.Get(outFile.mStrength);
+    unsigned long* theU[6] = {&outFile.mSeaStrength, &outFile.mLandStrength, &outFile.mAirStrength, &outFile.mSpaceStrength,
+                              &outFile.mNextUpdate, &outFile.mNumGatherers};
+    for (int i = 0; i < 6; i++) {
+        uint32_t theValue = 0;
+        ioIn.Get(theValue);
+        *theU[i] = theValue;
+    }
+    long* theL[11] = {&outFile.mL64, &outFile.mL68, &outFile.mL6C, &outFile.mNumBuildings, &outFile.mNumSeaUnits,
+                      &outFile.mNumAirUnits, &outFile.mNumLandUnits, &outFile.mNumSpaceUnits, &outFile.mVictoryPercent,
+                      &outFile.mL8C, &outFile.mTotalAttack};
+    for (int i = 0; i < 11; i++) {
+        int32_t theValue = 0;
+        ioIn.Get(theValue);
+        *theL[i] = theValue;
+    }
+    for (int r = 0; r < 7; r++) {
+        int32_t theValue = 0;
+        ioIn.Get(theValue);
+        outFile.mResources[r] = theValue;
+    }
+    int32_t theLB0 = 0;
+    ioIn.Get(theLB0);
+    outFile.mLB0 = theLB0;
+    theCount = 0;
+    ioIn.Get(theCount);
+    for (uint32_t a = 0; a < theCount && ioIn.mOK; a++) {
+        uint8_t theHas = 0;
+        ioIn.Get(theHas);
+        if (!theHas) {
+            outFile.mArmies.push_back(NULL);
+            continue;
+        }
+        uint32_t theSize = 0;
+        ioIn.Get(theSize);
+        if (!ioIn.mOK || ioIn.mAt + theSize > ioIn.mBytes.size())
+            return false;
+        std::vector<unsigned char> theArea(ioIn.mBytes.begin() + ioIn.mAt, ioIn.mBytes.begin() + ioIn.mAt + theSize);
+        ioIn.mAt += theSize;
+        EECPIArmy* theArmy = new EECPIArmy();
+        outFile.mArmies.push_back(theArmy);
+        if (!EEReadAreaBytes(theArea, *theArmy))
+            return false;
+        int32_t theValue = 0;
+        uint32_t theStrength = 0;
+        uint16_t theContinent = 0;
+        uint8_t theFlag = 0;
+        ioIn.Get(theValue);
+        theArmy->mL68 = theValue;
+        ioIn.Get(theValue);
+        theArmy->mL6C = theValue;
+        ioIn.Get(theContinent);
+        theArmy->mContinentID = theContinent;
+        ioIn.Get(theValue);
+        theArmy->mL74 = theValue;
+        ioIn.Get(theStrength);
+        theArmy->mStrength = theStrength;
+        ioIn.Get(theValue);
+        theArmy->mL7C = theValue;
+        ioIn.Get(theValue);
+        theArmy->mJoinDistanceSq = theValue;
+        ioIn.Get(theFlag);
+        theArmy->mB84 = theFlag != 0;
+    }
+    return ioIn.mOK;
+}
+}   // namespace
+
+long EECPIntelligence::SaveFiles(FSFile& outFile)
+{
+    EECPIBytes theOut;
+    theOut.Put((uint32_t)this->mFiles.size());
+    for (std::map<unsigned long, EECPIntelligencePlayerFile*>::const_iterator it = this->mFiles.begin(); it != this->mFiles.end(); ++it) {
+        theOut.Put((uint32_t)it->first);
+        theOut.Put((uint8_t)(it->second != NULL ? 1 : 0));
+        if (it->second != NULL)
+            EECPIPutFile(theOut, *it->second);
+    }
+    unsigned long theWritten = 0;
+    long theResult = outFile.Write((unsigned long)theOut.mBytes.size());
+    if (theResult == kErrorOK && !theOut.mBytes.empty())
+        theResult = outFile.Write(&theOut.mBytes[0], (unsigned long)theOut.mBytes.size(), theWritten);
+    return theResult;
+}
+
+long EECPIntelligence::ReadFiles(FSFile& inFile, std::vector<unsigned char>& outBytes)
+{
+    unsigned long theSize = 0;
+    unsigned long theRead = 0;
+    outBytes.clear();
+    long theResult = inFile.Read(theSize);
+    if (theResult == kErrorOK && theSize > 0) {
+        outBytes.resize(theSize);
+        theResult = inFile.Read(&outBytes[0], theSize, theRead);
+        if (theResult == kErrorOK && theRead != theSize)
+            theResult = kErrorBeyondEnd;
+    }
+    return theResult;
+}
+
+bool EECPIntelligence::RestoreFiles(const std::vector<unsigned char>& inBytes)
+{
+    EECPIBytes theIn;
+    theIn.mBytes = inBytes;
+    std::map<unsigned long, EECPIntelligencePlayerFile*> theFiles;
+    uint32_t theCount = 0;
+    theIn.Get(theCount);
+    bool theOK = theIn.mOK;
+    for (uint32_t f = 0; f < theCount && theOK; f++) {
+        uint32_t theID = 0;
+        uint8_t theHas = 0;
+        theIn.Get(theID);
+        theIn.Get(theHas);
+        EEPlayer* thePlayer = theID < gWorld.mNumPlayers ? gWorld.mPlayers[theID] : NULL;
+        if (!theIn.mOK || (theHas && thePlayer == NULL)) {
+            theOK = false;
+            break;
+        }
+        EECPIntelligencePlayerFile* theFile = NULL;
+        if (theHas) {
+            theFile = new EECPIntelligencePlayerFile(this->mPlayer, thePlayer);
+            theOK = EECPIGetFile(theIn, *theFile);
+        }
+        theFiles[theID] = theFile;
+    }
+    if (!theOK || theIn.mAt != theIn.mBytes.size()) {
+        for (std::map<unsigned long, EECPIntelligencePlayerFile*>::iterator it = theFiles.begin(); it != theFiles.end(); ++it)
+            delete it->second;
+        return false;
+    }
+    for (std::map<unsigned long, EECPIntelligencePlayerFile*>::iterator it = this->mFiles.begin(); it != this->mFiles.end(); ++it)
+        delete it->second;
+    this->mFiles.swap(theFiles);
+    return true;
+}

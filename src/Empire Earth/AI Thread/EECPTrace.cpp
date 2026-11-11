@@ -728,6 +728,10 @@ void EECPOutOfSynchDump(FILE* inFile)
                 if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
                     fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
                             theCiv->mResourceManager->mDangerZones.size());
+                if (theCiv->mUnitManager != NULL && theCiv->mResourceManager != NULL)   // the demand's first tier's inputs
+                    fprintf(inFile, " wantcit=%ld workers=%lu gathercap=%lu",
+                            (long)theCiv->mUnitManager->GetWantedCitizens(), (unsigned long)theCiv->mUnitManager->GetNumWorkers(),
+                            (unsigned long)theCiv->mResourceManager->GetGatherCapacity());
             }
             if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
                 fprintf(inFile, " attackgroups=%lu", (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size());
@@ -738,6 +742,13 @@ void EECPOutOfSynchDump(FILE* inFile)
             // EnableManagers' other inputs
             fprintf(inFile, " combat=%lu damaged=%d/%d attacks=%ld", (unsigned long)theCP->mCombatState,
                     theCP->mBuildingDamaged ? 1 : 0, theCP->mCitizenDamaged ? 1 : 0, (long)theCP->mNumAttacks);
+            {   // the managers' timers (save 0.269)
+                unsigned long theTimers[kEECPManagerTimers];
+                theCP->GetManagerTimers(theTimers);
+                fprintf(inFile, " timers=");
+                for (long t = 0; t < kEECPManagerTimers; t++)
+                    fprintf(inFile, "%s%lu", t ? "," : "", theTimers[t]);
+            }
         }
         fprintf(inFile, "\n");
         // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request

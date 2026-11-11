@@ -1,12 +1,10 @@
-//! The C ABI of the async-op machinery (`asyncop`) for the C++ `AsyncOp`, `TimerThread`, `AsyncOpContainer`,
-//! `SocketThreadSimple` and `QueueSocket`. Ops cross as opaque `void*` handles the C++ keeps alive (`AddRef`) while
+//! The C ABI of the async-op machinery (`asyncop`) for the C++ `AsyncOp`, `SocketThreadSimple` and `QueueSocket`
+//! (the timer thread and the op container are Rust objects: `thread`). Ops cross as opaque `void*` handles the C++ keeps alive (`AddRef`) while
 //! a queue holds them; a queue hands them back through a sink called after the queue's own borrow ended, so a
 //! sink may use the queue again. Statuses are `long` (the C++ `WONStatus`); the decisions are small integers
 //! (the enums' `code`).
 
-use crate::asyncop::{
-    self, OpHandle, OpQueue, OpSet, OpState, PumpPlan, QueueCompletion, QueueNext, QueueOpKind, TimerQueue,
-};
+use crate::asyncop::{self, OpHandle, OpSet, OpState, QueueCompletion, QueueNext, QueueOpKind};
 use crate::ops;
 use crate::status::Status;
 use std::ffi::{c_long, c_void};
@@ -107,153 +105,7 @@ pub unsafe extern "C" fn ee_won_op_set_mode(state: *mut OpState, mode: i32) {
     unsafe { (*state).set_mode(mode) }
 }
 
-// ---- TimerThread
-
-#[no_mangle]
-pub extern "C" fn ee_won_timers_new() -> *mut TimerQueue {
-    Box::into_raw(Box::new(TimerQueue::new()))
-}
-
-/// # Safety
-/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_destroy(timers: *mut TimerQueue) {
-    if !timers.is_null() {
-        drop(unsafe { Box::from_raw(timers) });
-    }
-}
-
-/// The tick the wait times count from (`ThreadFunc`'s start).
-///
-/// # Safety
-/// `timers` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_set_last_tick(timers: *mut TimerQueue) {
-    unsafe { (*timers).set_last_tick(ops::tick()) }
-}
-
-/// `TimerThread::AddTimerOp` now -> the entry's key.
-///
-/// # Safety
-/// `timers` is live; `op` stays alive while the entry exists.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_add(timers: *mut TimerQueue, timeout: u32, op: *mut c_void) -> u64 {
-    unsafe { (*timers).add(ops::tick(), timeout, op as OpHandle) }
-}
-
-/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
-///
-/// # Safety
-/// `timers` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_remove(timers: *mut TimerQueue, key: u64) -> *mut c_void {
-    unsafe { (*timers).remove(key) }.map_or(std::ptr::null_mut(), |op| op as *mut c_void)
-}
-
-/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
-///
-/// # Safety
-/// `timers` is live during the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_pump(timers: *mut TimerQueue, sink: EeWonOpSink, context: *mut c_void) {
-    let due = unsafe { (*timers).pump(ops::tick()) };
-    for op in due {
-        unsafe { sink(context, op as *mut c_void) };
-    }
-}
-
-/// `TimerThread::GetWaitTime`.
-///
-/// # Safety
-/// `timers` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_wait_time(timers: *const TimerQueue) -> u32 {
-    unsafe { (*timers).wait_time() }
-}
-
-/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
-///
-/// # Safety
-/// `timers` is live during the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_timers_purge(timers: *mut TimerQueue, sink: EeWonOpSink, context: *mut c_void) {
-    let ops = unsafe { (*timers).purge() };
-    for op in ops {
-        unsafe { sink(context, op as *mut c_void) };
-    }
-}
-
-// ---- AsyncOpContainer
-
-#[no_mangle]
-pub extern "C" fn ee_won_opqueue_new() -> *mut OpQueue {
-    Box::into_raw(Box::new(OpQueue::new()))
-}
-
-/// # Safety
-/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opqueue_destroy(queue: *mut OpQueue) {
-    if !queue.is_null() {
-        drop(unsafe { Box::from_raw(queue) });
-    }
-}
-
-/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
-/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
-///
-/// # Safety
-/// `queue` is live; a queued `op` stays alive until popped.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opqueue_queue(
-    queue: *mut OpQueue,
-    op: *mut c_void,
-    current: *mut c_void,
-    current_pending: bool,
-    purging: bool,
-) -> i32 {
-    unsafe { (*queue).queue(op as OpHandle, current as OpHandle, current_pending, purging).code() }
-}
-
-/// The front op, taken (null: none).
-///
-/// # Safety
-/// `queue` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opqueue_pop(queue: *mut OpQueue) -> *mut c_void {
-    unsafe { (*queue).pop() }.map_or(std::ptr::null_mut(), |op| op as *mut c_void)
-}
-
-/// # Safety
-/// `queue` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opqueue_len(queue: *const OpQueue) -> usize {
-    unsafe { (*queue).len() }
-}
-
-/// `AsyncOpContainer::Pump`'s accounting, started now.
-#[no_mangle]
-pub extern "C" fn ee_won_pump_plan_new(wait: u32, max_ops: i32, queued: usize) -> PumpPlan {
-    PumpPlan::new(ops::tick(), wait, max_ops, queued)
-}
-
-/// Whether to wait for the signal before pumping.
-///
-/// # Safety
-/// `plan` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_pump_plan_should_wait(plan: *const PumpPlan, queued: usize) -> bool {
-    unsafe { (*plan).should_wait(queued) }
-}
-
-/// After one op: whether to go on with the next.
-///
-/// # Safety
-/// `plan` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_pump_plan_go_on(plan: *mut PumpPlan) -> bool {
-    unsafe { (*plan).go_on(ops::tick()) }
-}
+// (TimerThread and AsyncOpContainer are Rust objects: `thread`)
 
 // ---- SocketThreadSimple
 
@@ -415,34 +267,7 @@ mod tests {
     #[test]
     fn queues_through_the_abi() {
         unsafe {
-            let t = ee_won_timers_new();
-            ee_won_timers_set_last_tick(t);
-            let k = ee_won_timers_add(t, 0, 7 as *mut c_void);
             let mut got = Vec::<usize>::new();
-            ee_won_timers_pump(t, collect, (&mut got as *mut Vec<usize>).cast());
-            assert_eq!(got, vec![7]);
-            assert!(ee_won_timers_remove(t, k).is_null());
-            let k2 = ee_won_timers_add(t, 100_000, 8 as *mut c_void);
-            assert!(ee_won_timers_wait_time(t) > 0);
-            assert_eq!(ee_won_timers_remove(t, k2), 8 as *mut c_void);
-            ee_won_timers_add(t, 100_000, 9 as *mut c_void);
-            got.clear();
-            ee_won_timers_purge(t, collect, (&mut got as *mut Vec<usize>).cast());
-            assert_eq!(got, vec![9]);
-            ee_won_timers_destroy(t);
-
-            let q = ee_won_opqueue_new();
-            assert_eq!(ee_won_opqueue_queue(q, 1 as *mut c_void, std::ptr::null_mut(), false, false), 2);
-            assert_eq!(ee_won_opqueue_queue(q, 2 as *mut c_void, std::ptr::null_mut(), false, false), 1);
-            assert_eq!(ee_won_opqueue_len(q), 2);
-            assert_eq!(ee_won_opqueue_pop(q), 1 as *mut c_void);
-            assert_eq!(ee_won_opqueue_pop(q), 2 as *mut c_void);
-            assert!(ee_won_opqueue_pop(q).is_null());
-            ee_won_opqueue_destroy(q);
-            let mut plan = ee_won_pump_plan_new(0, 1, 0);
-            assert!(!ee_won_pump_plan_should_wait(&plan, 0));
-            assert!(!ee_won_pump_plan_go_on(&mut plan));
-
             let s = ee_won_opset_new();
             assert!(ee_won_opset_insert(s, 5 as *mut c_void));
             assert!(ee_won_opset_insert(s, 3 as *mut c_void));

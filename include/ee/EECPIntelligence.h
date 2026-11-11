@@ -15,6 +15,7 @@ class EEUnit;
 class EEComplexUnit;
 class EECPIArmy;
 class EECPILocation;
+class FSFile;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 template <class T> class U2DPoint;
 
@@ -155,6 +156,11 @@ public:
     // 0x81da1 (ret 8): inPlayer's file, created on first use, then refreshed
     EECPIntelligencePlayerFile* UpdateFile(EEComputerPlayer* inOwner, EEPlayer* inPlayer);
     EEPlayer* GetRandomEnemy(EEPlayer* inPlayer);  // 0x81e30 (ret 4): a random enemy of inPlayer (player 0 if none)
+    // port (save 0.271, EESaveHasIntelligence): the files as they are, as one byte block (EEComputerPlayer's Save and
+    // Load); RestoreFiles puts them in place of the current ones, false (nothing changed) when the bytes do not read
+    long SaveFiles(FSFile& outFile);
+    static long ReadFiles(FSFile& inFile, std::vector<unsigned char>& outBytes);
+    bool RestoreFiles(const std::vector<unsigned char>& inBytes);
 
     EEComputerPlayer* mPlayer;              // +0x04
     std::map<unsigned long, EECPIntelligencePlayerFile*> mFiles;   // +0x08 by player id (insert 0x482007 setb, _Lbound 0xd9988 jae)
