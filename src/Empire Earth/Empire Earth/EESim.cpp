@@ -163,6 +163,20 @@
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEPathManager.h"
+#include "ee/EEMap.h"
+#include "ee/RTSRegionTable.h"
+#include "lle/U2DPoint.h"
+#include "ee/EEMapDimensions.h"
+#include "ee/EEAreaUtilities.h"
+#include "ee/AStarGraphableObjectBase.h"
+#include "ee/EEAIAStarStorage.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinent.h"
+#include "ee/EEAIPathSubSector.h"
+#include "ee/EEAIContinentManager.h"
+#include "lle/UReferenceCounter.h"
+#include "ee/EEPPatrolGroup.h"
+#include "ee/EETown.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EETechCapture.h"
@@ -569,6 +583,30 @@ void DumpState(const std::string& inPath)
         for (long r = 0; r < 5; r++)
             fprintf(f, "%s%a", r ? "," : "", (double)p->mResourceCaps[kResourceFood + r]);
         fprintf(f, "\n");
+        // the towns (hull, patrol group) and the patrol groups (their points as unit@tile)
+        for (size_t t = 0; t < p->mTowns.size(); t++) {
+            EETown* theTown = p->mTowns[t];
+            if (theTown == NULL)
+                continue;
+            fprintf(f, "TOWN %lu %ld units=%ld patrol=%ld hull=", i, (long)theTown->mTownID, (long)theTown->mNumUnits,
+                    theTown->mPatrolGroup != NULL ? (long)theTown->mPatrolGroup->mID : -1L);
+            for (unsigned long v = 0; v < theTown->mHull.GetPointCount(); v++)
+                fprintf(f, "%ld,%ld ", (long)theTown->mHull.GetPoint(v)->GetX(), (long)theTown->mHull.GetPoint(v)->GetY());
+            fprintf(f, "\n");
+        }
+        for (size_t g = 0; g < p->mPatrolGroups.size(); g++) {
+            EEPPatrolGroup* theGroup = p->mPatrolGroups[g];
+            if (theGroup == NULL)
+                continue;
+            fprintf(f, "PATROL %lu %lu town=%d loop=%d points=", i, (unsigned long)theGroup->mID, theGroup->mIsTownPatrol ? 1 : 0,
+                    theGroup->mIsLoop ? 1 : 0);
+            for (size_t k = 0; k < theGroup->mPatrolPoints.size(); k++) {
+                EEComplexUnit* thePoint = theGroup->mPatrolPoints[k];
+                if (thePoint != NULL)
+                    fprintf(f, "%lu@%ld,%ld ", (unsigned long)thePoint->mUnitID, (long)thePoint->mTileX, (long)thePoint->mTileY);
+            }
+            fprintf(f, "\n");
+        }
     }
     EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
     gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
@@ -625,6 +663,18 @@ void DumpState(const std::string& inPath)
         for (size_t b = 0; b < sizeof(EEUnit); b++)
             fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(u)[b]);
         fprintf(f, "\n");
+    }
+    // the units of each map region in order (RTSRegionTable: FindImpactUnit and the target searches walk them)
+    if (gWorld.mMap != NULL && gWorld.mMap->mUnitRegions != NULL) {
+        RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
+        for (unsigned long r = 0; r < theTable->mRegionsX * theTable->mRegionsY; r++) {
+            if (theTable->mRegions[r].size() < 2)
+                continue;
+            fprintf(f, "REGION %lu:", r);
+            for (size_t k = 0; k < theTable->mRegions[r].size(); k++)
+                fprintf(f, " %lu", theTable->mRegions[r][k] != NULL ? (unsigned long)theTable->mRegions[r][k]->mUnitID : 0UL);
+            fprintf(f, "\n");
+        }
     }
     fclose(f);
 }

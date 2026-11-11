@@ -73,6 +73,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPExperimentTimers.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -1089,12 +1090,72 @@ float EECPScheduleSpan(EEComputerPlayer* inPlayer)
     return 0.0f;
 }
 
+EECPExperimentTimers gCPExperimentTimers;
+
+template <class T>
+static long EECPSaveTimerArray(FSFile& outFile, const T (&inValues)[EECPExperimentTimers::kPlayers])
+{
+    long theResult = outFile.Write((unsigned long)EECPExperimentTimers::kPlayers);
+    for (long i = 0; i < EECPExperimentTimers::kPlayers && theResult == kErrorOK; i++)
+        theResult = outFile.Write(inValues[i]);
+    return theResult;
+}
+
+template <class T>
+static long EECPLoadTimerArray(FSFile& inFile, T (&outValues)[EECPExperimentTimers::kPlayers])
+{
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+        T theValue = 0;
+        theResult = inFile.Read(theValue);
+        if (i < (unsigned long)EECPExperimentTimers::kPlayers)
+            outValues[i] = theValue;
+    }
+    return theResult;
+}
+
+long EECPSaveExperimentTimers(FSFile& outFile)
+{
+    const EECPExperimentTimers& t = gCPExperimentTimers;
+    long theResult = EECPSaveTimerArray(outFile, t.mBoats);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mBoatHold);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mSettleLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mGuardLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mMilitiaLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mNavalFleeLast);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleEpoch);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleStart);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatChecked);
+    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatUntil);
+    return theResult;
+}
+
+// read into a copy (zero where the file has fewer players), put in place at the loaded game's first tick
+long EECPLoadExperimentTimers(FSFile& inFile)
+{
+    EECPExperimentTimers t = {};
+    long theResult = EECPLoadTimerArray(inFile, t.mBoats);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mBoatHold);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mSettleLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mGuardLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mMilitiaLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mNavalFleeLast);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleEpoch);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleStart);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatChecked);
+    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatUntil);
+    if (theResult == kErrorOK)
+        EEAfterLoad([t]() { gCPExperimentTimers = t; });
+    return theResult;
+}
+
 // the Prehistoric counts from the game's start; a later epoch from when the player was first seen in it (TEST ONLY
-// bookkeeping: not saved; the AI asks often enough that the lag is a few seconds)
+// bookkeeping; saved from 0.258, ee/EECPExperimentTimers.h; the AI asks often enough that the lag is a few seconds)
 unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
-    static long sEpoch[64];
-    static unsigned long sStart[64];
+    long (&sEpoch)[64] = gCPExperimentTimers.mScheduleEpoch;   // port: saved (ee/EECPExperimentTimers.h)
+    unsigned long (&sStart)[64] = gCPExperimentTimers.mScheduleStart;
     if (inPlayer->mTechnologies == NULL || inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
         return 0;
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
@@ -1185,8 +1246,8 @@ static long EECPCountSoldiers(EEComputerPlayer* inPlayer)
 
 static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
 {
-    static unsigned long sChecked[64];
-    static unsigned long sUntil[64];
+    unsigned long (&sChecked)[64] = gCPExperimentTimers.mThreatChecked;   // port: saved (ee/EECPExperimentTimers.h)
+    unsigned long (&sUntil)[64] = gCPExperimentTimers.mThreatUntil;
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
     unsigned long theNow = gPhysics->mGameTime;
     if (sChecked[theID] != 0 && theNow >= sChecked[theID] && theNow - sChecked[theID] < kCPThreatCheckMs)
@@ -4883,6 +4944,27 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mFavoriteSpaceType);
     }
+    // port (0.254 on, no format change): the favourite land, sea, air and space types and their history as saved. The
+    // load enters the player's epochs again (EnterEpoch), which picks new favourites at random after this Load, so the
+    // loaded game trained and costed another army (seed 2's 2100 s save: class 207 for the saved 24 at the first
+    // update); put back at the first tick (EEAfterLoad)
+    if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        EEComputerPlayer* theSelf = this;
+        unsigned long thePlayerID = this->mPlayerID;
+        unsigned long theLand = this->mFavoriteLandType, theSea = this->mFavoriteSeaType;
+        unsigned long theAir = this->mFavoriteAirType, theSpace = this->mFavoriteSpaceType;
+        std::vector<std::pair<unsigned long, long> > theHistory(this->mFavoriteTypeHistory.begin(), this->mFavoriteTypeHistory.end());
+        EEAfterLoad([theSelf, thePlayerID, theLand, theSea, theAir, theSpace, theHistory]() {
+            if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
+                return;   // not the world's computer player of that id any more
+            theSelf->mFavoriteLandType = theLand;
+            theSelf->mFavoriteSeaType = theSea;
+            theSelf->mFavoriteAirType = theAir;
+            theSelf->mFavoriteSpaceType = theSpace;
+            theSelf->mFavoriteTypeHistory.assign(theHistory.begin(), theHistory.end());
+        });
+    }
     // port (0.256): the running values the original saved otherwise or not at all (Save), put back at the first tick
     // after RepairPointers (which asks for a regroup) and before the first Update (EEAfterLoad): the pop cap
     // (WorkOutPopulation's), the enable-time flag (saved as false until now: Update set the time again), the regroup
@@ -5076,9 +5158,38 @@ void EEComputerPlayer::Clear()
 // FUNCTION: EXE 0x43cff8
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the
 // attack bounds and missing favourite types, and flags stranded units; returns the first error
+// port: the computer players repaired while gDeferComputerPlayerRestore was set, with EEPlayer::RepairPointers' result
+static std::vector<std::pair<EEComputerPlayer*, long> > sDeferredRestores;
+
 long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = EEPlayer::RepairPointers(inMajorVersion, inMinorVersion);
+    if (gDeferComputerPlayerRestore) {   // port: EEWorld::CreatePlayers restores the managers once every player is repaired
+        sDeferredRestores.push_back(std::make_pair(this, theResult));
+        return theResult;
+    }
+    return this->RestoreManagers(inMajorVersion, inMinorVersion, theResult);
+}
+
+// port: set by EEWorld::CreatePlayers while it repairs the players of a loaded game from save version 0.260 on; the
+// computer players' managers are then restored after every player's RepairPointers, not after their own. A manager's
+// restore re-finds its tasks' areas (EECPILocation::Update), and a task in another player's town found none when
+// that player's towns were not rebuilt yet (seed 3's 1350 s save: player 3's attack sub group lost its task's town,
+// player 2 having been repaired first, and drew a random number the saved game did not)
+bool gDeferComputerPlayerRestore = false;
+
+void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    std::vector<std::pair<EEComputerPlayer*, long> > theRestores;
+    theRestores.swap(sDeferredRestores);
+    for (size_t i = 0; i < theRestores.size(); i++)
+        theRestores[i].first->RestoreManagers(inMajorVersion, inMinorVersion, theRestores[i].second);
+}
+
+// the rest of RepairPointers (EXE 0x43cff8 after the EEPlayer call): the managers, the resource centres, the timers
+long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult)
+{
+    long theResult = inResult;
     if (theResult == kErrorOK)
         theResult = this->mCombatManager->Restore(inMajorVersion, inMinorVersion);
     if (theResult == kErrorOK)

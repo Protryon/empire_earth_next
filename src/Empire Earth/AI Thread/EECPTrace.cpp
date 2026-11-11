@@ -53,6 +53,15 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
 #include "ee/EEGameLog.h"
+#include "lle/U2DPoint.h"
+#include "ee/EEMapDimensions.h"
+#include "ee/EEAreaUtilities.h"
+#include "ee/AStarGraphableObjectBase.h"
+#include "ee/EEAIAStarStorage.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinent.h"
+#include "ee/EEAIPathSubSector.h"
+#include "ee/EEAIContinentManager.h"
 #include <math.h>
 
 bool gCPTraceOn = false;
@@ -735,6 +744,15 @@ void EECPOutOfSynchDump(FILE* inFile)
                     fprintf(inFile, " siege=");
                     for (size_t t = 0; t < theSub->mSiegeTargets.size(); t++)
                         fprintf(inFile, "%ld,", (long)theSub->mSiegeTargets[t]->mUnitID);
+                    fprintf(inFile, " task=%ld/%d/%ld,%ld/%lu/%ld nwp=%ld,%ld",
+                            (long)theSub->mTask.mType, theSub->mTask.mIsActive ? 1 : 0,
+                            (long)theSub->mTask.mLocation.mTile.mX, (long)theSub->mTask.mLocation.mTile.mY,
+                            theSub->mTask.mUnit != NULL ? (unsigned long)theSub->mTask.mUnit->mUnitID : 0UL,
+                            theSub->mTask.mPlayer != NULL ? (long)theSub->mTask.mPlayer->mPlayerID : -1L,
+                            (long)theSub->mNextWaypoint.mTile.mX, (long)theSub->mNextWaypoint.mTile.mY);
+                    fprintf(inFile, " area=%ld/%lu/%d", (long)theSub->mTask.mLocation.mType,
+                            (unsigned long)theSub->mTask.mLocation.mSerial,
+                            theSub->mTask.mLocation.mSerial != 0 && gContinentManager.GetArea(theSub->mTask.mLocation.mSerial) != NULL ? 1 : 0);
                     fprintf(inFile, "\n");
                 }
             }
