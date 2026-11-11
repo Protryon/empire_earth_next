@@ -5083,6 +5083,23 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             });
         }
     }
+    // port (0.271): the intelligence files as they are (EECPIntelligence::SaveFiles), put in place at the first tick
+    if (theResult == kErrorOK && EESaveHasIntelligence(inMajorVersion, inMinorVersion)) {
+        std::vector<unsigned char> theBytes;
+        theResult = EECPIntelligence::ReadFiles(inFile, theBytes);
+        if (theResult == kErrorOK) {
+            EEComputerPlayer* theSelf = this;
+            unsigned long thePlayerID = this->mPlayerID;
+            EEAfterLoad([theSelf, thePlayerID, theBytes]() {
+                if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                    || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf || theSelf->mCombatManager == NULL
+                    || theSelf->mCombatManager->mIntelligence == NULL)
+                    return;
+                if (!theSelf->mCombatManager->mIntelligence->RestoreFiles(theBytes))
+                    ESDebugOut("EEComputerPlayer: player %lu's saved intelligence could not be read\n", thePlayerID);
+            });
+        }
+    }
     return theResult;
 }
 
@@ -5944,6 +5961,12 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         this->GetManagerTimers(theTimers);
         for (long i = 0; i < kEECPManagerTimers && theResult == kErrorOK; i++)
             theResult = outFile.Write(theTimers[i]);
+    }
+    if (theResult == kErrorOK && EESaveHasIntelligence(inMajorVersion, inMinorVersion)) {   // port (0.271, Load)
+        if (this->mCombatManager != NULL && this->mCombatManager->mIntelligence != NULL)
+            theResult = this->mCombatManager->mIntelligence->SaveFiles(outFile);
+        else
+            theResult = outFile.Write((unsigned long)0);   // an empty block
     }
     return theResult;
 }
