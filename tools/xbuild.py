@@ -391,6 +391,12 @@ WON_TESTS = {
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
     # staging module
     "won_staging_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
+    # persist module
+    "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
+                                                            "FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                            "FileWriter.cpp", "WONFile.cpp", "CRC16.cpp",
+                                                            "StringUtil.cpp")],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],

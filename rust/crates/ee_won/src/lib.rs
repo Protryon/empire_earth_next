@@ -34,6 +34,7 @@ pub mod netstats;
 pub mod ops;
 pub mod parser;
 pub mod path;
+pub mod persist;
 pub mod plaintext;
 pub mod random;
 pub mod regkey;

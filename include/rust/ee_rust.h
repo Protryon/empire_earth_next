@@ -1178,6 +1178,44 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
+/// cut given).
+enum class EeWonPrefsRead {
+  Whole = 0,
+  OtherVersion = 1,
+  Cut = 2,
+};
+
+/// A read's event for the C++: `kind`, a number (a time, an id, a flag, a port, a setting's index for a text or
+/// flag in `index`), the text (UTF-16 units, `units`/`count`) or bytes (`bytes`/`length`), an address (six bytes).
+enum class EeWonPrefsEventKind {
+  User,
+  UserTime,
+  UserId,
+  UserValue04,
+  UserValue08,
+  UserPassword,
+  SoundEffects,
+  Music,
+  NetworkAdapter,
+  LanName,
+  LanNamesDone,
+  DirectConnect,
+  BroadcastPort,
+  Reconnect,
+  ReconnectTime,
+  ReconnectId,
+  Ignored,
+  Friend,
+  Blocked,
+  Flag,
+  SettingText,
+  ConnectionSpeed,
+  OptionsBegin,
+  OptionName,
+  OptionValue,
+};
+
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -3966,6 +4004,68 @@ struct EeWonQueueDecision {
 struct EeWonFileWriter {
   void *file;
 };
+
+/// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
+struct EeWonTextList {
+  const void *data;
+  const size_t *offsets;
+  size_t count;
+};
+
+/// The global file's lists: `names.count` users with their fields at the same index; the passwords' bytes.
+struct EeWonGlobalPrefsOut {
+  EeWonTextList names;
+  const int32_t *last_use;
+  const uint16_t *ids;
+  const int32_t *value04;
+  const int32_t *value08;
+  EeWonTextList passwords;
+  bool sound_effects;
+  bool music;
+  int32_t network_adapter;
+};
+
+/// The user file's lists (`lan_user` false: the LAN part is not written). Addresses are six bytes each; a game
+/// filter `i` has the values from `option_first[i]` to `option_first[i + 1]` of `option_values`.
+struct EeWonUserPrefsOut {
+  bool lan_user;
+  EeWonTextList lan_names;
+  const int32_t *lan_times;
+  const uint8_t *direct_addresses;
+  EeWonTextList direct_names;
+  uint16_t broadcast_port;
+  size_t reconnect_count;
+  const uint8_t *reconnect_addresses;
+  const int32_t *reconnect_times;
+  const int32_t *reconnect_ids;
+  EeWonTextList ignored;
+  EeWonTextList friend_names;
+  const uint32_t *friend_ids;
+  size_t blocked_count;
+  const uint32_t *blocked;
+  bool first[6];
+  /// The tab, the last server, the last room (three texts).
+  EeWonTextList texts;
+  bool second[5];
+  uint16_t connection_speed;
+  EeWonTextList option_names;
+  const size_t *option_first;
+  EeWonTextList option_values;
+};
+
+struct EeWonPrefsEvent {
+  EeWonPrefsEventKind kind;
+  int64_t value;
+  uint8_t index;
+  const uint16_t *units;
+  size_t count;
+  const uint8_t *bytes;
+  size_t length;
+  uint8_t address[6];
+};
+
+/// Receives each event of a read in order.
+using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -10349,6 +10449,72 @@ void ee_won_path_relative(const uint8_t *directory,
                           size_t sub_length,
                           EeWonByteSink sink,
                           void *context);
+
+/// `write_global` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold `names.count` entries; the sink's contract.
+void ee_won_prefs_write_global(const EeWonGlobalPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `write_user` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold their counts; the sink's contract.
+void ee_won_prefs_write_user(const EeWonUserPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `read_global` (the file's bytes) to the sink.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the sink's contract. No reference into Rust is kept past each call.
+EeWonPrefsRead ee_won_prefs_read_global(const uint8_t *bytes,
+                                        size_t length,
+                                        EeWonPrefsSink sink,
+                                        void *context);
+
+/// `read_user` to the sink.
+///
+/// # Safety
+/// As `ee_won_prefs_read_global`.
+EeWonPrefsRead ee_won_prefs_read_user(const uint8_t *bytes,
+                                      size_t length,
+                                      bool lan_user,
+                                      EeWonPrefsSink sink,
+                                      void *context);
+
+/// `user_file_name` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_prefs_user_file_name(int32_t id, EeWonByteSink sink, void *context);
+
+/// `find_unused_user_id`.
+///
+/// # Safety
+/// `ids` holds `count` ids in ascending order.
+int32_t ee_won_prefs_unused_user_id(const int32_t *ids, size_t count);
+
+/// `prune_users`: `drop[i]` set to 1 for a user dropped without its file, 2 with it, else 0.
+///
+/// # Safety
+/// `ids`, `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_users(const int32_t *ids,
+                              const int64_t *times,
+                              size_t count,
+                              uint8_t *drop);
+
+/// `prune_lan_names`: `drop[i]` set for each name dropped.
+///
+/// # Safety
+/// `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop);
+
+/// `recent_lan_name`, -1 for none.
+///
+/// # Safety
+/// `times` holds `count` entries.
+int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
+
+uint16_t ee_won_prefs_default_lan_number(uint32_t host);
 
 /// `config_name`.
 ///
