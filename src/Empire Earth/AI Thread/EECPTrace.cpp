@@ -37,6 +37,7 @@
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
+#include "ee/EECPResearchManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
@@ -718,6 +719,22 @@ void EECPOutOfSynchDump(FILE* inFile)
             fprintf(inFile, " popcap=%ld", (long)theCP->mPopulationCap);
             if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
                 fprintf(inFile, " epochadv=%lu", (unsigned long)theCiv->mNextEpochAdvanceTime);
+                // the epoch advance's guards (AttemptEpochAdvance's caller): advancing, scheduled, requested, the
+                // later-epoch requests of the build, research and unit managers, behind a human
+                fprintf(inFile, " advflags=%d%d%d", theCiv->mAdvancingEpoch ? 1 : 0, theCiv->mScheduleEpochAdvance ? 1 : 0,
+                        theCiv->mEpochResearchRequested ? 1 : 0);
+                if (theCiv->mBuildManager != NULL && theCiv->mResearchManager != NULL && theCiv->mUnitManager != NULL)
+                    fprintf(inFile, " later=%d%d%d%d", theCiv->mBuildManager->HasLaterEpochRequests() ? 1 : 0,
+                            theCiv->mResearchManager->HasLaterEpochIDs() ? 1 : 0,
+                            theCiv->mUnitManager->HasLaterEpochRequests() ? 1 : 0, theCiv->IsBehindInEpoch() ? 1 : 0);
+                if (theCiv->mResearchManager != NULL) {   // the research queues up to the manager's epoch
+                    fprintf(inFile, " rq=");
+                    for (long e = 0; e <= theCiv->mResearchManager->mEpoch && e < EEEpochCount(); e++) {
+                        fprintf(inFile, "%s", e ? "|" : "");
+                        for (size_t k = 0; k < theCiv->mResearchManager->mEpochIDs[e].size(); k++)
+                            fprintf(inFile, "%s%ld", k ? "," : "", theCiv->mResearchManager->mEpochIDs[e][k]);
+                    }
+                }
                 if (theCiv->mBuildManager != NULL) {
                     fprintf(inFile, " queues=");
                     for (long e = 0; e < EEEpochCount(); e++)
