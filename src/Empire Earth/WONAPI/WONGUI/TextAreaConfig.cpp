@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x0078f860
 // Binds the config to its scroll area and keeps the component as the text area to configure
@@ -23,40 +26,42 @@ void TextAreaConfig::SetComponent(Component* theComponent)
 // unknown keys to the scroll area config and throws on an unknown text flag
 bool TextAreaConfig::Virtual24(const std::string& key)
 {
-    if(key=="TEXTFLAGS") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_TEXTAREACONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) {
         while(true) {
             bool add=true;
             GUIString flag=this->ReadFlag(&add);
             if(flag.length()==0) break;
             int mask;
-            if(flag.CompareNoCase("WordWrap")==0) mask=1;
-            else if(flag.CompareNoCase("AllowSelection")==0) mask=2;
-            else if(flag.CompareNoCase("ScrollOnBottom")==0) mask=4;
-            else if(flag.CompareNoCase("ShowPartialLines")==0) mask=8;
-            else if(flag.CompareNoCase("ScrollFullLine")==0) mask=0x10;
-            else if(flag.CompareNoCase("DelayWordWrap")==0) mask=0x20;
+            const int aNameIdx_flag=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_TEXTAREACONFIG_VIRTUAL24_FLAG,flag.mData->mText,flag.mData->mLength,sizeof(wchar_t));
+            if(aNameIdx_flag==0) mask=1;
+            else if(aNameIdx_flag==1) mask=2;
+            else if(aNameIdx_flag==2) mask=4;
+            else if(aNameIdx_flag==3) mask=8;
+            else if(aNameIdx_flag==4) mask=0x10;
+            else if(aNameIdx_flag==5) mask=0x20;
             else throw ConfigObjectException("Unknown text flag: "+(std::string)flag);
             this->mTextArea->SetTextFlags(mask,add);
         }
-    } else if(key=="TEXT") {
+    } else if(aKeyIdx==1) {
         this->mTextArea->AddSegment(this->ReadString(false),false);
-    } else if(key=="FORMATTEDTEXT") {
+    } else if(aKeyIdx==2) {
         this->mTextArea->AddFormatedText(this->ReadString(false),false);
-    } else if(key=="FONT") {
+    } else if(aKeyIdx==3) {
         this->mTextArea->SetFont(this->ReadFont());
-    } else if(key=="TEXTCOLOR") {
+    } else if(aKeyIdx==4) {
         this->mTextArea->mTextColor=this->ReadColor();
-    } else if(key=="SELCOLOR") {
+    } else if(aKeyIdx==5) {
         this->mTextArea->mSelColor=this->ReadSelectionColor();
-    } else if(key=="LINKFONT") {
+    } else if(aKeyIdx==6) {
         this->mTextArea->SetLinkFont(this->ReadFont());
-    } else if(key=="MAXCHARS") {
+    } else if(aKeyIdx==7) {
         this->mTextArea->SetMaxChars(this->ReadInt());
-    } else if(key=="MAXLINES") {
+    } else if(aKeyIdx==8) {
         this->mTextArea->SetMaxLines(this->ReadInt());
-    } else if(key=="WRAPINDENTSIZE") {
+    } else if(aKeyIdx==9) {
         this->mTextArea->SetWrapIndentSize(this->ReadInt());
-    } else if(key=="HORZALIGN") {
+    } else if(aKeyIdx==10) {
         this->mTextArea->SetLineAlignment(this->ReadHorzAlign());
     } else return ScrollAreaConfig::Virtual24(key);
     return true;

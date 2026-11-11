@@ -11,6 +11,10 @@
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/ESChecksum.h"
+#include "lle/GEColor.h"
+#include "lle/GETextureCoordinate.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -20,6 +24,8 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamity.h"
+#include "ee/EEMap.h"
 
 void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
 {
@@ -285,4 +291,262 @@ void EETechCaptureSweep()
             theRecord.Commit();
         }
     }
+}
+
+// ---- CALW: a calamity's update with its world calls --------------------------------------------------------------
+
+namespace {
+
+std::vector<unsigned char> sCalamityEvents;
+unsigned int sCalamityEventCount = 0;
+long sCalamityCollecting = 0;
+long sCanCastDepth = 0;
+std::vector<long> sEpochSteps;
+std::vector<unsigned char> sUnitSteps;
+unsigned int sUnitStepCount = 0;
+
+void Append(std::vector<unsigned char>& ioBytes, const void* inData, unsigned int inSize)
+{
+    const unsigned char* theBytes = (const unsigned char*)inData;
+    ioBytes.insert(ioBytes.end(), theBytes, theBytes + inSize);
+}
+
+unsigned int UnitID(EEUnit* inUnit)
+{
+    return inUnit != NULL ? inUnit->mUnitID : 0xffffffffu;
+}
+
+// the calamity's numeric state (no pointers: whether the units are set, and their ids)
+void CalamityState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
+{
+    ioRecord.F32(inCalamity->mTimeAlive);
+    ioRecord.F32(inCalamity->mFloatPlaceHolder1);
+    ioRecord.F32(inCalamity->mFloatPlaceHolder2);
+    ioRecord.I32(inCalamity->mIntPlaceHolder1);
+    ioRecord.I32(inCalamity->mIntPlaceHolder2);
+    ioRecord.U32((inCalamity->mBoolPlaceHolder1 ? 1u : 0u) | (inCalamity->mBoolPlaceHolder2 ? 2u : 0u) |
+                 (inCalamity->mInitialized ? 4u : 0u) | (inCalamity->mHasTargetLocation ? 8u : 0u) |
+                 (inCalamity->mHasTargetUnit ? 16u : 0u) | (inCalamity->mTargetUnit != NULL ? 32u : 0u) |
+                 (inCalamity->mCasterUnit != NULL ? 64u : 0u));
+    ioRecord.F32(inCalamity->mTargetLocation.mX);
+    ioRecord.F32(inCalamity->mTargetLocation.mY);
+    ioRecord.F32(inCalamity->mTargetLocation.mZ);
+    ioRecord.F32(inCalamity->mShakeLocation.mX);
+    ioRecord.F32(inCalamity->mShakeLocation.mY);
+    ioRecord.F32(inCalamity->mShakeLocation.mZ);
+    ioRecord.U32(inCalamity->mEffectHandle.mValue);
+    ioRecord.F32(inCalamity->mEpicenterFactor);
+    ioRecord.F32(inCalamity->mHeight);
+    ioRecord.F32(inCalamity->mDiscreteUpdateTime);
+    ioRecord.F32(inCalamity->mTimeElapsedSinceLastUpdate);
+    ioRecord.I32((long)inCalamity->mTilePlaceHolder1.mX);
+    ioRecord.I32((long)inCalamity->mTilePlaceHolder1.mY);
+    ioRecord.U32(UnitID(inCalamity->mTargetUnit));
+    ioRecord.U32(UnitID(inCalamity->mCasterUnit));
+    ioRecord.U32(inCalamity->mPlayerNumber);
+}
+
+}   // namespace
+
+void EECalamityCaptureEvent(long inOp, long inA, long inB, float inC, float inD)
+{
+    if (sCalamityCollecting == 0)
+        return;
+    int theInts[3] = {(int)inOp, (int)inA, (int)inB};
+    float theFloats[2] = {inC, inD};
+    Append(sCalamityEvents, theInts, sizeof(theInts));
+    Append(sCalamityEvents, theFloats, sizeof(theFloats));
+    sCalamityEventCount++;
+}
+
+long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime)
+{
+    if (!EESimCaptureRecord::Active())
+        return inClass->Update(inCalamity, inElapsedTime);
+    EESimCaptureRecord theRecord(EECaptureTag("CALW"));
+    theRecord.I32(inClass->mClassEnum);
+    CalamityState(theRecord, inCalamity);
+    theRecord.F32(inElapsedTime);
+    sCalamityEvents.clear();
+    sCalamityEventCount = 0;
+    sCalamityCollecting++;
+    long theResult = inClass->Update(inCalamity, inElapsedTime);
+    sCalamityCollecting--;
+    CalamityState(theRecord, inCalamity);
+    theRecord.I32(theResult);
+    theRecord.U32(sCalamityEventCount);
+    if (!sCalamityEvents.empty())
+        theRecord.Bytes(sCalamityEvents.data(), (unsigned int)sCalamityEvents.size());
+    theRecord.Commit();
+    sCalamityEvents.clear();
+    sCalamityEventCount = 0;
+    return theResult;
+}
+
+// ---- CCAS: CanCastAt ----------------------------------------------------------------------------------------------
+
+EECalamityCanCastScope::EECalamityCanCastScope() : mOutermost(sCanCastDepth == 0)
+{
+    sCanCastDepth++;
+}
+
+EECalamityCanCastScope::~EECalamityCanCastScope()
+{
+    sCanCastDepth--;
+}
+
+namespace {
+
+void CanCastRecord(long inKind, EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation,
+                   unsigned long inX, unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult)
+{
+    EESimCaptureRecord theRecord(EECaptureTag("CCAS"));
+    theRecord.I32(inKind);
+    theRecord.I32(inClass->mClassEnum);
+    theRecord.U32(UnitID(inUnit));
+    theRecord.F32(inLocation.mX);
+    theRecord.F32(inLocation.mY);
+    theRecord.F32(inLocation.mZ);
+    theRecord.U32((unsigned int)inX);
+    theRecord.U32((unsigned int)inY);
+    theRecord.U32(inCheck ? 1 : 0);
+    theRecord.U32(UnitID(inTargetUnit));
+    theRecord.I32(inResult);
+    theRecord.Commit();
+}
+
+EEUnit* LivingUnit(EEPlayer* inPlayer, long inSkip)
+{
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && inSkip-- == 0)
+            return theUnit;
+    return NULL;
+}
+
+}   // namespace
+
+long EECalamityCanCastScope::Record(EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation,
+                                    unsigned long inX, unsigned long inY, bool inCheck, EEUnit* inTargetUnit,
+                                    long inResult)
+{
+    if (this->mOutermost && EESimCaptureRecord::Active())
+        CanCastRecord(0, inClass, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, inResult);
+    return inResult;
+}
+
+void EECalamityCaptureSweep()
+{
+    EECalamityManager* theManager = EECalamityManager::GetInstance();
+    unsigned long n = gWorld.GetNumPlayers();
+    long theSize = gWorld.mMap->GetSize();
+    for (unsigned long theRow = 0; theRow < theManager->GetCalamityClassCount(); theRow++) {
+        EECalamityClass* theClass = theManager->GetCalamityClass(theRow);
+        if (theClass == NULL)
+            continue;
+        for (unsigned long p = 1; p < n; p++) {
+            EEPlayer* thePlayer = gWorld.GetPlayer(p);
+            EEPlayer* theOther = gWorld.GetPlayer(p + 1 < n ? p + 1 : 1);
+            if (thePlayer == NULL || theOther == NULL)
+                continue;
+            EEUnit* theCaster = LivingUnit(thePlayer, 0);
+            if (theCaster == NULL)
+                continue;
+            EEUnit* theTargets[4] = {NULL, LivingUnit(theOther, 0), theCaster, LivingUnit(thePlayer, 1)};
+            EEUnit* theFar = LivingUnit(theOther, 3);
+            long thePoints[6][2] = {
+                {theCaster->GetTileX(), theCaster->GetTileY()},
+                {theTargets[1] != NULL ? theTargets[1]->GetTileX() : theSize / 2,
+                 theTargets[1] != NULL ? theTargets[1]->GetTileY() : theSize / 2},
+                {theSize / 2, theSize / 2},
+                {theCaster->GetTileX() + 3, theCaster->GetTileY() - 2},
+                {theFar != NULL ? theFar->GetTileX() : 1, theFar != NULL ? theFar->GetTileY() : theSize / 2},
+                {theSize + 5, theSize + 5},
+            };
+            for (long i = 0; i < 6; i++) {
+                for (long t = 0; t < 4; t++) {
+                    unsigned long theX = (unsigned long)thePoints[i][0];
+                    unsigned long theY = (unsigned long)thePoints[i][1];
+                    GE3DPoint theLocation((long)theX + 0.5f, (long)theY + 0.5f, 0.0f);
+                    EEComplexUnit* theUnit = theCaster->mComplexUnit;
+                    long theResult = theClass->CanCastAt(theUnit, theLocation, theX, theY, true, theTargets[t]);
+                    CanCastRecord(1, theClass, theUnit, theLocation, theX, theY, true, theTargets[t], theResult);
+                    if (t == 1 && i < 2) {
+                        theResult = theClass->CanCastAt(theUnit, theLocation, theX, theY, false, theTargets[t]);
+                        CanCastRecord(1, theClass, theUnit, theLocation, theX, theY, false, theTargets[t], theResult);
+                    }
+                    // nature's cast (no caster): only the classes cast at no location or unit read no caster
+                    if (t == 0 && theClass->GetTargetKind() == 1) {
+                        theResult = theClass->CanCastAt(NULL, theLocation, theX, theY, true, NULL);
+                        CanCastRecord(1, theClass, NULL, theLocation, theX, theY, true, NULL, theResult);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---- TRTE: ResearchToEpoch's steps --------------------------------------------------------------------------------
+
+void EETechCaptureEpochStep(long inStep, long inEpoch)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    if (inStep < 0) {
+        sEpochSteps.clear();
+        return;
+    }
+    sEpochSteps.push_back(inStep);
+    sEpochSteps.push_back(inEpoch);
+}
+
+void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(EECaptureTag("TRTE"));
+    theRecord.I32(inEpoch);
+    theRecord.I32((long)inTree->mEpochs.size());
+    theRecord.U32(inLocal ? 1 : 0);
+    theRecord.U32((unsigned int)sEpochSteps.size() / 2);
+    for (size_t i = 0; i < sEpochSteps.size(); i++)
+        theRecord.I32(sEpochSteps[i]);
+    EETechCaptureTree(theRecord, inTree);
+    for (long e = 0; e < (long)inTree->mEpochs.size(); e++)
+        EETechCaptureEpoch(theRecord, &inTree->mEpochs[e]);
+    theRecord.Commit();
+    sEpochSteps.clear();
+}
+
+// ---- EVUN: the units an effect walks ------------------------------------------------------------------------------
+
+void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EEComplexUnit* theComplex = inUnit->mComplexUnit;
+    int theValues[7] = {(int)inUnit->mUnitID, (int)inUnit->mUnitClass->mUnitType, (int)inUnit->GetHitPoints(),
+                        (int)((theComplex != NULL ? 1u : 0u) | (theComplex != NULL && theComplex->mIsBuilt ? 2u : 0u) |
+                              (inUnit->mTileNode != NULL ? 4u : 0u) |
+                              (theComplex != NULL && theComplex->mPreviousPart != NULL ? 8u : 0u)),
+                        theComplex != NULL ? (int)theComplex->mFlightTime : 0, inApplies ? 1 : 0, (int)inValue};
+    Append(sUnitSteps, theValues, sizeof(theValues));
+    sUnitStepCount++;
+}
+
+void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA, long inB)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(EECaptureTag("EVUN"));
+    theRecord.I32(inLoop);
+    theRecord.I32(inEffect);
+    theRecord.I32(inUnitType);
+    theRecord.I32(inA);
+    theRecord.I32(inB);
+    theRecord.U32(sUnitStepCount);
+    if (!sUnitSteps.empty())
+        theRecord.Bytes(sUnitSteps.data(), (unsigned int)sUnitSteps.size());
+    theRecord.Commit();
+    sUnitSteps.clear();
+    sUnitStepCount = 0;
 }

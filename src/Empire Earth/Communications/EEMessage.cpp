@@ -1333,24 +1333,12 @@ bool EEMBuildUnit::IsResponse(NEMessage* inMessage)
 // Plans a wall from start to end for a player and orders the selected citizens to build its pieces
 void EEMBuildWall::Execute()
 {
-    std::vector<EEUnit*> thePieces;
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayerID];
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEActiveGroup* theActiveGroup = NULL;
-    if (theGroup->GetFirstUnit()) {
-        theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->KeepCitizens();
-        if (theActiveGroup->GetFirstUnit()) {
-            EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(this->mTechnology)->mData->mUnitClass];
-            EEPlanWall(this->mStart, this->mEnd, theClass, thePlayer, 1, 0, thePieces);
-            if (theActiveGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-        }
-        if (thePieces.size() > 0)
-            EEBuildWall(theActiveGroup, thePieces);
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs build_wall: with a selection, one active group of it keeps its
+    // citizens; with some left the wall is planned as foundations and one unit drawn acknowledges; the group builds the
+    // new pieces) over the world calls of EEUnitHost.cpp
+    ee_units_build_wall(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mTechnology, this->mStart.GetX(),
+                        this->mStart.GetY(), this->mEnd.GetX(), this->mEnd.GetY());
 }
 
 // EEMBuildWall's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -2142,25 +2130,10 @@ void EEMDisband::Execute()
 void EEMDropoffResource::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    unsigned long theID = this->mDropoffID;
-    EEComplexUnit* theDropoff = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theID));
-    EEActiveGroup* theActiveGroup = NULL;
-    if (theUnit && theDropoff) {
-        theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->SpreadAroundTile(theDropoff->mTileX, theDropoff->mTileY);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGGather(NULL, theDropoff, true), false);
-            theActiveGroup->mAction = kActionDropoffResource;
-            theActiveGroup->Plan();
-            if (theActiveGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs dropoff_resource: with a selection and a complex drop-off, one
+    // active group of the selection spreads around the drop-off's tile, gets a Gather goal with no resource and the
+    // drop-off, the action Dropoff Resource, plans, one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
+    ee_units_dropoff_resource(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mDropoffID);
 }
 
 // EEMDropoffResource's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -7729,57 +7702,11 @@ bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
 void EEMUnloadTransport::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    bool theCanUnload = false;
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup->GetFirstUnit() == NULL)
-        return;
-    for (unsigned long i = 1; i < 6; i++) {
-        EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 1, i);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            thePlayer->mPendingGroups.push_back(theActiveGroup);
-            theActiveGroup->SpreadForUnload(this->GetX(), this->GetY());
-            EEComplexUnit* theUnit = theActiveGroup->GetFirstUnit();
-            if (theUnit == NULL)
-                continue;
-            EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit->GetComplexUnit(), this->GetX(), this->GetY(), false);
-            unsigned long theCount = theActiveGroup->GetNumUnits();
-            theCanUnload = false;  // each part looks for its own loaded transport
-            for (unsigned long j = 0; j < theCount && !theCanUnload; j++) {
-                theUnit = theActiveGroup->GetUnit(j);
-                if ((theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
-                    && theUnit->mComplexUnit->GetNumCargoUnits() > 0)
-                    theCanUnload = true;
-                else
-                    theCanUnload = false;
-            }
-            if (theCanUnload) {
-                theGoal->SetTransport(theUnit->mComplexUnit);
-                if (theCanUnload && theGoal->CanUnloadAtDestination()) {
-                    theActiveGroup->ClearGoal();
-                    theActiveGroup->SetGoal(theGoal, false);
-                    theActiveGroup->mAction = kActionUnloadTransport;
-                    theActiveGroup->Plan();
-                    thePlayer->PlayAcknowledgement(theUnit);
-                    continue;
-                }
-            }
-            delete theGoal;
-            if ((theUnit->mUnitClass->IsTransport() || theUnit->mUnitClass->mIsParatrooperBomber)
-                && theUnit->mComplexUnit->GetNumCargoUnits() > 0) {
-                U2DPoint<long> theTile(this->GetX(), this->GetY());
-                thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, 0x7c3b, false);
-            }
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGLocation((float)this->GetX(), (float)this->GetY(), 0.0f, false, true, false, 0.0f, false, 0),
-                                    false);
-            theActiveGroup->mAction = kActionPrepareToMove;
-            theActiveGroup->Plan();
-            EESendGroupCommand(theActiveGroup, NULL, thePlayer->mPlayerID, 0xb8, 0);
-            thePlayer->PlayAcknowledgement(theUnit);
-        } else
-            theActiveGroup->Dereference();
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs unload_transport: per formation slot a group of the selection
+    // spreads for the unload; a loaded transport that can unload there gets the unload goal, else the group moves to
+    // the tile, with the warning event for a loaded one) over the world calls of EEUnitHost.cpp
+    ee_units_unload_transport(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (int64_t)this->GetX(),
+                              (int64_t)this->GetY());
 }
 
 // FUNCTION: EXE 0x4c889e

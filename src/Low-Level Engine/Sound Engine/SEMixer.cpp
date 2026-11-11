@@ -1,22 +1,58 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEMixer.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// The registry of mixers and the decisions (which mixer is active, how a change stops, deactivates and activates,
+// the destructor's, the start's choice of plug-ins and the shutdown's order) are Rust: rust/crates/ee_sound
+// mixers.rs (docs/RUST_PLAN.md R3.6). This file keeps the plug-in's entry points, the conductor, the active mixer
+// pointer the renderers read, and the trampolines ee_mixerscpp_* through which the Rust reaches them.
 #include <windows.h>
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEMixer.h"
+#include "rust/ee_rust.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-std::vector<SEMixer*> SEMixer::sMixers;
 SEMixer* SEMixer::sActiveMixer;
+
+// The C++ side of the Rust decisions
+struct SEMixer::Rust {
+    static SEMixer* Of(void* inMixer) { return static_cast<SEMixer*>(inMixer); }
+    static long StopMusic(void* inMixer) { return Of(inMixer)->mConductor.SetConductorState(0); }
+    static long Activate(void* inMixer) { return Of(inMixer)->ActivateMixer(); }
+    static long Deactivate(void* inMixer) { return Of(inMixer)->DeactivateMixer(); }
+    static void* Create(SEMixerStart* inStart) { return new SEMixer(inStart->mModule, inStart->mWindow); }
+    static void Delete(void* inMixer) { delete Of(inMixer); }
+    static void* Active() { return SEMixer::sActiveMixer; }
+    static void SetActive(void* inMixer) { SEMixer::sActiveMixer = Of(inMixer); }
+};
+
+extern "C" {
+void* ee_mixerscpp_active() { return SEMixer::Rust::Active(); }
+void ee_mixerscpp_set_active(void* inMixer) { SEMixer::Rust::SetActive(inMixer); }
+int32_t ee_mixerscpp_stop_music(void* inMixer) { return (int32_t)SEMixer::Rust::StopMusic(inMixer); }
+int32_t ee_mixerscpp_activate(void* inMixer) { return (int32_t)SEMixer::Rust::Activate(inMixer); }
+int32_t ee_mixerscpp_deactivate(void* inMixer) { return (int32_t)SEMixer::Rust::Deactivate(inMixer); }
+int32_t ee_mixerscpp_first_module(void* inStart)
+{
+    SEMixerStart* theStart = static_cast<SEMixerStart*>(inStart);
+    return (int32_t)PIMModule::GetFirstModule(*theStart->mDirectory, ' snd', theStart->mModule);
+}
+int32_t ee_mixerscpp_next_module(void* inStart)
+{
+    return (int32_t)PIMModule::GetNextModule(static_cast<SEMixerStart*>(inStart)->mModule);
+}
+void* ee_mixerscpp_create_mixer(void* inStart) { return SEMixer::Rust::Create(static_cast<SEMixerStart*>(inStart)); }
+bool ee_mixerscpp_is_valid(void* inMixer) { return SEMixer::Rust::Of(inMixer)->IsValid(); }
+void ee_mixerscpp_delete_mixer(void* inMixer) { SEMixer::Rust::Delete(inMixer); }
+}
 
 // FUNCTION: LLE 0x1004e8f3
 // Creates a sound mixer from a mixer plug-in: registers it, looks up every SPIM entry point and initialises it
 SEMixer::SEMixer(PIMModule* inModule, GEWindow* inWindow)
 {
     this->mModule = inModule;
-    SEMixer::sMixers.push_back(this);
+    ee_mixers_register(this);
     this->mActivateMixer = (long (*)())inModule->GetEntry("SPIMActivateMixer");
     this->mCreateChannels = (long (*)(unsigned long, SEChannelDescription*))inModule->GetEntry("SPIMCreateChannels");
     this->mDeactivateMixer = (long (*)())inModule->GetEntry("SPIMDeactivateMixer");
@@ -60,26 +96,25 @@ SEMixer::SEMixer(PIMModule* inModule, GEWindow* inWindow)
 // Destroys the mixer: stops the music and deactivates it if active, unregisters it and unloads its plug-in
 SEMixer::~SEMixer()
 {
-    if (this == SEMixer::sActiveMixer) {
-        this->mConductor.SetConductorState(0);
-        this->DeactivateMixer();
-        SEMixer::sActiveMixer = NULL;
-    }
-    std::vector<SEMixer*>::iterator theMixer = std::find(SEMixer::sMixers.begin(), SEMixer::sMixers.end(), this);
-    if (theMixer != SEMixer::sMixers.end())
-        SEMixer::sMixers.erase(theMixer);
+    ee_mixers_destroy(this);
     this->mModule->Unload();
+}
+
+// Returns how many mixers are registered
+unsigned long SEMixer::GetCount()
+{
+    return ee_mixers_count();
 }
 
 // FUNCTION: LLE 0x1004ede9
 // Returns the registered mixer with the given index; kErrorBeyondEnd past the last
 long SEMixer::GetMixer(unsigned long inIndex, SEMixer*& outMixer)
 {
-    if (inIndex < SEMixer::sMixers.size()) {
-        outMixer = SEMixer::sMixers[inIndex];
-        return kErrorOK;
-    }
-    return kErrorBeyondEnd;
+    void* theMixer = NULL;
+    long theResult = ee_mixers_get((uint32_t)inIndex, &theMixer);
+    if (theResult == kErrorOK)
+        outMixer = static_cast<SEMixer*>(theMixer);
+    return theResult;
 }
 
 // FUNCTION: LLE 0x1004ee15
@@ -87,21 +122,7 @@ long SEMixer::GetMixer(unsigned long inIndex, SEMixer*& outMixer)
 // either step fails
 long SEMixer::UseMixer(SEMixer* inMixer)
 {
-    long theResult = kErrorOK;
-    if (SEMixer::sActiveMixer) {
-        if ((theResult = SEMixer::sActiveMixer->mConductor.SetConductorState(0)) == kErrorOK &&
-            (theResult = SEMixer::sActiveMixer->DeactivateMixer()) == kErrorOK)
-            SEMixer::sActiveMixer = NULL;
-        else
-            theResult = kErrorFailed;
-    }
-    if (theResult != kErrorOK || !inMixer)
-        return theResult;
-    if ((theResult = inMixer->ActivateMixer()) == kErrorOK)
-        SEMixer::sActiveMixer = inMixer;
-    else
-        theResult = kErrorFailed;
-    return theResult;
+    return ee_mixers_use(inMixer);
 }
 
 // Init chain and template COMDATs emitted in this unit (markers at the end):

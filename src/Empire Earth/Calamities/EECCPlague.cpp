@@ -14,6 +14,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -156,10 +157,12 @@ void EECCPlague::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x4b31f0
-// Ages the calamity with its contagion helper; returns the time-alive result
+// Ages the plague with its contagion helper; returns the time-alive result (Rust)
 long EECCPlague::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    return EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, inCalamity->mIntPlaceHolder1);
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b3208

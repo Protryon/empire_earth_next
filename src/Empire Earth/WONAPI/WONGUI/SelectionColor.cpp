@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // Creates the default selection colors: highlight text color on the highlight color
 SelectionColor::SelectionColor()
@@ -38,13 +39,9 @@ unsigned long SelectionColor::GetBackgroundColor(Graphics&) const { return this-
 // Returns the selected-text color for the mode: the original color, its inverse, the set foreground, else white
 unsigned long SelectionColor::GetForegroundColor(Graphics&,unsigned long original) const
 {
-    switch(this->mMode)
-    {
-    case ForegroundSelectionMode_UseOriginalColor: return original;
-    case ForegroundSelectionMode_InvertOriginalColor: return original^0xffffff;
-    case ForegroundSelectionMode_UseForegroundColor: return this->mForegroundColor;
-    default: return 0xffffff;
-    }
+    // ee_won's guidraw.rs sel_foreground
+    return ee_won_gui_sel_foreground((uint32_t)this->mBackgroundColor,(uint32_t)this->mForegroundColor,
+                                     (int32_t)this->mMode,(uint32_t)original);
 }
 }
 

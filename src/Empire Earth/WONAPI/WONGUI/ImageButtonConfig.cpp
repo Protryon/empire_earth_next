@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x0078ac90
 // Creates an image button configuration with no button bound
@@ -21,12 +24,13 @@ ImageButtonConfig::ImageButtonConfig()
 // image into that state; others go to the base config
 bool ImageButtonConfig::Virtual24(const std::string& instruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGEBUTTONCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
     ImageButtonType type;
-    if(instruction=="NORMALIMAGE") type=ImageButtonType_Normal;
-    else if(instruction=="OVERIMAGE") type=ImageButtonType_Over;
-    else if(instruction=="DOWNIMAGE") type=ImageButtonType_Down;
-    else if(instruction=="DISABLEDIMAGE") type=ImageButtonType_Disabled;
-    else if(instruction=="CHECKEDIMAGE") type=ImageButtonType_Checked;
+    if(aKeyIdx==0) type=ImageButtonType_Normal;
+    else if(aKeyIdx==1) type=ImageButtonType_Over;
+    else if(aKeyIdx==2) type=ImageButtonType_Down;
+    else if(aKeyIdx==3) type=ImageButtonType_Disabled;
+    else if(aKeyIdx==4) type=ImageButtonType_Checked;
     else return ComponentConfig::Virtual24(instruction);
     this->mImageButton->SetImage(type,this->ReadImage(false).get());
     return true;

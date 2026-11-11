@@ -11,6 +11,7 @@ class GEBitmap;
 class GETexture;
 
 class LLE_API UIBFull : public UITextureBackground {
+    friend struct UIBFullRust;              // UIBFull.cpp: a Rust-placed tile's draw (ee_ui background.rs)
 public:
     UIBFull(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription,
             const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm,

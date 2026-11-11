@@ -6,6 +6,9 @@
 #ifndef EE_EECCAEMINDCONTROL_H
 #define EE_EECCAEMINDCONTROL_H
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCAEMindControl : public EECCAreaEffect {
 public:
     EECCAEMindControl();
@@ -16,6 +19,8 @@ public:
     // identical to EECCAEExtraDamage's: ICF-folded into them (0xaee30, 0xaee45)
     virtual void Reset(EECalamity* inCalamity);
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     // +0x50 (ICF-folded 0x18aa9: true, not EECCAreaEffect's false)
     virtual bool AffectsOwnUnits();
 

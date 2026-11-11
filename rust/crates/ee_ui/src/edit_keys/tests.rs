@@ -10,13 +10,18 @@
 //! dispatch over the same fakes, and checks every line. The same driver relinked over the forwarders (the
 //! `UIEditBox.cpp` of this change) printed the same file, and equalled the original on four more seeds at ten times
 //! the size.
+//!
+//! Round 8 fixed the two hazards (an anchor left outside the text by a deletion becomes the caret,
+//! [`Edit::keep_anchor_in_text`]'s callers): 12 of the 60 boxes left such an anchor, and only their anchor, and the
+//! state lines that follow from it, changed; those were re-recorded from the driver over the fixed forwarders (the
+//! other 48 boxes are the original's lines). The last two tests reproduce the hazards (they failed before the fix).
 
 use core::ffi::{c_long, c_short, c_ulong};
 
 use super::*;
 use crate::edit::{EditFields, EditState, SCROLL_BAR_WIDTH};
 use crate::rect::{um_floor, UiRect};
-use crate::text::{prefix, Platform};
+use crate::text::{char_len, prefix, Platform};
 
 const GOLDEN: &str = include_str!("../golden_keys.txt");
 
@@ -684,4 +689,51 @@ fn an_ime_result_is_typed_a_character_at_a_time() {
     assert_eq!(f.lines[0], "\u{65e5}\u{672c}\u{8a9e}\0".as_bytes());
     assert!(f.s.f.ime_active);
     assert_eq!(f.s.f.ime_start_index, 3);
+}
+
+/// The anchor is a place in the text: its line exists and its index is within the line.
+fn anchor_in_text(f: &Fake) -> bool {
+    let (line, index) = (f.s.f.selection_start_line as usize, f.s.f.selection_start_index);
+    line < f.lines.len() && index >= 0 && index as usize <= char_len(&Platform, &f.lines[line])
+}
+
+#[test]
+fn a_deletion_during_a_drag_keeps_the_anchor_in_the_text() {
+    // round 7's hazard (the original's): a mouse press anchors the drag at the caret (the end), Backspace deletes
+    // the character before it, and the next MouseMove selected from the old anchor, past the line's end
+    let mut f = single(b"abcdef\0");
+    f.s.f.selecting = true;
+    f.s.f.selection_start_index = f.s.f.caret_index;
+    f.s.f.selection_start_line = f.s.f.caret_line;
+    press(&mut f, &[BACK]);
+    assert_eq!(f.lines[0], b"abcde\0");
+    assert!(anchor_in_text(&f), "anchor {} past the text", f.s.f.selection_start_index);
+    // the drag goes on from the caret where the deletion left it
+    let left = f.s.text.left;
+    f.run(|e| e.drag_to(UiPoint { x: left + 0.5, y: 30.0 }));
+    assert!(anchor_in_text(&f));
+    assert_eq!(f.s.f.selection_start_index, 5);
+    assert!(f.s.f.is_text_selected);
+    let selected = f.run(|e| e.selected_text());
+    assert!(selected.is_some());
+}
+
+#[test]
+fn shift_keypad_del_and_an_arrow_in_one_frame_keep_the_anchor_in_the_text() {
+    // round 7's other hazard: Shift+Home selects the whole line (the anchor at the end), then Shift + the keypad's
+    // Del (Num Lock off) deletes it and Shift+Right in the same frame selected from the old anchor, past the text
+    let mut f = single(b"abcdef\0");
+    press(&mut f, &[SHIFT, HOME]);
+    assert_eq!((f.s.f.selection_start_index, f.s.f.caret_index), (6, 0));
+    f.numlock = false;
+    press(&mut f, &[SHIFT, NUMDEL, RIGHT]);
+    assert_eq!(f.lines[0], b"\0");
+    assert!(anchor_in_text(&f), "anchor {} past the text", f.s.f.selection_start_index);
+    assert!(!f.s.f.is_text_selected);
+    // a Backspace without a selection, then Shift+Left: the selection is the one character left of the caret
+    let mut f = single(b"abc\0");
+    press(&mut f, &[SHIFT, BACK, LEFT]);
+    assert_eq!(f.lines[0], b"ab\0");
+    assert!(anchor_in_text(&f));
+    assert_eq!((f.s.f.selection_start_index, f.s.f.caret_index), (2, 1));
 }

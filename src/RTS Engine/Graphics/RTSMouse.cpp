@@ -22,6 +22,7 @@
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
+#include "rust/ee_rust.h"   // ee_gfx mouse.rs: ClampPosition and Update's move (RUST_PLAN R4.4)
 // 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer. PNG files
 // (the original's were Targa files, .tga; RUST_PLAN D9)
 static const char* sPointerFiles[10] = {
@@ -340,18 +341,15 @@ void RTSMouse::BeginFrame()
     this->mPreviousSaveUnder = theSaveUnder;
 }
 
+// the GE value classes as their #[repr(C)] mirrors (the same storage)
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
+
 // FUNCTION: EXE 0x51b31c
-// Keeps the pointer position inside the bounds (the right and bottom edges excluded)
+// Keeps the pointer position inside the bounds (the right and bottom edges excluded): ee_gfx mouse.rs
 void RTSMouse::ClampPosition()
 {
-    if (this->mPosition.GetX() < this->mBounds.GetLeft())
-        this->mPosition.SetX(this->mBounds.GetLeft());
-    else if (this->mPosition.GetX() >= this->mBounds.GetRight())
-        this->mPosition.SetX(this->mBounds.GetRight() - 1.0f);
-    if (this->mPosition.GetY() < this->mBounds.GetTop())
-        this->mPosition.SetY(this->mBounds.GetTop());
-    else if (this->mPosition.GetY() >= this->mBounds.GetBottom())
-        this->mPosition.SetY(this->mBounds.GetBottom() - 1.0f);
+    ee_gfx_mouse_clamp(reinterpret_cast<EeGe2DPoint*>(&this->mPosition),
+                       reinterpret_cast<const EeGeRectangle*>(&this->mBounds));
 }
 
 // FUNCTION: EXE 0x51b373
@@ -380,14 +378,10 @@ long RTSMouse::Release()
 }
 
 // FUNCTION: EXE 0x51b3cc
-// Moves the pointer by the raw mouse axes (scaled by bounds over desktop, sensitivity and the smallest move seen)
-// unless frozen, clamps it, and reads the wheel (0 without one)
+// Moves the pointer by the raw mouse axes (scaled by bounds over desktop, sensitivity and the smallest move seen;
+// the arithmetic is ee_gfx mouse.rs) unless frozen, clamps it, and reads the wheel (0 without one)
 void RTSMouse::Update()
 {
-    float theDeltaX = 0.0f;
-    float theDeltaY = 0.0f;
-    float theScaleX = (this->mBounds.GetRight() - this->mBounds.GetLeft()) / this->mDesktopWidth * this->mSensitivity;
-    float theScaleY = (this->mBounds.GetBottom() - this->mBounds.GetTop()) / this->mDesktopHeight * this->mSensitivity;
     ISEntity* theAxisX;
     ISEntity* theAxisY;
     ISEntity* theWheel = NULL;
@@ -395,27 +389,26 @@ void RTSMouse::Update()
     gISMouse->GetEntity(kMouseYAxis, theAxisY);
     gISMouse->GetEntity(kMouseZAxis, theWheel);
     if (!this->mIsFrozen) {
-        long theMoveX = theAxisX->GetNormalizedValue();
-        long theMoveY = theAxisY->GetNormalizedValue();
-        if (theMoveX != 0 || theMoveY != 0) {
-            if (theMoveX != 0) {
-                if ((theMoveX < 0 ? -theMoveX : theMoveX) < sMinXValue) {
-                    sMinXValue = theMoveX < 0 ? -theMoveX : theMoveX;
-                    ESDebugOut("!MinXValue now %ld\n", sMinXValue);
-                }
-                theDeltaX = (theScaleX + 0.0625f) * (float)theMoveX * 4.0f / sMinXValue;
-            }
-            if (theMoveY != 0) {
-                if ((theMoveY < 0 ? -theMoveY : theMoveY) < sMinYValue) {
-                    sMinYValue = theMoveY < 0 ? -theMoveY : theMoveY;
-                    ESDebugOut("!MinYValue now %ld\n", sMinYValue);
-                }
-                theDeltaY = (theScaleY + 0.0625f) * (float)theMoveY * 4.0f / sMinYValue;
-            }
-            this->mPosition.SetX(theDeltaX + this->mPosition.mX);
-            this->mPosition.SetY(theDeltaY + this->mPosition.mY);
-            this->ClampPosition();
-        }
+        // the move's arithmetic: ee_gfx mouse.rs (the axes read here, x first; the smallest moves are this unit's
+        // statics, 32-bit there: a mouse axis never reaches past it)
+        EeGfxMouseInput theInput;
+        theInput.position = *reinterpret_cast<const EeGe2DPoint*>(&this->mPosition);
+        theInput.bounds = *reinterpret_cast<const EeGeRectangle*>(&this->mBounds);
+        theInput.desktop_width = (uint32_t)this->mDesktopWidth;
+        theInput.desktop_height = (uint32_t)this->mDesktopHeight;
+        theInput.sensitivity = this->mSensitivity;
+        theInput.move_x = (int32_t)theAxisX->GetNormalizedValue();
+        theInput.move_y = (int32_t)theAxisY->GetNormalizedValue();
+        int32_t theMinX = (int32_t)sMinXValue, theMinY = (int32_t)sMinYValue;
+        EeGfxMouseMove theMove = ee_gfx_mouse_update_move(&theInput, &theMinX, &theMinY);
+        sMinXValue = theMinX;
+        sMinYValue = theMinY;
+        if (theMove.min_x_changed)
+            ESDebugOut("!MinXValue now %ld\n", sMinXValue);
+        if (theMove.min_y_changed)
+            ESDebugOut("!MinYValue now %ld\n", sMinYValue);
+        if (theMove.moved)
+            this->mPosition = *reinterpret_cast<const GE2DPoint*>(&theMove.position);
     }
     if (theWheel != NULL)
         this->mWheel = theWheel->GetValue();

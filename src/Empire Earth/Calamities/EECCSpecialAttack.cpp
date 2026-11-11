@@ -9,6 +9,8 @@
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -68,16 +70,32 @@ void EECCSpecialAttack::Reset(EECalamity* inCalamity)
 // Orders the caster to make a special attack on the live target unit; always returns 7 (done)
 long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    EEUnit* theTargetUnit = NULL;
-    EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
-    if (!inCalamity->GetTargetUnit(theTargetUnit) || !(theTargetUnit->mHitPoints > 0))
-        return 7;
-    theUnit->ClearGoals(0);
-    theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
-    theUnit->mIsSpecialAttack = true;
-    theUnit->StartAction(kActionAttackEnemyUnit);
-    theUnit->mUnitClass->ActionChanged(theUnit);
-    return 7;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCSpecialAttack::UpdateStep);
+}
+
+// New (port): EECCSpecialAttack's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCSpecialAttack::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCSpecialAttack* theClass = static_cast<EECCSpecialAttack*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::SpecialAttack: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
+        EECalamityCaptureEvent(kCalamityOpSpecialAttack, theTargetUnit->mUnitID);   // CALW (TEST ONLY)
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
+        theUnit->mIsSpecialAttack = true;
+        theUnit->StartAction(kActionAttackEnemyUnit);
+        theUnit->mUnitClass->ActionChanged(theUnit);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b32da
@@ -85,26 +103,16 @@ long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
 long EECCSpecialAttack::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                   bool inCheck, EEUnit* inTargetUnit)
 {
-    unsigned long theTargetID = -1;
-    long theResult = EECalamityClass::CanCastAt(inUnit, inLocation, inX, inY, inCheck, inTargetUnit);
-    if (theResult == 2)
-        theResult = 0;
-    if (theResult == 0) {
-        if (inTargetUnit != NULL)
-            theTargetID = inTargetUnit->mUnitID;
-        theResult = 1;
-        EEUnit* theTarget = ::gWorld.GetUnit(theTargetID);
-        if (theTarget != NULL && this->IsValidTarget(inUnit, theTarget))
-            theResult = 0;
-    }
-    return theResult;
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::SpecialAttack, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
 // FUNCTION: EXE 0x4b333f
 // Accepts an enemy unit in the class's unit set
 bool EECCSpecialAttack::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    return gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet())
-        && inTargetUnit->mPlayer != inUnit->mPlayer
-        && inUnit->mPlayer->mEnemies[inTargetUnit->mPlayer->mPlayerID] != 0;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

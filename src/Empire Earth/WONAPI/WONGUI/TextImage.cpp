@@ -12,16 +12,18 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextImage.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 void TextImage::Paint(Graphics &g, TextArea *theTextArea)
 {
-	if(theTextArea->mSelStartChar<=this->mAbsStartChar && theTextArea->mSelEndChar>=this->mAbsEndChar)
-	{
-		g.SetColor(theTextArea->mSelColor.GetBackgroundColor(g));
-		g.FillRect(this->mx,0,this->mWidth,this->mLine->mHeight);
-	}
-
-	g.DrawImage(this->mImage,this->mx,this->my);
+	// the selection background when the selection covers the image, then the image (guidraw.rs text_image)
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mImage;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_text_image(theTextArea->mSelStartChar,theTextArea->mSelEndChar,this->mAbsStartChar,
+			this->mAbsEndChar,this->mx,this->my,this->mWidth,this->mLine->mHeight,
+			(uint32_t)theTextArea->mSelColor.GetBackgroundColor(g),o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 void TextImage::CalcDimensions()

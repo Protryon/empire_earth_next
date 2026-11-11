@@ -10,6 +10,9 @@
 class EEGraphicEffect;
 class EESoundObject;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCHurricane : public EELocationCalamityClass {
 public:
     EECCHurricane();                        // 0xb114a
@@ -22,6 +25,8 @@ public:
     virtual void PlaySound(EECalamity* inCalamity);              // +0x2c 0xb141f: starts the sound
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 0xb1480
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb14c3
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb17cb
 
 protected:

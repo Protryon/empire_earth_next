@@ -29,6 +29,22 @@ fn pitch_runs_from_near_to_far_and_holds_past_zoom_one() {
 }
 
 #[test]
+fn free_pitch_holds_past_zoom_one() {
+    // the original's pow(1 - |zoom|, 0.5) was NaN here (gCameraMaxZoom 2), and the table cosine faults on NaN
+    let far = pitch(1.0, MODE_FREE, &NO_WORLD);
+    assert_eq!(far, FREE_PITCH_FAR);
+    for k in 0..=100 {
+        let zoom = 1.0 + k as f32 / 100.0;
+        let p = pitch(zoom, MODE_FREE, &NO_WORLD);
+        assert!(!p.is_nan(), "zoom {zoom}");
+        assert_eq!(p, far, "zoom {zoom}");
+        assert_eq!(pitch(-zoom, MODE_FREE, &NO_WORLD), -far, "zoom {}", -zoom);
+    }
+    // and up to 1 it is the original's curve
+    assert_eq!(pitch(0.75, MODE_FREE, &NO_WORLD), (FREE_PITCH_FAR - FREE_PITCH_NEAR) * (1.0 - 0.5) + FREE_PITCH_NEAR);
+}
+
+#[test]
 fn go_to_takes_the_slower_move_and_snaps_short_ones() {
     let a = Ge3DPoint::new(0.0, 0.0, 0.0);
     let b = Ge3DPoint::new(30.0, 0.0, 0.0);

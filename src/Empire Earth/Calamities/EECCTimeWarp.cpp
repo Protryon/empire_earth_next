@@ -16,6 +16,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -332,61 +334,69 @@ void EECCTimeWarp::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x4b4361
-// Ages the calamity: tints and departs the target, brings it back before the end, blinks its colour while tinted;
-// returns 7 once the target is dead or the calamity is marked finished
+// Ages the calamity: tints and departs the target, brings it back before the end, blinks its colour while tinted
+// (Rust); returns 7 once the target is dead or the calamity is marked finished
 long EECCTimeWarp::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    GE3DPoint theLocation;
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    EEUnit* theTargetUnit;
-    inCalamity->GetTargetUnit(theTargetUnit);
-    EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
-    if (this->mSecondarySound != NULL) {
-        this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, true);
-        this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, false);
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    theParams.warp_depart_time = (int32_t)this->mDepartTime;
+    theParams.warp_away_time = (int32_t)this->mAwayTime;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::UpdateStep);
+}
+
+// New (port): EECCTimeWarp's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCTimeWarp::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCTimeWarp* theClass = static_cast<EECCTimeWarp*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::WarpTint: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        GE3DPoint theLocation;
+        theUnit->GetPosition(theLocation);
+        theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
+        EECalamityCaptureEvent(kCalamityOpWarpTint);   // CALW (TEST ONLY)
+        theUnit->SetIsTinted(true);
+        theClass->PlayEffect(theLocation, theCalamity, true);
+        return true;
     }
-    if (theUnit->mHitPoints > 0) {
-        if (inCalamity->GetTimeAlive() - inElapsedTime < this->mDepartTime && inCalamity->GetTimeAlive() >= this->mDepartTime) {
-            theUnit->GetPosition(theLocation);
-            theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
-            theUnit->SetIsTinted(true);
-            this->PlayEffect(theLocation, inCalamity, true);
-        }
-        if (inCalamity->GetTimeAlive() >= this->mAwayTime && !inCalamity->mBoolPlaceHolder1) {
-            theUnit->GetPosition(theLocation);
-            theLocation.SetZ(theUnit->GetEffectHeight(true) * 0.5f + theLocation.GetZ());
-            gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect4, NULL);
-            if (inCalamity->mEffectHandle != kNoEffectHandle) {
-                gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
-                inCalamity->mEffectHandle = kNoEffectHandle;
-            }
-            this->Depart(inCalamity);
-            inCalamity->mBoolPlaceHolder1 = true;
-        }
-        if (inCalamity->GetTimeAlive() >= this->mLifeTime - this->mAwayTime && !inCalamity->mBoolPlaceHolder2) {
-            this->Return(inCalamity);
-            inCalamity->mBoolPlaceHolder2 = true;
-        }
-        if (theUnit->mIsTinted) {
-            inCalamity->mFloatPlaceHolder1 -= inElapsedTime;
-            if (inCalamity->mFloatPlaceHolder1 <= 0.0f) {
-                if (theUnit->mColor == sWarpColor)
-                    theUnit->SetColor(sBlackColor);
-                else
-                    theUnit->SetColor(sWarpColor);
-                if (inCalamity->GetTimeAlive() > this->mAwayTime * 0.5f)
-                    inCalamity->mFloatPlaceHolder1 = this->mAwayTime * 0.025f;
-                else if (inCalamity->GetTimeAlive() > 0.0f)
-                    inCalamity->mFloatPlaceHolder1 = this->mAwayTime * 0.1f;
-                else
-                    inCalamity->mFloatPlaceHolder1 = this->mAwayTime * 0.1f;
-            }
-        }
-    } else
-        inCalamity->mIntPlaceHolder2 = -1;
-    if (inCalamity->mIntPlaceHolder2 == -1)
-        theResult = 7;
-    return theResult;
+    case EeCalamityOp::WarpAwayEffect: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        GE3DPoint theLocation;
+        theUnit->GetPosition(theLocation);
+        theLocation.SetZ(theUnit->GetEffectHeight(true) * 0.5f + theLocation.GetZ());
+        gEffectManager->CreatePlacedEffect(theLocation, theClass->mGraphicEffect4, NULL);
+        return true;
+    }
+    case EeCalamityOp::WarpDepart: {
+        EECalamityCaptureEvent(kCalamityOpWarpDepart);   // CALW (TEST ONLY)
+        theClass->Depart(theCalamity);
+        return true;
+    }
+    case EeCalamityOp::WarpReturn: {
+        EECalamityCaptureEvent(kCalamityOpWarpReturn);   // CALW (TEST ONLY)
+        theClass->Return(theCalamity);
+        return true;
+    }
+    case EeCalamityOp::WarpBlink: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        EECalamityCaptureEvent(kCalamityOpWarpBlink);   // CALW (TEST ONLY)
+        if (theUnit->mColor == sWarpColor)
+            theUnit->SetColor(sBlackColor);
+        else
+            theUnit->SetColor(sWarpColor);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // Compiler-generated for this unit (EEComplexUnit::SetColor, inline, first emitted here):
@@ -396,11 +406,8 @@ long EECCTimeWarp::Update(EECalamity* inCalamity, float inElapsedTime)
 // Accepts another unit on the map that is in the class's unit set
 bool EECCTimeWarp::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    bool theResult = false;
-    if (inTargetUnit->mTileNode != NULL && inTargetUnit != inUnit
-        && gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet()))
-        theResult = true;
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }
 
 // SYNTHETIC: EXE 0x4b3ade

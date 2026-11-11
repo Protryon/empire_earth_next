@@ -436,6 +436,21 @@ WON_TESTS = {
     # WONGUI's multi-column lists and tree rows (the column resizes and places, the header's buttons, sorts and
     # resize edges, the tree's +/- box and child places), the original's statements against ee_won's guimulti module
     "won_guimulti_test": [],
+    # WONGUI's tree list (the walks over the items, the range, last-child, open, scroll, insert, remove, sort and
+    # mouse rules), the original's statements against ee_won's guitree module
+    "won_guitree_test": [],
+    # WONGUI's menus' keys and choices (a popup menu's keys and submenus, the menu bar's keys, items, menus,
+    # presses and events), the original's statements against ee_won's guimenu module
+    "won_guimenu_test": [],
+    # WONGUI's event dispatch decisions (a window's mouse, keys, double click, resize, hover and cursor; the window
+    # manager's timer step, popups, focus and capture; the root's window drag; a container's mouse child, desired
+    # size and insert place), the original's statements against ee_won's guievent module
+    "won_guievent_test": [],
+    # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
+    # against ee_won's guiconf tables, the names through the real GUIString
+    "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                         "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                         "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],

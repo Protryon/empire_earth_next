@@ -16,6 +16,8 @@
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -189,62 +191,59 @@ void EECCHurricane::UnloadMedia(EEPlayer* inPlayer)
 
 // FUNCTION: EXE 0x4b14c3
 // After the launch effect creates the storm (or updates its sound), follows the storm unit and every tick time damages
-// living enemy units of the class's unit set within reach, with a strike effect each; returns the time-alive result
+// living enemy units of the class's unit set within reach, with a strike effect each (Rust); returns the time-alive
+// result
 long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    std::vector<EEUnit*> theUnits;
-    GE3DPoint theLocation;
-    EEPlayer* theNaturePlayer = ::gWorld.mPlayers[0];
-    EEUnit* theStorm = NULL;
-    EEGraphicEffect* theEffect = NULL;
-    if (this->mGraphicEffect1 == NULL || inCalamity->GetTimeAlive() >= this->mGraphicEffect1->mDuration) {
-        if (!inCalamity->GetTargetUnit(theStorm)) {
-            this->CreateStorm(inCalamity);
-            this->PlaySound(inCalamity);
-        } else
-            this->UpdateSound(inCalamity, this->mSound, -1.0f, 4.0f, true);
-        inCalamity->GetTargetUnit(theStorm);
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL) {
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+        theParams.storm_delay = (uint32_t)this->mGraphicEffect1->mDuration;
+    }
+    theParams.storm_damage = (int32_t)this->mDamage;
+    theParams.storm_tick_time = (uint32_t)this->mTickTime;
+    theParams.storm_radius = this->mRadius;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCHurricane::UpdateStep);
+}
+
+// New (port): EECCHurricane's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCHurricane::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCHurricane* theClass = static_cast<EECCHurricane*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::CreateStorm: {
+        bool theCreated = theClass->CreateStorm(theCalamity);
+        EECalamityCaptureEvent(kCalamityOpCreateStorm, theCreated);   // CALW (TEST ONLY)
+        return true;
+    }
+    case EeCalamityOp::StormPrepare: {
+        EEUnit* theStorm = NULL;
+        theCalamity->GetTargetUnit(theStorm);
         EEComplexUnit* theStormUnit = theStorm->mComplexUnit;
         theStormUnit->SetIsDeletable(false);
         const GETransformation& theStormLocation = theStormUnit->mPhysicalModel.GetLocation();
-        theLocation.SetX(theStormLocation.GetX());
-        theLocation.SetY(theStormLocation.GetY());
-        theLocation.SetZ(theStormLocation.GetZ());
-        inCalamity->mTargetLocation = theLocation;
-        float theTime = inCalamity->mIntPlaceHolder1 + inElapsedTime;
-        inCalamity->mIntPlaceHolder1 = UMFloatToLong(theTime);
-        if (theTime >= this->mTickTime) {
-            long theTicks = UMFloatToLong(theTime / this->mTickTime);
-            if (EEGetUnitsNear(theLocation, this->mRadius, theUnits) > 0) {
-                long theDamage = this->mDamage * theTicks;
-                for (long i = theUnits.size() - 1; i >= 0; i--) {
-                    EEUnit* theUnit = theUnits[i];
-                    if (theUnit->mUnitID == theStorm->mUnitID || theUnit->mPlayer == theStormUnit->mPlayer
-                        || theStormUnit->mPlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0
-                        || !gUnitSetManager.Contains(theUnit->mUnitClass->GetUnitType(), this->GetUnitSet())
-                        || !(theUnit->mHitPoints > 0))
-                        continue;
-                    float theDistance = EEGetDistanceSquared(static_cast<EEComplexUnit*>(theUnit), theStormUnit);
-                    float theReach = EEGetUnitRadius(static_cast<EEComplexUnit*>(theUnit), theStormUnit) + this->mRadius;
-                    if (!(theReach * theReach > theDistance))
-                        continue;
-                    if (this->mGraphicEffect3->mKind == kEffect2DLightning)
-                        gEffectManager->CreateUnitEffect(theUnit, this->mGraphicEffect3, NULL, 0, 0, 0);
-                    else
-                        gEffectManager->CreateEffectBetweenUnits(theStormUnit, theUnit, this->mGraphicEffect3, NULL);
-                    if (theUnit->mPlayer == theNaturePlayer)
-                        continue;
-                    if (this->mIsBlockedByImmunity && static_cast<EEComplexUnit*>(theUnit)->GetEffect(3, theEffect)) {
-                        if (theEffect != NULL)
-                            gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
-                    } else
-                        theUnit->TakeHit(theStorm, theDamage, inCalamity->mPlayerNumber, this->mIsBlockedByImmunity ? 2 : 3);
-                }
-            }
-            inCalamity->mIntPlaceHolder1 = UMFloatToLong(theTime - (float)this->mTickTime * theTicks);
-        }
+        outReply.x = theStormLocation.GetX();
+        outReply.y = theStormLocation.GetY();
+        outReply.z = theStormLocation.GetZ();
+        return true;
     }
-    return EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
+    case EeCalamityOp::Strike: {
+        EEUnit* theStorm = NULL;
+        theCalamity->GetTargetUnit(theStorm);
+        EEComplexUnit* theStormUnit = theStorm->mComplexUnit;
+        EEUnit* theUnit = ioHost.mUnits[inCall.index];
+        EECalamityCaptureEvent(kCalamityOpStrike, theUnit->mUnitID);   // CALW (TEST ONLY)
+        if (theClass->mGraphicEffect3->mKind == kEffect2DLightning)
+            gEffectManager->CreateUnitEffect(theUnit, theClass->mGraphicEffect3, NULL, 0, 0, 0);
+        else
+            gEffectManager->CreateEffectBetweenUnits(theStormUnit, theUnit, theClass->mGraphicEffect3, NULL);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b17cb
@@ -252,28 +251,9 @@ long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
 // hurricane or anti-matter storm nearby
 bool EECCHurricane::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    std::vector<EEUnit*> theUnits;
-    bool theResult;
-    if (this->mOverWater) {
-        theResult = ::gWorld.IsTileBlocked(inX, inY);
-        if (!theResult)
-            return theResult;
-    }
-    theResult = ::gWorld.mMap->GetTile(inX, inY)->mTerrainType != 12;
-    if (!theResult)
-        return theResult;
-    theResult = ::gWorld.mMap->IsAreaOnMap(inX, inY, this->mArea);
-    if (theResult) {
-        EEGetUnitsNear(GE3DPoint((long)inX + 0.5f, (long)inY + 0.5f, 0.0f),
-                       gUnitClassTable[this->mUnitClassIndex]->GetInnerCollisionSphere() * 1.5f, theUnits);
-        for (long i = theUnits.size() - 1; i >= 0; i--) {
-            EEUnit* theUnit = theUnits[i];
-            if (theUnit->mHitPoints > 0
-                && (theUnit->mUnitClass->GetUnitType() == kUnitTypeHurricane || theUnit->mUnitClass->GetUnitType() == kUnitTypeAntiMatterStorm)) {
-                theResult = false;
-                break;
-            }
-        }
-    }
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.over_water = this->mOverWater;
+    theCast.area = (int32_t)this->mArea;
+    return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }

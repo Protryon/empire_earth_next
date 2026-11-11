@@ -9,6 +9,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 
 // FUNCTION: WON 0x006f9d80
@@ -97,24 +98,16 @@ void Label::Paint(Graphics& g) {
     Component::Paint(g);
     int x=0,y=0;
     this->mBackground.Paint(g,0,0,this->Width(),this->Height());
+    (void)x; (void)y;
+    // the text aligned inside the padded area (guidraw.rs label)
+    int pads[4]={this->mLeftPad,this->mTopPad,this->mRightPad,this->mBottomPad};
     int textWidth=this->mWrappedText->GetWidth();
     int textHeight=this->mWrappedText->GetHeight();
-    int width=this->Width()-this->mRightPad-this->mLeftPad;
-    int height=this->Height()-this->mBottomPad-this->mTopPad;
-    switch(this->mAlign38) {
-    case HorzAlign_Left:x=0;break;
-    case HorzAlign_Center:x=(width-textWidth)/2;break;
-    case HorzAlign_Right:x=width-textWidth;break;
-    }
-    switch(this->mAlign3C) {
-    case VertAlign_Top:y=0;break;
-    case VertAlign_Center:y=(height-textHeight)/2;break;
-    case VertAlign_Bottom:y=height-textHeight;break;
-    }
-    x+=this->mLeftPad;
-    y+=this->mTopPad;
-    g.SetColor(this->mColor);
-    this->mWrappedText->Paint(g,x,y);
+    WONDrawSlots slots;
+    slots.mText=this->mWrappedText.get();
+    WONDrawOps ops([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_label(this->Width(),this->Height(),pads,
+        this->mAlign38,this->mAlign3C,textWidth,textHeight,this->mColor,o,n); });
+    WONDrawRun(g,ops,slots);
 }
 
 // Compiler-generated and header-inline functions this unit emits:
