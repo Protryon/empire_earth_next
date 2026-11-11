@@ -53,6 +53,7 @@ struct UIDbDataBackgrounds {
 static_assert(sizeof(UIDbDataBackgrounds) == 308, "on-disk record: 308 bytes on every target");
 
 class LLE_API UIBackgroundTable {
+    friend struct UIBackgroundTableRust;    // the Rust record copy's host calls (UIBackgroundTable.cpp)
 public:
     UIBackgroundTable();
     virtual ~UIBackgroundTable() {}         // 0x1005c34a

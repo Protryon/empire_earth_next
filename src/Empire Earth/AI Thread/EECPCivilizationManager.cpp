@@ -50,6 +50,7 @@
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EECPTrace.h"
+#include "ee/EESaveGameFiles.h"
 
 const UString EECPCivilizationManager::sData("EECPCivilizationManager-Data");
 // SYNTHETIC: EXE 0x46e8d4   (wrapper)
@@ -874,6 +875,16 @@ long EECPCivilizationManager::Load(unsigned long inMajorVersion, unsigned long i
         theResult = inFile.Read(this->mNextFortressTime);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mMoraleBuildingsEnabled);
+    // port (0.267): the repair, airport site and space dock site timers (game ms; the original did not save them, so
+    // a loaded player repaired at its first update and every 31 s from there: seed 4's 1350 s save sent a citizen to
+    // repair at once, seeds 2's and 5's 600 s saves 50 and 20 s later than the continued game)
+    if (theResult == kErrorOK && EESaveHasCivilizationTimers(inMajorVersion, inMinorVersion)) {
+        theResult = inFile.Read(this->mNextRepairTime);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mNextAirportSiteTime);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mNextSpaceDockSiteTime);
+    }
     return theResult;
 }
 
@@ -1112,7 +1123,15 @@ long EECPCivilizationManager::Save(unsigned long inMajorVersion, unsigned long i
     theResult = outFile.Write(this->mNextFortressTime - gPhysics->mGameTime);
     if (theResult != kErrorOK)
         return theResult;
-    return outFile.Write(this->mMoraleBuildingsEnabled);
+    theResult = outFile.Write(this->mMoraleBuildingsEnabled);
+    if (theResult == kErrorOK && EESaveHasCivilizationTimers(inMajorVersion, inMinorVersion)) {   // port (0.267, Load)
+        theResult = outFile.Write(this->mNextRepairTime);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(this->mNextAirportSiteTime);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(this->mNextSpaceDockSiteTime);
+    }
+    return theResult;
 }
 
 // FUNCTION: EXE 0x470b04

@@ -1204,8 +1204,9 @@ void EEActiveGroup::KeepNonCitizens()
     unsigned long i = 0;
     while (i < this->GetNumUnits()) {
         EEComplexUnit* theUnit = this->GetUnit(i);
-        if (theUnit->mIsCommandable && theUnit->mHitPoints > 0 && theUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen
-            && theUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
+        // New (R5b.4): the test is Rust over the unit store (ee_units group.rs keeps_non_citizen: commandable, living,
+        // not a land or naval citizen)
+        if (ee_units_keeps_non_citizen(static_cast<uint32_t>(theUnit->mUnitID)))
             i++;
         else
             this->RemoveUnit(theUnit);

@@ -32,6 +32,7 @@
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
+#include "ee/EEUGLocation.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
@@ -50,6 +51,7 @@
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
+#include "ee/EEUnitKind.h"
 #include "rust/ee_rust.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -98,7 +100,17 @@ enum DryEvent {
     kDrySpreadTile,       // tag, x, y
     kDryAddBuildTarget,   // unit, target
     kDryOrderRepair,      // unit, target
-    kDryAddMember         // tag, unit
+    kDryAddMember,        // tag, unit
+    kDryKeepNonCitizens,  // tag, the count, the ids kept
+    kDryLonePatrol,       // player id, x, y
+    kDryInsertPoint,      // unit, player id, x, y
+    kDryGoalRoute,        // unit, the route (2 words)
+    kDryAddPoint,         // the route (2 words), player id, x, y
+    kDryGoalAddPoint,     // ctor, player id, x, y
+    kDrySpreadUnit,       // tag, target, x, y
+    kDryComplexOf,        // unit, its complex unit
+    kDryPathPoint,        // unit, x, y in, x, y out, the height (bits)
+    kDryResetPaths        // tag
 };
 
 struct DryGroup {
@@ -201,10 +213,13 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_HEAL_UNIT: theKind = kGoalHealUnit; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     case EE_GOAL_CTOR_PATROL:
     case EE_GOAL_CTOR_PATROL_ROUTE: theKind = kGoalPatrol; break;
+    case EE_GOAL_CTOR_LOCATION: theKind = kGoalLocation; break;
     default: theMade = false; break;
     }
     Log({kDryGoalNew, inSpec->ctor, inSpec->unit_a, inSpec->unit_b, Bits(inSpec->point[0]), Bits(inSpec->point[1]),
          Bits(inSpec->point[2]), inSpec->flag_a, inSpec->flag_b});
+    if (inSpec->ctor == EE_GOAL_CTOR_LOCATION)   // (the other constructors' records keep their words)
+        Log({Bits(inSpec->value), inSpec->flag_c});
     LogRoute(inSpec->object);
     Log({theMade ? 1u : 0u});
     if (!theMade)
@@ -264,6 +279,27 @@ void DryKeepGroundAttackers(void* inGroup)
             theIndex++;
     }
     Log({kDryKeepGround, theGroup->mTag});
+    LogUnits(theGroup->mUnits);
+}
+
+void DryKeepNonCitizens(void* inGroup)
+{
+    // EEActiveGroup::KeepNonCitizens' loop over the store's test, compared with the object's
+    DryGroup* theGroup = Dry(inGroup);
+    for (unsigned long theIndex = 0; theIndex < theGroup->mUnits.size();) {
+        EEComplexUnit* theUnit = theGroup->mUnits[theIndex];
+        bool theKeeps = ee_units_keeps_non_citizen(static_cast<uint32_t>(theUnit->mUnitID));
+        bool theObject = theUnit->mIsCommandable && theUnit->mHitPoints > 0
+            && theUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen
+            && theUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen;
+        if (theKeeps != theObject)
+            sDry->mMismatches++;
+        if (!theKeeps)
+            DryRemove(theGroup, theUnit);
+        else
+            theIndex++;
+    }
+    Log({kDryKeepNonCitizens, theGroup->mTag});
     LogUnits(theGroup->mUnits);
 }
 
@@ -336,6 +372,12 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         return static_cast<EEUnitGoal*>(new EEUGPatrol(theFlagA));
     case EE_GOAL_CTOR_PATROL_ROUTE:
         return static_cast<EEUnitGoal*>(new EEUGPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
+    case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: new EEUGLocation(&point, true, forced, rotating, facing, false, 0)
+        GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
+        EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
+        theGoal->mUseGroupMovement = inSpec->flag_c != 0;
+        return static_cast<EEUnitGoal*>(theGoal);
+    }
     default:
         return NULL;
     }
@@ -618,4 +660,141 @@ extern "C" void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit)
     }
     EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
     ActiveOf(inGroup)->AddMember(theUnit->mComplexUnit, true);
+}
+
+extern "C" void ee_units_host_group_keep_non_citizens(void* inGroup)
+{
+    if (sDry != NULL) {
+        DryKeepNonCitizens(inGroup);
+        return;
+    }
+    ActiveOf(inGroup)->KeepNonCitizens();
+}
+
+// EEMAddPatrolPoint with nothing selected: a lone patrol group with the point, registered with the player
+extern "C" void ee_units_host_patrol_new_lone(void* inPlayer, float inX, float inY)
+{
+    if (sDry != NULL) {
+        Log({kDryLonePatrol, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    EEPPatrolGroup* thePatrolGroup = new EEPPatrolGroup();
+    thePatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    thePlayer->AddPatrolGroup(thePatrolGroup);
+    thePatrolGroup->Dereference();
+}
+
+// a selected path point: the point into its route after it
+extern "C" void ee_units_host_patrol_insert_point_at(uint32_t inUnit, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryInsertPoint, inUnit, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->mPatrolGroup->InsertPatrolPointAt(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID, theUnit);
+}
+
+// the route of the unit's current goal when it is a patrol (EEGoalCast<EEUGPatrol>(GetGoal())), else NULL; a read
+extern "C" void* ee_units_host_unit_goal_patrol_route(uint32_t inUnit)
+{
+    EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(ComplexOf(inUnit)->GetGoal());
+    EEPPatrolGroup* theRoute = theGoal != NULL ? theGoal->mPatrolGroup : NULL;
+    if (sDry != NULL) {
+        Log({kDryGoalRoute, inUnit});
+        LogRoute(theRoute);
+    }
+    return theRoute;
+}
+
+extern "C" void ee_units_host_patrol_add_point(void* inRoute, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryAddPoint});
+        LogRoute(inRoute);
+        Log({PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    static_cast<EEPPatrolGroup*>(inRoute)->AddPoint(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID);
+}
+
+// a new patrol goal's route: the point added, the route registered with the player
+extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryGoalAddPoint, static_cast<DryGoal*>(inGoal)->mCtor, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    EEUGPatrol* theGoal = static_cast<EEUGPatrol*>(static_cast<EEUnitGoal*>(inGoal));
+    theGoal->mPatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    thePlayer->AddPatrolGroup(theGoal->mPatrolGroup);
+}
+
+// the dry host does not spread: the group keeps its units (logged)
+extern "C" void ee_units_host_group_spread_around_unit(void* inGroup, uint32_t inTarget, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadUnit, Dry(inGroup)->mTag, inTarget, (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadAroundUnit(UnitOf(inTarget), (long)inX, (long)inY);
+}
+
+// the unit's complex unit (EEUnit::GetComplexUnit) as an id, 0xffffffff for none; a read
+extern "C" uint32_t ee_units_host_unit_complex_id(uint32_t inUnit)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+    uint32_t theID = theComplex != NULL ? static_cast<uint32_t>(theComplex->mUnitID) : 0xffffffffu;
+    if (sDry != NULL)
+        Log({kDryComplexOf, inUnit, theID});
+    return theID;
+}
+
+// EEMPathTo's point (its statements before the loop, as they were): a point off the map goes to the closest tile's
+// centre; a tile under a building the first selected unit cannot pass goes to the building's nearest footprint tile;
+// the height is the final tile's (at least 0). *ioX, *ioY: the message's point in, the point the body uses out (the
+// message keeps it). A read (the dry host's too)
+extern "C" float ee_units_host_path_to_point(uint32_t inFirst, float* ioX, float* ioY)
+{
+    EEComplexUnit* theFirstUnit = ComplexOf(inFirst);
+    float theInX = *ioX, theInY = *ioY;
+    long theX = (long)*ioX;
+    long theY = (long)*ioY;
+    EETile* theTile = gWorld.GetMap()->GetTile(theX, theY);
+    if (theTile == NULL) {
+        GE3DPoint thePoint((float)theX + 0.5f, (float)theY + 0.5f, 0.0f);
+        theTile = gWorld.GetMap()->GetClosestTile(&thePoint, &theX, &theY);
+        *ioX = (float)theX + 0.5f;
+        *ioY = (float)theY + 0.5f;
+    }
+    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
+        if (theNode->mUnit->mUnitClass->mTileSize > 1 && !theNode->mUnit->IsPassableBy(theFirstUnit->GetComplexUnit())) {
+            theFirstUnit->GetNearestFootprintTile(theNode->mUnit, &theX, &theY);
+            theTile = gWorld.GetMap()->GetTile(theX, theY);
+            if (theTile != NULL) {
+                *ioX = (float)theX + 0.5f;
+                *ioY = (float)theY + 0.5f;
+                break;
+            }
+            theX = (long)*ioX;
+            theY = (long)*ioY;
+            theTile = gWorld.GetMap()->GetTile(theX, theY);
+        }
+    }
+    float theZ = theTile->mHeight >= 0.0f ? theTile->mHeight : 0.0f;
+    if (sDry != NULL)
+        Log({kDryPathPoint, inFirst, Bits(theInX), Bits(theInY), Bits(*ioX), Bits(*ioY), Bits(theZ)});
+    return theZ;
+}
+
+extern "C" void ee_units_host_group_reset_paths(void* inGroup)
+{
+    if (sDry != NULL) {
+        Log({kDryResetPaths, Dry(inGroup)->mTag});
+        return;
+    }
+    ActiveOf(inGroup)->ResetUnitsPaths();
 }

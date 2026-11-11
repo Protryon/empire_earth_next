@@ -721,6 +721,22 @@ constexpr static const int32_t EE_GROUP_COMMAND_TARGET = 186;
 /// `kActionGatherResource` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_GATHER_RESOURCE = 4004;
 
+/// `kUnitCategoryLandCitizen`, `kUnitCategoryNavalCitizen`
+constexpr static const int64_t EE_UNIT_CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const int64_t EE_UNIT_CATEGORY_NAVAL_CITIZEN = 22;
+
+/// `kActionAttackEnemyUnit`, `kActionHealUnit` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_ATTACK_ENEMY_UNIT = 2001;
+
+constexpr static const int32_t EE_ACTION_HEAL_UNIT = 16001;
+
+/// `kActionPrepareToMove` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
+
+/// `EESendGroupCommand`'s move marker
+constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -743,6 +759,10 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
 
 /// `new EEUGPatrol(object, unit_a, flag_a)` (the route, a patrol group from `Host::unit_patrol_group`; the target)
 constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
+
+/// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
+/// forced, rotating, the facing, group movement)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -4003,10 +4023,73 @@ struct EeUiTilePlan {
   float h;
 };
 
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
+/// One record of the backgrounds database file (`UIDbDataBackgrounds`, 308 bytes on every target).
+struct EeUiDbBackground {
+  uint8_t name[100];
+  uint8_t texture_file[100];
+  float top_offset;
+  float bottom_offset;
+  float left_offset;
+  float right_offset;
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  int32_t id;
+  uint32_t background_id;
+  uint32_t form_id;
+  int32_t texture_top;
+  int32_t texture_left;
+  int32_t texture_bottom;
+  int32_t texture_right;
+  uint32_t background_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  int32_t num_cols;
+  int32_t num_rows;
+  int32_t draw_priority;
+  int32_t red;
+  int32_t green;
+  int32_t blue;
+  uint8_t visible;
+  uint8_t has_alpha;
+  uint8_t attribute1;
+  uint8_t attribute2;
+  uint8_t attribute3;
+  uint8_t pad[3];
+};
+
+/// `UIBackgroundTable`'s members from `mTileWidthPercent` (+0x50 in the original) to `mAttribute3`, in order
+/// (offsets `static_assert`ed in `UIBackgroundTable.cpp`).
+struct EeUiBackgroundTableFields {
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  long id;
+  unsigned long background_id;
+  unsigned long form_id;
+  unsigned long background_type;
+  long num_cols;
+  long num_rows;
+  unsigned long draw_priority;
+  bool visible;
+  bool has_alpha;
+  bool attribute1;
+  bool attribute2;
+  bool attribute3;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
 };
 
 /// `GEColor`: red, green, blue.
@@ -4014,6 +4097,20 @@ struct EeUiColor {
   float red;
   float green;
   float blue;
+};
+
+/// One table entry as Rust writes it: its record from `mTileWidthPercent` on, `mLayout`, `mTextureRect`, `mColor`.
+struct EeUiBackgroundTableRefs {
+  EeUiBackgroundTableFields *fields;
+  EeUiLayout *layout;
+  EeUiRect *texture_rect;
+  EeUiColor *color;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
 };
 
 /// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
@@ -4165,18 +4262,6 @@ struct EeUiControlsTableFields {
   bool fit_rect_to_text;
   bool scale_to_control;
   bool loop_movie;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// Where one `UIControlsTable` keeps what the Rust side writes.
@@ -4585,6 +4670,9 @@ struct EeGoalSpec {
   uint8_t flag_b;
   /// an object the host handed out for the goal (a route)
   void *object;
+  /// a value (the location's facing)
+  float value;
+  uint8_t flag_c;
 };
 
 /// Receives bytes; valid only during the call.
@@ -9605,6 +9693,28 @@ void ee_ui_background_set_visibility(void *background, bool visible);
 /// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
 void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
 
+/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
+void ee_ui_background_full_tile_name(const char *name,
+                                     unsigned long row,
+                                     unsigned long column,
+                                     void *out);
+
+/// `UIBackgroundTable::Create`.
+long ee_ui_background_table_create(void *file);
+
+/// The new table entry's members from a record (`Create`'s copy; the C++ copies the texture file name).
+void ee_ui_background_table_from_record(const EeUiDbBackground *record,
+                                        EeUiBackgroundTableRefs out);
+
+/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
+long ee_ui_event_create(void *file, int kind, void *manager);
+
+/// `UIEvent::Initialize`.
+long ee_ui_event_initialize(unsigned long *count, void *event);
+
+/// `UIEvent::Uninitialize`.
+long ee_ui_event_uninitialize(unsigned long *count, void *event);
+
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
 
@@ -10022,6 +10132,24 @@ void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
 /// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
 void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
 
+/// `UIEditBox::UpdateKeyboard`.
+long ee_ui_edit_update_keyboard(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Copy`.
+void ee_ui_edit_copy(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Cut`.
+void ee_ui_edit_cut(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Paste`.
+void ee_ui_edit_paste(const EeUiEditRefs *refs);
+
+/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
+void ee_ui_edit_add_ime_result(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
+void ee_ui_edit_drag(const EeUiEditRefs *refs, EeUiPoint at);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -10221,6 +10349,23 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
+long ee_ui_status_fill(long value,
+                       long min,
+                       long max,
+                       unsigned long width,
+                       EeUiRect fill,
+                       EeUiRect *out);
+
+/// `SetLocation`'s fill and text rectangles from the moved control rectangle.
+void ee_ui_status_location(EeUiRect rect, unsigned long border, EeUiRect *fill, EeUiRect *text);
+
+/// `CopyData`'s fill: whether the border insets it (`out` then the inset rectangle).
+bool ee_ui_status_copy_fill(EeUiRect fill, unsigned long border, EeUiRect *out);
+
+/// `CopyData`'s text rectangle for a text of `width` x `height`.
+EeUiRect ee_ui_status_copy_text(EeUiRect text, float width, float height);
 
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
@@ -10512,6 +10657,44 @@ void ee_units_explore(void *player,
 /// the unit.
 bool ee_units_keeps_ground_attacker(uint32_t id);
 
+/// `EEActiveGroup::KeepNonCitizens`' test over the store (`group::keeps_non_citizen`): whether the group keeps the
+/// unit.
+bool ee_units_keeps_non_citizen(uint32_t id);
+
+/// `EEMAddPatrolPoint::Execute`'s body (`group::add_patrol_point`) for the sender, its selection and the point.
+void ee_units_add_patrol_point(void *player,
+                               void *selection,
+                               float x,
+                               float y);
+
+/// `EEMAttackUnit::Execute`'s body (`group::attack_unit`) for the sender, its selection, the target id and the
+/// queued and convert flags.
+void ee_units_attack_unit(void *player,
+                          void *selection,
+                          uint32_t target,
+                          bool queued,
+                          bool convert);
+
+/// `EEMHealUnit::Execute`'s body (`group::heal_unit`) for the sender, its selection and the target id.
+void ee_units_heal_unit(void *player,
+                        void *selection,
+                        uint32_t target);
+
+/// `EEMPathTo::Execute`'s body (`group::path_to`) for the sender, its selection, the message's point (read, and
+/// written back as the body adjusted it) and its options.
+///
+/// # Safety
+/// `x` and `y` point to the message's floats for the call.
+void ee_units_path_to(void *player,
+                      void *selection,
+                      float *x,
+                      float *y,
+                      float facing,
+                      bool forced,
+                      bool rotating,
+                      bool queued,
+                      bool group_movement);
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 void ee_units_attack_ground(void *player,
@@ -10598,6 +10781,29 @@ extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
 extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
 
 extern void ee_units_host_group_add_member(void *group, uint32_t unit);
+
+extern void ee_units_host_group_keep_non_citizens(void *group);
+
+extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
+
+extern void ee_units_host_patrol_insert_point_at(uint32_t unit, float x, float y, void *player);
+
+extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
+
+extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
+
+extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
+
+extern void ee_units_host_group_spread_around_unit(void *group,
+                                                   uint32_t target,
+                                                   int64_t x,
+                                                   int64_t y);
+
+extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
+
+extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
+
+extern void ee_units_host_group_reset_paths(void *group);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

@@ -1004,6 +1004,19 @@ bool ReadRegions(Reader& ioReader)
 
 }   // namespace
 
+void EEWriteAreaBytes(const EEAIArea& inArea, std::vector<unsigned char>& outBytes)
+{
+    Writer theWriter;
+    WriteArea(theWriter, inArea);
+    outBytes.swap(theWriter.mBytes);
+}
+
+bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outArea)
+{
+    Reader theReader(inBytes);
+    return ReadArea(theReader, outArea) && theReader.mAt == theReader.mBytes.size();
+}
+
 long EESaveContinentRegions(FSFile& outFile)
 {
     Writer theWriter;

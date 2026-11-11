@@ -5703,6 +5703,210 @@ moved wholly, so no unit was deleted.
   submenus), the per-class config readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the
   platform backend, the text area's and menus' paint).
 
+## R5b.4, seventh round: the fixture's orders, Add Patrol Point, Attack Unit, Heal Unit and Path To in Rust over host calls (ee_units group.rs; EETestFixtureOrders.cpp; branch rust-r5b4-core, 2026-11-11)
+
+- **The orders exercise** (TEST ONLY; EETestFixtureOrders.cpp, fixture_driver.orders, `fixture_game.py --exercise
+  random-game --play-seconds N --orders`, also posix_game.py). "<seq> order <form> <kind>" picks a group of the local
+  player's units, selects it with `EEMSelectTheseUnits` (as the unit icon bar sends it: a UI action), and gives the
+  order through the platform's events (ISHandleEvent: the pointer set under the mouse's input lock, the button press
+  and release, Shift as a key event): gather (citizens, a right click on a world-player resource in view that a
+  citizen can gather), repair and repair queued (citizens, a right click, with Shift for the queued form, on one of
+  the player's built land buildings in view whose hit points the fixture first halves under the world's write lock:
+  no game message damages a building), patrol (the Patrol status button, button object 18), attack ground (the
+  Attack Ground button, object 6, then a left click on a seen point beyond the first unit's minimum range) and move
+  (a right click on open ground). The click points come from the game's own picker (`PickUnitUnreferenced`, the hit
+  test the click itself uses) over a 12-pixel grid of the game view, under the world's read lock.
+  - **The verdict** comes from a hook in `EEPhysics::DrainInput` (`gEEMessageExecutedTestHook`, NULL unless the
+    fixture runs, so EE-SIM and the gates do not see it) called before and after each input executes, on the physics
+    thread under the world's write lock: before, the sender's active group and each unit's current goal; after, every
+    unit judged by the original's rule (EEMessage.cpp's body, Fill, the keeps, the spreads and Plan, read on the
+    objects, not through the store): a Gather goal on the target (or a Location goal at its tile when the continents
+    say it cannot reach it), the target first in the build queue (queued: in it), a Patrol goal on the nearest town's
+    route (or a Location goal for a class that cannot patrol; every goal unchanged when the town has no route), an
+    Attack Ground goal at the message's point, a Location goal after a move. Units the rule does not judge here (the
+    spread's own groups of non-citizens, transports in containers) are "skip".
+  - **What the reconstruction's UI really sends.** The Patrol button (`EEUIFMGStatusButton::Command` 0x12) sends
+    `EEMPatrol(-1)` at once: no point is clicked; the patrol of the nearest town's route. `EEMAddPatrolPoint` has no
+    sender in the reconstruction (only its import constructor): the original's patrol-point mode is not there.
+    `StartPatrol` (buttons 0x1b, 0x22: heal_mech, heal) enters UI state 0x10, whose mouse test is `EEModeHeal`: the
+    name is wrong (it starts the heal mode). Attack Unit needs a seen enemy, Heal Unit a healer: a random map's start
+    has neither, so the fixture does not reach them; Attack Ground needs a unit whose class attacks the ground (none
+    at the start: the step is "skipped (no-unit)").
+  - Not run here (no harness sessions). The self test's stand-in speaks the protocol; the lead's run is the only
+    evidence that the orders work in the game.
+- **Add Patrol Point** (`EEMAddPatrolPoint::Execute`) is `group::add_patrol_point` over host calls (six new ones:
+  KeepNonCitizens, the lone patrol group, the path point's insert, the first unit's patrol goal's route, a route's
+  AddPoint, a new patrol goal's point and registration). `EEActiveGroup::KeepNonCitizens`' test reads the store
+  (`ee_units_keeps_non_citizen`: commandable, hit points, category; its only caller is this body).
+- **Attack Unit and Heal Unit** (`EEMAttackUnit::Execute`, `EEMHealUnit::Execute`) are `group::attack_unit` and
+  `group::heal_unit` (two new host calls: SpreadAroundUnit, a unit's complex unit as an id). Attack Unit's goal takes
+  the selection's first unit as it is when the goal is made (read again there, after the slots' Fills), as the
+  original did. **Behaviour change:** a heal target with no complex unit is refused before any group; the original built the
+  goal over NULL and its Plan dereferenced it (a crash). The UI sends only complex targets.
+- **Path To** (`EEMPathTo::Execute`) is `group::path_to`. Its statements before the loop (a point off the map to the
+  closest tile's centre, a tile under a building the first unit cannot pass to the building's nearest footprint tile,
+  the final tile's height) moved unchanged into one host call (`ee_units_host_path_to_point`, a read); the message
+  keeps the adjusted point (the FFI writes it back, as the original wrote `mX`/`mY`). Its goal is a new host
+  constructor (`EE_GOAL_CTOR_LOCATION`: the spec gained `value`, the facing, and `flag_c`, the group movement flag;
+  the dry log adds those two words for this constructor only, so the other bodies' records keep their digests). The
+  acknowledgement comes before the move marker, which shows for every group that took units, as in the original.
+- **The sweep** (USGC) gained the three bodies' original statements and cases (Add Patrol Point at the two Attack
+  Ground points; Attack Unit at the next player's unit, the player's own, the resource and no unit, plain and queued,
+  the first as a conversion; Heal Unit at the player's own first unit, the next player's and no unit; Path To at the
+  two Attack Ground points with no option and with all four). The goldens'
+  USGC lines were recorded again with each body (the new records); every other digest stayed equal to its golden.
+- **A trap:** Git Bash's `sed -i` rewrote a CRLF file (EEGroupCommandSweep.cpp) with LF line ends, silently: edit
+  CRLF files through a script that reads and writes the bytes (`file` shows the line ends).
+- **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, the Rust gate PASS,
+  every capture digest of the four profiles equal to its golden but USGC, whose lines the next commit recorded; the
+  live Rust-against-original comparison inside the sweep never stopped a game): see the final report. Not run: any harness session, macOS or Linux builds.
+
+## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and
+`UIEvent.h` gained a `friend struct`; `UIEditBox.h` lost three private members): `UIEditBox::UpdateKeyboard`'s repeat
+(the 500 ms delay, then 50 ms steps, the caret shown while a key is held), `ProcessInput`, `ProcessShiftInput` and
+`ProcessControlInput` (deleted from the C++: which keys move, select, delete, cut, copy, paste, clear a line, scroll
+or fire Enter), `Cut`/`Copy`/`Paste`, `AddIMEResultString`'s typing and `MouseMove`'s drag selection and auto-scroll
+(`edit_keys.rs`); `UIBackgroundTable::Create`'s loop and record copy (`background_table.rs`);
+`UIEvent::CreateControlEvents`/`CreateFormEvents`' loop and `Initialize`/`Uninitialize`'s count (`event.rs`);
+`UIFullBackground::LoadBackground`'s tile file names (`background.rs`); `UIStatusBar`'s value clamp, fill width, move
+rectangles and `CopyData`'s inset fill and centred text (`status.rs`).
+
+- **Keys are host questions, asked as the C++ asked them.** `UIControl`'s predicates stay C++ (`DeleteKeyPressed`
+  reads the keypad's Del only with Num Lock off, `CutKeyPressed` is Ctrl+X or Shift+Del, `ShiftKeyPressed` reads
+  `JustPressed` then `GetValue`), so Rust asks `ee_uicpp_edit_key(k)` at each place the C++ called one, in its order,
+  short-circuits included. The golden driver's key entities digest every read (`reads <n> <fnv>` per operation), so a
+  reordered or extra question fails the replay. The four timers are `TMPoll`s behind `ee_uicpp_edit_poll`.
+- **Two calls come back into the box.** `ProcessEnterKey` is virtual (the scenario editor's `EESETSAEditBox`
+  overrides it) and an IME result's characters go through `UIManager::UpdateTranslatedKey` to the focused control's
+  `UpdateTranslatedKey`: both run inside `Edit::call` (the record stored before, reloaded after). The driver checked
+  the virtual stays virtual with a subclass whose vtable is `UIEditBox`'s with slot 35 replaced.
+- **UTF-8 (D6):** every editing key's golden includes characters of one to four bytes; Backspace, Delete, the arrows
+  and an IME result step whole code points (the model's `Mbcs`), and Rust's unit tests say so on `a€😀` and `日本語`.
+- **Kept quirks:** Shift+Del without a selection deletes backwards (only the keypad's Del reaches it: the main Del
+  with Shift is Cut, which returns first); Ctrl+A, Ctrl+L and Ctrl+Enter do not count as handled (no repeat);
+  Shift+Right moves `mCharScroll` characters; a drag's line moves wrap their unsigned arithmetic as the C++ did.
+  `Uninitialize` decrements a count already at 0 (it wraps); a background record whose read fails keeps the previous
+  record's bytes (a second entry from it); a full background's name with no `.` in its file part but one in a
+  directory takes the numbers before the directory's `.`; a status bar's value is clamped below the minimum first (a
+  reversed range takes its minimum).
+- **Original hazards, found by the drivers, left as they were (each reachable only as described):**
+  - a multi-line box narrower than its widest character adds lines forever (known; the driver keeps boxes wide);
+  - `SetText` or `SetText`-like edits during an IME composition leave the composition's start past the text, and the
+    next typed key reads past `mLines` (the game's text input closes the composition first);
+  - `AddIMEResultString` with no composition open reads the stale composition start (the IME sends a result only
+    during a composition);
+  - an edit during a mouse drag (Backspace deleting the anchor's line, or `SetText`) leaves the drag's anchor past
+    the text, and the next `MouseMove` selects from it: **a person can reach this** by typing while dragging a
+    selection;
+  - Shift held with a deletion and a move in the same frame (Shift+keypad Del with Num Lock off, plus an arrow): the
+    deletion leaves the anchor at the selection's far end, the move then selects from it, past the text when it was
+    the end. **A person can reach this** too. Neither is fixed here (no behaviour change); a fix would reset the
+    anchor after a deletion.
+  - `UIBackgroundTable::Create` and the events' loops copy an uninitialised record when the first record's read
+    fails (the Rust starts from zeros; the driver never fails the first record read);
+  - `LoadBackground` built a name in 256 bytes and the no-extension numbers in 3: names over about 240 bytes or grids
+    over 99 overflowed; the Rust name is whole (the only divergence, unreachable from the UI database).
+- **Golden drivers, new traps.**
+  - With `-DLOWLEVELENGINE_EXPORTS` every dllexport class's inline members are emitted in the driver's unit, and
+    under `#define private public` those copies reference the statics by their public names (`@@2`), so a COMDAT
+    from the driver can win and read address 0. Compile the driver with `-DEE_STATIC -DLLE_CURRENT_HEADERS
+    -DLLE_EXE_HEADERS` (no dllexport) and reach private statics by their decorated names
+    (`?sEnterKey@UIControl@@1PEAVISEntity@@EA`, `?sShiftKey@UIForm@@0...`, the controls array's `@@0V?$vector...`).
+  - A driver-side subclass of a unit's class gets a vtable naming the base's protected virtuals by the public
+    decoration (address 0), and the MS ABI emits a vftable only where a constructor runs; clang-cl crashed building a
+    subclass constructor under `EE_STATIC`. Copy the real vtable (`??_7UIEditBox@@6B@`) into an array and replace one
+    slot, checking it holds the member's address first.
+  - `-Xclang -fdump-vtable-layouts` on a two-line unit with a derived class whose constructor is inline prints a
+    class's slots (FSFileSpec's: Close 2, Open 12, `Read(int32_t&)` 22, `Read(uint32_t&)` 23,
+    `Read(unsigned char*, ...)` 25); a fake file is then a block whose vptr is a table of stubs.
+  - `GERhombus::SetRectangle` is inline and calls the private `ComputeRotation`: call it from a unit without the
+    `private` define; `GERectangle::Contains` and `UILayoutUtility()` are out of line (GEBitmap.cpp,
+    UITrampolines.cpp): define them in the driver.
+  - A random world that holds a box's invariants: the frame's `CheckScrollBar` after every operation (CopyData calls
+    it first), no `SetText` or press during a composition, no edit during a drag, a shown control needs entity groups
+    (`SetRectangle`/`SetLocation` reach `GetEntityGroupById`): set `mDisplayMode` 0. `HeapValidate` after every
+    operation (`UI_GOLDEN_HEAPCHECK=1`) turned a heap corruption at a later allocation into the operation that caused
+    it.
+  - The driver's clipboard is the process's: the replay carries it from one box to the next.
+  - Run driver builds with their own `EE_ORIG_SRC_ROOT`: `clang_build.compile_to` stages a unit at the same path as
+    the game's build, and a driver build during a game build races on it.
+- **Goldens:** `golden_keys.txt` (60 boxes x 70 operations, 688 KB), `golden_bg.txt` (100 background files, 200 event
+  files, 100 count sequences, 60 full backgrounds; 706 KB), `golden_status.txt` (100 bars x 25 operations, 527 KB).
+  Each replays whole in Rust; each driver relinked over the forwarders printed the same file, and the same on three or
+  four more seeds at ten times the size (the Rust replays also pass on those). Mutations checked: Shift+Right's
+  `mCharScroll`, Shift+Del's backward deletion each fail the key replay.
+- **Gates run:** after each commit `build.py -j 4 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle (seeds 2-7, the main
+  checkout's open tree) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game or POSIX build
+  was run.
+- **What a real game exercises (EE-SIM has no UI):** the key dispatch runs on every frame an edit box has the
+  keyboard: the lobby's player-name and chat boxes, the save game name, the scenario editor's boxes, multiplayer chat
+  in a game. The fixture's `wonkey` only types characters (`UpdateTranslatedKey`, already Rust before this round), so
+  only a person reaches the keys: Backspace, Delete, the arrows, Home/End, Shift selections, Ctrl+X/C/V/A/L, Enter in
+  a single-line box (the chat's send), a mouse drag selection, an IME. The background table and the form and control
+  events load once at start-up (every menu's backgrounds and every button's event come from them); the full
+  background's names load the scenario editor's 4 x 3 picture (`textures\Scenfull_<row>_<column>`); the status bar
+  draws the post-game summary's bars.
+
+## R5a.2, fifth round: claim ranges, behaviours, unit order, attack counts, repair timers, towns (save 0.265-0.268, branch rust-r5a-aisave4, 2026-11-11)
+
+Continues "R5a.2, fourth round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
+Each commit was built and gated on its own tree (build 0/0 for EE-AOC and EE-SIM, the plain oracle identical to ref
+on seeds 2-7, the Rust gate, sim_capture's four profiles PASS) and measured with the full saveload run. All of these
+are load and save code: they run in the real game's Load Game screen as in EE-SIM (no change to how a game plays).
+
+- **0.265, the claim ranges and danger zones** (`EECPSaveResourceState`, `EESaveHasResourceState`). Seed 4's 2100 s
+  iron gatherer: FindResourceTarget's first pass (economy.forage_patches) takes only the mines within the claim
+  range, which EECPClaimExpand grows in steps kept in EECPTrace.cpp's statics. A loaded player started at the first
+  range (25 where the saved game had 40) and took the near mine. The steps and their last time are now in
+  gCPExperimentTimers, and the resource managers' mDangerZones (also read there) are saved with them; a load puts
+  both in place at the first tick. The dumps' AI line shows `claim=` and `danger=`. Measured: seed 3 2100 s 57 -> 569,
+  seed 4 600/2100 s 80 -> 173, 0 -> 52, seed 5 1350/2100 s 91 -> 106, 23 -> 35.
+- **The harass and cautious behaviours** (no format change, saves from 0.254). EEComplexUnit::RepairPointers made a
+  saved behaviour 3 or 4 the class's own. The computer players give their explorers harass on Hard, which can flee
+  (dbunitbehavior mCanFlee): a loaded explorer stood and fought where the saved one ran (seed 7's 600 s save: the
+  unit AI's ShouldIRun trigger). Measured: seed 7 600/2100 s 10 -> 22, 1 -> 99, seed 2 2100 s 20 -> 27.
+- **0.266, the order of the units the unit managers track** (`EESaveHasUnitManagerOrder`). UnitAdded files a
+  building by its distance to the town centre of that moment, so EECPUnitManager::mUnits' order is the game's
+  history; the load's AddAllUnits filed them in the unit list's order. StartProduction's round robin walks it (seed
+  6's 600 s save trained at the other of two barracks 50 s after the load: found by the buildings' mBuildQueue and
+  mCurrentResearch swapped in the dumps' raw bytes, layout.json names the offsets). Saved as each class's ids;
+  reordered at the first tick. Measured: seed 4 600 s 173 -> 208, seed 6 600 s 59 -> 73, seed 7 2100 s 99 -> 284.
+- **The attack count and combat state** (no format change, saves from 0.254). EEUGAttackUnit::RepairPointers counted
+  every loaded attack goal in mNumAttacks and set the combat state to 2 for the first; the constructor and destructor
+  leave out an animal target, so a load counted the hunts for good and overwrote the saved state (seed 3's 1350 s
+  save: state 2 with 2 attacks against 1 and 0; EnableManagers built other priority lists, two shuffle draws
+  fewer, at the first AI update). Measured: seed 3 1350 s 0 -> 107.
+- **0.267, the repair and site timers** (`EESaveHasCivilizationTimers`). EECPCivilizationManager's mNextRepairTime
+  (and the airport and space dock site timers) were never saved: a loaded player repaired at its first update and
+  every 31 s from there, sending other citizens to repair at other times (seed 4 1350 s at once, seeds 2 and 5 600 s
+  later). The largest effect this round: seed 2 58/86/27 -> 308/683/27, seed 3 94 -> 207 and
+  107 -> 309, seed 4 1350 s 1 -> 205, seed 5 23/106/35 -> 312/479/71, seed 6 73/16 -> 205/202, seed 7 22/178/284 ->
+  171/559/420.
+- **0.268, the towns' areas** (`EESaveHasTownAreas`, `EEWriteAreaBytes`/`EEReadAreaBytes` over the continent block's
+  area format). The towns' block now also holds each town's continent and area (tiles as they are, hull, bounds);
+  RepairPointers makes the towns from it (EEMakeSavedTowns) instead of rebuilding them from the buildings in the
+  load's order, which made seed 6's 2100 s town 3 two towns and an extra patrol group. An older save, or a town that
+  cannot be read, rebuilds as before. Measured: seed 6 2100 s 0 -> 101.
+- **The numbers** (first divergent CT line after the load, 600/1350/2100 s, start -> end of this round): seed 2
+  58/86/20 -> 308/683/27, seed 3 94/0/57 -> 207/309/569, seed 4 80/1/0 -> 208/205/52, seed 5 23/91/23 -> 312/479/71,
+  seed 6 59/16/0 -> 205/202/101, seed 7 10/178/1 -> 171/559/420. Still **0 of 18** continue identically to the end
+  (2700 s), but no save now parts in its first 25 CTs.
+- **The unit store's checks on the load path**: all 18 loads of the 0.264 + behaviour build and of the final 0.268
+  build ran to the end with EE_SIM_CAPTURE on (USCK every tick, from the first tick after the load): no mismatch.
+- **Lesson: a stage slot per run fills the disk.** sim.py keeps build/sim/stage/<slot> per run name, seed and save
+  (the written folders copied) and nothing deletes it; C: ran out with 149 of this worktree's slots in place
+  (deleting them and the other agents' took it from 4 to 26 GB free). The scratch scripts now
+  delete their slots and saves as soon as a run's numbers are in.
+- **Tools** (scratch, under the worktree's build/hunt, not committed): `pair.py` (now removes its slots), `capload.py
+  NAME` (each save of a saveload run loaded with captures on, the capture deleted after), `rawdiff.py DIR UNIT K`
+  (the differing non-pointer words of a unit's raw bytes in two dumps), `sum.py` (a saveload log as the per-seed
+  numbers), `clean.sh`.
+- **Still different after a load** (not traced this round): seed 2 2100 s at CT 27, seed 4 2100 s at CT 52 (an `ai`
+  checksum only: the computer players' state, no unit), seed 5 2100 s at 71, seed 6 2100 s at 101, the 600 s and
+  1350 s saves after 200 to 680 CTs.
+
 ## R6: WONGUI's tree list, the menus' keys, the config readers' key tables and the event dispatch decisions in Rust (ee_won guitree.rs, guimenu.rs, guiconf.rs, guievent.rs; branch rust-r6-won10, 2026-11-11)
 
 Round 10 of R6 (RUST_PLAN "R6 WON, the rest"). Same pattern as rounds 8 and 9: a `tests/won` driver (in `xbuild.py`
