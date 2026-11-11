@@ -71,6 +71,7 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EETeam.h"
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
@@ -1199,12 +1200,21 @@ void EEWorld::CreatePlayers(EEGameState* inState)
     }
     this->mPlayers[0]->AddPendingUnits(false, false);
     if (inState->mIsLoadedGame) {
+        // port (saves from 0.260 on): the computer players' managers are restored once every player is repaired (their
+        // tasks name other players' towns, rebuilt by those players' RepairPointers; EEComputerPlayer::RestoreManagers),
+        // unless a computer player is replaced on load (the original order then)
+        bool theDefer = EESaveHasTowns(inState->mMajorVersion, inState->mMinorVersion);
+        for (i = 0; i < inState->GetNumPlayers() && theDefer; i++)
+            theDefer = inState->mPlayers[i]->mComputerPlayer == NULL || !inState->mPlayers[i]->mComputerPlayer->mReplaceOnLoad;
+        gDeferComputerPlayerRestore = theDefer;
         for (i = 0; i < inState->GetNumPlayers(); i++) {
             EEPlayer* thePlayer = inState->mPlayers[i];
             thePlayer->RepairPointers(inState->mMajorVersion, inState->mMinorVersion);
             if (thePlayer->mComputerPlayer != NULL && thePlayer->mComputerPlayer->mReplaceOnLoad == true)
                 this->ReplacePlayer(i, inState->mMajorVersion, inState->mMinorVersion, inState->mMap);
         }
+        gDeferComputerPlayerRestore = false;
+        EECPRestoreDeferredManagers(inState->mMajorVersion, inState->mMinorVersion);
     }
     this->FlushQueuedPlacements();
     if (inState->mInScenarioEditor == true)
