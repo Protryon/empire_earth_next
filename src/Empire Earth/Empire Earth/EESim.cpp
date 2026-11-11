@@ -866,6 +866,14 @@ void AfterTick()
     // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
     static long sNextCastMs = 300000;
     static long sCasts = 0;
+    static bool sCastsAligned = false;
+    if (!sCastsAligned) {   // a loaded game casts on the continued game's schedule (sim_oracle.py saveload)
+        sCastsAligned = true;
+        if (!sOptions.mLoadSave.empty()) {
+            sCasts = theTime / 300000;
+            sNextCastMs = (sCasts + 1) * 300000;
+        }
+    }
     if (sOptions.mCalamities && theTime >= sNextCastMs) {
         sNextCastMs += 300000;
         EETechCaptureCastCalamities(sCasts++);
