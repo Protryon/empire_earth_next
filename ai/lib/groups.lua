@@ -583,9 +583,35 @@ local function set_state(g, state)
     end
 end
 
+-- [research §4.4, AI_RESEARCH §8.41] g.route (opt-in): the legs follow ai.route's waypoints round the danger map's
+-- threat (known towers and soldiers), weighted g.route_avoid (default 8); the route is asked again for a new place or
+-- after 30 s. -> the next waypoint at least 5 tiles from the centre, or the place itself
+local function routed(g, cx, cy, x, y)
+    local now = ai.time()
+    if g.path == nil or g.path_tx ~= x or g.path_ty ~= y or now - (g.path_t or 0) >= 30000 then
+        local path = ai.route(cx, cy, x, y, {avoid = g.route_avoid or 8})
+        g.path, g.path_tx, g.path_ty, g.path_t, g.path_k = {}, x, y, now, 1
+        if path ~= nil then
+            for k, w in ipairs(path) do
+                g.path[k] = {w[1], w[2]}
+            end
+        end
+    end
+    while g.path_k <= #g.path and near(cx, cy, g.path[g.path_k][1], g.path[g.path_k][2], 5) do
+        g.path_k = g.path_k + 1
+    end
+    if g.path_k <= #g.path then
+        return g.path[g.path_k][1], g.path[g.path_k][2]
+    end
+    return x, y
+end
+
 -- a leg of LEG tiles from the centre towards (x, y), given again when the leg moved 4 tiles or after MOVE_MS
 local function move(g, cx, cy, x, y, forced)
     local now = ai.time()
+    if g.route then
+        x, y = routed(g, cx, cy, x, y)
+    end
     local dist = isqrt(d2(cx, cy, x, y))
     local lx, ly = x, y
     if dist > M.LEG then

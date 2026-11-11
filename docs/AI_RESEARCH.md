@@ -2980,6 +2980,96 @@ dropped 1-2 games a row):
 - `--repeat 2` on b1b1312 (seeds 4 and 9, against the improved classic and rush, 90 minutes): all four pairs
   identical.
 
+**The overnight experiments D1-D5 (2026-11-11).**
+- The protocol:
+  - one switch over main 1e422bd's boom, against main 1e422bd's scripts as the baseline;
+  - 32 seeds (2-33), Small, Hard, 120 minutes, the same exe;
+  - kept only if the defeats do not rise in any matchup and something gains;
+  - the kept one is also checked against the mirror and Age of AI.
+- Stone / Copper: the games that reached the epoch and its median minute. Lost: citizens and boats in all.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 6/32 | 0/27/5 | 31, 24.9 | 20, 61.6 | 111.8 |
+| | cheating classic | 13/32 | 8/18/6 | 22, 28.0 | 8, 74.7 | 85.0 |
+| | mirror | 0/32 | 1/1/30 | 32, 21.5 | 32, 51.9 | 15.9 |
+| | Age of AI | 0/32 | 0/11/21 | 32, 22.4 | 32, 50.9 | 17.1 |
+| D1 watcher + attack from Copper (`watch`, `attack`) | improved classic | 8/32 | 1/24/7 | 31, 24.9 | 22, 65.9 | 114.6 |
+| | cheating classic | 16/32 | 8/19/5 | 22, 28.0 | 6, 90.5 | 86.6 |
+| D2 wave flight (`wave_n = 8`): **kept** | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 87.1 |
+| | mirror | 0/32 | 1/0/31 | 31, 21.5 | 31, 51.6 | 15.4 |
+| | Age of AI | 0/31 | 0/14/17 | 31, 22.3 | 31, 51.2 | 17.8 |
+| D3 four Prehistoric towers from 6 citizens (`towers = 4`, `tower_at = 6`) | improved classic | 10/32 | 0/29/3 | 32, 24.6 | 21, 64.8 | 120.5 |
+| | cheating classic | 17/32 | 12/18/2 | 26, 29.1 | 9, 81.7 | 74.4 |
+| D4 tower bait (`bait`, Age of AI's early.c) | improved classic | 8/32 | 0/27/5 | 32, 24.3 | 15, 62.4 | 123.0 |
+| | cheating classic | 15/30 | 8/17/5 | 21, 25.9 | 10, 78.2 | 87.4 |
+| D5 the hurt spots (`hurt_safety`, Age of AI's attack.c citizens_safety) | improved classic | 9/32 | 0/27/5 | 32, 25.2 | 17, 57.3 | 109.2 |
+| | cheating classic | 20/32 | 4/24/4 | 21, 29.8 | 3, 54.3 | 66.4 |
+
+- **Kept:** D2 alone. It has the fewest defeats against both classics and no defeats against the mirror or Age of
+  AI. The gain is small, though: 2 and 1 games, within a 32-seed bench's noise. Against Age of AI and the improved
+  classic it has fewer close games (17 against 21, 2 against 5), and it loses a few more citizens against the
+  classics. It is kept by the protocol's rule; a 64-seed check would settle it.
+- **Off:**
+  - D1 adds defeats against both classics and comes to the Copper Age later. The attacks pull soldiers out of a town
+    the classics are about to hit.
+  - D3 reaches the Stone Age in every game against the improved classic and in 26 of 32 against the cheating one
+    (22 for the baseline). It wins 12 against 8 there and loses the fewest citizens. But it has 4 more defeats against
+    each classic: the fourth tower's stone and the earlier towers come out of the Stone Age reserve.
+  - D4 and D5 both move citizens more often and add defeats. D5 halves the Copper Age games against the cheating
+    classic (3 against 8).
+
+**D2 on 64 seeds; D3b and D3c (2026-11-11).** The same protocol. Seeds 34-65 were added to the baseline and to D2.
+D3b and D3c are each one switch over D2, against D2's 32-seed rows above.
+
+| Experiment | Matchup | Seeds | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 2-65 | 13/64 | 1/52/11 | 63, 23.8 | 40, 61.5 | 108.1 |
+| | cheating classic | 2-65 | 28/64 | 17/38/9 | 46, 29.4 | 19, 71.8 | 76.1 |
+| D2 wave flight | improved classic | 2-65 | 10/64 | 1/55/8 | 63, 23.8 | 40, 62.4 | 111.5 |
+| | cheating classic | 2-65 | 28/64 | 18/36/10 | 46, 29.6 | 18, 72.3 | 77.1 |
+| D3b D2 + the towers from 6 citizens (`tower_at = 6`) | improved classic | 2-33 | 7/32 | 0/26/6 | 32, 24.0 | 22, 62.3 | 113.0 |
+| | cheating classic | 2-33 | 17/31 | 4/18/9 | 23, 29.1 | 7, 81.8 | 75.3 |
+| D3c D2 + a fourth tower once the next epoch is reserved (`towers_saving = 4`) | improved classic | 2-33 | 9/32 | 0/27/5 | 32, 24.9 | 18, 62.4 | 115.2 |
+| | cheating classic | 2-33 | 17/32 | 8/18/6 | 23, 29.3 | 11, 77.9 | 73.9 |
+
+- **D2 holds on 64 seeds:** 10 defeats against 13 by the improved classic, 28 against 28 by the cheating one. Kept.
+- **D3b and D3c add defeats against both classics** (7 and 9 against 4; 17 and 17 against 12). Both are off; no
+  64-seed run.
+  - Earlier towers and a fourth tower reach the Stone Age in every game against the improved classic. They also lose
+    fewer citizens against the cheating classic.
+  - But more towns are wiped out later. The tower spending, or the towers at the town that the plan builds first,
+    does not stop the waves that kill the town.
+
+**D6 and D7, the Prehistoric rule measured for the owner (2026-11-11).** Both are off by default; each is one switch
+over D2. 32 seeds (2-33), against D2's rows.
+- D6, `plan.emergency = N`: up to N soldiers, and a barracks, while a wave of 8 or more is seen in the claim range.
+  Training stops 60 s after the wave is gone.
+- D7, `tower_militia`: in the Prehistoric, a raid in a tower's reach is fought by the militia whatever its size or
+  kind, when the citizens and the towers win by the square law at 3 x.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Citizens at 20 min | Lost |
+|---|---|---|---|---|---|---|---|
+| D2 | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 28.6 | 87.1 |
+| D6, N = 4 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 115.5 |
+| | cheating classic | 13/32 | 6/19/7 | 23, 29.3 | 6, 75.5 | 28.7 | 86.3 |
+| D6, N = 8 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 122.4 |
+| | cheating classic | 12/32 | 6/18/8 | 23, 29.4 | 7, 75.8 | 28.7 | 88.4 |
+| D7 | improved classic | 6/32 | 0/28/4 | 32, 24.3 | 21, 63.2 | 32.9 | 119.5 |
+| | cheating classic | 16/31 | 8/20/3 | 21, 27.4 | 6, 73.9 | 28.4 | 76.1 |
+
+- **Neither helps, and neither costs the economy anything measurable:** the Stone Age minute and the citizens at 20
+  minutes are within 0.2 of D2's.
+- **D6** changes almost nothing. The Prehistoric town has no barracks when a wave arrives (it stands from 28
+  citizens), so the soldiers ordered come after the wave: 23 plan lines with soldiers in the 32 games against the
+  cheating classic. An emergency army would have to be built before the wave is seen, which is the rule the owner
+  set.
+- **D7** adds defeats (6 and 16). Its militia rarely triggers: a Prehistoric tower reaches 4 tiles, and the waves
+  stand outside that (938 militia lines against D2's 917).
+- No 64-seed run: none is better than D2.
+
 **Open.**
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
