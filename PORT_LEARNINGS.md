@@ -4720,4 +4720,3 @@ Each save version below keeps the older ones' load path (an older save loads wit
     for it at that update while the dumps are equal, so the state is not in the dumps yet;
   - dead units held by handles or other pointers than mLastAttacker (mLastResource, the AI's target handles) are not
     made again; the continent manager is rebuilt at load, the path searches are asked again.
-||||||| abb66a9f
