@@ -5367,3 +5367,58 @@ on seeds 2-7, the Rust gate, sim_capture's four profiles PASS) and measured with
   - *seed 2 2100 s, tick 16* and *seed 7 2100 s, tick 20*: a sub group picks another task / a unit another attack
     destination; the trace's "income" and other `cp` statistics lines differ at once after a load (trace statics,
     not game state).
+
+## R5b.4, sixth round: Attack Ground, Patrol, Gather and Repair in Rust over host calls, the dry host's sweep, the store's next fields (ee_units group.rs; branch rust-r5b4-core, 2026-11-11)
+
+- **The store's next fields** (each a write-through holder or a class field reported with `mUnitClass`, compared by
+  USCK at every tick and before every executed message; no difference over the 24 capture games): `EEComplexUnit::mIsCommandable` (the doppelganger's load
+  reads it through `EEUnitStoreRead`), `mFormationSlot`, the class's `mCanAttackGround`, and `EEUnit::mResourceAmount`.
+- **The bodies** (`ee_units` group.rs over host calls in EEUnitHost.cpp, in the original's order and draw count):
+  `EEMAttackGround::Execute` (`attack_ground`: the draw before the goal, the drawn unit acknowledging by id; a group
+  whose ground attackers all left stays pending with no goal), `EEMPatrol::Execute` (`patrol`: the target by id as
+  `EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))` over the store, i.e. a complex unit whose record's owner is the id's
+  top byte; target -1 asks the host for the nearest town's route point; a selected path point adds the target's tile;
+  the route read once before the loop, the goal made before the group's goal is cleared), `EEMGatherResource::Execute`
+  (`gather`: the target's resource amount from the store, the queued flag set before the spread, the goal queued as the
+  message says) and `EEMRepairUnit::Execute` (`repair`: the spread around the target's tile from the store; queued,
+  build targets; else every unit orders the repair, then all are added back). KeepGroundAttackers' test reads the store
+  (`ee_units_keeps_ground_attacker`); KeepMobileUnits, the spreads, the repair orders stay host calls.
+- **The holders found their writers again:** `mResourceAmount` is read by the unit load (`EEUnitStoreRead`) and passed to
+  four `sprintf`s (the deleted copy constructor refuses a holder as a variadic argument on Windows too: `.Get()`).
+- **A selected unit out of its list.** A body reads the first selected unit's class type from the store; a unit that
+  left its list (dead, not yet validated out of the selection) has no record, so the type is then read on the object
+  through the host (`object_unit_type`). The dry host does not log that read.
+- **The dry host and the USGC sweep** (TEST ONLY; ee/EEUnitHost.h, EEGroupCommandSweep.cpp). No capture game sends a
+  group command, and a body cannot run in the live world in a sweep (goals, the goals' counter, groups, draws,
+  effects). So every host call has a dry branch (a thread-local state set by `EEUnitHostDryBegin`): groups are unit
+  lists, Fill takes the units EEFillMembers takes (the store; neither the selection nor the group is sorted: the sort is
+  logged), KeepMobileUnits runs the original test on the objects, KeepGroundAttackers the store's test checked against
+  the object's flag, a goal is a record of its arguments, a draw walks its range without touching the generator, the
+  reads (map height, nearest town's point, a route) are real and logged, the rest is logged. Every five game minutes,
+  for every player, its list's complex units (in order, reversed, none, and after its first path point) with a set
+  of arguments (points at the first unit's tile and the map's centre; targets -1, its first unit, the next player's,
+  its path point, an id nobody has) run the Rust body (the FFI entry the game calls) and then the original's
+  statements copied from EEMessage.cpp (each world call through the same host calls, each unit read on the object:
+  `gWorld.GetUnit`, `EEUnitCast`, `mUnitClass`). The two logs must be equal (else EE-SIM exits 3); USGC holds the
+  Rust log. The hull reads of FindNearestTown run inside an `EEGeomCaptureScope`, so HULL/AREA keep their goldens.
+  **What it covers:** the decisions over real units (the targets, the store against the objects, the branches, which
+  units the keeps leave, the draws' ranges and which unit acknowledges); **not** the world calls themselves (Fill's
+  sort, Plan, SetGoal, the spreads, the markers, the acknowledgement's sound): only a played game runs those.
+- **A trap:** a point off the map's diamond has no terrain row (`GeTerrainView::point` reads before a row's start):
+  the sweep's first map corner (0.5, 0.5) crashed in `mesh_z`. The UI never sends one; the sweep uses on-map points.
+- **The USGC goldens** were recorded with the Attack Ground and Patrol build (276-1,080 records a game), then again with
+  the Gather and Repair cases (780-2,340); the first two bodies' records alone still give the first goldens (oracle
+  seed 2: 810 records, the same digest), so adding cases changed nothing in them.
+- **Disk:** every sim_oracle/sim_capture run leaves a staged data copy per seed under `build/sim/stage/<kind>-<NAME>-<seed>`
+  that nothing deletes (about 400 MB each): C: reached 0 bytes during this round. The scratch gate scripts now delete
+  each run's slots with its captures.
+- **What only a played game runs** (no capture game sends these messages): the four bodies' world calls (Fill's sorts,
+  KeepMobileUnits on a real group, the spreads, SetGoal, Plan, the command markers, the acknowledgement sounds, the
+  repair orders). The fixture commands that would reach them, on a box-selected group: right-click on a tree or mine
+  with citizens selected (EEMGatherResource), right-click on a damaged own building with citizens (EEMRepairUnit;
+  Shift for the queued form), the Patrol button then a point or own unit (EEMPatrol), the Attack Ground button with a
+  siege unit then a point (EEMAttackGround). Not written into the fixture: each needs its own outcome check (which goal
+  each unit got), more than a small change.
+- **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, `rust_build.py gate`
+  PASS, `sim_capture.py` digests of the four profiles equal to the goldens but USGC, which the next commit recorded):
+  see the final report for the merged numbers. Not run: any harness session, macOS or Linux builds.
