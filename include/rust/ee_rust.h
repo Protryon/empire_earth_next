@@ -4288,6 +4288,44 @@ struct EeWonInitErrors {
   bool allow_ignore;
 };
 
+/// A `WONRectangle` (x, y, width, height).
+struct EeWonRect {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+};
+
+/// A child layout instruction (`ChildLayoutInstruction`): its flags and the four offsets.
+struct EeWonChildLayout {
+  int32_t flags;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+};
+
+/// A percentage layout's numbers (`PercentLayoutParam`): percentages (negative: leave that coordinate) and the
+/// padding inside each anchor edge.
+struct EeWonPercent {
+  int32_t px;
+  int32_t py;
+  int32_t pw;
+  int32_t ph;
+  int32_t lp;
+  int32_t tp;
+  int32_t rp;
+  int32_t bp;
+};
+
+/// One component of a vertical flow layout: its paddings, its x and its height.
+struct EeWonFlowItem {
+  int32_t top_pad;
+  int32_t left_pad;
+  int32_t left;
+  int32_t height;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -11198,6 +11236,133 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
+///
+/// # Safety
+/// Both outs are writable.
+bool ee_won_gui_layout_keyword(int32_t index,
+                               const uint8_t **out_name,
+                               int32_t *out_flag);
+
+bool ee_won_gui_layout_zero_rest(bool chain, bool repeat, int32_t read);
+
+EeWonRect ee_won_gui_rect_intersect(EeWonRect a, EeWonRect b);
+
+EeWonRect ee_won_gui_rect_union(EeWonRect a, EeWonRect b);
+
+bool ee_won_gui_rect_intersects(EeWonRect a, EeWonRect b);
+
+/// `set_size`: true with the size to set in the outs, false when nothing changes.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_set_size(int32_t cur_width,
+                         int32_t cur_height,
+                         int32_t width,
+                         int32_t height,
+                         int32_t *out_w,
+                         int32_t *out_h);
+
+/// `size_at_least`: true with the size to set in the outs, false when nothing changes.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_size_at_least(int32_t cur_width,
+                              int32_t cur_height,
+                              int32_t width,
+                              int32_t height,
+                              int32_t *out_w,
+                              int32_t *out_h);
+
+EeWonRect ee_won_gui_child_layout(EeWonRect child,
+                                  EeWonRect reference,
+                                  bool ref_is_parent,
+                                  EeWonChildLayout layout);
+
+/// `center_shift` over `count` bounds: true with the shift in the outs.
+///
+/// # Safety
+/// `bounds` holds `count` rectangles (or is NULL with 0); the outs are writable.
+bool ee_won_gui_center_shift(const EeWonRect *bounds,
+                             size_t count,
+                             EeWonRect center,
+                             bool center_is_box,
+                             bool horz,
+                             bool vert,
+                             int32_t *out_dx,
+                             int32_t *out_dy);
+
+/// `same_size` (`which` 0) or `size_at_least_layout` (1, with the paddings) over `count` (width, height) pairs
+/// as `2 * count` ints, into the outs.
+///
+/// # Safety
+/// `sizes` holds `2 * count` ints (or is NULL with 0); the outs are writable.
+void ee_won_gui_max_size(int32_t which,
+                         const int32_t *sizes,
+                         size_t count,
+                         bool horz,
+                         bool vert,
+                         int32_t horz_pad,
+                         int32_t vert_pad,
+                         int32_t *out_w,
+                         int32_t *out_h);
+
+/// `clear_right` over `count` right edges.
+///
+/// # Safety
+/// `rights` holds `count` ints (or is NULL with 0).
+int32_t ee_won_gui_clear_right(const int32_t *rights, size_t count, int32_t pad);
+
+/// `space_evenly` over `count` extents, the positions into `out` (`count` ints).
+///
+/// # Safety
+/// `extents` holds and `out` has room for `count` ints (or both are NULL with 0).
+void ee_won_gui_space_evenly(const int32_t *extents,
+                             size_t count,
+                             int32_t box_pos,
+                             int32_t box_extent,
+                             bool box_is_parent,
+                             int32_t left_pad,
+                             int32_t right_pad,
+                             int32_t *out);
+
+/// `no_overlap`: true with the shift in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_no_overlap(EeWonRect target,
+                           EeWonRect reference,
+                           bool ref_is_parent,
+                           int32_t kind,
+                           int32_t horz_pad,
+                           int32_t vert_pad,
+                           int32_t *out_dx,
+                           int32_t *out_dy);
+
+/// `percent_borders`: bit i of `given` set when anchor i (left, top, right, bottom) was given; the chosen
+/// indices into `out` (4 ints).
+///
+/// # Safety
+/// `out` has room for 4 ints.
+void ee_won_gui_percent_borders(uint32_t given,
+                                int32_t *out);
+
+/// `percent_layout` with the four edges (left, right, top, bottom).
+///
+/// # Safety
+/// `edges` holds 4 ints.
+EeWonRect ee_won_gui_percent_layout(EeWonRect target, const int32_t *edges, EeWonPercent p);
+
+/// `vertical_flow` over `count` items, the positions into `out` (`2 * count` ints: x, y).
+///
+/// # Safety
+/// `items` holds `count` items and `out` has room for `2 * count` ints (or both are NULL with 0).
+void ee_won_gui_vertical_flow(const EeWonFlowItem *items,
+                              size_t count,
+                              int32_t left,
+                              int32_t top,
+                              int32_t *out);
 
 /// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
 ///

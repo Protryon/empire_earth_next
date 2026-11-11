@@ -9,6 +9,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// SetSize's and SetSizeAtLeast's size rules are ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 #include "ee/wonapi/WONComponentFlags.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006f52d0
@@ -61,9 +63,7 @@ void Component::SetPos(int x, int y)
 // Resizes the component (negative sizes become 0) and notifies the size change when it differs
 void Component::SetSize(int width, int height)
 {
-    if(width < 0) width = 0;
-    if(height < 0) height = 0;
-    if(width == this->Width() && height == this->Height())
+    if(!ee_won_gui_set_size(this->Width(), this->Height(), width, height, &width, &height))
         return;
     this->mBounds.height = height;
     this->mBounds.width = width;
@@ -74,9 +74,7 @@ void Component::SetSize(int width, int height)
 // Grows the component to at least the given width and height; never shrinks it
 void Component::SetSizeAtLeast(int width, int height)
 {
-    if(width < this->Width()) width = this->Width();
-    if(height < this->Height()) height = this->Height();
-    if(width > this->Width() || height > this->Height())
+    if(ee_won_gui_size_at_least(this->Width(), this->Height(), width, height, &width, &height))
         this->SetSize(width,height);
 }
 

@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
+#include "rust/ee_rust.h"
+// The layouts' arithmetic is ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs); this unit keeps the
+// layout objects, their lists and the SetPos / SetSize calls.
 namespace WONAPI {
 
 // FUNCTION: WON 0x00737100
@@ -19,48 +22,11 @@ void ChildLayoutInstruction::Execute(Component*)
 {
     Component* child = this->mChild;
     Component* reference = this->mReference;
-    int left, top;
-    if(reference == child->mParent)
-    {
-        left = 0;
-        top = 0;
-    }
-    else
-    {
-        left = reference->Left();
-        top = reference->Top();
-    }
-    int referenceWidth = reference->Width();
-    int referenceHeight = reference->Height();
-    int right = left + referenceWidth;
-    int bottom = top + referenceHeight;
-    int x = child->Left();
-    int y = child->Top();
-    int width = child->Width();
-    int height = child->Height();
-    for(int flag = 1; flag < 0x100000; flag <<= 1)
-    {
-        if((this->mFlags & flag) == 0)
-            continue;
-        switch(flag)
-        {
-        case 0x00001: width = this->mWidth + referenceWidth; break;
-        case 0x00002: height = this->mHeight + referenceHeight; break;
-        case 0x00100: y = this->mY - height + top; break;
-        case 0x00200: y = this->mY + bottom; break;
-        case 0x00400: x = this->mX + right; break;
-        case 0x00800: x = this->mX - width + left; break;
-        case 0x01000: x = this->mX + left; break;
-        case 0x02000: x = this->mX - width + right; break;
-        case 0x04000: y = this->mY + top; break;
-        case 0x08000: y = this->mY - height + bottom; break;
-        case 0x10000: width = this->mWidth - x + right; break;
-        case 0x20000: width = this->mWidth - x + left; break;
-        case 0x40000: height = this->mHeight - y + top; break;
-        case 0x80000: height = this->mHeight - y + bottom; break;
-        }
-    }
-    child->SetPosSize(x, y, width, height);
+    EeWonRect aChild = { child->Left(), child->Top(), child->Width(), child->Height() };
+    EeWonRect aRef = { reference->Left(), reference->Top(), reference->Width(), reference->Height() };
+    EeWonChildLayout aLayout = { this->mFlags, this->mX, this->mY, this->mWidth, this->mHeight };
+    EeWonRect r = ee_won_gui_child_layout(aChild, aRef, reference == child->mParent, aLayout);
+    child->SetPosSize(r.x, r.y, r.width, r.height);
 }
 // FUNCTION: WON 0x006f61b0
 // Returns whether the component is this instruction's child or its reference
