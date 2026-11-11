@@ -3,8 +3,13 @@
 //
 // 0x1007db5b..0x1007e312: the U2D key init chains, the ctor, the dtor, then the out-of-line members in alphabetical
 // order. The header-inline members (and the implicit copy members, ??_E) are emitted first by UIControlsTable.cpp.
+//
+// The arithmetic is Rust (rust/crates/ee_ui/src/status.rs, docs/RUST_PLAN.md R6): the value's clamp and the fill's
+// width, the rectangles a move lays out, CopyData's inset fill and centred text. The rhombi, the texts and every
+// draw stay here.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -30,6 +35,13 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIStatusBar.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top)
+static inline EeUiRect UIStatusRect(const GERectangle& r)
+{
+    return EeUiRect{r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()};
+}
+static inline GERectangle UIStatusRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
 
 // FUNCTION: LLE 0x1007dc7b
 // Creates a progress bar control: empty range, black fill, white text and a text area inset by the border
@@ -82,22 +94,15 @@ long UIStatusBar::CopyData()
     unsigned long theBorder = this->mBorderThickness;
     long theResult = UIControl::CopyData();
     this->mCopiedStatusRhombus = this->mStatusRhombus;
-    if (theBorder > 0) {
-        theRectangle = this->mCopiedStatusRhombus.GetRectangle();
-        theRectangle.SetLeft(theRectangle.GetLeft() + theBorder);
-        theRectangle.SetRight(theRectangle.GetRight() - theBorder);
-        theRectangle.SetTop(theRectangle.GetTop() + theBorder);
-        theRectangle.SetBottom(theRectangle.GetBottom() - theBorder);
+    EeUiRect theFill;
+    if (ee_ui_status_copy_fill(UIStatusRect(this->mCopiedStatusRhombus.GetRectangle()), theBorder, &theFill)) {
+        theRectangle = UIStatusRect(theFill);
         this->mCopiedStatusRhombus.SetRectangle(theRectangle);
     }
     if (this->mText && this->mText->GetText().GetLength() > 0) {
-        this->mCopiedTextRectangle = this->mTextRectangle;
-        if (this->mText->GetTextExtent().GetWidth() < this->mCopiedTextRectangle.GetWidth())
-            this->mCopiedTextRectangle.SetLeft(this->mCopiedTextRectangle.GetWidth() * 0.5f + this->mCopiedTextRectangle.GetLeft() -
-                                         this->mText->GetTextExtent().GetWidth() * 0.5f);
-        if (this->mText->GetTextExtent().GetHeight() < this->mCopiedTextRectangle.GetHeight())
-            this->mCopiedTextRectangle.SetTop(this->mCopiedTextRectangle.GetHeight() * 0.5f + this->mCopiedTextRectangle.GetTop() -
-                                        this->mText->GetTextExtent().GetHeight() * 0.5f);
+        const GERectangle& theExtent = this->mText->GetTextExtent();
+        this->mCopiedTextRectangle = UIStatusRect(ee_ui_status_copy_text(UIStatusRect(this->mTextRectangle),
+                                                                         theExtent.GetWidth(), theExtent.GetHeight()));
         *this->mCopiedText = *this->mText;
         this->mHasCopiedText = true;
     } else
@@ -131,22 +136,10 @@ long UIStatusBar::DrawTextA()
 // Sets the progress value, clamped to the range, sizing the fill to match (at least 1 pixel above 0)
 void UIStatusBar::SetCurrentRangeValue(long inValue)
 {
-    GERectangle theRectangle;
-    if (inValue < this->mMinRange)
-        inValue = this->mMinRange;
-    else if (inValue > this->mMaxRange)
-        inValue = this->mMaxRange;
-    float thePercent;
-    if (this->mMaxRange == this->mMinRange)
-        thePercent = 0.0f;
-    else
-        thePercent = ((float)inValue - this->mMinRange) / ((float)this->mMaxRange - this->mMinRange);
-    float theWidth = this->GetWidth() * thePercent;
-    if (thePercent > 0.0f && theWidth < 1.0f)
-        theWidth = 1.0f;
-    theRectangle = this->mStatusRhombus.GetRectangle();
-    theRectangle.SetRight(theRectangle.GetLeft() + theWidth);
-    this->mStatusRhombus.SetRectangle(theRectangle);
+    EeUiRect theFill;
+    inValue = ee_ui_status_fill(inValue, this->mMinRange, this->mMaxRange, this->GetWidth(),
+                                UIStatusRect(this->mStatusRhombus.GetRectangle()), &theFill);
+    this->mStatusRhombus.SetRectangle(UIStatusRect(theFill));
     if (this->mCurrentRangeValue != inValue) {
         this->mCurrentRangeValue = inValue;
         this->SetDirty(true);
@@ -158,13 +151,12 @@ void UIStatusBar::SetCurrentRangeValue(long inValue)
 void UIStatusBar::SetLocation(const GE2DPoint& inLocation)
 {
     UIControl::SetLocation(inLocation);
-    this->mStatusRhombus.SetRectangle(GERectangle(this->mRectangle.GetTopLeft(), GE2DPoint(this->mRectangle.GetRight() + 1.0f,
-                                                                               this->mRectangle.GetBottom() + 1.0f)));
+    EeUiRect theFill;
+    EeUiRect theText;
+    ee_ui_status_location(UIStatusRect(this->mRectangle), this->GetBorderThickness(), &theFill, &theText);
+    this->mStatusRhombus.SetRectangle(UIStatusRect(theFill));
     this->SetCurrentRangeValue(this->mCurrentRangeValue);
-    this->mTextRectangle.SetLeft(this->GetRectangle().GetLeft() + this->GetBorderThickness());
-    this->mTextRectangle.SetTop(this->GetRectangle().GetTop() + this->GetBorderThickness());
-    this->mTextRectangle.SetRight(this->GetRectangle().GetRight() - this->GetBorderThickness());
-    this->mTextRectangle.SetBottom(this->GetRectangle().GetBottom() - this->GetBorderThickness());
+    this->mTextRectangle = UIStatusRect(theText);
 }
 
 // FUNCTION: LLE 0x1007e27f
