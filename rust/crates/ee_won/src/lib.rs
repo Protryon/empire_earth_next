@@ -14,6 +14,7 @@ pub mod cdkey;
 pub mod config;
 pub mod crc16;
 pub mod der;
+pub mod dir;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;

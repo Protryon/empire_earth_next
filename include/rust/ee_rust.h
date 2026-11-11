@@ -778,6 +778,73 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
+constexpr static const int32_t MORE_REPLIES = 100059;
+
+constexpr static const uint32_t DIRS_ONLY_MASK = 2;
+
+constexpr static const uint32_t SERVICES_ONLY_MASK = 5;
+
+constexpr static const uint32_t ADD_TYPE = 16;
+
+constexpr static const uint32_t ADD_DISPLAY_NAME = 32;
+
+constexpr static const uint32_t ADD_CREATED = 64;
+
+constexpr static const uint32_t ADD_TOUCHED = 128;
+
+constexpr static const uint32_t ADD_LIFESPAN = 256;
+
+constexpr static const uint32_t ADD_DO_TYPE = 512;
+
+constexpr static const uint32_t ADD_DO_DATA = 1024;
+
+constexpr static const uint32_t ADD_DATA_OBJECTS = 2048;
+
+constexpr static const uint32_t ADD_ACLS = 4096;
+
+constexpr static const uint32_t ADD_CRC = 8192;
+
+constexpr static const uint32_t ADD_UIDS = 16384;
+
+constexpr static const uint32_t ADD_IPS = 32768;
+
+constexpr static const uint32_t DIR_ADD_PATH = 65536;
+
+constexpr static const uint32_t DIR_ADD_NAME = 131072;
+
+constexpr static const uint32_t DIR_ADD_REQ_UNIQUE = 262144;
+
+constexpr static const uint32_t SERV_ADD_PATH = 16777216;
+
+constexpr static const uint32_t SERV_ADD_NAME = 33554432;
+
+constexpr static const uint32_t SERV_ADD_NET_ADDR = 67108864;
+
+constexpr static const uint32_t TYPE = 1;
+
+constexpr static const uint32_t PATH = 2;
+
+constexpr static const uint32_t NAME = 4;
+
+constexpr static const uint32_t NET_ADDR = 8;
+
+constexpr static const uint32_t REQ_UNIQUE = 16;
+
+constexpr static const uint32_t DISPLAY_NAME = 32;
+
+constexpr static const uint32_t LIFESPAN = 64;
+
+constexpr static const uint32_t CREATED = 128;
+
+constexpr static const uint32_t TOUCHED = 256;
+
+constexpr static const uint32_t CRC = 512;
+
+constexpr static const uint32_t IPS = 1024;
+
+constexpr static const uint32_t IDS = 2048;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -3608,6 +3675,62 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
+/// negative `status`, 3 cut short; `sequence` when `has_sequence`.
+struct EeWonDirReply {
+  int32_t kind;
+  int32_t status;
+  bool has_sequence;
+  uint8_t sequence;
+};
+
+/// A data object across the C ABI.
+struct EeWonDirDataObject {
+  const uint8_t *data_type;
+  size_t data_type_len;
+  bool has_data;
+  const uint8_t *data;
+  size_t data_len;
+};
+
+/// An ACL permission across the C ABI (the raw values).
+struct EeWonDirAcl {
+  uint8_t kind;
+  int32_t user;
+  int32_t community;
+  int16_t trust;
+};
+
+/// An entity across the C ABI; valid only during the sink's call. `fields` is the `read` bits.
+struct EeWonDirEntity {
+  uint32_t fields;
+  uint8_t kind;
+  const uint16_t *path;
+  size_t path_len;
+  const uint16_t *name;
+  size_t name_len;
+  const uint16_t *display_name;
+  size_t display_name_len;
+  const uint8_t *net_addr;
+  size_t net_addr_len;
+  bool req_unique;
+  int32_t lifespan;
+  int32_t created;
+  int32_t touched;
+  int32_t crc;
+  int32_t create_ip;
+  int32_t touch_ip;
+  int32_t create_id;
+  int32_t touch_id;
+  const EeWonDirDataObject *objects;
+  size_t object_count;
+  const EeWonDirAcl *acls;
+  size_t acl_count;
+};
+
+/// Receives an entity; valid only during the call.
+using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -8572,6 +8695,24 @@ void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t c
 bool ee_won_config_open(EeWonConfigIo *io,
                         const char *path,
                         int32_t *status);
+
+/// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_multi(const uint8_t *data,
+                                     size_t length,
+                                     EeWonDirEntitySink sink,
+                                     void *context);
+
+/// `ParseSingleEntityReply`: the entity to the sink when read whole.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
+                                      size_t length,
+                                      EeWonDirEntitySink sink,
+                                      void *context);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

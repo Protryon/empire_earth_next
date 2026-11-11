@@ -401,6 +401,10 @@ WON_TESTS = {
     # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
     "won_auth_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
                       WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
+    # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
+    "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                     *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+                     WON_SRC / "WONSocket" / "IPAddr.cpp"],
 }
 
 
