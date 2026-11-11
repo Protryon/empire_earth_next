@@ -888,6 +888,10 @@ void EEPhysics::ProcessUnitSwaps()
     this->mUnitSwaps.clear();
 }
 
+// TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called
+// before (0) and after (1) the message executes, under the world's write lock; NULL unless the fixture runs
+void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
+
 // FUNCTION: EXE 0x55355c
 // Runs the queued physics tick messages (one while the timer runs): checksums or dumps the world when asked,
 // takes the owed ticks and speed, executes the tick's player inputs; a stray non-tick message at the head is dropped
@@ -945,6 +949,8 @@ void EEPhysics::DrainInput()
             EEMessageCaptureExecuted(theInput);   // TEST ONLY: the simulation capture's NMEX record (off by default)
             if (EESimCaptureRecord::Active())   // TEST ONLY: the unit store equals the objects before the message
                 EEUnitStoreCheck(theInput->GetType());
+            if (gEEMessageExecutedTestHook != NULL)   // TEST ONLY: the UI fixture's orders (EETestFixtureOrders.cpp)
+                gEEMessageExecutedTestHook(theInput, 0);
             switch (theInput->GetType()) {
             case kNetMessageRemovePlayer: {
                 NEMRemovePlayer* theRemove = static_cast<NEMRemovePlayer*>(theInput);
@@ -974,6 +980,8 @@ void EEPhysics::DrainInput()
                 break;
             }
             }
+            if (gEEMessageExecutedTestHook != NULL)
+                gEEMessageExecutedTestHook(theInput, 1);
             theInput->Dereference();
         }
     }
