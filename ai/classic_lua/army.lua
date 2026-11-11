@@ -14,6 +14,7 @@ local T = require("classic_lua.tune")
 local R = require("classic_lua.resource")
 local U = require("classic_lua.units")
 local G = require("lib.groups")
+local C = T.C
 
 local M = {}
 
@@ -2032,9 +2033,73 @@ function M.on_events(view, memory, events)
 end
 
 -- every step (EECPCombatManager::Tick)
+-- KillUnitsForMilitary (EECPPersonnel::Update, every 30 s) through ChooseUnitsToKill: the citizens over the citizen
+-- share of the population limit (GetCitizenSurplus: the citizens and boats, own and asked for, against
+-- ceil(limit x citizen_percentage)) are deleted, the idle first (10070), then the waiting gatherers (10060) and the
+-- gatherers (10000) by their resource (wood 40, stone 30, iron 20, gold 15, food 10). The transports' rule (5 more
+-- at the limit with too few transports): NOT STARTED (the transports)
+local KILL_MS = 30000
+local KILL_SCORE = {wood = 40, stone = 30, iron = 20, gold = 15, food = 10}
+
+local function kill_for_military(view, memory)
+    local a = army(memory)
+    if view.time < (a.next_kill or 0) then
+        return
+    end
+    a.next_kill = view.time + KILL_MS
+    local cap = view.population_cap
+    if cap <= 0 then
+        return
+    end
+    local ids = ai.units{category = "citizen"}
+    for _, id in ipairs(ai.units{category = "boat"}) do
+        ids[#ids + 1] = id
+    end
+    local um = U.state(memory)
+    local asked = 0
+    for _, c in ipairs({C.citizen, C.female_citizen}) do
+        asked = asked + (um.waiting[c] or 0)
+    end
+    local surplus = #ids + asked - (cap * memory.t.behavior.citizen_percentage_k + 999) // 1000
+    if surplus <= 0 or #ids == 0 then
+        return
+    end
+    local cols = ai.get(ids, {"action", "gathers", "waiting", "inside", "category"})
+    local list = {}
+    for k = 1, #ids do
+        if cols.action[k] ~= nil and cols.inside[k] == nil then
+            local score = 10000
+            if cols.action[k] == "idle" then
+                score = 10070
+            elseif cols.action[k] == "gather" then
+                if cols.waiting[k] then
+                    score = 10060
+                end
+                score = score + (KILL_SCORE[cols.gathers[k] or ""] or 0)
+            end
+            list[#list + 1] = {id = ids[k], score = score}
+        end
+    end
+    table.sort(list, function(p, q)
+        if p.score ~= q.score then
+            return p.score > q.score
+        end
+        return p.id < q.id
+    end)
+    local kill = {}
+    for k = 1, math.min(surplus, #list) do
+        kill[#kill + 1] = list[k].id
+    end
+    if #kill > 0 then
+        ai.delete(kill)
+        print(string.format("classic_lua army.kill citizens=%d surplus=%d", #kill, surplus))
+    end
+end
+
 function M.step(view, memory)
     local a = army(memory)
     G.init(a)
+    kill_for_military(view, memory)
     fill_requests(view, memory)
     update_groups(view, memory)
     if view.time >= (memory.me + 5) * 1000 then
