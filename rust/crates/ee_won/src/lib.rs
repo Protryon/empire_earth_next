@@ -67,6 +67,7 @@ pub mod staging;
 pub mod status;
 pub mod strcase;
 pub mod text;
+pub mod thread;
 pub mod wire;
 
 #[cfg(test)]

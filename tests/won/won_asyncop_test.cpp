@@ -344,6 +344,7 @@ int main(int argc, char** argv)
     return aFailures;
 }
 
-// the stop flag and the signal wait, as a subclass's ThreadFunc reads them (the original's protected members)
-bool TestThread::IsStoppedForTest() { return this->mStopped; }
-bool TestThread::WaitForSignalForTest(unsigned long inMs) { return this->mSignalEvent.WaitFor(inMs); }
+// the stop flag and the signal wait, as a subclass's ThreadFunc reads them (the original's protected mStopped and
+// mSignalEvent, read through the shim since the move to Rust)
+bool TestThread::IsStoppedForTest() { return this->IsStopped(); }
+bool TestThread::WaitForSignalForTest(unsigned long inMs) { return this->WaitForSignal(inMs); }

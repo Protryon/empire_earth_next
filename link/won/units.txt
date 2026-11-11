@@ -1,9 +1,7 @@
 29ef80 29f729 WONCommon/AsyncOp.cpp
 29f190 29f1a3 WONCommon/AsyncOpMode.cpp
-29f730 29fc7a WONCommon/AsyncOpContainer.cpp
 29fc80 2a9135 WONCommon/AsyncOpTracker.cpp
 2a00d0 2accc5 WONCommon/AsyncOpWithTracker.cpp
-2a02a0 2a09f6 WONCommon/TimerThread.cpp
 2a0c70 2a0cd7 WONCommon/CRC16.cpp
 2a0ce0 2a1e05 WONCommon/FileReader.cpp
 2a1e30 2a26a5 WONCommon/FileWriter.cpp
@@ -14,7 +12,6 @@
 2a48c0 2a5fe5 WONCommon/StringParser.cpp
 2a57e0 2aa209 WONCommon/StringParserLists.cpp
 2a6090 2a6c03 WONCommon/StringUtil.cpp
-2a6c10 2a8768 WONCommon/Thread.cpp
 2a6dc0 2a759d WONCommon/WONDebug.cpp
 2a7610 2a8106 WONCommon/WONFile.cpp
 2aa920 2b606c WONSocket/SocketOps.cpp
