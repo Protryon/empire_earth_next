@@ -70,45 +70,33 @@ void MultiPingOp::ClearServers()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+static void MultiPingAppend(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+	static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+
+// the datagram's bytes are Rust's (ee_won server.rs)
 ByteBufferPtr MultiPingOp::GetRequest(MultiPingStruct *theStruct)
 {
 	theStruct->mPingId = rand();
 	theStruct->mStartPingTick = WONTickCount();
 
-	WriteBuffer aBuf(0,true);
-	aBuf.AppendByte(3);
-	aBuf.AppendByte(1);
-	aBuf.AppendByte(5);
-	aBuf.AppendLong(theStruct->mPingId);
-	aBuf.AppendBool(false);
-	return aBuf.ToByteBuffer(true);
+	std::string aBytes;
+	ee_won_server_multi_ping_request(theStruct->mPingId, MultiPingAppend, &aBytes);
+	return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.length(), false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 MultiPingOp::PingAction MultiPingOp::HandleResponse(MultiPingStruct *theStruct, const ByteBuffer *theResponse)
 {
-	ReadBuffer aBuf(theResponse->data(),theResponse->length());
-	try
-	{
-		unsigned char aHeader = aBuf.ReadByte();
-		unsigned char aService = aBuf.ReadByte();
-		unsigned char aMsg = aBuf.ReadByte();
-
-		if(aHeader!=3 || aService!=1 || aMsg!=6)
-			return PingAction_InvalidReply;
-
-		int anId = aBuf.ReadLong();
-		if(anId!=theStruct->mPingId)
-			return PingAction_InvalidReply;
-
-		theStruct->mPingTime = WONTickCount()-theStruct->mStartPingTick;
-		return PingAction_Done;
-	}
-	catch(ReadBufferException&)
-	{
+	// the reply's test is Rust's (ee_won server.rs)
+	if(!ee_won_server_multi_ping_reply(reinterpret_cast<const uint8_t*>(theResponse->data()),theResponse->length(),
+	                                   theStruct->mPingId))
 		return PingAction_InvalidReply;
-	}
+
+	theStruct->mPingTime = WONTickCount()-theStruct->mStartPingTick;
+	return PingAction_Done;
 
 }
 
@@ -131,11 +119,10 @@ void MultiPingOp::RecvCallback(RecvBytesFromOp *theOp)
 	if(!this->HandleResponsePrv(theOp->GetStatus(),theOp->GetBytes(),theOp->GetAddr()))
 		this->Finish(theOp->GetStatus());
 
-	if(this->mPingMap.size()!=0)
-		return;
-	if(this->mPingList.size()==0)
+	int aNext = ee_won_server_multi_ping_next(this->mPingMap.size(),this->mPingList.size());
+	if(aNext==1)
 		this->Finish((WONStatus)WS_Success);
-	else
+	else if(aNext==2)
 		this->PingBatchAsync();
 }
 
@@ -186,7 +173,7 @@ void MultiPingOp::FinishBatch()
 	{
 		MultiPingStruct *aStruct = anItr->second;
 		aStruct->mNumFailures++;
-		if(aStruct->mNumFailures >= this->mMaxFailures)
+		if(ee_won_server_multi_ping_gives_up(aStruct->mNumFailures,this->mMaxFailures))
 			this->mFinishedList.push_back(aStruct);
 		else
 			this->mPingList.push_back(aStruct);
@@ -226,28 +213,22 @@ void MultiPingOp::PingBatchAsync()
 ///////////////////////////////////////////////////////////////////////////////
 DWORD MultiPingOp::ResponseTimeLeft(DWORD theStartTick)
 {
-	DWORD anElapsed = WONTickCount() - theStartTick;
-	if(anElapsed > this->mMaxPingTime)
+	// Rust's (ee_won server.rs); the op's time left is read only when the batch's wait is not over, as before
+	DWORD aNow = WONTickCount();
+	if(ee_won_server_multi_ping_time_left(aNow,theStartTick,this->mMaxPingTime,0xffffffff)==0)
 		return 0;
-
-
-	DWORD anAbsTimeLeft = this->TimeLeft();
-	DWORD aTimeLeft = this->mMaxPingTime - anElapsed;
-
-	if(aTimeLeft < anAbsTimeLeft)
-		return aTimeLeft;
-	else
-		return anAbsTimeLeft;
+	return ee_won_server_multi_ping_time_left(aNow,theStartTick,this->mMaxPingTime,this->TimeLeft());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 bool MultiPingOp::HandleResponsePrv(WONStatus theStatus, const ByteBuffer *theResponse, const IPAddr &theAddr)
 {
-	if(theStatus!=(WONStatus)WS_Success && theStatus!=(WONStatus)WS_WSAEMSGSIZE)
+	int aRule = ee_won_server_multi_ping_recv_status(theStatus);
+	if(aRule==0)
 		return false;
 
-	if(theStatus==(WONStatus)WS_Success)
+	if(aRule==2)
 	{
 		MultiPingMap::iterator anItr = this->mPingMap.find(theAddr);
 		if(anItr!=this->mPingMap.end())
@@ -323,7 +304,7 @@ void MultiPingOp::RunHook()
 	{
 		aStatus = this->PingBatchBlock();
 		this->FinishBatch();
-		if(aStatus!=(WONStatus)0 && aStatus!=(WONStatus)100001)
+		if(!ee_won_server_multi_ping_continues(aStatus))
 		{
 			this->Finish(aStatus);
 			return; 
@@ -361,23 +342,18 @@ void MultiPingOp::CleanupHook()
 
 	if(!this->mOrderListByPingTime)
 		return;
-	typedef std::multimap<DWORD,MultiPingStructPtr> SortMap;
-	SortMap aMap;
-	aListItr = this->mFinishedList.begin();
-	while(aListItr!=this->mFinishedList.end())
-	{
-		aMap.insert(SortMap::value_type((*aListItr)->mPingTime,*aListItr));
-		++aListItr;
-	}
+	// the order is Rust's (ee_won server.rs): by ping time as a DWORD, equal times in list order
+	std::vector<MultiPingStructPtr> aStructs(this->mFinishedList.begin(),this->mFinishedList.end());
+	std::vector<int> aTimes;
+	for(size_t i=0; i<aStructs.size(); i++)
+		aTimes.push_back(aStructs[i]->mPingTime);
+	std::vector<size_t> anOrder(aStructs.size());
+	if(!aStructs.empty())
+		ee_won_server_multi_ping_order(&aTimes[0],aTimes.size(),&anOrder[0]);
 
 	this->mFinishedList.clear();
-
-	SortMap::iterator aMapItr = aMap.begin();
-	while(aMapItr!=aMap.end())
-	{
-		this->mFinishedList.push_back(aMapItr->second);
-		aMapItr++;
-	}
+	for(size_t i=0; i<anOrder.size(); i++)
+		this->mFinishedList.push_back(aStructs[anOrder[i]]);
 
 }
 	
@@ -390,12 +366,12 @@ SmartPtr<ServerContext> MultiPingOp::GetServerContext(bool discardNonResponsiveS
 	while(anItr!=this->mFinishedList.end())
 	{
 		MultiPingStruct *aStruct = *anItr;
-		if(aStruct->mPingTime!=-1 || !discardNonResponsiveServers)
+		if(ee_won_server_multi_ping_keeps(aStruct->mPingTime,discardNonResponsiveServers))
 			aContext->AddAddress(aStruct->mAddr);
 
 		++anItr;
 	}
 
-	aContext->mShuffleAddresses = false;
+	aContext->SetShuffleAddresses(false);
 	return aContext;
 }
