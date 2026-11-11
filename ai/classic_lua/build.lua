@@ -542,11 +542,44 @@ end
 
 -- Update: every 3 s the first buildable request of each epoch to the current one (up to 4 tried; one started),
 -- the builders every 2 minutes
+-- CancelStalledBuilds: a builder waiting for its foundation's site to clear while another unit holds it (the record's
+-- `stalled`): the foundation is deleted, its request put back at the front of its epoch's queue without a site (the
+-- C++'s: FindSite picks another), the builder sent to the town centre; one builder at a time until none
+local function cancel_stalled(view, memory)
+    local bm = M.state(memory)
+    local ids = ai.units{category = "citizen"}
+    if #ids == 0 then
+        return
+    end
+    local cols = ai.get(ids, {"stalled", "target"})
+    local done = {}
+    for k = 1, #ids do
+        local target = cols.target[k]
+        if cols.stalled[k] and target ~= nil and not done[target] then
+            done[target] = true
+            local b = R.unit(target)
+            if b ~= nil then
+                local t = U().class_tech(view, b.type)
+                local e = t ~= nil and (t.epoch or 0) + 1 or 1
+                bm.q[e] = bm.q[e] or {}
+                table.insert(bm.q[e], 1, {class = b.type, x = 0, y = 0})
+                ai.delete({target})
+                local tx, ty = R.town(view)
+                if tx ~= nil then
+                    ai.move({ids[k]}, tx, ty)
+                end
+                print(string.format("classic_lua build.stalled %s at=%d,%d", b.type, b.x, b.y))
+            end
+        end
+    end
+end
+
 function M.update(view, memory)
     local bm = M.state(memory)
     if view.time <= bm.next_update then
         return
     end
+    cancel_stalled(view, memory)
     local tried, started = 0, false
     for e = 1, view.epoch + 1 do
         if started or tried >= 4 then
