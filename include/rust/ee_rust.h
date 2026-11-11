@@ -1728,6 +1728,21 @@ struct EeScenarioAreaPlan {
   int32_t right;
 };
 
+/// A path point (`GE3DPoint`).
+struct EePathPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// A search's bounds (`EEAIAStarBounds`: top, left, bottom, right).
+struct EePathBounds {
+  int32_t top;
+  int32_t left;
+  int32_t bottom;
+  int32_t right;
+};
+
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -4854,6 +4869,63 @@ void ee_astar_prune_choke_points(const int32_t *categories,
 size_t ee_astar_scenario_area_plan(const EeScenarioArea *areas,
                                    size_t count,
                                    EeScenarioAreaPlan *out);
+
+/// `TrimPath`'s cut: the index to erase the path from, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count` points.
+ptrdiff_t ee_path_trim_index(const EePathPoint *path,
+                             size_t count,
+                             size_t waypoints,
+                             float unit_x,
+                             float unit_y);
+
+/// `AppendWaypoints` after no cut: the points to append to the path (`count` of them) from the unit's
+/// `waypoint_count` waypoints, into `out` (room for `waypoint_count`); returns their number.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` and `out` for `waypoint_count` points.
+size_t ee_path_append_waypoints(const EePathPoint *path,
+                                size_t count,
+                                const EePathPoint *waypoints,
+                                size_t waypoint_count,
+                                EePathPoint *out);
+
+/// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
+/// takes the path up to that point and the detour).
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+bool ee_path_join_paths(const EePathPoint *path,
+                        size_t count,
+                        const EePathPoint *detour,
+                        size_t detour_count,
+                        size_t join);
+
+/// `FinishFailedPath`'s detour search: the count from the path's end, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+ptrdiff_t ee_path_detour_join_count(const EePathPoint *path,
+                                    size_t count,
+                                    const EePathPoint *detour,
+                                    size_t detour_count);
+
+/// `TryShortPath`'s revolutions.
+int32_t ee_path_short_path_revs(int32_t queued,
+                                int32_t from_x,
+                                int32_t from_y,
+                                int32_t to_x,
+                                int32_t to_y);
+
+/// The bounds `margin` tiles around a tile, clipped to the map.
+EePathBounds ee_path_bounds_around(int32_t x, int32_t y, int32_t margin, int32_t map_size);
+
+/// `SetGraphRevs`' step budget (`repeated`: the path history's same-tile request).
+int32_t ee_path_graph_revs(int32_t distance, bool kind_allowed, bool repeated);
+
+/// `SetPathRevs`' step budget.
+int32_t ee_path_path_revs(int32_t distance, bool amphibious, bool same_continent);
 
 /// `UDataCompression::Compress`.
 ///

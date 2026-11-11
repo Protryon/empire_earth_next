@@ -76,6 +76,15 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"   // ee_path_*: the path splicing (ee_astar path_splice.rs)
+
+static_assert(sizeof(GE3DPoint) == sizeof(EePathPoint) && offsetof(GE3DPoint, mZ) == offsetof(EePathPoint, z),
+              "GE3DPoint");
+
+static const EePathPoint* EEPathPoints(const std::vector<GE3DPoint>& inPoints)
+{
+    return inPoints.empty() ? NULL : reinterpret_cast<const EePathPoint*>(&inPoints[0]);
+}
 
 // TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path splicing's record PMSP, one per call of
 // TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's detour search and the bounded searches' revolutions and
@@ -504,15 +513,9 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
     theTime = gPhysics ? gPhysics->GetGameTime() : 0;
     if (theTime > 4000)
         theTime -= 4000;
-    long theFactor;
-    if (theDistance <= 0xf)
-        theFactor = 0xfa;
-    else if (theDistance <= 0x50)
-        theFactor = 0x4b;
-    else
-        theFactor = theDistance <= 0xa0 ? 0x5a : 0x6e;
-    if (!inMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] && theFactor >= 0x28)
-        theFactor = 0x28;
+    // (Rust: ee_astar path_splice.rs graph_revs: the distance band's factor, the kind's cap, the repeat's 3)
+    bool theAllowed = inMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] != 0;
+    bool theRepeated = false;
     EEComplexUnit* theUnit = inMachine->mGoal.mUnit;
     if (theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen) {
         for (it = this->mHistory.begin(); it != this->mHistory.end(); it++) {
@@ -521,11 +524,11 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
             if ((*it).mUnitID != theUnit->GetUnitID())
                 continue;
             if ((*it).GetX() == inTo.GetX() && (*it).GetY() == inTo.GetY())
-                theFactor = 3;
+                theRepeated = true;
             break;
         }
     }
-    inMachine->SetMaxRevs(theDistance * theFactor);
+    inMachine->SetMaxRevs(ee_path_graph_revs((int32_t)theDistance, theAllowed, theRepeated));
 }
 
 // FUNCTION: EXE 0x4a6157
@@ -542,17 +545,8 @@ void EEPathManager::SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit,
         theAmphibious = true;
     else
         theAmphibious = false;
-    long theFactor;
-    if (theDistance <= 0xf)
-        theFactor = 0x177;
-    else {
-        theFactor = 0x8c;
-        if (theDistance > 0x50)
-            theFactor += 5;
-    }
-    if (!theAmphibious && theFromContinent != theToContinent && theFactor >= 0x28)
-        theFactor = 0x28;
-    inMachine->SetMaxRevs(theDistance * theFactor);
+    // (Rust: ee_astar path_splice.rs path_revs)
+    inMachine->SetMaxRevs(ee_path_path_revs((int32_t)theDistance, theAmphibious, theFromContinent == theToContinent));
 }
 
 // FUNCTION: EXE 0x4a61f2
@@ -1159,18 +1153,16 @@ bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPa
         theRecord.F32(inUnit->mPhysicalModel.GetLocation().GetY());
         EEPathCapturePoints(theRecord, ioPath);
     }
-    unsigned long theWaypoints = inUnit->mWaypoints.size();
-    long theFirst = theWaypoints < ioPath.size() ? theWaypoints : ioPath.size();
-    long theX = UMFloor(inUnit->mPhysicalModel.GetLocation().GetX());
-    long theY = UMFloor(inUnit->mPhysicalModel.GetLocation().GetY());
+    // (Rust: ee_astar path_splice.rs trim_index; the y test floors the coordinate, where the original floored the
+    // comparison's result)
     bool theResult = false;
-    for (long i = ioPath.size() - 1; i > theFirst; i--) {
-        if (UMFloor(ioPath[i].GetX()) != theX || UMFloor(ioPath[i].GetY()) != theY)   // was !UMFloor(y == theY)
-            continue;
+    ptrdiff_t theCut = ee_path_trim_index(EEPathPoints(ioPath), ioPath.size(), inUnit->mWaypoints.size(),
+                                          inUnit->mPhysicalModel.GetLocation().GetX(),
+                                          inUnit->mPhysicalModel.GetLocation().GetY());
+    if (theCut >= 0) {
         theResult = true;
-        ioPath.erase(ioPath.begin() + i, ioPath.end());
+        ioPath.erase(ioPath.begin() + theCut, ioPath.end());
         inUnit->DropPath();
-        break;
     }
     if (theCapture) {
         theRecord.U32(theResult);
@@ -1201,14 +1193,17 @@ void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint
         }
         return;
     }
+    // (Rust: ee_astar path_splice.rs append_waypoints: the points to append)
     std::deque<EEComplexUnitWaypoint>& theWaypoints = inUnit->mWaypoints;
-    if (ioPath.size() != 0 && theWaypoints.size() != 0) {
-        if (UMFloor(ioPath.back().GetX()) != UMFloor(theWaypoints.back().mLocation.GetX()) ||
-            UMFloor(ioPath.back().GetY()) != UMFloor(theWaypoints.back().mLocation.GetY()))
-            ioPath.push_back(theWaypoints.back().mLocation);
-    }
-    for (long i = theWaypoints.size() - 2; i >= 0; i--)
-        ioPath.push_back(theWaypoints[i].mLocation);
+    std::vector<GE3DPoint> theLocations;
+    theLocations.reserve(theWaypoints.size());
+    for (size_t i = 0; i < theWaypoints.size(); i++)
+        theLocations.push_back(theWaypoints[i].mLocation);
+    std::vector<GE3DPoint> theAdded(theLocations.size());
+    size_t theCount = ee_path_append_waypoints(EEPathPoints(ioPath), ioPath.size(), EEPathPoints(theLocations),
+                                               theLocations.size(),
+                                               theAdded.empty() ? NULL : reinterpret_cast<EePathPoint*>(&theAdded[0]));
+    ioPath.insert(ioPath.end(), theAdded.begin(), theAdded.begin() + theCount);
     if (theCapture) {
         theRecord.U32(0);
         EEPathCapturePoints(theRecord, ioPath);
@@ -1243,17 +1238,19 @@ bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inTyp
     this->mBoundedMachine->SetStart(inFrom);
     this->mBoundedMachine->SetGoal(ioTo);
     this->mBoundedMachine->mTile = ioTo;
-    unsigned long theDistance = UMAbs(inFrom.GetX() - ioTo.GetX()) + UMAbs(inFrom.GetY() - ioTo.GetY());
-    if (theDistance > 20)
-        theDistance /= 20;
+    // (Rust: ee_astar path_splice.rs: 4 more than the queued searches, 11 at most, plus the distance, divided by
+    // 20 above 20; the bounds revs + 1 around the start, clipped to the map)
     long theQueued = this->mPaths.size();
-    long theRevs = (theQueued > 10 ? 11 : theQueued + 4) + theDistance;
+    long theRevs = ee_path_short_path_revs((int32_t)theQueued, (int32_t)inFrom.GetX(), (int32_t)inFrom.GetY(),
+                                           (int32_t)ioTo.GetX(), (int32_t)ioTo.GetY());
     this->mBoundedMachine->SetMaxRevs(theRevs);
     EEAIAStarBounds theBounds;
-    theBounds.mTop = inFrom.GetY() - theRevs - 1 > 0 ? inFrom.GetY() - theRevs - 1 : 0;
-    theBounds.mLeft = inFrom.GetX() - theRevs - 1 > 0 ? inFrom.GetX() - theRevs - 1 : 0;
-    theBounds.mRight = inFrom.GetX() + theRevs + 1 < inMap->mSize - 1 ? inFrom.GetX() + theRevs + 1 : inMap->mSize - 1;
-    theBounds.mBottom = inFrom.GetY() + theRevs + 1 < inMap->mSize - 1 ? inFrom.GetY() + theRevs + 1 : inMap->mSize - 1;
+    EePathBounds theRect = ee_path_bounds_around((int32_t)inFrom.GetX(), (int32_t)inFrom.GetY(), (int32_t)(theRevs + 1),
+                                                 (int32_t)inMap->mSize);
+    theBounds.mTop = theRect.top;
+    theBounds.mLeft = theRect.left;
+    theBounds.mRight = theRect.right;
+    theBounds.mBottom = theRect.bottom;
     if (EESimCaptureRecord::Active()) {   // TEST ONLY
         EESimCaptureRecord theRecord(kPathSpliceCapture);
         theRecord.U32(kPathSpliceShortPath);
@@ -1393,25 +1390,13 @@ bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
     return theResult;
 }
 
-// NEAR: the original builds the unit's tile through the (const long&, const long&) pair ctor 0xaa817 and tests the
-// distance through the out-of-line U2DPoint<long>::DistanceToSquared 0x8a3f (its locals are EETileCoordinates here,
-// the type RunBoundedPath and the machines take).
-// FUNCTION: EXE 0x4a7f4a
-// Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
-// inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
 // FinishFailedPath's second join: the count from inPath's end of the point among its first ten (from the tenth
-// down) on inDetour's first tile, -1 without one (inDetour not empty)
+// down) on inDetour's first tile, -1 without one
 static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const std::vector<GE3DPoint>& inDetour)
 {
-    long theDetourY = UMFloor(inDetour[0].GetY());
-    long theDetourX = UMFloor(inDetour[0].GetX());
-    long theIndex = -1;
-    for (long i = (inPath.size() < 10 ? inPath.size() : 10) - 1; i >= 0; i--) {
-        if (UMFloor(inPath[i].GetX()) == theDetourX && UMFloor(inPath[i].GetY()) == theDetourY) {
-            theIndex = inPath.size() - i;
-            break;
-        }
-    }
+    // (Rust: ee_astar path_splice.rs detour_join_count)
+    long theIndex = (long)ee_path_detour_join_count(EEPathPoints(inPath), inPath.size(), EEPathPoints(inDetour),
+                                                    inDetour.size());
     if (EESimCaptureRecord::Active()) {   // TEST ONLY
         EESimCaptureRecord theRecord(kPathSpliceCapture);
         theRecord.U32(kPathSpliceDetour);
@@ -1423,6 +1408,12 @@ static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const st
     return theIndex;
 }
 
+// NEAR: the original builds the unit's tile through the (const long&, const long&) pair ctor 0xaa817 and tests the
+// distance through the out-of-line U2DPoint<long>::DistanceToSquared 0x8a3f (its locals are EETileCoordinates here,
+// the type RunBoundedPath and the machines take).
+// FUNCTION: EXE 0x4a7f4a
+// Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
+// inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
 void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
 {
     std::vector<GE3DPoint> thePath;
@@ -1465,10 +1456,12 @@ void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
         theTo.mY = theY;
         theFrom.mX = theUnit->GetTileX();
         theFrom.mY = theUnit->GetTileY();
-        theBounds.mTop = theFrom.GetY() - 26 > 0 ? theFrom.GetY() - 26 : 0;
-        theBounds.mLeft = theFrom.GetX() - 26 > 0 ? theFrom.GetX() - 26 : 0;
-        theBounds.mBottom = theFrom.GetY() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetY() + 26 : gWorld.GetMap()->GetSize() - 1;
-        theBounds.mRight = theFrom.GetX() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetX() + 26 : gWorld.GetMap()->GetSize() - 1;
+        EePathBounds theRect = ee_path_bounds_around((int32_t)theFrom.GetX(), (int32_t)theFrom.GetY(), 26,
+                                                     (int32_t)gWorld.GetMap()->GetSize());
+        theBounds.mTop = theRect.top;
+        theBounds.mLeft = theRect.left;
+        theBounds.mBottom = theRect.bottom;
+        theBounds.mRight = theRect.right;
         if (EESimCaptureRecord::Active()) {   // TEST ONLY
             EESimCaptureRecord theRecord(kPathSpliceCapture);
             theRecord.U32(kPathSpliceFailedBounds);
@@ -1784,12 +1777,10 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
         EEPathCapturePoints(theRecord, inDetour);
         theRecord.I32((int)inCount);
     }
+    // (Rust: ee_astar path_splice.rs join_paths: the test)
     if (outPath != NULL && inDetour.size() > 0) {
-        long theX = UMFloor(inPath[inPath.size() - inCount].GetX());
-        long theY = UMFloor(inPath[inPath.size() - inCount].GetY());
-        long theDetourX = UMFloor(inDetour[0].GetX());
-        long theDetourY = UMFloor(inDetour[0].GetY());
-        if (theX == theDetourX && theY == theDetourY) {
+        if (ee_path_join_paths(EEPathPoints(inPath), inPath.size(), EEPathPoints(inDetour), inDetour.size(),
+                               (size_t)inCount)) {
             outPath->reserve(inPath.size() + inDetour.size());
             unsigned long i;
             for (i = 0; i < inPath.size() - inCount; i++)

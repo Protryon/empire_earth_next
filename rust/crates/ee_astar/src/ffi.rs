@@ -1894,3 +1894,118 @@ pub unsafe extern "C" fn ee_astar_scenario_area_plan(
     unsafe { std::ptr::copy_nonoverlapping(plan.as_ptr(), out, plan.len()) };
     plan.len()
 }
+
+// ---- the path manager's splicing (path_splice.rs) ----
+
+use crate::path_splice::{self, EePathBounds, EePathPoint};
+
+/// A point list from C++ (`GE3DPoint`s; any pointer when `count` is 0).
+///
+/// # Safety
+/// `points` valid for `count`.
+unsafe fn path_points<'a>(points: *const EePathPoint, count: usize) -> &'a [EePathPoint] {
+    if count == 0 || points.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(points, count) }
+    }
+}
+
+/// `TrimPath`'s cut: the index to erase the path from, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_trim_index(
+    path: *const EePathPoint,
+    count: usize,
+    waypoints: usize,
+    unit_x: f32,
+    unit_y: f32,
+) -> isize {
+    // SAFETY: the caller's contract
+    let path = unsafe { path_points(path, count) };
+    path_splice::trim_index(path, waypoints, unit_x, unit_y).map_or(-1, |i| i as isize)
+}
+
+/// `AppendWaypoints` after no cut: the points to append to the path (`count` of them) from the unit's
+/// `waypoint_count` waypoints, into `out` (room for `waypoint_count`); returns their number.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` and `out` for `waypoint_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_append_waypoints(
+    path: *const EePathPoint,
+    count: usize,
+    waypoints: *const EePathPoint,
+    waypoint_count: usize,
+    out: *mut EePathPoint,
+) -> usize {
+    // SAFETY: the caller's contract
+    let (path, waypoints) = unsafe { (path_points(path, count), path_points(waypoints, waypoint_count)) };
+    let mut joined = path.to_vec();
+    path_splice::append_waypoints(&mut joined, waypoints);
+    let added = &joined[path.len()..];
+    // SAFETY: the caller's contract; at most `waypoint_count` points are added
+    unsafe { std::ptr::copy_nonoverlapping(added.as_ptr(), out, added.len()) };
+    added.len()
+}
+
+/// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
+/// takes the path up to that point and the detour).
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_join_paths(
+    path: *const EePathPoint,
+    count: usize,
+    detour: *const EePathPoint,
+    detour_count: usize,
+    join: usize,
+) -> bool {
+    // SAFETY: the caller's contract
+    let (path, detour) = unsafe { (path_points(path, count), path_points(detour, detour_count)) };
+    path_splice::join_paths(path, detour, join).is_some()
+}
+
+/// `FinishFailedPath`'s detour search: the count from the path's end, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_detour_join_count(
+    path: *const EePathPoint,
+    count: usize,
+    detour: *const EePathPoint,
+    detour_count: usize,
+) -> isize {
+    // SAFETY: the caller's contract
+    let (path, detour) = unsafe { (path_points(path, count), path_points(detour, detour_count)) };
+    path_splice::detour_join_count(path, detour).map_or(-1, |n| n as isize)
+}
+
+/// `TryShortPath`'s revolutions.
+#[no_mangle]
+pub extern "C" fn ee_path_short_path_revs(queued: i32, from_x: i32, from_y: i32, to_x: i32, to_y: i32) -> i32 {
+    path_splice::short_path_revs(queued, (from_x, from_y), (to_x, to_y))
+}
+
+/// The bounds `margin` tiles around a tile, clipped to the map.
+#[no_mangle]
+pub extern "C" fn ee_path_bounds_around(x: i32, y: i32, margin: i32, map_size: i32) -> EePathBounds {
+    path_splice::bounds_around((x, y), margin, map_size)
+}
+
+/// `SetGraphRevs`' step budget (`repeated`: the path history's same-tile request).
+#[no_mangle]
+pub extern "C" fn ee_path_graph_revs(distance: i32, kind_allowed: bool, repeated: bool) -> i32 {
+    path_splice::graph_revs(distance, kind_allowed, repeated)
+}
+
+/// `SetPathRevs`' step budget.
+#[no_mangle]
+pub extern "C" fn ee_path_path_revs(distance: i32, amphibious: bool, same_continent: bool) -> i32 {
+    path_splice::path_revs(distance, amphibious, same_continent)
+}
