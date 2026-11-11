@@ -3,6 +3,7 @@
 #define EE_WONAPI_WONLOBBYSTAGING_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
+struct EeWonRoomMsg; // rust/ee_rust.h (ee_won staging.rs)
 namespace WONAPI {
 class CreateGameDialog;
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots.
@@ -16,16 +17,17 @@ public:
     virtual void HandleComponentEvent(ComponentEvent* inEvent);
     void HandleJoinRequest(ReadBuffer& inBuffer, LobbyClient* inClient);
     void HandleJoinReply(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandlePlayerJoined(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandleReadyRequest(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandleReadyChanged(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandlePingReport(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandlePingChanged(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandleGameDissolved(ReadBuffer& inBuffer, LobbyClient* inClient);
+    // the room message's fixed fields are read and its guards checked in HandleMessage (ee_won staging.rs)
+    void HandlePlayerJoined(const EeWonRoomMsg& inMsg, ReadBuffer& inBuffer, LobbyClient* inClient);
+    void HandleReadyRequest(const EeWonRoomMsg& inMsg, LobbyClient* inClient);
+    void HandleReadyChanged(const EeWonRoomMsg& inMsg, LobbyClient* inClient);
+    void HandlePingReport(const EeWonRoomMsg& inMsg, LobbyClient* inClient);
+    void HandlePingChanged(const EeWonRoomMsg& inMsg, LobbyClient* inClient);
+    void HandleGameDissolved(LobbyClient* inClient);
     void ResetReadyFlags();
     void SetGameInProgress(bool inInProgress);
-    void HandleStartGame(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandleClientKicked(ReadBuffer& inBuffer, LobbyClient* inClient);
+    void HandleStartGame(LobbyClient* inClient);
+    void HandleClientKicked(const EeWonRoomMsg& inMsg, LobbyClient* inClient);
     void HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient);
     void HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient* inClient);
     void SendToCaptain(const ByteBuffer* inMessage);

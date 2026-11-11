@@ -1234,6 +1234,51 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
+/// cut given).
+enum class EeWonPrefsRead {
+  Whole = 0,
+  OtherVersion = 1,
+  Cut = 2,
+};
+
+/// A read's event for the C++: `kind`, a number (a time, an id, a flag, a port, a setting's index for a text or
+/// flag in `index`), the text (UTF-16 units, `units`/`count`) or bytes (`bytes`/`length`), an address (six bytes).
+enum class EeWonPrefsEventKind {
+  User,
+  UserTime,
+  UserId,
+  UserValue04,
+  UserValue08,
+  UserPassword,
+  SoundEffects,
+  Music,
+  NetworkAdapter,
+  LanName,
+  LanNamesDone,
+  DirectConnect,
+  BroadcastPort,
+  Reconnect,
+  ReconnectTime,
+  ReconnectId,
+  Ignored,
+  Friend,
+  Blocked,
+  Flag,
+  SettingText,
+  ConnectionSpeed,
+  OptionsBegin,
+  OptionName,
+  OptionValue,
+};
+
+/// The sound `UpdateReadyState` plays (if the staging sounds are on).
+enum class EeWonReadySound {
+  Silent = 0,
+  AllReady = 1,
+  NotReady = 2,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -4071,6 +4116,115 @@ struct EeWonQueueDecision {
 /// `FileWriter`'s state.
 struct EeWonFileWriter {
   void *file;
+};
+
+/// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
+struct EeWonTextList {
+  const void *data;
+  const size_t *offsets;
+  size_t count;
+};
+
+/// The global file's lists: `names.count` users with their fields at the same index; the passwords' bytes.
+struct EeWonGlobalPrefsOut {
+  EeWonTextList names;
+  const int32_t *last_use;
+  const uint16_t *ids;
+  const int32_t *value04;
+  const int32_t *value08;
+  EeWonTextList passwords;
+  bool sound_effects;
+  bool music;
+  int32_t network_adapter;
+};
+
+/// The user file's lists (`lan_user` false: the LAN part is not written). Addresses are six bytes each; a game
+/// filter `i` has the values from `option_first[i]` to `option_first[i + 1]` of `option_values`.
+struct EeWonUserPrefsOut {
+  bool lan_user;
+  EeWonTextList lan_names;
+  const int32_t *lan_times;
+  const uint8_t *direct_addresses;
+  EeWonTextList direct_names;
+  uint16_t broadcast_port;
+  size_t reconnect_count;
+  const uint8_t *reconnect_addresses;
+  const int32_t *reconnect_times;
+  const int32_t *reconnect_ids;
+  EeWonTextList ignored;
+  EeWonTextList friend_names;
+  const uint32_t *friend_ids;
+  size_t blocked_count;
+  const uint32_t *blocked;
+  bool first[6];
+  /// The tab, the last server, the last room (three texts).
+  EeWonTextList texts;
+  bool second[5];
+  uint16_t connection_speed;
+  EeWonTextList option_names;
+  const size_t *option_first;
+  EeWonTextList option_values;
+};
+
+struct EeWonPrefsEvent {
+  EeWonPrefsEventKind kind;
+  int64_t value;
+  uint8_t index;
+  const uint16_t *units;
+  size_t count;
+  const uint8_t *bytes;
+  size_t length;
+  uint8_t address[6];
+};
+
+/// Receives each event of a read in order.
+using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A room message's fields (`RoomMsg`).
+struct EeWonRoomMsg {
+  uint8_t kind;
+  uint16_t id;
+  bool flag;
+  uint16_t ping;
+  size_t rest;
+};
+
+/// `Roles` for the C++.
+struct EeWonRoomRoles {
+  bool sender_is_captain;
+  bool i_am_captain;
+  bool sender_has_player;
+  bool sender_ready;
+};
+
+/// `UpdateReadyState`'s state: the inputs, and on return the sound and the remembered state (`last_*` updated).
+struct EeWonReadyState {
+  bool all_ready;
+  bool last_all_ready;
+  bool is_host;
+  bool last_ready;
+  bool i_am_ready;
+  int64_t now;
+  int64_t last_ready_time;
+  EeWonReadySound sound;
+};
+
+/// A summary's fields but the name (`Summary`), and a read's answer (`SummaryRead`).
+struct EeWonGameSummary {
+  int32_t game_type;
+  uint8_t address[6];
+  uint16_t product_id;
+  bool in_progress;
+  bool has_password;
+  bool invite_only;
+  bool ask_to_join;
+  int32_t skill;
+  int32_t players;
+  int32_t open_slots;
+  /// For a read: true when it succeeded, the `SUMMARY_*` bits read, where the game code's part begins.
+  bool ok;
+  uint32_t read;
+  size_t rest;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -10383,11 +10537,26 @@ int32_t ee_won_guistring_to_int(const void *a,
 /// `a` holds `a_length` writable units of `wchar_size` bytes.
 void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
 
-/// `GetString` into `out` (room for `a_length` bytes).
+/// `GetString`: the text as UTF-8, given to the sink once.
 ///
 /// # Safety
-/// `a` as `ee_won_guistring_find_char`; `out` has room for `a_length` bytes.
-void ee_won_guistring_narrow(const void *a, uint16_t a_length, uint8_t *out, uint32_t wchar_size);
+/// `a` as `ee_won_guistring_find_char`; the sink's contract (`EeWonByteSink`).
+void ee_won_guistring_narrow(const void *a,
+                             uint16_t a_length,
+                             uint32_t wchar_size,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The narrow constructors' and `AssignStr`'s text: `length` bytes of UTF-8 as `wchar_t` units, given to the sink
+/// once (`count` units of `wchar_size` bytes; none for empty text).
+///
+/// # Safety
+/// `narrow` holds `length` bytes (or is NULL with 0); the sink's contract (`EeWonWideSink`).
+void ee_won_guistring_widen(const uint8_t *narrow,
+                            size_t length,
+                            uint32_t wchar_size,
+                            EeWonWideSink sink,
+                            void *context);
 
 /// `SetFilePath`'s separators.
 ///
@@ -10445,6 +10614,72 @@ void ee_won_path_relative(const uint8_t *directory,
                           EeWonByteSink sink,
                           void *context);
 
+/// `write_global` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold `names.count` entries; the sink's contract.
+void ee_won_prefs_write_global(const EeWonGlobalPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `write_user` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold their counts; the sink's contract.
+void ee_won_prefs_write_user(const EeWonUserPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `read_global` (the file's bytes) to the sink.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the sink's contract. No reference into Rust is kept past each call.
+EeWonPrefsRead ee_won_prefs_read_global(const uint8_t *bytes,
+                                        size_t length,
+                                        EeWonPrefsSink sink,
+                                        void *context);
+
+/// `read_user` to the sink.
+///
+/// # Safety
+/// As `ee_won_prefs_read_global`.
+EeWonPrefsRead ee_won_prefs_read_user(const uint8_t *bytes,
+                                      size_t length,
+                                      bool lan_user,
+                                      EeWonPrefsSink sink,
+                                      void *context);
+
+/// `user_file_name` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_prefs_user_file_name(int32_t id, EeWonByteSink sink, void *context);
+
+/// `find_unused_user_id`.
+///
+/// # Safety
+/// `ids` holds `count` ids in ascending order.
+int32_t ee_won_prefs_unused_user_id(const int32_t *ids, size_t count);
+
+/// `prune_users`: `drop[i]` set to 1 for a user dropped without its file, 2 with it, else 0.
+///
+/// # Safety
+/// `ids`, `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_users(const int32_t *ids,
+                              const int64_t *times,
+                              size_t count,
+                              uint8_t *drop);
+
+/// `prune_lan_names`: `drop[i]` set for each name dropped.
+///
+/// # Safety
+/// `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop);
+
+/// `recent_lan_name`, -1 for none.
+///
+/// # Safety
+/// `times` holds `count` entries.
+int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
+
+uint16_t ee_won_prefs_default_lan_number(uint32_t host);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -10482,6 +10717,73 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+/// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable.
+int32_t ee_won_room_read(const uint8_t *bytes, size_t length, bool joining, EeWonRoomMsg *out);
+
+/// `room_accepts`.
+///
+/// # Safety
+/// Both point to valid structs.
+bool ee_won_room_accepts(const EeWonRoomMsg *m, const EeWonRoomRoles *roles);
+
+/// `room_message` into the sink.
+///
+/// # Safety
+/// `m` is valid; the sink's contract.
+void ee_won_room_message(const EeWonRoomMsg *m, EeWonByteSink sink, void *context);
+
+/// `player_head` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_room_player_head(uint16_t ping, bool ready, EeWonByteSink sink, void *context);
+
+int32_t ee_won_room_start_exit_code(bool i_am_captain);
+
+/// `ready_state` in place.
+///
+/// # Safety
+/// `s` is valid and writable.
+void ee_won_room_ready_state(EeWonReadyState *s);
+
+bool ee_won_game_is_full(int32_t players, int32_t open_slots);
+
+/// `join_status`: the status, or -1 to ask the game code's hook.
+int16_t ee_won_game_join_status(bool full,
+                                bool invite_only,
+                                bool invited,
+                                bool is_host,
+                                bool in_progress);
+
+int16_t ee_won_game_host_join_check(bool full, bool in_progress);
+
+bool ee_won_game_matches_room_spec(int32_t flags, int32_t game_type);
+
+/// `write_summary` into the sink; `name` is UTF-16 LE bytes.
+///
+/// # Safety
+/// `s` is valid; `name` holds `name_length` bytes; the sink's contract.
+void ee_won_game_write_summary(const EeWonGameSummary *s,
+                               const uint8_t *name,
+                               size_t name_length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `read_summary` into `out`; the name (when read) goes to the sink as UTF-16 units.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable; the sink's contract.
+void ee_won_game_read_summary(const uint8_t *bytes,
+                              size_t length,
+                              int32_t game_type,
+                              uint16_t product_id,
+                              EeWonGameSummary *out,
+                              EeWonUnitSink name_sink,
+                              void *context);
 
 }  // extern "C"
 
