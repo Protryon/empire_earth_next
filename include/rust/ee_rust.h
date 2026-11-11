@@ -778,6 +778,12 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// The sink's `which`: the target name.
+constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
+
+/// The sink's `which`: the text.
+constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
+
 /// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
 constexpr static const int32_t MORE_REPLIES = 100059;
 
@@ -3645,6 +3651,32 @@ struct EeWonAuthEntry {
   bool present;
 };
 
+/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
+struct EeWonChatText {
+  const void *text;
+  size_t length;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
+struct EeWonChatOutcome {
+  bool ok;
+  int32_t error;
+  int32_t command;
+  bool target_set;
+  /// The client's index in the names handed in, -1 for NULL.
+  int32_t target;
+  bool duration_set;
+  uint32_t duration;
+  bool invitation_set;
+  bool invitation;
+};
+
+/// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
+using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
+
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
 struct EeWonFileReader {
@@ -3662,9 +3694,6 @@ struct EeWonConfigIo {
   int32_t *line;
   bool unicode;
 };
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A saved state across the C ABI: the file position, name and line, and the pushback's units.
 struct EeWonConfigState {
@@ -8554,6 +8583,69 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool force,
                                       bool peer_valid,
                                       int64_t expire_delta);
+
+/// `GetCommandName`.
+const char *ee_won_chat_command_name(int32_t command);
+
+/// `ParseCommand`'s first step: the command word (upper-cased, from position 1) to the sink, and the position
+/// after it.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` receives the word during the call.
+int32_t ee_won_chat_command_word(EeWonChatText text,
+                                 uint32_t wchar_size,
+                                 EeWonWideUnitSink sink,
+                                 void *context);
+
+/// `ParseCommand`'s second step (`parse_command`): `command` -1 for an unknown word, `clients` the room's names.
+///
+/// # Safety
+/// The texts as `EeWonChatText`, `clients` `client_count` of them; `out` is valid; `sink` receives the texts set.
+void ee_won_chat_parse(EeWonChatText text,
+                       int32_t pos,
+                       int32_t command,
+                       EeWonChatText reply,
+                       const EeWonChatText *clients,
+                       size_t client_count,
+                       int32_t threshold,
+                       uint32_t wchar_size,
+                       EeWonChatOutcome *out,
+                       EeWonChatSink sink,
+                       void *context);
+
+/// `FindClient` (`find_client`): the match into `*matched`, the client's index or -1.
+///
+/// # Safety
+/// As `ee_won_chat_parse`; `matched` is valid.
+int32_t ee_won_chat_find_client(EeWonChatText name,
+                                const EeWonChatText *clients,
+                                size_t client_count,
+                                uint32_t wchar_size,
+                                int32_t *matched);
+
+/// `HandleInput`'s decision: 0 no client list, 1 a command, 2 an emote, 3 an emote with nothing in it, 4 a
+/// broadcast, 5 an empty broadcast. For an emote the sink gets its text.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` as `ee_won_chat_parse`.
+int32_t ee_won_chat_input(EeWonChatText text,
+                          uint32_t wchar_size,
+                          int32_t prefix,
+                          bool allow_colon,
+                          bool has_clients,
+                          EeWonChatSink sink,
+                          void *context);
+
+/// `GetHelp`'s commands (`help_commands`) into `out` (room for 32); their count.
+///
+/// # Safety
+/// `out` has room for 32 ids.
+size_t ee_won_chat_help(uint32_t room_flags,
+                        bool moderator,
+                        bool room_captain,
+                        bool game_captain,
+                        bool admin,
+                        int32_t *out);
 
 EeWonConfigLexer *ee_won_config_new();
 

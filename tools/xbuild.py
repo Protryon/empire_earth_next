@@ -409,6 +409,13 @@ WON_TESTS = {
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
     "won_regkey_test": [*[WON_SRC / "WONCommon" / f for f in ("RegKey.cpp", "ByteBuffer.cpp")]],
+    # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
+    "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
+                      *[WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                       "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                       "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+                      *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
+                                                           "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 
 

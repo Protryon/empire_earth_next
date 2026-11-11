@@ -198,6 +198,7 @@ int main(int argc, char** argv)
 #endif
     Run();
     Dump();
+    remove("won_regkey.yaml");
     if (argc > 1 && strcmp(argv[1], "--print") == 0) {
         for (size_t i = 0; i < sLines.size(); i++)
             printf("%s\n", sLines[i].c_str());
