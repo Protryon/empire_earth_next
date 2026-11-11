@@ -1053,6 +1053,9 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
             static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
             if (r >= 0 && r < 5)
                 EECPUnitsSetStr(L, "gathers", kKinds[r]);
+            // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
+            if (theGather->mWaiting && c->mCurrentPhysicsAction != 0)
+                EECPUnitsSetBool(L, "waiting", true);
         } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g))
             theTarget = theBuild->mTarget;
         else if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(g))
