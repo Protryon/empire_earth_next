@@ -4790,3 +4790,80 @@ servers reach (AuthContext's login data, the directory replies), each captured o
 - Still C++ of WON: peer auth, AuthContext's sessions and certificate flow, GetCertOp, the other services' requests
   and replies (directory requests, routing, DB, HTTP, FTP, misc, the server connection), ConfigObject /
   ConfigValue (the object model on virtual hooks), WONFile, RegKey, the lobby logic and WONGUI.
+
+## R6: WON's paths, RegKey, the chat parser, GUIStringData and ConfigObject's grammar in Rust (ee_won path.rs, regkey.rs, chat.rs, guistring.rs, configobj.rs; branch rust-r6-won5, 2026-11-10)
+
+Round 5 of R6 (the map of what is left is in RUST_PLAN's "R6 WON, the rest" row). Each piece was captured over the
+C++ first by a driver in `tests/won` (added to `xbuild.py` `WON_TESTS`), the Rust tests replay the golden, and the
+driver relinked over the forwarders prints the same.
+
+- **`won_parse_test` after D6.** It failed 39 of 3537 lines: D6 made `WStringToString` UTF-8 and the golden and
+  `parser_golden`'s model still had the code page (ASCII and 0xA0-0xFF as single bytes, anything else '?'). The
+  model is `text::game_from_utf16` now and the golden is re-recorded from the current C++. The 39 lines are all
+  `wstrs` (a wide string read and narrowed) plus the formats line (`L"w\xe9"`): inputs 02, 03, 37-41, 49-52 in both
+  widths of the C pass (40 and 41 are wide only: 20 lines) and the same without 39 in the English pass (18: there
+  0xA0 is a space, so input 39's token is plain "x"). U+4142 and U+263A were '?' and are their UTF-8 now; the
+  Latin-1 units (e9, fc, a0, b2, b3, b9, ff) were one 1252 byte each and are two-byte UTF-8 now. Each is what D6
+  asks: game text is UTF-8, nothing is squeezed into a code page.
+- **WONFile's path logic (`path.rs`).** The separators, the directory/name and extension splits, `NormalizePath`,
+  `CalcFullPath`'s join to the current directory and `GetRelativePath` (the CRT's `toupper` per byte). The class
+  keeps its strings, cache flags and platform calls. `won_path_test` (170 lines) works in a directory it creates
+  and prints `<T>` and `<V>` for it and its volume, so the golden is the same on any Windows machine; elsewhere the
+  absolute-path lines are not compared (they are Windows paths). **Kept quirk:** `NormalizePath(".")` throws
+  `std::out_of_range` (the original's `substr(1)` of the emptied path); the forwarder throws it. A name cached
+  before a normalisation stays cached (only the directory is recomputed), as the golden's "cached" lines show.
+- **RegKey (`regkey.rs`).** The config.yaml names (`.`, `:` and control characters to `_`, blanks trimmed,
+  "(default)" for an empty name), the blocks, the binary values' hex both ways and the root range; RegKey keeps its
+  block, path and open flag and calls `PlatConfig`. `won_regkey_test` runs on a scratch `$EE_CONFIG` and prints
+  the file's lines too (97 lines). Every lobby load reads `UseLocalIP` through it (`LobbyConfig`).
+- **The chat command parser (`chat.rs`).** Everything but the tables: the command word, the name matches (full,
+  unique prefix, ambiguous), `ParseCommand` after the lookup, `HandleInput`'s kind of line, the help lines a
+  client sees, the short names. The command maps stay C++ `std::map`s: the word is computed in Rust, looked up in
+  C++, and the rest of the parse is a second call that returns what to set (`EeWonChatOutcome` plus a sink for the
+  texts; "not set" leaves a member alone, as the original's early returns did). The CRT's `towupper`, `iswspace`,
+  `toupper`, `isalpha` (of a signed `char`) and `atoi` are called as the original called them (`CrtChat`; the
+  tests' `CChat` is the C locale). The `crt` module is `cbindgen:ignore`: cbindgen exported its `extern` block
+  and a `cfg`'d type alias twice, and the command constants clashed with `windows.h`'s `IGNORE` until they became
+  `pub(crate)`. The golden (439 lines) uses the lobby's own command names (`_LobbyResource.cfg`); the driver
+  defines the resource globals and copies the four `LobbyClient` methods it needs (LobbyModel.cpp links the whole
+  lobby). **Kept quirks:** a rest of line of one character is empty; `/unmute Bob` sets its text to "Bob" (the
+  second `GetRestOfLine` starts at the name again); a duration needs a unit letter (`10` is error 7); `-1h` and
+  `99999999d` wrap in the 32-bit int; `INFINITE` leaves the previous duration; the constructor leaves `mCommand`
+  unset (the driver sets it). Reached by the LAN lobby's chat; `lan_game.py` does not chat, so only the golden
+  covers it.
+- **GUIStringData (`guistring.rs`).** WONGUI's text: `Compare`, both `CompareNoCase`s, `compare` with narrow text
+  (0 only when the narrow text continues with '0': the original's bug, kept), `ToInt` (a 16-bit offset that
+  wraps), `find` of a character and of a substring, `findNoCase`, `rFind` both ways (`std::wstring::rfind`),
+  `findOneOf`, `toUpper` / `toLowerCase` and `GetString`. Reads at the length see the terminator, as the original
+  did. The golden (1280 lines) has a C and an English pass: `towupper` folds Latin-1 only in the English locale
+  (`a` vs `é` is -168 in C, -136 in English), so the case maps stay the CRT's. Every lobby label, list and chat
+  line goes through this: only a lobby tour or the LAN game exercises it in the game.
+  - **Found, not changed (D6):** `GUIString(const char*)` widens each byte and `GetString` narrows a unit below 256
+    to its byte and any other to '?': Latin-1, not UTF-8. A lobby text that reaches the game's narrow strings this
+    way (or comes from them) is not UTF-8 for a non-ASCII character. The UTF-8 meeting point D6 made is
+    `StringUtil` (`StringToWString` / `WStringToString`); the GUIString constructors and `GetString` are a second,
+    older one. Changing them changes what the lobby shows for any narrow resource text with a byte above 0x7F; it
+    needs its own look at the callers.
+- **ConfigObject's grammar (`configobj.rs`).** A token's kind in a group (`}`, `key:`, a group), the header's
+  sequence (`[name] [: base] {`, a four-state step function the C++ feeds token by token), the instructions,
+  which block of `IFDEFINED` / `IFNOTDEFINED` is parsed (`else` in any case), the `, optional` suffix and its two
+  warnings, and an included file's path. The C++ keeps the objects, the key and group maps, the virtual hooks
+  (WONGUI's resource and component configs override them), the lexer calls and the texts. `won_cfgobj_test`
+  parses 44 snippets (and one with the include path ignored) into a test group with typed keys and three kinds of
+  child group and prints every group's keys, the error and the warnings (103 lines); `--files DIR` prints the 61
+  lobby files' results and warnings' CRCs, the same over the C++ and the port.
+  - **Behaviour change:** `SimpleConfigValue<unsigned short>::ReadValue` assigned the `int` it read into even when
+    the read failed (uninitialised: the first capture printed 0, the port's run 182). It keeps the value now, as
+    the parser's sized reads do since round 3; the golden was re-recorded over the original ConfigObject with that
+    fix.
+  - **Kept quirk:** an `INCLUDEGROUP` on a file's last line throws `FileReaderException` out of the parse ("Attempt
+    to setpos past end of mem buffer": the state saved before the include is at the end, and the reader, in memory
+    mode, refuses a position equal to its length). The lobby's files never end so; snippet 26 records it.
+- **What exercises what.** WONFile, RegKey, GUIStringData and ConfigObject run at every lobby load: the LAN game
+  (`lan_game.py`) or a lobby tour is their end-to-end check. The chat parser runs only when someone types in the
+  lobby's chat (no harness test does). Nothing here touches the simulation: the oracle was identical after each
+  gated build.
+- **Still C++ of WON:** the lobby logic proper (LobbyModel, LanLogic's objects, StagingLogic, InitLogic,
+  LobbyPersistentData's file layout, the resource table, RoutingLogic), StringUtil's case functions, WONGUI's
+  components and layout, and everything only the gone internet servers reach (peer auth, AuthContext's sessions and
+  certificate flow, GetCertOp, the services' requests and replies).
