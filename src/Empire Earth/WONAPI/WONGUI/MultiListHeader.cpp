@@ -10,6 +10,10 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The buttons' places over the columns, the sort a press asks for, a column's shown sort, the resize edge under
+// the mouse and the dragged width are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs); this unit
+// keeps the buttons, the cursor and the events.
 namespace WONAPI {
 // FUNCTION: WON 0x00702bc0
 // Attaches the header to a list area and registers itself as that list's header
@@ -55,21 +59,21 @@ void MultiListHeader::NotifyColumnChange()
 {
     if(this->mListArea==NULL) return;
     std::vector<MultiListArea::ColumnInfo>& columns=this->mListArea->mColumnInfoVector;
-    int x=-this->mListArea->mHorzOffset;
     int size=this->mColumnVector.size();
+    std::vector<char> aHas(size);
+    for(int i=0;i<size;++i) aHas[i]=this->mColumnVector[i].mComponent!=NULL;
+    std::vector<int> aWidths;
+    for(size_t i=0;i<columns.size();++i) aWidths.push_back(columns[i].mWidth);
+    std::vector<EeWonHeaderCol> aPlaces(size+1);
+    ee_won_gui_mh_layout((const bool*)(size?&aHas[0]:NULL),size,aWidths.empty()?NULL:&aWidths[0],aWidths.size(),
+                         this->mListArea->mHorzOffset,&aPlaces[0]);
     for(int i=0;i<size;++i) {
         Component* component=this->mColumnVector[i].mComponent;
-        int width=-1;
-        if(i<columns.size()) width=columns[i].mWidth;
         if(component!=NULL) {
-            if(width==-1) {
-                component->SetEnabled(false);
-                width=0;
-            } else component->SetEnabled(true);
-            component->SetVisible(width!=0);
-            component->SetPosSize(x,0,width,this->Height());
+            component->SetEnabled(aPlaces[i].enabled);
+            component->SetVisible(aPlaces[i].width!=0);
+            component->SetPosSize(aPlaces[i].x,0,aPlaces[i].width,this->Height());
         }
-        x+=width;
     }
     if(this->mColumnVector.size()>0) {
         Component* component=this->mColumnVector[this->mColumnVector.size()-1].mComponent;
@@ -97,9 +101,9 @@ int MultiListHeader::GetColumnIndex(Component* component)
 // Returns a column's sort direction if it is the sorted column, otherwise none
 ListSortType MultiListHeader::GetSortType(int column)
 {
-    if(column<0 || column>=this->mColumnVector.size() || column!=this->mCurSortCol)
-        return ListSortType_None;
-    return this->mColumnVector[column].mSortType;
+    int aType=ListSortType_None;
+    if(column>=0 && column<this->mColumnVector.size()) aType=this->mColumnVector[column].mSortType;
+    return static_cast<ListSortType>(ee_won_gui_mh_sort_type(column,this->mColumnVector.size(),this->mCurSortCol,aType));
 }
 }
 
@@ -119,9 +123,8 @@ void MultiListHeader::HandleComponentEvent(ComponentEvent* event)
         if(parent==NULL) return;
         int column=child->mControlId;
         if(column>=0 && column<(int)this->mListArea->mColumnInfoVector.size() && column<this->mColumnVector.size()) {
-            ListSortType type=this->mColumnVector[column].mSortType;
-            if(column==this->mCurSortCol || type==ListSortType_None)
-                type=type==ListSortType_Ascending ? ListSortType_Descending : ListSortType_Ascending;
+            ListSortType type=static_cast<ListSortType>(
+                ee_won_gui_mh_toggle(this->mColumnVector[column].mSortType,column==this->mCurSortCol));
             this->mListArea->SetSortColumn(column,type);
             return;
         }
@@ -152,29 +155,32 @@ Component* MultiListHeader::GetDragComponent(int x)
     this->mDragColumn=-1;
     this->mDragComponent=NULL;
     std::vector<MultiListArea::ColumnInfo>& columns=this->mListArea->mColumnInfoVector;
-    for(int i=0;i<this->mColumnVector.size();++i) {
+    std::vector<EeWonHeaderButton> aButtons(this->mColumnVector.size());
+    for(size_t i=0;i<this->mColumnVector.size();++i) {
         Component* component=this->mColumnVector[i].mComponent;
-        if(component==NULL || !(x>=component->Left()) || !(x<=component->Right()))
-            continue;
-        int width=component->Width()/4;
-        if(width>5) width=5;
-        if(x-component->Left()<width && i!=0) this->mDragColumn=i-1;
-        else if(component->Right()-x<width && i!=this->mColumnVector.size()) this->mDragColumn=i;
-        else return NULL;
-        if(this->mDragColumn>=columns.size()) {
-            this->mDragColumn=-1;
-            return NULL;
-        }
-        MultiListArea::ColumnInfo& info=columns[this->mDragColumn];
-        if(info.mSizeMode==0 || (info.mSizeMode==2 && (info.mPartnerColumn<0 || info.mPartnerColumn>=columns.size()))) {
-            this->mDragColumn=-1;
-            return NULL;
-        }
-        this->mDragX=x-this->mListArea->mColumnInfoVector[this->mDragColumn].mWidth;
-        this->mDragComponent=this->mColumnVector[this->mDragColumn].mComponent;
-        return this->mDragComponent;
+        aButtons[i].present=component!=NULL;
+        if(component!=NULL) {
+            aButtons[i].left=component->Left();
+            aButtons[i].right=component->Right();
+            aButtons[i].width=component->Width();
+        } else aButtons[i].left=aButtons[i].right=aButtons[i].width=0;
     }
-    return NULL;
+    std::vector<int> aWidths,aPartners;
+    std::vector<unsigned char> aModes;
+    for(size_t i=0;i<columns.size();++i) {
+        aWidths.push_back(columns[i].mWidth);
+        aModes.push_back(columns[i].mSizeMode);
+        aPartners.push_back(columns[i].mPartnerColumn);
+    }
+    int aDragX;
+    int aColumn=ee_won_gui_mh_drag(x,aButtons.empty()?NULL:&aButtons[0],aButtons.size(),aWidths.empty()?NULL:&aWidths[0],
+                                   aModes.empty()?NULL:&aModes[0],aPartners.empty()?NULL:&aPartners[0],columns.size(),
+                                   &aDragX);
+    if(aColumn<0) return NULL;
+    this->mDragColumn=aColumn;
+    this->mDragX=aDragX;
+    this->mDragComponent=this->mColumnVector[this->mDragColumn].mComponent;
+    return this->mDragComponent;
 }
 // FUNCTION: WON 0x00703260
 // Starts a column resize on a left press at a column edge; otherwise passes the press on
@@ -196,9 +202,7 @@ void MultiListHeader::MouseMove(int x,int y)
 void MultiListHeader::MouseDrag(int x,int y)
 {
     if(this->mDragColumn>=0) {
-        int width=x-this->mDragX;
-        if(width<0) width=0;
-        this->mListArea->SetColumnWidth(this->mDragColumn,width,false);
+        this->mListArea->SetColumnWidth(this->mDragColumn,ee_won_gui_mh_drag_width(x,this->mDragX),false);
         this->SetCursor(Cursor::GetStandardCursor(StandardCursor_EastWest));
     } else Container::MouseDrag(x,y);
 }

@@ -14,7 +14,16 @@
 #include "platform/PlatKeys.h"
 #include "ee/wonapi/WONLobbyDelayLoadImage.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
 using namespace WONAPI;
+// The popups' places, the windows a mouse event belongs to, the press that ends the popups, the modality and the
+// dialog an EndDialog names are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); this unit keeps the
+// windows, the popup list, the dialogs, the events, focus and capture.
+static EeWonRect4 WinRect4(const WONRectangle& inRect)
+{
+    EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
+    return aRect;
+}
 // FUNCTION: WON 0x0072b660
 // Creates the window manager: registers the BMP and WIM decoders, becomes the default manager, sets standard colours
 WindowManager::WindowManager() {
@@ -377,7 +386,7 @@ bool WindowManager::AddWindow(Window *theWindow)
 bool WindowManager::RemoveWindow(Window *theWindow)
 {
 	AutoCrit aCrit(this->mDataCrit);
-		
+
 	if(this->mWindowSet.erase(theWindow)>0)
 	{
 		this->mWindowCount--;
@@ -386,10 +395,10 @@ bool WindowManager::RemoveWindow(Window *theWindow)
 
 		if(this->mWindowSet.empty())
 			this->mDefaultWindow = NULL;
-		else 
+		else
 			this->mDefaultWindow = this->mWindowSet.begin()->get();
 
-		
+
 		WindowEventList::iterator anItr = this->mWindowEventList.begin();
 		while(anItr!=this->mWindowEventList.end())
 		{
@@ -552,7 +561,7 @@ void WindowManager::ProcessEvents()
 			this->mLastLoseFocusTick = 0;
 			if(this->mIsFullScreen)
 				this->RestoreScreenResolution();
-		}	
+		}
 
 		WindowSet::iterator anItr = this->mWindowSet.begin();
 		while(anItr!=this->mWindowSet.end())
@@ -570,7 +579,7 @@ void WindowManager::ProcessEvents()
 			this->mCallingTimers = false;
 		}
 
-		if(!this->mRemoveTimerEvents.empty()) 
+		if(!this->mRemoveTimerEvents.empty())
 		{
 			for(WindowEventSet::iterator aTimerItr = this->mRemoveTimerEvents.begin(); aTimerItr != this->mRemoveTimerEvents.end(); ++aTimerItr)
 				this->mTimerEvents.erase(*aTimerItr);
@@ -619,17 +628,16 @@ static inline bool PopupRectContains(const WONRectangle& r,int x,int y) {
 // and the dialog, and makes every other window modal
 void WindowManager::CalcModality()
 {
-	
+
 	if(this->mPopupInputComponent.get()!=NULL)
 		SetModal(this->mPopupInputComponent.get(),false);
 	if(this->mModalComponent!=NULL)
 		SetModal(this->mModalComponent,false);
 
-	bool modal = false;
 	this->mPopupIsUp = false;
 	if(!this->mPopupList.empty())
 	{
-		
+
 		this->mPopupIsUp = true;
 		PopupList::iterator anItr = this->mPopupList.begin();
 		while(anItr!=this->mPopupList.end())
@@ -638,24 +646,18 @@ void WindowManager::CalcModality()
 			aPopup->SetComponentFlags(0x8000 | 0x10000,true);
 			++anItr;
 		}
-
-		if(((this->mPopupFlags & (PopupFlag_IsModal))?true:false))
-			modal = true;
 	}
-	
-	if(this->mModalComponent!=NULL)
-	{
-		if(!modal) 
-			SetModal(this->mModalComponent,true);
 
-		modal = true;
-	}
+	uint32_t aModality = ee_won_gui_modality(this->mPopupIsUp, this->mPopupFlags, this->mModalComponent!=NULL);
+	bool modal = (aModality & 1)!=0;
+	if(aModality & 2)
+		SetModal(this->mModalComponent,true);
 
 	if(!this->mPopupIsUp && this->mPopupOwnerComponent.get()!=NULL)
 		this->mPopupOwnerComponent = NULL;
 
 	if(this->mPopupInputComponent.get()!=NULL)
-	{ 
+	{
 		if(this->mPopupIsUp)
 			SetModal(this->mPopupInputComponent.get(),true);
 		else
@@ -666,11 +668,9 @@ void WindowManager::CalcModality()
 	while(anItr!=this->mWindowSet.end())
 	{
 		Window *aWindow = anItr->get();
-		if(aWindow==this->mModalWindow && !this->mPopupIsUp && this->mModalComponent==aWindow->mRoot.get())
-			aWindow->SetModal(false);
-		else
-			(*anItr)->SetModal(modal);
-		
+		aWindow->SetModal(ee_won_gui_window_modal(aWindow==this->mModalWindow, this->mPopupIsUp,
+		                                          this->mModalComponent==aWindow->mRoot.get(), modal));
+
 		++anItr;
 	}
 }
@@ -726,10 +726,8 @@ int WindowManager::DoDialog(Window *theWindow, Component *theComponent)
 // Ends the current modal dialog with a result, unless another window or dialog is named
 void WindowManager::EndDialog(int theResult, Window *theWindow, Component *theDialog)
 {
-	if(theWindow!=NULL && theWindow!=this->mModalWindow)
-		return;
-
-	if(theDialog!=NULL && theDialog!=this->mModalComponent)
+	if(!ee_won_gui_ends_dialog(theWindow!=NULL, theWindow==this->mModalWindow, theDialog!=NULL,
+	                           theDialog==this->mModalComponent))
 		return;
 
 	this->mDialogResult = theResult;
@@ -766,36 +764,11 @@ void WindowManager::AdjustPopupPosition(Window *theParent, Component *theCompone
 
 	}
 
-	int dx = 0, dy = 0;
-	if(theComponent->Right() > aBoundingRect.Right())
-	{
-		dx = aBoundingRect.Right() - theComponent->Right();
-		theComponent->SetPos(theComponent->Left() + dx, theComponent->Top());
-		if(anAvoidRect.Width()>0 && theComponent->Left()<=theAvoidRect.Right() && theComponent->Right()>=theAvoidRect.x)
-			theComponent->SetPos(anAvoidRect.Left()-theComponent->Width(),theComponent->Top());
-	}
-	else if(theComponent->Left() < aBoundingRect.x)
-	{
-		dx = aBoundingRect.Left() - theComponent->Left();
-		theComponent->SetPos(theComponent->Left() + dx,theComponent->Top());
-		if(anAvoidRect.Width()>0 && theComponent->Left()<=theAvoidRect.Right() && theComponent->Right()>=theAvoidRect.x)
-			theComponent->SetPos(anAvoidRect.Right(),theComponent->Top());
-	}
-
-	if(theComponent->Bottom() > aBoundingRect.Bottom())
-	{
-		dy = aBoundingRect.Bottom() - theComponent->Bottom();
-		theComponent->SetPos(theComponent->Left(), theComponent->Top() + dy);
-		if(anAvoidRect.Height()>0 && theComponent->Top()<=theAvoidRect.Bottom() && theComponent->Bottom()>=theAvoidRect.y)
-			theComponent->SetPos(theComponent->Left(), anAvoidRect.Top()-theComponent->Height());
-	}
-	else if(theComponent->Top() < aBoundingRect.y)
-	{
-		dy = aBoundingRect.Top() - theComponent->Top();
-		theComponent->SetPos(theComponent->Left(), theComponent->Top() + dy);
-		if(anAvoidRect.Height()>0 && theComponent->Top()<=theAvoidRect.Bottom() && theComponent->Bottom()>=theAvoidRect.y)
-			theComponent->SetPos(theComponent->Left(), anAvoidRect.Bottom());
-	}
+	EeWonRect4 aPopupRect = { theComponent->Left(), theComponent->Top(), theComponent->Width(), theComponent->Height() };
+	int aMoves[8];
+	size_t aCount = ee_won_gui_popup_adjust(aPopupRect, WinRect4(aBoundingRect), WinRect4(anAvoidRect), aMoves);
+	for(size_t i=0; i<aCount; i++)
+		theComponent->SetPos(aMoves[2*i], aMoves[2*i+1]);
 }
 
 // FUNCTION: WON 0x0072e040
@@ -803,14 +776,14 @@ void WindowManager::AdjustPopupPosition(Window *theParent, Component *theCompone
 // the popup flags; ignored while another popup opens or closes, or when the parent lacks focus
 void WindowManager::DoPopup(const PopupParams &theParams)
 {
-	
+
 	SmartPtr<Window> aParent = theParams.mParent;
 	SmartPtr<Component> aPopup = theParams.mPopup;
 
 	if(this->mInDoPopup || this->mInEndPopup)
 		return;
 
-	bool additional = (theParams.mFlags&PopupFlag_Additional) && !this->mPopupList.empty();
+	bool additional = ee_won_gui_popup_additional(theParams.mFlags, !this->mPopupList.empty());
 	Window *aFocusCheckWindow = aParent.get();
 	if(additional)
 		aFocusCheckWindow = this->mPopupOwnerWindow;
@@ -823,12 +796,8 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 	if(this->mPopupIsUp && !additional)
 		this->EndPopup(NULL);
 
-	int x = theParams.mx;
-	int y = theParams.my;
-	if(x==-1)
-		x = aParent->mMouseX;
-	if(y==-1)
-		y = aParent->mMouseY;
+	int y;
+	int x = ee_won_gui_popup_place(theParams.mx, theParams.my, aParent->mMouseX, aParent->mMouseY, &y);
 
 	aPopup->SetPos(x,y);
 
@@ -842,11 +811,7 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 	}
 
 	this->mPopupList.push_back(aPopup.get());
-	bool inOwnWindow = this->mBA5;
-	if(((this->mPopupFlags & (PopupFlag_InOwnWindow))?true:false))
-		inOwnWindow = true;
-	else if(((this->mPopupFlags & (PopupFlag_NotInOwnWindow))?true:false))
-		inOwnWindow = false;
+	bool inOwnWindow = ee_won_gui_popup_own_window(this->mPopupFlags, this->mBA5);
 
 	if(((this->mPopupFlags & (PopupFlag_AdjustPosition))?true:false))
 		this->AdjustPopupPosition(aParent.get(),aPopup.get(),inOwnWindow,theParams.mAvoidRect);
@@ -874,7 +839,7 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 			}
 			this->mPopupWindowSave = NULL;
 		}
-				
+
 		if(aPopupWindow.get()==NULL)
 		{
 			aPopupWindow = CreateNativeWindow();
@@ -889,7 +854,7 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 
 		if(((this->mPopupFlags & (PopupFlag_WantInput))?true:false))
 		{
-			this->mPopupOwnerWindow->PlatformSetFocus();	
+			this->mPopupOwnerWindow->PlatformSetFocus();
 			this->mPopupOwnerWindow->mRoot->LostFocus();
 		}
 
@@ -931,7 +896,7 @@ void WindowManager::EndPopup(Component *thePopup)
 		return;
 
 	bool inEndPopup = this->mInEndPopup;
-	this->mInEndPopup = true; 
+	this->mInEndPopup = true;
 	while(!this->mPopupList.empty() && this->mPopupList.back()!=thePopup)
 		this->EndPopup(this->mPopupList.back());
 
@@ -964,7 +929,7 @@ void WindowManager::EndPopup(Component *thePopup)
 
 		if(aPopupWindow.get()!=aPopupOwnerWindow.get())
 		{
-			aPopupWindow->mIsPopup = false; 
+			aPopupWindow->mIsPopup = false;
 			if(this->mPopupList.empty())
 				this->mPopupWindowSave = aPopupWindow;
 
@@ -977,7 +942,7 @@ void WindowManager::EndPopup(Component *thePopup)
 			}
 			else
 				aPopupWindow->Close();
-			
+
 			if(this->mPopupList.empty() && ((this->mPopupFlags & (PopupFlag_WantInput))?true:false))
 			{
 				if(this->mFocusWindow==aPopupOwnerWindow.get())
@@ -1029,7 +994,7 @@ void WindowManager::FindMouseWindow(MouseEvent *theEvent)
 		this->mPopupOwnerWindow->GetRect(anOwnerRect,true);
 		anOwnerRect.x -= aPopupRect.x;
 		anOwnerRect.y -= aPopupRect.y;
-		if(PopupRectContains(anOwnerRect,theEvent->mx,theEvent->my))
+		if(ee_won_gui_rect_contains(WinRect4(anOwnerRect),theEvent->mx,theEvent->my))
 		{
 			theEvent->mWindow = this->mPopupOwnerWindow;
 			theEvent->mx -= anOwnerRect.x;
@@ -1056,25 +1021,26 @@ void WindowManager::FindMouseWindow(MouseEvent *theEvent)
 		return;
 	}
 
-	PopupList::iterator anItr  = this->mPopupList.end();
-	do
+	// every popup's window rectangle (the original stopped asking at the topmost hit; GetRect only reads)
+	std::vector<Window*> aWindows;
+	std::vector<EeWonRect4> aRects;
+	for(PopupList::iterator anItr = this->mPopupList.begin(); anItr!=this->mPopupList.end(); ++anItr)
 	{
 		WONRectangle aRect;
-
-		--anItr;
 		Window *aWindow = (*anItr)->GetRoot();
 		aWindow->GetRect(aRect,true);
 		aRect.x -= anOwnerRect.x;
 		aRect.y -= anOwnerRect.y;
-
-		if(PopupRectContains(aRect,theEvent->mx,theEvent->my))
-		{
-			theEvent->mWindow = aWindow;
-			theEvent->mx -= aRect.x;
-			theEvent->my -= aRect.y;
-			return;
-		}
-	} while(anItr!=this->mPopupList.begin());
+		aWindows.push_back(aWindow);
+		aRects.push_back(WinRect4(aRect));
+	}
+	int64_t aHit = ee_won_gui_popup_window_at(aRects.empty()?NULL:&aRects[0], aRects.size(), theEvent->mx, theEvent->my);
+	if(aHit>=0)
+	{
+		theEvent->mWindow = aWindows[(size_t)aHit];
+		theEvent->mx -= aRects[(size_t)aHit].x;
+		theEvent->my -= aRects[(size_t)aHit].y;
+	}
 }
 
 // FUNCTION: WON 0x0072ee40
@@ -1086,7 +1052,7 @@ bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
 	if(theEvent->mButtonOrAmount==0)
 		this->mMouseDownWindow = theEvent->mWindow;
 
-	if(((this->mPopupFlags & (1<<theEvent->mButtonOrAmount))?true:false)) 
+	if(ee_won_gui_popup_click_ends(this->mPopupFlags, theEvent->mButtonOrAmount))
 	{
 		int x = theEvent->mx, y = theEvent->my;
 		Container *aContainer = theEvent->mWindow->mRoot.get();
@@ -1098,7 +1064,7 @@ bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
 
 			Component *aClickChild = aContainer->FindClickChildAt(x, y);
 			if(aClickChild!=NULL)
-			{ 
+			{
 				if(aClickChild==this->mPopupInputComponent.get() || ((aClickChild->mComponentBits & 0x10000)?true:false))
 				{
 					endPopup = false;
@@ -1127,7 +1093,7 @@ bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
 	}
 
 	if(theEvent->mWindow->mIsPopup)
-		this->mPopupOwnerWindow->PlatformSetFocus();	
+		this->mPopupOwnerWindow->PlatformSetFocus();
 
 	return false;
 }
@@ -1156,7 +1122,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				anEvent->mWindow->PlatformSetMouseCapture(true);
 		}
 
-		if(theEvent->mWindow->mMouseIsInClientArea) 
+		if(theEvent->mWindow->mMouseIsInClientArea)
 			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
 		break;
 
@@ -1164,7 +1130,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 		{
 			WindowEventBase *nextEvent = this->PeekNextEvent();
 			if(nextEvent!=NULL && nextEvent->mEventType==InputEvent_MouseMove && nextEvent->mWindow==theEvent->mWindow)
-				return; 
+				return;
 
 			this->FindMouseWindow(static_cast<MouseEvent*>(theEvent));
 			if(this->mPopupIsUp && theEvent->mEventType==InputEvent_MouseMove && ((this->mPopupFlags & (PopupFlag_EndOnMouseMove))?true:false))
@@ -1194,7 +1160,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 			this->FindMouseWindow(anEvent);
 			if(this->mPopupIsUp && !((this->mPopupFlags & (PopupFlag_DontWantMouse))?true:false))
 			{
-				
+
 				Component *aPopupComponent = this->mPopupList.back();
 				aPopupComponent->MouseWheel(anEvent->mButtonOrAmount);
 				return;
@@ -1212,14 +1178,14 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 			{
 				int aKey = static_cast<KeyEvent*>(theEvent)->mKey;
 				if(theEvent->mEventType==InputEvent_KeyDown)
-				{	
+				{
 					if(((this->mPopupFlags & (PopupFlag_EndOnKeyDown))?true:false) || ((this->mPopupFlags & (PopupFlag_EndOnEscape))?true:false) && aKey==VK_ESCAPE)
 					{
 						this->EndPopup(NULL);
 						break;
 					}
 				}
-				
+
 				if(((this->mPopupFlags & (PopupFlag_WantInput))?true:false))
 				{
 					Window *aPopupWindow = this->mPopupList.back()->GetRoot();
@@ -1247,7 +1213,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 
 		case InputEvent_SizeChange:
 			if(theEvent->mWindow==this->mPopupOwnerWindow)
-				this->EndPopup(NULL);			
+				this->EndPopup(NULL);
 			else
 			{
 				WindowEventBase *nextEvent = this->PeekNextEvent();
@@ -1263,7 +1229,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 						s2->mWidth = s1->mWidth;
 					if(s2->mHeight==-1)
 						s2->mHeight = s1->mHeight;
-					return; 
+					return;
 				}
 			}
 

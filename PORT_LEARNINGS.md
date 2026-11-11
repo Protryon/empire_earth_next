@@ -5628,6 +5628,81 @@ edge and wrapping ints).
   MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
   value readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the platform backend).
 
+## R6: WONGUI's text area, compound controls, multi-column lists, config expressions, popups and modality, and the lobby dialogs' decisions in Rust (ee_won guitext.rs, guictl.rs, guimulti.rs, guicfg.rs, guiwin.rs, dialogs.rs; branch rust-r6-won9, 2026-11-11)
+
+Round 9 of R6, after round 8's map of WONGUI (RUST_PLAN "R6 WON, the rest"). Same pattern: a `tests/won` driver (in
+`xbuild.py` `WON_TESTS`) runs the original's statements, copied from the C++ before the port with the components
+replaced by the numbers and flags they read, their `SetPos` / `SetSize` / `SetEnabled` calls by the values they
+received, against the Rust ABI over generated inputs (a fixed LCG; small, edge and wrapping ints). The C++ classes keep
+their objects, child lists, vtables, events, fonts and the paint; Rust answers the numbers and decisions. No C++ class
+moved wholly, so no unit was deleted.
+
+- **The text area (`guitext.rs`, the chat, MOTD and help pages).** `AddSeg`'s line metrics (height, baseline,
+  descent, the total height and whether the line's segments move), `AlignLine`, `AddSegmentPrv`'s fit test,
+  `TextSegment::Wrap`'s loop (steps: a piece on the current line or a new line; the C++ measures every unit once and
+  the rest of the text through a callback, as `GetStringWidth` may kern), `ShouldScrollOnBottom`, the delayed wrap
+  (over 5000 characters, due after 2 to 10 ticks), `EnforceMaxChars` / `EnforceMaxLines`' trim points,
+  `RemoveSegmentsUpTo`'s line search (through a flags callback), `EnforceInvariants`' renumbering, `FindSegment`'s
+  clamp, cache and pick (a point below the line returns NULL and keeps the cache, as before), `CharAt` (a width
+  callback asked only for the units the walk reaches), `CheckSel`, the drag and key scrolls, `GetSelText`'s parts,
+  `GotoAnchor`'s clamp (a negative line compared as unsigned is past the end: the last line), `AddFormatedText`'s
+  split and `LobbyAppendFormattedText`'s commands (`<n> <cN> <fN> <sN> <lN> <<`, executed by the C++ as steps; the
+  NULL entries stay its check). `FindLineAt` and `IsLineVisible` are guilist's (the same statements).
+  `won_guitext_test`: 8,400,570 checks, 0 failures.
+- **Compound controls (`guictl.rs`).** ComboBox: the list box's size, the input box's selection rule, the keys, the
+  item searches. TabBar / TabCtrl: a tab's x, the neighbour of a disabled tab, `KeepTabButtonInView`,
+  `AdjustTabBarScroll` and the arrows' states, the page, page area, arrows' and bars' places (`VertPositionTabBar`
+  reads the container's height after its `SetSize`, which clamps), the first tab's bar height, the arrow keys'
+  target and the tab after a removal. Splitter: the maximised split, `SetSplitterPos`' clamp and edges, the
+  remembered percentages, the layout (`Width() * percent / 100 + offset` in doubles, to an int as `cvttsd2si`:
+  NaN and out of range give `INT_MIN`; the original negated the bar's size before halving it, `(-w)/2`, which
+  differs from `-(w/2)` only at `INT_MIN`: the driver found it), panes, bars, cursor, drag and the maximise buttons.
+  `won_guictl_test`: 11,578,060 checks, 0 failures. Found in the driver, not the game: with no pages,
+  `TabCtrl::KeyDown`'s bound is the largest `size_t` and the walk runs to the int's wrap (both the original and the
+  port); the control always has a page when a tab is selected.
+- **Multi-column lists (`guimulti.rs`).** `GetColumnAt`, `SetColumnWidth` (a paired column takes from its partner,
+  any other grows the total up to a positive maximum; every column's x), the dynamic column after a resize, the
+  auto-grow test, the partner links; the header's buttons over the columns (a header column past the list's
+  columns without a button moves the next ones one pixel left: the original added its -1), the sort a press asks
+  for, the shown sort, `GetDragComponent`'s resize edge and the dragged width; TreeItem's +/- box and a child's
+  indent and place. `won_guimulti_test`: 3,900,000 checks, 0 failures.
+- **Config expressions (`guicfg.rs`).** `ComponentConfig::ParseExpression`'s recursive descent reads the
+  StringParser and `GetIntValue` through callbacks; `GetIntValue` can throw (a missing named value, nested
+  expressions in function calls), so its callback catches into a `std::exception_ptr` and the C++ wrapper rethrows
+  after the Rust returns: no exception crosses a Rust frame. `GetIntValue`'s name scan and kinds (`@ID_` needs
+  upper case: the original's `toupper` took the comparison's result) are Rust too. Behaviour change: `INT_MIN / -1`,
+  a divide fault in the original, gives `INT_MIN`. `won_guicfg_test`: 300,271 checks (the exceptions' texts and the
+  parser's position compared too), 0 failures.
+- **Popups and modality (`guiwin.rs`).** `AdjustPopupPosition` as its `SetPos` sequence, `DoPopup`'s mouse default,
+  own window and joining rules, `FindMouseWindow`'s topmost popup window (it now reads every popup window's
+  rectangle; the original stopped at the topmost hit; `GetRect` only reads), `CheckPopupClick`'s button test,
+  `CalcModality`'s decisions, `EndDialog`'s target; PopupMenu's submenu delay, first release, keyboard mode's end,
+  `MenuItem::CalcDimensions` and the submenu's place. `won_guiwin_test`: 8,000,000 checks, 0 failures.
+- **The lobby dialogs (`dialogs.rs`).** CreateGameDialog's and CreateRoomDialog's create button, the skill clamp,
+  the Internet-only radios, LanPortDialog's port rule, AddFriendDialog's OK, the network adapters' order and
+  chosen address, StatusDialog's message width, padding, widening and its first 50 ms (on the 32-bit tick's wrap on
+  every platform; LP64's `unsigned long` start differed only at the 49-day wrap). `won_dialogs_test`: 12,000,000
+  checks, 0 failures. RoutingLogic's flow stays C++: it runs only against the Internet servers, which are gone, so
+  nothing can exercise a port of it (its decisions are round 7's `routing.rs`).
+- **What exercises what.** Every lobby load: the config expressions (every number in the 63 .cfg files), the text
+  area's layout and format commands (the MOTD and help pages, the chat's lines), the tab controls', splitters' and
+  multi-column lists' layout. The LAN game (`lan_game.py`, `wonclick` / `wonselect` / `wonkey`) adds: the chat's
+  appends, wrap, trims and bottom scroll, the game and player lists' columns and header, the create-game dialog's
+  button and skill, popups and modality when the dialogs open, the combo boxes when one is clicked. Only a person
+  reaches: the text area's mouse selection, links, drag scroll, keys and copy; the combo box's keys; the tab arrow
+  keys and scroll arrows; the splitter's drag and maximise buttons; the header's resize drag and sort clicks; the
+  popup menus (right-click); the LAN port, add-friend and network-adapter dialogs; the status dialog's sizing.
+  Every commit here changes layout or drawing inputs: a lobby run checks them. Nothing touches the simulation: the
+  oracle was identical after each gated build (six code commits, each built, oracle-checked and Rust-gated on its
+  own).
+- **Script edits and blanks.** The C++ edits were made by scripts matching the original statements exactly; where a
+  file's statements carried trailing blanks the scripts strip the file's trailing blanks first, so some diffs (e.g.
+  TextSegments.cpp, ComboBox.cpp, TabCtrl.cpp, Splitter.cpp, WindowManager.cpp) also hold whitespace-only lines.
+- **Still C++ of WONGUI:** the component objects and their event dispatch (Window, WindowManager's flow,
+  RootContainer, the popups' windows), TreeArea, the menus' key handling (`TryKeyDown` recurses through the
+  submenus), the per-class config readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the
+  platform backend, the text area's and menus' paint).
+
 ## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
 
 Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and

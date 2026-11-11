@@ -1017,6 +1017,18 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+constexpr static const int32_t POSITION_LEFT = 1;
+
+constexpr static const int32_t POSITION_TOP = 2;
+
+constexpr static const int32_t POSITION_RIGHT = 4;
+
+constexpr static const int32_t POSITION_BOTTOM = 8;
+
+constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+
+constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+
 /// The component flags these rules read.
 constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
 
@@ -1024,6 +1036,41 @@ constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
 
 /// A child a modal state does not block.
 constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+
+/// The text flags (TextFlags in the C++).
+constexpr static const int32_t WORD_WRAP = 1;
+
+constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+
+constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+
+constexpr static const int32_t SCROLL_FULL_LINE = 16;
+
+constexpr static const int32_t DELAY_WORD_WRAP = 32;
+
+/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
+/// its last segment stands for the trimmed one.
+constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+
+constexpr static const uint32_t LINE_HAS_SEGS = 2;
+
+constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+
+constexpr static const int32_t POPUP_WANT_INPUT = 128;
+
+constexpr static const int32_t POPUP_IS_MODAL = 256;
+
+constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
+
+constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
+
+constexpr static const int32_t POPUP_ADDITIONAL = 4096;
+
+constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
+
+constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
+
+constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
 
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
@@ -4574,6 +4621,40 @@ struct EeWonInitErrors {
   bool allow_ignore;
 };
 
+/// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
+/// the operand threw).
+struct EeWonExprHost {
+  void *ctx;
+  void (*skip_whitespace)(void *ctx);
+  uint8_t (*peek)(void *ctx);
+  void (*advance)(void *ctx, int32_t n);
+  bool (*int_value)(void *ctx, int32_t *out);
+};
+
+/// Whether item `i` (below the count) matches, read from the C++ list.
+using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
+
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
+using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
+
+/// The split's state (`SetSplitterPos`): the point and the bars' edges.
+struct EeWonSplit {
+  int32_t x;
+  int32_t y;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
+};
+
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
 struct EeWonSel {
   int32_t start;
@@ -4642,6 +4723,21 @@ using EeWonTopOf = int32_t(*)(const void *ctx, size_t i);
 /// Whether item `i` (below the count) is selectable.
 using EeWonSelectableOf = bool(*)(const void *ctx, size_t i);
 
+/// A header button's place (`NotifyColumnChange`).
+struct EeWonHeaderCol {
+  int32_t x;
+  int32_t width;
+  bool enabled;
+};
+
+/// A header button as `GetDragComponent` reads it.
+struct EeWonHeaderButton {
+  bool present;
+  int32_t left;
+  int32_t right;
+  int32_t width;
+};
+
 /// `LayoutThumb`'s answer: `hidden` (everything fits: the thumb is hidden and nothing else changes), else the
 /// thumb's size and, when `set_pos`, its new top.
 struct EeWonThumbOut {
@@ -4679,6 +4775,56 @@ struct EeWonScrollArea {
   int32_t view_y;
   int32_t view_width;
   int32_t view_height;
+};
+
+/// A line's vertical metrics (`TextLine`'s height, baseline and descent).
+struct EeWonTextLineM {
+  int32_t height;
+  int32_t baseline;
+  int32_t descent;
+};
+
+/// A line's place: its y and height.
+struct EeWonTextLineY {
+  int32_t y;
+  int32_t height;
+};
+
+/// A line's flags (`i` below the count), read from the C++ area.
+using EeWonLineFlagsOf = uint32_t(*)(const void *ctx, size_t i);
+
+/// A unit's width (`i` a position in the segment's text), read from the C++ font.
+using EeWonCharWidthOf = int32_t(*)(const void *ctx, int32_t i);
+
+/// The font's width of a text's units from `start` to its end, read from the C++ font.
+using EeWonRestWidthOf = int32_t(*)(const void *ctx, int32_t start);
+
+/// One step of a segment's wrap (`TextSegment::Wrap`): a piece of the text on the current line
+/// (`kind` 0: units [start, end), `width` wide), or a new line (`kind` 1: `width` its starting width, the wrap
+/// indent on a left-aligned area).
+struct EeWonTextWrapOp {
+  int32_t kind;
+  int32_t start;
+  int32_t end;
+  int32_t width;
+};
+
+/// One line of `AddFormatedText`: units [start, start + len), with a line break after it.
+struct EeWonTextPart {
+  int32_t start;
+  int32_t len;
+  bool line_break;
+};
+
+/// One step of `LobbyAppendFormattedText`: `kind` 0 appends units [a, a + b) to the pending text, 1 appends
+/// '<', 2 adds the pending text as a segment in the current colour and font and empties it, 3 a line break,
+/// 4 the colour becomes colour `a`, 5 the font becomes font `a` (when not NULL), 6 adds string `a` as a segment
+/// (when not NULL), 7 adds segment `a` (when not NULL), 8 adds the pending text as the last segment, breaking
+/// the line when `b` is 1.
+struct EeWonFormatOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
 };
 
 /// One line break: the line ends at `pos`, the next starts at `next`; the line is `width` wide.
@@ -10576,6 +10722,41 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
+
+bool ee_won_dlg_name_enabled(uint32_t name_len);
+
+int32_t ee_won_dlg_skill_level(int32_t sel);
+
+bool ee_won_dlg_internet_access(int32_t game_type);
+
+bool ee_won_dlg_lan_port_ok(int32_t port, uint16_t game_port);
+
+/// `adapter_order`: the order, or 2 when the columns decide.
+int32_t ee_won_dlg_adapter_order(int32_t host, int32_t other);
+
+uint32_t ee_won_dlg_selected_address(bool has_selection, uint32_t selected, uint32_t local_host);
+
+int32_t ee_won_dlg_status_body_width(int32_t text_width, int32_t m_width, int32_t root_width);
+
+/// `status_pad`: -1 for 5 lines or more.
+int32_t ee_won_dlg_status_pad(int32_t label_height, int32_t line_height);
+
+/// `status_extra_width`: false when the dialog keeps its shape, else true with the extra width in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_dlg_status_extra_width(int32_t new_width,
+                                   int32_t new_height,
+                                   int32_t root_height,
+                                   int32_t width_change,
+                                   int32_t old_width,
+                                   int32_t *out);
+
+bool ee_won_dlg_status_young(uint32_t now, uint32_t start);
+
+int32_t ee_won_dlg_growth(int32_t new_, int32_t old);
+
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
 /// # Safety
@@ -11874,6 +12055,227 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink image,
                                  void *context);
 
+/// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `out` is writable.
+int32_t ee_won_cfg_expr(const EeWonExprHost *host, int32_t level, int32_t *out);
+
+bool ee_won_cfg_name_char(int8_t c);
+
+/// `name_kind` over `len` bytes: the kind, the offset into `out_at`.
+///
+/// # Safety
+/// `name` holds `len` bytes (or is NULL with 0); `out_at` is writable.
+int32_t ee_won_cfg_name_kind(const uint8_t *name, size_t len, size_t *out_at);
+
+/// `combo_list_size` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_combo_list_size(int32_t max_width,
+                                int32_t max_height,
+                                int32_t box_width,
+                                int32_t area_width,
+                                int32_t right_pad,
+                                int32_t left_pad,
+                                int32_t total_width,
+                                int32_t combo_width,
+                                int32_t total_height,
+                                int32_t *out_width,
+                                int32_t *out_height);
+
+bool ee_won_gui_combo_select_to_end(int32_t item_width, int32_t edit_width);
+
+int32_t ee_won_gui_combo_key(int32_t key, bool visible);
+
+/// `first_match`: the index, or -1.
+int64_t ee_won_gui_first_match(size_t count, EeWonMatchOf matches, const void *ctx);
+
+int32_t ee_won_gui_tab_x(int32_t id, size_t count, int32_t prev_right, int32_t overlap);
+
+int32_t ee_won_gui_tab_neighbour(int32_t old);
+
+/// `tab_keep_in_view`: false when in view, else true with the scroll in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_keep_in_view(int32_t left, int32_t width, int32_t limit, int32_t *out);
+
+/// `tab_scroll`: the new x; true with the arrows' states in the outs when the tabs overflow.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_tab_scroll(int32_t old_x,
+                           int32_t amount,
+                           int32_t width,
+                           int32_t container_width,
+                           int32_t *out_x,
+                           bool *out_left,
+                           bool *out_right);
+
+EeWonRect4 ee_won_gui_tab_page_rect(int32_t left_pad,
+                                    int32_t right_pad,
+                                    int32_t top_pad,
+                                    int32_t bottom_pad,
+                                    int32_t area_top,
+                                    int32_t area_height,
+                                    int32_t width);
+
+/// `tab_area`: the top, the height into `out_height`.
+///
+/// # Safety
+/// `out_height` is writable.
+int32_t ee_won_gui_tab_area(bool on_bottom,
+                            int32_t height,
+                            int32_t bar_top,
+                            int32_t bar_bottom,
+                            int32_t overlap,
+                            int32_t *out_height);
+
+/// `tab_arrows`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_tab_arrows(bool on_left,
+                              bool on_bottom,
+                              int32_t width,
+                              int32_t right_width,
+                              int32_t left_width,
+                              int32_t left_height,
+                              int32_t area_top,
+                              int32_t area_bottom,
+                              int32_t *out_y);
+
+int32_t ee_won_gui_tab_bottom_height(int32_t bar_height, int32_t overlap, int32_t top_offset);
+
+/// `tab_vert`: the top container's y, the bottom container's into `out_bottom_y`.
+///
+/// # Safety
+/// `out_bottom_y` is writable.
+int32_t ee_won_gui_tab_vert(bool on_bottom,
+                            int32_t height,
+                            int32_t bottom_height,
+                            int32_t top_offset,
+                            int32_t *out_bottom_y);
+
+/// `tab_horz` (an arrow's edge is read only when the arrow is there and visible): the left, the right into
+/// `out_right`.
+///
+/// # Safety
+/// `out_right` is writable.
+int32_t ee_won_gui_tab_horz(bool need_arrows,
+                            bool arrows_on_left,
+                            bool right_arrow_shown,
+                            int32_t right_arrow_right,
+                            bool left_arrow_shown,
+                            int32_t left_arrow_left,
+                            bool on_right,
+                            int32_t width,
+                            int32_t bar_width,
+                            int32_t left_offset,
+                            int32_t *out_right);
+
+int32_t ee_won_gui_tab_bar_height(int32_t current, int32_t tab_height);
+
+/// `tab_key_target`: false for another key, else true with the tab in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_key_target(int32_t key,
+                               int32_t old,
+                               size_t count,
+                               EeWonDisabledOf disabled,
+                               const void *ctx,
+                               int32_t *out);
+
+int32_t ee_won_gui_tab_after_remove(int32_t removed, int32_t current);
+
+/// `split_max` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_split_max(int32_t pos,
+                          int32_t width,
+                          int32_t height,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t *out_x,
+                          int32_t *out_y,
+                          bool *out_lr,
+                          bool *out_ud);
+
+int32_t ee_won_gui_split_button_quadrant(int32_t control_id);
+
+bool ee_won_gui_split_is_max_button(int32_t control_id);
+
+/// `split_set`: false when unchanged, else true with the split in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_set(int32_t x,
+                          int32_t y,
+                          bool lr_max,
+                          bool ud_max,
+                          int32_t min_left,
+                          int32_t min_right,
+                          int32_t min_top,
+                          int32_t min_bottom,
+                          int32_t width,
+                          int32_t height,
+                          bool valid,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          EeWonSplit *out);
+
+/// `split_percent`: false when the size is not positive, else true with the percentage in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_percent(int32_t v, int32_t size, double *out);
+
+int32_t ee_won_gui_split_at(int32_t size, double percent, int32_t offset);
+
+/// `split_layout`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_layout(bool have_max,
+                                int32_t quadrant,
+                                double left_pct,
+                                double top_pct,
+                                int32_t bar_w,
+                                int32_t bar_h,
+                                int32_t width,
+                                int32_t height,
+                                int32_t *out_y);
+
+EeWonRect4 ee_won_gui_split_pane(int32_t pos, int32_t width, int32_t height, EeWonSplit s);
+
+EeWonRect4 ee_won_gui_split_bar(int32_t kind, int32_t width, int32_t height, EeWonSplit s);
+
+int32_t ee_won_gui_split_cursor(int32_t kind);
+
+/// `split_drag`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_drag(int32_t x,
+                              int32_t y,
+                              int32_t child_x,
+                              int32_t child_y,
+                              int32_t drag_x,
+                              int32_t drag_y,
+                              bool lr,
+                              bool ud,
+                              int32_t sx,
+                              int32_t sy,
+                              int32_t *out_y);
+
 /// `move_cursor` over a `GUIString`'s units.
 ///
 /// # Safety
@@ -12270,6 +12672,91 @@ bool ee_won_gui_list_item_tip(int32_t width,
                               int32_t offset,
                               int32_t view_height);
 
+/// `column_at` over `count` columns.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int32_t ee_won_gui_ml_column_at(const int32_t *xs, const int32_t *widths, size_t count, int32_t x);
+
+/// `set_column_width` over `count` columns in place.
+///
+/// # Safety
+/// The arrays hold `count` entries (or are NULL with 0); `total` is writable.
+bool ee_won_gui_ml_set_width(int32_t *widths,
+                             const uint8_t *modes,
+                             const int32_t *partners,
+                             int32_t *xs,
+                             size_t count,
+                             int32_t *total,
+                             int32_t max_total,
+                             int32_t col,
+                             int32_t width,
+                             bool from_size);
+
+/// `dynamic_delta`: 0 when nothing changes.
+int32_t ee_won_gui_ml_dynamic_delta(int32_t column,
+                                    size_t count,
+                                    int32_t view_width,
+                                    int32_t old_width,
+                                    int32_t total);
+
+/// `grow_column`: -1 when the cell fits.
+int32_t ee_won_gui_ml_grow(int32_t item_width, int32_t border, int32_t column_width);
+
+bool ee_won_gui_ml_relink(uint8_t old_mode, uint8_t new_mode);
+
+/// `link_partners` over `count` columns in place.
+///
+/// # Safety
+/// `modes` and `partners` hold `count` entries (or are NULL with 0).
+void ee_won_gui_ml_link_partners(const uint8_t *modes, int32_t *partners, size_t count);
+
+/// `header_layout` for `count` header columns over `columns` list columns into `out` (room for `count`).
+///
+/// # Safety
+/// `has_button` holds and `out` has room for `count` entries, `widths` holds `columns` ints (each may be NULL
+/// with a 0 count).
+void ee_won_gui_mh_layout(const bool *has_button,
+                          size_t count,
+                          const int32_t *widths,
+                          size_t columns,
+                          int32_t horz,
+                          EeWonHeaderCol *out);
+
+int32_t ee_won_gui_mh_toggle(int32_t sort_type, bool is_current);
+
+int32_t ee_won_gui_mh_sort_type(int32_t column, size_t count, int32_t current, int32_t sort_type);
+
+/// `header_drag` over `count` buttons and `columns` list columns: the column (and the grab x into `out_drag_x`),
+/// or -1.
+///
+/// # Safety
+/// `buttons` holds `count` entries and the column arrays `columns` (each may be NULL with a 0 count);
+/// `out_drag_x` is writable.
+int32_t ee_won_gui_mh_drag(int32_t x,
+                           const EeWonHeaderButton *buttons,
+                           size_t count,
+                           const int32_t *widths,
+                           const uint8_t *modes,
+                           const int32_t *partners,
+                           size_t columns,
+                           int32_t *out_drag_x);
+
+int32_t ee_won_gui_mh_drag_width(int32_t x, int32_t drag_x);
+
+bool ee_won_gui_tree_box_hit(int32_t x, int32_t indent);
+
+/// `tree_child`: the indent, the place into `out_pos`.
+///
+/// # Safety
+/// `out_pos` is writable.
+int32_t ee_won_gui_tree_child(bool parent_is_root,
+                              int32_t tree_flags,
+                              int32_t parent_indent,
+                              int32_t pos,
+                              size_t count,
+                              size_t *out_pos);
+
 EeWonThumbOut ee_won_gui_thumb_layout(EeWonThumbIn t);
 
 /// `thumb_drag`: the new top into `out_top`, the position returned.
@@ -12427,6 +12914,289 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// `add_seg_metrics` on the line and the total height in place.
+///
+/// # Safety
+/// `line` and `total_height` are writable.
+bool ee_won_gui_text_add_seg(EeWonTextLineM *line,
+                             int32_t seg_height,
+                             int32_t seg_ascent,
+                             int32_t *total_height);
+
+int32_t ee_won_gui_text_align_x(int32_t view_width, int32_t line_width, int32_t align);
+
+bool ee_won_gui_text_seg_fits(int32_t area_width,
+                              int32_t line_width,
+                              int32_t seg_width,
+                              int32_t view_width,
+                              bool word_wrap,
+                              bool been_visible);
+
+bool ee_won_gui_text_scroll_on_bottom(int32_t flags,
+                                      bool user_scrolled,
+                                      size_t count,
+                                      EeWonTextLineY last,
+                                      EeWonTextLineY prev,
+                                      int32_t offset,
+                                      int32_t view_height);
+
+bool ee_won_gui_text_delay_wrap(int32_t flags, int32_t chars);
+
+bool ee_won_gui_text_wrap_due(int32_t ticks, int32_t chars);
+
+/// `max_chars_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_chars_excess(int32_t max_chars, int32_t last_end);
+
+/// `max_chars_cut` over `count` segment ends.
+///
+/// # Safety
+/// `ends` holds `count` ints (or is NULL with 0).
+size_t ee_won_gui_text_chars_cut(const int32_t *ends, size_t count, int32_t excess);
+
+/// `max_lines_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_lines_excess(int32_t max_lines, int32_t num_lines);
+
+/// `max_lines_cut` over `count` segments' line-break flags.
+///
+/// # Safety
+/// `breaks` holds `count` bools (or is NULL with 0).
+size_t ee_won_gui_text_lines_cut(const bool *breaks, size_t count, int32_t excess);
+
+/// `remove_lines_stop` over `count` lines whose flags `flags_of(ctx, i)` gives.
+size_t ee_won_gui_text_remove_stop(size_t count, EeWonLineFlagsOf flags_of, const void *ctx);
+
+/// `renumber` over `lines` lines and `segs` segments in place; the totals and the line count into `out` (3
+/// ints).
+///
+/// # Safety
+/// Each array holds its count of entries (or is NULL with 0); the scalars and `out` are writable.
+void ee_won_gui_text_renumber(const int32_t *line_widths,
+                              const int32_t *line_heights,
+                              int32_t *line_ys,
+                              size_t lines,
+                              int32_t *seg_starts,
+                              int32_t *seg_ends,
+                              const bool *seg_breaks,
+                              size_t segs,
+                              int32_t *sel_start,
+                              int32_t *sel_end,
+                              int32_t *offset,
+                              int32_t *out);
+
+/// `find_clamp` in place.
+///
+/// # Safety
+/// `x` and `y` are writable.
+void ee_won_gui_text_find_clamp(int32_t *x, int32_t *y, int32_t total_width, int32_t total_height);
+
+bool ee_won_gui_text_find_cached(int32_t x,
+                                 int32_t y,
+                                 int32_t line_x,
+                                 int32_t line_y,
+                                 int32_t line_height,
+                                 int32_t seg_x,
+                                 int32_t seg_width);
+
+/// `find_pick` over the line's `count` segments: the index, -1 for no segment, -2 below the line.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int64_t ee_won_gui_text_find_pick(int32_t x,
+                                  int32_t y,
+                                  int32_t line_y,
+                                  int32_t line_height,
+                                  const int32_t *xs,
+                                  const int32_t *widths,
+                                  size_t count,
+                                  bool lenient);
+
+int32_t ee_won_gui_text_char_at(int32_t width,
+                                int32_t start,
+                                int32_t end,
+                                int32_t abs_start,
+                                EeWonCharWidthOf char_width,
+                                const void *ctx);
+
+int32_t ee_won_gui_text_base_char_at(int32_t x,
+                                     int32_t seg_x,
+                                     int32_t seg_width,
+                                     int32_t abs_start,
+                                     int32_t abs_end);
+
+/// `check_sel` in place.
+///
+/// # Safety
+/// The three are writable.
+void ee_won_gui_text_check_sel(int32_t *start,
+                               int32_t *end,
+                               bool *backwards,
+                               int32_t at,
+                               bool new_start);
+
+/// `drag_scroll`: false while inside, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_drag_scroll(int32_t x,
+                                 int32_t y,
+                                 int32_t width,
+                                 int32_t height,
+                                 bool full_line,
+                                 int32_t down,
+                                 int32_t up,
+                                 int32_t *vert,
+                                 int32_t *horz);
+
+/// `key_scroll`: false for another key, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_key_scroll(int32_t key,
+                                int32_t *vert,
+                                int32_t *horz,
+                                int32_t down,
+                                int32_t up,
+                                int32_t view_height);
+
+/// `sel_part`: false when nothing is selected, else true with the offset and length in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_text_sel_part(int32_t sel_start,
+                              int32_t sel_end,
+                              int32_t abs_start,
+                              int32_t abs_end,
+                              int32_t *out_offset,
+                              int32_t *out_len);
+
+bool ee_won_gui_text_sel_break(bool text,
+                               bool line_break,
+                               int32_t sel_start,
+                               int32_t sel_end,
+                               int32_t abs_start,
+                               int32_t abs_end);
+
+int32_t ee_won_gui_text_anchor_line(int32_t line, size_t count);
+
+/// `wrap_segment` over a `GUIString`'s units with their widths: the first `room` steps into `out` (`3 * len + 8`
+/// is enough), their count returned (all of them, even past the room).
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes and `widths` `len` ints (or both are NULL with 0); `out` has room
+/// for `room` steps.
+size_t ee_won_gui_text_wrap(const void *text,
+                            uint16_t len,
+                            uint32_t wchar_size,
+                            const int32_t *widths,
+                            int32_t box_width,
+                            int32_t line_width,
+                            bool line_empty,
+                            bool align_left,
+                            int32_t indent,
+                            EeWonRestWidthOf rest_width,
+                            const void *ctx,
+                            EeWonTextWrapOp *out,
+                            size_t room);
+
+/// `split_lines` over a `GUIString`'s units: the first `room` parts into `out` (`len` is enough), their count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` parts.
+size_t ee_won_gui_text_split(const void *text,
+                             uint16_t len,
+                             uint32_t wchar_size,
+                             bool line_break,
+                             EeWonTextPart *out,
+                             size_t room);
+
+/// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
+/// count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` steps.
+size_t ee_won_gui_text_format(const void *text,
+                              uint16_t len,
+                              uint32_t wchar_size,
+                              int32_t num_strings,
+                              int32_t num_colors,
+                              int32_t num_fonts,
+                              int32_t num_segments,
+                              bool line_break,
+                              EeWonFormatOp *out,
+                              size_t room);
+
+/// `popup_adjust`: the `SetPos` calls into `out` (room for 4), their count.
+///
+/// # Safety
+/// `out` has room for 4 pairs (8 ints).
+size_t ee_won_gui_popup_adjust(EeWonRect4 popup, EeWonRect4 bounds, EeWonRect4 avoid, int32_t *out);
+
+bool ee_won_gui_popup_additional(int32_t flags, bool open);
+
+/// `popup_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_popup_place(int32_t x,
+                               int32_t y,
+                               int32_t mouse_x,
+                               int32_t mouse_y,
+                               int32_t *out_y);
+
+bool ee_won_gui_popup_own_window(int32_t flags, bool default_);
+
+bool ee_won_gui_rect_contains(EeWonRect4 r, int32_t x, int32_t y);
+
+/// `popup_window_at` over `count` rectangles: the index, or -1.
+///
+/// # Safety
+/// `rects` holds `count` rectangles (or is NULL with 0).
+int64_t ee_won_gui_popup_window_at(const EeWonRect4 *rects, size_t count, int32_t x, int32_t y);
+
+bool ee_won_gui_popup_click_ends(int32_t flags, int32_t button);
+
+uint32_t ee_won_gui_modality(bool popups_open, int32_t flags, bool has_dialog);
+
+bool ee_won_gui_window_modal(bool is_dialog_window, bool popup_up, bool dialog_is_root, bool modal);
+
+bool ee_won_gui_ends_dialog(bool window_given,
+                            bool window_is_modal,
+                            bool dialog_given,
+                            bool dialog_is_modal);
+
+/// `menu_timer`: the new total into `acc`, the check into `out_check`, whether the timer stays.
+///
+/// # Safety
+/// `acc` and `out_check` are writable.
+bool ee_won_gui_menu_timer(bool keyboard, int32_t *acc, int32_t delta, bool *out_check);
+
+/// `menu_mouse_up`: the count in place, whether the release goes on.
+///
+/// # Safety
+/// `count` is writable.
+bool ee_won_gui_menu_mouse_up(int32_t button, int32_t *count);
+
+/// `menu_mouse_move`: -1 ignore the move, 1 leave keyboard mode first, 0 track it.
+int32_t ee_won_gui_menu_mouse_move(bool keyboard,
+                                   int32_t x,
+                                   int32_t y,
+                                   int32_t last_x,
+                                   int32_t last_y);
+
+/// `menu_item_size` in place.
+///
+/// # Safety
+/// `width` and `height` are writable.
+void ee_won_gui_menu_item_size(int32_t *width, int32_t *height);
+
+/// `submenu_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_submenu_place(int32_t view_width, int32_t item_top, int32_t *out_y);
+
+EeWonRect4 ee_won_gui_submenu_avoid(int32_t root_x, int32_t view_width);
 
 /// `wrap` over a `GUIString`'s units with their widths: the first `room` breaks into `out` (`2 * len + 1` is
 /// enough: a unit breaks at most twice, once inside a word and once more when it alone is wider than the line),

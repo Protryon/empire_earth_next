@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 namespace WONAPI {
 // FUNCTION: WON 0x7f91b0
 // Creates the status dialog, remembering when it was created
@@ -66,36 +69,28 @@ void StatusDialog::SetText(const GUIString& inTitle, const GUIString& inStatus, 
     int anOldStatusHeight = this->mStatusLabel->Height();
     int aRootWidth = GetLobbyRoot()->Width();
     int aRootHeight = GetLobbyRoot()->Height();
-    int aBodyWidth = this->mStatusLabel->mWrappedText->mFont->GetStringWidth(inStatus);
-    int aMinWidth = this->mStatusLabel->mWrappedText->mFont->GetCharacterWidth('M') * 30;
-    if (aBodyWidth < aMinWidth)
-        aBodyWidth = aMinWidth;
-    if (aBodyWidth > aRootWidth / 2)
-        aBodyWidth = aRootWidth / 2;
-    int aWidthChange = aBodyWidth - this->mStatusLabel->Width();
-    if (aWidthChange < 0)
-        aWidthChange = 0;
+    int aBodyWidth = ee_won_dlg_status_body_width(this->mStatusLabel->mWrappedText->mFont->GetStringWidth(inStatus),
+                                                  this->mStatusLabel->mWrappedText->mFont->GetCharacterWidth('M'),
+                                                  aRootWidth);
+    int aWidthChange = ee_won_dlg_growth(aBodyWidth, this->mStatusLabel->Width());
     this->mStatusLabel->SetSize(aBodyWidth, this->mStatusLabel->Height());
     this->mStatusLabel->SetText(inStatus, true);
-    int aNumLines = this->mStatusLabel->Height() / this->mStatusLabel->mWrappedText->mFont->GetHeight();
-    if (aNumLines < 5) {
-        int aPad = (5 - aNumLines) * this->mStatusLabel->mWrappedText->mFont->GetHeight() / 2;
+    int aPad = ee_won_dlg_status_pad(this->mStatusLabel->Height(), this->mStatusLabel->mWrappedText->mFont->GetHeight());
+    if (aPad >= 0) {
         this->mStatusLabel->SetVertPad(aPad, aPad);
         this->mStatusLabel->SetDesiredSize(0, 0);
     }
-    int aHeightChange = this->mStatusLabel->Height() - anOldStatusHeight;
-    if (aHeightChange < 0)
-        aHeightChange = 0;
+    int aHeightChange = ee_won_dlg_growth(this->mStatusLabel->Height(), anOldStatusHeight);
     int aNewWidth = anOldWidth + aWidthChange;
     int aNewHeight = aHeightChange + anOldHeight;
-    if (aNewHeight > aNewWidth || aNewHeight >= aRootHeight) {
-        int anExtraWidth = aNewWidth * 5 / 4 - aWidthChange - anOldWidth;
+    int anExtraWidth;
+    if (ee_won_dlg_status_extra_width(aNewWidth, aNewHeight, aRootHeight, aWidthChange, anOldWidth, &anExtraWidth)) {
         aWidthChange += anExtraWidth;
         this->mStatusLabel->SetSize(aBodyWidth + anExtraWidth, this->mStatusLabel->Height());
         aHeightChange = this->mStatusLabel->Height() - anOldStatusHeight;
     }
     this->SetSize(aWidthChange + anOldWidth, aHeightChange + anOldHeight);
-    if (WONTickCount() - this->mStartTick < 50) {
+    if (ee_won_dlg_status_young(WONTickCount(), (uint32_t)this->mStartTick)) {
         this->mStatusLabel->SetSizeAtLeast(anInitialStatusWidth, anInitialStatusHeight);
         this->mDialogComponent->SetSizeAtLeast(anInitialComponentWidth, anInitialComponentHeight);
         this->SetSizeAtLeast(anInitialWidth, anInitialHeight);
