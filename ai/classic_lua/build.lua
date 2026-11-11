@@ -93,7 +93,7 @@ function M.queue(view, memory, class, append, front, x, y)
             list[#list + 1] = item
         end
     end
-    R.add_costs(memory, U().cost(class), 1)
+    R.add_costs(memory, U().ledger_cost(class), 1)
     print(string.format("classic_lua build.queue %s e=%d", class, t.epoch))
 end
 
@@ -533,7 +533,7 @@ function M.update(view, memory)
                 tried = tried + 1
                 if start_building(view, memory, req) then
                     print(string.format("classic_lua build.start %s", req.class))
-                    R.remove_costs(memory, U().cost(req.class), 1)
+                    R.remove_costs(memory, U().ledger_cost(req.class), 1)
                     started = true
                 else
                     list[#list + 1] = req
