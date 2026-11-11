@@ -12601,6 +12601,168 @@ int32_t ee_won_gui_drag_scroll_end(int32_t char_pos,
                                    int32_t rect_width,
                                    int32_t horz_offset);
 
+bool ee_won_gui_win_mouse_enters(bool in_client, bool left_down);
+
+bool ee_won_gui_win_move_ends_double(bool detecting, int32_t x, int32_t y, int32_t dx, int32_t dy);
+
+bool ee_won_gui_win_release_exits(int32_t button, bool in_client);
+
+/// `double_click`: whether it is a double click; whether detection starts into `out_start`, whether the button's
+/// tick changes into `out_set` and the new tick into `out_tick`.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_win_double_click(int32_t event_type,
+                                 bool detecting,
+                                 uint32_t prev_tick,
+                                 uint32_t now,
+                                 bool *out_start,
+                                 bool *out_set,
+                                 uint32_t *out_tick);
+
+bool ee_won_gui_win_size_resizes(int32_t width,
+                                 int32_t height,
+                                 int32_t root_width,
+                                 int32_t root_height);
+
+bool ee_won_gui_win_resize_due(bool need,
+                               uint32_t tick,
+                               uint32_t last,
+                               uint32_t delay,
+                               int32_t suspended);
+
+bool ee_won_gui_win_cursor_forced(bool in_client, uint32_t tick, uint32_t last);
+
+/// `hover_elapsed`: whether to hover, the elapsed time into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_win_hover(bool in_client,
+                          uint32_t last_move,
+                          bool down0,
+                          bool down1,
+                          bool down2,
+                          uint32_t now,
+                          uint32_t *out);
+
+/// `exit_point`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_win_exit_point(int32_t left,
+                                  int32_t top,
+                                  int32_t width,
+                                  int32_t height,
+                                  int32_t *out_y);
+
+bool ee_won_gui_win_center_on_parent(bool in_parent, bool has_parent, bool parent_visible);
+
+/// `center`: left, top into `out_top`.
+///
+/// # Safety
+/// `out_top` is writable.
+int32_t ee_won_gui_win_center(int32_t sx,
+                              int32_t sy,
+                              int32_t sw,
+                              int32_t sh,
+                              int32_t width,
+                              int32_t height,
+                              int32_t *out_top);
+
+bool ee_won_gui_win_cursor_refresh(bool force, bool same);
+
+uint8_t ee_won_gui_win_close_step(int32_t state);
+
+/// `timer_step`: whether the step runs, the elapsed time into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_wm_timer_step(uint32_t tick, uint32_t last, uint32_t *out);
+
+uint8_t ee_won_gui_wm_popup_focus_step(bool popup_up,
+                                       bool focus_is_owner,
+                                       int32_t flags,
+                                       bool has_focus,
+                                       bool focus_is_popup,
+                                       bool end_pending);
+
+bool ee_won_gui_wm_restore_due(uint32_t last_lose, bool has_focus, uint32_t tick);
+
+bool ee_won_gui_wm_press_focuses(bool focus_is_window, bool is_popup, bool not_modal);
+
+bool ee_won_gui_wm_capture_changes(int32_t button, bool popup_up, bool capture_support);
+
+bool ee_won_gui_wm_move_ends_popup(bool popup_up, int32_t flags);
+
+bool ee_won_gui_wm_wheel_to_popup(bool popup_up, int32_t flags);
+
+uint8_t ee_won_gui_wm_popup_key(bool popup_up, int32_t event_type, int32_t flags, int32_t key);
+
+/// `size_merge` in place over `next` (x, y, width, height).
+///
+/// # Safety
+/// `this` and `next` have 4 entries.
+void ee_won_gui_wm_size_merge(const int32_t *this_, int32_t *next);
+
+bool ee_won_gui_wm_close_ends_popup(bool popup_up, bool is_owner, bool is_popup);
+
+uint8_t ee_won_gui_wm_popup_click_step(bool has_child,
+                                       bool is_input,
+                                       uint32_t bits,
+                                       bool has_input,
+                                       bool is_container);
+
+bool ee_won_gui_root_drag_starts(int32_t button, bool allow, bool child_drags);
+
+/// `drag_place`: whether the root moves, its place into the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_root_drag_place(int32_t left,
+                                int32_t top,
+                                int32_t x,
+                                int32_t y,
+                                int32_t drag_x,
+                                int32_t drag_y,
+                                int32_t *out_x,
+                                int32_t *out_y);
+
+/// `drag_window`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_root_drag_window(int32_t rx, int32_t ry, int32_t nx, int32_t ny, int32_t *out_y);
+
+bool ee_won_gui_root_drag_ends(int32_t button);
+
+/// `cursor_place`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_root_cursor_place(int32_t x,
+                                     int32_t y,
+                                     int32_t hot_x,
+                                     int32_t hot_y,
+                                     int32_t *out_y);
+
+uint8_t ee_won_gui_ct_mouse_child(bool same, bool has_old, bool has_new);
+
+bool ee_won_gui_ct_release_to_child(bool has_child, bool same_as_old);
+
+/// `desired_size` over `count` children's (left, top, width, height): the width, the height into `out_h`.
+///
+/// # Safety
+/// `rects` has `4 * count` entries (may be NULL when 0); `out_h` is writable.
+int32_t ee_won_gui_ct_desired_size(const int32_t *rects,
+                                   size_t count,
+                                   int32_t *out_h);
+
+/// `find_top` over `count` children's always-on-top flags (non-zero: on top).
+///
+/// # Safety
+/// `on_top` has `count` entries (may be NULL when 0); `from <= count`.
+size_t ee_won_gui_ct_find_top(const uint8_t *on_top, size_t count, size_t from);
+
 bool ee_won_gui_want_focus(uint32_t flags, bool visible, bool disabled, bool parent_modal);
 
 bool ee_won_gui_hit_child(bool disabled, bool modal, uint32_t flags);
