@@ -11,11 +11,13 @@ local V = require("lib.view")
 local G = require("lib.groups")
 local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.41)
 local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
+local SC = require("lib.scout")    -- the watcher (plan.watch; off until benched)
+local AT = require("lib.attack")   -- attacks in windows from strength (plan.attack; off until benched)
 local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
 local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
 local DM = require("lib.demand")       -- the split's stock correction and the saving ramp (balanced's rules)
 
--- the economy rules (docs/AI_RESEARCH.md §8.42): each one switchable for the bench
+-- the economy rules (docs/AI_RESEARCH.md §8.43): each one switchable for the bench
 local ECON = {
     demand = false,         -- the stock correction of the gatherer split (lib.demand.correct)
     unreachable = true,     -- no reserve for an advance with a short resource nobody can gather
@@ -65,7 +67,7 @@ local PLAN = {
         -- gold, 12-18 iron, 6 stone, 10-15 wood, the boats on top), then the Copper Age
         citizens = 64, citizens_max = 90, save_at = 60, save_after = 10,
         -- (ECON.ramp: the reserve grows from nothing to the whole cost over these minutes into the epoch or these
-        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.42)
+        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.43)
         save_ramp = {from_min = 6, full_min = 14, from_cit = 52, full_cit = 64},
         floor = {wood = 10, stone = 6, gold = 12, iron = 12},
         cap = {wood = 15, stone = 6, gold = 12, iron = 18},
@@ -75,9 +77,9 @@ local PLAN = {
         patches = 5,
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
-        -- (balanced's standing army: a quarter of the citizens, at least 10; against a fixed 20 it lost fewer citizens
-        -- in every matchup, AI_RESEARCH §8.41)
-        army_per = 25, army_floor = 10,
+        -- (balanced's standing army: a quarter of the citizens, at least the owner's 20; on 32 seeds against the
+        -- floor of 10: 6 defeats against 13 by the improved classic, 13 against 14 by the cheating one, AI_RESEARCH §8.41)
+        army_per = 25, army_floor = 20,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         town_centers = 2, tc_at = 30,   -- (balanced: early_town_centers 2; research §4.2: a second citizen producer;
                                 -- tc_float = n: only while the food floats n above the reserve, not benched yet)
@@ -99,7 +101,7 @@ local PLAN = {
         food = 18,
         patches = 5,
         hunt = 8,
-        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 10,
+        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 20,
         barracks_at = 10,
         towers = 10,
         settlements = 14,
@@ -521,7 +523,7 @@ function M.step(view, memory)
     -- the light army comes before the reserve: what its missing soldiers cost is left out of it
     local missing = plan.soldiers - view.army_count
     if ECON.army_slack and in_epoch >= ARMY_FIRST_MIN then
-        -- (§8.42) past the soldiers-first window the reserve leaves out only the first three quarters of the light
+        -- (§8.43) past the soldiers-first window the reserve leaves out only the first three quarters of the light
         -- army: a town 2 soldiers short (iron-bound, 18 of 20) kept the reserve at 0 for 10 minutes, and the citizens
         -- took the Copper Age's food
         missing = plan.soldiers * 3 // 4 - view.army_count
@@ -576,7 +578,7 @@ function M.step(view, memory)
         if scramble and r ~= "stone" and not (kept and guarded(r)) then
             want = 0
         end
-        -- (§8.42) the epoch's reserve never shrinks while it is kept: the missing light army's cap follows the stock,
+        -- (§8.43) the epoch's reserve never shrinks while it is kept: the missing light army's cap follows the stock,
         -- so with the army short of iron (18 of 20) the food reserve went to 0 for 10 minutes and the citizens ate the
         -- Copper Age's food. Ratcheted, what came in stays saved; the soldiers (and citizens) share only the margin
         -- of the missing soldiers' cost above it
@@ -666,7 +668,7 @@ function M.step(view, memory)
         -- next epoch's first minutes), within the plan's floor and cap; food takes the rest and never less than its
         -- share (less once the advance's food is paid: food is finite until the farms)
         local land = view.citizens
-        -- (§8.42) the gatherers aim at the advance's whole cost, not at the reserve the missing army has lowered: with
+        -- (§8.43) the gatherers aim at the advance's whole cost, not at the reserve the missing army has lowered: with
         -- the light army short of iron the iron reserve was 0, the stock above the bank, no iron gatherer was wanted
         -- and the army and the Copper Age both waited on iron for the rest of the game
         local aim = reserve
@@ -717,7 +719,7 @@ function M.step(view, memory)
                 if army_short and r == "iron" then
                     spare = -1000000
                 end
-                -- (§8.42) nor wood up to its floor while the wood is under 150: in the Stone Age the settlements by
+                -- (§8.43) nor wood up to its floor while the wood is under 150: in the Stone Age the settlements by
                 -- the gold and iron mines were queued for minutes unpaid (wood 5-55), so the Copper Age's metals had
                 -- no drop site and no gatherer
                 if ECON.wood_floor and r == "wood" and view.stock.wood < 150 and want.wood <= plan.floor.wood then
@@ -738,7 +740,7 @@ function M.step(view, memory)
         -- floor share for one the plan wants that is under 150 (the Stone Age's wood sat at 0-50 for 30 minutes with
         -- no gatherer: no boats, settlements or towers), taken from gold, stone and iron (iron kept while the army is
         -- short), then from food down to 4 under its minimum (with food and the army's iron the whole town, nothing
-        -- else could give, §8.42); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
+        -- else could give, §8.43); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
         if ECON.demand then
             local lacks = {wood = true}
             for _, r in ipairs({"stone", "gold", "iron"}) do
@@ -775,7 +777,7 @@ function M.step(view, memory)
             hunt_cap = math.max(hunt_cap, plan.food - patch_places)
             hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         end
-        -- (§8.42, the defence agent's seed 7: the forage ran out before the Stone Age, 24-29 citizens on 5-55 food a
+        -- (§8.43, the defence agent's seed 7: the forage ran out before the Stone Age, 24-29 citizens on 5-55 food a
         -- minute for 25 minutes) with fewer food places than half the plan's food the claim, and with it the hunting
         -- and the patches, may grow to claim_dry
         local claim_max = plan.claim_max
@@ -1065,6 +1067,12 @@ function M.step(view, memory)
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
+    if plan.watch then
+        SC.step(view, memory, {from = home})
+    end
+    if plan.attack then
+        AT.step(view, memory, {guard = home, keep = plan.attack_keep or 8})
+    end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or

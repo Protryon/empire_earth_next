@@ -1924,7 +1924,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
 
-## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.42)
+## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.43)
 
 - **`ai.units{type = ...}` takes one class name, not a list.** AI_LUA_UNITS §2.2 says "a class id or a list", but
   `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter

@@ -48,7 +48,10 @@ M.opts = {
     militia_max = 6,      -- ... against at most this many raiders
     militia_ms = 12000,   -- a militia citizen is back at work after this long, or once its raid is gone
     militia_ranged = false, -- the militia against a raid with ranged units (rock throwers and slingers kite the
-                          -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not)
+                          -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
+    camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
+    camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
+                          -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
     tower_share = 100,    -- percent of a tower's attack per 2 s of its reload counted in the odds
     clear_r = 10,         -- a spot is clear with no raider this near ...
     clear_ms = 8000,      -- ... and no citizen hit near it for this long
@@ -427,7 +430,7 @@ local function handle(mem, cl, now)
     end)
     -- the militia: the nearest citizens join while the odds are short of militia_odds, within its caps
     local fighters = {}
-    if not held and cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0)
+    if not held and cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0 or (cl.camped or 0) >= o.camp_ms)
             and fhp * fatk * 100 < enemy * o.militia_odds then
         local nhp, natk = fhp, fatk
         for _, c in ipairs(danger) do
@@ -568,6 +571,29 @@ function M.micro(mem, events, now, tx, ty)
         end
     end
     CLUSTERS = raids
+    -- the camps: where a raid has stood (a spot kept while a raid is within camp_r of it; forgotten 30 s after)
+    mem.camps = mem.camps or {}
+    for _, cl in ipairs(CLUSTERS) do
+        local found = nil
+        for _, c in ipairs(mem.camps) do
+            if found == nil and d2(c.x, c.y, cl.x, cl.y) <= M.opts.camp_r * M.opts.camp_r then
+                found = c
+            end
+        end
+        if found == nil then
+            found = {x = cl.x, y = cl.y, first = now}
+            mem.camps[#mem.camps + 1] = found
+        end
+        found.last = now
+        cl.camped = now - found.first
+    end
+    local keep = {}
+    for _, c in ipairs(mem.camps) do
+        if now - c.last <= 30000 and #keep < 16 then
+            keep[#keep + 1] = c
+        end
+    end
+    mem.camps = keep
     if #CLUSTERS > (mem.raids_now or 0) then
         mem.st.raids = mem.st.raids + #CLUSTERS - (mem.raids_now or 0)
     end
