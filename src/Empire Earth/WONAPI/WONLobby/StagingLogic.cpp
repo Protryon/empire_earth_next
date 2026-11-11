@@ -16,6 +16,9 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/ee_rust.h"
+// The room messages' bytes, their reads, who acts on which and the ready state's sounds are ee_won's staging module
+// (rust/crates/ee_won/src/staging.rs); this class keeps the game, the clients, the join op, the events and sounds.
 namespace WONAPI {
 void LobbyNetSendToCaptain(const ByteBuffer*);
 void LobbyNetBroadcastToGame(const ByteBuffer*);
@@ -27,6 +30,24 @@ bool LobbyIAmReady();
 class Sound;
 void LobbyNetRemoveGameAdvertisement(LobbyGame*);
 void LobbyNetLeaveGame(LobbyGame*);
+
+static void StagingAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+// a room message (ee_won_room_message) as the ByteBuffer the game is sent
+static ByteBufferPtr StagingMessage(unsigned char inKind, unsigned short inId, bool inFlag, unsigned short inPing)
+{
+    EeWonRoomMsg aMsg;
+    memset(&aMsg, 0, sizeof(aMsg));
+    aMsg.kind = inKind;
+    aMsg.id = inId;
+    aMsg.flag = inFlag;
+    aMsg.ping = inPing;
+    std::string aBytes;
+    ee_won_room_message(&aMsg, StagingAppendBytes, &aBytes);
+    return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.length(), false);
+}
 
 // Leaves the half-joined or half-hosted game when it goes out of scope, unless cleared (the original's cleanup at
 // 0x7f06d0 holds only this bool) (provisional name)
@@ -56,18 +77,18 @@ void StagingLogic::InitComponent(ComponentConfig* inConfig)
 }
 
 // FUNCTION: WON 0x007ef2b0
-// Host: answers a client's request to join and announces the new player to the game, then re-advertises it
+// Host: answers a client's request to join and announces the new player to the game, then re-advertises it (a
+// client with a player already: room_accepts)
 void StagingLogic::HandleJoinRequest(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
-    if (inClient->HasPlayer()) return;
     ConstSmartPtr<ByteBuffer> aReply = this->mGame->GetJoinReply(inBuffer, inClient);
     if (aReply.get() == NULL) return;
     this->SendToClient(inClient, aReply.get());
     LobbyPlayer* aPlayer = inClient->mPlayer.get();
     if (aPlayer != NULL) {
         WriteBuffer aBuffer(0, true);
-        aBuffer.AppendByte(3);
-        aBuffer.AppendShort(inClient->GetClientId());
+        ByteBufferPtr aHead = StagingMessage(3, inClient->GetClientId(), false, 0);
+        aBuffer.AppendBytes(aHead->data(), aHead->length());
         aPlayer->WriteToBuffer(aBuffer);
         this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
         LobbyNetAdvertiseGame();
@@ -76,22 +97,19 @@ void StagingLogic::HandleJoinRequest(ReadBuffer& inBuffer, LobbyClient* inClient
 }
 
 // FUNCTION: WON 0x007ef410
-// Takes the host's answer to our join request and finishes the waiting join
+// Takes the host's answer to our join request and finishes the waiting join (from the captain: room_accepts)
 void StagingLogic::HandleJoinReply(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
-    if (inClient->IsCaptain(1)) {
-        this->mJoinStatus = this->mGame->HandleJoinReply(inBuffer);
-        if (this->mJoinOp.get() != NULL) this->mJoinOp->Finish(WS_Success);
-    }
+    this->mJoinStatus = this->mGame->HandleJoinReply(inBuffer);
+    if (this->mJoinOp.get() != NULL) this->mJoinOp->Finish(WS_Success);
 }
 
 // FUNCTION: WON 0x007ef450
-// Adds a player announced by the host to its client, reports the change and plays the joined sound
-void StagingLogic::HandlePlayerJoined(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Adds a player announced by the host (room_accepts: the captain) to its client, reports the change and plays the
+// joined sound; the player's bytes follow the id read in HandleMessage
+void StagingLogic::HandlePlayerJoined(const EeWonRoomMsg& inMsg, ReadBuffer& inBuffer, LobbyClient* inClient)
 {
-    if (!inClient->IsCaptain(1)) return;
-    unsigned short aClientId = inBuffer.ReadShort();
-    LobbyClient* aClient = this->mGame->FindClient(aClientId);
+    LobbyClient* aClient = this->mGame->FindClient(inMsg.id);
     if (aClient == NULL) return;
     if (!aClient->HasPlayer()) {
         SmartPtr<LobbyPlayer> aPlayer = LobbyPlayer::CreatePlayer();
@@ -108,76 +126,49 @@ void StagingLogic::HandlePlayerJoined(ReadBuffer& inBuffer, LobbyClient* inClien
 }
 
 // FUNCTION: WON 0x007ef620
-// Host: broadcasts a player's changed ready flag to the game
-void StagingLogic::HandleReadyRequest(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Host: broadcasts a player's changed ready flag to the game (room_accepts: we host, the sender has a player whose
+// flag changes)
+void StagingLogic::HandleReadyRequest(const EeWonRoomMsg& inMsg, LobbyClient* inClient)
 {
-    if (!this->IAmCaptain() || !inClient->HasPlayer())
-        return;
-    bool aReady = inBuffer.ReadBool();
-    if (inClient->IsReady() == aReady)
-        return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(5);
-    aBuffer.AppendShort(inClient->GetClientId());
-    aBuffer.AppendBool(aReady);
-    this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
+    this->BroadcastToGame(StagingMessage(5, inClient->GetClientId(), inMsg.flag, 0).get());
 }
 
 // FUNCTION: WON 0x007ef720
-// Sets a player's ready flag as announced by the host and updates the all-ready state
-void StagingLogic::HandleReadyChanged(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Sets a player's ready flag as announced by the host (room_accepts) and updates the all-ready state
+void StagingLogic::HandleReadyChanged(const EeWonRoomMsg& inMsg, LobbyClient* inClient)
 {
-    if (!inClient->IsCaptain(1))
-        return;
-    unsigned short anId = inBuffer.ReadShort();
-    bool aReady = inBuffer.ReadBool();
-    LobbyClient* aClient = this->mGame->FindClient(anId);
+    LobbyClient* aClient = this->mGame->FindClient(inMsg.id);
     if (aClient == NULL || aClient->mPlayer.get() == NULL)
         return;
-    aClient->mPlayer->mIsReady = aReady;
+    aClient->mPlayer->mIsReady = inMsg.flag;
     this->UpdateReadyState();
     LobbyBroadcastEvent(new PlayerChangedEvent(aClient, 2), true);
 }
 
 // FUNCTION: WON 0x007ef7d0
-// Host: broadcasts the ping a player reported to the game
-void StagingLogic::HandlePingReport(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Host: broadcasts the ping a player reported to the game (room_accepts: we host, the sender has a player)
+void StagingLogic::HandlePingReport(const EeWonRoomMsg& inMsg, LobbyClient* inClient)
 {
-    if (!this->IAmCaptain())
-        return;
-    unsigned short aPing = inBuffer.ReadShort();
-    if (inClient->mPlayer.get() == NULL)
-        return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(9);
-    aBuffer.AppendShort(inClient->GetClientId());
-    aBuffer.AppendShort(aPing);
-    this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
+    this->BroadcastToGame(StagingMessage(9, inClient->GetClientId(), false, inMsg.ping).get());
 }
 
 // FUNCTION: WON 0x007ef8c0
-// Sets a player's ping as announced by the host
-void StagingLogic::HandlePingChanged(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Sets a player's ping as announced by the host (room_accepts)
+void StagingLogic::HandlePingChanged(const EeWonRoomMsg& inMsg, LobbyClient* inClient)
 {
-    if (!inClient->IsCaptain(1))
-        return;
-    unsigned short anId = inBuffer.ReadShort();
-    unsigned short aPing = inBuffer.ReadShort();
-    LobbyClient* aClient = this->mGame->FindClient(anId);
+    LobbyClient* aClient = this->mGame->FindClient(inMsg.id);
     if (aClient != NULL && aClient->mPlayer.get() != NULL) {
-        aClient->mPlayer->mPing = aPing;
+        aClient->mPlayer->mPing = inMsg.ping;
         LobbyBroadcastEvent(new PlayerChangedEvent(aClient, 2), true);
     }
 }
 
 // FUNCTION: WON 0x007ef970
-// Leaves the game and tells the player when the host dissolved it
-void StagingLogic::HandleGameDissolved(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Leaves the game and tells the player when the host dissolved it (room_accepts: from the captain, not us)
+void StagingLogic::HandleGameDissolved(LobbyClient* inClient)
 {
-    if (inClient->IsCaptain(1) && !this->IAmCaptain()) {
-        this->LeaveGame(false);
-        LobbyMessageBox(::RoutingLogic_GameDissolvedTitle_String, ::RoutingLogic_GameDissolvedDetails_String);
-    }
+    this->LeaveGame(false);
+    LobbyMessageBox(::RoutingLogic_GameDissolvedTitle_String, ::RoutingLogic_GameDissolvedDetails_String);
 }
 
 // FUNCTION: WON 0x007ef9b0
@@ -209,49 +200,55 @@ void StagingLogic::SetGameInProgress(bool inInProgress)
 }
 
 // FUNCTION: WON 0x007efac0
-// Leaves the lobby to start the game when the host says so; the host also marks the game in progress
-void StagingLogic::HandleStartGame(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Leaves the lobby to start the game when the host says so (room_accepts); the host also marks the game in progress
+void StagingLogic::HandleStartGame(LobbyClient* inClient)
 {
-    if (!inClient->IsCaptain(1))
-        return;
-    if (this->IAmCaptain()) {
+    bool isCaptain = this->IAmCaptain();
+    if (isCaptain)
         this->SetGameInProgress(true);
-        LobbyExit(2);
-    } else LobbyExit(1);
+    LobbyExit(ee_won_room_start_exit_code(isCaptain));
 }
 
 // FUNCTION: WON 0x007efb00
-// Handles the host's announcement that a client was kicked or banned
-void StagingLogic::HandleClientKicked(ReadBuffer& inBuffer, LobbyClient* inClient)
+// Handles the host's announcement (room_accepts) that a client was kicked or banned
+void StagingLogic::HandleClientKicked(const EeWonRoomMsg& inMsg, LobbyClient* inClient)
 {
-    if (!inClient->IsCaptain(1))
-        return;
-    unsigned short anId = inBuffer.ReadShort();
-    bool aFlag = inBuffer.ReadBool();
-    LobbyClient* aClient = this->mGame->FindClient(anId);
-    if (aClient != NULL) this->HandleKicked(aClient, aFlag);
+    LobbyClient* aClient = this->mGame->FindClient(inMsg.id);
+    if (aClient != NULL) this->HandleKicked(aClient, inMsg.flag);
 }
 
 // FUNCTION: WON 0x007efb50
-// Dispatches a game room message by type, passing unknown types to the game; while joining only the reply counts
+// Dispatches a game room message by type, passing unknown types to the game; while joining only the reply counts.
+// ee_won reads the type and the fixed fields (a short message does nothing) and says whether the receiver acts on
+// it; the game code's part is read on from the buffer
 void StagingLogic::HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
     if (this->mGame.get() == NULL || inClient == NULL) return;
+    EeWonRoomMsg aMsg;
+    long aStart = inBuffer.pos();
+    if (ee_won_room_read(reinterpret_cast<const uint8_t*>(inBuffer.data()) + aStart,
+                         (size_t)(inBuffer.length() - aStart), this->mJoinStatus == 1, &aMsg) != 0)
+        return;
+    inBuffer.SetPos((int)(aStart + aMsg.rest));
+    EeWonRoomRoles aRoles;
+    aRoles.sender_is_captain = inClient->IsCaptain(1);
+    aRoles.i_am_captain = this->IAmCaptain();
+    aRoles.sender_has_player = inClient->HasPlayer();
+    aRoles.sender_ready = inClient->IsReady();
+    if (!ee_won_room_accepts(&aMsg, &aRoles)) return;
     try {
-        unsigned char aType = inBuffer.ReadByte();
-        if (this->mJoinStatus == 1 && aType != 2) return;
-        switch (aType) {
+        switch (aMsg.kind) {
         case 1: this->HandleJoinRequest(inBuffer, inClient); break;
         case 2: this->HandleJoinReply(inBuffer, inClient); break;
-        case 3: this->HandlePlayerJoined(inBuffer, inClient); break;
-        case 4: this->HandleReadyRequest(inBuffer, inClient); break;
-        case 5: this->HandleReadyChanged(inBuffer, inClient); break;
-        case 6: this->HandleGameDissolved(inBuffer, inClient); break;
-        case 7: this->HandleStartGame(inBuffer, inClient); break;
-        case 8: this->HandlePingReport(inBuffer, inClient); break;
-        case 9: this->HandlePingChanged(inBuffer, inClient); break;
-        case 10: this->HandleClientKicked(inBuffer, inClient); break;
-        default: this->mGame->HandleGameMessage(aType, inBuffer, inClient); break;
+        case 3: this->HandlePlayerJoined(aMsg, inBuffer, inClient); break;
+        case 4: this->HandleReadyRequest(aMsg, inClient); break;
+        case 5: this->HandleReadyChanged(aMsg, inClient); break;
+        case 6: this->HandleGameDissolved(inClient); break;
+        case 7: this->HandleStartGame(inClient); break;
+        case 8: this->HandlePingReport(aMsg, inClient); break;
+        case 9: this->HandlePingChanged(aMsg, inClient); break;
+        case 10: this->HandleClientKicked(aMsg, inClient); break;
+        default: this->mGame->HandleGameMessage(aMsg.kind, inBuffer, inClient); break;
         }
     } catch (ReadBufferException&) {}
 }
@@ -390,10 +387,7 @@ bool StagingLogic::Logout(bool inConfirm)
 // Asks the host to set our ready flag
 void StagingLogic::SendReady(bool inReady)
 {
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(4);
-    aBuffer.AppendBool(inReady);
-    this->SendToCaptain(aBuffer.ToByteBuffer(true).get());
+    this->SendToCaptain(StagingMessage(4, 0, inReady, 0).get());
 }
 
 // FUNCTION: WON 0x007f0230
@@ -402,18 +396,14 @@ void StagingLogic::SendGameDissolved()
 {
     if (!this->IAmCaptain())
         return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(6);
-    this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
+    this->BroadcastToGame(StagingMessage(6, 0, false, 0).get());
 }
 
 // FUNCTION: WON 0x007f02e0
 // Tells every client in the game to start it
 void StagingLogic::SendStartGame()
 {
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(7);
-    this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
+    this->BroadcastToGame(StagingMessage(7, 0, false, 0).get());
 }
 
 // FUNCTION: WON 0x007f0390
@@ -633,10 +623,7 @@ void StagingLogic::NotifyPingChange(LobbyGame* inGame)
 {
     if (this->mGame.get() == NULL || this->IAmCaptain() || !inGame->IsSameGame(this->mGame.get()))
         return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(8);
-    aBuffer.AppendShort(inGame->GetPing());
-    this->SendToCaptain(aBuffer.ToByteBuffer(true).get());
+    this->SendToCaptain(StagingMessage(8, 0, false, inGame->GetPing()).get());
 }
 
 // FUNCTION: WON 0x007f10f0
@@ -645,11 +632,7 @@ void StagingLogic::KickClient(LobbyClient* inClient, bool inBan)
 {
     if (inClient == NULL || this->mGame.get() == NULL || !this->IAmCaptain())
         return;
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(10);
-    aBuffer.AppendShort(inClient->GetClientId());
-    aBuffer.AppendBool(inBan);
-    this->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
+    this->BroadcastToGame(StagingMessage(10, inClient->GetClientId(), inBan, 0).get());
     LobbyNetKickClient(inClient, inBan);
 }
 
@@ -662,27 +645,27 @@ void StagingLogic::NotifyStagingChange()
 
 // FUNCTION: WON 0x007f1200
 // Plays the all-ready sound (at most every 15 s) or the not-ready sound when the game's ready state changes
+// (ee_won_room_ready_state decides)
 void StagingLogic::UpdateReadyState()
 {
     this->NotifyStagingChange();
     LobbyGame* aGame = this->mGame.get();
     if (aGame == NULL) return;
-    bool isReady = aGame->AreAllReady();
-    if (isReady) {
-        if (this->mLastAllReady != isReady) {
-            long aTime = time(NULL);
-            if (aTime - this->mLastReadyTime >= 15) {
-                this->mLastReadyTime = aTime;
-                if (LobbyGetStagingSoundEffects()) {
-                    LobbyPlaySound(::LobbyGlobal_AllReady_Sound.get());
-                }
-            }
-        }
-    } else if (!aGame->mIsHost && this->mLastReady != LobbyIAmReady()) {
-        this->mLastReady = LobbyIAmReady();
-        if (!this->mLastReady && LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_AllNotReady_Sound.get());
-    }
-    this->mLastAllReady = isReady;
+    EeWonReadyState aState;
+    aState.all_ready = aGame->AreAllReady();
+    aState.last_all_ready = this->mLastAllReady;
+    aState.is_host = aGame->mIsHost;
+    aState.last_ready = this->mLastReady;
+    aState.i_am_ready = LobbyIAmReady();
+    aState.now = (int64_t)time(NULL);
+    aState.last_ready_time = this->mLastReadyTime;
+    ee_won_room_ready_state(&aState);
+    this->mLastAllReady = aState.all_ready;
+    this->mLastReady = aState.last_ready;
+    this->mLastReadyTime = (long)aState.last_ready_time;
+    if (aState.sound != EeWonReadySound::Silent && LobbyGetStagingSoundEffects())
+        LobbyPlaySound(aState.sound == EeWonReadySound::AllReady ? ::LobbyGlobal_AllReady_Sound.get()
+                                                            : ::LobbyGlobal_AllNotReady_Sound.get());
 }
 }
 

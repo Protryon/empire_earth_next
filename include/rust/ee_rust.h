@@ -1178,6 +1178,13 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// The sound `UpdateReadyState` plays (if the staging sounds are on).
+enum class EeWonReadySound {
+  Silent = 0,
+  AllReady = 1,
+  NotReady = 2,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -3958,6 +3965,53 @@ struct EeWonQueueDecision {
 /// `FileWriter`'s state.
 struct EeWonFileWriter {
   void *file;
+};
+
+/// A room message's fields (`RoomMsg`).
+struct EeWonRoomMsg {
+  uint8_t kind;
+  uint16_t id;
+  bool flag;
+  uint16_t ping;
+  size_t rest;
+};
+
+/// `Roles` for the C++.
+struct EeWonRoomRoles {
+  bool sender_is_captain;
+  bool i_am_captain;
+  bool sender_has_player;
+  bool sender_ready;
+};
+
+/// `UpdateReadyState`'s state: the inputs, and on return the sound and the remembered state (`last_*` updated).
+struct EeWonReadyState {
+  bool all_ready;
+  bool last_all_ready;
+  bool is_host;
+  bool last_ready;
+  bool i_am_ready;
+  int64_t now;
+  int64_t last_ready_time;
+  EeWonReadySound sound;
+};
+
+/// A summary's fields but the name (`Summary`), and a read's answer (`SummaryRead`).
+struct EeWonGameSummary {
+  int32_t game_type;
+  uint8_t address[6];
+  uint16_t product_id;
+  bool in_progress;
+  bool has_password;
+  bool invite_only;
+  bool ask_to_join;
+  int32_t skill;
+  int32_t players;
+  int32_t open_slots;
+  /// For a read: true when it succeeded, the `SUMMARY_*` bits read, where the game code's part begins.
+  bool ok;
+  uint32_t read;
+  size_t rest;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -10333,6 +10387,73 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+/// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable.
+int32_t ee_won_room_read(const uint8_t *bytes, size_t length, bool joining, EeWonRoomMsg *out);
+
+/// `room_accepts`.
+///
+/// # Safety
+/// Both point to valid structs.
+bool ee_won_room_accepts(const EeWonRoomMsg *m, const EeWonRoomRoles *roles);
+
+/// `room_message` into the sink.
+///
+/// # Safety
+/// `m` is valid; the sink's contract.
+void ee_won_room_message(const EeWonRoomMsg *m, EeWonByteSink sink, void *context);
+
+/// `player_head` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_room_player_head(uint16_t ping, bool ready, EeWonByteSink sink, void *context);
+
+int32_t ee_won_room_start_exit_code(bool i_am_captain);
+
+/// `ready_state` in place.
+///
+/// # Safety
+/// `s` is valid and writable.
+void ee_won_room_ready_state(EeWonReadyState *s);
+
+bool ee_won_game_is_full(int32_t players, int32_t open_slots);
+
+/// `join_status`: the status, or -1 to ask the game code's hook.
+int16_t ee_won_game_join_status(bool full,
+                                bool invite_only,
+                                bool invited,
+                                bool is_host,
+                                bool in_progress);
+
+int16_t ee_won_game_host_join_check(bool full, bool in_progress);
+
+bool ee_won_game_matches_room_spec(int32_t flags, int32_t game_type);
+
+/// `write_summary` into the sink; `name` is UTF-16 LE bytes.
+///
+/// # Safety
+/// `s` is valid; `name` holds `name_length` bytes; the sink's contract.
+void ee_won_game_write_summary(const EeWonGameSummary *s,
+                               const uint8_t *name,
+                               size_t name_length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `read_summary` into `out`; the name (when read) goes to the sink as UTF-16 units.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable; the sink's contract.
+void ee_won_game_read_summary(const uint8_t *bytes,
+                              size_t length,
+                              int32_t game_type,
+                              uint16_t product_id,
+                              EeWonGameSummary *out,
+                              EeWonUnitSink name_sink,
+                              void *context);
 
 }  // extern "C"
 
