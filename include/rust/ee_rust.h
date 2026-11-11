@@ -9198,6 +9198,12 @@ void ee_ui_background_set_visibility(void *background, bool visible);
 /// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
 void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
 
+/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
+void ee_ui_background_full_tile_name(const char *name,
+                                     unsigned long row,
+                                     unsigned long column,
+                                     void *out);
+
 /// `UIBackgroundTable::Create`.
 long ee_ui_background_table_create(void *file);
 
