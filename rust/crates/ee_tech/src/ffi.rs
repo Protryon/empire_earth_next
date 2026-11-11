@@ -7,8 +7,9 @@ use crate::calamity_cast::{self, EeCalamityCast};
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
 use crate::effects::{self, EeTechAttribute, EeTechEffectHandler, EeTechEffectValues};
 use crate::tree::{
-    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochUpdate, EeTechNode, EeTechPrerequisite,
-    EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode, SumCostsView,
+    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate, EeTechNode,
+    EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode,
+    SumCostsView,
 };
 use std::ffi::c_void;
 
@@ -467,6 +468,26 @@ pub unsafe extern "C" fn ee_calamity_valid_location(
     // SAFETY: as above
     let (cast, host) = unsafe { (*cast, *host) };
     calamity_cast::valid_location(&mut FfiCalamityHost(host), &cast)
+}
+
+/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
+///
+/// # Safety
+/// `out` must be valid for `capacity` writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_research_to_epoch(
+    epoch: i32,
+    count: i32,
+    local: bool,
+    out: *mut EeTechEpochStep,
+    capacity: u32,
+) -> u32 {
+    let steps = tree::research_to_epoch_steps(epoch, count, local);
+    for (i, step) in steps.iter().take(capacity as usize).enumerate() {
+        // SAFETY: the caller's contract
+        unsafe { *out.add(i) = *step };
+    }
+    steps.len() as u32
 }
 
 #[cfg(test)]

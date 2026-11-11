@@ -715,38 +715,40 @@ void EETechTree::ResearchToEpoch(long inEpoch)
     }
     gEventsEnabled = false;
     EETechCaptureEpochStep(-1, 0);   // TEST ONLY (ee/EETechCapture.h)
-    bool theLocal = false;
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()) {
-        if (inEpoch != kTechEpochPrehistoric) {
-            if (inEpoch > kTechEpochPrehistoric) {
-                for (long i = 0; i < inEpoch; i++) {
-                    EETechCaptureEpochStep(0, i);   // TEST ONLY (ee/EETechCapture.h)
-                    this->mEpochs[i].Unlock();
-                    EETechCaptureEpochStep(1, i);   // TEST ONLY (ee/EETechCapture.h)
-                    this->mEpochs[i].ResearchAll(false);
-                    if (i + 1 == inEpoch && i + 1 < this->mEpochs.size()) {
-                        EETechCaptureEpochStep(0, i + 1);   // TEST ONLY (ee/EETechCapture.h)
-                        this->mEpochs[i + 1].Unlock();
-                        EETechCaptureEpochStep(2, i + 1);   // TEST ONLY (ee/EETechCapture.h)
-                        this->mEpochs[i + 1].ResearchSelf();
-                    }
-                }
-            }
-        } else {
-            EETechCaptureEpochStep(0, 0);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[0].Unlock();
-            EETechCaptureEpochStep(2, 0);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[0].ResearchSelf();
-        }
-        EETechCaptureEpochStep(3, inEpoch);   // TEST ONLY (ee/EETechCapture.h)
-        this->mEpochs[inEpoch].ResearchKind(7, true);
-        if (gWorld.mPlayers[this->mPlayerIndex] == gWorld.GetCurrentPlayer()) {
-            theLocal = true;
-            EETechCaptureEpochStep(4, inEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochNameID = EEEpochTitleID(this->mEpochs[inEpoch].mData->mID);
+    // which epochs are unlocked and researched, and in which order, is the Rust tech logic's (ee_tech tree.rs); the
+    // epochs' members and the interface stay here
+    bool theLocal = inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size() &&
+                    gWorld.mPlayers[this->mPlayerIndex] == gWorld.GetCurrentPlayer();
+    std::vector<EeTechEpochStep> theSteps(2 * this->mEpochs.size() + 4);
+    uint32_t theCount = ee_tech_research_to_epoch((int32_t)inEpoch, (int32_t)this->mEpochs.size(), theLocal,
+                                                  theSteps.data(), (uint32_t)theSteps.size());
+    ESVERIFY_AT(theCount <= theSteps.size(), 1);
+    for (uint32_t i = 0; i < theCount && i < theSteps.size(); i++) {
+        long theEpoch = theSteps[i].epoch;
+        switch (theSteps[i].step) {
+        case EeTechEpochStepKind::Unlock:
+            EETechCaptureEpochStep(0, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
+            this->mEpochs[theEpoch].Unlock();
+            break;
+        case EeTechEpochStepKind::ResearchAll:
+            EETechCaptureEpochStep(1, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
+            this->mEpochs[theEpoch].ResearchAll(false);
+            break;
+        case EeTechEpochStepKind::ResearchSelf:
+            EETechCaptureEpochStep(2, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
+            this->mEpochs[theEpoch].ResearchSelf();
+            break;
+        case EeTechEpochStepKind::ResearchKind7:
+            EETechCaptureEpochStep(3, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
+            this->mEpochs[theEpoch].ResearchKind(7, true);
+            break;
+        case EeTechEpochStepKind::ShowName:
+            EETechCaptureEpochStep(4, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
+            this->mEpochNameID = EEEpochTitleID(this->mEpochs[theEpoch].mData->mID);
             gUserInterface->PostShowEpochName();
             if (gUIManager->mMainGameForm != NULL)
                 gUIManager->mMainGameForm->mRefreshGroup = true;
+            break;
         }
     }
     EETechCaptureResearchToEpoch(this, inEpoch, theLocal);   // TEST ONLY (ee/EETechCapture.h)

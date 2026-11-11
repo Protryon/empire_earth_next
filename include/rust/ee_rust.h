@@ -1484,6 +1484,20 @@ enum class EeCalamityCastMode : int32_t {
   SpecialAttack,
 };
 
+/// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
+enum class EeTechEpochStepKind : uint32_t {
+  /// `mEpochs[epoch].Unlock()`.
+  Unlock = 0,
+  /// `mEpochs[epoch].ResearchAll(false)`.
+  ResearchAll,
+  /// `mEpochs[epoch].ResearchSelf()`.
+  ResearchSelf,
+  /// `mEpochs[epoch].ResearchKind(7, true)`.
+  ResearchKind7,
+  /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
+  ShowName,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -3993,6 +4007,12 @@ struct EeCalamityCast {
   bool blocked_by_immunity;
   /// The hurricane only over water (`mOverWater`).
   bool over_water;
+};
+
+/// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
+struct EeTechEpochStep {
+  EeTechEpochStepKind step;
+  int32_t epoch;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -9579,6 +9599,16 @@ bool ee_calamity_valid_target(const EeCalamityCast *cast, const EeCalamityHostFf
 /// # Safety
 /// As [`ee_calamity_can_cast_at`].
 bool ee_calamity_valid_location(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
+///
+/// # Safety
+/// `out` must be valid for `capacity` writes.
+uint32_t ee_tech_research_to_epoch(int32_t epoch,
+                                   int32_t count,
+                                   bool local,
+                                   EeTechEpochStep *out,
+                                   uint32_t capacity);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
