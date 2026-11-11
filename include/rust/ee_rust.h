@@ -1113,6 +1113,16 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunityTrust = 2,
 };
 
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -10016,6 +10026,61 @@ int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
 int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
+
+/// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
+///
+/// # Safety
+/// `a` and `b` hold their lengths' units of `wchar_size` bytes.
+int32_t ee_won_guistring_op(EeWonGuiStringOp op,
+                            const void *a,
+                            uint16_t a_length,
+                            const void *b,
+                            uint16_t b_length,
+                            int32_t start,
+                            uint32_t wchar_size);
+
+/// `find(int, start)` (`reverse` false) or `rFind(int, start)`.
+///
+/// # Safety
+/// `a` holds `a_length` units of `wchar_size` bytes.
+int32_t ee_won_guistring_find_char(const void *a,
+                                   uint16_t a_length,
+                                   int32_t ch,
+                                   int32_t start,
+                                   bool reverse,
+                                   uint32_t wchar_size);
+
+/// `compare(const char*, offset)` (`no_case` false) or `CompareNoCase(const char*, offset)`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `narrow` is NUL-terminated.
+int32_t ee_won_guistring_compare_narrow(const void *a,
+                                        uint16_t a_length,
+                                        int32_t offset,
+                                        const uint8_t *narrow,
+                                        bool no_case,
+                                        uint32_t wchar_size);
+
+/// `ToInt`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`.
+int32_t ee_won_guistring_to_int(const void *a,
+                                uint16_t a_length,
+                                uint16_t offset,
+                                uint32_t wchar_size);
+
+/// `toUpper` / `toLowerCase` in place.
+///
+/// # Safety
+/// `a` holds `a_length` writable units of `wchar_size` bytes.
+void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
+
+/// `GetString` into `out` (room for `a_length` bytes).
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `out` has room for `a_length` bytes.
+void ee_won_guistring_narrow(const void *a, uint16_t a_length, uint8_t *out, uint32_t wchar_size);
 
 /// `SetFilePath`'s separators.
 ///

@@ -416,6 +416,10 @@ WON_TESTS = {
                                                        "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
                       *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                            "StringParserLists.cpp", "StringUtil.cpp")]],
+    # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
+    "won_guistring_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                           "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                           "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
 }
 
 
