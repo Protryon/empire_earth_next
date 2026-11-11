@@ -6195,6 +6195,7 @@ Only a played game with sound exercises these (EE-SIM has no conductor; the gold
 the music's start at the first game frame (`EEWorld.cpp` 1053), every song change (5 to 7 minutes) and its fades,
 the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
 volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
+<<<<<<< HEAD
 
 ## R5a.2, sixth round: the managers' timers, the players' unit lists, the intelligence files, the tracked units (save 0.269-0.271, branch rust-r5a-aisave5, 2026-11-11)
 
@@ -6260,3 +6261,100 @@ how a game plays, the plain oracle stays identical).
 - **Not covered**: saves of other maps, difficulties, game speeds or player counts; the next engine (EECPNext) and
   human players' state; multiplayer saves. The saveload test is the measure only for its 18 saves; a new divergence
   elsewhere names its own cause with the same tools.
+||||||| 3eaa435c
+=======
+
+## R5b.2, second round: the conversion and heal tests, the drop point, the line of fire, splash victims and the new target search in Rust (ee_combat decide.rs, walks.rs; branch rust-combat2, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| can a priest convert a target | `EECanConvert` (`EEUCBasicPriest.cpp`) | `decide::can_convert` | CBCN |
+| can a unit heal a target | `EECanHeal` | `decide::can_heal` | CBCH |
+| the drop point on a target (model point, tile) | `EEFindDropLocation` | `decide::drop_point` | CBDP |
+| the line of fire | `EEIsLineToUnitBlocked` | `walks::line_blocked` over `EeCombatLineHost` | CBLB |
+| splash damage's victims | `EEUnitClass::ApplyAreaDamage` | `walks::area_victims` over `EeCombatAreaHost` | CBAD |
+| the new target search | `EEFindNewTarget` (+ the deleted `EEUUGetUnitsInArea`) | `walks::units_in_area`, `walks::choose_target` over `EeCombatTargetHost` | CBFT |
+
+- **Golden first, then the move.** Commit b96a53c2 wrapped the unmodified C++ (renamed `...Original`) with capture
+  probes: the decisions' inputs gathered exactly as the Rust records later take them, the walks' observable results
+  (units by `mUnitID`: the victims in hit order, the candidates in order and the chosen one, the line's result, last
+  tile and blocker). Its digests are the new lines of the four golden files; the moved build gives the same records.
+  The walks' records are not replayable without a world: `check` gates them, the unit tests pin the order.
+- **Out flags that are not always written.** `EECanConvert` writes `outFlag` only on its last branch, and several
+  callers declare `bool theFlag;` uninitialized and read it after a true result (a cyber priest's): the Rust result
+  says `flag_written`, and the C++ writes the flag only then. Likewise `EEIsTileTopAbove` writes the blocker on every
+  call but `EEIsLineToUnitBlocked` may make none: the golden wrapper detected that with a sentinel pointer, the host
+  writes the caller's pointer directly.
+- **Eager reads where the original was lazy**, all pure: the adaptation power, the shield, the damage table cell, a
+  building priest's distance, the unit set. Two guards: the damage table is read only for an ammo column >= 0, the unit
+  set only for a set below the manager's size (`EEUnitSetManager::Contains` indexes `mSets` unchecked; the original
+  only reached it after every other test passed).
+- **Walks with C++ mutations inside.** `ApplyAreaDamage` hits each victim (TakeHit, kills, food) before reading the
+  tile node's `mNext`, as the original did: the host's `hit` runs inside the walk and `node_next` is asked after it.
+  `IsTargetIgnored` erases expired entries, so `choose_target` asks each test lazily, in the original's order
+  (`TARGET_TEST_*`); the technology kind keeps its last answer across candidates (asked only without `inArg6`).
+- **Handles, not references.** Units and tile nodes cross as `uint64_t` (the pointers); Rust compares them (the
+  victims' "hit once" list) and hands them back. The sort of `EESortUnique` is by `mUnitID` through `unit_id`;
+  equal ids are one unit, so the stable Rust sort gives the C++'s order. The tile line crosses as a C++-owned pair
+  array copied before the next host call.
+- **Coverage.** The AI games never heal: EE-SIM's capture sweep (`EECombatCaptureSweep`) calls `EECanHeal` over its
+  pairs both ways, a unit and itself, and the previous player's newest unit; CBCH's golden came from that sweep over
+  the C++ test (oracle profile). CBCN comes from priests in the oracle's seed 6 and the late and space games, CBFT
+  from a few dozen calls a game.
+- **A generic type name in a crate breaks another crate's header type.** `rust/cbindgen.toml` renames `Handle` to
+  `EeDx7Handle` (ee_dx7's `*mut c_void`); a `pub type Handle = u64` in ee_combat was renamed to the same C name and
+  replaced it (`using EeDx7Handle = uint64_t`), and only the DX7 rasterizer units failed to compile. The Rust gate's
+  header check passed (the header was current). Name exported aliases uniquely (`EeCombatHandle`).
+- **What stays C++:** the weapon tag point and the target model's top (model data), `EEGetTileLine`, the walls'
+  `EEIsTileTopAbove`, the region table, the screens' `Virtual08`, every target test, `EERetargetAttack`, the goal's
+  location in `EEFindDropLocation`, the hits themselves.
+
+## R4.4, second round: the free camera's pitch held past zoom 1, the pointer's arithmetic, the units' screen point and bars in Rust, a scroll check (ee_gfx mouse.rs, units.rs; branch rust-gfx8, 2026-11-11)
+
+- **Behaviour change (the owner's call): the free camera holds its pitch past |zoom| 1.** Mode 3's `GetPitch` was
+  `pow(1 - |zoom|, 0.5)`, NaN past zoom 1 (the port's `gCameraMaxZoom` is 2), and the table cosine faults on a NaN
+  angle (round one's hazard). `camera::pitch` now clamps |zoom| to 1 in mode 3 as modes 0 and 1 do (the sign kept:
+  the far pitch, negated for a negative zoom). Of the camera golden's 14,424 lines exactly the 71 GetPitch cases of
+  mode 3 with |zoom| > 1 changed (each had a NaN output before); they were re-recorded from the driver over the
+  fixed unit, every other line is still the original's. `free_pitch_holds_past_zoom_one` failed before the fix and
+  passes after. The camera's other cases never had a mode-3 zoom past 1, and the simulation (EE-SIM) never enters
+  mode 3: the oracle cannot see it; a cinematic after a far zoom-out can (only a person or a scenario reaches it).
+- **The pointer (`mouse.rs`, `RTSMouse.cpp`).** `ClampPosition` and `Update`'s move: the raw axes scaled by the
+  bounds over the desktop, the sensitivity and the smallest move seen. The smallest moves stay the unit's file
+  statics (passed in and out, 32-bit: a mouse axis never reaches past it); the C++ keeps the entity reads in their
+  order (x then y), the "MinXValue now" debug lines (the result says when a minimum changed), the frozen test and
+  the wheel. `x < 0 ? -x : x` of `LONG_MIN` is `wrapping_neg` (the C++'s wrap).
+- **The units' render object (`units.rs`, `EEROUnits.cpp`).** `GetScreenPoint` (over `ee_ge`'s `GeViewport` mirror
+  of `gU4E8F08`), `DrawBars`' sizes from the window, `DrawBar`'s tag point, origin and rectangle split (full: two
+  rectangles; partial: four, each at least a pixel wide; empty: two) and `DrawObjectBars`' (one or two). The C++
+  keeps every rhombus call (SetRectangle, the colours, the draws) in the original's order by the result's `kind`.
+  Not moved: the selection rings' size choice and the area-effect ring's colours (trivial, but no golden covers
+  them: their models' members are private and the fakes were not worth it), the labels, the placement footprint.
+- **The golden drivers** (`build/gfx8_golden`, scratch: `build.py LEAF orig|cur [seed [scale [full]]]`, BASE
+  9635b89c). New trick: the driver `#include`s the unit (`EE_UNIT`, its absolute path, as a define) to reach its
+  file statics (`sFGBar`, `sBarWidth`), and calls its private passes through explicit template instantiations
+  (`template struct Rob<Tag, &EEROUnits::DrawBars>`: an explicit instantiation may name a private member). The
+  rasterizer and the vertex arrays are fake objects whose vtable is 160/40 template stubs that log their slot (and
+  the bar or colour argument); `GERhombus::ComputeRotation` (private, out of line) logs the rectangle just set. The
+  rasterizer's inline getters dereference its screen states: the fake's words all point at a block of words that
+  point at themselves, so any such chain reads harmlessly. Mouse: a fake `ISDevice` subclass stands in for
+  `gISMouse` (`GetEntity` is the base's first slot), fake entities log each read, `ESDebugOut` logs its text.
+  Results: mouse 4,000 cases, rounits 4,344; the relinked drivers printed the same files, and the same on seeds 2
+  and 3 at four times the size (16,000 and 17,376 lines). Mutations (24.5 for 24 in the bar width, 0.0626 for
+  0.0625 in the y move) fail the replays.
+- **Python on Windows writes CRLF** (`Path.write_text` in text mode): a quick scripted edit of a Rust file turned
+  it CRLF and showed a whole-file diff. Edit through `read_bytes`/`write_bytes`.
+- **The scroll check (TEST ONLY).** The fixture writes a `camera` telemetry line (the focus now and the move's
+  target in tiles, the zoom, the mode, whether each is a point of the mesh, the map size) and takes `key <form>
+  <dik> <ms>` (a key held through `ISHandleEvent`, the entry the window layer feeds a key press to: the window
+  message -> SDL -> event path itself is what `--input-check`'s F3 proves) and `wheel <form> <0|1> <n>`.
+  `fixture_game.py --scroll-check` scrolls by an arrow key (the opposite one when the first is at the map's edge)
+  and by the pointer at the window's left (else right) edge, requires each move of at least half a tile with the
+  camera still on the map, then sets zoom 1 and requires the zoom hot keys (`]` in, `[` out) and the wheel to change
+  it each way; `--zoom-captures P ...` is posix_game's. The self test's stand-in covers both, including a FAIL with
+  its numbers. Not run against the game here (no harness sessions for agents).
+- **Only a tour, a scroll/zoom run or a person reaches:** every change of this round draws or reads input on the
+  UI and render threads: the bars and the screen point (any frame with a selected unit), the pointer's move (any
+  mouse motion), the mode-3 pitch past zoom 1 (a cinematic or the free camera after a far zoom-out; a person or a
+  scenario), the fixture's new commands (the scroll check). EE-SIM touches none of them.
+>>>>>>> refs/heads/rust

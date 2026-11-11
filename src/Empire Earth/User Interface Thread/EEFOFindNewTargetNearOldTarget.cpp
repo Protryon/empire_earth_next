@@ -2551,39 +2551,8 @@ template <class F> long EEUUSearchTiles(const GE2DPoint& inPosition, const U2DPo
     return outUnits.size();
 }
 
-// 0x250806 (an inline COMDAT after the range): the units in inArea's unit regions that inScreen passes (+0x08), sorted
-// and made unique when a unit of a class bigger than one region was among them and inUnique; their number (inferred)
-// name (the screen twin of ee/EEUnitCollector.h's EEGetUnitsInRectangle)
-inline long EEUUGetUnitsInArea(const U2DRectangle<long>& inArea, std::vector<EEUnit*>& outUnits,
-                               EEFOFindNewTargetScreenBase* inScreen, bool inUnique)
-{
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(inArea);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-    U2DPoint<long> theEndX = theRegions.GetBottomRight();
-    U2DPoint<long> theEndY = theRegions.GetBottomRight();
-    bool theMultiple = false;
-    U2DPoint<long> theStart = theRegions.GetTopLeft();
-    for (long x = theStart.mX; x <= theEndX.mX; x++) {
-        U2DPoint<long> theRowStart = theRegions.GetTopLeft();
-        for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-            if (!theRegion)
-                continue;
-            for (long i = theRegion->size() - 1; i >= 0; i--) {
-                EEComplexUnit* theUnit = (*theRegion)[i];
-                if (!inArea.Contains(theUnit->GetTileX(), theUnit->GetTileY()) ||
-                    !inScreen->Virtual08(theUnit))
-                    continue;
-                if (theUnit->mUnitClass->mTileSize > 1)
-                    theMultiple = true;
-                outUnits.push_back(theUnit);
-            }
-        }
-    }
-    if (inUnique && theMultiple)
-        EESortUnique(outUnits, EEUUUnitIDLess(), EEUUUnitIDEqual());
-    return outUnits.size();
-}
+// (0x250806, EEUUGetUnitsInArea, the units of an area's unit regions that a screen passes: ee_combat's units_in_area,
+// called from EEFindNewTarget below)
 
 // the circle screen of 0x24bf01 (ctor 0x24bfd3 out of line right after its first user; operator() 0x250d37 an inline
 // COMDAT for EEGetUnitsInRectangle 0x250b99) (provisional names; moved here from ee/EEUnitUtilities.h)
@@ -3447,54 +3416,154 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// a unit's id in the CB** capture records (-1: none)
+static int32_t EECombatCaptureID(EEUnit* inUnit)
+{
+    return inUnit != NULL ? (int32_t)inUnit->GetUnitID() : -1;
+}
+
+// The world of the new target search (ee_combat units_in_area and choose_target, walks.rs): the unit regions, the
+// screen, the candidates and their tests. Handles are the units' pointers.
+struct EENewTargetHost {
+    EEFOFindNewTargetScreenBase* mScreen;
+    EEComplexUnit* mUnit;
+    long mIgnoreArgument;
+    std::vector<EEComplexUnit*> mUnits;
+};
+
+static EEComplexUnit* EENewTargetUnit(uint64_t inHandle)
+{
+    return (EEComplexUnit*)(uintptr_t)inHandle;
+}
+
+static void EENewTargetRegions(void* inContext, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom,
+                               int32_t (*outRegions)[4])
+{
+    U2DRectangle<long> theArea;
+    theArea.mLeft = inLeft;
+    theArea.mTop = inTop;
+    theArea.mRight = inRight;
+    theArea.mBottom = inBottom;
+    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(theArea);
+    (*outRegions)[0] = (int32_t)theRegions.GetTopLeft().mX;
+    (*outRegions)[1] = (int32_t)theRegions.GetTopLeft().mY;
+    (*outRegions)[2] = (int32_t)theRegions.GetBottomRight().mX;
+    (*outRegions)[3] = (int32_t)theRegions.GetBottomRight().mY;
+}
+
+static int32_t EENewTargetRegionLength(void* inContext, int32_t inX, int32_t inY)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return theRegion != NULL ? (int32_t)theRegion->size() : -1;
+}
+
+static uint64_t EENewTargetRegionUnit(void* inContext, int32_t inX, int32_t inY, int32_t inIndex)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
+}
+
+static void EENewTargetUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
+{
+    (*outTile)[0] = (int32_t)EENewTargetUnit(inUnit)->GetTileX();
+    (*outTile)[1] = (int32_t)EENewTargetUnit(inUnit)->GetTileY();
+}
+
+static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
+{
+    return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
+}
+
+static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
+{
+    return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
+}
+
+static uint32_t EENewTargetUnitID(void* inContext, uint64_t inUnit)
+{
+    return (uint32_t)EENewTargetUnit(inUnit)->GetUnitID();
+}
+
+static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
+{
+    EENewTargetHost* theHost = (EENewTargetHost*)inContext;
+    EEComplexUnit* inUnit = theHost->mUnit;
+    EEComplexUnit* theUnit = EENewTargetUnit(inHandle);
+    EEPlayer* thePlayer = inUnit->GetPlayer();
+    EEPlayer* theOwner = theUnit->GetPlayer();
+    switch (inTest) {
+    case EE_COMBAT_TARGET_TEST_TECH_KIND_6: {
+        EETechnology* theTechnology = thePlayer->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
+        return theTechnology != NULL && theTechnology->mData->mKind == 6;
+    }
+    case EE_COMBAT_TARGET_TEST_NOT_ENEMY:
+        return theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0;
+    case EE_COMBAT_TARGET_TEST_DISABLED:
+        return theUnit->mIsDisabled && !theUnit->IsProtected();
+    case EE_COMBAT_TARGET_TEST_NATURE:
+        return theOwner->GetPlayerID() == 0;
+    case EE_COMBAT_TARGET_TEST_ATTACKED_BY:
+        return EEIsAttackedBy(inUnit, theUnit);
+    case EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS:
+        return EECanTargetClass(inUnit, theUnit->GetUnitClass());
+    case EE_COMBAT_TARGET_TEST_FOUNDATION:
+        return theUnit->IsFoundation();
+    case EE_COMBAT_TARGET_TEST_SEEN:
+        return EEIsSeenBy(theUnit, inUnit->GetPlayer(), true);
+    case EE_COMBAT_TARGET_TEST_PART_LEFT_OUT:
+        return theUnit->GetUnitClass()->IsPartLeftOut(theUnit);
+    case EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS:
+        return inUnit->CanAttackClass(theUnit->GetUnitClass());
+    case EE_COMBAT_TARGET_TEST_IGNORED:
+        return inUnit->mIgnoredTargets.size() != 0 && inUnit->IsTargetIgnored(theUnit, theHost->mIgnoreArgument != 0);
+    }
+    return 0;
+}
+
+static void EENewTargetPush(void* inContext, uint64_t inUnit)
+{
+    ((EENewTargetHost*)inContext)->mUnits.push_back(EENewTargetUnit(inUnit));
+}
+
 // FUNCTION: EXE 0x645dd6
 // Gives a unit's goal the first enemy near a tile that passes a screen; false when none
+// (new: the region walk under it and the choice are ee_combat's; the tests and the retarget stay here)
 bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, EEComplexUnit* inUnit,
                 EETileCoordinate* inTile, long inRadius, bool inArg6, long inArg7)
 {
-    std::vector<EEUnit*> theUnits;
-    U2DRectangle<long> theArea;
-    bool theFound = false;
-    unsigned long i;
-    unsigned long theCount;
-    long theKind = -1;
-
-    theArea.mLeft = inTile->GetX() - inRadius;
-    theArea.mTop = inTile->GetY() - inRadius;
-    theArea.mRight = inTile->GetX() + inRadius;
-    theArea.mBottom = inTile->GetY() + inRadius;
-    EEUUGetUnitsInArea(theArea, theUnits, inScreen, true);
-    if (theUnits.size() > 0 && (theCount = theUnits.size()) != 0) {
-        EEPlayer* thePlayer = inUnit->GetPlayer();
-        for (i = 0; i < theCount; i++) {
-            EEPlayer* theOwner = theUnits[i]->GetPlayer();
-            if (!inArg6) {
-                EETechnology* theTechnology =
-                    thePlayer->GetTechTree()->Get(theUnits[i]->GetUnitClass()->GetTechnology());
-                if (theTechnology != NULL)
-                    theKind = theTechnology->mData->mKind;
-                else
-                    theKind = -1;
-            }
-
-            if (theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0)
-                continue;
-            if (static_cast<EEComplexUnit*>(theUnits[i])->mIsDisabled && !static_cast<EEComplexUnit*>(theUnits[i])->IsProtected())
-                continue;
-            if (theOwner->GetPlayerID() == 0 && !EEIsAttackedBy(inUnit, theUnits[i]))
-                continue;
-            if (theKind == 6 || !EECanTargetClass(inUnit, theUnits[i]->GetUnitClass()))
-                continue;
-            if (theUnits[i]->IsFoundation() || !EEIsSeenBy(theUnits[i], inUnit->GetPlayer(), true)
-                || theUnits[i]->GetUnitClass()->IsPartLeftOut(static_cast<EEComplexUnit*>(theUnits[i]))
-                || !inUnit->CanAttackClass(theUnits[i]->GetUnitClass()))
-                continue;
-            if (inUnit->mIgnoredTargets.size() != 0 && inUnit->IsTargetIgnored(static_cast<EEComplexUnit*>(theUnits[i]), inArg7 != 0))
-                continue;
-            EERetargetAttack(inUnit, inGoal, static_cast<EEComplexUnit*>(theUnits[i]));
-            theFound = true;
-            break;
-        }
+    EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
+    EeCombatTargetHost theHost = {&theContext, EENewTargetRegions, EENewTargetRegionLength, EENewTargetRegionUnit,
+                                  EENewTargetUnitTile, EENewTargetScreen, EENewTargetMultiple, EENewTargetUnitID,
+                                  EENewTargetTest, EENewTargetPush};
+    EeCombatFindTargetIn in = {};
+    in.left = (int32_t)(inTile->GetX() - inRadius);
+    in.top = (int32_t)(inTile->GetY() - inRadius);
+    in.right = (int32_t)(inTile->GetX() + inRadius);
+    in.bottom = (int32_t)(inTile->GetY() + inRadius);
+    in.skip_kind = inArg6;
+    ee_combat_units_in_area(&in, &theHost);
+    std::vector<uint64_t> theHandles;
+    for (size_t i = 0; i < theContext.mUnits.size(); i++)
+        theHandles.push_back((uint64_t)(uintptr_t)theContext.mUnits[i]);
+    int32_t theChoice = ee_combat_choose_target(theHandles.empty() ? NULL : &theHandles[0], (uint32_t)theHandles.size(),
+                                                inArg6, &theHost);
+    bool theFound = theChoice >= 0;
+    if (theFound)
+        EERetargetAttack(inUnit, inGoal, theContext.mUnits[theChoice]);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'F', 'T'));
+        theRecord.I32(EECombatCaptureID(inUnit));
+        theRecord.I32((int32_t)inTile->GetX());
+        theRecord.I32((int32_t)inTile->GetY());
+        theRecord.I32((int32_t)inRadius);
+        theRecord.I32(inArg6);
+        theRecord.I32((int32_t)inArg7);
+        theRecord.I32((int32_t)theContext.mUnits.size());
+        for (size_t j = 0; j < theContext.mUnits.size(); j++)
+            theRecord.I32(EECombatCaptureID(theContext.mUnits[j]));
+        theRecord.I32(theFound);
+        theRecord.I32(theFound ? EECombatCaptureID(theContext.mUnits[theChoice]) : -1);
+        theRecord.Commit();
     }
     return theFound;
 }
@@ -3766,18 +3835,25 @@ void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::
 
 // FUNCTION: EXE 0x646bf2
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
+// (new: the decision is ee_combat's can_heal over a record of pure reads; the unit set is looked up only for a set
+// in the manager's range, which the original indexed unchecked)
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
 {
-    long theHitPoints = inTarget->mHitPoints;
-    long theMaximum = inTarget->mStats->mMaxHitPoints;
-    unsigned long theType = inTarget->mUnitClass->mUnitType;
     unsigned long theSet = inUnit->mStats->mWonderUnitSet;
-    if (theSet > 0 && inTarget->IsRepairable() && (float)theHitPoints / theMaximum <= inUnit->mUnitClass->GetHealThreshold()
-        && inTarget != inUnit
-        && (inUnit->mPlayer == inTarget->mPlayer || inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0)
-        && gUnitSetManager.Contains(theType, theSet))
-        return true;
-    return false;
+    EeCombatCanHealIn in = {};
+    in.has_set = theSet > 0;
+    in.repairable = inTarget->IsRepairable();
+    in.hit_points = (int32_t)inTarget->mHitPoints;
+    in.maximum = (int32_t)inTarget->mStats->mMaxHitPoints;
+    in.threshold = inUnit->mUnitClass->GetHealThreshold();
+    in.same_unit = inTarget == inUnit;
+    in.same_player = inUnit->mPlayer == inTarget->mPlayer;
+    in.allied = inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0;
+    in.in_set = theSet != 0 && theSet < gUnitSetManager.GetSize()
+                && gUnitSetManager.Contains(inTarget->mUnitClass->mUnitType, theSet);
+    int32_t theResult = ee_combat_can_heal(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'H'), in, theResult);
+    return theResult != 0;
 }
 
 // FUNCTION: EXE 0x646c87
@@ -4743,7 +4819,54 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
 // Finds where a dropped unit lands on a target: the model's drop point (lower when damaged) or its tile
 // Where a unit dropped onto inTarget (its goal's target when NULL) lands: the model's drop point (scaled down with
 // a damaged unit's health), else its tile; *outTarget the target (NULL when not placed)
+// (new: the model's and the tile's point are ee_combat's drop_point; the goal's location and the target stay here)
 void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
+{
+    EEUnitGoal* theGoal = inUnit->mActiveGoal;
+    GE3DPoint theLocation;
+    EeCombatDropIn in = {};
+    if (inTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
+        in.kind = EE_COMBAT_DROP_KIND_GOAL;
+        theGoal->GetGoalLocation(theLocation);
+    } else {
+        if (inTarget == NULL)
+            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
+            in.kind = EE_COMBAT_DROP_KIND_MODEL;
+            in.offset[0] = inTarget->GetModel()->mDefaultPoint.GetX();
+            in.offset[1] = inTarget->GetModel()->mDefaultPoint.GetY();
+            in.offset[2] = inTarget->GetModel()->mDefaultPoint.GetZ();
+            in.scale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
+            in.built = inTarget->mComplexUnit->mIsBuilt;
+            in.hit_points = (int32_t)inTarget->mHitPoints;
+            in.max_hit_points = (int32_t)inTarget->mStats->mMaxHitPoints;
+            memcpy(in.transformation, inTarget->mComplexUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.transformation));
+        } else if (inTarget->mTile != NULL) {
+            in.kind = EE_COMBAT_DROP_KIND_TILE;
+            in.tile_x = (int32_t)inTarget->GetTileX();
+            in.tile_y = (int32_t)inTarget->GetTileY();
+            in.tile_height = inTarget->mTile->GetHeight();
+        } else {
+            in.kind = EE_COMBAT_DROP_KIND_NONE;
+            inTarget = NULL;
+        }
+        if (in.kind != EE_COMBAT_DROP_KIND_NONE) {
+            EeCombatDropOut thePoint = ee_combat_drop_point(&in);
+            theLocation.SetX(thePoint.x);
+            theLocation.SetY(thePoint.y);
+            theLocation.SetZ(thePoint.z);
+        }
+    }
+    *outTarget = inTarget;
+    *outLocation = theLocation;
+    if (EESimCaptureRecord::Active()) {
+        struct { float x, y, z; int32_t target; } theOut = {outLocation->GetX(), outLocation->GetY(), outLocation->GetZ(),
+                                                            EECombatCaptureID(*outTarget)};
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'P'), in, theOut);
+    }
+}
+
+static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
 {
     EEUnitGoal* theGoal = inUnit->mActiveGoal;
     GE3DPoint theOffset;
@@ -6242,103 +6365,133 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
 // Tells whether something on the tile line from a unit to a target blocks its shot
 // Whether something on the tile line from inUnit to inTarget blocks inUnit's shot (the shot's height runs from
 // inUnit's weapon point to the top of inTarget); outX/outY: the last tile reached (inferred)
+// With EE_SIM_CAPTURE, a CBLB record: the call's units and tiles, the result, the last tile, the blocker (its golden
+// lines came from the C++ walk)
+static bool EEIsLineToUnitBlockedWalk(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
+
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
 {
-    std::vector<U2DPoint<long> > theTiles;
+    EEUnit* const kUnwritten = (EEUnit*)(uintptr_t)1;   // EEIsTileTopAbove writes the blocker, never reads it
+    EEUnit* theBlocker = kUnwritten;
+    bool theResult = EEIsLineToUnitBlockedWalk(inUnit, inTarget, &theBlocker, outArg4, outArg5);
+    if (theBlocker != kUnwritten)
+        *outArg3 = theBlocker;
+    if (EESimCaptureRecord::Active()) {
+        int32_t theIn[6] = {EECombatCaptureID(inUnit), EECombatCaptureID(inTarget), (int32_t)inUnit->GetTileX(),
+                            (int32_t)inUnit->GetTileY(), (int32_t)inTarget->GetTileX(), (int32_t)inTarget->GetTileY()};
+        int32_t theOut[5] = {theResult, (int32_t)*outArg4, (int32_t)*outArg5, theBlocker != kUnwritten,
+                             theBlocker != kUnwritten ? EECombatCaptureID(theBlocker) : -1};
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'L', 'B'), theIn, theOut);
+    }
+    return theResult;
+}
+
+// The world of the line of fire (ee_combat line_blocked, walks.rs): the shooter, the target, the caller's blocker
+struct EELineOfFireHost {
+    EEComplexUnit* mUnit;
+    EEUnit* mTarget;
+    EEUnit** mBlocker;
+    std::vector<int32_t> mPairs;
+};
+
+// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
+static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
+{
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    EEComplexUnit* inUnit = theHost->mUnit;
     GE3DPoint theStart;
-    long theFromX = inUnit->GetTileX();
-    bool theBlocked = false;
-    long theFromY = inUnit->GetTileY();
-    long theToX = inTarget->GetTileX();
-    long theToY = inTarget->GetTileY();
-    float theStep = 0.0f;
-    long theX = 0;
-    long theY = 0;
-    bool theBare = inUnit->GetUnitClass()->mIsMelee;
     GETransformation theTransformation;
     GETransformation theOrientation;
     unsigned long thePart;
     float theHeight;
-    float theZ;
-    unsigned long i;
-    if (!inUnit->GetUnitClass()->mSkipsLineOfFireCheck && UMAbs(theFromX - theToX) + UMAbs(theFromY - theToY) > 1
-        && inTarget->GetHitPoints() > 0) {
-        theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
-        if (!theBare) {
-            theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
-            float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
-            EEModel* theModel = inUnit->GetModel();
-            EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-            EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
-            unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-            unsigned long theIndex = theUnit->mWeaponTagPoint;
-            EETagPointList::Scale(theTransformation, theScale);
-            if (theModel->GetNumParts() > 0) {
-                theOrientation.MakeIdentity();
-                if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
-                    theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
-                (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
-            } else if (theList != NULL && theList->mPoints.size() > theIndex) {
-                theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-            } else {
-                theUnit = inUnit->GetComplexUnit();
-                const GE3DPoint& theTop =
-                    theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
-                theStart.SetX(theTop.GetX());
-                theStart.SetY(theTop.GetY());
-                theStart.SetZ(theTop.GetZ() * 0.5f);
-                theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
-            }
-            if (theList != NULL)
-                theHeight = theStart.GetZ();
+    theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
+    if (!inBare) {
+        theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
+        float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
+        EEModel* theModel = inUnit->GetModel();
+        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
+        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        unsigned long theIndex = theUnit->mWeaponTagPoint;
+        EETagPointList::Scale(theTransformation, theScale);
+        if (theModel->GetNumParts() > 0) {
+            theOrientation.MakeIdentity();
+            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
+                theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
+            (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
+        } else if (theList != NULL && theList->mPoints.size() > theIndex) {
+            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
+        } else {
+            theUnit = inUnit->GetComplexUnit();
+            const GE3DPoint& theTop =
+                theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
+            theStart.SetX(theTop.GetX());
+            theStart.SetY(theTop.GetY());
+            theStart.SetZ(theTop.GetZ() * 0.5f);
+            theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
         }
-        EEGetTileLine(theFromX, theFromY, theToX, theToY, &theTiles, 0, 1);
-        if (!theBare && inTarget->GetComplexUnit() != NULL) {
-            EEComplexUnit* theTarget = inTarget->GetComplexUnit();
-            unsigned long theFrame = theTarget->mPhysicalModel.GetFrame();
-            unsigned long theSet = theTarget->mAnimation;
-            float theTop = inTarget->GetModel()->mModels[theSet]->GetBoundingBox(theFrame).GetTopRightBack().GetZ()
-                * inTarget->mStats->GetScale();
-            if (!theTarget->mIsBuilt)
-                theTop *= (float)theTarget->GetHitPoints() / theTarget->mStats->mMaxHitPoints;
-            theTop += theTarget->mPhysicalModel.GetLocation().GetZ();
-            if (theTiles.size() != 0)
-                theStep = (theTop - theHeight) / (theTiles.size() + 1);
-            else
-                theStep = 0.0f;
-        }
-        theX = theFromX;
-        theY = theFromY;
-        theZ = theHeight;
-        for (i = 0; i < theTiles.size(); i++) {
-            if (theBlocked)
-                break;
-            long theTileX = theTiles[i].mX;
-            long theTileY = theTiles[i].mY;
-            if (!theBare)
-                theZ = (i + 1) * theStep + theHeight;
-            if (UMAbs(theTileX - theX) == 1 && UMAbs(theTileY - theY) == 1) {
-                float theCorner = theZ - theStep * 0.5f;
-                if (EEIsTileTopAbove(theTileX, theY, theCorner, outArg3, theBare)
-                    && EEIsTileTopAbove(theX, theTileY, theCorner, outArg3, theBare)) {
-                    theBlocked = true;
-                    theX = theTileX;
-                    continue;
-                }
-            }
-            theBlocked = EEIsTileTopAbove(theTileX, theTileY, theZ, outArg3, theBare);
-            theX = theTileX;
-            theY = theTileY;
-        }
-        if (!theBlocked && UMAbs(theToX - theX) == 1 && UMAbs(theToY - theY) == 1
-            && EEIsTileTopAbove(theToX, theY, theZ, outArg3, theBare) && EEIsTileTopAbove(theX, theToY, theZ, outArg3, theBare)) {
-            theBlocked = true;
-            theX = theToX;
-        }
+        if (theList != NULL)
+            theHeight = theStart.GetZ();
     }
-    *outArg4 = theX;
-    *outArg5 = theY;
-    return theBlocked;
+    return theHeight;
+}
+
+static const int32_t* EELineOfFireTileLine(void* inContext, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY,
+                                           uint32_t* outCount)
+{
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    std::vector<U2DPoint<long> > theTiles;
+    EEGetTileLine(inFromX, inFromY, inToX, inToY, &theTiles, 0, 1);
+    theHost->mPairs.clear();
+    for (size_t i = 0; i < theTiles.size(); i++) {
+        theHost->mPairs.push_back((int32_t)theTiles[i].mX);
+        theHost->mPairs.push_back((int32_t)theTiles[i].mY);
+    }
+    *outCount = (uint32_t)theTiles.size();
+    return theHost->mPairs.empty() ? NULL : &theHost->mPairs[0];
+}
+
+static void EELineOfFireTargetTop(void* inContext, EeCombatTargetTop* outTop)
+{
+    EEUnit* inTarget = ((EELineOfFireHost*)inContext)->mTarget;
+    EEComplexUnit* theTarget = inTarget->GetComplexUnit();
+    if (theTarget == NULL)
+        return;
+    unsigned long theFrame = theTarget->mPhysicalModel.GetFrame();
+    unsigned long theSet = theTarget->mAnimation;
+    outTop->present = 1;
+    outTop->box_top = inTarget->GetModel()->mModels[theSet]->GetBoundingBox(theFrame).GetTopRightBack().GetZ();
+    outTop->scale = inTarget->mStats->GetScale();
+    outTop->built = theTarget->mIsBuilt;
+    outTop->hit_points = (int32_t)theTarget->GetHitPoints();
+    outTop->max_hit_points = (int32_t)theTarget->mStats->mMaxHitPoints;
+    outTop->z = theTarget->mPhysicalModel.GetLocation().GetZ();
+}
+
+static int32_t EELineOfFireTileTopAbove(void* inContext, int32_t inX, int32_t inY, float inHeight, int32_t inBare)
+{
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    return EEIsTileTopAbove((long)inX, (long)inY, inHeight, theHost->mBlocker, inBare != 0);
+}
+
+// (new: the walk is ee_combat's line_blocked; the weapon point, the target's top, the tile line and the walls stay here)
+static bool EEIsLineToUnitBlockedWalk(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
+{
+    EELineOfFireHost theContext = {inUnit, inTarget, outArg3, std::vector<int32_t>()};
+    EeCombatLineHost theHost = {&theContext, EELineOfFireStartHeight, EELineOfFireTileLine, EELineOfFireTargetTop,
+                                EELineOfFireTileTopAbove};
+    EeCombatLineIn in = {};
+    in.from_x = (int32_t)inUnit->GetTileX();
+    in.from_y = (int32_t)inUnit->GetTileY();
+    in.to_x = (int32_t)inTarget->GetTileX();
+    in.to_y = (int32_t)inTarget->GetTileY();
+    in.skips_check = inUnit->GetUnitClass()->mSkipsLineOfFireCheck;
+    in.target_alive = inTarget->GetHitPoints() > 0;
+    in.bare = inUnit->GetUnitClass()->mIsMelee;
+    EeCombatLineOut theOut = ee_combat_line_blocked(&in, &theHost);
+    *outArg4 = theOut.x;
+    *outArg5 = theOut.y;
+    return theOut.blocked != 0;
 }
 
 // FUNCTION: EXE 0x64e3b2

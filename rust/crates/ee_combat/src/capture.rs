@@ -2,11 +2,12 @@
 //! the tag, the input record's bytes, the output's bytes. `replay` recomputes each output here and compares it byte
 //! for byte; the gate (`tools/sim_capture.py replay`) runs it over captures of the C++ formulas.
 
+use crate::decide::*;
 use crate::*;
 use std::collections::BTreeMap;
 
 /// The tags (the little-endian u32 of the four letters) and their formulas' names.
-pub const TAGS: [(&[u8; 4], &str); 20] = [
+pub const TAGS: [(&[u8; 4], &str); 23] = [
     (b"CBAF", "attack factor"),
     (b"CBDM", "damage"),
     (b"CBEL", "elevation"),
@@ -27,6 +28,9 @@ pub const TAGS: [(&[u8; 4], &str); 20] = [
     (b"CBRT", "gather reach"),
     (b"CBHR", "heal range"),
     (b"CBDT", "damage row"),
+    (b"CBCN", "can convert"),
+    (b"CBCH", "can heal"),
+    (b"CBDP", "drop point (model and tile)"),
 ];
 
 pub fn tag(name: &[u8; 4]) -> u32 {
@@ -95,6 +99,11 @@ unsafe impl Plain for EeCombatRangeIn {}
 unsafe impl Plain for EeCombatReachIn {}
 unsafe impl Plain for EeCombatDamageRowIn {}
 unsafe impl Plain for EeCombatDamageRowOut {}
+unsafe impl Plain for EeCombatCanConvertIn {}
+unsafe impl Plain for EeCombatCanConvertOut {}
+unsafe impl Plain for EeCombatCanHealIn {}
+unsafe impl Plain for EeCombatDropIn {}
+unsafe impl Plain for EeCombatDropOut {}
 
 fn bytes_of<T: Plain>(value: &T) -> &[u8] {
     // SAFETY: a Plain value is size_of::<T>() initialized bytes (4-byte fields, no padding)
@@ -162,6 +171,21 @@ pub fn replay(record: &Record) -> Option<Result<bool, String>> {
         check(p, |v: &[f32; 2]| within_range(v[0], v[1]))
     } else if t == tag(b"CBDT") {
         check(p, damage_row)
+    } else if t == tag(b"CBCN") {
+        check(p, can_convert)
+    } else if t == tag(b"CBCH") {
+        check(p, can_heal)
+    } else if t == tag(b"CBDP") {
+        // the input, then the point and the target's id: only the model's and the tile's point are computed here
+        let size = std::mem::size_of::<EeCombatDropIn>();
+        if p.len() != size + 16 {
+            return Some(Err(format!("payload of {} bytes, not {}", p.len(), size + 16)));
+        }
+        let input: EeCombatDropIn = from_bytes(&p[..size]);
+        if input.kind != DROP_KIND_MODEL && input.kind != DROP_KIND_TILE {
+            return None;
+        }
+        Ok(bytes_of(&drop_point(&input)) == &p[size..size + 12])
     } else {
         return None;
     })

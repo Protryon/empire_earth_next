@@ -189,47 +189,51 @@ void EEUCBasicPriest::UnitCreated(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x60da86
 // Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
 // temple's range); outFlag is set when the target is shielded
+// (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
+// read only for a valid ammo column, the shield and the building priest's distance always: none has side effects)
 bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag)
 {
     long theCost = EEGetConversionCost(inPriest);
-    bool theResult = false;
-    bool thePower;
-    if (!inPriest->mUnitClass->IsCrusader() && inPriest->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
-        gCivPowersManager.HasPower(inPriest->GetPlayer(), kCivPowerAdaptation))
-        thePower = true;
-    else
-        thePower = false;
     EEUnitClass* theClass = inTarget->mUnitClass;
-    EEUnitClassUpgrade* theStats = inPriest->mStats;
-    EEUnitClassUpgrade* theTargetStats = inTarget->mStats;
-    if (inTarget->mPlayer == inPriest->mPlayer || inPriest->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] == 0 ||
-        theStats->mConversionRate <= 0.0f || (inTarget->mIsDisabled && !inTarget->IsProtected()))
-        return theResult;
-    if ((theTargetStats->mConversionResistance < 1.0f || (theClass->mUnitType == kUnitTypeTownCenter && thePower)) && inTarget->mHitPoints > 0 &&
-        theClass->CanBeAttacked() && gDamageTable[theClass->mFamily][inPriest->mUnitClass->mAmmoType] != 0.0f &&
-        (theClass->mCategory != inPriest->mUnitClass->mCategory || theStats->mConvertsPriests) && inPriest->GetPower() >= theCost &&
-        (inPriest->mUnitClass->mCategory != kUnitCategoryBuildingPriest || theClass->mCategory != kUnitCategoryLandPriest || theStats->mConvertsPriests))
-        theResult = true;
-    if (theClass->IsLandBuilding() && !theStats->mConvertsBuildings)
-        theResult = theResult && thePower && (theClass->mUnitType == kUnitTypeTownCenter || theClass->mUnitType == kUnitTypeSettlement) &&
-                    inPriest->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochCopper;
-    if (inPriest->mUnitClass->mCategory == kUnitCategoryBuildingPriest) {
-        GE3DPoint thePosition(inPriest->mPhysicalModel.GetLocation().GetX(),
-                              inPriest->mPhysicalModel.GetLocation().GetY(),
-                              inPriest->mPhysicalModel.GetLocation().GetZ());
-        GE3DPoint theTarget(inTarget->mPhysicalModel.GetLocation().GetX(),
-                            inTarget->mPhysicalModel.GetLocation().GetY(),
-                            inTarget->mPhysicalModel.GetLocation().GetZ());
-        float theRange = inPriest->mStats->mRange;
-        if (thePosition.DistanceToSquared(theTarget) >= theRange * theRange)
-            theResult = false;
-    }
-    if (theResult && !inPriest->mUnitClass->mIsCyber && !theClass->mIsCyber) {
-        bool theShielded = inTarget->HasEffect(4);
-        outFlag = theShielded;
-        theResult = !theShielded;
-    }
-    return theResult;
+    EEUnitClass* thePriestClass = inPriest->mUnitClass;
+    EeCombatCanConvertIn in = {};
+    in.crusader = thePriestClass->IsCrusader();
+    in.building_priest = thePriestClass->mCategory == kUnitCategoryBuildingPriest;
+    in.adaptation = gCivPowersManager.HasPower(inPriest->GetPlayer(), kCivPowerAdaptation);
+    in.same_player = inTarget->mPlayer == inPriest->mPlayer;
+    in.enemy = inPriest->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0;
+    in.conversion_rate = inPriest->mStats->mConversionRate;
+    in.target_disabled = inTarget->mIsDisabled;
+    in.target_protected = inTarget->IsProtected();
+    in.resistance = inTarget->mStats->mConversionResistance;
+    in.target_town_center = theClass->mUnitType == kUnitTypeTownCenter;
+    in.target_settlement = theClass->mUnitType == kUnitTypeSettlement;
+    in.target_hit_points = (int32_t)inTarget->mHitPoints;
+    in.attackable = theClass->CanBeAttacked();
+    in.damage = thePriestClass->mAmmoType >= 0 ? gDamageTable[theClass->mFamily][thePriestClass->mAmmoType] : 0.0f;
+    in.same_category = theClass->mCategory == thePriestClass->mCategory;
+    in.converts_priests = inPriest->mStats->mConvertsPriests;
+    in.power = (int32_t)inPriest->GetPower();
+    in.cost = (int32_t)theCost;
+    in.target_land_priest = theClass->mCategory == kUnitCategoryLandPriest;
+    in.converts_buildings = inPriest->mStats->mConvertsBuildings;
+    in.target_land_building = theClass->IsLandBuilding();
+    in.at_copper = inPriest->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochCopper;
+    in.priest_x = inPriest->mPhysicalModel.GetLocation().GetX();
+    in.priest_y = inPriest->mPhysicalModel.GetLocation().GetY();
+    in.priest_z = inPriest->mPhysicalModel.GetLocation().GetZ();
+    in.target_x = inTarget->mPhysicalModel.GetLocation().GetX();
+    in.target_y = inTarget->mPhysicalModel.GetLocation().GetY();
+    in.target_z = inTarget->mPhysicalModel.GetLocation().GetZ();
+    in.range = inPriest->mStats->mRange;
+    in.priest_cyber = thePriestClass->mIsCyber;
+    in.target_cyber = theClass->mIsCyber;
+    in.shielded = inTarget->HasEffect(4);
+    EeCombatCanConvertOut theOut = ee_combat_can_convert(&in);
+    if (theOut.flag_written)
+        outFlag = theOut.flag != 0;
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'N'), in, theOut);
+    return theOut.result != 0;
 }
 
 // FUNCTION: EXE 0x60dd0a
