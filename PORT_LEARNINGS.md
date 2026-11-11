@@ -5547,3 +5547,83 @@ composition (single- and multi-line), `DrawPolygons`' selection spans, `GetSelec
   every label, list box (the map and civilization lists, the saved games), check box and radio button, the edit
   boxes (the player name, chat, the lobby), the IME underlines only with an IME. The lead's tour must compare the
   menu captures pixel for pixel against the build before this branch.
+
+## R6: WONGUI's layout arithmetic, scrolling, input box text model, list lines, focus and button rules in Rust (ee_won guilayout.rs, guiscroll.rs, guiedit.rs, guilist.rs, guifocus.rs, guiwrap.rs; branch rust-r6-won8, 2026-11-11)
+
+Round 8 of R6: the WON GUI toolkit (WONGUI, 39.2k lines; its map by area, size, lobby use and dependency is in
+RUST_PLAN's "R6 WON, the rest" row). The C++ classes keep their objects, child lists, vtables, virtual calls,
+fonts, events and drawing; Rust answers the numbers and decisions they made. Each piece was captured first: a
+driver in `tests/won` (in `xbuild.py` `WON_TESTS`) runs the original's statements, copied from the C++ before the
+port with the components replaced by the numbers and flags they read and their `SetPos` / `SetSize` /
+`SetVisible` calls by the values they received, next to the Rust ABI over generated inputs (a fixed LCG; small,
+edge and wrapping ints).
+
+- **Layout (`guilayout.rs`).** `WONRectangle`'s intersection, union (an empty rectangle becomes the other) and the
+  asymmetric overlap test; `Component::SetSize`'s clamp and no-change test and `SetSizeAtLeast`'s grow test;
+  `ChildLayoutInstruction::Execute` (the 14 flags from the lowest bit up, each seeing the earlier ones: GrowToRight
+  after Right measures from the new x); the centre, same-size, clear-right, space-evenly (the leftover pixels one
+  each to the first gaps), no-overlap (clamped one way for the parent and the other for a sibling), size-at-least,
+  percentage (`SetBorders`' anchor choice as indices, `DoCalc`) and vertical-flow layouts; the LAYOUT rule's
+  instruction names (the C++ still compares each with `GUIString::CompareNoCase`, in the original's order) and
+  which offsets a chained or repeated rule zeroes. `won_guilayout_test`: 2,914,011 checks, 0 failures. GridLayout
+  stays C++ (nothing uses it; its `Execute()` overrides no layout slot).
+- **Scrolling (`guiscroll.rs`).** `Scrollbar::LayoutThumb` (the thumb's share of the track, the position's share of
+  the free track, a thumb pushed back inside always moved), `MouseDrag`'s thumb and position,
+  `HandleComponentEvent`'s line and page steps and clamp; `ScrollArea`'s offsets clamp, `OnBottom`, the view inside
+  the padding and the bottom pin, its desired and fitting sizes; `ScrollbarScroller`'s conditions (a visible
+  conditional bar is left alone while conditions are applied) and the bars' totals; `ButtonScroller`'s button
+  conditions and which buttons can still scroll. `won_guiscroll_test`: 18,889,559 checks, 0 failures. A zero total
+  with a negative page divides by zero in both (the original crashed; so does the port).
+- **The input box (`guiedit.rs`).** `MoveCursor` (found: the word move left stops just after the space before the
+  word it crossed, "ab  cd ef" from the end goes to 6, not 7; kept), `SelectRange`, the Home / End / Left / Right
+  selection (Home and End measure the real text, Left and Right walk the shown one, as before), what Backspace and
+  Delete keep (as the `assign` calls the original made), `SetSelText`'s cut at the first unit below 32 (the
+  original's `int` of a `wchar_t`) and its limit, the cursor's blink and blink rate, `CheckSel`'s character under
+  the mouse and the selection it extends, `AdjustPosition`'s scroll and `TimerEvent`'s drag scroll. The font stays
+  C++: the box measures the cursor's prefix and the characters the walk can reach (`GetCharacterWidth` for each, a
+  few more calls than the original made, all without side effects but the font's glyph cache) and hands the widths
+  over. The history, `NumericFilter` (the CRT's `isdigit`) and the clipboard stay C++. `won_guiedit_test`:
+  9,437,056 checks, 0 failures.
+- **The list (`guilist.rs`).** `FindLineAt` is the STL's `lower_bound` walk exactly (the halving loop both
+  libraries use), reading the items' tops through a callback, so a batch insert's unsorted tops find what they
+  found; `FindItemAt`'s test, `IsItemVisible` (partial lines with 0x80), `EnsureVisible`, `EnforceInvariants`'
+  stacking (the heights read first, then each item's virtual `SetPos`: none of the overrides changes a height),
+  the full-line scroll's extra height, `FindSelectableItem`, `SelectRange`'s bounds, the keys' target line and
+  scroll, the scrolls an insert, a refresh and a delete leave, a batch insert's provisional top, a refresh's new
+  place, `DeleteRange`'s bounds and the item tool tip's test. `won_guilist_test`: 22,613,891 checks, 0 failures.
+  - **Found: two original faults.** With the wrap flag (0x800, the popup menus') and neither end item
+    selectable, `FindSelectableItem` called itself without end (a stack overflow); the port answers no item
+    (behaviour change: a crash becomes no selection). With the wrap flag, Left and Right's "no line" (-1) wrapped
+    to the end like any line above the first, so they moved the selection too; kept.
+- **Focus and buttons (`guifocus.rs`).** `WantFocus`, `FindChildAt`'s verdict on the topmost child hit (disabled
+  or blocked by a modal state: no child at all), `GetNextFocusId` (a byte that skips 0),
+  `SetFocusToLastFocusChild`'s pick (found: the byte difference is compared as an `int` and kept as a byte, so
+  an id newer than the current one wins until a smaller byte replaces it, and the current id itself, when not
+  skipped, gives 0, which counts as no pick: the next candidate is taken; kept), `TabFocus`'s start and its
+  loop's bound; `Button`'s release (held, dragged off, repeat, activate on press), drag, keys (Enter on the default
+  button, Space, the radio arrows) and repeat timer, and `WONButton::GetButtonState`'s state and its fallback
+  cells. The C++ keeps the child lists, the virtual `TabFocus` / `HitTest` / `RequestFocus` calls, the radio
+  groups, sounds, timers and events. `won_guifocus_test`: 905,952 checks, 0 failures.
+- **The word wrap (`guiwrap.rs`).** `WrappedText::CalcWrap`'s loop (the breaks at the last space that fits, inside a
+  word when none does, at CR, LF and CR LF; the text's width; the unit after a final CR is the terminator, as the
+  original read it) and `SetMaxWidth`'s rewrap rule. The C++ measures every unit once with `GetCharacterWidth`
+  (the original measured the units it visited, some twice after a backtrack: the same numbers, a different call
+  count) and keeps the break list (`BreakInfo` still narrows to `unsigned short`), the height and the paint. A
+  unit breaks at most twice (inside a word, then alone when it is wider than the line); the C++ hands room for
+  `2 * len + 1` and asks again with more if the count says so. `won_guiwrap_test`: 3,559,089 checks, 0 failures.
+  Its first oracle run failed when drive C: filled up (EE-SIM's per-run stage slots under `build/sim/stage`, now
+  deleted by `tools/sim.py` when a game exits); it was committed after a clean rerun (seeds 2-7 identical).
+- **What exercises what.** Every lobby load lays out the 63 .cfg files' components (the layouts, `SetSize`,
+  the rectangles, the wrap of every label and button text). The LAN game (`lan_game.py`) adds: the clicks
+  (`wonclick`: the hit verdict, `Button`'s press and release), typing (`wonkey`: `SetSelText`'s cut and limit, the
+  caret's blink and scroll), the game and player lists and the chat (the list's lines, stacking, inserts,
+  deletes and scrolls, the scrollbars' thumbs and the scroll areas' clamps), the button states at every paint.
+  Only a person at the lobby reaches: the input box's mouse selection, drag scroll and arrow / Home / End keys,
+  Backspace and Delete, the list's keys, wrap and tool tips, Tab focus, the last-focus pick, the radio arrows,
+  Space, Enter and the button repeat, the scrollbar drag and its arrows and track. Every move here changes layout
+  or drawing: a lobby run checks them. Nothing here touches the simulation: the oracle was identical after each
+  gated build (six code commits, each built, oracle-checked and Rust-gated on its own).
+- **Still C++ of WONGUI:** the component objects and their event dispatch (Window, WindowManager, RootContainer,
+  the popups and modality), TextArea and its segments (the chat's rich text wrap), ComboBox, TabCtrl, Splitter,
+  MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
+  value readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the platform backend).

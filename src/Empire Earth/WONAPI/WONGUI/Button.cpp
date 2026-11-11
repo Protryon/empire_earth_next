@@ -10,6 +10,9 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The release, drag, key and repeat decisions are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs);
+// this unit keeps the buttons, their radio groups, sounds, timers, focus and events.
 namespace WONAPI {
 // Current default button and the dialog's default button (0x00966224 and 0x00966228 in the original)
 SmartPtr<Button> Button::mDefaultButton;
@@ -206,19 +209,20 @@ void Button::ButtonDown()
 // Releases a pressed button (unless the mouse or key still holds it), activating it unless dragged off
 void Button::ButtonUp(bool activate)
 {
-    if(!this->IsPressed() || this->mMouseDownState==2 || this->mKeyDown) return;
-    if(this->mMouseDownState==1) activate=false;
+    EeWonButtonUp anUp=ee_won_gui_button_up((uint32_t)mButtonFlags,this->mMouseDownState,this->mKeyDown,activate);
+    if(anUp==EeWonButtonUp::Ignore) return;
     this->SetButtonFlags(0x20,false);
     this->Invalidate();
-    if(this->IsRepeat()) { this->RequestTimer(false); return; }
-    if(activate && !this->IsActivateOnPress()) this->Fn2F3440();
+    if(anUp==EeWonButtonUp::StopRepeat) { this->RequestTimer(false); return; }
+    if(anUp==EeWonButtonUp::Activate) this->Fn2F3440();
 }
 // FUNCTION: WON 0x006f3740
 // Presses the button while dragging inside it and releases it, without activating, outside
 void Button::MouseDrag(int x,int y)
 {
-    if(this->mMouseDownState==0) return;
-    if(x>=0 && y>=0 && x<this->Width() && y<this->Height()) {
+    int aWhere=ee_won_gui_button_drag(this->mMouseDownState,x,y,this->Width(),this->Height());
+    if(aWhere<0) return;
+    if(aWhere==0) {
         this->mMouseDownState=2;
         if(!this->IsPressed()) { this->ButtonDown(); this->mDelayAcc=500; }
     } else { this->mMouseDownState=1; this->ButtonUp(false); }
@@ -244,25 +248,27 @@ void Button::LostFocus()
 // Handles keys: Enter activates the default button, Space presses, arrows move and activate within a radio group
 bool Button::KeyDown(int key)
 {
-    if(key==13) {
-        if(this->IsDefaultButton()) { this->Fn2F3440(); return true; }
-    } else if(key==32 && !this->mKeyDown) {
+    EeWonButtonKey anAction=ee_won_gui_button_key(key,this->IsDefaultButton(),this->mKeyDown,this->IsRadio());
+    switch(anAction) {
+    case EeWonButtonKey::Activate:
+        this->Fn2F3440();
+        return true;
+    case EeWonButtonKey::Press:
         this->mKeyDown=true;
         if(this->mParent!=NULL) this->mParent->mHasUsedDialogKeys=true;
         this->ButtonDown();
         return true;
-    }
-    if(this->IsRadio()) {
-        bool forward;
-        if(key==38 || key==37) forward=false;
-        else if(key==40 || key==39) forward=true;
-        else return false;
+    case EeWonButtonKey::RadioBack:
+    case EeWonButtonKey::RadioForward:
+    {
         if(this->mParent!=NULL) this->mParent->mHasUsedDialogKeys=true;
-        Button* next=this->GetNextRadio(forward);
+        Button* next=this->GetNextRadio(anAction==EeWonButtonKey::RadioForward);
         if(next!=NULL) { next->Fn2F3440(); next->RequestFocus(); }
         return true;
     }
-    return false;
+    default:
+        return false;
+    }
 }
 // FUNCTION: WON 0x006f38b0
 // Releases the button on Space, activating it
@@ -279,8 +285,7 @@ bool Button::KeyUp(int key)
 // Repeats the activation every 100 ms after an initial 500 ms hold
 bool Button::TimerEvent(int delta)
 {
-    this->mDelayAcc+=delta;
-    if(this->mDelayAcc>500) { this->mDelayAcc-=100; this->Fn2F3440(); }
+    if(ee_won_gui_button_repeat(this->mDelayAcc,delta,&this->mDelayAcc)) this->Fn2F3440();
     return true;
 }
 // FUNCTION: WON 0x006f3900

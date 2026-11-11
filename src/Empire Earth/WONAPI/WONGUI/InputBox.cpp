@@ -14,6 +14,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006f7f70
+// The selection model, the cursor moves, the deletes' parts, the paste's cut and limit, the blink, the character
+// under the mouse and the horizontal scroll are ee_won's guiedit module (rust/crates/ee_won/src/guiedit.rs); this
+// unit keeps the box, its texts, history, font calls, clipboard, events and paint.
 // Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
 bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
 {
@@ -120,57 +123,30 @@ void InputBox::CheckSel(int x, int y, bool newStart)
 	if(!this->mAllowSelection)
 		return;
 
-	if(x<0) x = 0;
-	else if(x>this->Width()) x = this->Width();
-	
-	x += this->mHorzOffset - this->mTextRect.x;
-
+	// the font's widths: the cursor's prefix and each character the walk from it can reach (back from the
+	// cursor when the prefix reaches the mouse, else forward)
+	int aContentX = ee_won_gui_sel_x(x, this->Width(), this->mHorzOffset, this->mTextRect.x);
 	Font* aFM = this->mFont.get();
 	int aSelChar = this->mBackwardsSel?this->mSelStartChar:this->mSelEndChar;
 	int aWidth = aFM->GetStringWidth(this->mText, 0, aSelChar);
-	if(aWidth >= x)
+	int aLength = this->mText.length();
+	std::vector<int> aWidths(aLength, 0);
+	if(aWidth >= aContentX)
 	{
-		aSelChar--;
-		while(aSelChar>=0 && aWidth>=x)
-		{
-			aWidth-=aFM->GetCharacterWidth(this->mText[aSelChar]);
-			if(aWidth>=x)
-				aSelChar--;
-		}
-		aSelChar++;
+		for(int i = 0; i < aSelChar && i < aLength; i++)
+			aWidths[i] = aFM->GetCharacterWidth(this->mText[i]);
 	}
 	else
 	{
-		while(aSelChar<this->mText.length() && aWidth<x)
-		{
-			aWidth+=aFM->GetCharacterWidth(this->mText[aSelChar]);
-
-				aSelChar++;
-		}
+		for(int i = aSelChar < 0 ? 0 : aSelChar; i < aLength; i++)
+			aWidths[i] = aFM->GetCharacterWidth(this->mText[i]);
 	}
-	if(aSelChar<0)
-		aSelChar=0;
-	if(aSelChar>this->mText.length())
-		aSelChar = this->mText.length();
-
-	if(newStart)
-	{
-		this->mSelStartChar = this->mSelEndChar = aSelChar;
-		this->mBackwardsSel = false;
-	}
-	else
-	{
-		if(this->mBackwardsSel)
-			this->mSelStartChar = aSelChar;
-		else
-			this->mSelEndChar = aSelChar;
-
-		if(this->mSelStartChar > this->mSelEndChar)
-		{
-			this->mBackwardsSel = !this->mBackwardsSel;
-			std::swap(this->mSelStartChar,this->mSelEndChar);
-		}
-	}
+	EeWonSel aSel = { this->mSelStartChar, this->mSelEndChar, this->mBackwardsSel };
+	ee_won_gui_check_sel(x, this->Width(), this->mHorzOffset, this->mTextRect.x, aWidth, aSelChar,
+		aWidths.empty() ? NULL : &aWidths[0], aWidths.size(), newStart, &aSel);
+	this->mSelStartChar = aSel.start;
+	this->mSelEndChar = aSel.end;
+	this->mBackwardsSel = aSel.backwards;
 	
 	this->Invalidate();
 }
@@ -222,62 +198,44 @@ void InputBox::MouseDrag(int x, int y)
 // Sets the cursor's on and off blink times (off defaults to on when not positive)
 void InputBox::SetCursorBlinkRate(int theOnTime, int theOffTime) 
 {
-	if(theOffTime<=0)
-		theOffTime = theOnTime;
-
 	this->mCursorOnTime = theOnTime;
-	this->mCursorOffTime = theOffTime;
+	this->mCursorOffTime = ee_won_gui_blink_off_time(theOnTime, theOffTime);
 }
 
 // FUNCTION: WON 0x006f8800
 // Blinks the cursor and, while drag-selecting outside the box, scrolls the text and extends the selection
 bool InputBox::TimerEvent(int theDelta)
 {
-	this->mCursorDelay+=theDelta;
-	if(this->mCursorOn && this->mCursorDelay>this->mCursorOnTime)
-	{
-		this->mCursorDelay%=this->mCursorOnTime;
-		this->mCursorOn = false;
+	EeWonBlink aBlink = ee_won_gui_blink(this->mCursorDelay, theDelta, this->mCursorOn, this->mCursorOnTime,
+		this->mCursorOffTime);
+	this->mCursorDelay = aBlink.delay;
+	this->mCursorOn = aBlink.on;
+	if(aBlink.changed)
 		this->Invalidate();
-	}
-	else if(!this->mCursorOn && this->mCursorDelay>this->mCursorOffTime)
-	{
-		this->mCursorDelay%=this->mCursorOffTime;
-		this->mCursorOn = true;
-		this->Invalidate();		
-	}
 
 	if(!this->mSelecting)
 		return true;
 	int x,y;
 	this->GetMousePos(x,y);
-	if((x>=0 && x<=this->Width() && y>=0 && y<=this->Height()))
-		return true;
 	int aCharPos = this->mBackwardsSel?this->mSelStartChar:this->mSelEndChar;
-
-	if(x>this->Width() && aCharPos!=this->mText.length())
-	{
-		this->mHorzOffset += x-this->Width();
-		if(this->mHorzOffset<0)
-			this->mHorzOffset = 0;
-	}
-	else if(x<0 && aCharPos!=0)
-		this->mHorzOffset += x;
+	int anOffset = this->mHorzOffset;
+	if(!ee_won_gui_drag_scroll(x, y, this->Width(), this->Height(), aCharPos, this->mText.length(), this->mHorzOffset,
+		&anOffset))
+		return true;
+	this->mHorzOffset = anOffset;
 
 	this->CheckSel(x,y,false);
 
 	aCharPos = this->mBackwardsSel?this->mSelStartChar:this->mSelEndChar;
+	int aTextWidth = 0, anM = 0;
 	if(aCharPos==this->mText.length())
 	{
-		int aTextWidth = this->mFont->GetStringWidth(this->mText);
+		aTextWidth = this->mFont->GetStringWidth(this->mText);
 		if(aTextWidth + this->mHorzOffset > this->mTextRect.width)
-			this->mHorzOffset = aTextWidth-this->mTextRect.width+this->mFont->GetStringWidth(GUIString("M"));
+			anM = this->mFont->GetStringWidth(GUIString("M"));
 	}
-	if(aCharPos==0)
-		this->mHorzOffset = 0;
-
-	if(this->mHorzOffset<0)
-		this->mHorzOffset = 0;
+	this->mHorzOffset = ee_won_gui_drag_scroll_end(aCharPos, this->mText.length(), aTextWidth, anM,
+		this->mTextRect.width, this->mHorzOffset);
 
 	return true;
 }
@@ -291,19 +249,7 @@ void InputBox::AdjustPosition()
 
 	int aPreWidth = aFM->GetStringWidth(this->mText, 0, aCursorPos);
 	int anM = aFM->GetCharacterWidth('M');
-
-	if(aPreWidth - this->mHorzOffset < 0)
-	{
-		this->mHorzOffset = aPreWidth - 10*anM;
-		if(this->mHorzOffset<0)
-			this->mHorzOffset = 0;
-	}
-
-	if(aPreWidth - this->mHorzOffset >= this->mTextRect.width)
-	{
-		if(this->mTextRect.width!=0 && aPreWidth-this->mHorzOffset!=0)
-			this->mHorzOffset = aPreWidth - this->mTextRect.width + anM;
-	}
+	this->mHorzOffset = ee_won_gui_cursor_scroll(aPreWidth, anM, this->mHorzOffset, this->mTextRect.width);
 }
 
 // FUNCTION: WON 0x006f8aa0
@@ -311,17 +257,10 @@ void InputBox::AdjustPosition()
 void InputBox::SelectRange(int theStartPos, int theEndPos)
 {
 
-	if(theStartPos<0) theStartPos = this->mText.length();
-	if(theEndPos<0) theEndPos = this->mText.length();
-	if(theStartPos>this->mText.length()) theStartPos = this->mText.length();
-	if(theEndPos>this->mText.length()) theEndPos = this->mText.length();
-
-	this->mBackwardsSel = theStartPos>theEndPos;
-	if(this->mBackwardsSel)
-		std::swap(theStartPos,theEndPos);
-
-	this->mSelStartChar = theStartPos;
-	this->mSelEndChar = theEndPos;
+	EeWonSel aSel = ee_won_gui_select_range(theStartPos, theEndPos, this->mText.length());
+	this->mBackwardsSel = aSel.backwards;
+	this->mSelStartChar = aSel.start;
+	this->mSelEndChar = aSel.end;
 	this->AdjustPosition();
 	this->Invalidate();
 }
@@ -334,26 +273,16 @@ void InputBox::SetSelText(const GUIString &theText, bool sendEvent)
 	const GUIString &aText = this->GetText();
 	GUIString aPasteStr = theText;
 	
-	for(int i=0; i<aPasteStr.length(); i++)
-	{
-		int aChar = aPasteStr[i];
-		if(aChar<32)
-		{
-			aPasteStr.resize(i);
-			break; 
-		}
-	}
+	int aCut = ee_won_gui_control_cut(aPasteStr.mData->mText, aPasteStr.length(), sizeof(wchar_t));
+	if(aCut < aPasteStr.length())
+		aPasteStr.resize(aCut);
 	if(this->mInputFilter && !this->mInputFilter(this,aPasteStr))
 		return;
 
-	if(this->mMaxChars>0 && aText.length()+aPasteStr.length()-(this->mSelEndChar-this->mSelStartChar)>this->mMaxChars)
-	{
-		int aNumCharsAllowed = this->mMaxChars-aText.length()+(this->mSelEndChar-this->mSelStartChar);
-		if(aNumCharsAllowed<0)
-			aNumCharsAllowed = 0;
-
+	int aNumCharsAllowed = ee_won_gui_paste_allowed(aText.length(), aPasteStr.length(), this->mSelStartChar,
+		this->mSelEndChar, this->mMaxChars);
+	if(aNumCharsAllowed >= 0)
 		aPasteStr.resize(aNumCharsAllowed);
-	}
 
 	if(aPasteStr.length()>0 || this->mSelStartChar!=this->mSelEndChar)
 	{
@@ -377,37 +306,7 @@ void InputBox::SetSelText(const GUIString &theText, bool sendEvent)
 // Returns the cursor position one character (or one word) to the left or right, clamped to the text
 int InputBox::MoveCursor(bool left, bool wholeWord, const GUIString &theStr, int thePos)
 {			
-	int dx = left ? -1 : 1;
-	
-	thePos+=dx;
-	if(wholeWord)
-	{		
-		while(thePos>=0 && thePos<theStr.length())
-		{
-			if((theStr[thePos]!=' '))
-				thePos+=dx;
-			else
-				break; 
-		}		
-
-		while(thePos>=0 && thePos<theStr.length())
-		{
-			if((theStr[thePos]==' '))
-				thePos+=dx;
-			else
-				break; 
-		}		
-	
-		if(left)
-			thePos++;
-	}
-	
-	if(thePos<0)
-		thePos = 0;
-	if(thePos>theStr.length())
-		thePos = theStr.length();
-
-	return thePos;
+	return ee_won_gui_move_cursor(left, wholeWord, theStr.mData->mText, theStr.length(), sizeof(wchar_t), thePos);
 }
 
 // FUNCTION: WON 0x006f9140
@@ -525,28 +424,12 @@ bool InputBox::KeyDown(int theKey)
 		case 46:  
 		{
 			GUIString left, right;
-			if(this->mSelStartChar!=this->mSelEndChar) 
-			{
-				left.assign(aText,0,this->mSelStartChar);
-				right.assign(aText,this->mSelEndChar);
-			}
-			else 
-			{
-				if(theKey==8) 
-				{
-					if(this->mSelStartChar>0)
-						left.assign(aText,0,this->mSelStartChar-1);
-
-					right.assign(aText,this->mSelEndChar);
-				}
-				else  
-				{
-					left.assign(aText,0,this->mSelStartChar);
-					
-					if(this->mSelEndChar<aText.length())
-						right.assign(aText,this->mSelEndChar+1);
-				}
-			}	
+			EeWonDeleteParts aParts = ee_won_gui_delete_parts(theKey==8, this->mSelStartChar, this->mSelEndChar,
+				aText.length());
+			if(aParts.left_count>=0)
+				left.assign(aText,0,aParts.left_count);
+			if(aParts.right_start>=0)
+				right.assign(aText,aParts.right_start);
 								
 			this->mSelStartChar = this->mSelEndChar = left.length();
 			GUIString total = left;
@@ -555,60 +438,21 @@ bool InputBox::KeyDown(int theKey)
 		}
 		break;
 
-		case 36: 
-			if(!shift)
-				this->mSelEndChar = 0;
-			else if(!this->mBackwardsSel)
-				this->mSelEndChar = this->mSelStartChar;				
-			
-			this->mSelStartChar = 0;
-			this->mBackwardsSel =  this->mSelStartChar!=this->mSelEndChar;				
-			break;
-			
-		case 35: 
-			if(!shift)
-				this->mSelStartChar = aText.length();
-			else if(this->mBackwardsSel)
-				this->mSelStartChar = this->mSelEndChar;
-
-			this->mBackwardsSel = false;
-			this->mSelEndChar = aText.length();
-			break;
-
+		case 36:
+		case 35:
 		case 37:
-		case 39: 
-			if(!shift && this->mSelStartChar!=this->mSelEndChar) 
-			{
-				if(theKey==37)
-					this->mSelEndChar = this->mSelStartChar;
-				else
-					this->mSelStartChar = this->mSelEndChar;
-			}
-			else if(this->mBackwardsSel)
-			{
-				this->mSelStartChar = this->MoveCursor(theKey==37,ctrl,this->mText,this->mSelStartChar);
-				
-				if(!shift)
-					this->mSelEndChar = this->mSelStartChar;
-			}
-			else
-			{
-				this->mSelEndChar = this->MoveCursor(theKey==37,ctrl,this->mText,this->mSelEndChar);
-				
-				if(!shift)
-					this->mSelStartChar = this->mSelEndChar;					
-			}						
-
-			if(this->mSelStartChar>this->mSelEndChar)
-			{
-				this->mBackwardsSel = !this->mBackwardsSel;
-				std::swap(this->mSelStartChar, this->mSelEndChar);
-			}
-			else if(this->mSelStartChar==this->mSelEndChar)
-				this->mBackwardsSel = false;
-			
+		case 39:
+		{
+			// Home and End measure the real text, Left and Right walk the shown one (as the original did)
+			const GUIString& aWalk = (theKey==36 || theKey==35) ? aText : this->mText;
+			EeWonSel aSel = { this->mSelStartChar, this->mSelEndChar, this->mBackwardsSel };
+			ee_won_gui_key_selection(theKey, shift, ctrl, &aSel, aWalk.mData->mText, aWalk.length(), sizeof(wchar_t));
+			this->mSelStartChar = aSel.start;
+			this->mSelEndChar = aSel.end;
+			this->mBackwardsSel = aSel.backwards;
+		}
 			break;
-							
+
 		default:  
 			return false;
 	}

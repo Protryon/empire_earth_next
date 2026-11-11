@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "rust/ee_rust.h"
+// The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module
+// (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x00788840
 // Reads a comma-separated list of components and adds each to the container
@@ -64,22 +67,13 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 			if(aStr.length()==0)
 				break;
 
-			if(aStr.CompareNoCase("SameWidth")==0) instructions |= 0x1;
-			else if(aStr.CompareNoCase("SameHeight")==0) instructions |= 0x2;
-			else if(aStr.CompareNoCase("Above")==0) instructions |= 0x100;
-			else if(aStr.CompareNoCase("Below")==0) instructions |= 0x200;
-			else if(aStr.CompareNoCase("Right")==0) instructions |= 0x400;
-			else if(aStr.CompareNoCase("Left")==0) instructions |= 0x800;
-			else if(aStr.CompareNoCase("SameLeft")==0) instructions |= 0x1000;
-			else if(aStr.CompareNoCase("SameRight")==0) instructions |= 0x2000;
-			else if(aStr.CompareNoCase("SameTop")==0) instructions |= 0x4000;
-			else if(aStr.CompareNoCase("SameBottom")==0) instructions |= 0x8000;
-			else if(aStr.CompareNoCase("GrowToRight")==0) instructions |= 0x10000;
-			else if(aStr.CompareNoCase("GrowToLeft")==0) instructions |= 0x20000;
-			else if(aStr.CompareNoCase("GrowToTop")==0) instructions |= 0x40000;
-			else if(aStr.CompareNoCase("GrowToBottom")==0) instructions |= 0x80000;
-			else if(aStr.CompareNoCase("SameSize")==0) instructions |= 0x3;	
-			else 
+			// the names in the original's order, each compared as the original compared it
+			const uint8_t* aName = NULL;
+			int aFlag = 0;
+			bool aFound = false;
+			for(int k = 0; !aFound && ee_won_gui_layout_keyword(k, &aName, &aFlag); k++)
+				if(aStr.CompareNoCase((const char*)aName)==0) { instructions |= aFlag; aFound = true; }
+			if(!aFound)
 				throw ConfigObjectException("Unknown layout instruction: " + (std::string)aStr);
 		}
 	}
@@ -113,7 +107,7 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 			this->EnsureComma();
 	}
 
-	if((!chain && !repeat) || i!=0)
+	if(ee_won_gui_layout_zero_rest(chain, repeat, i))
 	{
 		for(; i<4; i++)
 			this->mLayoutParams[i] = 0;

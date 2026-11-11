@@ -11,6 +11,8 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// TabFocus's start and its loop's bound are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x006f63b0
 // Paints every invalid visible child in its own coordinates, clip rectangle and colour scheme
@@ -76,16 +78,14 @@ void Container::ClearGrabBG()
 // whether a child took it
 bool Container::TabFocus(bool forward,bool init)
 {
-    if(!this->WantFocus()) return false;
-    if(init) {
-        if(this->mIsolateTabFocus) return false;
-        if(this->ComponentFlagSet(ComponentFlag_WantTabFocus)) {
-            this->mHasUsedDialogKeys=true;
-            this->RequestFocus();
-            return true;
-        }
+    switch(ee_won_gui_tab_focus_start(this->WantFocus(),init,this->mIsolateTabFocus,(uint32_t)this->mComponentBits,
+                                      !this->mChildList.empty())) {
+    case 0: return false;
+    case 1:
+        this->mHasUsedDialogKeys=true;
+        this->RequestFocus();
+        return true;
     }
-    if(this->mChildList.empty()) return false;
     bool wrap=this->mIsolateTabFocus;
     Component* child=init?NULL:this->mFocusChild;
     if(child==NULL) { SmartPtr<Component> &first=forward?this->mChildList.front():this->mChildList.back(); child=first.get(); }
@@ -97,7 +97,7 @@ bool Container::TabFocus(bool forward,bool init)
             return true;
         }
         child=child->GetNextSibling(forward,wrap);
-        if(++count>=this->mChildList.size()) break;
+        if(ee_won_gui_tab_focus_done(count++,this->mChildList.size())) break;
     }
     return false;
 }

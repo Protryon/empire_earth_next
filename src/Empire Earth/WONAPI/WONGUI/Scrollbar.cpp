@@ -8,6 +8,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The thumb's layout and drag and the line and page steps are ee_won's guiscroll module
+// (rust/crates/ee_won/src/guiscroll.rs); this unit keeps the controls and their SetPos / SetSize / SetVisible calls.
 namespace WONAPI {
 // FUNCTION: WON 0x00705fa0
 // Copies line scroll steps, thumb resizing and minimum thumb size from another scrollbar
@@ -80,7 +83,19 @@ void Scrollbar::S_SetPosSize(Component *theComponent, int x, int y, int width, i
 // Sizes and places the thumb for the page and total size (hidden when everything fits), kept inside the track
 void Scrollbar::LayoutThumb(bool changePos)
 {
-	if(this->mPageSize >= this->mTotalSize)
+	EeWonThumbIn anIn;
+	anIn.page = this->mPageSize;
+	anIn.total = this->mTotalSize;
+	anIn.position = this->mPosition;
+	anIn.track_top = this->S_Top(this->mScrollRect.get());
+	anIn.track_len = this->S_Height(this->mScrollRect.get());
+	anIn.thumb_top = this->S_Top(this->mThumb.get());
+	anIn.thumb_len = this->S_Height(this->mThumb.get());
+	anIn.resize_thumb = this->mResizeThumb;
+	anIn.min_thumb = this->mMinThumbSize;
+	anIn.change_pos = changePos;
+	EeWonThumbOut anOut = ee_won_gui_thumb_layout(anIn);
+	if(anOut.hidden)
 	{
 		this->mThumb->SetVisible(false);
 		return;
@@ -88,38 +103,14 @@ void Scrollbar::LayoutThumb(bool changePos)
 
 	this->mThumb->SetVisible(!this->IsDisabled());
 
-	int aScrollHeight = this->S_Height(this->mScrollRect.get());
-	int aThumbSize = this->S_Height(this->mThumb.get());
-	if(this->mResizeThumb)
-	{
-		aThumbSize = aScrollHeight*this->mPageSize/this->mTotalSize;
-		if(aThumbSize<this->mMinThumbSize)
-			aThumbSize = this->mMinThumbSize;
-	}
-
-	int aThumbPos = this->S_Top(this->mThumb.get());
-	if(changePos)
-		aThumbPos = this->S_Top(this->mScrollRect.get())+(aScrollHeight-aThumbSize)*this->mPosition/(this->mTotalSize-this->mPageSize);
-
-	if(aThumbPos<this->S_Top(this->mScrollRect.get()))
-	{
-		if(this->mVertical) aThumbPos = this->mScrollRect->Top(); else aThumbPos = this->mScrollRect->Left();
-		changePos = true;
-	}
-	if(aThumbPos+aThumbSize >= this->S_Bottom(this->mScrollRect.get()))
-	{
-		aThumbPos = this->S_Bottom(this->mScrollRect.get())-aThumbSize;
-		changePos = true;
-	}
-
 	int aThumbWidth = this->S_Width(this->mThumb.get());
 	if(aThumbWidth==0)
 		aThumbWidth = this->S_Width(this);
 
-	if(changePos)
-		this->S_SetPosSize(this->mThumb.get(),this->S_Left(this->mThumb.get()),aThumbPos,aThumbWidth,aThumbSize);
+	if(anOut.set_pos)
+		this->S_SetPosSize(this->mThumb.get(),this->S_Left(this->mThumb.get()),anOut.pos,aThumbWidth,anOut.len);
 	else
-		this->S_SetSize(this->mThumb.get(),aThumbWidth,aThumbSize);
+		this->S_SetSize(this->mThumb.get(),aThumbWidth,anOut.len);
 }
 
 // FUNCTION: WON 0x00706380
@@ -162,17 +153,11 @@ void Scrollbar::MouseDrag(int x, int y)
 
 	int aNewY = this->mVertical? (this->mThumb->Top() + dy) : (this->mThumb->Left() + dx);
 
-	if(aNewY<this->S_Top(this->mScrollRect.get()))
-		if(this->mVertical) aNewY = this->mScrollRect->Top(); else aNewY = this->mScrollRect->Left();
-	if(aNewY+this->S_Height(this->mThumb.get()) > this->S_Bottom(this->mScrollRect.get()))
-		aNewY = this->S_Bottom(this->mScrollRect.get())-this->S_Height(this->mThumb.get());
-
 	int oldPosition = this->mPosition;
-	int aHeightDiff = this->S_Height(this->mScrollRect.get()) - this->S_Height(this->mThumb.get());
-	if(aHeightDiff<=0)
-		this->mPosition = 0;
-	else
-		this->mPosition = (this->mTotalSize-this->mPageSize)*(aNewY-this->S_Top(this->mScrollRect.get()))/aHeightDiff;
+	int aTop = 0;
+	this->mPosition = ee_won_gui_thumb_drag(aNewY,this->S_Top(this->mScrollRect.get()),
+		this->S_Height(this->mScrollRect.get()),this->S_Height(this->mThumb.get()),this->mTotalSize,this->mPageSize,&aTop);
+	aNewY = aTop;
 
 	if(aNewY!=this->S_Top(this->mThumb.get()))
 	{
@@ -197,21 +182,19 @@ void Scrollbar::HandleComponentEvent(ComponentEvent *theEvent)
 	}
 
 	int anOldPosition = this->mPosition;
+	EeWonScrollPress aPress;
+	int aMouseY = 0;
 	if(theEvent->mComponent==this->mUpArrow.get())
-		this->mPosition-=this->mLineUpScrollSize;
+		aPress = EeWonScrollPress::LineUp;
 	else if(theEvent->mComponent==this->mDownArrow.get())
-		this->mPosition+=this->mLineDownScrollSize;
+		aPress = EeWonScrollPress::LineDown;
 	else if(theEvent->mComponent==this->mScrollRect.get())
 	{
-		int aMouseX, aMouseY;
+		int aMouseX;
 		this->GetMousePos(aMouseX, aMouseY);
 		if(!this->mVertical)
 			aMouseY = aMouseX;
-
-		if(aMouseY < this->S_Top(this->mThumb.get()))
-			this->mPosition-=this->mPageScrollSize;
-		else if(aMouseY >= this->S_Bottom(this->mThumb.get()))
-			this->mPosition+=this->mPageScrollSize;
+		aPress = EeWonScrollPress::Track;
 	}
 	else
 	{
@@ -219,12 +202,9 @@ void Scrollbar::HandleComponentEvent(ComponentEvent *theEvent)
 		return;
 	}
 
-
-	int aMaxPos = this->mTotalSize - this->mPageSize;
-	if(this->mPosition>aMaxPos)
-		this->mPosition = aMaxPos;
-	if(this->mPosition<0)
-		this->mPosition = 0;
+	this->mPosition = ee_won_gui_scroll_step(aPress,aMouseY,this->S_Top(this->mThumb.get()),
+		this->S_Height(this->mThumb.get()),this->mPosition,this->mLineUpScrollSize,this->mLineDownScrollSize,
+		this->mPageScrollSize,this->mTotalSize,this->mPageSize);
 
 	if(this->mPosition==anOldPosition)
 		return;
