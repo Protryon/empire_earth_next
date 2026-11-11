@@ -29,6 +29,14 @@ defaults to the main checkout's build/sim/cache (shared by the worktrees: a diff
 --repeat past the first are always played (the determinism check). Only finished games (rc 0, a report, no
 wall-timeout) are stored. Delete the folder to drop the cache.
 
+--screen SEEDS plays those seeds first (a subset of --seeds) and stops every variant whose screened player
+(--screen-player, default 2: the first computer seat) is defeated clearly more often than the baseline's on the same
+seeds: at least --screen-factor times (default 2) and --screen-margin more games (default 3). The others go on to
+every seed. The baseline is --screen-baseline: a finished bench's folder (its runs matched by seed and matchup:
+size, map, difficulty, AIs, cheats, personality, engine), or "first" (default): this bench's runs with the first --vary and
+--env-vary values (matched in the same way), which always go on. With "first", engines, personalities and cheats are
+matchups, not variants: to screen one engine against another, bench the baseline engine first and name its folder. A stopped variant keeps its first-stage rows in results.csv; results.json's "screen" has the counts.
+16 seeds at a factor of 2 only stops gross regressions: defeats vary by several games in 32 from chance alone.
 """
 import argparse
 import concurrent.futures
@@ -269,6 +277,65 @@ def run_one(run, args, slots, out):
         slots.put(slot)
 
 
+# ------------------------------------------------------------------------------------------------ the screening
+
+MATCHUP = ("size", "map", "difficulty", "ai", "cheats", "personality", "engine")
+
+
+def variant_of(run):
+    """a run's variant: everything but the seed and the repeat"""
+    return json.dumps([run[k] for k in MATCHUP] + [run["variant"], sorted(run["env"].items())])
+
+
+def defeated(report, player):
+    """1 when the player was defeated, 0 when not, None without a report"""
+    for p in report.get("players") or []:
+        if p.get("index") == player:
+            return 1 if p.get("result") == 2 else 0
+    return None
+
+
+def screening(results, a):
+    """{variant: dict(label, seeds, defeats, baseline, stopped)} over the first stage's results"""
+    base = {}   # (seed, matchup) -> defeated
+    match = lambda r: (r["seed"],) + tuple(r[k] for k in MATCHUP)
+    # "first": the runs with the first --vary and --env-vary values (the first run's)
+    first = (results[0]["variant"], results[0]["env"]) if results and a.screen_baseline == "first" else None
+    is_base = lambda r: first is not None and (r["variant"], r["env"]) == first
+    if first is not None:
+        for r in results:
+            if is_base(r) and r["repeat"] == 0:
+                base[match(r)] = defeated(r["report"], a.screen_player)
+    else:
+        bench = pathlib.Path(a.screen_baseline)
+        for r in json.loads((bench / "results.json").read_text()).get("runs", []):
+            key = (r["seed"],) + tuple(r[k] for k in MATCHUP)
+            if r.get("repeat", 0) != 0:
+                continue
+            if key in base:
+                sys.exit(f"--screen-baseline {bench}: two runs of seed {r['seed']} in one matchup")
+            base[key] = defeated(r["report"], a.screen_player)
+    rows = {}
+    for r in results:
+        if r["repeat"] != 0:
+            continue
+        v = variant_of(r)
+        row = rows.setdefault(v, dict(label=r["id"].split("-", 1)[1].rsplit("-r", 1)[0].strip("-"), seeds=0,
+                                      defeats=0, baseline=0, stopped=False, base=is_base(r)))
+        d, b = defeated(r["report"], a.screen_player), base.get(match(r))
+        if d is None or b is None:
+            continue   # a run without a report, or a seed the baseline lacks: not compared
+        row["seeds"] += 1
+        row["defeats"] += d
+        row["baseline"] += b
+    for v, row in rows.items():
+        row["stopped"] = not row["base"] and row["seeds"] > 0 and row["defeats"] >= max(
+            a.screen_factor * row["baseline"], row["baseline"] + a.screen_margin)
+        print(f"SCREEN {row['label']}: p{a.screen_player} defeated {row['defeats']} against the baseline's "
+              f"{row['baseline']} in {row['seeds']} seeds: {'STOPPED' if row['stopped'] else 'goes on'}", flush=True)
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
@@ -304,6 +371,12 @@ def main():
     ap.add_argument("--cache", nargs="?", const="default", metavar="DIR",
                     help="reuse finished games with the same inputs (see above; default DIR: the main checkout's "
                          "build/sim/cache)")
+    ap.add_argument("--screen", metavar="SEEDS", help="the first stage's seeds (see above)")
+    ap.add_argument("--screen-baseline", default="first",
+                    help="a finished bench folder, or first (this bench's first variant)")
+    ap.add_argument("--screen-player", type=int, default=2)
+    ap.add_argument("--screen-factor", type=float, default=2.0)
+    ap.add_argument("--screen-margin", type=int, default=3)
     a = ap.parse_args()
     a.cache_dir = cache_dir(a.cache) if a.cache else None
     if not a.exe.exists():
@@ -350,7 +423,23 @@ def main():
     def play(batch):
         with concurrent.futures.ThreadPoolExecutor(max(1, a.jobs)) as ex:
             return list(ex.map(lambda r: run_one(r, a, slots, out), batch))
-    results = play(runs)
+    screen = None
+    if a.screen:
+        first = {int(s, 0) for s in split(a.screen)}
+        stage1 = [r for r in runs if r["seed"] in first]
+        print(f"screen: the first stage, {len(stage1)} runs (seeds {a.screen})", flush=True)
+        results = play(stage1)
+        screen = screening(results, a)
+        stopped = {v for v, row in screen.items() if row["stopped"]}
+        rest = [r for r in runs if r["seed"] not in first and variant_of(r) not in stopped]
+        print(f"screen: {len(stopped)} of {len(screen)} variants stopped; the second stage, {len(rest)} runs",
+              flush=True)
+        results += play(rest)
+        order = {r["id"]: k for k, r in enumerate(runs)}
+        results.sort(key=lambda r: order[r["id"]])
+        screen = list(screen.values())
+    else:
+        results = play(runs)
     total = time.monotonic() - t0
     # determinism: the repeats of a cell print the same trace
     sys.path.insert(0, str(HERE / "harness"))
@@ -368,7 +457,7 @@ def main():
             print(f"DETERMINISM {cell}: {'identical' if same else 'DIFFERENT'}: {buf.getvalue().strip().splitlines()[-1]}",
                   flush=True)
     (out.parent / "results.json").write_text(json.dumps(dict(test_only=True, runs=results, determinism=checks,
-                                                             wall_seconds=round(total, 1)), indent=2) + "\n")
+                                                             wall_seconds=round(total, 1), screen=screen), indent=2) + "\n")
     fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "engine", "variant", "repeat", "rc",
               "cached", "lua_errors", "outcome", "game_s", "wall", "wall_game", "winner", "player", "human", "result", "epoch", "population",
               "victory_units", "citizens", "army", "buildings", "food", "wood", "stone", "gold", "iron"]
