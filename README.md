@@ -171,7 +171,8 @@ have all been played before (e.g. the baseline of each round) takes seconds; any
 misses. `--screen SEEDS` plays those seeds first and drops every variant whose first computer is defeated at least
 twice as often as the baseline's, and 3 games more (`--screen-factor`, `--screen-margin`); the rest go on to
 `--seeds`. With 16 first-stage seeds it only catches gross regressions (32-seed defeat counts move by several games
-from chance alone).
+from chance alone). The games run below normal priority (`--normal-priority` turns that off), so the windowed
+gates can run beside a bench.
 
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
 EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic, next, random;

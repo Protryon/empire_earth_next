@@ -19,6 +19,8 @@ tools/ai_scorecard.py scores the result (wins, time to each epoch, economy and a
 --ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. ai: the checkout's); each run's
 script errors (EE-SIM's "SIM next.error" lines) are counted in lua_errors.
 --sim-arg passes an option to EE-SIM.exe as it is (e.g. --sim-arg=--lobby --sim-arg=181=#0).
+The games run below normal priority (Windows: BELOW_NORMAL_PRIORITY_CLASS; POSIX: nice 10), so that the windowed
+gates and a played game keep their CPU while a bench runs; --normal-priority turns that off.
 
 --cache [DIR] reuses a finished game: a run whose EE-SIM.exe, data tree, rules documents, AI scripts, settings and seed
 all equal an earlier cached run's copies that run's report, trace and progress instead of playing it (the game is
@@ -207,6 +209,20 @@ def cache_put(cache, key, parts, report, trace, err, meta):
 
 # ------------------------------------------------------------------------------------------------ a run
 
+def priority(args):
+    """subprocess options for a game below normal priority (Windows), unless --normal-priority"""
+    if args.normal_priority or sys.platform != "win32":
+        return {}
+    return dict(creationflags=subprocess.BELOW_NORMAL_PRIORITY_CLASS)
+
+
+def lowered(command, args):
+    """POSIX: the command under nice (a preexec_fn is not safe with the bench's threads)"""
+    if args.normal_priority or sys.platform == "win32" or not shutil.which("nice"):
+        return command
+    return ["nice", "-n", "10", *command]
+
+
 def run_one(run, args, slots, out):
     slot = slots.get()
     try:
@@ -251,8 +267,8 @@ def run_one(run, args, slots, out):
         for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
             report.unlink(missing_ok=True)
             with open(err, "w", encoding="utf-8") as f:
-                rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f,
-                                    env=env).returncode
+                rc = subprocess.run(lowered(sim.command(args.exe, stage, opts, cfg), args), stdout=subprocess.DEVNULL,
+                                    stderr=f, env=env, **priority(args)).returncode
             try:
                 rep = json.loads(report.read_text())
             except (OSError, ValueError):
@@ -363,6 +379,9 @@ def main():
     ap.add_argument("--port-base", type=int, default=2000,
                     help="the first slot's port offset (64 more per slot); give benches run at the same time ranges apart, e.g. 2000 and 6000")
     ap.add_argument("--human-defeat", action="store_true", help="let the idle human be defeated")
+    ap.add_argument("--normal-priority", action="store_true",
+                    help="run the games at normal priority (default: below normal, so that a windowed game or the "
+                         "gates keep their CPU while a bench runs; the game's results do not depend on it)")
     ap.add_argument("--data", default="binary")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
     ap.add_argument("--sim-arg", action="append", default=[])
