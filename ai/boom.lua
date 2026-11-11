@@ -15,9 +15,9 @@ local D = require("lib.demand")        -- the split's stock correction and the s
 
 -- the economy rules (docs/AI_RESEARCH.md §8.40): each one switchable for the bench
 local ECON = {
-    demand = true,          -- the stock correction of the gatherer split (lib.demand.correct)
+    demand = false,         -- the stock correction of the gatherer split (lib.demand.correct)
     unreachable = true,     -- no reserve for an advance with a short resource nobody can gather
-    ramp = true,            -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
+    ramp = false,           -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
     tc = true,              -- a second town centre (the plan's town_centers, tc_at; lib.econ_units)
     army_slack = false,     -- past the soldiers-first window the reserve waits for 3/4 of the light army only
 }
