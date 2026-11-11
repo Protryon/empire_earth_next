@@ -60,6 +60,7 @@ pub mod plaintext;
 pub mod random;
 pub mod regkey;
 pub mod resource;
+pub mod routemsg;
 pub mod routing;
 pub mod servctx;
 pub mod server;

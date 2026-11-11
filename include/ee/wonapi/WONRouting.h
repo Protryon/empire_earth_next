@@ -928,7 +928,6 @@ public:
 
 class RoutingGetGroupListOp : public RoutingOp {
 public:
-    void ParseReplyExceptForStatus(ReadBuffer&); //2c5c10
     RoutingMemberInfoPtr GetNewMemberInfo(); //ownhelper2c5a60, nullconnection fallback
     RoutingGroupInfoPtr GetNewGroupInfo(); //ownhelper2c5ad0, nullconnection fallback
     // Only the inline constructor its callers need; everything else is out of line:
@@ -1051,7 +1050,6 @@ public:
     RoutingClientJoinedServerOp(RoutingConnection* connection) : RoutingOp(connection) {}
     virtual RoutingOpType GetType() const { return 8; } //slot14
     virtual WONStatus HandleReply(unsigned char, ReadBuffer&); // 0x2c4700
-    static void ParseExClientData(ReadBuffer&, RoutingClientInfo*); // 2c4680, cdecl
     SmartPtr<RoutingClientInfo> mClientInfo; //64
     const std::wstring& GetClientName() const { if(this->mClientInfo.get()!=NULL) return this->mClientInfo->mName; else return GetEmptyWStr(); }
 };
@@ -1338,7 +1336,6 @@ public:
     virtual void SendRequest();
     virtual WONStatus HandleReply(unsigned char, ReadBuffer&);
     virtual RoutingOpType GetType() const;
-    void ParseReplyExceptForStatus(ReadBuffer&); //2c8170, 500 bytes
     unsigned short mLinkId; //64, 2bf231
     std::string mDataType; //68, ctor zeroes 6c/70/74, assigned at 2bf24d
     void SetDataType(const std::string& v) { this->mDataType=v; }

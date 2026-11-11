@@ -9,6 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingGroupAdmin.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -16,22 +17,18 @@ namespace WONAPI {
 ///////////////////////////////////////////////////////////////////////////////
 void RoutingRelinquishCaptaincyOp::SendRequest()
 {
-	this->InitSendMsg(53 /* SDK RoutingRelinquishCaptaincyRequest */);
-	this->mSendMsg.AppendShort(this->mGroupId);
-	this->mSendMsg.AppendShort(this->mNewCaptainId);
-	this->SendMsg();
-	this->AddOp();
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendRelinquishCaptain(this, this->mGroupId, this->mNewCaptainId);
+    this->SendMsg();
+    this->AddOp();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RoutingRelinquishCaptaincyOp::HandleReply(unsigned char theMsgType, ReadBuffer &theMsg)
 {
-	if(theMsgType!=66 /* SDK RoutingStatusReply */)
-		return WS_RoutingOp_DontWantReply /* SDK WS_RoutingOp_DontWantReply */;
-
-	WONStatus aStatus = (WONStatus)theMsg.ReadShort();
-	return aStatus;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(theMsgType, theMsg);
 }
 
 

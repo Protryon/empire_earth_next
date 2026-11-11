@@ -1501,6 +1501,327 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
+
+/// `WS_None`
+constexpr static const int32_t EE_WON_RT_NONE = 100004;
+
+/// `WS_InvalidMessage`
+constexpr static const int32_t EE_WON_RT_INVALID_MESSAGE = 100006;
+
+/// `WS_MessageUnpackFailure`
+constexpr static const int32_t EE_WON_RT_UNPACK_FAILURE = 100012;
+
+/// `WS_RoutingOp_DontWantReply`
+constexpr static const int32_t EE_WON_RT_DONT_WANT = 100104;
+
+/// `WS_RoutingOp_NeedMoreReplies`
+constexpr static const int32_t EE_WON_RT_NEED_MORE = 100105;
+
+constexpr static const int32_t EE_WON_RT_REQ_HEADER = 0;
+
+constexpr static const int32_t EE_WON_RT_REQ_BAN = 1;
+
+constexpr static const int32_t EE_WON_RT_REQ_MUTE = 2;
+
+constexpr static const int32_t EE_WON_RT_REQ_CANCEL_JOIN = 3;
+
+constexpr static const int32_t EE_WON_RT_REQ_LEAVE = 4;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_FLAGS = 5;
+
+constexpr static const int32_t EE_WON_RT_REQ_SERVER_ALERT = 6;
+
+constexpr static const int32_t EE_WON_RT_REQ_START_SHUTDOWN = 7;
+
+constexpr static const int32_t EE_WON_RT_REQ_ABORT_SHUTDOWN = 8;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_CLIENT_FLAGS = 9;
+
+constexpr static const int32_t EE_WON_RT_REQ_SEND_CHAT = 10;
+
+constexpr static const int32_t EE_WON_RT_REQ_SEND_DATA = 11;
+
+constexpr static const int32_t EE_WON_RT_REQ_BECOME_MODERATOR = 12;
+
+constexpr static const int32_t EE_WON_RT_REQ_ACCEPT_CLIENT = 13;
+
+constexpr static const int32_t EE_WON_RT_REQ_CREATE_DATA = 14;
+
+constexpr static const int32_t EE_WON_RT_REQ_DELETE_DATA = 15;
+
+constexpr static const int32_t EE_WON_RT_REQ_INVITE = 16;
+
+constexpr static const int32_t EE_WON_RT_REQ_MODIFY_DATA = 17;
+
+constexpr static const int32_t EE_WON_RT_REQ_READ_DATA = 18;
+
+constexpr static const int32_t EE_WON_RT_REQ_UNSUBSCRIBE = 19;
+
+constexpr static const int32_t EE_WON_RT_REQ_CREATE_GROUP = 20;
+
+constexpr static const int32_t EE_WON_RT_REQ_JOIN_GROUP = 21;
+
+constexpr static const int32_t EE_WON_RT_REQ_REGISTER = 22;
+
+constexpr static const int32_t EE_WON_RT_REQ_CLIENT_LIST = 23;
+
+constexpr static const int32_t EE_WON_RT_REQ_GROUP_LIST = 24;
+
+constexpr static const int32_t EE_WON_RT_REQ_MEMBERS = 25;
+
+constexpr static const int32_t EE_WON_RT_REQ_BAD_USERS = 26;
+
+constexpr static const int32_t EE_WON_RT_REQ_FIREWALL = 27;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_NAME = 28;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_PASSWORD = 29;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_MAX_PLAYERS = 30;
+
+constexpr static const int32_t EE_WON_RT_REQ_RELINQUISH_CAPTAIN = 31;
+
+constexpr static const int32_t EE_WON_RT_REQ_DISCONNECT = 32;
+
+constexpr static const int32_t EE_WON_RT_REQ_USER_STATUS = 33;
+
+constexpr static const int32_t EE_WON_RT_REQ_GROUP_LIST_REQ = 34;
+
+/// A status reply (message 66): every op that only waits for the server's status
+constexpr static const int32_t EE_WON_RT_STATUS = 0;
+
+constexpr static const int32_t EE_WON_RT_GROUP_LIST = 1;
+
+/// `RoutingGetGroupListOp::ParseGroupListObj`: a group list body without type or status
+constexpr static const int32_t EE_WON_RT_GROUP_LIST_BODY = 2;
+
+constexpr static const int32_t EE_WON_RT_READ_DATA = 3;
+
+constexpr static const int32_t EE_WON_RT_CREATE_GROUP = 4;
+
+constexpr static const int32_t EE_WON_RT_JOIN_GROUP = 5;
+
+constexpr static const int32_t EE_WON_RT_REGISTER = 6;
+
+constexpr static const int32_t EE_WON_RT_CLIENT_LIST = 7;
+
+constexpr static const int32_t EE_WON_RT_MEMBERS = 8;
+
+constexpr static const int32_t EE_WON_RT_BAD_USERS = 9;
+
+constexpr static const int32_t EE_WON_RT_FIREWALL = 10;
+
+constexpr static const int32_t EE_WON_RT_DERIVED = 11;
+
+/// `RoutingGetUserStatusOp::CheckResponse`: the whole datagram
+constexpr static const int32_t EE_WON_RT_USER_STATUS = 12;
+
+/// `RoutingGetGroupListReqOp::CheckResponse`: the whole reply
+constexpr static const int32_t EE_WON_RT_GROUP_LIST_REQ = 13;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_FLAGS = 20;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_JOINED_GROUP = 21;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_JOINED_SERVER = 22;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_LEFT_GROUP = 23;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_LEFT_SERVER = 24;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_CREATED = 25;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_DELETED = 26;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_MODIFIED = 27;
+
+constexpr static const int32_t EE_WON_RT_N_CAPTAIN_CHANGED = 28;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_CREATED = 29;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_DELETED = 30;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_FLAGS = 31;
+
+constexpr static const int32_t EE_WON_RT_N_INVITATION = 32;
+
+constexpr static const int32_t EE_WON_RT_N_JOIN_ATTEMPT = 33;
+
+constexpr static const int32_t EE_WON_RT_N_MAX_PLAYERS = 34;
+
+constexpr static const int32_t EE_WON_RT_N_MEMBER_COUNT = 35;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_NAME = 36;
+
+constexpr static const int32_t EE_WON_RT_N_OBSERVER_COUNT = 37;
+
+constexpr static const int32_t EE_WON_RT_N_MEMBER_FLAGS = 38;
+
+constexpr static const int32_t EE_WON_RT_N_PEER_CHAT = 39;
+
+constexpr static const int32_t EE_WON_RT_N_PEER_DATA = 40;
+
+constexpr static const int32_t EE_WON_RT_N_SERVER_ALERT = 41;
+
+constexpr static const int32_t EE_WON_RT_N_SHUTDOWN_ABORTED = 42;
+
+constexpr static const int32_t EE_WON_RT_N_SHUTDOWN_STARTED = 43;
+
+constexpr static const int32_t EE_WON_RT_N_BANNED = 44;
+
+constexpr static const int32_t EE_WON_RT_N_MUTED = 45;
+
+/// the op's numeric member `slot` = `num`
+constexpr static const uint8_t EE_WON_RT_FIELD = 1;
+
+/// the op's wide string member `slot` = the UTF-16 units at `at` (`len` units)
+constexpr static const uint8_t EE_WON_RT_TEXT = 2;
+
+/// the op's narrow string member `slot` = the bytes at `at`
+constexpr static const uint8_t EE_WON_RT_NARROW = 3;
+
+/// the op's buffer member `slot` = a new buffer of the bytes at `at`
+constexpr static const uint8_t EE_WON_RT_BUF = 4;
+
+/// a new record of kind `slot` (from the op's factory) becomes the current one of its kind
+constexpr static const uint8_t EE_WON_RT_NEW = 5;
+
+/// the current record's numeric field `slot` = `num`
+constexpr static const uint8_t EE_WON_RT_REC = 6;
+
+/// the current record's wide string field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_TEXT = 7;
+
+/// the current record's narrow string field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_NARROW = 8;
+
+/// the current record's buffer field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_BUF = 9;
+
+/// the current record goes into the container `slot`
+constexpr static const uint8_t EE_WON_RT_INSERT = 10;
+
+/// an action `slot` (with `num`)
+constexpr static const uint8_t EE_WON_RT_ACT = 11;
+
+/// a client (`GetNewClientInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_CLIENT = 0;
+
+/// a member (`GetNewMemberInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_MEMBER = 1;
+
+/// a group (`GetNewGroupInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_GROUP = 2;
+
+/// a data object (`new RoutingDataObject`)
+constexpr static const uint8_t EE_WON_RT_KIND_OBJECT = 3;
+
+/// a bad user (a default `RoutingBadUser`)
+constexpr static const uint8_t EE_WON_RT_KIND_BAD_USER = 4;
+
+/// the current member's client: `member->mClientInfo = GetNewClientInfo()`, now the current client
+constexpr static const uint8_t EE_WON_RT_KIND_MEMBER_CLIENT = 5;
+
+/// the op's own client: `mClientInfo = GetNewClientInfo()`, now the current client
+constexpr static const uint8_t EE_WON_RT_KIND_OP_CLIENT = 6;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_ID = 0;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_NAME = 1;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_FLAGS = 2;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_USER_ID = 3;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_ADDRESS = 4;
+
+constexpr static const uint8_t EE_WON_RT_MEMBER_ID = 5;
+
+constexpr static const uint8_t EE_WON_RT_MEMBER_FLAGS = 6;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_ID = 7;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_NAME = 8;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_CAPTAIN = 9;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_MAX_CLIENTS = 10;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_FLAGS = 11;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_ASYNC_FLAGS = 12;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_OBSERVERS = 13;
+
+/// `mMaxPlayers`, which holds the member count
+constexpr static const uint8_t EE_WON_RT_GROUP_MAX_PLAYERS = 14;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_LINK = 15;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_TYPE = 16;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_NAME = 17;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_DATA = 18;
+
+constexpr static const uint8_t EE_WON_RT_BAD_WON_ID = 19;
+
+constexpr static const uint8_t EE_WON_RT_BAD_NAME = 20;
+
+constexpr static const uint8_t EE_WON_RT_BAD_EXPIRATION = 21;
+
+constexpr static const uint8_t EE_WON_RT_BAD_MODERATOR_ID = 22;
+
+constexpr static const uint8_t EE_WON_RT_BAD_MODERATOR_NAME = 23;
+
+constexpr static const uint8_t EE_WON_RT_BAD_COMMENT = 24;
+
+/// the client map, by the client's id (`map[id] = client`)
+constexpr static const uint8_t EE_WON_RT_INTO_CLIENTS = 0;
+
+/// the member map, by the member's id
+constexpr static const uint8_t EE_WON_RT_INTO_MEMBERS = 1;
+
+/// the current group's member map
+constexpr static const uint8_t EE_WON_RT_INTO_GROUP_MEMBERS = 2;
+
+/// the group map, by the group's id
+constexpr static const uint8_t EE_WON_RT_INTO_GROUPS = 3;
+
+/// the end of the data object list
+constexpr static const uint8_t EE_WON_RT_INTO_OBJECTS = 4;
+
+/// the end of the bad user list
+constexpr static const uint8_t EE_WON_RT_INTO_BAD_USERS = 5;
+
+/// `CheckLeaveGroup(num)`
+constexpr static const uint8_t EE_WON_RT_ACT_CHECK_LEAVE = 0;
+
+/// the group map is cleared
+constexpr static const uint8_t EE_WON_RT_ACT_CLEAR_GROUPS = 1;
+
+/// the bad user list is cleared
+constexpr static const uint8_t EE_WON_RT_ACT_CLEAR_BAD_USERS = 2;
+
+/// the op's client map = the client map built so far (an inner client list op's)
+constexpr static const uint8_t EE_WON_RT_ACT_COMMIT_CLIENTS = 3;
+
+/// the op's member map = the member map built so far (an inner members op's)
+constexpr static const uint8_t EE_WON_RT_ACT_COMMIT_MEMBERS = 4;
+
+/// `++mReplyCount`
+constexpr static const uint8_t EE_WON_RT_ACT_INC_REPLIES = 5;
+
+/// `mRecipients.push_back(num)`
+constexpr static const uint8_t EE_WON_RT_ACT_RECIPIENT = 6;
+
+/// the next queried user's status = `num` (in the status map's order)
+constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
+
+/// `InvalidReplyHeader()` (a group list request's reply of another kind)
+constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
+
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
   Hashed = 0,
@@ -6390,6 +6711,75 @@ struct EeWonResource {
   const char *name;
   EeWonResKind kind;
   bool new_section;
+};
+
+/// A request's fields from the C++ (strings as UTF-16 LE bytes).
+struct EeWonRouteRequest {
+  int32_t kind;
+  bool derived;
+  uint16_t group_id;
+  uint16_t client_id;
+  uint16_t link_id;
+  uint16_t parent_id;
+  uint16_t max_players;
+  uint16_t offset;
+  uint16_t port;
+  uint16_t flags16;
+  uint8_t byte1;
+  uint8_t byte2;
+  bool on;
+  bool by_won_id;
+  bool is_cdkey;
+  bool is_ex;
+  uint32_t longs[4];
+  EeWonDirBytes text1;
+  EeWonDirBytes text2;
+  EeWonDirBytes narrow;
+  EeWonDirBytes data;
+  const uint16_t *ids;
+  size_t id_count;
+  const uint32_t *user_ids;
+  size_t user_id_count;
+};
+
+/// The op state a reply's read depends on.
+struct EeWonRouteState {
+  /// `mGroupId` (join, members)
+  uint16_t group_id;
+  /// `mJoinFlags` (create, join)
+  uint8_t join_flags;
+  /// `mRegisterFlags`
+  uint32_t register_flags;
+  int32_t reply_count;
+  int32_t replies_needed;
+  /// `mWaitingForStatusReply` (firewall)
+  bool waiting;
+  /// the user status query's map size
+  uint32_t user_count;
+};
+
+/// One assignment a reply makes.
+struct EeWonRouteEvent {
+  uint8_t tag;
+  uint8_t slot;
+  int32_t num;
+  /// a string's or buffer's offset in the message
+  uint32_t at;
+  /// its length: UTF-16 units for a wide string, else bytes
+  uint32_t len;
+};
+
+/// Receives a reply's assignments; valid only during the call.
+using EeWonRouteSink = void(*)(void *context, const EeWonRouteEvent *events, size_t count);
+
+/// How a reply's read ended, for the C++.
+struct EeWonRouteResult {
+  /// the status the op returns (when not cut)
+  int32_t status;
+  /// the original threw `ReadBufferException` after the assignments
+  bool cut;
+  /// the reader's position at the end
+  uint32_t pos;
 };
 
 /// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
@@ -16363,6 +16753,42 @@ size_t ee_won_resource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and what it points to are valid; `sink` accepts `context`.
+void ee_won_route_request(const EeWonRouteRequest *r, EeWonByteSink sink, void *context);
+
+/// A reply's read: its assignments into `sink` (once, all of them), how it ended into `out`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `state` and `out` are valid; `sink` accepts `context`.
+void ee_won_route_reply(int32_t kind,
+                        uint8_t message,
+                        const uint8_t *data,
+                        size_t length,
+                        size_t pos,
+                        const EeWonRouteState *state,
+                        EeWonRouteSink sink,
+                        void *context,
+                        EeWonRouteResult *out);
+
+/// `MsgCallback`'s header; false when the message is cut short.
+///
+/// # Safety
+/// `data` holds `length` bytes; the outputs are valid.
+bool ee_won_route_header(const uint8_t *data,
+                         size_t length,
+                         uint8_t *message,
+                         bool *derived,
+                         uint32_t *pos);
+
+/// `MsgCallback`'s rule for a `HandleReply` status (see [`dispatch`]).
+int32_t ee_won_route_dispatch(int32_t status);
+
+/// `GetUnsolicitedOp`'s notification for a routing message type, or -1.
+int32_t ee_won_route_unsolicited(uint8_t message);
 
 /// `room_spec`; a negative group is none.
 int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);

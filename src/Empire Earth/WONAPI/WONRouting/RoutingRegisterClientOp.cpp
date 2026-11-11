@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -47,13 +48,8 @@ void RoutingRegisterClientOp::SendRequest()
     this->mReplyCount = 0;
     this->mNumRepliesNeeded = 1;
     if (this->mRegisterFlags & 4) this->mNumRepliesNeeded = 2;
-    this->InitSendMsg(52);
-    this->mSendMsg.AppendWString(this->mClientName, 2);
-    this->mSendMsg.AppendWString(this->mServerPassword, 2);
-    this->mSendMsg.AppendLong(this->mReconnectId);
-    this->mSendMsg.AppendLong(this->mAsyncMessageFlags);
-    this->mSendMsg.AppendLong(this->mRegisterFlags);
-    this->mSendMsg.AppendLong(this->mClientFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendRegister(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -62,29 +58,8 @@ void RoutingRegisterClientOp::SendRequest()
 // Reads the register reply (client id, name, reconnect id) and the client list; waits until all replies are in
 WONStatus RoutingRegisterClientOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    WONStatus status;
-    if (inMsgType != 23 && inMsgType != 74) {
-        if (inMsgType == 51) {
-            status = inMsg.ReadShort();
-            if (status == 0) {
-                this->mClientId = inMsg.ReadShort();
-                inMsg.ReadWString(this->mClientName, 2);
-                this->mReconnectId = inMsg.ReadLong();
-            }
-            ++this->mReplyCount;
-        } else {
-            return (WONStatus)WS_RoutingOp_DontWantReply;
-        }
-    } else {
-        if (!(this->mRegisterFlags & 0x14))
-            return (WONStatus)WS_RoutingOp_DontWantReply;
-        SmartPtr<RoutingGetClientListOp> op = new RoutingGetClientListOp(this->mConnection.get());
-        status = op->HandleReply(inMsgType, inMsg);
-        this->mClientMap = op->mClientMap;
-        ++this->mReplyCount;
-    }
-    if (status == 0 && this->mReplyCount != this->mNumRepliesNeeded) return (WONStatus)WS_RoutingOp_NeedMoreReplies;
-    return status;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteRegister(this, inMsgType, inMsg);
 }
 }
 
