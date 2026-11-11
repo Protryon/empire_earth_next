@@ -173,6 +173,9 @@ dependencies = [
 [[package]]
 name = "ee_astar"
 version = "0.1.0"
+dependencies = [
+ "ee_ge",
+]
 
 [[package]]
 name = "ee_codec"

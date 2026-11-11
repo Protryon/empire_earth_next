@@ -22,10 +22,12 @@
 //! The engine's sparse point set (`U2DSparseArrayPointContainer`: the areas' and sub sectors' tiles) is `sparse`,
 //! whole (the C++ class owns a handle). `manager` is the manager's last loops over its objects (`GetTilesNextTo`,
 //! `PruneChokePoints` with the geometry behind a host, `CreateScenarioAreas`' choice), `path_splice` the path
-//! manager's path splicing and step budgets.
+//! manager's path splicing and step budgets. `hull` is the AI's hulls (`U2DPolygon<long>`/`U2DConvexHull<long>`:
+//! every area's outline, on `ee_ge::hull`'s convex hull, which the engine's float hull shares).
 //!
-//! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
-//! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
+//! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic, `long` as `i32` (the Windows build's;
+//! wrapping where the C++ wraps; the hulls keep `c_long`, `U2DPoint<long>`'s layout, and the exe's `float` steps in
+//! its order), the lists' orders and the tie-breaking exactly the C++'s. The gate is
 //! `tools/sim_capture.py`'s A* records: every search of the six oracle games, its goal calls and view answers and its
 //! storage afterwards, digested and compared with the digests of the C++ machine.
 
@@ -35,6 +37,7 @@ pub mod continent_grid;
 pub mod ffi;
 pub mod goals;
 pub mod graph;
+pub mod hull;
 pub mod machine;
 pub mod manager;
 pub mod modifiers;
