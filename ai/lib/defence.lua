@@ -72,6 +72,8 @@ M.opts = {
     away_min = 6000,      -- a citizen stays away at least this long
     away_max = 150000,    -- and at most this long (then the engine has it again)
     reflee_ms = 3000,     -- a citizen still in danger is sent again after this long
+    return_scan = 40,     -- citizens away looked at a second at most, in turn (boom-econ: 100+ citizens away with a
+                          -- large raid overran the micro step's budget from minute 81 of seed 19)
     return_max = 12,      -- citizens sent back at most a second (the micro step's 300k budget: 60 at once
                           -- overran it in one 120-minute game)
     repair = true,        -- builders repair the towers hit
@@ -174,6 +176,11 @@ local function scan(tx, ty)
         end
         for _, cl in ipairs(CLUSTERS) do
             cl.x, cl.y = cl.tx // cl.n, cl.ty // cl.n
+            cl.x0, cl.x1, cl.y0, cl.y1 = cl.xs[1], cl.xs[1], cl.ys[1], cl.ys[1]
+            for k = 2, cl.n do
+                cl.x0, cl.x1 = math.min(cl.x0, cl.xs[k]), math.max(cl.x1, cl.xs[k])
+                cl.y0, cl.y1 = math.min(cl.y0, cl.ys[k]), math.max(cl.y1, cl.ys[k])
+            end
         end
     end
     -- the refuges: built own towers (armed buildings) and town centres near the town
@@ -212,7 +219,9 @@ end
 local function raided(x, y, r)
     for _, cl in ipairs(CLUSTERS) do
         local rr = r + cl.dr - M.opts.danger_r
-        if raider_d2(cl, x, y) <= rr * rr then
+        if cl.x0 ~= nil and (x < cl.x0 - rr or x > cl.x1 + rr or y < cl.y0 - rr or y > cl.y1 + rr) then
+            -- (outside the raid's box grown by the radius: no raider can be that near)
+        elseif raider_d2(cl, x, y) <= rr * rr then
             return true
         end
     end
@@ -322,7 +331,14 @@ end
 local function returns(mem, now)
     local o = M.opts
     local back = {}
-    for _, id in ipairs(ai.keys(mem.away)) do
+    local keys = ai.keys(mem.away)
+    local start = #keys > 0 and (mem.return_k or 0) % #keys or 0
+    local look = {}
+    for i = 1, math.min(#keys, o.return_scan) do
+        look[i] = keys[(start + i - 1) % #keys + 1]
+    end
+    mem.return_k = start + #look
+    for _, id in ipairs(look) do
         local a = mem.away[id]
         local u = ai.unit(id)
         if u == nil then

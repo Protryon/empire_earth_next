@@ -107,7 +107,7 @@ local PLAN = {
         food = 18,
         patches = 5,
         hunt = 8,
-        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 20,
+        soldiers = 20, soldiers_max = 60, army_per = 35, army_floor = 20,   -- (§8.50: a third of the citizens from Copper)
         barracks_at = 10,
         towers = 10,
         settlements = 14,
