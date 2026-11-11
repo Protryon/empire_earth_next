@@ -2641,6 +2641,53 @@ static int LuaWaterSites(lua_State* L)
     return 1;
 }
 
+// ai.area(id) or ai.area(x, y) -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles = n}: an
+// area of the continent manager (a land mass, a water body: the classic's continents, as ai.tuning's largest_sea) by
+// its id or the one at a tile, its kind and size; nil for none
+static int LuaArea(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    EEAIContinent* theArea = NULL;
+    if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
+        long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+        long w, h;
+        EECPUnitsMapSize(w, h);
+        if (x >= 0 && y >= 0 && x < w && y < h)
+            theArea = gContinentManager.GetContinentAt(x, y);
+    } else if (lua_isinteger(L, 1)) {
+        lua_Integer theID = lua_tointeger(L, 1);
+        if (theID > 0 && (size_t)theID < gContinentManager.mContinents.size())
+            theArea = gContinentManager.GetContinentByID((unsigned short)theID);
+    }
+    if (theArea == NULL)
+        return 0;
+    lua_createtable(L, 0, 3);
+    EECPUnitsSetInt(L, "id", (long)theArea->mID);
+    EECPUnitsSetInt(L, "category", (long)theArea->mCategory);
+    EECPUnitsSetInt(L, "tiles", (long)theArea->mTiles.Size());
+    return 1;
+}
+
+// ai.area_point(id, seed) -> x, y: a random tile of the area (EEAIArea::GetRandomPoint), drawn from a stream seeded
+// with the script's number (the game's random stream is left alone); nil for no such area or an empty one
+static int LuaAreaPoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+        return 0;
+    lua_Integer theID = lua_tointeger(L, 1);
+    if (theID <= 0 || (size_t)theID >= gContinentManager.mContinents.size())
+        return 0;
+    EEAIContinent* theArea = gContinentManager.GetContinentByID((unsigned short)theID);
+    if (theArea == NULL || !(theArea->mTiles.Size() > 0))
+        return 0;
+    URandom theRandom((unsigned long)lua_tointeger(L, 2));
+    U2DPoint<long> thePoint = theArea->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    return 2;
+}
+
 // ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
 // point (every `grid` tiles) on the land mass nearest (x, y) (EECPNextArmy's scout), scored by its distance less
 // half its distance from `away` (further from the town first); points within grid of a skip entry are left out.
@@ -3240,6 +3287,11 @@ static int LuaTuning(lua_State* L)
     EECPUnitsSetBool(L, "planets", (theKind & kRMMapPlanetsMap) != 0);
     EECPUnitsSetBool(L, "waterless", (theKind & kRMMapWaterlessMap) != 0);
     EECPUnitsSetBool(L, "space", theMap != NULL && theMap->mTerrainMesh.GetIsSpaceMap());
+    // the map's tiles by kind (the continent manager's counts: the classic's domain shares weigh the sea by them)
+    EECPUnitsSetInt(L, "water_tiles", gContinentManager.GetNumWaterTiles());
+    EECPUnitsSetInt(L, "land_tiles", gContinentManager.GetNumLandTiles());
+    EECPUnitsSetInt(L, "space_tiles", gContinentManager.GetNumSpaceTiles());
+    EECPUnitsSetInt(L, "largest_sea", gContinentManager.GetLargestContinent(kContinentCategoryWater));
     EECPUnitsSetInt(L, "population_limit", me->EEPlayer::GetPopulationLimit(0));   // the game's (the AI's cap: the view)
     // the cheats
     lua_createtable(L, 0, 7);
@@ -3664,7 +3716,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"area_point", LuaAreaPoint}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

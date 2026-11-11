@@ -92,16 +92,71 @@ local function own_strength()
     end)
 end
 
--- the free soldiers (Personnel's pool: the engine holds them), {id -> record}, and a list in id order
+-- the own warships (the sea units of the classic's files: ships, not fishing boats or transports), records
+local function own_ships()
+    return R.memo("army_ships", function()
+        local ids = ai.units{category = "ship"}
+        local out = {}
+        if #ids == 0 then
+            return out
+        end
+        local cols = ai.get(ids, {"x", "y", "type", "held", "inside"})
+        for k = 1, #ids do
+            if cols.x[k] ~= nil then
+                out[#out + 1] = {id = ids[k], x = cols.x[k], y = cols.y[k], type = cols.type[k], held = cols.held[k],
+                                 inside = cols.inside[k]}
+            end
+        end
+        return out
+    end)
+end
+
+-- the free soldiers and warships (Personnel's pool: the engine holds them), {id -> record}, and a list in id order
 local function free_pool()
     local pool, list = {}, {}
-    for _, u in ipairs(own_military()) do
-        if u.held == "engine" and u.inside == nil and (cls(u.type).speed or 0) > 0 then
-            pool[u.id] = u
-            list[#list + 1] = u
+    for _, src in ipairs({own_military(), own_ships()}) do
+        for _, u in ipairs(src) do
+            if u.held == "engine" and u.inside == nil and (cls(u.type).speed or 0) > 0 then
+                pool[u.id] = u
+                list[#list + 1] = u
+            end
         end
     end
+    table.sort(list, function(p, q) return p.id < q.id end)
     return pool, list
+end
+
+-- a class's domain in the classic's files (AddUnitType): air, sea, space, else land
+local function domain_of(c)
+    local d = c.domain or "land"
+    if d == "air" or d == "sea" or d == "space" then
+        return d
+    end
+    return "land"
+end
+
+-- a unit the files count as military (AddUnitType: no citizen or boat; an attack, a calamity power, a medic or a
+-- conversion)
+local function file_military(c)
+    return c.category ~= "citizen" and c.category ~= "boat" and ((c.attack or 0) > 0 or c.converts or c.medic)
+end
+
+-- the own file's strength and count per domain (EECPIntelligence's own player file: every own unit)
+local function own_domains()
+    return R.memo("army_domains", function()
+        local out = {land = 0, sea = 0, air = 0, space = 0, n_land = 0, n_sea = 0, n_air = 0, n_space = 0}
+        for _, src in ipairs({own_military(), own_ships()}) do
+            for _, u in ipairs(src) do
+                local c = cls(u.type)
+                if file_military(c) then
+                    local d = domain_of(c)
+                    out[d] = out[d] + (c.influence or 0)
+                    out["n_" .. d] = out["n_" .. d] + 1
+                end
+            end
+        end
+        return out
+    end)
 end
 
 -- an enemy player's file (EECPIntelligencePlayerFile::Update every 30 s): the military and gatherers known (the
@@ -115,6 +170,7 @@ local function file_of(memory, player)
     end
     f = f or {military = 0, gatherers = 0}
     local military, gatherers, types, buildings = 0, 0, {}, {}
+    local dom = {land = 0, sea = 0, air = 0, space = 0}
     local seen_type = {}
     for _, m in ipairs(ai.memory{player = player}) do
         local c = cls(m.type)
@@ -126,11 +182,20 @@ local function file_of(memory, player)
             gatherers = gatherers + 1
         elseif (c.attack or 0) > 0 or c.converts or c.medic then
             military = military + 1
+            if c.category ~= "boat" then
+                local d = domain_of(c)
+                dom[d] = dom[d] + (c.influence or 0)
+            end
             if not seen_type[m.type] then
                 seen_type[m.type] = true
                 types[#types + 1] = m.type
             end
         end
+    end
+    -- the strength per domain (the most remembered at once, as the counts)
+    f.dom = f.dom or {land = 0, sea = 0, air = 0, space = 0}
+    for _, d in ipairs({"land", "sea", "air", "space"}) do
+        f.dom[d] = math.max(f.dom[d], dom[d])
     end
     table.sort(types)
     f.military = math.max(f.military, military)
@@ -442,19 +507,21 @@ end
 -- The unit selector (EECPUnitSelector::Select)
 
 -- GatherCandidates' classes by AI kind (GetScreenedTypesByLine with the currently-buildable screen, then
--- KeepBestClasses: per kind the classes of its latest epoch). DEVIATION: land classes only (the navy, the air and
--- space: NOT STARTED); the classes come from the view's costs (what the player can train)
-local function candidate_classes(view, kind)
+-- KeepBestClasses: per kind the classes of its latest epoch), of one domain (SplitByDomain: "land" or "sea").
+-- DEVIATION: the air and space: NOT STARTED; the classes come from the view's costs (what the player can train)
+local function candidate_classes(view, kind, domain)
+    domain = domain or "land"
     local byKind = {}
     for _, c in ipairs(view.costs or {}) do
         if c.military and not c.building then
             local k = cls(c.type)
             local t = U.class_tech(view, c.type)
-            if k.domain == "land" and (k.speed or 0) > 0 and (k.epoch or 0) <= view.epoch
+            if k.domain == domain and (k.speed or 0) > 0 and (k.epoch or 0) <= view.epoch
                     and (k.attack_unit or k.defense_unit) and not k.is_transport
                     and t ~= nil and not t.obsolete and (k.ai_kind or 0) ~= 0 then
                 -- FilterByStrategy: an attack group keeps the attack units, a defence group the defence units
-                if (kind == 0 and k.attack_unit) or (kind == 1 and k.defense_unit) then
+                -- (the strategies of kind 4 and 5 keep both)
+                if (kind == 0 and k.attack_unit) or (kind == 1 and k.defense_unit) or kind == 4 or kind == 5 then
                     byKind[k.ai_kind] = byKind[k.ai_kind] or {}
                     local l = byKind[k.ai_kind]
                     l[#l + 1] = c.type
@@ -505,9 +572,151 @@ local function unit_limit(view, memory)
     return view.population_cap * (1000 - memory.t.behavior.citizen_percentage_k) // 1000
 end
 
--- Select: the classes of a new group's slots and the held units it takes. kind 0 attack, 1 defence. The
--- candidates are the free soldiers (and, for an attack, the defence groups' soldiers: GatherDefendingUnits)
-local function select_units(view, memory, kind, target)
+-- GetDomainShare(sea): the water's share of the map's tiles (x 0.85..1.15), cut by the own sea strength against the
+-- target's (or by the own sea units' count when the target has none at sea), then pulled toward the target's sea
+-- share of its strength by the air unit weight (as the original: GetAirUnitWeight); thousandths. 0 without a sea
+local function sea_share(memory, f)
+    local t = memory.t
+    if (t.largest_sea or 0) == 0 then
+        return 0
+    end
+    local water, space, land = t.water_tiles or 0, t.space_tiles or 0, t.land_tiles or 0
+    local total = water + space + land
+    if total <= 0 then
+        return 0
+    end
+    local tdom = f.dom or {land = 0, sea = 0, air = 0, space = 0}
+    local tsum = tdom.land + tdom.sea + tdom.air + tdom.space
+    local own = own_domains()
+    local share = tsum ~= 0 and tdom.sea * 1000 // tsum or 0
+    local ratio
+    if tdom.sea > 0 then
+        ratio = own.sea ~= 0 and own.sea * 1000 // tdom.sea or 1000 - share
+    else
+        ratio = own.n_sea * 1000
+    end
+    local result = 0
+    local fraction = water * 1000 // total
+    if fraction > 0 then
+        result = ai.random(850, 1150) * fraction // 1000
+        if result > 1000 then
+            result = fraction
+        end
+        if result > 0 then
+            if ratio >= 1000 then
+                result = result * 1000 // ratio
+            elseif ratio > 0 then
+                result = (1000 - ratio) * result // 1000
+            else
+                result = T.random_k() * result // 1000
+            end
+        end
+    end
+    if share > 0 and result > 0 then
+        result = memory.t.behavior.air_unit_weight_k * (share - result) // 1000 + result
+        result = math.max(0, math.min(1000, result))
+    end
+    return result
+end
+
+-- the sea counterpart of IsFavoriteLand (EECPUSFavoriteUnitsScreen::IsFavoriteSea)
+local function favorite_sea_ok(name)
+    local k = cls(name)
+    local ak = k.ai_kind or 0
+    return (k.speed or 0) > 0 and (k.attack or 0) > 0 and ak ~= KIND_HERO and not k.medic and not k.converts
+        and ak ~= KIND_SPECIAL and not k.is_transport and not k.mine
+end
+M.favorite_sea_ok = favorite_sea_ok
+
+-- AllocateCounterUnits for one domain: the classes whose family counters the target's types (weights 3/2/1), up to
+-- `maximum` classes, each in the choices its weight's times; ceil(n x the RPS factor) picks. -> the slots, n left
+local function counter_slots(memory, byKind, weights, list, n, maximum, siege_limit)
+    local b = memory.t.behavior
+    local pool = {}
+    for _, ak in ipairs(ai.keys(byKind)) do
+        for _, name in ipairs(byKind[ak]) do
+            pool[#pool + 1] = name
+        end
+    end
+    local limited = 0
+    shuffle(pool)
+    local choices, specials, count = {}, {}, 0
+    for i = #pool, 1, -1 do
+        local name = pool[i]
+        local k = cls(name)
+        if k.ai_kind == KIND_SPECIAL then
+            specials[#specials + 1] = name
+        elseif count < maximum and weights[k.ai_kind] ~= nil then
+            if k.medic then
+                choices[#choices + 1] = name
+            else
+                for _ = 1, weights[k.ai_kind] do
+                    choices[#choices + 1] = name
+                end
+                count = count + 1
+            end
+            if siege_limit ~= nil and (k.ai_kind == KIND_SIEGE or k.ai_kind == KIND_ARTILLERY) then
+                limited = limited + 1
+                if limited >= siege_limit then
+                    weights[k.ai_kind] = nil
+                end
+            end
+        end
+    end
+    local slots = {}
+    if #choices > 0 then
+        local factor = memory.t.island and b.rps_selection_islands_k or b.rps_selection_non_islands_k
+        local picks = (n * factor + 999) // 1000
+        for _ = 1, picks do
+            local name
+            if #specials > 0 and T.random_k() < b.specialized_unit_chance_k then
+                name = specials[ai.random(1, #specials)]
+            else
+                -- TakeUnitClass(the first choice): a free unit of it when there is one
+                local first = choices[1]
+                for _, u in ipairs(list) do
+                    if u.type == first then
+                        name = first
+                        break
+                    end
+                end
+                if name == nil then
+                    name = choices[ai.random(1, #choices)]
+                end
+            end
+            slots[#slots + 1] = name
+            n = math.max(n - 1, 0)
+        end
+    end
+    return slots, n
+end
+
+-- the favourite of a domain (AllocateFavoriteUnits): the player's favourite type when available, else a random
+-- favourite candidate of the domain's classes; nil for none
+local function favorite_of(view, fav, domain, byKind, ok_fn)
+    if fav ~= nil then
+        local t = U.class_tech(view, fav)
+        if cls(fav).domain == domain and t ~= nil and t.available then
+            return fav
+        end
+    end
+    local list2 = {}
+    for _, ak in ipairs(ai.keys(byKind)) do
+        for _, name in ipairs(byKind[ak]) do
+            local t = U.class_tech(view, name)
+            if t ~= nil and t.available and ok_fn(name) then
+                list2[#list2 + 1] = name
+            end
+        end
+    end
+    return #list2 > 0 and list2[ai.random(1, #list2)] or nil
+end
+
+-- Select: the classes of a new group's slots and the held units it takes, land and sea. kind 0 attack, 1 defence.
+-- The candidates are the free soldiers and warships (and, for an attack, the defence groups' soldiers:
+-- GatherDefendingUnits). ComputeDomainShares: the sea share (GetDomainShare); the air share (from WW1) and space:
+-- NOT STARTED
+local function select_units(view, memory, kind, target, naval)
     local b = memory.t.behavior
     local mem = army(memory)
     local pool, list = free_pool()
@@ -527,9 +736,13 @@ local function select_units(view, memory, kind, target)
             end
         end
     end
-    -- ComputeGroupSize
     local f = file_of(memory, target)
     local strength = strength_of(view, memory, f)
+    if naval ~= nil then
+        -- (CheckNaval's strategy: the count set, the sea's share 100, a counter requirement and the favourites)
+        return M.select_naval(view, memory, kind, f, strength, list, naval)
+    end
+    -- ComputeGroupSize
     local share
     if kind == 1 then
         share = T.random(b.defense_group_size_min, b.defense_group_size_max)
@@ -564,9 +777,32 @@ local function select_units(view, memory, kind, target)
     if count <= 0 then
         return nil
     end
-    local numLand = count
+    -- ComputeDomainShares and Calculate: the sea's count (the cap x its share must make a unit), the rest land
+    local numSea = 0
+    local sea_k = sea_share(memory, f)
+    local cap = view.population_cap
+    local land_k = 1000 - sea_k
+    local sum = 0
+    if sea_k > 0 and cap * sea_k // 1000 > 0 then
+        sum = sum + sea_k
+    else
+        sea_k = 0
+    end
+    if land_k > 0 and cap * land_k // 1000 > 0 then
+        sum = sum + land_k
+    end
+    if sum > 0 and sea_k > 0 then
+        numSea = sea_k * count // sum
+    end
+    local byKind = candidate_classes(view, kind, "land")
+    local seaKind = candidate_classes(view, kind, "sea")
+    -- RedistributeDomainCounts: a domain with no class gives its count to land
+    if numSea > 0 and #ai.keys(seaKind) == 0 then
+        numSea = 0
+    end
+    local numLand = count - numSea
     local held, slots = {}, {}
-    -- AllocateHeldUnits: the most common classes first (up to 9 classes)
+    -- AllocateHeldUnits: the most common classes first (up to 9 classes), each domain within its count
     if held_n > 0 then
         local counts = {}
         for _, c in ipairs(cands) do
@@ -589,7 +825,8 @@ local function select_units(view, memory, kind, target)
             if best == nil then
                 break
             end
-            local take = math.min(bn, wanted)
+            local sea = domain_of(cls(best)) == "sea"
+            local take = math.min(bn, wanted, sea and numSea or numLand)
             for _, c in ipairs(cands) do
                 if take <= 0 then
                     break
@@ -599,113 +836,142 @@ local function select_units(view, memory, kind, target)
                     held[#held + 1] = c
                     take = take - 1
                     wanted = wanted - 1
-                    numLand = numLand - 1
+                    if sea then
+                        numSea = numSea - 1
+                    else
+                        numLand = numLand - 1
+                    end
                 end
             end
             counts[best] = nil
         end
     end
-    local byKind = candidate_classes(view, kind)
     -- AllocateSpecialUnits (priests, prophets, heroes, carriers): NOT STARTED
-    -- AllocateCounterUnits: the families that counter the target's unit types, weighted 3/2/1
-    if counters and numLand > 0 then
+    -- AllocateCounterUnits: the families that counter the target's unit types, weighted 3/2/1 (WeighCounters: the
+    -- families with a candidate class), the sea (3-5 classes) before the land (2-6, the siege share)
+    if counters and (numLand > 0 or numSea > 0) then
+        local all = {}
+        for _, ak in ipairs(ai.keys(byKind)) do
+            all[ak] = true
+        end
+        for _, ak in ipairs(ai.keys(seaKind)) do
+            all[ak] = true
+        end
         local weights = {}
         for _, t in ipairs(f.types or {}) do
             local k = cls(t)
             local ws = {3, 2, 1}
             for i, ck in ipairs(k.counters or {}) do
-                if ck ~= 0 and byKind[ck] ~= nil then
+                if ck ~= 0 and all[ck] then
                     weights[ck] = (weights[ck] or 0) + ws[i]
                 end
             end
         end
         if #ai.keys(weights) > 0 then
-            local land = {}
-            for _, ak in ipairs(ai.keys(byKind)) do
-                for _, name in ipairs(byKind[ak]) do
-                    land[#land + 1] = name
-                end
-            end
-            local maximum = ai.random(2, 6)
-            local limit = (b.siege_weapon_percentage_k * numLand + 999) // 1000
-            local limited = 0
-            shuffle(land)
-            local choices, specials, n = {}, {}, 0
-            for i = #land, 1, -1 do
-                local name = land[i]
-                local k = cls(name)
-                if k.ai_kind == KIND_SPECIAL then
-                    specials[#specials + 1] = name
-                elseif n < maximum and weights[k.ai_kind] ~= nil then
-                    if k.medic then
-                        choices[#choices + 1] = name
-                    else
-                        for _ = 1, weights[k.ai_kind] do
-                            choices[#choices + 1] = name
-                        end
-                        n = n + 1
-                    end
-                    if k.ai_kind == KIND_SIEGE or k.ai_kind == KIND_ARTILLERY then
-                        limited = limited + 1
-                        if limited >= limit then
-                            weights[k.ai_kind] = nil
-                        end
-                    end
-                end
-            end
-            if #choices > 0 then
-                local factor = memory.t.island and b.rps_selection_islands_k or b.rps_selection_non_islands_k
-                local picks = (numLand * factor + 999) // 1000
-                for _ = 1, picks do
-                    local name
-                    if #specials > 0 and T.random_k() < b.specialized_unit_chance_k then
-                        name = specials[ai.random(1, #specials)]
-                    else
-                        -- TakeUnitClass(the first choice): a free unit of it when there is one
-                        local first = choices[1]
-                        for _, u in ipairs(list) do
-                            if u.type == first then
-                                name = first
-                                break
-                            end
-                        end
-                        if name == nil then
-                            name = choices[ai.random(1, #choices)]
-                        end
-                    end
+            if numSea > 0 then
+                local got
+                got, numSea = counter_slots(memory, seaKind, weights, list, numSea, ai.random(3, 5), nil)
+                for _, name in ipairs(got) do
                     slots[#slots + 1] = name
-                    numLand = math.max(numLand - 1, 0)
+                end
+            end
+            if numLand > 0 then
+                local got
+                got, numLand = counter_slots(memory, byKind, weights, list, numLand, ai.random(2, 6),
+                    (b.siege_weapon_percentage_k * numLand + 999) // 1000)
+                for _, name in ipairs(got) do
+                    slots[#slots + 1] = name
                 end
             end
         end
     end
-    -- AllocateFavoriteUnits: the rest of the land count, the favourite land type (or a random favourite candidate)
-    if favorites and numLand > 0 then
-        local fav = memory.cp.favorite_land
-        local ok = false
+    -- AllocateFavoriteUnits: the sea count the favourite sea type (none: the count goes to land), then the land count
+    -- the favourite land type
+    if favorites and numSea > 0 then
+        local fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
         if fav ~= nil then
-            local t = U.class_tech(view, fav)
-            ok = cls(fav).domain == "land" and t ~= nil and t.available
-        end
-        if not ok then
-            local list2 = {}
-            for _, ak in ipairs(ai.keys(byKind)) do
-                for _, name in ipairs(byKind[ak]) do
-                    local t = U.class_tech(view, name)
-                    if t ~= nil and t.available and favorite_land_ok(name) then
-                        list2[#list2 + 1] = name
-                    end
-                end
+            for _ = 1, numSea do
+                slots[#slots + 1] = fav
             end
-            fav = #list2 > 0 and list2[ai.random(1, #list2)] or nil
+        else
+            numLand = numLand + numSea
         end
+        numSea = 0
+    end
+    if favorites and numLand > 0 then
+        local fav = favorite_of(view, memory.cp.favorite_land, "land", byKind, favorite_land_ok)
         if fav ~= nil then
             for _ = 1, numLand do
                 slots[#slots + 1] = fav
             end
         end
     end
-    return {count = count, held = held, slots = slots, strength = strength}
+    return {count = count, held = held, slots = slots, strength = strength, sea_k = sea_k}
+end
+
+-- CheckNaval's selection: `count` units, all at sea (no sea class: they go to land, as AllocateFavoriteUnits moves
+-- the count), the counter requirement first, then the favourites
+function M.select_naval(view, memory, kind, f, strength, list, count)
+    local b = memory.t.behavior
+    local byKind = candidate_classes(view, kind, "land")
+    local seaKind = candidate_classes(view, kind, "sea")
+    local numSea, numLand = count, 0
+    if #ai.keys(seaKind) == 0 then
+        numSea, numLand = 0, count
+    end
+    local slots = {}
+    local all = {}
+    for _, ak in ipairs(ai.keys(byKind)) do
+        all[ak] = true
+    end
+    for _, ak in ipairs(ai.keys(seaKind)) do
+        all[ak] = true
+    end
+    local weights = {}
+    for _, t in ipairs(f.types or {}) do
+        local k = cls(t)
+        local ws = {3, 2, 1}
+        for i, ck in ipairs(k.counters or {}) do
+            if ck ~= 0 and all[ck] then
+                weights[ck] = (weights[ck] or 0) + ws[i]
+            end
+        end
+    end
+    if #ai.keys(weights) > 0 then
+        local got
+        if numSea > 0 then
+            got, numSea = counter_slots(memory, seaKind, weights, list, numSea, ai.random(3, 5), nil)
+            for _, name in ipairs(got) do
+                slots[#slots + 1] = name
+            end
+        end
+        if numLand > 0 then
+            got, numLand = counter_slots(memory, byKind, weights, list, numLand, ai.random(2, 6),
+                (b.siege_weapon_percentage_k * numLand + 999) // 1000)
+            for _, name in ipairs(got) do
+                slots[#slots + 1] = name
+            end
+        end
+    end
+    if numSea > 0 then
+        local fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
+        if fav ~= nil then
+            for _ = 1, numSea do
+                slots[#slots + 1] = fav
+            end
+        else
+            numLand = numLand + numSea
+        end
+    end
+    if numLand > 0 then
+        local fav = favorite_of(view, memory.cp.favorite_land, "land", byKind, favorite_land_ok)
+        if fav ~= nil then
+            for _ = 1, numLand do
+                slots[#slots + 1] = fav
+            end
+        end
+    end
+    return {count = count, held = {}, slots = slots, strength = strength, sea_k = 1000}
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -730,9 +996,9 @@ end
 
 -- CreateGroup (MakePlan, PlaceSubGroups): a sub-group of the selection, its held units taken, its slots requested
 -- through Personnel. Returns the group, or nil
-local function create_group(view, memory, kind, mission, target, why)
+local function create_group(view, memory, kind, mission, target, why, naval)
     local mem = army(memory)
-    local sel = select_units(view, memory, kind, target)
+    local sel = select_units(view, memory, kind, target, naval)
     if sel == nil or (#sel.held == 0 and #sel.slots == 0) then
         print(string.format("classic_lua army.%s kind=%d target=%d none", why, kind, target or 0))
         return nil
@@ -741,24 +1007,36 @@ local function create_group(view, memory, kind, mission, target, why)
     if rx == nil or rx < 0 then
         return nil
     end
-    local g = G.create(mem, {task = "defend", role = "army", x = rx, y = ry, radius = GUARD_RADIUS, target = 0})
-    g.kind, g.mission, g.enemy = kind, mission, target or 0
-    g.phase, g.phase_t = "wait", view.time
-    g.deadline = view.time + REQUEST_MS
-    g.slots = {}
+    -- MakeSubGroups: one sub-group per kind (GetSubGroupKind): land, and sea (the warships)
+    local parts = {land = {slots = {}, ids = {}}, sea = {slots = {}, ids = {}}}
     for _, name in ipairs(sel.slots) do
-        g.slots[#g.slots + 1] = {c = name, asked = false}
+        local part = parts[domain_of(cls(name)) == "sea" and "sea" or "land"]
+        part.slots[#part.slots + 1] = {c = name, asked = false}
     end
-    local ids = {}
     for _, c in ipairs(sel.held) do
-        ids[#ids + 1] = c.id
+        local part = parts[domain_of(cls(c.type)) == "sea" and "sea" or "land"]
+        part.ids[#part.ids + 1] = c.id
     end
-    if #ids > 0 then
-        G.add(mem, g, ids)
+    local first = nil
+    for _, d in ipairs({"land", "sea"}) do
+        local part = parts[d]
+        if #part.slots > 0 or #part.ids > 0 then
+            local g = G.create(mem, {task = "defend", role = "army", x = rx, y = ry, radius = GUARD_RADIUS, target = 0})
+            g.kind, g.mission, g.enemy = kind, mission, target or 0
+            g.sea = d == "sea"
+            g.phase, g.phase_t = "wait", view.time
+            g.deadline = view.time + REQUEST_MS
+            g.slots = part.slots
+            if #part.ids > 0 then
+                G.add(mem, g, part.ids)
+            end
+            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d%s",
+                why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
+                g.sea and " navy" or ""))
+            first = first or g
+        end
     end
-    print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d",
-        why, g.id, kind, mission, target or 0, sel.count, #ids, #g.slots, sel.strength))
-    return g
+    return first
 end
 
 -- Personnel's FillRequest: each open slot takes a free unit of its class, else one is ordered (once); the
@@ -981,9 +1259,68 @@ local function defence_task(view, memory, g)
     return nil
 end
 
+-- a random point of a water body (EEAIContinent::GetRandomPoint, ai.area_point with the script's draw)
+local function sea_point(body)
+    return ai.area_point(body, ai.random(1, 0x7fffffff))
+end
+
+-- AssignSeaTask: FindSeaTarget finds nothing (the original's); a quarter of the time a known unit of the target
+-- player on the sub-group's water (its main continent); else a random point of that water (the defend tasks of
+-- ChooseTask: scenario only, none); else the water by the town. DEVIATION (fog): the known units are those
+-- remembered (ai.memory)
+local function assign_sea_task(view, memory, g)
+    local x, y = g.cx or g.x, g.cy or g.y
+    -- (GetMainContinent: the water body under the sub-group, else the largest)
+    local here = (x ~= nil and x >= 0) and ai.area(x, y) or nil
+    local body = (here ~= nil and here.category == 2) and here.id or 0
+    if body == 0 then
+        body = memory.t.largest_sea or 0
+    end
+    local why = nil
+    if body ~= 0 and T.random_k() < 250 then
+        local list = {}
+        for _, m in ipairs(ai.memory{player = g.enemy}) do
+            if not m.building then
+                local t = ai.area(m.x, m.y)
+                if t ~= nil and t.id == body then
+                    list[#list + 1] = m
+                end
+            end
+        end
+        if #list > 0 then
+            local m = list[ai.random(1, #list)]
+            set_place(g, "attack", m.x, m.y, 0, g.enemy)
+            why = "unit"
+        end
+    end
+    if why == nil and body ~= 0 then
+        local px, py = sea_point(body)
+        if px ~= nil then
+            set_place(g, "defend", px, py, GUARD_RADIUS, 0)
+            why = "sea"
+        end
+    end
+    if why == nil then
+        local rx, ry = rally_point(view)
+        local sites = rx ~= nil and ai.water_sites(rx, ry, {max = 1}) or {}
+        if #sites > 0 then
+            rx, ry = sites[1][1], sites[1][2]
+        end
+        set_place(g, "defend", rx, ry, GUARD_RADIUS, 0)
+        why = "return"
+    end
+    g.task_t = view.time
+    g.task_check = view.time + ai.random(10, 120) * 1000
+    print(string.format("classic_lua army.task id=%d mission=%d %s at=%d,%d units=%d navy", g.id, g.mission, why, g.x,
+        g.y, #g.units))
+end
+
 -- AssignLandTask: an attack (mission 0 or 2) goes for the target's territory (the weakest region first); else the
--- defence ladder; else back to the rally point
+-- defence ladder; else back to the rally point. A sea sub-group: AssignSeaTask
 local function assign_task(view, memory, g)
+    if g.sea then
+        return assign_sea_task(view, memory, g)
+    end
     local why = nil
     local home = g.mission == 3 and g.task_town ~= nil and town_by_id(g.task_town) or nil
     if home ~= nil then
@@ -1049,7 +1386,8 @@ local function update_groups(view, memory)
                     assign_task(view, memory, g)
                 elseif g.task == "defend" and g.mission ~= 3 and g.state ~= "fighting"
                         and view.time >= (g.task_check or 0) then
-                    if ai.random(0, 1) == 0 then
+                    -- (a sea sub-group's place is a location task: done once looked at again)
+                    if g.sea or ai.random(0, 1) == 0 then
                         assign_task(view, memory, g)
                     else
                         g.task_check = view.time + ai.random(10, 120) * 1000
@@ -1076,6 +1414,46 @@ end
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- The defence commander
+
+-- CheckNaval: every ship_maintenance_timer minutes, with more than 50 water tiles on the map, the warships (own and
+-- asked for) topped up to the difficulty's ships_to_maintain by a group of a sea-only strategy (kind 5: a defence
+-- group) against a random enemy; the peace rules hold it back as an attack's. ChooseUnitsToKill's room: NOT STARTED.
+-- The carrier fighters (WW2): NOT STARTED
+local function check_naval(view, memory)
+    local a = army(memory)
+    if view.time <= (a.next_naval or 0) then
+        return
+    end
+    local t = memory.t
+    local b = t.behavior
+    if (t.water_tiles or 0) > 50 then
+        local limit
+        if t.deathmatch then
+            limit = T.by_difficulty(memory, b.ships_to_maintain_dm_easy, b.ships_to_maintain_dm_medium,
+                b.ships_to_maintain_dm_hard)
+        else
+            limit = T.by_difficulty(memory, b.ships_to_maintain_easy, b.ships_to_maintain_medium,
+                b.ships_to_maintain_hard)
+        end
+        local have = #own_ships()
+        for _, g in ipairs(G.all(a)) do
+            for _, sl in ipairs(g.slots or {}) do
+                if domain_of(cls(sl.c)) == "sea" then
+                    have = have + 1
+                end
+            end
+        end
+        if have < limit then
+            local target = random_enemy()
+            local p = t.personality
+            local peace = (view.epoch <= 0 and not p.prehistoric_attacks) or (view.epoch == 1 and not p.stone_attacks)
+            if target ~= nil and not peace then
+                create_group(view, memory, 5, 1, target, "naval", limit - have)
+            end
+        end
+    end
+    a.next_naval = view.time + b.ship_maintenance_timer * 60000
+end
 
 -- CounterAttack: a defence group (kind 1, mission 3) for the package's town against its attacker
 local function counter_attack(view, memory, pk)
@@ -1117,7 +1495,7 @@ local function send_best(view, memory, pk)
     end
     local best, bd = nil, nil
     for _, g in ipairs(G.all(a)) do
-        if g.role == "army" and g.mission ~= 2 and not inpkg[g.id] and #g.units > 0 and g.phase == "task" then
+        if g.role == "army" and not g.sea and g.mission ~= 2 and not inpkg[g.id] and #g.units > 0 and g.phase == "task" then
             local d
             if net > 0 then
                 local s = 0
@@ -1196,7 +1574,7 @@ local function deploy(view, memory, pk, tw, threats)
     local sent = 0
     for k = #pk.groups, 1, -1 do
         local g = a.groups[pk.groups[k]]
-        if g ~= nil and #g.units > 0 and g.phase ~= "wait" then
+        if g ~= nil and not g.sea and #g.units > 0 and g.phase ~= "wait" then
             local gx, gy = g.cx or g.x, g.cy or g.y
             local cx, cy = hull_closest(tw, gx, gy)
             local dist = d2(cx, cy, gx, gy)
@@ -1411,6 +1789,7 @@ local function defense(view, memory)
     if view.time >= cp.next_aid then
         plan_aid(view, memory)
     end
+    check_naval(view, memory)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -1506,7 +1885,7 @@ local function note_deaths(view, memory, events)
                     a.deaths[key] = nil
                     local best, bd = nil, nil
                     for _, g in ipairs(G.all(a)) do
-                        if g.role == "army" and g.mission ~= 2 and #g.units > 0 and g.phase == "task" then
+                        if g.role == "army" and not g.sea and g.mission ~= 2 and #g.units > 0 and g.phase == "task" then
                             local d = d2(g.cx or g.x, g.cy or g.y, h.x, h.y)
                             if bd == nil or d < bd then
                                 best, bd = g, d

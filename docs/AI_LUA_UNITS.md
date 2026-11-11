@@ -953,6 +953,13 @@ from data, so that a script can make its decisions with the same numbers:
   the largest water body's shore tiles next to the land mass at (x, y) and the water tiles round them, explored ones
   only (EECPBuildManager::CollectSiteTiles(2), which reads the whole map); empty when that water does not touch the
   land. The classic's FindShoreSite tries them in turn.
+- `ai.tuning()` has the map's `water_tiles`, `land_tiles` and `space_tiles` (the continent manager's counts) and
+  `largest_sea` (the largest water body's id, 0 for none): the classic's domain shares (GetDomainShare) weigh the
+  sea by them. `ai.area(id)` or `ai.area(x, y)` -> `{id, category, tiles}`: an area of the continent manager (the
+  classic's continents: a land mass, a water body), by its id or the one at a tile, with its kind (1 land, 2 water,
+  3 cliff, 4 space, 5 map edge) and size. These ids are not `ai.tile`'s `continent` and `sea` (the path sectors'
+  land masses and water bodies). `ai.area_point(id, seed)` -> x, y: a random tile of the area
+  (EEAIArea::GetRandomPoint) from a stream seeded with the script's number (AssignSeaTask's random point).
 
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
