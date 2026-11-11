@@ -24,13 +24,18 @@ void GUIStringData::toUpper()
 {
     ee_won_guistring_change_case(this->mText,this->mLength,true,sizeof(wchar_t));
 }
+static void GUIStringDataNarrowSink(void* context, const uint8_t* bytes, size_t length)
+{
+    static_cast<std::string*>(context)->assign(reinterpret_cast<const char*>(bytes),length);
+}
 // FUNCTION: WON 0x00727d90
-// Returns the text as a narrow string; characters above 255 become '?'
+// Returns the text as the game's narrow text, UTF-8 (D6; the original narrowed a character below 256 to its byte and
+// any other to '?')
 std::string GUIStringData::GetString() const
 {
-    std::string result(this->mLength,'\0');
+    std::string result;
     if(this->mLength!=0)
-        ee_won_guistring_narrow(this->mText,this->mLength,reinterpret_cast<uint8_t*>(&result[0]),sizeof(wchar_t));
+        ee_won_guistring_narrow(this->mText,this->mLength,sizeof(wchar_t),GUIStringDataNarrowSink,&result);
     return result;
 }
 
@@ -55,7 +60,8 @@ int GUIStringData::CompareNoCase(const GUIStringData* other) const
     return ee_won_guistring_op(EeWonGuiStringOp::CompareNoCase,this->mText,this->mLength,other->mText,other->mLength,0,
                                sizeof(wchar_t));
 }
-// The offset is a signed int and narrow bytes widen unsigned; the counted wide text decides, not an embedded NUL
+// The offset is a signed int and the narrow text is UTF-8 (decoded first); the counted wide text decides, not an
+// embedded NUL
 // FUNCTION: WON 0x00728150
 // Compares the text from an offset with a narrow string ignoring case; returns 1 if the narrow
 // string ends first, the first difference, else 0 or -1

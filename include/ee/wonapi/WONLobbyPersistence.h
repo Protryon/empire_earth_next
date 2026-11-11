@@ -206,23 +206,16 @@ public:
     // the destructor is implicit (0x75c2c0; it does not store its own vtable)
     std::string GetUserFileName(long inUserId); // 0x75e6e0 (provisional name)
     long FindUnusedUserId();                  // 0x75e770 (provisional name)
-    long ReadFileHeader(FileReader& inReader);  // 0x75f6a0 (provisional name)
-    void WriteFileHeader(FileWriter& outWriter, long inVersion);  // 0x75f750
     void PruneUsers(); // 0x75eb30 (drops the oldest users)
-    GUIString ReadByteString(FileReader& inReader); // 0x75ee80 (byte characters)
-    void WriteByteString(FileWriter& outWriter, const GUIString& inText); // 0x75f3d0
-    GUIString ReadWideString(FileReader& inReader); // 0x75f000 (16-bit characters)
-    GUIString ReadEncryptedString(FileReader& inReader); // 0x75f190
-    void WriteWideString(FileWriter& outWriter, const GUIString& inText); // 0x75f4e0
-    void WriteEncryptedString(FileWriter& outWriter, const GUIString& inText); // 0x75f530
+    // the files' layouts are ee_won's (persist.rs); the password's encryption stays here
+    GUIString DecryptString(const uint8_t* inData, size_t inLength); // 0x75f190's decryption
+    ByteBufferPtr EncryptString(const GUIString& inText); // 0x75f530's encryption (NULL when it fails)
     GUIString GetDefaultLanName(); // 0x75c520 (uses a CRC)
     void RestoreDefaults(); // 0x75c720
     void LoadGlobalPrefs(); // 0x75f7b0
     void SaveGlobalPrefs(); // 0x75faf0
     void LoadUserPrefs(); // 0x75fc70
     void SaveUserPrefs(); // 0x760770
-    void ReadLanPrefs(FileReader& inReader); // 0x760b10
-    void WriteLanPrefs(FileWriter& outWriter); // 0x760da0
     void PruneLanNames(); // 0x75e7e0 (keeps the 50 most recent LAN names)
     void SelectRecentLanName(); // 0x75ea40
     std::set<long> mUserIds;                  // 0x08 (the insert at 0x75fa52 gives the type)

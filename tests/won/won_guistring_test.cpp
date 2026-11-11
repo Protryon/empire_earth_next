@@ -1,6 +1,7 @@
 // WONGUI's GUIStringData (the lobby's text: every label, list item, chat line and input): the comparisons, searches,
-// case maps, number read and narrowing over a table of strings, one line per case, compared with
-// rust/crates/ee_won/src/golden_guistring.txt (recorded over the C++ before its port; the Rust test
+// case maps, number read and the crossing to and from narrow text (UTF-8, D6) over a table of strings, one line per
+// case, compared with rust/crates/ee_won/src/golden_guistring.txt (recorded over the C++ before its port and
+// re-recorded when the narrow crossing became UTF-8; the Rust test
 // `guistring_golden` replays the C-locale pass). A second pass runs under setlocale(LC_ALL, "English"): the case maps
 // and the space test are the C runtime's. `--print` prints the lines instead. The exit code is the number of failures.
 #include <windows.h>
@@ -26,7 +27,10 @@ static const wchar_t* const kTexts[] = {
     L"", L"a", L"abc", L"ABC", L"abd", L"ab", L"abcabc", L"  -42x", L"12", L"-", L" 7 ", L"\x00e9t\x00e9",
     L"\x00c9T\x00c9", L"\x263a smile", L"a_b", L"a-b c", L"0", L"\t\v99", L"x\x00ffy", L"aBcAbC",
 };
-static const char* const kNarrow[] = {"", "a", "abc", "ABC", "ab0", "b", "\xe9t", "\xc9T", "abcd", "0"};
+// the narrow text is the game's, UTF-8 (D6): "\xe9t" and "\xc9T" are stray bytes (U+FFFD), the last four are UTF-8
+static const char* const kNarrow[] = {"",     "a",          "abc",        "ABC",          "ab0",
+                                      "b",    "\xe9t",      "\xc9T",      "abcd",         "0",
+                                      "\xc3\xa9t", "\xc3\x89T", "\xe2\x98\xba", "x\xf0\x9f\x98\x80y"};
 static const wchar_t kChars[] = {'a', 'b', 'c', ' ', 0x263a, 0x00e9, 0};
 
 static std::string Units(const GUIString& inText)
@@ -111,6 +115,18 @@ static void Run(const char* inPass)
                      std::to_string(a.CompareNoCase(kNarrow[j], o));
             sLines.push_back(l);
         }
+    }
+    // the narrow constructors (whole, std::string, the first half of the bytes) and back
+    for (size_t j = 0; j < sizeof(kNarrow) / sizeof(kNarrow[0]); j++) {
+        GUIString aWhole(kNarrow[j]);
+        GUIString aString = GUIString(std::string(kNarrow[j]));
+        GUIString aHalf(kNarrow[j], (unsigned short)(strlen(kNarrow[j]) / 2));
+        std::string aBack = aWhole, aHalfBack = aHalf;
+        std::string l = std::string(inPass) + " from n" + std::to_string((int)j) + " " + Units(aWhole) + " back=" +
+                        Hex(aBack) + " half=" + Units(aHalf) + " back=" + Hex(aHalfBack);
+        if (aString != aWhole)
+            l += " std::string differs: " + Units(aString);
+        sLines.push_back(l);
     }
 }
 

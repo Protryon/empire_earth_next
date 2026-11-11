@@ -25,62 +25,96 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyParser.h"
+#include "rust/ee_rust.h"
 
 namespace WONAPI {
+// The files' layouts (written from lists, read as events in the original's order of assignments), the user file
+// name, the first free id, the pruning and the recent LAN name are ee_won's persist module
+// (rust/crates/ee_won/src/persist.rs); this class keeps the maps and sets, the password key and the defaults.
+static void PersistAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+// a list of wide texts as UTF-16 units for the Rust writer
+struct PersistTexts {
+    std::vector<uint16_t> mUnits;
+    std::vector<size_t> mOffsets;
+    PersistTexts() : mOffsets(1, 0) {}
+    void Add(const GUIString& inText)
+    {
+        std::string aBytes;
+        WideAppendUtf16LE(aBytes, (std::wstring)inText);
+        for (size_t i = 0; i + 1 < aBytes.size(); i += 2)
+            this->mUnits.push_back((uint16_t)((unsigned char)aBytes[i] | ((unsigned char)aBytes[i + 1] << 8)));
+        this->mOffsets.push_back(this->mUnits.size());
+    }
+    EeWonTextList List() const
+    {
+        EeWonTextList aList = {this->mUnits.empty() ? NULL : &this->mUnits[0], &this->mOffsets[0],
+                               this->mOffsets.size() - 1};
+        return aList;
+    }
+};
+// a list of byte strings (the passwords' Blowfish bytes, the filters' UTF-8 names)
+struct PersistBytes {
+    std::string mBytes;
+    std::vector<size_t> mOffsets;
+    PersistBytes() : mOffsets(1, 0) {}
+    void Add(const void* inData, size_t inLength)
+    {
+        this->mBytes.append(static_cast<const char*>(inData), inLength);
+        this->mOffsets.push_back(this->mBytes.size());
+    }
+    EeWonTextList List() const
+    {
+        EeWonTextList aList = {this->mBytes.data(), &this->mOffsets[0], this->mOffsets.size() - 1};
+        return aList;
+    }
+};
+static GUIString PersistText(const EeWonPrefsEvent* inEvent)
+{
+    std::wstring aText;
+    for (size_t i = 0; i < inEvent->count; i++)
+        WideAppendUtf16Unit(aText, inEvent->units[i]);
+    return GUIString(aText);
+}
+// the whole file (false when it does not open)
+static bool PersistReadFile(const std::string& inName, std::string& outBytes)
+{
+    FileReader aReader;
+    if (!aReader.Open(inName.c_str()))
+        return false;
+    char aBuffer[4096];
+    try {
+        int aCount;
+        while ((aCount = aReader.ReadMaxBytes(aBuffer, sizeof(aBuffer))) > 0)
+            outBytes.append(aBuffer, aCount);
+    } catch (FileReaderException&) {
+    }
+    return true;
+}
+template <class T> static const T* PersistArray(const std::vector<T>& inItems)
+{
+    return inItems.empty() ? NULL : &inItems[0];
+}
+
 // FUNCTION: WON 0x0075e6e0
 // Returns the preferences file name of a lobby user, _wonuser<id>.dat
 std::string LobbyPersistentData::GetUserFileName(long inUserId)
 {
-    // The original's frame holds a 52-byte area; the 50-character buffer size is inferred
-    char aFileName[50];
-    sprintf(aFileName, "_wonuser%d.dat", inUserId);
-    return aFileName;
+    std::string aName;
+    ee_won_prefs_user_file_name((int32_t)inUserId, PersistAppendBytes, &aName);
+    return aName;
 }
 // FUNCTION: WON 0x0075e770
 // Returns the first free user id after the run of consecutive ids starting at the smallest (1 when none exist)
 long LobbyPersistentData::FindUnusedUserId()
 {
-    if (this->mUserIds.empty())
-        return 1;
-    std::set<long>::iterator anItr = this->mUserIds.begin();
-    long anId = *anItr;
-    while (anItr != this->mUserIds.end() && anId == *anItr)
-    {
-        ++anId;
-        ++anItr;
-    }
-    return anId;
+    std::vector<int32_t> anIds(this->mUserIds.begin(), this->mUserIds.end());
+    return ee_won_prefs_unused_user_id(PersistArray(anIds), anIds.size());
 }
-// FUNCTION: WON 0x0075f6a0
-// Reads the "WONPER" file tag and returns the file version that follows (0 for a bad tag or a read error)
-long LobbyPersistentData::ReadFileHeader(FileReader& inReader)
-{
-    try
-    {
-        char aHeader[7];
-        aHeader[6] = 0;
-        inReader.ReadBytes(aHeader, 6);
-        if (strcmp(aHeader, "WONPER") == 0)
-            return inReader.ReadLong();
-    }
-    catch (FileReaderException&)
-    {
-    }
-    return 0;
-}
-// FUNCTION: WON 0x0075f750
-// Writes the "WONPER" file tag and the given version, ignoring write errors
-void LobbyPersistentData::WriteFileHeader(FileWriter& outWriter, long inVersion)
-{
-    try
-    {
-        outWriter.WriteBytes("WONPER", 6);
-        outWriter.WriteLong(inVersion);
-    }
-    catch (FileWriterException&)
-    {
-    }
-}
+// (ReadFileHeader 0x0075f6a0 and WriteFileHeader 0x0075f750: persist.rs header / read_header)
+
 }
 
 namespace WONAPI {
@@ -120,43 +154,57 @@ LobbyPersistentData* GetLobbyPersistentData()
 }
 
 
+// the global file's events applied as the original assigned them (the user, its fields, its id into the id set
+// after the password; the sound bytes mute the click sound)
+struct PersistGlobalLoad {
+    LobbyPersistentData* mData;
+    LobbyUserInfo* mUser;
+    static void Event(void* inContext, const EeWonPrefsEvent* e)
+    {
+        PersistGlobalLoad* aLoad = static_cast<PersistGlobalLoad*>(inContext);
+        LobbyPersistentData* d = aLoad->mData;
+        switch (e->kind) {
+        case EeWonPrefsEventKind::User: {
+            GUIString aName = PersistText(e);
+            aLoad->mUser = &d->mUsers.insert(LobbyUserInfoMap::value_type(aName, LobbyUserInfo())).first->second;
+            aLoad->mUser->mUserName = aName;
+            break;
+        }
+        case EeWonPrefsEventKind::UserTime: aLoad->mUser->mLastUseTime = (long)e->value; break;
+        case EeWonPrefsEventKind::UserId: aLoad->mUser->mUserId = (long)e->value; break;
+        case EeWonPrefsEventKind::UserValue04: aLoad->mUser->mValue04 = (long)e->value; break;
+        case EeWonPrefsEventKind::UserValue08: aLoad->mUser->mValue08 = (long)e->value; break;
+        case EeWonPrefsEventKind::UserPassword:
+            aLoad->mUser->mPassword = d->DecryptString(e->bytes, e->length);
+            d->mUserIds.insert(aLoad->mUser->mUserId);
+            break;
+        case EeWonPrefsEventKind::SoundEffects:
+            d->mLobbySoundEffects = d->mSavedLobbySoundEffects = e->value != 0;
+            // the click sound is used without a null check, as the original did
+            ::LobbyGlobal_ButtonClick_Sound->SetMuted(!d->mLobbySoundEffects);
+            break;
+        case EeWonPrefsEventKind::Music: d->mLobbyMusic = d->mSavedLobbyMusic = e->value != 0; break;
+        // the network adapter is stored as its numeric IPv4 address
+        case EeWonPrefsEventKind::NetworkAdapter: d->mNetworkAdapter = (long)e->value; break;
+        default: break;
+        }
+    }
+};
 // FUNCTION: WON 0x0075f7b0
 // Loads the saved login users (names, ids, encrypted passwords) and the lobby sound, music and network adapter
-// settings from _wonlobbypersistent.dat, muting the button click sound to match
+// settings from _wonlobbypersistent.dat, muting the button click sound to match; another version changes nothing
+// more (the dirty flag stays), a cut file keeps what was read before the cut
 void LobbyPersistentData::LoadGlobalPrefs()
 {
-    FileReader aReader;
-    if (!aReader.Open("_wonlobbypersistent.dat"))
+    std::string aBytes;
+    if (!PersistReadFile("_wonlobbypersistent.dat", aBytes))
         return;
     this->mUsers.clear();
     this->mNetworkAdapter = 0;
-    try
-    {
-        if (this->ReadFileHeader(aReader) != gLobbyGlobalPrefsVersion)
-            return;
-        unsigned short aCount = aReader.ReadShort();
-        for (int i = 0; i < aCount; ++i)
-        {
-            GUIString aName = this->ReadWideString(aReader);
-            std::pair<LobbyUserInfoMap::iterator,bool> aPair = this->mUsers.insert(LobbyUserInfoMap::value_type(aName, LobbyUserInfo()));
-            LobbyUserInfo& aUser = aPair.first->second;
-            aUser.mUserName = aName;
-            aUser.mLastUseTime = aReader.ReadLong();
-            aUser.mUserId = aReader.ReadShort();
-            aUser.mValue04 = aReader.ReadLong();
-            aUser.mValue08 = aReader.ReadLong();
-            aUser.mPassword = this->ReadEncryptedString(aReader);
-            this->mUserIds.insert(aUser.mUserId);
-        }
-        this->mLobbySoundEffects = this->mSavedLobbySoundEffects = aReader.ReadByte() != 0;
-        ::LobbyGlobal_ButtonClick_Sound->SetMuted(!this->mLobbySoundEffects);
-        this->mLobbyMusic = this->mSavedLobbyMusic = aReader.ReadByte() != 0;
-        // The network adapter is stored as its numeric IPv4 address; the click sound is used without a null check
-        this->mNetworkAdapter = aReader.ReadLong();
-    }
-    catch (FileReaderException&)
-    {
-    }
+    PersistGlobalLoad aLoad = {this, NULL};
+    if (ee_won_prefs_read_global(reinterpret_cast<const uint8_t*>(aBytes.data()), aBytes.length(),
+                                 PersistGlobalLoad::Event, &aLoad) == EeWonPrefsRead::OtherVersion)
+        return;
     this->mGlobalDirty = false;
 }
 
@@ -167,23 +215,37 @@ void LobbyPersistentData::SaveGlobalPrefs()
     FileWriter aWriter;
     if (!aWriter.Open("_wonlobbypersistent.dat", false))
         return;
+    PersistTexts aNames;
+    PersistBytes aPasswords;
+    std::vector<int32_t> aTimes, aValues04, aValues08;
+    std::vector<uint16_t> anIds;
+    for (LobbyUserInfoMap::iterator anItr = this->mUsers.begin(); anItr != this->mUsers.end(); ++anItr)
+    {
+        LobbyUserInfo& aUser = anItr->second;
+        aNames.Add(aUser.mUserName);
+        aTimes.push_back((int32_t)aUser.mLastUseTime);
+        anIds.push_back((uint16_t)aUser.mUserId);
+        aValues04.push_back((int32_t)aUser.mValue04);
+        aValues08.push_back((int32_t)aUser.mValue08);
+        ByteBufferPtr anEncrypted = this->EncryptString(aUser.mPassword);
+        aPasswords.Add(anEncrypted.get() != NULL ? anEncrypted->data() : "",
+                       anEncrypted.get() != NULL ? anEncrypted->length() : 0);
+    }
+    EeWonGlobalPrefsOut aPrefs;
+    aPrefs.names = aNames.List();
+    aPrefs.last_use = PersistArray(aTimes);
+    aPrefs.ids = PersistArray(anIds);
+    aPrefs.value04 = PersistArray(aValues04);
+    aPrefs.value08 = PersistArray(aValues08);
+    aPrefs.passwords = aPasswords.List();
+    aPrefs.sound_effects = this->mLobbySoundEffects;
+    aPrefs.music = this->mLobbyMusic;
+    aPrefs.network_adapter = (int32_t)this->mNetworkAdapter;
+    std::string aFile;
+    ee_won_prefs_write_global(&aPrefs, PersistAppendBytes, &aFile);
     try
     {
-        this->WriteFileHeader(aWriter, gLobbyGlobalPrefsVersion);
-        aWriter.WriteShort(this->mUsers.size());
-        for (LobbyUserInfoMap::iterator anItr = this->mUsers.begin(); anItr != this->mUsers.end(); ++anItr)
-        {
-            LobbyUserInfo& aUser = anItr->second;
-            this->WriteWideString(aWriter, aUser.mUserName);
-            aWriter.WriteLong(aUser.mLastUseTime);
-            aWriter.WriteShort(aUser.mUserId);
-            aWriter.WriteLong(aUser.mValue04);
-            aWriter.WriteLong(aUser.mValue08);
-            this->WriteEncryptedString(aWriter, aUser.mPassword);
-        }
-        aWriter.WriteByte(this->mLobbySoundEffects ? 1 : 0);
-        aWriter.WriteByte(this->mLobbyMusic ? 1 : 0);
-        aWriter.WriteLong(this->mNetworkAdapter);
+        aWriter.WriteBytes(aFile.data(), aFile.length());
     }
     catch (FileWriterException&)
     {
@@ -259,35 +321,36 @@ LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPass
     return &aUser;
 }
 
-// The age index is a multimap keyed by last use time (equal times kept), each entry pointing back into mUsers
 // FUNCTION: WON 0x0075eb30
 // Keeps at most 50 saved users: drops users without an id, then deletes the least recently used ones and their files
+// (persist.rs prune_users chooses)
 void LobbyPersistentData::PruneUsers()
 {
     if (this->mUsers.size() <= 50)
         return;
-    typedef std::multimap<long, LobbyUserInfoMap::iterator> UserTimeMap;
-    UserTimeMap aTimes;
-    LobbyUserInfoMap::iterator anItr = this->mUsers.begin();
-    while (anItr != this->mUsers.end())
+    std::vector<LobbyUserInfoMap::iterator> anItrs;
+    std::vector<int32_t> anIds;
+    std::vector<int64_t> aTimes;
+    for (LobbyUserInfoMap::iterator anItr = this->mUsers.begin(); anItr != this->mUsers.end(); ++anItr)
     {
-        if (anItr->second.mUserId == 0)
-            this->mUsers.erase(anItr++);
-        else
-        {
-            aTimes.insert(UserTimeMap::value_type(anItr->second.mLastUseTime, anItr));
-            ++anItr;
-        }
+        anItrs.push_back(anItr);
+        anIds.push_back((int32_t)anItr->second.mUserId);
+        aTimes.push_back(anItr->second.mLastUseTime);
     }
-    UserTimeMap::iterator aTime = aTimes.begin();
-    while (aTime != aTimes.end() && this->mUsers.size() > 50)
+    std::vector<uint8_t> aDrop(anItrs.size(), 0);
+    ee_won_prefs_prune_users(&anIds[0], &aTimes[0], anIds.size(), &aDrop[0]);
+    for (size_t i = 0; i < anItrs.size(); i++)
     {
-        LobbyUserInfo& aUser = aTime->second->second;
-        WONFile aFile(this->GetUserFileName(aUser.mUserId));
-        aFile.Delete(true);
-        this->mUserIds.erase(aUser.mUserId);
-        this->mUsers.erase(aTime->second);
-        aTime++;
+        if (aDrop[i] == 0)
+            continue;
+        if (aDrop[i] == 2)
+        {
+            LobbyUserInfo& aUser = anItrs[i]->second;
+            WONFile aFile(this->GetUserFileName(aUser.mUserId));
+            aFile.Delete(true);
+            this->mUserIds.erase(aUser.mUserId);
+        }
+        this->mUsers.erase(anItrs[i]);
     }
 }
 
@@ -320,52 +383,22 @@ void LobbyRemoveFriend(unsigned long inUserId)
 
 namespace WONAPI {
 
-// FUNCTION: WON 0x0075ee80
-// Reads a length-prefixed 8-bit string from a preferences file
-GUIString LobbyPersistentData::ReadByteString(FileReader& inReader)
-{
-    unsigned short aLength = inReader.ReadShort();
-    GUIString aString(new GUIStringData(aLength));
-    for (int i = 0; i < aLength; ++i)
-        aString.append((wchar_t)inReader.ReadByte());
-    return aString;
-}
-// FUNCTION: WON 0x0075f000
-// Reads a length-prefixed 16-bit (unencrypted) string from a preferences file
-GUIString LobbyPersistentData::ReadWideString(FileReader& inReader)
-{
-    unsigned short aLength = inReader.ReadShort();
-    GUIString aString(new GUIStringData(aLength));
-    for (int i = 0; i < aLength; ++i)
-        aString.append((wchar_t)inReader.ReadShort());
-    return aString;
-}
-// FUNCTION: WON 0x0075f3d0
-// Writes a string as a length-prefixed 8-bit string
-void LobbyPersistentData::WriteByteString(FileWriter& outWriter, const GUIString& inText)
-{
-    std::string aString = (std::string)inText;
-    outWriter.WriteShort(aString.length());
-    outWriter.WriteBytes(aString.c_str(), aString.length());
-}
-// FUNCTION: WON 0x0075f4e0
-// Writes a string as a length-prefixed 16-bit (unencrypted) string
-void LobbyPersistentData::WriteWideString(FileWriter& outWriter, const GUIString& inText)
-{
-    outWriter.WriteShort(inText.length());
-    for (int i = 0; i < inText.length(); ++i)
-        outWriter.WriteShort(inText[i]);
-}
+// (ReadByteString 0x0075ee80, ReadWideString 0x0075f000, WriteByteString 0x0075f3d0 and WriteWideString 0x0075f4e0:
+// persist.rs's strings)
+
+
+
 
 // FUNCTION: WON 0x0075f190
-// Reads and decrypts a saved password with the machine-bound key; returns an empty string if it cannot be decoded
-GUIString LobbyPersistentData::ReadEncryptedString(FileReader& reader)
+// Decrypts a saved password with the machine-bound key (ReadEncryptedString's half after the read); returns an
+// empty string if it cannot be decoded
+GUIString LobbyPersistentData::DecryptString(const uint8_t* inData, size_t inLength)
 {
-    unsigned short length = reader.ReadShort();
     WriteBuffer storage(0, true);
-    storage.Reserve(length); // grows the capacity only; the length stays 0
-    reader.ReadBytes(storage.mData, length);
-    ByteBufferPtr decrypted = this->mEncryptKey.Decrypt(storage.mData, length);
+    storage.Reserve(inLength); // grows the capacity only; the length stays 0
+    if (inLength != 0)
+        memcpy(storage.mData, inData, inLength);
+    ByteBufferPtr decrypted = this->mEncryptKey.Decrypt(storage.mData, (int)inLength);
     if (decrypted.get() == NULL)
         return GUIString("");
     ReadBuffer decoded(decrypted->data(), decrypted->length());
@@ -382,21 +415,80 @@ GUIString LobbyPersistentData::ReadEncryptedString(FileReader& reader)
 }
 
 // FUNCTION: WON 0x0075f530
-// Encrypts a password with the machine-bound key and writes it length-prefixed (length 0 if encryption fails)
-void LobbyPersistentData::WriteEncryptedString(FileWriter& writer, const GUIString& inText)
+// Encrypts a password with the machine-bound key (WriteEncryptedString's half before the write; NULL if encryption
+// fails: a length of 0 is saved)
+ByteBufferPtr LobbyPersistentData::EncryptString(const GUIString& inText)
 {
     WriteBuffer storage(0, true);
     std::wstring text = (std::wstring)inText;
     storage.AppendWString(text, 2);
-    ByteBufferPtr encrypted = this->mEncryptKey.Encrypt(storage.mData, storage.mLength);
-    writer.WriteShort(encrypted.get() != NULL ? encrypted->length() : 0);
-    writer.WriteBytes(encrypted.get() != NULL ? encrypted->data() : NULL,
-                      encrypted.get() != NULL ? encrypted->length() : 0);
+    return this->mEncryptKey.Encrypt(storage.mData, storage.mLength);
 }
+// the user file's events applied as the original assigned them
+struct PersistUserLoad {
+    LobbyPersistentData* mData;
+    LobbyReconnectInfo* mReconnect;
+    LobbyOptionSet* mOption;
+    bool mHaveGameOptions;
+    static void Event(void* inContext, const EeWonPrefsEvent* e)
+    {
+        PersistUserLoad* aLoad = static_cast<PersistUserLoad*>(inContext);
+        LobbyPersistentData* d = aLoad->mData;
+        // the settings in the file's order (persist.rs Settings)
+        bool* const aFlags[14] = {&d->mFilterDirtyWords, &d->mDoAutoAFK, &d->mCrossPromotion, &d->mAutoPingGames,
+                                  &d->mAnonymousToFriends, &d->mShowGamesInProgress, NULL, NULL, NULL,
+                                  &d->mLobbySoundEffects, &d->mLobbyMusic, &d->mChatSoundEffects,
+                                  &d->mStagingSoundEffects, &d->mShowConfirmations};
+        GUIString* const aTexts[3] = {&d->mTabSelect, &d->mLastServerName, &d->mLastRoomName};
+        switch (e->kind) {
+        case EeWonPrefsEventKind::LanName: d->mLanNameInfoMap[PersistText(e)] = (long)e->value; break;
+        case EeWonPrefsEventKind::LanNamesDone: d->SelectRecentLanName(); break;
+        case EeWonPrefsEventKind::DirectConnect: {
+            IPAddr anAddress;
+            anAddress.SetSixByte(e->address);
+            d->mDirectConnectMap[anAddress] = PersistText(e);
+            break;
+        }
+        case EeWonPrefsEventKind::BroadcastPort: d->mLanBroadcastPort = (unsigned short)e->value; break;
+        case EeWonPrefsEventKind::Reconnect: {
+            IPAddr anAddress;
+            anAddress.SetSixByte(e->address);
+            aLoad->mReconnect = &d->mReconnectInfoMap.insert(
+                std::map<IPAddr, LobbyReconnectInfo>::value_type(anAddress, LobbyReconnectInfo())).first->second;
+            break;
+        }
+        case EeWonPrefsEventKind::ReconnectTime: aLoad->mReconnect->mLastUseTime = (long)e->value; break;
+        case EeWonPrefsEventKind::ReconnectId: aLoad->mReconnect->mReconnectId = (int)e->value; break;
+        case EeWonPrefsEventKind::Ignored: d->mIgnoredNames.insert(PersistText(e)); break;
+        case EeWonPrefsEventKind::Friend: {
+            unsigned long aUserId = (unsigned long)e->value;
+            SmartPtr<LobbyFriend> aFriend = new LobbyFriend(PersistText(e), aUserId);
+            d->mFriends.insert(LobbyFriendMap::value_type(aUserId, aFriend));
+            break;
+        }
+        case EeWonPrefsEventKind::Blocked: d->mBlockedCDKeyIds.insert((unsigned long)e->value); break;
+        case EeWonPrefsEventKind::Flag:
+            if (e->index < 14 && aFlags[e->index] != NULL) *aFlags[e->index] = e->value != 0;
+            break;
+        case EeWonPrefsEventKind::SettingText:
+            if (e->index >= 6 && e->index < 9) *aTexts[e->index - 6] = PersistText(e);
+            break;
+        case EeWonPrefsEventKind::ConnectionSpeed: d->mConnectionSpeed = (unsigned short)e->value; break;
+        case EeWonPrefsEventKind::OptionsBegin: aLoad->mHaveGameOptions = true; break;
+        case EeWonPrefsEventKind::OptionName:
+            // the filter's name is UTF-8 (D6)
+            aLoad->mOption = &d->mGameOptions[GUIString(std::string(reinterpret_cast<const char*>(e->bytes), e->length))];
+            break;
+        case EeWonPrefsEventKind::OptionValue: aLoad->mOption->Add(PersistText(e)); break;
+        default: break;
+        }
+    }
+};
 // A file with another version returns early: the game filters then stay empty and the dirty flags unchanged
 // FUNCTION: WON 0x0075fc70
 // Loads the current user's _wonuser file: reconnect ids, ignored names, friends, blocked CD keys (loaded and saved
 // but never filled by the lobby), options, last server/room, sounds and game filters; LAN data for the LAN user
+// (ReadLanPrefs 0x00760b10 is persist.rs read_user's first part)
 void LobbyPersistentData::LoadUserPrefs()
 {
     this->RestoreDefaults();
@@ -406,186 +498,110 @@ void LobbyPersistentData::LoadUserPrefs()
     this->mLanNameInfoMap.clear();
     this->mDirectConnectMap.clear();
     this->mGameOptions.clear();
-    bool haveGameOptions = false;
-    int i;
-    FileReader reader;
-    std::string fileName = this->GetUserFileName(this->mCurrentUserId);
-    if (!reader.Open(fileName.c_str()))
+    std::string aBytes;
+    if (!PersistReadFile(this->GetUserFileName(this->mCurrentUserId), aBytes))
     {
         this->mGameOptions = this->mDefaultGameOptions;
         return;
     }
-    try
-    {
-        if (this->ReadFileHeader(reader) != gLobbyUserPrefsVersion)
-            return;
-        if (this->mCurrentUserId == 0)
-            this->ReadLanPrefs(reader);
-        unsigned short count = reader.ReadShort();
-        for (i = 0; i < count; ++i)
-        {
-            unsigned char bytes[6];
-            reader.ReadBytes(bytes, 6);
-            IPAddr address;
-            address.SetSixByte(bytes);
-            LobbyReconnectInfo& info = this->mReconnectInfoMap.insert(
-                std::map<IPAddr, LobbyReconnectInfo>::value_type(address, LobbyReconnectInfo())).first->second;
-            info.mLastUseTime = reader.ReadLong();
-            info.mReconnectId = reader.ReadLong();
-        }
-        count = reader.ReadShort();
-        for (i = 0; i < count; ++i)
-            this->mIgnoredNames.insert(this->ReadWideString(reader));
-        count = reader.ReadShort();
-        for (i = 0; i < count; ++i)
-        {
-            std::wstring name = (std::wstring)this->ReadWideString(reader);
-            unsigned long userId = reader.ReadLong();
-            SmartPtr<LobbyFriend> aFriend = new LobbyFriend(GUIString(name), userId);
-            this->mFriends.insert(LobbyFriendMap::value_type(userId, aFriend));
-        }
-        count = reader.ReadShort();
-        for (i = 0; i < count; ++i)
-            this->mBlockedCDKeyIds.insert(reader.ReadLong());
-        this->mFilterDirtyWords = reader.ReadByte() == 1;
-        this->mDoAutoAFK = reader.ReadByte() == 1;
-        this->mCrossPromotion = reader.ReadByte() == 1;
-        this->mAutoPingGames = reader.ReadByte() == 1;
-        this->mAnonymousToFriends = reader.ReadByte() == 1;
-        this->mShowGamesInProgress = reader.ReadByte() == 1;
-        this->mTabSelect = this->ReadWideString(reader);
-        this->mLastServerName = this->ReadWideString(reader);
-        this->mLastRoomName = this->ReadWideString(reader);
-        this->mLobbySoundEffects = reader.ReadByte() == 1;
-        this->mLobbyMusic = reader.ReadByte() == 1;
-        this->mChatSoundEffects = reader.ReadByte() == 1;
-        this->mStagingSoundEffects = reader.ReadByte() == 1;
-        this->mShowConfirmations = reader.ReadByte() == 1;
-        this->mConnectionSpeed = reader.ReadShort();
-        count = reader.ReadShort();
-        haveGameOptions = true;
-        for (i = 0; i < count; ++i)
-        {
-            GUIString optionName = this->ReadByteString(reader);
-            LobbyOptionSet& option = this->mGameOptions[optionName];
-            unsigned short numValues = reader.ReadShort();
-            for (int j = 0; j < numValues; ++j)
-                option.Add(this->ReadWideString(reader));
-        }
-    }
-    catch (FileReaderException&) {}
-    if (!haveGameOptions)
+    PersistUserLoad aLoad = {this, NULL, NULL, false};
+    if (ee_won_prefs_read_user(reinterpret_cast<const uint8_t*>(aBytes.data()), aBytes.length(),
+                               this->mCurrentUserId == 0, PersistUserLoad::Event, &aLoad) == EeWonPrefsRead::OtherVersion)
+        return;
+    if (!aLoad.mHaveGameOptions)
         this->mGameOptions = this->mDefaultGameOptions;
     this->mGlobalDirty = this->mLobbySoundEffects != this->mSavedLobbySoundEffects || this->mSavedLobbyMusic != this->mLobbyMusic;
     this->mUserDirty = false;
 }
 
-// FUNCTION: WON 0x00760b10
-// Reads the LAN user's recent LAN names (selecting the most recent), direct-connect addresses and broadcast port
-void LobbyPersistentData::ReadLanPrefs(FileReader& reader)
-{
-    int count = reader.ReadShort();
-    for (int nameIndex = 0; nameIndex < count; ++nameIndex)
-    {
-        GUIString name = this->ReadWideString(reader);
-        long lastUseTime = reader.ReadLong();
-        this->mLanNameInfoMap[name] = lastUseTime;
-    }
-    this->SelectRecentLanName();
-    count = reader.ReadShort();
-    for (int addressIndex = 0; addressIndex < count; ++addressIndex)
-    {
-        IPAddr address;
-        unsigned char bytes[6];
-        reader.ReadBytes(bytes, 6);
-        address.SetSixByte(bytes);
-        GUIString name = this->ReadWideString(reader);
-        this->mDirectConnectMap[address] = name;
-    }
-    this->mLanBroadcastPort = reader.ReadShort();
-}
 
-// FUNCTION: WON 0x00760da0
-// Writes the LAN user's recent LAN names, direct-connect addresses and broadcast port
-void LobbyPersistentData::WriteLanPrefs(FileWriter& writer)
-{
-    writer.WriteShort((unsigned short)this->mLanNameInfoMap.size());
-    for (std::map<GUIString, long, GUIStringLessNoCase>::const_iterator i = this->mLanNameInfoMap.begin(); i != this->mLanNameInfoMap.end(); ++i)
-    {
-        this->WriteWideString(writer, i->first);
-        writer.WriteLong(i->second);
-    }
-    writer.WriteShort((unsigned short)this->mDirectConnectMap.size());
-    for (std::map<IPAddr, GUIString>::const_iterator j = this->mDirectConnectMap.begin(); j != this->mDirectConnectMap.end(); ++j)
-    {
-        writer.WriteBytes(j->first.GetSixByte(), 6);
-        this->WriteWideString(writer, j->second);
-    }
-    writer.WriteShort(this->mLanBroadcastPort);
-}
+
+// (WriteLanPrefs 0x00760da0 is persist.rs write_user's first part)
 // FUNCTION: WON 0x00760770
-// Writes the current user's _wonuser file (the counterpart of LoadUserPrefs) and clears the user dirty flag
+// Writes the current user's _wonuser file (the counterpart of LoadUserPrefs) and clears the user dirty flag; a game
+// filter with no values is written without its count (persist.rs keeps the original's bug)
 void LobbyPersistentData::SaveUserPrefs()
 {
     FileWriter writer;
     std::string fileName = this->GetUserFileName(this->mCurrentUserId);
     if (!writer.Open(fileName.c_str(), false))
         return;
+    EeWonUserPrefsOut aPrefs;
+    memset(&aPrefs, 0, sizeof(aPrefs));
+    aPrefs.lan_user = this->mCurrentUserId == 0;
+    PersistTexts aLanNames, aDirectNames, anIgnored, aFriendNames, aTexts, aValues;
+    std::vector<int32_t> aLanTimes, aTimes, anIds;
+    std::vector<uint32_t> aFriendIds, aBlocked;
+    std::string aDirect, aReconnect;
+    PersistBytes anOptionNames;
+    std::vector<size_t> anOptionFirst(1, 0);
+    for (std::map<GUIString, long, GUIStringLessNoCase>::const_iterator i = this->mLanNameInfoMap.begin(); i != this->mLanNameInfoMap.end(); ++i)
+    {
+        aLanNames.Add(i->first);
+        aLanTimes.push_back((int32_t)i->second);
+    }
+    for (std::map<IPAddr, GUIString>::const_iterator j = this->mDirectConnectMap.begin(); j != this->mDirectConnectMap.end(); ++j)
+    {
+        aDirect.append(j->first.GetSixByte(), 6);
+        aDirectNames.Add(j->second);
+    }
+    for (std::map<IPAddr, LobbyReconnectInfo>::const_iterator a = this->mReconnectInfoMap.begin(); a != this->mReconnectInfoMap.end(); ++a)
+    {
+        aReconnect.append(a->first.GetSixByte(), 6);
+        aTimes.push_back((int32_t)a->second.mLastUseTime);
+        anIds.push_back((int32_t)a->second.mReconnectId);
+    }
+    for (LobbyIgnoredNameSet::const_iterator n = this->mIgnoredNames.begin(); n != this->mIgnoredNames.end(); ++n)
+        anIgnored.Add(*n);
+    for (LobbyFriendMap::const_iterator f = this->mFriends.begin(); f != this->mFriends.end(); ++f)
+    {
+        aFriendNames.Add(f->second->mName);
+        aFriendIds.push_back((uint32_t)f->first);
+    }
+    for (std::set<unsigned long>::const_iterator u = this->mBlockedCDKeyIds.begin(); u != this->mBlockedCDKeyIds.end(); ++u)
+        aBlocked.push_back((uint32_t)*u);
+    aTexts.Add(this->mTabSelect);
+    aTexts.Add(this->mLastServerName);
+    aTexts.Add(this->mLastRoomName);
+    for (std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>::const_iterator o = this->mGameOptions.begin(); o != this->mGameOptions.end(); ++o)
+    {
+        // the filter's name as UTF-8 (GetString)
+        std::string aName = (std::string)o->first;
+        anOptionNames.Add(aName.data(), aName.length());
+        for (LobbyOptionSet::StringList::const_iterator v = o->second.mValues.begin(); v != o->second.mValues.end(); ++v)
+            aValues.Add(*v);
+        anOptionFirst.push_back(aValues.mOffsets.size() - 1);
+    }
+    aPrefs.lan_names = aLanNames.List();
+    aPrefs.lan_times = PersistArray(aLanTimes);
+    aPrefs.direct_addresses = reinterpret_cast<const uint8_t*>(aDirect.data());
+    aPrefs.direct_names = aDirectNames.List();
+    aPrefs.broadcast_port = this->mLanBroadcastPort;
+    aPrefs.reconnect_count = aTimes.size();
+    aPrefs.reconnect_addresses = reinterpret_cast<const uint8_t*>(aReconnect.data());
+    aPrefs.reconnect_times = PersistArray(aTimes);
+    aPrefs.reconnect_ids = PersistArray(anIds);
+    aPrefs.ignored = anIgnored.List();
+    aPrefs.friend_names = aFriendNames.List();
+    aPrefs.friend_ids = PersistArray(aFriendIds);
+    aPrefs.blocked_count = aBlocked.size();
+    aPrefs.blocked = PersistArray(aBlocked);
+    bool aFirst[6] = {this->mFilterDirtyWords, this->mDoAutoAFK, this->mCrossPromotion, this->mAutoPingGames,
+                      this->mAnonymousToFriends, this->mShowGamesInProgress};
+    bool aSecond[5] = {this->mLobbySoundEffects, this->mLobbyMusic, this->mChatSoundEffects, this->mStagingSoundEffects,
+                       this->mShowConfirmations};
+    memcpy(aPrefs.first, aFirst, sizeof(aFirst));
+    memcpy(aPrefs.second, aSecond, sizeof(aSecond));
+    aPrefs.texts = aTexts.List();
+    aPrefs.connection_speed = this->mConnectionSpeed;
+    aPrefs.option_names = anOptionNames.List();
+    aPrefs.option_first = &anOptionFirst[0];
+    aPrefs.option_values = aValues.List();
+    std::string aFile;
+    ee_won_prefs_write_user(&aPrefs, PersistAppendBytes, &aFile);
     try
     {
-        this->WriteFileHeader(writer, gLobbyUserPrefsVersion);
-        if (this->mCurrentUserId == 0)
-            this->WriteLanPrefs(writer);
-        writer.WriteShort((unsigned short)this->mReconnectInfoMap.size());
-        for (std::map<IPAddr, LobbyReconnectInfo>::const_iterator a = this->mReconnectInfoMap.begin(); a != this->mReconnectInfoMap.end(); ++a)
-        {
-            const LobbyReconnectInfo& anInfo = a->second;
-            writer.WriteBytes(a->first.GetSixByte(), 6);
-            writer.WriteLong(anInfo.mLastUseTime);
-            writer.WriteLong(anInfo.mReconnectId);
-        }
-        writer.WriteShort((unsigned short)this->mIgnoredNames.size());
-        for (LobbyIgnoredNameSet::const_iterator n = this->mIgnoredNames.begin(); n != this->mIgnoredNames.end(); ++n)
-            this->WriteWideString(writer, *n);
-        writer.WriteShort((unsigned short)this->mFriends.size());
-        for (LobbyFriendMap::const_iterator f = this->mFriends.begin(); f != this->mFriends.end(); ++f)
-        {
-            this->WriteWideString(writer, f->second->mName);
-            writer.WriteLong(f->first);
-        }
-        writer.WriteShort((unsigned short)this->mBlockedCDKeyIds.size());
-        for (std::set<unsigned long>::const_iterator u = this->mBlockedCDKeyIds.begin(); u != this->mBlockedCDKeyIds.end(); ++u)
-            writer.WriteLong(*u);
-        writer.WriteByte(this->mFilterDirtyWords ? 1 : 0);
-        writer.WriteByte(this->mDoAutoAFK ? 1 : 0);
-        writer.WriteByte(this->mCrossPromotion ? 1 : 0);
-        writer.WriteByte(this->mAutoPingGames ? 1 : 0);
-        writer.WriteByte(this->mAnonymousToFriends ? 1 : 0);
-        writer.WriteByte(this->mShowGamesInProgress ? 1 : 0);
-        this->WriteWideString(writer, this->mTabSelect);
-        this->WriteWideString(writer, this->mLastServerName);
-        this->WriteWideString(writer, this->mLastRoomName);
-        writer.WriteByte(this->mLobbySoundEffects ? 1 : 0);
-        writer.WriteByte(this->mLobbyMusic ? 1 : 0);
-        writer.WriteByte(this->mChatSoundEffects ? 1 : 0);
-        writer.WriteByte(this->mStagingSoundEffects ? 1 : 0);
-        writer.WriteByte(this->mShowConfirmations ? 1 : 0);
-        writer.WriteShort(this->mConnectionSpeed);
-        writer.WriteShort((unsigned short)this->mGameOptions.size());
-        for (std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>::const_iterator o = this->mGameOptions.begin(); o != this->mGameOptions.end(); ++o)
-        {
-            this->WriteByteString(writer, o->first);
-            // A filter with no values writes no count at all, which the loader does not expect: the filters after it
-            // are misread on the next load
-            const LobbyOptionSet& aSet = o->second;
-            unsigned long aCount = aSet.mIndex.size();
-            if (aCount != 0)
-            {
-                writer.WriteShort((unsigned short)aCount);
-                for (LobbyOptionSet::StringList::const_iterator v = aSet.mValues.begin(); v != aSet.mValues.end(); ++v)
-                    this->WriteWideString(writer, *v);
-            }
-        }
+        writer.WriteBytes(aFile.data(), aFile.length());
     }
     catch (FileWriterException&) {}
     this->mUserDirty = false;
@@ -727,38 +743,43 @@ void LobbyResetFilters()
     aData->mUserDirty = true;
 }
 // FUNCTION: WON 0x0075e7e0
-// Keeps at most 50 recent LAN names, dropping the least recently used
+// Keeps at most 50 recent LAN names, dropping the least recently used (persist.rs prune_lan_names chooses)
 void LobbyPersistentData::PruneLanNames()
 {
     GetLobbyPersistentData();
     if (this->mLanNameInfoMap.size() <= 50) return;
-    typedef std::multimap<long, LobbyLanNameInfoMap::iterator> TimeMap;
-    TimeMap aTimes;
+    std::vector<LobbyLanNameInfoMap::iterator> anItrs;
+    std::vector<int64_t> aTimes;
     for (LobbyLanNameInfoMap::iterator anItr = this->mLanNameInfoMap.begin();
          anItr != this->mLanNameInfoMap.end(); ++anItr)
-        aTimes.insert(TimeMap::value_type(anItr->second, anItr));
-    TimeMap::iterator aTime = aTimes.begin();
-    while (aTime != aTimes.end() && this->mLanNameInfoMap.size() > 50)
     {
-        this->mLanNameInfoMap.erase(aTime->second);
-        aTime++;
+        anItrs.push_back(anItr);
+        aTimes.push_back(anItr->second);
     }
+    std::vector<uint8_t> aDrop(anItrs.size(), 0);
+    ee_won_prefs_prune_lan_names(&aTimes[0], aTimes.size(), reinterpret_cast<bool*>(&aDrop[0]));
+    for (size_t i = 0; i < anItrs.size(); i++)
+        if (aDrop[i])
+            this->mLanNameInfoMap.erase(anItrs[i]);
 }
 // FUNCTION: WON 0x0075ea40
 // Makes the most recently used saved LAN name current, or the default name when none is saved
+// (persist.rs recent_lan_name chooses)
 void LobbyPersistentData::SelectRecentLanName()
 {
     GetLobbyPersistentData();
     this->mLanName = this->GetDefaultLanName();
-    long aLastTime = 0;
-    LobbyLanNameInfoMap::iterator anItr;
-    for (anItr = this->mLanNameInfoMap.begin();
-         anItr != this->mLanNameInfoMap.end(); ++anItr) {
-        if (aLastTime == 0 || anItr->second > aLastTime) {
-            this->mLanName = anItr->first;
-            aLastTime = anItr->second;
-        }
+    std::vector<LobbyLanNameInfoMap::iterator> anItrs;
+    std::vector<int64_t> aTimes;
+    for (LobbyLanNameInfoMap::iterator anItr = this->mLanNameInfoMap.begin();
+         anItr != this->mLanNameInfoMap.end(); ++anItr)
+    {
+        anItrs.push_back(anItr);
+        aTimes.push_back(anItr->second);
     }
+    int64_t aChosen = ee_won_prefs_recent_lan_name(PersistArray(aTimes), aTimes.size());
+    if (aChosen >= 0)
+        this->mLanName = anItrs[(size_t)aChosen]->first;
 }
 }
 
@@ -773,10 +794,8 @@ GUIString LobbyPersistentData::GetDefaultLanName()
     if (aConfig != NULL && !aConfig->mAppendNumberToDefaultLanName)
         return aName;
     long anAddress = IPAddr::GetLocalAddr().GetHost();
-    CRC16 aCRC;
-    aCRC.Put(&anAddress,4);
     char aNumber[256];
-    unsigned short aValue = aCRC.Get() % 10000;
+    unsigned short aValue = ee_won_prefs_default_lan_number((uint32_t)anAddress);
     snprintf(aNumber, sizeof(aNumber), "%u", (unsigned)aValue);
     aName.append(GUIString(aNumber));
     return aName;

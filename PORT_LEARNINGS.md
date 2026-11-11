@@ -5017,3 +5017,140 @@ id and the sound.
   (select units, the Explore button).
 - **Gates:** each commit built 0/0 (EE-AOC, EE-SIM) and the oracle was identical on seeds 2-7; the C++ Fill factor
   and the Rust Fill gave all four capture profiles PASS (with the USFL goldens); the Rust gate PASS.
+
+## R6: GUIString's narrow text as UTF-8, the lobby's game room and its saved settings in Rust (ee_won guistring.rs, staging.rs, persist.rs; branch rust-r6-won6, 2026-11-10)
+
+Round 6 of R6 (the map of what is left is in RUST_PLAN's "R6 WON, the rest" row). Each piece was captured over the
+C++ first: the golden driver pattern for GUIStringData; for the game room and the saved settings, drivers in
+`tests/won` (added to `xbuild.py` `WON_TESTS`) that run the original's statements, copied before the port, next to
+the Rust ABI over the same inputs.
+
+- **GUIString's narrow crossing is UTF-8 (D6).** Round 5 found that `GUIString(const char*)` widened each byte and
+  `GetString` narrowed a unit below 256 to its byte and any other to '?' (Latin-1). Now the narrow constructors
+  (`const char*`, `std::string`, the bounded one: `AssignStr`) decode UTF-8 (a stray byte is U+FFFD), `GetString`
+  and `operator std::string` encode UTF-8 (a lone surrogate is U+FFFD), and `compare` / `CompareNoCase` with narrow
+  text decode it first (`guistring.rs` `widen` / `narrow` on `text.rs`, so `ee_plat_core::utf8` is still the one
+  conversion). `LobbyPersistentData::ReadByteString` reads its bytes as UTF-8, as `WriteByteString` (GetString)
+  writes them, so a game filter's name round-trips.
+  - **Finding every caller:** the narrow APIs were marked `__attribute__((unavailable))` for one compile census
+    (`clang_build.py won exe`): 328 sites. They are ASCII literals (unchanged), the game's UTF-8 text going in
+    (`EELobbyResource_GetString`'s epoch names into the filters, file names and saved-game paths, numbers formatted
+    with `sprintf`, `IPAddr::GetHostString`, config parse errors) and narrow results the game reads as UTF-8
+    (paths for `WONFile` / `SetPath` / `ListFiles`, emails, config map keys, exception texts). Every one was wrong
+    for a non-ASCII character and is right now; `CompareNoCase(const char*)` has 151 callers, all ASCII literals.
+  - **The golden** (`won_guistring_test`) was re-recorded: 84 changed lines, in both locale passes: the narrow
+    tables' `\xe9t` and `\xc9T` are stray bytes now (they compare as U+FFFD: `-136/-168` became `-65436/-65468`
+    and so on for every text, n6 and n7), and `narrow=` of the four non-ASCII texts is UTF-8 (`e974e9` became
+    `c3a974c3a9`, U+263A's `3f` became `e298ba`, `ff` became `c3bf`). 188 lines are new: four UTF-8 narrow texts
+    (`\xc3\xa9t`, `\xc3\x89T`, U+263A, an astral character) against every text, and the narrow constructors (whole,
+    `std::string`, the first half of the bytes: a cut sequence is U+FFFD) and back. 1468 lines, the same over the
+    driver and the Rust model.
+- **The game room (`staging.rs`).** StagingLogic's room messages (types 1-10: join request, reply, player joined,
+  ready request and change, dissolved, start, ping report and change, kicked) are built in Rust (the heads of 1
+  and 3, whose rest is the game code's), read in Rust (the type and the fixed fields; while a join waits only the
+  reply counts; a short message does nothing, as before: no handler acted before its reads), and who acts on which
+  is `room_accepts` over the sender's and our roles; `HandleMessage` positions the `ReadBuffer` after the fixed
+  fields for the game's hooks. `UpdateReadyState`'s sounds and remembered state, `HandleStartGame`'s exit code,
+  LobbyGame's `IsFull`, `GetJoinStatus` (before the hook), `HandleJoinRequest`'s first checks and `MatchesRoomSpec`,
+  the listing summary (`WriteSummary` / `ReadSummary`: a short summary keeps the fields read before the cut, as the
+  original assigned them while reading) and `LobbyPlayer::WriteToBuffer`'s head are Rust. The handlers for types
+  3-10 take the read message (`const EeWonRoomMsg&`) instead of re-reading. `won_staging_test` compares the
+  original's statements with the Rust over every message and value set, all 256 type bytes with their fields cut
+  at every length in three join states and 16 role sets (with two bodies), the ready state over 32 x 8 inputs, the
+  join rules and every summary of each game type cut at every length: 175,517 checks, 0 failures.
+  - The new constants are `pub(crate)`: as global `constexpr`s in `ee_rust.h` (`START_GAME`, `GAME_LAN`,
+    `PING_REPORT`, ...) they could clash with the game's names, as the chat commands did with `IGNORE`.
+- **The saved settings (`persist.rs`).** Both files' layouts: written from the C++'s lists (`EeWonGlobalPrefsOut`,
+  `EeWonUserPrefsOut`), read as a stream of events (`EeWonPrefsEvent`) in the order the original assigned them, so a
+  cut file leaves exactly what the original left (a reconnect entry exists from its address on, a game filter from
+  its name on, a saved user from its name on, the recent LAN name is chosen only after the LAN names were read
+  whole). The C++ keeps the maps, the password key (Blowfish of the machine id: `EncryptString` / `DecryptString`)
+  and the defaults; it reads the whole file (`ReadMaxBytes`) and writes it in one `WriteBytes`. The user file name,
+  `FindUnusedUserId`, the pruning of users and LAN names (a multimap by time: equal times in map order), the recent
+  LAN name and the default name's number (CRC-16 of the address) are Rust too. **Deleted:** ReadFileHeader,
+  WriteFileHeader, ReadByteString, WriteByteString, ReadWideString, WriteWideString, ReadEncryptedString,
+  WriteEncryptedString (its encryption is `EncryptString`), ReadLanPrefs, WriteLanPrefs.
+  - **Kept quirks:** a game filter with no values is written without its count (the filters after it are misread
+    on the next load); a setting byte is on only when it is 1; another version (or tag) returns before the dirty
+    flags are touched.
+  - **Behaviour change (POSIX only):** a wide string is written as its UTF-16 units and read back joining
+    surrogate pairs; the original wrote each 32-bit `wchar_t` as a short (an astral character was cut). Windows is
+    unchanged.
+  - `won_persist_test` saves 32 variants of both files through the original's statements and the port (the same
+    bytes), then loads each file cut at every length, with a wrong version and with an odd byte, both ways into
+    stand-ins of the same containers (the same afterwards), plus the rules against the original's: 26,855 checks, 0 failures.
+- **What exercises what.** The LAN game (`lan_game.py`) runs the summary (the joiner finds the game by it), the
+  join request and reply, the player joined message, the ready state, the start message, the join rules and the
+  saved settings of the LAN user (`_wonuser0.dat`, its LAN names and port; `_wonlobbypersistent.dat`) at the lobby's
+  start and end; a lobby tour runs the settings and GUIString everywhere. Nothing in today's game sends a kick, a
+  dissolve while others are in the room, a ping report (the LAN games are not pinged), or saves an Internet user
+  (the login servers are gone): the drivers cover those. Nothing here touches the simulation; the oracle was
+  identical after each gated build.
+- **Still C++ of WON:** LobbyModel's client, group and server lists, LanLogic's objects, StagingLogic's flow (host,
+  join, leave: dialogs, ops and events), InitLogic, the resource table, RoutingLogic, StringUtil's case functions,
+  WONGUI's components and layout, and everything only the gone internet servers reach (peer auth, AuthContext's
+  sessions and certificate flow, GetCertOp, the services' requests and replies).
+
+## R5b.1, finishing: the sparse point set, the manager's last loops and the path manager's splicing in Rust (ee_astar sparse.rs, manager.rs, path_splice.rs; branch rust-r5b-cont2, 2026-11-10)
+
+The map of what was left in the A* layer and the continent analysis went into RUST_PLAN's R5b.1 row first; this
+round moved the pieces that need neither the unit store nor the hulls, each its own commit.
+
+- **New capture records first, from the unchanged C++:** CNTN (every `GetTilesNextTo`: the tile, the id, the
+  result, the tiles) and PMSP (every `TrimPath`, `AppendWaypoints`, `JoinPaths`, `FinishFailedPath` detour search
+  and the bounded searches' revolutions and bounds, with a kind, the inputs and the outputs). `FinishFailedPath`'s
+  detour search became its own static function for this (same code). The goldens were recorded with that commit's
+  build in the four profiles, in the same runs that showed every older digest equal to its golden, and only the new
+  tags' lines were inserted (`merge_golden`-style: (seed, tag) order kept; the CNTN counts are 600-900 a game,
+  PMSP 12,000-21,000).
+- **`U2DSparseArrayPointContainer` whole** (`sparse.rs`; `U2DSparseArray.cpp` is forwarders). The tile sets of
+  every AI area (continents, path areas, hills, forests, choke points, rectangle areas), of the path sub sectors
+  and the explore goal's bad tiles. The C++ class keeps its name, vtable and API and owns one `EeSparseArray`
+  handle; the run node class, the column list header and their `UList` node pool (`SetPoolSize`,
+  `DumpPoolStats`) are gone: nothing outside the class used them. Kept from the C++: the point lists walk the
+  columns from the last and each column's runs upwards, `operator[]` from the first column, `GetClosestPoint` keeps
+  the last tie walking the list from its end (`<=`), `Insert` ignores a point left of the array with x <= 0, a
+  column emptied by `Remove` is deleted but the array keeps its size, and `GetRandomPoint` calls back into the
+  caller's `URandom::Generate()` in the C++'s order and number (16 column tries, then a run, then a y) with the
+  float expression `(long)(Generate() * (max + 1 - min) + min)` (a C cast: truncation, so `as` is right here).
+  Changed: the copy constructor shared the source's column pointers, so both destructors freed them; a copy now owns
+  its points. `Size()` is out of line.
+- **A capture read uninitialised memory, and the smaller areas changed it.** After the sparse array moved, ASGR
+  differed in all six oracle games with the same record counts and an identical oracle. A field diff of the two
+  captures (one seed, both exes) put every difference in four bytes of ten records: `mStartSector` of the continental
+  chain machine (type 7), a stack object in `NumberContinentChains` whose goal never sets it. The graph goal base's
+  ctor left `mGoalSector`/`mStartSector` unset (only `Reset` zeroed them), and the golden happened to see 0. The
+  ctor now sets both to 0; nothing reads them before `SetStart`/`SetGoal`. A record that reads a member the code
+  never sets is a trap for every later layout change: such fields should be initialised, not left out.
+- **`near` is a macro on Windows** (`windef.h`): a cbindgen struct field named `near` broke every unit including
+  `ee_rust.h`. The prune host's callback is `is_near`. (The `near`/`far` parameter names in `ee_dx7`'s exports
+  compile only because a parameter name may vanish.)
+- **The manager's last loops** (`manager.rs`): `GetTilesNextTo` walks the ring of `EEGetSquareRingTiles(x, y, 1)`
+  from its last tile, with the manager's `GetContinentID` as a callback (the id grid is freed in small games and the
+  lookup then searches the sub sectors, so a snapshot of nine ids would cost the calls the C++ skipped);
+  `PruneChokePoints`' loop asks the C++ objects through `EePruneCallbacks` in the C++'s order (the closest points
+  are the areas' C++ geometry, the deletion the C++'s); `theCount >= mAreaSerials.size() - 1` is unsigned, so a
+  choke point without areas never goes. `CreateScenarioAreas`' choice: the set areas with a positive height and
+  width, from the last, ids from 1, the sides truncated as the `(long)` casts (no oracle game has scenario areas:
+  only the unit test covers it).
+- **The path manager's splicing** (`path_splice.rs`): `TrimPath`'s cut, `AppendWaypoints`' points, `JoinPaths`'
+  test, the detour search, `TryShortPath`'s revolutions and the bounds of both bounded searches, and
+  `SetGraphRevs`/`SetPathRevs`' budgets (ASRN and ASGR record the max revs). The path history's walk for the repeat
+  stays C++ (saved state, branch rust-r5a-aisave3's). Points pass as `EePathPoint` over `GE3DPoint` (layout
+  asserted) and compare by tile through `UMFloor` (`lrintf`, then one down when that went up). `MergeWaypoints` has
+  no caller and stays as it was.
+- **Left** (RUST_PLAN's row): the hulls (`U2DPolygon<long>`/`U2DConvexHull<long>`: float math with `Normalize`,
+  shared with the float users) and the area geometry on them; the object bookkeeping of `Rebuild`/`RepairPathArea`
+  and the object queries, after the objects; `CanGetTo`, the goals' unit reads and the path manager's request
+  handling, after the unit store (the store's first stage on `rust` has owner, kind, tile, category, type, built,
+  goal kind; `CanGetTo` would add the class's domains and `CanMoveOnTerrain`, the planet id with its lazy write and
+  the footprint continent); the history and regions, saved state.
+- **Gates** (on the merge of `rust` 4d136f16, the unit store's first stage; the merge needed no resolution, the
+  header was current): `build.py -j 4 --sim` 0/0 for EE-AOC and EE-SIM; the sim oracle identical on seeds 2-7
+  (2,691-2,825 lines a seed); `sim_capture.py check` PASS in the four profiles with no tag ungated (285, 300, 289
+  and 301 digests in oracle, late, space and calamity, CNTB/CNTR/CNTN/PMSP/ASRN/ASGR among them); `rust_build.py
+  gate` PASS (1,462 tests; ee_astar 108, 16 new); the windowed-software test profile 0/0. Before the merge the
+  three leaves were built together (0/0, oracle identical) and each commit was checked with `cargo test`, clippy,
+  rustfmt and the header; the intermediate commits were not linked one by one. Not run: `gates.sh` or any harness
+  session, `eedata check`/`cppgate` (no data change), macOS or Linux builds. Nothing here is drawn: the sparse array
+  is read by the renderer only through the AI's areas (no draw path), so no tour-only risk is known.

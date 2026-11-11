@@ -80,6 +80,7 @@
 #include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEAIContinentCapture.h"   // TEST ONLY: the analysis' capture (EE_SIM_CAPTURE)
+#include "ee/EESimCapture.h"
 
 // Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
 // 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
@@ -956,42 +957,45 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
 {
     std::vector<U2DPoint<long> > theTiles;
     U2DRectangle<long> theRect;
-    unsigned short theID = 1;
-    long theCount = 0;
     EEScenarioManager* theManager = gWorld.GetScenarioManager();
     if (!theManager)
         return;
     long i;
+    std::vector<EeScenarioArea> theInputs(theManager->mAreas.size());
     for (i = theManager->mAreas.size() - 1; i >= 0; i--) {
-        if (theManager->mAreas[i] && !theManager->mAreas[i]->IsUnset() &&
-            theManager->mAreas[i]->GetRect().GetHeight() > 0.0f &&
-            theManager->mAreas[i]->GetRect().GetWidth() > 0.0f)
-            theCount++;
+        EESMArea* theSource = theManager->mAreas[i];
+        theInputs[i].set = theSource && !theSource->IsUnset();
+        if (!theInputs[i].set)
+            continue;
+        theInputs[i].top = theSource->GetRect().GetTop();
+        theInputs[i].bottom = theSource->GetRect().GetBottom();
+        theInputs[i].left = theSource->GetRect().GetLeft();
+        theInputs[i].right = theSource->GetRect().GetRight();
+        theInputs[i].height = theSource->GetRect().GetHeight();
+        theInputs[i].width = theSource->GetRect().GetWidth();
     }
-    if (theCount <= 0)
+    std::vector<EeScenarioAreaPlan> thePlan(theInputs.size());
+    size_t theCount = ee_astar_scenario_area_plan(theInputs.empty() ? NULL : &theInputs[0], theInputs.size(),
+                                                  thePlan.empty() ? NULL : &thePlan[0]);
+    if (theCount == 0)
         return;
     this->mRectangleAreas.resize(theCount + 1, NULL);
     for (i = this->mRectangleAreas.size() - 1; i >= 0; i--)
         this->mRectangleAreas[i] = NULL;
-    for (i = theManager->mAreas.size() - 1; i >= 0; i--) {
-        EEAIRectangleArea* theArea = NULL;
-        // the areas the count above admitted: unset areas too are skipped (they got no slot)
-        if (!theManager->mAreas[i] || theManager->mAreas[i]->IsUnset() ||
-            !(theManager->mAreas[i]->GetRect().GetHeight() > 0.0f) ||
-            !(theManager->mAreas[i]->GetRect().GetWidth() > 0.0f))
-            continue;
-        theArea = new EEAIRectangleArea;
+    for (size_t k = 0; k < theCount; k++) {
+        const EeScenarioAreaPlan& theEntry = thePlan[k];
+        EEAIRectangleArea* theArea = new EEAIRectangleArea;
         theArea->mNumLandTiles = 0;
         theArea->mNumWaterTiles = 0;
         theArea->mNumSpaceTiles = 0;
-        theArea->mID = theID++;
+        theArea->mID = theEntry.id;
         theArea->mSerial = ++this->mLastSerial;
         theArea->mAreaType = kAIAreaRectangleArea;
-        theArea->mScenarioAreaID = theManager->mAreas[i]->mID;
-        theRect.mTop = (long)(theManager->mAreas[i])->GetRect().GetTop();
-        theRect.mBottom = (long)(theManager->mAreas[i])->GetRect().GetBottom();
-        theRect.mLeft = (long)(theManager->mAreas[i])->GetRect().GetLeft();
-        theRect.mRight = (long)(theManager->mAreas[i])->GetRect().GetRight();
+        theArea->mScenarioAreaID = theManager->mAreas[theEntry.index]->mID;
+        theRect.mTop = theEntry.top;
+        theRect.mBottom = theEntry.bottom;
+        theRect.mLeft = theEntry.left;
+        theRect.mRight = theEntry.right;
         theArea->mRect = theRect;
         theTiles.clear();
         for (long x = theRect.mLeft; x <= theRect.mRight; x++) {
@@ -1757,30 +1761,39 @@ unsigned short EEAIContinentManager::GetUnitContinentID(EEUnit* inUnit)
     return theResult;
 }
 
+// GetTilesNextTo's lookup: the manager's GetContinentID
+static unsigned short EEAIContinentIDAt(void* inManager, int32_t inX, int32_t inY)
+{
+    return static_cast<const EEAIContinentManager*>(inManager)->GetContinentID(inX, inY);
+}
+
 // FUNCTION: EXE 0x422f5f
 // Returns whether tile (inX, inY) is on continent inID or on an adjacent continent with a neighbour tile on inID;
-// outTiles gets those neighbour tiles
+// outTiles gets those neighbour tiles (Rust: ee_astar manager.rs, the ring of EEGetSquareRingTiles walked from its
+// last tile)
 bool EEAIContinentManager::GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    unsigned short theID = this->GetContinentID(inX, inY);
-    bool theResult = false;
+    EePoint theTiles[8];
+    size_t theCount = 0;
+    bool theResult = ee_astar_tiles_next_to((int32_t)inX, (int32_t)inY, inID, (uint32_t)this->mWidth,
+                                            (uint32_t)this->mHeight, this->mTileFlags,
+                                            this->mTileFlags ? (size_t)(this->mFlagsWidth * this->mFlagsWidth) : 0,
+                                            (int32_t)this->mFlagsWidth, EEAIContinentIDAt, this, theTiles, &theCount);
     outTiles.clear();
-    if (theID != inID) {
-        if (this->mTileFlags[this->mFlagsWidth * theID + inID]) {
-            EEGetSquareRingTiles(inX, inY, 1, theTiles);
-            for (long i = theTiles.size() - 1; i >= 0; i--) {
-                if (!(theTiles[i].GetX() >= 0) || !(theTiles[i].GetY() >= 0))
-                    continue;
-                unsigned long theY = theTiles[i].GetY();
-                if ((unsigned long)theTiles[i].GetX() < this->mWidth && theY < this->mHeight &&
-                    this->GetContinentID(theTiles[i].GetX(), theTiles[i].GetY()) == inID)
-                    outTiles.push_back(theTiles[i]);
-            }
-            theResult = outTiles.size() != 0;
+    for (size_t k = 0; k < theCount; k++)
+        outTiles.push_back(U2DPoint<long>(theTiles[k].x, theTiles[k].y));
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: CNTN, the call's inputs and outputs
+        EESimCaptureRecord theRecord(kContinentCaptureNextTo);
+        theRecord.I32((int)inX);
+        theRecord.I32((int)inY);
+        theRecord.U32(inID);
+        theRecord.U32(theResult);
+        theRecord.U32((unsigned int)outTiles.size());
+        for (size_t k = 0; k < outTiles.size(); k++) {
+            theRecord.I32((int)outTiles[k].mX);
+            theRecord.I32((int)outTiles[k].mY);
         }
-    } else {
-        theResult = true;
+        theRecord.Commit();
     }
     return theResult;
 }
@@ -2183,47 +2196,75 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
 // FUNCTION: EXE 0x424b31
 // Deletes each choke point beside a map-edge continent when all but at most one of its joined areas also touch
 // a map-edge continent
-void EEAIContinentManager::PruneChokePoints()
+// PruneChokePoints' questions to the objects (ee_astar manager.rs PruneHost)
+static EEAIContinentManager* EEAIPruneManager(void* inContext)
 {
-    std::vector<EEAIContinent*> theEdges;
+    return static_cast<EEAIContinentManager*>(inContext);
+}
+
+static bool EEAIPruneChokeExists(void* inContext, size_t inChoke)
+{
+    return EEAIPruneManager(inContext)->mChokePoints[inChoke] != NULL;
+}
+
+static size_t EEAIPruneAreaCount(void* inContext, size_t inChoke)
+{
+    return EEAIPruneManager(inContext)->mChokePoints[inChoke]->mAreaSerials.size();
+}
+
+// the choke point's inK-th area: -2 none, the continent's index when it is one of the continents, else -1
+static int32_t EEAIPruneArea(void* inContext, size_t inChoke, size_t inK)
+{
+    EEAIContinentManager* theManager = EEAIPruneManager(inContext);
+    EEAIArea* theArea = theManager->GetArea(theManager->mChokePoints[inChoke]->mAreaSerials[inK]);
+    if (!theArea)
+        return -2;
+    for (long i = theManager->mContinents.size() - 1; i >= 0; i--) {
+        if (theManager->mContinents[i] == theArea)
+            return (int32_t)i;
+    }
+    return -1;
+}
+
+// whether map edge continent inEdge's closest points to the choke point (inK -1) or its inK-th area are at most
+// one tile apart
+static bool EEAIPruneNear(void* inContext, size_t inEdge, size_t inChoke, ptrdiff_t inK)
+{
+    EEAIContinentManager* theManager = EEAIPruneManager(inContext);
+    EEAIChokePoint* theChokePoint = theManager->mChokePoints[inChoke];
+    EEAIArea* theTarget = inK < 0 ? theChokePoint : theManager->GetArea(theChokePoint->mAreaSerials[inK]);
     U2DPoint<long> theThis;
     U2DPoint<long> theOther;
-    long i;
-    for (i = this->mContinents.size() - 1; i >= 0; i--) {
-        if (this->mContinents[i] && this->mContinents[i]->mCategory == kContinentCategoryMapEdge)
-            theEdges.push_back(this->mContinents[i]);
-    }
-    for (long j = this->mChokePoints.size() - 1; j >= 0; j--) {
-        EEAIChokePoint* theChokePoint = this->mChokePoints[j];
-        if (!theChokePoint)
-            continue;
-        for (i = theEdges.size() - 1; i >= 0; i--) {
-            theEdges[i]->GetClosestPoints(theChokePoint, theThis, theOther);
-            if (!(theThis.DistanceToSquared(theOther) <= 1))
-                continue;
-            long theCount = 0;
-            for (long k = theChokePoint->mAreaSerials.size() - 1; k >= 0; k--) {
-                EEAIArea* theArea = this->GetArea(theChokePoint->mAreaSerials[k]);
-                if (!theArea)
-                    continue;
-                for (long n = theEdges.size() - 1; n >= 0; n--) {
-                    if (theArea == theEdges[n])
-                        continue;
-                    theThis = U2DPoint<long>();
-                    theOther = U2DPoint<long>();
-                    theEdges[n]->GetClosestPoints(theArea, theThis, theOther);
-                    if (theThis.DistanceToSquared(theOther) <= 1)
-                        theCount++;
-                }
-            }
-            if (theCount > 0 && theCount >= theChokePoint->mAreaSerials.size() - 1) {
-                this->RemoveArea(theChokePoint);
-                this->mChokePoints[j] = NULL;
-                delete theChokePoint;
-            }
-            break;
-        }
-    }
+    theManager->mContinents[inEdge]->GetClosestPoints(theTarget, theThis, theOther);
+    return theThis.DistanceToSquared(theOther) <= 1;
+}
+
+static void EEAIPruneRemove(void* inContext, size_t inChoke)
+{
+    EEAIContinentManager* theManager = EEAIPruneManager(inContext);
+    EEAIChokePoint* theChokePoint = theManager->mChokePoints[inChoke];
+    theManager->RemoveArea(theChokePoint);
+    theManager->mChokePoints[inChoke] = NULL;
+    delete theChokePoint;
+}
+
+// FUNCTION: EXE 0x424cc0
+// Deletes the choke points that a map edge continent touches when their areas touch the map edge continents too
+// (Rust: ee_astar manager.rs prune_choke_points; the closest points it asks stay the areas' C++ geometry)
+void EEAIContinentManager::PruneChokePoints()
+{
+    std::vector<int32_t> theCategories(this->mContinents.size());
+    for (size_t i = 0; i < this->mContinents.size(); i++)
+        theCategories[i] = this->mContinents[i] ? (int32_t)this->mContinents[i]->mCategory : -1;
+    EePruneCallbacks theCallbacks;
+    theCallbacks.ctx = this;
+    theCallbacks.choke_exists = EEAIPruneChokeExists;
+    theCallbacks.area_count = EEAIPruneAreaCount;
+    theCallbacks.area = EEAIPruneArea;
+    theCallbacks.is_near = EEAIPruneNear;
+    theCallbacks.remove = EEAIPruneRemove;
+    ee_astar_prune_choke_points(theCategories.empty() ? NULL : &theCategories[0], theCategories.size(),
+                                this->mChokePoints.size(), &theCallbacks);
 }
 
 // FUNCTION: EXE 0x424dcf
