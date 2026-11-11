@@ -59,6 +59,10 @@ M.opts = {
                           -- dangerous unless the town holds it (raid_held): its gatherers go to the nearest drop
                           -- site, and M.dangerous tells the script's claims to leave the site while it lasts
     raid_held = 150,      -- percent: own soldiers and towers within 8 against the raiders within 8
+    tower_militia = false, -- (off; AI_RESEARCH §8.41 D7) in the Prehistoric, a raid in a tower's reach is fought by
+                          -- the militia whatever its size or kind, when the citizens and the towers win by the
+                          -- square law at militia_odds (the caps of 6 raiders and of ranged raids lifted there)
+    wave_size = 8,        -- a raid this large is a wave for the scripts (boom's plan.emergency)
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -456,7 +460,15 @@ local function handle(mem, cl, now)
     end)
     -- the militia: the nearest citizens join while the odds are short of militia_odds, within its caps
     local fighters = {}
-    if not held and cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0 or (cl.camped or 0) >= o.camp_ms)
+    local in_reach = false
+    if o.tower_militia and (mem.epoch or 0) == 0 then
+        for _, r in ipairs(REFUGES) do
+            if r.tower and d2(r.x, r.y, cl.x, cl.y) <= (r.range + 1) * (r.range + 1) then
+                in_reach = true
+            end
+        end
+    end
+    if not held and (in_reach or (cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0 or (cl.camped or 0) >= o.camp_ms)))
             and fhp * fatk * 100 < enemy * o.militia_odds then
         local nhp, natk = fhp, fatk
         for _, c in ipairs(danger) do
@@ -743,6 +755,7 @@ end
 
 function M.micro(mem, events, now, tx, ty, epoch)
     LAST = mem
+    mem.epoch = epoch
     state(mem)
     note(mem, events, now)
     if M.opts.hurt_safety and tx ~= nil and tx >= 0 then
