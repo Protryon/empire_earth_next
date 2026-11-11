@@ -89,17 +89,20 @@ def run_one(run, args, slots, out):
             opts += ["--port-offset", str(args.port_base + 64 * slots_index(slot))]
         t0 = time.monotonic()
         env = dict(os.environ, **run["env"])
-        for attempt in range(2):   # one retry of a run that died without a report (a start-up fault)
+        for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
             report.unlink(missing_ok=True)
             with open(err, "w", encoding="utf-8") as f:
                 rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f,
                                     env=env).returncode
             try:
                 rep = json.loads(report.read_text())
-                break
             except (OSError, ValueError):
                 rep = dict(outcome="no-report")
-                print(f"== {rid} [slot {slot}]: rc {rc}, no report" + (": retrying" if attempt == 0 else ""), flush=True)
+            # (the lobby's "slot 0 human: index #0 outside the combo's 0 lines": a menu race, the game never started)
+            if rep.get("outcome") not in ("no-report", "error") or rep.get("game_ms", 0) > 0:
+                break
+            print(f"== {rid} [slot {slot}]: rc {rc}, {rep.get('outcome')} {rep.get('error', '')} before the game"
+                  + (": retrying" if attempt == 0 else ""), flush=True)
         wall = time.monotonic() - t0
         # the next engine's script errors (EE-SIM writes "SIM next.error ..." to stderr: a seat without orders that step)
         lua_errors = sum(1 for x in err.read_text(errors="replace").splitlines() if x.startswith("SIM next.error"))
