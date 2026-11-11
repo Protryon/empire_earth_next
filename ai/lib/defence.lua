@@ -49,7 +49,7 @@ M.opts = {
     militia_ms = 12000,   -- a militia citizen is back at work after this long, or once its raid is gone
     militia_ranged = false, -- the militia against a raid with ranged units (rock throwers and slingers kite the
                           -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
-    wave_n = 0,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
+    wave_n = 8,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
                           -- refuge further from it (the settlements too), not to the nearest tower in its path
     bait = false,         -- [ageofai tactics.lua tower_bait, upstream early.c] a citizen with an enemy soldier within
                           -- 5 tiles, out of its towers' reach, runs to the spot 1.5 tiles behind the nearest
