@@ -75,6 +75,48 @@
 
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitHandle.h"
+#include "ee/EESimCapture.h"
+
+// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path splicing's record PMSP, one per call of
+// TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's detour search and the bounded searches' revolutions and
+// bounds: a u32 kind, the inputs, the outputs (points as three f32, lists with their u32 length first)
+enum {
+    kPathSpliceCapture = 0x50534d50,   // "PMSP"
+    kPathSpliceTrim = 1,
+    kPathSpliceAppend = 2,
+    kPathSpliceJoin = 3,
+    kPathSpliceDetour = 4,
+    kPathSpliceShortPath = 5,
+    kPathSpliceFailedBounds = 6,
+};
+
+static void EEPathCapturePoints(EESimCaptureRecord& ioRecord, const std::vector<GE3DPoint>& inPoints)
+{
+    ioRecord.U32((unsigned int)inPoints.size());
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        ioRecord.F32(inPoints[i].GetX());
+        ioRecord.F32(inPoints[i].GetY());
+        ioRecord.F32(inPoints[i].GetZ());
+    }
+}
+
+static void EEPathCaptureWaypoints(EESimCaptureRecord& ioRecord, const std::deque<EEComplexUnitWaypoint>& inWaypoints)
+{
+    ioRecord.U32((unsigned int)inWaypoints.size());
+    for (size_t i = 0; i < inWaypoints.size(); i++) {
+        ioRecord.F32(inWaypoints[i].mLocation.GetX());
+        ioRecord.F32(inWaypoints[i].mLocation.GetY());
+        ioRecord.F32(inWaypoints[i].mLocation.GetZ());
+    }
+}
+
+static void EEPathCaptureBounds(EESimCaptureRecord& ioRecord, const EEAIAStarBounds& inBounds)
+{
+    ioRecord.I32((int)inBounds.mTop);
+    ioRecord.I32((int)inBounds.mLeft);
+    ioRecord.I32((int)inBounds.mBottom);
+    ioRecord.I32((int)inBounds.mRight);
+}
 
 
 // NEAR: the original copies the (uninitialised) allocator byte of its fifth argument
@@ -1108,6 +1150,15 @@ void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EE
 // returns whether it cut
 bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
 {
+    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
+    bool theCapture = EESimCaptureRecord::Active();
+    if (theCapture) {
+        theRecord.U32(kPathSpliceTrim);
+        theRecord.U32((unsigned int)inUnit->mWaypoints.size());
+        theRecord.F32(inUnit->mPhysicalModel.GetLocation().GetX());
+        theRecord.F32(inUnit->mPhysicalModel.GetLocation().GetY());
+        EEPathCapturePoints(theRecord, ioPath);
+    }
     unsigned long theWaypoints = inUnit->mWaypoints.size();
     long theFirst = theWaypoints < ioPath.size() ? theWaypoints : ioPath.size();
     long theX = UMFloor(inUnit->mPhysicalModel.GetLocation().GetX());
@@ -1121,6 +1172,11 @@ bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPa
         inUnit->DropPath();
         break;
     }
+    if (theCapture) {
+        theRecord.U32(theResult);
+        theRecord.U32((unsigned int)ioPath.size());
+        theRecord.Commit();
+    }
     return theResult;
 }
 
@@ -1129,8 +1185,22 @@ bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPa
 // other waypoints, last first, then drops the unit's path
 void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
 {
-    if (inUnit == NULL || this->TrimPath(inUnit, ioPath))
+    if (inUnit == NULL)
         return;
+    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
+    bool theCapture = EESimCaptureRecord::Active();
+    if (theCapture) {
+        theRecord.U32(kPathSpliceAppend);
+        EEPathCapturePoints(theRecord, ioPath);
+        EEPathCaptureWaypoints(theRecord, inUnit->mWaypoints);
+    }
+    if (this->TrimPath(inUnit, ioPath)) {
+        if (theCapture) {
+            theRecord.U32(1);
+            theRecord.Commit();
+        }
+        return;
+    }
     std::deque<EEComplexUnitWaypoint>& theWaypoints = inUnit->mWaypoints;
     if (ioPath.size() != 0 && theWaypoints.size() != 0) {
         if (UMFloor(ioPath.back().GetX()) != UMFloor(theWaypoints.back().mLocation.GetX()) ||
@@ -1139,6 +1209,11 @@ void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint
     }
     for (long i = theWaypoints.size() - 2; i >= 0; i--)
         ioPath.push_back(theWaypoints[i].mLocation);
+    if (theCapture) {
+        theRecord.U32(0);
+        EEPathCapturePoints(theRecord, ioPath);
+        theRecord.Commit();
+    }
     if (ioPath.size() != 0)
         inUnit->DropPath();
 }
@@ -1179,6 +1254,19 @@ bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inTyp
     theBounds.mLeft = inFrom.GetX() - theRevs - 1 > 0 ? inFrom.GetX() - theRevs - 1 : 0;
     theBounds.mRight = inFrom.GetX() + theRevs + 1 < inMap->mSize - 1 ? inFrom.GetX() + theRevs + 1 : inMap->mSize - 1;
     theBounds.mBottom = inFrom.GetY() + theRevs + 1 < inMap->mSize - 1 ? inFrom.GetY() + theRevs + 1 : inMap->mSize - 1;
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY
+        EESimCaptureRecord theRecord(kPathSpliceCapture);
+        theRecord.U32(kPathSpliceShortPath);
+        theRecord.I32((int)theQueued);
+        theRecord.I32((int)inFrom.GetX());
+        theRecord.I32((int)inFrom.GetY());
+        theRecord.I32((int)ioTo.GetX());
+        theRecord.I32((int)ioTo.GetY());
+        theRecord.I32((int)inMap->mSize);
+        theRecord.I32((int)theRevs);
+        EEPathCaptureBounds(theRecord, theBounds);
+        theRecord.Commit();
+    }
     this->mBoundedMachine->mGoal.mBounds = theBounds;
     this->mBoundedMachine->mSearchBounds = theBounds;
     this->mBoundedMachine->Run();
@@ -1311,6 +1399,30 @@ bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
 // FUNCTION: EXE 0x4a7f4a
 // Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
 // inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
+// FinishFailedPath's second join: the count from inPath's end of the point among its first ten (from the tenth
+// down) on inDetour's first tile, -1 without one (inDetour not empty)
+static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const std::vector<GE3DPoint>& inDetour)
+{
+    long theDetourY = UMFloor(inDetour[0].GetY());
+    long theDetourX = UMFloor(inDetour[0].GetX());
+    long theIndex = -1;
+    for (long i = (inPath.size() < 10 ? inPath.size() : 10) - 1; i >= 0; i--) {
+        if (UMFloor(inPath[i].GetX()) == theDetourX && UMFloor(inPath[i].GetY()) == theDetourY) {
+            theIndex = inPath.size() - i;
+            break;
+        }
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY
+        EESimCaptureRecord theRecord(kPathSpliceCapture);
+        theRecord.U32(kPathSpliceDetour);
+        EEPathCapturePoints(theRecord, inPath);
+        EEPathCapturePoints(theRecord, inDetour);
+        theRecord.I32((int)theIndex);
+        theRecord.Commit();
+    }
+    return theIndex;
+}
+
 void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
 {
     std::vector<GE3DPoint> thePath;
@@ -1357,6 +1469,15 @@ void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
         theBounds.mLeft = theFrom.GetX() - 26 > 0 ? theFrom.GetX() - 26 : 0;
         theBounds.mBottom = theFrom.GetY() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetY() + 26 : gWorld.GetMap()->GetSize() - 1;
         theBounds.mRight = theFrom.GetX() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetX() + 26 : gWorld.GetMap()->GetSize() - 1;
+        if (EESimCaptureRecord::Active()) {   // TEST ONLY
+            EESimCaptureRecord theRecord(kPathSpliceCapture);
+            theRecord.U32(kPathSpliceFailedBounds);
+            theRecord.I32((int)theFrom.GetX());
+            theRecord.I32((int)theFrom.GetY());
+            theRecord.I32((int)gWorld.GetMap()->GetSize());
+            EEPathCaptureBounds(theRecord, theBounds);
+            theRecord.Commit();
+        }
         this->mBoundedMachine->mSearchBounds = theBounds;
         this->mBoundedMachine->mGoal.mBounds = theBounds;
         this->mBoundedMachine->mGoal.mMaxRevs = 50;
@@ -1378,15 +1499,7 @@ void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
         if (thePath.size() > 0) {
             this->mBoundedMachine->mGoal.GetPoints(theDetour);
             if (theDetour.size() > 0) {
-                long theDetourY = UMFloor(theDetour[0].GetY());
-                long theDetourX = UMFloor(theDetour[0].GetX());
-                long theIndex = -1;
-                for (long i = (thePath.size() < 10 ? thePath.size() : 10) - 1; i >= 0; i--) {
-                    if (UMFloor(thePath[i].GetX()) == theDetourX && UMFloor(thePath[i].GetY()) == theDetourY) {
-                        theIndex = thePath.size() - i;
-                        break;
-                    }
-                }
+                long theIndex = EEPathDetourJoinCount(thePath, theDetour);
                 if (theIndex != -1 && this->JoinPaths(thePath, theDetour, &theJoined, theIndex))
                     goto joined;
             }
@@ -1663,6 +1776,14 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
                               std::vector<GE3DPoint>* outPath, long inCount)
 {
     bool theResult = false;
+    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
+    bool theCapture = EESimCaptureRecord::Active() && outPath != NULL;
+    if (theCapture) {
+        theRecord.U32(kPathSpliceJoin);
+        EEPathCapturePoints(theRecord, inPath);
+        EEPathCapturePoints(theRecord, inDetour);
+        theRecord.I32((int)inCount);
+    }
     if (outPath != NULL && inDetour.size() > 0) {
         long theX = UMFloor(inPath[inPath.size() - inCount].GetX());
         long theY = UMFloor(inPath[inPath.size() - inCount].GetY());
@@ -1677,6 +1798,11 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
                 outPath->push_back(inDetour[i]);
             theResult = true;
         }
+    }
+    if (theCapture) {
+        theRecord.U32(theResult);
+        EEPathCapturePoints(theRecord, *outPath);
+        theRecord.Commit();
     }
     return theResult;
 }

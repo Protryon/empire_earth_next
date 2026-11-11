@@ -80,6 +80,7 @@
 #include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEAIContinentCapture.h"   // TEST ONLY: the analysis' capture (EE_SIM_CAPTURE)
+#include "ee/EESimCapture.h"
 
 // Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
 // 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
@@ -1781,6 +1782,19 @@ bool EEAIContinentManager::GetTilesNextTo(long inX, long inY, std::vector<U2DPoi
         }
     } else {
         theResult = true;
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: CNTN, the call's inputs and outputs
+        EESimCaptureRecord theRecord(kContinentCaptureNextTo);
+        theRecord.I32((int)inX);
+        theRecord.I32((int)inY);
+        theRecord.U32(inID);
+        theRecord.U32(theResult);
+        theRecord.U32((unsigned int)outTiles.size());
+        for (size_t k = 0; k < outTiles.size(); k++) {
+            theRecord.I32((int)outTiles[k].mX);
+            theRecord.I32((int)outTiles[k].mY);
+        }
+        theRecord.Commit();
     }
     return theResult;
 }
