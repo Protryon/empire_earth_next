@@ -968,6 +968,12 @@ from data, so that a script can make its decisions with the same numbers:
   it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
   towers and armed buildings known. No other query reads through the fog.
 
+**The `type` filter as a list (2026-11-10, boom-econ):** `ai.units`, `ai.seen`, `ai.resources` and `ai.memory` take
+`type = {"b_town_center", "b_capitol", ...}` (class names or ids, at most 16) as §2.2 says: a unit of any of them
+passes; unknown names are left out, and a list of none known matches nothing (as an unknown single name). Before, a
+table read as an unknown class and matched nothing (boom counted 0 town centres; `ai/ageofai/econ.lua`'s town list
+found no town). `tests/ai_units/types.lua` checks that a list's ids are the union of its names' ids.
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between

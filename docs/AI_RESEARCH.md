@@ -2980,6 +2980,96 @@ dropped 1-2 games a row):
 - `--repeat 2` on b1b1312 (seeds 4 and 9, against the improved classic and rush, 90 minutes): all four pairs
   identical.
 
+**The overnight experiments D1-D5 (2026-11-11).**
+- The protocol:
+  - one switch over main 1e422bd's boom, against main 1e422bd's scripts as the baseline;
+  - 32 seeds (2-33), Small, Hard, 120 minutes, the same exe;
+  - kept only if the defeats do not rise in any matchup and something gains;
+  - the kept one is also checked against the mirror and Age of AI.
+- Stone / Copper: the games that reached the epoch and its median minute. Lost: citizens and boats in all.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 6/32 | 0/27/5 | 31, 24.9 | 20, 61.6 | 111.8 |
+| | cheating classic | 13/32 | 8/18/6 | 22, 28.0 | 8, 74.7 | 85.0 |
+| | mirror | 0/32 | 1/1/30 | 32, 21.5 | 32, 51.9 | 15.9 |
+| | Age of AI | 0/32 | 0/11/21 | 32, 22.4 | 32, 50.9 | 17.1 |
+| D1 watcher + attack from Copper (`watch`, `attack`) | improved classic | 8/32 | 1/24/7 | 31, 24.9 | 22, 65.9 | 114.6 |
+| | cheating classic | 16/32 | 8/19/5 | 22, 28.0 | 6, 90.5 | 86.6 |
+| D2 wave flight (`wave_n = 8`): **kept** | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 87.1 |
+| | mirror | 0/32 | 1/0/31 | 31, 21.5 | 31, 51.6 | 15.4 |
+| | Age of AI | 0/31 | 0/14/17 | 31, 22.3 | 31, 51.2 | 17.8 |
+| D3 four Prehistoric towers from 6 citizens (`towers = 4`, `tower_at = 6`) | improved classic | 10/32 | 0/29/3 | 32, 24.6 | 21, 64.8 | 120.5 |
+| | cheating classic | 17/32 | 12/18/2 | 26, 29.1 | 9, 81.7 | 74.4 |
+| D4 tower bait (`bait`, Age of AI's early.c) | improved classic | 8/32 | 0/27/5 | 32, 24.3 | 15, 62.4 | 123.0 |
+| | cheating classic | 15/30 | 8/17/5 | 21, 25.9 | 10, 78.2 | 87.4 |
+| D5 the hurt spots (`hurt_safety`, Age of AI's attack.c citizens_safety) | improved classic | 9/32 | 0/27/5 | 32, 25.2 | 17, 57.3 | 109.2 |
+| | cheating classic | 20/32 | 4/24/4 | 21, 29.8 | 3, 54.3 | 66.4 |
+
+- **Kept:** D2 alone. It has the fewest defeats against both classics and no defeats against the mirror or Age of
+  AI. The gain is small, though: 2 and 1 games, within a 32-seed bench's noise. Against Age of AI and the improved
+  classic it has fewer close games (17 against 21, 2 against 5), and it loses a few more citizens against the
+  classics. It is kept by the protocol's rule; a 64-seed check would settle it.
+- **Off:**
+  - D1 adds defeats against both classics and comes to the Copper Age later. The attacks pull soldiers out of a town
+    the classics are about to hit.
+  - D3 reaches the Stone Age in every game against the improved classic and in 26 of 32 against the cheating one
+    (22 for the baseline). It wins 12 against 8 there and loses the fewest citizens. But it has 4 more defeats against
+    each classic: the fourth tower's stone and the earlier towers come out of the Stone Age reserve.
+  - D4 and D5 both move citizens more often and add defeats. D5 halves the Copper Age games against the cheating
+    classic (3 against 8).
+
+**D2 on 64 seeds; D3b and D3c (2026-11-11).** The same protocol. Seeds 34-65 were added to the baseline and to D2.
+D3b and D3c are each one switch over D2, against D2's 32-seed rows above.
+
+| Experiment | Matchup | Seeds | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 2-65 | 13/64 | 1/52/11 | 63, 23.8 | 40, 61.5 | 108.1 |
+| | cheating classic | 2-65 | 28/64 | 17/38/9 | 46, 29.4 | 19, 71.8 | 76.1 |
+| D2 wave flight | improved classic | 2-65 | 10/64 | 1/55/8 | 63, 23.8 | 40, 62.4 | 111.5 |
+| | cheating classic | 2-65 | 28/64 | 18/36/10 | 46, 29.6 | 18, 72.3 | 77.1 |
+| D3b D2 + the towers from 6 citizens (`tower_at = 6`) | improved classic | 2-33 | 7/32 | 0/26/6 | 32, 24.0 | 22, 62.3 | 113.0 |
+| | cheating classic | 2-33 | 17/31 | 4/18/9 | 23, 29.1 | 7, 81.8 | 75.3 |
+| D3c D2 + a fourth tower once the next epoch is reserved (`towers_saving = 4`) | improved classic | 2-33 | 9/32 | 0/27/5 | 32, 24.9 | 18, 62.4 | 115.2 |
+| | cheating classic | 2-33 | 17/32 | 8/18/6 | 23, 29.3 | 11, 77.9 | 73.9 |
+
+- **D2 holds on 64 seeds:** 10 defeats against 13 by the improved classic, 28 against 28 by the cheating one. Kept.
+- **D3b and D3c add defeats against both classics** (7 and 9 against 4; 17 and 17 against 12). Both are off; no
+  64-seed run.
+  - Earlier towers and a fourth tower reach the Stone Age in every game against the improved classic. They also lose
+    fewer citizens against the cheating classic.
+  - But more towns are wiped out later. The tower spending, or the towers at the town that the plan builds first,
+    does not stop the waves that kill the town.
+
+**D6 and D7, the Prehistoric rule measured for the owner (2026-11-11).** Both are off by default; each is one switch
+over D2. 32 seeds (2-33), against D2's rows.
+- D6, `plan.emergency = N`: up to N soldiers, and a barracks, while a wave of 8 or more is seen in the claim range.
+  Training stops 60 s after the wave is gone.
+- D7, `tower_militia`: in the Prehistoric, a raid in a tower's reach is fought by the militia whatever its size or
+  kind, when the citizens and the towers win by the square law at 3 x.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Citizens at 20 min | Lost |
+|---|---|---|---|---|---|---|---|
+| D2 | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 28.6 | 87.1 |
+| D6, N = 4 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 115.5 |
+| | cheating classic | 13/32 | 6/19/7 | 23, 29.3 | 6, 75.5 | 28.7 | 86.3 |
+| D6, N = 8 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 122.4 |
+| | cheating classic | 12/32 | 6/18/8 | 23, 29.4 | 7, 75.8 | 28.7 | 88.4 |
+| D7 | improved classic | 6/32 | 0/28/4 | 32, 24.3 | 21, 63.2 | 32.9 | 119.5 |
+| | cheating classic | 16/31 | 8/20/3 | 21, 27.4 | 6, 73.9 | 28.4 | 76.1 |
+
+- **Neither helps, and neither costs the economy anything measurable:** the Stone Age minute and the citizens at 20
+  minutes are within 0.2 of D2's.
+- **D6** changes almost nothing. The Prehistoric town has no barracks when a wave arrives (it stands from 28
+  citizens), so the soldiers ordered come after the wave: 23 plan lines with soldiers in the 32 games against the
+  cheating classic. An emergency army would have to be built before the wave is seen, which is the rule the owner
+  set.
+- **D7** adds defeats (6 and 16). Its militia rarely triggers: a Prehistoric tower reaches 4 tiles, and the waves
+  stand outside that (938 militia lines against D2's 917).
+- No 64-seed run: none is better than D2.
+
 **Open.**
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
@@ -3029,7 +3119,163 @@ Readings:
 Next: the farms (CheckBuildingCounts' farm entry never queues one in the port), the dock's water sites, then
 ChooseUnitsToKill, the special units, the guard posts and the navy; walls last (the C++ built none in 90 minutes).
 
-### 8.43 The classic computer player in Lua: farms, docks, fishing (2026-11-11, EE-SIM)
+### 8.43 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
+
+The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `ai/boom.lua`, each
+behind a switch of its `ECON` table, the logic in new library modules: `lib.econ_units` (orders on single citizens),
+`lib.demand` (the split's stock correction, the saving ramp), `lib.econ_stats` (the bench metrics: the `econ` trace
+line each minute with the idle town-centre seconds, the patches with more than 6 gatherers sent, the town centres).
+
+Bench: EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 90 minutes, `--ai-scripts` (a copy of `ai/` with
+`rush` registered and the baseline as `boom0`), the worktree's open tree, 16 games a row (seeds 2-17 unless noted;
+a row with fewer seats lost runs to the lobby's "slot 0 human" start fault). Boom is seat p2. "Result" is the mixed
+score (§8.29) against the other seat.
+
+| Row (boom against classic `balanced`) | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C (defeated) |
+|---|---|---|---|---|---|---|
+| baseline (main + the metrics; identical after the merge of main) | 24.7 | 56.2 (12/16) | 2/16 | 33.7 / 36.6 / 45.6 | 63.7 | 5-9-2 (3) |
+| + second town centre (Stone, from 30 citizens) | 24.7 | 57.9 (13/16) | 5/16 | 33.4 / 36.2 / 49.5 | 63.2 | 4-6-6 (2) |
+| + stock correction v1, unreachable, ramp (Prehistoric too) | 22.7 | 53.2 (9/16) | 4/16 | 27.9 / 36.2 / 49.9 | 63.6 | 2-8-6 (2) |
+| the same without the ramp | 24.7 | 55.7 (10/16) | 5/16 | 33.4 / 36.5 / 49.9 | 64.1 | 3-8-5 (1) |
+| the same without the stock correction | 22.7 | 56.9 (8/16) | 4/16 | 27.9 / 35.4 / 48.8 | 59.2 | 2-9-5 (1) |
+| v1 + army slack, no ramp | 24.7 | 54.5 (10/16) | 1/16 | 33.4 / 36.4 / 47.8 | 65.1 | 3-11-2 (2) |
+| v1 + army slack + Stone ramp | 24.7 | 55.2 (10/16) | 2/16 | 33.4 / 36.4 / 47.4 | 55.9 | 4-10-2 (1) |
+| stock correction v2 (food gives to wood), no ramp | 23.7 | 61.5 (14/16) | 0/16 | 32.6 / 33.9 / 52.1 | 86.9 | 0-9-7 (0) |
+| v2 + Stone ramp | 23.6 | 60.1 (11/13) | 1/13 | 32.4 / 33.5 / 51.1 | 78.3 | 0-8-5 (0) |
+| **as committed** (second town centre + unreachable) | 24.5 | 56.5 (10/13) | 4/13 | 33.5 / 38.7 / 55.3 | 62.8 | 4-5-4 (0) |
+| baseline, seeds 18-33 | 27.8 | 52.4 (7/16) | 3/16 | 31.4 / 30.1 / 39.6 | 65.4 | 2-11-3 (2) |
+| as committed, seeds 18-33 | 27.8 | 58.9 (7/16) | 3/16 | 31.4 / 29.9 / 40.6 | 69.4 | 1-12-3 (5) |
+
+| Other matchups | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C |
+|---|---|---|---|---|---|---|
+| baseline against `rush` | 21.5 | 47.8 (16/16) | 14/16 | 33.9 / 43.2 / 56.1 | 3.1 | 16-0-0 |
+| as committed against `rush` | 21.5 | 49.6 (16/16) | 13/16 | 32.8 / 43.1 / 60.8 | 7.9 | 16-0-0 |
+| baseline against `ageofai` | 22.3 | 49.5 (16/16) | 8/16 | 33.7 / 42.4 / 60.4 | 6.4 | 9-0-7 |
+| as committed against `ageofai` | 22.3 | 49.6 (14/16) | 8/16 | 33.2 / 41.8 / 62.6 | 10.6 | 6-2-8 |
+| mirror: as committed (boom) against the baseline (boom0), seeds 2-9 both seats | 22.0 / 21.5 | 52.9 (13/14) / 51.7 (14/14) | 6 / 7 | 33.4 / 43.7 / 64.4 against 34.6 / 45.4 / 64.4 | 11.6 / 20.5 | 4-2-8 |
+
+What the rows show:
+- **The second town centre** (`lib.econ_units.town_centers`: the finished settlement nearest the town with no enemy
+  soldier within 12 tiles is filled with 5 citizens, idle ones first, held until they are inside; only below 2 town
+  centres and before the Bronze Age) buys citizens, not pace: 4-9 more at 40 minutes in every matchup, the Copper Age
+  0-2 minutes later (5 citizens and the growth that follows come out of the saving). Against the classic AI it lost
+  fewer games on seeds 2-17 (6 and 5 against 9) and more on 18-33 (12 against 11, 5 defeated against 2): within the
+  noise of 16 games. Against `ageofai` 6-2 against the baseline's 9-0 (Copper reached 14 against 16). The idle town-centre seconds roughly double with two producers: food, not training, holds the
+  town back from the Stone Age's tenth minute (the one producer is the limit only in the first 6-8 minutes).
+- **The stock correction** (`lib.demand.correct`, balanced's surplus 1000 / cut 50% and low stock 150 / floor
+  shares): v1 took the low resource's gatherers from gold, stone and iron only, and never fired in the Stone Age's
+  wood famine (wood under 50 in half its minutes: food 18 and the army's iron were the whole town). v2 lets food give
+  down to 4 under its minimum: the famine minutes fell from 263 to 211 of about 650, the Copper Age is reached more
+  often (14/16) but later (61.5 against 56-58), the citizens at 30 minutes fall (33.9) and 87 citizens are lost
+  against 63. **Off by default.**
+- **The saving ramp** (`lib.demand.pressure`, balanced's epoch_pressure start/full: the reserve grows from 0 to the
+  whole cost): in the Prehistoric it started the reserve before the owner's 32 citizens and held them at 28 (the
+  Stone Age 2 minutes sooner, the Copper Age reached less often); from the Stone Age it changed little. **Off by
+  default**; the Stone and Copper plans keep `save_ramp` fields for the switch.
+- **No reserve for an unreachable advance** (balanced's claim_needed): the reserve is dropped while a resource of the
+  advance is short, no reachable site holds it (`memory.no_site`) and nobody gathers it. On; no trace line counts its
+  firings yet.
+- **The army slack** (past the soldiers-first window the reserve waits for 3/4 of the light army only): a trace
+  showed a town 2 soldiers short (iron-bound, 18 of 20) with a food reserve of 0 for 10 minutes while it saved for
+  the Copper Age (the missing army's cap `stock - missing x cost` follows the stock to 0), and its citizens took the
+  food. The slack lost more games (11 against 8). **Off.**
+- **Already in place** (no change needed): the gatherers sent to a patch never pass 6 in the C++ runner (`crowd` 0-0.4
+  samples a game, at most 7 sent for a moment); the busy gatherers moved per 10 s are balanced's moves_per_cycle 3 in
+  the C++ Rebalance, which a next seat runs; fishing from the Stone Age, boats on top of the food citizens; at most 2
+  barracks and 1-2 ranges before the Copper Age; the claim range grows when the patches cannot take the food wanted.
+- **The rush script is no test:** boom won 32 of 32 against it and lost 3-8 citizens a game.
+- **Determinism:** the `--repeat 2` run of the committed state was held back by the gates (not run); the baseline's 16 games after the merge of main (857f6aa, new C++ queries) equal the ones before
+  it in every number above.
+
+Open: the Stone Age's 15-minute stall (citizens 32-36 from minute 15 to 30: the Prehistoric reserve, then the army
+first) is where the Copper Age's 10 minutes against the owner's 46 go; the food places (18 on food, about 11 boats)
+bind from there. The per-unit gatherer placement, builders and rally points (items 6-8 of the economy plan) are not
+built: the runner already keeps the patches at 6.
+
+**The second round** (after the merge of boom's defence, cfc4c9e: the light army a quarter of the citizens, at least
+10; 32 games a row, seeds 2-33 against the improved classic, Small, Hard, 90 min; "Copper by 60" counts the seats
+in the Copper Age by minute 60; the median over all seats takes a seat that never got there as last):
+
+| Row | Stone (reached) | Copper (reached, median) | Copper by 50 / 60 min | Citizens 20 / 30 / 40 | Lost | W-L-C (defeated) |
+|---|---|---|---|---|---|---|
+| main's boom (the defence, no economy rules) | 25.0 (30/32) | 17/32, 59.9 | 2 / 9 | 31.0 / 36.6 / 52.9 | 43.8 | 5-15-12 (3) |
+| + second town centre, ratchet, full target, unreachable | 25.0 (30/32) | **20/32, 56.4** | 3 / **12** | 30.6 / 35.6 / 55.6 | 54.6 | 6-14-12 (4) |
+| the same without the second town centre | 25.0 (28/30) | 14/30, 57.0 | 1 / 10 | 31.0 / 36.2 / 52.3 | 43.0 | 3-15-12 (3) |
+| the same with the citizens beside the army (parallel) | 25.0 (30/32) | 22/32, 56.8 | 4 / 14 | 30.6 / 36.2 / 53.4 | 49.6 | 6-16-10 (**6**) |
+| main's boom against `ageofai` (16) | 22.3 | 16/16, 48.4 | 9 / 14 | 33.7 / 43.6 / 60.9 | 10.1 | 3-2-11 |
+| the economy rules against `ageofai` (16) | 22.3 | 15/16, 47.4 | 10 / 14 | 32.9 / 42.9 / 68.2 | 12.2 | 2-4-10 |
+
+- **What holds the citizens from minute 15 to 30** (`plan` lines classified, 32 games): 79% of the minutes 15-20 the
+  Prehistoric plan's 32 citizens (the saving for the Stone Age: by design); 20-25 the same and the Stone Age's
+  soldiers-first window (15%); 25-40 below every cap with under 50 food (52-63%): the soldiers, the citizens and the
+  boats share a food income bound by about 18 food places.
+- **What holds the Copper Age:** 5 minutes before the advance the furthest resource from its cost was gold or iron in
+  about 3 of 4 games (food in the rest). Two causes found in the traces:
+  - **the iron reserve at 0**: the missing light army's cap took the iron reserve to 0, the stock stood above the bank,
+    so `stock_targets` wanted no iron gatherer and the army and the Copper Age waited on iron for the rest of the game
+    (a third of the saving minutes had a short metal no gatherer was wanted for; 11 of 32 games 10 minutes or more).
+    The gatherers now aim at the advance's whole cost (`full_target`), and the reserve ratchets (`ratchet`: what came
+    in stays saved; the army and the citizens share only the missing soldiers' margin above it);
+  - **the mines' settlements unpaid**: with wood at 5-55 the settlements by the home gold and iron mines were queued
+    unpaid for minutes (`afford=0`), so those mines had no drop site and no gatherer. `wood_floor` keeps wood at its
+    plan floor in the give-way while it is under 150 (benched below once the gates allow).
+- **The second town centre** now pays: with the defence's larger army it is the rule that moves the Copper Age (20
+  against 14 reached; 12 against 10 by minute 60).
+- **The citizens beside the army** (the owner's "in parallel"): more Copper Ages (22) but 6 defeated against 4: off.
+- **`ai.units{type = {...}}`** now takes a list (C++, `tests/ai_units/types.lua`: a list's ids are the union of its
+  names' ids). Age of AI's `citizens_home` (econ.lua) had never run: with the list working it called an undefined
+  global `d2` and every step from about minute 1 aborted there (1,274 script errors in one game) - fixed with a local
+  helper. Its traces differ from about line 60 on.
+
+**The overnight experiments E1-E5** (2026-11-11; the coordinator's protocol). Each one switch of `ECON` over main
+1e422bd's boom (the baseline: its own `boom.lua`; with every switch off this boom's traces equal it until the switch
+first acts - checked seed by seed), seeds 2-33, Small, Hard, 2 AIs, 120 minutes, against the improved classic (`cl`:
+`--cheats none --personality balanced`) and the cheating classic (`cx`: Hard's seven cheats for the classic seat). All
+on this branch's EE-SIM (the `ai.units` type-list fix included). A row keeps its rule only if the defeats do not rise in
+any matchup and it gains somewhere. Stone and Copper are the median minute of the seats that got there (reached);
+"Copper by 60" counts seats in the Copper Age by minute 60; W-L-C the mixed score.
+
+| Experiment | Matchup | Stone (reached) | Copper (reached) | Copper by 60 | Citizens 20 / 40 | Defeated | W-L-C |
+|---|---|---|---|---|---|---|---|
+| baseline (main's boom) | cl | 24.9 (31/32) | 61.6 (20/32) | 7 | 32.9 / 54.6 | 6 | 1-28-3 |
+| baseline | cx | 28.0 (22/32) | 74.7 (8/32) | 1 | 28.8 / 27.5 | 13 | 1-29-2 |
+| E1: reserve ratchet + gatherers aim at the whole cost (the stall fix) | cl | 24.9 (31/32) | 61.0 (19/32) | 9 | 32.9 / 54.8 | 11 | 5-26-1 |
+| E1 | cx | 28.0 (22/32) | 72.9 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-27-4 |
+| E1 + the citizens beside the army (parallel) | cl | 24.9 (31/32) | 58.9 (20/32) | 11 | 32.9 / 58.2 | 9 | 1-27-4 |
+| E1 + parallel | cx | 28.0 (22/32) | 68.2 (7/32) | 2 | 28.8 / 29.3 | 18 | 0-28-4 |
+| E2: the forage-runs-dry claim (claim and hunting to 42 tiles) | cl | 24.3 (32/32) | 62.1 (23/32) | 9 | 33.0 / 55.1 | 7 | 2-26-4 |
+| E2 | cx (31) | 29.2 (25/31) | 92.4 (7/31) | 1 | 27.7 / 30.6 | 14 | 0-27-4 |
+| E3: the second town centre (alone; E1 lost) | cl | 24.9 (31/32) | 62.0 (21/32) | 9 | 32.8 / 59.5 | 8 | 2-23-7 |
+| E3 | cx | 29.3 (22/32) | 75.4 (8/32) | 2 | 28.7 / 32.2 | 13 | 1-28-3 |
+| E4: Age of AI's epoch account from Copper (50% of the income; aims at the cost) | cl | 24.9 (31/32) | 60.2 (18/32) | 9 | 32.9 / 54.8 | 12 | 2-26-4 |
+| E4 | cx | 28.0 (22/32) | 68.8 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-28-3 |
+| E5: wood keeps its floor under 150 (packing does not apply to boom's verbs) | cl | 24.9 (31/32) | 65.1 (20/32) | 8 | 32.9 / 55.2 | 10 | 3-27-2 |
+| E5 | cx | 28.0 (22/32) | 71.0 (4/32) | 1 | 28.8 / 27.5 | 16 | 1-30-1 |
+
+(E3's `cl` row merges 27 games with the 5 seeds re-run after the lobby's "slot 0 human" start fault; E2's `cx` lost
+seed 17 to it. The baseline's `cl` games show 6 defeats; the variants that act only after minute 20 range 6-12 on the
+same seeds, so a single row's defeats move by several games from chance alone.)
+
+- **Nothing is kept.** Every rule raised the defeats in at least one matchup. The closest:
+  - E3, the second town centre: 4-5 more citizens at 40 minutes in both matchups, Copper reached about as often, the
+    same 13 defeats under the cheats, 8 against 6 without;
+  - E2, the forage fallback: Stone reached in every `cl` game and in 25 against 22 `cx` games, but one defeat more in
+    each.
+- **E1** (the stall fix the coordinator asked for) moves Copper by 60 minutes from 7 to 9 (11 with parallel citizens)
+  and the citizens at 40 minutes up to 58, but the extra saving (and parallel citizens) cost the town 3-5 more
+  defeats in both matchups. The defence's army floor of 20 needs the food the ratchet keeps.
+- **E4** is not Age of AI's whole economy: only its epoch account in boom's reserve (the account implies aiming at the
+  cost, so E4 also carries E1's `full_target`). The army share that let Age of AI out-grow boom after 90 minutes is
+  the defence's training block, not reproduced here.
+- **E5's packing** (Age of AI's `tight_build`): boom places its buildings through the C++ `build near=` verb, so the
+  packing code has no seam; E5 benched the Stone Age wood floor instead (the mines' settlements waited on wood).
+- **E3 against Age of AI** (32 seeds): 3-11-18 against the baseline's 10-9-13 (Copper 51.6 against 50.9, all 32
+  reached in both; citizens at 40 minutes 60.7 against 59.6). The mirror (E3 against main's boom, seeds 2-17 both
+  seats) stopped after 5 games when the disk filled up; not counted.
+- **Checks:** with every switch off, boom's traces equal main 1e422bd's line for line (seeds 2-4, 45 minutes: 3908,
+  3760 and 3743 lines); `--repeat 2` of that set (seeds 2-3, 45 minutes) and of E3 gives identical traces (4206 /
+  4059 and 4322 / 3963 lines).
+### 8.44 The classic computer player in Lua: farms, docks, fishing (2026-11-11, EE-SIM)
 
 The "Lua built no farms" of §8.42 counted farm build orders. The C++ classic places its granary with EEMakeBuilding,
 which plants the farm foundations at once, and CheckBuildingCounts queues a farm request per unbuilt foundation (48
@@ -3079,9 +3325,9 @@ Next: the navy (warships from the docks: the sea share of ComputeDomainShares), 
 test, the building-count check's frequency, then ChooseUnitsToKill (only at the population limit: low effect at
 these caps), the special units, guard posts, walls.
 
-### 8.44 The classic computer player in Lua: the navy and the information cheat (2026-11-11, EE-SIM)
+### 8.45 The classic computer player in Lua: the navy and the information cheat (2026-11-11, EE-SIM)
 
-§8.43 found the C++'s war rafts and frigates sinking the port's fishing boats and shooting its citizens on the shore
+§8.44 found the C++'s war rafts and frigates sinking the port's fishing boats and shooting its citizens on the shore
 (287 of the port's units in 32 balanced games); the port trained no warship. Ported:
 - **The sea in the unit selector:** ComputeDomainShares' sea share (GetDomainShare: the water tiles' share of the map,
   the own sea strength against the target's, the air unit weight's pull) and Calculate, the sea's candidate classes,
@@ -3104,7 +3350,7 @@ test; for every other AI it is the fog-honest EECPNextSiteThreat (AI_LUA_UNITS �
 match the C++ line for line; manager 4 runs when wood and stone stand at enable_stock_build. The C++ queues more
 temples, universities and hospitals because its stock is higher more often, not by a different rule.
 
-Bench (as §8.42; before = §8.43's c3; navy = n8 without sees_all; after = s1 with both):
+Bench (as §8.42; before = §8.44's c3; navy = n8 without sees_all; after = s1 with both):
 
 | Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Fishers at 90 | Won-lost |
 |---|---|---|---|---|---|
