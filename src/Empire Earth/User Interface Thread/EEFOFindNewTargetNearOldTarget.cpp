@@ -6320,14 +6320,15 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
 // Tells whether something on the tile line from a unit to a target blocks its shot
 // Whether something on the tile line from inUnit to inTarget blocks inUnit's shot (the shot's height runs from
 // inUnit's weapon point to the top of inTarget); outX/outY: the last tile reached (inferred)
-// TEST ONLY (the golden of the CBLB capture): the call's units and tiles, the result, the last tile, the blocker
-static bool EEIsLineToUnitBlockedOriginal(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
+// With EE_SIM_CAPTURE, a CBLB record: the call's units and tiles, the result, the last tile, the blocker (its golden
+// lines came from the C++ walk)
+static bool EEIsLineToUnitBlockedWalk(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
 
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
 {
     EEUnit* const kUnwritten = (EEUnit*)(uintptr_t)1;   // EEIsTileTopAbove writes the blocker, never reads it
     EEUnit* theBlocker = kUnwritten;
-    bool theResult = EEIsLineToUnitBlockedOriginal(inUnit, inTarget, &theBlocker, outArg4, outArg5);
+    bool theResult = EEIsLineToUnitBlockedWalk(inUnit, inTarget, &theBlocker, outArg4, outArg5);
     if (theBlocker != kUnwritten)
         *outArg3 = theBlocker;
     if (EESimCaptureRecord::Active()) {
@@ -6340,103 +6341,112 @@ bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** out
     return theResult;
 }
 
-static bool EEIsLineToUnitBlockedOriginal(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
+// The world of the line of fire (ee_combat line_blocked, walks.rs): the shooter, the target, the caller's blocker
+struct EELineOfFireHost {
+    EEComplexUnit* mUnit;
+    EEUnit* mTarget;
+    EEUnit** mBlocker;
+    std::vector<int32_t> mPairs;
+};
+
+// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
+static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
 {
-    std::vector<U2DPoint<long> > theTiles;
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    EEComplexUnit* inUnit = theHost->mUnit;
     GE3DPoint theStart;
-    long theFromX = inUnit->GetTileX();
-    bool theBlocked = false;
-    long theFromY = inUnit->GetTileY();
-    long theToX = inTarget->GetTileX();
-    long theToY = inTarget->GetTileY();
-    float theStep = 0.0f;
-    long theX = 0;
-    long theY = 0;
-    bool theBare = inUnit->GetUnitClass()->mIsMelee;
     GETransformation theTransformation;
     GETransformation theOrientation;
     unsigned long thePart;
     float theHeight;
-    float theZ;
-    unsigned long i;
-    if (!inUnit->GetUnitClass()->mSkipsLineOfFireCheck && UMAbs(theFromX - theToX) + UMAbs(theFromY - theToY) > 1
-        && inTarget->GetHitPoints() > 0) {
-        theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
-        if (!theBare) {
-            theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
-            float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
-            EEModel* theModel = inUnit->GetModel();
-            EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-            EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
-            unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-            unsigned long theIndex = theUnit->mWeaponTagPoint;
-            EETagPointList::Scale(theTransformation, theScale);
-            if (theModel->GetNumParts() > 0) {
-                theOrientation.MakeIdentity();
-                if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
-                    theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
-                (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
-            } else if (theList != NULL && theList->mPoints.size() > theIndex) {
-                theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-            } else {
-                theUnit = inUnit->GetComplexUnit();
-                const GE3DPoint& theTop =
-                    theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
-                theStart.SetX(theTop.GetX());
-                theStart.SetY(theTop.GetY());
-                theStart.SetZ(theTop.GetZ() * 0.5f);
-                theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
-            }
-            if (theList != NULL)
-                theHeight = theStart.GetZ();
+    theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
+    if (!inBare) {
+        theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
+        float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
+        EEModel* theModel = inUnit->GetModel();
+        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
+        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        unsigned long theIndex = theUnit->mWeaponTagPoint;
+        EETagPointList::Scale(theTransformation, theScale);
+        if (theModel->GetNumParts() > 0) {
+            theOrientation.MakeIdentity();
+            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
+                theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
+            (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
+        } else if (theList != NULL && theList->mPoints.size() > theIndex) {
+            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
+        } else {
+            theUnit = inUnit->GetComplexUnit();
+            const GE3DPoint& theTop =
+                theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
+            theStart.SetX(theTop.GetX());
+            theStart.SetY(theTop.GetY());
+            theStart.SetZ(theTop.GetZ() * 0.5f);
+            theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
         }
-        EEGetTileLine(theFromX, theFromY, theToX, theToY, &theTiles, 0, 1);
-        if (!theBare && inTarget->GetComplexUnit() != NULL) {
-            EEComplexUnit* theTarget = inTarget->GetComplexUnit();
-            unsigned long theFrame = theTarget->mPhysicalModel.GetFrame();
-            unsigned long theSet = theTarget->mAnimation;
-            float theTop = inTarget->GetModel()->mModels[theSet]->GetBoundingBox(theFrame).GetTopRightBack().GetZ()
-                * inTarget->mStats->GetScale();
-            if (!theTarget->mIsBuilt)
-                theTop *= (float)theTarget->GetHitPoints() / theTarget->mStats->mMaxHitPoints;
-            theTop += theTarget->mPhysicalModel.GetLocation().GetZ();
-            if (theTiles.size() != 0)
-                theStep = (theTop - theHeight) / (theTiles.size() + 1);
-            else
-                theStep = 0.0f;
-        }
-        theX = theFromX;
-        theY = theFromY;
-        theZ = theHeight;
-        for (i = 0; i < theTiles.size(); i++) {
-            if (theBlocked)
-                break;
-            long theTileX = theTiles[i].mX;
-            long theTileY = theTiles[i].mY;
-            if (!theBare)
-                theZ = (i + 1) * theStep + theHeight;
-            if (UMAbs(theTileX - theX) == 1 && UMAbs(theTileY - theY) == 1) {
-                float theCorner = theZ - theStep * 0.5f;
-                if (EEIsTileTopAbove(theTileX, theY, theCorner, outArg3, theBare)
-                    && EEIsTileTopAbove(theX, theTileY, theCorner, outArg3, theBare)) {
-                    theBlocked = true;
-                    theX = theTileX;
-                    continue;
-                }
-            }
-            theBlocked = EEIsTileTopAbove(theTileX, theTileY, theZ, outArg3, theBare);
-            theX = theTileX;
-            theY = theTileY;
-        }
-        if (!theBlocked && UMAbs(theToX - theX) == 1 && UMAbs(theToY - theY) == 1
-            && EEIsTileTopAbove(theToX, theY, theZ, outArg3, theBare) && EEIsTileTopAbove(theX, theToY, theZ, outArg3, theBare)) {
-            theBlocked = true;
-            theX = theToX;
-        }
+        if (theList != NULL)
+            theHeight = theStart.GetZ();
     }
-    *outArg4 = theX;
-    *outArg5 = theY;
-    return theBlocked;
+    return theHeight;
+}
+
+static const int32_t* EELineOfFireTileLine(void* inContext, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY,
+                                           uint32_t* outCount)
+{
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    std::vector<U2DPoint<long> > theTiles;
+    EEGetTileLine(inFromX, inFromY, inToX, inToY, &theTiles, 0, 1);
+    theHost->mPairs.clear();
+    for (size_t i = 0; i < theTiles.size(); i++) {
+        theHost->mPairs.push_back((int32_t)theTiles[i].mX);
+        theHost->mPairs.push_back((int32_t)theTiles[i].mY);
+    }
+    *outCount = (uint32_t)theTiles.size();
+    return theHost->mPairs.empty() ? NULL : &theHost->mPairs[0];
+}
+
+static void EELineOfFireTargetTop(void* inContext, EeCombatTargetTop* outTop)
+{
+    EEUnit* inTarget = ((EELineOfFireHost*)inContext)->mTarget;
+    EEComplexUnit* theTarget = inTarget->GetComplexUnit();
+    if (theTarget == NULL)
+        return;
+    unsigned long theFrame = theTarget->mPhysicalModel.GetFrame();
+    unsigned long theSet = theTarget->mAnimation;
+    outTop->present = 1;
+    outTop->box_top = inTarget->GetModel()->mModels[theSet]->GetBoundingBox(theFrame).GetTopRightBack().GetZ();
+    outTop->scale = inTarget->mStats->GetScale();
+    outTop->built = theTarget->mIsBuilt;
+    outTop->hit_points = (int32_t)theTarget->GetHitPoints();
+    outTop->max_hit_points = (int32_t)theTarget->mStats->mMaxHitPoints;
+    outTop->z = theTarget->mPhysicalModel.GetLocation().GetZ();
+}
+
+static int32_t EELineOfFireTileTopAbove(void* inContext, int32_t inX, int32_t inY, float inHeight, int32_t inBare)
+{
+    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
+    return EEIsTileTopAbove((long)inX, (long)inY, inHeight, theHost->mBlocker, inBare != 0);
+}
+
+// (new: the walk is ee_combat's line_blocked; the weapon point, the target's top, the tile line and the walls stay here)
+static bool EEIsLineToUnitBlockedWalk(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
+{
+    EELineOfFireHost theContext = {inUnit, inTarget, outArg3, std::vector<int32_t>()};
+    EeCombatLineHost theHost = {&theContext, EELineOfFireStartHeight, EELineOfFireTileLine, EELineOfFireTargetTop,
+                                EELineOfFireTileTopAbove};
+    EeCombatLineIn in = {};
+    in.from_x = (int32_t)inUnit->GetTileX();
+    in.from_y = (int32_t)inUnit->GetTileY();
+    in.to_x = (int32_t)inTarget->GetTileX();
+    in.to_y = (int32_t)inTarget->GetTileY();
+    in.skips_check = inUnit->GetUnitClass()->mSkipsLineOfFireCheck;
+    in.target_alive = inTarget->GetHitPoints() > 0;
+    in.bare = inUnit->GetUnitClass()->mIsMelee;
+    EeCombatLineOut theOut = ee_combat_line_blocked(&in, &theHost);
+    *outArg4 = theOut.x;
+    *outArg5 = theOut.y;
+    return theOut.blocked != 0;
 }
 
 // FUNCTION: EXE 0x64e3b2
