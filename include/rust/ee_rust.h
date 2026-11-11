@@ -598,6 +598,10 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+constexpr static const int32_t DM_ERROR = 1;
+
+constexpr static const int32_t BUSY = 5;
+
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -1506,6 +1510,9 @@ struct EeAStarGraphStorage;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
+
+/// The score table, owned by the C++ `SEConductor` (created and destroyed with it).
+struct EeConductor;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
@@ -3545,6 +3552,18 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// The conductor's scalar members (the C++ object's, read and written around each call).
+struct EeConductorFields {
+  float volume;
+  /// 0 stopped, 1 running.
+  uint32_t state;
+  uint32_t reverb_state;
+  int32_t next_score_id;
+  int32_t playing_id;
+  uint32_t intensity;
+  uint32_t channel_group_count;
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -8902,6 +8921,135 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// # Safety
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
+
+/// An empty score table (the constructor).
+EeConductor *ee_conductor_create();
+
+/// Frees the table; its scores were deleted by the stop before (a stopped conductor holds none).
+///
+/// # Safety
+/// `c` from `ee_conductor_create`, not used afterwards.
+void ee_conductor_destroy(EeConductor *c);
+
+/// The constructor's scalar members.
+EeConductorFields ee_conductor_fields_new();
+
+/// `LoadScore(name, outID, secondary)`; `written` says whether the C++ wrote `outID` (then `out_id` holds it).
+///
+/// # Safety
+/// As `with`; `name` NUL-terminated, the outs valid.
+int32_t ee_conductor_load_score(EeConductor *c,
+                                void *ctx,
+                                EeConductorFields *f,
+                                const char *name,
+                                bool secondary,
+                                int32_t *out_id,
+                                bool *written);
+
+/// `SetConductorState`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_state(EeConductor *c, void *ctx, EeConductorFields *f, uint32_t state);
+
+/// `InitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_initialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `UninitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_uninitialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `Play`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_play(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Queue`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_queue(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Stop`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_stop(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `TransitionTo(id, command, flags)` (the flags are unused).
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_transition_to(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   int32_t id,
+                                   uint32_t command);
+
+/// `UnloadScore`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_unload_score(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `SetVolume`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_volume(EeConductor *c, void *ctx, EeConductorFields *f, float volume);
+
+/// `SetIntensity`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_intensity(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   uint32_t intensity,
+                                   bool immediate);
+
+/// `SetChannelGroupCount`.
+///
+/// # Safety
+/// `f` valid, the C++ lock held.
+int32_t ee_conductor_set_channel_group_count(EeConductorFields *f, uint32_t count);
+
+/// `GetCurrentlyPlayingScore`.
+///
+/// # Safety
+/// `f` valid.
+int32_t ee_conductor_currently_playing(const EeConductorFields *f);
+
+/// `GetScore`: the `SEScore*` (null: none).
+///
+/// # Safety
+/// As `with` (no host is reached).
+void *ee_conductor_score(EeConductor *c, int32_t id);
+
+/// `GetScoreID`.
+///
+/// # Safety
+/// As `with` (no host is reached).
+int32_t ee_conductor_score_id(EeConductor *c, void *score);
+
+/// One entry of the score table, for inspection (tests, the golden driver): false past the last. `name` gets at
+/// most `name_capacity - 1` bytes and a NUL.
+///
+/// # Safety
+/// As `with`; `name` has `name_capacity` bytes (> 0), the outs are valid.
+bool ee_conductor_entry(EeConductor *c,
+                        uint32_t index,
+                        char *name,
+                        uint32_t name_capacity,
+                        void **score,
+                        int32_t *id,
+                        uint32_t *load_count);
 
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);

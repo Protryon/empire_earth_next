@@ -1,6 +1,7 @@
 //! The Sound Engine's sound manager (`docs/RUST_PLAN.md` R3.6) behind the C++ `SESoundManager` facade: which channel
 //! an instance gets, the category and instance limits and priorities, the paused queue of looping sounds, the
-//! scavenger thread's decisions, one-shot sounds and the random start offsets.
+//! scavenger thread's decisions, one-shot sounds and the random start offsets; and `SEConductor`'s score table and
+//! decisions (`conductor`), over dmusic's objects which stay C++.
 //!
 //! C++ keeps the objects and their lifetimes: the instance nodes (pooled, intrusively reference counted, held by
 //! units, unit classes and effects), the samples (shared with the mixer plug-in), the sound path, the mixer, the
@@ -10,9 +11,12 @@
 //! `golden_sound.txt` holds the C++ implementation's behaviour (scenario scripts over a fake mixer, and MSVC
 //! `std::sort` permutations), dumped by a throwaway driver before the C++ was replaced.
 
+pub mod conductor;
 pub mod manager;
 pub mod msvc_sort;
 
+#[cfg(not(test))]
+pub mod conductor_ffi;
 #[cfg(not(test))]
 pub mod ffi;
 
@@ -20,3 +24,5 @@ pub mod ffi;
 mod fake;
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_conductor;
