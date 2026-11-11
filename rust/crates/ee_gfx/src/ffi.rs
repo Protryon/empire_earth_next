@@ -1,15 +1,19 @@
 //! The C ABI of the Graphics Thread's and the camera's math (`include/rust/ee_rust.h`), called by
-//! `EECameraControl.cpp`. Every function copies its inputs before it writes an output, so an output may alias an
-//! input; the terrain callbacks run while no Rust reference to a C++ object is held (the inputs are copies).
+//! `EECameraControl.cpp`, `RTSMouse.cpp` and `EEROUnits.cpp`. Every function copies its inputs before it writes an
+//! output, so an output may alias an input; the terrain callbacks run while no Rust reference to a C++ object is held
+//! (the inputs are copies).
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
+use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 
 use crate::camera::{
     self, EeGfxCameraGoTo, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxClipping, EeGfxEdgePlanes,
     EeGfxOrthoView, Ground,
 };
+use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
+use crate::units::{self, EeGfxBarRects, EeGfxBarSizes};
+use ee_ge::viewport::GeViewport;
 
 /// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
 #[repr(C)]
@@ -252,4 +256,109 @@ pub unsafe extern "C" fn ee_gfx_camera_step(state: *mut EeGfxCameraStep, elapsed
 pub unsafe extern "C" fn ee_gfx_camera_ortho_view(focus: *const Ge3DPoint, offset_y: f32) -> EeGfxOrthoView {
     // SAFETY: the function's contract
     unsafe { camera::ortho_view(*focus, offset_y) }
+}
+
+/// `RTSMouse::ClampPosition`: `*position` kept inside `*bounds`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_mouse_clamp(position: *mut Ge2DPoint, bounds: *const GeRectangle) {
+    // SAFETY: the function's contract
+    unsafe {
+        let r = mouse::clamp_position(*position, &*bounds);
+        *position = r;
+    }
+}
+
+/// `RTSMouse::Update`'s move (not frozen): `min_x`/`min_y` are the unit's smallest moves (`sMinXValue`/`sMinYValue`).
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_mouse_update_move(
+    input: *const EeGfxMouseInput,
+    min_x: *mut i32,
+    min_y: *mut i32,
+) -> EeGfxMouseMove {
+    // SAFETY: the function's contract
+    unsafe {
+        let (mut x, mut y) = (*min_x, *min_y);
+        let r = mouse::update_move(&*input, &mut x, &mut y);
+        *min_x = x;
+        *min_y = y;
+        r
+    }
+}
+
+/// `GetScreenPoint` (`EEROUnits.cpp`): `*point` to window coordinates in the game view `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_units_screen_point(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    point: *const Ge3DPoint,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let r = units::screen_point(&*viewport, orthographic, *point);
+        *out = r;
+    }
+}
+
+/// `DrawBars`' bar sizes from the window's size.
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_bar_sizes(window_width: u32, window_height: u32) -> EeGfxBarSizes {
+    units::bar_sizes(window_width, window_height)
+}
+
+/// `DrawBar`'s rectangles: the unit's bar tag (`bar` scaled by `scale` through `*transformation`) projected through
+/// `*viewport`, moved to row `row` and split by `fraction`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_units_unit_bar(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    transformation: *const GeTransformation,
+    bar: *const Ge3DPoint,
+    scale: f32,
+    fraction: f32,
+    row: i32,
+    sizes: *const EeGfxBarSizes,
+) -> EeGfxBarRects {
+    // SAFETY: the function's contract
+    unsafe {
+        let world = units::unit_bar_point(&*transformation, *bar, scale);
+        let screen = units::screen_point(&*viewport, orthographic, world);
+        let origin = units::bar_origin(screen, row, &*sizes);
+        units::unit_bar(origin, fraction, &*sizes)
+    }
+}
+
+/// `DrawObjectBars`' rectangles: the object's bar tag (`*location` plus `bar` scaled by `scale`) projected through
+/// `*viewport` and split by `health`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_units_object_bar(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    location: *const Ge3DPoint,
+    bar: *const Ge3DPoint,
+    scale: f32,
+    health: f32,
+    sizes: *const EeGfxBarSizes,
+) -> EeGfxBarRects {
+    // SAFETY: the function's contract
+    unsafe {
+        let world = units::object_bar_point(*location, *bar, scale);
+        let screen = units::screen_point(&*viewport, orthographic, world);
+        units::object_bar(screen, health, &*sizes)
+    }
 }
