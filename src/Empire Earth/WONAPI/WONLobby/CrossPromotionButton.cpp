@@ -12,6 +12,9 @@
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 namespace WONAPI {
 // FUNCTION: WON 0x007c9080
@@ -65,9 +68,10 @@ void CrossPromotionButton::HandleComponentEvent(ComponentEvent* event) {
 // FUNCTION: WON 0x007c9af0
 // Reads the DEFAULTIMAGE and DEFAULTBROWSE layout keys; passes other keys to the image button config
 bool CrossPromotionButtonConfig::Virtual24(const std::string& key) {
-    if(key=="DEFAULTIMAGE")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CROSSPROMOTIONBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0)
         this->mCrossPromotionButton->SetDefaultImage(this->ReadImage(false));
-    else if(key=="DEFAULTBROWSE")
+    else if(aKeyIdx==1)
         this->mCrossPromotionButton->SetDefaultBrowse(this->ReadString(false));
     else
         return ImageButtonConfig::Virtual24(key);
@@ -83,11 +87,12 @@ void CrossPromotionButtonConfig::SetComponent(Component* component) {
 // FUNCTION: WON 0x007c9380
 // Reads the FONT, TEXT and BROWSELOCATION layout keys; passes other keys to the image button config
 bool ImageTextButtonConfig::Virtual24(const std::string& key) {
-    if(key=="FONT")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGETEXTBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0)
         this->mImageTextButton->mFont=this->ReadFont();
-    else if(key=="TEXT")
+    else if(aKeyIdx==1)
         this->mImageTextButton->mText=this->ReadString(false);
-    else if(key=="BROWSELOCATION")
+    else if(aKeyIdx==2)
         this->mImageTextButton->mBrowse=this->ReadString(false);
     else
         return ImageButtonConfig::Virtual24(key);

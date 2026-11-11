@@ -12,6 +12,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLayoutConfigs.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // FUNCTION: WON 0x00788000
 // Finds the component this config is named after in the parent config; reports an error if it is missing
@@ -30,20 +33,21 @@ bool PercentLayoutConfig::PreParse(ConfigParser* parser)
 // or one of the percentages (PX, PY, PW, PH, LP, TP, RP, BP)
 bool PercentLayoutConfig::Virtual24(const std::string& instruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_PERCENTLAYOUTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
     int ref=-1,param=-1;
-    if(instruction=="REF") ref=0;
-    else if(instruction=="LEFT") ref=0;
-    else if(instruction=="RIGHT") ref=1;
-    else if(instruction=="TOP") ref=2;
-    else if(instruction=="BOTTOM") ref=3;
-    else if(instruction=="PX") param=0;
-    else if(instruction=="PY") param=1;
-    else if(instruction=="PW") param=2;
-    else if(instruction=="PH") param=3;
-    else if(instruction=="LP") param=4;
-    else if(instruction=="TP") param=5;
-    else if(instruction=="RP") param=6;
-    else if(instruction=="BP") param=7;
+    if(aKeyIdx==0) ref=0;
+    else if(aKeyIdx==1) ref=0;
+    else if(aKeyIdx==2) ref=1;
+    else if(aKeyIdx==3) ref=2;
+    else if(aKeyIdx==4) ref=3;
+    else if(aKeyIdx==5) param=0;
+    else if(aKeyIdx==6) param=1;
+    else if(aKeyIdx==7) param=2;
+    else if(aKeyIdx==8) param=3;
+    else if(aKeyIdx==9) param=4;
+    else if(aKeyIdx==10) param=5;
+    else if(aKeyIdx==11) param=6;
+    else if(aKeyIdx==12) param=7;
     else return false;
     if(ref>=0) this->refs[ref]=this->ReadComponent();
     else if(param>=0) this->params[param]=this->ReadInt();
@@ -73,24 +77,25 @@ bool ColorSchemeConfig::PreParse(ConfigParser*)
 // Sets one standard color of the scheme from its instruction name (3DFACE, HILIGHT, LINK ...)
 bool ColorSchemeConfig::Virtual24(const std::string& instruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COLORSCHEMECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
     int color=0;
-    if(instruction=="3DDARKSHADOW") color=0;
-    else if(instruction=="3DFACE") color=1;
-    else if(instruction=="3DHILIGHT") color=2;
-    else if(instruction=="3DSHADOW") color=3;
-    else if(instruction=="SCROLLBAR") color=4;
-    else if(instruction=="BUTTONTEXT") color=5;
-    else if(instruction=="GRAYTEXT") color=6;
-    else if(instruction=="HILIGHT") color=7;
-    else if(instruction=="HILIGHTTEXT") color=8;
-    else if(instruction=="TOOLTIPBACK") color=9;
-    else if(instruction=="TOOLTIPTEXT") color=10;
-    else if(instruction=="MENUBACK") color=11;
-    else if(instruction=="MENUTEXT") color=12;
-    else if(instruction=="BACK") color=13;
-    else if(instruction=="TEXT") color=14;
-    else if(instruction=="LINK") color=15;
-    else if(instruction=="LINKDOWN") color=16;
+    if(aKeyIdx==0) color=0;
+    else if(aKeyIdx==1) color=1;
+    else if(aKeyIdx==2) color=2;
+    else if(aKeyIdx==3) color=3;
+    else if(aKeyIdx==4) color=4;
+    else if(aKeyIdx==5) color=5;
+    else if(aKeyIdx==6) color=6;
+    else if(aKeyIdx==7) color=7;
+    else if(aKeyIdx==8) color=8;
+    else if(aKeyIdx==9) color=9;
+    else if(aKeyIdx==10) color=10;
+    else if(aKeyIdx==11) color=11;
+    else if(aKeyIdx==12) color=12;
+    else if(aKeyIdx==13) color=13;
+    else if(aKeyIdx==14) color=14;
+    else if(aKeyIdx==15) color=15;
+    else if(aKeyIdx==16) color=16;
     else return false;
     ColorScheme* destination=this->mColorScheme.get();
     DWORD value=this->ReadColor();

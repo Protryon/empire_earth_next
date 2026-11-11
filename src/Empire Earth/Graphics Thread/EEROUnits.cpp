@@ -35,6 +35,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "GEWindow.h"
+#include "rust/ee_rust.h"   // ee_gfx units.rs (RUST_PLAN R4.4)
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
@@ -166,6 +167,24 @@ const float kLabelBottom = 0.7135417f;      // 0x441bdc (548 / 768: the main gam
 const float kLabelMargin = 0.18066406f;     // 0x441be0 (185 / 1024)
 const float kRingStep = -0.44879895f;       // 0x441be4 (-2 pi / 14)
 
+// The bars' sizes, the bar rectangles and GetScreenPoint are ee_gfx units.rs (RUST_PLAN R4.4); the GE value classes
+// pass as their #[repr(C)] mirrors (the same storage)
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
+              sizeof(GERectangle) == sizeof(EeGeRectangle) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
+              sizeof(GEViewport) == sizeof(EeGeViewport), "GE mirrors");
+static EeGfxBarSizes EEROBarSizes()
+{
+    EeGfxBarSizes theSizes;
+    theSizes.width = (uint32_t)sBarWidth;
+    theSizes.height = sBarHeight;
+    theSizes.step = sBarStep;
+    return theSizes;
+}
+static const GERectangle& EERORect(const EeGfxBarRects& inRects, int inIndex)
+{
+    return *reinterpret_cast<const GERectangle*>(&inRects.rects[inIndex]);
+}
+
 // FUNCTION: EXE 0x5144e8
 // Creates the units' render object
 EEROUnits::EEROUnits()
@@ -257,89 +276,43 @@ void EEROUnits::DrawRings()
 
 // FUNCTION: EXE 0x5147f8
 // Draws one bar of a unit on screen above its bar tag (row inRow): the filled part in inColor and the rest
-// in inBackColor, each as two shaded rhombi at least one pixel wide
+// in inBackColor, each as two shaded rhombi at least one pixel wide (the rectangles: ee_gfx units.rs)
 
 void EEROUnits::DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GEColor& inBackColor, float inFraction,
                          long inRow)
 {
-    GERectangle theBar;
-    GERectangle theBack;
-    GE3DPoint theOffset;
-    GE3DPoint theLocation;
-    GE2DPoint theScreenPoint;
     unsigned long theScreen = gScreenIndex;
-    theOffset.SetX(inUnit->mSource->mBar.GetX() * inUnit->mScale);
-    theOffset.SetY(inUnit->mSource->mBar.GetY() * inUnit->mScale);
-    theOffset.SetZ(inUnit->mSource->mBar.GetZ() * inUnit->mScale);
-    inUnit->mTransformation.Apply(theOffset, theLocation);
-    GetScreenPoint(theLocation, theScreenPoint);
-    theScreenPoint.SetX(theScreenPoint.GetX() - sBarWidth / 2);
-    theScreenPoint.SetY(theScreenPoint.GetY() - inRow * sBarStep);
-    theScreenPoint.SetX((float)UMFloor(theScreenPoint.GetX()));
-    theScreenPoint.SetY((float)UMFloor(theScreenPoint.GetY()));
-    if (inFraction >= 1.0f) {
-        theBar.SetLeft(theScreenPoint.GetX());
-        theBar.SetRight(sBarWidth * kBarFraction + theScreenPoint.GetX());
-        theBar.SetTop(theScreenPoint.GetY());
-        theBar.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        sFGBar->SetRectangle(theBar);
+    EeGfxBarSizes theSizes = EEROBarSizes();
+    EeGfxBarRects theRects = ee_gfx_units_unit_bar(
+        reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
+        reinterpret_cast<const EeGeTransformation*>(&inUnit->mTransformation),
+        reinterpret_cast<const EeGe3DPoint*>(&inUnit->mSource->mBar), inUnit->mScale, inFraction, (int32_t)inRow,
+        &theSizes);
+    if (theRects.kind == 0) {   // full: the fill, then its back
+        sFGBar->SetRectangle(EERORect(theRects, 0));
         sFGBar->SetColorPerVertex(inColor, gBarBorderColor, inColor, inColor);
         gRasterizer->Draw(sFGBar, theScreen);
-        theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth + theScreenPoint.GetX());
-        theBack.SetBottom(theBar.GetBottom());
-        theBack.SetTop(theBar.GetTop());
-        sBGBar->SetRectangle(theBack);
+        sBGBar->SetRectangle(EERORect(theRects, 1));
         sBGBar->SetColorPerVertex(gBarBorderColor, inColor, inColor, inColor);
         gRasterizer->Draw(sBGBar, theScreen);
-    } else if (inFraction != 0.0f) {
-        theBar.SetLeft(theScreenPoint.GetX());
-        theBar.SetRight(sBarWidth * kBarFraction * inFraction + theScreenPoint.GetX());
-        theBar.SetTop(theScreenPoint.GetY());
-        theBar.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        if (theBar.GetWidth() < 1.0f)
-            theBar.SetRight(theBar.GetLeft() + 1.0f);
-        sFGBar->SetRectangle(theBar);
+    } else if (theRects.kind == 1) {   // partial: the fill and its back, then the rest and its back
+        sFGBar->SetRectangle(EERORect(theRects, 0));
         sFGBar->SetColorPerVertex(inColor, gBarBorderColor, inColor, inColor);
-        theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth * inFraction + theScreenPoint.GetX());
-        theBack.SetBottom(theBar.GetBottom());
-        theBack.SetTop(theBar.GetTop());
-        if (theBack.GetWidth() < 1.0f)
-            theBack.SetRight(theBack.GetLeft() + 1.0f);
-        sBGBar->SetRectangle(theBack);
+        sBGBar->SetRectangle(EERORect(theRects, 1));
         sBGBar->SetColorPerVertex(gBarBorderColor, inColor, inColor, inColor);
         gRasterizer->Draw(sBGBar, theScreen);
         gRasterizer->Draw(sFGBar, theScreen);
-        theBar.SetLeft(theBack.GetRight());
-        theBar.SetRight((sBarWidth - sBarWidth * inFraction) * kBarFraction + theBar.GetLeft());
-        theBar.SetBottom(theBack.GetBottom());
-        theBar.SetTop(theBack.GetTop());
-        if (theBar.GetWidth() < 1.0f)
-            theBar.SetRight(theBar.GetLeft() + 1.0f);
-        sFGBar->SetRectangle(theBar);
+        sFGBar->SetRectangle(EERORect(theRects, 2));
         sFGBar->SetColorPerVertex(inBackColor, gBarBorderColor, inBackColor, inBackColor);
-        theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth + theScreenPoint.GetX());
-        theBack.SetBottom(theBar.GetBottom());
-        theBack.SetTop(theBar.GetTop());
-        sBGBar->SetRectangle(theBack);
+        sBGBar->SetRectangle(EERORect(theRects, 3));
         sBGBar->SetColorPerVertex(gBarBorderColor, inBackColor, inBackColor, inBackColor);
         gRasterizer->Draw(sBGBar, theScreen);
         gRasterizer->Draw(sFGBar, theScreen);
-    } else {
-        theBar.SetLeft(theScreenPoint.GetX());
-        theBar.SetRight(sBarWidth * kBarFraction + theScreenPoint.GetX());
-        theBar.SetTop(theScreenPoint.GetY());
-        theBar.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        sFGBar->SetRectangle(theBar);
+    } else {   // empty: the rest and its back
+        sFGBar->SetRectangle(EERORect(theRects, 0));
         sFGBar->SetColorPerVertex(inBackColor, gBarBorderColor, inBackColor, inBackColor);
         gRasterizer->Draw(sFGBar, theScreen);
-        theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth + theScreenPoint.GetX());
-        theBack.SetBottom(theBar.GetBottom());
-        theBack.SetTop(theBar.GetTop());
-        sBGBar->SetRectangle(theBack);
+        sBGBar->SetRectangle(EERORect(theRects, 1));
         sBGBar->SetColorPerVertex(gBarBorderColor, inBackColor, inBackColor, inBackColor);
         gRasterizer->Draw(sBGBar, theScreen);
     }
@@ -586,10 +559,6 @@ void EEROUnits::DrawObjectModel(GETransformation& ioTransformation, EERenderShad
 // Draws a selected object's health bar above the object at its bar tag, restoring the blending
 void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
 {
-    GERectangle theBar;
-    GERectangle theBack;
-    GE3DPoint theOffset;
-    GE2DPoint theScreenPoint;
     unsigned long theScreen = gScreenIndex;
     unsigned long theSource;
     unsigned long theDestination;
@@ -597,42 +566,24 @@ void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
     gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
     sFGBar->SetColor(gBarColor);
     sBGBar->SetColor(gBarBackColor);
-    // The bar tag is relative to the object: add its location before projecting (it was projected near the map
-    // origin).
-    theOffset.SetX(inObject->mLocation.GetX() + inObject->mObject->mBar.GetX() * inObject->mModelScale);
-    theOffset.SetY(inObject->mLocation.GetY() + inObject->mObject->mBar.GetY() * inObject->mModelScale);
-    theOffset.SetZ(inObject->mLocation.GetZ() + inObject->mObject->mBar.GetZ() * inObject->mModelScale);
-    GetScreenPoint(theOffset, theScreenPoint);
-    theScreenPoint.SetX(theScreenPoint.GetX() - sBarWidth / 2);
-    theScreenPoint.SetY(theScreenPoint.GetY() - sBarStep);
-    if (inObject->mHealth >= 1.0f) {
-        theBar.SetLeft(theScreenPoint.GetX());
-        theBar.SetRight(sBarWidth + theScreenPoint.GetX());
-        theBar.SetTop(theScreenPoint.GetY());
-        theBar.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        sFGBar->SetRectangle(theBar);
+    // The bar tag is relative to the object: its location is added before projecting (it was projected near the map
+    // origin); the back part runs to the bar's full width (it was shortened by the filled width a second time).
+    EeGfxBarSizes theSizes = EEROBarSizes();
+    EeGfxBarRects theRects = ee_gfx_units_object_bar(
+        reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
+        reinterpret_cast<const EeGe3DPoint*>(&inObject->mLocation),
+        reinterpret_cast<const EeGe3DPoint*>(&inObject->mObject->mBar), inObject->mModelScale, inObject->mHealth,
+        &theSizes);
+    if (theRects.kind == 0) {   // full
+        sFGBar->SetRectangle(EERORect(theRects, 0));
         gRasterizer->Draw(sFGBar, theScreen);
-    } else if (inObject->mHealth != 0.0f) {
-        theBar.SetLeft(theScreenPoint.GetX());
-        theBar.SetRight(sBarWidth * inObject->mHealth + theScreenPoint.GetX());
-        theBar.SetTop(theScreenPoint.GetY());
-        theBar.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        sFGBar->SetRectangle(theBar);
+    } else if (theRects.kind == 1) {   // partial: the fill, then the back
+        sFGBar->SetRectangle(EERORect(theRects, 0));
         gRasterizer->Draw(sFGBar, theScreen);
-        float theLeft = theBar.GetLeft();
-        theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth + theLeft);  // the back part runs to the bar's full width (it was shortened
-                                                // by the filled width a second time)
-        theBack.SetBottom(theBar.GetBottom());
-        theBack.SetTop(theBar.GetTop());
-        sBGBar->SetRectangle(theBack);
+        sBGBar->SetRectangle(EERORect(theRects, 1));
         gRasterizer->Draw(sBGBar, theScreen);
-    } else {
-        theBack.SetLeft(theScreenPoint.GetX());
-        theBack.SetRight(sBarWidth + theScreenPoint.GetX());
-        theBack.SetTop(theScreenPoint.GetY());
-        theBack.SetBottom(theScreenPoint.GetY() + sBarHeight);
-        sBGBar->SetRectangle(theBack);
+    } else {   // empty: the back
+        sBGBar->SetRectangle(EERORect(theRects, 0));
         gRasterizer->Draw(sBGBar, theScreen);
     }
     gRasterizer->SetBlending(theSource, theDestination, theScreen);
@@ -861,10 +812,10 @@ void EEROUnits::DrawBars()
     gRasterizer->SetBlending(kBlendOne, kBlendZero, gScreenIndex);
     gRasterizer->SetCulling(kCullNone);
     SetWhiteLighting();
-    sBarWidth = max(24L, UMFloor(24.0f * (theWidth / 1024.0f)));
-    float theBarScale = (float)theHeight * 0.0013020834f;
-    sBarHeight = max(2.0f, theBarScale * 2.0f);
-    sBarStep = max(5.0f, theBarScale * 5.0f);
+    EeGfxBarSizes theSizes = ee_gfx_units_bar_sizes((uint32_t)theWidth, (uint32_t)theHeight);   // ee_gfx units.rs
+    sBarWidth = theSizes.width;
+    sBarHeight = theSizes.height;
+    sBarStep = theSizes.step;
     theCount = EERenderLists::sInstance.mSelectedUnits.size();
     for (i = 0; i < theCount; i++)
         this->DrawUnitBars(EERenderLists::sInstance.mSelectedUnits[i]);
@@ -1374,26 +1325,11 @@ void EEROUnits::ReleaseMedia()
 }
 
 // FUNCTION: EXE 0x518676
-// Projects a world point to window coordinates in the game view
+// Projects a world point to window coordinates in the game view (ee_gfx units.rs)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
-    GE3DPoint theCameraPoint(0.0f, 0.0f, 0.0f);
-    GE3DPoint theNormalPoint(0.0f, 0.0f, 0.0f);
-    float theW;
-    gU4E8F08.GetCameraInverse().Apply(inPoint, theCameraPoint);
-    if (!gOrthographicView)
-        gU4E8F08.NormalizePerspectiveCameraPoint(theCameraPoint, theNormalPoint, theW);
-    else
-        gU4E8F08.NormalizeOrthographicCameraPoint(theCameraPoint, theNormalPoint, theW);
-    if (theW < 0.0f)
-        theW = -theW;
-    if (theW != 0.0f)
-        theW = 1.0f / theW;
-    else
-        theW = 1.0f;
-    outPoint.SetX(theW * (gU4E8F08.GetHalfWidth() * theNormalPoint.GetX()) + (gU4E8F08.GetXCenter() - gU4E8F08.GetViewRectangle().GetLeft()));
-    outPoint.SetY(gU4E8F08.GetYCenter() - gU4E8F08.GetViewRectangle().GetTop() -
-                  theNormalPoint.GetY() * gU4E8F08.GetHalfWidth() * theW);
+    ee_gfx_units_screen_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
+                              reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe2DPoint*>(&outPoint));
 }
 
 // ICF-FOLDED: EXE 0x4e123d

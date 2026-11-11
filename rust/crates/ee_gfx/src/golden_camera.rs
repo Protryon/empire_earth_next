@@ -11,8 +11,10 @@
 //! movers (`cpp`, MoveTo with locations, Revolve, Rotate, ...) only advance the stream here.
 //!
 //! The generator keeps the camera out of two hazards of the original: no unit is followed (the handles stay empty),
-//! and the free camera's zoom stays within 1 (past it the pitch is NaN and the table cosine faults; see
-//! `pitch`'s note in PORT_LEARNINGS).
+//! and the free camera's zoom stays within 1 outside the GetPitch cases (past it the original's pitch is NaN and the
+//! table cosine faults). The port now holds the mode-3 pitch past |zoom| 1 (`camera::pitch`): the 71 GetPitch cases
+//! of mode 3 with |zoom| > 1, whose original output was NaN, were re-recorded from the driver over the fixed unit;
+//! the other 14,353 lines are the original's (PORT_LEARNINGS "R4.4, second round").
 
 use std::fmt::Write as _;
 

@@ -127,6 +127,18 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
         self.call(|h| h.process_enter_key());
     }
 
+    /// After a deletion an anchor that is no longer a place in the text (its line gone, or its index past its
+    /// line's end) becomes the caret. A fix, the owner's decision: the original kept it, so a drag's next
+    /// `MouseMove`, or a Shift move in the same frame, selected from past the text and read past the lines
+    /// (PORT_LEARNINGS "R6: ... round 8"). An anchor still inside the text stays where it was, as in the original.
+    pub(crate) fn keep_anchor_in_text(&mut self) {
+        let (line, index) = (self.s.f.selection_start_line, self.s.f.selection_start_index);
+        if line as usize >= self.h.line_count() || index < 0 || index as c_ulong > self.len(line) {
+            self.s.f.selection_start_index = self.s.f.caret_index;
+            self.s.f.selection_start_line = self.s.f.caret_line;
+        }
+    }
+
     /// `UpdateKeyboard`: Enter in a single-line box fires at once; otherwise a held key acts on its first frame,
     /// again after the 500 ms delay, then every 50 ms step, and shows the caret while it is held.
     pub fn update_keyboard(&mut self) -> c_long {
@@ -191,6 +203,7 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
                     } else {
                         self.back_space_char();
                     }
+                    self.keep_anchor_in_text();
                 }
             }
             if self.key(EditKey::Delete) {
@@ -201,6 +214,7 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
                     } else {
                         self.delete_char();
                     }
+                    self.keep_anchor_in_text();
                 }
             }
             if self.key(EditKey::Right) {
@@ -301,6 +315,7 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
                 } else {
                     self.back_space_char();
                 }
+                self.keep_anchor_in_text();
             }
         }
         if self.key(EditKey::Delete) {
@@ -313,6 +328,7 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
                 } else {
                     self.back_space_char();
                 }
+                self.keep_anchor_in_text();
             }
         }
         if self.key(EditKey::Right) {
@@ -410,6 +426,7 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
             } else {
                 self.delete_line(self.s.f.caret_line);
             }
+            self.keep_anchor_in_text();
         }
         if self.s.f.is_single_line {
             return handled;
@@ -450,13 +467,19 @@ impl<'a, M: Mbcs, H: EditHost + EditKeysHost> Edit<'a, M, H> {
         if self.s.f.is_text_selected {
             self.copy();
             self.delete_selected_text();
+            self.keep_anchor_in_text();
         }
     }
 
     /// `Paste`: the clipboard's text typed at the caret (`AddChar`).
     pub fn paste(&mut self) {
         if let Some(text) = self.h.clipboard_get() {
+            // typing over a selection deletes it first
+            let deletes = self.s.f.is_text_selected;
             self.add_char(&text);
+            if deletes {
+                self.keep_anchor_in_text();
+            }
         }
     }
 

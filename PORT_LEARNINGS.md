@@ -5823,6 +5823,7 @@ math. The class keeps its members, the key list, the followed units (handles), `
   scroll), so the oracle covers the update's step, `BuildView` and the clipping distances on the perspective path;
   scrolling, zooming, rotating, following a unit, a cinematic's key path and the orthographic view run only in the
   windowed game.
+
 ## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
 
 Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and
@@ -5968,6 +5969,326 @@ are load and save code: they run in the real game's Load Game screen as in EE-SI
 - **Still different after a load** (not traced this round): seed 2 2100 s at CT 27, seed 4 2100 s at CT 52 (an `ai`
   checksum only: the computer players' state, no unit), seed 5 2100 s at 71, seed 6 2100 s at 101, the 600 s and
   1350 s saves after 200 to 680 CTs.
+
+## R6: WONGUI's tree list, the menus' keys, the config readers' key tables and the event dispatch decisions in Rust (ee_won guitree.rs, guimenu.rs, guiconf.rs, guievent.rs; branch rust-r6-won10, 2026-11-11)
+
+Round 10 of R6 (RUST_PLAN "R6 WON, the rest"). Same pattern as rounds 8 and 9: a `tests/won` driver (in `xbuild.py`
+`WON_TESTS`) runs the original's statements, copied from the C++ before the port with the objects replaced by the
+flags and numbers they read, against the Rust ABI over generated inputs. The C++ classes keep their objects, lists,
+vtables, events and every call; Rust decides which call happens. No class moved wholly, so no unit was deleted.
+
+- **The tree list (`guitree.rs`).** TreeItem's walks go through `EeWonTreeOps` (callbacks answering parent, index,
+  child count, child and open, and doing a row insert or a close): `GetNextNonChild`, `InsertChildren` (children last
+  to first, an open child's own rows right after it), `CloseAll`. Rust holds only the item pointers between the
+  callbacks. The rest are decisions: the range and last-child tests (an index compared as `size_t`: a negative one is
+  past the last child), `SetOpen`'s work (no children: only the flag, no event) and its scroll, `InsertChild`'s row,
+  `RemoveChild`'s steps, `TreeArea::Sort`'s plan, `GetMouseItem`'s exit and enter (a callback asks `Contains` exactly
+  where the original did), `CanSelect`, `ContainsPoint`'s x, the row width, the expand button's event, the flags.
+  The tree has no keys of its own: its keyboard movement is ListArea's (round 8's `guilist`). `won_guitree_test`:
+  6,233,856 checks, 0 failures.
+- **The menus (`guimenu.rs`).** `PopupMenu::TryKeyDown`'s step once the open submenu declined the key (the C++ keeps
+  the recursion into the submenu), `CheckSubMenu`'s open, keep or close, the submenu's selection rules; MenuBar's
+  keys, `CheckItem`'s choice, its menu's place, flags (`StandardPopup` less `WantInput` and `EndOnEscape`: 0x2347)
+  and avoided rectangle, presses, events, moves, the items' places and sizes. The original has no mnemonics: a letter
+  does nothing in a menu. `won_guimenu_test`: 22,000,002 checks, 0 failures.
+- **cbindgen exports every `pub const` into the global namespace** without a prefix: `guimenu`'s `VK_RETURN` became
+  `constexpr static const int32_t VK_RETURN = 13;` in `ee_rust.h`, which windows.h's macro turns into
+  `int32_t 0x0D = 13` in every unit that includes both. The modules' constants are private now (round 9's
+  `POSITION_LEFT` and others are still exported; harmless while nothing defines those names).
+- **The config readers' key tables (`guiconf.rs`).** Each reader compared its instruction with its keys
+  (`key=="TEXT"`, exact) and the flag and value names it read with its names (`name.CompareNoCase("Bold")==0`); those
+  lists are 103 tables of 509 names in the original's order (`EE_WON_CFG_KEYS_<class>_<function>_<variable>`,
+  `EE_WON_CFG_NAMES_...`). A reader asks once (`ee_won_gui_cfg_key` over the `std::string`'s bytes,
+  `ee_won_gui_cfg_name` over the GUIString's units through `ee_won_guistring_compare_narrow`, the same compare as
+  before) and tests the index where it compared a text; a name listed twice answers its first place, the branch the
+  original took (`WantDefault` in the button flags). The 42 units' edit was made by a script that checked that undoing
+  it gives the original text back, and that no compared GUIString changes between the lookup and its last test (the
+  one variable declared twice in one function, ServerListCtrlConfig's `aType`, has a lookup in each scope). The C++
+  keeps the reads, the objects and what each entry does (the values stay in its branches). `won_guiconf_test`:
+  839,246 checks, every name of every table in four cases and with a character more or less, through the real
+  GUIStringData, in the C and the English locale, 0 failures.
+- **The event dispatch (`guievent.rs`).** Window: the enter, a move's end of double-click detection (the original's
+  `detect && x != dx || y != dy` kept: any change of y ends it), drag or move, a left release outside ending the drag
+  with an exit, the double click (tick 0 kept for "none", the tick read only when the press asks for the check), the
+  size change, the resize's delay, the forced cursor refresh, the hover, the place after an exit, centring, the
+  cursor's refresh, closing. WindowManager: the 50 ms timer step and its 1 s cap, the popups' end or keep on a focus
+  change, the resolution's restore, a press's focus and capture, a release's capture, a move's or key's end of the
+  popups, the wheel and keys sent to the popup, the merged size changes, a closing window's popup, and
+  `CheckPopupClick`'s walk down the clicked children. RootContainer: the window drag and the cursor component's
+  place. Container: the mouse child's exit and enter, the release only to the child that had the press,
+  `GetDesiredSize`, `FindTop` (now a walk over the flags of the children before the place: O(n) per `AddChild`
+  instead of O(on-top children)). `won_guievent_test`: 40,578,784 checks, 0 failures.
+- **`DWORD` is `unsigned long` in the Windows build** (windows.h) and `uint32_t` on POSIX (`platform/wintypes.h`): a
+  `DWORD*` passed for the ABI's `uint32_t*` does not compile on Windows (and would on POSIX). The out-parameters are
+  `uint32_t` locals; values cross by copy.
+- **What exercises what.** Every lobby load: the config tables (every instruction and flag of the 63 .cfg files goes
+  through them), Container's `FindTop` and `GetDesiredSize` (every child added, every fitted container), the window
+  manager's timer step, cursor and resize rules, Window's enter and moves, the mouse child's routing as soon as the
+  mouse moves. The LAN game (`lan_game.py`'s `wonclick` / `wonselect` / `wonkey`) adds the presses, releases, double
+  clicks, focus and capture, the keys' routing, and the popups' rules when its dialogs open. Only a person reaches the
+  window drag (a ParentDrag child), the hover, the wheel and the popup menus (right-click: `CheckSubMenu`, the
+  selection rules). Nothing reaches the tree list (the Internet room dialog's room list, RoomCtrl) or the menu bar
+  (unused) and `TryKeyDown` (only MenuBar calls it). The simulation is untouched: the oracle was identical after each
+  of the four gated builds.
+- **Still C++ of WONGUI:** the objects and the calls above, the config readers' branch bodies, and the drawing (Surface,
+  StretchImage's nine slices, the decoders, the platform backend, the paint).
+
+## R6: the mouse dispatch, the edit box's anchor fix, entity groups, the list's type-to-find, the text label's geometry and the scrolling label (ee_ui mouse.rs, entity_group.rs, find_key.rs, label_fit.rs, scrolling.rs; branch rust-r6-ui8, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIControl.h`,
+`UILBString.h`, `UITextLabel.h` and `UITLScrolling.h` gained a `friend struct`): `UIForm::UpdateMouse` and
+`UIControl::UpdateMouse` (`mouse.rs`: the captured control or the one under the mouse, the wheel, the form's eleven
+mouse events, a control's press, release and double-click dispatch and its button-down members);
+`UIEntityGroup::Disable`/`Enable`'s loops (`entity_group.rs`); `UILBString::UpdateTranslatedKey`'s search
+(`find_key.rs`); `UITextLabel::ComputeTextLabelRect`, `CheckScrollBar` and `SetLocation`'s rectangles
+(`label_fit.rs`); `UITLScrolling`'s `CopyData` scroll and snapshot, both `ScrollText`s, `Pause`/`Resume`/
+`StopScrolling` and `DrawTextA`'s line places (`scrolling.rs`). `RadioUnCheck` was already Rust (round 3's
+`RemoveOtherChecks`); what is left of it is `UIButtonRust::RadioSwap`'s reference counts.
+
+- **A fix, the owner's decision (the only behaviour change):** after an edit box's Backspace, Delete, Cut, Ctrl+L or
+  a paste over a selection, a selection anchor that is no longer a place in the text (its line gone, or its index
+  past its line's end) becomes the caret (`Edit::keep_anchor_in_text`, `edit_keys.rs`). The original kept it, so
+  round 7's two hazards read past the lines: typing Backspace while drag-selecting with the mouse (the drag's next
+  `MouseMove` selected from the old anchor), and Shift + the keypad's Del (Num Lock off) + an arrow in one frame
+  with a selection (the arrow selected from the deleted selection's far end). An anchor still inside the text stays
+  where it was, as in the original (a reset to the caret after every deletion would change nothing the game shows
+  but would move the printed anchor in 34 of the key golden's 60 boxes). Two Rust tests reproduce the hazards (they
+  failed before the fix); `golden_keys.txt` changed in 12 of its 60 boxes, each only in the anchor and the state
+  lines that follow from it, re-recorded from the key driver over the fixed forwarders (seeds 2-5: 158, 186, 149 and
+  185 of 600 boxes, the same kind of change only). Typing a character over a selection (`UpdateTranslatedKey`)
+  deletes it and ends the drag (`selecting` false), so it needs no reset.
+- **Mouse:** the captured control is read again after a control's handlers (they capture and release the mouse);
+  a control whose `MouseWheelTurned` fails is forgotten for the form's wheel event and the result is OK; a press
+  while the control thinks the button held is a press again (`MouseLButtonDown` once more), and a button up without
+  a release event still releases. `gISMouse->GetEntity`'s out pointer starts NULL in the host (the original's was
+  uninitialised; the real mouse always writes it).
+- **Type-to-find under D6:** `UWideString::operator[](0)` is a byte, so a key compares its lower- and upper-case
+  forms' first bytes with each line's first byte: `é` and `É` share the lead byte 0xc3 and match any line starting
+  with a two-byte Latin letter (kept).
+- **Text label:** `CheckScrollBar` does not look at the label type (a one-line label with more lines than rows gets
+  a scroll bar; the game never gives it more than one line). `ComputeTextLabelRect`'s visible lines run from the
+  slider's value for `mNumberLinesDisplayed` lines unchecked against the line count (the real slider's range keeps
+  them inside).
+- **Scrolling label:** the pixel offset is a `long` compared as a float, the snapshot loop's `y` an `unsigned long`
+  against a `long` bottom (a negative offset skips the loop), `ScrollText(time, end)` divides `time / lines` in
+  integers and its end delay wraps (`4294957151` in the golden): all kept.
+- **Golden drivers, new traps.**
+  - A calloc'ed form has no vtable: call `sForm->UIForm::UpdateMouse()` (qualified), or the virtual call jumps to 0.
+  - A vtable of `template <int N>` stubs that log their slot number finds the slots a unit calls without a layout
+    dump (`UIListBox<T>::ChangeSelectionIndex` is slot 36, `GetNumLines` 42, `HideControl` 12, `SetDirty` 25); then
+    give those slots typed stubs (a generic stub's extra argument registers hold garbage that differs per build).
+  - A fake class with an out-of-line constructor (the scroll bar, whose real one needs the manager's bitmaps):
+    define the constructor's decorated name (`??0UIScrollBar@@QEAA@KAEBVGE2DPoint@@MKPEAVUIForm@@KK@Z`) as an
+    `extern "C"` function taking `this` first and returning it, and fill the object there (memset, a stub vtable).
+  - Private statics of a unit that is not linked are defined by their decorated names in an `extern "C" { T v
+    __asm__("?sLMouseButton@UIManager@@0PEAVISEntity@@EA") = NULL; }` block; protected and private members called
+    from the driver under `#define protected public` link by their real decoration
+    (`?CheckScrollBar@UITextLabel@@MEAAXXZ`, `?ComputeTextLabelRect@UITextLabel@@AEAAXXZ`).
+  - `GERectangle::RoundToNearest` is GEBitmap.cpp's (copied into the driver); `UIManager::AddEventToTrigger` is
+    inline and pushes onto `mEventsToTrigger` (placement-new the deque in a calloc'ed manager; the event needs
+    `UIEvent`'s size for its `Reference`).
+- **Goldens:** `golden_mouse.txt` (1,500 worlds), `golden_group.txt` (400 groups and 400 lists),
+  `golden_label_fit.txt` (150 labels x 30 operations), `golden_scroll.txt` (120 labels x 40 operations). Each
+  replays whole in Rust; each driver relinked over the forwarders printed the same file, and the same on two more
+  seeds at ten times the size; the label and scroll replays also pass on those seeds. Mutations checked: the
+  wheel's forgotten control (mouse), the label margin and the centred left edge (label), the end offset's
+  comparison (scroll) each fail their replay; an equality-only change of the end comparison and a reassociation of
+  the vertical centring did not (no case lands on them).
+- **Gates run:** after each commit `build.py -j 3 --sim` (the first `-j 4`) 0/0 (EE-AOC, EE-SIM), the sim oracle
+  (seeds 2-7) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game or POSIX build was run.
+- **What a real game exercises (EE-SIM has no UI):** `UIForm::UpdateMouse` and `UIControl::UpdateMouse` run on every
+  frame of every menu with the mouse over a form (hover, clicks, the wheel over a list): every menu load of a tour.
+  `UIEntityGroup::Enable`/`Disable` run whenever the game enables or disables a group of buttons and hot keys
+  (greyed buttons). `ComputeTextLabelRect` and `CheckScrollBar` run on every text label's `SetText` and
+  `UITextLabel::SetLocation` on every label's move: every menu load; a scroll bar appears only on a multi-line label
+  with more lines than rows (long texts, the chat). The scrolling label is the
+  credits and the in-game scrolling texts (trigger 0x3f4): a tour reaches it only if it opens them.
+  `UILBString::UpdateTranslatedKey` runs only when a person types a letter into a focused string list (a combo
+  box's drop-down). The edit box fix changes only what a person's typing during a drag, or Shift + keypad Del with
+  an arrow, does.
+
+## R3.6, second round: the conductor, the music manager, the mixers' registry and the engine's start in Rust (ee_sound conductor.rs, music.rs, mixers.rs; branch rust-snd2, 2026-11-11)
+
+Moved to `rust/crates/ee_sound`, each over a `Host` trait and C++ trampolines, the C++ classes keeping every member
+the game reads and every exported name:
+
+- `SEConductor` (`conductor.rs`): the score table (names, ids, load counts, the loaded `SEScore*`; the member
+  `mScores` became the handle `mRust`), loading and the start's reload, the id counter's wrap past -1, start and
+  stop, `Play`/`Queue`/`Stop`, `TransitionTo`'s pattern, the volume curve (`volume^1.1512925` in double, silent at
+  0.01), the intensity and channel-group rules, `UnloadScore`. dmusic's loader and performance, the scores, the
+  mixer's music source and the lock stay C++; the trampolines `ee_conductorcpp_*` are the dmusic call sequences.
+- `EEMusicManager` (`music.rs`): the music thread's step (the intensity delay's countdown, what each wake-up does),
+  `DoStart`/`DoPause`/`DoStop`, `NextSong` (a random song of the epoch, a second draw against the same song),
+  `FadeIn`/`FadeOut`, the intensity rules (a drop waits 5 s) and the time to the next song (`lrintf(r * 120001 +
+  300000)`, 420001 taken as 420000). This is where "which piece next, fades, intensity, timers" live: `SEConductor`
+  and `SEScore` only carry them out. The manager has no Rust state; the members stay C++ (layout proven) and are
+  read and written one by one through the host in the original's order, because `SetIntensity` runs on the render
+  and simulation threads while the music thread is in a seconds-long fade (a copy in and out would lose their
+  writes).
+- `SEMixer` and `Sound Engine.cpp` (`mixers.rs`): the registry (`SEMixer::sMixers` became a Rust global behind a
+  lock that is never held across a trampoline: the destructor a trampoline runs comes back for it), `GetMixer`,
+  `GetCount` (out of line now), `UseMixer`'s stop/deactivate/activate decision, the destructor's, the start's walk
+  of the plug-in table (a mixer per sound module, the invalid ones deleted at once, `kErrorNotFound` for none) and
+  the shutdown's order. `sActiveMixer` stays a C++ static (the movie player reads it inline); the SPIM entry points,
+  the conductor and `new`/`delete` of the mixers stay C++.
+
+What did not move, and why:
+
+- **There is no volume, pan, 3D attenuation or channel allocation in `SEMixer`.** It is a table of the plug-in's
+  entry points. The mixing (volumes, pan, pitch, the channels' sums) is the plug-in's, in Rust since R3.1
+  (`ee_mixer`); which channel a sound gets and the voice limits are `SESoundManager`'s, in Rust since the first
+  round (`manager.rs`). The positional sound (volume and pan from the camera and the source) is the game's:
+  `EEComputeSoundParameters` (`EEFOFindNewTargetNearOldTarget.cpp` 2905; file-static copies in
+  `EEUCBasicPriest.cpp`, `EEUCBuildingPriest.cpp`), used by `PlayAnimationSound` (`EEGameUtilities.cpp`, falloff
+  4.0), the units, the calamities (`kCalamitySoundFalloff`), `EEAmbientSound`, `EEE3DRain`.
+- **`SEScore` has no decisions**: a dmusic segment's wrapper (repeat count, release). It stays C++ with dmusic.
+- **MCI CD audio is dead on this port**: `SEInitialize` is called with `inUseCD == false` (Empire Earth.cpp 2564),
+  so `SEInitializeCD`, `SECD` and the CD half of `SEShutdown` never run. Not ported.
+- **Microsoft DirectMusic is gone** (PORT_LEARNINGS "DirectMusic -> dmusic"); the vendored dmusic library
+  (`src/ThirdParty/dmusic`, C) plays the music and stays, D4-style, like miniaudio under the mixer.
+
+The sound triggers in the game (simulation lanes, not moved; for later):
+
+- unit acknowledgements: `EEMessage.cpp` picks the unit with `gPhysics->GetRandom` (the simulation's draw: it must
+  move with the message's Execute, RUST_PLAN 2.1), then `EEPlayer::PlayAcknowledgement` (Player/EEPlayer.cpp 2747:
+  the acknowledgement delay from `kWorldAcknowledgementDelay`, the group's change time) and
+  `EEUnitClassUpgrade::GetAcknowledgeSound(-1)` (a file-static alternation, `sModel74Index`);
+- selection sounds: `EEPlayer.cpp` 399/471 and `EEMessage.cpp` 6093 through `EEPlayForLocalPlayer`
+  (`EEGameUtilities.cpp` 89: local player only);
+- combat, death, construction and projectile sounds: `Units/` (17 units: `EEComplexUnit`, `EEUnit`, `EEUnitClass`,
+  the `EEUC*` classes, `EEUGBuildRepair`), with `EEComputeSoundParameters`;
+- calamities (16 units under `Calamities/`), the ambient sounds (`EEAmbientSound*.cpp`), the UI's clicks
+  (`User Interface Thread/`, 6 units), the music's intensity from the battle (`EERenderObject.cpp` 1627: the
+  fighting units' share every 250 ms, `gMusicFollowsBattle`).
+
+Golden drivers (each over the unmodified units, `#define private public`, the units included whole; relinked over
+the forwarders, each printed the same text):
+
+- **Fakes that answer must print their answers.** The music driver's fakes (the wait's result, the time, the random
+  generator, the songs, `GetScore`) draw from a seeded generator and print `name args -> answer`; the Rust fake
+  host takes its answers from the golden text at the point it asks, so the replay needs no copy of the driver's
+  generator and a call out of order fails at once ("wanted ..., the Rust asked ...").
+- **Other threads inside the wait.** The music driver's `WaitAny` may call `SetIntensity` or change the current
+  player before answering, as the render thread and the world would; the replay does the same at the same lines.
+- **Globals the unit reads by object** (`gWorld`, `gGamePreferences`, `PIMModule::sDirectory`) are zeroed storage
+  under `/ALTERNATENAME:<mangled>=storage`; `/FORCE:MULTIPLE` lets the driver's `PlatSleep` win over the Rust
+  library's.
+- **`#define private public` hides access errors in the forwarders.** The mixers' driver compiled the new
+  `SEMixer.cpp` with every member public, so its `extern "C"` trampolines reading `SEMixer::sActiveMixer` (private)
+  passed there and failed in the game's build: trampolines go through the nested `Rust` struct, and the full build
+  is the check, not the driver.
+- **cbindgen exports every `pub const` of the crate**: `WAIT_TIMEOUT` met Windows' macro of that name in the first
+  driver build. The modules' constants are `pub(crate)`; the conductor's (`OK`, `BUSY`, ...) had reached the
+  header in the conductor's commit and left it in the music manager's.
+
+- **The Rust gate under load**: `ee_plat_core`'s timer tests failed twice with eight agents on the machine ("0 ticks");
+  they pass alone (`--test-threads=1`), which is how this round's gate ran them.
+
+Behaviour changes: `EEMusicObject::GetRandom` returning NULL (no song for the epoch) crashed `DoStart` and `NextSong`
+(`LoadScore` on NULL); in Rust `DoStart` silences and asks to stop, `NextSong` keeps the old score id and plays
+whatever the conductor still has for it (pinned by a unit test; the shipped tables have songs for every epoch).
+`SEConductor::LoadScore(secondary)` with a name not in the table wrote entry `size - 1` (or `-1` when empty, UB);
+Rust writes the last entry or deletes the new score when the table is empty (unreachable: the start reloads names
+taken from the table).
+
+Only a played game with sound exercises these (EE-SIM has no conductor; the goldens are fakes; nobody has listened):
+the music's start at the first game frame (`EEWorld.cpp` 1053), every song change (5 to 7 minutes) and its fades,
+the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
+volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
+
+## R5b.2, second round: the conversion and heal tests, the drop point, the line of fire, splash victims and the new target search in Rust (ee_combat decide.rs, walks.rs; branch rust-combat2, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| can a priest convert a target | `EECanConvert` (`EEUCBasicPriest.cpp`) | `decide::can_convert` | CBCN |
+| can a unit heal a target | `EECanHeal` | `decide::can_heal` | CBCH |
+| the drop point on a target (model point, tile) | `EEFindDropLocation` | `decide::drop_point` | CBDP |
+| the line of fire | `EEIsLineToUnitBlocked` | `walks::line_blocked` over `EeCombatLineHost` | CBLB |
+| splash damage's victims | `EEUnitClass::ApplyAreaDamage` | `walks::area_victims` over `EeCombatAreaHost` | CBAD |
+| the new target search | `EEFindNewTarget` (+ the deleted `EEUUGetUnitsInArea`) | `walks::units_in_area`, `walks::choose_target` over `EeCombatTargetHost` | CBFT |
+
+- **Golden first, then the move.** Commit b96a53c2 wrapped the unmodified C++ (renamed `...Original`) with capture
+  probes: the decisions' inputs gathered exactly as the Rust records later take them, the walks' observable results
+  (units by `mUnitID`: the victims in hit order, the candidates in order and the chosen one, the line's result, last
+  tile and blocker). Its digests are the new lines of the four golden files; the moved build gives the same records.
+  The walks' records are not replayable without a world: `check` gates them, the unit tests pin the order.
+- **Out flags that are not always written.** `EECanConvert` writes `outFlag` only on its last branch, and several
+  callers declare `bool theFlag;` uninitialized and read it after a true result (a cyber priest's): the Rust result
+  says `flag_written`, and the C++ writes the flag only then. Likewise `EEIsTileTopAbove` writes the blocker on every
+  call but `EEIsLineToUnitBlocked` may make none: the golden wrapper detected that with a sentinel pointer, the host
+  writes the caller's pointer directly.
+- **Eager reads where the original was lazy**, all pure: the adaptation power, the shield, the damage table cell, a
+  building priest's distance, the unit set. Two guards: the damage table is read only for an ammo column >= 0, the unit
+  set only for a set below the manager's size (`EEUnitSetManager::Contains` indexes `mSets` unchecked; the original
+  only reached it after every other test passed).
+- **Walks with C++ mutations inside.** `ApplyAreaDamage` hits each victim (TakeHit, kills, food) before reading the
+  tile node's `mNext`, as the original did: the host's `hit` runs inside the walk and `node_next` is asked after it.
+  `IsTargetIgnored` erases expired entries, so `choose_target` asks each test lazily, in the original's order
+  (`TARGET_TEST_*`); the technology kind keeps its last answer across candidates (asked only without `inArg6`).
+- **Handles, not references.** Units and tile nodes cross as `uint64_t` (the pointers); Rust compares them (the
+  victims' "hit once" list) and hands them back. The sort of `EESortUnique` is by `mUnitID` through `unit_id`;
+  equal ids are one unit, so the stable Rust sort gives the C++'s order. The tile line crosses as a C++-owned pair
+  array copied before the next host call.
+- **Coverage.** The AI games never heal: EE-SIM's capture sweep (`EECombatCaptureSweep`) calls `EECanHeal` over its
+  pairs both ways, a unit and itself, and the previous player's newest unit; CBCH's golden came from that sweep over
+  the C++ test (oracle profile). CBCN comes from priests in the oracle's seed 6 and the late and space games, CBFT
+  from a few dozen calls a game.
+- **A generic type name in a crate breaks another crate's header type.** `rust/cbindgen.toml` renames `Handle` to
+  `EeDx7Handle` (ee_dx7's `*mut c_void`); a `pub type Handle = u64` in ee_combat was renamed to the same C name and
+  replaced it (`using EeDx7Handle = uint64_t`), and only the DX7 rasterizer units failed to compile. The Rust gate's
+  header check passed (the header was current). Name exported aliases uniquely (`EeCombatHandle`).
+- **What stays C++:** the weapon tag point and the target model's top (model data), `EEGetTileLine`, the walls'
+  `EEIsTileTopAbove`, the region table, the screens' `Virtual08`, every target test, `EERetargetAttack`, the goal's
+  location in `EEFindDropLocation`, the hits themselves.
+
+## R4.4, second round: the free camera's pitch held past zoom 1, the pointer's arithmetic, the units' screen point and bars in Rust, a scroll check (ee_gfx mouse.rs, units.rs; branch rust-gfx8, 2026-11-11)
+
+- **Behaviour change (the owner's call): the free camera holds its pitch past |zoom| 1.** Mode 3's `GetPitch` was
+  `pow(1 - |zoom|, 0.5)`, NaN past zoom 1 (the port's `gCameraMaxZoom` is 2), and the table cosine faults on a NaN
+  angle (round one's hazard). `camera::pitch` now clamps |zoom| to 1 in mode 3 as modes 0 and 1 do (the sign kept:
+  the far pitch, negated for a negative zoom). Of the camera golden's 14,424 lines exactly the 71 GetPitch cases of
+  mode 3 with |zoom| > 1 changed (each had a NaN output before); they were re-recorded from the driver over the
+  fixed unit, every other line is still the original's. `free_pitch_holds_past_zoom_one` failed before the fix and
+  passes after. The camera's other cases never had a mode-3 zoom past 1, and the simulation (EE-SIM) never enters
+  mode 3: the oracle cannot see it; a cinematic after a far zoom-out can (only a person or a scenario reaches it).
+- **The pointer (`mouse.rs`, `RTSMouse.cpp`).** `ClampPosition` and `Update`'s move: the raw axes scaled by the
+  bounds over the desktop, the sensitivity and the smallest move seen. The smallest moves stay the unit's file
+  statics (passed in and out, 32-bit: a mouse axis never reaches past it); the C++ keeps the entity reads in their
+  order (x then y), the "MinXValue now" debug lines (the result says when a minimum changed), the frozen test and
+  the wheel. `x < 0 ? -x : x` of `LONG_MIN` is `wrapping_neg` (the C++'s wrap).
+- **The units' render object (`units.rs`, `EEROUnits.cpp`).** `GetScreenPoint` (over `ee_ge`'s `GeViewport` mirror
+  of `gU4E8F08`), `DrawBars`' sizes from the window, `DrawBar`'s tag point, origin and rectangle split (full: two
+  rectangles; partial: four, each at least a pixel wide; empty: two) and `DrawObjectBars`' (one or two). The C++
+  keeps every rhombus call (SetRectangle, the colours, the draws) in the original's order by the result's `kind`.
+  Not moved: the selection rings' size choice and the area-effect ring's colours (trivial, but no golden covers
+  them: their models' members are private and the fakes were not worth it), the labels, the placement footprint.
+- **The golden drivers** (`build/gfx8_golden`, scratch: `build.py LEAF orig|cur [seed [scale [full]]]`, BASE
+  9635b89c). New trick: the driver `#include`s the unit (`EE_UNIT`, its absolute path, as a define) to reach its
+  file statics (`sFGBar`, `sBarWidth`), and calls its private passes through explicit template instantiations
+  (`template struct Rob<Tag, &EEROUnits::DrawBars>`: an explicit instantiation may name a private member). The
+  rasterizer and the vertex arrays are fake objects whose vtable is 160/40 template stubs that log their slot (and
+  the bar or colour argument); `GERhombus::ComputeRotation` (private, out of line) logs the rectangle just set. The
+  rasterizer's inline getters dereference its screen states: the fake's words all point at a block of words that
+  point at themselves, so any such chain reads harmlessly. Mouse: a fake `ISDevice` subclass stands in for
+  `gISMouse` (`GetEntity` is the base's first slot), fake entities log each read, `ESDebugOut` logs its text.
+  Results: mouse 4,000 cases, rounits 4,344; the relinked drivers printed the same files, and the same on seeds 2
+  and 3 at four times the size (16,000 and 17,376 lines). Mutations (24.5 for 24 in the bar width, 0.0626 for
+  0.0625 in the y move) fail the replays.
+- **Python on Windows writes CRLF** (`Path.write_text` in text mode): a quick scripted edit of a Rust file turned
+  it CRLF and showed a whole-file diff. Edit through `read_bytes`/`write_bytes`.
+- **The scroll check (TEST ONLY).** The fixture writes a `camera` telemetry line (the focus now and the move's
+  target in tiles, the zoom, the mode, whether each is a point of the mesh, the map size) and takes `key <form>
+  <dik> <ms>` (a key held through `ISHandleEvent`, the entry the window layer feeds a key press to: the window
+  message -> SDL -> event path itself is what `--input-check`'s F3 proves) and `wheel <form> <0|1> <n>`.
+  `fixture_game.py --scroll-check` scrolls by an arrow key (the opposite one when the first is at the map's edge)
+  and by the pointer at the window's left (else right) edge, requires each move of at least half a tile with the
+  camera still on the map, then sets zoom 1 and requires the zoom hot keys (`]` in, `[` out) and the wheel to change
+  it each way; `--zoom-captures P ...` is posix_game's. The self test's stand-in covers both, including a FAIL with
+  its numbers. Not run against the game here (no harness sessions for agents).
+- **Only a tour, a scroll/zoom run or a person reaches:** every change of this round draws or reads input on the
+  UI and render threads: the bars and the screen point (any frame with a selected unit), the pointer's move (any
+  mouse motion), the mode-3 pitch past zoom 1 (a cinematic or the free camera after a far zoom-out; a person or a
+  scenario), the fixture's new commands (the scroll check). EE-SIM touches none of them.
 
 ## The C++ object cache: incremental builds shared by every worktree (tools/objcache.py; branch rust-objcache, 2026-11-11)
 

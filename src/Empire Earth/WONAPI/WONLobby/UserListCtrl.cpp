@@ -14,6 +14,9 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyScreens.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // UserListItem: a client of the chat room, or a separator line between the list's groups
 // FUNCTION: WON 0x007ca6a0
@@ -276,8 +279,9 @@ namespace WONAPI {
 // Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
 bool UserListCtrlConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="GROUPTYPE") { }
-    else if(instruction=="CTRLLINKID") { }
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) { }
+    else if(aKeyIdx==1) { }
     else return ContainerConfig::Virtual24(instruction);
     return true;
 }
