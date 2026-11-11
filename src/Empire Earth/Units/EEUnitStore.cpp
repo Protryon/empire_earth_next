@@ -93,6 +93,8 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             EEUnitClass* theClass = theUnit->mUnitClass.Get();
             Set(theUnit, EE_UNIT_FIELD_CATEGORY, theClass != NULL ? (int64_t)theClass->mCategory : -1);
             Set(theUnit, EE_UNIT_FIELD_UNIT_TYPE, theClass != NULL ? (int64_t)theClass->mUnitType : -1);
+            Set(theUnit, EE_UNIT_FIELD_DOMAINS, theClass != NULL ? (int64_t)theClass->mDomains : 0);
+            Set(theUnit, EE_UNIT_FIELD_LAND_BUILDING, theClass != NULL && theClass->IsLandBuilding() ? 1 : 0);
         }
         break;
     }
@@ -142,6 +144,8 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         if (theClass != NULL) {
             outRecord.category = (int64_t)theClass->mCategory;
             outRecord.unit_type = (int64_t)theClass->mUnitType;
+            outRecord.domains = theClass->mDomains;
+            outRecord.land_building = theClass->IsLandBuilding() ? 1 : 0;
         }
     }
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
@@ -270,6 +274,65 @@ void EESelectPickSweep()
             size_t theEnd = i + 63 < theOwn.size() ? i + 63 : theOwn.size();
             std::vector<uint32_t> theChunk(theOwn.begin() + i, theOwn.begin() + theEnd);
             PickCase(4, thePlayer, theChunk);
+        }
+    }
+}
+
+// EEActiveGroup::Fill's test over the unit store (ee_units group.rs: the loop of EEActiveGroup::Fill 0x5ed9d4 with
+// EEActiveGroup::IsInFormationSlot 0x5edb21 over the records in place of the objects)
+size_t EEFillMembers(EEComplexUnit* const* inUnits, size_t inCount, long inSlot, uint32_t* outIndices)
+{
+    if (inCount == 0)
+        return 0;
+    std::vector<uint32_t> theIDs(inCount);
+    for (size_t i = 0; i < inCount; i++)
+        theIDs[i] = static_cast<uint32_t>(inUnits[i]->mUnitID);
+    return ee_units_fill_members(&theIDs[0], inCount, (int64_t)inSlot, outIndices);
+}
+
+void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* const* inUnits, size_t inCount, long inSlot,
+                   const uint32_t* inIndices, size_t inTaken)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(0x4c465355u);   // "USFL"
+    theRecord.U32((unsigned int)inCase);
+    theRecord.I32((int)gWorld.GetPlayerIndex(inPlayer));
+    theRecord.I32((int)inSlot);
+    theRecord.U32((unsigned int)inCount);
+    for (size_t i = 0; i < inCount; i++)
+        theRecord.U32(static_cast<uint32_t>(inUnits[i]->mUnitID));
+    theRecord.U32((unsigned int)inTaken);
+    theRecord.Bytes(inIndices, (unsigned int)(inTaken * 4));
+    theRecord.Commit();
+}
+
+static void FillCase(unsigned long inCase, EEPlayer* inPlayer, const std::vector<EEComplexUnit*>& inUnits, long inSlot)
+{
+    std::vector<uint32_t> theIndices(inUnits.size() + 1);
+    EEComplexUnit* const* theUnits = inUnits.empty() ? NULL : &inUnits[0];
+    size_t theTaken = EEFillMembers(theUnits, inUnits.size(), inSlot, &theIndices[0]);
+    EEFillCapture(inCase, inPlayer, theUnits, inUnits.size(), inSlot, &theIndices[0], theTaken);
+}
+
+void EEFillSweep()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    unsigned long theNumPlayers = gWorld.GetNumPlayers();
+    for (unsigned long p = 0; p < theNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<EEComplexUnit*> theOwn;   // its list's complex units (a selection holds only those)
+        for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
+            if (theUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT)
+                theOwn.push_back(static_cast<EEComplexUnit*>(theUnit));
+        std::vector<EEComplexUnit*> theReversed(theOwn.rbegin(), theOwn.rend());
+        // every slot (0..5) and one past them, the list in its order (1) and reversed (2)
+        for (long theSlot = 0; theSlot <= 6; theSlot++) {
+            FillCase(1, thePlayer, theOwn, theSlot);
+            FillCase(2, thePlayer, theReversed, theSlot);
         }
     }
 }

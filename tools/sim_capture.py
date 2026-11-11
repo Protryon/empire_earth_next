@@ -52,7 +52,10 @@ Its golden lines come from the C++ decisions (R5b.4 leaf 4).
 USCK is the unit store's check (ee/EEUnitStore.h, R5b.4 leaf 5): at every physics tick and before every executed game
 message, every unit of every player's list against its Rust record (the units compared; a difference stops EE-SIM with
 exit code 3). USPK is the box selection's pick (EESelectPick): every game call and, every five game minutes, a sweep
-over every player's units; its golden lines come from the C++ pick (EEPlayer::SelectUnits' loop).
+over every player's units; its golden lines come from the C++ pick (EEPlayer::SelectUnits' loop). USFL is the active
+groups' Fill test (EEFillMembers: which of a selection's units an active group takes for a formation slot): every
+EEActiveGroup::Fill (the computer players' attack groups; the group commands) and, every five game minutes, every
+player's units in every slot; its golden lines come from the C++ test (EEActiveGroup::Fill's loop).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """

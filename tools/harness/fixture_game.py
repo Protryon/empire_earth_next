@@ -17,7 +17,10 @@ fixture_driver.py's, shared with posix_game.py.
                player -> random map -> Start; the gameplay frame must be lit and varied (session_exercise's rendering
                check), physics ticks must advance; --play-seconds S plays on (civilization forms cancelled), then the
                play frame and, from 10 s, its mini map are checked; --input-check presses F3 twice through window
-               messages and requires the game to pause and resume (telemetry 'comm ... paused')
+               messages and requires the game to pause and resume (telemetry 'comm ... paused'); --box-select then
+               box-selects in the game view through the real press, drag and release (fixture_driver.box_select:
+               a box, its left half, the right half added with Shift, the box again with a unit deleted just before
+               the release); each selected group must equal the original rule over the box's ids
   random-game  the tour without the settings
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
@@ -231,6 +234,10 @@ def tour(g, a, summary):
         milestone(g, results, 'play', GAME, check=True, minimap=a.play_seconds >= 10, differ='gameplay')
         if a.input_check:
             summary['input'] = input_check(g)
+    if a.box_select:
+        summary['box_select'] = fixture_driver.box_select(g, GAME)
+        g.note(f'BOX SELECT PASS: {len(summary["box_select"]["steps"])} steps (add grew the group: '
+               f'{summary["box_select"]["grew"]})')
     (g.out / 'rendering.json').write_text(json.dumps([r['rendering'] for r in results if 'rendering' in r],
                                                      indent=2) + '\n')
     summary['result'] = 'PASS'
@@ -341,6 +348,8 @@ def main():
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')
     ap.add_argument('--input-check', action='store_true', help='tour/random-game with --play-seconds: F3 twice')
+    ap.add_argument('--box-select', action='store_true',
+                    help='tour/random-game: box selections in the game view (select, add with Shift, a dead unit)')
     ap.add_argument('--ai-players', type=int, default=2)
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')

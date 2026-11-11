@@ -2730,27 +2730,10 @@ bool EEMExplore::IsResponse(NEMessage* inMessage)
 void EEMExplore::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    for (unsigned long i = 1; i < 6; i++) {
-        EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 1, i);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            thePlayer->mPendingGroups.push_back(theActiveGroup);
-            theActiveGroup->KeepMobileUnits();
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGExplore(false), false);
-            theActiveGroup->mAction = kActionFindUnexploredArea;
-            theActiveGroup->Plan();
-            EEComplexUnit* theUnit;
-            if (theActiveGroup->GetNumUnits() > 0)
-                theUnit = theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1));
-            else
-                theUnit = NULL;
-            if (theUnit)
-                thePlayer->PlayAcknowledgement(theUnit);
-        } else
-            theActiveGroup->Dereference();
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs explore: per formation slot 1..5 an active group filled from
+    // the selection, given an Explore goal and planned, one unit drawn to acknowledge) over the world calls of
+    // EEUnitHost.cpp
+    ee_units_explore(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup));
 }
 
 // FUNCTION: EXE 0x4be6c6
@@ -6719,6 +6702,10 @@ bool EEMSelectUnit::IsResponse(NEMessage* inMessage)
     return false;
 }
 
+// New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
+// decoded ids as its message is built on the UI thread; NULL otherwise
+void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
+
 // FUNCTION: EXE 0x4c5d7f
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores
 // them compressed (and decoded)
@@ -6732,6 +6719,8 @@ EEMSelectUnits::EEMSelectUnits(const GERectangle& inRectangle, long inUnitType, 
     long thePlayerID = gWorld.GetCurrentPlayer()->mPlayerID;
     this->mBufferSize = CompressUnits(theUnits, thePlayerID, this->mBuffer);
     DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
+    if (gEESelectUnitsTestHook != NULL)   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
+        gEESelectUnitsTestHook(this->mUnitIDs);
 }
 
 // The selection on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1 or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids.
