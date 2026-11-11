@@ -6195,75 +6195,6 @@ Only a played game with sound exercises these (EE-SIM has no conductor; the gold
 the music's start at the first game frame (`EEWorld.cpp` 1053), every song change (5 to 7 minutes) and its fades,
 the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
 volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
-<<<<<<< HEAD
-
-## R5a.2, sixth round: the managers' timers, the players' unit lists, the intelligence files, the tracked units (save 0.269-0.271, branch rust-r5a-aisave5, 2026-11-11)
-
-Continues "R5a.2, fifth round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
-Each change was built (0/0 for EE-AOC and EE-SIM), checked with the oracle (identical to ref; seeds 2-7 for the
-first two, seeds 2-3 under the lighter per-commit gates after that) and the Rust gate, and measured with the full
-saveload run. All of it is save and load code: it runs in the real game's Load Game screen as in EE-SIM (no change to
-how a game plays, the plain oracle stays identical).
-
-- **0.269, the managers' timers** (`EESaveHasManagerTimers`, EEComputerPlayer::GetManagerTimers/SetManagerTimers,
-  after the computer player's 0.256 running values; put back at the first tick). Five timers the original kept out of
-  the save, so a loaded player started them at 0: the attack commander's next drop of spent groups (mNextDropTime:
-  DropSpentGroups ran at the first update and every 45 s from the load), the exploration manager's next update
-  (mNextTime, every 30 s), the personnel's next update (every 30 s), the build manager's next builder check (every
-  120 s) and the defence commander's next raid check. Found from the checksum lines themselves: many saves parted
-  on `oos, ai` only, the AI part off by 93 (= 31 x 3: player 2's unit manager mNumWaiting, one explorer request
-  early or late) or by -3/-4 (player 2's or 3's attack group count: a group dropped at another time); the first
-  differing AI decision of seeds 2/2100, 7/600, 5/1350 and 7/1350 was `explore train.request` 1 to 6 s apart.
-  Measured: seed 2 308/683/27 -> END/END/472, seed 3 207 -> END, seed 4 208/205/52 -> 480/END/END, seed 5
-  312/479/71 -> END/END/END, seed 6 205 -> 308, seed 7 171/559 -> END/END: **10 of 18** saves continue identically
-  to the end (the first ever).
-- **0.270, the order of each player's unit list** (`EESaveHasPlayerUnitOrder`, EEPWorldHelper's
-  SavePlayerUnitOrder/RestorePlayerUnitOrder). RTSPlayer::InsertUnit puts a unit after the first unit of its id's
-  hash bucket (id & 0x7f), or at the end of the list when that bucket is empty, so the running list holds the
-  bucket groups in the order the buckets last filled. RTSPlayer::SaveUnits writes them in bucket index order (each
-  bucket's own order kept: first, then last to second) and the load inserts them in that order, so every walk of a
-  player's units (mFirstUnit, mNext) saw the groups in another order after a load. Found at seed 6's 2100 s save:
-  the dumps parted when two citizens of a militia fight attacked another raider (EECPRMMilitia takes the nearest
-  raider, the first in the attacker's list among equals). The ids are saved after the resource state; at the first
-  tick the list (mNext, mPrevious, first and last) and each bucket's first unit are relinked to the saved order (a
-  unit only the load has goes after the last unit of its bucket, keeping each bucket's units together as GetUnit
-  walks them). Measured: seed 2 2100 s 472 -> END, seed 3 2100 s 569 -> END, seed 6 1350/2100 s 202/101 -> END/174:
-  **13 of 18**.
-- **0.271, the intelligence files** (`EESaveHasIntelligence`, EECPIntelligence::SaveFiles/ReadFiles/RestoreFiles,
-  after the manager timers). What a computer player knows of each player (EECPIntelligencePlayerFile: the armies,
-  the unit type and family counts, the bounds, strengths and counts, its next update) was never saved: a loaded
-  player made each file again from the world at its first use, where the running game's file held what it saw up
-  to 30 s before. Found at seed 7's 2100 s save with the draw traces (`pair.py --rng-from`): the continued game drew
-  eight numbers in EETown::GetRandomPoint (EECPDefenseCommander::AssignSubGroupTask) where the loaded game drew two;
-  the dumps' ASG line showed the sub group's task in another town (FindThreatenedTown weighs each town by the files'
-  armies). The files are one byte block per computer player; the armies' areas use the continent block's area format
-  (EEWriteAreaBytes) and they are put in place of the load's at the first tick. Measured: seed 4 600 s 480 -> END,
-  seed 6 600/2100 s 308/174 -> END/END, seed 7 2100 s 420 -> END: **17 of 18**.
-- **The tracked units the running game did not track** (no format change, saves from 0.266). The load's
-  AddAllUnits tracks every unit of a computer player; the 0.266 order put the saved units first and kept the others.
-  Seed 3's 1350 s save tracked one citizen more than the continued game (the dumps' new `workers=`: 18 against 17 at
-  the load), so GetNumWorkers and with it the standing army target and the demand for soldiers were higher (the
-  trace's `demand t1=` 30 food and 30 gold apart 150 s after the load, the AI checksum 309 CTs after it). A unit the
-  saved order lacks is now let go (with the reference UnitAdded took). Measured: seed 3 1350 s 309 -> END:
-  **18 of 18**, `saveload: PASS`.
-- **Tools**: the dumps' AI line shows the manager timers (`timers=`) and the demand's inputs (`wantcit= workers=
-  gathercap=`), PLAYERUNITS lines each player's unit list (TEST ONLY, committed). Scratch, under build/hunt (not
-  committed): `pair.py --rng-from MS` (the draw trace from save ms + MS: the 50,000-draw cap ends long before a late
-  divergence otherwise), `td.py` (the first differing AI decision of two oracle traces, the trace's statistics lines
-  left out), `gate2.sh` (the lighter per-commit gates), `sl.sh` (one saveload measure, its slots deleted).
-- **Lesson: read the checksum's arithmetic.** EECPOutOfSynchChecksum sums per player `theSum * (id + 1)`, its parts
-  chained by `* 31`: a difference of 93 is 31 x 3 (player 2, the part before the last), -3 or -4 the attack group
-  count of player 2 or 3. That named the unsaved timers before any dump was read.
-- **The numbers** (first divergent CT line after the load, 600/1350/2100 s, start -> end of this round): seed 2
-  308/683/27 -> END/END/END, seed 3 207/309/569 -> END/END/END, seed 4 208/205/52 ->
-  END/END/END, seed 5 312/479/71 -> END/END/END, seed 6 205/202/101 -> END/END/END, seed 7 171/559/420 ->
-  END/END/END. **All 18 saves continue identically to the end** (2700 s; `sim_oracle.py saveload`: PASS).
-- **Not covered**: saves of other maps, difficulties, game speeds or player counts; the next engine (EECPNext) and
-  human players' state; multiplayer saves. The saveload test is the measure only for its 18 saves; a new divergence
-  elsewhere names its own cause with the same tools.
-||||||| 3eaa435c
-=======
-
 ## R5b.2, second round: the conversion and heal tests, the drop point, the line of fire, splash victims and the new target search in Rust (ee_combat decide.rs, walks.rs; branch rust-combat2, 2026-11-11)
 
 | Piece | C++ caller | Rust | Tag |
@@ -6357,4 +6288,68 @@ how a game plays, the plain oracle stays identical).
   UI and render threads: the bars and the screen point (any frame with a selected unit), the pointer's move (any
   mouse motion), the mode-3 pitch past zoom 1 (a cinematic or the free camera after a far zoom-out; a person or a
   scenario), the fixture's new commands (the scroll check). EE-SIM touches none of them.
->>>>>>> refs/heads/rust
+
+## R5a.2, sixth round: the managers' timers, the players' unit lists, the intelligence files, the tracked units (save 0.269-0.271, branch rust-r5a-aisave5, 2026-11-11)
+
+Continues "R5a.2, fifth round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
+Each change was built (0/0 for EE-AOC and EE-SIM), checked with the oracle (identical to ref; seeds 2-7 for the
+first two, seeds 2-3 under the lighter per-commit gates after that) and the Rust gate, and measured with the full
+saveload run. All of it is save and load code: it runs in the real game's Load Game screen as in EE-SIM (no change to
+how a game plays, the plain oracle stays identical).
+
+- **0.269, the managers' timers** (`EESaveHasManagerTimers`, EEComputerPlayer::GetManagerTimers/SetManagerTimers,
+  after the computer player's 0.256 running values; put back at the first tick). Five timers the original kept out of
+  the save, so a loaded player started them at 0: the attack commander's next drop of spent groups (mNextDropTime:
+  DropSpentGroups ran at the first update and every 45 s from the load), the exploration manager's next update
+  (mNextTime, every 30 s), the personnel's next update (every 30 s), the build manager's next builder check (every
+  120 s) and the defence commander's next raid check. Found from the checksum lines themselves: many saves parted
+  on `oos, ai` only, the AI part off by 93 (= 31 x 3: player 2's unit manager mNumWaiting, one explorer request
+  early or late) or by -3/-4 (player 2's or 3's attack group count: a group dropped at another time); the first
+  differing AI decision of seeds 2/2100, 7/600, 5/1350 and 7/1350 was `explore train.request` 1 to 6 s apart.
+  Measured: seed 2 308/683/27 -> END/END/472, seed 3 207 -> END, seed 4 208/205/52 -> 480/END/END, seed 5
+  312/479/71 -> END/END/END, seed 6 205 -> 308, seed 7 171/559 -> END/END: **10 of 18** saves continue identically
+  to the end (the first ever).
+- **0.270, the order of each player's unit list** (`EESaveHasPlayerUnitOrder`, EEPWorldHelper's
+  SavePlayerUnitOrder/RestorePlayerUnitOrder). RTSPlayer::InsertUnit puts a unit after the first unit of its id's
+  hash bucket (id & 0x7f), or at the end of the list when that bucket is empty, so the running list holds the
+  bucket groups in the order the buckets last filled. RTSPlayer::SaveUnits writes them in bucket index order (each
+  bucket's own order kept: first, then last to second) and the load inserts them in that order, so every walk of a
+  player's units (mFirstUnit, mNext) saw the groups in another order after a load. Found at seed 6's 2100 s save:
+  the dumps parted when two citizens of a militia fight attacked another raider (EECPRMMilitia takes the nearest
+  raider, the first in the attacker's list among equals). The ids are saved after the resource state; at the first
+  tick the list (mNext, mPrevious, first and last) and each bucket's first unit are relinked to the saved order (a
+  unit only the load has goes after the last unit of its bucket, keeping each bucket's units together as GetUnit
+  walks them). Measured: seed 2 2100 s 472 -> END, seed 3 2100 s 569 -> END, seed 6 1350/2100 s 202/101 -> END/174:
+  **13 of 18**.
+- **0.271, the intelligence files** (`EESaveHasIntelligence`, EECPIntelligence::SaveFiles/ReadFiles/RestoreFiles,
+  after the manager timers). What a computer player knows of each player (EECPIntelligencePlayerFile: the armies,
+  the unit type and family counts, the bounds, strengths and counts, its next update) was never saved: a loaded
+  player made each file again from the world at its first use, where the running game's file held what it saw up
+  to 30 s before. Found at seed 7's 2100 s save with the draw traces (`pair.py --rng-from`): the continued game drew
+  eight numbers in EETown::GetRandomPoint (EECPDefenseCommander::AssignSubGroupTask) where the loaded game drew two;
+  the dumps' ASG line showed the sub group's task in another town (FindThreatenedTown weighs each town by the files'
+  armies). The files are one byte block per computer player; the armies' areas use the continent block's area format
+  (EEWriteAreaBytes) and they are put in place of the load's at the first tick. Measured: seed 4 600 s 480 -> END,
+  seed 6 600/2100 s 308/174 -> END/END, seed 7 2100 s 420 -> END: **17 of 18**.
+- **The tracked units the running game did not track** (no format change, saves from 0.266). The load's
+  AddAllUnits tracks every unit of a computer player; the 0.266 order put the saved units first and kept the others.
+  Seed 3's 1350 s save tracked one citizen more than the continued game (the dumps' new `workers=`: 18 against 17 at
+  the load), so GetNumWorkers and with it the standing army target and the demand for soldiers were higher (the
+  trace's `demand t1=` 30 food and 30 gold apart 150 s after the load, the AI checksum 309 CTs after it). A unit the
+  saved order lacks is now let go (with the reference UnitAdded took). Measured: seed 3 1350 s 309 -> END:
+  **18 of 18**, `saveload: PASS`.
+- **Tools**: the dumps' AI line shows the manager timers (`timers=`) and the demand's inputs (`wantcit= workers=
+  gathercap=`), PLAYERUNITS lines each player's unit list (TEST ONLY, committed). Scratch, under build/hunt (not
+  committed): `pair.py --rng-from MS` (the draw trace from save ms + MS: the 50,000-draw cap ends long before a late
+  divergence otherwise), `td.py` (the first differing AI decision of two oracle traces, the trace's statistics lines
+  left out), `gate2.sh` (the lighter per-commit gates), `sl.sh` (one saveload measure, its slots deleted).
+- **Lesson: read the checksum's arithmetic.** EECPOutOfSynchChecksum sums per player `theSum * (id + 1)`, its parts
+  chained by `* 31`: a difference of 93 is 31 x 3 (player 2, the part before the last), -3 or -4 the attack group
+  count of player 2 or 3. That named the unsaved timers before any dump was read.
+- **The numbers** (first divergent CT line after the load, 600/1350/2100 s, start -> end of this round): seed 2
+  308/683/27 -> END/END/END, seed 3 207/309/569 -> END/END/END, seed 4 208/205/52 ->
+  END/END/END, seed 5 312/479/71 -> END/END/END, seed 6 205/202/101 -> END/END/END, seed 7 171/559/420 ->
+  END/END/END. **All 18 saves continue identically to the end** (2700 s; `sim_oracle.py saveload`: PASS).
+- **Not covered**: saves of other maps, difficulties, game speeds or player counts; the next engine (EECPNext) and
+  human players' state; multiplayer saves. The saveload test is the measure only for its 18 saves; a new divergence
+  elsewhere names its own cause with the same tools.
