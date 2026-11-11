@@ -524,8 +524,8 @@ local function note(mem, events, now)
                 mem.st.hits = mem.st.hits + 1
             end
         elseif (e.kind == "died" or e.kind == "converted") and e.type ~= nil then
-            -- (the engine reports a unit killed as "converted": EECPUnitsOnTaken tests its hit points, which
-            -- EEComplexUnit::Kill zeroes only after UnitTaken; a priest's conversion is a swap, AI_RESEARCH §8.40)
+            -- (a converted unit is lost as well; before the fix of 2026-11-10 the engine reported every kill as
+            -- "converted", AI_RESEARCH §8.40)
             local c = class(e.type)
             if c.category == "citizen" then
                 mem.st.lost_cit = mem.st.lost_cit + 1

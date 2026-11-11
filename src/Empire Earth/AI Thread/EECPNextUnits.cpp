@@ -514,7 +514,10 @@ void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool in
     long theKiller = 0;
     if (inUnit->mLastAttacker != NULL && EECPUnitsSeen(inPlayer, inUnit->mLastAttacker))
         theKiller = (long)inUnit->mLastAttacker->mUnitID;
-    bool theConverted = inUnit->mHitPoints > 0;   // alive, but no longer the player's
+    // converted: alive and another player's now. A unit killed still has its hit points here (EEComplexUnit::Kill
+    // calls UnitTaken before it zeroes them), so the hit points alone made every kill a "converted" event and no
+    // script ever saw "died" (AI_RESEARCH §8.40); a priest's conversion is a swap (EEConvertUnit), skipped above
+    bool theConverted = inUnit->mHitPoints > 0 && inUnit->mPlayer != NULL && inUnit->mPlayer != inPlayer;
     EECPUnitsEventAdd(s, theConverted ? kEvConverted : kEvDied, theID, theKiller,
         inUnit->mUnitClass != NULL ? inUnit->mUnitClass->mUnitType : -1, 0);
     s->mHeld.erase(theID);

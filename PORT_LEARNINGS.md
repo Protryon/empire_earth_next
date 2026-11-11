@@ -1930,7 +1930,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   its hit points are above 0, but `EEComplexUnit::Kill` calls `UnitTaken` before it zeroes them; a priest's
   conversion goes through `EEConvertUnit` -> `Kill(false, false, true)` with the swap flag, which the hook skips. So
   every kill is `converted` and no script ever saw `died` (Age of AI's `diplo.lua` counts its losses from `died`).
-  `lib.defence` counts both; the C++ fix is left to the owner because it changes Age of AI's play.
+  Fixed: a unit is converted only while alive and another player's; `lib.defence` counts both kinds as losses.
 - **A released gatherer is on no runner list.** `ai.release` put only idle citizens back on the engine's idle list,
   so a citizen sent back to its resource with `ai.gather` and then released worked unseen by the gatherer runner until
   the resource ran out. `ai.release(ids, {gather = true})` puts it on its resource's list.
