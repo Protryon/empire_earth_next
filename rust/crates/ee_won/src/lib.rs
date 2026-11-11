@@ -29,6 +29,7 @@ pub mod flow;
 pub mod guicfg;
 pub mod guiconf;
 pub mod guictl;
+pub mod guidraw;
 pub mod guiedit;
 pub mod guievent;
 pub mod guifocus;

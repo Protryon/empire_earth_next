@@ -17,6 +17,16 @@
 //         lifetime, the result
 //   TSWP  the sweep (every five game minutes): per player and node: availability, obsolescence, costs, SumCosts, the
 //         prerequisite closure (DependsOn over every id), and the tree's checksum
+//   CALW  one calamity's Update in full: class, the calamity's state before, the elapsed time, its state after, the
+//         result, and the world calls the update made in order (EECalamityCaptureEvent: damage, effects, random
+//         draws, the classes' world steps)
+//   CCAS  a CanCastAt (kind 0: a game call, the outermost one; kind 1: the sweep every five game minutes over every
+//         calamity class, each computer player's first living unit and real points and targets): class, caster,
+//         location, tile, check, target, result
+//   TRTE  ResearchToEpoch: the epoch, the tree's epochs, whether the player is the local one, the epoch steps in
+//         order (unlock, research all, research self, research kind 7, show the name), the tree after
+//   EVUN  the units an effect walks (line of sight, hit points, flight time, area effects, conversions): per unit its
+//         view, whether the effect applies and the value written
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test.
 #ifndef EE_EETECHCAPTURE_H
 #define EE_EETECHCAPTURE_H
@@ -60,4 +70,60 @@ void EETechCaptureSweep();
 // every class runs in a game the computer players alone never cast one in
 void EETechCaptureCastCalamities(long inCall);
 
+class EECalamity;
+class EECalamityClass;
+class EEComplexUnit;
+class EEUnit;
+class GE3DPoint;
+// CALW: one world call of a calamity's update (an EECalamityCaptureOp, two integers, two floats), collected while
+// EECalamityCaptureUpdate runs the update
+enum EECalamityCaptureOp {
+    kCalamityOpHelperUpdate = 1,    // the contagion helper's Update (id)
+    kCalamityOpUnitsNear,           // EEGetUnitsNear (count)
+    kCalamityOpTakeHit,             // TakeHit (unit id, damage; player, mode as floats)
+    kCalamityOpImmune,              // the unit's immunity effect blocks it (unit id)
+    kCalamityOpStrike,              // the hurricane's strike effect on a unit (unit id)
+    kCalamityOpCracks,              // the earthquake's cracks
+    kCalamityOpRandom,              // a physics random draw (its value)
+    kCalamityOpShake,               // the camera shake (angle, amplitude)
+    kCalamityOpCreateStorm,         // the hurricane's storm unit
+    kCalamityOpLaunchMeteor,
+    kCalamityOpCreateVolcano,       // (the effect manager's result)
+    kCalamityOpWarpTint,            // the time warp's departure effect
+    kCalamityOpWarpDepart,
+    kCalamityOpWarpReturn,
+    kCalamityOpWarpBlink,
+    kCalamityOpHold,                // the teleport's hold
+    kCalamityOpTeleport,
+    kCalamityOpLogicBombMark,
+    kCalamityOpLogicBombDisable,
+    kCalamityOpCreateHelper,        // a contagion helper (id)
+    kCalamityOpApplyEffect,         // an area effect class's ApplyEffect
+    kCalamityOpPlacedEffect,        // a placed effect at the target (x, y as floats)
+    kCalamityOpMorale,
+    kCalamityOpSpecialAttack,
+    kCalamityOpSpecialLocation,
+    kCalamityOpDestroyEffect,       // (the handle)
+};
+void EECalamityCaptureEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
+// runs inClass->Update(inCalamity, inElapsedTime) and, capturing, writes its CALW record
+long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime);
+// CCAS kind 0: records an outermost CanCastAt's result (the scope counts the nesting of the overrides' calls)
+struct EECalamityCanCastScope {
+    EECalamityCanCastScope();
+    ~EECalamityCanCastScope();
+    long Record(EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, unsigned long inX,
+                unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult);
+    bool mOutermost;
+};
+// CCAS kind 1: the sweep (every five game minutes)
+void EECalamityCaptureSweep();
+// TRTE: one step of ResearchToEpoch (0 unlock, 1 research all, 2 research self, 3 research kind 7, 4 show the name)
+void EETechCaptureEpochStep(long inStep, long inEpoch);
+// TRTE: the record of the ResearchToEpoch whose steps were collected
+void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal);
+// EVUN: one unit an effect walks (collected), and the walk's record (inLoop: 0 sight off, 1 sight on, 2 hit points,
+// 3 pending hit points, 4 flight time, 5 pending flight time, 6 area effects, 7 conversion)
+void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue);
+void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA = 0, long inB = 0);
 #endif

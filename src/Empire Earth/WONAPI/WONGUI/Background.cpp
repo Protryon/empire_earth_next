@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyBackground.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 
 
@@ -87,47 +88,28 @@ void Background::SetColor(int theColor)
 // Paints a rectangle: stretched image alone, or fill, border, tiled image (scrolled by the offsets) and component
 void Background::Paint(Graphics &g, int xpos, int ypos, int width, int height, int xoff, int yoff)
 {
-	if(this->mStretchImage && this->mImage.get()!=NULL)
-	{
-		if(this->mImage->mWidth!=width || this->mImage->mHeight!=height)
-			this->mImage->SetSize(width,height);
-
-		g.DrawImage(this->mImage.get(),xpos,ypos);
-		return;
-	}
-
-	g.Translate(xpos,ypos);
-
-	if(this->mColor!=-1)
-	{
-		g.SetColor(this->mColor);
-		g.FillRect(0,0,width,height);
-	}
-
-	if(this->mBorderColor!=-1)
-	{
-		g.SetColor(this->mBorderColor);
-		g.DrawRect(0,0,width,height);
-	}
-	
-	if(this->mImage.get()!=NULL)
-	{
-		g.PushClipRect(0,0,width,height);
-		int startX = this->mUseOffsets?-(xoff%this->mImage->mWidth):0;
-		int startY = this->mUseOffsets?-(yoff%this->mImage->mHeight):0;
-		for(int y = startY; y<height; y+=this->mImage->mHeight)
-			for(int x = startX; x<width; x+=this->mImage->mWidth)
-				g.DrawImage(this->mImage.get(), x, y);
-
-		g.PopClipRect();
-	}
-
-	if(this->mComponent.get()!=NULL)
-	{
-		this->mComponent->SetSize(width,height);
+	// guidraw.rs background: the stretched image, or the fill, border, tiles and component
+	EeWonBackground b;
+	b.has_image = this->mImage.get()!=NULL;
+	b.stretch_image = this->mStretchImage;
+	b.use_offsets = this->mUseOffsets;
+	b.has_component = this->mComponent.get()!=NULL;
+	b.image_width = b.has_image ? this->mImage->mWidth : 0;
+	b.image_height = b.has_image ? this->mImage->mHeight : 0;
+	b.color = this->mColor;
+	b.border_color = this->mBorderColor;
+	b.x = xpos;
+	b.y = ypos;
+	b.width = width;
+	b.height = height;
+	b.x_offset = xoff;
+	b.y_offset = yoff;
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_background(&b,o,n); });
+	WONDrawRun(g,anOps,aSlots,[&](const EeWonDrawOp& o) {
+		this->mComponent->SetSize(o.b,o.c);
 		this->mComponent->Invalidate();
 		this->mComponent->Paint(g);
-	}
-	
-	g.Translate(-xpos,-ypos);
+	});
 }

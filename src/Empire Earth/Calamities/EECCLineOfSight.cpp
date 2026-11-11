@@ -9,6 +9,8 @@
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEGlobalCalamityClass.h"
@@ -71,10 +73,12 @@ void EECCLineOfSight::Reset(EECalamity* inCalamity)
 }
 
 // FUNCTION: EXE 0x4b2019
-// Ages the calamity; returns the time-alive result
+// Ages the calamity; returns the time-alive result (Rust)
 long EECCLineOfSight::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    return EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b202f
@@ -82,5 +86,8 @@ long EECCLineOfSight::Update(EECalamity* inCalamity, float inElapsedTime)
 long EECCLineOfSight::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
-    return 0;
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::Global, inUnit, inX, inY, inCheck, inTargetUnit));
 }

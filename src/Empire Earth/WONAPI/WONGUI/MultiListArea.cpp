@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/ee_rust.h"
+#include "ee/wonapi/WONGUIDraw.h"
 // The column at an x, the column resizes and positions, the dynamic column, the auto-grow test and the partner
 // links are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs); this unit keeps the columns' viewports,
 // the rows and cells, sorting and the paint.
@@ -132,31 +133,22 @@ void MultiListArea::Virtual08()
 // Paints the list once across all columns, then once per column clipped to that column
 void MultiListArea::ScrollPaint(Graphics &g)
 {
-	int anXPos = 0;
-	
-
-	// Give chance to paint over all columns
-	this->mColumnPaintContext = -1;
-	this->mPaintWidth = this->mTotalColumnWidth;
-	ListArea::ScrollPaint(g);
-
-	// Now paint each column
-	for(int i=0; i<this->mColumnInfoVector.size(); i++)
-	{		
-		ColumnInfo &aCol = this->mColumnInfoVector[i];
-		this->mColumnPaintContext = i;
-		this->mPaintWidth = aCol.mWidth-this->mColumnBorderWidth;
-
-		g.PushClipRect(anXPos,this->mVertOffset,this->mPaintWidth,this->mScrollArea.height);
-		g.Translate(anXPos,0);
-		ListArea::ScrollPaint(g);
-		g.Translate(-anXPos,0);
-		g.PopClipRect();
-
-
-	
-		anXPos += aCol.mWidth;
-	}
+	// the rows once over all columns, then once per column clipped to it (guidraw.rs multi_list)
+	std::vector<int> aWidths;
+	for(size_t i=0; i<this->mColumnInfoVector.size(); i++)
+		aWidths.push_back(this->mColumnInfoVector[i].mWidth);
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_multi_list(aWidths.empty() ? NULL : &aWidths[0],aWidths.size(),this->mColumnBorderWidth,
+			this->mTotalColumnWidth,this->mVertOffset,this->mScrollArea.height,o,n); });
+	WONDrawRun(g,anOps,WONDrawSlots(),[&](const EeWonDrawOp& o) {
+		if(o.a==0)
+		{
+			this->mColumnPaintContext = o.b;
+			this->mPaintWidth = o.c;
+		}
+		else
+			ListArea::ScrollPaint(g);
+	});
 }
 
 // FUNCTION: WON 0x00703E50

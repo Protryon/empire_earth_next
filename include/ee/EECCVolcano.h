@@ -13,6 +13,9 @@ class EEGraphicEffect;
 class EESoundObject;
 class EEUnitClass;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCVolcano : public EELocationCalamityClass {
 public:
     long GetUnitClassIndex() const { return this->mUnitClassIndex; }  // inline (the main form's StartCalamity 0x26662d) (provisional name)
@@ -27,6 +30,8 @@ public:
     virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);       // (the volcano reads inUnit->mPlayer) +0x30 0xb5137
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 0xb50ec
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb516c
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb523e
 
     // 0xb4e74: a random location of a map tile between mMinimumRadius and mMaximumRadius around inCenter, at the

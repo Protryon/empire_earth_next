@@ -15,10 +15,10 @@
 //! over, 0x20 pressed, 0x40 activate on press, 0x200 no activate, 0x400 default on focus.
 
 /// The component flags these rules read.
-pub const FLAG_WANT_FOCUS: u32 = 0x8;
-pub const FLAG_WANT_TAB_FOCUS: u32 = 0x4000;
+pub(crate) const FLAG_WANT_FOCUS: u32 = 0x8;
+pub(crate) const FLAG_WANT_TAB_FOCUS: u32 = 0x4000;
 /// A child a modal state does not block.
-pub const FLAG_MODAL_OK: u32 = 0x8000;
+pub(crate) const FLAG_MODAL_OK: u32 = 0x8000;
 
 /// `Component::WantFocus`: it asks for focus, is visible and enabled, and no modal state of its parent blocks it.
 pub fn want_focus(flags: u32, visible: bool, disabled: bool, parent_modal: bool) -> bool {

@@ -275,12 +275,12 @@ pub fn tab_after_remove(removed: i32, current: i32) -> i32 {
 
 // ---- Splitter
 
-pub const POSITION_LEFT: i32 = 1;
-pub const POSITION_TOP: i32 = 2;
-pub const POSITION_RIGHT: i32 = 4;
-pub const POSITION_BOTTOM: i32 = 8;
-pub const SPLITTER_LEFT_RIGHT: i32 = 5;
-pub const SPLITTER_UP_DOWN: i32 = 10;
+pub(crate) const POSITION_LEFT: i32 = 1;
+pub(crate) const POSITION_TOP: i32 = 2;
+pub(crate) const POSITION_RIGHT: i32 = 4;
+pub(crate) const POSITION_BOTTOM: i32 = 8;
+pub(crate) const SPLITTER_LEFT_RIGHT: i32 = 5;
+pub(crate) const SPLITTER_UP_DOWN: i32 = 10;
 
 /// `MaxQuadrant`: the split (x, y) that maximises quadrant `pos` (bars half off the edge) and whether each axis
 /// is maximised.

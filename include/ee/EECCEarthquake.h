@@ -15,6 +15,9 @@ class GETransformation;
 // 0x5309e0: a global transformation the earthquake maps its target location through before it measures the distance
 // to the origin (the view? provisional name; owner header inferred; also read at 0x10440b/0x10520c/0x10f5af)
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCEarthquake : public EELocationCalamityClass {
 public:
     EECCEarthquake();                       // 0xb037f
@@ -27,6 +30,8 @@ public:
     virtual void PlaySound(EECalamity* inCalamity);              // +0x2c 0xb0654: starts the sound
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 (ICF-folded into EECCFire's 0xb10c9)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb0a60
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb0da5
 
 protected:
@@ -35,9 +40,7 @@ protected:
     bool CreateCracks(EECalamity* inCalamity);          // 0xb0502: mCrackCount cracks around the target
     bool SetAffectedArea(EECalamity* inCalamity);       // 0xb06b5: the calamity's rectangle (mRadius around the target)
     long CreateCrack(GE3DPoint& inFrom, float inX, float inY);   // 0xb071c
-    void UpdateEpicenterFactor(EECalamity* inCalamity); // 0xb085c
-    void UpdateQuakeSound(EECalamity* inCalamity);      // 0xb090f
-    void ShakeCamera(EECalamity* inCalamity, float inElapsedTime);   // 0xb0956
+    // UpdateEpicenterFactor 0xb085c, UpdateQuakeSound 0xb090f and ShakeCamera 0xb0956: Rust (calamity_update.rs)
 
     EEGraphicEffect* mGraphicEffect2;       // +0x28 (record +0x98; from the caster to the target at Start)
     EEGraphicEffect* mGraphicEffect1;       // +0x2c (record +0x94; the cracks; its height is the radius, its duration

@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // FUNCTION: WON 0x6fa2c0
 // Sizes the item from its text and optional image, taking the list's font and text colour when unset
@@ -33,32 +34,26 @@ int TextListItem::Compare(const ListItem* inOther,ListArea* inList) const
 // selected item
 void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
-    unsigned long aColor=this->mColor;
-    if(this->mSelected) {
-        const SelectionColor& aSelection=inList->GetSelColor();
-        inGraphics.SetColor(aSelection.GetBackgroundColor(inGraphics));
-        int aWidth=inList->mPaintWidth;
-        if(!inList->ListFlagSet(0x10)) aWidth=this->mWidth;
-        int aX=0;
-        Image* anImage=this->mImage.get();
-        if(anImage!=NULL && !inList->ListFlagSet(0x20)) {
-            int anImageWidth=anImage->mWidth;
-            aX=anImageWidth+2;
-            aWidth-=anImageWidth+2;
-        }
-        inGraphics.FillRect(aX,0,aWidth,this->mHeight);
-        aColor=aSelection.GetForegroundColor(inGraphics,this->mColor);
-    }
-    inGraphics.SetColor(aColor);
-    inGraphics.SetFont(this->mFont.get());
-    int aTextX=2;
+    // the selection behind a selected item, the image, the text centred on the row (guidraw.rs text_row)
     Image* anImage=this->mImage.get();
-    if(anImage!=NULL) {
-        int anImageY=(this->mHeight-anImage->mHeight)/2;
-        if(anImageY<0) anImageY=0;
-        inGraphics.DrawImage(anImage,2,anImageY);
-        aTextX=this->mImage->mWidth+4;
-    }
-    inGraphics.DrawString(this->mText,aTextX,(this->mHeight-this->mFont->GetHeight())/2);
+    EeWonTextRowPaint r;
+    r.selected=this->mSelected;
+    r.full_row_select=inList->ListFlagSet(0x10);
+    r.no_image_select=inList->ListFlagSet(0x20);
+    r.has_image=anImage!=NULL;
+    r.sel=WONDrawSelOf(inList->GetSelColor());
+    r.color=(uint32_t)this->mColor;
+    r.paint_width=inList->mPaintWidth;
+    r.width=this->mWidth;
+    r.height=this->mHeight;
+    r.image_width=anImage ? anImage->mWidth : 0;
+    r.image_height=anImage ? anImage->mHeight : 0;
+    r.font_height=this->mFont->GetHeight();
+    WONDrawSlots aSlots;
+    aSlots.mImages[0]=anImage;
+    aSlots.mFont=this->mFont.get();
+    aSlots.mString=&this->mText;
+    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_text_row(&r,o,n); });
+    WONDrawRun(inGraphics,anOps,aSlots);
 }
 }

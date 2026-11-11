@@ -19,6 +19,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -136,25 +138,37 @@ void EECCAEMindControl::Reset(EECalamity* inCalamity)
 // (ICF-folded into EECCAEExtraDamage::Update)
 long EECCAEMindControl::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    GE3DPoint theLocation;
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, inCalamity->mIntPlaceHolder1);
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    if (inCalamity->GetTimeAlive() >= this->mEffect1Duration && !inCalamity->mBoolPlaceHolder1) {
-        inCalamity->mBoolPlaceHolder1 = true;
-        if (this->mGraphicEffect2 != NULL) {
-            theLocation = inCalamity->mTargetLocation;
-            theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + 0.05f);
-            EEEffectHandle theEffectHandle;
-            gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect2, &theEffectHandle);
-            inCalamity->mEffectHandle = theEffectHandle;
-        }
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect2 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT2;
+    theParams.area_delay = (uint32_t)this->mEffect1Duration;
+    theParams.area_time2 = (int32_t)this->mEffect2Time;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCAEMindControl::UpdateStep);
+}
+
+// New (port): EECCAEMindControl's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCAEMindControl::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCAEMindControl* theClass = static_cast<EECCAEMindControl*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::PlacedEffect: {
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        EEEffectHandle theEffectHandle;
+        gEffectManager->CreatePlacedEffect(theLocation, theClass->mGraphicEffect2, &theEffectHandle);
+        EECalamityCaptureEvent(kCalamityOpPlacedEffect, theEffectHandle.mValue, 0, theLocation.mX, theLocation.mZ);   // CALW (TEST ONLY)
+        outReply.id = (uint32_t)theEffectHandle.mValue;
+        return true;
     }
-    if (inCalamity->GetTimeAlive() >= this->mEffect2Time && !inCalamity->mBoolPlaceHolder2) {
-        inCalamity->mBoolPlaceHolder2 = true;
-        this->ApplyEffect(inCalamity);
+    case EeCalamityOp::ApplyEffect: {
+        EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
+        theClass->ApplyEffect(theCalamity);
+        return true;
     }
-    return theResult;
+    default:
+        return false;
+    }
 }
 
 // ICF-FOLDED: EXE 0x418aa9

@@ -67,30 +67,65 @@ def apply_overlay(staged, rules):
     return copy
 
 
-def compile_to(src, flags, obj, opt, overlays=None, extra=()):
+def compile_to(src, flags, obj, opt, overlays=None, extra=(), cache=None):
     """Compile one source with clang-cl into obj -> (ok, log). overlays: {source path relative to src/: rules}
-    (apply_overlay) for a test profile; extra: more clang-cl arguments."""
+    (apply_overlay) for a test profile; extra: more clang-cl arguments; cache: an objcache.Cache to reuse objects
+    from (tools/objcache.py; build.py and this tool's compile_one pass the shared one).
+
+    Every compile is reproducible and independent of where it runs: /Brepro (no time stamp in the object) and the
+    staging root, the repository root and the toolchain directory mapped to fixed names in every embedded path
+    (objcache.prefix_map_flags: __FILE__ reads C:\\EEX\\... whatever EE_ORIG_SRC_ROOT is; a test profile's overlay
+    copy reads as the unit it replaces)."""
+    import objcache
     flags = verify.unit_flags(src, flags)
-    staged = verify.stage_source(src)
+    staged = orig = verify.stage_source(src)
     rules = overlays.get(str(units.rel_src(src))) if overlays else None
     iflags, inc = verify.include_paths(staged)
     if rules:
         staged = apply_overlay(staged, rules)
     std = [] if str(src).lower().endswith(".c") else ["/std:c++17"]
-    pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
-    cmd = [str(CLANG), *CLANG_FLAGS, *std, *clang_flags(flags, opt), *extra, *verify.DEFINES.split(), *iflags,
-           f"/Fo{obj}", str(staged)]
-    r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    obj = pathlib.Path(obj)
+    obj.parent.mkdir(parents=True, exist_ok=True)
+    args = [*CLANG_FLAGS, "/Brepro", *std, *clang_flags(flags, opt), *extra, *verify.DEFINES.split(), *iflags]
+    # the roots' fixed names (the key leaves them out: they follow from the roots, which it holds as tokens); the
+    # overlay copy's own name never reaches the object (nor the key: that holds the unit's staged name)
+    names = objcache.prefix_map_flags()
     if rules:
-        staged.unlink(missing_ok=True)
-    return r.returncode == 0, (r.stdout + r.stderr).strip()
+        names.append(f"/clang:-ffile-prefix-map={staged}={objcache.CANONICAL['stage']}\\"
+                     + str(units.rel_src(src)).replace("/", "\\"))
+    no_obj = any(a.lower() in ("/zs", "-zs", "-fsyntax-only", "/e", "/ep", "/p") for a in extra)
+    key = None
+    try:
+        if cache is not None and not no_obj:
+            key = cache.manifest_key(args, inc, str(orig), staged.read_bytes())
+            if cache.lookup(key, obj):
+                return True, ""
+        dep = obj.with_name(obj.name + ".d")
+        deps = ["/clang:-MD", f"/clang:-MF{dep}"] if key else []
+        obj.unlink(missing_ok=True)
+        r = subprocess.run([str(CLANG), *args, *names, *deps, f"/Fo{obj}", str(staged)], env=dict(os.environ, INCLUDE=inc),
+                           capture_output=True, text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        ok = r.returncode == 0
+        if key:
+            if ok:
+                cache.insert(key, obj, dep, staged)
+            else:
+                cache.note_uncached()
+            dep.unlink(missing_ok=True)
+        return ok, (r.stdout + r.stderr).strip()
+    finally:
+        if rules:
+            staged.unlink(missing_ok=True)
 
 
 def compile_one(job, out, opt, overlays=None, extra=()):
+    """Compile one (module, source, flags) job into <out>/obj through the shared object cache (tools/objcache.py;
+    EE_OBJ_CACHE=off compiles every unit)."""
+    import objcache
     mod, src, flags = job
     rel = units.rel_src(src)
-    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, overlays, extra)
+    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, overlays, extra,
+                         cache=objcache.get())
     logf = out / "log" / mod / rel.with_suffix(".log")
     if ok:
         logf.unlink(missing_ok=True)
@@ -185,7 +220,8 @@ def main():
     for m, (ok, bad) in done.items():
         print(f"{m:9} {ok:4} compiled  {bad:3} failed")
     n_bad = sum(b for _, b in done.values())
-    print(f"{len(jobs) - n_bad}/{len(jobs)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
+    import objcache
+    print(f"{len(jobs) - n_bad}/{len(jobs)} units{objcache.summary()} in {time.time() - t0:.0f} s -> {out / 'obj'}")
     if a.census:
         x64_census(out, logs)
     if errors:

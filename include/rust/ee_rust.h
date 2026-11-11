@@ -659,6 +659,52 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// [`EeCalamityOp::TargetView`]'s flags.
+constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IS_CASTER = 2;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_SAME_PLAYER = 4;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_ENEMY = 8;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IN_SET = 16;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_FOUNDATION = 32;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_BUILT = 64;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
+
+/// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
+
+/// The class has a sound.
+constexpr static const uint32_t EE_CALAMITY_SOUND = 2;
+
+/// The class has a secondary sound.
+constexpr static const uint32_t EE_CALAMITY_SECONDARY_SOUND = 4;
+
+/// The class has its first graphic effect.
+constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
+
+/// The class has its second graphic effect.
+constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// [`EeTechUnitView::flags`]: the unit has a complex unit.
+constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
+
+/// Its complex unit is built.
+constexpr static const uint32_t EE_TECH_UNIT_BUILT = 2;
+
+/// It is on a tile (`mTileNode`).
+constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
+
+/// It is carried (`mPreviousPart`).
+constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
+
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -729,6 +775,21 @@ constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
 
 /// `kFadeInRate`.
 constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
+
+/// `kHelpTextOffset`: the tool tip's gap below the mouse.
+constexpr static const float HELP_TEXT_OFFSET = 32.0;
+
+/// `kTextSpacing`: the gap around the title, the axis labels and the grid values.
+constexpr static const float TEXT_SPACING = 5.0;
+
+/// `kMaximumZoomScale`.
+constexpr static const float MAXIMUM_ZOOM = 4.0;
+
+/// `kKeyNone`: a hot key record's empty modifier.
+constexpr static const uint32_t KEY_NONE = 32767;
+
+/// Which key member `GetEntity` fills: a modifier slot (0 to 2) or the key.
+constexpr static const size_t KEY_SLOT = 3;
 
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
@@ -801,6 +862,12 @@ constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
 /// `EESendGroupCommand`'s move marker
 constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
 
+/// `kActionDropoffResource` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
+
+/// `kActionUnloadTransport` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -827,6 +894,12 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
 /// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
 /// forced, rotating, the facing, group movement)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
+
+/// `new EEUGUnloadTransport(unit_a's complex unit, (long)point[0], (long)point[1], flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
+
+/// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -987,6 +1060,10 @@ constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
 /// `EEUnit::mResourceAmount` (what a resource has left)
 constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 
+/// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
+/// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
+constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -1000,73 +1077,6 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
-
-/// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
-constexpr static const int32_t MORE_REPLIES = 100059;
-
-constexpr static const uint32_t DIRS_ONLY_MASK = 2;
-
-constexpr static const uint32_t SERVICES_ONLY_MASK = 5;
-
-constexpr static const uint32_t ADD_TYPE = 16;
-
-constexpr static const uint32_t ADD_DISPLAY_NAME = 32;
-
-constexpr static const uint32_t ADD_CREATED = 64;
-
-constexpr static const uint32_t ADD_TOUCHED = 128;
-
-constexpr static const uint32_t ADD_LIFESPAN = 256;
-
-constexpr static const uint32_t ADD_DO_TYPE = 512;
-
-constexpr static const uint32_t ADD_DO_DATA = 1024;
-
-constexpr static const uint32_t ADD_DATA_OBJECTS = 2048;
-
-constexpr static const uint32_t ADD_ACLS = 4096;
-
-constexpr static const uint32_t ADD_CRC = 8192;
-
-constexpr static const uint32_t ADD_UIDS = 16384;
-
-constexpr static const uint32_t ADD_IPS = 32768;
-
-constexpr static const uint32_t DIR_ADD_PATH = 65536;
-
-constexpr static const uint32_t DIR_ADD_NAME = 131072;
-
-constexpr static const uint32_t DIR_ADD_REQ_UNIQUE = 262144;
-
-constexpr static const uint32_t SERV_ADD_PATH = 16777216;
-
-constexpr static const uint32_t SERV_ADD_NAME = 33554432;
-
-constexpr static const uint32_t SERV_ADD_NET_ADDR = 67108864;
-
-constexpr static const uint32_t TYPE = 1;
-
-constexpr static const uint32_t PATH = 2;
-
-constexpr static const uint32_t NAME = 4;
-
-constexpr static const uint32_t NET_ADDR = 8;
-
-constexpr static const uint32_t REQ_UNIQUE = 16;
-
-constexpr static const uint32_t DISPLAY_NAME = 32;
-
-constexpr static const uint32_t LIFESPAN = 64;
-
-constexpr static const uint32_t CREATED = 128;
-
-constexpr static const uint32_t TOUCHED = 256;
-
-constexpr static const uint32_t CRC = 512;
-
-constexpr static const uint32_t IPS = 1024;
-
-constexpr static const uint32_t IDS = 2048;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -1410,109 +1420,60 @@ constexpr static const int32_t EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_A
 /// UserListCtrlConfig::Virtual24(instruction) in UserListCtrl.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION = 102;
 
-constexpr static const int32_t POSITION_LEFT = 1;
+/// `Graphics::SetColor(a)` (the colour's bits).
+constexpr static const int32_t EE_WON_DRAW_SET_COLOR = 1;
 
-constexpr static const int32_t POSITION_TOP = 2;
+/// `Graphics::SetSysColor(a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_SYS_COLOR = 2;
 
-constexpr static const int32_t POSITION_RIGHT = 4;
+/// `Graphics::FillRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_RECT = 3;
 
-constexpr static const int32_t POSITION_BOTTOM = 8;
+/// `Graphics::DrawRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_RECT = 4;
 
-constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+/// `Graphics::DrawDottedRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_DOTTED_RECT = 5;
 
-constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+/// `Graphics::DrawLine(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_LINE = 6;
 
-/// The component flags these rules read.
-constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
+/// `Graphics::DrawImage(image a, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE = 7;
 
-constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
+/// `image a->SetSize(b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE_SIZE = 8;
 
-/// A child a modal state does not block.
-constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+/// `Graphics::PushClipRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_PUSH_CLIP = 9;
 
-/// The text flags (TextFlags in the C++).
-constexpr static const int32_t WORD_WRAP = 1;
+/// `Graphics::PopClipRect()`.
+constexpr static const int32_t EE_WON_DRAW_POP_CLIP = 10;
 
-constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+/// `Graphics::Translate(a, b)`.
+constexpr static const int32_t EE_WON_DRAW_TRANSLATE = 11;
 
-constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+/// `Graphics::SetFont(font a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_FONT = 12;
 
-constexpr static const int32_t SCROLL_FULL_LINE = 16;
+/// `Graphics::DrawString(string a, b, c, d, e)` (offset, length, x, y; the offset and length as `unsigned short`).
+constexpr static const int32_t EE_WON_DRAW_STRING = 13;
 
-constexpr static const int32_t DELAY_WORD_WRAP = 32;
+/// `Graphics::DrawString(string a, b, c)` (the whole string at x, y).
+constexpr static const int32_t EE_WON_DRAW_STRING_ALL = 14;
 
-/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
-/// its last segment stands for the trimmed one.
-constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+/// `wrapped text a->Paint(g, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_TEXT = 15;
 
-constexpr static const uint32_t LINE_HAS_SEGS = 2;
+/// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
+constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 
-constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+/// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
+constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
-constexpr static const int32_t POPUP_WANT_INPUT = 128;
-
-constexpr static const int32_t POPUP_IS_MODAL = 256;
-
-constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
-
-constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
-
-constexpr static const int32_t POPUP_ADDITIONAL = 4096;
-
-constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
-
-constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
-
-constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
-
-constexpr static const uint8_t JOIN_REQUEST = 1;
-
-constexpr static const uint8_t JOIN_REPLY = 2;
-
-constexpr static const uint8_t CLIENT_JOINED = 3;
-
-constexpr static const uint8_t CLIENT_LEFT = 4;
-
-constexpr static const uint8_t CHAT_REQUEST = 5;
-
-constexpr static const uint8_t CHAT_LINE = 6;
-
-constexpr static const uint8_t PING = 7;
-
-constexpr static const uint8_t STAGING = 8;
-
-constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
-
-constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
-
-constexpr static const uint8_t DISCOVERY_REMOVED = 3;
-
-constexpr static const uint8_t DISCOVERY_QUERY = 4;
-
-/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
-constexpr static const int16_t JOIN_OK = 0;
-
-constexpr static const int32_t JOIN_BAD_REPLY = 1;
-
-constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
-
-constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
-
-/// Chat flags: a whisper to the target, a line to the sender's team.
-constexpr static const uint16_t CHAT_WHISPER = 4;
-
-constexpr static const uint16_t CHAT_TEAM = 256;
-
-/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
-/// host re-sends its full summary instead of a keep-alive after this many.
-constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
-
-constexpr static const int64_t JOINER_PING_IDLE = 120;
-
-constexpr static const int64_t SUMMARY_REPEAT = 30;
-
-/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
-constexpr static const uint8_t SEP = 92;
+/// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
+/// height).
+constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -1665,6 +1626,186 @@ enum class EeTechTreeResearchAfter : uint32_t {
   Nothing = 0,
   EpochStatistics,
   CountTowardNextEpoch,
+};
+
+/// The host calls (`EeCalamityCall::op`). Each names what the C++ does and what it answers.
+enum class EeCalamityOp : int32_t {
+  /// The contagion helper `index`'s `Update(x)` (if it exists).
+  HelperUpdate = 1,
+  /// `UpdateSound(calamity, sound index (0 the class's sound, 1 its secondary), volume x, falloff y, primary
+  /// node when value is 1)`.
+  Sound = 2,
+  /// `EEGetUnitsNear((x, y, z), w)`: value its result, id the list's size; the host keeps the list for the unit calls.
+  UnitsNear = 3,
+  /// The caster's continent (`kAIPathNonSpace`): value.
+  CasterContinent = 4,
+  /// Unit `index` of the list for the earthquake: flags bit 0 a land building, bit 1 alive; value its continent.
+  QuakeUnit = 5,
+  /// Unit `index`'s immunity (effect kind 3): true when it has one (the host plays its effect).
+  Immune = 6,
+  /// Unit `index` is carried: ok, and key the outermost carrier.
+  Carried = 7,
+  /// Unit `index` takes `value` damage from the caster (x 0) or the storm (x 1), for the calamity's player,
+  /// mode 2 when blocked by immunity else 3.
+  TakeHit = 8,
+  /// The earthquake's cracks.
+  Cracks = 9,
+  /// The distance from the camera to the target in the view plane: x.
+  CameraDistance = 10,
+  /// `gPhysics->GetRandom()`: x.
+  Random = 11,
+  /// The local player's camera shake at angle x by amplitude y (once per player and update).
+  Shake = 12,
+  /// The calamity has a target unit: ok.
+  TargetExists = 13,
+  /// The hurricane's `CreateStorm`.
+  CreateStorm = 14,
+  /// The class's `PlaySound(calamity)`.
+  PlayClassSound = 15,
+  /// The storm unit made undeletable: its location x, y, z.
+  StormPrepare = 16,
+  /// Unit `index` of the list for the hurricane: flags bit 0 the storm itself, bit 1 the storm's player, bit 2
+  /// an enemy of it, bit 3 in the class's unit set, bit 4 alive, bit 5 nature's; x the distance squared to the
+  /// storm, y its radius against the storm.
+  StormUnit = 17,
+  /// The hurricane's strike effect on unit `index`.
+  Strike = 18,
+  /// The meteor storm's `LaunchMeteor`.
+  LaunchMeteor = 19,
+  /// `gPhysics->mRandom.Generate()`: x.
+  RandomGenerate = 20,
+  /// `gPhysics->GetRandom(x, y)`: x.
+  RandomRange = 21,
+  /// The volcano's `CreateVolcano` and its two effects: value the last effect's result.
+  CreateVolcano = 22,
+  /// The target unit's hit points: value.
+  TargetHitPoints = 23,
+  /// The time warp's departure: the unit tinted, its departure effect and sound.
+  WarpTint = 24,
+  /// The time warp's placed effect where the unit leaves.
+  WarpAwayEffect = 25,
+  /// `gEffectManager->DestroyEffect(value)`.
+  DestroyEffect = 26,
+  /// The time warp's `Depart`.
+  WarpDepart = 27,
+  /// The time warp's `Return`.
+  WarpReturn = 28,
+  /// The target unit is tinted: ok.
+  TargetTinted = 29,
+  /// The time warp's colour blink.
+  WarpBlink = 30,
+  /// The caster's hit points: value.
+  CasterHitPoints = 31,
+  /// The calamity has a caster: ok.
+  CasterExists = 32,
+  /// The teleport's `HoldCaster`.
+  Hold = 33,
+  /// The teleport's `Teleport`.
+  Teleport = 34,
+  /// The logic bomb's placed mark at the target.
+  LogicBombMark = 35,
+  /// The logic bomb's disabling of its target.
+  LogicBombDisable = 36,
+  /// The target unit exists, is complex and has no hit points: ok.
+  TargetDead = 37,
+  /// A contagion helper for the class's functor at the calamity: value its id.
+  CreateHelper = 38,
+  /// The class's `ApplyEffect(calamity)`.
+  ApplyEffect = 39,
+  /// The terrain mesh's height at (x, y): x.
+  MeshZ = 40,
+  /// The class's second graphic effect placed at (x, y, z): id its handle.
+  PlacedEffect = 41,
+  /// The morale's start on its target (effect, counter, sound).
+  Morale = 42,
+  /// The target unit exists and is alive: ok.
+  TargetAlive = 43,
+  /// The special attack's order to the caster.
+  SpecialAttack = 44,
+  /// The special location's order to the caster.
+  SpecialLocation = 45,
+  /// The caster's player index (`EEWorld::GetPlayerIndex`): value.
+  CasterPlayerIndex = 46,
+  /// The caster's power: value.
+  CasterPower = 47,
+  /// The tile exists: ok.
+  TileExists = 48,
+  /// The tile is visible to the caster's player: ok.
+  TileVisible = 49,
+  /// An area effect of kind 3 at the tile against player `value`: ok.
+  AreaEffect = 50,
+  /// The unit with the target's id (`gWorld.GetUnit`): ok when there is one.
+  TargetLookup = 51,
+  /// The class's `IsValidLocation(caster, tile)`: ok.
+  ValidLocation = 52,
+  /// The class's `IsValidTarget(caster, the looked-up unit)`: ok.
+  ValidTarget = 53,
+  /// The target's flags (`EE_CALAMITY_TARGET_*`).
+  TargetView = 54,
+  /// `EEMap::IsAreaOnMap(tile, value)`: ok.
+  AreaOnMap = 55,
+  /// The terrain mesh's `GetIsValidTile(tile)`: ok.
+  ValidTile = 56,
+  /// The terrain mesh is a space map: ok.
+  SpaceMap = 57,
+  /// The tile's continent (`kAIPathNonSpace`): value.
+  TileContinent = 58,
+  /// `EEWorld::IsTileBlocked(tile)`: ok.
+  TileBlocked = 59,
+  /// The tile's terrain type: ok when the tile exists, value the type.
+  TerrainType = 60,
+  /// The class's unit class's inner collision sphere: x.
+  InnerSphere = 61,
+  /// Unit `index` of the list is a living hurricane or anti-matter storm: ok.
+  NearStorm = 62,
+  /// The class's unit class's tile size: value.
+  TileSize = 63,
+  /// `EEMap::IsEdgeTile(tile)`: ok.
+  EdgeTile = 64,
+  /// `EEIsTileUnblocked` for the class's unit class at the tile (the caster's player, else nature's): ok.
+  TileUnblocked = 65,
+  /// The caster is a radio man: ok.
+  CasterIsRadioMan = 66,
+  /// `EEIsTileFree(tile)`: ok.
+  TileFree = 67,
+};
+
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
+
+/// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
+enum class EeTechEpochStepKind : uint32_t {
+  /// `mEpochs[epoch].Unlock()`.
+  Unlock = 0,
+  /// `mEpochs[epoch].ResearchAll(false)`.
+  ResearchAll,
+  /// `mEpochs[epoch].ResearchSelf()`.
+  ResearchSelf,
+  /// `mEpochs[epoch].ResearchKind(7, true)`.
+  ResearchKind7,
+  /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
+  ShowName,
+};
+
+/// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
+enum class EeTechUnitWalk : uint32_t {
+  /// The player's units, for the hit point rescale (built ones only).
+  HitPoints = 0,
+  /// The pending units, for the hit point rescale (the built test at the write).
+  PendingHitPoints,
+  /// The player's or the pending units, for the flight time rescale.
+  FlightTime,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -4400,6 +4541,158 @@ struct EeCalamityAge {
   uint8_t pad[3];
 };
 
+/// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
+struct EeCalamityParams {
+  int32_t class_enum;
+  float lifetime;
+  /// `EE_CALAMITY_*` bits.
+  uint32_t flags;
+  int32_t quake_damage;
+  int32_t quake_tick_time;
+  int32_t quake_shake;
+  float quake_duration;
+  float quake_radius;
+  float quake_shake_interval;
+  float quake_volume;
+  float quake_quake_volume;
+  float quake_minimum_factor;
+  float quake_quake_minimum_factor;
+  float quake_speed;
+  float quake_falloff;
+  /// The game variant's earthquake damage factor.
+  float quake_damage_factor;
+  int32_t storm_damage;
+  uint32_t storm_tick_time;
+  float storm_radius;
+  /// Its first effect's duration (the storm's delay).
+  uint32_t storm_delay;
+  float meteor_minimum_interval;
+  float meteor_maximum_interval;
+  /// The volcano's first effect's delay (`mTime1`).
+  uint32_t volcano_delay;
+  int32_t warp_depart_time;
+  int32_t warp_away_time;
+  /// The teleport's hold time.
+  int32_t teleport_hold_time;
+  uint32_t bomb_time2;
+  uint32_t bomb_time3;
+  /// The area effects' and the leprosy's first effect's duration.
+  uint32_t area_delay;
+  /// The extra damage's and the mind control's second time.
+  int32_t area_time2;
+  /// The morale's effect duration.
+  int32_t morale_delay;
+};
+
+/// The calamity's members an update reads and writes (`EECalamity`).
+struct EeCalamityState {
+  float time_alive;
+  float float1;
+  float float2;
+  int32_t int1;
+  int32_t int2;
+  float target[3];
+  float epicenter_factor;
+  uint32_t effect_handle;
+  bool bool1;
+  bool bool2;
+  uint8_t pad[2];
+};
+
+/// One host call.
+struct EeCalamityCall {
+  EeCalamityOp op;
+  int32_t index;
+  int32_t value;
+  /// A second index (the casts' tile y).
+  int32_t index2;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// The host's answer.
+struct EeCalamityReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  uint64_t key;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
+/// objects, reading and writing the calamity through `state` (the C++ copies it in and out around its step).
+struct EeCalamityHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, EeCalamityState *state, const EeCalamityCall *call, EeCalamityReply *reply);
+};
+
+/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
+struct EeCalamityCast {
+  EeCalamityCastMode mode;
+  int32_t class_enum;
+  uint32_t x;
+  uint32_t y;
+  /// `GetCost()`.
+  int32_t cost;
+  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
+  uint32_t radius;
+  int32_t area;
+  /// `kTerrainSpace` (the meteor storm's tiles).
+  int32_t space_terrain;
+  bool check;
+  bool has_caster;
+  bool blocked_by_immunity;
+  /// The hurricane only over water (`mOverWater`).
+  bool over_water;
+};
+
+/// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
+struct EeTechEpochStep {
+  EeTechEpochStepKind step;
+  int32_t epoch;
+};
+
+/// One unit of a rescale walk: whether it is rescaled (`EVHP`), whether the new value is written, and the value.
+struct EeTechUnitStep {
+  bool rescaled;
+  bool applies;
+  uint8_t pad[2];
+  /// `ee_tech_rescale`'s amount.
+  float amount;
+  /// The amount's C cast (the value written).
+  int32_t value;
+};
+
+/// What an effect reads of one unit it walks (`EEUnit` and its `EEComplexUnit`).
+struct EeTechUnitView {
+  int32_t unit_type;
+  int32_t hit_points;
+  /// The complex unit's flight time (0 without one).
+  int32_t flight_time;
+  /// `EE_TECH_UNIT_*` bits.
+  uint32_t flags;
+};
+
+/// `ConvertEventUnits`' decisions around its walk.
+struct EeTechConversion {
+  /// Only the given unit (in the effect's set, by a unit tech): else every unit of the class, after the upgrade
+  /// levels and the queued technology are carried over.
+  bool single;
+  /// The new class's tech node gets a research delay (one unit converted, the new class exists).
+  bool delay_new_class;
+  /// The queued improvements move to the new class.
+  bool move_queued;
+  /// The new units take their class's behaviour (tech 0x413 or 0x138d).
+  bool set_behavior;
+};
+
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
   float bottom;
@@ -4828,6 +5121,61 @@ struct EeUiDbFont {
   char pad[3];
 };
 
+/// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
+struct EeUiGraphLayout {
+  EeUiRect title;
+  EeUiRect y_axis;
+  EeUiRect x_axis;
+  EeUiRect graph;
+};
+
+/// Which texts `CopyData` lays out: each label's flag (`mLabelGraph` ..) and whether its text exists (`SetFont`
+/// made them).
+struct EeUiGraphTexts {
+  bool label_graph;
+  bool has_title;
+  bool label_grid;
+  bool has_grid;
+  bool label_y;
+  bool has_y;
+  bool label_x;
+  bool has_x;
+};
+
+/// A graph's value range (`UGraph`'s or the displayed one, `UIGraph::mMinX` ..).
+struct EeUiGraphRange {
+  long min_x;
+  long max_x;
+  long min_y;
+  long max_y;
+};
+
+/// What `SetCandidateList` leaves: the window's left and right edges and the selected line within the page.
+struct EeUiCandidateFit {
+  float left;
+  float right;
+  long selection;
+};
+
+/// One line of the window's border.
+struct EeUiCandidateLine {
+  float x0;
+  float y0;
+  float x1;
+  float y1;
+  /// The light border colour (else the dark one).
+  bool light;
+};
+
+/// `DrawPolygons`' plan after the background: the selection bar (when `selection` is not negative: the selected
+/// line, two pixels in from each side, clipped to the window) and the two-pixel bevelled border, top (dark),
+/// bottom (light), left (dark), right (light), in the C++'s order.
+struct EeUiCandidateFrame {
+  bool has_selection;
+  EeUiRect selection;
+  EeUiCandidateLine lines[8];
+};
+
 /// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
 /// dark one (`sDarkBorder`).
 struct EeUiBorderLine {
@@ -5041,6 +5389,8 @@ struct EeUnitRecord {
   int64_t formation_slot;
   /// `EEUnit::mResourceAmount`
   int64_t resource_amount;
+  /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
+  uint8_t on_map;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -5383,6 +5733,217 @@ struct EeWonSplit {
   int32_t right;
   int32_t top;
   int32_t bottom;
+};
+
+/// The filter's inputs (`StretchImageFilter`'s members and the source image's size).
+struct EeWonStretchFilter {
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
+  int32_t src_width;
+  int32_t src_height;
+  bool tile_horz;
+  bool tile_vert;
+  bool skip_center;
+};
+
+/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
+struct EeWonDrawOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+  int32_t f;
+  int32_t g;
+  int32_t h;
+};
+
+/// A frame to paint (`WONFrame::Paint`'s inputs): its image's size (slot `slot`), the component's size and the
+/// paddings left out of the frame.
+struct EeWonFrame {
+  bool has_image;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+};
+
+/// A background to paint (`Background`'s members, its image's size and the rectangle and offsets).
+struct EeWonBackground {
+  bool has_image;
+  bool stretch_image;
+  bool use_offsets;
+  bool has_component;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t color;
+  int32_t border_color;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t x_offset;
+  int32_t y_offset;
+};
+
+/// A WONButton to paint: its size, flags and members, and its state's image (slot 0) and text (slot 0).
+struct EeWonButtonPaint {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  bool scale_image;
+  bool has_image;
+  bool has_text;
+  bool pressed;
+  bool disabled;
+  bool draw_gray_text;
+  /// the focus style is set, the button has the focus and its parent has used the dialog keys
+  bool focus_shown;
+  int32_t h_align;
+  int32_t v_align;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t color;
+  int32_t left_text_pad;
+  int32_t top_text_pad;
+  int32_t right_text_pad;
+  int32_t bottom_text_pad;
+  int32_t left_focus_pad;
+  int32_t top_focus_pad;
+  int32_t right_focus_pad;
+  int32_t bottom_focus_pad;
+  int32_t push_dx;
+  int32_t push_dy;
+};
+
+/// A WONSimpleButton to paint (its four images' presence and sizes, slots 0..3).
+struct EeWonSimpleButtonPaint {
+  bool disabled;
+  bool check_mouse_down;
+  bool pressed;
+  bool mouse_over;
+  bool scale_image;
+  uint8_t mouse_down_state;
+  bool has_image[4];
+  int32_t image_width[4];
+  int32_t image_height[4];
+  int32_t width;
+  int32_t height;
+};
+
+/// One line break of a wrapped text (`WrappedText::BreakInfo`).
+struct EeWonLineBreak {
+  uint16_t break_pos;
+  uint16_t next_start;
+  uint16_t width;
+};
+
+/// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
+/// `string_width(ctx, offset, length)` is `Font::GetStringWidth(text, offset, length)`, `char_width(ctx, index)`
+/// is `Font::GetCharacterWidth(text[index])`, or of 'M' for a negative index.
+struct EeWonTextMeasure {
+  void *ctx;
+  int32_t (*string_width)(void*, int32_t, int32_t);
+  int32_t (*char_width)(void*, int32_t);
+};
+
+/// A row's or line's place, as the list callback answers it (`top`, `height`; a text line's `x` too).
+struct EeWonRowPlace {
+  int32_t x;
+  int32_t top;
+  int32_t height;
+};
+
+/// Answers the place of row `index` (`ctx` is the C++ caller's).
+using EeWonRowOf = EeWonRowPlace(*)(const void *ctx, size_t index);
+
+/// A multi-column row to paint (`MultiListItem::Paint`'s inputs; `has_cell` and `cell_width` are the column's
+/// cell when the column is one of the row's).
+struct EeWonMultiRowPaint {
+  int32_t column;
+  bool selected;
+  bool full_row_select;
+  bool has_cell;
+  uint32_t cell_count;
+  uint32_t selection_color;
+  int32_t total_width;
+  int32_t height;
+  uint8_t align;
+  int32_t paint_width;
+  int32_t cell_width;
+};
+
+/// A selection's colours (`SelectionColor`: background, foreground and the foreground's mode).
+struct EeWonSelColor {
+  uint32_t background;
+  uint32_t foreground;
+  int32_t mode;
+};
+
+/// A text row to paint (`TextListItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+struct EeWonTextRowPaint {
+  bool selected;
+  bool full_row_select;
+  bool no_image_select;
+  bool has_image;
+  EeWonSelColor sel;
+  uint32_t color;
+  int32_t paint_width;
+  int32_t width;
+  int32_t height;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t font_height;
+};
+
+/// An input box to paint (its members; icon slot 0, font slot 0, string slot 0 the shown text).
+struct EeWonInputPaint {
+  bool disabled_look;
+  bool has_icon;
+  bool has_focus;
+  bool cursor_on;
+  bool underline_cursor;
+  bool backwards_sel;
+  int32_t width;
+  int32_t height;
+  int32_t horz_offset;
+  int32_t text_color;
+  int32_t disabled_text_color;
+  int32_t icon_height;
+  int32_t text_x;
+  int32_t text_y;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t sel_start;
+  int32_t sel_end;
+  int32_t length;
+  int32_t font_height;
+  EeWonSelColor sel;
+};
+
+/// A text segment's range to paint (`TextSegment::Paint`'s inputs; font slot 0, string slot 0 the segment's text).
+struct EeWonSegmentPaint {
+  int32_t area_sel_start;
+  int32_t area_sel_end;
+  int32_t abs_start;
+  int32_t start;
+  int32_t end;
+  int32_t x;
+  int32_t y;
+  int32_t line_height;
+  uint32_t color;
+  EeWonSelColor sel;
 };
 
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
@@ -10447,6 +11008,74 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
 /// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
 EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
 
+/// A calamity class's `Update(calamity, elapsed)` (`calamity_update::update`); `state` in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op the class asks.
+int32_t ee_calamity_update(const EeCalamityParams *params,
+                           EeCalamityState *state,
+                           float elapsed,
+                           const EeCalamityHostFfi *host);
+
+/// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
+///
+/// # Safety
+/// `cast` and `host` must be valid; the host's `call` must answer every op the cast asks.
+int32_t ee_calamity_can_cast_at(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A unit class's `IsValidTarget` (`calamity_cast::valid_target`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_target(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A location class's `IsValidLocation` (`calamity_cast::valid_location`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_location(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
+///
+/// # Safety
+/// `out` must be valid for `capacity` writes.
+uint32_t ee_tech_research_to_epoch(int32_t epoch,
+                                   int32_t count,
+                                   bool local,
+                                   EeTechEpochStep *out,
+                                   uint32_t capacity);
+
+/// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+EeTechUnitStep ee_tech_unit_step(EeTechUnitWalk walk,
+                                 const EeTechUnitView *unit,
+                                 int32_t class_type,
+                                 uint32_t old_maximum,
+                                 int32_t new_maximum);
+
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_sight_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_area_effect_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, int32_t id);
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
 
@@ -10484,6 +11113,17 @@ long ee_ui_background_full_draw(void *background,
                                 unsigned long designed_height,
                                 unsigned long columns,
                                 unsigned long rows);
+
+/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_bfull_draw(void *background,
+                                 EeUiRect form,
+                                 EeUiRect redraw,
+                                 unsigned long texture_width,
+                                 unsigned long texture_height,
+                                 EeUiRect texture_rect,
+                                 unsigned long columns,
+                                 unsigned long rows);
 
 /// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
 /// `RelayoutBackground` (never exclusive) lay a background out in.
@@ -10996,6 +11636,11 @@ void ee_ui_form_set_all_controls_dirty(void *form);
 /// `UIForm::GetToolTipShadowRectangle(rect, out)`.
 EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
 
+/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
+EeUiPoint ee_ui_form_help_location(EeUiPoint mouse,
+                                   EeUiRect label,
+                                   EeUiRect form);
+
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
 
@@ -11016,6 +11661,81 @@ void ee_ui_group_enable(void *group);
 long ee_ui_string_list_find(void *list,
                             const char *key,
                             unsigned long selection);
+
+/// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
+EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
+                                        EeUiRect rect,
+                                        EeUiGraphTexts texts,
+                                        long max_x,
+                                        long max_y);
+
+/// `UIGraph::CopyData`'s displayed range.
+EeUiGraphRange ee_ui_graph_copy_range(float zoom, EeUiGraphRange displayed, EeUiGraphRange graph);
+
+/// `ZoomIn` (`zoom_in`) or `ZoomOut`: the new zoom; `out` the displayed range.
+float ee_ui_graph_zoom(bool zoom_in,
+                       float zoom,
+                       float increment,
+                       EeUiGraphRange graph,
+                       EeUiGraphRange *out);
+
+/// `UIGraph::DrawPolygons` after `UIControl::DrawPolygons` (`result`), the grid lines drawn with `line`.
+long ee_ui_graph_draw_grid(void *graph,
+                           void *line,
+                           long result,
+                           unsigned long thickness,
+                           EeUiRect rect,
+                           bool grid,
+                           unsigned long divisions_x,
+                           unsigned long divisions_y,
+                           float zoom);
+
+/// `UIGraph::DrawGridText`.
+long ee_ui_graph_draw_grid_text(void *graph,
+                                EeUiRect rect,
+                                unsigned long divisions_x,
+                                unsigned long divisions_y,
+                                float zoom,
+                                EeUiGraphRange range);
+
+/// `UIGraph::DrawTextA` after the draw count's decrement.
+long ee_ui_graph_draw_texts(void *graph, bool title, bool x, bool y, bool grid);
+
+/// `UILineGraph::DrawPolygons` after `UIGraph::DrawPolygons` (`result`), over the copied graph's `count` series.
+long ee_ui_linegraph_draw_list(void *graph,
+                               long result,
+                               unsigned long count);
+
+/// `UILineGraph::DrawSeries` of `series` (`count` points), drawn with `line`.
+long ee_ui_linegraph_draw_series(void *graph,
+                                 void *line,
+                                 const void *series,
+                                 unsigned long count,
+                                 long series_min_x,
+                                 EeUiGraphRange copied,
+                                 EeUiGraphRange displayed,
+                                 EeUiRect rect);
+
+/// `OpenCandidateWindow`'s rectangle.
+EeUiRect ee_ui_ime_open_rect(EeUiRect screen,
+                             EeUiRect control,
+                             float width_ratio,
+                             float height_ratio);
+
+/// `SetCandidateList`'s page, lines and width.
+EeUiCandidateFit ee_ui_ime_candidate_list(void *list,
+                                          float height,
+                                          long font_height,
+                                          unsigned long selection,
+                                          unsigned long count,
+                                          unsigned long window_width,
+                                          float left);
+
+/// `DrawPolygons`' selection bar and border.
+EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long height);
+
+/// `DrawTextA`'s row of line `index`.
+EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
 /// `UITextLabel::ComputeTextLabelRect`.
 void ee_ui_label_compute_rect(void *label);
@@ -11054,6 +11774,15 @@ bool ee_ui_hotkey_fire_events(void *key);
 
 /// `UIForm::UpdateKeyboard` -> its result.
 long ee_ui_form_update_keyboard(void *form);
+
+/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
+void ee_ui_hotkey_set_event(void **slot, void *event);
+
+/// `UIHotKey::SetModifier(code, slot)`.
+void ee_ui_hotkey_set_modifier(void *key, unsigned long code, int slot);
+
+/// `UIHotKey::CreateHotKeys(file)` -> its result.
+long ee_ui_hotkey_create_hotkeys(void *file);
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 EeUiBorderLine ee_ui_border_line(EeUiRect r,
@@ -11492,6 +12221,18 @@ void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
 
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+uint64_t ee_units_store_checksum_flag1();
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+uint32_t ee_units_store_check_on_map(const uint32_t *ids,
+                                     const uint64_t *objects,
+                                     size_t count);
+
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
 ///
@@ -11584,6 +12325,30 @@ void ee_units_repair(void *player,
                      uint32_t target,
                      bool queued);
 
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+bool ee_units_keeps_citizen(uint32_t id);
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+void ee_units_build_wall(void *player,
+                         void *selection,
+                         int32_t technology,
+                         float start_x,
+                         float start_y,
+                         float end_x,
+                         float end_y);
+
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+void ee_units_unload_transport(void *player,
+                               void *selection,
+                               int64_t x,
+                               int64_t y);
+
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+void ee_units_dropoff_resource(void *player,
+                               void *selection,
+                               uint32_t dropoff);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -11668,6 +12433,30 @@ extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
 extern void ee_units_host_group_reset_paths(void *group);
+
+extern void ee_units_host_group_keep_citizens(void *group);
+
+extern void *ee_units_host_wall_plan(void *player,
+                                     int32_t technology,
+                                     float start_x,
+                                     float start_y,
+                                     float end_x,
+                                     float end_y,
+                                     size_t *count);
+
+extern void ee_units_host_wall_build(void *group, void *pieces);
+
+extern void ee_units_host_wall_release(void *pieces);
+
+extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
+
+extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
+
+extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
+
+extern uint8_t ee_units_host_goal_can_unload(void *goal);
+
+extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
@@ -13579,6 +14368,202 @@ int32_t ee_won_gui_split_drag(int32_t x,
                               int32_t sx,
                               int32_t sy,
                               int32_t *out_y);
+
+/// `StretchImageFilter::Filter`'s placement: the new image's size, then the pixel operations.
+///
+/// # Safety
+/// `f`, `out_width` and `out_height` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_filter(const EeWonStretchFilter *f,
+                                      int32_t *out_width,
+                                      int32_t *out_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_paint(bool skip_center,
+                                     int32_t left,
+                                     int32_t right,
+                                     int32_t top,
+                                     int32_t bottom,
+                                     int32_t width,
+                                     int32_t height,
+                                     EeWonDrawOp *out,
+                                     size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_center(int32_t width,
+                                      int32_t height,
+                                      int32_t center_width,
+                                      int32_t center_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_frame(const EeWonFrame *f, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_combo_frame(bool draw_frame,
+                                   bool button_in_frame,
+                                   bool button_visible,
+                                   int32_t button_width,
+                                   const EeWonFrame *f,
+                                   EeWonDrawOp *out,
+                                   size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_scroll_container(bool vert_visible,
+                                        bool horz_visible,
+                                        bool transparent,
+                                        bool has_corner,
+                                        int32_t vert_left,
+                                        int32_t vert_bottom,
+                                        const EeWonFrame *f,
+                                        EeWonDrawOp *out,
+                                        size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_background(const EeWonBackground *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button_text(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_simple_button(const EeWonSimpleButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_header_arrow(int32_t sort,
+                                    int32_t color,
+                                    bool has_text,
+                                    int32_t text_width,
+                                    int32_t left_text_pad,
+                                    int32_t width,
+                                    int32_t height,
+                                    bool pressed,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `pads` holds four ints (left, top, right, bottom); `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_label(int32_t width,
+                             int32_t height,
+                             const int32_t *pads,
+                             int32_t h_align,
+                             int32_t v_align,
+                             int32_t text_width,
+                             int32_t text_height,
+                             int32_t color,
+                             EeWonDrawOp *out,
+                             size_t cap);
+
+/// # Safety
+/// `breaks` holds `count` breaks; `m` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_wrapped_text(bool has_font,
+                                    int32_t length,
+                                    bool centered,
+                                    int32_t width,
+                                    int32_t font_height,
+                                    const EeWonLineBreak *breaks,
+                                    size_t count,
+                                    int32_t x,
+                                    int32_t y,
+                                    const EeWonTextMeasure *m,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `row_of` answers every index below `count` for `ctx`; `paint_width_out` is valid; `out` has room for `cap`
+/// operations (or is NULL).
+size_t ee_won_gui_draw_list(int32_t total_width,
+                            int32_t view_width,
+                            int32_t paint_width,
+                            size_t first,
+                            size_t count,
+                            int32_t offset,
+                            int32_t view_height,
+                            bool partial,
+                            EeWonRowOf row_of,
+                            const void *ctx,
+                            int32_t *paint_width_out,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
+/// # Safety
+/// As `ee_won_gui_draw_list`.
+size_t ee_won_gui_draw_text_lines(size_t first,
+                                  size_t count,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  bool partial,
+                                  EeWonRowOf row_of,
+                                  const void *ctx,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `columns` holds `count` widths; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_list(const int32_t *columns,
+                                  size_t count,
+                                  int32_t border,
+                                  int32_t total_width,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_row(const EeWonMultiRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_row(const EeWonTextRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_input_box(const EeWonInputPaint *b,
+                                 const EeWonTextMeasure *m,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `s` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_segment(const EeWonSegmentPaint *s,
+                               const EeWonTextMeasure *m,
+                               EeWonDrawOp *out,
+                               size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_image(int32_t area_sel_start,
+                                  int32_t area_sel_end,
+                                  int32_t abs_start,
+                                  int32_t abs_end,
+                                  int32_t x,
+                                  int32_t y,
+                                  int32_t width,
+                                  int32_t line_height,
+                                  uint32_t sel_background,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// `SelectionColor::GetForegroundColor`.
+uint32_t ee_won_gui_sel_foreground(uint32_t background,
+                                   uint32_t foreground,
+                                   int32_t mode,
+                                   uint32_t original);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
