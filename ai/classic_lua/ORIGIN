@@ -101,8 +101,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
-                other players' area hull test; HasEnemyNear counts the armed enemies seen within a region (9 tiles),
-                not every player's influence; BuildSettlementFor (the gather goal's storage search asks the AI for a
+                other players' area hull test; HasEnemyNear counts the armed enemies seen or remembered (ai.memory) in the
+                influence regions round the tile (up to 27 tiles), not every player's influence; BuildSettlementFor
+                (the gather goal's storage search asks the AI for a
                 settlement when the drop site is far: a hook a script cannot get) - the patch settlements of
                 forage_patches stand in. NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
                 CitizenLost's re-cost.
