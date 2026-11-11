@@ -984,6 +984,25 @@ constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 /// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
 constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
 
+/// `EEComplexUnit::mPhysicalModel.GetLocation()`'s x, y and z, as their float bits (`EEUnitStoreModel`'s setters)
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_X = 17;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Y = 18;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Z = 19;
+
+/// `EEComplexUnit::mHeight` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_HEIGHT = 20;
+
+/// `EEComplexUnit::mTimesUpdated`
+constexpr static const uint32_t EE_UNIT_FIELD_TIMES_UPDATED = 21;
+
+/// `EEComplexUnit::mActiveGroup != NULL`
+constexpr static const uint32_t EE_UNIT_FIELD_ACTIVE_GROUP = 22;
+
+/// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
+constexpr static const uint32_t EE_UNIT_FIELD_COMMAND = 23;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -4776,6 +4795,15 @@ struct EeUnitRecord {
   int64_t resource_amount;
   /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
   uint8_t on_map;
+  /// `EEComplexUnit::mActiveGroup != NULL`
+  uint8_t active_group;
+  /// the location's x, y, z and `mHeight` as float bits
+  uint32_t location[3];
+  uint32_t height;
+  /// `EEComplexUnit::mTimesUpdated` (an `unsigned long`)
+  int64_t times_updated;
+  /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
+  int64_t command;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -10918,6 +10946,17 @@ uint32_t ee_units_store_clear_player(uint64_t player);
 
 /// A holder's write (`EE_UNIT_FIELD_*`); ignored unless the record under `id` is `object`'s.
 bool ee_units_store_set(uint32_t id, uint64_t object, uint32_t field, int64_t value);
+
+/// The location's write (`EEUnitStoreModel`'s setters): x, y and z as float bits, in one call; ignored unless the
+/// record under `id` is `object`'s.
+bool ee_units_store_set_location(uint32_t id,
+                                 uint64_t object,
+                                 uint32_t x,
+                                 uint32_t y,
+                                 uint32_t z);
+
+/// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
+uint64_t ee_units_store_checksum_flag2();
 
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///

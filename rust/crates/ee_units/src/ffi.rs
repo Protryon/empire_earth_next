@@ -55,6 +55,23 @@ pub extern "C" fn ee_units_store_set(id: u32, object: u64, field: u32, value: i6
     with_store(|s| s.set(id, object, field, value))
 }
 
+/// The location's write (`EEUnitStoreModel`'s setters): x, y and z as float bits, in one call; ignored unless the
+/// record under `id` is `object`'s.
+#[no_mangle]
+pub extern "C" fn ee_units_store_set_location(id: u32, object: u64, x: u32, y: u32, z: u32) -> bool {
+    with_store(|s| {
+        s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_X, i64::from(x))
+            && s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_Y, i64::from(y))
+            && s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_Z, i64::from(z))
+    })
+}
+
+/// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
+#[no_mangle]
+pub extern "C" fn ee_units_store_checksum_flag2() -> u64 {
+    with_store(|s| s.checksum_flag2())
+}
+
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///
 /// # Safety

@@ -1595,7 +1595,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     std::deque<EEUnitGoal*> theGoals;
     fprintf(inFile, "\n");
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08lx  *************\n", this->GetComplexUnit()->mUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->GetComplexUnit()->mTimesUpdated);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->GetComplexUnit()->mTimesUpdated.Get());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Owner:              %2ld\n", this->mPlayer->mPlayerID);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4ld\n", this->GetUnitClass()->GetUnitType());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4ld\n", this->GetTileX());

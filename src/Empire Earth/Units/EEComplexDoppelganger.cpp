@@ -519,7 +519,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     }
     if (thePartsResult != 0)
         goto LoadFlags;
-    if ((theResult = inFile.Read(this->mHeight)) != 0
+    if ((theResult = EEUnitStoreRead(inFile, this->mHeight)) != 0
         || (theResult = inFile.Read(this->mVelocity)) != 0
         || (theResult = inFile.Read(this->mF220)) != 0
         || (theResult = inFile.Read(this->mF21C)) != 0
@@ -557,7 +557,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = inFile.Read(theValue)) != 0
         || (theResult = inFile.Read(this->mWeaponTagPoint)) != 0)
         goto LoadFlags;
-    inFile.Read(this->mTimesUpdated);
+    EEUnitStoreRead(inFile, this->mTimesUpdated);
 
 LoadFlags:
     if ((theResult = inFile.Read(this->mConversionStartTime)) != 0
@@ -1234,7 +1234,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
             goto SaveGoals;
         theResult = outFile.Write(this->mTurretAngles[q]);
     }
-    if (theResult != 0 || (theResult = outFile.Write(this->mHeight)) != 0
+    if (theResult != 0 || (theResult = outFile.Write(this->mHeight.Get())) != 0
         || (theResult = outFile.Write(this->mVelocity)) != 0 || (theResult = outFile.Write(this->mF220)) != 0
         || (theResult = outFile.Write(this->mF21C)) != 0 || (theResult = outFile.Write(this->mCurrentResearch)) != 0
         || (theResult = outFile.Write(this->mAnimation)) != 0 || (theResult = outFile.Write(this->mCurrentPhysicsAction)) != 0
@@ -1253,7 +1253,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = outFile.Write(this->mCollisionResolutionCount)) != 0 || (theResult = outFile.Write(this->mWakeTimer)) != 0
         || (theResult = outFile.Write(this->mTrailEffectTimer)) != 0 || (theResult = outFile.Write(this->mAmmunition)) != 0
         || (theResult = outFile.Write(this->mAnimationTime)) != 0 || (theResult = outFile.Write(theZero)) != 0
-        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated)) != 0
+        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated.Get())) != 0
         || (theResult = outFile.Write(this->mConversionStartTime)) != 0 || (theResult = outFile.Write(this->mCollisionState)) != 0
         || (theResult = outFile.Write(this->mIsDisabled)) != 0 || (theResult = outFile.Write(this->mIsDeletable)) != 0
         || (theResult = outFile.Write(this->mIsCommandable)) != 0 || (theResult = outFile.Write(this->mIsAnimationPaused)) != 0
