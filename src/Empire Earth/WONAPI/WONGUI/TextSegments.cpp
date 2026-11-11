@@ -11,7 +11,23 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "rust/ee_rust.h"
+// The wrap's breaks, the selected part and the character under a point are ee_won's guitext module
+// (rust/crates/ee_won/src/guitext.rs); this unit keeps the segments, the font (it measures every unit and the
+// rest of a wrapped text) and the paint.
 namespace WONAPI {
+struct TextSegmentMeasure { Font* mFont; const GUIString* mText; };
+static int32_t TextRestWidthOf(const void* inMeasure, int32_t inStart)
+{
+    const TextSegmentMeasure* aMeasure = static_cast<const TextSegmentMeasure*>(inMeasure);
+    return aMeasure->mFont->GetStringWidth(*aMeasure->mText, (unsigned short)inStart,
+                                           (unsigned short)(aMeasure->mText->length() - inStart));
+}
+static int32_t TextCharWidthOf(const void* inMeasure, int32_t inPos)
+{
+    const TextSegmentMeasure* aMeasure = static_cast<const TextSegmentMeasure*>(inMeasure);
+    return aMeasure->mFont->GetCharacterWidth((*aMeasure->mText)[inPos]);
+}
 // FUNCTION: WON 0x00710aa0
 // Moves a segment that does not fit onto a new line (unless its line is empty), indented by the wrap
 // indent
@@ -28,7 +44,8 @@ void TextSegmentBase::Wrap(TextArea *theTextArea, TextLine *theLine)
 // Appends a line break to the copied text when the selection spans this segment's line break
 void TextSegmentBase::GetSelText(TextArea *theTextArea, GUIString &theStr)
 {
-	if(this->mLineBreak && theTextArea->mSelStartChar<=this->mAbsStartChar && theTextArea->mSelEndChar>this->mAbsEndChar)
+	if(ee_won_gui_text_sel_break(false, this->mLineBreak, theTextArea->mSelStartChar, theTextArea->mSelEndChar,
+	                             this->mAbsStartChar, this->mAbsEndChar))
 		theStr.append("\r\n");
 }
 
@@ -46,23 +63,14 @@ void TextSegment::CalcDimensions()
 // its line break
 void TextSegment::GetSelText(TextArea *theTextArea, GUIString &theStr)
 {
-	int aSelStartChar = theTextArea->mSelStartChar;
-	int aSelEndChar = theTextArea->mSelEndChar;
-
-	if(this->mAbsStartChar > aSelStartChar)
-		aSelStartChar = this->mAbsStartChar;
-
-	if(this->mAbsEndChar < aSelEndChar)
-		aSelEndChar = this->mAbsEndChar;
-
-	if(aSelStartChar >= aSelEndChar)
+	int anOffset, aLength;
+	if(!ee_won_gui_text_sel_part(theTextArea->mSelStartChar, theTextArea->mSelEndChar, this->mAbsStartChar,
+	                             this->mAbsEndChar, &anOffset, &aLength))
 		return;
 
-	aSelStartChar -= this->mAbsStartChar;
-	aSelEndChar -= this->mAbsStartChar;
-
-	theStr.append(this->mText, aSelStartChar, aSelEndChar-aSelStartChar);
-	if(this->mLineBreak && theTextArea->mSelEndChar>this->mAbsEndChar)
+	theStr.append(this->mText, anOffset, aLength);
+	if(ee_won_gui_text_sel_break(true, this->mLineBreak, theTextArea->mSelStartChar, theTextArea->mSelEndChar,
+	                             this->mAbsStartChar, this->mAbsEndChar))
 		theStr.append("\r\n");
 }
 
@@ -73,81 +81,42 @@ void TextSegment::Wrap(TextArea *theTextArea, TextLine *theLine)
 {
 	this->mLine = NULL; // set mLine to NULL then reset it to aLine on the first line to which we add a segment piece
 
-	int aCurPos = 0;
 	GUIString &aStr = this->mText;
 	Font *aFM = this->mFont.get();
-	int aTextBoxWidth = theTextArea->mScrollArea.width; 
-	TextLine *aLine = theLine;
-
-	while(aCurPos < aStr.length())
+	int aLength = aStr.length();
+	// every unit measured once (the original measured the units its loop reached, again after a restart)
+	std::vector<int> aWidths(aLength);
+	for(int i = 0; i < aLength; i++)
+		aWidths[i] = aFM->GetCharacterWidth(aStr[i]);
+	TextSegmentMeasure aMeasure = { aFM, &aStr };
+	std::vector<EeWonTextWrapOp> anOps(3 * aLength + 8);
+	bool aLeft = theTextArea->mLineAlign==HorzAlign_Left;
+	size_t aCount = ee_won_gui_text_wrap(aStr.mData->mText, (uint16_t)aLength, sizeof(wchar_t),
+	                                     aLength ? &aWidths[0] : NULL, theTextArea->mScrollArea.width, theLine->mWidth,
+	                                     theLine->mSegmentList.empty(), aLeft, theTextArea->mWrapIndentSize,
+	                                     TextRestWidthOf, &aMeasure, &anOps[0], anOps.size());
+	if(aCount > anOps.size())
 	{
-		int aWidth = aLine->mWidth;
-		int aBreakWidth = aLine->mWidth;
-		int aStartPos = aCurPos;
-		int aBreakPos = aStartPos-1;
-		while(aCurPos < aStr.length())
+		anOps.resize(aCount);
+		aCount = ee_won_gui_text_wrap(aStr.mData->mText, (uint16_t)aLength, sizeof(wchar_t), &aWidths[0],
+		                              theTextArea->mScrollArea.width, theLine->mWidth, theLine->mSegmentList.empty(),
+		                              aLeft, theTextArea->mWrapIndentSize, TextRestWidthOf, &aMeasure, &anOps[0],
+		                              anOps.size());
+	}
+	TextLine *aLine = theLine;
+	for(size_t i = 0; i < aCount; i++)
+	{
+		const EeWonTextWrapOp &anOp = anOps[i];
+		if(anOp.kind == 1)
 		{
-			int aChar = aStr[aCurPos];
-			aWidth += aFM->GetCharacterWidth(aChar);
-			if(aChar==' ') 
-			{
-				aBreakPos = aCurPos;
-				aBreakWidth = aWidth;
-			}
-
-			if(aWidth > aTextBoxWidth)
-				break;
-
-			aCurPos++;
-		}
-
-		bool forceBreak = false;
-		if(aBreakPos < aStartPos)
-		{
-			if(aWidth < aTextBoxWidth)
-				aBreakPos = aStr.length(); 
-			else if(aLine->mSegmentList.empty()) // force the break in the middle of the word if we're at the beginning of the line
-			{
-				aBreakPos = aCurPos;
-				aBreakWidth = aTextBoxWidth;
-				if(aBreakPos==aStartPos)	// need at least one character per line
-					aBreakPos++;
-
-				forceBreak = true;
-			}
-			else	// otherwise try again on new line
-				aCurPos = 0;
-		}
-
-		if(aBreakPos >= aStartPos)
-		{
-			if(aBreakPos!=aStartPos)
-			{
-				theTextArea->AddSeg(new TextSegmentPiece(this, aStartPos, aBreakPos, aBreakWidth/*aTextBoxWidth-aLine->mWidth*/));
-				if(this->mLine==NULL)
-					this->mLine = aLine;
-			}
-
-			aCurPos = aBreakPos;
-			if(!forceBreak)	// Skip the space where we wrapped
-				aCurPos++;
-		}
-
-		if(aCurPos>=aStr.length())
-			break;
-
-		aLine = theTextArea->AddLine(this->mHeight, this->mAscent);
-		if(theTextArea->mLineAlign==HorzAlign_Left)
-			aLine->mWidth = theTextArea->mWrapIndentSize;
-
-		aWidth = aFM->GetStringWidth(aStr, aCurPos, aStr.length()-aCurPos);
-		if(!(aWidth <= aTextBoxWidth - aLine->mWidth))
+			aLine = theTextArea->AddLine(this->mHeight, this->mAscent);
+			if(aLeft)
+				aLine->mWidth = anOp.width;
 			continue;
-		theTextArea->AddSeg(new TextSegmentPiece(this, aCurPos, aStr.length(), aWidth));
+		}
+		theTextArea->AddSeg(new TextSegmentPiece(this, anOp.start, anOp.end, anOp.width));
 		if(this->mLine==NULL)
 			this->mLine = aLine;
-
-		break;
 	}
 }
 
@@ -164,9 +133,9 @@ void TextSegment::Paint(Graphics &g, TextArea *theTextArea, int theStartChar, in
 	if(theEndChar < aSelEndChar)
 		aSelEndChar = theEndChar;
 
-	g.SetColor(this->mColor);	
+	g.SetColor(this->mColor);
 	g.SetFont(this->mFont.get());
-	
+
 	bool fullSelection = aSelStartChar==theStartChar && aSelEndChar==theEndChar;
 	if(!fullSelection)
 		g.DrawString(this->mText, theStartChar, theEndChar - theStartChar, xpos, ypos);
@@ -195,21 +164,8 @@ void TextSegment::Paint(Graphics &g, TextArea *theTextArea)
 // character)
 int TextSegment::CharAt(int theWidth, int theStartChar, int theEndChar)
 {
-	int aPos = theStartChar;
-
-	int aWidth = 0;
-	int aCharWidth = 0;
-	while(aPos<theEndChar && aWidth<theWidth)
-	{
-		aCharWidth = this->mFont->GetCharacterWidth(this->mText[aPos]);
-		aWidth+=aCharWidth;
-		aPos++;
-	}
-
-	if(theWidth>=0 && theWidth<aWidth-aCharWidth/2)
-		aPos--;
-
-	return aPos + this->mAbsStartChar;	
+	TextSegmentMeasure aMeasure = { this->mFont.get(), &this->mText };
+	return ee_won_gui_text_char_at(theWidth, theStartChar, theEndChar, this->mAbsStartChar, TextCharWidthOf, &aMeasure);
 }
 
 // FUNCTION: WON 0x007113c0

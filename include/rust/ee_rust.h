@@ -1025,6 +1025,25 @@ constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
 /// A child a modal state does not block.
 constexpr static const uint32_t FLAG_MODAL_OK = 32768;
 
+/// The text flags (TextFlags in the C++).
+constexpr static const int32_t WORD_WRAP = 1;
+
+constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+
+constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+
+constexpr static const int32_t SCROLL_FULL_LINE = 16;
+
+constexpr static const int32_t DELAY_WORD_WRAP = 32;
+
+/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
+/// its last segment stands for the trimmed one.
+constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+
+constexpr static const uint32_t LINE_HAS_SEGS = 2;
+
+constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
 constexpr static const uint8_t JOIN_REPLY = 2;
@@ -4614,6 +4633,56 @@ struct EeWonScrollArea {
   int32_t view_y;
   int32_t view_width;
   int32_t view_height;
+};
+
+/// A line's vertical metrics (`TextLine`'s height, baseline and descent).
+struct EeWonTextLineM {
+  int32_t height;
+  int32_t baseline;
+  int32_t descent;
+};
+
+/// A line's place: its y and height.
+struct EeWonTextLineY {
+  int32_t y;
+  int32_t height;
+};
+
+/// A line's flags (`i` below the count), read from the C++ area.
+using EeWonLineFlagsOf = uint32_t(*)(const void *ctx, size_t i);
+
+/// A unit's width (`i` a position in the segment's text), read from the C++ font.
+using EeWonCharWidthOf = int32_t(*)(const void *ctx, int32_t i);
+
+/// The font's width of a text's units from `start` to its end, read from the C++ font.
+using EeWonRestWidthOf = int32_t(*)(const void *ctx, int32_t start);
+
+/// One step of a segment's wrap (`TextSegment::Wrap`): a piece of the text on the current line
+/// (`kind` 0: units [start, end), `width` wide), or a new line (`kind` 1: `width` its starting width, the wrap
+/// indent on a left-aligned area).
+struct EeWonTextWrapOp {
+  int32_t kind;
+  int32_t start;
+  int32_t end;
+  int32_t width;
+};
+
+/// One line of `AddFormatedText`: units [start, start + len), with a line break after it.
+struct EeWonTextPart {
+  int32_t start;
+  int32_t len;
+  bool line_break;
+};
+
+/// One step of `LobbyAppendFormattedText`: `kind` 0 appends units [a, a + b) to the pending text, 1 appends
+/// '<', 2 adds the pending text as a segment in the current colour and font and empties it, 3 a line break,
+/// 4 the colour becomes colour `a`, 5 the font becomes font `a` (when not NULL), 6 adds string `a` as a segment
+/// (when not NULL), 7 adds segment `a` (when not NULL), 8 adds the pending text as the last segment, breaking
+/// the line when `b` is 1.
+struct EeWonFormatOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
 };
 
 /// One line break: the line ends at `pos`, the next starts at `next`; the line is `width` wide.
@@ -12305,6 +12374,217 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// `add_seg_metrics` on the line and the total height in place.
+///
+/// # Safety
+/// `line` and `total_height` are writable.
+bool ee_won_gui_text_add_seg(EeWonTextLineM *line,
+                             int32_t seg_height,
+                             int32_t seg_ascent,
+                             int32_t *total_height);
+
+int32_t ee_won_gui_text_align_x(int32_t view_width, int32_t line_width, int32_t align);
+
+bool ee_won_gui_text_seg_fits(int32_t area_width,
+                              int32_t line_width,
+                              int32_t seg_width,
+                              int32_t view_width,
+                              bool word_wrap,
+                              bool been_visible);
+
+bool ee_won_gui_text_scroll_on_bottom(int32_t flags,
+                                      bool user_scrolled,
+                                      size_t count,
+                                      EeWonTextLineY last,
+                                      EeWonTextLineY prev,
+                                      int32_t offset,
+                                      int32_t view_height);
+
+bool ee_won_gui_text_delay_wrap(int32_t flags, int32_t chars);
+
+bool ee_won_gui_text_wrap_due(int32_t ticks, int32_t chars);
+
+/// `max_chars_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_chars_excess(int32_t max_chars, int32_t last_end);
+
+/// `max_chars_cut` over `count` segment ends.
+///
+/// # Safety
+/// `ends` holds `count` ints (or is NULL with 0).
+size_t ee_won_gui_text_chars_cut(const int32_t *ends, size_t count, int32_t excess);
+
+/// `max_lines_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_lines_excess(int32_t max_lines, int32_t num_lines);
+
+/// `max_lines_cut` over `count` segments' line-break flags.
+///
+/// # Safety
+/// `breaks` holds `count` bools (or is NULL with 0).
+size_t ee_won_gui_text_lines_cut(const bool *breaks, size_t count, int32_t excess);
+
+/// `remove_lines_stop` over `count` lines whose flags `flags_of(ctx, i)` gives.
+size_t ee_won_gui_text_remove_stop(size_t count, EeWonLineFlagsOf flags_of, const void *ctx);
+
+/// `renumber` over `lines` lines and `segs` segments in place; the totals and the line count into `out` (3
+/// ints).
+///
+/// # Safety
+/// Each array holds its count of entries (or is NULL with 0); the scalars and `out` are writable.
+void ee_won_gui_text_renumber(const int32_t *line_widths,
+                              const int32_t *line_heights,
+                              int32_t *line_ys,
+                              size_t lines,
+                              int32_t *seg_starts,
+                              int32_t *seg_ends,
+                              const bool *seg_breaks,
+                              size_t segs,
+                              int32_t *sel_start,
+                              int32_t *sel_end,
+                              int32_t *offset,
+                              int32_t *out);
+
+/// `find_clamp` in place.
+///
+/// # Safety
+/// `x` and `y` are writable.
+void ee_won_gui_text_find_clamp(int32_t *x, int32_t *y, int32_t total_width, int32_t total_height);
+
+bool ee_won_gui_text_find_cached(int32_t x,
+                                 int32_t y,
+                                 int32_t line_x,
+                                 int32_t line_y,
+                                 int32_t line_height,
+                                 int32_t seg_x,
+                                 int32_t seg_width);
+
+/// `find_pick` over the line's `count` segments: the index, -1 for no segment, -2 below the line.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int64_t ee_won_gui_text_find_pick(int32_t x,
+                                  int32_t y,
+                                  int32_t line_y,
+                                  int32_t line_height,
+                                  const int32_t *xs,
+                                  const int32_t *widths,
+                                  size_t count,
+                                  bool lenient);
+
+int32_t ee_won_gui_text_char_at(int32_t width,
+                                int32_t start,
+                                int32_t end,
+                                int32_t abs_start,
+                                EeWonCharWidthOf char_width,
+                                const void *ctx);
+
+int32_t ee_won_gui_text_base_char_at(int32_t x,
+                                     int32_t seg_x,
+                                     int32_t seg_width,
+                                     int32_t abs_start,
+                                     int32_t abs_end);
+
+/// `check_sel` in place.
+///
+/// # Safety
+/// The three are writable.
+void ee_won_gui_text_check_sel(int32_t *start,
+                               int32_t *end,
+                               bool *backwards,
+                               int32_t at,
+                               bool new_start);
+
+/// `drag_scroll`: false while inside, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_drag_scroll(int32_t x,
+                                 int32_t y,
+                                 int32_t width,
+                                 int32_t height,
+                                 bool full_line,
+                                 int32_t down,
+                                 int32_t up,
+                                 int32_t *vert,
+                                 int32_t *horz);
+
+/// `key_scroll`: false for another key, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_key_scroll(int32_t key,
+                                int32_t *vert,
+                                int32_t *horz,
+                                int32_t down,
+                                int32_t up,
+                                int32_t view_height);
+
+/// `sel_part`: false when nothing is selected, else true with the offset and length in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_text_sel_part(int32_t sel_start,
+                              int32_t sel_end,
+                              int32_t abs_start,
+                              int32_t abs_end,
+                              int32_t *out_offset,
+                              int32_t *out_len);
+
+bool ee_won_gui_text_sel_break(bool text,
+                               bool line_break,
+                               int32_t sel_start,
+                               int32_t sel_end,
+                               int32_t abs_start,
+                               int32_t abs_end);
+
+int32_t ee_won_gui_text_anchor_line(int32_t line, size_t count);
+
+/// `wrap_segment` over a `GUIString`'s units with their widths: the first `room` steps into `out` (`3 * len + 8`
+/// is enough), their count returned (all of them, even past the room).
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes and `widths` `len` ints (or both are NULL with 0); `out` has room
+/// for `room` steps.
+size_t ee_won_gui_text_wrap(const void *text,
+                            uint16_t len,
+                            uint32_t wchar_size,
+                            const int32_t *widths,
+                            int32_t box_width,
+                            int32_t line_width,
+                            bool line_empty,
+                            bool align_left,
+                            int32_t indent,
+                            EeWonRestWidthOf rest_width,
+                            const void *ctx,
+                            EeWonTextWrapOp *out,
+                            size_t room);
+
+/// `split_lines` over a `GUIString`'s units: the first `room` parts into `out` (`len` is enough), their count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` parts.
+size_t ee_won_gui_text_split(const void *text,
+                             uint16_t len,
+                             uint32_t wchar_size,
+                             bool line_break,
+                             EeWonTextPart *out,
+                             size_t room);
+
+/// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
+/// count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` steps.
+size_t ee_won_gui_text_format(const void *text,
+                              uint16_t len,
+                              uint32_t wchar_size,
+                              int32_t num_strings,
+                              int32_t num_colors,
+                              int32_t num_fonts,
+                              int32_t num_segments,
+                              bool line_break,
+                              EeWonFormatOp *out,
+                              size_t room);
 
 /// `wrap` over a `GUIString`'s units with their widths: the first `room` breaks into `out` (`2 * len + 1` is
 /// enough: a unit breaks at most twice, once inside a word and once more when it alone is wider than the line),

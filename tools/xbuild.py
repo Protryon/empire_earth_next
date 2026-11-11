@@ -426,6 +426,10 @@ WON_TESTS = {
     "won_guifocus_test": [],
     # WONGUI's word wrap (WrappedText's breaks and rewrap rule), the original's loop against ee_won's guiwrap module
     "won_guiwrap_test": [],
+    # WONGUI's rich text area (the chat: segments on lines, the wrap, limits, renumbering, the segment and
+    # character under a point, the selection, scrolls, the text splits and the lobby's format commands), the
+    # original's statements against ee_won's guitext module
+    "won_guitext_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
