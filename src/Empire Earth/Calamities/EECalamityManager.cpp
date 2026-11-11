@@ -484,7 +484,7 @@ void EECalamityManager::Update(float inElapsedTime)
     std::vector<EECalamity*>::iterator theIterator = this->mCalamities.begin();
     while (theIterator != this->mCalamities.end()) {
         float theBefore = (*theIterator)->mTimeAlive;
-        long theUpdate = (*theIterator)->mClass->Update(*theIterator, inElapsedTime);
+        long theUpdate = EECalamityCaptureUpdate((*theIterator)->mClass, *theIterator, inElapsedTime);   // CALW (TEST ONLY)
         if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
             EESimCaptureRecord theRecord(EECaptureTag("CALU"));
             theRecord.I32((*theIterator)->mClass->mClassEnum);

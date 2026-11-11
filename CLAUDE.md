@@ -25,6 +25,7 @@ python -I tools/rust_build.py gate                                 # the Rust li
 - A full build takes about 2 minutes. A link must report `0 unresolved, 0 duplicates`.
 - Sources are staged under `C:\EEX\` before compiling. `EE_ORIG_SRC_ROOT` moves the staging root. Use a separate
   root per worktree when two builds run at once.
+- Builds reuse objects from a content-addressed cache shared by all worktrees (`tools/objcache.py`, `C:\EEX-objcache-store`; `EE_OBJ_CACHE=off` disables it).
 - New units without an original address go into `units.EXTRA_UNITS` (`tools/units.py`, per module).
 - Linux/macOS: `python -I tools/fetch_posix.py sdl3 fonts`, then `python -I tools/xbuild.py game -j 8`.
   - `xbuild.py test` runs the platform tests (`tests/platform`).

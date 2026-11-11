@@ -18,6 +18,10 @@ class EECPResourceCenter;                   // ee/EECPCivilizationManager.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
+// port (0.269): the managers' timers a save holds after the computer player's running values (EESaveHasManagerTimers):
+// the attack commander's drop time, the exploration time, the personnel's update time, the builder check, the raid check
+const long kEECPManagerTimers = 5;
+
 class EEComputerPlayer : public EEPlayer {
 public:
     static const UString sData;             // 0x4e5c70 "EEComputerPlayer-Data" (chain 0x2ce2e; guard 0x4e5c68 bit 1) (provisional name)
@@ -91,6 +95,8 @@ public:
     void SetEnableTime(long inTime);        // 0x3d492: mNextEnableTime = mEnableInterval seconds after inTime, mIsEnableTimeSet (provisional name)
     void SetNextExpansionTime(unsigned long inTime);  // 0x3d61a: mNextExpansionTime = inTime + the per-difficulty seconds (provisional name)
     void SetActive(bool inActive);          // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
+    void GetManagerTimers(unsigned long* outTimers) const;   // port (0.269): kEECPManagerTimers values, the save's order
+    void SetManagerTimers(const unsigned long* inTimers);
     void SetCitizenPercentage(float inValue);  // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
     void SetDMAttackFrequencyModifier(float inValue);  // 0x3ec9d (mDMAttackFrequencyModifierEasy/mDMAttackFrequencyModifierMedium/mDMAttackFrequencyModifierHard by difficulty) (provisional name)
     void SetDMInitialAttackModifier(float inValue);  // 0x3ecd6 (mDMInitialAttackModifierEasy/mDMInitialAttackModifierMedium/mDMInitialAttackModifierHard) (provisional name)

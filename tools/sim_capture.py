@@ -47,6 +47,10 @@ CALC/CALS/CALU calamities, TSWP the tech trees' sweep every five game minutes) a
 computer players stay in the first epochs and never cast a calamity, so --profile late and space play other games
 (later start epochs, the computer players' cheats, more players) and --profile calamity the oracle's game with every
 calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_<profile>.txt.
+CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
+calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
+(ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
+the C++ before the calamity updates, CanCastAt, ResearchToEpoch and the effects' unit walks moved (R5b.2, round 2).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
 bytes it came from, the bytes it exports again, its members as the import left them), NMSW the same for a sweep of
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE

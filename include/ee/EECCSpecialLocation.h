@@ -6,6 +6,9 @@
 #ifndef EE_EECCSPECIALLOCATION_H
 #define EE_EECCSPECIALLOCATION_H
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCSpecialLocation : public EELocationCalamityClass {
 public:
     EECCSpecialLocation();                  // 0xb338d
@@ -15,6 +18,8 @@ public:
     virtual void Initialize(EECalamityData* inData);             // +0x20 (ICF-folded 0xafea3)
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb33c6 (the move; then over)
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb3468
     // +0x50, new here, 0xb3443: EECalamityClass::CanCastAt with an area-effect refusal (2) counting as fine
     virtual long CanCastIgnoringAreaEffects(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,

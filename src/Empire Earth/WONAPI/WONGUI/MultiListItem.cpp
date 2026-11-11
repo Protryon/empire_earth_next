@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // FUNCTION: WON 0x7026e0
 // Sizes every cell; the row is as tall as its tallest cell and as wide as all columns together
@@ -86,26 +87,29 @@ void MultiListItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
     MultiListArea* anArea=static_cast<MultiListArea*>(inList);
     int aColumn=anArea->mColumnPaintContext;
-    if(aColumn<0 && this->mSelected) {
-        if(anArea->ListFlagSet(0x10)) {
-            inGraphics.SetColor(anArea->GetSelColor().GetBackgroundColor(inGraphics));
-            inGraphics.FillRect(0,0,anArea->mTotalColumnWidth,this->mHeight);
-        }
-        return;
-    }
-    if(static_cast<unsigned int>(aColumn)>=this->mItems.size()) return;
-    ListItem* anItem=this->mItems[aColumn].get();
-    if(anItem==NULL) return;
-    anItem->mHeight=this->mHeight;
-    if(this->mSelected && (anArea->ListFlagSet(0x10) || aColumn==0)) anItem->mSelected=this->mSelected; else anItem->mSelected=false;
-    unsigned char anAlign=anArea->mColumnInfoVector[aColumn].mHAlign;
-    int anOffset=0;
-    if(anAlign==1) anOffset=(anArea->mPaintWidth-anItem->mWidth)/2;
-    else if(anAlign==2) anOffset=anArea->mPaintWidth-anItem->mWidth;
-    if(anOffset<0) anOffset=0;
-    inGraphics.Translate(anOffset,0);
-    anItem->Paint(inGraphics,inList);
-    inGraphics.Translate(-anOffset,0);
+    // the selection bar in the all-columns pass, else the column's cell at its alignment (guidraw.rs multi_row);
+    // the cell is read only where the column is one of the row's
+    ListItem* anItem=static_cast<unsigned int>(aColumn)<this->mItems.size() ? this->mItems[aColumn].get() : NULL;
+    EeWonMultiRowPaint r;
+    r.column=aColumn;
+    r.selected=this->mSelected;
+    r.full_row_select=anArea->ListFlagSet(0x10);
+    r.has_cell=anItem!=NULL;
+    r.cell_count=(uint32_t)this->mItems.size();
+    r.selection_color=(uint32_t)anArea->GetSelColor().GetBackgroundColor(inGraphics);
+    r.total_width=anArea->mTotalColumnWidth;
+    r.height=this->mHeight;
+    r.align=anItem!=NULL ? anArea->mColumnInfoVector[aColumn].mHAlign : 0;
+    r.paint_width=anArea->mPaintWidth;
+    r.cell_width=anItem!=NULL ? anItem->mWidth : 0;
+    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_multi_row(&r,o,n); });
+    WONDrawRun(inGraphics,anOps,WONDrawSlots(),[&](const EeWonDrawOp& o) {
+        if(o.a==0) {
+            anItem->mHeight=o.b;
+            anItem->mSelected=o.c!=0;
+        } else
+            anItem->Paint(inGraphics,inList);
+    });
 }
 // FUNCTION: WON 0x702650
 // Gives each cell its column's viewport, or detaches them all when the viewport is NULL

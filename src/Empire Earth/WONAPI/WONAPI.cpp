@@ -174,7 +174,7 @@ void WONAPICore::PumpThread::ThreadFunc()
     WONAPICore* api=WONAPICore::GetInstance();
     while(true) {
         api->Pump(20);
-        if(this->mStopped) return;
+        if(this->IsStopped()) return;
     }
 }
 }

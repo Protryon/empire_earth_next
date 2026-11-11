@@ -397,8 +397,8 @@ GUIString LobbyPersistentData::DecryptString(const uint8_t* inData, size_t inLen
     WriteBuffer storage(0, true);
     storage.Reserve(inLength); // grows the capacity only; the length stays 0
     if (inLength != 0)
-        memcpy(storage.mData, inData, inLength);
-    ByteBufferPtr decrypted = this->mEncryptKey.Decrypt(storage.mData, (int)inLength);
+        memcpy(storage.data(), inData, inLength);
+    ByteBufferPtr decrypted = this->mEncryptKey.Decrypt(storage.data(), (int)inLength);
     if (decrypted.get() == NULL)
         return GUIString("");
     ReadBuffer decoded(decrypted->data(), decrypted->length());
@@ -422,7 +422,7 @@ ByteBufferPtr LobbyPersistentData::EncryptString(const GUIString& inText)
     WriteBuffer storage(0, true);
     std::wstring text = (std::wstring)inText;
     storage.AppendWString(text, 2);
-    return this->mEncryptKey.Encrypt(storage.mData, storage.mLength);
+    return this->mEncryptKey.Encrypt(storage.data(), storage.length());
 }
 // the user file's events applied as the original assigned them
 struct PersistUserLoad {

@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // ListItem's out-of-line members precede ListArea in the original object: VC6 sees the ctor's body before
 // `new ListItem` in ListArea::ListArea and drops the delete-on-throw guard (0x6fa570).
@@ -297,22 +298,27 @@ void ListArea::AdjustPosition(bool scrollbar)
 // FUNCTION: WON 0x006faef0
 // Handles a size change of the list box and updates its scroll range
 void ListArea::Virtual08() { ScrollArea::Virtual08();this->AdjustPosition(false); }
+// an item's top and height for the draw plan
+static EeWonRowPlace ListItemPlaceOf(const void* ctx,size_t index)
+{
+    const std::vector<SmartPtr<ListItem> >& items=*(const std::vector<SmartPtr<ListItem> >*)ctx;
+    EeWonRowPlace r;
+    r.x=0;
+    r.top=items[index]->mTop;
+    r.height=items[index]->mHeight;
+    return r;
+}
 // FUNCTION: WON 0x006fafb0
 // Draws the visible items from the top line down, at least as wide as the view
 void ListArea::ScrollPaint(Graphics& g)
 {
-    std::vector<SmartPtr<ListItem> >::iterator i=this->mItems.begin()+this->mTopLineVectorPos;
-    int width=this->mTotalWidth;
-    if(this->mScrollArea.width>width) width=this->mScrollArea.width;
-    if(this->mPaintWidth==-1) this->mPaintWidth=width;
-    while(i!=this->mItems.end()) {
-        ListItem* item=i->get();
-        if(!this->IsItemVisible(item)) break;
-        g.Translate(0,item->mTop);
-        item->Paint(g,this);
-        g.Translate(0,-item->mTop);
-        ++i;
-    }
+    // the paint width, then each visible item from the top line, translated to its top (guidraw.rs list_paint)
+    int paintWidth=this->mPaintWidth;
+    WONDrawOps ops([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_list(this->mTotalWidth,this->mScrollArea.width,
+        this->mPaintWidth,(size_t)this->mTopLineVectorPos,this->mItems.size(),this->mVertOffset,this->mScrollArea.height,
+        this->ListFlagSet(0x80),ListItemPlaceOf,&this->mItems,&paintWidth,o,n); });
+    this->mPaintWidth=paintWidth;
+    WONDrawRun(g,ops,WONDrawSlots(),[&](const EeWonDrawOp& o) { this->mItems[o.b]->Paint(g,this); });
     this->mPaintWidth=-1;
 }
 // FUNCTION: WON 0x006fb060

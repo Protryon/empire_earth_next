@@ -17,7 +17,7 @@
 #include "lle/UIEvent.h"
 #include "lle/UIHotKey.h"
 
-// One hot key record of the UI database (0x7c bytes) (provisional names)
+// One hot key record of the UI database (0x7c bytes) (provisional names; read in Rust: ee_ui hotkey.rs DbHotKey)
 struct UIDbDataHotKeys {
     uint32_t mUnused;                       // +0x00
     int32_t mID;                            // +0x04 negative: no hot key
@@ -48,42 +48,7 @@ unsigned long UIHotKey::sPressedPollAmount;
 // Reads every hot key record from the UI database file into the shared table (NULL for unused records)
 long UIHotKey::CreateHotKeys(FSFileSpec& inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult;
-    inFile.Open(kFileAccessRead);
-    theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            UIDbDataHotKeys theData;
-            UIHotKey* theHotKey;
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (theData.mID >= 0) {
-                theHotKey = new UIHotKey;
-                if (theData.mModifiers[0] != kKeyNone) {
-                    gISKeyboard->GetEntity(theData.mModifiers[0], theHotKey->mModifiers[0]);
-                    theHotKey->mModifierState |= ISKeyboard::ComputeModifierState(theData.mModifiers[0]);
-                } else
-                    theHotKey->mModifiers[0] = NULL;
-                if (theData.mModifiers[1] != kKeyNone) {
-                    gISKeyboard->GetEntity(theData.mModifiers[1], theHotKey->mModifiers[1]);
-                    theHotKey->mModifierState |= ISKeyboard::ComputeModifierState(theData.mModifiers[1]);
-                } else
-                    theHotKey->mModifiers[1] = NULL;
-                if (theData.mModifiers[2] != kKeyNone) {
-                    gISKeyboard->GetEntity(theData.mModifiers[2], theHotKey->mModifiers[2]);
-                    theHotKey->mModifierState |= ISKeyboard::ComputeModifierState(theData.mModifiers[2]);
-                } else
-                    theHotKey->mModifiers[2] = NULL;
-                theResult = gISKeyboard->GetEntity(theData.mKey, theHotKey->mKey);
-                theHotKey->CalculateKeyCount();
-            } else
-                theHotKey = NULL;
-            UIHotKey::sHotKey.push_back(theHotKey);
-        }
-    }
-    inFile.Close();
-    return theResult;
+    return ee_ui_hotkey_create_hotkeys(&inFile);
 }
 
 // FUNCTION: LLE 0x1007710d
@@ -123,69 +88,35 @@ void UIHotKey::GetHotKeyName(UWideString& outName)
 // Replaces the double-press event, releasing the old one and initializing the new one
 void UIHotKey::SetDoublePressedEvent(UIEvent* inEvent)
 {
-    if (this->mDoublePressedEvent) {
-        this->mDoublePressedEvent->Uninitialize();
-        this->mDoublePressedEvent->Dereference();
-    }
-    this->mDoublePressedEvent = inEvent;
-    if (this->mDoublePressedEvent) {
-        this->mDoublePressedEvent->Reference();
-        this->mDoublePressedEvent->Initialize();
-    }
+    ee_ui_hotkey_set_event(reinterpret_cast<void**>(&this->mDoublePressedEvent), inEvent);
 }
 
 // FUNCTION: LLE 0x100772f0
 // Replaces the just-pressed event, releasing the old one and initializing the new one
 void UIHotKey::SetJustPressedEvent(UIEvent* inEvent)
 {
-    if (this->mJustPressedEvent) {
-        this->mJustPressedEvent->Uninitialize();
-        this->mJustPressedEvent->Dereference();
-    }
-    this->mJustPressedEvent = inEvent;
-    if (this->mJustPressedEvent) {
-        this->mJustPressedEvent->Reference();
-        this->mJustPressedEvent->Initialize();
-    }
+    ee_ui_hotkey_set_event(reinterpret_cast<void**>(&this->mJustPressedEvent), inEvent);
 }
 
 // FUNCTION: LLE 0x10077321
 // Replaces the just-released event, releasing the old one and initializing the new one
 void UIHotKey::SetJustUnpressedEvent(UIEvent* inEvent)
 {
-    if (this->mJustUnpressedEvent) {
-        this->mJustUnpressedEvent->Uninitialize();
-        this->mJustUnpressedEvent->Dereference();
-    }
-    this->mJustUnpressedEvent = inEvent;
-    if (this->mJustUnpressedEvent) {
-        this->mJustUnpressedEvent->Reference();
-        this->mJustUnpressedEvent->Initialize();
-    }
+    ee_ui_hotkey_set_event(reinterpret_cast<void**>(&this->mJustUnpressedEvent), inEvent);
 }
 
 // FUNCTION: LLE 0x10077352
 // Replaces the held-down event, releasing the old one and initializing the new one
 void UIHotKey::SetPressedEvent(UIEvent* inEvent)
 {
-    if (this->mPressedEvent) {
-        this->mPressedEvent->Uninitialize();
-        this->mPressedEvent->Dereference();
-    }
-    this->mPressedEvent = inEvent;
-    if (this->mPressedEvent) {
-        this->mPressedEvent->Reference();
-        this->mPressedEvent->Initialize();
-    }
+    ee_ui_hotkey_set_event(reinterpret_cast<void**>(&this->mPressedEvent), inEvent);
 }
 
 // FUNCTION: LLE 0x10077383
 // Sets one modifier slot to a key and adds it to the required modifier state
 void UIHotKey::SetModifier(unsigned long inKey, unsigned char inIndex)
 {
-    this->mModifierState |= ISKeyboard::ComputeModifierState(inKey);
-    gISKeyboard->GetEntity(inKey, this->mModifiers[inIndex]);
-    this->CalculateKeyCount();
+    ee_ui_hotkey_set_modifier(this, inKey, inIndex);
 }
 
 // The Rust FireEvents' questions about the hot key, its keys and events (ee_ui hotkey.rs, docs/RUST_PLAN.md R6)
@@ -237,6 +168,15 @@ struct UIHotKeyRust {
         }
     }
     static void Process(void* inKey, int inEvent) { Event(inKey, inEvent)->ProcessEvent(Key(inKey)->mForm, Key(inKey)); }
+    static void CountKeys(void* inKey) { Key(inKey)->CalculateKeyCount(); }
+    static long GetEntity(void* inKey, unsigned long inCode, int inMember)
+    {
+        UIHotKey* theKey = Key(inKey);
+        return gISKeyboard->GetEntity(inCode, inMember == 3 ? theKey->mKey : theKey->mModifiers[inMember]);
+    }
+    static unsigned long* State(void* inKey) { return &Key(inKey)->mModifierState; }
+    static void ClearModifier(void* inKey, int inSlot) { Key(inKey)->mModifiers[inSlot] = NULL; }
+    static std::vector<UIHotKey*>& sHotKeys() { return UIHotKey::sHotKey; }
 };
 
 extern "C" unsigned long ee_uicpp_hotkey_value(void* inKey, int inWhich) { return UIHotKeyRust::Value(inKey, inWhich); }
@@ -244,6 +184,37 @@ extern "C" long ee_uicpp_hotkey_modifier_value(void* inKey, int inIndex) { retur
 extern "C" bool ee_uicpp_hotkey_has_event(void* inKey, int inEvent) { return UIHotKeyRust::Event(inKey, inEvent) != NULL; }
 extern "C" bool ee_uicpp_hotkey_key_test(void* inKey, int inEvent) { return UIHotKeyRust::KeyTest(inKey, inEvent); }
 extern "C" void ee_uicpp_hotkey_process(void* inKey, int inEvent) { UIHotKeyRust::Process(inKey, inEvent); }
+
+// The Rust setters' and CreateHotKeys' calls (ee_ui hotkey.rs): the events, the keyboard's entities, the members
+extern "C" void ee_uicpp_hotkey_event_call(void* inEvent, int inCall)
+{
+    UIEvent* theEvent = static_cast<UIEvent*>(inEvent);
+    switch (inCall) {
+    case 0:
+        theEvent->Uninitialize();
+        break;
+    case 1:
+        theEvent->Dereference();
+        break;
+    case 2:
+        theEvent->Reference();
+        break;
+    default:
+        theEvent->Initialize();
+        break;
+    }
+}
+extern "C" long ee_uicpp_hotkey_get_entity(void* inKey, unsigned long inCode, int inMember)
+{
+    return UIHotKeyRust::GetEntity(inKey, inCode, inMember);
+}
+extern "C" unsigned long ee_uicpp_hotkey_modifier_state(unsigned long inCode) { return ISKeyboard::ComputeModifierState(inCode); }
+extern "C" unsigned long ee_uicpp_hotkey_state(void* inKey) { return *UIHotKeyRust::State(inKey); }
+extern "C" void ee_uicpp_hotkey_set_state(void* inKey, unsigned long inState) { *UIHotKeyRust::State(inKey) = inState; }
+extern "C" void ee_uicpp_hotkey_clear_modifier(void* inKey, int inSlot) { UIHotKeyRust::ClearModifier(inKey, inSlot); }
+extern "C" void ee_uicpp_hotkey_count_keys(void* inKey) { UIHotKeyRust::CountKeys(inKey); }
+extern "C" void* ee_uicpp_hotkey_create() { return new UIHotKey; }
+extern "C" void ee_uicpp_hotkey_push(void* inKey) { UIHotKeyRust::sHotKeys().push_back(static_cast<UIHotKey*>(inKey)); }
 
 // FUNCTION: LLE 0x100773b6
 // Fires the first matching event (double press, press, held, release) when enabled and the modifiers are down;

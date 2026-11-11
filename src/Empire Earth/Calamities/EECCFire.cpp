@@ -14,6 +14,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -150,13 +151,12 @@ void EECCFire::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x4b10f4
-// Updates the fire's sound and ages it with its contagion helper; returns the time-alive result
+// Updates the fire's sound and ages it with its contagion helper; returns the time-alive result (Rust)
 long EECCFire::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    return EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, theCalamityHelperID);
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b113b

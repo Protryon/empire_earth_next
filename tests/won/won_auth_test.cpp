@@ -140,7 +140,7 @@ struct OrigContext {
     void AppendLoginSecrets(WriteBuffer& output)
     {
         SecretList::iterator next=this->mSecretList.begin();
-        unsigned long countPosition=output.mLength;
+        unsigned long countPosition=output.length();
         unsigned char count=0;
         output.SkipBytes(1);
         while(next!=this->mSecretList.end() && count<256) {
@@ -188,7 +188,7 @@ struct OrigContext {
     void AppendHashes(WriteBuffer& output,const RawBuffer& challenge)
     {
         int count=0;
-        unsigned long countPosition=output.mLength;
+        unsigned long countPosition=output.length();
         output.SkipBytes(1);
         std::map<std::wstring,OrigCommunityData>::iterator next=this->mCommunityMap.begin();
         while(next!=this->mCommunityMap.end()) {

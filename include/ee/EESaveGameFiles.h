@@ -120,6 +120,25 @@ inline bool EESaveHasTownAreas(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 268;
 }
+// port: from 0.269 a save holds the computer players' manager timers the original kept out of it (the attack
+// commander's next drop of spent groups, the next exploration, the personnel's next update, the next builder and raid
+// checks; EEComputerPlayer::GetManagerTimers): a load started them at 0
+inline bool EESaveHasManagerTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 269;
+}
+// port: from 0.270 a save holds the order of each player's unit list (EEPWorldHelper): the load inserted the units by
+// hash bucket index, where the running list holds the buckets in the order they last filled
+inline bool EESaveHasPlayerUnitOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 270;
+}
+// port: from 0.271 a save holds each computer player's intelligence files (EECPIntelligence::SaveFiles): a load made
+// them again from the world at their first use, where the running game's files held what they saw up to 30 s before
+inline bool EESaveHasIntelligence(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 271;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;

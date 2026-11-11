@@ -26,12 +26,12 @@ static void AppendLineBytes(void* inBuffer, const uint8_t* inBytes, size_t inLen
 // a NUL) as the message and returns success, WS_TimedOut when time runs out, or the socket error
 WONStatus RecvCRMsgOp::Continue()
 {
-    int32_t aLast=this->mBuffer.mLength>0
-        ? static_cast<unsigned char>(this->mBuffer.mData[this->mBuffer.mLength-1]) : -1;
+    int32_t aLast=this->mBuffer.length()>0
+        ? static_cast<unsigned char>(this->mBuffer.data()[this->mBuffer.length()-1]) : -1;
     WONStatus aStatus=ee_won_op_recv_line(&this->mSocket->mCore,this->mSocket->mDataCrit.mCrit,aLast,
                                           this->GetTiming(),AppendLineBytes,&this->mBuffer);
     if (aStatus==WS_Success) {
-        this->mBuffer.data()[this->mBuffer.mLength-2]=0;
+        this->mBuffer.data()[this->mBuffer.length()-2]=0;
         this->mBuffer.SetSize(this->mBuffer.length()-1);
         this->mMessage=this->mBuffer.ToByteBuffer(true);
     }

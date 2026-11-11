@@ -635,10 +635,10 @@ void WONSoundThread::StopSounds()
 ///////////////////////////////////////////////////////////////////////////////
 void WONSoundThread::ThreadFunc()
 {
-	while(!this->mStopped)
+	while(!this->IsStopped())
 	{
-		this->mSignalEvent.WaitFor(50);
-		if(this->mStopped)
+		this->WaitForSignal(50);
+		if(this->IsStopped())
 			break;
 
 		this->PlaySounds();
@@ -647,7 +647,7 @@ void WONSoundThread::ThreadFunc()
 	this->StopSounds();
 	while(!this->mBusyChannels.empty())
 	{
-		this->mSignalEvent.WaitFor(50);
+		this->WaitForSignal(50);
 		this->PlaySounds();
 	}
 }

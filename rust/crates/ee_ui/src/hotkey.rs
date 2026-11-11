@@ -190,5 +190,153 @@ pub fn update_keyboard(h: &mut impl KeyboardHost) -> c_long {
     result
 }
 
+/// A `UIEvent*`, opaque.
+pub type Event = *mut c_void;
+
+/// The calls a hot key's event setters make on an event.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EventCall {
+    /// `Uninitialize`.
+    Uninitialize = 0,
+    /// `Dereference` (the event deletes itself at 0).
+    Dereference = 1,
+    /// `Reference`.
+    Reference = 2,
+    /// `Initialize`.
+    Initialize = 3,
+}
+
+/// One of a hot key's four event members and the calls on its events.
+pub trait EventSlotHost {
+    fn get(&self) -> Event;
+    fn set(&mut self, e: Event);
+    fn call(&mut self, e: Event, c: EventCall);
+}
+
+/// `SetDoublePressedEvent` .. `SetPressedEvent`: the old event (when set) uninitialised and released, the new one
+/// (when not NULL) stored, referenced and initialised. Setting the event a slot already holds releases it first
+/// (an event held only there is deleted before it is referenced again, as in the C++).
+pub fn set_event(h: &mut impl EventSlotHost, event: Event) {
+    let old = h.get();
+    if !old.is_null() {
+        h.call(old, EventCall::Uninitialize);
+        h.call(old, EventCall::Dereference);
+    }
+    h.set(event);
+    let new = h.get();
+    if !new.is_null() {
+        h.call(new, EventCall::Reference);
+        h.call(new, EventCall::Initialize);
+    }
+}
+
+/// `kKeyNone`: a hot key record's empty modifier.
+pub const KEY_NONE: u32 = 0x7fff;
+/// `kErrorOK`.
+const ERROR_OK: c_long = 0;
+
+/// One hot key record of the UI database (`UIDbDataHotKeys`, 124 bytes on every target).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DbHotKey {
+    pub unused: u32,
+    /// Negative: no hot key in this slot.
+    pub id: i32,
+    pub label: [u8; 100],
+    /// `DIK_*` codes, [`KEY_NONE`]: none.
+    pub modifiers: [u32; 3],
+    pub key: u32,
+}
+
+const _: () = assert!(core::mem::size_of::<DbHotKey>() == 124);
+
+impl DbHotKey {
+    /// A record of zero bytes (the C++'s was uninitialised until the first read).
+    pub fn zeroed() -> DbHotKey {
+        // SAFETY: integers and a byte array: all bits zero is a value of each
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// Which key member `GetEntity` fills: a modifier slot (0 to 2) or the key.
+pub const KEY_SLOT: usize = 3;
+
+/// A hot key's keys (`SetModifier`, `CreateHotKeys`).
+pub trait KeysHost {
+    /// `gISKeyboard->GetEntity(code, member)`, `member` a modifier slot or [`KEY_SLOT`]; its result.
+    fn get_entity(&mut self, key: HotKey, code: c_ulong, member: usize) -> c_long;
+    /// `ISKeyboard::ComputeModifierState(code)`.
+    fn modifier_state(&mut self, code: c_ulong) -> c_ulong;
+    /// `mModifierState`.
+    fn state(&self, key: HotKey) -> c_ulong;
+    fn set_state(&mut self, key: HotKey, state: c_ulong);
+    /// `mModifiers[slot] = NULL`.
+    fn clear_modifier(&mut self, key: HotKey, slot: usize);
+    /// `CalculateKeyCount`.
+    fn count_keys(&mut self, key: HotKey);
+}
+
+/// `SetModifier(code, slot)`: the code's modifier state added, the slot's entity set, the keys counted again.
+pub fn set_modifier(h: &mut impl KeysHost, key: HotKey, code: c_ulong, slot: usize) {
+    let s = h.state(key) | h.modifier_state(code);
+    h.set_state(key, s);
+    h.get_entity(key, code, slot);
+    h.count_keys(key);
+}
+
+/// `CreateHotKeys`' file and table.
+pub trait CreateHost: KeysHost {
+    fn open(&mut self);
+    fn read_count(&mut self, count: &mut c_ulong) -> c_long;
+    fn read_record(&mut self, record: &mut DbHotKey) -> c_long;
+    /// `new UIHotKey`.
+    fn create(&mut self) -> HotKey;
+    /// `sHotKey.push_back(key)` (NULL for an unused record).
+    fn push(&mut self, key: HotKey);
+    fn close(&mut self);
+}
+
+/// `CreateHotKeys`: every record of the file into the shared table, a hot key for each record with an id (its
+/// modifiers' entities and states, then its key's), NULL for the others. A record whose read fails keeps the
+/// previous record's bytes (zeros before the first). The result is the count's read when it fails, else the last
+/// record's read or key lookup, as the C++ left it.
+pub fn create(h: &mut impl CreateHost) -> c_long {
+    h.open();
+    let mut count: c_ulong = 0;
+    let mut result = h.read_count(&mut count);
+    if result == ERROR_OK {
+        let mut record = DbHotKey::zeroed();
+        let mut i: c_ulong = 0;
+        while i < count {
+            result = h.read_record(&mut record);
+            let key = if record.id >= 0 {
+                let k = h.create();
+                for m in 0..3 {
+                    let code = record.modifiers[m];
+                    if code != KEY_NONE {
+                        h.get_entity(k, code as c_ulong, m);
+                        let s = h.state(k) | h.modifier_state(code as c_ulong);
+                        h.set_state(k, s);
+                    } else {
+                        h.clear_modifier(k, m);
+                    }
+                }
+                result = h.get_entity(k, record.key as c_ulong, KEY_SLOT);
+                h.count_keys(k);
+                k
+            } else {
+                core::ptr::null_mut()
+            };
+            h.push(key);
+            i += 1;
+        }
+    }
+    h.close();
+    result
+}
+
+#[cfg(test)]
+mod setters_tests;
 #[cfg(test)]
 mod tests;

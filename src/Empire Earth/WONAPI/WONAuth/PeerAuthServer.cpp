@@ -36,7 +36,7 @@ WONStatus PeerAuthServer::GetChallenge1(ByteBufferPtr& challenge)
     secret.AppendShort(this->mSecretB.GetKeyLen());
     secret.AppendBytes(this->mSecretB.GetKey(),this->mSecretB.GetKeyLen());
 
-    ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.mData,secret.mLength);
+    ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.data(),secret.length());
     if(encrypted.get()==NULL)
         return WS_PeerAuthServer_FailedToEncryptWithClientPubKey;
 
@@ -99,7 +99,7 @@ WONStatus PeerAuthServer::GetComplete(WONStatus status,ByteBufferPtr& complete)
         WriteBuffer secret(0,true);
         secret.AppendShort(this->mSecretA.GetKeyLen());
         secret.AppendBytes(this->mSecretA.GetKey(),this->mSecretA.GetKeyLen());
-        ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.mData,secret.mLength);
+        ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.data(),secret.length());
         if(encrypted.get()==NULL)
             return WS_PeerAuthServer_FailedToEncryptWithClientPubKey;
         msg.AppendShort(encrypted->length());
@@ -122,7 +122,7 @@ WONStatus PeerAuthServer::HandleChallenge2(ReadBuffer& challenge,ByteBufferPtr& 
     unsigned short secretBLen=msg.ReadShort();
     if(secretBLen!=this->mSecretB.GetKeyLen() || memcmp(this->mSecretB.GetKey(),msg.ReadBytes(secretBLen),secretBLen)!=0)
         return WS_PeerAuthServer_InvalidSecretB;
-    if(!this->mSecretA.SetKey(msg.mData+msg.mPos,msg.mLength-msg.mPos))
+    if(!this->mSecretA.SetKey(msg.data()+msg.pos(),msg.length()-msg.pos()))
         return WS_PeerAuthServer_InvalidSecretA;
     return this->GetComplete(0,complete);
 }

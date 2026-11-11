@@ -7,8 +7,13 @@
 // Not exact: DrawPolygons (98%: the original packs the per-line offset temp into theResult's slot [ebp-8], ours
 // into the loop's UMCeilFloat parameter slot); DrawGridText (70%: the original refuses GetTopLeft's GE2DPoint copy
 // ctor in the column loop, like UIFullBackground::DrawBackground, plus frame-slot differences).
+//
+// The arithmetic and the decisions are Rust (rust/crates/ee_ui/src/graph.rs, docs/RUST_PLAN.md R6): CopyData's
+// layout and range, the zoom steps, the grid lines, the inner border, the grid values' places and which labels draw.
+// The texts (the virtual formats), the line, every draw and the copies stay here (UIGraphRust below).
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -31,9 +36,111 @@
 #include "lle/UIGraph.h"
 
 const float kDefaultZoomIncrement = 1.0f;
-const float kMaximumZoomScale = 4.0f;
-const float kTextSpacing = 5.0f;
 const float kDefaultLineOpacity = 0.25f;
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top)
+static inline EeUiRect UIGraphRect(const GERectangle& r) { return EeUiRect{r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()}; }
+static inline GERectangle UIGraphRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+
+// The Rust graph's questions and draws (ee_ui graph.rs): the texts, the grid values, the lines and the virtual draws
+struct UIGraphRust {
+    static UIGraph* Graph(void* inGraph) { return static_cast<UIGraph*>(inGraph); }
+    static GEText* Text(UIGraph* inGraph, int inWhich)
+    {
+        return inWhich == 0 ? inGraph->mTitleText : inWhich == 1 ? inGraph->mYAxisText : inGraph->mXAxisText;
+    }
+    static const UWideString& Label(UIGraph* inGraph, int inWhich)
+    {
+        return inWhich == 0 ? inGraph->mGraph.GetTitle() : inWhich == 1 ? inGraph->mGraph.GetYLabel() : inGraph->mGraph.GetXLabel();
+    }
+    static EeUiGraphRange Range(const UGraph& inGraph)
+    {
+        return EeUiGraphRange{inGraph.GetMinX(), inGraph.GetMaxX(), inGraph.GetMinY(), inGraph.GetMaxY()};
+    }
+    static EeUiGraphRange Displayed(const UIGraph* inGraph)
+    {
+        return EeUiGraphRange{inGraph->mMinX, inGraph->mMaxX, inGraph->mMinY, inGraph->mMaxY};
+    }
+    static void SetDisplayed(UIGraph* inGraph, const EeUiGraphRange& inRange)
+    {
+        inGraph->mMaxX = inRange.max_x;
+        inGraph->mMaxY = inRange.max_y;
+        inGraph->mMinX = inRange.min_x;
+        inGraph->mMinY = inRange.min_y;
+    }
+    static void Zoom(UIGraph* inGraph, bool inIn)
+    {
+        EeUiGraphRange theRange;
+        inGraph->mZoomScale = ee_ui_graph_zoom(inIn, inGraph->mZoomScale, inGraph->mZoomIncrement, Range(inGraph->mGraph), &theRange);
+        SetDisplayed(inGraph, theRange);
+        inGraph->SetDirty(true);
+    }
+    static void GridValue(UIGraph* inGraph, int inAxis, float inValue, float* outWidth, float* outHeight)
+    {
+        UWideString theString;
+        if (inAxis == 0)
+            inGraph->FormatXValues(inValue, theString);
+        else
+            inGraph->FormatYValues(inValue, theString);
+        inGraph->mGridText->SetText(theString);
+        *outWidth = inGraph->mGridText->GetTextExtent().GetWidth();
+        *outHeight = inGraph->mGridText->GetTextExtent().GetHeight();
+    }
+    static long DrawGridValue(UIGraph* inGraph, const GERectangle& inRectangle, float inX, float inY)
+    {
+        inGraph->mGridText->SetLocation(inX, inY);
+        return inGraph->GetForm()->DrawClippedText(inRectangle, inGraph->mGridText, inGraph);
+    }
+    static long Border(UIGraph* inGraph, const GERectangle& inRectangle, unsigned long inThickness)
+    {
+        return inGraph->DrawBorder(inRectangle, inThickness);
+    }
+    static long DrawText(UIGraph* inGraph, int inWhich)
+    {
+        switch (inWhich) {
+        case 0:
+            return inGraph->DrawTitleText();
+        case 1:
+            return inGraph->DrawXAxisText();
+        case 2:
+            return inGraph->DrawYAxisText();
+        default:
+            return inGraph->DrawGridText();
+        }
+    }
+};
+
+extern "C" void ee_uicpp_graph_text(void* inGraph, int inWhich, float* outWidth, float* outHeight)
+{
+    UIGraph* theGraph = UIGraphRust::Graph(inGraph);
+    GEText* theText = UIGraphRust::Text(theGraph, inWhich);
+    theText->SetText(UIGraphRust::Label(theGraph, inWhich));
+    *outWidth = theText->GetTextExtent().GetWidth();
+    *outHeight = theText->GetTextExtent().GetHeight();
+}
+extern "C" void ee_uicpp_graph_grid_value(void* inGraph, int inAxis, float inValue, float* outWidth, float* outHeight)
+{
+    UIGraphRust::GridValue(UIGraphRust::Graph(inGraph), inAxis, inValue, outWidth, outHeight);
+}
+extern "C" long ee_uicpp_graph_draw_grid_value(void* inGraph, const EeUiRect* inRectangle, float inX, float inY)
+{
+    return UIGraphRust::DrawGridValue(UIGraphRust::Graph(inGraph), UIGraphRect(*inRectangle), inX, inY);
+}
+extern "C" long ee_uicpp_graph_line(void* inGraph, void* inLine, float inX0, float inY0, float inX1, float inY1)
+{
+    UIGraph* theGraph = UIGraphRust::Graph(inGraph);
+    GELine* theLine = static_cast<GELine*>(inLine);
+    GE2DPoint theStart(inX0, inY0);
+    theLine->SetStartPoint(theStart);
+    GE2DPoint theEnd(inX1, inY1);
+    theLine->SetEndPoint(theEnd);
+    return theGraph->GetRasterizer()->Draw(theLine, theGraph->GetScreenIndex());
+}
+extern "C" long ee_uicpp_graph_border(void* inGraph, const EeUiRect* inRectangle, unsigned long inThickness)
+{
+    return UIGraphRust::Border(UIGraphRust::Graph(inGraph), UIGraphRect(*inRectangle), inThickness);
+}
+extern "C" long ee_uicpp_graph_draw_text(void* inGraph, int inWhich) { return UIGraphRust::DrawText(UIGraphRust::Graph(inGraph), inWhich); }
 
 // FUNCTION: LLE 0x10075c9c
 // Creates a graph control with a 15 x 10 grid, every label on, zoom 1 and no fonts yet
@@ -98,67 +205,19 @@ UIGraph::~UIGraph()
 // drawing; needs SetFont first (dereferences the texts unchecked)
 long UIGraph::CopyData()
 {
-    UWideString theString;
-    float theValueHeight = 0.0f;
-    float theValueWidth = 0.0f;
-    float theWidth;
-    float theHeight;
     this->mGraphRectangle = this->mRectangle;
-    float theCenterX = this->mGraphRectangle.GetWidth() * 0.5f + this->mGraphRectangle.GetLeft();
-    float theCenterY = this->mGraphRectangle.GetHeight() * 0.5f + this->mGraphRectangle.GetTop();
-    if (this->mLabelGraph && this->mTitleText) {
-        this->mTitleText->SetText(this->mGraph.GetTitle());
-        theWidth = this->mTitleText->GetTextExtent().GetWidth();
-        theHeight = this->mTitleText->GetTextExtent().GetHeight();
-        this->mTitleRectangle.SetLeft(theCenterX - theWidth * 0.5f);
-        this->mTitleRectangle.SetRight(this->mTitleRectangle.GetLeft() + theWidth);
-        this->mTitleRectangle.SetTop(this->mGraphRectangle.GetTop() + kTextSpacing);
-        this->mTitleRectangle.SetBottom(this->mTitleRectangle.GetTop() + theHeight);
-    } else
-        this->mTitleRectangle = GERectangle();
-    if (this->mLabelGrid && this->mGridText) {
-        // Fixed: the margins used to be measured from FormatYValues(mMaxX) and FormatXValues(mMaxY), axes and
-        // formatters swapped
-        this->FormatXValues((float)this->mMaxX, theString);
-        this->mGridText->SetText(theString);
-        theValueHeight = this->mGridText->GetTextExtent().GetHeight();
-        this->FormatYValues((float)this->mMaxY, theString);
-        this->mGridText->SetText(theString);
-        theValueWidth = this->mGridText->GetTextExtent().GetWidth() + kTextSpacing * 2;
-    }
-    if (this->mLabelYAxis && this->mYAxisText) {
-        this->mYAxisText->SetText(this->mGraph.GetYLabel());
-        theWidth = this->mYAxisText->GetTextExtent().GetWidth();
-        theHeight = this->mYAxisText->GetTextExtent().GetHeight();
-        this->mYAxisRectangle.SetLeft(this->mGraphRectangle.GetLeft() + kTextSpacing);
-        this->mYAxisRectangle.SetRight(this->mYAxisRectangle.GetLeft() + theWidth);
-        this->mYAxisRectangle.SetTop(theCenterY - theHeight * 0.5f);
-        this->mYAxisRectangle.SetBottom(this->mYAxisRectangle.GetTop() + theHeight);
-    } else
-        this->mYAxisRectangle = GERectangle();
-    if (this->mLabelXAxis && this->mXAxisText) {
-        this->mXAxisText->SetText(this->mGraph.GetXLabel());
-        theWidth = this->mXAxisText->GetTextExtent().GetWidth();
-        theHeight = this->mXAxisText->GetTextExtent().GetHeight();
-        this->mXAxisRectangle.SetLeft(theCenterX - theWidth * 0.5f);
-        this->mXAxisRectangle.SetRight(this->mXAxisRectangle.GetLeft() + theWidth);
-        this->mXAxisRectangle.SetBottom(this->mGraphRectangle.GetBottom() - kTextSpacing);
-        this->mXAxisRectangle.SetTop(this->mXAxisRectangle.GetBottom() - theHeight);
-    } else
-        this->mXAxisRectangle = GERectangle();
+    EeUiGraphTexts theTexts = {this->mLabelGraph, this->mTitleText != NULL, this->mLabelGrid, this->mGridText != NULL,
+                               this->mLabelYAxis, this->mYAxisText != NULL, this->mLabelXAxis, this->mXAxisText != NULL};
+    EeUiGraphLayout theLayout = ee_ui_graph_copy_layout(this, UIGraphRect(this->mRectangle), theTexts, this->mMaxX,
+                                                        this->mMaxY);
+    this->mTitleRectangle = UIGraphRect(theLayout.title);
+    this->mYAxisRectangle = UIGraphRect(theLayout.y_axis);
+    this->mXAxisRectangle = UIGraphRect(theLayout.x_axis);
     this->mGridColor = this->mTitleText->GetFgColor();
-    this->mGraphRectangle.SetLeft(this->mRectangle.GetLeft() + (this->mYAxisRectangle.GetWidth() + kTextSpacing * 2 + theValueWidth));
-    this->mGraphRectangle.SetRight(this->mRectangle.GetRight() - (kTextSpacing * 2 + theValueWidth));
-    this->mGraphRectangle.SetTop(this->mRectangle.GetTop() + (this->mTitleRectangle.GetHeight() + kTextSpacing * 2));
-    this->mGraphRectangle.SetBottom(this->mRectangle.GetBottom() -
-                              (this->mXAxisRectangle.GetHeight() + kTextSpacing * 2 + theValueHeight));
+    this->mGraphRectangle = UIGraphRect(theLayout.graph);
     this->SetBgRectangle(this->mGraphRectangle);
-    if (UMFloor(this->mZoomScale) == 1) {
-        this->mMaxX = this->mGraph.GetMaxX();
-        this->mMaxY = this->mGraph.GetMaxY();
-        this->mMinX = this->mGraph.GetMinX();
-        this->mMinY = this->mGraph.GetMinY();
-    }
+    UIGraphRust::SetDisplayed(this, ee_ui_graph_copy_range(this->mZoomScale, UIGraphRust::Displayed(this),
+                                                           UIGraphRust::Range(this->mGraph)));
     *this->mCopiedTitleText = *this->mTitleText;
     *this->mCopiedXAxisText = *this->mXAxisText;
     *this->mCopiedYAxisText = *this->mYAxisText;
@@ -194,45 +253,8 @@ long UIGraph::DrawYAxisText()
 // Draws the grid values below each column line and left of each row line (the bottom row stays unlabelled)
 long UIGraph::DrawGridText()
 {
-    GERectangle theRectangle;
-    UWideString theString;
-    long theResult = kErrorOK;
-    float theStep = this->mCopiedGraphRectangle.GetWidth() / UMCeilFloat(this->mNumberOfGridDivisionsX / this->mCopiedZoomScale);
-    float theValueStep = (this->mMaxX - this->mMinX) / (this->mNumberOfGridDivisionsX / this->mCopiedZoomScale);
-    float theValue = 0.0f;
-    for (unsigned long theColumn = 0; theColumn <= UMCeilFloat(this->mNumberOfGridDivisionsX / this->mCopiedZoomScale);
-         theColumn++) {
-        float theLabel = this->mMinX + theValue;
-        if (theLabel > this->mMaxX)
-            theLabel = this->mMaxX;
-        theValue += theValueStep;
-        this->FormatXValues(theLabel, theString);
-        this->mGridText->SetText(theString);
-        theRectangle = GERectangle(GE2DPoint(theColumn * theStep + this->mCopiedGraphRectangle.GetLeft(),
-                                             this->mCopiedGraphRectangle.GetBottom()),
-                                   this->mGridText->GetTextExtent().GetWidth(), this->mGridText->GetTextExtent().GetHeight());
-        this->mGridText->SetLocation(theRectangle.GetTopLeft());
-        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mGridText, this);
-    }
-    theStep = this->mCopiedGraphRectangle.GetHeight() / UMCeilFloat(this->mNumberOfGridDivisionsY / this->mCopiedZoomScale);
-    theValueStep = (this->mMaxY - this->mMinY) / (this->mNumberOfGridDivisionsY / this->mCopiedZoomScale);
-    theValue = 0.0f;
-    for (unsigned long theRow = 0; theRow < UMCeilFloat(this->mNumberOfGridDivisionsY / this->mCopiedZoomScale); theRow++) {
-        float theLabel = this->mMaxY - theValue;
-        if (theLabel > this->mMaxY)
-            theLabel = this->mMaxY;
-        theValue += theValueStep;
-        this->FormatYValues(theLabel, theString);
-        this->mGridText->SetText(theString);
-        float theX = this->mCopiedGraphRectangle.GetLeft() - this->mGridText->GetTextExtent().GetWidth();
-        float theOffset = theRow * theStep;
-        float theY = this->mCopiedGraphRectangle.GetTop() + theOffset;
-        theRectangle = GERectangle(theX, theY, this->mCopiedGraphRectangle.GetLeft(),
-                                   this->mCopiedGraphRectangle.GetTop() + this->mGridText->GetTextExtent().GetHeight() + theOffset);
-        this->mGridText->SetLocation(theX, theY);
-        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mGridText, this);
-    }
-    return theResult;
+    return ee_ui_graph_draw_grid_text(this, UIGraphRect(this->mCopiedGraphRectangle), this->mNumberOfGridDivisionsX,
+                                      this->mNumberOfGridDivisionsY, this->mCopiedZoomScale, UIGraphRust::Displayed(this));
 }
 
 // FUNCTION: LLE 0x10076822
@@ -250,32 +272,11 @@ long UIGraph::DrawPolygons()
     GELine theLine;
     unsigned long theThickness = this->mBorderThickness;
     long theResult = UIControl::DrawPolygons();
-    if (theThickness > 1)
-        theResult = this->DrawBorder(this->mCopiedGraphRectangle, theThickness - 1);
-    if (this->mCopiedDrawGrid) {
-        theLine.SetColor(this->mGridColor);
-        theLine.SetOpacity(this->mCopiedLineOpacity);
-        float theStep = this->mCopiedGraphRectangle.GetWidth() / UMCeilFloat(this->mNumberOfGridDivisionsX / this->mCopiedZoomScale);
-        for (unsigned long theColumn = 0; theColumn <= UMCeilFloat(this->mNumberOfGridDivisionsX / this->mCopiedZoomScale);
-             theColumn++) {
-            float theX = theColumn * theStep;
-            GE2DPoint theStart(this->mCopiedGraphRectangle.GetLeft() + theX, this->mCopiedGraphRectangle.GetTop());
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(this->mCopiedGraphRectangle.GetLeft() + theX, this->mCopiedGraphRectangle.GetBottom());
-            theLine.SetEndPoint(theEnd);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-        }
-        theStep = this->mCopiedGraphRectangle.GetHeight() / UMCeilFloat(this->mNumberOfGridDivisionsY / this->mCopiedZoomScale);
-        for (unsigned long theRow = 0; theRow <= UMCeilFloat(this->mNumberOfGridDivisionsY / this->mCopiedZoomScale);
-             theRow++) {
-            GE2DPoint theStart(this->mCopiedGraphRectangle.GetLeft(), this->mCopiedGraphRectangle.GetTop() + theRow * theStep);
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(this->mCopiedGraphRectangle.GetRight(), this->mCopiedGraphRectangle.GetTop() + theRow * theStep);
-            theLine.SetEndPoint(theEnd);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-        }
-    }
-    return theResult;
+    theLine.SetColor(this->mGridColor);
+    theLine.SetOpacity(this->mCopiedLineOpacity);
+    return ee_ui_graph_draw_grid(this, &theLine, theResult, theThickness, UIGraphRect(this->mCopiedGraphRectangle),
+                                 this->mCopiedDrawGrid, this->mNumberOfGridDivisionsX, this->mNumberOfGridDivisionsY,
+                                 this->mCopiedZoomScale);
 }
 
 // FUNCTION: LLE 0x10076acc
@@ -283,16 +284,8 @@ long UIGraph::DrawPolygons()
 long UIGraph::DrawTextA()
 {
     this->mDrawCount--;
-    long theResult = kErrorOK;
-    if (this->mCopiedLabelGraph)
-        theResult = this->DrawTitleText();
-    if (this->mCopiedLabelXAxis)
-        theResult = this->DrawXAxisText();
-    if (this->mCopiedLabelYAxis)
-        theResult = this->DrawYAxisText();
-    if (this->mCopiedLabelGrid)
-        theResult = this->DrawGridText();
-    return theResult;
+    return ee_ui_graph_draw_texts(this, this->mCopiedLabelGraph, this->mCopiedLabelXAxis, this->mCopiedLabelYAxis,
+                                  this->mCopiedLabelGrid);
 }
 
 // FUNCTION: LLE 0x10076b22
@@ -374,29 +367,15 @@ long UIGraph::MouseMove(const GE2DPoint& inLocation)
 // Zooms in one step (at most 4x) and shrinks the visible value range; the zoom location is stored but unused
 void UIGraph::ZoomIn(const GE2DPoint& inLocation)
 {
-    this->mZoomScale = this->mZoomIncrement + this->mZoomScale;
     this->mZoomLocation = inLocation;
-    if (this->mZoomScale > kMaximumZoomScale)
-        this->mZoomScale = kMaximumZoomScale;
-    this->mMaxX = UMFloor(this->mGraph.GetMaxX() / this->mZoomScale);
-    this->mMaxY = UMFloor(this->mGraph.GetMaxY() / this->mZoomScale);
-    this->mMinX = UMFloor(this->mGraph.GetMinX() / this->mZoomScale);
-    this->mMinY = UMFloor(this->mGraph.GetMinY() / this->mZoomScale);
-    this->SetDirty(true);
+    UIGraphRust::Zoom(this, true);
 }
 
 // FUNCTION: LLE 0x10076e44
 // Zooms out one step (at least 1x) and widens the visible value range
 void UIGraph::ZoomOut()
 {
-    this->mZoomScale -= this->mZoomIncrement;
-    if (this->mZoomScale < 1.0f)
-        this->mZoomScale = 1.0f;
-    this->mMaxX = UMFloor(this->mGraph.GetMaxX() / this->mZoomScale);
-    this->mMaxY = UMFloor(this->mGraph.GetMaxY() / this->mZoomScale);
-    this->mMinX = UMFloor(this->mGraph.GetMinX() / this->mZoomScale);
-    this->mMinY = UMFloor(this->mGraph.GetMinY() / this->mZoomScale);
-    this->SetDirty(true);
+    UIGraphRust::Zoom(this, false);
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

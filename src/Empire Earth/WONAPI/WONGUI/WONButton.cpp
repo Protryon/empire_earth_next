@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyWONButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_rust.h"
+#include "ee/wonapi/WONGUIDraw.h"
 // GetButtonState's state and fallback order are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 
@@ -280,54 +281,51 @@ void WONButton::CopyAttributes(WONButton *from)
 // FUNCTION: WON 0x00718DB0
 // Draws the button text aligned and pushed when pressed, embossed grey when disabled, with a dotted focus
 // rectangle after dialog-key use
+// The paint's inputs: the button's size, flags and pads, its state image and text (guidraw.rs EeWonButtonPaint)
+static EeWonButtonPaint WONButtonPaintOf(WONButton* b, Image* theImage, WrappedText* theText, int theColor)
+{
+	EeWonButtonPaint p;
+	p.width = b->Width();
+	p.height = b->Height();
+	p.transparent = b->mIsTransparent;
+	p.scale_image = b->mScaleImage;
+	p.has_image = theImage!=NULL;
+	p.has_text = theText!=NULL;
+	p.pressed = b->IsPressed();
+	p.disabled = b->IsDisabled();
+	p.draw_gray_text = b->mDrawGrayText;
+	p.focus_shown = b->mFocusStyle && b->HasFocus() && b->mParent->mHasUsedDialogKeys;
+	p.h_align = b->mHAlign;
+	p.v_align = b->mVAlign;
+	p.image_width = theImage ? theImage->mWidth : 0;
+	p.image_height = theImage ? theImage->mHeight : 0;
+	p.text_width = theText ? theText->GetWidth() : 0;
+	p.text_height = theText ? theText->GetHeight() : 0;
+	p.color = theColor;
+	p.left_text_pad = b->mLeftTextPad;
+	p.top_text_pad = b->mTopTextPad;
+	p.right_text_pad = b->mRightTextPad;
+	p.bottom_text_pad = b->mBottomTextPad;
+	p.left_focus_pad = b->mLeftFocusPad;
+	p.top_focus_pad = b->mTopFocusPad;
+	p.right_focus_pad = b->mRightFocusPad;
+	p.bottom_focus_pad = b->mBottomFocusPad;
+	p.push_dx = b->mPushDX;
+	p.push_dy = b->mPushDY;
+	return p;
+}
+
 void WONButton::DrawButtonText(Graphics &g, WrappedText *theText, int theColor)
 {
 	if(theText==NULL)
 		return;
 
-	int x,y;
-	if(this->mScaleImage)
-	{
-		switch(this->mHAlign)
-		{
-			case HorzAlign_Left: x = this->mLeftTextPad; break;
-			case HorzAlign_Center: x = (this->Width() - theText->GetWidth() - this->mLeftTextPad - this->mRightTextPad)/2 + this->mLeftTextPad; break;
-			case HorzAlign_Right: x = this->Width() - theText->GetWidth() - this->mRightTextPad; break;
-
-		}
-		y = (this->Height() - theText->GetHeight())/2;
-		if(this->IsPressed())
-		{
-			x+=this->mPushDX;
-			y+=this->mPushDY;
-		}
-	}
-	else
-	{
-		x = this->mLeftTextPad;
-		y = (this->Height() - theText->GetHeight())/2;
-	}
-
-	if(this->IsDisabled() && this->mDrawGrayText)
-	{
-		g.SetSysColor(StandardColor_3DHilight);
-		theText->Paint(g,x+1,y+1);
-		g.SetSysColor(StandardColor_GrayText);
-		theText->Paint(g,x,y);
-	}
-	else
-	{
-		g.SetColor(theColor);
-		theText->Paint(g,x,y);
-		if(this->mFocusStyle && this->HasFocus() && this->mParent->mHasUsedDialogKeys)
-		{
-			if(this->mScaleImage)
-				g.DrawDottedRect(this->mLeftFocusPad,this->mTopFocusPad,this->Width()-this->mLeftFocusPad-this->mRightFocusPad,this->Height()-this->mTopFocusPad-this->mBottomFocusPad);
-			else
-				g.DrawDottedRect(this->mLeftTextPad-1,y-1,theText->GetWidth()+2,theText->GetHeight()+2);
-		}
-		
-	}
+	// guidraw.rs button_text: the place by the alignment and push, the grey emboss, the focus rectangle
+	EeWonButtonPaint p = WONButtonPaintOf(this,NULL,theText,theColor);
+	WONDrawSlots aSlots;
+	aSlots.mText = theText;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_button_text(&p,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 // FUNCTION: WON 0x00718F90
@@ -365,42 +363,19 @@ void WONButton::GetButtonState(Graphics &g, int *theColor, WrappedText **theText
 void WONButton::Paint(Graphics &g)
 {
 	Button::Paint(g);
-	if(!this->mIsTransparent)
-	{
-		g.SetSysColor(StandardColor_3DFace);
-		g.FillRect(0,0,this->Width(),this->Height());
-	}
 
-	Image *anImage; 
-	int aColor; 
-	WrappedText *aText; 
+	Image *anImage;
+	int aColor;
+	WrappedText *aText;
 	this->GetButtonState(g,&aColor,&aText,&anImage);
 
-	if(this->mScaleImage)
-	{
-		if(anImage!=NULL)
-		{
-			if(anImage->mWidth!=this->Width() || anImage->mHeight!=this->Height())
-				anImage->SetSize(this->Width(),this->Height());
-
-			g.DrawImage(anImage,0,0);
-		}
-		this->DrawButtonText(g,aText,aColor);
-	}
-	else
-	{
-		int y = 0;
-
-		if(anImage!=NULL)
-		{
-			int aHeight = anImage->mHeight;
-			if(this->mVAlign==HorzAlign_Center) y = (this->Height() - aHeight - this->mTopTextPad - this->mBottomTextPad)/2;
-			else if(this->mVAlign==VertAlign_Bottom) y = this->Height() - aHeight - this->mTopTextPad - this->mBottomTextPad;
-
-			g.DrawImage(anImage,0,y + this->mTopTextPad);
-		}
-		this->DrawButtonText(g,aText,aColor);
-	}
+	// guidraw.rs button: the face, the state image scaled or aligned, then the text
+	EeWonButtonPaint p = WONButtonPaintOf(this,anImage,aText,aColor);
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = anImage;
+	aSlots.mText = aText;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_button(&p,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 

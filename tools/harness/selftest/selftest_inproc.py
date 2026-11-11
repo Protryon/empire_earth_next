@@ -253,7 +253,7 @@ def fixture(arch, d):
     (out / "root").mkdir(parents=True)
     env = dict(os.environ, EE_TEST_TIME_FACTOR="32", EE_TEST_SEED="2")
     g = fixture_driver.Game(out, [sys.executable, "-I", str(HERE / "fixture_standin.py")], env, cwd=str(out / "root"),
-                            deadline=time.monotonic() + 90)
+                            deadline=time.monotonic() + 150)
     problems = []
     try:
         g.wait(lambda s: s["form"] == fixture_driver.MAIN, "the main menu", 30)
@@ -298,6 +298,27 @@ def fixture(arch, d):
         time.sleep(0.3)
         if g.verdict(seq) != "rejected":
             problems.append(f"rejected order verdict {g.verdict(seq)}")
+        g.capture = lambda name: fixture_driver.frame(g, name)
+        scrolled = fixture_driver.scroll_check(g, 11, hold_ms=600, settle=0.6)
+        hows = [(r["kind"], r["how"]) for r in scrolled["steps"]]
+        if hows != [("key", "right"), ("key", "left"), ("edge", "left-edge"), ("zoom", "key-in"), ("zoom", "key-out"),
+                    ("zoom", "wheel-in"), ("zoom", "wheel-out")] or scrolled["key"] != "left"                 or scrolled["steps"][0]["moved"] >= 0.5 or scrolled["zooms"][0] != 1.0:
+            problems.append(f"scroll check {hows} {scrolled['key']} {scrolled['zooms']}")
+        for name in ("scroll-key", "scroll-edge", "zoom-key-in", "zoom-key-out"):
+            if not (out / f"{name}.bmp").exists():
+                problems.append(f"no capture {name}")
+        if fixture_driver.zoom_captures(g, 11, [50, 200]) != {"zoom50": True, "zoom200": True}                 or fixture_driver.camera(g)["zoom"] != 2.0:
+            problems.append(f"zoom captures {fixture_driver.camera(g)}")
+        held, failed = fixture_driver.hold_key, None
+        fixture_driver.hold_key = lambda *_: None   # keys that never reach the game: the check must fail with numbers
+        try:
+            fixture_driver.scroll_check(g, 11, hold_ms=300, settle=0.3, captures=False)
+        except RuntimeError as error:
+            failed = str(error)
+        finally:
+            fixture_driver.hold_key = held
+        if not failed or not failed.startswith("SCROLL CHECK FAIL key: the camera did not move right 0.0, left 0.0"):
+            problems.append(f"scroll check failure {failed!r}")
         if tel.get("clock") != [1, 1] or tel.get("paused") != 0 or tel["players"][2].get("stock") != [1, 2, 3, 4, 5]:
             problems.append(f"telemetry {tel}")
         played = fixture_driver.play(g, types.SimpleNamespace(max_game_seconds=40, play_seconds=None, capture_every=0),
@@ -315,4 +336,4 @@ def fixture(arch, d):
     log = fixture_driver.copy_game_logs(out / "root", out)
     if not log or [p["kind"] for p in log["players"].values()].count("computer") != 2 or 3 not in log["last_sample"]:
         problems.append(f"game log {log}")
-    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, orders, time cap, telemetry, game log"
+    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, orders, scroll check, zoom captures, time cap, telemetry, game log"

@@ -48,18 +48,23 @@ unsafe fn put_c(src: &[u8], out: *mut c_char, size: usize) -> usize {
 
 // ---- WONStatus
 
-/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
-/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
-///
-/// # Safety
-/// `buffer` has `size` bytes.
+thread_local! {
+    /// The text of the last unnamed status this thread asked for (the C++ shared one 1024-byte buffer).
+    static UNNAMED_STATUS: std::cell::RefCell<std::ffi::CString> = std::cell::RefCell::new(std::ffi::CString::default());
+}
+
+/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
+/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_status_name(s: c_long, buffer: *mut c_char, size: usize) -> *const c_char {
+pub extern "C" fn ee_won_status_text(s: c_long) -> *const c_char {
     if let Some(n) = status::named(s as status::Status) {
         return n.as_ptr();
     }
-    unsafe { put_c(status::unnamed(s as status::Status).as_bytes(), buffer, size) };
-    buffer
+    let text = std::ffi::CString::new(status::unnamed(s as status::Status)).expect("digits and letters");
+    UNNAMED_STATUS.with(|t| {
+        *t.borrow_mut() = text;
+        t.borrow().as_ptr()
+    })
 }
 
 // ---- NetStats
@@ -554,16 +559,32 @@ mod tests {
 
     #[test]
     fn status_names_through_the_abi() {
-        let mut buffer = [0 as c_char; 64];
-        // SAFETY: 64 bytes
-        let n = unsafe { std::ffi::CStr::from_ptr(ee_won_status_name(100001, buffer.as_mut_ptr(), 64)) };
-        assert_eq!(n.to_str().unwrap(), "WS_TimedOut");
-        let p = unsafe { ee_won_status_name(-2950, buffer.as_mut_ptr(), 64) };
-        assert_eq!(p, buffer.as_ptr());
-        assert_eq!(unsafe { std::ffi::CStr::from_ptr(p) }.to_str().unwrap(), "DBProxyServ_GameSpecificError-2950");
-        // a short buffer is cut
-        let p = unsafe { ee_won_status_name(123456, buffer.as_mut_ptr(), 4) };
-        assert_eq!(unsafe { std::ffi::CStr::from_ptr(p) }.to_str().unwrap(), "123");
+        let text = |s| unsafe { std::ffi::CStr::from_ptr(ee_won_status_text(s)) }.to_str().unwrap().to_string();
+        assert_eq!(text(100001), "WS_TimedOut");
+        assert_eq!(text(-2950), "DBProxyServ_GameSpecificError-2950");
+        assert_eq!(text(123456), "123456");
+        // a named one does not disturb the last unnamed text
+        let p = ee_won_status_text(99_999);
+        let _ = text(0);
+        assert_eq!(unsafe { std::ffi::CStr::from_ptr(p) }.to_str().unwrap(), "99999");
+    }
+
+    #[test]
+    fn the_cpp_status_constants_are_the_rust_table() {
+        // include/ee/wonapi/WONStatus.h's enum, the names the C++ callers use, against status.rs's table
+        let header = include_str!("../../../../include/ee/wonapi/WONStatus.h");
+        let mut seen = 0;
+        for line in header.lines() {
+            let line = line.trim();
+            let Some(rest) = line.strip_prefix("WS_") else { continue };
+            let Some((name, value)) = rest.split_once('=') else { continue };
+            let value: status::Status =
+                value.split(',').next().unwrap().trim().parse().unwrap_or_else(|_| panic!("{line}"));
+            let want = format!("WS_{}", name.trim());
+            assert_eq!(status::named(value).map(|n| n.to_str().unwrap().to_string()), Some(want), "{line}");
+            seen += 1;
+        }
+        assert_eq!(seen, status::NAMES.len());
     }
 
     #[test]

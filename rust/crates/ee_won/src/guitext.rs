@@ -24,11 +24,9 @@
 use std::ffi::c_void;
 
 /// The text flags (TextFlags in the C++).
-pub const WORD_WRAP: i32 = 0x01;
-pub const SCROLL_ON_BOTTOM: i32 = 0x04;
-pub const SHOW_PARTIAL_LINES: i32 = 0x08;
-pub const SCROLL_FULL_LINE: i32 = 0x10;
-pub const DELAY_WORD_WRAP: i32 = 0x20;
+pub(crate) const SCROLL_ON_BOTTOM: i32 = 0x04;
+pub(crate) const SHOW_PARTIAL_LINES: i32 = 0x08;
+pub(crate) const DELAY_WORD_WRAP: i32 = 0x20;
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
 #[repr(C)]
@@ -173,9 +171,9 @@ pub fn max_lines_cut(breaks: &[bool], excess: i32) -> usize {
 
 /// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
 /// its last segment stands for the trimmed one.
-pub const LINE_IS_SEG_LINE: u32 = 1;
-pub const LINE_HAS_SEGS: u32 = 2;
-pub const LINE_LAST_IS_SEG: u32 = 4;
+pub(crate) const LINE_IS_SEG_LINE: u32 = 1;
+pub(crate) const LINE_HAS_SEGS: u32 = 2;
+pub(crate) const LINE_LAST_IS_SEG: u32 = 4;
 /// A line's flags (`i` below the count), read from the C++ area.
 pub type EeWonLineFlagsOf = extern "C" fn(ctx: *const c_void, i: usize) -> u32;
 

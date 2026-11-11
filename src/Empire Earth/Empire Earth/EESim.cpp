@@ -181,6 +181,7 @@
 #include "ee/EETown.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EEAreaUtilities.h"     // EECanHeal (the sweep)
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
@@ -190,10 +191,13 @@
 // games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
 // those formulas (and the reach and damage effect tests) over each player's newest 64 living units and their
 // neighbours: real stats, distances and timers, plus fixed variations. It reads the world and writes nothing back.
+// EECanHeal (CBCH: no game heals) runs over each pair both ways, a unit and itself, and a unit and the previous
+// player's newest unit.
 static void EECombatCaptureSweep()
 {
     const EECombatRules& theRules = EEGetRules().mCombat;
     int32_t theTick = (int32_t)gPhysics->mTickTimeMs;
+    EEComplexUnit* theOtherPlayers = NULL;
     for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(p);
         if (thePlayer == NULL)
@@ -208,6 +212,11 @@ static void EECombatCaptureSweep()
             EEComplexUnit* b = theAll[i + 1];
             EEUnitClassUpgrade* s = a->mStats;
             EEUnitClassUpgrade* t = b->mStats;
+            EECanHeal(a, b);
+            EECanHeal(b, a);
+            EECanHeal(a, a);
+            if (theOtherPlayers != NULL)
+                EECanHeal(a, theOtherPlayers);
             int32_t theHitPoints = (int32_t)a->mHitPoints;
             int32_t theMax = (int32_t)s->mMaxHitPoints;
             const int32_t kTimers[] = {(int32_t)a->mRegenerationTimer, 0, theTick, 1000};
@@ -278,6 +287,8 @@ static void EECombatCaptureSweep()
                 }
             }
         }
+        if (!theAll.empty())
+            theOtherPlayers = theAll.back();
     }
 }
 
@@ -610,6 +621,14 @@ void DumpState(const std::string& inPath)
             fprintf(f, "\n");
         }
     }
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {   // each player's unit list in its order (save 0.270)
+        if (gWorld.mPlayers[i] == NULL)
+            continue;
+        fprintf(f, "PLAYERUNITS %lu:", i);
+        for (EEUnit* u = gWorld.mPlayers[i]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+            fprintf(f, " %lu", (unsigned long)u->mUnitID);
+        fprintf(f, "\n");
+    }
     EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
     gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
     for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
@@ -833,6 +852,7 @@ void AfterTick()
         EEFormationCaptureSweep();
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+        EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
         EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)

@@ -89,7 +89,7 @@ fn pow(base: f32, exponent: f64) -> f32 {
 
 /// `GetPitch(zoom, mode)`: linear (0), curved (1), the world camera's own pitch (2: `world` is
 /// `gWorld.mTransformation`), the free camera's (3), else 0. Modes 0 and 1 hold the pitch past zoom 1 (the port's
-/// farther zoom-out).
+/// farther zoom-out), and so does mode 3 past |zoom| 1 (a port change: the original's pitch is NaN there).
 pub fn pitch(zoom: f32, mode: i32, world: &GeTransformation) -> f32 {
     let mut zoom = zoom;
     if (mode == 0 || mode == 1) && zoom > 1.0 {
@@ -106,6 +106,11 @@ pub fn pitch(zoom: f32, mode: i32, world: &GeTransformation) -> f32 {
             let mut z = zoom;
             if z < 0.0 {
                 z = -z;
+            }
+            // Port change: the free camera holds its pitch past |zoom| 1 as modes 0 and 1 do (the original's
+            // pow(1 - |zoom|, 0.5) is NaN there, and the table cosine faults on a NaN angle).
+            if z > 1.0 {
+                z = 1.0;
             }
             let mut result = (FREE_PITCH_FAR - FREE_PITCH_NEAR) * (1.0 - pow(1.0 - z, 0.5)) + FREE_PITCH_NEAR;
             if zoom < 0.0 {

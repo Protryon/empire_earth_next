@@ -57,6 +57,12 @@ def parse_telemetry(text):
             elif p[:1] == ['clock'] and len(p) >= 6:
                 num, _, den = p[1].partition('/')
                 t.update(clock=[int(num), int(den or 1)], clock_ms=int(p[3]), frames=int(p[5]))
+            elif p[:1] == ['camera'] and len(p) == 16 and p[4] == 'target' and p[14] == 'size':
+                # "camera <x> <y> <z> target <x> <y> zoom <z> mode <m> valid <0|1> <0|1> size <n>": the focus now and
+                # the move's target (tiles), whether each lies on the map's mesh, the map's tiles per side
+                t['camera'] = dict(x=float(p[1]), y=float(p[2]), z=float(p[3]), tx=float(p[5]), ty=float(p[6]),
+                                   zoom=float(p[8]), mode=int(p[10]), valid=int(p[12]), valid_target=int(p[13]),
+                                   size=int(p[15]))
         except (IndexError, ValueError):
             pass
     return t
@@ -687,6 +693,151 @@ def orders(g, form, names=tuple(ORDER_KINDS)):
                            f'{[(r["step"], r["skipped"]) for r in steps]}')
     return dict(steps=steps, ran=[r['step'] for r in steps if not r['skipped']],
                 skipped={r['step']: r['skipped'] for r in steps if r['skipped']})
+
+
+DIK = dict(up=0xC8, down=0xD0, left=0xCB, right=0xCD, zoom_in=0x1B, zoom_out=0x1A)   # ']' zooms in, '[' out
+
+
+def camera(g):
+    """The fixture's camera telemetry now (parse_telemetry 'camera'); raises when the fixture reports none."""
+    cam = g.state()['telemetry'].get('camera')
+    if cam is None:
+        raise RuntimeError('the fixture reports no camera (no "camera" telemetry line: an older game?)')
+    return cam
+
+
+def _on_map(cam):
+    return bool(cam['valid'] and cam['valid_target'] and 0 <= cam['tx'] <= cam['size'] and 0 <= cam['ty'] <= cam['size'])
+
+
+def _fmt(cam):
+    return (f'({cam["tx"]:.2f},{cam["ty"]:.2f}) at ({cam["x"]:.2f},{cam["y"]:.2f},{cam["z"]:.2f}) zoom {cam["zoom"]:.3f} '
+            f'mode {cam["mode"]} on map {int(_on_map(cam))} size {cam["size"]}')
+
+
+def _command(g, text, verdicts, what, timeout=20):
+    seq = g.command(text)
+    end = time.monotonic() + timeout
+    while g.verdict(seq) is None and time.monotonic() < end:
+        g.check_alive()
+        time.sleep(0.1)
+    verdict = g.verdict(seq)
+    if verdict not in verdicts:
+        raise RuntimeError(f'{what}: the fixture says {verdict!r} for {text!r}')
+    return seq
+
+
+def hold_key(g, form, name, ms):
+    """A key held ms milliseconds through the fixture's key command (EETestFixture.cpp: a key down, then up, through
+    ISHandleEvent, the entry the window layer feeds a real key press to)."""
+    _command(g, f'key {form} {DIK[name]} {ms}', ('key-pressed',), f'key {name}')
+    time.sleep(ms / 1000)
+
+
+def scroll_check(g, form, hold_ms=1500, settle=2.0, captures=True):
+    """The camera moved in play (RUST_PLAN R4.4: the camera's math in Rust): on the game form, the camera scrolled by
+    keyboard (an arrow key held through the real input path; the opposite key when the first is at the map's edge)
+    and by the screen edge (the game's pointer at the window's left edge, else the right one; EEAScroll), each move's
+    target and focus checked through the fixture's camera telemetry to have changed and to lie on the map; then the
+    zoom set to 1 and changed by the zoom hot keys (']' in, '[' out) and by the wheel (3 notches each way), each in
+    its direction. Captures after each part (captures=False: none). -> evidence; raises 'SCROLL CHECK FAIL ...' with
+    the numbers on a failure; notes 'SCROLL CHECK PASS ...'."""
+    rows = []
+
+    def fail(text):
+        g.note(f'SCROLL CHECK FAIL {text}')
+        raise RuntimeError(f'SCROLL CHECK FAIL {text}')
+
+    def moved(before, after):
+        return ((after['tx'] - before['tx']) ** 2 + (after['ty'] - before['ty']) ** 2) ** 0.5
+
+    def step(kind, name, act):
+        dismiss(g, g.state())
+        before = camera(g)
+        act()
+        time.sleep(settle)
+        after = camera(g)
+        row = dict(kind=kind, how=name, before=before, after=after, moved=round(moved(before, after), 3),
+                   on_map=_on_map(after))
+        rows.append(row)
+        g.note(f'SCROLL {kind} {name}: {_fmt(before)} -> {_fmt(after)}, moved {row["moved"]}')
+        if not row['on_map']:
+            fail(f'{kind} {name}: the camera left the map: {_fmt(after)}')
+        return row
+
+    start = camera(g)
+    if not _on_map(start):
+        fail(f'the camera starts off the map: {_fmt(start)}')
+    for kind, ways in (('key', (('right', lambda: hold_key(g, form, 'right', hold_ms)),
+                                ('left', lambda: hold_key(g, form, 'left', hold_ms)))),
+                       ('edge', (('left-edge', lambda: edge(g, form, 0.0, hold_ms)),
+                                 ('right-edge', lambda: edge(g, form, 1.0, hold_ms))))):
+        for name, act in ways:
+            if step(kind, name, act)['moved'] >= 0.5:
+                break
+        else:
+            fail(f'{kind}: the camera did not move ' + ', '.join(f'{r["how"]} {r["moved"]}' for r in rows if r['kind'] == kind))
+        if captures:
+            g.capture(f'scroll-{kind}')
+    _command(g, f'zoom {form} 0 100', ('zoomed',), 'zoom 100')
+    time.sleep(settle)
+    zooms = [camera(g)['zoom']]
+    if abs(zooms[0] - 1.0) > 1e-3:
+        fail(f'the fixture set zoom 1, the camera reports {zooms[0]}')
+    for name, act, sign in (('key-in', lambda: hold_key(g, form, 'zoom_in', hold_ms // 3), -1),
+                            ('key-out', lambda: hold_key(g, form, 'zoom_out', hold_ms // 3), 1),
+                            ('wheel-in', lambda: wheel(g, form, 0, 3), -1),
+                            ('wheel-out', lambda: wheel(g, form, 1, 3), 1)):
+        dismiss(g, g.state())
+        act()
+        time.sleep(settle)
+        cam = camera(g)
+        zooms.append(cam['zoom'])
+        change = zooms[-1] - zooms[-2]
+        rows.append(dict(kind='zoom', how=name, zoom=zooms[-1], change=round(change, 4), camera=cam))
+        g.note(f'SCROLL zoom {name}: {zooms[-2]:.3f} -> {zooms[-1]:.3f}')
+        if change * sign <= 1e-4:
+            fail(f'zoom {name}: {zooms[-2]:.4f} -> {zooms[-1]:.4f} (expected {"a decrease" if sign < 0 else "an increase"})')
+        if not _on_map(cam):
+            fail(f'zoom {name}: the camera left the map: {_fmt(cam)}')
+        if captures and name.startswith('key'):
+            g.capture(f'zoom-{name}')
+    keyed = next(r for r in rows if r['kind'] == 'key' and r['moved'] >= 0.5)
+    edged = next(r for r in rows if r['kind'] == 'edge' and r['moved'] >= 0.5)
+    g.note(f'SCROLL CHECK PASS key {keyed["how"]} moved {keyed["moved"]} edge {edged["how"]} moved {edged["moved"]} '
+           f'zoom ' + ' -> '.join(f'{z:.3f}' for z in zooms))
+    return dict(steps=rows, zooms=zooms, key=keyed['how'], edge=edged['how'])
+
+
+def edge(g, form, fx, ms):
+    """The game's pointer at the window's left (fx 0) or right (fx 1) edge, mid height, for ms milliseconds, then back
+    to the middle of the window (EEUIFMainGame's update hands the pointer to the edge scroll, EEAScroll::Update)."""
+    st = window_state(g)
+    if not st['window']:
+        raise RuntimeError('the fixture reports no window size')
+    w, h = st['window']
+    x = 0 if fx < 0.5 else w - 1
+    _command(g, f'pointer {form} {x} {h // 2}', ('pointer-moved',), f'pointer {x}')
+    time.sleep(ms / 1000)
+    _command(g, f'pointer {form} {w // 2} {h // 2}', ('pointer-moved',), 'pointer back')
+
+
+def wheel(g, form, direction, notches):
+    """notches of the mouse wheel through the fixture's wheel command (ISHandleEvent's wheel event; direction 0:
+    away from the user, zoom in; 1: towards, zoom out)."""
+    _command(g, f'wheel {form} {direction} {notches}', ('wheeled',), f'wheel {direction}')
+    time.sleep(0.15 * notches)
+
+
+def zoom_captures(g, form, percents):
+    """As posix_game.py --zoom-captures: the camera zoom set to each percent (100 = the original's farthest) through
+    the fixture's zoom command, each captured as zoom<percent> -> {name: captured}."""
+    out = {}
+    for percent in percents:
+        _command(g, f'zoom {form} 0 {percent}', ('zoomed',), f'zoom {percent}')
+        time.sleep(2)
+        out[f'zoom{percent}'] = g.capture(f'zoom{percent}') is not None
+    return out
 
 
 GAME_LINE = re.compile(r'^EE-GAME (\d+) p(\d+) (\w+)(.*)$')
