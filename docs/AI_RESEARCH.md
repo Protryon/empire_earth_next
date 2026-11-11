@@ -3079,6 +3079,61 @@ Next: the navy (warships from the docks: the sea share of ComputeDomainShares), 
 test, the building-count check's frequency, then ChooseUnitsToKill (only at the population limit: low effect at
 these caps), the special units, guard posts, walls.
 
+### 8.44 The classic computer player in Lua: the navy and the information cheat (2026-11-11, EE-SIM)
+
+§8.43 found the C++'s war rafts and frigates sinking the port's fishing boats and shooting its citizens on the shore
+(287 of the port's units in 32 balanced games); the port trained no warship. Ported:
+- **The sea in the unit selector:** ComputeDomainShares' sea share (GetDomainShare: the water tiles' share of the map,
+  the own sea strength against the target's, the air unit weight's pull) and Calculate, the sea's candidate classes,
+  the held units and counter classes within each domain's count, ChooseFavoriteSeaType and the favourite sea units
+  (none: the count goes to land). A group's warships form a sea sub-group with AssignSeaTask (a known unit of the
+  target on its water a quarter of the time, else a random point of that water).
+- **CheckNaval:** every ship_maintenance_timer minutes the warships are topped up to ships_to_maintain (Hard: 1) by a
+  sea-only group; **the sea explorers** (num_sea_explorers: 1, the fastest warship class).
+- New generic queries: `ai.area` / `ai.area_point` (the continent manager's areas: the sea task's random point) and
+  `ai.tuning()`'s map tiles.
+
+**The information cheat as a capability.** The C++ classic's HasEnemyNear reads every player's units through the fog;
+the port's read what it saw, so under classic with the cheats its builders walked into the C++'s soldiers (157 of its
+citizens died building in the first 20 minutes over 32 games). A manifest entry may now declare `"sees_all": true`
+(only classic_lua does); the seat's trace start line ends in `sees_all=1`, and `ai.enemy_near(x, y)` is then the C++
+test; for every other AI it is the fog-honest EECPNextSiteThreat (AI_LUA_UNITS §11). Builder deaths by 20 minutes:
+157 -> 87.
+
+**The building-count check's frequency:** the port's EnableManagers and the civilization manager's 30-second check
+match the C++ line for line; manager 4 runs when wood and stone stand at enable_stock_build. The C++ queues more
+temples, universities and hospitals because its stock is higher more often, not by a different rule.
+
+Bench (as §8.42; before = §8.43's c3; navy = n8 without sees_all; after = s1 with both):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Fishers at 90 | Won-lost |
+|---|---|---|---|---|---|
+| balanced, before | classic | 23.2/2.3 / 25.2/2.2 / 28.5/4.5 / 40.4/3.7 | 2.0 / 30.9 | 21.9 | 16-8, 7 close |
+| balanced, before | classic_lua | 23.2/2.7 / 27.0/3.3 / 35.6/6.5 / 48.1/6.8 | 1.5 / 52.3 | 2.4 | 8-16 |
+| balanced, navy | classic | 23.5/2.1 / 25.7/2.5 / 30.0/4.8 / 46.7/3.7 | 1.8 / 26.8 | 22.3 | 19-6, 7 close |
+| balanced, navy | classic_lua | 23.0/2.8 / 26.7/3.2 / 34.9/6.2 / 44.8/7.1 | 1.4 / 45.8 | 5.2 | 6-19 |
+| balanced, after | classic | 23.9/2.4 / 25.8/2.7 / 30.6/6.0 / 45.7/3.3 | 1.6 / 23.4 | - | 20-6, 6 close |
+| balanced, after | classic_lua | 23.2/2.8 / 26.4/3.3 / 34.6/6.2 / 44.4/6.4 | 1.4 / 58.8 | - | 6-20 |
+| classic+cheats, before | classic | 25.8/6.0 / 50.8/5.4 / 50.8/9.4 / 50.5/5.1 | 4.8 / 30.8 | - | 8-10, 14 close |
+| classic+cheats, before | classic_lua | 21.4/4.2 / 35.4/4.7 / 39.9/14.1 / 42.2/26.4 | 11.3 / 91.6 | - | 10-8 |
+| classic+cheats, navy | classic | 26.4/6.2 / 50.7/5.6 / 51.2/10.5 / 50.5/6.3 | 3.5 / 24.5 | - | 6-10, 16 close |
+| classic+cheats, navy | classic_lua | 22.7/9.8 / 36.7/16.1 / 40.8/30.0 / 44.2/33.8 | 10.4 / 80.5 | - | 10-6 |
+| classic+cheats, after | classic | 26.4/6.4 / 51.1/6.3 / 51.1/12.2 / 50.9/6.5 | 3.6 / 17.7 | - | 3-11, 18 close |
+| classic+cheats, after | classic_lua | 23.2/9.1 / 40.0/16.2 / 44.8/25.3 / 44.7/30.8 | 6.8 / 69.8 | - | 11-3 |
+
+Readings:
+- **Balanced:** the port's fishers 2.4 -> 5.2 (the C++ 22); its units sunk by the C++'s ships 287 -> 280: the C++ fleet
+  still wins at sea. The won-lost moved within noise (8-16, 6-19, 6-20). The late economy (citizens at 90 minutes)
+  remains the gap.
+- **Classic with the cheats:** the port's early economy is nearer (40 against 51 citizens at 20 minutes, from 35), its
+  losses by 20 minutes halved; its army is now 2-3 times the C++'s at 20-40 minutes (it was 1.5 times before the
+  navy; not yet explained) - the port now outplays the C++ here (11-3), the opposite of the goal.
+- Determinism: seeds 2 and 5 (balanced) and 3 (classic with the cheats), 60 minutes, --repeat 2: identical. 0
+  script errors.
+
+Next: why the port's army outgrows the C++'s under classic with the cheats (its groups' slots and the sea shares),
+the C++ fleet's edge at sea, then ChooseUnitsToKill, the special units, guard posts, walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
