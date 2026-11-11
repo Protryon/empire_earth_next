@@ -11,7 +11,29 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "rust/ee_rust.h"
 using namespace WONAPI;
+// The lines' metrics, alignment and wrap test, the bottom rule, the delayed wrap, the limits' trims and the
+// renumbering after them, the segment and selection under a point and the scrolls are ee_won's guitext module
+// (rust/crates/ee_won/src/guitext.rs), the line at a y and its visibility guilist's; this unit keeps the lines,
+// segments, fonts, links, cursors, timers, events and the paint. The Rust reads the lines through these:
+static int32_t TextLineTopOf(const void* inLines, uintptr_t i)
+{
+    return (*static_cast<const TextArea::LineVector*>(inLines))[i]->my;
+}
+struct TextRemoveSearch { const TextArea::LineVector* mLines; TextLine* mFindLine; TextSegmentBase* mSegment; };
+static uint32_t TextRemoveFlagsOf(const void* inSearch, uintptr_t i)
+{
+    const TextRemoveSearch* aSearch = static_cast<const TextRemoveSearch*>(inSearch);
+    TextLine* aLine = (*aSearch->mLines)[i].get();
+    uint32_t aFlags = 0;
+    if (aLine == aSearch->mFindLine) aFlags |= 1;
+    if (!aLine->mSegmentList.empty()) {
+        aFlags |= 2;
+        if (aLine->mSegmentList.back()->GetActual() == aSearch->mSegment) aFlags |= 4;
+    }
+    return aFlags;
+}
 
 // FUNCTION: WON 0x00711df0
 // Clears the laid-out lines and anchors; unless only the display is reset, also drops every segment,
@@ -59,7 +81,7 @@ void TextArea::Virtual08() {
     bool bottom=this->ShouldScrollOnBottom();
     ScrollArea::Virtual08();
     if(this->TextFlagSet(TextFlag_WordWrap) && !this->mSegmentList.empty() && this->mScrollArea.width!=oldWidth && this->mHasBeenVisible) {
-        if(this->TextFlagSet(TextFlag_DelayWordWrap) && !this->mSegmentList.empty() && this->mSegmentList.back()->mAbsEndChar>5000) {
+        if(ee_won_gui_text_delay_wrap(this->mTextFlags,this->mSegmentList.back()->mAbsEndChar)) {
             this->mDelayWordWrapTimeAccum=0;
             this->mNeedRecalcWordWrap=true;
             this->RequestTimer(true);
@@ -78,8 +100,7 @@ void TextArea::AdjustPosition(bool becauseOfScrollbar) {
         LineVector::iterator itr=this->FindLineAt(this->mTotalHeight-this->mScrollArea.height);
         if(itr!=this->mLineVector.end()) {
             TextLine* line=(*itr).get();
-            this->mExtraHeight=line->my+line->mHeight+this->mScrollArea.height-this->mTotalHeight;
-            if(this->mExtraHeight<0) this->mExtraHeight=0;
+            this->mExtraHeight=ee_won_gui_list_full_line_extra(this->mTotalHeight,this->mScrollArea.height,line->my,line->mHeight);
         }
     }
     ScrollArea::AdjustPosition(becauseOfScrollbar);
@@ -102,23 +123,19 @@ void TextArea::AdjustPosition(bool becauseOfScrollbar) {
 // Returns whether new text should scroll the view to the bottom: scroll-on-bottom is set and the
 // user has not scrolled away from the last (non-empty) line
 bool TextArea::ShouldScrollOnBottom() {
-    if(!this->TextFlagSet(TextFlag_ScrollOnBottom)) return false;
-    if(!this->mUserHasScrolled) return true;
-    if(!this->mLineVector.empty()) {
-        TextLine* line=this->mLineVector.back().get();
-        if(line->mHeight==0 && this->mLineVector.size()>1) line=this->mLineVector[this->mLineVector.size()-2].get();
-        if(this->IsLineVisible(line)) return true;
-    }
-    return false;
+    EeWonTextLineY aLast={0,0},aPrev={0,0};
+    size_t aCount=this->mLineVector.size();
+    if(aCount>0) { aLast.y=this->mLineVector.back()->my;aLast.height=this->mLineVector.back()->mHeight; }
+    if(aCount>1) { aPrev.y=this->mLineVector[aCount-2]->my;aPrev.height=this->mLineVector[aCount-2]->mHeight; }
+    return ee_won_gui_text_scroll_on_bottom(this->mTextFlags,this->mUserHasScrolled,aCount,aLast,aPrev,
+                                            this->mVertOffset,this->mScrollArea.height);
 }
 
 // FUNCTION: WON 0x00713030
 // Returns whether a line is inside the view (partly, when partial lines are shown)
 bool TextArea::IsLineVisible(TextLine* line) {
-    if(line->my+line->mHeight<this->mVertOffset) return false;
-    int y=line->my;
-    if(!this->TextFlagSet(TextFlag_ShowPartialLines)) y+=line->mHeight;
-    return y<=this->mVertOffset+this->mScrollArea.height;
+    return ee_won_gui_list_visible(line->my,line->mHeight,this->mVertOffset,this->mScrollArea.height,
+                                   this->TextFlagSet(TextFlag_ShowPartialLines));
 }
 
 // FUNCTION: WON 0x00713080
@@ -149,18 +166,11 @@ void TextArea::ScrollPaint(Graphics& g) {
     }
 }
 
-struct TextLineYLess {
-    bool operator()(const SmartPtr<TextLine>& a,const SmartPtr<TextLine>& b) const { return a->my<b->my; }
-};
 // FUNCTION: WON 0x007131b0
 // Returns the line containing height y (the last line starting at or above y)
 TextArea::LineVector::iterator TextArea::FindLineAt(int y) {
     this->mSearchLine->my=y;
-    LineVector::iterator itr=std::lower_bound(this->mLineVector.begin(),this->mLineVector.end(),this->mSearchLine,TextLineYLess());
-    if(itr==this->mLineVector.end() || (*itr)->my>y) {
-        if(itr!=this->mLineVector.begin()) --itr;
-    }
-    return itr;
+    return this->mLineVector.begin()+ee_won_gui_list_line_at(this->mLineVector.size(),y,TextLineTopOf,&this->mLineVector);
 }
 
 // FUNCTION: WON 0x00713250
@@ -175,31 +185,25 @@ void TextArea::FindTopLine() {
 // clamps the point into the text, and a point right of a line's end hits its last segment
 TextSegmentBase* TextArea::FindSegment(int x,int y,bool lenient) {
     if(this->mLineVector.empty()) return NULL;
-    if(lenient) {
-        if(x>=this->mTotalWidth && this->mTotalWidth!=0) x=this->mTotalWidth-1;
-        if(x<0) x=0;
-        if(y>=this->mTotalHeight) y=this->mTotalHeight-1;
-        if(y<0) y=0;
-    }
+    if(lenient) ee_won_gui_text_find_clamp(&x,&y,this->mTotalWidth,this->mTotalHeight);
     if(this->mLastFindSeg!=NULL) {
         TextLine* line=this->mLastFindSeg->mLine;
-        int xpos=x-line->mx;
-        if(line->my<=y && line->my+line->mHeight>=y) {
-            if(xpos>=this->mLastFindSeg->mx && xpos<=this->mLastFindSeg->mx+this->mLastFindSeg->mWidth) return this->mLastFindSeg;
-        }
+        if(ee_won_gui_text_find_cached(x,y,line->mx,line->my,line->mHeight,this->mLastFindSeg->mx,this->mLastFindSeg->mWidth))
+            return this->mLastFindSeg;
     }
     LineVector::iterator lineItr=this->FindLineAt(y);
     TextLine* line=(*lineItr).get();
-    if(!lenient && line->my+line->mHeight<y) return NULL;
-    x-=line->mx;
-    TextLine::SegmentList::iterator segItr=line->mSegmentList.begin();
-    TextSegmentBase* seg=NULL;
-    while(segItr!=line->mSegmentList.end()) {
-        seg=segItr->get();
-        if(x<=seg->mx+seg->mWidth) break;
-        ++segItr;
+    std::vector<int> aXs,aWidths;
+    std::vector<TextSegmentBase*> aSegs;
+    for(TextLine::SegmentList::iterator segItr=line->mSegmentList.begin();segItr!=line->mSegmentList.end();++segItr) {
+        aXs.push_back((*segItr)->mx);
+        aWidths.push_back((*segItr)->mWidth);
+        aSegs.push_back(segItr->get());
     }
-    if(seg!=NULL && !lenient && x<seg->mx) seg=NULL;
+    int64_t aPick=ee_won_gui_text_find_pick(x-line->mx,y,line->my,line->mHeight,aXs.empty()?NULL:&aXs[0],
+                                            aWidths.empty()?NULL:&aWidths[0],aXs.size(),lenient);
+    if(aPick==-2) return NULL;
+    TextSegmentBase* seg=aPick<0?NULL:aSegs[(size_t)aPick];
     this->mLastFindSeg=seg;
     return seg;
 }
@@ -211,19 +215,7 @@ void TextArea::CheckSel(int x,int y,bool newStart) {
     TextSegmentBase* seg=this->FindSegment(x,y,true);
     if(seg==NULL) return;
     int selection=seg->CharAt(x-seg->mLine->mx);
-    if(newStart) {
-        this->mSelStartChar=this->mSelEndChar=selection;
-        this->mBackwardsSel=false;
-        this->Invalidate();
-        return;
-    }
-    bool backwards=this->mBackwardsSel;
-    if(backwards) this->mSelStartChar=selection;
-    else this->mSelEndChar=selection;
-    if(this->mSelStartChar>this->mSelEndChar) {
-        this->mBackwardsSel=!backwards;
-        int old=this->mSelStartChar;this->mSelStartChar=this->mSelEndChar;this->mSelEndChar=old;
-    }
+    ee_won_gui_text_check_sel(&this->mSelStartChar,&this->mSelEndChar,&this->mBackwardsSel,selection,newStart);
     this->Invalidate();
 }
 
@@ -233,26 +225,15 @@ void TextArea::CheckSel(int x,int y,bool newStart) {
 bool TextArea::TimerEvent(int) {
     if(this->mNeedRecalcWordWrap) {
         this->mDelayWordWrapTimeAccum++;
-        if(this->mDelayWordWrapTimeAccum>1) {
-            int chars=0;
-            if(!this->mSegmentList.empty()) chars=this->mSegmentList.back()->mAbsEndChar;
-            if(this->mDelayWordWrapTimeAccum>=10 || this->mDelayWordWrapTimeAccum>=chars/16000) this->RecalcWordWrap(true);
-        }
+        int chars=0;
+        if(!this->mSegmentList.empty()) chars=this->mSegmentList.back()->mAbsEndChar;
+        if(ee_won_gui_text_wrap_due(this->mDelayWordWrapTimeAccum,chars)) this->RecalcWordWrap(true);
     }
     if(!this->mSelecting) return this->mNeedRecalcWordWrap;
     int x,y;this->GetMousePos(x,y);
-    if(x>=0 && x<=this->Width() && y>=0 && y<=this->Height()) return true;
-    if(y>this->Height()) {
-        int delta=y-this->Height();
-        if(this->TextFlagSet(TextFlag_ScrollFullLine) && delta<this->mDownScrollAmount) delta=this->mDownScrollAmount;
-        this->mVertOffset+=delta;
-    } else if(y<0) {
-        int delta=-y;
-        if(this->TextFlagSet(TextFlag_ScrollFullLine) && delta<this->mUpScrollAmount) delta=this->mUpScrollAmount;
-        this->mVertOffset-=delta;
-    }
-    if(x>this->Width()) this->mHorzOffset+=x-this->Width();
-    else if(x<0) this->mHorzOffset+=x;
+    if(!ee_won_gui_text_drag_scroll(x,y,this->Width(),this->Height(),this->TextFlagSet(TextFlag_ScrollFullLine),
+                                    this->mDownScrollAmount,this->mUpScrollAmount,&this->mVertOffset,&this->mHorzOffset))
+        return true;
     this->AdjustPosition(false);
     this->ScrollTranslate(x,y);
     this->CheckSel(x,y,false);
@@ -330,15 +311,9 @@ void TextArea::MouseDrag(int x,int y) {
 // was used
 bool TextArea::KeyDown(int key) {
     if(ScrollArea::KeyDown(key)) return true;
-    switch(key) {
-    case VK_RIGHT:this->mHorzOffset+=10;break;
-    case VK_LEFT:this->mHorzOffset-=10;break;
-    case VK_DOWN:this->mVertOffset+=this->mDownScrollAmount;break;
-    case VK_UP:this->mVertOffset-=this->mUpScrollAmount;break;
-    case VK_NEXT:this->mVertOffset+=this->mScrollArea.height;break;
-    case VK_PRIOR:this->mVertOffset-=this->mScrollArea.height;break;
-    default:return false;
-    }
+    if(!ee_won_gui_text_key_scroll(key,&this->mVertOffset,&this->mHorzOffset,this->mDownScrollAmount,
+                                   this->mUpScrollAmount,this->mScrollArea.height))
+        return false;
     this->mUserHasScrolled=true;
     this->AdjustPosition(false);
     return true;
@@ -368,23 +343,10 @@ bool TextArea::KeyChar(int key) {
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
 void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
-    int start=0,next=0;
-    while(start<text.length()) {
-        int end=start;
-        while(end<text.length()) {
-            int ch=text[end];
-            if(ch=='\r') {
-                if(end+1<text.length() && text[end+1]=='\n') next=end+2;
-                else next=end+1;
-                break;
-            } else if(ch=='\n') { next=end+1;break; }
-            end++;
-        }
-        bool foundReturn=true;
-        if(end>=text.length()) { next=text.length();foundReturn=lineBreak; }
-        this->AddSegment(text.substr((unsigned short)start,(unsigned short)(end-start)),foundReturn);
-        start=next;
-    }
+    std::vector<EeWonTextPart> aParts(text.length()+1);
+    size_t aCount=ee_won_gui_text_split(text.mData->mText,text.length(),sizeof(wchar_t),lineBreak,&aParts[0],aParts.size());
+    for(size_t i=0;i<aCount && i<aParts.size();i++)
+        this->AddSegment(text.substr((unsigned short)aParts[i].start,(unsigned short)aParts[i].len),aParts[i].line_break);
 }
 
 // FUNCTION: WON 0x00713ff0
@@ -421,23 +383,11 @@ void TextArea::SetMaxLines(int lines) {
 // realigning its segments) as needed, then aligns the line
 void TextArea::AddSeg(TextSegmentBase* segment) {
     TextLine* line=this->mLineVector.back().get();
-    bool adjust=false;
-    int baseline=segment->mAscent;
-    if(baseline>line->mBaseline) { line->mBaseline=baseline;adjust=true; }
-    int descent=segment->mHeight-segment->mAscent;
-    if(descent>line->mDescent) line->mDescent=descent;
-    if(segment->mHeight>line->mHeight) {
-        this->mTotalHeight-=line->mHeight;
-        line->mHeight=segment->mHeight;
-        this->mTotalHeight+=line->mHeight;
-        adjust=true;
-    }
-    if(line->mDescent+line->mBaseline>line->mHeight) {
-        this->mTotalHeight-=line->mHeight;
-        line->mHeight=line->mBaseline+line->mDescent;
-        this->mTotalHeight+=line->mHeight;
-        adjust=true;
-    }
+    EeWonTextLineM aMetrics={line->mHeight,line->mBaseline,line->mDescent};
+    bool adjust=ee_won_gui_text_add_seg(&aMetrics,segment->mHeight,segment->mAscent,&this->mTotalHeight);
+    line->mHeight=aMetrics.height;
+    line->mBaseline=aMetrics.baseline;
+    line->mDescent=aMetrics.descent;
     if(adjust) {
         TextLine::SegmentList::iterator itr=line->mSegmentList.begin();
         while(itr!=line->mSegmentList.end()) {
@@ -456,13 +406,7 @@ void TextArea::AddSeg(TextSegmentBase* segment) {
 // FUNCTION: WON 0x007124a0
 // Sets a line's x for left, centre or right alignment in the view (never negative)
 void TextArea::AlignLine(TextLine* line,HorzAlign align) {
-    int x=0;
-    switch(align) {
-    case HorzAlign_Center:x=(this->mScrollArea.width-line->mWidth)/2;break;
-    case HorzAlign_Right:x=this->mScrollArea.width-line->mWidth;break;
-    }
-    if(x<=0) x=0;
-    line->mx=x;
+    line->mx=ee_won_gui_text_align_x(this->mScrollArea.width,line->mWidth,(int)align);
 }
 // FUNCTION: WON 0x00712980
 // Appends a segment after the last one, lays it out, enforces the character and line limits and
@@ -487,29 +431,32 @@ void TextArea::EnforceInvariants() {
     this->mTotalHeight=0;
     this->mNumLines=0;
     if(this->mLineVector.empty() || this->mSegmentList.empty()) return;
-    int deltaPos=this->mLineVector.front()->my;
-    LineVector::iterator lineItr=this->mLineVector.begin();
-    while(lineItr!=this->mLineVector.end()) {
-        TextLine* line=(*lineItr).get();
-        if(line->mWidth>this->mTotalWidth) this->mTotalWidth=line->mWidth;
-        line->my-=deltaPos;
-        this->mTotalHeight+=line->mHeight;
-        ++lineItr;
+    std::vector<int> aWidths,aHeights,aYs,aStarts,aEnds;
+    std::vector<char> aBreaks;
+    for(LineVector::iterator lineItr=this->mLineVector.begin();lineItr!=this->mLineVector.end();++lineItr) {
+        aWidths.push_back((*lineItr)->mWidth);
+        aHeights.push_back((*lineItr)->mHeight);
+        aYs.push_back((*lineItr)->my);
     }
-    int deltaChar=this->mSegmentList.front()->mAbsStartChar;
-    SegmentList::iterator itr=this->mSegmentList.begin();
-    while(itr!=this->mSegmentList.end()) {
-        TextSegmentBase* seg=itr->get();
-        seg->mAbsStartChar-=deltaChar;
-        seg->mAbsEndChar-=deltaChar;
-        if(seg->mLineBreak) this->mNumLines++;
-        ++itr;
+    for(SegmentList::iterator itr=this->mSegmentList.begin();itr!=this->mSegmentList.end();++itr) {
+        aStarts.push_back((*itr)->mAbsStartChar);
+        aEnds.push_back((*itr)->mAbsEndChar);
+        aBreaks.push_back((*itr)->mLineBreak);
     }
-    this->mSelStartChar-=deltaChar;
-    this->mSelEndChar-=deltaChar;
-    if(this->mSelStartChar<0) this->mSelStartChar=0;
-    if(this->mSelEndChar<0) this->mSelEndChar=0;
-    this->mVertOffset-=deltaPos;
+    int aTotals[3];
+    ee_won_gui_text_renumber(&aWidths[0],&aHeights[0],&aYs[0],aYs.size(),&aStarts[0],&aEnds[0],(const bool*)&aBreaks[0],
+                             aStarts.size(),&this->mSelStartChar,&this->mSelEndChar,&this->mVertOffset,aTotals);
+    size_t i=0;
+    for(LineVector::iterator lineItr=this->mLineVector.begin();lineItr!=this->mLineVector.end();++lineItr,++i)
+        (*lineItr)->my=aYs[i];
+    i=0;
+    for(SegmentList::iterator itr=this->mSegmentList.begin();itr!=this->mSegmentList.end();++itr,++i) {
+        (*itr)->mAbsStartChar=aStarts[i];
+        (*itr)->mAbsEndChar=aEnds[i];
+    }
+    this->mTotalWidth=aTotals[0];
+    this->mTotalHeight=aTotals[1];
+    this->mNumLines=aTotals[2];
 }
 // FUNCTION: WON 0x00712cd0
 // Removes the lines up to the one ending past the given segment and every segment before that line,
@@ -517,20 +464,10 @@ void TextArea::EnforceInvariants() {
 void TextArea::RemoveSegmentsUpTo(TextSegmentBase* segment) {
     TextLine* findLine=segment->mLine;
     this->mLastFindSeg=NULL;
-    bool found=false;
-    LineVector::iterator lineItr=this->mLineVector.begin();
-    while(lineItr!=this->mLineVector.end()) {
-        TextLine* line=(*lineItr).get();
-        if(line==findLine) found=true;
-        if(found && !line->mSegmentList.empty()) {
-            TextSegmentBase* seg=line->mSegmentList.back().get();
-            if(seg->GetActual()!=segment) {
-                segment->mLine=line;
-                break;
-            }
-        }
-        ++lineItr;
-    }
+    TextRemoveSearch aSearch={&this->mLineVector,findLine,segment};
+    LineVector::iterator lineItr=this->mLineVector.begin()+
+        ee_won_gui_text_remove_stop(this->mLineVector.size(),TextRemoveFlagsOf,&aSearch);
+    if(lineItr!=this->mLineVector.end()) segment->mLine=lineItr->get();
     this->mLineVector.erase(this->mLineVector.begin(),lineItr);
     TextSegmentBase* stop=NULL;
     if(!this->mLineVector.empty()) {
@@ -551,34 +488,30 @@ void TextArea::RemoveSegmentsUpTo(TextSegmentBase* segment) {
 // FUNCTION: WON 0x00712f70
 // Removes the oldest segments while the text is longer than the character limit
 void TextArea::EnforceMaxChars() {
-    if(this->mMaxChars<=0 || this->mSegmentList.empty()) return;
-    TextSegmentBase* seg=this->mSegmentList.back().get();
-    int toRemove=seg->mAbsEndChar-this->mMaxChars;
+    if(this->mSegmentList.empty()) return;
+    int toRemove=ee_won_gui_text_chars_excess(this->mMaxChars,this->mSegmentList.back()->mAbsEndChar);
     if(toRemove<=0) return;
-    SegmentList::iterator itr=this->mSegmentList.begin();
-    while(itr!=this->mSegmentList.end()) {
-        seg=itr->get();
-        if(seg->mAbsEndChar+1>=toRemove) break;
-        ++itr;
+    std::vector<int> aEnds;
+    std::vector<TextSegmentBase*> aSegs;
+    for(SegmentList::iterator itr=this->mSegmentList.begin();itr!=this->mSegmentList.end();++itr) {
+        aEnds.push_back((*itr)->mAbsEndChar);
+        aSegs.push_back(itr->get());
     }
-    this->RemoveSegmentsUpTo(seg);
+    this->RemoveSegmentsUpTo(aSegs[ee_won_gui_text_chars_cut(&aEnds[0],aEnds.size(),toRemove)]);
 }
 // FUNCTION: WON 0x00712fd0
 // Removes the oldest lines while the text has more line breaks than the line limit
 void TextArea::EnforceMaxLines() {
-    if(this->mMaxLines<=0 || this->mSegmentList.empty()) return;
-    TextSegmentBase* seg=this->mSegmentList.back().get();
-    int toRemove=this->mNumLines-this->mMaxLines;
+    if(this->mSegmentList.empty()) return;
+    int toRemove=ee_won_gui_text_lines_excess(this->mMaxLines,this->mNumLines);
     if(toRemove<=0) return;
-    int count=0;
-    SegmentList::iterator itr=this->mSegmentList.begin();
-    while(itr!=this->mSegmentList.end()) {
-        seg=itr->get();
-        if(seg->mLineBreak) count++;
-        if(count>=toRemove) break;
-        ++itr;
+    std::vector<char> aBreaks;
+    std::vector<TextSegmentBase*> aSegs;
+    for(SegmentList::iterator itr=this->mSegmentList.begin();itr!=this->mSegmentList.end();++itr) {
+        aBreaks.push_back((*itr)->mLineBreak);
+        aSegs.push_back(itr->get());
     }
-    this->RemoveSegmentsUpTo(seg);
+    this->RemoveSegmentsUpTo(aSegs[ee_won_gui_text_lines_cut((const bool*)&aBreaks[0],aBreaks.size(),toRemove)]);
 }
 
 // FUNCTION: WON 0x00713680
@@ -613,7 +546,8 @@ void TextArea::AddSegmentPrv(TextSegmentBase* segment) {
     TextLine* line=this->mLineVector.back().get();
     segment->mLine=line;
     segment->PerformInstructions(this);
-    if(this->Width()<=0 || line->mWidth+segment->mWidth<=this->mScrollArea.width || !this->TextFlagSet(TextFlag_WordWrap) || !this->mHasBeenVisible) {
+    if(ee_won_gui_text_seg_fits(this->Width(),line->mWidth,segment->mWidth,this->mScrollArea.width,
+                                this->TextFlagSet(TextFlag_WordWrap),this->mHasBeenVisible)) {
         this->AddSeg(segment);
         if(line->mWidth>this->mTotalWidth && !this->TextFlagSet(TextFlag_WordWrap)) this->mTotalWidth=line->mWidth;
     } else segment->Wrap(this,line);

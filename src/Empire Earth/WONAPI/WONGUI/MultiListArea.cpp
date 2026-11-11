@@ -9,14 +9,21 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The column at an x, the column resizes and positions, the dynamic column, the auto-grow test and the partner
+// links are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs); this unit keeps the columns' viewports,
+// the rows and cells, sorting and the paint.
 namespace WONAPI {
 // FUNCTION: WON 0x007039c0
 // Returns the first column whose right edge is at or past x (the last column when x is beyond all of them)
 int MultiListArea::GetColumnAt(int x)
 {
-    for(int i=0;i<this->mColumnInfoVector.size();++i)
-        if(this->mColumnInfoVector[i].mx+this->mColumnInfoVector[i].mWidth>=x) return i;
-    return (int)this->mColumnInfoVector.size()-1;
+    std::vector<int> aXs,aWidths;
+    for(size_t i=0;i<this->mColumnInfoVector.size();++i) {
+        aXs.push_back(this->mColumnInfoVector[i].mx);
+        aWidths.push_back(this->mColumnInfoVector[i].mWidth);
+    }
+    return ee_won_gui_ml_column_at(aXs.empty()?NULL:&aXs[0],aWidths.empty()?NULL:&aWidths[0],aXs.size(),x);
 }
 // FUNCTION: WON 0x00703960
 // Returns a column's width, or 0 for an invalid column
@@ -41,48 +48,28 @@ namespace WONAPI {
 // then repositions every column and updates the header and scrolling
 void MultiListArea::SetColumnWidth(int theCol, int theWidth, bool fromSizeChanged)
 {
-	if(theCol >= this->mColumnInfoVector.size())
+	size_t aCount = this->mColumnInfoVector.size();
+	std::vector<int> aWidths(aCount), aPartners(aCount), aXs(aCount);
+	std::vector<unsigned char> aModes(aCount);
+	for(size_t i=0; i<aCount; i++)
+	{
+		aWidths[i] = this->mColumnInfoVector[i].mWidth;
+		aPartners[i] = this->mColumnInfoVector[i].mPartnerColumn;
+		aModes[i] = this->mColumnInfoVector[i].mSizeMode;
+	}
+	if(!ee_won_gui_ml_set_width(aCount?&aWidths[0]:NULL, aCount?&aModes[0]:NULL, aCount?&aPartners[0]:NULL,
+	                            aCount?&aXs[0]:NULL, aCount, &this->mTotalColumnWidth, this->mMaxTotalColumnWidth,
+	                            theCol, theWidth, fromSizeChanged))
 		return;
-	if(theWidth<0)
-		theWidth = 0;
 
-	ColumnInfo &aCol = this->mColumnInfoVector[theCol];
-	if(!fromSizeChanged && aCol.mSizeMode==2 && aCol.mPartnerColumn>=0 && aCol.mPartnerColumn<this->mColumnInfoVector.size())
+	for(size_t i=0; i<aCount; i++)
 	{
-		ColumnInfo &aCol2 = this->mColumnInfoVector[aCol.mPartnerColumn];
-		int anOldWidth = aCol.mWidth;
-		int aDelta = theWidth - anOldWidth;
-		if(aDelta>aCol2.mWidth)
-			aDelta = aCol2.mWidth;
-
-		aCol.mWidth += aDelta;
-		aCol2.mWidth -= aDelta;
-	}
-	else
-	{
-		int anOldWidth = aCol.mWidth;
-
-		int aDelta = theWidth - anOldWidth;
-		if(this->mMaxTotalColumnWidth>0 && aDelta>0 && this->mTotalColumnWidth+aDelta>this->mMaxTotalColumnWidth)
-		{
-			aDelta = this->mMaxTotalColumnWidth - this->mTotalColumnWidth;
-			if(aDelta<0)
-				aDelta = 0;
-		}
-
-		aCol.mWidth += aDelta;
-		this->mTotalColumnWidth += aDelta;
-	}
-
-	int aTotalWidth = 0;
-	for(int i=0; i<this->mColumnInfoVector.size(); i++)
-	{
+		this->mColumnInfoVector[i].mWidth = aWidths[i];
 		ScrollAreaViewport *aContainer = this->mColumnInfoVector[i].mContainer.get();
 		if(aContainer!=NULL)
-			aContainer->SetPos(aTotalWidth,0);
+			aContainer->SetPos(aXs[i],0);
 
-		this->mColumnInfoVector[i].mx = aTotalWidth;
-		aTotalWidth += this->mColumnInfoVector[i].mWidth;
+		this->mColumnInfoVector[i].mx = aXs[i];
 	}
 
 	this->NotifyListHeader();
@@ -134,15 +121,8 @@ void MultiListArea::Virtual08()
 	int oldWidth = this->mScrollArea.width;
 
 	ListArea::Virtual08();
-	if (!(this->mDynamicSizeColumn >= 0) || !(this->mDynamicSizeColumn < (int)this->mColumnInfoVector.size()))
-		return;
-	int aSizeDelta = this->mScrollArea.width - oldWidth;
-	if(this->mTotalColumnWidth + aSizeDelta > this->mScrollArea.width)
-	{
-		aSizeDelta = this->mScrollArea.width - this->mTotalColumnWidth;
-		if(aSizeDelta<0)
-			aSizeDelta = 0;
-	}
+	int aSizeDelta = ee_won_gui_ml_dynamic_delta(this->mDynamicSizeColumn, this->mColumnInfoVector.size(),
+	                                             this->mScrollArea.width, oldWidth, this->mTotalColumnWidth);
 
 	if(aSizeDelta!=0)
 		this->SetColumnWidth(this->mDynamicSizeColumn, this->mColumnInfoVector[this->mDynamicSizeColumn].mWidth + aSizeDelta,true);
@@ -189,11 +169,11 @@ MultiListItem* MultiListArea::UpdateItem(MultiListItem *theItem)
 		for(int i=0; i<this->mColumnInfoVector.size(); i++)
 		{
 			ListItem *anItem = theItem->GetItem(i);
-			if(anItem==NULL || !(anItem->mWidth>0))
+			if(anItem==NULL)
 				continue;
-			int aWidth = this->mColumnInfoVector[i].mWidth;
-			if(anItem->mWidth + this->mColumnBorderWidth > aWidth)
-				this->SetColumnWidth(i,anItem->mWidth + this->mColumnBorderWidth,false);
+			int aWidth = ee_won_gui_ml_grow(anItem->mWidth, this->mColumnBorderWidth, this->mColumnInfoVector[i].mWidth);
+			if(aWidth>=0)
+				this->SetColumnWidth(i,aWidth,false);
 		}
 	}
 	return theItem;
@@ -283,20 +263,20 @@ void MultiListArea::SetColumnSizeMode(int theCol, unsigned char theMode)
 	int anOldMode = this->mColumnInfoVector[theCol].mSizeMode;
 	this->mColumnInfoVector[theCol].mSizeMode = theMode;	
 
-	if(theMode!=2 && anOldMode!=2)
+	if(!ee_won_gui_ml_relink((unsigned char)anOldMode, theMode))
 		return;
 
-	int aPrevPartner = -1;
-	for(int i=0; i<this->mColumnInfoVector.size(); i++)
+	size_t aCount = this->mColumnInfoVector.size();
+	std::vector<unsigned char> aModes(aCount);
+	std::vector<int> aPartners(aCount);
+	for(size_t i=0; i<aCount; i++)
 	{
-		ColumnInfo &anInfo = this->mColumnInfoVector[i];
-		if(anInfo.mSizeMode!=2)
-			continue;
-		if(aPrevPartner>=0)
-			this->mColumnInfoVector[aPrevPartner].mPartnerColumn = i;
-
-		aPrevPartner = i;
+		aModes[i] = this->mColumnInfoVector[i].mSizeMode;
+		aPartners[i] = this->mColumnInfoVector[i].mPartnerColumn;
 	}
+	ee_won_gui_ml_link_partners(aCount?&aModes[0]:NULL, aCount?&aPartners[0]:NULL, aCount);
+	for(size_t i=0; i<aCount; i++)
+		this->mColumnInfoVector[i].mPartnerColumn = aPartners[i];
 }
 
 MultiListItem* MultiListArea::InsertRow(int theRow)

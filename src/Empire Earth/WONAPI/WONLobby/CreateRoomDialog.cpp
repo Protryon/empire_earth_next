@@ -8,6 +8,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 namespace WONAPI {
 CreateRoomDialog::CreateRoomDialog() {}
 
@@ -50,12 +53,9 @@ void CreateRoomDialog::UpdatePasswordVisibility()
 // Enables the create button only with a room name and, when shown, a password
 void CreateRoomDialog::CheckInput()
 {
-    bool aEnable = true;
-    if (this->mNameInput->mText.length() == 0)
-        aEnable = false;
-    else if (this->mPasswordInput->IsVisible() && this->mPasswordInput->mText.length() == 0)
-        aEnable = false;
-    this->mCreateButton->SetEnabled(aEnable);
+    this->mCreateButton->SetEnabled(ee_won_dlg_create_enabled(this->mNameInput->mText.length(),
+                                                              this->mPasswordInput->IsVisible(),
+                                                              this->mPasswordInput->mText.length()));
 }
 // FUNCTION: WON 0x7f6d70
 // Returns the typed password, or an empty string when the room has no password

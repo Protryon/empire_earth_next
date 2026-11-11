@@ -12,7 +12,16 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The split, its clamp and percentages, the panes' and bars' rectangles, the drag and the maximise buttons' rules
+// are ee_won's guictl module (rust/crates/ee_won/src/guictl.rs); this unit keeps the panes, bars, buttons,
+// cursors and events.
 namespace WONAPI {
+static EeWonSplit SplitOf(int x, int y, int left, int right, int top, int bottom)
+{
+	EeWonSplit aSplit = { x, y, left, right, top, bottom };
+	return aSplit;
+}
 
 // FUNCTION: WON 0x00707300
 // Registers a button that maximizes a quadrant, giving it control id 100005 + the quadrant position
@@ -40,12 +49,12 @@ void Splitter::AddSplitterPrv(Component *theSplitter, SplitterType theType, Comp
 	theDragComponent->SetComponentFlags(ComponentFlag_ParentDrag,true);
 	if(theDragComponent->GetDefaultCursor()==NULL)
 	{
-		if(theType==Splitter_Center)
-			theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest));
-		else if(theType & Splitter_LeftRight)
-			theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_EastWest));
-		else if(theType & Splitter_UpDown)
-			theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_NorthSouth));
+		switch(ee_won_gui_split_cursor(theType))
+		{
+			case 1: theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest)); break;
+			case 2: theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_EastWest)); break;
+			case 3: theDragComponent->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_NorthSouth)); break;
+		}
 	}
 	aParam.mDragComponent = theDragComponent;
 
@@ -96,28 +105,16 @@ void Splitter::MaxQuadrant(QuadrantPosition thePosition)
 	this->mHaveMaxQuadrant = true;
 	this->mCurMaxQuadrant = thePosition;
 
-	this->mLeftRightMax = this->mUpDownMax = true;
-
-	int x = this->mSplitX, y = this->mSplitY;
-	if(thePosition & Position_Left)
-		x = this->Width()-this->mLeftRightSplitterWidth/2;
-	else if(thePosition & Position_Right)
-		x = this->mLeftRightSplitterWidth/2;
-	else 
-		this->mLeftRightMax = false;
-
-	if(thePosition & Position_Top)
-		y = this->Height()-this->mUpDownSplitterHeight/2;
-	else if(thePosition & Position_Bottom)
-		y = this->mUpDownSplitterHeight/2;
-	else
-		this->mUpDownMax = false;
+	int x, y;
+	ee_won_gui_split_max(thePosition, this->Width(), this->Height(), this->mLeftRightSplitterWidth,
+	                     this->mUpDownSplitterHeight, this->mSplitX, this->mSplitY, &x, &y, &this->mLeftRightMax,
+	                     &this->mUpDownMax);
 
 
 	for(ButtonList::iterator aButtonItr = this->mButtonList.begin(); aButtonItr!=this->mButtonList.end(); ++aButtonItr)
 	{
 		Button *aButton = aButtonItr->get();
-		int aPosition = aButton->mControlId - 100006 + Position_Left;
+		int aPosition = ee_won_gui_split_button_quadrant(aButton->mControlId);
 		aButton->SetCheck(aPosition==thePosition,false);
 	}
 
@@ -176,7 +173,8 @@ void Splitter::UnMaxQuadrant()
 		++aQuadrantItr;
 	}
 
-	this->SetSplitterPos(this->Width()*this->mLeftPercent/100,this->Height()*this->mTopPercent/100,false);
+	this->SetSplitterPos(ee_won_gui_split_at(this->Width(),this->mLeftPercent,0),
+	                     ee_won_gui_split_at(this->Height(),this->mTopPercent,0),false);
 }
 
 // FUNCTION: WON 0x00707a50
@@ -190,21 +188,10 @@ void Splitter::CalcQuadrants()
 		Component *aComponent = aParam.mComponent;
 		int aPosition = aParam.mPosition;
 
-		int left = 0, right = this->Width(), top = 0, bottom = this->Height();
-
-		if(aPosition & Position_Left)
-			right = this->mSplitLeft;
-
-		if(aPosition & Position_Right)
-			left = this->mSplitRight;
-
-		if(aPosition & Position_Top)
-			bottom = this->mSplitTop;
-
-		if(aPosition & Position_Bottom)
-			top = this->mSplitBottom;
-
-		aComponent->SetPosSize(left,top,right-left,bottom-top);
+		EeWonRect4 r = ee_won_gui_split_pane(aPosition, this->Width(), this->Height(),
+		                                     SplitOf(this->mSplitX, this->mSplitY, this->mSplitLeft, this->mSplitRight,
+		                                             this->mSplitTop, this->mSplitBottom));
+		aComponent->SetPosSize(r.x,r.y,r.w,r.h);
 		++anItr;
 	}
 
@@ -221,29 +208,10 @@ void Splitter::CalcSplitterPositions()
 		Component *aComponent = aParam.mComponent;
 		if(aComponent->IsVisible())
 		{
-			int left = 0, top = 0, right = this->Width(), bottom = this->Height();
-
-			if(aParam.mType & Splitter_LeftRight)
-			{
-				left = this->mSplitLeft;
-				right = this->mSplitRight;
-			}
-
-			if(aParam.mType & Splitter_UpDown)
-			{
-				top = this->mSplitTop;
-				bottom = this->mSplitBottom;
-			}
-
-			switch(aParam.mType)
-			{
-				case Splitter_LeftRight_Top: bottom = this->mSplitTop; break;
-				case Splitter_LeftRight_Bottom: top = this->mSplitBottom; break;
-				case Splitter_UpDown_Left: right = this->mSplitLeft; break;
-				case Splitter_UpDown_Right: left = this->mSplitRight; break;
-			}
-
-			aComponent->SetPosSize(left,top,right-left,bottom-top);
+			EeWonRect4 r = ee_won_gui_split_bar(aParam.mType, this->Width(), this->Height(),
+			                                    SplitOf(this->mSplitX, this->mSplitY, this->mSplitLeft, this->mSplitRight,
+			                                            this->mSplitTop, this->mSplitBottom));
+			aComponent->SetPosSize(r.x,r.y,r.w,r.h);
 		}
 		++anItr;
 	}
@@ -277,39 +245,25 @@ void Splitter::SetPercentages(int theLeftPercent, int theTopPercent)
 // Moves the split (clamped to the minimum pane sizes unless maximized), optionally storing it as percentages
 void Splitter::SetSplitterPos(int x, int y, bool rememberPercentage)
 {
-	if(!this->mLeftRightMax)
-	{
-		if(x < this->mMinLeft)
-			x = this->mMinLeft;
-		if(x > this->Width()-this->mMinRight)
-			x = this->Width()-this->mMinRight;
-	}
-
-	if(!this->mUpDownMax)
-	{
-		if(y < this->mMinTop)
-			y = this->mMinTop;
-		if(y > this->Height()-this->mMinBottom)
-			y = this->Height()-this->mMinBottom;
-	}
-
-	if(this->mSplitCoordsValid && x==this->mSplitX && y==this->mSplitY)
+	EeWonSplit aSplit;
+	if(!ee_won_gui_split_set(x, y, this->mLeftRightMax, this->mUpDownMax, this->mMinLeft, this->mMinRight,
+	                         this->mMinTop, this->mMinBottom, this->Width(), this->Height(), this->mSplitCoordsValid,
+	                         this->mSplitX, this->mSplitY, this->mLeftRightSplitterWidth, this->mUpDownSplitterHeight,
+	                         &aSplit))
 		return;
 
 	this->mSplitCoordsValid = true;
-	this->mSplitX = x;
-	this->mSplitY = y;
-	this->mSplitLeft = x - this->mLeftRightSplitterWidth/2;
-	this->mSplitRight = x + this->mLeftRightSplitterWidth/2;
-	this->mSplitTop = y - this->mUpDownSplitterHeight/2;
-	this->mSplitBottom = y + this->mUpDownSplitterHeight/2;
+	this->mSplitX = aSplit.x;
+	this->mSplitY = aSplit.y;
+	this->mSplitLeft = aSplit.left;
+	this->mSplitRight = aSplit.right;
+	this->mSplitTop = aSplit.top;
+	this->mSplitBottom = aSplit.bottom;
 
 	if(rememberPercentage)
 	{
-		if(this->Width() > 0)
-			this->mLeftPercent = x*100.0/this->Width();
-		if(this->Height() > 0)
-			this->mTopPercent = y*100.0/this->Height();
+		ee_won_gui_split_percent(aSplit.x, this->Width(), &this->mLeftPercent);
+		ee_won_gui_split_percent(aSplit.y, this->Height(), &this->mTopPercent);
 	}
 
 	this->CalcSplitterPositions();
@@ -325,37 +279,11 @@ void Splitter::Virtual08()
 	Container::Virtual08();
 
 	this->mSplitCoordsValid = false;
-	double aLeftPercent = this->mLeftPercent;
-	double aTopPercent = this->mTopPercent;
-	if(this->mHaveMaxQuadrant)
-	{
-		int xoff = 0, yoff = 0;
-		if(this->mCurMaxQuadrant & Position_Left)
-		{
-			aLeftPercent = 100;
-			xoff = -this->mLeftRightSplitterWidth/2;
-		}
-		else if(this->mCurMaxQuadrant & Position_Right)
-		{
-			aLeftPercent = 0;
-			xoff = this->mLeftRightSplitterWidth/2;
-		}
-
-		if(this->mCurMaxQuadrant & Position_Top)
-		{
-			aTopPercent = 100;
-			yoff = -this->mUpDownSplitterHeight/2;
-		}
-		else if(this->mCurMaxQuadrant & Position_Bottom)
-		{
-			aTopPercent = 0;
-			yoff = this->mUpDownSplitterHeight/2;
-		}
-
-		this->SetSplitterPos(this->Width()*aLeftPercent/100 + xoff, this->Height()*aTopPercent/100 + yoff,false);
-	}
-	else		
-		this->SetSplitterPos(this->Width()*aLeftPercent/100,this->Height()*aTopPercent/100,false);
+	int y;
+	int x = ee_won_gui_split_layout(this->mHaveMaxQuadrant, this->mCurMaxQuadrant, this->mLeftPercent, this->mTopPercent,
+	                                this->mLeftRightSplitterWidth, this->mUpDownSplitterHeight, this->Width(),
+	                                this->Height(), &y);
+	this->SetSplitterPos(x,y,false);
 }
 
 // FUNCTION: WON 0x00707f30
@@ -416,14 +344,11 @@ void Splitter::MouseDrag(int x, int y)
 	Container::MouseDrag(x,y);
 	if(this->mMouseChild==NULL)
 		return;
-	int aDeltaX = 0, aDeltaY = 0;
-	if(this->mLeftRightDrag && !this->mLeftRightMax)
-		aDeltaX = x - this->mMouseChild->Left() - this->mDragX;
-
-	if(this->mUpDownDrag && !this->mUpDownMax)
-		aDeltaY = y - this->mMouseChild->Top() - this->mDragY;
-
-	this->SetSplitterPos(this->mSplitX+aDeltaX, this->mSplitY+aDeltaY);
+	int aNewY;
+	int aNewX = ee_won_gui_split_drag(x, y, this->mMouseChild->Left(), this->mMouseChild->Top(), this->mDragX,
+	                                  this->mDragY, this->mLeftRightDrag && !this->mLeftRightMax,
+	                                  this->mUpDownDrag && !this->mUpDownMax, this->mSplitX, this->mSplitY, &aNewY);
+	this->SetSplitterPos(aNewX, aNewY);
 
 
 }
@@ -435,20 +360,20 @@ bool Splitter::CheckMaxButton(ComponentEvent *theEvent)
 	if(theEvent->mType!=ComponentEvent_ButtonPressed)
 		return false;
 
-	if(theEvent->GetControlId()<100006 || theEvent->GetControlId()>100017)
+	if(!ee_won_gui_split_is_max_button(theEvent->GetControlId()))
 		return false;
 
 	Button *aButton = dynamic_cast<Button*>(theEvent->mComponent);
 	if(aButton==NULL)
 		return false;
-	
+
 	if(!aButton->IsChecked())
 	{
 		this->UnMaxQuadrant();
 		return true;
 	}
 
-	int aType = theEvent->GetControlId() - 100006 + Position_Left;
+	int aType = ee_won_gui_split_button_quadrant(theEvent->GetControlId());
 	this->MaxQuadrant((QuadrantPosition)aType);
 	return true;
 }
@@ -459,7 +384,7 @@ void Splitter::HandleComponentEvent(ComponentEvent *theEvent)
 {
 	if(this->CheckMaxButton(theEvent))
 		return;
-	else 
+	else
 		Container::HandleComponentEvent(theEvent);
 }
 }

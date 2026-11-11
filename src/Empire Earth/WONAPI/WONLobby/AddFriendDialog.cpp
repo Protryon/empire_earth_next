@@ -8,6 +8,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 
 namespace WONAPI {
 
@@ -36,7 +39,7 @@ const GUIString& AddFriendDialog::GetName()
 // Enables OK only when a friend name is typed
 void AddFriendDialog::CheckInput()
 {
-    this->mOkButton->SetEnabled(this->mNameInput->mText.length() != 0);
+    this->mOkButton->SetEnabled(ee_won_dlg_name_enabled(this->mNameInput->mText.length()));
 }
 
 // FUNCTION: WON 0x7f4a20

@@ -11,7 +11,15 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The tabs' places, the bar's scroll and arrows, the page area, the arrow keys' target and the tab after a
+// removal are ee_won's guictl module (rust/crates/ee_won/src/guictl.rs); this unit keeps the bars, buttons,
+// pages, focus and events.
 namespace WONAPI {
+static bool TabDisabledOf(const void* inBar, int32_t i)
+{
+    return const_cast<TabBar*>(static_cast<const TabBar*>(inBar))->Disabled(i);
+}
 // Creates a tab bar for its tab control with no current tab and a 4-pixel overlap between tabs
 TabBar::TabBar(TabCtrl* inCtrl) : mCurTab(NULL),mTabCtrl(inCtrl) { this->mOverlap=4; }
 // FUNCTION: WON 0x00708280
@@ -21,13 +29,10 @@ int TabBar::GetCurTabId() { return this->mCurTab==NULL ? -1 : this->mCurTab->mCo
 // Places a tab button right after the previous tab, overlapping it by the bar's overlap (the first tab at 0)
 void TabBar::PositionTab(Button* inTab)
 {
-    int x=0;
     int id=inTab->mControlId;
-    if(id>0 && id<=this->mTabVector.size()) {
-        Button* previous=this->mTabVector[id-1].get();
-        x=previous->Right()-this->mOverlap;
-    }
-    inTab->SetPos(x,0);
+    int aPrevRight=0;
+    if(id>0 && id<=this->mTabVector.size()) aPrevRight=this->mTabVector[id-1]->Right();
+    inTab->SetPos(ee_won_gui_tab_x(id,this->mTabVector.size(),aPrevRight,this->mOverlap),0);
 }
 // The temporary smart pointer from push_back is destroyed before PositionTab
 // FUNCTION: WON 0x00708300
@@ -86,7 +91,7 @@ void TabBar::EnableTab(int inId,bool inEnabled)
     if(inId<0 || inId>=this->mTabVector.size()) return;
     int oldId=this->GetCurTabId();
     if(oldId==inId && !inEnabled)
-        this->SetCurTab(oldId>0 ? oldId-1 : oldId+1,true);
+        this->SetCurTab(ee_won_gui_tab_neighbour(oldId),true);
     Button* tab=this->mTabVector[inId].get();
     if(tab!=NULL) tab->SetEnabled(inEnabled);
 }
@@ -186,26 +191,20 @@ void TabCtrl::KeepTabButtonInView()
 {
     Button* button=this->mBottomTabBar->mCurTab;
     if(button==NULL) return;
-    int left=this->mBottomTabBar->Left()+button->Left();
-    int width=button->Width();
-    int right=left+width;
-    if(left>=0) {
-        int limit=this->mTopTabBarContainer->Width();
-        if(width<=limit) {
-            if(right>limit) this->AdjustTabBarScroll(limit-right);
-            return;
-        }
-    }
-    this->AdjustTabBarScroll(-left);
+    int amount;
+    if(ee_won_gui_tab_keep_in_view(this->mBottomTabBar->Left()+button->Left(),button->Width(),
+                                   this->mTopTabBarContainer->Width(),&amount))
+        this->AdjustTabBarScroll(amount);
 }
 // FUNCTION: WON 0x00708c40
 // Fits a page into the page area below or above the tab bar, inside the padding
 void TabCtrl::PositionTabContainer(Container* inContainer)
 {
     if(inContainer==NULL) return;
-    inContainer->SetPos(this->mLeftPad,this->mContainerLayout->Top()+this->mTopPad);
-    inContainer->SetSize(this->Width()-this->mRightPad-this->mLeftPad,
-        this->mContainerLayout->Height()-this->mBottomPad-this->mTopPad);
+    EeWonRect4 r=ee_won_gui_tab_page_rect(this->mLeftPad,this->mRightPad,this->mTopPad,this->mBottomPad,
+                                          this->mContainerLayout->Top(),this->mContainerLayout->Height(),this->Width());
+    inContainer->SetPos(r.x,r.y);
+    inContainer->SetSize(r.w,r.h);
 }
 // FUNCTION: WON 0x00708cb0
 // Selects the first tab when none is selected yet, then clears the user-interaction flag
@@ -219,11 +218,10 @@ void TabCtrl::AddedToParent()
 // Sets the page area to the space not taken by the tab bar (above or below it, minus the overlap)
 void TabCtrl::CalcContainerLayout()
 {
-    int top=0;
-    int bottom=this->Height();
-    if(this->mTabBarOnBottom) bottom=this->mTopTabBarContainer->Top()+this->mTabBarOverlap;
-    else top=this->mTopTabBarContainer->Bottom()-this->mTabBarOverlap;
-    this->mContainerLayout->SetPosSize(0,top,this->Width(),bottom-top);
+    int height;
+    int top=ee_won_gui_tab_area(this->mTabBarOnBottom,this->Height(),this->mTopTabBarContainer->Top(),
+                                this->mTopTabBarContainer->Bottom(),this->mTabBarOverlap,&height);
+    this->mContainerLayout->SetPosSize(0,top,this->Width(),height);
 }
 // FUNCTION: WON 0x00708d40
 // Places the two scroll arrows side by side at the left or right end of the tab bar row
@@ -231,11 +229,10 @@ void TabCtrl::PositionArrows()
 {
     Button* left=this->mTabBarLeft.get();
     if(left==NULL || this->mTabBarRight.get()==NULL) return;
-    int x=0;
-    if(!this->mArrowsOnLeft) x=this->Width()-this->mTabBarRight->Width()-left->Width();
     int y;
-    if(this->mTabBarOnBottom) y=this->mContainerLayout->Bottom();
-    else y=this->mContainerLayout->Top()-left->Height();
+    int x=ee_won_gui_tab_arrows(this->mArrowsOnLeft,this->mTabBarOnBottom,this->Width(),this->mTabBarRight->Width(),
+                                left->Width(),left->Height(),this->mContainerLayout->Top(),
+                                this->mContainerLayout->Bottom(),&y);
     left->SetPos(x,y);
     this->mTabBarRight->SetPos(this->mTabBarLeft->Right(),y);
 }
@@ -244,32 +241,31 @@ void TabCtrl::PositionArrows()
 void TabCtrl::VertPositionTabBar()
 {
     this->mBottomTabBar->SetSize(this->mBottomTabBar->Width(),
-        this->mTabBarHeight-this->mTabBarOverlap-this->mBottomTabTopOffset);
+        ee_won_gui_tab_bottom_height(this->mTabBarHeight,this->mTabBarOverlap,this->mBottomTabTopOffset));
     this->mBottomTabBarContainer->SetSize(this->mBottomTabBarContainer->Width(),this->mBottomTabBar->Height());
     this->mTopTabBar->SetSize(this->mTopTabBar->Width(),this->mTabBarHeight);
     this->mTopTabBarContainer->SetSize(this->mTopTabBarContainer->Width(),this->mTabBarHeight);
-    int y=0;
-    int offset=this->mBottomTabTopOffset;
-    if(this->mTabBarOnBottom) { y=this->Height()-this->mBottomTabBarContainer->Height(); offset=-offset; }
+    int aBottomY;
+    int y=ee_won_gui_tab_vert(this->mTabBarOnBottom,this->Height(),this->mBottomTabBarContainer->Height(),
+                              this->mBottomTabTopOffset,&aBottomY);
     this->mTopTabBarContainer->SetPos(this->mTopTabBarContainer->Left(),y);
-    this->mBottomTabBarContainer->SetPos(this->mBottomTabBarContainer->Left(),offset+y);
+    this->mBottomTabBarContainer->SetPos(this->mBottomTabBarContainer->Left(),aBottomY);
 }
 // FUNCTION: WON 0x00708e80
 // Sets the horizontal extent of the tab bar containers, leaving room for visible scroll arrows or
 // right-aligning the bar when it fits
 void TabCtrl::HorzPositionTabBar()
 {
-    int left=0;
-    int right=this->Width();
-    if(this->NeedScrollButtons()) {
-        if(this->mArrowsOnLeft) {
-            Button* arrow=this->mTabBarRight.get();
-            if(arrow!=NULL && arrow->IsVisible()) left=arrow->Right();
-        } else {
-            Button* arrow=this->mTabBarLeft.get();
-            if(arrow!=NULL && arrow->IsVisible()) right=arrow->Left()-1;
-        }
-    } else if(this->mTabBarOnRight) left=this->Width()-this->mBottomTabBar->Width()-this->mBottomTabLeftOffset;
+    bool aNeed=this->NeedScrollButtons();
+    Button* aRightArrow=this->mTabBarRight.get();
+    Button* aLeftArrow=this->mTabBarLeft.get();
+    // the arrows are read only where the original read them
+    bool aRightShown=aNeed && this->mArrowsOnLeft && aRightArrow!=NULL && aRightArrow->IsVisible();
+    bool aLeftShown=aNeed && !this->mArrowsOnLeft && aLeftArrow!=NULL && aLeftArrow->IsVisible();
+    int right;
+    int left=ee_won_gui_tab_horz(aNeed,this->mArrowsOnLeft,aRightShown,aRightShown?aRightArrow->Right():0,aLeftShown,
+                                 aLeftShown?aLeftArrow->Left():0,this->mTabBarOnRight,this->Width(),
+                                 this->mBottomTabBar->Width(),this->mBottomTabLeftOffset,&right);
     this->mTopTabBarContainer->SetPos(left,this->mTopTabBarContainer->Top());
     this->mTopTabBarContainer->SetSize(right-left,this->mTopTabBarContainer->Height());
     this->mBottomTabBarContainer->SetPos(this->mBottomTabLeftOffset+left,this->mBottomTabBarContainer->Top());
@@ -303,14 +299,10 @@ bool TabCtrl::NeedScrollButtons() { return this->mBottomTabBar->Width()>this->Wi
 void TabCtrl::AdjustTabBarScroll(int inAmount)
 {
     int oldX=this->mBottomTabBar->Left();
-    int x=oldX+inAmount;
-    int width=this->mBottomTabBar->Width();
-    int containerWidth=this->mBottomTabBarContainer->Width();
-    if(containerWidth>=width) x=0;
-    else {
-        bool enableLeft=true,enableRight=true;
-        if(x+width<containerWidth-5) { enableRight=false; x=containerWidth-width-5; }
-        if(x>=0) { enableLeft=false; x=0; }
+    int x;
+    bool enableLeft,enableRight;
+    if(ee_won_gui_tab_scroll(oldX,inAmount,this->mBottomTabBar->Width(),this->mBottomTabBarContainer->Width(),&x,
+                             &enableLeft,&enableRight)) {
         if(this->mTabBarLeft.get()!=NULL && this->mTabBarRight.get()!=NULL) {
             this->mTabBarLeft->SetEnabled(enableLeft);
             this->mTabBarRight->SetEnabled(enableRight);
@@ -380,20 +372,14 @@ bool TabCtrl::KeyDown(int inKey)
 {
     Button* button=this->mBottomTabBar->mCurTab;
     if(button!=NULL && button->HasFocus()) {
-        int step;
-        if(inKey==39) step=1;
-        else if(inKey==37) step=-1;
-        else return Container::KeyDown(inKey);
-        int old=this->mBottomTabBar->GetCurTabId();
-        int next=old+step;
-        while(this->mBottomTabBar->Disabled(next) && next>0 && next<this->mTabVector.size()-1) {
-            if(inKey==39) { ++step; ++next; }
-            else if(inKey==37) { --step; --next; }
-        }
+        int aTarget;
+        if(!ee_won_gui_tab_key_target(inKey,this->mBottomTabBar->GetCurTabId(),this->mTabVector.size(),TabDisabledOf,
+                                      this->mBottomTabBar.get(),&aTarget))
+            return Container::KeyDown(inKey);
         this->mBottomTabBar->SetHasUsedDialogKeys(true);
         this->mTopTabBar->SetHasUsedDialogKeys(true);
         this->mUserHasInteracted=true;
-        this->SetCurTab(old+step,false);
+        this->SetCurTab(aTarget,false);
         Button* current=this->mBottomTabBar->mCurTab;
         if(current!=NULL) current->RequestFocus();
         return true;
@@ -421,10 +407,7 @@ int TabCtrl::GetTabIdForContainer(Container* inContainer)
 // the control lays out again when the tabs start or stop overflowing
 void TabCtrl::AddTab(Button* inTab,Container* inContainer)
 {
-    if(this->mTabBarHeight==0) {
-        if(inTab->Height()>0) this->mTabBarHeight=inTab->Height();
-        else this->mTabBarHeight=20;
-    }
+    this->mTabBarHeight=ee_won_gui_tab_bar_height(this->mTabBarHeight,inTab->Height());
     inTab->SetSize(inTab->Width(),this->mTabBarHeight);
     inTab->SetComponentFlags(ComponentFlag_GrabBG,false);
     this->mTabVector.push_back(inContainer);
@@ -493,7 +476,7 @@ void TabBar::RemoveTab(int theId)
 		Button *aButton = this->mTabVector[i].get();
 		if(aButton->GetParent()!=this)
 			this->AddChildEx(aButton,this->mTabVector.size()-i-1);
-			
+
 		this->PositionTab(aButton);
 	}
 }
@@ -511,14 +494,9 @@ void TabCtrl::RemoveTab(int theId)
 	this->RemoveChild(this->mTabVector[theId]);
 	this->mTabVector.erase(this->mTabVector.begin() + theId);
 	this->mBottomTabBar->RemoveTab(theId);
-	
 
-	if(theId<aCurTabId)
-		this->SetCurTab(aCurTabId-1,true);
-	else if(theId>aCurTabId)
-		this->SetCurTab(aCurTabId,true);
-	else 
-		this->SetCurTab(0,true);
+
+	this->SetCurTab(ee_won_gui_tab_after_remove(theId,aCurTabId),true);
 }
 }
 

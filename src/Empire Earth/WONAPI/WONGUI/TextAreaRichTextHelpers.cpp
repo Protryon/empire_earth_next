@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 void TextArea::AddAnchor(const GUIString &theName, int theLineNum)
 {
@@ -26,12 +27,7 @@ bool TextArea::GotoAnchor(const GUIString &theName)
 	if(anItr==this->mAnchorMap.end())
 		return false;
 
-	int aLineNum = anItr->second;
-	if(aLineNum>=this->mLineVector.size())
-		aLineNum = this->mLineVector.size()-1;
-
-	if(aLineNum<0)
-		aLineNum = 0;
+	int aLineNum = ee_won_gui_text_anchor_line((int)anItr->second, this->mLineVector.size());
 
 	TextLine *aLine = this->mLineVector[aLineNum];
 	this->mVertOffset = aLine->my;

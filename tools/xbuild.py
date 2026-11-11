@@ -426,6 +426,25 @@ WON_TESTS = {
     "won_guifocus_test": [],
     # WONGUI's word wrap (WrappedText's breaks and rewrap rule), the original's loop against ee_won's guiwrap module
     "won_guiwrap_test": [],
+    # WONGUI's rich text area (the chat: segments on lines, the wrap, limits, renumbering, the segment and
+    # character under a point, the selection, scrolls, the text splits and the lobby's format commands), the
+    # original's statements against ee_won's guitext module
+    "won_guitext_test": [],
+    # WONGUI's compound controls (the combo box's list size and keys, the tab control's bars, scroll, page and
+    # arrow keys, the splitter's split, panes and bars), the original's statements against ee_won's guictl module
+    "won_guictl_test": [],
+    # WONGUI's multi-column lists and tree rows (the column resizes and places, the header's buttons, sorts and
+    # resize edges, the tree's +/- box and child places), the original's statements against ee_won's guimulti module
+    "won_guimulti_test": [],
+    # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
+    # guicfg module (the port's exception-carrying wrapper included)
+    "won_guicfg_test": [],
+    # WONGUI's popups' places, mouse windows and ending presses, the modality and the popup menus' timing, the
+    # original's statements against ee_won's guiwin module
+    "won_guiwin_test": [],
+    # the lobby dialogs' decisions (the create and OK buttons, the skill, the LAN port, the adapters' order, the
+    # status dialog's sizes), the original's statements against ee_won's dialogs module
+    "won_dialogs_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

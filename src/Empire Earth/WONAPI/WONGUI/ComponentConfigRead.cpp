@@ -12,7 +12,27 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
+#include <exception>
+#include "rust/ee_rust.h"
+// The integer expressions' parse and the operand names' scan and kinds are ee_won's guicfg module
+// (rust/crates/ee_won/src/guicfg.rs); this unit keeps the readers, the StringParser and the operands' lookups. The
+// Rust reads through these; an operand's exception is caught here and rethrown after the Rust returns.
 namespace WONAPI {
+struct ConfigExprHost { ComponentConfig* mConfig; std::exception_ptr mError; };
+static void ConfigExprSkip(void* inHost) { static_cast<ConfigExprHost*>(inHost)->mConfig->mStringParser->SkipWhitespace(); }
+static uint8_t ConfigExprPeek(void* inHost) { return static_cast<ConfigExprHost*>(inHost)->mConfig->mStringParser->GetChar(0); }
+static void ConfigExprAdvance(void* inHost, int32_t inAmount) { static_cast<ConfigExprHost*>(inHost)->mConfig->mStringParser->IncrementPos(inAmount); }
+static bool ConfigExprInt(void* inHost, int32_t* outValue)
+{
+    ConfigExprHost* aHost = static_cast<ConfigExprHost*>(inHost);
+    try {
+        *outValue = aHost->mConfig->GetIntValue();
+        return true;
+    } catch (...) {
+        aHost->mError = std::current_exception();
+        return false;
+    }
+}
 
 // FUNCTION: WON 0x00782db0
 // Skips whitespace and returns whether the value string is used up
@@ -44,42 +64,15 @@ void ComponentConfig::EnsureComma()
 // values; throws on a missing ')' or division by zero
 int ComponentConfig::ParseExpression(int inLevel)
 {
-    int value;
-    this->mStringParser->SkipWhitespace();
-    if(this->mStringParser->GetChar(0)=='(')
+    ConfigExprHost aCtx={this,std::exception_ptr()};
+    EeWonExprHost aHost={&aCtx,ConfigExprSkip,ConfigExprPeek,ConfigExprAdvance,ConfigExprInt};
+    int32_t aValue=0;
+    switch(ee_won_cfg_expr(&aHost,inLevel,&aValue))
     {
-        this->mStringParser->IncrementPos(1);
-        value=this->ParseExpression(0);
-        this->mStringParser->SkipWhitespace();
-        if(this->mStringParser->GetChar(0)!=')')
-            throw ConfigObjectException("Expecting ')'");
-        this->mStringParser->IncrementPos(1);
-    }
-    else
-        value=this->GetIntValue();
-    for(;;)
-    {
-        this->mStringParser->SkipWhitespace();
-        unsigned char op=this->mStringParser->GetChar(0);
-        this->mStringParser->IncrementPos(1);
-        if(op=='+' && inLevel<1)
-            value+=this->ParseExpression(1);
-        else if(op=='-' && inLevel<1)
-            value-=this->ParseExpression(1);
-        else if(op=='*' && inLevel<2)
-            value*=this->ParseExpression(2);
-        else if(op=='/' && inLevel<2)
-        {
-            int divisor=this->ParseExpression(2);
-            if(divisor==0)
-                throw ConfigObjectException("Division by 0.");
-            value/=divisor;
-        }
-        else
-        {
-            this->mStringParser->IncrementPos(-1);
-            return value;
-        }
+    case 0: return aValue;
+    case 1: throw ConfigObjectException("Expecting ')'");
+    case 2: throw ConfigObjectException("Division by 0.");
+    default: std::rethrow_exception(aCtx.mError);
     }
 }
 
@@ -187,31 +180,31 @@ int ComponentConfig::GetIntValue()
     while(!this->mStringParser->EndOfString())
     {
         char next=this->mStringParser->GetChar(0);
-        if(safe_isspace(next)) break;
-        if(next!='@' && next!='_' && next!='.' && !safe_isalnum(next)) break;
+        if(!ee_won_cfg_name_char((int8_t)next)) break;
         name+=next;
         this->mStringParser->IncrementPos(1);
     }
     bool isFunction=this->mStringParser->GetChar(0)=='(';
     ComponentConfig* config=this;
-    if(name[0]=='@')
+    size_t at;
+    int kind=ee_won_cfg_name_kind((const uint8_t*)name.data(),name.size(),&at);
+    if(kind<=1)
     {
-        if(name.length()>3 && toupper(name[1]=='I') && toupper(name[2]=='D') && name[3]=='_')
+        if(kind==0)
         {
-            std::string idName=name.substr(4);
+            std::string idName=name.substr(at);
             int controlId;
             if(!ComponentConfig::mResourceConfigTable->GetControlId(idName,controlId))
                 throw ConfigObjectException("Invalid control id: "+name);
             return controlId;
         }
-        return this->GetIntResource(std::string(name.c_str()+1));
+        return this->GetIntResource(std::string(name.c_str()+at));
     }
     std::string key;
-    std::string::size_type dot=name.rfind('.');
-    if(dot!=std::string::npos)
+    if(kind==2)
     {
-        std::string configName=name.substr(0,dot);
-        key=name.substr(dot+1);
+        std::string configName=name.substr(0,at);
+        key=name.substr(at+1);
         config=this->GetComponentConfig(GUIString(configName),true);
     }
     else key=name;

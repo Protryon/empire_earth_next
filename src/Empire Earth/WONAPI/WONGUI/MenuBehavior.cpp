@@ -10,6 +10,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The submenu delay, the swallowed first release, the keyboard mode's end, an item's size and the submenu's place
+// are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); this unit keeps the menus, submenus and the paint.
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 
 namespace WONAPI {
@@ -18,8 +21,7 @@ namespace WONAPI {
 void MenuItem::CalcDimensions(ListArea* area)
 {
     TextListItem::CalcDimensions(area);
-    this->mHeight+=4;
-    this->mWidth+=32;
+    ee_won_gui_menu_item_size(&this->mWidth,&this->mHeight);
 }
 
 // FUNCTION: WON 0x006fcf10
@@ -118,14 +120,10 @@ void PopupMenu::HandleComponentEvent(ComponentEvent* event)
 // Opens or closes the submenu of the hovered item after 350 ms; returns whether to keep the timer
 bool PopupMenu::TimerEvent(int delta)
 {
-    if(this->mKeyboardMode) return false;
-    this->mTimerAcc+=delta;
-    if(this->mTimerAcc>=350)
-    {
-        this->CheckSubMenu();
-        return false;
-    }
-    return true;
+    bool aCheck;
+    bool aKeep=ee_won_gui_menu_timer(this->mKeyboardMode,&this->mTimerAcc,delta,&aCheck);
+    if(aCheck) this->CheckSubMenu();
+    return aKeep;
 }
 
 // FUNCTION: WON 0x006fd860
@@ -146,9 +144,10 @@ void PopupMenu::ListSelChangedHook()
 // Leaves keyboard mode once the mouse really moves, then tracks the item under it
 void PopupMenu::MouseMove(int x,int y)
 {
-    if(this->mKeyboardMode)
+    int aMove=ee_won_gui_menu_mouse_move(this->mKeyboardMode,x,y,this->mLastX,this->mLastY);
+    if(aMove<0) return;
+    if(aMove>0)
     {
-        if(x==this->mLastX && y==this->mLastY) return;
         this->mKeyboardMode=false;
         this->SetListFlags(4,this->mCurSubMenu.get()==NULL);
     }
@@ -161,11 +160,7 @@ void PopupMenu::MouseMove(int x,int y)
 // Ignores the first left-button release after the menu opens; others go to the list box
 void PopupMenu::MouseUp(int x,int y,int button)
 {
-    if(button==0)
-    {
-        ++this->mMouseUpCount;
-        if(this->mMouseUpCount<2) return;
-    }
+    if(!ee_won_gui_menu_mouse_up(button,&this->mMouseUpCount)) return;
     ListArea::MouseUp(x,y,button);
 }
 // FUNCTION: WON 0x006fd610
@@ -188,12 +183,14 @@ void PopupMenu::CheckSubMenu()
         this->SetListFlags(4,false);
         this->mCurSubMenu=submenu;
         this->mCurSubMenuItem=item;
-        int x=this->mScrollArea.width-2,y=item->mTop;
+        int y;
+        int x=ee_won_gui_submenu_place(this->mScrollArea.width,item->mTop,&y);
         this->ScrollUntranslate(x,y);
         this->LocalToRoot(x,y);
         submenu->Reset();
         PopupParams params(submenu,0x33c7,this,x,y);
-        params.mAvoidRect=WONRectangle(x-this->mScrollArea.width+2,0,this->mScrollArea.width-2,0);
+        EeWonRect4 anAvoid=ee_won_gui_submenu_avoid(x,this->mScrollArea.width);
+        params.mAvoidRect=WONRectangle(anAvoid.x,anAvoid.y,anAvoid.w,anAvoid.h);
         this->GetRoot()->QueueEvent(new DoPopupEvent(params));
     }
 }
