@@ -17,14 +17,10 @@
 
 use crate::guictl::EeWonRect4;
 
-pub const POPUP_WANT_INPUT: i32 = 0x0080;
-pub const POPUP_IS_MODAL: i32 = 0x0100;
-pub const POPUP_ADJUST_POSITION: i32 = 0x0200;
-pub const POPUP_EAT_MOUSE_DOWN: i32 = 0x0800;
-pub const POPUP_ADDITIONAL: i32 = 0x1000;
-pub const POPUP_DONT_WANT_MOUSE: i32 = 0x4000;
-pub const POPUP_NOT_IN_OWN_WINDOW: i32 = 0x8000;
-pub const POPUP_IN_OWN_WINDOW: i32 = 0x10000;
+pub(crate) const POPUP_IS_MODAL: i32 = 0x0100;
+pub(crate) const POPUP_ADDITIONAL: i32 = 0x1000;
+pub(crate) const POPUP_NOT_IN_OWN_WINDOW: i32 = 0x8000;
+pub(crate) const POPUP_IN_OWN_WINDOW: i32 = 0x10000;
 
 fn right(r: &EeWonRect4) -> i32 {
     r.x.wrapping_add(r.w)
