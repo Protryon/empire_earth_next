@@ -224,9 +224,9 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         static const char* const kBlocked[6] = {"", "unexplored", "enemy_near", "danger", "area", "tower"};
         if (s.blocked > 0 && s.blocked <= kNextBlockedTower)   // why the gatherer finders would pass it over (nil: they would not)
             e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
-        theSites.Push(e);
+        theSites.Push(std::move(e));
     }
-    v.Set("sites", theSites);
+    v.Set("sites", std::move(theSites));
     EECPLuaValue theBuildings = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.buildings.size(); k++) {
         const EECPNextBuildings& b = inView.buildings[k];
@@ -237,18 +237,18 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("queued", EECPNextInt(b.queued));
         e.Set("busy", EECPNextInt(b.busy));
         e.Set("queue", EECPNextInt(b.queue));
-        theBuildings.Push(e);
+        theBuildings.Push(std::move(e));
     }
-    v.Set("buildings", theBuildings);
+    v.Set("buildings", std::move(theBuildings));
     EECPLuaValue theSoldiers = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.soldiers.size(); k++) {
         EECPLuaValue e = EECPLuaValue::NewMap();
         e.Set("type", EECPLuaValue::Str(EECPNextClassName(inView.soldiers[k].type)));
         e.Set("count", EECPNextInt(inView.soldiers[k].count));
         e.Set("strength", EECPNextInt(inView.soldiers[k].strength));
-        theSoldiers.Push(e);
+        theSoldiers.Push(std::move(e));
     }
-    v.Set("soldiers", theSoldiers);
+    v.Set("soldiers", std::move(theSoldiers));
     v.Set("army_count", EECPNextInt(inView.army_count));
     v.Set("army_strength", EECPNextInt(inView.army_strength));
     EECPLuaValue theThreats = EECPLuaValue::NewArray();
@@ -261,9 +261,9 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("x", EECPNextInt(t.x));
         e.Set("y", EECPNextInt(t.y));
         e.Set("distance", EECPNextInt(t.distance));
-        theThreats.Push(e);
+        theThreats.Push(std::move(e));
     }
-    v.Set("threats", theThreats);
+    v.Set("threats", std::move(theThreats));
     v.Set("threat_strength", EECPNextInt(inView.threat_strength));
     EECPLuaValue theEnemies = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.enemies.size(); k++) {
@@ -282,9 +282,9 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("citizen_y", EECPNextInt(n.citizen_y));
         e.Set("army_x", EECPNextInt(n.army_x));
         e.Set("army_y", EECPNextInt(n.army_y));
-        theEnemies.Push(e);
+        theEnemies.Push(std::move(e));
     }
-    v.Set("enemies", theEnemies);
+    v.Set("enemies", std::move(theEnemies));
     v.Set("next_epoch_cost", EECPNextResources(inView.next_epoch_cost));
     v.Set("epoch2_cost", EECPNextResources(inView.epoch2_cost));
     v.Set("sol_missing", EECPNextInt(inView.sol_missing));
@@ -302,18 +302,18 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("requested", EECPNextInt(c.requested));
         e.Set("in_production", EECPNextInt(c.in_production));
         e.Set("counts_toward_epoch", EECPLuaValue::Bool(c.counts_toward_epoch != 0));
-        theCosts.Push(e);
+        theCosts.Push(std::move(e));
     }
-    v.Set("costs", theCosts);
+    v.Set("costs", std::move(theCosts));
     EECPLuaValue theEvents = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.events.size(); k++) {
         EECPLuaValue e = EECPLuaValue::NewMap();
         e.Set("kind", EECPLuaValue::Str(EECPNextEventKindName(inView.events[k].kind)));
         e.Set("type", EECPLuaValue::Str(EECPNextClassName(inView.events[k].type)));
         e.Set("count", EECPNextInt(inView.events[k].count));
-        theEvents.Push(e);
+        theEvents.Push(std::move(e));
     }
-    v.Set("events", theEvents);
+    v.Set("events", std::move(theEvents));
     EECPLuaValue theGroups = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inView.groups.size(); k++) {
         const EECPNextGroupView& g = inView.groups[k];
@@ -334,9 +334,9 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("started", EECPNextInt(g.started));
         e.Set("lost", EECPNextInt(g.lost));
         e.Set("created", EECPNextInt(g.created));
-        theGroups.Push(e);
+        theGroups.Push(std::move(e));
     }
-    v.Set("groups", theGroups);
+    v.Set("groups", std::move(theGroups));
     v.Set("free_soldiers", EECPNextInt(inView.free_soldiers));
     v.Set("free_strength", EECPNextInt(inView.free_strength));
     // §8.35: the game near the town, the hunters, the worked forest edge
@@ -349,7 +349,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         theWood.Set("distance", EECPNextInt(inView.wood_distance));
         theWood.Set("has_drop", EECPLuaValue::Bool(inView.wood_drop != 0));
         theWood.Set("ready", EECPLuaValue::Bool(inView.wood_ready != 0));
-        v.Set("wood", theWood);
+        v.Set("wood", std::move(theWood));
     }
     EECPLuaValue theResults = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inResults.size(); k++) {
@@ -360,10 +360,10 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("count", EECPNextInt(inResults[k].mCount));
         if (inResults[k].mGroup != 0)
             e.Set("group", EECPNextInt(inResults[k].mGroup));   // the group verbs
-        theResults.Push(e);
+        theResults.Push(std::move(e));
     }
-    v.Set("results", theResults);
-    outValue = v;
+    v.Set("results", std::move(theResults));
+    outValue = std::move(v);
 }
 
 // ---------------------------------------------------------------------------------------------------------------

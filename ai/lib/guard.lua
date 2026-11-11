@@ -39,6 +39,12 @@ M.opts = {
     fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
                           -- centre, where the citizens run, instead of holding its post (no garrison: a town
                           -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
+    sweep = false,        -- (boom-econ's finding, AI_RESEARCH §8.50) with no raid on, enemy soldiers standing within
+                          -- sweep_r of an own building in the zone - a lone slinger by the home gold, too weak to be a
+                          -- raid and never hitting, kept the gold gatherers off for minutes - are attacked by the
+                          -- guard at sweep_odds, out of their towers' reach
+    sweep_r = 9,
+    sweep_odds = 200,     -- percent: the units sent against the swept soldiers (square law)
     deny = true,          -- the enemy citizens in the zone are hunted while no raid is on ...
     deny_n = 4,           -- ... at most this many at once
 }
@@ -339,6 +345,74 @@ end
 
 -- the guard hunts the enemy citizens in its zone that no known enemy tower covers: 2 units a citizen, 4 citizens and
 -- half the guard at most, the nearest first -> whether it hunts
+-- the guard's sweep: the enemy soldiers near own buildings in the zone, out of their towers' reach, each taken on by
+-- the nearest healthy units until sweep_odds is reached -> whether it sweeps
+local function sweep(view, g, recs, zone)
+    local ids = ai.seen{enemy = true, armed = true, category = "soldier", near = {view.town_x, view.town_y, zone}, limit = 12}
+    if #ids == 0 then
+        return false
+    end
+    local c = ai.get(ids, {"x", "y", "hp", "attack"})
+    local healthy = {}
+    for _, u in ipairs(recs) do
+        if not g.hurt[u.id] then
+            healthy[#healthy + 1] = u
+        end
+    end
+    local by, used, n = {}, {}, 0
+    for k = 1, #ids do
+        local ex, ey = c.x[k], c.y[k]
+        if ex ~= nil and #ai.units{category = "building", near = {ex, ey, M.opts.sweep_r}, limit = 1} > 0 then
+            local safe = true
+            for _, m in ipairs(ai.memory{buildings = true, enemy = true, near = {ex, ey, 9}, limit = 6}) do
+                local cl = ai.class(m.type)
+                local r = (cl ~= nil and cl.range or 0) // 100 + 2
+                if cl ~= nil and (cl.attack or 0) > 0 and d2(m.x, m.y, ex, ey) <= r * r then
+                    safe = false
+                end
+            end
+            if safe then
+                local need = (c.hp[k] or 0) * (c.attack[k] or 0) * M.opts.sweep_odds // 100
+                local hp, atk = 0, 0
+                while hp * atk < need do
+                    local best, bd = nil, nil
+                    for _, u in ipairs(healthy) do
+                        if not used[u.id] then
+                            local d = d2(u.x, u.y, ex, ey)
+                            if bd == nil or d < bd then
+                                best, bd = u, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        break
+                    end
+                    used[best.id] = true
+                    hp, atk = hp + best.hp, atk + best.attack
+                    if g.aims[best.id] ~= ids[k] or (best.action ~= "attack" and best.action ~= "move") then
+                        by[ids[k]] = by[ids[k]] or {}
+                        local l = by[ids[k]]
+                        l[#l + 1] = best.id
+                    end
+                    g.aims[best.id] = ids[k]
+                    n = n + 1
+                end
+            end
+        end
+    end
+    if n == 0 then
+        return false
+    end
+    for _, tid in ipairs(ai.keys(by)) do
+        ai.attack(by[tid], tid)
+    end
+    if g.state ~= "sweeping" then
+        print(string.format("guard sweep units=%d", n))
+    end
+    g.state = "sweeping"
+    return true
+end
+
 local function deny(view, g, recs, zone)
     local ids = ai.seen{enemy = true, category = "citizen", near = {view.town_x, view.town_y, zone}, limit = 12}
     if #ids == 0 then
@@ -486,6 +560,9 @@ function M.step(view, mem, opts)
     end
     if #raids > 0 and (g.noted == nil or now - g.noted >= 20000) then
         g.noted = now
+    end
+    if #fight == 0 and #raids == 0 and M.opts.sweep and sweep(view, g, recs, zone) then
+        return
     end
     if #fight == 0 and #raids == 0 and M.opts.deny then
         -- [research §4.3 step 4; boom's old defend group] no raid: the enemy citizens gathering or building in the

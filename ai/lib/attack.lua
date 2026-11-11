@@ -34,6 +34,10 @@ M.opts = {
     tower_atk = 2,         -- ... and its attack / this in the estimate
     cooldown_ms = 180000,  -- after a retreat, no new force for this long
     route = true,          -- the force's legs follow ai.route round the danger map's threat
+    home_wave = 0,         -- percent (0: off; AI_RESEARCH §8.50): the guard left at home holds this share of the
+                           -- largest raid seen in the claim range in the last wave_ms (square law), and the force
+                           -- takes only the soldiers beyond it
+    wave_ms = 900000,
 }
 
 local function d2(ax, ay, bx, by)
@@ -84,6 +88,10 @@ local function windows(view, mem, guard)
     for _, cl in ipairs(D.clusters()) do
         if d2(cl.x, cl.y, view.town_x, view.town_y) <= (view.claim_range + 5) * (view.claim_range + 5) then
             big = math.max(big, cl.n)
+            local s = cl.hp * cl.atk
+            if s > (mem.att_wave or 0) or now - (mem.att_wave_t or 0) > o.wave_ms then
+                mem.att_wave, mem.att_wave_t = s, now
+            end
         end
     end
     local gs = guard ~= nil and strength(guard.units) or 0
@@ -155,6 +163,17 @@ function M.step(view, mem, opts)
     end
     local keep = opts.keep or 8
     local n = #guard.units - keep
+    if o.home_wave > 0 and n >= o.min_force then
+        -- the home guard: the first units of the guard until it holds home_wave of the largest recent raid
+        local need = now - (mem.att_wave_t or -o.wave_ms) <= o.wave_ms and (mem.att_wave or 0) * o.home_wave // 100 or 0
+        local c = ai.get(guard.units, {"hp", "attack"})
+        local hp, atk, k = 0, 0, 0
+        while k < #guard.units and (k < keep or hp * atk < need) do
+            k = k + 1
+            hp, atk = hp + (c.hp[k] or 0), atk + (c.attack[k] or 0)
+        end
+        n = #guard.units - k
+    end
     if n < o.min_force then
         return
     end
