@@ -10,6 +10,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The intersection, union and overlap test are ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
 WONRectangle::WONRectangle() { this->x=this->y=this->width=this->height=0; }
 WONRectangle::WONRectangle(int inX,int inY,int inWidth,int inHeight)
@@ -24,46 +26,22 @@ WONRectangle::WONRectangle(int inX,int inY,int inWidth,int inHeight)
 
 // FUNCTION: WON 0x00749330
 // Shrinks the rectangle to its overlap with another (empty size when they do not overlap)
+static EeWonRect ToRust(const WONRectangle& r) { EeWonRect e = { r.x, r.y, r.width, r.height }; return e; }
+static void FromRust(WONRectangle& r, const EeWonRect& e) { r.x = e.x; r.y = e.y; r.width = e.width; r.height = e.height; }
 void WONRectangle::DoIntersect(const WONRectangle& other)
 {
-    int right=this->x+this->width;
-    int bottom=this->y+this->height;
-    int otherRight=other.x+other.width;
-    int otherBottom=other.y+other.height;
-    if(other.x>this->x) this->x=other.x;
-    if(other.y>this->y) this->y=other.y;
-    if(otherRight<right) right=otherRight;
-    if(otherBottom<bottom) bottom=otherBottom;
-    this->width=right-this->x;
-    this->height=bottom-this->y;
-    if(this->width<0) this->width=0;
-    if(this->height<0) this->height=0;
+    FromRust(*this, ee_won_gui_rect_intersect(ToRust(*this), ToRust(other)));
 }
 // FUNCTION: WON 0x007493b0
 // Grows the rectangle to cover another as well; an empty rectangle becomes a copy of the other
 void WONRectangle::DoUnion(const WONRectangle& other)
 {
-    if(this->width==0 || this->height==0)
-    {
-        this->x=other.x; this->y=other.y; this->width=other.width; this->height=other.height;
-        return;
-    }
-    int right=this->x+this->width;
-    int bottom=this->y+this->height;
-    int otherRight=other.x+other.width;
-    int otherBottom=other.y+other.height;
-    if(other.x<this->x) this->x=other.x;
-    if(other.y<this->y) this->y=other.y;
-    if(otherRight>right) right=otherRight;
-    if(otherBottom>bottom) bottom=otherBottom;
-    this->width=right-this->x;
-    this->height=bottom-this->y;
+    FromRust(*this, ee_won_gui_rect_union(ToRust(*this), ToRust(other)));
 }
 // FUNCTION: WON 0x00749450
 // Returns whether two rectangles overlap (touching this one's right/bottom edge counts)
 bool WONRectangle::Intersects(const WONRectangle& other) const
 {
-    return this->x+this->width>=other.x && this->x<other.x+other.width &&
-           this->y+this->height>=other.y && this->y<other.y+other.height;
+    return ee_won_gui_rect_intersects(ToRust(*this), ToRust(other));
 }
 }

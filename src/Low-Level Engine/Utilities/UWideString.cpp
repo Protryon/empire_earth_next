@@ -158,6 +158,11 @@ UWideString::UWideString(const char* inString)
     this->mLength = PlatMbsLen(MB(inString));
     this->mByteLength = PlatMbsNBCnt(MB(inString), this->mLength);
     this->mCapacity = this->mLength * 2 + 2;
+    // port (decision D6): a UTF-8 character takes up to 4 bytes, so two a character can be too few (two euro signs
+    // are 7 bytes with the terminator, the room 6: strcpy overran the buffer): the room is at least the bytes and the
+    // terminator (text of 1- and 2-byte characters keeps the original's capacity)
+    if (this->mCapacity < this->mByteLength + 1)
+        this->mCapacity = this->mByteLength + 1;
     this->mString = new char[this->mCapacity];
     strcpy(this->mString, inString);
 }

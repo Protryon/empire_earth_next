@@ -11,6 +11,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyWONButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// GetButtonState's state and fallback order are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 
 // FUNCTION: WON 0x00718060
@@ -334,32 +336,20 @@ void WONButton::DrawButtonText(Graphics &g, WrappedText *theText, int theColor)
 void WONButton::GetButtonState(Graphics &g, int *theColor, WrappedText **theText, Image **theImage)
 {
 	int aState = 0;
-	if(this->IsDisabled())
-		aState = 2;
-	else if(this->IsPressed())
-		aState = 1;
-	else if(this->IsMouseOver() && ((mButtonFlags&1)!=0))
-		aState = 3;
-	else if(this->IsDefaultButton())
-		aState = 4;
+	int aCheckedIndex = ee_won_gui_button_state(this->IsDisabled(),(uint32_t)mButtonFlags,this->IsDefaultButton(),
+		this->mHasCheck,&aState);
 
-	int aCheckedIndex = (this->mHasCheck && this->IsChecked())?1:0;
-
-	ButtonState &aStateStruct = this->mStates[aState][aCheckedIndex];
-
-	Image *anImage = aStateStruct.mImage.get();
-	int aColor = aStateStruct.mColor;
-	WrappedText *aText = aStateStruct.mText.get();
-
-	if(anImage==NULL) anImage = this->mStates[0][aCheckedIndex].mImage.get();
-	if(aColor==-1) aColor = this->mStates[0][aCheckedIndex].mColor;
-	if(aText==NULL) aText = this->mStates[0][aCheckedIndex].mText.get();
-
-	if(aCheckedIndex==1)
+	// the state's own cell, then the normal state's in the same column, then (checked) the normal unchecked one
+	Image *anImage = NULL;
+	int aColor = -1;
+	WrappedText *aText = NULL;
+	int s = 0, c = 0;
+	for(int k = 0; ee_won_gui_button_state_cell(aState,aCheckedIndex,k,&s,&c); k++)
 	{
-		if(anImage==NULL) anImage = this->mStates[0][0].mImage.get();
-		if(aColor==-1) aColor = this->mStates[0][0].mColor;
-		if(aText==NULL) aText = this->mStates[0][0].mText.get();
+		ButtonState &aCell = this->mStates[s][c];
+		if(anImage==NULL) anImage = aCell.mImage.get();
+		if(aColor==-1) aColor = aCell.mColor;
+		if(aText==NULL) aText = aCell.mText.get();
 	}
 
 	if(aColor==-1)

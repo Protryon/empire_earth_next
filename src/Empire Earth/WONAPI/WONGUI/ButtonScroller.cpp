@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The scroll buttons' conditions and which can still scroll are ee_won's guiscroll module
+// (rust/crates/ee_won/src/guiscroll.rs).
 namespace WONAPI {
 // Scroller driven by left, right, up and down buttons (not identified in the original exe)
 ButtonScroller::ButtonScroller()
@@ -56,25 +59,11 @@ bool ButtonScroller::EnableScrollButtons(Button *theLeft, Button *theRight, Scro
 	if(theLeft==NULL || theRight==NULL)
 		return false;
 
-	bool showLeft = theLeft->IsVisible(), showRight = theRight->IsVisible();
-	switch(theCondition)
-	{
-		case ScrollButtonCondition_Disable: showLeft = false; showRight = false; break;
-		case ScrollButtonCondition_Enable: showLeft = true; showRight = true; break;
-		case ScrollButtonCondition_Conditional: showLeft = showRight = !(theLeft->IsDisabled() && theRight->IsDisabled()); break;
-		case ScrollButtonCondition_PartialConditional: showLeft = !theLeft->IsDisabled(); showRight = !theRight->IsDisabled(); break;
-	}
-
-	// Prevent situations where conditional scrollbars are enabled and disabled recursively since
-	// it turns out that it's possible for the appearance of a scrollbar to change the wordwrapping
-	// such that the scrollbar is no longer necessary.
-	if(this->mSettingScrollButtonConditions)
-	{
-		if(!showLeft && theLeft->IsVisible())
-			return false;
-		if(!showRight && theRight->IsVisible())
-			return false;
-	}
+	int k = ee_won_gui_scroll_button_condition(theCondition, this->mSettingScrollButtonConditions,
+		theLeft->IsVisible(), theRight->IsVisible(), theLeft->IsDisabled(), theRight->IsDisabled());
+	if(k<0)
+		return false;
+	bool showLeft = (k&1)!=0, showRight = (k&2)!=0;
 
 	// Did anything change?
 	bool changed = showLeft!=theLeft->IsVisible() || showRight!=theRight->IsVisible();
@@ -152,17 +141,21 @@ void ButtonScroller::SetButton(Button *theButton, Direction theDirection)
 
 void ButtonScroller::NotifyScrollChange(bool becauseOfScroller)
 {
+	ScrollArea* a=this->mScrollArea.get();
+	EeWonScrollArea anArea = { a->mVertOffset, a->mHorzOffset, a->mTotalWidth, a->mTotalHeight, a->mExtraHeight,
+	                           a->mScrollArea.x, a->mScrollArea.y, a->mScrollArea.width, a->mScrollArea.height };
+	unsigned int aCan = ee_won_gui_scroll_buttons(anArea);
 	if(this->mLeftButton.get()!=NULL)
-		this->mLeftButton->SetEnabled(this->mScrollArea->mHorzOffset>0);
+		this->mLeftButton->SetEnabled((aCan&1)!=0);
 
 	if(this->mUpButton.get()!=NULL)
-		this->mUpButton->SetEnabled(this->mScrollArea->mVertOffset>0);
+		this->mUpButton->SetEnabled((aCan&2)!=0);
 
 	if(this->mRightButton.get()!=NULL)
-		this->mRightButton->SetEnabled(this->mScrollArea->mHorzOffset + this->mScrollArea->mScrollArea.width < this->mScrollArea->mTotalWidth);
+		this->mRightButton->SetEnabled((aCan&4)!=0);
 
 	if(this->mDownButton.get()!=NULL)
-		this->mDownButton->SetEnabled(this->mScrollArea->mVertOffset + this->mScrollArea->mScrollArea.height < (this->mScrollArea->mTotalHeight+this->mScrollArea->mExtraHeight));
+		this->mDownButton->SetEnabled((aCan&8)!=0);
 
 	this->SetScrollButtonConditions(this->mHorzCondition, this->mVertCondition);
 }

@@ -225,6 +225,7 @@ dependencies = [
 name = "ee_ge"
 version = "0.1.0"
 dependencies = [
+ "ee_plat_core",
  "ee_random",
 ]
 

@@ -9,8 +9,8 @@
 // The text model is Rust (rust/crates/ee_ui/src/edit.rs, docs/RUST_PLAN.md R6): insertion and word wrap, deletion,
 // caret moves, selection, scrolling, the caret from a mouse location and the IME composition's bookkeeping. Their
 // members below forward to it with the box's members from mCaretX on as the pinned record EeUiEditFields; the lines
-// stay here (mLines), read and written through the ee_uicpp_edit_* host calls. What stays C++: construction, drawing
-// (CopyData, DrawPolygons, DrawTextA), the clipboard, mouse capture, key dispatch and repeat, focus.
+// stay here (mLines), read and written through the ee_uicpp_edit_* host calls. The drawing's ranges, rows and IME
+// underlines are Rust too (edit_draw.rs). What stays C++: construction, the draw calls, the clipboard, mouse capture, key dispatch and repeat, focus.
 #include <windows.h>
 #include <mbstring.h>
 #include <stddef.h>
@@ -122,6 +122,57 @@ struct UIEditBoxRust {
     static void EraseLine(void* inBox, size_t inLine) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + inLine); }
     static void KeepFirstLine(void* inBox) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + 1, Box(inBox)->mLines.end()); }
     static UIScrollBar* ScrollBar(void* inBox) { return Box(inBox)->mScrollBar; }
+    static void SetCopiedIME(UIEditBox* inBox, const EeUiEditIme& inIME)
+    {
+        inBox->mCopiedIMEActive = inIME.active;
+        inBox->mCopiedIMEStartLine = inIME.start_line;
+        inBox->mCopiedIMEStartIndex = inIME.start_index;
+        inBox->mCopiedIMEEndLine = inIME.end_line;
+        inBox->mCopiedIMEEndIndex = inIME.end_index;
+    }
+    // DrawPolygons' IME underlines (ee_ui edit_draw.rs): the copied text measures, the line draws
+    struct Underlines {
+        UIEditBox* mBox;
+        UWideString mString;
+        GELine* mLine;
+    };
+    static unsigned long DisplayLength(void* inContext, unsigned long inLine)
+    {
+        return static_cast<Underlines*>(inContext)->mBox->mDisplayLines[inLine].GetLength();
+    }
+    static float PrefixWidth(void* inContext, unsigned long inLine, unsigned long inIndex)
+    {
+        Underlines* u = static_cast<Underlines*>(inContext);
+        u->mString.CopyString(u->mBox->mDisplayLines[inLine], inIndex);
+        u->mBox->mCopiedText->SetText(u->mString);
+        return u->mBox->mCopiedText->GetTextExtent().GetWidth();
+    }
+    static size_t CharBytes(void* inContext, unsigned long inLine, unsigned long inIndex)
+    {
+        Underlines* u = static_cast<Underlines*>(inContext);
+        const char* theChar = (const char*)PlatMbsNInc(
+            reinterpret_cast<const unsigned char*>((const char*)u->mBox->mDisplayLines[inLine]), inIndex);
+        u->mString.CopyString(theChar, 1);
+        return PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)u->mString), 1);
+    }
+    static float CharWidth(void* inContext, unsigned long, unsigned long)
+    {
+        Underlines* u = static_cast<Underlines*>(inContext);   // the character CharBytes copied
+        u->mBox->mCopiedText->SetText(u->mString);
+        return u->mBox->mCopiedText->GetTextExtent().GetWidth();
+    }
+    static uint8_t Attribute(void* inContext, int32_t inOffset)
+    {
+        return (uint8_t)static_cast<Underlines*>(inContext)->mBox->mCopiedIMEAttributes[inOffset];
+    }
+    static long DrawLine(void* inContext, EeUiPoint inStart, EeUiPoint inEnd)
+    {
+        Underlines* u = static_cast<Underlines*>(inContext);
+        u->mLine->SetStartPoint(GE2DPoint(inStart.x, inStart.y));
+        u->mLine->SetColor(u->mBox->mCopiedIMETextColor);
+        u->mLine->SetEndPoint(GE2DPoint(inEnd.x, inEnd.y));
+        return u->mBox->GetRasterizer()->Draw(u->mLine, u->mBox->GetScreenIndex());
+    }
 };
 
 // The host calls of ee_ui/src/edit_ffi.rs
@@ -438,15 +489,9 @@ long UIEditBox::CopyData()
         this->mText->SetText(UWideString(theString));
         this->mDisplayLines[0] = theString;
         if (this->mIMEActive == true) {
-            this->mCopiedIMEStartIndex = this->mIMEStartIndex;
-            if (this->mCopiedIMEStartIndex < (unsigned long)this->mDrawingIndex)
-                this->mCopiedIMEStartIndex = 0;
-            else
-                this->mCopiedIMEStartIndex -= this->mDrawingIndex;
-            this->mCopiedIMEStartLine = 0;
-            this->mCopiedIMEEndLine = 0;
-            this->mCopiedIMEEndIndex = this->mIMECompositionLength + this->mCopiedIMEStartIndex;
-            this->mCopiedIMEActive = true;
+            // from the drawing index on (ee_ui edit_draw.rs)
+            UIEditBoxRust::SetCopiedIME(this, ee_ui_edit_copied_ime_single(this->mIMEStartIndex, this->mIMECompositionLength,
+                                                                          this->mDrawingIndex));
             this->mCopiedIMETextColor = this->mIMETextColor;
             this->mCopiedIMEAttributes = this->mIMEAttributes;
         } else
@@ -467,33 +512,17 @@ long UIEditBox::CopyData()
         }
         theResult = this->mScrollBar->CopyData();
         if (this->mIMEActive == true) {
-            this->mCopiedIMEActive = true;
             this->mCopiedIMETextColor = this->mIMETextColor;
             this->mCopiedIMEAttributes = this->mIMEAttributes;
-            this->mCopiedIMEStartIndex = this->mIMEStartIndex;
-            this->mCopiedIMEStartLine = this->mIMEStartLine;
-            if (this->mIMEStartLine < theFirstLine) {
-                this->mCopiedIMEStartLine = 0;
-                this->mCopiedIMEStartIndex = 0;
-            } else if (this->mIMEStartLine >= theLastLine)
-                this->mCopiedIMEActive = false;
-            else
-                this->mCopiedIMEStartLine = this->mIMEStartLine - theFirstLine;
+            // clipped to the copied lines, its end walked over the lines after its start (ee_ui edit_draw.rs)
             long theLength = PlatMbsLen(PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mIMEStartLine]),
                                               this->mIMEStartIndex));
-            if (theLength < (long)this->mIMECompositionLength) {
-                long theCount = this->mIMECompositionLength - theLength;
-                unsigned long theLine = this->mIMEStartLine + 1;
-                while (theCount > 0) {
-                    theCount -= this->mLines[theLine].GetLength();
-                    theLine++;
-                }
-                this->mCopiedIMEEndLine = theLine - theFirstLine - 1;
-                this->mCopiedIMEEndIndex = this->mLines[theLine - 1].GetLength() + theCount;
-            } else {
-                this->mCopiedIMEEndIndex = this->mIMECompositionLength + this->mIMEStartIndex;
-                this->mCopiedIMEEndLine = this->mIMEStartLine - theFirstLine;
-            }
+            std::vector<unsigned long> theLengths(this->mLines.size());
+            for (size_t i = 0; i < this->mLines.size(); i++)
+                theLengths[i] = this->mLines[i].GetLength();
+            UIEditBoxRust::SetCopiedIME(this, ee_ui_edit_copied_ime_lines(this->mIMEStartLine, this->mIMEStartIndex,
+                                                                         this->mIMECompositionLength, theFirstLine, theLastLine,
+                                                                         theLength, theLengths.data(), theLengths.size()));
         } else
             this->mCopiedIMEActive = false;
     }
@@ -501,44 +530,18 @@ long UIEditBox::CopyData()
     *this->mCopiedText = *this->GetGEText();
     if (this->mIsTextSelected) {
         this->mSelectionRhombus.SetColor(this->mSelectedBgColor);
-        this->mCopiedIsTextSelected = true;
-        if (this->mCaretLine < this->mSelectionStartLine) {
-            this->mCopiedSelectionEndLine = this->mSelectionStartLine;
-            this->mCopiedSelectionStartLine = this->mCaretLine;
-            this->mCopiedSelectionEndIndex = this->mSelectionStartIndex;
-            this->mCopiedSelectionStartIndex = this->mCaretIndex;
-        } else {
-            this->mCopiedSelectionStartLine = this->mSelectionStartLine;
-            this->mCopiedSelectionEndLine = this->mCaretLine;
-            this->mCopiedSelectionStartIndex = this->mSelectionStartIndex;
-            this->mCopiedSelectionEndIndex = this->mCaretIndex;
-        }
-        if (this->mCopiedSelectionStartLine == this->mCopiedSelectionEndLine && this->mCaretIndex < this->mSelectionStartIndex) {
-            this->mCopiedSelectionEndIndex = this->mSelectionStartIndex;
-            this->mCopiedSelectionStartIndex = this->mCaretIndex;
-        }
-        if (this->mCopiedSelectionStartIndex <= this->mDrawingIndex)
-            this->mCopiedSelectionStartIndex = 0;
-        else
-            this->mCopiedSelectionStartIndex -= this->mDrawingIndex;
-        if (this->mCopiedSelectionEndIndex <= this->mDrawingIndex)
-            this->mCopiedSelectionEndIndex = 0;
-        else
-            this->mCopiedSelectionEndIndex -= this->mDrawingIndex;
-        if (this->mCopiedSelectionStartLine < theFirstLine) {
-            this->mCopiedSelectionStartLine = 0;
-            this->mCopiedSelectionStartIndex = 0;
-        } else if (this->mCopiedSelectionStartLine >= theLastLine)
-            this->mCopiedIsTextSelected = false;
-        else
-            this->mCopiedSelectionStartLine -= theFirstLine;
-        if (this->mCopiedSelectionEndLine >= theLastLine) {
-            this->mCopiedSelectionEndLine = theLastLine - theFirstLine - 1;
-            this->mCopiedSelectionEndIndex = this->mDisplayLines[this->mCopiedSelectionEndLine].GetLength();
-        } else if ((long)(this->mCopiedSelectionEndLine - theFirstLine) >= 0)
-            this->mCopiedSelectionEndLine -= theFirstLine;
-        else
-            this->mCopiedIsTextSelected = false;
+        // the caret and the anchor ordered, clipped to the copied lines (ee_ui edit_draw.rs)
+        std::vector<unsigned long> theLengths(this->mDisplayLines.size());
+        for (size_t i = 0; i < this->mDisplayLines.size(); i++)
+            theLengths[i] = this->mDisplayLines[i].GetLength();
+        EeUiEditSelection theSelection = ee_ui_edit_copied_selection(this->mCaretLine, this->mCaretIndex, this->mSelectionStartLine,
+                                                                     this->mSelectionStartIndex, this->mDrawingIndex, theFirstLine,
+                                                                     theLastLine, theLengths.data(), theLengths.size());
+        this->mCopiedIsTextSelected = theSelection.selected;
+        this->mCopiedSelectionStartLine = theSelection.start_line;
+        this->mCopiedSelectionEndLine = theSelection.end_line;
+        this->mCopiedSelectionStartIndex = theSelection.start_index;
+        this->mCopiedSelectionEndIndex = theSelection.end_index;
     } else
         this->mCopiedIsTextSelected = false;
     return theResult;
@@ -601,57 +604,34 @@ void UIEditBox::DeleteText()
 // Draws the control frame, scroll bar, selection highlight, IME underlines and blinking caret from the draw copy
 long UIEditBox::DrawPolygons()
 {
-    UWideString theString;
     GELine theLine;
     GERectangle theRectangle;
-    GE2DPoint theStart;
     long theResult = UIControl::DrawPolygons();
     if (this->mScrollBarVisible)
         theResult = this->mScrollBar->DrawPolygons();
     if (this->mCopiedIsTextSelected) {
+        // per copied line, its highlighted characters (ee_ui edit_draw.rs)
+        EeUiEditSelection theSelection = {this->mCopiedSelectionStartLine, this->mCopiedSelectionEndLine,
+                                          this->mCopiedSelectionStartIndex, this->mCopiedSelectionEndIndex, true};
         for (unsigned long i = this->mCopiedSelectionStartLine; i <= this->mCopiedSelectionEndLine; i++) {
-            if (i == this->mCopiedSelectionStartLine) {
-                if (i == this->mCopiedSelectionEndLine)
-                    this->GetSelectedTextRectangle(i, this->mCopiedSelectionStartIndex, this->mCopiedSelectionEndIndex, theRectangle);
-                else
-                    this->GetSelectedTextRectangle(i, this->mCopiedSelectionStartIndex, this->mDisplayLines[i].GetLength(), theRectangle);
-            } else if (i == this->mCopiedSelectionEndLine)
-                this->GetSelectedTextRectangle(i, 0, this->mCopiedSelectionEndIndex, theRectangle);
-            else
-                this->GetSelectedTextRectangle(i, 0, this->mDisplayLines[i].GetLength(), theRectangle);
+            unsigned long theLength = i < this->mDisplayLines.size() ? this->mDisplayLines[i].GetLength() : 0;
+            EeUiEditSpan theSpan = ee_ui_edit_selection_span(&theSelection, i, theLength);
+            this->GetSelectedTextRectangle(i, theSpan.from, theSpan.to, theRectangle);
             this->mSelectionRhombus.SetRectangle(theRectangle);
             theResult = this->GetRasterizer()->Draw(&this->mSelectionRhombus, this->GetScreenIndex());
         }
     }
     if (this->mCopiedIMEActive == true) {
-        int theOffset = 0;
-        for (unsigned long i = this->mCopiedIMEStartLine; i <= this->mCopiedIMEEndLine; i++) {
-            unsigned long j;
-            j = i == this->mCopiedIMEStartLine ? this->mCopiedIMEStartIndex : 0;
-            for (; j <= (i == this->mCopiedIMEEndLine ? this->mCopiedIMEEndIndex : this->mDisplayLines[i].GetLength()); j++) {
-                theString.CopyString(this->mDisplayLines[i], j);
-                this->mCopiedText->SetText(theString);
-                float theX = this->mCopiedText->GetTextExtent().GetWidth() + this->mCopiedTextRectangle.GetLeft();
-                const char* theChar = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[i]), j);
-                theString.CopyString(theChar, 1);
-                if ((this->mCopiedIMEAttributes[theOffset] == 1 || this->mCopiedIMEAttributes[theOffset] == 3) &&
-                    this->mCopiedTextRectangle.GetRight() > theX) {
-                    theLine.SetStartPoint(GE2DPoint(theX, (float)((i + 1) * this->mCopiedText->GetFont()->GetHeight()) +
-                                                              this->mCopiedTextRectangle.GetTop() - 1.0f));
-                    this->mCopiedText->SetText(theString);
-                    theLine.SetColor(this->mCopiedIMETextColor);
-                    float theEnd;
-                    if (this->mCopiedText->GetTextExtent().GetWidth() + theX < this->mCopiedTextRectangle.GetRight())
-                        theEnd = this->mCopiedText->GetTextExtent().GetWidth() + theX;
-                    else
-                        theEnd = this->mCopiedTextRectangle.GetRight();
-                    theLine.GetStartPoint(theStart);
-                    theLine.SetEndPoint(GE2DPoint(theEnd, theStart.GetY()));
-                    theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-                }
-                theOffset += PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)theString), 1);
-            }
-        }
+        // the target clauses underlined (ee_ui edit_draw.rs)
+        UIEditBoxRust::Underlines theUnderlines = {this, UWideString(), &theLine};
+        EeUiImeHost theHost = {&theUnderlines,         UIEditBoxRust::DisplayLength, UIEditBoxRust::PrefixWidth,
+                               UIEditBoxRust::CharBytes, UIEditBoxRust::CharWidth,     UIEditBoxRust::Attribute,
+                               UIEditBoxRust::DrawLine};
+        EeUiEditIme theIME = {this->mCopiedIMEStartLine, this->mCopiedIMEStartIndex, this->mCopiedIMEEndLine,
+                              this->mCopiedIMEEndIndex, true};
+        GERectangle& r = this->mCopiedTextRectangle;
+        EeUiRect theText = {r.mBottom, r.mLeft, r.mRight, r.mTop};
+        theResult = ee_ui_edit_ime_underlines(&theIME, theText, this->mCopiedText->GetFont()->GetHeight(), theResult, &theHost);
     }
     if (this->mCopiedCursorOn)
         theResult = this->GetRasterizer()->Draw(this->mCursor, this->GetScreenIndex());
@@ -669,7 +649,7 @@ long UIEditBox::DrawTextA()
     for (std::vector<UWideString>::iterator theLine = this->mDisplayLines.begin(); theLine < this->mDisplayLines.end();
          ++theLine, i++) {
         this->mCopiedText->SetText(*theLine);
-        float theY = (float)(i * this->mCopiedText->GetFont()->GetHeight()) + this->mCopiedTextRectangle.GetTop();
+        float theY = ee_ui_edit_text_row_y(i, this->mCopiedText->GetFont()->GetHeight(), this->mCopiedTextRectangle.GetTop());
         this->mCopiedText->SetLocation(this->mCopiedTextRectangle.GetLeft(), theY);
         theResult = this->GetForm()->DrawClippedText(this->mCopiedTextRectangle, this->mCopiedText, this);
         if (this->mCopiedIMEActive != true || !(i >= this->mCopiedIMEStartLine) || !(i <= this->mCopiedIMEEndLine))
@@ -725,17 +705,19 @@ void UIEditBox::GetSelectedTextRectangle(unsigned long inLine, unsigned long inS
 {
     UWideString theString;
     long theHeight = this->mCopiedText->GetFont()->GetHeight();
-    outRectangle.SetTop((float)(inLine * theHeight) + this->mTextRectangle.GetTop());
-    outRectangle.SetBottom(theHeight + outRectangle.GetTop());
     theString.CopyString(this->mDisplayLines[inLine], inStartIndex);
     this->mCopiedText->SetText(theString);
-    outRectangle.SetLeft(this->mCopiedText->GetTextExtent().GetWidth() + this->mTextRectangle.GetLeft());
+    float theBefore = this->mCopiedText->GetTextExtent().GetWidth();
     const char* theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[inLine]),
                                                 inStartIndex);
     theString.CopyString(theText, inEndIndex - inStartIndex);
     this->mCopiedText->SetText(theString);
-    outRectangle.SetRight(this->mCopiedText->GetTextExtent().GetWidth() + outRectangle.GetLeft());
-    outRectangle.And(this->mTextRectangle);
+    // the row, from the text before to the end of the span, clipped to the text rectangle (ee_ui edit_draw.rs)
+    const GERectangle& r = this->mTextRectangle;
+    EeUiRect theTextRectangle = {r.mBottom, r.mLeft, r.mRight, r.mTop};
+    EeUiRect theRow = ee_ui_edit_selection_rect(inLine, theHeight, theTextRectangle, theBefore,
+                                                this->mCopiedText->GetTextExtent().GetWidth());
+    outRectangle = GERectangle(theRow.left, theRow.top, theRow.right, theRow.bottom);
 }
 
 // FUNCTION: LLE 0x1006c768

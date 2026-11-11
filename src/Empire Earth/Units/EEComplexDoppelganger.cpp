@@ -564,7 +564,7 @@ LoadFlags:
         || (theResult = inFile.Read(this->mCollisionState)) != 0
         || (theResult = inFile.Read(this->mIsDisabled)) != 0
         || (theResult = inFile.Read(this->mIsDeletable)) != 0
-        || (theResult = inFile.Read(this->mIsCommandable)) != 0
+        || (theResult = EEUnitStoreRead(inFile, this->mIsCommandable)) != 0
         || (theResult = inFile.Read(this->mIsAnimationPaused)) != 0
         || (theResult = inFile.Read(this->mHasArrived)) != 0
         || (theResult = inFile.Read(this->mIsPathDone)) != 0

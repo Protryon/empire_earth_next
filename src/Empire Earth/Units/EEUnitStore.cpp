@@ -95,7 +95,14 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_UNIT_TYPE, theClass != NULL ? (int64_t)theClass->mUnitType : -1);
             Set(theUnit, EE_UNIT_FIELD_DOMAINS, theClass != NULL ? (int64_t)theClass->mDomains : 0);
             Set(theUnit, EE_UNIT_FIELD_LAND_BUILDING, theClass != NULL && theClass->IsLandBuilding() ? 1 : 0);
+            Set(theUnit, EE_UNIT_FIELD_CAN_ATTACK_GROUND, theClass != NULL && theClass->mCanAttackGround ? 1 : 0);
         }
+        break;
+    }
+    case kUnitFieldResourceAmount: {
+        EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mResourceAmount));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_RESOURCE_AMOUNT, (int64_t)theUnit->mResourceAmount.Get());
         break;
     }
     case kUnitFieldComplex: {
@@ -108,6 +115,18 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsBuilt));
         if (theUnit->mInUnitStore)
             Set(theUnit, EE_UNIT_FIELD_BUILT, theUnit->mIsBuilt.Get() ? 1 : 0);
+        break;
+    }
+    case kUnitFieldCommandable: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCommandable));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_COMMANDABLE, theUnit->mIsCommandable.Get() ? 1 : 0);
+        break;
+    }
+    case kUnitFieldFormationSlot: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mFormationSlot));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_FORMATION_SLOT, (int64_t)theUnit->mFormationSlot.Get());
         break;
     }
     case kUnitFieldGoal: {
@@ -139,6 +158,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     if (inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT) {
         EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
         outRecord.hit_points = (int64_t)theUnit->mHitPoints.Get();
+        outRecord.resource_amount = (int64_t)theUnit->mResourceAmount.Get();
         outRecord.complex = (uint8_t)ComplexOf(theUnit);
         EEUnitClass* theClass = theUnit->mUnitClass.Get();
         if (theClass != NULL) {
@@ -146,12 +166,15 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
             outRecord.unit_type = (int64_t)theClass->mUnitType;
             outRecord.domains = theClass->mDomains;
             outRecord.land_building = theClass->IsLandBuilding() ? 1 : 0;
+            outRecord.can_attack_ground = theClass->mCanAttackGround ? 1 : 0;
         }
     }
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
         outRecord.built = theUnit->mIsBuilt.Get() ? 1 : 0;
         outRecord.goal_kind = (int32_t)GoalKind(theUnit->mGoalState.Get());
+        outRecord.commandable = theUnit->mIsCommandable.Get() ? 1 : 0;
+        outRecord.formation_slot = (int64_t)theUnit->mFormationSlot.Get();
     }
 }
 

@@ -10,6 +10,8 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// FindChildAt's verdict on the child hit is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // Container::SizeChanged in the SDK
 // FUNCTION: WON 0x006f62b0
@@ -103,9 +105,8 @@ Component* Container::FindChildAt(int x,int y)
         --i;
         Component* child=i->get();
         if(child->Contains(x,y) && child->HitTest(x-child->Left(),y-child->Top())) {
-            if(child->IsDisabled()) return NULL;
-            if(this->mModalCount>0 && !child->ComponentFlagSet(0x8000)) return NULL;
-            return child;
+            return ee_won_gui_hit_child(child->IsDisabled(),this->mModalCount>0,(uint32_t)child->mComponentBits) ? child
+                                                                                                                : NULL;
         }
     } while(i!=this->mChildList.begin());
     return NULL;

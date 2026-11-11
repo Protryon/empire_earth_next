@@ -35,6 +35,8 @@
 #include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/Graphics Engine.h"
+#include "GERustMath.h"
+#include "GERustText.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // TEMPLATE: LLE 0x10016206
@@ -83,17 +85,17 @@ bool GEFontBitmap::operator==(GEFont* inFont)
 }
 
 // FUNCTION: LLE 0x10015409
-// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell
+// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (the cells' layout is
+// Rust: ee_ge font.rs GeFontPacker)
 GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
 {
     UWideString theString;
     GERectangle theRect;
     GETextureCoordinate theCoordinate;
     GEText theText(inFont);
-    GE2DPoint thePosition;
+    EeGeFontPacker thePacker = {};   // the pen at the top left, no texture yet
     GEScreen* theScreen = inRasterizer->GetScreen(inScreen);
     GETexture* theTexture = NULL;
-    unsigned long theRowHeight = 0;
     unsigned long theSource;
     unsigned long theDestination;
     inRasterizer->GetBlending(theSource, theDestination, inScreen);
@@ -115,27 +117,18 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
         PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
         theString = theCell;
         theText.SetText(theString);
-        float theHeight = theText.GetTextExtent().GetHeight();
-        if (theHeight > theRowHeight)
-            theRowHeight = theHeight;
-        if (theText.GetTextExtent().GetWidth() + thePosition.GetX() >= 256.0f) {
-            thePosition.SetY(thePosition.GetY() + theRowHeight);
-            theRowHeight = 0;
-            thePosition.SetX(0.0f);
-        }
-        if (theTexture == NULL || thePosition.GetY() + theHeight >= 256.0f) {
+        // the next cell: a new row at the right edge, a new texture at the bottom edge
+        EeGeRectangle thePlace;
+        if (ee_ge_font_cell_place(&thePacker, theText.GetTextExtent().GetWidth(), theText.GetTextExtent().GetHeight(),
+                                  &thePlace)) {
             if (theTexture != NULL) {
                 theTexture->GetSurface()->TextUnlock();
                 this->CreateSurfaceAlpha(theTexture->GetSurface());
             }
             theTexture = this->CreateNewFontTexture(theScreen);
-            thePosition.SetXY(0.0f, 0.0f);
         }
-        this->mCharacters[theIndex].mRect.SetLeft(thePosition.GetX());
-        this->mCharacters[theIndex].mRect.SetTop(thePosition.GetY());
-        this->mCharacters[theIndex].mRect.SetRight(theText.GetTextExtent().GetWidth() + thePosition.GetX());
-        this->mCharacters[theIndex].mRect.SetBottom(thePosition.GetY() + theText.GetTextExtent().GetHeight());
-        theText.SetLocation(thePosition);
+        *GERust(this->mCharacters[theIndex].mRect) = thePlace;
+        theText.SetLocation(this->mCharacters[theIndex].mRect.GetTopLeft());
         inRasterizer->Draw(&theText, theTexture->GetSurface());
         this->mCharacters[theIndex].mTexture = theTexture;
         this->mCharacters[theIndex].mTexture->Reference();
@@ -148,7 +141,6 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
                                                 this->mCharacters[theIndex].mBottomRight);
         this->mCharacters[theIndex].mXScale = this->mBitmap->GetXScale();
         this->mCharacters[theIndex].mYScale = this->mBitmap->GetYScale();
-        thePosition.SetX(this->mCharacters[theIndex].mRect.GetWidth() + thePosition.GetX());
     }
     inFont->SetFontBitmap(this);
     theTexture->GetSurface()->TextUnlock();
@@ -196,113 +188,82 @@ GEColor theTemp1(0.0f, 0.0f, 0.0f);
 }
 
 // FUNCTION: LLE 0x10015ac5
-// Turns a rendered glyph texture into white with alpha taken from the green channel (black stays transparent)
+// Turns a rendered glyph texture into white with alpha taken from the green channel (black stays transparent; the
+// pixel pass is Rust: ee_ge font.rs)
 long GEFontBitmap::CreateSurfaceAlpha(GESurface* inSurface)
 {
     inSurface->Lock();
-    unsigned long theSkip = (inSurface->GetBytesPerRow() - inSurface->GetWidth() * 2) / 2;
-    unsigned short* thePixel = reinterpret_cast<unsigned short*>(inSurface->GetMemoryAddress());
-    for (unsigned long y = 0; y < inSurface->GetHeight(); y++) {
-        for (unsigned long x = 0; x < inSurface->GetWidth(); x++) {
-            if (GEUnpackGreen(kPixelFormatA4R4G4B4, *thePixel) == 0)
-                *thePixel = GEPackColor(kPixelFormatA4R4G4B4, 0, 0, 0, 0);
-            else
-                *thePixel = GEPackColor(kPixelFormatA4R4G4B4, 255, 255, 255, GEUnpackGreen(kPixelFormatA4R4G4B4, *thePixel));
-            thePixel++;
-        }
-        thePixel += theSkip;
-    }
+    ee_ge_font_surface_alpha(reinterpret_cast<uint16_t*>(inSurface->GetMemoryAddress()), inSurface->GetWidth(),
+                             inSurface->GetHeight(), inSurface->GetBytesPerRow());
     inSurface->Unlock();
     return 0;
 }
 
+// The glyphs of a text's draw (Rust: ee_ge font.rs draw_plan; inClip NULL: unclipped), at most one a byte
+static std::vector<EeGeGlyphDraw> GEFontBitmapPlan(GEText* inText, const GERectangle* inClip, unsigned long inFirst,
+                                                   const std::vector<GEFBCharacter>& inCharacters)
+{
+    const char* theText = inText->GetText();
+    std::vector<EeGeGlyphDraw> thePlan(strlen(theText));
+    thePlan.resize(ee_ge_font_draw_plan(GERustTextOps(), theText, inFirst,
+                                        reinterpret_cast<const EeGeFbCharacter*>(inCharacters.data()),
+                                        inCharacters.size(), GERust(inText->GetLocation()),
+                                        inClip != NULL ? GERust(*inClip) : NULL, thePlan.data(), thePlan.size()));
+    return thePlan;
+}
+
 // FUNCTION: LLE 0x10015b99
-// Draws the text glyph by glyph at its location in its colour; returns the last draw's result
+// Draws the text glyph by glyph at its location in its colour; returns the last draw's result. A character's cell is
+// its Windows-1252 byte (decision D6: the text is UTF-8); a character outside the code page or the font is skipped,
+// as a byte outside the font was. The walk is Rust (ee_ge font.rs); the bitmap's calls are made here in its order.
 long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
 {
     long theResult = 0;
-    GE2DPoint theLocation;
-    theLocation = inText->GetLocation();
-    const char* theCharacter = inText->GetText();
+    std::vector<EeGeGlyphDraw> thePlan = GEFontBitmapPlan(inText, NULL, this->mFirstCharacter, this->mCharacters);
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (*theCharacter != 0) {
-        // the character's cell (its Windows-1252 byte); a character outside the code page or the font is skipped,
-        // as a byte outside the font was
-        uint32_t theLength = 0;
-        long theIndex = (long)PlatCp1252ByteOf(PlatUtf8Decode(theCharacter, &theLength)) - (long)this->mFirstCharacter;
-        theCharacter += theLength;
-        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size())
-            continue;
-        this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
-        this->mBitmap->SetTextureCoordinates(
-            this->mCharacters[theIndex].mTopLeft,
-            GETextureCoordinate(this->mCharacters[theIndex].mBottomRight.GetU(), this->mCharacters[theIndex].mTopLeft.GetV()),
-            GETextureCoordinate(this->mCharacters[theIndex].mTopLeft.GetU(), this->mCharacters[theIndex].mBottomRight.GetV()),
-            this->mCharacters[theIndex].mBottomRight);
-        this->mBitmap->SetXYScale(this->mCharacters[theIndex].mXScale, this->mCharacters[theIndex].mYScale);
-        this->mBitmap->SetLocation(theLocation);
+    for (size_t i = 0; i < thePlan.size(); i++) {
+        const GEFBCharacter& theCell = this->mCharacters[thePlan[i].cell];
+        this->mBitmap->SetTexture(theCell.mTexture, inScreen);
+        this->mBitmap->SetTextureCoordinates(theCell.mTopLeft,
+                                             GETextureCoordinate(theCell.mBottomRight.GetU(), theCell.mTopLeft.GetV()),
+                                             GETextureCoordinate(theCell.mTopLeft.GetU(), theCell.mBottomRight.GetV()),
+                                             theCell.mBottomRight);
+        this->mBitmap->SetXYScale(theCell.mXScale, theCell.mYScale);
+        this->mBitmap->SetLocation(*reinterpret_cast<const GE2DPoint*>(&thePlan[i].location));
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
-        theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
     }
     return theResult;
 }
 
 // FUNCTION: LLE 0x10015dcd
-// Draws the text glyph by glyph clipped to a rectangle; a glyph fully outside is skipped (the pen still advances)
+// Draws the text glyph by glyph clipped to a rectangle: a glyph inside it whole, one across its edge cut to it, one
+// fully outside not at all (its texture is still set and the pen still advances). The walk and the cuts are Rust
+// (ee_ge font.rs).
 long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
                         unsigned long inScreen)
 {
-    GERectangle theSource;
-    GE2DPoint theLocation = inText->GetLocation();
-    GERectangle theDestination(inText->GetLocation());
     long theResult = 0;
-    const char* theCharacter = inText->GetText();
+    std::vector<EeGeGlyphDraw> thePlan = GEFontBitmapPlan(inText, &inRectangle, this->mFirstCharacter, this->mCharacters);
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (*theCharacter != 0) {
-        // the character's cell (its Windows-1252 byte), as in Draw above
-        uint32_t theLength = 0;
-        long theIndex = (long)PlatCp1252ByteOf(PlatUtf8Decode(theCharacter, &theLength)) - (long)this->mFirstCharacter;
-        theCharacter += theLength;
-        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size())
+    for (size_t i = 0; i < thePlan.size(); i++) {
+        const EeGeGlyphDraw& theGlyph = thePlan[i];
+        const GEFBCharacter& theCell = this->mCharacters[theGlyph.cell];
+        this->mBitmap->SetTexture(theCell.mTexture, inScreen);
+        if (theGlyph.kind == GE_GLYPH_SKIPPED)
             continue;
-        this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
-        theDestination = GERectangle(theLocation, this->mCharacters[theIndex].mRect.GetWidth(),
-                                     this->mCharacters[theIndex].mRect.GetHeight());
-        if (inRectangle.Contains(theDestination)) {
-            this->mBitmap->SetTextureCoordinates(
-                this->mCharacters[theIndex].mTopLeft,
-                GETextureCoordinate(this->mCharacters[theIndex].mBottomRight.GetU(), this->mCharacters[theIndex].mTopLeft.GetV()),
-                GETextureCoordinate(this->mCharacters[theIndex].mTopLeft.GetU(), this->mCharacters[theIndex].mBottomRight.GetV()),
-                this->mCharacters[theIndex].mBottomRight);
-            this->mBitmap->SetXYScale(this->mCharacters[theIndex].mXScale, this->mCharacters[theIndex].mYScale);
-        } else if (theDestination.Intersects(inRectangle)) {
-            theSource = this->mCharacters[theIndex].mRect;
-            if (inRectangle.GetTop() > theDestination.GetTop()) {
-                theSource.SetTop(theSource.GetTop() + (inRectangle.GetTop() - theDestination.GetTop()));
-                theDestination.SetTop(inRectangle.GetTop());
-            }
-            if (inRectangle.GetLeft() > theDestination.GetLeft()) {
-                theSource.SetLeft(theSource.GetLeft() + (inRectangle.GetLeft() - theDestination.GetLeft()));
-                theDestination.SetLeft(inRectangle.GetLeft());
-            }
-            if (inRectangle.GetRight() < theDestination.GetRight()) {
-                theSource.SetRight(theSource.GetRight() - (theDestination.GetRight() - inRectangle.GetRight()));
-                theDestination.SetRight(inRectangle.GetRight());
-            }
-            if (inRectangle.GetBottom() < theDestination.GetBottom()) {
-                theSource.SetBottom(theSource.GetBottom() - (theDestination.GetBottom() - inRectangle.GetBottom()));
-                theDestination.SetBottom(inRectangle.GetBottom());
-            }
-            this->mBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, inScreen);
+        if (theGlyph.kind == GE_GLYPH_FULL) {
+            this->mBitmap->SetTextureCoordinates(theCell.mTopLeft,
+                                                 GETextureCoordinate(theCell.mBottomRight.GetU(), theCell.mTopLeft.GetV()),
+                                                 GETextureCoordinate(theCell.mTopLeft.GetU(), theCell.mBottomRight.GetV()),
+                                                 theCell.mBottomRight);
+            this->mBitmap->SetXYScale(theCell.mXScale, theCell.mYScale);
         } else {
-            // A glyph fully outside the rectangle is not drawn, but the pen still advances past it.
-            theDestination.SetLeft(theDestination.GetRight() + 1.0f);
-            theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-            continue;
+            const GERectangle& theDestination = *reinterpret_cast<const GERectangle*>(&theGlyph.destination);
+            this->mBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination,
+                                                          *reinterpret_cast<const GERectangle*>(&theGlyph.source), inScreen);
         }
-        this->mBitmap->SetLocation(theDestination.GetTopLeft());
+        this->mBitmap->SetLocation(*reinterpret_cast<const GE2DPoint*>(&theGlyph.location));
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
-        theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
     }
     return theResult;
 }

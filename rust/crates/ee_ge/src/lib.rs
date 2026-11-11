@@ -9,7 +9,8 @@
 //! (`managers.rs`), `GEViewport`'s matrices, planes and frustum (`viewport.rs`), `UpdateVisibleTerrain` as a plan the
 //! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and its walks over the C++ models
 //! (`physical_walk.rs`), `GEBitmap`'s and
-//! `GERhombus`'s corners and stretched coordinates (`bitmap.rs`).
+//! `GERhombus`'s corners and stretched coordinates (`bitmap.rs`), and the text: `GEText`'s extent and `GEFontBitmap`'s
+//! cell layout, alpha pass and draw plan (`font.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -29,8 +30,12 @@
 pub mod bbox;
 pub mod bitmap;
 pub mod ffi;
+pub mod font;
+pub mod font_ffi;
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_font;
 #[cfg(test)]
 mod golden_model_geom;
 #[cfg(test)]

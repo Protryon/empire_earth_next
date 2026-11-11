@@ -300,7 +300,7 @@ public:
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
     unsigned long mResourceType;            // +0x38 (saved)
     EEUnitStoreField<long, kUnitFieldHitPoints> mHitPoints;   // +0x3c (the unit store's) (> 0: alive) (provisional name)
-    long mResourceAmount;                   // +0x40 (saved)
+    EEUnitStoreField<long, kUnitFieldResourceAmount> mResourceAmount;   // +0x40 (saved) (the unit store's)
     unsigned char mHiddenFlags;             // +0x44 flags (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90)
 };
 
@@ -867,7 +867,7 @@ public:
     long mFlightTime;                       // +0x290
     long mRegenerationTimer;                // +0x294 (saved)
     long mExitingUnitID;                    // +0x298 (saved)
-    unsigned long mFormationSlot;           // +0x29c
+    EEUnitStoreField<unsigned long, kUnitFieldFormationSlot> mFormationSlot;   // +0x29c (the unit store's)
     long mLastHitPoints;                    // +0x2a0
     long mReloadTimer;                      // +0x2a4 (saved)
     long mCargoRoom;                        // +0x2a8 (saved)
@@ -917,7 +917,7 @@ public:
     bool GetIsCommandable() const { return this->mIsCommandable; }  // inline (0x61c806 budget) r37_big B2
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    bool mIsCommandable;                    // +0x341 (set: selectable by the aircraft hot key; provisional name)
+    EEUnitStoreField<bool, kUnitFieldCommandable> mIsCommandable;   // +0x341 (the unit store's) (set: selectable by the aircraft hot key; provisional name)
     bool mIsClearanceGranted;               // +0x342 (+0x340..+0x351 saved)
     bool mIsAnimationPaused;                // +0x343
     bool mIsPaidFor;                        // +0x344

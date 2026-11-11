@@ -12,3 +12,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_random = { path = "../ee_random" }
+
+# the platform's text functions the C++ hands the text code (font.rs), for the tests only
+[dev-dependencies]
+ee_plat_core = { path = "../ee_plat_core" }

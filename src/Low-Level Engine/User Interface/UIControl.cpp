@@ -7,6 +7,8 @@
 // starts at 0x10065f69.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
+
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -178,55 +180,23 @@ bool UIControl::DownKeyPressed()
 }
 
 // FUNCTION: LLE 0x10065520
-// Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1)
+// Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
+// the rows on top, then the bottom, left and right ones, each line placed by Rust (ee_ui draw.rs)
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
     long theResult = kErrorOK;
     GELine theLine;
-    const GEColor* theTopLeftColor;
-    const GEColor* theBottomRightColor;
-    unsigned long i;
     if (inThickness > 0) {
         theLine.SetOpacity(this->mCopiedBorderOpacity);
-        if (this->mCopiedBorderType == 0) {
-            theTopLeftColor = &UIControl::sDarkBorder;
-            theBottomRightColor = &UIControl::sLightBorder;
-        } else {
-            theTopLeftColor = &UIControl::sLightBorder;
-            theBottomRightColor = &UIControl::sDarkBorder;
-        }
-        for (i = 0; i < inThickness; i++) {
-            theLine.SetColor(*theTopLeftColor);
-            GE2DPoint theStart(inRectangle.GetLeft(), inRectangle.GetTop() + i);
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(inRectangle.GetRight() + 1.0f - i, inRectangle.GetTop() + i);
-            theLine.SetEndPoint(theEnd);
-            theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
-        }
-        for (i = 0; i < inThickness; i++) {
-            theLine.SetColor(*theBottomRightColor);
-            GE2DPoint theStart(inRectangle.GetLeft() + i, inRectangle.GetBottom() - i);
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(inRectangle.GetRight() + 1.0f, inRectangle.GetBottom() - i);
-            theLine.SetEndPoint(theEnd);
-            theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
-        }
-        for (i = 0; i < inThickness; i++) {
-            theLine.SetColor(*theTopLeftColor);
-            GE2DPoint theStart(inRectangle.GetLeft() + i, inRectangle.GetTop());
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(inRectangle.GetLeft() + i, inRectangle.GetBottom() + 1.0f - i);
-            theLine.SetEndPoint(theEnd);
-            theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
-        }
-        for (i = 0; i < inThickness; i++) {
-            theLine.SetColor(*theBottomRightColor);
-            GE2DPoint theStart(inRectangle.GetRight() - i, inRectangle.GetTop() + i);
-            theLine.SetStartPoint(theStart);
-            GE2DPoint theEnd(inRectangle.GetRight() - i, inRectangle.GetBottom() + 1.0f);
-            theLine.SetEndPoint(theEnd);
-            theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
-        }
+        EeUiRect theRectangle = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+        for (unsigned int theSide = 0; theSide < 4; theSide++)
+            for (unsigned long i = 0; i < inThickness; i++) {
+                EeUiBorderLine thePlan = ee_ui_border_line(theRectangle, theSide, i, this->mCopiedBorderType);
+                theLine.SetColor(thePlan.light ? UIControl::sLightBorder : UIControl::sDarkBorder);
+                theLine.SetStartPoint(GE2DPoint(thePlan.start.x, thePlan.start.y));
+                theLine.SetEndPoint(GE2DPoint(thePlan.end.x, thePlan.end.y));
+                theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
+            }
     }
     return theResult;
 }

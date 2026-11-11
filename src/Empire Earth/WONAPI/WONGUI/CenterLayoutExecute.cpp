@@ -11,6 +11,8 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
+#include "rust/ee_rust.h"
+// The centring shift is ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x007375a0
 // Moves the layout's components together so their bounding box is centred horizontally and/or
@@ -20,24 +22,18 @@ void CenterLayout::Execute(Component* parent)
     if(this->mComponentList.empty())
         return;
     std::list<Component*>::iterator it;
-    WONRectangle rectangle;
+    std::vector<EeWonRect> aBounds;
     for(it=this->mComponentList.begin();it!=this->mComponentList.end();++it)
     {
-        Component* child=*it;
-        rectangle.DoUnion(child->GetBounds());
-
+        const WONRectangle& b=(*it)->GetBounds();
+        EeWonRect r = { b.x, b.y, b.width, b.height };
+        aBounds.push_back(r);
     }
+    bool aBox = this->mCenterBox!=NULL && this->mCenterBox!=parent;
+    Component* center = aBox ? this->mCenterBox : parent;
+    EeWonRect aCenter = { center->Left(), center->Top(), center->Width(), center->Height() };
     int dx=0,dy=0;
-    Component* center=parent;
-    if(this->mCenterBox!=NULL && this->mCenterBox!=parent)
-    {
-        center=this->mCenterBox;
-        if(this->mHorz) dx=center->Left();
-        if(this->mVert) dy=center->Top();
-    }
-    if(this->mHorz) dx+=(center->Width()-rectangle.width)/2-rectangle.x;
-    if(this->mVert) dy+=(center->Height()-rectangle.height)/2-rectangle.y;
-    if(dx==0 && dy==0)
+    if(!ee_won_gui_center_shift(&aBounds[0],aBounds.size(),aCenter,aBox,this->mHorz,this->mVert,&dx,&dy))
         return;
     for(it=this->mComponentList.begin();it!=this->mComponentList.end();++it)
     {

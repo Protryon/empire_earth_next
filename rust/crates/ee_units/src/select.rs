@@ -62,6 +62,7 @@ mod tests {
             unit_type: 40,
             domains: 2,
             land_building: 0,
+            ..Default::default()
         }
     }
 
