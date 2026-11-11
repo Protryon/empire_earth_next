@@ -5760,3 +5760,52 @@ moved wholly, so no unit was deleted.
 - **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, the Rust gate PASS,
   every capture digest of the four profiles equal to its golden but USGC, whose lines the next commit recorded; the
   live Rust-against-original comparison inside the sweep never stopped a game): see the final report. Not run: any harness session, macOS or Linux builds.
+
+## R5b.2, second round: the calamity classes' updates, CanCastAt, ResearchToEpoch and the effects' unit walks in Rust (ee_tech calamity_update.rs, calamity_cast.rs; branch rust-tech2, 2026-11-11)
+
+Every calamity class's `Update`, `CanCastAt` with every class's `IsValidTarget`/`IsValidLocation`, the steps of
+`EETechTree::ResearchToEpoch` and which units an effect walks applies to (with the values it writes) are Rust. The
+C++ keeps the classes, their members, vtables and object lifetimes, and every world effect.
+
+- **Capture first, from the unmodified C++** (commits fcb0f0bb, 9b084b41; `ee/EETechCapture.h`): CALW (one record per
+  calamity update: the calamity's numeric state before and after, the elapsed time, the result, and the update's
+  world calls in order: damage with unit, amount, player and mode, immunity, strikes, cracks, camera shakes, every
+  physics random draw with its value, storms, meteors, volcanoes, the time warp's, teleport's and logic bomb's steps,
+  helpers, placed and destroyed effects, morale, the special orders), CCAS (every outermost `CanCastAt` of the game
+  and a sweep every five game minutes over every calamity class, every player's first living unit, six points
+  (its tile, a target's, the map centre, an offset, a far unit's, off the map) and four targets, checked and not),
+  TRTE (ResearchToEpoch's steps and the tree after), EVUN (the line of sight, hit point, flight time, area effect
+  and conversion walks: per unit its view, whether the effect applies, the value). In the same runs every existing
+  digest of the four profiles equalled its golden. Counts: CALW 13,802-63,259 updates in the calamity games, 8,503
+  in late seed 2 (a computer player casting by itself); CCAS 41,364 sweep records per oracle game (49,061-55,152 in
+  late, with the prophets' own calls); EVUN only where effects rescale or convert (late: about 1,000 a game).
+- **The updates over a host.** `calamity_update::update` dispatches on the class enum; each class's body is the
+  C++'s, with every world effect an `EeCalamityOp` call (`EeCalamityCall`/`EeCalamityReply`). The calamity's
+  members travel as `EeCalamityState` (time alive, the float, int and bool placeholders, the target, the epicenter
+  factor, the effect handle): the C++ copies it into the `EECalamity` before every host call and back after it, so a
+  world step that reads or changes the calamity (`Depart` writes four of its members, `CreateStorm` its target) sees
+  and leaves what the C++ update saw. The shared calls (helpers, sounds, units near, the damage loops' unit views,
+  `TakeHit`, the three physics draws, the target and caster) are `EECalamityUpdate.cpp`'s; a class's own steps (its
+  effects, units, orders, file statics such as the time warp's colours and the logic bomb's `AdjustLocation`) are
+  its static `UpdateStep` in its own unit. The unit views ask in the C++'s short-circuit order and stop where the C++
+  stopped (the continent of a unit that is no land building is never asked).
+- **Kept quirks.** `min`/`max` are the Windows macros (`(a < b) ? a : b`: the second for NaN). The earthquake's
+  damage is the C cast of `factor * damage * ticks` (float); the hurricane's tick count is `lrintf(time / tick)` and
+  its remainder `lrintf(time - tick * ticks)`; unsigned members (`mTickTime`, `mDuration`, `mTime1`, the effect
+  delays) are converted to float as the C++ compares them. The earthquake's `UpdateEpicenterFactor`,
+  `UpdateQuakeSound` and `ShakeCamera` are gone (the camera distance and the shake itself are host calls).
+- **CanCastAt.** `calamity_cast::can_cast_at` is the base test and the five overrides' compositions (global 0, the
+  location's and unit's extra test, the special attack's 2 allowed); `IsValidLocation`/`IsValidTarget` are virtual
+  and asked through the host, and the overrides (area effects and leprosy, earthquake, hurricane, meteor storm,
+  volcano, teleport, special location; conscription, drop object, logic bomb, morale, special attack, time warp)
+  are forwarders into `valid_location`/`valid_target` over `EECalamityCast.cpp`. The fire's and the plague's
+  `IsValidTarget` stay their functor's `CanInfect` (no decision of their own). `GetCost()` is asked up front (no
+  class overrides it).
+- **ResearchToEpoch** asks Rust for its steps (unlock, research all, research self, research kind 7, show the name)
+  and runs them; **the effects' walks** take `ee_tech_unit_step` (hit points, pending hit points, flight time: whether
+  the unit is rescaled, whether the value is written, the value), `ee_tech_sight_applies`,
+  `ee_tech_area_effect_applies`, `ee_tech_conversion` and `ee_tech_conversion_unit` (a carried unit on a tile is kept,
+  and the previous new unit's behaviour is set again, as the C++ did).
+- **Only the calamity profile and late exercise most of this**: no oracle game casts a calamity or runs CanCastAt
+  except the sweep; the prophets (late, space) call CanCastAt; CALW covers every class in the calamity profile. The
+  media effects, `Unlock`, `ResearchAll` and saves stay C++. Nothing here draws: no change is tour-only.
