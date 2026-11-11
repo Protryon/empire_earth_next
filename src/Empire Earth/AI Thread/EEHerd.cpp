@@ -201,7 +201,7 @@ void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
         if (theAttacker && inUnit->mUnitClass->mAttack > 0) {
             long theTarget = inUnit->mUnitClass->mAmmoType;
             long theSource = theAttacker->mUnitClass->mFamily;
-            if (theAttacker->mUnitClass->CanBeAttacked() && gDamageTable[theSource][theTarget] > 0.0f)
+            if (theAttacker->mUnitClass->CanBeAttacked() && EEDamageFactor(theSource, theTarget) > 0.0f)
                 this->Attack(theAttacker, theUnits);
         }
     } else
@@ -648,7 +648,7 @@ void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
         return;
     long theTarget = inUnit->mUnitClass->mAmmoType;
     long theSource = theAttacker->mUnitClass->mFamily;
-    if (!theAttacker->mUnitClass->CanBeAttacked() || !(gDamageTable[theSource][theTarget] > 0.0f))
+    if (!theAttacker->mUnitClass->CanBeAttacked() || !(EEDamageFactor(theSource, theTarget) > 0.0f))
         return;
     if (inAll)
         theUnits.assign(this->mUnits.begin(), this->mUnits.end());

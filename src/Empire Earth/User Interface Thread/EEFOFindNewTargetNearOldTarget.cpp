@@ -4030,7 +4030,7 @@ bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
     if (inClass != NULL) {
         if (inAttacker != NULL && inAttacker->mUnitClass->mAmmoType == 0x3c) {
             unsigned long theKind = inClass->mFamily;
-            if (!inClass->CanBeAttacked() || gDamageTable[theKind][0x3c] <= 0.0f)
+            if (!inClass->CanBeAttacked() || EEDamageFactor(theKind, 0x3c) <= 0.0f)
                 return false;
         } else {
             long theCategory = inClass->mCategory;

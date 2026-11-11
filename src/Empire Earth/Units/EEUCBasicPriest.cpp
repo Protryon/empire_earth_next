@@ -210,7 +210,7 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
     in.target_settlement = theClass->mUnitType == kUnitTypeSettlement;
     in.target_hit_points = (int32_t)inTarget->mHitPoints;
     in.attackable = theClass->CanBeAttacked();
-    in.damage = thePriestClass->mAmmoType >= 0 ? gDamageTable[theClass->mFamily][thePriestClass->mAmmoType] : 0.0f;
+    in.damage = thePriestClass->mAmmoType >= 0 ? EEDamageFactor(theClass->mFamily, thePriestClass->mAmmoType) : 0.0f;
     in.same_category = theClass->mCategory == thePriestClass->mCategory;
     in.converts_priests = inPriest->mStats->mConvertsPriests;
     in.power = (int32_t)inPriest->GetPower();

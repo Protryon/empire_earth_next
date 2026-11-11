@@ -121,7 +121,7 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
             // and hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
             theIn.attacker_human = thePlayer->IsHuman() && inPlayer != 0;
             theIn.target_human = theTarget->IsHuman() && inTargetPlayer != 0;
-            theIn.factor = gDamageTable[inClass->mFamily][inKind];
+            theIn.factor = EEDamageFactor(inClass->mFamily, inKind);
             const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
             unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
             theIn.has_rule = theDifficulty < theList.size();
@@ -148,6 +148,12 @@ static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on 
 unsigned long EEFamilyCount()
 {
     return gDamageTableRowCount;
+}
+
+// gDamageTable[inRow][inColumn] (ee_combat's checked accessor: 0 off the table)
+float EEDamageFactor(long inRow, long inColumn)
+{
+    return ee_combat_damage_factor((int32_t)inRow, (int32_t)inColumn);
 }
 
 // FUNCTION: EXE 0x4dbf11
