@@ -287,6 +287,12 @@ def fixture(arch, d):
         ordered = fixture_driver.orders(g, 11)
         if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1:
             problems.append(f"orders {ordered}")
+        try:   # the second gather's scouting ends "scout-unseen": not a skip, the step fails
+            fixture_driver.order_step(g, 11, "gather")
+            problems.append("a gather whose scouting saw nothing passed")
+        except RuntimeError as error:
+            if "scout-unseen" not in str(error):
+                problems.append(f"scout-unseen gather: {error}")
         seq = g.command("order 11 9")
         g.wait(lambda s: s["command"] >= seq, "a rejected order", 10)
         time.sleep(0.3)

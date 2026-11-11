@@ -20,35 +20,35 @@
 
 use crate::wire::{PastEnd, Reader, Writer};
 
-pub const JOIN_REQUEST: u8 = 1;
-pub const JOIN_REPLY: u8 = 2;
-pub const CLIENT_JOINED: u8 = 3;
-pub const CLIENT_LEFT: u8 = 4;
-pub const CHAT_REQUEST: u8 = 5;
-pub const CHAT_LINE: u8 = 6;
-pub const PING: u8 = 7;
-pub const STAGING: u8 = 8;
+pub(crate) const JOIN_REQUEST: u8 = 1;
+pub(crate) const JOIN_REPLY: u8 = 2;
+pub(crate) const CLIENT_JOINED: u8 = 3;
+pub(crate) const CLIENT_LEFT: u8 = 4;
+pub(crate) const CHAT_REQUEST: u8 = 5;
+pub(crate) const CHAT_LINE: u8 = 6;
+pub(crate) const PING: u8 = 7;
+pub(crate) const STAGING: u8 = 8;
 
-pub const DISCOVERY_SUMMARY: u8 = 1;
-pub const DISCOVERY_KEEP_ALIVE: u8 = 2;
-pub const DISCOVERY_REMOVED: u8 = 3;
-pub const DISCOVERY_QUERY: u8 = 4;
+pub(crate) const DISCOVERY_SUMMARY: u8 = 1;
+pub(crate) const DISCOVERY_KEEP_ALIVE: u8 = 2;
+pub(crate) const DISCOVERY_REMOVED: u8 = 3;
+pub(crate) const DISCOVERY_QUERY: u8 = 4;
 
 /// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
-pub const JOIN_OK: i16 = 0;
-pub const JOIN_BAD_REPLY: i32 = 1;
-pub const JOIN_WRONG_PASSWORD: i16 = 2;
-pub const JOIN_OTHER_SUBNET: i16 = 3;
+pub(crate) const JOIN_OK: i16 = 0;
+pub(crate) const JOIN_BAD_REPLY: i32 = 1;
+pub(crate) const JOIN_WRONG_PASSWORD: i16 = 2;
+pub(crate) const JOIN_OTHER_SUBNET: i16 = 3;
 
 /// Chat flags: a whisper to the target, a line to the sender's team.
-pub const CHAT_WHISPER: u16 = 4;
-pub const CHAT_TEAM: u16 = 0x100;
+pub(crate) const CHAT_WHISPER: u16 = 4;
+pub(crate) const CHAT_TEAM: u16 = 0x100;
 
 /// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
 /// host re-sends its full summary instead of a keep-alive after this many.
-pub const HOST_SOCKET_SILENCE: i64 = 300;
-pub const JOINER_PING_IDLE: i64 = 120;
-pub const SUMMARY_REPEAT: i64 = 30;
+pub(crate) const HOST_SOCKET_SILENCE: i64 = 300;
+pub(crate) const JOINER_PING_IDLE: i64 = 120;
+pub(crate) const SUMMARY_REPEAT: i64 = 30;
 
 fn game_message(kind: u8) -> Writer {
     let mut w = Writer::new(2, true);

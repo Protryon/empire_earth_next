@@ -140,6 +140,19 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
     }
 }
 
+// in the world's unit chain (gWorld.mUnits: x-sorted, through mTileNode; RTSUnit::Link puts the previous link, the
+// chain's head or a unit, in mPrev, RTSUnit::Unlink clears it)
+static bool OnMap(RTSUnit* inUnit)
+{
+    return inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL;
+}
+
+void EEUnitStoreLinked(RTSUnit* inUnit)
+{
+    if (inUnit->mInUnitStore)
+        Set(inUnit, EE_UNIT_FIELD_ON_MAP, OnMap(inUnit) ? 1 : 0);
+}
+
 // the record of a unit as its object is now (owner: the list's player id; inPlayer: that player object)
 static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, EeUnitRecord& outRecord)
 {
@@ -152,6 +165,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     outRecord.valid = inUnit->mIsValid.Get() ? 1 : 0;
     outRecord.tile_x = (int64_t)inUnit->mTileX.Get();
     outRecord.tile_y = (int64_t)inUnit->mTileY.Get();
+    outRecord.on_map = OnMap(inUnit) ? 1 : 0;
     outRecord.goal_kind = -1;
     outRecord.category = -1;
     outRecord.unit_type = -1;
@@ -219,6 +233,28 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     }
     EeUnitStoreCheck theCheck;
     ee_units_store_check(sObjects.empty() ? NULL : &sObjects[0], sObjects.size(), &theCheck);
+    // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the
+    // checksum's flag 1 over it (EEComplexUnit::GetChecksum(1)) against the store's sum; a mismatch counts like a
+    // field's (so the USCK record, and its digest, stay the same while there is none)
+    static std::vector<uint32_t> sChainIDs;
+    static std::vector<uint64_t> sChainObjects;
+    sChainIDs.clear();
+    sChainObjects.clear();
+    unsigned long theFlag1 = 0;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+        sChainIDs.push_back(static_cast<uint32_t>(theUnit->mUnitID));
+        sChainObjects.push_back(reinterpret_cast<uintptr_t>(theUnit));
+        theFlag1 += static_cast<EEUnit*>(theUnit)->GetChecksum(1);
+    }
+    uint32_t theOffMap = ee_units_store_check_on_map(sChainIDs.empty() ? NULL : &sChainIDs[0],
+                                                     sChainObjects.empty() ? NULL : &sChainObjects[0], sChainIDs.size());
+    unsigned long theStoreFlag1 = (unsigned long)ee_units_store_checksum_flag1();
+    if (theOffMap != 0 || theStoreFlag1 != theFlag1) {
+        fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
+                "%08lx over the chain, %08lx over the store\n", sChainIDs.size(), theOffMap,
+                (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1);
+        theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
+    }
     EESimCaptureRecord theRecord(0x4b435355u);   // "USCK"
     theRecord.U32((unsigned int)inWhere);
     theRecord.U32(theCheck.compared);

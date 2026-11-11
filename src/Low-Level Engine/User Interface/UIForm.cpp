@@ -58,7 +58,7 @@ ISEntity* UIForm::sShiftKey;
 const float kToolTipShadowOffset = 3.0f;
 const float kToolTipShadowOpacity = 0.4f;
 const float kFadeInRate = 1.0f / 700.0f;
-const float kHelpTextOffset = 32.0f;
+// kHelpTextOffset (32): ee_ui form_state.rs HELP_TEXT_OFFSET
 
 // Orders the hot keys so that combinations with more keys are tried first (vtable 0x100999d8: ??_G only)
 class UIHotKeySorter {
@@ -1645,20 +1645,13 @@ void UIForm::UpdateHelpString()
 // Places the tool tip by the mouse inside the form: shifted left at the right edge, above the cursor near the bottom
 void UIForm::SetHelpTextPopupLocation()
 {
-    GE2DPoint theLocation;
-    theLocation = this->mMouseLocation;
-    GERectangle theRectangle = this->mHelpTextLabel->GetRectangle();
-    float theWidth = theRectangle.GetWidth();
-    if (this->mMouseLocation.GetX() + theWidth > this->mRectangle.GetRight())
-        theLocation.SetX(UMFloor(theLocation.GetX()) -
-                         (UMFloor(this->mMouseLocation.GetX()) + theWidth - this->mRectangle.GetRight() + 1.0f));
-    if (theRectangle.GetHeight() + kHelpTextOffset > this->mRectangle.GetBottom() - this->mMouseLocation.GetY())
-        theLocation.SetY(UMFloor(theLocation.GetY()) - theRectangle.GetHeight());
-    else
-        theLocation.SetY(UMFloor(theLocation.GetY()) + kHelpTextOffset);
-    theLocation.SetX(UMFloor(theLocation.GetX() + 0.5f));
-    theLocation.SetY(UMFloor(theLocation.GetY() + 0.5f));
-    this->mHelpTextLabel->SetLocation(theLocation);
+    // the place is Rust (ee_ui form_state.rs help_popup_location)
+    const GERectangle& theRectangle = this->mHelpTextLabel->GetRectangle();
+    EeUiPoint theLocation = ee_ui_form_help_location(
+        EeUiPoint{this->mMouseLocation.GetX(), this->mMouseLocation.GetY()},
+        EeUiRect{theRectangle.GetBottom(), theRectangle.GetLeft(), theRectangle.GetRight(), theRectangle.GetTop()},
+        EeUiRect{this->mRectangle.GetBottom(), this->mRectangle.GetLeft(), this->mRectangle.GetRight(), this->mRectangle.GetTop()});
+    this->mHelpTextLabel->SetLocation(GE2DPoint(theLocation.x, theLocation.y));
 }
 
 // FUNCTION: LLE 0x10073c7d

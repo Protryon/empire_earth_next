@@ -18,6 +18,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -212,21 +214,33 @@ void EECCAreaEffect::UnloadMedia(EEPlayer* inPlayer)
 // helper and applies the effect to the units in range, once. Returns the time-alive result
 long EECCAreaEffect::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult;
-    if (inCalamity->mBoolPlaceHolder1)
-        theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, inCalamity->mIntPlaceHolder1);
-    else
-        theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    if (!(inCalamity->GetTimeAlive() >= this->mEffect1Duration) || inCalamity->mBoolPlaceHolder1)
-        return theResult;
-    long theCalamityHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(this->mFunctor, inCalamity, NULL);
-    ::gWorld.GetContagionManager()->GetContagionHelper(theCalamityHelperID);
-    inCalamity->mIntPlaceHolder1 = theCalamityHelperID;
-    this->ApplyEffect(inCalamity);
-    inCalamity->mBoolPlaceHolder1 = true;
-    return theResult;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.area_delay = (uint32_t)this->mEffect1Duration;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCAreaEffect::UpdateStep);
+}
+
+// New (port): EECCAreaEffect's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCAreaEffect::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCAreaEffect* theClass = static_cast<EECCAreaEffect*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::CreateHelper: {
+        long theCalamityHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(theClass->mFunctor, theCalamity, NULL);
+        ::gWorld.GetContagionManager()->GetContagionHelper(theCalamityHelperID);
+        EECalamityCaptureEvent(kCalamityOpCreateHelper, theCalamityHelperID);   // CALW (TEST ONLY)
+        outReply.value = (int32_t)theCalamityHelperID;
+        return true;
+    }
+    case EeCalamityOp::ApplyEffect: {
+        EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
+        theClass->ApplyEffect(theCalamity);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4af726
@@ -265,7 +279,10 @@ void EECCAreaEffect::ApplyEffect(EECalamity* inCalamity)
 // Returns whether the calamity's area around the tile fits on the map
 bool EECCAreaEffect::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    return ::gWorld.mMap->IsAreaOnMap(inX, inY, (this->mRadius + 1) / 2);
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.radius = (uint32_t)this->mRadius;
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
 
 // ICF-FOLDED: EXE 0x4ac9f3

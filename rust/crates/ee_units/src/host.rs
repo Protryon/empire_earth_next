@@ -34,6 +34,10 @@ pub const EE_GOAL_CTOR_PATROL_ROUTE: u32 = 7;
 /// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
 /// forced, rotating, the facing, group movement)
 pub const EE_GOAL_CTOR_LOCATION: u32 = 8;
+/// `new EEUGUnloadTransport(unit_a's complex unit, (long)point[0], (long)point[1], flag_a)`
+pub const EE_GOAL_CTOR_UNLOAD_TRANSPORT: u32 = 9;
+/// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
+pub const EE_GOAL_CTOR_LOCATION_XY: u32 = 10;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 pub const EE_UNIT_ID_NONE: u32 = 0xffff_ffff;
@@ -80,7 +84,8 @@ impl EeGoalSpec {
             EE_GOAL_CTOR_GATHER => 6,
             EE_GOAL_CTOR_HEAL_UNIT => 15,
             EE_GOAL_CTOR_PATROL | EE_GOAL_CTOR_PATROL_ROUTE => 9,
-            EE_GOAL_CTOR_LOCATION => 1,
+            EE_GOAL_CTOR_LOCATION | EE_GOAL_CTOR_LOCATION_XY => 1,
+            EE_GOAL_CTOR_UNLOAD_TRANSPORT => 8,
             _ => return None,
         })
     }
@@ -193,6 +198,26 @@ pub trait Host {
     fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32);
     /// `EEActiveGroup::ResetUnitsPaths`
     fn group_reset_paths(&mut self, group: HostRef);
+    /// `EEActiveGroup::KeepCitizens` (its test is `group::keeps_citizen` over the store)
+    fn group_keep_citizens(&mut self, group: HostRef);
+    /// `EEPlanWall(start, end, gUnitClassTable[the technology's unit class], player, true, false, pieces)`: the new
+    /// pieces (a list the host owns until `wall_release`) and their count
+    fn wall_plan(&mut self, player: HostRef, technology: i32, start: (f32, f32), end: (f32, f32)) -> (HostRef, usize);
+    /// `EEBuildWall(group, pieces)`
+    fn wall_build(&mut self, group: HostRef, pieces: HostRef);
+    /// the pieces' list goes
+    fn wall_release(&mut self, pieces: HostRef);
+    /// `EEActiveGroup::SpreadForUnload(x, y)`
+    fn group_spread_for_unload(&mut self, group: HostRef, x: i64, y: i64);
+    /// the unit carries cargo it can unload: `(mUnitClass->IsTransport() || mUnitClass->mIsParatrooperBomber) &&
+    /// mComplexUnit->GetNumCargoUnits() > 0`, read on the object
+    fn unit_can_unload(&mut self, unit: u32) -> bool;
+    /// `goal->SetTransport(unit->mComplexUnit)` on an unload goal not yet given
+    fn goal_set_transport(&mut self, goal: &GoalHandle, unit: u32);
+    /// `goal->CanUnloadAtDestination()` on an unload goal not yet given
+    fn goal_can_unload(&mut self, goal: &GoalHandle) -> bool;
+    /// `player->mEvents.AddEvent(U2DPoint<long>(x, y), 2, player, 0x7c3b, false)`: "cannot unload there"
+    fn unload_warning(&mut self, player: HostRef, x: i64, y: i64);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -246,6 +271,23 @@ pub mod game {
         fn ee_units_host_unit_complex_id(unit: u32) -> u32;
         fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
         fn ee_units_host_group_reset_paths(group: *mut c_void);
+        fn ee_units_host_group_keep_citizens(group: *mut c_void);
+        fn ee_units_host_wall_plan(
+            player: *mut c_void,
+            technology: i32,
+            start_x: f32,
+            start_y: f32,
+            end_x: f32,
+            end_y: f32,
+            count: *mut usize,
+        ) -> *mut c_void;
+        fn ee_units_host_wall_build(group: *mut c_void, pieces: *mut c_void);
+        fn ee_units_host_wall_release(pieces: *mut c_void);
+        fn ee_units_host_group_spread_for_unload(group: *mut c_void, x: i64, y: i64);
+        fn ee_units_host_unit_can_unload(unit: u32) -> u8;
+        fn ee_units_host_goal_set_transport(goal: *mut c_void, unit: u32);
+        fn ee_units_host_goal_can_unload(goal: *mut c_void) -> u8;
+        fn ee_units_host_unload_warning(player: *mut c_void, x: i64, y: i64);
     }
 
     pub struct GameHost;
@@ -392,6 +434,45 @@ pub mod game {
         fn group_reset_paths(&mut self, group: HostRef) {
             unsafe { ee_units_host_group_reset_paths(group.0) }
         }
+        fn group_keep_citizens(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_keep_citizens(group.0) }
+        }
+        fn wall_plan(
+            &mut self,
+            player: HostRef,
+            technology: i32,
+            start: (f32, f32),
+            end: (f32, f32),
+        ) -> (HostRef, usize) {
+            let mut count = 0usize;
+            // SAFETY: the count is written for the call
+            let pieces =
+                unsafe { ee_units_host_wall_plan(player.0, technology, start.0, start.1, end.0, end.1, &mut count) };
+            (HostRef(pieces), count)
+        }
+        fn wall_build(&mut self, group: HostRef, pieces: HostRef) {
+            unsafe { ee_units_host_wall_build(group.0, pieces.0) }
+        }
+        fn wall_release(&mut self, pieces: HostRef) {
+            unsafe { ee_units_host_wall_release(pieces.0) }
+        }
+        fn group_spread_for_unload(&mut self, group: HostRef, x: i64, y: i64) {
+            unsafe { ee_units_host_group_spread_for_unload(group.0, x, y) }
+        }
+        fn unit_can_unload(&mut self, unit: u32) -> bool {
+            unsafe { ee_units_host_unit_can_unload(unit) != 0 }
+        }
+        fn goal_set_transport(&mut self, goal: &GoalHandle, unit: u32) {
+            // SAFETY: a goal the host created and nothing consumed yet
+            unsafe { ee_units_host_goal_set_transport(goal.as_ptr(), unit) }
+        }
+        fn goal_can_unload(&mut self, goal: &GoalHandle) -> bool {
+            // SAFETY: as above
+            unsafe { ee_units_host_goal_can_unload(goal.as_ptr()) != 0 }
+        }
+        fn unload_warning(&mut self, player: HostRef, x: i64, y: i64) {
+            unsafe { ee_units_host_unload_warning(player.0, x, y) }
+        }
     }
 }
 
@@ -439,6 +520,16 @@ pub(crate) mod tests {
         ComplexOf(u32),
         PathPoint(u32, u32, u32),
         ResetPaths(HostRef),
+        KeepCitizens(HostRef),
+        /// player, technology, the points' bits
+        WallPlan(HostRef, i32, [u32; 4]),
+        WallBuild(HostRef, HostRef),
+        WallRelease(HostRef),
+        SpreadUnload(HostRef, i64, i64),
+        CanUnload(u32),
+        SetTransport(u8, u32),
+        CanUnloadThere(u8),
+        UnloadWarning(HostRef, i64, i64),
         /// a location goal's facing and group movement flag
         Location(u32, u8, u8),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
@@ -471,6 +562,12 @@ pub(crate) mod tests {
         pub complex_of: BTreeMap<u32, u32>,
         /// Path To's point as the host adjusts it (x, y, z; None: unchanged, height 0)
         pub path_point: Option<(f32, f32, f32)>,
+        /// KeepCitizens keeps these; the wall's pieces (EEPlanWall's count)
+        pub citizens: Vec<u32>,
+        pub wall_pieces: usize,
+        /// the units that carry cargo; whether an unload goal can unload at its destination
+        pub cargo: Vec<u32>,
+        pub unload_there: bool,
         /// log the goals' arguments too (Call::Spec)
         pub specs: bool,
         pub made: usize,
@@ -666,12 +763,71 @@ pub(crate) mod tests {
         fn group_reset_paths(&mut self, group: HostRef) {
             self.calls.push(Call::ResetPaths(group));
         }
+        fn group_keep_citizens(&mut self, group: HostRef) {
+            let keep = self.citizens.clone();
+            if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                ids.retain(|id| keep.contains(id));
+            }
+            self.calls.push(Call::KeepCitizens(group));
+        }
+        fn wall_plan(
+            &mut self,
+            player: HostRef,
+            technology: i32,
+            start: (f32, f32),
+            end: (f32, f32),
+        ) -> (HostRef, usize) {
+            let bits = [start.0.to_bits(), start.1.to_bits(), end.0.to_bits(), end.1.to_bits()];
+            self.calls.push(Call::WallPlan(player, technology, bits));
+            (HostRef(0x7700 as *mut c_void), self.wall_pieces)
+        }
+        fn wall_build(&mut self, group: HostRef, pieces: HostRef) {
+            self.calls.push(Call::WallBuild(group, pieces));
+        }
+        fn wall_release(&mut self, pieces: HostRef) {
+            self.calls.push(Call::WallRelease(pieces));
+        }
+        fn group_spread_for_unload(&mut self, group: HostRef, x: i64, y: i64) {
+            self.calls.push(Call::SpreadUnload(group, x, y));
+        }
+        fn unit_can_unload(&mut self, unit: u32) -> bool {
+            self.calls.push(Call::CanUnload(unit));
+            self.cargo.contains(&unit)
+        }
+        fn goal_set_transport(&mut self, goal: &GoalHandle, unit: u32) {
+            let kind = self.goal_kind(goal);
+            self.calls.push(Call::SetTransport(kind, unit));
+        }
+        fn goal_can_unload(&mut self, goal: &GoalHandle) -> bool {
+            let kind = self.goal_kind(goal);
+            self.calls.push(Call::CanUnloadThere(kind));
+            self.unload_there
+        }
+        fn unload_warning(&mut self, player: HostRef, x: i64, y: i64) {
+            self.calls.push(Call::UnloadWarning(player, x, y));
+        }
     }
 
     #[test]
     fn the_constructors_kinds() {
-        let kinds: Vec<_> = (0..10).map(|c| EeGoalSpec::new(c).kind()).collect();
-        assert_eq!(kinds, vec![None, Some(10), Some(3), Some(2), Some(6), Some(15), Some(9), Some(9), Some(1), None]);
+        let kinds: Vec<_> = (0..12).map(|c| EeGoalSpec::new(c).kind()).collect();
+        assert_eq!(
+            kinds,
+            vec![
+                None,
+                Some(10),
+                Some(3),
+                Some(2),
+                Some(6),
+                Some(15),
+                Some(9),
+                Some(9),
+                Some(1),
+                Some(8),
+                Some(1),
+                None
+            ]
+        );
         let s = EeGoalSpec::new(EE_GOAL_CTOR_ATTACK_UNIT);
         assert_eq!((s.unit_a, s.unit_b, s.flag_a, s.flag_b), (EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, 0, 0));
         assert!(s.object.is_null());

@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyMSSkinImage.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x007193C0
@@ -27,31 +28,11 @@ void WONHeaderButton::Paint(Graphics &g)
 	WrappedText *aText;
 
 	this->GetButtonState(g,&aColor, &aText);
-	g.SetColor(aColor);
-	int x;
-	if(aText==NULL || aText->GetWidth()==0)
-		x = (this->Width()-4)/2;
-	else
-		x = aText->GetWidth() + 10 + this->mLeftTextPad;
-	
-	int y = this->Height()/2-2;
-	int offset = ((mButtonFlags&0x20)!=0)?1:0;
-	x+=offset;
-	y+=offset;
-
-	int i;
-	if(aSortType==ListSortType_Ascending)
-	{
-		for(i=0; i<4; i++)
-			g.DrawLine(x-i, y+i, x+i, y+i);	
-
-	} 
-	else if(aSortType==ListSortType_Descending)
-	{
-		for(i=0; i<4; i++)
-			g.DrawLine(x-(3-i), y+i, x+(3-i), y+i);			
-	}
-
+	// the arrow after the text, one pixel down and right while pressed (guidraw.rs header_arrow)
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_header_arrow((int)aSortType,aColor,aText!=NULL,aText ? aText->GetWidth() : 0,
+			this->mLeftTextPad,this->Width(),this->Height(),(mButtonFlags&0x20)!=0,o,n); });
+	WONDrawRun(g,anOps,WONDrawSlots());
 }
 
 // FUNCTION: WON 0x0071A450

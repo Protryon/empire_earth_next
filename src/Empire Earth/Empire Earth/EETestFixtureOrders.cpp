@@ -7,7 +7,10 @@
 //
 // Kinds:
 //   0 gather         up to four citizens; a right click on a resource of the world player in view (a tree, a mine)
-//                    that a citizen of the group can gather -> EEMGatherResource;
+//                    that a citizen of the group can gather -> EEMGatherResource. With none in view (a random map's
+//                    start often shows none), the group first walks (EEMPathTo) to the nearest one it could gather
+//                    until the player sees it, the camera is centred on it (EEACenterCamera) and the view scanned
+//                    again (note "scouting" meanwhile; "scout-unseen" / "scout-no-pick" when that fails);
 //   1 repair         up to four citizens; one of the player's built land buildings in view is damaged first (its hit
 //                    points set to half its maximum under the world's write lock: TEST ONLY, there is no game message
 //                    for it); a right click on it -> EEMRepairUnit;
@@ -139,6 +142,7 @@
 #include "ee/EETown.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitPicker.h"
+#include "ee/EEACenterCamera.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEGraphics.h"
@@ -710,7 +714,36 @@ struct OrderPlan {
     long mTarget = -1;
     long mDamage = -1;                      // repair: the building to damage
     const char* mRefusal = NULL;
+    long mScout = -1;                       // gather with nothing in view: the nearest resource the group can gather
+    long mScoutX = 0, mScoutY = 0;          // its tile
 };
+
+// gather (the world's read lock held): the world player's resource nearest inWorker that it could gather were its tile
+// in view and that it can reach, into ioPlan.mScout (-1: none). A random map's start often shows none: the human's
+// citizens idle and the start's line of sight is short (the lead's runs 2026-11-11: an arctic start and a grass one,
+// no tree or mine in view or explored).
+void ScoutTarget(EEComplexUnit* inWorker, OrderPlan& ioPlan)
+{
+    EEPlayer* theWorld = gWorld.mPlayers[0];
+    long theBest = -1;
+    for (RTSUnit* theNode = theWorld != NULL ? theWorld->mFirstUnit : NULL; theNode != NULL; theNode = theNode->mNext) {
+        EEUnit* theUnit = static_cast<EEUnit*>(theNode);
+        long theX = theUnit->GetTileX(), theY = theUnit->GetTileY();
+        if (!theUnit->mIsValid || theX == -10000 || theUnit->mResourceAmount <= 0
+            || theUnit->mUnitClass->mFamily == kUnitFamilyAnimal
+            || !inWorker->CanGather(theUnit, theX, theY, true, false)
+            || !gContinentManager.CanGetTo(inWorker, theX, theY))
+            continue;
+        long theDX = theX - inWorker->GetTileX(), theDY = theY - inWorker->GetTileY();
+        long theDistance = theDX * theDX + theDY * theDY;
+        if (theBest >= 0 && theDistance >= theBest)
+            continue;
+        theBest = theDistance;
+        ioPlan.mScout = (long)theUnit->mUnitID;
+        ioPlan.mScoutX = theX;
+        ioPlan.mScoutY = theY;
+    }
+}
 
 // chooses the units, the target and the click point (the world's read lock held)
 void Choose(int inKind, OrderPlan& outPlan)
@@ -768,8 +801,10 @@ void Choose(int inKind, OrderPlan& outPlan)
             if (theUnit->mUnitClass->GetIsTree())   // a tree first, else the first resource found
                 break;
         }
-        if (outPlan.mTarget < 0)
+        if (outPlan.mTarget < 0) {
             outPlan.mRefusal = "no-target";
+            ScoutTarget(theWorker, outPlan);
+        }
     } else if (inKind == kOrderRepair || inKind == kOrderRepairQueued) {
         for (std::map<long, GE2DPoint>::iterator it = thePoints.begin(); it != thePoints.end(); ++it) {
             EEComplexUnit* theUnit = OwnComplex(it->first);
@@ -806,12 +841,67 @@ void Choose(int inKind, OrderPlan& outPlan)
     }
 }
 
+// gather with no resource in view: the group selected and sent (EEMPathTo, as a UI action) to the nearest resource
+// ScoutTarget found, until the player sees its tile (at most 60 s); then the camera centred on it (EEACenterCamera,
+// as the mini map's click does) and the plan chosen again from the new view (ioPlan: the new plan, or "no-target")
+void Scout(int inKind, OrderPlan& ioPlan)
+{
+    {
+        std::lock_guard<std::mutex> theLock(sOrderMutex);
+        sOrder.mNote = "scouting";
+    }
+    long theScout = ioPlan.mScout;
+    long theX = ioPlan.mScoutX, theY = ioPlan.mScoutY;
+    long theWorkerID = ioPlan.mUnits[0];
+    Post(new EEMSelectTheseUnits(ioPlan.mUnits));
+    bool theSelected = false;
+    for (int k = 0; k < 40 && !theSelected; k++) {
+        Wait(150);
+        theSelected = Selected(ioPlan.mUnits);
+    }
+    if (theSelected)
+        Post(new EEMPathTo((float)theX + 0.5f, (float)theY + 0.5f, 0.0f, false, false));
+    bool theSeen = false;
+    for (int k = 0; theSelected && k < 120 && !theSeen; k++) {
+        Wait(500);
+        gWorld.mLock->ReadLock();
+        EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)theScout));
+        EEComplexUnit* theWorker = OwnComplex(theWorkerID);
+        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+        theSeen = theUnit != NULL && theWorker != NULL && thePlayer != NULL && theUnit->mResourceAmount > 0
+            && EEIsSeenBy(theUnit, thePlayer, true) && theWorker->CanGather(theUnit, theX, theY, false, false);
+        gWorld.mLock->ReadUnlock();
+    }
+    OrderPlan thePlan;
+    if (theSeen) {
+        EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
+        theAction->SetLocation(theX, theY);
+        theAction->Dereference();
+        Wait(1500);   // frames drawn from the new view fill the picker
+        gWorld.mLock->ReadLock();
+        Choose(inKind, thePlan);
+        gWorld.mLock->ReadUnlock();
+    }
+    if (!theSelected)
+        thePlan.mRefusal = "not-selected";
+    else if (!theSeen)
+        thePlan.mRefusal = "scout-unseen";     // not a skip: the driver fails the step with this note
+    else if (thePlan.mTarget < 0)
+        thePlan.mRefusal = "scout-no-pick";
+    thePlan.mScout = -1;
+    ioPlan = thePlan;
+    std::lock_guard<std::mutex> theLock(sOrderMutex);
+    sOrder.mNote = "-";
+}
+
 void OrderRun(unsigned long inSeq, int inKind)
 {
     OrderPlan thePlan;
     gWorld.mLock->ReadLock();
     Choose(inKind, thePlan);
     gWorld.mLock->ReadUnlock();
+    if (inKind == kOrderGather && thePlan.mTarget < 0 && thePlan.mScout >= 0)
+        Scout(inKind, thePlan);
     if (thePlan.mRefusal != NULL) {
         Refuse(thePlan.mRefusal);
         fprintf(stderr, "TEST UI order-refused order control %d value 0 on form 0 (seq %lu, top form 0)\n", inKind, inSeq);

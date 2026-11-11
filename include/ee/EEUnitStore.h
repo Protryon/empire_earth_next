@@ -90,6 +90,9 @@ void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* 
 void EEUnitStoreRemove(RTSUnit* inUnit);
 // a player object goes (~RTSPlayer): the records of its list go, by the object (temporary players may share an id)
 void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer);
+// the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
+// on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
+void EEUnitStoreLinked(RTSUnit* inUnit);
 
 class EEPlayer;
 // the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
@@ -111,8 +114,10 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
 // TEST ONLY: the Fill test over every player's units for every slot (USFL records; EE-SIM, every five game minutes)
 void EEFillSweep();
 
-// TEST ONLY: every unit of every player's list against its record; the count compared. inWhere names the point
-// (0: after a physics tick, else the executed message's type). A mismatch prints the unit and field and exits 3.
+// TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
+// on-the-map flags, and the out-of-sync checksum's flag 1 over the chain against the store's; the count compared.
+// inWhere names the point (0: after a physics tick, else the executed message's type). A mismatch prints the unit and
+// field and exits 3.
 unsigned long EEUnitStoreCheck(unsigned long inWhere);
 
 #endif

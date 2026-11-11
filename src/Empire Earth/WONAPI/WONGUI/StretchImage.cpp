@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 
 using namespace WONAPI;
@@ -36,53 +37,8 @@ static void CopyRawImage(ImageType *src, ImageType *dst, int destx, int desty, i
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-template <class ImageType, class PixelType> 
-// FUNCTION: WON 0x00755170
-// FUNCTION: WON 0x00755410
-// Tiles a source rectangle across a row from x1 to x2, clipping the last one (8-bit 0x00755170, 32-bit 0x00755410)
-static void RawTileHorz(ImageType *src, ImageType *dst, int x1, int x2, int y, int tileLeft, int tileTop, int tileWidth, int tileHeight)
-{
-	int endX = x2 - tileWidth;
-	int x;
-	for(x = x1; x<endX; x+=tileWidth)
-		CopyRawImage<ImageType,PixelType>(src,dst,x,y,tileLeft,tileTop,tileWidth,tileHeight);
-
-	int finalWidth = x2 - x;
-	if(finalWidth>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,x,y,tileLeft,tileTop,finalWidth,tileHeight);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-template <class ImageType, class PixelType> 
-static void RawTileVert(ImageType *src, ImageType *dst, int y1, int y2, int x, int tileLeft, int tileTop, int tileWidth, int tileHeight)
-{
-	int endY = y2 - tileHeight;
-	int y;
-	for(y = y1; y<endY; y+=tileHeight)
-		CopyRawImage<ImageType,PixelType>(src,dst,x,y,tileLeft,tileTop,tileWidth,tileHeight);
-
-	int finalHeight = y2 - y;
-	if(finalHeight>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,x,y,tileLeft,tileTop,tileWidth,finalHeight);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-template <class ImageType, class PixelType> 
-static void RawTileHorzVert(ImageType *src, ImageType *dst, int x1, int x2, int y1, int y2, int tileLeft, int tileTop, int tileWidth, int tileHeight)
-{
-	int endY = y2 - tileHeight;
-	int y;
-	for(y = y1; y<endY; y+=tileHeight)
-		RawTileHorz<ImageType,PixelType>(src,dst,x1,x2,y,tileLeft,tileTop,tileWidth,tileHeight);
-
-	int finalHeight = y2 - y;
-	if(finalHeight>0)
-		RawTileHorz<ImageType,PixelType>(src,dst,x1,x2,y,tileLeft,tileTop,tileWidth,finalHeight);
-}
+// The tiles (RawTileHorz 0x00755170 / 0x00755410, RawTileVert, RawTileHorzVert) are copies in ee_won's plan
+// (guidraw.rs stretch_filter).
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -152,118 +108,36 @@ static void RawStretch(ImageType *src, ImageType *dst, int x1, int x2, int y1, i
 template <class ImageType, class PixelType> 
 static SmartPtr<ImageType> DoFilter(ImageType *theImage, StretchImageFilter *theFilter)
 {
-	int mWidth = theFilter->mWidth;
-	int mHeight = theFilter->mHeight;
-	int mLeftWidth = theFilter->mLeftWidth;
-	int mRightWidth = theFilter->mRightWidth;
-	int mTopHeight = theFilter->mTopHeight;
-	int mBottomHeight = theFilter->mBottomHeight;
-	bool mTileHorz = theFilter->mTileHorz, mTileVert = theFilter->mTileVert; 
-
-	if(mBottomHeight + mTopHeight > mHeight)
-		mHeight = mBottomHeight + mTopHeight;
-
-	if(mRightWidth + mLeftWidth > mWidth)
-		mWidth = mRightWidth + mLeftWidth;
+	// the placement of the nine pieces is ee_won's (guidraw.rs stretch_filter): the new size, then the corner
+	// copies and the sides' and centre's stretches and tiles in the original's order
+	EeWonStretchFilter aFilter;
+	aFilter.width = theFilter->mWidth;
+	aFilter.height = theFilter->mHeight;
+	aFilter.left = theFilter->mLeftWidth;
+	aFilter.right = theFilter->mRightWidth;
+	aFilter.top = theFilter->mTopHeight;
+	aFilter.bottom = theFilter->mBottomHeight;
+	aFilter.src_width = theImage->GetWidth();
+	aFilter.src_height = theImage->GetHeight();
+	aFilter.tile_horz = theFilter->mTileHorz;
+	aFilter.tile_vert = theFilter->mTileVert;
+	aFilter.skip_center = theFilter->mSkipCenter;
+	int aWidth = 0, aHeight = 0;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_stretch_filter(&aFilter,&aWidth,&aHeight,o,n); });
 
 	ImageType *src = theImage;
-	SmartPtr<ImageType> newImage = new ImageType(mWidth,mHeight);
+	SmartPtr<ImageType> newImage = new ImageType(aWidth,aHeight);
 
 	ImageType *dst = newImage.get();
 	CopyRawImageInfo(dst,src);
 
-
-	int x = 0, y = 0, left = 0, top = 0;
-
-	// Simplification: Assume left and top are 0, and width and height are mWidth and mHeight
-	int imageLeft = 0;
-	int imageTop = 0;
-	int imageRight = src->GetWidth()-mRightWidth;
-	int imageBottom = src->GetHeight()-mBottomHeight;
-	
-	left = x;
-	top = y;
-	int right = x + mWidth - mRightWidth;
-	int bottom = y + mHeight - mBottomHeight;
-
-	int centerWidth = mWidth - mRightWidth - mLeftWidth;
-	int centerHeight = mHeight - mBottomHeight - mTopHeight;
-
-	int imageCenterWidth = src->GetWidth() - mRightWidth - mLeftWidth;
-	int imageCenterHeight = src->GetHeight() - mBottomHeight - mTopHeight;
-
-	int minCenterWidth = centerWidth<imageCenterWidth?centerWidth:imageCenterWidth; 
-	int minCenterHeight = centerHeight<imageCenterHeight?centerHeight:imageCenterHeight; 
-
-	// 9 pieces
-
-	// Center
-	if(!theFilter->mSkipCenter && imageCenterHeight>0 && imageCenterWidth>0)
+	for(const EeWonDrawOp* o = anOps.begin(); o!=anOps.end(); ++o)
 	{
-		if(!mTileHorz && !mTileVert) // just stretch
-			RawStretch<ImageType,PixelType>(src,dst,left+mLeftWidth,right,top+mTopHeight,bottom,imageLeft+mLeftWidth,imageTop+mTopHeight,imageCenterWidth,imageCenterHeight);
-		else if(mTileHorz && mTileVert) // just tile
-			RawTileHorzVert<ImageType,PixelType>(src,dst,left+mLeftWidth,right,top+mTopHeight,bottom,imageLeft+mLeftWidth,imageTop+mTopHeight,imageCenterWidth,imageCenterHeight);
-		else if(mTileVert) // stretch horz, tile vert
-		{
-			RawStretch<ImageType,PixelType>(src,dst,left+mLeftWidth,right,top+mTopHeight,top+mTopHeight+minCenterHeight,imageLeft+mLeftWidth,imageTop+mTopHeight,imageCenterWidth,imageCenterHeight);
-			RawTileVert<ImageType,PixelType>(dst,dst,top+mTopHeight+imageCenterHeight,bottom,left+mLeftWidth,left+mLeftWidth,top+mTopHeight,centerWidth,imageCenterHeight);
-		}
-		else if(mTileHorz) // stretch vert, tile horz
-		{
-			RawStretch<ImageType,PixelType>(src,dst,left+mLeftWidth,left+mLeftWidth+minCenterWidth,top+mTopHeight,bottom,imageLeft+mLeftWidth,imageTop+mTopHeight,imageCenterWidth,imageCenterHeight);
-			RawTileHorz<ImageType,PixelType>(dst,dst,left+mLeftWidth+imageCenterWidth,right,top+mTopHeight,left+mLeftWidth,top+mTopHeight,imageCenterWidth,centerHeight);
-		}
+		if(o->kind==EE_WON_DRAW_COPY_PIXELS)
+			CopyRawImage<ImageType,PixelType>(o->a ? dst : src,dst,o->b,o->c,o->d,o->e,o->f,o->g);
+		else if(o->kind==EE_WON_DRAW_STRETCH_PIXELS)
+			RawStretch<ImageType,PixelType>(src,dst,o->a,o->b,o->c,o->d,o->e,o->f,o->g,o->h);
 	}
-
-
-	// Sides
-	if(mLeftWidth>0 && imageCenterHeight>0) // left side
-	{
-		if(mTileVert)
-			RawTileVert<ImageType,PixelType>(src,dst,top+mTopHeight,bottom,left,imageLeft,imageTop+mTopHeight,mLeftWidth,imageCenterHeight);
-		else
-			RawStretch<ImageType,PixelType>(src,dst,left,left+mLeftWidth,top+mTopHeight,bottom,imageLeft,imageTop+mTopHeight,mLeftWidth,imageCenterHeight);
-	}
-
-	if(mRightWidth>0 && imageCenterHeight>0) // right side
-	{
-		if(mTileVert)
-			RawTileVert<ImageType,PixelType>(src,dst,top+mTopHeight,bottom,right,imageRight,imageTop+mTopHeight,mRightWidth,imageCenterHeight);
-		else
-			RawStretch<ImageType,PixelType>(src,dst,right,right+mRightWidth,top+mTopHeight,bottom,imageRight,imageTop+mTopHeight,mRightWidth,imageCenterHeight);
-	}
-
-
-	if(mTopHeight>0 && imageCenterWidth>0) // top side
-	{
-		if(mTileHorz)
-			RawTileHorz<ImageType,PixelType>(src,dst,left+mLeftWidth,right,top,imageLeft+mLeftWidth,imageTop,imageCenterWidth,mTopHeight);
-		else
-			RawStretch<ImageType,PixelType>(src,dst,left+mLeftWidth,right,top,top+mTopHeight,imageLeft+mLeftWidth,imageTop,imageCenterWidth,mTopHeight);
-	}
-
-	if(mBottomHeight>0 && imageCenterWidth>0) // bottom side
-	{
-		if(mTileHorz)
-			RawTileHorz<ImageType,PixelType>(src,dst,left+mLeftWidth,right,bottom,imageLeft+mLeftWidth,imageBottom,imageCenterWidth,mBottomHeight);
-		else
-			RawStretch<ImageType,PixelType>(src,dst,left+mLeftWidth,right,bottom,bottom+mBottomHeight,imageLeft+mLeftWidth,imageBottom,imageCenterWidth,mBottomHeight);
-	}
-
-	// Corners
-	if(mLeftWidth>0 && mTopHeight>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,left,top,imageLeft,imageTop,mLeftWidth,mTopHeight); // top-left
-
-	if(mRightWidth>0 && mTopHeight>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,right,top,imageRight,imageTop,mRightWidth,mTopHeight); // top-right
-
-	if(mLeftWidth>0 && mBottomHeight>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,left,bottom,imageLeft,imageBottom,mLeftWidth,mBottomHeight); // bottom-left
-
-	if(mRightWidth>0 && mBottomHeight>0)
-		CopyRawImage<ImageType,PixelType>(src,dst,right,bottom,imageRight,imageBottom,mRightWidth,mBottomHeight); // bottom-right
-
 
 	return newImage;
 
@@ -359,38 +233,12 @@ void StretchImage::Paint(Graphics &g)
 	if(this->mNeedRecalc)
 		this->CalcImage(g.mDisplayContext.get());
 
-	if(this->mSkipCenter)
-	{
-		if(this->mLeftWidth>0)
-		{
-			g.PushClipRect(0,0,this->mLeftWidth,this->mHeight); // Left part
-			g.DrawImage(this->mCachedImage.get(),0,0);
-			g.PopClipRect();
-		}
-
-		if(this->mRightWidth>0)
-		{
-			g.PushClipRect(this->mWidth-this->mRightWidth,0,this->mRightWidth,this->mHeight); // right part
-			g.DrawImage(this->mCachedImage.get(),0,0);
-			g.PopClipRect();
-		}
-
-		if(this->mTopHeight>0)
-		{	
-			g.PushClipRect(0,0,this->mWidth,this->mTopHeight); // top part
-			g.DrawImage(this->mCachedImage.get(),0,0);
-			g.PopClipRect();
-		}
-
-		if(this->mBottomHeight>0)
-		{
-			g.PushClipRect(0,this->mHeight-this->mBottomHeight,this->mWidth,this->mBottomHeight);
-			g.DrawImage(this->mCachedImage.get(),0,0);
-			g.PopClipRect();
-		}
-	}
-	else
-		g.DrawImage(this->mCachedImage.get(),0,0);
+	// the whole image, or with skip-centre the four border strips (guidraw.rs stretch_paint)
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mCachedImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_stretch_paint(this->mSkipCenter,this->mLeftWidth,
+		this->mRightWidth,this->mTopHeight,this->mBottomHeight,this->mWidth,this->mHeight,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -461,10 +309,13 @@ SmartPtr<NativeImage> StretchImage::GetNative(DisplayContext *theContext)
 // Draws the stretch image, then the center image centered on it when it fits
 void StretchCenterImage::Paint(Graphics &g)
 {
-	g.DrawImage(this->mStretchImage.get(),0,0);
-	
-	if(this->mCenterImage->mWidth<=this->mWidth && this->mCenterImage->mHeight<=this->mHeight)
-		g.DrawImage(this->mCenterImage.get(),(this->mWidth-this->mCenterImage->mWidth)/2,(this->mHeight-this->mCenterImage->mHeight)/2);
+	// guidraw.rs stretch_center_paint
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mStretchImage.get();
+	aSlots.mImages[1] = this->mCenterImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_stretch_center(this->mWidth,this->mHeight,
+		this->mCenterImage->mWidth,this->mCenterImage->mHeight,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

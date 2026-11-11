@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinFrame.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x007177C0
@@ -31,26 +32,19 @@ void WONFrame::Copy(const WONFrame &from)
 // Stretches the frame image to the component's full size when needed and draws it at the top-left corner
 void WONFrame::Paint(Graphics &g, Component *theComponent)
 {
-	if(this->mImage.get()==NULL)
-		return;
-
-	if(this->mImage->mWidth!=theComponent->Width() || this->mImage->mHeight!=theComponent->Height())
-		this->mImage->SetSize(theComponent->Width(),theComponent->Height());
-
-	g.DrawImage(this->mImage.get(),0,0);
+	this->Paint(g,theComponent,0,0,0,0);
 }
 
 // FUNCTION: WON 0x00717910
 // Stretches the frame image to the component's size less the given paddings and draws it inside them
 void WONFrame::Paint(Graphics &g, Component *theComponent, int lp, int tp, int rp, int bp)
 {
-	if(this->mImage.get()==NULL)
-		return;
-
-	if(this->mImage->mWidth!=theComponent->Width()-lp-rp || this->mImage->mHeight!=theComponent->Height()-tp-bp)
-		this->mImage->SetSize(theComponent->Width()-lp-rp,theComponent->Height()-tp-bp);
-
-	g.DrawImage(this->mImage.get(),lp,tp);
+	// guidraw.rs frame_paint
+	EeWonFrame aFrame = WONDrawFrameOf(*this,theComponent,lp,tp,rp,bp);
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_frame(&aFrame,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 }
 
