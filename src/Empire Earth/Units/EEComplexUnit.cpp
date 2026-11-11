@@ -1600,7 +1600,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4ld\n", this->GetUnitClass()->GetUnitType());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4ld\n", this->GetTileX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (y):           %4ld\n", this->GetTileY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Hit Points:         %6ld\n", this->mHitPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Hit Points:         %6ld\n", this->mHitPoints.Get());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(this->GetComplexUnit()->GetCommandType()),
         this->GetComplexUnit()->GetCommandType());
     if (this->GetComplexUnit()->mActiveGroup == NULL)

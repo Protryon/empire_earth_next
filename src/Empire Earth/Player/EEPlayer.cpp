@@ -3879,17 +3879,18 @@ void EEPlayer::SelectUnits(std::vector<long>& inUnitIDs)
     EESelectedGroup* theGroup = this->mActiveGroup;
     this->UpdateSelection(NULL, true);
     theGroup->Clear();
-    for (unsigned long i = 0; i < inUnitIDs.size(); i++) {
-        long& theID = inUnitIDs[i];
-        RTSUnit* theUnit = this->GetUnit(theID);
-        if (theUnit == NULL)
-            continue;
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit;
-        if (!theGroup->Contains(theComplexUnit) && theComplexUnit->mIsBuilt != false
-            && theComplexUnit->mUnitClass->mUnitType != kUnitTypePathPoint) {
-            theGroup->Add(theComplexUnit);
-            theLastUnit = theComplexUnit;
-        }
+    // New (R5b.4): the pick (ee/EEUnitStore.h EESelectPick); the group takes each picked unit (Add skips an invalid
+    // one), the last one picked plays its sound. The ids are the selection's 32-bit values (the original's long)
+    std::vector<uint32_t> theIDs(inUnitIDs.size() + 1);
+    for (size_t i = 0; i < inUnitIDs.size(); i++)
+        theIDs[i] = static_cast<uint32_t>(inUnitIDs[i]);
+    std::vector<uint32_t> thePicked(inUnitIDs.size() + 1);
+    size_t thePickedCount = EESelectPick(this, &theIDs[0], inUnitIDs.size(), &thePicked[0]);
+    EESelectPickCapture(100, this, &theIDs[0], inUnitIDs.size(), &thePicked[0], thePickedCount);   // TEST ONLY (off by default)
+    for (size_t i = 0; i < thePickedCount; i++) {
+        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(this->GetUnit(thePicked[i]))->mComplexUnit;
+        theGroup->Add(theComplexUnit);
+        theLastUnit = theComplexUnit;
     }
     if (theLastUnit != NULL && gWorld.mExecutingLocalSelection)
         EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));

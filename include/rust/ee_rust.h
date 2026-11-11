@@ -674,6 +674,29 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
+/// `new EEUGExplore(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
+
+/// `new EEUGAttackGround(point, flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_GROUND = 2;
+
+/// `new EEUGAttackUnit(unit_a, unit_b, flag_a, flag_b)` (the attacker's complex unit, the target, the third
+/// argument, convert)
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_UNIT = 3;
+
+/// `new EEUGGather(unit_a, unit_b, flag_a)` (the resource, the drop-off; either may be none)
+constexpr static const uint32_t EE_GOAL_CTOR_GATHER = 4;
+
+/// `new EEUGHealUnit(unit_a, flag_a)` (the healed complex unit)
+constexpr static const uint32_t EE_GOAL_CTOR_HEAL_UNIT = 5;
+
+/// `new EEUGPatrol(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
+
+/// "no unit" in a spec (`EEUnitHandle::kNone`)
+constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
+
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
 
@@ -786,6 +809,45 @@ constexpr static const uint8_t EE_OBJECT_RTS_UNIT = 0;
 constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
+
+/// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
+constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
+
+/// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
+constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
+
+constexpr static const uint32_t EE_UNIT_FIELD_TILE_Y = 2;
+
+constexpr static const uint32_t EE_UNIT_FIELD_VALID = 3;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HIT_POINTS = 4;
+
+/// `EEUnit::mUnitClass`: the value is the class's category, `EE_UNIT_FIELD_UNIT_TYPE` its type (both -1: none)
+constexpr static const uint32_t EE_UNIT_FIELD_CATEGORY = 5;
+
+constexpr static const uint32_t EE_UNIT_FIELD_UNIT_TYPE = 6;
+
+/// `EEUnit::mComplexUnit`: `EE_UNIT_COMPLEX_*`
+constexpr static const uint32_t EE_UNIT_FIELD_COMPLEX = 7;
+
+constexpr static const uint32_t EE_UNIT_FIELD_BUILT = 8;
+
+/// `EEComplexUnit::mGoalState`: the goal's `mKind`, -1 for none
+constexpr static const uint32_t EE_UNIT_FIELD_GOAL_KIND = 9;
+
+/// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
+/// `ResetEEUnit` clears it)
+constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
+
+constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
+
+constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
+
+/// The sink's `which`: the target name.
+constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
+
+/// The sink's `which`: the text.
+constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
 /// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
 constexpr static const int32_t MORE_REPLIES = 100059;
@@ -932,6 +994,9 @@ constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
 constexpr static const int64_t JOINER_PING_IDLE = 120;
 
 constexpr static const int64_t SUMMARY_REPEAT = 30;
+
+/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
+constexpr static const uint8_t SEP = 92;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -1094,6 +1159,55 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -1111,6 +1225,16 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunity = 1,
   /// the first community's trust
   FirstCommunityTrust = 2,
+};
+
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
 };
 
 /// `FSArchive`'s tables.
@@ -3691,6 +3815,63 @@ struct EeUiSliderFields {
   bool is_dragging;
 };
 
+/// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
+/// built flag and goal) are 0 / -1.
+struct EeUnitRecord {
+  /// `RTSUnit::mUnitID`, the key
+  uint32_t id;
+  /// the player id of the list the unit is in (`RTSPlayer::mPlayerID` at the insert)
+  uint32_t owner;
+  /// the object's address: a write from an object that is not the one inserted under its id is ignored
+  uint64_t object;
+  /// the player object whose list holds it (`~RTSPlayer` drops its records by the object: temporary players of
+  /// the editor's forms may share an id)
+  uint64_t player;
+  /// `RTSUnit::mObjectKind` (ee_units' `EE_OBJECT_*`)
+  uint8_t object_kind;
+  /// `EE_UNIT_COMPLEX_*`
+  uint8_t complex;
+  /// `RTSUnit::mIsValid`
+  uint8_t valid;
+  /// `EEComplexUnit::mIsBuilt`
+  uint8_t built;
+  /// `EEComplexUnit::mGoalState->mKind`, -1 for none
+  int32_t goal_kind;
+  /// `EEUnit::mHitPoints`
+  int64_t hit_points;
+  /// `RTSUnit::mTileX`, `mTileY`
+  int64_t tile_x;
+  int64_t tile_y;
+  /// `EEUnit::mUnitClass->mCategory`, `->mUnitType` (-1: no class)
+  int64_t category;
+  int64_t unit_type;
+};
+
+/// The result of a consistency check (`Store::check`).
+struct EeUnitStoreCheck {
+  /// the objects compared
+  uint32_t compared;
+  /// the objects whose record is missing or differs, plus the records no object named
+  uint32_t mismatches;
+  /// the records in the store
+  uint32_t records;
+  /// the first mismatch: its id (0xffffffff: none, or a record no object named) and field (`first_difference`;
+  /// 0xff: no record)
+  uint32_t first_id;
+  uint32_t first_field;
+};
+
+/// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
+struct EeGoalSpec {
+  uint32_t ctor;
+  uint32_t unit_a;
+  uint32_t unit_b;
+  /// a location (`GE3DPoint`)
+  float point[3];
+  uint8_t flag_a;
+  uint8_t flag_b;
+};
+
 /// Receives bytes; valid only during the call.
 using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3709,6 +3890,32 @@ struct EeWonAuthEntry {
   bool present;
 };
 
+/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
+struct EeWonChatText {
+  const void *text;
+  size_t length;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
+struct EeWonChatOutcome {
+  bool ok;
+  int32_t error;
+  int32_t command;
+  bool target_set;
+  /// The client's index in the names handed in, -1 for NULL.
+  int32_t target;
+  bool duration_set;
+  uint32_t duration;
+  bool invitation_set;
+  bool invitation;
+};
+
+/// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
+using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
+
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
 struct EeWonFileReader {
@@ -3726,9 +3933,6 @@ struct EeWonConfigIo {
   int32_t *line;
   bool unicode;
 };
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A saved state across the C ABI: the file position, name and line, and the pushback's units.
 struct EeWonConfigState {
@@ -8760,6 +8964,57 @@ bool ee_units_unregister(uint32_t id, void *unit);
 /// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
 void *ee_units_resolve(uint32_t id);
 
+/// A unit enters a player's list: its record (replacing any under its id).
+///
+/// # Safety
+/// `record` points to a valid record.
+void ee_units_store_insert(const EeUnitRecord *record);
+
+/// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
+bool ee_units_store_remove(uint32_t id,
+                           uint64_t object);
+
+/// A player object goes: the records of its list. The count removed.
+uint32_t ee_units_store_clear_player(uint64_t player);
+
+/// A holder's write (`EE_UNIT_FIELD_*`); ignored unless the record under `id` is `object`'s.
+bool ee_units_store_set(uint32_t id, uint64_t object, uint32_t field, int64_t value);
+
+/// The record under `id` into `out`; false (and `out` untouched) when there is none.
+///
+/// # Safety
+/// `out` points to writable memory for one record.
+bool ee_units_store_get(uint32_t id, EeUnitRecord *out);
+
+/// The number of records.
+uint32_t ee_units_store_count();
+
+/// TEST ONLY: the objects' fields (every unit of every player's list) against the records.
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0); `out` to writable memory for the result.
+void ee_units_store_check(const EeUnitRecord *objects,
+                          size_t count,
+                          EeUnitStoreCheck *out);
+
+/// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
+/// `ids` into `out` (room for `count`: a pick never has more), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+size_t ee_units_select_pick(uint64_t player,
+                            const uint32_t *ids,
+                            size_t count,
+                            uint32_t *out);
+
+extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
+
+extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
+
+extern uint8_t ee_units_host_goal_kind(void *goal);
+
+extern void ee_units_host_goal_release(void *goal);
+
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
 /// # Safety
@@ -8834,6 +9089,69 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool force,
                                       bool peer_valid,
                                       int64_t expire_delta);
+
+/// `GetCommandName`.
+const char *ee_won_chat_command_name(int32_t command);
+
+/// `ParseCommand`'s first step: the command word (upper-cased, from position 1) to the sink, and the position
+/// after it.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` receives the word during the call.
+int32_t ee_won_chat_command_word(EeWonChatText text,
+                                 uint32_t wchar_size,
+                                 EeWonWideUnitSink sink,
+                                 void *context);
+
+/// `ParseCommand`'s second step (`parse_command`): `command` -1 for an unknown word, `clients` the room's names.
+///
+/// # Safety
+/// The texts as `EeWonChatText`, `clients` `client_count` of them; `out` is valid; `sink` receives the texts set.
+void ee_won_chat_parse(EeWonChatText text,
+                       int32_t pos,
+                       int32_t command,
+                       EeWonChatText reply,
+                       const EeWonChatText *clients,
+                       size_t client_count,
+                       int32_t threshold,
+                       uint32_t wchar_size,
+                       EeWonChatOutcome *out,
+                       EeWonChatSink sink,
+                       void *context);
+
+/// `FindClient` (`find_client`): the match into `*matched`, the client's index or -1.
+///
+/// # Safety
+/// As `ee_won_chat_parse`; `matched` is valid.
+int32_t ee_won_chat_find_client(EeWonChatText name,
+                                const EeWonChatText *clients,
+                                size_t client_count,
+                                uint32_t wchar_size,
+                                int32_t *matched);
+
+/// `HandleInput`'s decision: 0 no client list, 1 a command, 2 an emote, 3 an emote with nothing in it, 4 a
+/// broadcast, 5 an empty broadcast. For an emote the sink gets its text.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` as `ee_won_chat_parse`.
+int32_t ee_won_chat_input(EeWonChatText text,
+                          uint32_t wchar_size,
+                          int32_t prefix,
+                          bool allow_colon,
+                          bool has_clients,
+                          EeWonChatSink sink,
+                          void *context);
+
+/// `GetHelp`'s commands (`help_commands`) into `out` (room for 32); their count.
+///
+/// # Safety
+/// `out` has room for 32 ids.
+size_t ee_won_chat_help(uint32_t room_flags,
+                        bool moderator,
+                        bool room_captain,
+                        bool game_captain,
+                        bool admin,
+                        int32_t *out);
 
 EeWonConfigLexer *ee_won_config_new();
 
@@ -8978,6 +9296,51 @@ void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t c
 bool ee_won_config_open(EeWonConfigIo *io,
                         const char *path,
                         int32_t *status);
+
+/// `token_kind`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgToken ee_won_cfg_token_kind(const uint8_t *token, size_t length);
+
+/// `group_start_step`.
+///
+/// # Safety
+/// `token` holds `length` bytes; `state` is valid.
+EeWonCfgStart ee_won_cfg_group_start(int32_t *state, const uint8_t *token, size_t length);
+
+/// `group_instruction` (`value` false) or `value_instruction`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgInstruction ee_won_cfg_instruction(const uint8_t *token, size_t length, bool value);
+
+/// `condition_parses_first`.
+bool ee_won_cfg_condition(EeWonCfgInstruction instruction,
+                          bool found,
+                          bool expected_empty,
+                          bool matches);
+
+/// `is_else`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+bool ee_won_cfg_is_else(const uint8_t *token, size_t length);
+
+/// `optional_suffix`.
+EeWonCfgOptional ee_won_cfg_optional(bool comma, bool read, bool word_is_optional);
+
+/// `include_path`.
+///
+/// # Safety
+/// `path` and `base` hold their lengths' bytes; `sink` receives the path during the call.
+void ee_won_cfg_include_path(const uint8_t *path,
+                             size_t path_length,
+                             bool ignore_path,
+                             const uint8_t *base,
+                             size_t base_length,
+                             EeWonByteSink sink,
+                             void *context);
 
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
@@ -10204,6 +10567,155 @@ int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
 int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
+
+/// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
+///
+/// # Safety
+/// `a` and `b` hold their lengths' units of `wchar_size` bytes.
+int32_t ee_won_guistring_op(EeWonGuiStringOp op,
+                            const void *a,
+                            uint16_t a_length,
+                            const void *b,
+                            uint16_t b_length,
+                            int32_t start,
+                            uint32_t wchar_size);
+
+/// `find(int, start)` (`reverse` false) or `rFind(int, start)`.
+///
+/// # Safety
+/// `a` holds `a_length` units of `wchar_size` bytes.
+int32_t ee_won_guistring_find_char(const void *a,
+                                   uint16_t a_length,
+                                   int32_t ch,
+                                   int32_t start,
+                                   bool reverse,
+                                   uint32_t wchar_size);
+
+/// `compare(const char*, offset)` (`no_case` false) or `CompareNoCase(const char*, offset)`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `narrow` is NUL-terminated.
+int32_t ee_won_guistring_compare_narrow(const void *a,
+                                        uint16_t a_length,
+                                        int32_t offset,
+                                        const uint8_t *narrow,
+                                        bool no_case,
+                                        uint32_t wchar_size);
+
+/// `ToInt`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`.
+int32_t ee_won_guistring_to_int(const void *a,
+                                uint16_t a_length,
+                                uint16_t offset,
+                                uint32_t wchar_size);
+
+/// `toUpper` / `toLowerCase` in place.
+///
+/// # Safety
+/// `a` holds `a_length` writable units of `wchar_size` bytes.
+void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
+
+/// `GetString` into `out` (room for `a_length` bytes).
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `out` has room for `a_length` bytes.
+void ee_won_guistring_narrow(const void *a, uint16_t a_length, uint8_t *out, uint32_t wchar_size);
+
+/// `SetFilePath`'s separators.
+///
+/// # Safety
+/// `path` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_path_given(const uint8_t *path, size_t length, EeWonByteSink sink, void *context);
+
+/// The last separator's index, or -1.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+ptrdiff_t ee_won_path_directory_split(const uint8_t *path, size_t length);
+
+/// The last dot's index, or -1.
+///
+/// # Safety
+/// `name` holds `length` bytes.
+ptrdiff_t ee_won_path_extension_split(const uint8_t *name, size_t length);
+
+/// `NormalizePath`: 0 for an empty path (nothing given), 1 with the path given, 2 where the original threw.
+///
+/// # Safety
+/// As `ee_won_path_given`.
+int32_t ee_won_path_normalize(const uint8_t *path,
+                              size_t length,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// Whether the absolute path needs the current directory.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+bool ee_won_path_needs_current(const uint8_t *path, size_t length);
+
+/// `CalcFullPath`'s join and normalisation; `current` NULL when none is needed. 1 with the path given, 2 where
+/// the original threw.
+///
+/// # Safety
+/// `path` holds `length` bytes, `current` (when not NULL) `current_length`; `sink` as `ee_won_path_given`.
+int32_t ee_won_path_absolute(const uint8_t *path,
+                             size_t length,
+                             const uint8_t *current,
+                             size_t current_length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `GetRelativePath`.
+///
+/// # Safety
+/// `directory` and `sub` hold their lengths' bytes; `sink` as `ee_won_path_given`.
+void ee_won_path_relative(const uint8_t *directory,
+                          size_t directory_length,
+                          const uint8_t *sub,
+                          size_t sub_length,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `config_name`.
+///
+/// # Safety
+/// `name` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_regkey_name(const uint8_t *name, size_t length, EeWonByteSink sink, void *context);
+
+/// `config_block`; `parent` NULL for the root block.
+///
+/// # Safety
+/// `parent` (when not NULL) and `path` hold their lengths' bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_block(const uint8_t *parent,
+                         size_t parent_length,
+                         const uint8_t *path,
+                         size_t path_length,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// `binary_text`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_binary_text(const uint8_t *data,
+                               size_t length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `binary_value`: its code; the sink gets the bytes only for 0.
+///
+/// # Safety
+/// `text` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+int32_t ee_won_regkey_binary_value(const uint8_t *text,
+                                   size_t length,
+                                   EeWonByteSink sink,
+                                   void *context);
+
+/// `root_valid`.
+bool ee_won_regkey_root_valid(int32_t root);
 
 }  // extern "C"
 

@@ -79,7 +79,7 @@ c w02 skip: ws=0 word=7 end=0
 c w02 starts: r=0 pos=0 is=0 pos=0
 c w02 ints: r=0 pos=0 n=0 v=-
 c w02 strs: r=1 pos=37 v=71756f7465642022782220090a0d245c2041413432
-c w02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c20413f
+c w02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c2041e48582
 c w02 intlists: r=1 pos=0 n=0 v=-
 c w02 strlists: r=1 pos=0 n=0 v=-
 c w02 bools: r=0 pos=0 n=0 v=-
@@ -96,7 +96,7 @@ c n02 skip: ws=0 word=7 end=0
 c n02 starts: r=0 pos=0 is=0 pos=0
 c n02 ints: r=0 pos=0 n=0 v=-
 c n02 strs: r=1 pos=37 v=71756f7465642022782220090a0d245c2041413432
-c n02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c20413f
+c n02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c2041e48582
 c n02 intlists: r=1 pos=0 n=0 v=-
 c n02 strlists: r=1 pos=0 n=0 v=-
 c n02 bools: r=0 pos=0 n=0 v=-
@@ -113,7 +113,7 @@ c w03 skip: ws=0 word=16 end=0
 c w03 starts: r=0 pos=0 is=0 pos=0
 c w03 ints: r=0 pos=0 n=0 v=-
 c w03 strs: r=1 pos=20 v=77006900640065003a26410020007a00
-c w03 wstrs: r=1 pos=20 n=1 v=776964653f41207a
+c w03 wstrs: r=1 pos=20 n=1 v=77696465e298ba41207a
 c w03 intlists: r=1 pos=0 n=0 v=-
 c w03 strlists: r=1 pos=0 n=0 v=-
 c w03 bools: r=0 pos=1 n=0 v=-
@@ -130,7 +130,7 @@ c n03 skip: ws=0 word=16 end=0
 c n03 starts: r=0 pos=0 is=0 pos=0
 c n03 ints: r=0 pos=0 n=0 v=-
 c n03 strs: r=1 pos=20 v=77006900640065003a26410020007a00
-c n03 wstrs: r=1 pos=20 n=1 v=776964653f41207a
+c n03 wstrs: r=1 pos=20 n=1 v=77696465e298ba41207a
 c n03 intlists: r=1 pos=0 n=0 v=-
 c n03 strlists: r=1 pos=0 n=0 v=-
 c n03 bools: r=0 pos=1 n=0 v=-
@@ -1269,7 +1269,7 @@ c w37 skip: ws=0 word=3 end=0
 c w37 starts: r=0 pos=0 is=0 pos=0
 c w37 ints: r=0 pos=0 n=0 v=-
 c w37 strs: r=1 pos=5 v=e974e920fc
-c w37 wstrs: r=1 pos=5 n=1 v=e974e920fc
+c w37 wstrs: r=1 pos=5 n=1 v=c3a974c3a920c3bc
 c w37 intlists: r=1 pos=0 n=0 v=-
 c w37 strlists: r=1 pos=0 n=0 v=-
 c w37 bools: r=0 pos=0 n=0 v=-
@@ -1286,7 +1286,7 @@ c n37 skip: ws=0 word=3 end=0
 c n37 starts: r=0 pos=0 is=0 pos=0
 c n37 ints: r=0 pos=0 n=0 v=-
 c n37 strs: r=1 pos=5 v=e974e920fc
-c n37 wstrs: r=1 pos=5 n=1 v=e974e920fc
+c n37 wstrs: r=1 pos=5 n=1 v=c3a974c3a920c3bc
 c n37 intlists: r=1 pos=0 n=0 v=-
 c n37 strlists: r=1 pos=0 n=0 v=-
 c n37 bools: r=0 pos=0 n=0 v=-
@@ -1303,7 +1303,7 @@ c w38 skip: ws=0 word=4 end=1
 c w38 starts: r=0 pos=0 is=0 pos=0
 c w38 ints: r=0 pos=0 n=0 v=-
 c w38 strs: r=1 pos=4 v=747275e9
-c w38 wstrs: r=1 pos=4 n=1 v=747275e9
+c w38 wstrs: r=1 pos=4 n=1 v=747275c3a9
 c w38 intlists: r=1 pos=0 n=0 v=-
 c w38 strlists: r=1 pos=0 n=0 v=-
 c w38 bools: r=0 pos=3 n=0 v=-
@@ -1320,7 +1320,7 @@ c n38 skip: ws=0 word=4 end=1
 c n38 starts: r=0 pos=0 is=0 pos=0
 c n38 ints: r=0 pos=0 n=0 v=-
 c n38 strs: r=1 pos=4 v=747275e9
-c n38 wstrs: r=1 pos=4 n=1 v=747275e9
+c n38 wstrs: r=1 pos=4 n=1 v=747275c3a9
 c n38 intlists: r=1 pos=0 n=0 v=-
 c n38 strlists: r=1 pos=0 n=0 v=-
 c n38 bools: r=0 pos=3 n=0 v=-
@@ -1337,7 +1337,7 @@ c w39 skip: ws=0 word=1 end=0
 c w39 starts: r=0 pos=0 is=0 pos=0
 c w39 ints: r=0 pos=0 n=0 v=-
 c w39 strs: r=1 pos=3 v=a02078
-c w39 wstrs: r=1 pos=3 n=1 v=a02078
+c w39 wstrs: r=1 pos=3 n=1 v=c2a02078
 c w39 intlists: r=1 pos=0 n=0 v=-
 c w39 strlists: r=1 pos=0 n=0 v=-
 c w39 bools: r=0 pos=0 n=0 v=-
@@ -1354,7 +1354,7 @@ c n39 skip: ws=0 word=1 end=0
 c n39 starts: r=0 pos=0 is=0 pos=0
 c n39 ints: r=0 pos=0 n=0 v=-
 c n39 strs: r=1 pos=3 v=a02078
-c n39 wstrs: r=1 pos=3 n=1 v=a02078
+c n39 wstrs: r=1 pos=3 n=1 v=c2a02078
 c n39 intlists: r=1 pos=0 n=0 v=-
 c n39 strlists: r=1 pos=0 n=0 v=-
 c n39 bools: r=0 pos=0 n=0 v=-
@@ -1371,7 +1371,7 @@ c w40 skip: ws=0 word=1 end=0
 c w40 starts: r=0 pos=0 is=0 pos=0
 c w40 ints: r=0 pos=0 n=0 v=-
 c w40 strs: r=1 pos=7 v=ff20736d696c65
-c w40 wstrs: r=1 pos=7 n=1 v=3f20736d696c65
+c w40 wstrs: r=1 pos=7 n=1 v=e298ba20736d696c65
 c w40 intlists: r=1 pos=0 n=0 v=-
 c w40 strlists: r=1 pos=0 n=0 v=-
 c w40 bools: r=0 pos=0 n=0 v=-
@@ -1388,7 +1388,7 @@ c w41 skip: ws=0 word=4 end=0
 c w41 starts: r=0 pos=0 is=0 pos=0
 c w41 ints: r=0 pos=0 n=0 v=-
 c w41 strs: r=1 pos=5 v=3a26
-c w41 wstrs: r=1 pos=5 n=1 v=3f
+c w41 wstrs: r=1 pos=5 n=1 v=e298ba
 c w41 intlists: r=1 pos=0 n=0 v=-
 c w41 strlists: r=1 pos=0 n=0 v=-
 c w41 bools: r=0 pos=1 n=0 v=-
@@ -1643,7 +1643,7 @@ c w49 skip: ws=0 word=2 end=0
 c w49 starts: r=0 pos=0 is=0 pos=0
 c w49 ints: r=0 pos=0 n=0 v=-
 c w49 strs: r=1 pos=5 v=b2b32031b9
-c w49 wstrs: r=1 pos=5 n=1 v=b2b32031b9
+c w49 wstrs: r=1 pos=5 n=1 v=c2b2c2b32031c2b9
 c w49 intlists: r=1 pos=0 n=0 v=-
 c w49 strlists: r=1 pos=0 n=0 v=-
 c w49 bools: r=0 pos=0 n=0 v=-
@@ -1660,7 +1660,7 @@ c n49 skip: ws=0 word=2 end=0
 c n49 starts: r=0 pos=0 is=0 pos=0
 c n49 ints: r=0 pos=0 n=0 v=-
 c n49 strs: r=1 pos=5 v=b2b32031b9
-c n49 wstrs: r=1 pos=5 n=1 v=b2b32031b9
+c n49 wstrs: r=1 pos=5 n=1 v=c2b2c2b32031c2b9
 c n49 intlists: r=1 pos=0 n=0 v=-
 c n49 strlists: r=1 pos=0 n=0 v=-
 c n49 bools: r=0 pos=0 n=0 v=-
@@ -1677,7 +1677,7 @@ c w50 skip: ws=0 word=3 end=1
 c w50 starts: r=0 pos=0 is=0 pos=0
 c w50 ints: r=1 pos=2 n=1 v=30
 c w50 strs: r=1 pos=3 v=3078b2
-c w50 wstrs: r=1 pos=3 n=1 v=3078b2
+c w50 wstrs: r=1 pos=3 n=1 v=3078c2b2
 c w50 intlists: r=1 pos=0 n=0 v=-
 c w50 strlists: r=1 pos=0 n=0 v=-
 c w50 bools: r=0 pos=2 n=0 v=-
@@ -1694,7 +1694,7 @@ c n50 skip: ws=0 word=3 end=1
 c n50 starts: r=0 pos=0 is=0 pos=0
 c n50 ints: r=1 pos=2 n=1 v=30
 c n50 strs: r=1 pos=3 v=3078b2
-c n50 wstrs: r=1 pos=3 n=1 v=3078b2
+c n50 wstrs: r=1 pos=3 n=1 v=3078c2b2
 c n50 intlists: r=1 pos=0 n=0 v=-
 c n50 strlists: r=1 pos=0 n=0 v=-
 c n50 bools: r=0 pos=2 n=0 v=-
@@ -1711,7 +1711,7 @@ c w51 skip: ws=0 word=6 end=1
 c w51 starts: r=0 pos=0 is=0 pos=0
 c w51 ints: r=0 pos=0 n=0 v=-
 c w51 strs: r=1 pos=6 v=04b2
-c w51 wstrs: r=1 pos=6 n=1 v=04b2
+c w51 wstrs: r=1 pos=6 n=1 v=04c2b2
 c w51 intlists: r=1 pos=0 n=0 v=-
 c w51 strlists: r=1 pos=0 n=0 v=-
 c w51 bools: r=0 pos=0 n=0 v=-
@@ -1728,7 +1728,7 @@ c n51 skip: ws=0 word=6 end=1
 c n51 starts: r=0 pos=0 is=0 pos=0
 c n51 ints: r=0 pos=0 n=0 v=-
 c n51 strs: r=1 pos=6 v=04b2
-c n51 wstrs: r=1 pos=6 n=1 v=04b2
+c n51 wstrs: r=1 pos=6 n=1 v=04c2b2
 c n51 intlists: r=1 pos=0 n=0 v=-
 c n51 strlists: r=1 pos=0 n=0 v=-
 c n51 bools: r=0 pos=0 n=0 v=-
@@ -1745,7 +1745,7 @@ c w52 skip: ws=0 word=3 end=0
 c w52 starts: r=0 pos=0 is=0 pos=0
 c w52 ints: r=0 pos=0 n=0 v=-
 c w52 strs: r=1 pos=5 v=e958|ff
-c w52 wstrs: r=1 pos=5 n=2 v=e9582c20ff
+c w52 wstrs: r=1 pos=5 n=2 v=c3a9582c20c3bf
 c w52 intlists: r=1 pos=0 n=0 v=-
 c w52 strlists: r=1 pos=0 n=0 v=-
 c w52 bools: r=0 pos=0 n=0 v=-
@@ -1762,11 +1762,11 @@ c n52 skip: ws=0 word=3 end=0
 c n52 starts: r=0 pos=0 is=0 pos=0
 c n52 ints: r=0 pos=0 n=0 v=-
 c n52 strs: r=1 pos=5 v=e958|ff
-c n52 wstrs: r=1 pos=5 n=2 v=e9582c20ff
+c n52 wstrs: r=1 pos=5 n=2 v=c3a9582c20c3bf
 c n52 intlists: r=1 pos=0 n=0 v=-
 c n52 strlists: r=1 pos=0 n=0 v=-
 c n52 bools: r=0 pos=0 n=0 v=-
-formats: 547275653b46616c73653b303b2d313b323134373438333634373b2d323134373438333634383b36353533353b2d33323736383b2d32333b3233333b2d353b343030303030303030303b2d313233343536373839303132333b31383434363734343037333730393535313631353b77e93b782c202c20793b28547275652c2046616c7365292c2028293b28612c206229
+formats: 547275653b46616c73653b303b2d313b323134373438333634373b2d323134373438333634383b36353533353b2d33323736383b2d32333b3233333b2d353b343030303030303030303b2d313233343536373839303132333b31383434363734343037333730393535313631353b77c3a93b782c202c20793b28547275652c2046616c7365292c2028293b28612c206229
 english w00 str: r=1 pos=0 out=-
 english w00 str-ws: r=1 pos=0 out=-
 english w00 wstr: r=1 pos=0 out=-
@@ -1848,7 +1848,7 @@ english w02 skip: ws=0 word=7 end=0
 english w02 starts: r=0 pos=0 is=0 pos=0
 english w02 ints: r=0 pos=0 n=0 v=-
 english w02 strs: r=1 pos=37 v=71756f7465642022782220090a0d245c2041413432
-english w02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c20413f
+english w02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c2041e48582
 english w02 intlists: r=1 pos=0 n=0 v=-
 english w02 strlists: r=1 pos=0 n=0 v=-
 english w02 bools: r=0 pos=0 n=0 v=-
@@ -1865,7 +1865,7 @@ english n02 skip: ws=0 word=7 end=0
 english n02 starts: r=0 pos=0 is=0 pos=0
 english n02 ints: r=0 pos=0 n=0 v=-
 english n02 strs: r=1 pos=37 v=71756f7465642022782220090a0d245c2041413432
-english n02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c20413f
+english n02 wstrs: r=1 pos=37 n=1 v=71756f7465642022782220090a0d245c2041e48582
 english n02 intlists: r=1 pos=0 n=0 v=-
 english n02 strlists: r=1 pos=0 n=0 v=-
 english n02 bools: r=0 pos=0 n=0 v=-
@@ -1882,7 +1882,7 @@ english w03 skip: ws=0 word=16 end=0
 english w03 starts: r=0 pos=0 is=0 pos=0
 english w03 ints: r=0 pos=0 n=0 v=-
 english w03 strs: r=1 pos=20 v=77006900640065003a26410020007a00
-english w03 wstrs: r=1 pos=20 n=1 v=776964653f41207a
+english w03 wstrs: r=1 pos=20 n=1 v=77696465e298ba41207a
 english w03 intlists: r=1 pos=0 n=0 v=-
 english w03 strlists: r=1 pos=0 n=0 v=-
 english w03 bools: r=0 pos=1 n=0 v=-
@@ -1899,7 +1899,7 @@ english n03 skip: ws=0 word=16 end=0
 english n03 starts: r=0 pos=0 is=0 pos=0
 english n03 ints: r=0 pos=0 n=0 v=-
 english n03 strs: r=1 pos=20 v=77006900640065003a26410020007a00
-english n03 wstrs: r=1 pos=20 n=1 v=776964653f41207a
+english n03 wstrs: r=1 pos=20 n=1 v=77696465e298ba41207a
 english n03 intlists: r=1 pos=0 n=0 v=-
 english n03 strlists: r=1 pos=0 n=0 v=-
 english n03 bools: r=0 pos=1 n=0 v=-
@@ -3038,7 +3038,7 @@ english w37 skip: ws=0 word=3 end=0
 english w37 starts: r=0 pos=0 is=0 pos=0
 english w37 ints: r=0 pos=0 n=0 v=-
 english w37 strs: r=1 pos=5 v=e974e920fc
-english w37 wstrs: r=1 pos=5 n=1 v=e974e920fc
+english w37 wstrs: r=1 pos=5 n=1 v=c3a974c3a920c3bc
 english w37 intlists: r=1 pos=0 n=0 v=-
 english w37 strlists: r=1 pos=0 n=0 v=-
 english w37 bools: r=0 pos=0 n=0 v=-
@@ -3055,7 +3055,7 @@ english n37 skip: ws=0 word=3 end=0
 english n37 starts: r=0 pos=0 is=0 pos=0
 english n37 ints: r=0 pos=0 n=0 v=-
 english n37 strs: r=1 pos=5 v=e974e920fc
-english n37 wstrs: r=1 pos=5 n=1 v=e974e920fc
+english n37 wstrs: r=1 pos=5 n=1 v=c3a974c3a920c3bc
 english n37 intlists: r=1 pos=0 n=0 v=-
 english n37 strlists: r=1 pos=0 n=0 v=-
 english n37 bools: r=0 pos=0 n=0 v=-
@@ -3072,7 +3072,7 @@ english w38 skip: ws=0 word=4 end=1
 english w38 starts: r=0 pos=0 is=0 pos=0
 english w38 ints: r=0 pos=0 n=0 v=-
 english w38 strs: r=1 pos=4 v=747275e9
-english w38 wstrs: r=1 pos=4 n=1 v=747275e9
+english w38 wstrs: r=1 pos=4 n=1 v=747275c3a9
 english w38 intlists: r=1 pos=0 n=0 v=-
 english w38 strlists: r=1 pos=0 n=0 v=-
 english w38 bools: r=0 pos=3 n=0 v=-
@@ -3089,7 +3089,7 @@ english n38 skip: ws=0 word=4 end=1
 english n38 starts: r=0 pos=0 is=0 pos=0
 english n38 ints: r=0 pos=0 n=0 v=-
 english n38 strs: r=1 pos=4 v=747275e9
-english n38 wstrs: r=1 pos=4 n=1 v=747275e9
+english n38 wstrs: r=1 pos=4 n=1 v=747275c3a9
 english n38 intlists: r=1 pos=0 n=0 v=-
 english n38 strlists: r=1 pos=0 n=0 v=-
 english n38 bools: r=0 pos=3 n=0 v=-
@@ -3140,7 +3140,7 @@ english w40 skip: ws=0 word=1 end=0
 english w40 starts: r=0 pos=0 is=0 pos=0
 english w40 ints: r=0 pos=0 n=0 v=-
 english w40 strs: r=1 pos=7 v=ff20736d696c65
-english w40 wstrs: r=1 pos=7 n=1 v=3f20736d696c65
+english w40 wstrs: r=1 pos=7 n=1 v=e298ba20736d696c65
 english w40 intlists: r=1 pos=0 n=0 v=-
 english w40 strlists: r=1 pos=0 n=0 v=-
 english w40 bools: r=0 pos=0 n=0 v=-
@@ -3157,7 +3157,7 @@ english w41 skip: ws=0 word=4 end=0
 english w41 starts: r=0 pos=0 is=0 pos=0
 english w41 ints: r=0 pos=0 n=0 v=-
 english w41 strs: r=1 pos=5 v=3a26
-english w41 wstrs: r=1 pos=5 n=1 v=3f
+english w41 wstrs: r=1 pos=5 n=1 v=e298ba
 english w41 intlists: r=1 pos=0 n=0 v=-
 english w41 strlists: r=1 pos=0 n=0 v=-
 english w41 bools: r=0 pos=1 n=0 v=-
@@ -3412,7 +3412,7 @@ english w49 skip: ws=0 word=2 end=0
 english w49 starts: r=0 pos=0 is=0 pos=0
 english w49 ints: r=0 pos=0 n=0 v=-
 english w49 strs: r=1 pos=5 v=b2b32031b9
-english w49 wstrs: r=1 pos=5 n=1 v=b2b32031b9
+english w49 wstrs: r=1 pos=5 n=1 v=c2b2c2b32031c2b9
 english w49 intlists: r=1 pos=0 n=0 v=-
 english w49 strlists: r=1 pos=0 n=0 v=-
 english w49 bools: r=0 pos=0 n=0 v=-
@@ -3429,7 +3429,7 @@ english n49 skip: ws=0 word=2 end=0
 english n49 starts: r=0 pos=0 is=0 pos=0
 english n49 ints: r=0 pos=0 n=0 v=-
 english n49 strs: r=1 pos=5 v=b2b32031b9
-english n49 wstrs: r=1 pos=5 n=1 v=b2b32031b9
+english n49 wstrs: r=1 pos=5 n=1 v=c2b2c2b32031c2b9
 english n49 intlists: r=1 pos=0 n=0 v=-
 english n49 strlists: r=1 pos=0 n=0 v=-
 english n49 bools: r=0 pos=0 n=0 v=-
@@ -3446,7 +3446,7 @@ english w50 skip: ws=0 word=3 end=1
 english w50 starts: r=0 pos=0 is=0 pos=0
 english w50 ints: r=1 pos=2 n=1 v=30
 english w50 strs: r=1 pos=3 v=3078b2
-english w50 wstrs: r=1 pos=3 n=1 v=3078b2
+english w50 wstrs: r=1 pos=3 n=1 v=3078c2b2
 english w50 intlists: r=1 pos=0 n=0 v=-
 english w50 strlists: r=1 pos=0 n=0 v=-
 english w50 bools: r=0 pos=2 n=0 v=-
@@ -3463,7 +3463,7 @@ english n50 skip: ws=0 word=3 end=1
 english n50 starts: r=0 pos=0 is=0 pos=0
 english n50 ints: r=1 pos=2 n=1 v=30
 english n50 strs: r=1 pos=3 v=3078b2
-english n50 wstrs: r=1 pos=3 n=1 v=3078b2
+english n50 wstrs: r=1 pos=3 n=1 v=3078c2b2
 english n50 intlists: r=1 pos=0 n=0 v=-
 english n50 strlists: r=1 pos=0 n=0 v=-
 english n50 bools: r=0 pos=2 n=0 v=-
@@ -3480,7 +3480,7 @@ english w51 skip: ws=0 word=6 end=1
 english w51 starts: r=0 pos=0 is=0 pos=0
 english w51 ints: r=0 pos=0 n=0 v=-
 english w51 strs: r=1 pos=6 v=04b2
-english w51 wstrs: r=1 pos=6 n=1 v=04b2
+english w51 wstrs: r=1 pos=6 n=1 v=04c2b2
 english w51 intlists: r=1 pos=0 n=0 v=-
 english w51 strlists: r=1 pos=0 n=0 v=-
 english w51 bools: r=0 pos=0 n=0 v=-
@@ -3497,7 +3497,7 @@ english n51 skip: ws=0 word=6 end=1
 english n51 starts: r=0 pos=0 is=0 pos=0
 english n51 ints: r=0 pos=0 n=0 v=-
 english n51 strs: r=1 pos=6 v=04b2
-english n51 wstrs: r=1 pos=6 n=1 v=04b2
+english n51 wstrs: r=1 pos=6 n=1 v=04c2b2
 english n51 intlists: r=1 pos=0 n=0 v=-
 english n51 strlists: r=1 pos=0 n=0 v=-
 english n51 bools: r=0 pos=0 n=0 v=-
@@ -3514,7 +3514,7 @@ english w52 skip: ws=0 word=3 end=0
 english w52 starts: r=0 pos=0 is=0 pos=0
 english w52 ints: r=0 pos=0 n=0 v=-
 english w52 strs: r=1 pos=5 v=e958|ff
-english w52 wstrs: r=1 pos=5 n=2 v=e9582c20ff
+english w52 wstrs: r=1 pos=5 n=2 v=c3a9582c20c3bf
 english w52 intlists: r=1 pos=0 n=0 v=-
 english w52 strlists: r=1 pos=0 n=0 v=-
 english w52 bools: r=0 pos=0 n=0 v=-
@@ -3531,7 +3531,7 @@ english n52 skip: ws=0 word=3 end=0
 english n52 starts: r=0 pos=0 is=0 pos=0
 english n52 ints: r=0 pos=0 n=0 v=-
 english n52 strs: r=1 pos=5 v=e958|ff
-english n52 wstrs: r=1 pos=5 n=2 v=e9582c20ff
+english n52 wstrs: r=1 pos=5 n=2 v=c3a9582c20c3bf
 english n52 intlists: r=1 pos=0 n=0 v=-
 english n52 strlists: r=1 pos=0 n=0 v=-
 english n52 bools: r=0 pos=0 n=0 v=-

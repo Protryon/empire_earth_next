@@ -136,7 +136,7 @@ void EEUGPatrol::GetDebugText(UWideString& ioText)
         EEComplexUnit* thePoint = this->mPatrolGroup->mPatrolPoints[i];
         if (thePoint == NULL)
             continue;
-        sprintf(theText, "{%ld,%ld} ", thePoint->mTileX, thePoint->mTileY);
+        sprintf(theText, "{%ld,%ld} ", thePoint->mTileX.Get(), thePoint->mTileY.Get());
         ioText += theText;
     }
     sprintf(theText, " )\n");

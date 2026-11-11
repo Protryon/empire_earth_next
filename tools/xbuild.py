@@ -405,6 +405,27 @@ WON_TESTS = {
     "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
                      *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
+    "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
+    # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
+    "won_regkey_test": [*[WON_SRC / "WONCommon" / f for f in ("RegKey.cpp", "ByteBuffer.cpp")]],
+    # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
+    "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
+                      *[WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                       "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                       "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+                      *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
+                                                           "StringParserLists.cpp", "StringUtil.cpp")]],
+    # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
+    "won_guistring_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                           "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                           "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+    # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
+    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
+                                                             "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringParser.cpp", "StringParserCollections.cpp",
+                                                             "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 
 

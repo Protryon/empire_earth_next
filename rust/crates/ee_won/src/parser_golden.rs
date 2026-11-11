@@ -2,8 +2,8 @@
 //! the port. This test replays the C-locale pass (the `c` lines) and the formats line through `parser`; the list
 //! reads and formats are the C++ glue's loops (StringParserCollections.cpp, StringParserLists.cpp), replayed here
 //! over the same primitives. The `english` pass needs the C runtime's locale and is checked by `won_parse_test`
-//! itself, which runs over the Rust port. `WStringToString` (the code page) is modelled for the inputs' units only:
-//! ASCII and 0xa0-0xff as themselves, anything else '?', the text ending at a NUL (`std::string(buffer)`).
+//! itself, which runs over the Rust port. `WStringToString` is UTF-8 (decision D6: `text::game_from_utf16`, the
+//! inputs are all in the BMP), the text ending at the first NUL.
 
 use crate::parser::{format_bool, CLocale, Narrow, Parser, Text, Wide};
 
@@ -80,11 +80,8 @@ fn hex_units(units: &[u32]) -> String {
 }
 
 fn narrow_of(units: &[u32]) -> Vec<u8> {
-    units
-        .iter()
-        .take_while(|&&u| u != 0)
-        .map(|&u| if u < 0x80 || (0xa0..=0xff).contains(&u) { u as u8 } else { b'?' })
-        .collect()
+    let units: Vec<u16> = units.iter().take_while(|&&u| u != 0).map(|&u| u as u16).collect();
+    crate::text::game_from_utf16(&units)
 }
 
 type P<'a, T> = Parser<'a, T, CLocale>;

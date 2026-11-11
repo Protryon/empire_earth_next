@@ -1,0 +1,103 @@
+s00 r=1 error= warnings=
+s00 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s01 r=1 error= warnings=
+s01 root name= base= keys=Count: 12%0aFlag: True%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: hello%0aWide: wide%0a
+s02 r=1 error= warnings=
+s02 root name= base= keys=Count: 3%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: lower case key%0aWide: w  [DEF]%0a
+s03 r=1 error= warnings=
+s03 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b, c, d, e%0aRepl: y, z%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s04 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 1) - Failed to parse value for key: Count%0aWarning (won_cfgobj_case.cfg: 2) - Failed to parse value for key: Flag%0a
+s04 root name= base= keys=Count: 7%0aFlag: False%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s05 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 1) - Unexpected key/val: UNKNOWN 1%0a
+s05 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: after%0aWide: w  [DEF]%0a
+s06 r=1 error= warnings=
+s06 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s06 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: one%0aWide: w  [DEF]%0a
+s06 root.1 name= base= keys=Count: 2%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s07 r=1 error= warnings=
+s07 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s07 root.0 name=Named base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: n%0aWide: w  [DEF]%0a
+s07 root.1 name= base=Base keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s07 root.2 name=Named2 base=Base2 keys=Count: 7  [DEF]%0aFlag: True%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s08 r=1 error= warnings=
+s08 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s08 root.slot name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: second%0aWide: w  [DEF]%0a
+s09 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 2) - Unexpected key/val: TEXT x %0a
+s09 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s10 r=0 error=Unexpected '}' (won_cfgobj_case.cfg:1) warnings=Warning (won_cfgobj_case.cfg: 1) - Unexpected child group: NOSUCH%0a
+s10 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s11 r=0 error=Unexpected '}' (won_cfgobj_case.cfg:1) warnings=
+s11 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s12 r=0 error=Expecting '}' (won_cfgobj_case.cfg:2) warnings=
+s12 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s13 r=0 error=Expecting '{' but got x (won_cfgobj_case.cfg:1) warnings=
+s13 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s14 r=0 error=Expecting '{' but got } (won_cfgobj_case.cfg:1) warnings=
+s14 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s15 r=1 error= warnings=
+s15 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: value here%0aWide: w  [DEF]%0a
+s16 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 4) - Redefintion of A%0a
+s16 root name= base= keys=Count: 2%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: 2%0aWide: w  [DEF]%0a
+s17 r=1 error= warnings=
+s17 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: x%0aWide: w  [DEF]%0a
+s18 r=1 error= warnings=
+s18 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: defined%0aWide: w  [DEF]%0a
+s19 r=1 error= warnings=
+s19 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: undefined%0aWide: w  [DEF]%0a
+s20 r=1 error= warnings=
+s20 root name= base= keys=Count: 4%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s21 r=1 error= warnings=
+s21 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: fast%0aWide: w  [DEF]%0a
+s22 r=1 error= warnings=
+s22 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: other%0aWide: w  [DEF]%0a
+s23 r=1 error= warnings=
+s23 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: notdefined%0aWide: w  [DEF]%0a
+s24 r=1 error= warnings=
+s24 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: defined%0aWide: w  [DEF]%0a
+s25 r=0 error=Expecting '{' (won_cfgobj_case.cfg:1) warnings=
+s25 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s26 r=0 thrown=Attempt to setpos past end of mem buffer. error= warnings=
+s26 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: common Count: 9%0aWide: w  [DEF]%0a
+s26 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: common Count: 9%0aWide: w  [DEF]%0a
+s27 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 1) - IncludeGroup not found: Missing%0aWarning (won_cfgobj_case.cfg: 3) - Expecting string: optional after include group, include is required.%0aWarning (won_cfgobj_case.cfg: 3) - IncludeGroup not found: M3%0aWarning (won_cfgobj_case.cfg: 4) - Expecting string: optional after include group, include is required.%0aWarning (won_cfgobj_case.cfg: 4) - IncludeGroup not found: M4%0a
+s27 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s28 r=1 error= warnings=
+s28 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b, inc%0aRepl:   [DEF]%0aText: 5%0aWide: w  [DEF]%0a
+s29 r=1 error= warnings=
+s29 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: from dir%0aWide: w  [DEF]%0a
+s30 r=1 error= warnings=
+s30 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: fine%0aWide: w  [DEF]%0a
+s31 r=0 error=File not found: nofile.cfg (won_cfgobj_case.cfg:1) warnings=
+s31 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s32 r=0 error=File not found: nofile.cfg (won_cfgobj_case.cfg:1) warnings=Warning (won_cfgobj_case.cfg: 1) - Expecting string: optional after include file, include is required.%0a
+s32 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s33 r=0 error=Define not found: Inner (won_cfgobj_case.cfg:2) warnings=
+s33 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s33 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s34 r=1 error= warnings=
+s34 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s34 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s34 root.0.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s34 root.0.0.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: deep%0aWide: w  [DEF]%0a
+s35 r=1 error= warnings=
+s35 root name= base= keys=Count: 5%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: a%0aWide: w  [DEF]%0a
+s36 r=1 error= warnings=
+s36 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b, x y, z%0aRepl:   [DEF]%0aText: quoted value%0aWide: w  [DEF]%0a
+s37 r=1 error= warnings=
+s37 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: plain%0a
+s38 r=1 error= warnings=
+s38 root name= base= keys=Count: 4464%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s39 r=1 error= warnings=
+s39 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: line  continued%0aWide: w  [DEF]%0a
+s40 r=1 error= warnings=
+s40 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s40 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: split%0aWide: w  [DEF]%0a
+s41 r=1 error= warnings=
+s41 root name= base= keys=Count: 7  [DEF]%0aFlag: True%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: common Count: 9%0aWide: w  [DEF]%0a
+s41 root.0 name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: common Count: 9%0aWide: w  [DEF]%0a
+s42 r=1 error= warnings=Warning (won_cfgobj_case.cfg: 2) - Redefintion of G%0a
+s42 root name= base= keys=Count: 1%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: g%0aWide: w  [DEF]%0a
+s43 r=0 error=Expecting '{' but got Name (won_cfgobj_case.cfg:1) warnings=
+s43 root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b  [DEF]%0aRepl:   [DEF]%0aText: def  [DEF]%0aWide: w  [DEF]%0a
+s29i r=1 error= warnings=
+s29i root name= base= keys=Count: 7  [DEF]%0aFlag: False  [DEF]%0aItems: a, b, inc%0aRepl:   [DEF]%0aText: included%0aWide: w  [DEF]%0a

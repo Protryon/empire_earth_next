@@ -67,6 +67,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
+                       # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
+                       "Empire Earth/Units/EEUnitStore.cpp",
+                       # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
+                       "Empire Earth/Units/EEUnitHost.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
