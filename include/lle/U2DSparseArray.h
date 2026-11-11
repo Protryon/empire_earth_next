@@ -36,6 +36,12 @@ public:
     bool Remove(const U2DPoint<long>& inPoint);
     long Size() const;
     U2DPoint<long> operator[](long inIndex) const;
+    // port (save version 0.263, the continent manager's regions in a saved game): the set as it is (empty columns
+    // too: GetRandomPoint draws a column), as numbers: the offset, the count, the column count, then per column 0 (none)
+    // or 1, its size, its run count and its runs' ends (ee_sparse_raw); SetRaw makes the set from them (false, the set
+    // cleared, when they are not such a list)
+    void GetRaw(std::vector<long>& outRaw) const;
+    bool SetRaw(const std::vector<long>& inRaw);
 
 private:
     EeSparseArray* mPoints;                 // the points (ee_sparse_new)

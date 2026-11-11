@@ -20,6 +20,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGPatrol.h"
 #include "ee/EEPPatrolGroup.h"
+#include "ee/EEUnitKind.h"
 
 const UString EEUGPatrol::sData("EEUGPatrol-Data");
 // SYNTHETIC: EXE 0x627de8   (wrapper)
@@ -217,7 +218,7 @@ long EEUGPatrol::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
     long theResult = 0;
     if (USavedID(this->mTarget) != -1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mTarget)));
+        this->mTarget = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mTarget)));
         if (this->mTarget != NULL) {
             this->mTarget->Reference();
             if (USavedID(this->mPatrolGroup) != -1) {

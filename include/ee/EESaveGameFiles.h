@@ -79,6 +79,29 @@ inline bool EESaveHasGhosts(unsigned long inMajorVersion, unsigned long inMinorV
 {
     return inMajorVersion > 0 || inMinorVersion >= 262;
 }
+// port: from 0.263 a save holds the continent manager as it is (EEAIContinentSave.cpp): its areas with their serials,
+// the sectors and sub sectors, the grids and counters, and the serials of the herds and towns. A load rebuilt it from
+// the map as it then was, numbering the herds and towns before the regions: other path areas, sub sectors and choke
+// points under other serials than the running game's, which the computer players' tasks name
+inline bool EESaveHasContinentRegions(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 263;
+}
+// port: from 0.264 a save holds each attack sub group's position (EECPAttackSubGroup::mPosition: FindPosition keeps it
+// between its refreshes and scans for targets around it)
+inline bool EESaveHasSubGroupPosition(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 264;
+}
+long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
+long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
+// whether the save being loaded has the block (EEWorld::StartGame of a loaded game)
+bool EEContinentRegionsPending();
+// StartGame of such a game, in place of BuildRegions: the saved manager (EEAIContinentSave.cpp); false when the block
+// could not be read (the regions are then built as for an older save)
+bool EERestoreContinentRegions();
+// TEST ONLY (EE-SIM's state dumps): a hash of the block a save would write now
+unsigned long EEContinentRegionsDigest();
 // the dead attacker of that id, made from the save as a unit out of the world (EEComplexUnit::RepairPointers); NULL
 // when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
 class EEComplexUnit;

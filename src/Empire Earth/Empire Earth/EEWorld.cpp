@@ -72,6 +72,7 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EECPILocation.h"
 #include "ee/EETeam.h"
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
@@ -942,6 +943,13 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     this->SetPopulationLimit(inState->mGameOptions.mUnitLimit);
     gUserInterface->SetLoadProgress(kWorldLoadProgress18);
     this->ClearContinents();
+    // port (save version 0.263): a loaded game's continent manager is the saved one (made in place of BuildRegions,
+    // below); its computer players' locations keep their saved areas until the first tick (ee/EECPILocation.h)
+    bool theSavedRegions = theLoaded && EEContinentRegionsPending();
+    if (theSavedRegions) {
+        gLoadKeepsLocations = true;
+        EEAfterLoad([]() { gLoadKeepsLocations = false; });
+    }
     gUserInterface->SetLoadProgress(kWorldLoadProgress19);
     this->CreateMiniMap(inState);
     gUserInterface->SetLoadProgress(kWorldLoadProgress20);
@@ -1026,7 +1034,10 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gMiniMap->Redraw();
     gMiniMap->Refresh();
     gUserInterface->SetLoadProgress(kWorldLoadProgress24);
-    gContinentManager.BuildRegions(this->mMap);
+    if (theSavedRegions)
+        EERestoreContinentRegions();   // port (0.263): the saved regions (it builds them itself if it cannot read them)
+    else
+        gContinentManager.BuildRegions(this->mMap);
     gPathManager.Reset();
     gUserInterface->SetLoadProgress(kWorldLoadProgress25);
     if (this->mEnvironmentManager != NULL)

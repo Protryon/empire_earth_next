@@ -5296,3 +5296,74 @@ and the area classes' geometry on them, each its own commit, after a capture rec
   `gates.sh` or any harness session, macOS or Linux builds. **Tour only:** the terrain volume's hull
   (`terrain_volume.rs`) now calls the shared `ee_ge::hull` (same code moved; `trunc_long` saturates at `c_long`'s
   limits, the same on Windows); nothing else here is drawn.
+
+## R5a.2, fourth round: the continent manager in the save, the sub groups' positions (save 0.263-0.264, branch rust-r5a-aisave3, 2026-11-10)
+
+Continues "R5a.2, third round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
+Each commit was built and gated on its own tree (build 0/0 for EE-AOC and EE-SIM, the plain oracle identical to ref
+on seeds 2-7, the Rust gate, sim_capture's four profiles PASS) and measured with the full saveload run.
+
+- **0.263, the continent manager's regions** (`EEAIContinentSave.cpp`, ee/EESaveGameFiles.h
+  `EESaveHasContinentRegions`). A load ran BuildRegions over the map as it then was; the running game built its
+  regions once at the start and repaired them since (RepairPathArea, forests losing trees). The loaded game had other
+  path areas, sub sectors and choke points, under other serials: a load numbered the herds and towns (in
+  RepairPointers) before the regions, the running game after them. The computer players name areas by serial and
+  tile (EECPILocation), and the load re-found them (Restore calls Update) before BuildRegions had made any choke
+  point: a choke point task became a continent task (seed 7's 600 s save), a town task whose location names player 0
+  (two of the original's tasks leave mPlayer 0) lost its area, an inactive task with no area got a continent.
+  - The save now holds the manager as it is, as one byte block of its own format after the dead attackers: the
+    counters, the region information and gEEAIRegionSize, the grids (tile values, continent ids, sub sector ids,
+    continent adjacency), every continent, hill, path area, forest, choke point and rectangle area (serial, kind, the
+    sparse tile set as it is, empty columns too, the hull as it is, the bounds and each kind's fields), the sectors
+    and sub sectors (numbered: their maps, neighbours and links), the shore tiles, free ids and pending sector tiles,
+    the serial table (each serial's owner) and **the map tiles' AI values** (EETile::mAIValue).
+  - A load makes the regions from it where it ran BuildRegions: Clear's continents and hills stay as objects and
+    take the saved contents, the rest is the saved objects, the herds and towns the load made again take their saved
+    serials by player and id, the counter is the saved one. From the start of the load to its first tick,
+    EECPILocation::Update keeps the saved area (gLoadKeepsLocations): Restore and the load's group refresh no longer
+    re-find it. The point sets are saved as they are (U2DSparseArrayPointContainer::GetRaw/SetRaw over ee_astar
+    sparse.rs `raw`/`set_raw`, empty columns too: GetRandomPoint draws a column), the hulls too (U2DConvexHull's
+    `PortWrite`/`PortRead`: AddTiles may leave a hull stale).
+  - **Lesson: BuildRegions writes outside the manager.** UpdateTileValues sets every map tile's mAIValue, which the
+    path searches read as a cost. Without it the manager's digest of the loaded game equalled the continued game's
+    and still a gatherer's new path went one column over (seed 7's 2100 s save, tick 1): the first restore made 3
+    saves worse at CT granularity until the tiles' values were in the block.
+  - Measured: the manager's digest (the dump's `AREAS digest=`, the same bytes a save writes) of the loaded game equals
+    the continued game's at the first tick on every save tried (7/600, 7/2100, 2/2100); the attack sub groups' task
+    areas equal. No change at CT granularity (the same first divergent lines on all 18).
+- **0.264, the attack sub groups' positions** (EECPAttackSubGroup::mPosition, `EESaveHasSubGroupPosition`).
+  FindPosition keeps the position between its refreshes (every 5 s) and the target scan works around the area it
+  leaves. A loaded sub group had (0, 0), so it took its rally point, scanned there, found no target, left the attack
+  state and skipped its units' updates (seed 7's 600 s save: the defence commander drew where the continued game's
+  sub group unit did). First divergent CT line, before -> after: seed 2 58/2/1 -> 58/86/20, seed 3 94/0/2 ->
+  94/0/57, seed 4 6/1/0 -> 80/1/0, seed 7 3/178/1 -> 10/178/1; seeds 5 and 6 unchanged.
+- **Tried and dropped** (no effect at tick or CT level, not committed): skipping the computer players'
+  RefreshResourceCenters for 0.263 loads (the resource centres, groups and personnel are saved). Seed 4's 2100 s iron
+  gatherer still goes to the other mine.
+- **The load-path casts**: the 17 `dynamic_cast<EEComplexUnit*>` of the load path (EEComplexDoppelganger's Load and
+  RepairPointers, the RepairPointers of EEUGAttackUnit, EEUGCastCalamity, EEUGGather, EEUGPatrol, and
+  EEAirTrafficControl's) are `EEUnitCast<EEComplexUnit>` (ee/EEUnitKind.h).
+- **The numbers** (first divergent CT line after the load, 600/1350/2100 s, start -> end of this round): seed 2
+  58/2/1 -> 58/86/20, seed 3 94/0/2 -> 94/0/57, seed 4 6/1/0 -> 80/1/0, seed 5 23/91/23 unchanged, seed 6 59/16/0
+  unchanged, seed 7 3/178/1 -> 10/178/1. Still **0 of 18** continue identically to the end.
+- **Tools** (TEST ONLY, committed): the dumps' `AREAS` line (the manager's digest, serial counter, list sizes and
+  serial table), the ASG line's `refresh=` (what Update would make of the task's area) and `player=`, each unit's
+  waypoints (`wps=`). Scratch (not committed, under the worktree's build/hunt): `pair.py SEED T` (a continued and a
+  loaded game of one save with a dump after each physics tick, `--rng` for the draw traces), `nd.py` (the first
+  differing dump lines, raw bytes left out), `tr.py` (the first differing AI decision, the trace's statistics lines
+  left out: their timers are trace statics), `many.sh`, `gate.sh` (the per-commit gates). A pair run of a 2100 s
+  save takes about a minute. The rng trace's callers resolve with `tools/sim.py resolve --map
+  build/clang/exe/EE-SIM.map` after adding the preferred base 0x400000.
+- **Still different after a load** (measured next causes):
+  - *seed 4 2100 s, tick 8*: player 3's idle iron gatherer gets mine 0x149 (far, near 70,33) in the continued game
+    and 0x147 (near 89,64) in the loaded one, from EECPResourceManager::FindResourceTarget (the resource centres
+    walked backwards, FindResourceUnit, IsVisibleTo, HasEnemyNear, EECPRMResourceInDanger). No random draw differs
+    and the dumps are equal: the state is in one of those tests, not dumped yet;
+  - *seed 6 2100 s, tick 0*: player 3's town 3 is rebuilt as two towns (the building at 19,52 alone as town 10, an
+    extra patrol group): the load adds the buildings in its own order and CanTake refuses one the saved town's hull
+    had taken. A town has no unit list (tiles, hull, counters): saving the towns' tiles and hulls and making them
+    from the save would fix it;
+  - *seed 3 1350 s, first CT*: the draws part between ticks 0 and 7 (the dumps' tickrandom differs); not traced yet;
+  - *seed 2 2100 s, tick 16* and *seed 7 2100 s, tick 20*: a sub group picks another task / a unit another attack
+    destination; the trace's "income" and other `cp` statistics lines differ at once after a load (trace statics,
+    not game state).

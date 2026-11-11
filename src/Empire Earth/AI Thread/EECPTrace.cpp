@@ -42,6 +42,7 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPILocation.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EECPASTargetUnit.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPAttackGroup.h"
@@ -693,6 +694,16 @@ void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long lon
 // player's own timers, one line each, so two dumps name the computer player and the part that differ
 void EECPOutOfSynchDump(FILE* inFile)
 {
+    {   // the continent manager's areas (serial/kind), its serial counter and its lists' sizes
+        fprintf(inFile, "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
+                EEContinentRegionsDigest(), (unsigned long)gContinentManager.mLastSerial, gContinentManager.mContinents.size(), gContinentManager.mHills.size(),
+                gContinentManager.mPathAreas.size(), gContinentManager.mPathSectors.size(), gContinentManager.mPathSubSectors.size(),
+                gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(), gContinentManager.mAreas.size());
+        for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
+             theIt != gContinentManager.mAreas.end(); ++theIt)
+            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->first, theIt->second != NULL ? (long)theIt->second->mAreaType : -1L);
+        fprintf(inFile, "\n");
+    }
     for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
         EEPlayer* thePlayer = gWorld.mPlayers[i];
         if (thePlayer == NULL)
@@ -753,6 +764,12 @@ void EECPOutOfSynchDump(FILE* inFile)
                     fprintf(inFile, " area=%ld/%lu/%d", (long)theSub->mTask.mLocation.mType,
                             (unsigned long)theSub->mTask.mLocation.mSerial,
                             theSub->mTask.mLocation.mSerial != 0 && gContinentManager.GetArea(theSub->mTask.mLocation.mSerial) != NULL ? 1 : 0);
+                    {   // what a refresh (EECPILocation::Update, on a copy) would make of the task's area; its player
+                        EECPILocation theCopy(theSub->mTask.mLocation);
+                        theCopy.Update();
+                        fprintf(inFile, " refresh=%ld/%lu player=%lu", (long)theCopy.mType, (unsigned long)theCopy.mSerial,
+                                (unsigned long)theSub->mTask.mLocation.mPlayer);
+                    }
                     fprintf(inFile, "\n");
                 }
             }

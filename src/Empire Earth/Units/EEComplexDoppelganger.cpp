@@ -60,7 +60,7 @@ static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vect
 
 static EEComplexUnit* LoadedComplexUnit(unsigned long inID)
 {
-    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(inID)));
+    return EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(gWorld.GetUnit(inID)));
 }
 
 static void RestoreLoadedContacts()
@@ -900,7 +900,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     for (long cargo = 0; cargo < theCount; cargo++) {
         if (this->GetPlayer()->HasLoadedUnitID(USavedID(this->mCargo[cargo])))
             continue;
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mCargo[cargo])));
+        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mCargo[cargo])));
         theUnit->Reference();
         theCargo.push_back(theUnit);
     }
@@ -947,16 +947,16 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         else
             theResult = 3;
     }
-    this->mPreviousPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mPreviousPart)));
+    this->mPreviousPart = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mPreviousPart)));
     if (this->mPreviousPart != NULL)
         this->mPreviousPart->Reference();
-    this->mNextPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mNextPart)));
+    this->mNextPart = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mNextPart)));
     if (this->mNextPart != NULL)
         this->mNextPart->Reference();
-    this->mHomeBase = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHomeBase)));
+    this->mHomeBase = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHomeBase)));
     if (this->mHomeBase != NULL)
         this->mHomeBase->Reference();
-    this->mContainer = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mContainer)));
+    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer)));
     if (this->mContainer != NULL) {
         // A not-yet-repaired cargo vector still holds IDs; a repaired one holds actual unit pointers.
         if (this->mContainer->mUnitClass->mTransportCapacity < 1
@@ -995,7 +995,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         this->SetGatheredResource(theLink);
     {
         unsigned long theAttackerID = USavedID(this->mLastAttacker);
-        this->mLastAttacker = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theAttackerID));
+        this->mLastAttacker = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theAttackerID));
         if (this->mLastAttacker == NULL && EESaveHasGhosts(inMajorVersion, inMinorVersion))
             this->mLastAttacker = EEFindLoadedGhost(theAttackerID);   // port (0.262): an attacker that died, as the saved game kept it
     }
@@ -1004,7 +1004,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->mOwner == (EEComplexUnit*)-1 || this->mOwner == NULL)
         this->mOwner = NULL;
     else {
-        this->mOwner = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mOwner)));
+        this->mOwner = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mOwner)));
         if (this->mOwner != NULL)
             this->mOwner->Reference();
         else
@@ -1039,7 +1039,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         this->GetPlayer()->AddWonder(this, !(inMajorVersion == 0 && inMinorVersion < 0xe2));
     this->mHerd = NULL;
     for (long linked = this->mHeldUnits.size() - 1; linked >= 0; linked--) {
-        this->mHeldUnits[linked] = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHeldUnits[linked])));
+        this->mHeldUnits[linked] = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHeldUnits[linked])));
         if (this->mHeldUnits[linked] != NULL)
             this->mHeldUnits[linked]->Reference();
         else
@@ -1048,7 +1048,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->mHolder == (EEComplexUnit*)-1)
         this->mHolder = NULL;
     else {
-        this->mHolder = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHolder)));
+        this->mHolder = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHolder)));
         if (this->mHolder != NULL)
             this->mHolder->Reference();
     }

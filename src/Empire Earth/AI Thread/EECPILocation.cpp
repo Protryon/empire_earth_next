@@ -53,6 +53,15 @@
 #include "ee/EECPILocation.h"
 
 static const UString kData("EECPILocation-Data");
+
+// port (R5a.2, "load equals continue"): set while a game saved from version 0.263 on is loaded, until its first tick
+// (EEWorld::StartGame). The running game calls Update on a location only at a group refresh (RefreshTaskLocation),
+// which only a load runs (RefreshResourceCenters), and at a load (Restore). The original re-found the areas then
+// because a load renumbered them; a 0.263 save keeps the continent manager and its serials (EEAIContinentSave.cpp),
+// so the saved area stands. Update re-found a choke point task as a continent (the load had made no choke points
+// yet when it restored the tasks) and dropped a town task whose location names player 0 (two of the original's
+// tasks leave mPlayer 0: EECPAttackGroup's continent task, EECPDefenseCommander's aid task)
+bool gLoadKeepsLocations = false;
 // SYNTHETIC: EXE 0x480816   (wrapper)
 // SYNTHETIC: EXE 0x480820   (ctor)
 // SYNTHETIC: EXE 0x480831   (registrar)
@@ -177,6 +186,8 @@ long EECPILocation::Save(unsigned long inMajorVersion, unsigned long inMinorVers
 // player's town) and stores its serial; armies are left alone; with no area found the type becomes none
 void EECPILocation::Update()
 {
+    if (gLoadKeepsLocations)   // port: a load of a 0.263 save keeps the saved area (ee/EECPILocation.h)
+        return;
     EEAIArea* theArea = NULL;
     if (this->GetTile().GetX() < gMapWidth && this->GetTile().GetY() < gMapHeight) {
         switch (this->mType) {

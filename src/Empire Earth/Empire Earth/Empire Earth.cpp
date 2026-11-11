@@ -870,8 +870,10 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 260 the towns' ids, order and counters (EESaveHasTowns)
 // 261 the computer players' gatherer lists as saved (EESaveHasGathererOrder)
 // 262 the dead attackers the units still hold (EESaveHasGhosts)
+// 263 the continent manager as it is, with the herds' and towns' serials (EESaveHasContinentRegions)
+// 264 the attack sub groups' positions (EESaveHasSubGroupPosition)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 262;
+const unsigned long kSaveGameMinorVersion = 264;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

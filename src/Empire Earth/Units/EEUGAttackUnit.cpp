@@ -370,7 +370,7 @@ long EEUGAttackUnit::RepairPointers(unsigned long inFirst, unsigned long inSecon
                 this->mTargetTileY = this->mTarget->mTileY;
             }
             if (USavedID(this->mAttacker) != -1) {
-                this->mAttacker = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mAttacker)));
+                this->mAttacker = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mAttacker)));
                 if (this->mAttacker != NULL) {
                     EEPlayer* thePlayer = this->mAttacker->mPlayer;
                     if (thePlayer->mNumAttacks == 0)

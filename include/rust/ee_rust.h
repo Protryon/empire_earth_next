@@ -5334,6 +5334,21 @@ EeSparseArray *ee_sparse_new();
 /// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed.
 EeSparseArray *ee_sparse_clone(const EeSparseArray *s);
 
+/// The set as numbers (`SparseArray::raw`: a saved game's continent manager), its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+const int32_t *ee_sparse_raw(EeSparseArray *s,
+                             size_t *count);
+
+/// The set from `ee_sparse_raw`'s numbers; false (the set then empty) when they are not such a list.
+///
+/// # Safety
+/// `s` a live set, `data` `count` numbers (NULL with 0).
+bool ee_sparse_set_raw(EeSparseArray *s,
+                       const int32_t *data,
+                       size_t count);
+
 /// Releases a set.
 ///
 /// # Safety

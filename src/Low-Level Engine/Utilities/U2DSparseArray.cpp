@@ -152,3 +152,17 @@ U2DPoint<long> U2DSparseArrayPointContainer::operator[](long inIndex) const
 {
     return U2DSparsePoint(ee_sparse_get(this->mPoints, (int32_t)inIndex));
 }
+
+// port (save version 0.263): the set as numbers, and the set from them (ee_astar sparse.rs raw / set_raw)
+void U2DSparseArrayPointContainer::GetRaw(std::vector<long>& outRaw) const
+{
+    size_t theCount = 0;
+    const int32_t* theRaw = ee_sparse_raw(this->mPoints, &theCount);
+    outRaw.assign(theRaw, theRaw + theCount);
+}
+
+bool U2DSparseArrayPointContainer::SetRaw(const std::vector<long>& inRaw)
+{
+    std::vector<int32_t> theRaw(inRaw.begin(), inRaw.end());
+    return ee_sparse_set_raw(this->mPoints, theRaw.empty() ? NULL : &theRaw[0], theRaw.size());
+}

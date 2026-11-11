@@ -1604,6 +1604,7 @@ use crate::sparse::{PointList, SparseArray};
 pub struct EeSparseArray {
     set: SparseArray,
     scratch: Vec<EePoint>,
+    raw: Vec<i32>,
 }
 
 /// A new, empty set.
@@ -1620,7 +1621,38 @@ pub extern "C" fn ee_sparse_new() -> *mut EeSparseArray {
 pub unsafe extern "C" fn ee_sparse_clone(s: *const EeSparseArray) -> *mut EeSparseArray {
     // SAFETY: the caller's contract
     let s = unsafe { &*s };
-    Box::into_raw(Box::new(EeSparseArray { set: s.set.clone(), scratch: Vec::new() }))
+    Box::into_raw(Box::new(EeSparseArray { set: s.set.clone(), scratch: Vec::new(), raw: Vec::new() }))
+}
+
+/// The set as numbers (`SparseArray::raw`: a saved game's continent manager), its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_raw(s: *mut EeSparseArray, count: *mut usize) -> *const i32 {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    s.set.raw(&mut s.raw);
+    // SAFETY: the caller's contract
+    unsafe { *count = s.raw.len() };
+    s.raw.as_ptr()
+}
+
+/// The set from `ee_sparse_raw`'s numbers; false (the set then empty) when they are not such a list.
+///
+/// # Safety
+/// `s` a live set, `data` `count` numbers (NULL with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_set_raw(s: *mut EeSparseArray, data: *const i32, count: usize) -> bool {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    let data = if count == 0 || data.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, count) }
+    };
+    s.set.set_raw(data)
 }
 
 /// Releases a set.

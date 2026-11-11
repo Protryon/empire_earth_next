@@ -42,4 +42,8 @@ public:
     unsigned long mPlayer;                  // +0x14 a gWorld.mPlayers index
 };
 
+// port: set while a game saved from version 0.263 on is loaded (EEWorld::StartGame) until its first tick: Update keeps
+// the saved area (EECPILocation.cpp)
+extern bool gLoadKeepsLocations;
+
 #endif

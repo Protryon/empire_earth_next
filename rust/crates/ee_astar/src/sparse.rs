@@ -198,6 +198,81 @@ impl SparseArray {
         self.count
     }
 
+    /// The set as it is, as numbers (a saved game's continent manager: docs/RUST_PLAN.md R5a.2, save version 0.263):
+    /// the offset, the count, the column count, then per column 0 (none) or 1, its size, its run count and each run's
+    /// start and end. Empty columns are kept: `random_point` draws a column.
+    pub fn raw(&self, out: &mut Vec<i32>) {
+        out.clear();
+        out.push(self.offset);
+        out.push(self.count);
+        out.push(self.columns.len() as i32);
+        for column in &self.columns {
+            match column {
+                None => out.push(0),
+                Some(c) => {
+                    out.push(1);
+                    out.push(c.size);
+                    out.push(c.runs.len() as i32);
+                    for run in &c.runs {
+                        out.push(run.start);
+                        out.push(run.end);
+                    }
+                }
+            }
+        }
+    }
+
+    /// The set from `raw`'s numbers; false (the set then empty) when they are not such a list.
+    pub fn set_raw(&mut self, data: &[i32]) -> bool {
+        self.clear();
+        let mut at = 0usize;
+        let next = |at: &mut usize| -> Option<i32> {
+            let v = data.get(*at).copied();
+            *at += 1;
+            v
+        };
+        let parsed = (|| -> Option<SparseArray> {
+            let offset = next(&mut at)?;
+            let count = next(&mut at)?;
+            let columns = next(&mut at)?;
+            if columns < 0 || columns as usize > data.len() {
+                return None;
+            }
+            let mut set = SparseArray { columns: Vec::with_capacity(columns as usize), offset, count };
+            for _ in 0..columns {
+                match next(&mut at)? {
+                    0 => set.columns.push(None),
+                    1 => {
+                        let size = next(&mut at)?;
+                        let runs = next(&mut at)?;
+                        if runs < 0 || runs as usize > data.len() {
+                            return None;
+                        }
+                        let mut column = Column { runs: Vec::with_capacity(runs as usize), size };
+                        for _ in 0..runs {
+                            let start = next(&mut at)?;
+                            let end = next(&mut at)?;
+                            column.runs.push(Run { start, end });
+                        }
+                        set.columns.push(Some(column));
+                    }
+                    _ => return None,
+                }
+            }
+            if at != data.len() {
+                return None;
+            }
+            Some(set)
+        })();
+        match parsed {
+            Some(set) => {
+                *self = set;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// `Clear`.
     pub fn clear(&mut self) {
         self.columns.clear();
@@ -413,6 +488,39 @@ mod tests {
 
     fn runs(s: &SparseArray, x: i32) -> Vec<(i32, i32)> {
         s.column(x).map(|c| c.runs.iter().map(|r| (r.start, r.end)).collect()).unwrap_or_default()
+    }
+
+    #[test]
+    fn raw_keeps_the_columns_runs_and_empty_columns() {
+        let mut s = SparseArray::new();
+        s.create(&[pt(3, 1), pt(3, 2), pt(3, 5), pt(5, 7), pt(4, 0)]);
+        assert!(s.remove(pt(4, 0)));
+        let mut raw = Vec::new();
+        s.raw(&mut raw);
+        let mut t = SparseArray::new();
+        assert!(t.set_raw(&raw));
+        assert_eq!(s, t);
+        assert_eq!(runs(&t, 3), vec![(1, 2), (5, 5)]);
+        // the same random draws pick the same points (an emptied column is still drawn)
+        let mut a = [0.4f32, 0.9, 0.1].into_iter().cycle();
+        let mut b = [0.4f32, 0.9, 0.1].into_iter().cycle();
+        for _ in 0..6 {
+            assert_eq!(s.random_point(&mut || a.next().unwrap()), t.random_point(&mut || b.next().unwrap()));
+        }
+        let mut again = Vec::new();
+        t.raw(&mut again);
+        assert_eq!(raw, again);
+    }
+
+    #[test]
+    fn set_raw_refuses_a_bad_list() {
+        let mut s = SparseArray::new();
+        s.create(&[pt(1, 1)]);
+        assert!(!s.set_raw(&[0, 1, 1, 1, 1, 2, 1])); // two runs announced, one there
+        assert_eq!(s.size(), 0);
+        assert!(!s.set_raw(&[0, 0, 1, 7])); // a column flag that is neither 0 nor 1
+        assert!(!s.set_raw(&[0, 0, 0, 9])); // numbers past the list
+        assert!(s.set_raw(&[0, 0, 0]));
     }
 
     #[test]
