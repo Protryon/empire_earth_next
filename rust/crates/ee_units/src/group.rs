@@ -13,8 +13,9 @@
 //! such unit it would take (PORT_LEARNINGS "R5b.4, fifth round").
 
 use crate::host::{
-    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_EXPLORE, EE_GOAL_CTOR_GATHER,
-    EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
+    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_ATTACK_UNIT, EE_GOAL_CTOR_EXPLORE,
+    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_LOCATION, EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE,
+    EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -303,6 +304,241 @@ pub fn repair(host: &mut impl Host, player: HostRef, selection: HostRef, target_
         let index = host.random(0, ids.len() as i32 - 1);
         host.play_acknowledgement(player, group, index);
     }
+}
+
+/// `EEActiveGroup::KeepNonCitizens`' test over the store: a commandable, living unit that is not a citizen (land or
+/// naval). A unit in no list has no record and is not kept.
+pub fn keeps_non_citizen(unit: Option<&EeUnitRecord>) -> bool {
+    unit.is_some_and(|u| {
+        u.commandable != 0
+            && u.hit_points > 0
+            && u.category != EE_UNIT_CATEGORY_LAND_CITIZEN
+            && u.category != EE_UNIT_CATEGORY_NAVAL_CITIZEN
+    })
+}
+
+/// `kUnitCategoryLandCitizen`, `kUnitCategoryNavalCitizen`
+pub const EE_UNIT_CATEGORY_LAND_CITIZEN: i64 = 6;
+pub const EE_UNIT_CATEGORY_NAVAL_CITIZEN: i64 = 0x16;
+
+/// `EEMAddPatrolPoint::Execute`: with a first selected unit that is a path point, the point goes into its route after
+/// it (`InsertPatrolPointAt`); a first unit patrolling adds the point to its goal's route; else for each formation slot
+/// 1..5 a new active group filled from the selection goes to the player's pending groups, keeps its mobile units and
+/// its non-citizens and gets a new patrol (`new EEUGPatrol(true)`, the point added to its route, the route registered
+/// with the player) with the action Move To Next Patrol Point, plans, and one unit, drawn, acknowledges; an empty
+/// group is released. With nothing selected, a lone patrol group with the point is registered with the player.
+pub fn add_patrol_point(host: &mut impl Host, player: HostRef, selection: HostRef, x: f32, y: f32) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let Some(&first) = ids.first() else {
+        host.patrol_new_lone(player, x, y);
+        return;
+    };
+    if unit_type(host, first) == EE_UNIT_TYPE_PATH_POINT {
+        host.patrol_insert_point_at(first, x, y, player);
+        return;
+    }
+    let route = host.unit_goal_patrol_route(first);
+    if !route.0.is_null() {
+        host.patrol_add_point(route, x, y, player);
+        return;
+    }
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 0, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_keep_mobile(group);
+        host.group_keep_non_citizens(group);
+        let goal = host.goal_new(&EeGoalSpec { flag_a: 1, ..EeGoalSpec::new(EE_GOAL_CTOR_PATROL) });
+        if let Some(goal) = &goal {
+            host.goal_patrol_add_point(goal, x, y, player);
+        }
+        host.group_clear_goal(group);
+        if let Some(goal) = goal {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_MOVE_TO_NEXT_PATROL_POINT);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+    }
+}
+
+/// `kActionAttackEnemyUnit`, `kActionHealUnit` (ee/EEUnitAction.h)
+pub const EE_ACTION_ATTACK_ENEMY_UNIT: i32 = 2001;
+pub const EE_ACTION_HEAL_UNIT: i32 = 16001;
+
+/// `EEMAttackUnit::Execute`: with a selection and a living target (`gWorld.GetUnit`, hit points above 0), for each
+/// formation slot 1..5 a new active group filled from the selection (sorted, sort 1) takes the queued flag; one that
+/// took units goes to the player's pending groups and spreads around the target (`SpreadAroundUnit(target, its
+/// tile)`); when units are left one is drawn, the group gets an Attack Unit goal (`new EEUGAttackUnit(the selection's
+/// first unit as it is then, target, 1, convert)`, queued as the message says) with the action Attack Enemy Unit,
+/// plans, shows the attack marker on the target (0xb9) and the drawn unit acknowledges; an empty group is released.
+pub fn attack_unit(
+    host: &mut impl Host,
+    player: HostRef,
+    selection: HostRef,
+    target_id: u32,
+    queued: bool,
+    convert: bool,
+) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    let Some(target) = world_unit(host, target_id) else { return };
+    if target.hit_points <= 0 {
+        return;
+    }
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_set_queued(group, queued);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_spread_around_unit(group, target_id, target.tile_x, target.tile_y);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            continue;
+        }
+        let index = host.random(0, ids.len() as i32 - 1);
+        let unit = ids[index as usize];
+        host.group_clear_goal(group);
+        host.group_ids(selection, &mut ids);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_ATTACK_UNIT);
+        spec.unit_a = ids.first().copied().unwrap_or(EE_UNIT_ID_NONE);
+        spec.unit_b = target_id;
+        spec.flag_a = 1;
+        spec.flag_b = convert as u8;
+        if let Some(goal) = host.goal_new(&spec) {
+            host.group_set_goal(group, goal, queued);
+        }
+        host.group_set_action(group, EE_ACTION_ATTACK_ENEMY_UNIT);
+        host.group_plan(group);
+        host.send_group_command(group, target_id, player, EE_GROUP_COMMAND_ATTACK, 0);
+        host.acknowledge_unit(player, unit);
+    }
+}
+
+/// `EEMHealUnit::Execute`: with a target (`gWorld.GetUnit`), for each formation slot 1..5 a new active group filled
+/// from the selection (sort 1) that took units goes to the player's pending groups and gets a Heal Unit goal (`new
+/// EEUGHealUnit(the target's complex unit, true)`) with the action Heal Unit, plans, and one unit, drawn, acknowledges;
+/// an empty group is released. A target with no complex unit is refused before any group (the original built the
+/// goal over NULL and its Plan dereferenced it: a crash; the UI sends only complex targets).
+pub fn heal_unit(host: &mut impl Host, player: HostRef, selection: HostRef, target_id: u32) {
+    if world_unit(host, target_id).is_none() {
+        return;
+    }
+    let complex = host.unit_complex_id(target_id);
+    if complex == EE_UNIT_ID_NONE {
+        return;
+    }
+    let mut ids = Vec::new();
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_clear_goal(group);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_HEAL_UNIT);
+        spec.unit_a = complex;
+        spec.flag_a = 1;
+        if let Some(goal) = host.goal_new(&spec) {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_HEAL_UNIT);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+    }
+}
+
+/// `kActionPrepareToMove` (ee/EEUnitAction.h)
+pub const EE_ACTION_PREPARE_TO_MOVE: i32 = 8000;
+/// `EESendGroupCommand`'s move marker
+pub const EE_GROUP_COMMAND_MOVE: i32 = 0xb8;
+
+/// EEMPathTo's options
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PathToOptions {
+    pub facing: f32,
+    pub forced: bool,
+    pub rotating: bool,
+    pub queued: bool,
+    pub group_movement: bool,
+}
+
+/// `EEMPathTo::Execute`: with a selection, the point is adjusted by the host from the first selected unit (the map's
+/// closest tile, a building it cannot pass; the message keeps the adjusted point: returned) and takes the final tile's
+/// height; for each formation slot 1..5 a new active group filled from the selection goes to the player's pending
+/// groups, keeps its mobile units and gets a Location goal (`new EEUGLocation(&point, true, forced, rotating, facing,
+/// false, 0)` with its group movement flag; made before the paths are reset and the goal cleared), queued as the
+/// message says, with the action Prepare To Move; it plans, one unit, drawn, acknowledges, and the move marker (0xb8)
+/// shows; an empty group is released. Returns the point (None: no selection, the message unchanged).
+pub fn path_to(
+    host: &mut impl Host,
+    player: HostRef,
+    selection: HostRef,
+    x: f32,
+    y: f32,
+    o: PathToOptions,
+) -> Option<(f32, f32)> {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let &first = ids.first()?;
+    let (x, y, z) = host.path_to_point(first, x, y);
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 0, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_keep_mobile(group);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_LOCATION);
+        spec.point = [x, y, z];
+        spec.flag_a = o.forced as u8;
+        spec.flag_b = o.rotating as u8;
+        spec.value = o.facing;
+        spec.flag_c = o.group_movement as u8;
+        let goal = host.goal_new(&spec);
+        host.group_reset_paths(group);
+        host.group_clear_goal(group);
+        if let Some(goal) = goal {
+            host.group_set_goal(group, goal, o.queued);
+        }
+        host.group_set_action(group, EE_ACTION_PREPARE_TO_MOVE);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+        host.send_group_command(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0);
+    }
+    Some((x, y))
 }
 
 #[cfg(test)]
@@ -703,6 +939,254 @@ mod tests {
         let mut host = MockHost::default();
         host.units.insert(target, resource(target, 0));
         repair(&mut host, player, selection, target, false);
+        assert!(host.calls.is_empty());
+    }
+    /// `EEMAddPatrolPoint::Execute`'s calls: the keeps, the new patrol's point before the clear, the draw last
+    #[test]
+    fn add_patrol_point_makes_the_original_calls_in_order() {
+        let mut host = MockHost { specs: true, ..Default::default() };
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        host.units.insert(first, complex(first, 3));
+        host.groups.insert(0x600, vec![first, 0x0100_0002, 0x0100_0003]);
+        host.fills.insert(2, vec![first, 0x0100_0002, 0x0100_0003]);
+        host.fills.insert(3, vec![0x0100_0004]);
+        host.mobile = vec![first, 0x0100_0002, 0x0100_0003];
+        host.non_citizens = vec![0x0100_0002, 0x0100_0003];
+        host.draws = vec![1];
+        add_patrol_point(&mut host, player, selection, 12.5, 30.0);
+        let (x, y) = (12.5f32.to_bits(), 30.0f32.to_bits());
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::GoalRoute(first)];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 0, slot));
+            match slot {
+                2 | 3 => {
+                    expected.extend([
+                        Call::Pending(player, group),
+                        Call::KeepMobile(group),
+                        Call::KeepNonCitizens(group),
+                        Call::GoalNew(EE_GOAL_CTOR_PATROL, 1),
+                        Call::Spec(EE_GOAL_CTOR_PATROL, EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, [0; 3], 1, 0),
+                        Call::GoalAddPoint(9, x, y, player),
+                        Call::ClearGoal(group),
+                        Call::SetGoal(group, 9, false),
+                        Call::SetAction(group, EE_ACTION_MOVE_TO_NEXT_PATROL_POINT),
+                        Call::Plan(group),
+                    ]);
+                    if slot == 2 {
+                        expected.extend([Call::Random(0, 1), Call::Acknowledge(player, group, 1)]);
+                    }
+                }
+                _ => expected.push(Call::Release(group)),
+            }
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+    }
+
+    #[test]
+    fn add_patrol_point_routes() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        let (x, y) = (4.0f32.to_bits(), 5.0f32.to_bits());
+        // nothing selected: a lone patrol
+        let mut host = MockHost::default();
+        add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+        assert_eq!(host.calls, vec![Call::LonePatrol(player, x, y)]);
+        // a path point first: the point into its route (out of the store: its type read on the object)
+        for in_store in [true, false] {
+            let mut host = MockHost::default();
+            host.groups.insert(0x600, vec![first]);
+            if in_store {
+                host.units.insert(first, complex(first, EE_UNIT_TYPE_PATH_POINT));
+            } else {
+                host.object_types.insert(first, EE_UNIT_TYPE_PATH_POINT);
+            }
+            add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+            let tail = host.calls.last().unwrap();
+            assert_eq!(tail, &Call::InsertPoint(first, x, y, player));
+        }
+        // a patrolling first unit: the point added to its goal's route
+        let mut host = MockHost::default();
+        host.groups.insert(0x600, vec![first]);
+        host.units.insert(first, complex(first, 3));
+        host.goal_routes.insert(first, 0x7700);
+        add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+        assert_eq!(host.calls, vec![Call::GoalRoute(first), Call::AddPoint(r(0x7700), x, y, player)]);
+    }
+
+    #[test]
+    fn the_non_citizens_test() {
+        let soldier = EeUnitRecord { commandable: 1, category: 1, ..complex(1, 3) };
+        assert!(keeps_non_citizen(Some(&soldier)));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { commandable: 0, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { hit_points: 0, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_LAND_CITIZEN, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_NAVAL_CITIZEN, ..soldier })));
+        assert!(!keeps_non_citizen(None));
+    }
+    /// `EEMAttackUnit::Execute`'s calls: the queued flag on every new group, the spread, the draw before the goal,
+    /// the goal's attacker the selection's first unit as it is then, the marker on the target, the drawn unit
+    #[test]
+    fn attack_unit_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0200_0009;
+        for (queued, convert) in [(false, false), (true, true)] {
+            let mut host = MockHost { specs: true, ..Default::default() };
+            host.units.insert(target, EeUnitRecord { tile_x: 7, tile_y: 8, ..complex(target, 5) });
+            host.groups.insert(0x600, vec![0x0100_0003, 0x0100_0001]);
+            host.fills.insert(2, vec![0x0100_0001, 0x0100_0003]);
+            host.fills.insert(4, vec![0x0100_0005]);
+            host.mobile = vec![0x0100_0001, 0x0100_0003];
+            host.draws = vec![1];
+            attack_unit(&mut host, player, selection, target, queued, convert);
+            let g = |n: usize| r(0x1000 + n);
+            let mut expected = Vec::new();
+            for slot in 1..6 {
+                let group = g(slot as usize);
+                expected.push(Call::NewGroup(player, group));
+                expected.push(Call::Fill(group, selection, 1, slot));
+                expected.push(Call::Queued(group, queued));
+                match slot {
+                    2 => expected.extend([
+                        Call::Pending(player, group),
+                        Call::SpreadUnit(group, target, 7, 8),
+                        Call::Random(0, 1),
+                        Call::ClearGoal(group),
+                        Call::GoalNew(EE_GOAL_CTOR_ATTACK_UNIT, 1),
+                        Call::Spec(EE_GOAL_CTOR_ATTACK_UNIT, 0x0100_0003, target, [0; 3], 1, 0),
+                        Call::SetGoal(group, 2, queued),
+                        Call::SetAction(group, EE_ACTION_ATTACK_ENEMY_UNIT),
+                        Call::Plan(group),
+                        Call::Send(group, target, player, EE_GROUP_COMMAND_ATTACK, 0),
+                        Call::AcknowledgeUnit(player, 0x0100_0003),
+                    ]),
+                    4 => expected.extend([Call::Pending(player, group), Call::SpreadUnit(group, target, 7, 8)]),
+                    _ => expected.push(Call::Release(group)),
+                }
+            }
+            assert_eq!(host.calls, expected);
+            assert_eq!(host.live, 0);
+        }
+    }
+
+    #[test]
+    fn attack_unit_needs_a_selection_and_a_living_target() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0200_0009;
+        for (hit_points, selected, owner) in [(0, true, 2), (-3, true, 2), (5, false, 2), (5, true, 3)] {
+            let mut host = MockHost::default();
+            host.units.insert(target, EeUnitRecord { hit_points, owner, ..complex(target, 5) });
+            if selected {
+                host.groups.insert(0x600, vec![0x0100_0001]);
+            }
+            host.fills.insert(1, vec![0x0100_0001]);
+            attack_unit(&mut host, player, selection, target, false, false);
+            assert!(host.calls.is_empty(), "{hit_points} {selected} {owner}");
+        }
+    }
+
+    /// `EEMHealUnit::Execute`'s calls: the target's complex unit read once, a goal per group that took units, the
+    /// draw after the plan; a target without a complex unit is refused
+    #[test]
+    fn heal_unit_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0100_0007;
+        let mut host = MockHost { specs: true, ..Default::default() };
+        host.units.insert(target, complex(target, 5));
+        host.complex_of.insert(target, 0x0100_0008);
+        host.fills.insert(5, vec![0x0100_0001, 0x0100_0002]);
+        host.draws = vec![1];
+        heal_unit(&mut host, player, selection, target);
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::ComplexOf(target)];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 1, slot));
+            if slot != 5 {
+                expected.push(Call::Release(group));
+                continue;
+            }
+            expected.extend([
+                Call::Pending(player, group),
+                Call::ClearGoal(group),
+                Call::GoalNew(EE_GOAL_CTOR_HEAL_UNIT, 1),
+                Call::Spec(EE_GOAL_CTOR_HEAL_UNIT, 0x0100_0008, EE_UNIT_ID_NONE, [0; 3], 1, 0),
+                Call::SetGoal(group, 15, false),
+                Call::SetAction(group, EE_ACTION_HEAL_UNIT),
+                Call::Plan(group),
+                Call::Random(0, 1),
+                Call::Acknowledge(player, group, 1),
+            ]);
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+        // no such unit, a unit of another list than its id names: nothing; no complex unit: refused after the read
+        for owner in [None, Some(3)] {
+            let mut host = MockHost::default();
+            if let Some(owner) = owner {
+                host.units.insert(target, EeUnitRecord { owner, ..complex(target, 5) });
+            }
+            heal_unit(&mut host, player, selection, target);
+            assert!(host.calls.is_empty());
+        }
+        let mut host = MockHost::default();
+        host.units.insert(target, complex(target, 5));
+        host.complex_of.insert(target, EE_UNIT_ID_NONE);
+        heal_unit(&mut host, player, selection, target);
+        assert_eq!(host.calls, vec![Call::ComplexOf(target)]);
+    }
+    /// `EEMPathTo::Execute`'s calls: the point adjusted once, the goal before the paths' reset and the clear, the
+    /// draw after the plan, the marker after the acknowledgement (also for a group the keep emptied)
+    #[test]
+    fn path_to_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        let o = PathToOptions { facing: 0.75, forced: true, rotating: false, queued: true, group_movement: true };
+        let mut host = MockHost { specs: true, path_point: Some((20.5, 21.5, 3.25)), ..Default::default() };
+        host.groups.insert(0x600, vec![first, 0x0100_0002]);
+        host.fills.insert(2, vec![first, 0x0100_0002]);
+        host.fills.insert(3, vec![0x0100_0009]);
+        host.mobile = vec![first, 0x0100_0002];
+        host.draws = vec![1];
+        assert_eq!(path_to(&mut host, player, selection, 20.2, 21.9, o), Some((20.5, 21.5)));
+        let bits = [20.5f32.to_bits(), 21.5f32.to_bits(), 3.25f32.to_bits()];
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::PathPoint(first, 20.2f32.to_bits(), 21.9f32.to_bits())];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 0, slot));
+            if slot != 2 && slot != 3 {
+                expected.push(Call::Release(group));
+                continue;
+            }
+            expected.extend([
+                Call::Pending(player, group),
+                Call::KeepMobile(group),
+                Call::GoalNew(EE_GOAL_CTOR_LOCATION, 1),
+                Call::Spec(EE_GOAL_CTOR_LOCATION, EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, bits, 1, 0),
+                Call::Location(0.75f32.to_bits(), 0, 1),
+                Call::ResetPaths(group),
+                Call::ClearGoal(group),
+                Call::SetGoal(group, 1, true),
+                Call::SetAction(group, EE_ACTION_PREPARE_TO_MOVE),
+                Call::Plan(group),
+            ]);
+            if slot == 2 {
+                expected.extend([Call::Random(0, 1), Call::Acknowledge(player, group, 1)]);
+            }
+            expected.push(Call::Send(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0));
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+        // no selection: nothing, the point unchanged
+        let mut host = MockHost::default();
+        assert_eq!(path_to(&mut host, player, selection, 1.0, 2.0, o), None);
         assert!(host.calls.is_empty());
     }
 }

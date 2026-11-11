@@ -22,7 +22,8 @@
 //     "<seq> lclick <form> <x> <y>", the same and then a left button press and release as the platform's mouse
 //     events deliver them (ISHandleEvent): a click through the real hit test, or
 //     "<seq> boxselect <form> <mode> <x0> <y0> <x1> <y1>", a box selection in the game view: see "the box selection"
-//     below),
+//     below, or "<seq> order <form> <kind>", an order to a group of the local player's units through the real input
+//     path, judged unit by unit once its message executed: see EETestFixtureOrders.cpp),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -146,6 +147,10 @@
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
 namespace WONAPI { bool LobbyIAmReady(); }   // LobbyStagingSupport.cpp
 extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
+// the orders (EETestFixtureOrders.cpp)
+void EETestOrdersInstall();
+const char* EETestOrderStart(unsigned long inSeq, unsigned long inKind);
+std::string EETestOrderSnapshot();
 
 // the renderer's test hooks (rust/crates/ee_gx ffi.rs; GX.cpp keeps them linked): a callback before every presented
 // frame, and a read-back of that frame as 32-bit BGRA rows
@@ -830,6 +835,8 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         theVerdict = "clicked";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
         theVerdict = BoxStart(theSeq, theLine);
+    } else if (!strcmp(theOp, "order") && a == inFormID) {
+        theVerdict = EETestOrderStart(theSeq, b);
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
         UILBString* theList = dynamic_cast<UILBString*>(theControl);
         if (theList && c < theList->GetLineCount()) {
@@ -847,6 +854,7 @@ void Poll(const std::string& inDirectory)
     if (!theManager)
         return;
     std::string theSelection = BoxSnapshot();   // before the UI lock (the world's read lock inside)
+    theSelection += EETestOrderSnapshot();
     theManager->LockUIForCopyData();
     UIForm* theForm = theManager->GetCurrentForm();
     std::string theTemporary = inDirectory + "/ui-state.tmp";
@@ -992,6 +1000,7 @@ void EETestFixtureStart()
     sDirectory = theCopy;
     GXTestSetPresentHook(PresentHook);   // frame.request -> frame.bmp
     gEESelectUnitsTestHook = BoxLassoHook;   // each box selection's ids (the boxselect command)
+    EETestOrdersInstall();                   // each executed input's view (the order command)
     fprintf(stderr, "TEST UI fixture on %s\n", theCopy.c_str());
     std::thread([theCopy]() {
         for (;;) {

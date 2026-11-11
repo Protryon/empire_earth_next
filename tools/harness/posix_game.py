@@ -182,6 +182,8 @@ def run(a):
         summary['captures']['end'] = g.capture('end')
         if a.box_select and a.exercise == 'random-game':
             summary['box_select'] = fixture_driver.box_select(g, GAME)
+        if a.orders and a.exercise == 'random-game':
+            summary['orders'] = fixture_driver.orders(g, GAME)
         summary.update(outcome=outcome, final=g.state()['telemetry'], wall_seconds=played['wall_seconds'])
         g.note(f'END {outcome}: {summary["final"]}')
         summary['result'] = 'PASS'
@@ -223,6 +225,8 @@ def main():
     ap.add_argument('--capture-every', type=float, default=0, help='capture the window every S wall seconds')
     ap.add_argument('--box-select', action='store_true',
                     help='random-game: box selections in the game view after the play (fixture_driver.box_select)')
+    ap.add_argument('--orders', action='store_true',
+                    help='random-game: orders through the real input path after the play (fixture_driver.orders)')
     ap.add_argument('--timeout', type=float, default=120, help='seconds to reach the main menu')
     ap.add_argument('--lobby-check', action='append', default=[], help='ai-game: CONTROL=0|1, a lobby check box')
     ap.add_argument('--zoom-captures', type=int, nargs='*', default=[],

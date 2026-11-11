@@ -20,7 +20,10 @@ fixture_driver.py's, shared with posix_game.py.
                messages and requires the game to pause and resume (telemetry 'comm ... paused'); --box-select then
                box-selects in the game view through the real press, drag and release (fixture_driver.box_select:
                a box, its left half, the right half added with Shift, the box again with a unit deleted just before
-               the release); each selected group must equal the original rule over the box's ids
+               the release); each selected group must equal the original rule over the box's ids; --orders then
+               gives orders through the real input path (fixture_driver.orders: citizens right-click a resource
+               and a damaged building, plain and with Shift; the Patrol and Attack Ground buttons; a move) and
+               judges every unit of each group by the original's rule after the message executed
   random-game  the tour without the settings
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
@@ -238,6 +241,9 @@ def tour(g, a, summary):
         summary['box_select'] = fixture_driver.box_select(g, GAME)
         g.note(f'BOX SELECT PASS: {len(summary["box_select"]["steps"])} steps (add grew the group: '
                f'{summary["box_select"]["grew"]})')
+    if a.orders:
+        summary['orders'] = fixture_driver.orders(g, GAME)
+        g.note(f'ORDERS PASS: ran {summary["orders"]["ran"]} skipped {summary["orders"]["skipped"]}')
     (g.out / 'rendering.json').write_text(json.dumps([r['rendering'] for r in results if 'rendering' in r],
                                                      indent=2) + '\n')
     summary['result'] = 'PASS'
@@ -350,6 +356,8 @@ def main():
     ap.add_argument('--input-check', action='store_true', help='tour/random-game with --play-seconds: F3 twice')
     ap.add_argument('--box-select', action='store_true',
                     help='tour/random-game: box selections in the game view (select, add with Shift, a dead unit)')
+    ap.add_argument('--orders', action='store_true',
+                    help='tour/random-game: orders through the real input path, each unit judged (fixture_driver.orders)')
     ap.add_argument('--ai-players', type=int, default=2)
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')

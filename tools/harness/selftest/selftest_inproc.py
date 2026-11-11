@@ -284,6 +284,14 @@ def fixture(arch, d):
         time.sleep(0.3)
         if g.verdict(seq) != "rejected":
             problems.append(f"rejected box verdict {g.verdict(seq)}")
+        ordered = fixture_driver.orders(g, 11)
+        if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1:
+            problems.append(f"orders {ordered}")
+        seq = g.command("order 11 9")
+        g.wait(lambda s: s["command"] >= seq, "a rejected order", 10)
+        time.sleep(0.3)
+        if g.verdict(seq) != "rejected":
+            problems.append(f"rejected order verdict {g.verdict(seq)}")
         if tel.get("clock") != [1, 1] or tel.get("paused") != 0 or tel["players"][2].get("stock") != [1, 2, 3, 4, 5]:
             problems.append(f"telemetry {tel}")
         played = fixture_driver.play(g, types.SimpleNamespace(max_game_seconds=40, play_seconds=None, capture_every=0),
@@ -301,4 +309,4 @@ def fixture(arch, d):
     log = fixture_driver.copy_game_logs(out / "root", out)
     if not log or [p["kind"] for p in log["players"].values()].count("computer") != 2 or 3 not in log["last_sample"]:
         problems.append(f"game log {log}")
-    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, time cap, telemetry, game log"
+    return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, orders, time cap, telemetry, game log"
