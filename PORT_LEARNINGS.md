@@ -6106,3 +6106,45 @@ mouse events, a control's press, release and double-click dispatch and its butto
   `UILBString::UpdateTranslatedKey` runs only when a person types a letter into a focused string list (a combo
   box's drop-down). The edit box fix changes only what a person's typing during a drag, or Shift + keypad Del with
   an arrow, does.
+
+## R6: WON's Internet code, round 1 (WONServer's exchange, ServerContext, WONDir's ops)
+
+Branch `rust-won-net1`. The owner keeps WON's Internet-only code and ports it as a reference; nothing reaches it
+(the WON servers are gone), so no game, tour or LAN gate exercises any line of this section: only the drivers do.
+
+- **The exchange over hooks.** `ServerRequestOp` is the base of about 60 service ops and an `AsyncOp` over a
+  `BlockingSocket`, both C++ objects; its algorithm (failover across the address list, the expired-session retry,
+  the last-error rule, the blocking loop, the asynchronous completions) moved to `server.rs` over a trait of the
+  op's primitives, which the C++ hands over as a struct of function pointers plus pointers to the five members the
+  exchange keeps. The members are read and written through the pointers at every step, never cached across a
+  hook: a subclass's `CheckResponse` calls `SetLastServerError` (C++, forwarding to Rust on the same members) in
+  the middle of a step.
+- **Scripted-environment drivers.** The driver copies the original's statements into a class whose primitives are
+  a scripted environment (an address list, scripted connects, peer auths, requests, sends, receives, replies,
+  checks and time left, each logged); the same environment behind the hooks runs the Rust exchange, and the two
+  traces and final members must agree. Defaults when a script runs out and a call cap (300) make every scenario
+  end. The golden (`golden_server.txt`) carries the script with the trace, so the Rust replay needs no generator.
+- **A golden must hit the rare paths.** The first 500-scenario golden missed a mutation (the expired-session test
+  dropped from the context's failure notice): an expiry needs a reused session, an expired reply and a server
+  context together. `--print` now keeps every scenario whose session expired and one in four of the rest; the
+  mutation then fails the replay. The 200,000 direct comparisons in the driver cover the rest.
+- **Partial reads.** `PingOp::CheckResponse` assigns each field as it reads it, so a cut reply leaves the first
+  fields set before the throw: Rust returns how many fields it read and the C++ assigns that many, then throws
+  `ReadBufferException`. The same holds for the directory status replies' returned address (assigned only once
+  read whole).
+- **ServerContext wholly in Rust.** Its map of list iterators keyed by the six address bytes is a `Vec` searched
+  by those bytes (equality is all the list needs; the set copy sorts by them). An `IPAddr` crosses as its value
+  (sockaddr, validity, remembered host string) because callers read the host string of the copies. The shuffle
+  keeps the CRT's `rand()` (and `srand(time(NULL))`) through a callback, so the order is the original's.
+- **Tool traps.** Git Bash rewrites a command-line argument starting with `//` (an MSYS path): a splice script
+  given `"// FUNCTION: ..."` as its marker matched one character late and left `/// FUNCTION` in the file. Pass
+  markers in a file, or check the result. Heredocs with unbalanced quotes inside (an apostrophe in a comment)
+  failed in the Bash tool; write such scripts with the editor instead.
+- **Network-layer APIs these call** (for the merge with the lobby lane's whole move of the network layer):
+  `BlockingSocket(0)`, `SetLengthFieldSize`, `Close`, `Connect`, `SendMsg`, `RecvMsg`, `QueueOp`,
+  `AddMsgTransform`, `CryptTransform`, `ConnectOp`, `SendMsgOp`, `RecvMsgOp::GetMsg`, `SendBytesToOp`,
+  `RecvBytesFromOp`, `SetRepeatOp` / `SetRepeatCompletion`, `AsyncOp::Finish` / `Kill` / `TimeLeft` /
+  `GetStatus` / `RunAsync` / `RunBlock` / `mKilled` / `mRunMode`, `AsyncOpWithTracker::Track` /
+  `mTracker.KillAll`, `ByteBuffer(data, length, false)`, `ReadBufferException`, `WideAppendUtf16LE`,
+  `WideAppendUtf16Unit`, `WONTickCount`; and IPAddr's public members `mAddr`, `mIsValid`, `mHost`,
+  `mRememberHostString` (ServerContext's value conversion).
