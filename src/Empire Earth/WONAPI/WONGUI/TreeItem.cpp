@@ -9,6 +9,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The +/- box test and a child's indent and place are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs);
+// this unit keeps the rows, their children, the list rows and the paint.
 namespace WONAPI {
 static void DrawHorzDottedLine(Graphics &g, int x, int y, int length)
 {
@@ -118,7 +121,7 @@ void TreeItem::MouseDown(ListArea *theListArea, int x, int y, int theButton)
 	if(theButton==0)
 	{
 		TreeArea *aTreeArea = static_cast<TreeArea*>(theListArea);
-		if((x < this->mX && x > this->mX-14) || (theListArea->CheckDoubleClick(theButton) && aTreeArea->TreeFlagSet(8)))
+		if(ee_won_gui_tree_box_hit(x, this->mX) || (theListArea->CheckDoubleClick(theButton) && aTreeArea->TreeFlagSet(8)))
 		{
 			this->ToggleOpen(aTreeArea, aTreeArea->TreeFlagSet(4));
 			return;
@@ -177,13 +180,10 @@ int TreeItem::GetInsertPos(TreeArea* tree,TreeItem* item,int position) {
 void TreeItem::InsertChild(TreeArea *theTreeArea, TreeItem *theItem, int thePos)
 {
 	thePos = this->GetInsertPos(theTreeArea,theItem,thePos);
-	if(this->mParent==NULL && !theTreeArea->TreeFlagSet(2 | 1))
-		theItem->mX = 0;
-	else
-		theItem->mX = this->mX + 15;
-
-	if(thePos<0 || thePos>this->mChildren.size())
-		thePos = this->mChildren.size();
+	size_t aPlace;
+	theItem->mX = ee_won_gui_tree_child(this->mParent==NULL, theTreeArea->TreeFlagSet(2 | 1) ? 1 : 0, this->mX, thePos,
+	                                    this->mChildren.size(), &aPlace);
+	thePos = (int)aPlace;
 
 	bool onEnd = thePos==this->mChildren.size();
 

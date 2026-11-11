@@ -4632,6 +4632,21 @@ using EeWonTopOf = int32_t(*)(const void *ctx, size_t i);
 /// Whether item `i` (below the count) is selectable.
 using EeWonSelectableOf = bool(*)(const void *ctx, size_t i);
 
+/// A header button's place (`NotifyColumnChange`).
+struct EeWonHeaderCol {
+  int32_t x;
+  int32_t width;
+  bool enabled;
+};
+
+/// A header button as `GetDragComponent` reads it.
+struct EeWonHeaderButton {
+  bool present;
+  int32_t left;
+  int32_t right;
+  int32_t width;
+};
+
 /// `LayoutThumb`'s answer: `hidden` (everything fits: the thumb is hidden and nothing else changes), else the
 /// thumb's size and, when `set_pos`, its new top.
 struct EeWonThumbOut {
@@ -12459,6 +12474,91 @@ bool ee_won_gui_list_item_tip(int32_t width,
                               int32_t view_width,
                               int32_t offset,
                               int32_t view_height);
+
+/// `column_at` over `count` columns.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int32_t ee_won_gui_ml_column_at(const int32_t *xs, const int32_t *widths, size_t count, int32_t x);
+
+/// `set_column_width` over `count` columns in place.
+///
+/// # Safety
+/// The arrays hold `count` entries (or are NULL with 0); `total` is writable.
+bool ee_won_gui_ml_set_width(int32_t *widths,
+                             const uint8_t *modes,
+                             const int32_t *partners,
+                             int32_t *xs,
+                             size_t count,
+                             int32_t *total,
+                             int32_t max_total,
+                             int32_t col,
+                             int32_t width,
+                             bool from_size);
+
+/// `dynamic_delta`: 0 when nothing changes.
+int32_t ee_won_gui_ml_dynamic_delta(int32_t column,
+                                    size_t count,
+                                    int32_t view_width,
+                                    int32_t old_width,
+                                    int32_t total);
+
+/// `grow_column`: -1 when the cell fits.
+int32_t ee_won_gui_ml_grow(int32_t item_width, int32_t border, int32_t column_width);
+
+bool ee_won_gui_ml_relink(uint8_t old_mode, uint8_t new_mode);
+
+/// `link_partners` over `count` columns in place.
+///
+/// # Safety
+/// `modes` and `partners` hold `count` entries (or are NULL with 0).
+void ee_won_gui_ml_link_partners(const uint8_t *modes, int32_t *partners, size_t count);
+
+/// `header_layout` for `count` header columns over `columns` list columns into `out` (room for `count`).
+///
+/// # Safety
+/// `has_button` holds and `out` has room for `count` entries, `widths` holds `columns` ints (each may be NULL
+/// with a 0 count).
+void ee_won_gui_mh_layout(const bool *has_button,
+                          size_t count,
+                          const int32_t *widths,
+                          size_t columns,
+                          int32_t horz,
+                          EeWonHeaderCol *out);
+
+int32_t ee_won_gui_mh_toggle(int32_t sort_type, bool is_current);
+
+int32_t ee_won_gui_mh_sort_type(int32_t column, size_t count, int32_t current, int32_t sort_type);
+
+/// `header_drag` over `count` buttons and `columns` list columns: the column (and the grab x into `out_drag_x`),
+/// or -1.
+///
+/// # Safety
+/// `buttons` holds `count` entries and the column arrays `columns` (each may be NULL with a 0 count);
+/// `out_drag_x` is writable.
+int32_t ee_won_gui_mh_drag(int32_t x,
+                           const EeWonHeaderButton *buttons,
+                           size_t count,
+                           const int32_t *widths,
+                           const uint8_t *modes,
+                           const int32_t *partners,
+                           size_t columns,
+                           int32_t *out_drag_x);
+
+int32_t ee_won_gui_mh_drag_width(int32_t x, int32_t drag_x);
+
+bool ee_won_gui_tree_box_hit(int32_t x, int32_t indent);
+
+/// `tree_child`: the indent, the place into `out_pos`.
+///
+/// # Safety
+/// `out_pos` is writable.
+int32_t ee_won_gui_tree_child(bool parent_is_root,
+                              int32_t tree_flags,
+                              int32_t parent_indent,
+                              int32_t pos,
+                              size_t count,
+                              size_t *out_pos);
 
 EeWonThumbOut ee_won_gui_thumb_layout(EeWonThumbIn t);
 

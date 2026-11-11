@@ -433,6 +433,9 @@ WON_TESTS = {
     # WONGUI's compound controls (the combo box's list size and keys, the tab control's bars, scroll, page and
     # arrow keys, the splitter's split, panes and bars), the original's statements against ee_won's guictl module
     "won_guictl_test": [],
+    # WONGUI's multi-column lists and tree rows (the column resizes and places, the header's buttons, sorts and
+    # resize edges, the tree's +/- box and child places), the original's statements against ee_won's guimulti module
+    "won_guimulti_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
