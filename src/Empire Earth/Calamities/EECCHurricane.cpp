@@ -16,6 +16,7 @@
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -199,7 +200,8 @@ long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
     EEGraphicEffect* theEffect = NULL;
     if (this->mGraphicEffect1 == NULL || inCalamity->GetTimeAlive() >= this->mGraphicEffect1->mDuration) {
         if (!inCalamity->GetTargetUnit(theStorm)) {
-            this->CreateStorm(inCalamity);
+            bool theCreated = this->CreateStorm(inCalamity);
+            EECalamityCaptureEvent(kCalamityOpCreateStorm, theCreated);   // CALW (TEST ONLY)
             this->PlaySound(inCalamity);
         } else
             this->UpdateSound(inCalamity, this->mSound, -1.0f, 4.0f, true);
@@ -215,7 +217,9 @@ long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
         inCalamity->mIntPlaceHolder1 = UMFloatToLong(theTime);
         if (theTime >= this->mTickTime) {
             long theTicks = UMFloatToLong(theTime / this->mTickTime);
-            if (EEGetUnitsNear(theLocation, this->mRadius, theUnits) > 0) {
+            long theNear = EEGetUnitsNear(theLocation, this->mRadius, theUnits);
+            EECalamityCaptureEvent(kCalamityOpUnitsNear, theNear);   // CALW (TEST ONLY)
+            if (theNear > 0) {
                 long theDamage = this->mDamage * theTicks;
                 for (long i = theUnits.size() - 1; i >= 0; i--) {
                     EEUnit* theUnit = theUnits[i];
@@ -228,6 +232,7 @@ long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
                     float theReach = EEGetUnitRadius(static_cast<EEComplexUnit*>(theUnit), theStormUnit) + this->mRadius;
                     if (!(theReach * theReach > theDistance))
                         continue;
+                    EECalamityCaptureEvent(kCalamityOpStrike, theUnit->mUnitID);   // CALW (TEST ONLY)
                     if (this->mGraphicEffect3->mKind == kEffect2DLightning)
                         gEffectManager->CreateUnitEffect(theUnit, this->mGraphicEffect3, NULL, 0, 0, 0);
                     else
@@ -235,10 +240,14 @@ long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
                     if (theUnit->mPlayer == theNaturePlayer)
                         continue;
                     if (this->mIsBlockedByImmunity && static_cast<EEComplexUnit*>(theUnit)->GetEffect(3, theEffect)) {
+                        EECalamityCaptureEvent(kCalamityOpImmune, theUnit->mUnitID);   // CALW (TEST ONLY)
                         if (theEffect != NULL)
                             gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
-                    } else
+                    } else {
+                        EECalamityCaptureEvent(kCalamityOpTakeHit, theUnit->mUnitID, theDamage, (float)inCalamity->mPlayerNumber,
+                                               this->mIsBlockedByImmunity ? 2.0f : 3.0f);   // CALW (TEST ONLY)
                         theUnit->TakeHit(theStorm, theDamage, inCalamity->mPlayerNumber, this->mIsBlockedByImmunity ? 2 : 3);
+                    }
                 }
             }
             inCalamity->mIntPlaceHolder1 = UMFloatToLong(theTime - (float)this->mTickTime * theTicks);

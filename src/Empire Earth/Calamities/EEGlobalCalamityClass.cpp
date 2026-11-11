@@ -13,6 +13,7 @@
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEGlobalCalamityClass.h"
@@ -29,5 +30,6 @@ long EEGlobalCalamityClass::GetTargetKind()
 long EEGlobalCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX,
                                       unsigned long inY, bool inCheck, EEUnit* inTargetUnit)
 {
-    return 0;
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, 0);
 }

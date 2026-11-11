@@ -15,6 +15,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -138,6 +139,7 @@ long EECCMorale::Update(EECalamity* inCalamity, float inElapsedTime)
             this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, true);
         if (!inCalamity->mBoolPlaceHolder1) {
             inCalamity->mBoolPlaceHolder1 = true;
+            EECalamityCaptureEvent(kCalamityOpMorale);   // CALW (TEST ONLY)
             EEUnit* theTargetUnit;
             inCalamity->GetTargetUnit(theTargetUnit);
             EEGraphicEffect* theEffect = theTargetUnit->mUnitClass->mMoraleEffect;

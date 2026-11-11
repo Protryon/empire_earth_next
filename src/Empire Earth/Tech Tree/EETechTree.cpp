@@ -714,30 +714,42 @@ void EETechTree::ResearchToEpoch(long inEpoch)
         theRecord.Commit();
     }
     gEventsEnabled = false;
+    EETechCaptureEpochStep(-1, 0);   // TEST ONLY (ee/EETechCapture.h)
+    bool theLocal = false;
     if (inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()) {
         if (inEpoch != kTechEpochPrehistoric) {
             if (inEpoch > kTechEpochPrehistoric) {
                 for (long i = 0; i < inEpoch; i++) {
+                    EETechCaptureEpochStep(0, i);   // TEST ONLY (ee/EETechCapture.h)
                     this->mEpochs[i].Unlock();
+                    EETechCaptureEpochStep(1, i);   // TEST ONLY (ee/EETechCapture.h)
                     this->mEpochs[i].ResearchAll(false);
                     if (i + 1 == inEpoch && i + 1 < this->mEpochs.size()) {
+                        EETechCaptureEpochStep(0, i + 1);   // TEST ONLY (ee/EETechCapture.h)
                         this->mEpochs[i + 1].Unlock();
+                        EETechCaptureEpochStep(2, i + 1);   // TEST ONLY (ee/EETechCapture.h)
                         this->mEpochs[i + 1].ResearchSelf();
                     }
                 }
             }
         } else {
+            EETechCaptureEpochStep(0, 0);   // TEST ONLY (ee/EETechCapture.h)
             this->mEpochs[0].Unlock();
+            EETechCaptureEpochStep(2, 0);   // TEST ONLY (ee/EETechCapture.h)
             this->mEpochs[0].ResearchSelf();
         }
+        EETechCaptureEpochStep(3, inEpoch);   // TEST ONLY (ee/EETechCapture.h)
         this->mEpochs[inEpoch].ResearchKind(7, true);
         if (gWorld.mPlayers[this->mPlayerIndex] == gWorld.GetCurrentPlayer()) {
+            theLocal = true;
+            EETechCaptureEpochStep(4, inEpoch);   // TEST ONLY (ee/EETechCapture.h)
             this->mEpochNameID = EEEpochTitleID(this->mEpochs[inEpoch].mData->mID);
             gUserInterface->PostShowEpochName();
             if (gUIManager->mMainGameForm != NULL)
                 gUIManager->mMainGameForm->mRefreshGroup = true;
         }
     }
+    EETechCaptureResearchToEpoch(this, inEpoch, theLocal);   // TEST ONLY (ee/EETechCapture.h)
     gEventsEnabled = true;
 }
 

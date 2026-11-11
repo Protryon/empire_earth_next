@@ -9,6 +9,7 @@
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -66,6 +67,7 @@ long EECCSpecialLocation::Update(EECalamity* inCalamity, float inElapsedTime)
     EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
     GE3DPoint theLocation;
     theLocation = inCalamity->mTargetLocation;
+    EECalamityCaptureEvent(kCalamityOpSpecialLocation);   // CALW (TEST ONLY)
     theUnit->ClearGoals(0);
     theUnit->SetGoal(new EEUGLocation(&theLocation, 1, 1, 0, 0.0f, 0, 0), 0, 0);
     theUnit->StartAction(kActionSpecialLocation);

@@ -833,6 +833,7 @@ void AfterTick()
         EEFormationCaptureSweep();
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+        EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
         EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)

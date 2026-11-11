@@ -30,6 +30,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "rust/ee_rust.h"
+#include "ee/EETechCapture.h"
 
 // FUNCTION: EXE 0x4adcd9
 // Creates a calamity class with no lifetime or class flags
@@ -92,6 +93,7 @@ long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTim
     EeCalamityAge theAge = ee_calamity_update_time_alive(inCalamity->GetTimeAlive(), inElapsedTime, this->mLifeTime);
     if (inHelperID != -1) {
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inHelperID);
+        EECalamityCaptureEvent(kCalamityOpHelperUpdate, inHelperID, theHelper != NULL);   // CALW (TEST ONLY)
         if (theHelper != NULL)
             theHelper->Update(inElapsedTime);
     }
@@ -137,6 +139,7 @@ long EECalamityClass::CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned 
 long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     long thePlayerIndex = 0;
     long theResult = 1;
     if (inUnit != NULL)
@@ -149,7 +152,7 @@ long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, un
             }
         }
     }
-    return theResult;
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, theResult);
 }
 
 // ICF-FOLDED: EXE 0x5ad67e

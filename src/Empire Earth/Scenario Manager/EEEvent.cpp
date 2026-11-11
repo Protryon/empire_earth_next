@@ -278,10 +278,13 @@ long SetEventAreaEffect(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* i
         if (!gLoadingSavedGame) {
             for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL;
                  theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                if (theUnit->mUnitClass->mUnitType == inClass->mUnitType &&
-                    theUnit->mComplexUnit != NULL && theUnit->GetHitPoints() > 0)
+                bool theApplies = theUnit->mUnitClass->mUnitType == inClass->mUnitType &&
+                    theUnit->mComplexUnit != NULL && theUnit->GetHitPoints() > 0;
+                EETechCaptureUnitStep(theUnit, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
+                if (theApplies)
                     theUnit->mComplexUnit->MakeAreaEffects();
             }
+            EETechCaptureUnitWalk(6, (long)(inEffect - &gEventEffects[0]), inClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
         }
     }
     return 0;
@@ -445,15 +448,22 @@ long ConvertEventUnits(EEEventEffect* inEffect, long inPlayerIndex, long inID, E
         EEComplexUnit* theNew = NULL;
         for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
             EEUnit* theUnit = *it;
-            if (!(theUnit->GetHitPoints() > 0))
+            if (!(theUnit->GetHitPoints() > 0)) {
+                EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
                 continue;
-            if (theUnit->mTileNode == NULL || theUnit->GetComplexUnit()->mPreviousPart == NULL)
+            }
+            bool theReplace = theUnit->mTileNode == NULL || theUnit->GetComplexUnit()->mPreviousPart == NULL;
+            EETechCaptureUnitStep(theUnit, theReplace, theNew != NULL);   // TEST ONLY (ee/EETechCapture.h)
+            if (theReplace)
                 theNew = EEReplaceUnit(static_cast<EEComplexUnit*>(theUnit), inPlayerIndex, theClass);
             if (theSetBehavior && theNew != NULL)
                 theNew->SetBehavior(theNew->GetClass()->mBehavior);
         }
     } else
         theResult = 3;
+    EETechCaptureUnitWalk(7, (long)(inEffect - &gEventEffects[0]), (long)theFrom,
+                          (inUnit != NULL ? 1 : 0) | (theInSet ? 2 : 0) | (theResult == 3 ? 4 : 0) |
+                          (inID == 0x413 || inID == 0x138d ? 8 : 0), (long)theTo);   // TEST ONLY (ee/EETechCapture.h)
     return theResult;
 }
 
@@ -518,15 +528,21 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
             case EeTechAttributeOp::LineOfSight: {
                 for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                      theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetClass()->GetUnitType() == theClass->mUnitType)
+                    bool theApplies = theUnit->GetClass()->GetUnitType() == theClass->mUnitType;
+                    EETechCaptureUnitStep(theUnit, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
+                    if (theApplies)
                         theUnit->SightOffHere();
                 }
+                EETechCaptureUnitWalk(0, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
                 theUpgrade->mLineOfSight = ee_tech_effect_f32(theClass->mLineOfSight, theUpgrade->GetLineOfSight(), &theValues);
                 for (EEUnit* theNext = thePlayer->mFirstUnit; theNext != NULL;
                      theNext = static_cast<EEUnit*>(theNext->mNext)) {
-                    if (theNext->GetClass()->GetUnitType() == theClass->mUnitType)
+                    bool theApplies = theNext->GetClass()->GetUnitType() == theClass->mUnitType;
+                    EETechCaptureUnitStep(theNext, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
+                    if (theApplies)
                         theNext->SightOnHere();
                 }
+                EETechCaptureUnitWalk(1, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
                 break;
             }
             case EeTechAttributeOp::AreaEffect:
@@ -541,29 +557,40 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                     for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                          theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                         if (theUnit->GetClass()->GetUnitType() != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
-                            (theUnit->GetComplexUnit() != NULL && theUnit->mComplexUnit->mIsBuilt != true))
+                            (theUnit->GetComplexUnit() != NULL && theUnit->mComplexUnit->mIsBuilt != true)) {
+                            EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
                             continue;
+                        }
                         float theAmount = ee_tech_rescale((int32_t)theUnit->GetHitPoints(), (uint32_t)theOldMaximum,
                                                           (int32_t)theUpgrade->mMaxHitPoints);
                         if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
                             EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
                                                  theUpgrade->mMaxHitPoints, theAmount);
+                        EETechCaptureUnitStep(theUnit, theUnit->GetHitPoints() > 0, (long)theAmount);   // TEST ONLY (ee/EETechCapture.h)
                         if (theUnit->GetHitPoints() > 0)
                             theUnit->SetHitPoints((long)theAmount);
                     }
+                    EETechCaptureUnitWalk(2, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType,
+                                          (long)theOldMaximum, theUpgrade->mMaxHitPoints);   // TEST ONLY (ee/EETechCapture.h)
                     for (unsigned long j = 0; j < thePlayer->GetNumPendingUnits(); j++) {
                         EEUnit* theUnit = static_cast<EEUnit*>(thePlayer->GetPendingUnit(j));
-                        if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0))
+                        if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0)) {
+                            EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
                             continue;
+                        }
                         float theAmount = ee_tech_rescale((int32_t)theUnit->GetHitPoints(), (uint32_t)theOldMaximum,
                                                           (int32_t)theUpgrade->mMaxHitPoints);
                         if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
                             EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
                                                  theUpgrade->mMaxHitPoints, theAmount);
+                        EETechCaptureUnitStep(theUnit, theUnit->GetHitPoints() > 0 &&
+                            (theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mIsBuilt == true), (long)theAmount);   // TEST ONLY (ee/EETechCapture.h)
                         if (theUnit->GetHitPoints() > 0 &&
                             (theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mIsBuilt == true))
                             theUnit->SetHitPoints((long)theAmount);
                     }
+                    EETechCaptureUnitWalk(3, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType,
+                                          (long)theOldMaximum, theUpgrade->mMaxHitPoints);   // TEST ONLY (ee/EETechCapture.h)
                 }
                 break;
             }
@@ -577,31 +604,41 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                     for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                          theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
-                            theUnit->mComplexUnit == NULL)
+                            theUnit->mComplexUnit == NULL) {
+                            EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
                             continue;
+                        }
                         float theAmount = ee_tech_rescale((int32_t)theUnit->mComplexUnit->mFlightTime, (uint32_t)theOldMaximum,
                                                           (int32_t)theUpgrade->mFlightTime);
                         if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
                             EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
                                                  theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
+                        EETechCaptureUnitStep(theUnit, theUnit->mComplexUnit->mFlightTime > 0, theValue);   // TEST ONLY (ee/EETechCapture.h)
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
                     }
+                    EETechCaptureUnitWalk(4, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType,
+                                          (long)theOldMaximum, theUpgrade->mFlightTime);   // TEST ONLY (ee/EETechCapture.h)
                     for (unsigned long j = 0; j < thePlayer->GetNumPendingUnits(); j++) {
                         EEUnit* theUnit = static_cast<EEUnit*>(thePlayer->GetPendingUnit(j));
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
-                            theUnit->mComplexUnit == NULL)
+                            theUnit->mComplexUnit == NULL) {
+                            EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
                             continue;
+                        }
                         float theAmount = ee_tech_rescale((int32_t)theUnit->mComplexUnit->mFlightTime, (uint32_t)theOldMaximum,
                                                           (int32_t)theUpgrade->mFlightTime);
                         if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
                             EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
                                                  theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
+                        EETechCaptureUnitStep(theUnit, theUnit->mComplexUnit->mFlightTime > 0, theValue);   // TEST ONLY (ee/EETechCapture.h)
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
                     }
+                    EETechCaptureUnitWalk(5, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType,
+                                          (long)theOldMaximum, theUpgrade->mFlightTime);   // TEST ONLY (ee/EETechCapture.h)
                 }
                 break;
             }

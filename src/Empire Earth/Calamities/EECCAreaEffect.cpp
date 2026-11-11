@@ -18,6 +18,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -224,6 +225,8 @@ long EECCAreaEffect::Update(EECalamity* inCalamity, float inElapsedTime)
     long theCalamityHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(this->mFunctor, inCalamity, NULL);
     ::gWorld.GetContagionManager()->GetContagionHelper(theCalamityHelperID);
     inCalamity->mIntPlaceHolder1 = theCalamityHelperID;
+    EECalamityCaptureEvent(kCalamityOpCreateHelper, theCalamityHelperID);   // CALW (TEST ONLY)
+    EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
     this->ApplyEffect(inCalamity);
     inCalamity->mBoolPlaceHolder1 = true;
     return theResult;

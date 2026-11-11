@@ -9,6 +9,7 @@
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -72,6 +73,7 @@ long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
     EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
     if (!inCalamity->GetTargetUnit(theTargetUnit) || !(theTargetUnit->mHitPoints > 0))
         return 7;
+    EECalamityCaptureEvent(kCalamityOpSpecialAttack, theTargetUnit->mUnitID);   // CALW (TEST ONLY)
     theUnit->ClearGoals(0);
     theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
     theUnit->mIsSpecialAttack = true;
@@ -85,6 +87,7 @@ long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
 long EECCSpecialAttack::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                   bool inCheck, EEUnit* inTargetUnit)
 {
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     unsigned long theTargetID = -1;
     long theResult = EECalamityClass::CanCastAt(inUnit, inLocation, inX, inY, inCheck, inTargetUnit);
     if (theResult == 2)
@@ -97,7 +100,7 @@ long EECCSpecialAttack::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, 
         if (theTarget != NULL && this->IsValidTarget(inUnit, theTarget))
             theResult = 0;
     }
-    return theResult;
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, theResult);
 }
 
 // FUNCTION: EXE 0x4b333f

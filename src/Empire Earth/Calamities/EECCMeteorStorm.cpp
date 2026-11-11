@@ -18,6 +18,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -187,13 +188,17 @@ long EECCMeteorStorm::Update(EECalamity* inCalamity, float inElapsedTime)
     inCalamity->SetTimeAlive(theTimeAlive);
     if (theTimeAlive < this->mLifeTime) {
         if (theTimeAlive > inCalamity->GetFloatPlaceHolder1()) {
+            EECalamityCaptureEvent(kCalamityOpLaunchMeteor);   // CALW (TEST ONLY)
             this->LaunchMeteor(inCalamity);
             float theNextLaunch = inCalamity->GetFloatPlaceHolder1();
             float theRandom = gPhysics->mRandom.Generate();
+            EECalamityCaptureEvent(kCalamityOpRandom, 0, 0, theRandom);   // CALW (TEST ONLY)
             inCalamity->SetFloatPlaceHolder1(theNextLaunch + (this->mMinimumInterval + (this->mMaximumInterval - this->mMinimumInterval) * theRandom));
             if (inCalamity->GetFloatPlaceHolder2() < theTimeAlive) {
                 this->PlaySound(inCalamity);
-                inCalamity->SetFloatPlaceHolder2(gPhysics->GetRandom(500.0f, 2000.0f) + theTimeAlive);
+                float theDelay = gPhysics->GetRandom(500.0f, 2000.0f);
+                EECalamityCaptureEvent(kCalamityOpRandom, 1, 0, theDelay);   // CALW (TEST ONLY)
+                inCalamity->SetFloatPlaceHolder2(theDelay + theTimeAlive);
             }
         }
     } else

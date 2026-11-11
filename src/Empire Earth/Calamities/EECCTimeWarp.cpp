@@ -16,6 +16,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -349,6 +350,7 @@ long EECCTimeWarp::Update(EECalamity* inCalamity, float inElapsedTime)
         if (inCalamity->GetTimeAlive() - inElapsedTime < this->mDepartTime && inCalamity->GetTimeAlive() >= this->mDepartTime) {
             theUnit->GetPosition(theLocation);
             theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
+            EECalamityCaptureEvent(kCalamityOpWarpTint);   // CALW (TEST ONLY)
             theUnit->SetIsTinted(true);
             this->PlayEffect(theLocation, inCalamity, true);
         }
@@ -357,19 +359,23 @@ long EECCTimeWarp::Update(EECalamity* inCalamity, float inElapsedTime)
             theLocation.SetZ(theUnit->GetEffectHeight(true) * 0.5f + theLocation.GetZ());
             gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect4, NULL);
             if (inCalamity->mEffectHandle != kNoEffectHandle) {
+                EECalamityCaptureEvent(kCalamityOpDestroyEffect, inCalamity->mEffectHandle.mValue);   // CALW (TEST ONLY)
                 gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
                 inCalamity->mEffectHandle = kNoEffectHandle;
             }
+            EECalamityCaptureEvent(kCalamityOpWarpDepart);   // CALW (TEST ONLY)
             this->Depart(inCalamity);
             inCalamity->mBoolPlaceHolder1 = true;
         }
         if (inCalamity->GetTimeAlive() >= this->mLifeTime - this->mAwayTime && !inCalamity->mBoolPlaceHolder2) {
+            EECalamityCaptureEvent(kCalamityOpWarpReturn);   // CALW (TEST ONLY)
             this->Return(inCalamity);
             inCalamity->mBoolPlaceHolder2 = true;
         }
         if (theUnit->mIsTinted) {
             inCalamity->mFloatPlaceHolder1 -= inElapsedTime;
             if (inCalamity->mFloatPlaceHolder1 <= 0.0f) {
+                EECalamityCaptureEvent(kCalamityOpWarpBlink);   // CALW (TEST ONLY)
                 if (theUnit->mColor == sWarpColor)
                     theUnit->SetColor(sBlackColor);
                 else

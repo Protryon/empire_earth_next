@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -183,6 +184,7 @@ long EECCLeprosy::Update(EECalamity* inCalamity, float inElapsedTime)
 {
     long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, inCalamity->mIntPlaceHolder1);
     if (inCalamity->GetTimeAlive() >= this->mEffect1Duration && !inCalamity->mBoolPlaceHolder1) {
+        EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
         this->ApplyEffect(inCalamity);
         inCalamity->mBoolPlaceHolder1 = true;
     }

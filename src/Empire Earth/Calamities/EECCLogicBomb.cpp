@@ -16,6 +16,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/GEModel.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -198,6 +199,7 @@ long EECCLogicBomb::Update(EECalamity* inCalamity, float inElapsedTime)
     if (inCalamity->GetTimeAlive() >= this->mEffectTime2 && !inCalamity->GetBoolPlaceHolder1()) {
         inCalamity->SetBoolPlaceHolder1(true);
         if (this->mGraphicEffect2 != NULL) {
+            EECalamityCaptureEvent(kCalamityOpLogicBombMark);   // CALW (TEST ONLY)
             inCalamity->GetTargetLocation(theLocation);
             AdjustLocation(inCalamity, &theLocation);
             theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + 0.05f);
@@ -206,6 +208,7 @@ long EECCLogicBomb::Update(EECalamity* inCalamity, float inElapsedTime)
     }
     if (inCalamity->GetTimeAlive() >= this->mEffectTime3 && !inCalamity->GetBoolPlaceHolder2()) {
         inCalamity->SetBoolPlaceHolder2(true);
+        EECalamityCaptureEvent(kCalamityOpLogicBombDisable);   // CALW (TEST ONLY)
         EEUnit* theTargetUnit = NULL;
         if (inCalamity->GetTargetUnit(theTargetUnit)) {
             EEComplexUnit* theUnit = theTargetUnit->GetComplexUnit();

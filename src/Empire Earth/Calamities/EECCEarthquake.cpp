@@ -18,6 +18,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -265,12 +266,15 @@ void EECCEarthquake::ShakeCamera(EECalamity* inCalamity, float inElapsedTime)
     float theTime = inCalamity->GetFloatPlaceHolder1() + inElapsedTime;
     if (theTime > this->mShakeInterval) {
         theTime -= this->mShakeInterval;
-        float theAngle = gPhysics->GetRandom() * 6.2831855f - 3.1415927f;
+        float theRandom = gPhysics->GetRandom();
+        EECalamityCaptureEvent(kCalamityOpRandom, 0, 0, theRandom);   // CALW (TEST ONLY)
+        float theAngle = theRandom * 6.2831855f - 3.1415927f;
         if (inCalamity->GetEpicenterFactor() >= 0.11f) {
             EEPlayer* thePlayer = ::gWorld.GetCurrentPlayer();
             if (!thePlayer->mEarthquakeShaken) {
                 thePlayer->mEarthquakeShaken = true;
                 float theAmplitude = (this->mShake * inElapsedTime) * inCalamity->GetEpicenterFactor();
+                EECalamityCaptureEvent(kCalamityOpShake, 0, 0, theAngle, theAmplitude);   // CALW (TEST ONLY)
                 ::gWorld.mCameraControl.GetLocation(::gWorld.mCameraControl.mFraction, theLocation);
                 theLocation.mX += UMCos(theAngle) * theAmplitude;
                 theLocation.SetY(theLocation.GetY() + UMCos(1.5707964f - theAngle) * theAmplitude);
@@ -301,6 +305,7 @@ long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
     float theNewTime = theTime + theElapsed;
     float theRadius = max(0.0f, min((theTime - theDelay) * this->mSpeed, this->mRadius));
     if (theNewTime >= theDelay && !inCalamity->mBoolPlaceHolder1) {
+        EECalamityCaptureEvent(kCalamityOpCracks);   // CALW (TEST ONLY)
         this->CreateCracks(inCalamity);
         inCalamity->mBoolPlaceHolder1 = true;
     }
@@ -312,7 +317,9 @@ long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
                                     * theTicks);
             inCalamity->mIntPlaceHolder1 -= this->mTickTime * theTicks;
             theLocation = inCalamity->mTargetLocation;
-            if (EEGetUnitsNear(theLocation, theRadius, theUnits) > 0) {
+            long theNear = EEGetUnitsNear(theLocation, theRadius, theUnits);
+            EECalamityCaptureEvent(kCalamityOpUnitsNear, theNear);   // CALW (TEST ONLY)
+            if (theNear > 0) {
                 for (long i = theUnits.size() - 1; i >= 0; i--) {
                     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
                     if (!theUnit->mUnitClass->IsLandBuilding() || !(theUnit->mHitPoints > 0)
@@ -320,6 +327,7 @@ long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
                         continue;
                     bool theProtected = false;
                     if (this->mIsBlockedByImmunity && theUnit->GetEffect(3, theEffect)) {
+                        EECalamityCaptureEvent(kCalamityOpImmune, theUnit->mUnitID);   // CALW (TEST ONLY)
                         if (theEffect != NULL)
                             gWorld.GetEffectManager()->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
                         theProtected = true;
@@ -334,6 +342,8 @@ long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
                             continue;
                         theDamagedCarriers.push_back(theUnit->GetOutermostCarrier());
                     }
+                    EECalamityCaptureEvent(kCalamityOpTakeHit, theUnit->mUnitID, theDamage,
+                                           (float)inCalamity->GetPlayerNumber(), this->mIsBlockedByImmunity ? 2.0f : 3.0f);   // CALW (TEST ONLY)
                     theUnit->TakeHit(theCaster, theDamage, inCalamity->GetPlayerNumber(), this->mIsBlockedByImmunity ? 2 : 3);
                 }
             }

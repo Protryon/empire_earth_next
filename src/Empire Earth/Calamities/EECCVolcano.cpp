@@ -37,6 +37,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 
 const float kTwoPi = 6.2831855f;
 const float kPi = 3.1415927f;
@@ -331,6 +332,7 @@ long EECCVolcano::Update(EECalamity* inCalamity, float inElapsedTime)
             inCalamity->GetTargetUnit(theVolcano);
             gEffectManager->CreateUnitEffect(theVolcano, this->mGraphicEffect3, NULL, 0, 0, 0);
             theResult = gEffectManager->CreateUnitEffect(theVolcano, this->mGraphicEffect2, NULL, 0, 0, 0);
+            EECalamityCaptureEvent(kCalamityOpCreateVolcano, theResult);   // CALW (TEST ONLY)
         }
     }
     if (theTimeAlive > this->mLifeTime)

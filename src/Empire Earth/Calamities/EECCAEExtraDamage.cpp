@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -139,11 +140,13 @@ long EECCAEExtraDamage::Update(EECalamity* inCalamity, float inElapsedTime)
             theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + 0.05f);
             EEEffectHandle theEffectHandle;
             gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect2, &theEffectHandle);
+            EECalamityCaptureEvent(kCalamityOpPlacedEffect, theEffectHandle.mValue, 0, theLocation.mX, theLocation.mZ);   // CALW (TEST ONLY)
             inCalamity->mEffectHandle = theEffectHandle;
         }
     }
     if (inCalamity->GetTimeAlive() >= this->mEffect2Time && !inCalamity->mBoolPlaceHolder2) {
         inCalamity->mBoolPlaceHolder2 = true;
+        EECalamityCaptureEvent(kCalamityOpApplyEffect);   // CALW (TEST ONLY)
         this->ApplyEffect(inCalamity);
     }
     return theResult;

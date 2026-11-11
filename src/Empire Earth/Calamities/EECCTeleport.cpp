@@ -16,6 +16,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -223,12 +224,15 @@ long EECCTeleport::Update(EECalamity* inCalamity, float inElapsedTime)
         this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, false);
     if (theCaster->mHitPoints > 0) {
         if (inCalamity->GetTimeAlive() >= this->mHoldTime && !inCalamity->mBoolPlaceHolder1) {
+            EECalamityCaptureEvent(kCalamityOpHold);   // CALW (TEST ONLY)
             this->HoldCaster(inCalamity);
             inCalamity->mBoolPlaceHolder1 = true;
         }
         if (inCalamity->GetTimeAlive() >= this->mLifeTime - this->mHoldTime && !inCalamity->mBoolPlaceHolder2) {
-            if (inCalamity->mCasterUnit != NULL)
+            if (inCalamity->mCasterUnit != NULL) {
+                EECalamityCaptureEvent(kCalamityOpTeleport);   // CALW (TEST ONLY)
                 this->Teleport(inCalamity);
+            }
             inCalamity->mBoolPlaceHolder2 = true;
         }
     } else
