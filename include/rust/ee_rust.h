@@ -4540,6 +4540,16 @@ struct EeWonInitErrors {
   bool allow_ignore;
 };
 
+/// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
+/// the operand threw).
+struct EeWonExprHost {
+  void *ctx;
+  void (*skip_whitespace)(void *ctx);
+  uint8_t (*peek)(void *ctx);
+  void (*advance)(void *ctx, int32_t n);
+  bool (*int_value)(void *ctx, int32_t *out);
+};
+
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
 
@@ -11871,6 +11881,20 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `out` is writable.
+int32_t ee_won_cfg_expr(const EeWonExprHost *host, int32_t level, int32_t *out);
+
+bool ee_won_cfg_name_char(int8_t c);
+
+/// `name_kind` over `len` bytes: the kind, the offset into `out_at`.
+///
+/// # Safety
+/// `name` holds `len` bytes (or is NULL with 0); `out_at` is writable.
+int32_t ee_won_cfg_name_kind(const uint8_t *name, size_t len, size_t *out_at);
 
 /// `combo_list_size` into the outs.
 ///

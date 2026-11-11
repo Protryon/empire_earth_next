@@ -436,6 +436,9 @@ WON_TESTS = {
     # WONGUI's multi-column lists and tree rows (the column resizes and places, the header's buttons, sorts and
     # resize edges, the tree's +/- box and child places), the original's statements against ee_won's guimulti module
     "won_guimulti_test": [],
+    # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
+    # guicfg module (the port's exception-carrying wrapper included)
+    "won_guicfg_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
