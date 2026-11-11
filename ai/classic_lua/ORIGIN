@@ -45,7 +45,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
                 ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteSeaType (main.lua: a random
                 warship class trainable now that passes IsFavoriteSea). NOT STARTED: the favourite
-                air and space types, Regroup's island fishing rule beyond mUsesFishing, ChooseUnitsToKill.
+                air and space types, Regroup's island fishing rule beyond mUsesFishing.
                 DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
                 and factories train (the favourite screener's AI lines are not exposed).
   EECPCivilizationManager.cpp
@@ -163,13 +163,14 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
                 one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
-                the free pool is the soldiers the engine holds. ENGINE: RetireObsoleteUnits. NOT STARTED:
-                KillUnitsForMilitary, UnloadTransport.
+                the free pool is the soldiers the engine holds; KillUnitsForMilitary every 30 s (ChooseUnitsToKill's
+                citizens over the citizen share of the population limit deleted, the idle first). ENGINE:
+                RetireObsoleteUnits. NOT STARTED: its transports' rule, UnloadTransport.
   EECPIntelligence.cpp, EECPIArmy.cpp
                 PARTLY -> army.lua: the player files (every 30 s from ai.memory: military, gatherers, the military's
                 unit types, the land buildings), the armies (land units with attack joined within 12 tiles of an
-                army's bounds, strength the classes' influence). DEVIATION (fog): the C++ files read every unit of a
-                player; the port's enemy armies are those seen now, its counts the most remembered at once and at
+                army's bounds, strength the classes' influence). with the manifest's sees_all the C++'s own file (ai.player_file: every unit of
+                the player, seen or not); without it, DEVIATION (fog): the C++ files read every unit of a player; the port's enemy armies are those seen now, its counts the most remembered at once and at
                 least the own counts (a group is sized as against a mirror of the player when little is known).
   EECPDefenseCommander.cpp, EECPMilitaryAidPackage.cpp
                 PARTLY -> army.lua: Update every 8 s with defence enabled (from the player id + 5 s), UpdatePackages
