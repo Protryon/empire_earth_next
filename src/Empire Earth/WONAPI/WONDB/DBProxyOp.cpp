@@ -57,8 +57,8 @@ WONStatus DBProxyOp::CheckResponse()
     unsigned char aFlags=aReply.ReadByte();
     if (aHeader!=5 || aService!=14)
         return this->InvalidReplyHeader();
-    if (aReply.mPos<aReply.length())
-        this->mReceivedData.AppendBytes(aReply.mData+aReply.mPos,aReply.length()-aReply.mPos);
+    if (aReply.pos()<aReply.length())
+        this->mReceivedData.AppendBytes(aReply.data()+aReply.pos(),aReply.length()-aReply.pos());
     if ((aFlags&0x80)!=0) {
         this->mReplyData=this->mReceivedData.ToByteBuffer(true);
         return aStatus;

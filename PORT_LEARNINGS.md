@@ -6684,3 +6684,65 @@ Branch `rust-won-net1`. The owner keeps WON's Internet-only code and ports it as
   `mTracker.KillAll`, `ByteBuffer(data, length, false)`, `ReadBufferException`, `WideAppendUtf16LE`,
   `WideAppendUtf16Unit`, `WONTickCount`; and IPAddr's public members `mAddr`, `mIsValid`, `mHost`,
   `mRememberHostString` (ServerContext's value conversion).
+
+## R6: WON's first whole classes: the buffers, WONStatus, Thread, TimerThread and AsyncOpContainer as Rust objects (ee_won buffer.rs, thread.rs; branch rust-r6-won12, 2026-11-11)
+
+Round 12 of R6 (RUST_PLAN "R6 WON, the rest"), the first round of the owner's decision that WON becomes wholly
+internal to Rust: whole classes move, bottom-up; a Rust object owns the state, and the C++ class is deleted or
+reduced to a thin shim while C++ callers remain. The Internet services (WONDir, DB, Routing, Server, Misc,
+Internal, GetCertOp, peer auth) are kept and ported by a second lane (branch `rust-won-net1`); the network layer
+below them keeps its C++ API as shims over the Rust objects.
+
+- **What moved.** `ByteBuffer` (a `RefCount` shim holding an `EeWonByteBuffer`: owned bytes, possibly a view into a
+  writer's former allocation, or none for `ByteBuffer(NULL)`), `WriteBuffer` (holding an `EeWonWriteBuffer`: the
+  capacity's growth from 32, doubling, `ReserveChunk`'s cap, 6 spare bytes in front for the prefix, `ToByteBuffer`'s
+  prefix and hand-over), `ReadBuffer` (embedding its `EeWonReadBuffer` by value, a view over bytes it does not own:
+  the bound, the sign-extended length fields; the shim throws `ReadBufferException`), all in `buffer.rs`;
+  `WONStatusToString` (an inline shim over `ee_won_status_text`, a thread's own buffer for unnamed statuses);
+  `ThreadBase`/`Thread` (an `EeWonThread`: the run flags, priority, auto-reset signal, platform thread and its id;
+  the object's thread calls the C++ `ThreadFunc` back, inside the crash dump's SEH filter on Windows, and deletes an
+  auto-deleting thread after it), `TimerThread` (wholly an `EeWonTimerThread`: the two deadline maps, which op holds
+  which entry (the original kept the multimap iterator in the op: `AsyncOp::mTimerQueue`/`mTimerKey` are gone), the
+  lock, the thread's loop), `AsyncOpContainer` (wholly an `EeWonOpContainer`: the queue, the op being pumped, the
+  lock, the signal, the pump and the purge), in `thread.rs`. Deleted: ByteBuffer.cpp (with `OffsetByteBuffer`),
+  ReadBuffer.cpp, WriteBuffer.cpp, WONStatus.cpp, Thread.cpp, TimerThread.cpp, AsyncOpContainer.cpp, and the C ABI
+  of the queues the C++ drove before (`ee_won_timers_*`, `ee_won_opqueue_*`, `ee_won_pump_plan_*`,
+  `ee_won_read_*`, `ee_won_write_*`, `ee_won_encode_length`, `ee_won_length_prefix`).
+- **Same locks, same threads, same order.** The Rust objects lock with the platform's recursive mutex (the C++
+  `CriticalSection` was one) and wait on the platform's events (whose waits follow the harness clock), so the ops'
+  callbacks (`Finish(WS_TimedOut)`, `Kill(true)`, `StartRunAsync`, `Complete`, the references) run under the same
+  locks, on the same threads, in the same order as the statements they replace. A std `Mutex` would have deadlocked
+  the first op whose `Finish` queues itself back into the container it is pumped from.
+- **The goldens, recorded first.** `won_buffer_test` (3103 steps: every append, growth, reserve, chunk, set, prefix
+  size and hand-over, the reads, their throws and what a throw leaves in the string) and `won_asyncop_test` (128
+  events with every op's reference count: queued, pumped, finished from outside, rerun, killed with and without
+  finishing, the op being pumped queuing itself, the pump's op limit, run immediately, blocking, a zero timeout, the
+  purge, ops at the container's deletion; timers due, replaced, removed, purged, on the thread, after a stop, at the
+  thread's deletion; a thread's start, `InThisThread`, stop, priority and auto-delete) were recorded over the
+  unmodified C++ classes, committed before the move, and print the same over the Rust objects (the asyncop driver
+  20 runs out of 20; its two lines reading the threads' protected flag and signal go through the shim's
+  `IsStopped`/`WaitForSignal` now). `buffer_golden` replays the buffer script whole in Rust. Driver traps:
+  `new[]` is zero-filled in the buffer driver (a growth's bytes were indeterminate); a reader position past the end
+  is not asked (the bound wraps and reads outside the buffer, as before); the auto-deleting thread logs from itself
+  (the log needs a lock).
+- **Mechanical edits outside the lane** (the lead coordinates them with `rust-won-net1`): the readers of
+  `ReadBuffer::mPos/mData/mLength` and `WriteBuffer::mData/mLength` use `pos()`, `data()`, `length()` (or
+  `Available()` where the original compared signed): WONAuth AuthSession, GetCertOp, PeerAuthClient,
+  PeerAuthServer; WONDB DBProxyOp, ProfileData; WONMisc DetectFirewallOp. No other service file changed.
+- **Behaviour changes.** A growth's, `SetSize`'s or `SkipBytes`' new bytes are zero (indeterminate before); a
+  `SetBytes` past the allocation stops the game (it wrote outside it); `ReadRawWString`'s byte count no longer wraps
+  at 32 bits on Windows (it read outside the buffer); `WriteBuffer::Release` is `Reset` (nobody took the allocation
+  any more: `ToByteBuffer(true)` hands it to the byte buffer); `AddTimerOp` takes the op's new reference before
+  dropping the old entry's (the original released first: a timer entry holding the last reference would have
+  freed the op it then used); a `ByteBuffer` made with `inTakeOwnership` copies the bytes and frees the caller's array at once; the
+  thread's platform handle is closed with its object (it was never closed).
+- **Not moved, and why.** `AsyncOp` keeps its members: about 30 service files of the other lane read `mRunMode`,
+  `mKilled`, `mStatus` directly, so moving its state into a Rust object needs a coordinated accessor change first
+  (`IsAsync()`, `IsKilled()`, `GetStatus()`); its transitions are Rust's since round 3. The socket core (IPAddr,
+  AsyncSocket, the socket ops, RecvCRMsgOp, SocketThread, BlockingSocket, QueueSocket, LobbyLanSocket) is the next
+  round's.
+- **What runs it.** Every lobby load reads its files through `ReadBuffer`/`WriteBuffer` (the saved settings) and
+  starts WONAPICore's timer and socket threads and its op container; the LAN game adds every lobby and game-room
+  message (`WriteBuffer` built, `ReadBuffer` read), the LAN socket ops queued and completed through the container,
+  the broadcast and join timeouts through the timer thread. EE-SIM never loads the lobby: the oracle cannot see a
+  fault here; the lead's LAN game is the end-to-end check.

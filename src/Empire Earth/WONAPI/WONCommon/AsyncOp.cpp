@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONTimerThread.h"
 namespace WONAPI {
 // The run state's transitions are Rust's (rust/crates/ee_won/src/asyncop.rs OpState, ee_won_op_*): each method
 // copies the members into an EeWonOpState under mLock, asks Rust what to do, copies the result back and acts
@@ -24,8 +25,6 @@ AsyncOp::AsyncOp()
     EeWonOpState aState;
     ee_won_op_state_init(&aState);
     this->SetState(aState);
-    this->mTimerQueue=NULL;
-    this->mTimerKey=0;
     this->mContainer=NULL;
 }
 // FUNCTION: WON 0x0069f000
@@ -95,10 +94,8 @@ void AsyncOp::Complete()
     bool aDeliver=ee_won_op_complete(&aState);
     this->SetState(aState);
     if(!aDeliver) return;
-    if(this->mTimerQueue!=NULL) {
-        lock.Leave();
-        WONAPICore::RemoveTimerOp(this);
-    } else lock.Leave();
+    lock.Leave();
+    WONAPICore::RemoveTimerOp(this);   // (no entry: nothing; the timer thread knows the op's entry)
     this->CleanupHook();
     SmartPtr<CompletionBase<AsyncOpPtr> > completion=this->mCompletion;
     if(completion.get()!=NULL) completion->Complete(this);
@@ -192,3 +189,60 @@ DWORD AsyncOp::RealTimeLeft()
 // (void __cdecl std::_Construct(struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> > *,struct std::pair<unsigned long co)
 // TEMPLATE: WON 0x00769eb0
 // (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<uns)
+
+// ---- the C++ side of the Rust thread, timer thread and op container (ee_won thread.rs): their calls into the
+// objects they hold (Thread.cpp, TimerThread.cpp and AsyncOpContainer.cpp are deleted)
+namespace WONAPI {
+// the thread's body: ThreadFunc, with the crash dump's SEH filter on Windows (elsewhere there is no SEH)
+void ThreadBase::RunThreadFunc(void* inThread)
+{
+    ThreadBase* aThread=static_cast<ThreadBase*>(inThread);
+#ifdef _WIN32
+    __try {
+        aThread->ThreadFunc();
+    } __except(WONDebug::DumpStackToFile(GetExceptionInformation())) {
+    }
+#else
+    aThread->ThreadFunc();
+#endif
+}
+void ThreadBase::DeleteThread(void* inThread) { delete static_cast<ThreadBase*>(inThread); }
+ThreadBase::ThreadBase()
+{
+    EeWonThreadBody aBody={&ThreadBase::RunThreadFunc,&ThreadBase::DeleteThread,this};
+    this->mThread=ee_won_thread_new(aBody);
+}
+
+// a due op times out; a purged one is killed; then the timer's reference goes
+static void TimerOpDue(void*,void* inOp)
+{
+    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
+    anOp->Finish(WS_TimedOut);
+    anOp->Release();
+}
+static void TimerOpPurged(void*,void* inOp)
+{
+    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
+    anOp->Kill(true);
+    anOp->Release();
+}
+TimerThread::TimerThread()
+{
+    EeWonTimerHooks aHooks={TimerOpDue,TimerOpPurged,NULL};
+    this->mTimer=ee_won_timer_thread_new(aHooks);
+}
+
+static void OpAddRef(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->AddRef(); }
+static void OpRelease(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Release(); }
+static bool OpIsPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->mStatus==WS_Pending; }
+static bool OpCompletionPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->mCompletionPending; }
+static void OpStartRunAsync(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->StartRunAsync(); }
+static void OpComplete(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Complete(); }
+static void OpKill(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Kill(true); }
+AsyncOpContainer::AsyncOpContainer()
+{
+    EeWonContainerHooks aHooks={OpAddRef,OpRelease,OpIsPending,OpCompletionPending,OpStartRunAsync,OpComplete,OpKill,
+                                NULL};
+    this->mContainer=ee_won_container_new(aHooks);
+}
+}

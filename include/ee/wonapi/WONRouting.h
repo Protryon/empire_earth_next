@@ -25,8 +25,9 @@ void StringToUpperCaseInPlace(std::string&); //2a69a0
 typedef long RoutingOpType;
 enum AuthType { AUTH_TYPE_NONE=0, AUTH_TYPE_SESSION=1, AUTH_TYPE_PERSISTENT=2, AUTH_TYPE_PERSISTENT_NOCRYPT=3 };
 
-// 0x29deb0 (WONStatus.cpp, the first WONAPI object): the status text
-const char* WONStatusToString(WONStatus inStatus);
+// the status text (ee_won's status table; WONStatus.cpp, 0x29deb0, is deleted): a WS_ name, or a number valid until
+// this thread's next unnamed status
+inline const char* WONStatusToString(WONStatus inStatus) { return ee_won_status_text(inStatus); }
 
 // WON's millisecond tick (was GetTickCount): real time, wraps every 2^32 ms like GetTickCount; compare by unsigned
 // 32-bit difference
@@ -40,7 +41,7 @@ class AsyncOpContainer;
 
 // AsyncOp: 0x44 bytes; ctor 29ef80, dtor 29f000, three vtable slots. The run state's transitions are Rust's
 // (rust/crates/ee_won/src/asyncop.rs: GetState / SetState copy the members in and out under mLock); the timer
-// thread's entry of the op is a key into its Rust queue (mTimerQueue, mTimerKey: the original's multimap iterator)
+// thread's entry of the op is the Rust timer thread's (thread.rs)
 class AsyncOp : public RefCount {
 public:
     WONStatus Run(long inMode,unsigned long inTimeout);      //29f500, returns the status
@@ -110,8 +111,7 @@ public:
     bool mCompletionPending;                // +0x38
     bool mKilled;                           // +0x39
     bool mRunAsyncImmediately;              // +0x3a; byte3b is normalalignment
-    EeWonTimerQueue* mTimerQueue;           // +0x3c, nonowning: the timer thread's queue holding the op (NULL: none)
-    uint64_t mTimerKey;                     // +0x40 the op's entry in it
+    // (the original's timer entry, +0x3c: the timer thread's, ee_won thread.rs EeWonTimerThread)
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
@@ -128,19 +128,21 @@ public:
         {return PlatEventWait(this->mEvent,(uint32_t)milliseconds)==0;}
     PlatEvent* mEvent; //04
 };
-// AsyncOpContainer: 0x38 bytes, only a virtual destructor. Ctor 29f730, dtor 29f830
+// AsyncOpContainer: a Rust object (ee_won thread.rs EeWonOpContainer: the queue holding a reference per op, the op
+// being pumped, the lock, the signal, the pump and the purge) behind this shim; each op's steps come back through
+// AsyncOp.cpp's hooks. The original unit (AsyncOpContainer.cpp) is deleted.
 class AsyncOpContainer {
 public:
     AsyncOpContainer();
-    virtual ~AsyncOpContainer();
-    void QueueOp(AsyncOp*); //29f9b0
-    void PurgeOps(); //29f900
-    void Pump(unsigned long,int inMaxOps=0); //29fad0
-    CriticalSection mDataCrit; //04..1c
-    Event mSignal; //1c..24
-    EeWonOpQueue* mOpQueue; //24..30 (the original's std::list<AsyncOpPtr>: Rust's, holding a reference per op)
-    AsyncOpPtr mCurPumpOp; //30
-    bool mPurging; //34; naturalpadding35..37
+    virtual ~AsyncOpContainer() { ee_won_container_free(this->mContainer); }
+    void QueueOp(AsyncOp* inOp) { ee_won_container_queue(this->mContainer,inOp); }
+    void PurgeOps() { ee_won_container_purge(this->mContainer); }
+    void Pump(unsigned long inWaitTime,int inMaxOps=0)
+    { ee_won_container_pump(this->mContainer,static_cast<uint32_t>(inWaitTime),inMaxOps); }
+    EeWonOpContainer* mContainer;
+private:
+    AsyncOpContainer(const AsyncOpContainer&);
+    AsyncOpContainer& operator=(const AsyncOpContainer&);
 };
 
 class SocketOp;
@@ -2243,28 +2245,41 @@ public:
 // ThreadBase 0x14 / Thread 0x1c. Event (8 bytes) comes from AsyncOpContainer above.
 // Base ctor 2a6c10 and base dtor 2a6c80; DNSThread allocation 0x20 at 2d980a.
 enum ThreadPriority { ThreadPriority_Highest,ThreadPriority_High,ThreadPriority_Normal,ThreadPriority_Low,ThreadPriority_Lowest };
+// ThreadBase / Thread: a Rust object (ee_won thread.rs EeWonThread: the run flags, priority, signal event and the
+// platform thread) behind these shims; the object's thread calls the virtual ThreadFunc (and deletes an
+// auto-deleting thread after it). The original units (Thread.cpp: the start, stop and priority hooks) are deleted.
 class ThreadBase {
 protected:
-    virtual void StartHook(); //slot00 2a6c50
-    virtual void WaitForStopHook(); //slot04 empty 326b60
-    virtual bool InThisThreadHook(); //slot08 false 30a7b0
-    virtual void SetPriorityHook(); //slot0c empty 326b60
-    virtual void ThreadFunc()=0; //slot10 pure
+    virtual void ThreadFunc()=0;
 public:
-    ThreadBase(); //2a6c10, stopped1/running0/autodelete0/priority2/Event auto reset
-    virtual ~ThreadBase(); //slot14 2a6c80 ordinary
-    virtual void Signal(); //slot18 2a6cf0
-    void Start(); //2a6ca0
-    void Stop(bool waitForStop=true); //2a6cc0
-    bool InThisThread(); //2a6d00
-    void WaitForStop(); //2a6d10
-    void SetPriority(ThreadPriority thePriority); //priority update gated by state (WON SDK)
+    ThreadBase();
+    virtual ~ThreadBase() { ee_won_thread_free(this->mThread); }
+    virtual void Signal() { ee_won_thread_signal(this->mThread); }
+    void Start() { ee_won_thread_start(this->mThread); }
+    // marks the thread stopped, signals it and waits for it when asked (nothing when it was stopped)
+    void Stop(bool waitForStop=true)
+    {
+        if(!ee_won_thread_mark_stopped(this->mThread))
+            return;
+        this->Signal();
+        if(waitForStop)
+            this->WaitForStop();
+    }
+    bool InThisThread() { return ee_won_thread_in_this_thread(this->mThread); }
+    void WaitForStop() { ee_won_thread_wait_for_stop(this->mThread); }
+    void SetPriority(ThreadPriority thePriority)
+    { ee_won_thread_set_priority(this->mThread,static_cast<int32_t>(thePriority)); }
 protected:
-    bool mStopped; //04
-    bool mRunning; //05
-    bool mAutoDelete; //06,naturalpadding07
-    Event mSignalEvent; //08..10
-    ThreadPriority mPriority; //10..14
+    // the original's mStopped and mSignalEvent, as a ThreadFunc reads them
+    bool IsStopped() const { return ee_won_thread_is_stopped(this->mThread); }
+    bool WaitForSignal(unsigned long inMilliseconds)
+    { return ee_won_thread_wait_signal(this->mThread,static_cast<uint32_t>(inMilliseconds)); }
+    EeWonThread* mThread;
+private:
+    ThreadBase(const ThreadBase&);
+    ThreadBase& operator=(const ThreadBase&);
+    static void RunThreadFunc(void* inThread);     // the Rust thread's body (AsyncOp.cpp: the crash dump's SEH filter)
+    static void DeleteThread(void* inThread);
 };
 // WON SDK static-only diagnostics API; no instance fields, bases, or virtual slots.
 class WONDebug {
@@ -2274,17 +2289,8 @@ public:
     static int DumpStackToFile(void *theInfo = NULL);
 };
 class Thread : public ThreadBase {
-  private:
-    static uint32_t StaticThreadFunc(void*); //2a85e0
-  protected:
-    virtual void StartHook(); //slot00 2a8670
-    virtual void WaitForStopHook(); //slot04 2a86c0
-    virtual bool InThisThreadHook(); //slot08 2a86d0
-    virtual void SetPriorityHook(); //slot0c 2a86f0
-    PlatThread* mThreadHandle; //14
-    uint32_t mThreadId; //18, StartHook writes the thread id to a stack variable, not this member, in this version
 public:
-    void SetAutoDelete(bool inAutoDelete) { this->mAutoDelete=inAutoDelete; }
+    void SetAutoDelete(bool inAutoDelete) { ee_won_thread_set_auto_delete(this->mThread,inAutoDelete); }
 };
 class DNSTestOp : public AsyncOp {
     friend class DNSTestThread;
