@@ -41,6 +41,9 @@
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
+#include "ee/EECPAttackGroup.h"
+#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
@@ -428,10 +431,32 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
             : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : (theClass->mDomains & kMovementSea) ? 'n' : 's';
     }
+    // the classic's sub-group holding it (EECPAttackCommander::FindHolder, read only): its id and mission, its task
+    // (type:mode) and that task's distance; the group's task (type:mode) - which of the classic's groups it served
+    long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
+    long theGroupType = -1, theGroupMode = -1;
+    if (inPlayer->mCombatManager != NULL && inPlayer->mCombatManager->mAttackCommander != NULL) {
+        EECPAttackSubGroup* theHolder = inPlayer->mCombatManager->mAttackCommander->FindHolder(inUnit);
+        if (theHolder != NULL) {
+            theGroup = (long)theHolder->mID;
+            theMission = theHolder->mMission;
+            theTaskType = theHolder->mTask.mIsActive ? theHolder->mTask.mType : -1;
+            theTaskMode = theHolder->mTask.mMode;
+            if (theHolder->mTask.mIsActive && theX != -10000) {
+                long theDX = theHolder->mTask.mLocation.mTile.mX - theX, theDY = theHolder->mTask.mLocation.mTile.mY - theY;
+                theTaskDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+            }
+            if (theHolder->mGroup != NULL) {
+                theGroupType = theHolder->mGroup->mTask.mType;
+                theGroupMode = theHolder->mGroup->mTask.mMode;
+            }
+        }
+    }
     EECPTraceScope theScope("cp");
-    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld",
+    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
         EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
-        theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance);
+        theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance,
+        theGroup, theMission, theTaskType, theTaskMode, theTaskDistance, theGroupType, theGroupMode);
 }
 
 // A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
