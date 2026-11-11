@@ -1515,14 +1515,25 @@ function M.step(view, memory)
     attack(view, memory)
     drop_spent(view, memory)
     -- (a sub-group waiting for its first units is no lib.groups group yet: lib.groups drops empty groups)
-    local parked = {}
+    local parked, waiting = {}, {}
     for _, g in ipairs(G.all(a)) do
-        if #g.units == 0 and #(g.slots or {}) > 0 then
-            parked[#parked + 1] = g
-            a.groups[g.id] = nil
+        if #(g.slots or {}) > 0 then
+            if #g.units == 0 then
+                parked[#parked + 1] = g
+                a.groups[g.id] = nil
+            else
+                waiting[#waiting + 1] = g
+            end
         end
     end
     G.step(view, a)
+    -- (a waiting group whose last units died in the step keeps its slots)
+    for _, g in ipairs(waiting) do
+        if a.groups[g.id] == nil then
+            g.units, g.aims = {}, {}
+            parked[#parked + 1] = g
+        end
+    end
     for _, g in ipairs(parked) do
         a.groups[g.id] = g
     end
