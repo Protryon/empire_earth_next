@@ -58,6 +58,14 @@ function M.cost(class)
     return ai.class(class) ~= nil and ai.class(class).cost or (c.cost or {})
 end
 
+-- the cost the needs ledger counts (EECPResourceManager::AddCosts: the tech's listed cost, ScaleCost'ed; GetCost's
+-- epoch and upgrade factors left out - the future research sentinel's listed cost is what pulls the classic's
+-- first gatherers to stone and iron)
+function M.ledger_cost(class)
+    local c = R.class_of(class)
+    return c.data_cost or c.cost or {}
+end
+
 local function sum_cost(cost)
     local s = 0
     for _, r in ipairs(RES) do
@@ -329,7 +337,7 @@ function M.request(view, memory, class, n)
     if list == nil then
         return
     end
-    local cost = M.cost(class)
+    local cost = M.ledger_cost(class)
     for _, q in ipairs(list) do
         if q.class == class then
             R.add_costs(memory, cost, n)
