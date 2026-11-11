@@ -52,6 +52,9 @@ local PLAN = {
         patches = 5,
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
+        -- (balanced's standing army: a quarter of the citizens, at least 10; against a fixed 20 it lost fewer citizens
+        -- in every matchup, AI_RESEARCH §8.39)
+        army_per = 25, army_floor = 10,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
         settlements = 12,       -- (§8.36: every worked mine has its own)
@@ -70,7 +73,7 @@ local PLAN = {
         food = 18,
         patches = 5,
         hunt = 8,
-        soldiers = 20, soldiers_max = 40,
+        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 10,
         barracks_at = 10,
         towers = 10,
         settlements = 14,
