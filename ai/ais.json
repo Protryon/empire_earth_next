@@ -15,6 +15,13 @@
       "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing; the navy, the landings and the towns; the diplomacy (war answered, opinions, peace, alliance blocks, vassals, capitulation)."
     },
     {
+      "id": "rush",
+      "name": "Rush",
+      "script": "rush",
+      "random": false,
+      "description": "An early army from two barracks, raids on the enemy's gatherers and waves at its town from the Prehistoric; falls back to a boom when two waves are lost (a test opponent for the other AIs' defence)."
+    },
+    {
       "id": "classic_lua",
       "name": "Classic (Lua)",
       "script": "classic_lua.main",
