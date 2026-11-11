@@ -193,6 +193,9 @@ def main():
     ap.add_argument("--exe", type=pathlib.Path, default=DEFAULT_EXE)
     ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS: the next engine's scripts read from this "
                                                             "folder first (e.g. ai, the checkout's)")
+    ap.add_argument("--keep-stage", action="store_true",
+                    help="keep a named --slot's stage after the run (by default it is deleted when the game exits: "
+                         "the stages of the oracle's, captures' and saveload's per-run slots once filled the disk)")
     ap.add_argument("args", nargs=argparse.REMAINDER, help="EE-SIM.exe's options (after --)")
     a = ap.parse_args()
     args = a.args[1:] if a.args[:1] == ["--"] else a.args
@@ -204,7 +207,12 @@ def main():
     stage = prepare(a.data, a.slot, sets)
     cfg = stage / "config.yaml"
     cfg.unlink(missing_ok=True)   # a fresh config.yaml per run
-    sys.exit(subprocess.run(command(a.exe, stage, args, cfg)).returncode)
+    code = subprocess.run(command(a.exe, stage, args, cfg)).returncode
+    # a named slot is one run's (sim_oracle, sim_capture, saveload name theirs per run and seed); its outputs (traces,
+    # reports, captures, saves) are written outside it, so it goes with the run. "default" stays, as before.
+    if a.slot != "default" and not a.keep_stage and stage.resolve().parent == STAGES.resolve():
+        shutil.rmtree(stage, ignore_errors=True)
+    sys.exit(code)
 
 
 if __name__ == "__main__":
