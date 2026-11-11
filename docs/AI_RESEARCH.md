@@ -3380,6 +3380,48 @@ Readings:
 Next: why the port's army outgrows the C++'s under classic with the cheats (its groups' slots and the sea shares),
 the C++ fleet's edge at sea, then ChooseUnitsToKill, the special units, guard posts, walls.
 
+### 8.46 The classic computer player in Lua: the garrison cheat, and why its army outgrew the C++'s (2026-11-11, EE-SIM)
+
+Under classic with the cheats the port's citizens trailed (35 against 51 at 20 minutes) and its army was 2-3 times
+the C++'s. With the cost cheat (cost100=1) a citizen costs nothing; the town centre's 28 s per citizen sets the pace.
+A trace of the C++'s StartProduction showed it training at a capitol and one, then two town centres from minute 5:
+its FillGarrison sends the idle citizens into a settlement and **tops the rest of the garrison up with no
+citizens** (EEComplexUnit::AddGarrison(count + room)), so a settlement becomes a town centre for 1-4 citizens every
+town_center_upgrade_timer (5) minutes. The port could only garrison citizens it had, found few idle ones, and never
+upgraded a settlement.
+
+Ported as a second explicit capability, `"fills_garrison"` (AI_LUA_UNITS §11; classic_lua only, `fills_garrison=1` in
+the start line): `ai.garrison_fill(id, n)` is the original's call. The port's FillGarrison takes the waiting gatherers
+too, fills the rest once citizens are on their way, and sends new citizens to the garrison every 2 s (UnitAdded).
+
+Bench (as §8.42; before = §8.45's s1, after = g2):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced, before | classic | 23.9/2.4 / 25.8/2.7 / 30.6/6.0 / 45.7/3.3 | 1.6 / 23.4 | 20-6, 6 close |
+| balanced, before | classic_lua | 23.2/2.8 / 26.4/3.3 / 34.6/6.2 / 44.4/6.4 | 1.4 / 58.8 | 6-20 |
+| balanced, after | classic | 23.8/2.4 / 25.6/2.7 / 29.8/5.0 / 44.5/3.1 | 1.8 / 30.1 | 16-9, 7 close |
+| balanced, after | classic_lua | 23.2/2.7 / 26.3/3.3 / 35.0/5.8 / 45.0/5.7 | 1.7 / 53.0 | 9-16 |
+| classic+cheats, before | classic | 26.4/6.4 / 51.1/6.3 / 51.1/12.2 / 50.9/6.5 | 3.6 / 17.7 | 3-11, 18 close |
+| classic+cheats, before | classic_lua | 23.2/9.1 / 40.0/16.2 / 44.8/25.3 / 44.7/30.8 | 6.8 / 69.8 | 11-3 |
+| classic+cheats, after | classic | 26.3/6.4 / 50.8/6.5 / 51.0/11.4 / 50.5/6.7 | 3.7 / 23.4 | 0-8, 24 close |
+| classic+cheats, after | classic_lua | 23.2/9.4 / 50.0/13.2 / 49.6/24.5 / 49.7/25.9 | 11.2 / 97.0 | 8-0 |
+
+Readings:
+- **Classic with the cheats:** the citizens are level from 20 minutes (50 against 51); 24 games close of 32.
+- **The army gap is losses, not production.** Over the 32 games the C++ lost 6270 military units (the trace's
+  `cp losses` other) against the port's 3882 (balanced: 3450 against 1932). The C++ requests more soldiers than the
+  port (381 against 93 in seed 14 by 40 minutes) but loses them faster. Both attack equally often (4 attacks in an
+  hour in seeds 10, 14 and 18, nearly all at the empty human seat), so the losses come from the other groups' fights
+  (the defence, counter-attack and ships-to-maintain groups) - where lib.groups' fighting stands in for the
+  C++'s sub-group state machines (ORIGIN: EECPAttackSubGroup, the ASG* classes). Not yet traced to a cause: the trace
+  has no per-unit deaths for a C++ seat.
+- **Balanced:** level to 40 minutes; one script budget error (group_pop at 86 minutes, a large army).
+- Determinism: seeds 3 (classic with the cheats), 2 and 5 (balanced), 60 minutes, --repeat 2: identical.
+
+Next: a per-unit death trace for the C++ seat (where and to what its soldiers die), then the fight itself; the C++
+fleet's edge under balanced.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
