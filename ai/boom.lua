@@ -731,7 +731,10 @@ function M.step(view, memory)
         release_unkept(view, order, keep)
         memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
 
-        local tower_wanted = tower ~= nil and towers < plan.towers
+        -- (plan.towers_saving: the towers wanted once the next epoch is reserved - the reserve keeps them off its cost;
+        -- AI_RESEARCH §8.41 D3c)
+        local tower_target = saving and plan.towers_saving or plan.towers
+        local tower_wanted = tower ~= nil and towers < tower_target
         local boats_changed = (memory.boats_seen or -1) ~= view.boats
         memory.boats_seen = view.boats
         for _, r in ipairs(V.resources) do
