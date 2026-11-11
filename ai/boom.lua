@@ -468,7 +468,7 @@ function M.step(view, memory)
     local age = view.epoch < 2 and view.epoch + 1 or 3
     local plan = PLAN[age]
     if plan.army_per ~= nil then
-        plan = GD.scaled(plan, view.citizens)   -- (the light army by the workers, balanced's rule: lib.guard)
+        plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
     end
     local citizen = V.cost(view, "citizen")
     local in_epoch = (view.time - view.epoch_start) // 60000

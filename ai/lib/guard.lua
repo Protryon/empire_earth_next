@@ -196,13 +196,21 @@ end
 
 -- [balanced: military.standing_army 0.25 a worker, army_floor] a plan whose light army grows with the citizens:
 -- plan.army_per (percent of the citizens), at least plan.army_floor, at most plan.soldiers_max -> a copy of the plan
-function M.scaled(plan, citizens)
-    local n = math.max(plan.army_floor or 0, citizens * plan.army_per // 100)
+-- (AI_RESEARCH §8.50, boom-econ's finding: the improved classic reaches 180 population by minute 70 and grinds a
+-- 90-100-citizen boom down with 42-48-soldier attacks) from the epoch plan.late_epoch, plan.late_per and plan.late_max
+-- replace army_per and soldiers_max: the army grows towards the population cap in the late game
+function M.scaled(plan, citizens, epoch)
+    local per, most = plan.army_per, plan.soldiers_max
+    if plan.late_epoch ~= nil and (epoch or 0) >= plan.late_epoch then
+        per, most = plan.late_per or per, plan.late_max or most
+    end
+    local n = math.max(plan.army_floor or 0, citizens * per // 100)
     local p = {}
     for k, v in pairs(plan) do   -- (a copy: the order does not matter)
         p[k] = v
     end
-    p.soldiers = math.min(n, plan.soldiers_max)
+    p.soldiers = math.min(n, most)
+    p.soldiers_max = math.max(most, plan.soldiers_max)
     return p
 end
 
