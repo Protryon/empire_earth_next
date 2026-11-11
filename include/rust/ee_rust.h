@@ -1301,6 +1301,13 @@ enum class EeWonPrefsEventKind {
   OptionValue,
 };
 
+/// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
+enum class EeWonResKind {
+  String = 0,
+  Image = 1,
+  Sound = 2,
+};
+
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -4359,6 +4366,15 @@ struct EeWonPrefsEvent {
 
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
+struct EeWonResource {
+  const char *section;
+  const char *key;
+  const char *name;
+  EeWonResKind kind;
+  bool new_section;
+};
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -11282,6 +11298,14 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+size_t ee_won_resource_count();
+
+/// Row `index` (below `ee_won_resource_count`) into `out`; false past the end.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_resource_row(size_t index, EeWonResource *out);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///
