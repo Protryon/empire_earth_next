@@ -18,6 +18,32 @@ const UString kU2DPolygonPointCountKey("U2DPolygon-PointCount");
 // specialisation stays engine-only.
 class GE3DLine;
 
+#ifdef LLE_EXE_HEADERS
+// New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; defined in EEAIContinentCapture.cpp): the records of
+// the hulls' geometry (HULL: kind 1 SetPoints, 2 GetClosestOutlinePoint, 3 GetClosestPoints, 4 GetClosestPoint,
+// 6 Contains, 7 GetScanLines) and of the areas' (AREA, ee/EEAIArea.h). Only the outermost captured call of a thread
+// is recorded: a scope made while another is alive is not outer, so the calls an algorithm makes inside another (and
+// that leave the C++ with it) never reach the digests.
+enum {
+    kGeomCaptureHull = 0x4c4c5548,          // "HULL"
+    kGeomCaptureArea = 0x41455241,          // "AREA"
+};
+class EEGeomCaptureScope {
+public:
+    EEGeomCaptureScope();                   // mOuter: the capture is on and no other scope is alive on this thread
+    ~EEGeomCaptureScope();
+    bool mOuter;
+};
+void EEGeomCaptureBegin(unsigned int inTag, unsigned int inKind);
+void EEGeomCaptureValue(long inValue);
+void EEGeomCaptureFloat(float inValue);
+void EEGeomCapturePoint(const U2DPoint<long>& inPoint);
+// inWhole: the count and every point; else the count and an FNV-1a hash of the points (a hull's identity)
+void EEGeomCapturePoints(const std::vector<U2DPoint<long> >& inPoints, bool inWhole);
+void EEGeomCaptureRows(const std::map<long, std::pair<long, long> >& inRows);
+void EEGeomCaptureCommit();
+#endif
+
 #ifdef LOWLEVELENGINE_EXPORTS
 
 // Inferred: an explicit std::less for the point type. U2DPolygon<T>::Sort's sort(.., less<U2DPoint<T> >()) family
@@ -111,6 +137,23 @@ public:
     // earlier (about 16 EE_LOST_DEBUG units at the top reproduce it; no source for it found).
     virtual U2DPoint<T> GetClosestOutlinePoint(const U2DPoint<T>& inPoint)
     {
+#ifdef LLE_EXE_HEADERS
+        EEGeomCaptureScope theScope;
+        U2DPoint<T> theResult = this->ClosestOutlinePoint(inPoint);
+        if (theScope.mOuter) {   // TEST ONLY: HULL 2
+            EEGeomCaptureBegin(kGeomCaptureHull, 2);
+            EEGeomCapturePoints(this->mPoints, false);
+            EEGeomCapturePoint(inPoint);
+            EEGeomCapturePoint(theResult);
+            EEGeomCaptureCommit();
+        }
+        return theResult;
+#else
+        return this->ClosestOutlinePoint(inPoint);
+#endif
+    }
+    U2DPoint<T> ClosestOutlinePoint(const U2DPoint<T>& inPoint)
+    {
         U2DPoint<T> theResult;
         U2DPoint<T> theCandidate;
         GEVector theEdge;
@@ -201,6 +244,23 @@ public:
     // else branch's operator[]/operator= (about 4 units of budget short, as in GetClosestOutlinePoint).
     virtual void GetClosestPoints(U2DPolygon& inPolygon, U2DPoint<T>& outPoint, U2DPoint<T>& outOtherPoint)
     {
+#ifdef LLE_EXE_HEADERS
+        EEGeomCaptureScope theScope;
+        this->ClosestPoints(inPolygon, outPoint, outOtherPoint);
+        if (theScope.mOuter) {   // TEST ONLY: HULL 3
+            EEGeomCaptureBegin(kGeomCaptureHull, 3);
+            EEGeomCapturePoints(this->mPoints, false);
+            EEGeomCapturePoints(inPolygon.mPoints, false);
+            EEGeomCapturePoint(outPoint);
+            EEGeomCapturePoint(outOtherPoint);
+            EEGeomCaptureCommit();
+        }
+#else
+        this->ClosestPoints(inPolygon, outPoint, outOtherPoint);
+#endif
+    }
+    void ClosestPoints(U2DPolygon& inPolygon, U2DPoint<T>& outPoint, U2DPoint<T>& outOtherPoint)
+    {
         // float keys for every T (exe <long>: fldz, DistanceToSquaredF 0xe964, the tree's fld/fcomp insert 0x412af4)
         std::multimap<float, std::pair<long, long> > theDistances;
         U2DPoint<T> theOther;
@@ -247,6 +307,23 @@ public:
     // two front `end() - 1` operator- calls and inlines the loop's operator[] (ours the reverse); back() and
     // rbegin() are refused whole instead.
     virtual U2DPoint<T> GetClosestPoint(const U2DPoint<T>& inPoint)
+    {
+#ifdef LLE_EXE_HEADERS
+        EEGeomCaptureScope theScope;
+        U2DPoint<T> theResult = this->ClosestPoint(inPoint);
+        if (theScope.mOuter) {   // TEST ONLY: HULL 4
+            EEGeomCaptureBegin(kGeomCaptureHull, 4);
+            EEGeomCapturePoints(this->mPoints, false);
+            EEGeomCapturePoint(inPoint);
+            EEGeomCapturePoint(theResult);
+            EEGeomCaptureCommit();
+        }
+        return theResult;
+#else
+        return this->ClosestPoint(inPoint);
+#endif
+    }
+    U2DPoint<T> ClosestPoint(const U2DPoint<T>& inPoint)
     {
         U2DPoint<T> theResult;
         T theBest;
@@ -405,6 +482,7 @@ public:
     U2DPoint<T>* GetPoint(long inIndex) { return &this->mPoints[inIndex]; }  // inline (0x1002feb7 is vector::operator[])
     unsigned long GetPointCount() { return this->mPoints.size(); }      // 0x1002ffe4
     const U2DPoint<T>& GetCenter() const { return this->mCenter; }  // exe (EECPDefenseCommander reads a town's) (provisional name)
+    const std::vector<U2DPoint<T> >& GetPoints() const { return this->mPoints; }   // New (port)
 
 protected:
     std::vector<U2DPoint<T> > mPoints;      // +0x04
@@ -593,6 +671,9 @@ public:
 #endif
     virtual void SetPoints(const std::vector<U2DPoint<T> >& inPoints, bool inIsSorted)   // slot 2 (0x1002f795)
     {
+#ifdef LLE_EXE_HEADERS
+        EEGeomCaptureScope theScope;
+#endif
         long i;
         this->Clear();
         this->mPoints.resize(inPoints.size());
@@ -609,6 +690,21 @@ public:
         }
         this->Compute(inIsSorted);
         this->ComputeArea();
+#ifdef LLE_EXE_HEADERS
+        if (theScope.mOuter) {   // TEST ONLY: HULL 1, the input and the whole hull
+            EEGeomCaptureBegin(kGeomCaptureHull, 1);
+            EEGeomCaptureValue(inIsSorted);
+            EEGeomCapturePoints(inPoints, true);
+            EEGeomCapturePoints(this->mPoints, true);
+            EEGeomCaptureValue(this->mBounds.mBottom);
+            EEGeomCaptureValue(this->mBounds.mLeft);
+            EEGeomCaptureValue(this->mBounds.mRight);
+            EEGeomCaptureValue(this->mBounds.mTop);
+            EEGeomCapturePoint(this->mCenter);
+            EEGeomCaptureFloat(this->mArea);
+            EEGeomCaptureCommit();
+        }
+#endif
     }
     virtual long Load(FSFile& inFile) { return U2DPolygon<T>::Load(inFile); }   // slot 9 (0x1002fc0a)
     virtual long Save(FSFile& inFile) { return U2DPolygon<T>::Save(inFile); }   // slot 10 (0x1002fd14)
@@ -628,6 +724,9 @@ public:
 #endif
     virtual bool Contains(const U2DPoint<T>& inPoint)   // slot 11 (0x1002fd20)
     {
+#ifdef LLE_EXE_HEADERS
+        EEGeomCaptureScope theScope;
+#endif
         long theCount = this->mPoints.size();
         bool theResult = theCount != 0;
         for (long i = 0; theResult && i < theCount; i++) {
@@ -635,6 +734,15 @@ public:
             const U2DPoint<T>& theStart = this->mPoints[i];
             theResult = inPoint.GetSide(theStart, theEnd) <= 0;
         }
+#ifdef LLE_EXE_HEADERS
+        if (theScope.mOuter) {   // TEST ONLY: HULL 6
+            EEGeomCaptureBegin(kGeomCaptureHull, 6);
+            EEGeomCapturePoints(this->mPoints, false);
+            EEGeomCapturePoint(inPoint);
+            EEGeomCaptureValue(theResult);
+            EEGeomCaptureCommit();
+        }
+#endif
         return theResult;
     }
     // slot 14 (0x1002f917): the tile rows the outline covers, row -> (first x, last x)
@@ -655,6 +763,14 @@ public:
             theEdge.SetDirection(GEVector(theEnd.GetX() - theStart.GetX(), theEnd.GetY() - theStart.GetY(), 0.0f));
             this->AddScanLine(theEdge, outRows);
         }
+#ifdef LLE_EXE_HEADERS
+        if (EEGeomCaptureScope().mOuter) {   // TEST ONLY: HULL 7, the rows after the call
+            EEGeomCaptureBegin(kGeomCaptureHull, 7);
+            EEGeomCapturePoints(this->mPoints, false);
+            EEGeomCaptureRows(outRows);
+            EEGeomCaptureCommit();
+        }
+#endif
     }
     // slot 15 (0x1002f9eb): walks the tiles under one edge
     virtual void AddScanLine(const GE3DLine& inEdge, std::map<long, std::pair<long, long> >& ioRows)

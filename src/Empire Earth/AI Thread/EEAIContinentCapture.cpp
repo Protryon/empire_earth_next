@@ -327,3 +327,76 @@ void EEAIContinentCapture(unsigned long inTag)
     }
     theRecord.Commit();
 }
+
+// The hulls' and the areas' geometry records (lle/U2DPolygon.h, kGeomCaptureHull / kGeomCaptureArea): one open record
+// and the scope depth per thread
+static thread_local long sGeomCaptureDepth = 0;
+static thread_local EESimCaptureRecord* sGeomCaptureRecord = NULL;
+
+EEGeomCaptureScope::EEGeomCaptureScope() : mOuter(sGeomCaptureDepth == 0 && EESimCaptureRecord::Active())
+{
+    sGeomCaptureDepth++;
+}
+
+EEGeomCaptureScope::~EEGeomCaptureScope()
+{
+    sGeomCaptureDepth--;
+}
+
+void EEGeomCaptureBegin(unsigned int inTag, unsigned int inKind)
+{
+    delete sGeomCaptureRecord;
+    sGeomCaptureRecord = new EESimCaptureRecord(inTag);
+    sGeomCaptureRecord->U32(inKind);
+}
+
+void EEGeomCaptureValue(long inValue)
+{
+    sGeomCaptureRecord->I32((int)inValue);
+}
+
+void EEGeomCaptureFloat(float inValue)
+{
+    sGeomCaptureRecord->F32(inValue);
+}
+
+void EEGeomCapturePoint(const U2DPoint<long>& inPoint)
+{
+    sGeomCaptureRecord->I32((int)inPoint.mX);
+    sGeomCaptureRecord->I32((int)inPoint.mY);
+}
+
+void EEGeomCapturePoints(const std::vector<U2DPoint<long> >& inPoints, bool inWhole)
+{
+    sGeomCaptureRecord->I32((int)inPoints.size());
+    if (inWhole) {
+        for (size_t i = 0; i < inPoints.size(); i++)
+            EEGeomCapturePoint(inPoints[i]);
+        return;
+    }
+    unsigned int theHash = 0x811c9dc5u;
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        int theValues[2] = {(int)inPoints[i].mX, (int)inPoints[i].mY};
+        const unsigned char* theBytes = (const unsigned char*)theValues;
+        for (size_t j = 0; j < sizeof(theValues); j++)
+            theHash = (theHash ^ theBytes[j]) * 0x01000193u;
+    }
+    sGeomCaptureRecord->U32(theHash);
+}
+
+void EEGeomCaptureRows(const std::map<long, std::pair<long, long> >& inRows)
+{
+    sGeomCaptureRecord->I32((int)inRows.size());
+    for (std::map<long, std::pair<long, long> >::const_iterator theIt = inRows.begin(); theIt != inRows.end(); ++theIt) {
+        sGeomCaptureRecord->I32((int)theIt->first);
+        sGeomCaptureRecord->I32((int)theIt->second.first);
+        sGeomCaptureRecord->I32((int)theIt->second.second);
+    }
+}
+
+void EEGeomCaptureCommit()
+{
+    sGeomCaptureRecord->Commit();
+    delete sGeomCaptureRecord;
+    sGeomCaptureRecord = NULL;
+}

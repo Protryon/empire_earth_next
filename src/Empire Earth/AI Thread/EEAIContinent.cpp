@@ -76,6 +76,7 @@ void EEAIContinent::AddPathAreaID(unsigned short inID)
 // back to the area version when the other is not a continent or either has no shore. Returns success
 bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
 {
+    EEGeomCaptureScope theScope;
     EEAIContinent* theOther = dynamic_cast<EEAIContinent*>(inOther);
     U2DPoint<long> theCandidate;
     bool theResult;
@@ -106,6 +107,17 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
             theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
     } else
         theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
+    if (theScope.mOuter) {   // TEST ONLY: AREA 2
+        EEGeomCaptureBegin(kGeomCaptureArea, 2);
+        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCaptureValue(theOther != NULL);
+        EEGeomCaptureValue(inOther->mTiles.Size());
+        EEGeomCapturePoints(inOther->mHull.GetPoints(), false);
+        EEGeomCaptureValue(theResult);
+        EEGeomCapturePoint(outThis);
+        EEGeomCapturePoint(outOther);
+        EEGeomCaptureCommit();
+    }
     return theResult;
 }
 
@@ -143,6 +155,23 @@ void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<lon
 // with a neighbour in one of those water bodies; all shore tiles when the list is empty or holds a 0
 void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
                               long inKind)
+{
+    EEGeomCaptureScope theScope;
+    this->ShoreInRegions(inIDs, outTiles, inKind);
+    if (theScope.mOuter) {   // TEST ONLY: AREA 6
+        EEGeomCaptureBegin(kGeomCaptureArea, 6);
+        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCaptureValue((long)inIDs.size());
+        for (size_t i = 0; i < inIDs.size(); i++)
+            EEGeomCaptureValue(inIDs[i]);
+        EEGeomCaptureValue(inKind);
+        EEGeomCapturePoints(outTiles, false);
+        EEGeomCaptureCommit();
+    }
+}
+
+void EEAIContinent::ShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
+                                   long inKind)
 {
     EETileCoordinate theNeighbor;
     long theZeros;
