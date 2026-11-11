@@ -117,6 +117,86 @@ constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
 /// Neither: no target.
 constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
 
+/// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
+/// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
+/// complex unit may be missing).
+/// `IsCandidate`: an enemy's live unit (not disabled unless protected).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CANDIDATE = 1;
+
+/// The candidate's owner is player 0 (nature).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_NATURE = 2;
+
+/// `EEIsAttackedBy(unit, candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ATTACKED_BY = 3;
+
+/// The candidate's class is a wall and not a tower.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_WALL = 4;
+
+/// `EECanTargetClass(unit, candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS = 5;
+
+/// The candidate (its complex unit) `IsFoundation`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_FOUNDATION = 6;
+
+/// `EEIsSeenBy(candidate, unit's player, true)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_SEEN = 7;
+
+/// `unit->IsOnOtherContinentThan(candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_OTHER_CONTINENT = 8;
+
+/// The candidate's class `IsPartLeftOut(candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT = 9;
+
+/// The unit's (`EESearchTargetAlongList`) or the candidate's (`EESearchTarget`) class `IsPriest`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PRIEST = 10;
+
+/// `EECanPriestConvert(unit, candidate)` (false for a list unit without a complex unit).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_PRIEST_CONVERT = 11;
+
+/// `unit->CanAttackClass(candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_ATTACK_CLASS = 12;
+
+/// The unit has ignored targets and `IsTargetIgnored(candidate, true)` (which may drop expired ones).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_IGNORED = 13;
+
+/// The candidate's goal attacks the unit.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT = 14;
+
+/// The candidate's owner is the unit's player or not its enemy.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_NOT_ENEMY = 15;
+
+/// The candidate class's technology in its owner's tree is of kind 6.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_TECH_KIND_6 = 16;
+
+/// The candidate's hit points are positive.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ALIVE = 17;
+
+/// The candidate pursues the unit (`EEGetPursuerOf`): a complex unit, no projectile, whose goal attacks the unit or
+/// gathers from it.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PURSUES = 18;
+
+/// The outcome of one candidate in the capture's trace (`SearchHost::trace`).
+/// Rejected by a test.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_REJECTED = 0;
+
+/// A large unit scored already (`EESearchTarget`'s scratch list).
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_SCORED = 1;
+
+/// Scored, not better than the best.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_NOT_BETTER = 2;
+
+/// Reachable: the best so far.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_BEST = 3;
+
+/// Not reachable: ignored by the unit from now on.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_IGNORED = 4;
+
+/// Of the targeting table's preferred unit type (`EESearchTargetAlongList`: the search ends on it).
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_PREFERRED = 5;
+
+/// `kUnitType14AntiMissileBattery`: always scored as a still target.
+constexpr static const int32_t EE_COMBAT_ANTI_MISSILE_BATTERY = 741;
+
 /// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
 /// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
 /// call's `inArg6` is false; no technology: -1).
@@ -2947,6 +3027,86 @@ struct EeCombatDamageRowOut {
   float base[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
+};
+
+/// A search's result: the best target (0 for none), its score, and whether the search ended early.
+struct EeCombatSearchOut {
+  uint64_t best;
+  int32_t score;
+  int32_t done;
+};
+
+/// A search's inputs: the searching unit's stats and tile, the search's tile, area and scale, and the targeting
+/// table (`EEAIUnitTargetingTable::sTable`, three rows of ten).
+struct EeCombatSearchIn {
+  /// its stats' `GetAttack`, `GetMaxVelocity`, `GetRange`; its `GetLineOfSight`
+  float attack;
+  float max_velocity;
+  float range;
+  float reach;
+  float scale;
+  /// its class's `mMinRange`
+  float min_range;
+  /// its class's `mIsMelee`, `mShootsHigh`; its stats' `mCanFireOverWalls`
+  int32_t melee;
+  int32_t shoots_high;
+  int32_t over_walls;
+  /// its tile
+  int32_t unit_x;
+  int32_t unit_y;
+  /// the search's tile
+  int32_t x;
+  int32_t y;
+  /// `EESearchTarget`: the area (inclusive), the unit regions' size, the physics' tick value, the unit's location
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+  int32_t region_size;
+  int32_t tick_random;
+  float position_x;
+  float position_y;
+  /// the targeting table, row by row
+  int32_t table[30];
+};
+
+/// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
+struct EeCombatSearchTarget {
+  /// its class's `mTileSize > 1`
+  int32_t multiple;
+  /// its class's `mUnitType`
+  int32_t unit_type;
+  /// its stats' attack and maximum velocity
+  float attack;
+  float max_velocity;
+};
+
+/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
+/// function of the right type.
+struct EeCombatSearchHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
+  uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
+  int32_t (*dummy_head)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  void (*target)(void *ctx, uint64_t unit, EeCombatSearchTarget *out);
+  float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
+  float (*attack_factor)(void *ctx, uint64_t unit);
+  int32_t (*line_blocked)(void *ctx, uint64_t unit);
+  int32_t (*reachable)(void *ctx, uint64_t unit);
+  void (*ignore)(void *ctx, uint64_t unit);
+  void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
 };
 
 /// `EECanConvert`'s result and its out flag (written only when `flag_written`).
@@ -7899,6 +8059,21 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EESearchTarget`.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+EeCombatSearchOut ee_combat_search_target(const EeCombatSearchIn *input,
+                                          const EeCombatSearchHost *host);
+
+/// `EESearchTargetAlongList` from `unit` (the searching unit's handle in the list).
+///
+/// # Safety
+/// As `ee_combat_search_target`.
+EeCombatSearchOut ee_combat_search_along_list(const EeCombatSearchIn *input,
+                                              uint64_t unit,
+                                              const EeCombatSearchHost *host);
 
 /// `EECanConvert`.
 ///

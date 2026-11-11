@@ -15,6 +15,10 @@
 pub mod capture;
 pub mod decide;
 pub mod ffi;
+pub mod search;
+pub mod search_ffi;
+#[cfg(test)]
+mod search_tests;
 #[cfg(test)]
 mod tests;
 pub mod walks;
