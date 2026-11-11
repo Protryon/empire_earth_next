@@ -3020,6 +3020,28 @@ dropped 1-2 games a row):
   - D4 and D5 both move citizens more often and add defeats. D5 halves the Copper Age games against the cheating
     classic (3 against 8).
 
+**D2 on 64 seeds; D3b and D3c (2026-11-11).** The same protocol. Seeds 34-65 were added to the baseline and to D2.
+D3b and D3c are each one switch over D2, against D2's 32-seed rows above.
+
+| Experiment | Matchup | Seeds | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 2-65 | 13/64 | 1/52/11 | 63, 23.8 | 40, 61.5 | 108.1 |
+| | cheating classic | 2-65 | 28/64 | 17/38/9 | 46, 29.4 | 19, 71.8 | 76.1 |
+| D2 wave flight | improved classic | 2-65 | 10/64 | 1/55/8 | 63, 23.8 | 40, 62.4 | 111.5 |
+| | cheating classic | 2-65 | 28/64 | 18/36/10 | 46, 29.6 | 18, 72.3 | 77.1 |
+| D3b D2 + the towers from 6 citizens (`tower_at = 6`) | improved classic | 2-33 | 7/32 | 0/26/6 | 32, 24.0 | 22, 62.3 | 113.0 |
+| | cheating classic | 2-33 | 17/31 | 4/18/9 | 23, 29.1 | 7, 81.8 | 75.3 |
+| D3c D2 + a fourth tower once the next epoch is reserved (`towers_saving = 4`) | improved classic | 2-33 | 9/32 | 0/27/5 | 32, 24.9 | 18, 62.4 | 115.2 |
+| | cheating classic | 2-33 | 17/32 | 8/18/6 | 23, 29.3 | 11, 77.9 | 73.9 |
+
+- **D2 holds on 64 seeds:** 10 defeats against 13 by the improved classic, 28 against 28 by the cheating one. Kept.
+- **D3b and D3c add defeats against both classics** (7 and 9 against 4; 17 and 17 against 12). Both are off; no
+  64-seed run.
+  - Earlier towers and a fourth tower reach the Stone Age in every game against the improved classic. They also lose
+    fewer citizens against the cheating classic.
+  - But more towns are wiped out later. The tower spending, or the towers at the town that the plan builds first,
+    does not stop the waves that kill the town.
+
 **Open.**
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
