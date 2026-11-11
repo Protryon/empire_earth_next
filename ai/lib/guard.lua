@@ -1,4 +1,4 @@
--- The home guard over the per-unit interface (docs/AI_LUA_UNITS.md §3; docs/AI_RESEARCH.md §8.39).
+-- The home guard over the per-unit interface (docs/AI_LUA_UNITS.md §3; docs/AI_RESEARCH.md §8.40).
 -- require("lib.guard"). Generic: any script may use it; the numbers are options.
 --
 --   GD.step(view, mem, opts)   every strategy step: the free soldiers join the guard (a manual lib.groups group of

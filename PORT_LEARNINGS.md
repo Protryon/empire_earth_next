@@ -1924,7 +1924,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
 
-## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.39)
+## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.40)
 
 - **A unit killed arrives as a `converted` event, never as `died`.** `EECPUnitsOnTaken` calls a unit converted when
   its hit points are above 0, but `EEComplexUnit::Kill` calls `UnitTaken` before it zeroes them; a priest's

@@ -915,7 +915,7 @@ node for). The view has `epoch2_cost` (the epoch after the next: the copper plan
 gathers (an `EEUGGather` goal on a live resource, e.g. just given by `ai.gather`) to the engine's gatherer list of
 that resource, so the runners count it where it works. Without the option (as before) only an idle unit rejoins
 them, on the idle list, and a released gatherer was on no list until its resource ran out. `lib.defence` sends the
-citizens that fled a raid back to their spot this way (AI_RESEARCH §8.39).
+citizens that fled a raid back to their spot this way (AI_RESEARCH §8.40).
 
 **The classic port's queries (2026-11-10, `ai/classic_lua/`, its ORIGIN map):** what the classic computer player reads
 from data, so that a script can make its decisions with the same numbers:
