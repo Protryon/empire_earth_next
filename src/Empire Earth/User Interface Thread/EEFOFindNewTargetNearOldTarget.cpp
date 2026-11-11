@@ -4793,265 +4793,37 @@ void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint
 // Collects the tiles of a line, walking in from both ends (optionally the end tiles and 4-connected)
 // The tiles of the line (inX1, inY1)-(inX2, inY2): a symmetric double-step rasteriser that walks in from both ends
 // (inEnds: the two end tiles too; !inThin: the extra tiles that make the line 4-connected), in order from (inX1, inY1)
-// TEST ONLY (the CBTL capture): the call's ends and flags, then the tiles
-static void EEGetTileLineOriginal(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles,
-                                  bool inEnds, bool inThin);
-
+// (new: the rasteriser is ee_combat's tile_line)
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles, bool inEnds,
                 bool inThin)
 {
-    EEGetTileLineOriginal(inX1, inY1, inX2, inY2, outTiles, inEnds, inThin);
-    if (EESimCaptureRecord::Active()) {
-        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'T', 'L'));
-        int32_t theIn[6] = {(int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin};
-        theRecord.Bytes(theIn, sizeof(theIn));
-        theRecord.I32((int32_t)outTiles->size());
-        for (size_t i = 0; i < outTiles->size(); i++) {
-            theRecord.I32((int32_t)(*outTiles)[i].mX);
-            theRecord.I32((int32_t)(*outTiles)[i].mY);
-        }
-        theRecord.Commit();
-    }
-}
-
-static void EEGetTileLineOriginal(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles,
-                                  bool inEnds, bool inThin)
-{
-    long theSwap;
-    long theIncrement1;
-    long theD;
-    long i;
-    long theHalf2;
-    std::vector<U2DPoint<long> > theBack;
-    std::vector<U2DPoint<long> > theFront;
     long theDX = inX1 - inX2;
     if (theDX < 0)
         theDX = -theDX;
     long theDY = inY1 - inY2;
     if (theDY < 0)
         theDY = -theDY;
-    bool theForward = false;
-    theBack.reserve(theDY + theDX);
-    theFront.reserve(theDY + theDX);
-    long theSignX = inX2 - inX1 >= 0 ? 1 : -1;
-    long theLengthX = (inX2 - inX1) * theSignX;
-    long theSignY = inY2 - inY1 >= 0 ? 1 : -1;
-    long theLengthY = (inY2 - inY1) * theSignY;
-    long theStep = theSignX != theSignY ? -1 : 1;
-    long theSteep;
-    if (theLengthY > theLengthX) {
-        theSwap = inX1;
-        inX1 = inY1;
-        inY1 = theSwap;
-        theSwap = inX2;
-        inX2 = inY2;
-        inY2 = theSwap;
-        theSwap = theLengthX;
-        theLengthX = theLengthY;
-        theLengthY = theSwap;
-        theSteep = 1;
-    } else {
-        theSteep = 0;
-    }
-    long theX;
-    long theY;
-    long theEndX;
-    long theEndY;
-    if (inX1 > inX2) {
-        theX = inX2;
-        theY = inY2;
-        theEndX = inX1;
-        theEndY = inY1;
-    } else {
-        theX = inX1;
-        theY = inY1;
-        theEndX = inX2;
-        theEndY = inY2;
-        theForward = true;
-    }
-    long theQuads = (theLengthX - 1) / 4;
-    long theLeft = (theLengthX - 1) % 4;
-    if (inEnds) {
-        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-    }
-    if (!inThin && theLeft == 0 && theQuads == 0 && theLengthX == 1 && theLengthY == 1)
-        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-    long theHalf = theLengthY * 2;
-    long theIncrement2 = (theHalf - theLengthX) * 2;
-    if (theLeft >= 0) {
-        if (theIncrement2 < 0) {
-            theIncrement1 = theLengthY * 4;
-            theD = theIncrement1 - theLengthX;
-            for (i = 0; i < theQuads; i++) {
-                theX++;
-                theEndX--;
-                if (theD < 0) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                    if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theD += theIncrement1;
-                } else {
-                    if (theD < theHalf) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX) : U2DPoint<long>(theX, theY + theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX) : U2DPoint<long>(theEndX, theEndY - theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    }
-                    theD += theIncrement2;
-                }
-            }
-            if (theLeft != 0) {
-                if (theD < 0) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    if (theLeft > 1)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                } else if (theD < theHalf) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    if (theLeft > 1) {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 1) : U2DPoint<long>(theX + 1, theY + theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                    }
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                    if (theLeft > 1)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                }
-            }
-        } else {
-            theHalf2 = (theLengthY - theLengthX) * 2;
-            theD = theLengthX + (theLengthY - theLengthX) * 4;
-            for (i = 0; i < theQuads; i++) {
-                theX++;
-                theEndX--;
-                if (theD < 1) {
-                    if (theD < theHalf2) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    }
-                    theD += theIncrement2;
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX) : U2DPoint<long>(theX, theY + theStep));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                    if (!inThin)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                    if (!inThin)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX) : U2DPoint<long>(theEndX, theEndY - theStep));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                    theD += (theLengthY - theLengthX) * 4;
-                    if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                }
-            }
-            if (theLeft != 0) {
-                if (theD < 1) {
-                    if (theD < theHalf2) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        if (theLeft > 1) {
-                            if (!inThin)
-                                theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 1) : U2DPoint<long>(theX + 1, theY + theStep));
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        }
-                        if (theLeft > 2)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                        if (theLeft > 1) {
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                            if (!inThin)
-                                theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        }
-                        if (theLeft > 2) {
-                            if (theD > theHalf2) {
-                                if (!inThin)
-                                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                                theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                            } else {
-                                theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                            }
-                        }
-                    }
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 1) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep + theStep));
-                        if (theLeft > 2)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                    }
-                }
-            }
-        }
+    // a line has at most two tiles a step, and its two ends
+    std::vector<int32_t> thePairs((size_t)(theDX + theDY) * 4 + 8);
+    uint32_t theCapacity = (uint32_t)(thePairs.size() / 2);
+    uint32_t theCount = ee_combat_tile_line((int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin,
+                                            (int32_t(*)[2])&thePairs[0], theCapacity);
+    if (theCount > theCapacity) {
+        thePairs.resize((size_t)theCount * 2);
+        ee_combat_tile_line((int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin,
+                            (int32_t(*)[2])&thePairs[0], theCount);
     }
     outTiles->clear();
-    outTiles->reserve(theFront.size() + theBack.size());
-    *outTiles = theForward ? theFront : theBack;
-    if (theForward) {
-        for (i = theBack.size() - 1; i >= 0; i--)
-            outTiles->push_back(theBack[i]);
-    } else {
-        for (i = theFront.size() - 1; i >= 0; i--)
-            outTiles->push_back(theFront[i]);
+    outTiles->reserve(theCount);
+    for (uint32_t i = 0; i < theCount; i++)
+        outTiles->push_back(U2DPoint<long>(thePairs[i * 2], thePairs[i * 2 + 1]));
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'T', 'L'));
+        int32_t theIn[6] = {(int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin};
+        theRecord.Bytes(theIn, sizeof(theIn));
+        theRecord.I32((int32_t)theCount);
+        theRecord.Bytes(&thePairs[0], theCount * 8);
+        theRecord.Commit();
     }
 }
 
@@ -6239,31 +6011,17 @@ struct EELineOfFireHost {
     std::vector<int32_t> mPairs;
 };
 
-// TEST ONLY (the golden of the CBWP capture): the start height's inputs as the original reads them (kind 0: bare,
-// 1: a turret model's point, 2: the list's point, 3: the box's top), the model chain's transforms, the height
-struct EEWeaponCaptureIn {
-    int32_t kind, list_present;
-    float location[16];
-    float scale;
-    int32_t turret;
-    float yaw;
-    float point[3];
-    float top[3];
-    int32_t chain;
-};
-static float EELineOfFireStartHeightOriginal(void* inContext, int32_t inBare);
-
+// the shot's start: the shooter's height, or (not bare) its weapon tag point's. The model's data at its frame is
+// gathered here (the tag point, the model chain's transforms, the turret's yaw, the box); the arithmetic is ee_combat's
+// weapon_height (geometry.rs)
 static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
 {
-    float theHeight = EELineOfFireStartHeightOriginal(inContext, inBare);
-    if (!EESimCaptureRecord::Active())
-        return theHeight;
     EEComplexUnit* theUnit = ((EELineOfFireHost*)inContext)->mUnit->GetComplexUnit();
-    EEWeaponCaptureIn in = {};
+    EeCombatWeaponIn in = {};
     std::vector<float> theChain;
     memcpy(in.location, theUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
     if (inBare) {
-        in.kind = 0;
+        in.kind = EE_COMBAT_WEAPON_KIND_BARE;
     } else {
         EEModel* theModel = ((EELineOfFireHost*)inContext)->mUnit->GetModel();
         EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
@@ -6273,19 +6031,18 @@ static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
         in.scale = theUnit->mPhysicalModel.GetScale();
         EETagPoint* thePoint = NULL;
         if (theModel->GetNumParts() > 0) {
-            in.kind = 1;
+            in.kind = EE_COMBAT_WEAPON_KIND_TURRET;
             unsigned long thePart;
-            thePoint = theList->GetTagPoint(theIndex);
-            if (theModel->FindTurretPart(thePoint->mModel, thePart) == 0) {
+            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0) {
                 in.turret = 1;
                 in.yaw = theUnit->mTurretAngles[thePart];
             }
             thePoint = *(theList->mPoints.begin() + theIndex);
         } else if (theList != NULL && theList->mPoints.size() > theIndex) {
-            in.kind = 2;
+            in.kind = EE_COMBAT_WEAPON_KIND_POINT;
             thePoint = theList->GetTagPoint(theIndex);
         } else {
-            in.kind = 3;
+            in.kind = EE_COMBAT_WEAPON_KIND_BOX;
             const GE3DPoint& theTop = theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
             in.top[0] = theTop.GetX();
             in.top[1] = theTop.GetY();
@@ -6303,53 +6060,14 @@ static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
             }
         }
     }
-    EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'W', 'P'));
-    theRecord.Bytes(&in, sizeof(in));
-    if (!theChain.empty())
-        theRecord.F32s(&theChain[0], (unsigned int)theChain.size());
-    theRecord.F32(theHeight);
-    theRecord.Commit();
-    return theHeight;
-}
-
-// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
-static float EELineOfFireStartHeightOriginal(void* inContext, int32_t inBare)
-{
-    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
-    EEComplexUnit* inUnit = theHost->mUnit;
-    GE3DPoint theStart;
-    GETransformation theTransformation;
-    GETransformation theOrientation;
-    unsigned long thePart;
-    float theHeight;
-    theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
-    if (!inBare) {
-        theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
-        float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
-        EEModel* theModel = inUnit->GetModel();
-        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
-        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-        unsigned long theIndex = theUnit->mWeaponTagPoint;
-        EETagPointList::Scale(theTransformation, theScale);
-        if (theModel->GetNumParts() > 0) {
-            theOrientation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
-                theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
-            (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
-        } else if (theList != NULL && theList->mPoints.size() > theIndex) {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-        } else {
-            theUnit = inUnit->GetComplexUnit();
-            const GE3DPoint& theTop =
-                theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
-            theStart.SetX(theTop.GetX());
-            theStart.SetY(theTop.GetY());
-            theStart.SetZ(theTop.GetZ() * 0.5f);
-            theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
-        }
-        if (theList != NULL)
-            theHeight = theStart.GetZ();
+    float theHeight = ee_combat_weapon_height(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'W', 'P'));
+        theRecord.Bytes(&in, sizeof(in));
+        if (!theChain.empty())
+            theRecord.F32s(&theChain[0], (unsigned int)theChain.size());
+        theRecord.F32(theHeight);
+        theRecord.Commit();
     }
     return theHeight;
 }

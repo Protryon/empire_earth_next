@@ -117,6 +117,20 @@ constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
 /// Neither: no target.
 constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
 
+/// The start height's case, as the C++ finds it.
+/// Bare (a melee shooter): its location's z.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BARE = 0;
+
+/// A model with turret parts: the tag point turned by its part's turret yaw (identity when the point's model is no
+/// turret part), up the model chain, then the scaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_TURRET = 1;
+
+/// The tag point list's point: up the model chain, then the scaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
+
+/// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
+
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
 /// complex unit may be missing).
@@ -3027,6 +3041,28 @@ struct EeCombatDamageRowOut {
   float base[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
+};
+
+/// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
+/// point's model first, then each parent) are passed beside it.
+struct EeCombatWeaponIn {
+  /// `WEAPON_KIND_*`
+  int32_t kind;
+  /// the animation's tag point list exists (else the height stays the location's z)
+  int32_t list_present;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// its physical model's scale
+  float scale;
+  /// the point's model is a turret part (`FindTurretPart` found it): `yaw` is its turret angle
+  int32_t turret;
+  float yaw;
+  /// the tag point at the frame, in its model's space
+  float point[3];
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+  float top[3];
+  /// the number of model chain transforms
+  int32_t chain;
 };
 
 /// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
@@ -8059,6 +8095,27 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
+/// a larger buffer when it exceeds `capacity`).
+///
+/// # Safety
+/// `out` must point to `capacity` pairs (or be NULL with `capacity` 0).
+uint32_t ee_combat_tile_line(int32_t x1,
+                             int32_t y1,
+                             int32_t x2,
+                             int32_t y2,
+                             int32_t ends,
+                             int32_t thin,
+                             int32_t (*out)[2],
+                             uint32_t capacity);
+
+/// The line of fire's start height (the weapon tag point's world z) over `input.chain` model transforms.
+///
+/// # Safety
+/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
+float ee_combat_weapon_height(const EeCombatWeaponIn *input,
+                              const float (*chain)[16]);
 
 /// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
 ///
