@@ -409,6 +409,23 @@ WON_TESTS = {
     # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
     # statements against ee_won's routing module
     "won_routing_test": [],
+    # WONGUI's layout arithmetic (rectangles, sizes, the child layout instructions and layouts, the LAYOUT rule), the
+    # original's statements against ee_won's guilayout module
+    "won_guilayout_test": [],
+    # WONGUI's scrolling (the scrollbar's thumb and steps, the scroll area's clamp and view, the scrollers'
+    # conditions), the original's statements against ee_won's guiscroll module
+    "won_guiscroll_test": [],
+    # WONGUI's input box text model (the selection, cursor moves, deletes, paste limit, blink, mouse character and
+    # scroll), the original's statements against ee_won's guiedit module
+    "won_guiedit_test": [],
+    # WONGUI's list lines and selection (the line at a y, visibility, stacking, the selectable walk, the keys, the
+    # scrolls of inserts, refreshes and deletes), the original's statements against ee_won's guilist module
+    "won_guilist_test": [],
+    # WONGUI's focus rules, hit-test verdict and buttons' state machine, the original's statements against ee_won's
+    # guifocus module
+    "won_guifocus_test": [],
+    # WONGUI's word wrap (WrappedText's breaks and rewrap rule), the original's loop against ee_won's guiwrap module
+    "won_guiwrap_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

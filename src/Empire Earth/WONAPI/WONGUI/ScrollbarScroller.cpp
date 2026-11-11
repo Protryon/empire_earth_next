@@ -8,6 +8,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The scrollbar conditions and the bars' numbers are ee_won's guiscroll module (rust/crates/ee_won/src/guiscroll.rs).
 using namespace WONAPI;
 // FUNCTION: WON 0x00705760
 // Uses a scrollbar as the vertical or horizontal one (by its orientation) and listens to its events
@@ -37,14 +39,13 @@ void ScrollbarScroller::AddControls() {
 bool ScrollbarScroller::EnableScrollbar(Scrollbar* scrollbar,ScrollbarCondition condition) {
     if(scrollbar==NULL || this->mScrollArea.get()==NULL) return false;
     bool visible=scrollbar->IsVisible();
-    if(this->mSettingScrollbarConditions && condition==ScrollbarCondition_Conditional && visible) return false;
-    switch(condition) {
-    case ScrollbarCondition_Disable:scrollbar->SetVisible(false);break;
-    case ScrollbarCondition_Enable:scrollbar->SetVisible(true);break;
-    case ScrollbarCondition_Conditional:
-        scrollbar->SetVisible(scrollbar->mVertical ? this->mScrollArea->mTotalHeight>this->mScrollArea->mScrollArea.height : this->mScrollArea->mTotalWidth>this->mScrollArea->mScrollArea.width);
-        break;
-    }
+    ScrollArea* a=this->mScrollArea.get();
+    EeWonScrollArea anArea = { a->mVertOffset, a->mHorzOffset, a->mTotalWidth, a->mTotalHeight, a->mExtraHeight,
+                               a->mScrollArea.x, a->mScrollArea.y, a->mScrollArea.width, a->mScrollArea.height };
+    int k=ee_won_gui_scrollbar_condition(condition,this->mSettingScrollbarConditions,visible,scrollbar->mVertical,
+                                         anArea);
+    if(k<0) return false;
+    if(k==0 || k==1) scrollbar->SetVisible(k==1);
     return visible!=scrollbar->IsVisible();
 }
 // FUNCTION: WON 0x00705990
@@ -76,24 +77,30 @@ void ScrollbarScroller::HandleComponentEvent(ComponentEvent* event) {
 // FUNCTION: WON 0x00705a50
 // Updates both scrollbars' sizes, steps, position and enabled state from the scroll area, then reapplies conditions
 void ScrollbarScroller::NotifyScrollChange(bool becauseOfScroller) {
+    ScrollArea* a=this->mScrollArea.get();
+    EeWonScrollArea anArea = { a->mVertOffset, a->mHorzOffset, a->mTotalWidth, a->mTotalHeight, a->mExtraHeight,
+                               a->mScrollArea.x, a->mScrollArea.y, a->mScrollArea.width, a->mScrollArea.height };
+    int aTotal=0,aPage=0;
     if(this->mVertScrollbar.get()!=NULL) {
-        this->mVertScrollbar->mTotalSize=this->mScrollArea->mTotalHeight+this->mScrollArea->mExtraHeight;
-        this->mVertScrollbar->mPageSize=this->mScrollArea->mScrollArea.height;
-        this->mVertScrollbar->mPageScrollSize=this->mScrollArea->mScrollArea.height;
+        bool anEnabled=ee_won_gui_scrollbar_sync(anArea,true,&aTotal,&aPage);
+        this->mVertScrollbar->mTotalSize=aTotal;
+        this->mVertScrollbar->mPageSize=aPage;
+        this->mVertScrollbar->mPageScrollSize=aPage;
         this->mVertScrollbar->mLineUpScrollSize=this->mScrollArea->mUpScrollAmount;
         this->mVertScrollbar->mLineDownScrollSize=this->mScrollArea->mDownScrollAmount;
         if(!becauseOfScroller) this->mVertScrollbar->mPosition=this->mScrollArea->mVertOffset;
         this->mVertScrollbar->LayoutThumb(!becauseOfScroller);
-        this->mVertScrollbar->SetEnabled(this->mScrollArea->mTotalHeight+this->mScrollArea->mExtraHeight>this->mScrollArea->mScrollArea.height);
+        this->mVertScrollbar->SetEnabled(anEnabled);
         this->mVertScrollbar->Invalidate();
     }
     if(this->mHorzScrollbar.get()!=NULL) {
-        this->mHorzScrollbar->mTotalSize=this->mScrollArea->mTotalWidth;
-        this->mHorzScrollbar->mPageSize=this->mScrollArea->mScrollArea.width;
-        this->mHorzScrollbar->mPageScrollSize=this->mScrollArea->mScrollArea.width;
+        bool anEnabled=ee_won_gui_scrollbar_sync(anArea,false,&aTotal,&aPage);
+        this->mHorzScrollbar->mTotalSize=aTotal;
+        this->mHorzScrollbar->mPageSize=aPage;
+        this->mHorzScrollbar->mPageScrollSize=aPage;
         if(!becauseOfScroller) this->mHorzScrollbar->mPosition=this->mScrollArea->mHorzOffset;
         this->mHorzScrollbar->LayoutThumb(!becauseOfScroller);
-        this->mHorzScrollbar->SetEnabled(this->mScrollArea->mTotalWidth>this->mScrollArea->mScrollArea.width);
+        this->mHorzScrollbar->SetEnabled(anEnabled);
         this->mHorzScrollbar->Invalidate();
     }
     this->SetScrollbarConditions(this->mHorzCondition,this->mVertCondition);

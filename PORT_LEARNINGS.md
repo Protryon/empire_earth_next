@@ -5478,6 +5478,155 @@ Graphics Engine owns no text logic in C++. There is no line breaking in the engi
 - **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, `rust_build.py gate`
   PASS, `sim_capture.py` digests of the four profiles equal to the goldens but USGC, which the next commit recorded):
   see the final report for the merged numbers. Not run: any harness session, macOS or Linux builds.
+
+## R6: the controls' drawing: borders, clipped text, labels, list boxes, check boxes and the edit box (ee_ui draw.rs, edit_draw.rs; branch rust-r6-ui6, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` as plans the C++ executes (it keeps every draw call, the line, rhombus, bitmap and
+text objects and their order; the classes keep their members, vtables and exported names, no header gained a
+member): `UIControl::DrawBorder`'s lines (`border_line`: side by side, row by row, which of the two border colours);
+`UIForm::DrawClippedText`'s pieces around the form's clip rectangles, the copied popup or the IME candidate window
+(`draw_clipped_text`, the one sequence run in Rust: its draws go back through a function the C++ passes); a
+`UITextLabel`'s one-line placement, its copied line range and each wrapped line's place and clip rectangle;
+`UIListBox<T>`'s copied line range, selection rectangle and focus lines (`UIListBox.h`), `UILBString`'s rows; the
+check box's and radio button's scaled bitmap (`draw.rs`); `UIEditBox::CopyData`'s copied selection and IME
+composition (single- and multi-line), `DrawPolygons`' selection spans, `GetSelectedTextRectangle`'s row,
+`DrawTextA`'s row and the IME underline loop (measures and draws through a function table, `edit_draw.rs`).
+
+- **What stays C++, on purpose.** The pure call sequences: `UIButton`/`UIBitmap`/`UISlider`/`UIScrollBar`/
+  `UIComboBox`/`UITriStateCheckBox`'s `DrawPolygons`/`DrawTextA` (each the base, then its parts' draws, no decision
+  beyond a null test), `UIForm::DrawPolygons`/`DrawTextA` (the draw list, the popup, the tool tip's shadow, whose
+  rectangle was already Rust) and `UIManager`'s; `UIControl::CopyData` and the parts' `CopyData` copies (member
+  copies). They are in the golden trace all the same (the `form` and `button` cases), so a later move has its pin.
+- **The golden driver** (`build/ui_draw_golden`, scratch, `build.py orig|cur [seeds]`): the UI units and `include/`
+  of 863e464c extracted with `git archive` (`orig`) or the worktree's (`cur`), compiled as the game compiles them
+  (`clang_build.compile_to`, `EE_INCLUDE` pointing at the tree's headers), with the real `GELine`, `GERhombus`,
+  `GERectangle`, `UString`, `UWideString` and a scratch Rust staticlib (ee_ui, ee_ge, ee_plat_core), under
+  `/FORCE:UNRESOLVED`. Controls are calloc'ed with their class's vtable (`??_7UITextLabel@@6B@` through an asm
+  label) and their members set under `#define private public`; the scroll bars are real (`UIScrollBar`, `UISlider`,
+  two `UIScrollButton`s), so their `CopyData` and draws run. The rasterizer is a calloc'ed block whose vptr is a
+  table of stubs (the `Draw` overloads at the slots the header's comments give: text 15, rhombus 17, line 20, bitmap
+  21; any other slot logs and exits); its vertex arrays are a real `GEVertexArray` subclass, so each draw logs what
+  the line or rhombus really holds (ends, per-vertex colour and opacity). Text is measured by a fake
+  `GEText::ComputeTextExtent` (a hash advance per code point times the font's height / 8 + 1). Cases: 200 borders
+  (thickness 0..5, border types 0, 1, 7), 400 clipped texts (0..4 clip rectangles, a popup that is or is not the
+  drawing control, the candidate window, a failing draw), 200 one-line and 200 multi-line labels (every alignment,
+  fitted or not, with and without a scroll bar at any value, empty, UTF-8 and emoji lines), 200 string list boxes
+  (selection inside, outside and absent, focus on and off, a line height whose row product wraps), 200 buttons,
+  check boxes and radio buttons (scaled and unscaled bitmaps, labels, copied texts), 100 forms (draw lists, popups,
+  tool tips with the shadow), 400 edit boxes (single- and multi-line, password, caret blinking, scrolled away,
+  selections both ways across and past the copied lines, IME compositions with random clause attributes, lines with
+  breaks). `golden_draw.txt` keeps each case's inputs and its log as a line count and an FNV-1a 64 digest (730 KB;
+  the full log is 1.7 MB). `draw/tests.rs` and `edit_draw/tests.rs` rebuild every case's whole log (the C++ glue
+  included: the background rhombus, the scroll thumb, the cursor line, the measures) over the Rust; the driver
+  relinked over the forwarders printed the same log byte for byte, and on seeds 2 and 3 at ten times the size (17 MB
+  each). Mutations checked: the label margin, the IME attribute test, the clipped selection end each fail a replay.
+- **Driver traps, new.**
+  - `UIForm::DrawPolygons`/`DrawTextA` are protected virtuals: under the override a qualified call references the
+    public name and lands at address 0. Call them by their decorated names through an asm label
+    (`?DrawPolygons@UIForm@@MEAAJXZ`). The same for `GERasterizer::sActiveRasterizer` (protected static,
+    `@@1PEAV1@EA`) and the strings' `sDefaultAllocationLength` (the driver's TU references the public name
+    `@@2KA`): define both names.
+  - `GERScreenState`'s inline constructor reaches members with out-of-line constructors: calloc it.
+  - `GEVertexArray`'s constructor and destructor are out of line (GEVertexArray.cpp): define them for the fake.
+  - A random world must keep the box's invariants or it measures the original's undefined behaviour: a list box
+    showing more lines than its rows has a scroll bar; a caret or anchor never sits after a line break; an IME
+    composition stays on the copied lines (one reaching past them reads past `mDisplayLines` in `DrawPolygons`, the
+    original's hazard, unreachable while the box scrolls to the composition).
+  - Disk: C: ran full mid-session (another agent's runs); an `Edit` failed with ENOSPC and left the file unchanged.
+- **Kept quirks.** A border line's end is `(right + 1) - i`; a check box's scale uses `2 * thickness` as an unsigned
+  product; a label's wrapped lines are centred on the control's rectangle but start from the copied text rectangle,
+  and move left by half the scroll bar's width whenever the label has one (shown or not); a string list box's row
+  is one pixel wider than its text rectangle; a selection rectangle that misses the text rectangle is drawn
+  unclipped (`And` leaves it); the multi-line edit box's measuring text keeps the last text the caret was measured
+  with; an IME composition's end is not clipped to the copied lines.
+- **Gates run:** after each of the two commits `build.py -j 4 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle (seeds
+  2-7, the main checkout's open tree) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game
+  or POSIX build was run.
+- **Only a tour exercises these** (EE-SIM draws no UI), both commits change what is drawn on every frame of every
+  menu: the borders of every control with one, every text of every control (each goes through `DrawClippedText`),
+  every label, list box (the map and civilization lists, the saved games), check box and radio button, the edit
+  boxes (the player name, chat, the lobby), the IME underlines only with an IME. The lead's tour must compare the
+  menu captures pixel for pixel against the build before this branch.
+
+## R6: WONGUI's layout arithmetic, scrolling, input box text model, list lines, focus and button rules in Rust (ee_won guilayout.rs, guiscroll.rs, guiedit.rs, guilist.rs, guifocus.rs, guiwrap.rs; branch rust-r6-won8, 2026-11-11)
+
+Round 8 of R6: the WON GUI toolkit (WONGUI, 39.2k lines; its map by area, size, lobby use and dependency is in
+RUST_PLAN's "R6 WON, the rest" row). The C++ classes keep their objects, child lists, vtables, virtual calls,
+fonts, events and drawing; Rust answers the numbers and decisions they made. Each piece was captured first: a
+driver in `tests/won` (in `xbuild.py` `WON_TESTS`) runs the original's statements, copied from the C++ before the
+port with the components replaced by the numbers and flags they read and their `SetPos` / `SetSize` /
+`SetVisible` calls by the values they received, next to the Rust ABI over generated inputs (a fixed LCG; small,
+edge and wrapping ints).
+
+- **Layout (`guilayout.rs`).** `WONRectangle`'s intersection, union (an empty rectangle becomes the other) and the
+  asymmetric overlap test; `Component::SetSize`'s clamp and no-change test and `SetSizeAtLeast`'s grow test;
+  `ChildLayoutInstruction::Execute` (the 14 flags from the lowest bit up, each seeing the earlier ones: GrowToRight
+  after Right measures from the new x); the centre, same-size, clear-right, space-evenly (the leftover pixels one
+  each to the first gaps), no-overlap (clamped one way for the parent and the other for a sibling), size-at-least,
+  percentage (`SetBorders`' anchor choice as indices, `DoCalc`) and vertical-flow layouts; the LAYOUT rule's
+  instruction names (the C++ still compares each with `GUIString::CompareNoCase`, in the original's order) and
+  which offsets a chained or repeated rule zeroes. `won_guilayout_test`: 2,914,011 checks, 0 failures. GridLayout
+  stays C++ (nothing uses it; its `Execute()` overrides no layout slot).
+- **Scrolling (`guiscroll.rs`).** `Scrollbar::LayoutThumb` (the thumb's share of the track, the position's share of
+  the free track, a thumb pushed back inside always moved), `MouseDrag`'s thumb and position,
+  `HandleComponentEvent`'s line and page steps and clamp; `ScrollArea`'s offsets clamp, `OnBottom`, the view inside
+  the padding and the bottom pin, its desired and fitting sizes; `ScrollbarScroller`'s conditions (a visible
+  conditional bar is left alone while conditions are applied) and the bars' totals; `ButtonScroller`'s button
+  conditions and which buttons can still scroll. `won_guiscroll_test`: 18,889,559 checks, 0 failures. A zero total
+  with a negative page divides by zero in both (the original crashed; so does the port).
+- **The input box (`guiedit.rs`).** `MoveCursor` (found: the word move left stops just after the space before the
+  word it crossed, "ab  cd ef" from the end goes to 6, not 7; kept), `SelectRange`, the Home / End / Left / Right
+  selection (Home and End measure the real text, Left and Right walk the shown one, as before), what Backspace and
+  Delete keep (as the `assign` calls the original made), `SetSelText`'s cut at the first unit below 32 (the
+  original's `int` of a `wchar_t`) and its limit, the cursor's blink and blink rate, `CheckSel`'s character under
+  the mouse and the selection it extends, `AdjustPosition`'s scroll and `TimerEvent`'s drag scroll. The font stays
+  C++: the box measures the cursor's prefix and the characters the walk can reach (`GetCharacterWidth` for each, a
+  few more calls than the original made, all without side effects but the font's glyph cache) and hands the widths
+  over. The history, `NumericFilter` (the CRT's `isdigit`) and the clipboard stay C++. `won_guiedit_test`:
+  9,437,056 checks, 0 failures.
+- **The list (`guilist.rs`).** `FindLineAt` is the STL's `lower_bound` walk exactly (the halving loop both
+  libraries use), reading the items' tops through a callback, so a batch insert's unsorted tops find what they
+  found; `FindItemAt`'s test, `IsItemVisible` (partial lines with 0x80), `EnsureVisible`, `EnforceInvariants`'
+  stacking (the heights read first, then each item's virtual `SetPos`: none of the overrides changes a height),
+  the full-line scroll's extra height, `FindSelectableItem`, `SelectRange`'s bounds, the keys' target line and
+  scroll, the scrolls an insert, a refresh and a delete leave, a batch insert's provisional top, a refresh's new
+  place, `DeleteRange`'s bounds and the item tool tip's test. `won_guilist_test`: 22,613,891 checks, 0 failures.
+  - **Found: two original faults.** With the wrap flag (0x800, the popup menus') and neither end item
+    selectable, `FindSelectableItem` called itself without end (a stack overflow); the port answers no item
+    (behaviour change: a crash becomes no selection). With the wrap flag, Left and Right's "no line" (-1) wrapped
+    to the end like any line above the first, so they moved the selection too; kept.
+- **Focus and buttons (`guifocus.rs`).** `WantFocus`, `FindChildAt`'s verdict on the topmost child hit (disabled
+  or blocked by a modal state: no child at all), `GetNextFocusId` (a byte that skips 0),
+  `SetFocusToLastFocusChild`'s pick (found: the byte difference is compared as an `int` and kept as a byte, so
+  an id newer than the current one wins until a smaller byte replaces it, and the current id itself, when not
+  skipped, gives 0, which counts as no pick: the next candidate is taken; kept), `TabFocus`'s start and its
+  loop's bound; `Button`'s release (held, dragged off, repeat, activate on press), drag, keys (Enter on the default
+  button, Space, the radio arrows) and repeat timer, and `WONButton::GetButtonState`'s state and its fallback
+  cells. The C++ keeps the child lists, the virtual `TabFocus` / `HitTest` / `RequestFocus` calls, the radio
+  groups, sounds, timers and events. `won_guifocus_test`: 905,952 checks, 0 failures.
+- **The word wrap (`guiwrap.rs`).** `WrappedText::CalcWrap`'s loop (the breaks at the last space that fits, inside a
+  word when none does, at CR, LF and CR LF; the text's width; the unit after a final CR is the terminator, as the
+  original read it) and `SetMaxWidth`'s rewrap rule. The C++ measures every unit once with `GetCharacterWidth`
+  (the original measured the units it visited, some twice after a backtrack: the same numbers, a different call
+  count) and keeps the break list (`BreakInfo` still narrows to `unsigned short`), the height and the paint. A
+  unit breaks at most twice (inside a word, then alone when it is wider than the line); the C++ hands room for
+  `2 * len + 1` and asks again with more if the count says so. `won_guiwrap_test`: 3,559,089 checks, 0 failures.
+  Its first oracle run failed when drive C: filled up (EE-SIM's per-run stage slots under `build/sim/stage`, now
+  deleted by `tools/sim.py` when a game exits); it was committed after a clean rerun (seeds 2-7 identical).
+- **What exercises what.** Every lobby load lays out the 63 .cfg files' components (the layouts, `SetSize`,
+  the rectangles, the wrap of every label and button text). The LAN game (`lan_game.py`) adds: the clicks
+  (`wonclick`: the hit verdict, `Button`'s press and release), typing (`wonkey`: `SetSelText`'s cut and limit, the
+  caret's blink and scroll), the game and player lists and the chat (the list's lines, stacking, inserts,
+  deletes and scrolls, the scrollbars' thumbs and the scroll areas' clamps), the button states at every paint.
+  Only a person at the lobby reaches: the input box's mouse selection, drag scroll and arrow / Home / End keys,
+  Backspace and Delete, the list's keys, wrap and tool tips, Tab focus, the last-focus pick, the radio arrows,
+  Space, Enter and the button repeat, the scrollbar drag and its arrows and track. Every move here changes layout
+  or drawing: a lobby run checks them. Nothing here touches the simulation: the oracle was identical after each
+  gated build (six code commits, each built, oracle-checked and Rust-gated on its own).
+- **Still C++ of WONGUI:** the component objects and their event dispatch (Window, WindowManager, RootContainer,
+  the popups and modality), TextArea and its segments (the chat's rich text wrap), ComboBox, TabCtrl, Splitter,
+  MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
+  value readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the platform backend).
 ## R5b.4, seventh round: the fixture's orders, Add Patrol Point, Attack Unit, Heal Unit and Path To in Rust over host calls (ee_units group.rs; EETestFixtureOrders.cpp; branch rust-r5b4-core, 2026-11-11)
 
 - **The orders exercise** (TEST ONLY; EETestFixtureOrders.cpp, fixture_driver.orders, `fixture_game.py --exercise

@@ -34,6 +34,12 @@
 // at run time) (provisional name).
 const float kTextLabelMargin = 6.0f;
 
+static EeUiRect UITextLabelRect(const GERectangle& inRectangle)
+{
+    EeUiRect theRectangle = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    return theRectangle;
+}
+
 // FUNCTION: LLE 0x1007e579
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
 UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
@@ -189,21 +195,12 @@ long UITextLabel::CopyData()
             this->mCopiedText->SetText(*this->mLines[0]);
         else
             this->mCopiedText->SetText("");
-        float theX;
-        if (this->mAlignment == kTextAlignLeft) {
-            theX = this->mTextRectangle.GetLeft();
-            if (this->mFitRectToText)
-                theX += kTextLabelMargin * 0.5f;
-        } else if (this->mAlignment == kTextAlignCenter)
-            theX = this->mTextRectangle.GetWidth() * 0.5f + this->mTextRectangle.GetLeft() -
-                   this->mCopiedText->GetTextExtent().GetWidth() * 0.5f;
-        else {
-            theX = this->mTextRectangle.GetRight() - this->mCopiedText->GetTextExtent().GetWidth();
-            if (this->mFitRectToText)
-                theX -= kTextLabelMargin * 0.5f;
-        }
-        this->mCopiedText->SetLocation(GE2DPoint(theX, this->mTextRectangle.GetHeight() * 0.5f + this->mTextRectangle.GetTop() -
-                                                     this->mCopiedText->GetTextExtent().GetHeight() * 0.5f));
+        // placed by its alignment in the text rectangle (ee_ui draw.rs)
+        const GERectangle& theExtent = this->mCopiedText->GetTextExtent();
+        EeUiPoint theLocation = ee_ui_label_one_line_location(this->mAlignment, this->mFitRectToText,
+                                                              UITextLabelRect(this->mTextRectangle), theExtent.GetWidth(),
+                                                              theExtent.GetHeight());
+        this->mCopiedText->SetLocation(GE2DPoint(theLocation.x, theLocation.y));
     } else {
         if (this->mScrollBarRemoved) {
             delete this->mScrollBar;
@@ -212,20 +209,16 @@ long UITextLabel::CopyData()
         }
         if (this->mRecomputePending)
             this->RecomputeDisplayRange();
-        unsigned long i;
-        unsigned long theEnd;
-        if (this->mScrollBar != NULL) {
-            this->mDrawScrollBar = true;
-            i = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-            theEnd = this->mNumberLinesDisplayed + i;
-            this->mLastDisplayLine = this->mNumberLinesDisplayed - 1;
+        // the scroll bar's window of lines, or every line (ee_ui draw.rs)
+        bool theScroll = this->mScrollBar != NULL;
+        EeUiLineRange theRange = ee_ui_label_line_range(theScroll, theScroll ? this->mScrollBar->GetSlider()->GetCurrentRangeValue() : 0,
+                                                        this->mNumberLinesDisplayed, this->mLines.size());
+        unsigned long i = theRange.first;
+        unsigned long theEnd = theRange.end;
+        this->mLastDisplayLine = theRange.last;
+        this->mDrawScrollBar = theScroll;
+        if (theScroll)
             this->mScrollBar->CopyData();
-        } else {
-            i = 0;
-            theEnd = this->mLines.size();
-            this->mLastDisplayLine = this->mLines.size() - 1;
-            this->mDrawScrollBar = false;
-        }
         for (unsigned long j = 0; i < theEnd; i++, j++)
             this->mDisplayLines[j] = *this->mLines[i];
     }
@@ -274,28 +267,17 @@ long UITextLabel::DrawTextA()
     if (this->mLabelType == 0)
         theResult = this->mForm->DrawClippedText(this->mCopiedDrawRectangle, this->mCopiedText, this);
     else {
-        float theHeight = theLineHeight;
         unsigned long theOffset = 0;
         for (; i <= this->mLastDisplayLine; i++, theOffset += theLineHeight) {
             this->mCopiedText->SetText(this->mDisplayLines[i]);
-            float theX;
-            if (this->mAlignment == kTextAlignLeft) {
-                theX = this->mCopiedTextRectangle.GetLeft();
-                if (this->mFitRectToText)
-                    theX += kTextLabelMargin * 0.5f;
-            } else if (this->mAlignment == kTextAlignCenter) {
-                theX = this->mRectangle.GetWidth() * 0.5f + this->mCopiedTextRectangle.GetLeft() -
-                       this->mCopiedText->GetTextExtent().GetWidth() * 0.5f;
-                if (this->mScrollBar)
-                    theX -= this->mScrollBar->GetCopiedDrawRectangle().GetWidth() * 0.5f;
-            } else {
-                theX = this->mRectangle.GetRight() - this->mCopiedText->GetTextExtent().GetWidth();
-                if (this->mFitRectToText)
-                    theX -= kTextLabelMargin * 0.5f;
-            }
-            this->mCopiedText->SetLocation(theX, theOffset + this->mCopiedTextRectangle.GetTop());
-            const GE2DPoint& theLocation = this->mCopiedText->GetLocation();
-            theRectangle = GERectangle(theLocation, GE2DPoint(this->mCopiedTextRectangle.GetRight(), theLocation.GetY() + theHeight));
+            // placed by its alignment, clipped to the rest of its row (ee_ui draw.rs)
+            EeUiLabelLine thePlan = ee_ui_label_line(
+                this->mAlignment, this->mFitRectToText, UITextLabelRect(this->mRectangle),
+                UITextLabelRect(this->mCopiedTextRectangle), this->mCopiedText->GetTextExtent().GetWidth(),
+                this->mScrollBar != NULL, this->mScrollBar ? this->mScrollBar->GetCopiedDrawRectangle().GetWidth() : 0.0f,
+                theOffset, theLineHeight);
+            this->mCopiedText->SetLocation(thePlan.at.x, thePlan.at.y);
+            theRectangle = GERectangle(thePlan.rect.left, thePlan.rect.top, thePlan.rect.right, thePlan.rect.bottom);
             theResult = this->mForm->DrawClippedText(theRectangle, this->mCopiedText, this);
         }
     }

@@ -376,30 +376,28 @@ template <class T> long UIListBox<T>::CopyData()
         this->mScrollBarRemoved = false;
         this->mScrollBarCaptured = false;
     }
-    unsigned long theFirst;
-    unsigned long theLast;
-    if (this->mScrollBar != NULL) {
-        theFirst = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-        this->mDrawLineCount = this->mNumberLinesDisplayed;
-        theLast = this->mNumberLinesDisplayed + theFirst;
+    // the scroll bar's window of lines, or every line (ee_ui draw.rs)
+    bool theScroll = this->mScrollBar != NULL;
+    EeUiListRange theRange = ee_ui_list_line_range(theScroll, theScroll ? this->mScrollBar->GetSlider()->GetCurrentRangeValue() : 0,
+                                                   this->mNumberLinesDisplayed, this->GetNumLines());
+    unsigned long theFirst = theRange.first;
+    unsigned long theLast = theRange.end;
+    this->mDrawLineCount = theRange.count;
+    if (theScroll)
         theResult = this->mScrollBar->CopyData();
-        this->mCopiedScrollBarVisible = true;
-    } else {
-        theFirst = 0;
-        theLast = this->GetNumLines();
-        this->mDrawLineCount = this->GetNumLines();
-        this->mCopiedScrollBarVisible = false;
-    }
+    this->mCopiedScrollBarVisible = theScroll;
     if (this->mNumberLinesDisplayed > this->mCopyLineArray.size())
         this->mCopyLineArray.resize(this->mNumberLinesDisplayed);
     for (unsigned long i = theFirst; i < theLast; i++, theIndex++)
         this->mCopyLineArray[theIndex] = this->mData[i];
-    if (this->GetNumLines() > 0 && this->mHasSelection && this->mCurrentSelection >= theFirst && this->mCurrentSelection < theLast) {
+    // the selected line's rectangle when it is copied (ee_ui draw.rs)
+    EeUiRect theText = {this->mCopyTextRectangle.mBottom, this->mCopyTextRectangle.mLeft, this->mCopyTextRectangle.mRight,
+                        this->mCopyTextRectangle.mTop};
+    EeUiRect theSelection;
+    if (ee_ui_list_selection(this->GetNumLines(), this->mHasSelection, this->mCurrentSelection, theFirst, theLast, theText,
+                             this->mLineHeight, &theSelection)) {
         this->mCopiedHasSelection = true;
-        theRectangle.mLeft = this->mCopyTextRectangle.mLeft;
-        theRectangle.mRight = this->mCopyTextRectangle.mRight;
-        theRectangle.mTop = (float)((this->mCurrentSelection - theFirst) * this->mLineHeight) + this->mCopyTextRectangle.mTop;
-        theRectangle.mBottom = theRectangle.mTop + this->mLineHeight - 1.0f;
+        theRectangle = GERectangle(theSelection.left, theSelection.top, theSelection.right, theSelection.bottom);
         this->mSelectedBackground->SetRectangle(theRectangle);
         *this->mCopiedSelectedBackground = *this->mSelectedBackground;
         if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex) {
@@ -433,21 +431,16 @@ template <class T> long UIListBox<T>::DrawPolygons()
     if (this->mCopiedHasSelection) {
         theResult = this->GetRasterizer()->Draw(this->mCopiedSelectedBackground, this->GetScreenIndex());
         if (this->mCopiedHasFocus) {
-            GERectangle theRectangle = this->mCopiedSelectedBackground->GetRectangle();
-            thePoint = GE2DPoint(theRectangle.GetLeft(), theRectangle.GetTop());
-            theLine.SetStartPoint(thePoint);
-            thePoint = GE2DPoint(theRectangle.GetRight(), theRectangle.GetTop());
-            theLine.SetEndPoint(thePoint);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-            thePoint = GE2DPoint(theRectangle.GetLeft(), theRectangle.GetBottom());
-            theLine.SetEndPoint(thePoint);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-            thePoint = GE2DPoint(theRectangle.GetRight(), theRectangle.GetBottom());
-            theLine.SetStartPoint(thePoint);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
-            thePoint = GE2DPoint(theRectangle.GetRight(), theRectangle.GetTop());
-            theLine.SetEndPoint(thePoint);
-            theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
+            // the focus rectangle: top, left, bottom, right (ee_ui draw.rs)
+            const GERectangle& theRectangle = this->mCopiedSelectedBackground->GetRectangle();
+            EeUiRect theFocus = {theRectangle.mBottom, theRectangle.mLeft, theRectangle.mRight, theRectangle.mTop};
+            EeUiPoint theEnds[8];
+            ee_ui_list_focus_lines(theFocus, theEnds);
+            for (int k = 0; k < 4; k++) {
+                theLine.SetStartPoint(GE2DPoint(theEnds[2 * k].x, theEnds[2 * k].y));
+                theLine.SetEndPoint(GE2DPoint(theEnds[2 * k + 1].x, theEnds[2 * k + 1].y));
+                theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
+            }
         }
     }
     return theResult;

@@ -10,62 +10,61 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
+#include "rust/ee_rust.h"
+// The layouts' arithmetic is ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs); this unit keeps the
+// layout objects, their lists and the SetPos / SetSize calls.
 namespace WONAPI {
 // FUNCTION: WON 0x00737370
 // Sets the four anchor components; a missing edge takes the opposite edge on the same axis, then the last
 // anchor supplied
 void PercentLayoutParam::SetBorders(Component* inLeft, Component* inTop, Component* inRight, Component* inBottom)
 {
-    this->left=inLeft; this->top=inTop; this->right=inRight; this->bottom=inBottom;
-    Component* last=NULL;
-    if(inLeft==NULL) this->left=inRight; else last=inLeft;
-    if(inRight==NULL) this->right=this->left; else last=inRight;
-    if(inTop==NULL) this->top=inBottom; else last=inTop;
-    if(inBottom==NULL) this->bottom=this->top; else last=inBottom;
-    if(this->left==NULL) this->left=last;
-    if(this->right==NULL) this->right=last;
-    if(this->top==NULL) this->top=last;
-    if(this->bottom==NULL) this->bottom=last;
+    Component* in[4] = { inLeft, inTop, inRight, inBottom };
+    int anIndex[4];
+    ee_won_gui_percent_borders((inLeft!=NULL?1u:0u)|(inTop!=NULL?2u:0u)|(inRight!=NULL?4u:0u)|(inBottom!=NULL?8u:0u),
+                               anIndex);
+    this->left=anIndex[0]<0?NULL:in[anIndex[0]];
+    this->top=anIndex[1]<0?NULL:in[anIndex[1]];
+    this->right=anIndex[2]<0?NULL:in[anIndex[2]];
+    this->bottom=anIndex[3]<0?NULL:in[anIndex[3]];
 }
 // FUNCTION: WON 0x00737430
 // Positions and sizes the target as percentages of the span between its padded anchor edges; a negative
 // percentage leaves that coordinate unchanged (the padding is added even when it is the default -1)
 void PercentLayoutParam::DoCalc(Component* target, Component* parent)
 {
-    int x=target->Left(), y=target->Top(), width=target->Width(), height=target->Height();
+    // the anchors are read only for an axis the layout sets, as the original read them
+    int anEdges[4] = { 0, 0, 0, 0 };
     if(this->px>=0 || this->pw>=0)
     {
-        int leftEdge=this->left==parent?0:this->left->Left();
-        int rightEdge=this->right==parent?parent->Width():this->right->Left()+this->right->Width();
-        leftEdge+=this->lp;
-        rightEdge-=this->rp;
-        if(this->px>=0) x=leftEdge+(rightEdge-leftEdge)*this->px/100;
-        if(this->pw>=0) width=(rightEdge-leftEdge)*this->pw/100;
+        anEdges[0]=this->left==parent?0:this->left->Left();
+        anEdges[1]=this->right==parent?parent->Width():this->right->Left()+this->right->Width();
     }
     if(this->py>=0 || this->ph>=0)
     {
-        int topEdge=this->top==parent?0:this->top->Top();
-        int bottomEdge=this->bottom==parent?parent->Height():this->bottom->Top()+this->bottom->Height();
-        topEdge+=this->tp;
-        bottomEdge-=this->bp;
-        if(this->py>=0) y=topEdge+(bottomEdge-topEdge)*this->py/100;
-        if(this->ph>=0) height=(bottomEdge-topEdge)*this->ph/100;
+        anEdges[2]=this->top==parent?0:this->top->Top();
+        anEdges[3]=this->bottom==parent?parent->Height():this->bottom->Top()+this->bottom->Height();
     }
-    target->SetPosSize(x,y,width,height);
+    EeWonRect aTarget = { target->Left(), target->Top(), target->Width(), target->Height() };
+    EeWonPercent p = { this->px, this->py, this->pw, this->ph, this->lp, this->tp, this->rp, this->bp };
+    EeWonRect r = ee_won_gui_percent_layout(aTarget, anEdges, p);
+    target->SetPosSize(r.x,r.y,r.width,r.height);
 }
 // FUNCTION: WON 0x00737800
 // Gives every listed component the largest width and/or height among them, per the horizontal and
 // vertical flags
 void SameSizeLayout::Execute(Component*)
 {
-    int width=0,height=0;
+    std::vector<int> aSizes;
     std::list<Component*>::iterator i;
     for(i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
     {
-        Component* child=*i;
-        if(this->mHorz && child->Width()>width) width=child->Width();
-        if(this->mVert && child->Height()>height) height=child->Height();
+        aSizes.push_back((*i)->Width());
+        aSizes.push_back((*i)->Height());
     }
+    int width=0,height=0;
+    ee_won_gui_max_size(0,aSizes.empty()?NULL:&aSizes[0],this->mComponentList.size(),this->mHorz,this->mVert,0,0,
+                        &width,&height);
     for(i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
     {
         Component* child=*i;
@@ -78,15 +77,11 @@ void SameSizeLayout::Execute(Component*)
 // Moves the component to the right of the rightmost listed component, plus the padding
 void ClearRightLayout::Execute(Component*)
 {
-    int right=0;
+    std::vector<int> aRights;
     for(std::list<Component*>::iterator i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
-    {
-        Component* child=*i;
-        int r=child->Right();
-        if(r>right) right=r;
-
-    }
-    this->mComponent->SetPos(right+this->mPad,this->mComponent->Top());
+        aRights.push_back((*i)->Right());
+    this->mComponent->SetPos(ee_won_gui_clear_right(aRights.empty()?NULL:&aRights[0],aRights.size(),this->mPad),
+                             this->mComponent->Top());
 }
 // FUNCTION: WON 0x00737920
 // Spreads the listed components evenly across the space box (horizontally or vertically), handing the
@@ -94,30 +89,21 @@ void ClearRightLayout::Execute(Component*)
 void SpaceEvenlyLayout::Execute(Component* parent)
 {
     if(this->mComponentList.empty()) return;
-    int total=0;
+    std::vector<int> anExtents;
     std::list<Component*>::iterator i;
     for(i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
-        total+=this->mIsHorz?(*i)->Width():(*i)->Height();
+        anExtents.push_back(this->mIsHorz?(*i)->Width():(*i)->Height());
     Component* box=this->mSpaceBox;
-    int available=(this->mIsHorz?box->Width():box->Height())-this->mRightPad-this->mLeftPad-total;
-    if(available<0) available=0;
-    int spacing=0,remainder=0;
-    if(this->mComponentList.size()>1)
-    {
-        spacing=available/(this->mComponentList.size()-1);
-        remainder=available%(this->mComponentList.size()-1);
-    }
-    int position=this->mIsHorz?box->Left():box->Top();
-    if(box==parent) position=0;
-    position+=this->mLeftPad;
-    for(i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
+    std::vector<int> aPositions(anExtents.size());
+    ee_won_gui_space_evenly(&anExtents[0],anExtents.size(),this->mIsHorz?box->Left():box->Top(),
+                            this->mIsHorz?box->Width():box->Height(),box==parent,this->mLeftPad,this->mRightPad,
+                            &aPositions[0]);
+    size_t n=0;
+    for(i=this->mComponentList.begin();i!=this->mComponentList.end();++i,++n)
     {
         Component* child=*i;
-        if(this->mIsHorz) child->SetPos(position,child->Top());
-        else child->SetPos(child->Left(),position);
-        if(this->mIsHorz) position+=child->Width()+spacing;
-        else position+=child->Height()+spacing;
-        if(remainder>0) { ++position; --remainder; }
+        if(this->mIsHorz) child->SetPos(aPositions[n],child->Top());
+        else child->SetPos(child->Left(),aPositions[n]);
     }
 }
 // The shift is clamped one way for the parent and the other way for a sibling reference
@@ -126,22 +112,12 @@ void SpaceEvenlyLayout::Execute(Component* parent)
 // inside the parent when the reference is the parent, along the requested sides
 void NoOverlapLayout::Execute(Component* parent)
 {
+    const WONRectangle& b=this->mTarget->GetBounds();
+    EeWonRect aTarget = { b.x, b.y, b.width, b.height };
+    EeWonRect aRef = { this->mRef->Left(), this->mRef->Top(), this->mRef->Width(), this->mRef->Height() };
     int dx=0,dy=0;
-    if(this->mRef==parent)
-    {
-        if(this->mType&0x800) { dx=this->mHorzPad-this->mTarget->Left(); if(dx<0) dx=0; }
-        else if(this->mType&0x400) { const WONRectangle& b=this->mTarget->GetBounds(); dx=this->mRef->Width()-b.width+this->mHorzPad-b.x; if(dx>0) dx=0; }
-        if(this->mType&0x100) { dy=this->mVertPad-this->mTarget->Top(); if(dy<0) dy=0; }
-        else if(this->mType&0x200) { const WONRectangle& b=this->mTarget->GetBounds(); dy=this->mRef->Height()-b.height-b.y+this->mVertPad; if(dy>0) dy=0; }
-    }
-    else
-    {
-        if(this->mType&0x800) { const WONRectangle& b=this->mTarget->GetBounds(); dx=this->mRef->Left()-b.width+this->mHorzPad-b.x; if(dx>0) dx=0; }
-        else if(this->mType&0x400) { dx=this->mRef->Right()-this->mTarget->Left()+this->mHorzPad; if(dx<0) dx=0; }
-        if(this->mType&0x100) { const WONRectangle& b=this->mTarget->GetBounds(); dy=this->mRef->Top()-b.height-b.y+this->mVertPad; if(dy>0) dy=0; }
-        else if(this->mType&0x200) { dy=this->mRef->Height()-this->mTarget->Top()+this->mRef->Top()+this->mVertPad; if(dy<0) dy=0; }
-    }
-    if(dx==0 && dy==0) return;
+    if(!ee_won_gui_no_overlap(aTarget,aRef,this->mRef==parent,this->mType,this->mHorzPad,this->mVertPad,&dx,&dy))
+        return;
     this->mTarget->SetPos(this->mTarget->Left()+dx,this->mTarget->Top()+dy);
     for(std::list<Component*>::iterator i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
     {
@@ -153,14 +129,16 @@ void NoOverlapLayout::Execute(Component* parent)
 // Grows the target to at least the largest listed component's width and height plus the padding
 void SizeAtLeastLayout::Execute(Component*)
 {
-    int width=0,height=0;
+    std::vector<int> aSizes;
     for(std::list<Component*>::iterator i=this->mComponentList.begin();i!=this->mComponentList.end();++i)
     {
-        Component* child=*i;
-        if(child->Width()>width) width=child->Width();
-        if(child->Height()>height) height=child->Height();
+        aSizes.push_back((*i)->Width());
+        aSizes.push_back((*i)->Height());
     }
-    this->mTarget->SetSizeAtLeast(width+this->mHorzPad,height+this->mVertPad);
+    int width=0,height=0;
+    ee_won_gui_max_size(1,aSizes.empty()?NULL:&aSizes[0],this->mComponentList.size(),false,false,this->mHorzPad,
+                        this->mVertPad,&width,&height);
+    this->mTarget->SetSizeAtLeast(width,height);
 }
 }
 #include "ee/wonapi/WONPercentLayout.h"
@@ -247,17 +225,16 @@ void VerticalFlowLayout::Execute(Component* theParent)
         aTop = this->mTopComp->Top()+this->mTopComp->Height();
         aLeft = this->mTopComp->Left();
     }
-    for(; anItr!=this->mComponentList.end(); ++anItr)
+    std::vector<EeWonFlowItem> anItems;
+    for(ComponentList::iterator i = anItr; i!=this->mComponentList.end(); ++i)
     {
-        aTop += anItr->mTopPad;
-        Component* aComp = anItr->mComponent;
-        int aLeftPad = anItr->mLeftPad;
-        if(aLeftPad>=0)
-            aComp->SetPos(aLeft+aLeftPad,aTop);
-        else
-            aComp->SetPos(aComp->Left(),aTop);
-        aTop += aComp->Height();
+        EeWonFlowItem it = { i->mTopPad, i->mLeftPad, i->mComponent->Left(), i->mComponent->Height() };
+        anItems.push_back(it);
     }
+    std::vector<int> aPositions(2*anItems.size());
+    ee_won_gui_vertical_flow(&anItems[0],anItems.size(),aLeft,aTop,&aPositions[0]);
+    for(size_t n = 0; anItr!=this->mComponentList.end(); ++anItr, ++n)
+        anItr->mComponent->SetPos(aPositions[2*n],aPositions[2*n+1]);
 }
 }
 

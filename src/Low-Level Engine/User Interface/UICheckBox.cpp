@@ -131,9 +131,10 @@ long UICheckBox::DrawPolygons()
     if (this->mScaleBitmap && this->mCopiedBitmap) {
         float theXScale = this->mCopiedBitmap->GetXScale();
         float theYScale = this->mCopiedBitmap->GetYScale();
-        float theBorder = 2 * this->GetBorderThickness();
-        this->mCopiedBitmap->SetXYScale(theXScale * ((this->GetCopiedDrawRectangle().GetHeight() - theBorder) * 0.05f),
-                                  theYScale * ((this->GetCopiedDrawRectangle().GetHeight() - theBorder) * 0.05f));
+        float theScale[2];   // the box's inner height over 20 pixels (ee_ui draw.rs)
+        ee_ui_box_bitmap_scale(theXScale, theYScale, this->GetCopiedDrawRectangle().GetHeight(), true,
+                               this->GetBorderThickness(), theScale);
+        this->mCopiedBitmap->SetXYScale(theScale[0], theScale[1]);
         theResult = UIButton::DrawPolygons();
         this->mCopiedBitmap->SetXYScale(theXScale, theYScale);
     } else
