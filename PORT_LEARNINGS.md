@@ -1588,6 +1588,19 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
     `atan2` in the simulation's files; UCRT and glibc may differ in the last bit), `std::sort` on ties (68 game
     files use it; MSVC's STL and libstdc++ order equal elements differently), and any leftover LP64 width. Not
     risks: the URandom generator (32-bit state, lrintf), SSE2 floats on both, `-ffp-contract=off` on both.
+- **Where a 120-minute game's time went (2026-11-11, `tools/sim_profile.py`).** Boom against Age of AI, seed 25: a
+  third in `EECPLuaState::CheckMemory`, which after every Lua call converted the whole memory table into an
+  `EECPLuaValue` tree (paths, copies, a sort) only to see that it could be saved; 12% in the UCRT's `lrintf` (it
+  reads and restores the floating-point environment around each rounding: UMCos, ground points, movement); the
+  next engine's view copied map by map into arrays. A check-only walk, cvtss2si inside 2^30 (`UMRint`) and moves
+  halved the game part (seeds 2-7, both opponents: 582 -> 261 s and 864 -> 365 s of game) with byte-identical
+  reports and traces (the `EE-AIPROF` lines aside: they are wall time). Trace writing is not a cost (under 0.1%).
+- **-O2 changes the game.** The sim built with `--opt=-O2` was no faster than -O1 on the same seeds and one game of
+  12 (seed 4 against the classic) left the -O1 trace at 50 game s (`sim hash` units differ): some code depends on
+  how it is compiled (UB or float evaluation). Benches stay on -O1.
+- **Other runs' ports.** A sim given another bench's `--port-offset` (two benches with the same `--port-base`)
+  faults at the main menu in `NERecordPlayback::Process`: give concurrent benches ranges apart. A freshly linked exe
+  can also take ~100 s to reach the main menu on its first runs with the CPU idle (seen on several new exes at once; probably the virus scanner).
 
 ## macOS playtesting under lldb and ASan (2026-11-06)
 

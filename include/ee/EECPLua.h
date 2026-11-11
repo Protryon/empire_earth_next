@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 struct lua_State;
@@ -65,6 +66,7 @@ public:
     size_t Size() const { return mItems.size(); }
     const EECPLuaValue& At(size_t inIndex) const { return mItems[inIndex]; }
     EECPLuaValue& Push(const EECPLuaValue& inValue);   // an array: appends
+    EECPLuaValue& Push(EECPLuaValue&& inValue);        // (the same, moving the value in)
 
     // a map's fields, in key order
     size_t FieldCount() const { return mKeys.size(); }
@@ -72,6 +74,8 @@ public:
     const EECPLuaValue& ValueAt(size_t inIndex) const { return mItems[inIndex]; }
     EECPLuaValue& Set(const EECPLuaKey& inKey, const EECPLuaValue& inValue);   // a map: inserts or replaces
     EECPLuaValue& Set(const char* inKey, const EECPLuaValue& inValue) { return Set(EECPLuaKey::Str(inKey), inValue); }
+    EECPLuaValue& Set(const EECPLuaKey& inKey, EECPLuaValue&& inValue);   // (the same, moving the value in)
+    EECPLuaValue& Set(const char* inKey, EECPLuaValue&& inValue) { return Set(EECPLuaKey::Str(inKey), std::move(inValue)); }
     const EECPLuaValue* Find(const EECPLuaKey& inKey) const;
     const EECPLuaValue* Find(const char* inKey) const { return Find(EECPLuaKey::Str(inKey)); }
 

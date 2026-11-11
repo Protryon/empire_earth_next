@@ -449,7 +449,15 @@ bool WriteTo(const std::string& inPath)
     bool theWritten = fflush(theFile) == 0;
     theWritten = fclose(theFile) == 0 && theWritten;
 #ifdef _WIN32
-    theWritten = theWritten && MoveFileExA(theTemporary.c_str(), inPath.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+    // Another process (a virus scanner, the indexer, a test harness reading the settings) may hold the file for a
+    // moment; a failed replace would otherwise move the settings to the user's directory
+    bool theMoved = false;
+    for (int theTry = 0; theWritten && !theMoved && theTry < 10; theTry++) {
+        if (theTry)
+            Sleep(50);
+        theMoved = MoveFileExA(theTemporary.c_str(), inPath.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+    }
+    theWritten = theWritten && theMoved;
 #else
     theWritten = theWritten && rename(theTemporary.c_str(), inPath.c_str()) == 0;
 #endif
