@@ -487,10 +487,23 @@ local function queue_morale_building(view, memory)
     if B.is_queued(memory, C.house) then
         return
     end
+    -- GetMoraleFill: the drop site's EEAEMoraleFromBuildings effect, (its level + the unfinished houses in its square)
+    -- over its maximum level; only the town centre (dbareaeffect tc_morale_bonus_rng_10: 2 houses within 10 tiles)
+    -- and the capitol (capitol_morale_bonus_rng_10: 4) carry one, so a settlement wants no houses. DEVIATION: the
+    -- effect is not readable; the port counts the houses in the square (the level) from the data's numbers
+    local MORALE = {[C.town_center] = 2, [C.capitol] = 4}
     for _, d in ipairs(R.drops(false)) do
-        if d.built then
-            local houses = #ai.units{type = C.house, near = {d.x, d.y, 8}}
-            if houses < 4 then
+        local du = R.unit(d.id)
+        local max = du ~= nil and MORALE[du.type] or nil
+        if d.built and max ~= nil then
+            local houses = 0
+            for _, id in ipairs(ai.units{type = C.house, near = {d.x, d.y, 15}}) do
+                local h = R.unit(id)
+                if h ~= nil and math.abs(h.x - d.x) <= 10 and math.abs(h.y - d.y) <= 10 then
+                    houses = houses + 1
+                end
+            end
+            if houses < max then
                 local x, y = B.house_site(memory, d)
                 if x ~= nil then
                     B.queue(view, memory, C.house, true, false, x, y)

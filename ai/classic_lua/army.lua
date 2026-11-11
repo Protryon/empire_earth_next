@@ -138,6 +138,7 @@ local function file_of(memory, player)
     f.types = types
     f.buildings = buildings
     f.next = now + 30000
+    f.player = player
     a.files[player] = f
     return f
 end
@@ -147,8 +148,19 @@ end
 -- own military and citizens), so a group is sized as against a mirror of the player when little is known
 local function strength_of(view, memory, f)
     local b = memory.t.behavior
-    local mil = math.max(f.military, #own_military())
-    local gat = math.max(f.gatherers, view.citizens or 0)
+    local mil, gat = f.military, f.gatherers
+    -- (the mirror only for a player known to have a town or buildings: one never seen with anything, such as a
+    -- seat with no units, has the strength the classic's file gives it, nothing)
+    local known = #(f.buildings or {}) > 0
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == f.player and (e.town_x or -1) >= 0 then
+            known = true
+        end
+    end
+    if known then
+        mil = math.max(mil, #own_military())
+        gat = math.max(gat, view.citizens or 0)
+    end
     return (mil * b.military_count_weight_k + gat * b.worker_count_weight_k) // 1000
 end
 
@@ -156,7 +168,7 @@ end
 local function enemies()
     local humans, computers = {}, {}
     for _, p in ipairs(ai.players()) do
-        if p.enemy and not p.me and p.alive then
+        if p.enemy and not p.me then   -- (the classic skips only observers: a player with no units left counts)
             if p.human then
                 humans[#humans + 1] = p.id
             else
@@ -758,6 +770,12 @@ local function fill_requests(view, memory)
     for _, g in ipairs(G.all(mem)) do
         if g.slots ~= nil and #g.slots > 0 then
             if view.time >= (g.deadline or 0) then
+                -- Cancel: the open slots go, and one production order each with them
+                for _, sl in ipairs(g.slots) do
+                    if sl.asked then
+                        U.cancel_request(memory, sl.c, 1)
+                    end
+                end
                 g.slots = {}
             else
                 local ids, keep = {}, {}
@@ -776,6 +794,7 @@ local function fill_requests(view, memory)
                         if not s.asked then
                             U.request(view, memory, s.c, 1)
                             s.asked = true
+                            s.asked_t = view.time
                         end
                         keep[#keep + 1] = s
                     end
@@ -1407,7 +1426,7 @@ local function attack(view, memory)
     local b = memory.t.behavior
     local humans, computers = enemies()
     local list = computers
-    if #humans > 0 and #computers > 0 and T.random_k() < b.computer_aggression_k * 10 then
+    if #humans > 0 and #computers > 0 and T.random_k() < b.computer_aggression_k // 100 then   -- (mComputerAggression x 0.01: 10 -> 10%)
         list = computers
     elseif #humans > 0 then
         list = humans
@@ -1537,6 +1556,18 @@ function M.step(view, memory)
                 a.groups[g.id] = nil
             else
                 waiting[#waiting + 1] = g
+            end
+        end
+    end
+    -- (the soldiers the militia sent to fight are left to it)
+    G.committed = {}
+    local mi = memory.militia
+    if mi ~= nil and mi.fight ~= nil then
+        for _, id in ipairs(ai.keys(mi.fight)) do
+            if view.time < mi.fight[id] then
+                G.committed[id] = true
+            else
+                mi.fight[id] = nil
             end
         end
     end
