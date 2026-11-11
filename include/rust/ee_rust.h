@@ -730,6 +730,21 @@ constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
 /// `kFadeInRate`.
 constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
+/// `kHelpTextOffset`: the tool tip's gap below the mouse.
+constexpr static const float HELP_TEXT_OFFSET = 32.0;
+
+/// `kTextSpacing`: the gap around the title, the axis labels and the grid values.
+constexpr static const float TEXT_SPACING = 5.0;
+
+/// `kMaximumZoomScale`.
+constexpr static const float MAXIMUM_ZOOM = 4.0;
+
+/// `kKeyNone`: a hot key record's empty modifier.
+constexpr static const uint32_t KEY_NONE = 32767;
+
+/// Which key member `GetEntity` fills: a modifier slot (0 to 2) or the key.
+constexpr static const size_t KEY_SLOT = 3;
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -4842,6 +4857,61 @@ struct EeUiDbFont {
   uint8_t style10;
   uint8_t style08;
   char pad[3];
+};
+
+/// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
+struct EeUiGraphLayout {
+  EeUiRect title;
+  EeUiRect y_axis;
+  EeUiRect x_axis;
+  EeUiRect graph;
+};
+
+/// Which texts `CopyData` lays out: each label's flag (`mLabelGraph` ..) and whether its text exists (`SetFont`
+/// made them).
+struct EeUiGraphTexts {
+  bool label_graph;
+  bool has_title;
+  bool label_grid;
+  bool has_grid;
+  bool label_y;
+  bool has_y;
+  bool label_x;
+  bool has_x;
+};
+
+/// A graph's value range (`UGraph`'s or the displayed one, `UIGraph::mMinX` ..).
+struct EeUiGraphRange {
+  long min_x;
+  long max_x;
+  long min_y;
+  long max_y;
+};
+
+/// What `SetCandidateList` leaves: the window's left and right edges and the selected line within the page.
+struct EeUiCandidateFit {
+  float left;
+  float right;
+  long selection;
+};
+
+/// One line of the window's border.
+struct EeUiCandidateLine {
+  float x0;
+  float y0;
+  float x1;
+  float y1;
+  /// The light border colour (else the dark one).
+  bool light;
+};
+
+/// `DrawPolygons`' plan after the background: the selection bar (when `selection` is not negative: the selected
+/// line, two pixels in from each side, clipped to the window) and the two-pixel bevelled border, top (dark),
+/// bottom (light), left (dark), right (light), in the C++'s order.
+struct EeUiCandidateFrame {
+  bool has_selection;
+  EeUiRect selection;
+  EeUiCandidateLine lines[8];
 };
 
 /// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
@@ -10503,6 +10573,17 @@ long ee_ui_background_full_draw(void *background,
                                 unsigned long columns,
                                 unsigned long rows);
 
+/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_bfull_draw(void *background,
+                                 EeUiRect form,
+                                 EeUiRect redraw,
+                                 unsigned long texture_width,
+                                 unsigned long texture_height,
+                                 EeUiRect texture_rect,
+                                 unsigned long columns,
+                                 unsigned long rows);
+
 /// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
 /// `RelayoutBackground` (never exclusive) lay a background out in.
 EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
@@ -11014,6 +11095,11 @@ void ee_ui_form_set_all_controls_dirty(void *form);
 /// `UIForm::GetToolTipShadowRectangle(rect, out)`.
 EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
 
+/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
+EeUiPoint ee_ui_form_help_location(EeUiPoint mouse,
+                                   EeUiRect label,
+                                   EeUiRect form);
+
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
 
@@ -11034,6 +11120,81 @@ void ee_ui_group_enable(void *group);
 long ee_ui_string_list_find(void *list,
                             const char *key,
                             unsigned long selection);
+
+/// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
+EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
+                                        EeUiRect rect,
+                                        EeUiGraphTexts texts,
+                                        long max_x,
+                                        long max_y);
+
+/// `UIGraph::CopyData`'s displayed range.
+EeUiGraphRange ee_ui_graph_copy_range(float zoom, EeUiGraphRange displayed, EeUiGraphRange graph);
+
+/// `ZoomIn` (`zoom_in`) or `ZoomOut`: the new zoom; `out` the displayed range.
+float ee_ui_graph_zoom(bool zoom_in,
+                       float zoom,
+                       float increment,
+                       EeUiGraphRange graph,
+                       EeUiGraphRange *out);
+
+/// `UIGraph::DrawPolygons` after `UIControl::DrawPolygons` (`result`), the grid lines drawn with `line`.
+long ee_ui_graph_draw_grid(void *graph,
+                           void *line,
+                           long result,
+                           unsigned long thickness,
+                           EeUiRect rect,
+                           bool grid,
+                           unsigned long divisions_x,
+                           unsigned long divisions_y,
+                           float zoom);
+
+/// `UIGraph::DrawGridText`.
+long ee_ui_graph_draw_grid_text(void *graph,
+                                EeUiRect rect,
+                                unsigned long divisions_x,
+                                unsigned long divisions_y,
+                                float zoom,
+                                EeUiGraphRange range);
+
+/// `UIGraph::DrawTextA` after the draw count's decrement.
+long ee_ui_graph_draw_texts(void *graph, bool title, bool x, bool y, bool grid);
+
+/// `UILineGraph::DrawPolygons` after `UIGraph::DrawPolygons` (`result`), over the copied graph's `count` series.
+long ee_ui_linegraph_draw_list(void *graph,
+                               long result,
+                               unsigned long count);
+
+/// `UILineGraph::DrawSeries` of `series` (`count` points), drawn with `line`.
+long ee_ui_linegraph_draw_series(void *graph,
+                                 void *line,
+                                 const void *series,
+                                 unsigned long count,
+                                 long series_min_x,
+                                 EeUiGraphRange copied,
+                                 EeUiGraphRange displayed,
+                                 EeUiRect rect);
+
+/// `OpenCandidateWindow`'s rectangle.
+EeUiRect ee_ui_ime_open_rect(EeUiRect screen,
+                             EeUiRect control,
+                             float width_ratio,
+                             float height_ratio);
+
+/// `SetCandidateList`'s page, lines and width.
+EeUiCandidateFit ee_ui_ime_candidate_list(void *list,
+                                          float height,
+                                          long font_height,
+                                          unsigned long selection,
+                                          unsigned long count,
+                                          unsigned long window_width,
+                                          float left);
+
+/// `DrawPolygons`' selection bar and border.
+EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long height);
+
+/// `DrawTextA`'s row of line `index`.
+EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
 /// `UITextLabel::ComputeTextLabelRect`.
 void ee_ui_label_compute_rect(void *label);
@@ -11072,6 +11233,15 @@ bool ee_ui_hotkey_fire_events(void *key);
 
 /// `UIForm::UpdateKeyboard` -> its result.
 long ee_ui_form_update_keyboard(void *form);
+
+/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
+void ee_ui_hotkey_set_event(void **slot, void *event);
+
+/// `UIHotKey::SetModifier(code, slot)`.
+void ee_ui_hotkey_set_modifier(void *key, unsigned long code, int slot);
+
+/// `UIHotKey::CreateHotKeys(file)` -> its result.
+long ee_ui_hotkey_create_hotkeys(void *file);
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 EeUiBorderLine ee_ui_border_line(EeUiRect r,

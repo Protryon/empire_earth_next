@@ -1,6 +1,6 @@
 //! The label's geometry against the real C++ (`golden_label_fit.txt`): a scratch driver (`build/ui_label_golden`)
 //! ran the unmodified `UITextLabel.cpp` (with the real `UIControl.cpp` and `UIForm.cpp`; a fake scroll bar whose
-//! constructor, slider range and virtuals log, the real one needing the manager's bitmaps) over 150 labels (one-line
+//! constructor, slider range and virtuals log, the real one needing the manager's bitmaps) over 150 labels (then 40 one-line fitted labels at the vertical centring's rounding edge, round 9) (one-line
 //! and multi-line, fit-to-text or not, each alignment, three font heights, borders) of 30 random operations: new
 //! lines and appended ones with `CheckScrollBar`, `DeleteLine`, `DeleteArray`, `SetFitRectToText`, `SetLocation`,
 //! `SetRectangle`, a scroll position or an alignment then `ComputeTextLabelRect`, a removed scroll bar's deletion
@@ -320,7 +320,7 @@ fn replays_the_cpp_golden() {
         assert_eq!(a, b, "line {}", n + 1);
     }
     assert_eq!(out.len(), golden.len(), "line count");
-    assert_eq!(labels, 150);
+    assert_eq!(labels, 190);
 }
 
 #[test]

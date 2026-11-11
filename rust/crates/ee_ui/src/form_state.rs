@@ -66,6 +66,29 @@ pub fn and_in_place(r: &mut UiRect, other: &UiRect) -> bool {
     overlap
 }
 
+/// `kHelpTextOffset`: the tool tip's gap below the mouse.
+pub const HELP_TEXT_OFFSET: f32 = 32.0;
+
+/// `SetHelpTextPopupLocation`: the tool tip `label` (its rectangle) at the mouse, moved left to end a pixel inside the
+/// form's right edge when it would pass it, above the mouse when it would pass the bottom (else
+/// [`HELP_TEXT_OFFSET`] below), on whole pixels (each coordinate floored, then rounded).
+pub fn help_popup_location(mouse: crate::rect::UiPoint, label: UiRect, form: UiRect) -> crate::rect::UiPoint {
+    use crate::rect::um_floor;
+    let mut at = mouse;
+    let width = label.width();
+    if mouse.x + width > form.right {
+        at.x = um_floor(at.x) as f32 - (um_floor(mouse.x) as f32 + width - form.right + 1.0);
+    }
+    if label.height() + HELP_TEXT_OFFSET > form.bottom - mouse.y {
+        at.y = um_floor(at.y) as f32 - label.height();
+    } else {
+        at.y = um_floor(at.y) as f32 + HELP_TEXT_OFFSET;
+    }
+    at.x = um_floor(at.x + 0.5) as f32;
+    at.y = um_floor(at.y + 0.5) as f32;
+    at
+}
+
 /// `GetToolTipShadowRectangle`: the rectangle moved 3 pixels right and down.
 pub fn tool_tip_shadow(r: &UiRect) -> UiRect {
     UiRect::new(
@@ -497,5 +520,7 @@ pub fn close(h: &mut impl LifeHost) {
     }
 }
 
+#[cfg(test)]
+mod help_tests;
 #[cfg(test)]
 mod tests;
