@@ -2315,6 +2315,18 @@ struct EEUUTargetSearch {
             && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
     }
     bool Score(EEComplexUnit* inTarget);    // 0x25000c (inline below; always false)
+    // TEST ONLY (the CBST capture): one Score call's target, outcome (0 rejected, 1 scored already, 2 not better,
+    // 3 the best so far, 4 unreachable and ignored) and score; always false
+    bool Trace(EEComplexUnit* inTarget, int32_t inCode, long inScore)
+    {
+        if (EESimCaptureRecord::Active()) {
+            this->mTrace.push_back(inTarget != NULL ? (int32_t)inTarget->GetUnitID() : -1);
+            this->mTrace.push_back(inCode);
+            this->mTrace.push_back((int32_t)inScore);
+        }
+        return false;
+    }
+    std::vector<int32_t> mTrace;            // TEST ONLY
     std::vector<EEComplexUnit*> mScratch;   // +0x00 (the large units already scored)
     float mCenterX;                         // +0x10 (inX + 0.5)
     float mCenterY;                         // +0x14
@@ -2356,7 +2368,7 @@ inline bool EEUUTargetSearch::Score(EEComplexUnit* inTarget)
     long theB = -10000;
     if (theClass->mTileSize > 1) {
         if (std::find(this->mScratch.begin(), this->mScratch.end(), inTarget) != this->mScratch.end())
-            return false;
+            return this->Trace(inTarget, 1, 0);
         if (theClass->mTileSize > 1)
             this->mScratch.push_back(inTarget);
     }
@@ -2366,34 +2378,34 @@ inline bool EEUUTargetSearch::Score(EEComplexUnit* inTarget)
     else
         theDistance = EEGetHitDistanceSquared(this->mUnit, inTarget, this->mCenterX, this->mCenterY);
     if (theDistance > this->mReachSquared)
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theOwner->GetPlayerID() == 0 && !EEIsAttackedBy(this->mUnit, inTarget))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theClass->mIsWall && !theClass->mIsTower)
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (!EECanTargetClass(this->mUnit, theClass))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (inTarget->IsFoundation())
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (!EEIsSeenBy(inTarget, this->mUnit->GetPlayer(), true))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (this->mUnit->IsOnOtherContinentThan(inTarget))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theClass->IsPartLeftOut(inTarget))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theClass->IsPriest() && !EECanPriestConvert(this->mUnit, inTarget) && !this->mUnit->CanAttackClass(theClass))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (this->mUnit->mIgnoredTargets.size() != 0 && this->mUnit->IsTargetIgnored(inTarget, true))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     float theToHit = gToHitTable.GetAttackFactor(this->mAmmoType, theClass, this->mUnit->mPlayer->GetPlayerID(), theOwner->GetPlayerID());
     if (this->mIsImmobile && this->mMode == 1 && theDistance >= this->mScaledRangeSquared)
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theDistance < this->mMinRangeSquared)
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (theToHit <= 0.0f)
-        return false;
+        return this->Trace(inTarget, 0, 0);
     if (!this->mUnit->mUnitClass->mShootsHigh && !this->mUnit->mStats->mCanFireOverWalls && EEIsLineToUnitBlocked(this->mUnit, inTarget, &theBlocker, &theA, &theB))
-        return false;
+        return this->Trace(inTarget, 0, 0);
     float theTargetFAC = inTarget->mStats->mMaxVelocity;
     long theScore = 0;
     if (theClass->mUnitType == EEAIUnitTargetingTable::sTable[this->mMode][5]) {
@@ -2414,7 +2426,7 @@ inline bool EEUUTargetSearch::Score(EEComplexUnit* inTarget)
         long theHit = UMFloatToLong(EEAIUnitTargetingTable::sTable[this->mMode][6] * theToHit);
         theScore += theHit + theNear;
         if (theScore <= this->mBestScore)
-            return false;
+            return this->Trace(inTarget, 2, theScore);
     }
     U2DPoint<long> theTile;
     theTile.mX = 0;
@@ -2424,8 +2436,10 @@ inline bool EEUUTargetSearch::Score(EEComplexUnit* inTarget)
         this->mBestScore = theScore;
         if (theFinal == true || theScore >= EEAIUnitTargetingTable::sTable[this->mMode][9])
             this->mIsDone = true;
+        this->Trace(inTarget, 3, theScore);
     } else {
         this->mUnit->IgnoreTarget(inTarget);
+        this->Trace(inTarget, 4, theScore);
     }
     return false;
 }
@@ -2583,6 +2597,26 @@ EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long i
         U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
         EEUUSearchTiles(thePosition, theTile, inArea, theScratch, theSearch);
     }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBST capture)
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'S', 'T'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)inX);
+        theRecord.I32((int32_t)inY);
+        theRecord.F32(inScale);
+        theRecord.I32((int32_t)inArea->mLeft);
+        theRecord.I32((int32_t)inArea->mTop);
+        theRecord.I32((int32_t)inArea->mRight);
+        theRecord.I32((int32_t)inArea->mBottom);
+        theRecord.I32(inUnit->mUnitClass->mIsMelee);
+        theRecord.I32((int32_t)gPhysics->mTickRandom);
+        theRecord.I32((int32_t)(theSearch.mTrace.size() / 3));
+        for (size_t i = 0; i < theSearch.mTrace.size(); i++)
+            theRecord.I32(theSearch.mTrace[i]);
+        theRecord.I32(theSearch.mBest != NULL ? (int32_t)theSearch.mBest->GetUnitID() : -1);
+        theRecord.I32((int32_t)theSearch.mBestScore);
+        theRecord.I32(theSearch.mIsDone);
+        theRecord.Commit();
+    }
     return theSearch.mBest;
 }
 
@@ -2640,6 +2674,17 @@ EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
     return EESearchTargetAlongList(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), 1.0f);
 }
 
+// TEST ONLY (the CBSL capture): one candidate of the unit-list search, its outcome (0 rejected, 2 not better, 3 the
+// best so far, 4 unreachable and ignored, 5 the preferred type) and score
+static void EESearchTrace(std::vector<int32_t>& ioTrace, EEUnit* inUnit, int32_t inCode, long inScore)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    ioTrace.push_back(inUnit != NULL ? (int32_t)inUnit->GetUnitID() : -1);
+    ioTrace.push_back(inCode);
+    ioTrace.push_back((int32_t)inScore);
+}
+
 // FUNCTION: EXE 0x643fa7
 // Returns the best target for a unit around a tile along the x-sorted unit list, scored by its targeting table
 // The best target for inUnit around (inX, inY) along the x-sorted unit list (both ways), scored by the targeting
@@ -2688,6 +2733,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
     EEUnit* theA;
     long theB;
     long theC;
+    std::vector<int32_t> theTrace;   // TEST ONLY (the CBSL capture)
     if (inUnit->mStats->GetAttack() == 0.0f) {
         theDone = true;
         theBackDone = true;
@@ -2725,6 +2771,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                         float theTargetFAC = theForward->mStats->GetMaxVelocity();
                         long theScore = 0;
                         if (theForward->GetUnitClass()->mUnitType == EEAIUnitTargetingTable::sTable[theMode][5]) {
+                            EESearchTrace(theTrace, theForward, 5, 0);
                             theBest = theForward;
                             theDone = true;
                             theBackDone = true;
@@ -2748,6 +2795,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                         theScore += theHit + theNear;
                         if (theScore > theBestScore) {
                             if (EEIsAttackReachable(inUnit, theTarget, &theTile)) {
+                                EESearchTrace(theTrace, theForward, 3, theScore);
                                 theBest = theForward;
                                 theBestScore = theScore;
                                 if (theScore >= EEAIUnitTargetingTable::sTable[theMode][9]) {
@@ -2756,9 +2804,16 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                                 }
                             } else {
                                 inUnit->IgnoreTarget(theTarget);
+                                EESearchTrace(theTrace, theForward, 4, theScore);
                             }
+                        } else {
+                            EESearchTrace(theTrace, theForward, 2, theScore);
                         }
+                    } else {
+                        EESearchTrace(theTrace, theForward, 0, 0);
                     }
+                } else {
+                    EESearchTrace(theTrace, theForward, 0, 0);
                 }
                 theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
             }
@@ -2796,6 +2851,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                     float theTargetFAC = theBackward->mStats->GetMaxVelocity();
                     long theScore = 0;
                     if (theBackward->GetUnitClass()->mUnitType == EEAIUnitTargetingTable::sTable[theMode][5]) {
+                        EESearchTrace(theTrace, theBackward, 5, 0);
                         theBest = theBackward;
                         theDone = true;
                         theBackDone = true;
@@ -2819,6 +2875,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                     theScore += theHit + theNear;
                     if (theScore > theBestScore) {
                         if (EEIsAttackReachable(inUnit, theTarget, &theTile)) {
+                            EESearchTrace(theTrace, theBackward, 3, theScore);
                             theBest = theBackward;
                             theBestScore = theScore;
                             if (theScore >= EEAIUnitTargetingTable::sTable[theMode][9]) {
@@ -2827,12 +2884,32 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
                             }
                         } else {
                             inUnit->IgnoreTarget(theTarget);
+                            EESearchTrace(theTrace, theBackward, 4, theScore);
                         }
+                    } else {
+                        EESearchTrace(theTrace, theBackward, 2, theScore);
                     }
+                } else {
+                    EESearchTrace(theTrace, theBackward, 0, 0);
                 }
+            } else {
+                EESearchTrace(theTrace, theBackward, 0, 0);
             }
             theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
         }
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBSL capture)
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'S', 'L'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)inX);
+        theRecord.I32((int32_t)inY);
+        theRecord.F32(inScale);
+        theRecord.I32((int32_t)(theTrace.size() / 3));
+        for (size_t i = 0; i < theTrace.size(); i++)
+            theRecord.I32(theTrace[i]);
+        theRecord.I32(theBest != NULL ? (int32_t)theBest->GetUnitID() : -1);
+        theRecord.I32((int32_t)theBestScore);
+        theRecord.Commit();
     }
     return theBest;
 }
@@ -3364,6 +3441,7 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
     EEUGAttackUnit* theAttack;
     EEUGGather* theGather;
     long theDistance;
+    std::vector<int32_t> theTrace;   // TEST ONLY (the CBPU capture: each pursuer and its distance)
 
     if (RTSDummyHead(theForward) != NULL || theForward == NULL)
         theForwardDone = true;
@@ -3381,6 +3459,8 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
                     || (theGather != NULL && theGather->mResource == inUnit)) {
                     inUnit->GetNearestFootprintTile(theForward, &theTileX, &theTileY);
                     theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
+                    theTrace.push_back((int32_t)theUnit->GetUnitID());   // TEST ONLY
+                    theTrace.push_back((int32_t)theDistance);
                     if (theBest == -1 || theDistance < theBest) {
                         theResult = theUnit;
                         theBest = theDistance;
@@ -3404,6 +3484,8 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
                 || (theGather != NULL && theGather->mResource == inUnit)) {
                 inUnit->GetNearestFootprintTile(theBackward, &theTileX, &theTileY);
                 theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
+                theTrace.push_back((int32_t)theUnit->GetUnitID());   // TEST ONLY
+                theTrace.push_back((int32_t)theDistance);
                 if (theBest == -1 || theDistance < theBest) {
                     theResult = theUnit;
                     theBest = theDistance;
@@ -3412,6 +3494,17 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
         }
         theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
         theBackwardDone = theBackward == NULL;
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBPU capture)
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'P', 'U'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)theX);
+        theRecord.I32((int32_t)theY);
+        theRecord.I32((int32_t)(theTrace.size() / 2));
+        for (size_t i = 0; i < theTrace.size(); i++)
+            theRecord.I32(theTrace[i]);
+        theRecord.I32(theResult != NULL ? (int32_t)theResult->GetUnitID() : -1);
+        theRecord.Commit();
     }
     return theResult;
 }
@@ -4969,8 +5062,29 @@ void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint
 // Collects the tiles of a line, walking in from both ends (optionally the end tiles and 4-connected)
 // The tiles of the line (inX1, inY1)-(inX2, inY2): a symmetric double-step rasteriser that walks in from both ends
 // (inEnds: the two end tiles too; !inThin: the extra tiles that make the line 4-connected), in order from (inX1, inY1)
+// TEST ONLY (the CBTL capture): the call's ends and flags, then the tiles
+static void EEGetTileLineOriginal(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles,
+                                  bool inEnds, bool inThin);
+
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles, bool inEnds,
                 bool inThin)
+{
+    EEGetTileLineOriginal(inX1, inY1, inX2, inY2, outTiles, inEnds, inThin);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'T', 'L'));
+        int32_t theIn[6] = {(int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin};
+        theRecord.Bytes(theIn, sizeof(theIn));
+        theRecord.I32((int32_t)outTiles->size());
+        for (size_t i = 0; i < outTiles->size(); i++) {
+            theRecord.I32((int32_t)(*outTiles)[i].mX);
+            theRecord.I32((int32_t)(*outTiles)[i].mY);
+        }
+        theRecord.Commit();
+    }
+}
+
+static void EEGetTileLineOriginal(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles,
+                                  bool inEnds, bool inThin)
 {
     long theSwap;
     long theIncrement1;
@@ -6394,8 +6508,81 @@ struct EELineOfFireHost {
     std::vector<int32_t> mPairs;
 };
 
-// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
+// TEST ONLY (the golden of the CBWP capture): the start height's inputs as the original reads them (kind 0: bare,
+// 1: a turret model's point, 2: the list's point, 3: the box's top), the model chain's transforms, the height
+struct EEWeaponCaptureIn {
+    int32_t kind, list_present;
+    float location[16];
+    float scale;
+    int32_t turret;
+    float yaw;
+    float point[3];
+    float top[3];
+    int32_t chain;
+};
+static float EELineOfFireStartHeightOriginal(void* inContext, int32_t inBare);
+
 static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
+{
+    float theHeight = EELineOfFireStartHeightOriginal(inContext, inBare);
+    if (!EESimCaptureRecord::Active())
+        return theHeight;
+    EEComplexUnit* theUnit = ((EELineOfFireHost*)inContext)->mUnit->GetComplexUnit();
+    EEWeaponCaptureIn in = {};
+    std::vector<float> theChain;
+    memcpy(in.location, theUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    if (inBare) {
+        in.kind = 0;
+    } else {
+        EEModel* theModel = ((EELineOfFireHost*)inContext)->mUnit->GetModel();
+        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        unsigned long theIndex = theUnit->mWeaponTagPoint;
+        in.list_present = theList != NULL;
+        in.scale = theUnit->mPhysicalModel.GetScale();
+        EETagPoint* thePoint = NULL;
+        if (theModel->GetNumParts() > 0) {
+            in.kind = 1;
+            unsigned long thePart;
+            thePoint = theList->GetTagPoint(theIndex);
+            if (theModel->FindTurretPart(thePoint->mModel, thePart) == 0) {
+                in.turret = 1;
+                in.yaw = theUnit->mTurretAngles[thePart];
+            }
+            thePoint = *(theList->mPoints.begin() + theIndex);
+        } else if (theList != NULL && theList->mPoints.size() > theIndex) {
+            in.kind = 2;
+            thePoint = theList->GetTagPoint(theIndex);
+        } else {
+            in.kind = 3;
+            const GE3DPoint& theTop = theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
+            in.top[0] = theTop.GetX();
+            in.top[1] = theTop.GetY();
+            in.top[2] = theTop.GetZ();
+        }
+        if (thePoint != NULL) {
+            const GE3DPoint& theLocal = thePoint->mModel->GetTagPoint(thePoint->mIndex, theFrame);
+            in.point[0] = theLocal.GetX();
+            in.point[1] = theLocal.GetY();
+            in.point[2] = theLocal.GetZ();
+            for (GEModel* theLink = thePoint->mModel; theLink != NULL; theLink = theLink->GetParentModel()) {
+                const GETransformation& theStep = theLink->GetInternalTransform(theFrame);
+                theChain.insert(theChain.end(), &theStep.mMatrix[0][0], &theStep.mMatrix[0][0] + 16);
+                in.chain++;
+            }
+        }
+    }
+    EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'W', 'P'));
+    theRecord.Bytes(&in, sizeof(in));
+    if (!theChain.empty())
+        theRecord.F32s(&theChain[0], (unsigned int)theChain.size());
+    theRecord.F32(theHeight);
+    theRecord.Commit();
+    return theHeight;
+}
+
+// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
+static float EELineOfFireStartHeightOriginal(void* inContext, int32_t inBare)
 {
     EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
     EEComplexUnit* inUnit = theHost->mUnit;
