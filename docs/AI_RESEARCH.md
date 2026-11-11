@@ -2930,7 +2930,30 @@ What it shows:
 - `EECPTraceUnitLost`'s `if` without braces counts every lost unit in the citizens' by-distance and by-killer fields.
   This only affects the trace.
 
+**32 seeds (2-33) against both classics, the final scripts with the died fix** (a few start-up failures under load
+dropped 1-2 games a row):
+
+| Matchup | Variant | Games | W/L/C | Defeats | Stone (n, median) | Copper (n, median) | Lost 20 min / all | Citizens 30 / 40 min | End citizens |
+|---|---|---|---|---|---|---|---|---|---|
+| Improved classic | baseline | 32 | 2/25/5 | 16 | 32, 26.6 | 19, 54.7 | 3.6 / 121.5 | 33 / 43 | 37 |
+| | final | 30 | 0/22/8 | 11 | 28, 25.8 | 15, 59.9 | 4.0 / 114.4 | 36 / 52 | 46 |
+| Cheating classic | baseline | 31 | 5/21/5 | 14 | 21, 30.6 | 6, 75.8 | 13.0 / 81.5 | 15 / 17 | 30 |
+| | final | 31 | 4/23/4 | 20 | 21, 29.3 | 6, 62.1 | 10.0 / 71.5 | 20 / 27 | 23 |
+
+- Against the improved classic the final scripts have fewer defeats (11 of 30 against 16 of 32), fewer citizens lost
+  and more citizens at 40 minutes. Fewer games reach the Copper Age (15 against 19), and those that do get there 5
+  minutes later.
+- Against the cheating classic they have more defeats: 20 of 31 against 14 of 31. That is a real regression, not
+  noise. Fewer citizens are lost and the town is larger at 30-40 minutes, but more towns are wiped out later. The
+  flight keeps the citizens alive through the first raids; it does not stop the waves that follow.
+- `--repeat 2` on the final scripts (seeds 4 and 9 against the classic and rush, 90 minutes): all four pairs
+  identical.
+- **Age of AI with the died fix** (against the improved classic, seeds 2-17): W/L/C 1/12/3 -> 0/11/4, defeats 6 -> 3,
+  citizens lost 127 -> 133, end citizens 57 -> 61. Its play changes (diplo lines 396 -> 362 in 16 games). The traces
+  first differ at the losses trace line, which the braces fix corrected.
+
 **Open.**
+- The cheating classic's later waves: the regression above.
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
 - Raids routed around towers.
