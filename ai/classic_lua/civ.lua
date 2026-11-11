@@ -522,7 +522,7 @@ function M.update(view, memory)
             end
         end
         local wanted = U.wanted_citizens(view, memory)
-        R.add_costs(memory, U.cost(C.citizen), wanted)
+        R.add_costs(memory, U.ledger_cost(C.citizen), wanted)
         civ.first_done = true
     end
     civ.farm_type = C.farm   -- (EEGetFarmType: the robotic farm with its upgrade; not ported, Nano and later)

@@ -52,6 +52,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitBehavior.h"
+#include "ee/EEUGGather.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
@@ -385,7 +386,9 @@ static void EECPUnitsTake(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECompl
     }
 }
 
-static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit)
+// inWork (ai.release(ids, {gather = true})): a citizen or boat that gathers goes onto its resource's gatherer list, so
+// the engine's runners count it where it works (else only an idle one rejoins them, on the idle list)
+static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit, bool inWork)
 {
     if (s->mHeld.erase((long)inUnit->mUnitID) == 0 || inUnit->mUnitClass->IsBuilding())
         return;
@@ -394,9 +397,22 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     if (inPlayer->mCombatManager != NULL)
         inPlayer->mCombatManager->UnitAdded(inUnit);
     long theCategory = inUnit->mUnitClass->mCategory;
-    if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) && EECPUnitsIdle(inUnit)
-        && inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL)
-        inPlayer->mCivilizationManager->mResourceManager->AddIdleGatherer(inUnit);
+    if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)
+        || inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResourceManager == NULL)
+        return;
+    EECPResourceManager* theManager = inPlayer->mCivilizationManager->mResourceManager;
+    if (EECPUnitsIdle(inUnit)) {
+        theManager->AddIdleGatherer(inUnit);
+        return;
+    }
+    EEUGGather* theGoal = inWork ? dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal()) : NULL;
+    if (theGoal != NULL && theGoal->mResource != NULL && theGoal->mResource->mHitPoints > 0) {
+        long theResource = (long)theGoal->mResource->GetResourceType();
+        if (theResource >= 0 && theResource < 7) {
+            theManager->RemoveGatherer(inUnit);
+            theManager->AddGatherer(inUnit, theResource);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -498,7 +514,10 @@ void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool in
     long theKiller = 0;
     if (inUnit->mLastAttacker != NULL && EECPUnitsSeen(inPlayer, inUnit->mLastAttacker))
         theKiller = (long)inUnit->mLastAttacker->mUnitID;
-    bool theConverted = inUnit->mHitPoints > 0;   // alive, but no longer the player's
+    // converted: alive and another player's now. A unit killed still has its hit points here (EEComplexUnit::Kill
+    // calls UnitTaken before it zeroes them), so the hit points alone made every kill a "converted" event and no
+    // script ever saw "died" (AI_RESEARCH §8.41); a priest's conversion is a swap (EEConvertUnit), skipped above
+    bool theConverted = inUnit->mHitPoints > 0 && inUnit->mPlayer != NULL && inUnit->mPlayer != inPlayer;
     EECPUnitsEventAdd(s, theConverted ? kEvConverted : kEvDied, theID, theKiller,
         inUnit->mUnitClass != NULL ? inUnit->mUnitClass->mUnitType : -1, 0);
     s->mHeld.erase(theID);
@@ -1277,12 +1296,44 @@ static int LuaClass(lua_State* L)
             lua_setfield(L, -2, kNames[i]);
         }
         lua_setfield(L, -2, "cost");
+        lua_newtable(L);
+        for (long i = 0; i < 5; i++) {
+            lua_pushinteger(L, theNode != NULL ? (lua_Integer)me->ScaleCost(theNode->mData->mCosts[kResourceFood + i]) : 0);
+            lua_setfield(L, -2, kNames[i]);
+        }
+        lua_setfield(L, -2, "data_cost");   // the needs ledger's cost (EECPResourceManager::AddCosts)
     }
     EECPUnitsSetBool(L, "building", c->IsBuilding());
     EECPUnitsSetInt(L, "size", c->GetTileSize());
     EECPUnitsSetInt(L, "garrison", c->mGarrisonCapacity);
     EECPUnitsSetInt(L, "transport", c->mTransportCapacity);
     EECPUnitsSetBool(L, "can_garrison", c->mCanGarrison);
+    // the class's military data (the classic unit selector's: its AI kind, the kinds it counters, its roles,
+    // its influence and epoch, its domain)
+    EECPUnitsSetInt(L, "ai_kind", (long)c->mAIKind);
+    lua_createtable(L, 3, 0);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind1);
+    lua_rawseti(L, -2, 1);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind2);
+    lua_rawseti(L, -2, 2);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind3);
+    lua_rawseti(L, -2, 3);
+    lua_setfield(L, -2, "counters");
+    EECPUnitsSetBool(L, "attack_unit", c->mIsAttackUnit);
+    EECPUnitsSetBool(L, "defense_unit", c->mIsDefenseUnit);
+    EECPUnitsSetBool(L, "medic", c->mIsMedic);
+    EECPUnitsSetBool(L, "converts", c->mHasCalamityPowers || c->mConversionRate != 0.0f);
+    EECPUnitsSetBool(L, "is_transport", c->IsTransport());
+    EECPUnitsSetBool(L, "mine", c->mFamily == kUnitFamilyMines);
+    EECPUnitsSetInt(L, "influence", c->mInfluence);
+    EECPUnitsSetInt(L, "epoch", c->mEpoch);
+    EECPUnitsSetInt(L, "pop", c->GetPopulationCost());
+    {
+        unsigned char d = c->GetDomains();
+        const char* theDomain = ((d & kMovementAir) && !c->FliesOver()) ? "air"
+            : (d & kMovementSea) ? "sea" : (d & kMovementSpace) ? "space" : "land";
+        EECPUnitsSetStr(L, "domain", theDomain);
+    }
     if ((unsigned long)theType < me->mUnitClassUpgrades.size() && me->mUnitClassUpgrades[theType] != NULL) {
         EEUnitClassUpgrade* u = me->mUnitClassUpgrades[theType];
         EECPUnitsSetInt(L, "hp", u->mMaxHitPoints);
@@ -1869,6 +1920,7 @@ static int EECPUnitsHold(lua_State* L, bool inTake)
 {
     EEComputerPlayer* me = EECPUnitsMe(L);
     EECPUnitsState* s = EECPUnitsGet(me);
+    bool theWork = !inTake && EECPUnitsOptBool(L, 2, "gather", false);
     EECPUnitsReadIds(L, 1, s->mIds);
     EECPUnitsCharge(L, kCostCall + (int64_t)s->mIds.size() * kCostId);
     long n = 0;
@@ -1879,7 +1931,7 @@ static int EECPUnitsHold(lua_State* L, bool inTake)
         if (inTake)
             EECPUnitsTake(me, s, c);
         else
-            EECPUnitsRelease(me, s, c);
+            EECPUnitsRelease(me, s, c, theWork);
         n++;
     }
     lua_pushinteger(L, (lua_Integer)n);
@@ -3420,6 +3472,14 @@ static void EECPUnitsPushCost(lua_State* L, EEComputerPlayer* me, EETechTreeNode
         lua_setfield(L, -2, kNames[i]);
     }
     lua_setfield(L, -2, "cost");
+    // the tech's listed cost as the classic's needs ledger counts it (EECPResourceManager::AddCosts: the data's
+    // mCosts, ScaleCost'ed, without GetCost's epoch and upgrade factors)
+    lua_createtable(L, 0, 5);
+    for (long i = 0; i < 5; i++) {
+        lua_pushinteger(L, (lua_Integer)me->ScaleCost(inNode->mData->mCosts[kResourceFood + i]));
+        lua_setfield(L, -2, kNames[i]);
+    }
+    lua_setfield(L, -2, "data_cost");
 }
 
 // ai.techs{epoch = n, id = tech} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the

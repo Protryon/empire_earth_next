@@ -2769,7 +2769,7 @@ classic, 32 players).
   in every bench. **The other engines are unchanged** by the interface additions: boom and Age of AI against the
   classic, seed 2, 25 minutes, give the same traces on this build as on main's (1,887 and 2,541 lines).
 
-### 8.40 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
+### 8.42 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
 
 The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `ai/boom.lua`, each
 behind a switch of its `ECON` table, the logic in new library modules: `lib.econ_units` (orders on single citizens),
@@ -2841,6 +2841,196 @@ Open: the Stone Age's 15-minute stall (citizens 32-36 from minute 15 to 30: the 
 first) is where the Copper Age's 10 minutes against the owner's 46 go; the food places (18 on food, about 11 boats)
 bind from there. The per-unit gatherer placement, builders and rally points (items 6-8 of the economy plan) are not
 built: the runner already keeps the patches at 6.
+
+### 8.40 The classic computer player in Lua, the army (2026-11-10, EE-SIM)
+
+The second stage of §8.39: `ai/classic_lua/army.lua` replaces the first army stage with the classic's army.
+- The attack (EECPCombatManager::Update on the attack timer: the target player, CreateGroup).
+- The attack groups: the unit selector's group size, held, counter and favourite units; Personnel's per-class
+  request slots with their 600 s deadline; the sub-groups' wait for units, gathering at the rally point, and the
+  task (AssignLandTask's territory targets, else the defence ladder).
+- The defence commander: an aid package per town (EEPlayer::AddUnitToTown's clusters), SendAid / SendBestSubGroup /
+  CounterAttack, Gather, Deploy, Recall, PlanAid, CreateDefendGroup, GetUnitAllowance, ComputeTownThreat over the
+  seen armies; NoteThreat on citizen deaths.
+- lib.groups moves and fights the groups. ORIGIN has the deviations (fog: the target files are what ai.memory holds)
+  and what is not started (special units, ChooseUnitsToKill, hills and choke points, naval, air, walls).
+
+Three economy differences under the classic personality, found while chasing the army's numbers, mattered more than
+the army itself:
+- **The needs ledger counted the in-game cost, not the listed one.** EECPResourceManager::AddCosts counts a tech's
+  listed cost (ScaleCost'ed); `ai.class`'s `cost` is GetCost's, whose epoch factor zeroes the future research
+  sentinel (2000 wood, 1000 stone, 2000 iron) in the Prehistoric. The classic personality splits gatherers by the
+  needs, so the C++ sent its first gatherers to stone and iron while the port's went to wood. `data_cost` (AI_LUA_UNITS
+  §11) is the ledger's cost now.
+- **BuildSettlementFor never ran.** The gather goal's storage search asks the C++ AI for a settlement by a far
+  resource; the engine hook skips a script's seat. Without it the classic personality's mines had no drop site, so
+  no tower site either (FindTowerSite works the centres with a drop site): 0-3 towers by 12 minutes against the
+  C++'s 11-23, and the raids walked in. econ.lua ports it (every 4 s over the gatherers at work).
+- **HasEnemyNear saw too little.** It took the enemies seen within 9 tiles; the C++ sums every enemy influence in
+  the regions round a site (up to 27 tiles across). Lua citizens died far from home (386 of 917 deaths beyond 30
+  tiles, 188 to towers). It now takes the armed enemies seen or remembered in the same box.
+
+Bench: Small, Hard, 2 AIs (Lua against the C++ classic in the same game), seeds 2-17, 90 minutes, open data;
+stage 1 (lua_bal4, lua_cls4) against this stage (a8_bal, a8_cls); classic with the retail Hard cheats on both AIs.
+
+| Matchup | AI | Stone | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Citizens at 90 min (wiped) | Won-lost |
+|---|---|---|---|---|---|---|---|
+| balanced, stage-1 | classic | 16/16, 25.2 | 15/16, 63.8 | 22.9/2.2 / 25.0/2.2 / 30.4/5.1 / 45.9/3.2 | 2.3 / 24.6 | 151 (0/16) | 12-1, 3 close |
+| balanced, stage-1 | classic_lua | 16/16, 24.9 | 9/16, 64.6 | 23.4/2.3 / 27.2/3.2 / 38.0/6.3 / 48.2/7.1 | 2.1 / 95.4 | 45 (2/16) | 1-12, 3 close |
+| balanced, stage-2 | classic | 15/16, 25.1 | 13/16, 61.2 | 22.7/2.5 / 25.2/1.9 / 30.0/6.2 / 46.8/4.4 | 2.6 / 28.0 | 136 (1/16) | 11-3, 2 close |
+| balanced, stage-2 | classic_lua | 16/16, 25.0 | 9/16, 65.9 | 23.6/2.8 / 26.7/3.3 / 33.9/7.2 / 43.4/9.3 | 2.0 / 66.4 | 50 (3/16) | 3-11, 2 close |
+| classic+cheats, stage-1 | classic | 16/16, 45.6 | - | 27.9/6.4 / 51.1/9.2 / 50.9/13.7 / 50.8/8.6 | 2.6 / 26.1 | 51 (0/16) | 12-1, 3 close |
+| classic+cheats, stage-1 | classic_lua | 16/16, 46.5 | - | 22.4/7.1 / 33.6/10.5 / 34.6/13.2 / 31.0/16.8 | 13.7 / 155.1 | 7 (4/16) | 1-12, 3 close |
+| classic+cheats, stage-2 | classic | 16/16, 45.6 | - | 25.9/5.9 / 50.3/4.1 / 49.9/4.6 / 49.4/2.4 | 7.6 / 76.5 | 50 (0/16) | 0-6, 10 close |
+| classic+cheats, stage-2 | classic_lua | 16/16, 46.4 | - | 22.2/7.9 / 37.2/14.3 / 44.0/39.6 / 45.9/42.3 | 9.9 / 68.2 | 56 (0/16) | 6-0, 10 close |
+
+Readings:
+- **Balanced:** the economy is level to 30 minutes and close at 40 (43.4 against 46.8 citizens); Lua keeps a larger
+  army (7-9 against 4-6) and loses more citizens (66 against 28 in all), and loses 3-11 (2 close). The losses come
+  later in the game, past the first epochs.
+- **Classic with the cheats:** Lua's economy trails at 20 minutes (37 against 50 citizens) and is level by 40; its
+  army grows to 40 while the C++'s falls to 2-5 (its attacks die at Lua's towers), and Lua wins 6-0 (10 close):
+  from level-ish to ahead, so the remaining gap is in the other direction.
+- An experiment that dropped the target file's floor at the own military (the suspected feedback that grows the
+  army) did not lower the army and was not kept.
+- Determinism: seeds 2 and 5, 60 minutes, `--repeat 2`: traces identical. 0 script errors.
+
+Next: the balanced late-game losses and army size (the attack groups' slots against the room), the classic
+personality's early citizens, then the special units, ChooseUnitsToKill and the walls.
+
+### 8.41 Boom's defence and army on the per-unit interface (2026-11-10, EE-SIM)
+
+The owner's brief: boom's raid answer, militia and Stone Age guard in Lua on the per-unit interface (AI_LUA_UNITS
+§3, §11), with the improved classic's rules (`balanced`) and the research's (STRATEGY_RESEARCH §4), as library
+modules other AIs can use. Built:
+- `ai/lib/defence.lua`: the raid answer and the militia in the micro step, with the engine's militia and danger-zone
+  reflexes off (`ai.reflex{militia = false, danger = false}`).
+  - Raiders are clustered once a game second (one `ai.seen`). A cluster is a raid when it is stronger than boom's
+    THREAT_MIN, or when one of its units has hit an own unit in the last 15 s.
+  - Only the citizens with a raider within 6 tiles of them or of their work spot run. They go to the nearest tower or
+    town centre that is not further into the raid.
+  - They go back to their exact spot when it is clear. The return goes through a documented hook (`D.on_return`, for
+    the economy's placement module) and `ai.release{gather = true}` (new, AI_LUA_UNITS §11).
+  - The militia fights only melee raids of at most 6 raiders, at 3 x by the square law. The soldiers and the towers
+    in reach count; at most 4 citizens join a raider. It breaks off below half those odds.
+  - Warships are raids too: the citizens run from them, and none is sent back to a shore under fire.
+  - Builders repair the towers hit (2 a tower, 3 towers at once).
+- `ai/lib/guard.lua`: the home guard, as a manual lib.groups group.
+  - Its post is under the own tower nearest the citizens' centre.
+  - It fights the raids in the claim range at 0.8 x with the towers in reach, and always under a tower. It does not
+    chase past that zone.
+  - Focus fire: the raider nearest the citizens first. Units go on the next target in turn once enough fire is on
+    one. The hurt (under 35%) are pulled back.
+  - Under a warship's fire the ranged units shoot it and the rest leave its reach.
+  - With no raid on, at most half of it hunts the enemy citizens in its zone that are out of their towers' reach.
+  - The training follows a mix by the raiders seen (ai.memory). With nothing seen: 2/3 spearmen, 1/3 slingers.
+    Spearmen go against shock infantry and cavalry, slingers against spearmen, clubmen against ranged units.
+- `ai/boom.lua`: the plan's `army_per` / `army_floor` (balanced's standing army: a quarter of the citizens, at least
+  10) in the Stone and Copper plans; the micro step; the calls.
+
+**The bench.**
+- Small, Hard, 2 AIs, 120 minutes, seeds 2-17, `--data open`. Boom plays from seat p2.
+- Opponents: Age of AI; boom itself; the improved classic (`balanced`, no cheats); the original classic with
+  retail-Hard cheats (classicX); the rush script (now in ais.json).
+- Each row is 16 games. A few lobby start-up failures under the machine's load dropped one game from some rows.
+- W/L/C: the scorecard's rule (1.5 x citizens and army at the end, or the other side wiped out).
+- Lost: citizens and boats, by 20 minutes / in all. Per raid: the trace's next.raid incidents with a hit.
+
+| Matchup | Variant | W/L/C | Defeats | Stone / Copper (median min) | Lost 20 min / all | Lost a raid | Citizens / army 40 min | End citizens / army |
+|---|---|---|---|---|---|---|---|---|
+| Age of AI | baseline (main) | 4/5/7 | 0 | 22.3 / 49.5 | 0.5 / 14.5 | 2.06 | 60 / 16 | 108 / 17 |
+| | defence only | 4/5/7 | 0 | 22.3 / 51.7 | 0.6 / 10.5 | 1.18 | 60 / 14 | 111 / 19 |
+| | + guard, fixed 20 | 0/4/12 | 0 | 22.3 / 52.1 | 0.6 / 13.7 | 1.39 | 58 / 17 | 111 / 31 |
+| | + guard, scaled (final) | 4/4/8 | 0 | 22.3 / 51.6 | 0.6 / 10.4 | 1.04 | 62 / 12 | 112 / 30 |
+| Mirror | baseline | 1/2/13 | 0 | 21.6 / 47.3 | 0.1 / 39.2 | 4.40 | 60 / 15 | 98 / 23 |
+| | defence only | 0/0/16 | 0 | 21.6 / 46.8 | 0.1 / 12.6 | 1.71 | 62 / 18 | 111 / 20 |
+| | fixed 20 | 1/1/14 | 0 | 21.6 / 51.2 | 0.1 / 18.8 | 2.13 | 67 / 16 | 107 / 23 |
+| | scaled (final) | 0/0/16 | 0 | 21.6 / 51.7 | 0.1 / 4.7 | 0.70 | 68 / 11 | 111 / 28 |
+| Improved classic | baseline | 1/11/4 | 6 | 24.7 / 56.2 (12) | 2.6 / 110.9 | 2.02 | 46 / 13 | 49 / 8 |
+| | defence only | 0/13/3 | 5 | 22.9 / 61.6 (11) | 2.2 / 132.9 | 1.62 | 61 / 13 | 54 / 9 |
+| | fixed 20 | 1/12/3 | 3 | 23.8 / 62.6 (12) | 2.0 / 111.1 | 1.13 | 60 / 15 | 65 / 11 |
+| | scaled (final) | 0/12/4 | 3 | 23.8 / 60.8 (10) | 2.0 / 125.1 | 1.53 | 60 / 10 | 60 / 15 |
+| Cheating classic | baseline | 5/9/2 | 6 | 27.7 (11) / 75.8 (6) | 9.4 / 84.0 | 2.29 | 20 / 4 | 41 / 9 |
+| | defence only | 2/12/2 | 9 | 27.8 (10) / 77.3 (3) | 10.6 / 83.0 | 1.76 | 28 / 2 | 23 / 3 |
+| | fixed 20 | 4/12/0 | 11 | 27.4 (11) / 77.1 (3) | 8.9 / 87.6 | 1.89 | 30 / 5 | 26 / 4 |
+| | scaled (final) | 4/9/3 | 8 | 27.4 (11) / 66.3 (5) | 8.9 / 71.0 | 1.78 | 31 / 4 | 36 / 6 |
+| Rush | baseline | 12/0/4 | 0 | 21.5 / 47.8 | 0.3 / 7.4 | 1.35 | 56 / 19 | 111 / 22 |
+| | defence only | 10/0/6 | 0 | 21.5 / 51.8 | 0.4 / 9.2 | 1.69 | 62 / 17 | 110 / 22 |
+| | fixed 20 | 9/0/6 | 0 | 21.5 / 51.8 | 0.5 / 15.0 | 2.37 | 61 / 16 | 107 / 22 |
+| | scaled (final) | 11/0/4 | 0 | 21.5 / 51.1 | 0.5 / 4.6 | 0.72 | 68 / 12 | 110 / 26 |
+
+(A count in brackets: the games that reached that epoch, where fewer than all 16 did.)
+
+What it shows:
+- **The mirror and the rush.**
+  - Citizens lost fall from 39 to 5 a game in the mirror and from 7 to 5 against rush.
+  - A raid costs 0.7 citizens (4.4 and 1.35 before).
+  - The town has 68 citizens at 40 minutes (56-60 before). Rush is still beaten in 11 of 16.
+- **The epochs.** The Stone Age comes at the same minute. The Copper Age comes 2-5 minutes later in every
+  matchup, with more citizens and a smaller light army at 40 minutes (10-12 soldiers against 13-19), and a larger
+  army at the end (26-30 against 17-23).
+- **The improved classic still wins the late game.**
+  - Boom is ahead at 40 minutes (60 citizens to 46) and has half the defeats (3 against 6).
+  - It still loses 111-133 citizens a game, to the Copper Age waves and to warships. Ships killed 585-662 citizens
+    and boats in 16 games, against 375 before: there are more boats and shore gatherers to sink.
+  - The defence cannot answer an army, and boom has no army of its own beyond the light one.
+- **The cheating classic.**
+  - Its Prehistoric raids of 10-15 rock throwers and clubmen kill about 9 citizens by minute 20, whatever the
+    answer. The citizens that run die running: 24 of 33 losses in seed 2 were moving. Before, the militia died
+    fighting.
+  - 8 defeats against 6 is within this matchup's noise: its W/L/C went 5/9/2, 2/12/2, 4/12/0 and 4/9/3 across
+    variants of the same defence.
+- **A fixed 20 against a quarter of the citizens.** The scaled army loses fewer citizens in all five matchups. The
+  fixed 20 holds the citizens back in the Stone Age (`army_first`), and its guard sends more soldiers on the hunt.
+- **The old home group raided.**
+  - Boom's lib.groups defend group (radius: the claim range) attacked every enemy citizen in its claim. On Small maps
+    the claims overlap, which is why the mirror lost 39 citizens a game (549 of them killed by soldiers).
+  - Without it, Age of AI won 11 of 16 against boom (its economy grew to 171 citizens).
+  - The guard's hunt of the citizens in its own zone restores that effect without the chase.
+- **Soldiers lost to towers:** 1-3 a game against every opponent but Age of AI, against which it is 8-33 (the guard's
+  hunt and the scouts near its fronts' towers).
+
+**Determinism and errors.**
+- Two runs of seed 2 against the improved classic (90 minutes) and two of seed 3 against rush (45 minutes) gave
+  identical traces. These runs were with the scripts before the hunt and the scaled army: the gates' run should
+  repeat the check.
+- The defence's micro step overran its 300k budget twice in 64 games, each time sending about 60 citizens back at
+  once. It now sends 12 a second, and there have been no script errors since.
+
+**Engine findings.**
+- A unit killed arrives as a `converted` event, never as `died` (PORT_LEARNINGS). Age of AI's `diplo.lua` counts its
+  losses from `died`, so it has never seen one.
+- `EECPTraceUnitLost`'s `if` without braces counts every lost unit in the citizens' by-distance and by-killer fields.
+  This only affects the trace.
+
+**32 seeds (2-33) against both classics, the final scripts with the died fix** (a few start-up failures under load
+dropped 1-2 games a row):
+
+| Matchup | Variant | Games | W/L/C | Defeats | Stone (n, median) | Copper (n, median) | Lost 20 min / all | Citizens 30 / 40 min | End citizens |
+|---|---|---|---|---|---|---|---|---|---|
+| Improved classic | baseline | 32 | 2/25/5 | 16 | 32, 26.6 | 19, 54.7 | 3.6 / 121.5 | 33 / 43 | 37 |
+| | final | 30 | 0/22/8 | 11 | 28, 25.8 | 15, 59.9 | 4.0 / 114.4 | 36 / 52 | 46 |
+| Cheating classic | baseline | 31 | 5/21/5 | 14 | 21, 30.6 | 6, 75.8 | 13.0 / 81.5 | 15 / 17 | 30 |
+| | final | 31 | 4/23/4 | 20 | 21, 29.3 | 6, 62.1 | 10.0 / 71.5 | 20 / 27 | 23 |
+
+- Against the improved classic the final scripts have fewer defeats (11 of 30 against 16 of 32), fewer citizens lost
+  and more citizens at 40 minutes. Fewer games reach the Copper Age (15 against 19), and those that do get there 5
+  minutes later.
+- Against the cheating classic they have more defeats: 20 of 31 against 14 of 31. That is a real regression, not
+  noise. Fewer citizens are lost and the town is larger at 30-40 minutes, but more towns are wiped out later. The
+  flight keeps the citizens alive through the first raids; it does not stop the waves that follow.
+- `--repeat 2` on the final scripts (seeds 4 and 9 against the classic and rush, 90 minutes): all four pairs
+  identical.
+- **Age of AI with the died fix** (against the improved classic, seeds 2-17): W/L/C 1/12/3 -> 0/11/4, defeats 6 -> 3,
+  citizens lost 127 -> 133, end citizens 57 -> 61. Its play changes (diplo lines 396 -> 362 in 16 games). The traces
+  first differ at the losses trace line, which the braces fix corrected.
+
+**Open.**
+- The cheating classic's later waves: the regression above.
+- The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
+  wired or benched.
+- Raids routed around towers.
+- The late-game answer to the classic's waves and warships.
 
 ### 8.9 Next
 

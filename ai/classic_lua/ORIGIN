@@ -101,10 +101,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
-                other players' area hull test; HasEnemyNear counts the armed enemies seen within a region (9 tiles),
-                not every player's influence; BuildSettlementFor (the gather goal's storage search asks the AI for a
-                settlement when the drop site is far: a hook a script cannot get) - the patch settlements of
-                forage_patches stand in. NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
+                other players' area hull test; HasEnemyNear counts the armed enemies seen or remembered (ai.memory) in the
+                influence regions round the tile (up to 27 tiles), not every player's influence. BuildSettlementFor (the gather goal's
+                storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
+                seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
+                gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
                 CitizenLost's re-cost.
   EECPResourceCenter.cpp
                 PORTED -> resource.lua (update_groups, flag_group, centre_middle, find_resource_unit) and build.lua
@@ -112,35 +113,69 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 start (nature's unit list); the port groups what is explored, again every 15 s (with the reveal cheat
                 the same as the original). GetCenter's free-tile search is not ported (the box's middle).
   EECPWallManager.cpp           NOT STARTED (the defence stage; ai.wall, ai.gate)
-  EECPCombatManager.cpp         PARTLY -> combat.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
+  EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
-                the target player (computers by the aggression's chance when humans are there too), the personality's
-                peace rules (prehistoric_attacks, stone_attacks: EECPACPrehistoricPeace), one attack group sent at
-                the target's nearest known building or town. DEVIATIONS (fog): the target is the nearest known enemy
-                (the C++ front overlap, weakest gatherers and revenge read every player's units); the target's
-                strength is what ai.memory holds. NOT STARTED: the wonder race, NoteThreat, Attack (flares, cover
-                landings), the ICBM, EpochReached's WW1 groups, AttackPlayer / DefendPlayer.
-  EECPCombatStrategy.cpp        NOT STARTED (the domain shares: land only so far)
-  EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp, EECPAttackSubGroupUnit.cpp, EECPASG*.cpp,
-  EECPASGU*.cpp, EECPASTargetUnit.cpp, EECPAttackFormation*.cpp, EECPAGTask.cpp, EECPAGOrder.cpp
-                NOT STARTED (the army stage; plan: the group tasks and their timers ported, the sub-groups' movement,
-                fighting and retreat on lib.groups; the formations ENGINE: ai.formation / ai.move{formation})
-  EECPUnitSelector.cpp          PARTLY -> combat.lua: ComputeGroupSize (the attack and defence shares of the
-                target's strength, the difficulty's group modifier); the group takes the free soldiers and requests the
-                favourite land unit for the rest. NOT STARTED: the domain shares, the counter units, the specials
-                (priests, prophets, heroes, carriers, paratroopers), the held-units requirement, KeepBestClasses.
-  EECPPersonnel.cpp             NOT STARTED (the army stage; RetireObsoleteUnits ENGINE)
-  EECPIntelligence.cpp, EECPIArmy.cpp, EECPILocation.cpp
-                NOT STARTED (the army stage; from ai.memory: the C++ reads every player's units)
+                the target player (computers by the aggression's chance when humans are there too; theLargest, else
+                the nearest; theAided by the damage taken from each player, with the chances' roll), the personality's
+                peace rules (prehistoric_attacks, stone_attacks: EECPACPrehistoricPeace), CreateGroup(kind 0);
+                NoteThreat (more than 20 own citizens lost in a 9-tile region: the nearest group not attacking goes
+                there); GetUnitsAvailable, GetUnitLimit. DEVIATIONS (fog): theLargest (the enemy whose land overlaps
+                the own) is the enemy with the known building nearest the town; theWeakest (short of a resource the
+                player needs) is not ported (the enemies' gatherers per resource are not seen). NOT STARTED: the wonder
+                race, Attack's flares and covered landings, the ICBM, EpochReached's WW1 groups, AttackPlayer /
+                DefendPlayer (allies), the scenario's attack and defend tasks.
+  EECPCombatStrategy.cpp        PARTLY -> army.lua: the land share only (Small land maps); the sea, air and space
+                shares (ComputeDomainShares, GetDomainShare): NOT STARTED (the navy stage)
+  EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp
+                PARTLY -> army.lua: CreateGroup / MakePlan / PlaceSubGroups (one land sub-group per group: its held
+                units taken, its slots requested), DropSpentGroups every 45 s, the sub-group's phases (WaitForUnits
+                while Personnel fills its slots, HasGathered: at the rally point or 30 s, then the task),
+                AssignLandTask (mission 2: FindLandTarget over the target's territory - GetTargets' regions by the
+                player's influence, where the scorer's zero scores leave the weakest region first - else the
+                defence ladder, else the rally point), the task given again when a territory is done (lib.groups
+                "arrived") and a defence task looked at again after 10-120 s (kept half the time). ENGINE / lib.groups:
+                the movement, the targets, the fighting (EECPAttackSubGroupUnit, EECPASG*, EECPASGU*,
+                EECPASTargetUnit, the formations). DEVIATIONS: a sub-group does not split or merge; no retreat (the
+                Hard classic does not retreat either); the targets are what lib.groups picks within 12 tiles.
+                NOT STARTED: sea, air, space and transport sub-groups; GiveImprovements.
+  EECPUnitSelector.cpp          PARTLY -> army.lua: Select: GatherCandidates (the free soldiers, an attack also the
+                defence groups' at rest: GatherDefendingUnits; the classes the player trains by AI kind,
+                KeepBestClasses, FilterByStrategy), ComputeGroupSize (the attack/defence share of the target file's
+                strength, the attack group modifier, the room: the count beyond the room taken from held units, no
+                room: only held units), AllocateHeldUnits (the most common classes), AllocateCounterUnits (the
+                counter families of the target's unit types weighted 3/2/1, 2-6 classes, the siege share, the RPS
+                factor, the specialised chance, TakeUnitClass), AllocateFavoriteUnits (the favourite land type, else
+                a random favourite candidate). DEVIATION: the target file's counts (see EECPIntelligence).
+                NOT STARTED: AllocateSpecialUnits (priests, prophets, heroes, carriers, paratroopers), the deathmatch
+                early scale, ChooseUnitsToKill's room.
+  EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
+                one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
+                the free pool is the soldiers the engine holds. ENGINE: RetireObsoleteUnits. NOT STARTED:
+                KillUnitsForMilitary, UnloadTransport.
+  EECPIntelligence.cpp, EECPIArmy.cpp
+                PARTLY -> army.lua: the player files (every 30 s from ai.memory: military, gatherers, the military's
+                unit types, the land buildings), the armies (land units with attack joined within 12 tiles of an
+                army's bounds, strength the classes' influence). DEVIATION (fog): the C++ files read every unit of a
+                player; the port's enemy armies are those seen now, its counts the most remembered at once and at
+                least the own counts (a group is sized as against a mirror of the player when little is known).
   EECPDefenseCommander.cpp, EECPMilitaryAidPackage.cpp
-                PARTLY -> combat.lua: AidOwnTowns (the home town's package: its first gathering staffs a defence group,
-                its later ones every 20 s while the town's threat is over aid_threat_threshold, else every 35 s),
-                PlanAid on defensive_unit_update (the first after the replenish delay; the town-guard chance;
-                CreateDefendGroup with GetUnitAllowance's defensive_unit_cap), one defend group at home (lib.groups).
-                DEVIATIONS: the town threat is the seen enemies' strength within 30 tiles over the own soldiers' there
-                (ComputeTownThreat reads the influence table); the defend groups join the home group (the guard
-                ladder of AssignSubGroupTask: choke points, forests, hills, other towns - not ported). NOT STARTED:
-                AidAllies, CheckRaids / Retaliate, BuildUp (deathmatch), CheckNaval, CheckSpace, CheckSpecials.
+                PARTLY -> army.lua: Update every 8 s with defence enabled (from the player id + 5 s), UpdatePackages
+                (recalled: gathering once the threat passes aid_threat_threshold; gathering: Gather every 20 s, else
+                Recall; finished packages go), AidOwnTowns (SendAid for every town without a package), SendAid,
+                AssignSubGroups (SendBestSubGroup: the free land group matching the net threat or the nearest; else
+                CounterAttack: a defence group of mission 3 for the town), Gather (more groups while the worst
+                threats outnumber them, own towns up to twice with a net threat; town_guard_update between sends),
+                Deploy (the groups near the hull to the threat points in turn), Recall, PlanAid on
+                defensive_unit_update (the first after the replenish delay; the town-guard chance: aid to the most
+                threatened town, else one of the 3 largest; else CreateDefendGroup), GetUnitAllowance
+                (defensive_unit_cap), ComputeTownThreat (the Hard 55-tile range; the armies inside the hull twice,
+                outside by distance; the own armies' cover; over the own land strength), GetWorstThreats,
+                FindThreatenedTown, AssignSubGroupTask (a forest within 35 tiles 80% for foot soldiers, a threatened
+                town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
+                EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
+                bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
+                the hills and choke points of the ladder (no query), AidAllies, CheckRaids / Retaliate, BuildUp
+                (deathmatch), CheckNaval, CheckSpace, CheckSpecials.
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s). NOT STARTED: the sea,
                 space and air explorers.
@@ -164,10 +199,11 @@ what is explored (a town centre's few tiles at the start), so an idle citizen wi
 (econ.lua) until the finders know a resource.
 
 Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
-ai.find_site's `margin` and `far` options, ai.class's `tech`, the own units' `target` and `gathers`, the view's
+ai.find_site's `margin` and `far` options, ai.class's `tech` and military data (ai_kind, counters, roles,
+influence, epoch, pop, domain), the own units' `target` and `gathers`, the view's
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
 Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
-choke points and hills; the water site tiles; the gather goal's storage-search hook (BuildSettlementFor); the epoch's
+choke points and hills; the water site tiles; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.

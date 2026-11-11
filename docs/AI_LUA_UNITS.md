@@ -911,6 +911,12 @@ player's stance towards me, `EEPlayer::GetEnemy`) and `allies` (the other player
 game's family number) and `cost` (the tech's cost as the player pays it, by resource; 0 for a class its tree has no
 node for). The view has `epoch2_cost` (the epoch after the next: the copper plan holds both before farms).
 
+**The release of a working citizen (2026-11-10):** `ai.release(ids, {gather = true})` hands a citizen or boat that
+gathers (an `EEUGGather` goal on a live resource, e.g. just given by `ai.gather`) to the engine's gatherer list of
+that resource, so the runners count it where it works. Without the option (as before) only an idle unit rejoins
+them, on the idle list, and a released gatherer was on no list until its resource ran out. `lib.defence` sends the
+citizens that fled a raid back to their spot this way (AI_RESEARCH §8.41).
+
 **The classic port's queries (2026-11-10, `ai/classic_lua/`, its ORIGIN map):** what the classic computer player reads
 from data, so that a script can make its decisions with the same numbers:
 - `ai.tuning()` -> `difficulty` (0 easy .. 2 hard), `deathmatch`, `all_managers` (the resource setting 5),
@@ -932,6 +938,13 @@ from data, so that a script can make its decisions with the same numbers:
 - `ai.find_site` takes `margin = true` (the footprint grown by a tile is free too: the classic's CanBuildAt inMargin)
   and `far = true` (the rings from `max` inward).
 - `ai.class` has `tech` (the class's own tech id, what `ai.train` orders).
+- `ai.class` has the class's military data, which the classic unit selector reads (the db's, never fogged):
+  `ai_kind` (the AI kind: the counter families), `counters` (the three kinds it counters, 0 for none), `attack_unit`,
+  `defense_unit` (the attack and defence group roles), `medic`, `converts` (a priest's or calamity powers),
+  `is_transport`, `mine`, `influence` (its weight in the classic's strength sums), `epoch`, `pop` (its population cost)
+  and `domain` (`land`, `sea`, `air` or `space`).
+- `ai.class` and the `ai.techs` records have `data_cost`: the tech's listed cost as the cost cheat scales it, without
+  the epoch and upgrade factors of `cost` (what the classic's needs ledger counts: EECPResourceManager::AddCosts).
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
@@ -945,7 +958,7 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between
-  AIs, `ai.resign`, `ai.class`'s damage class / hit factors, `ai.reflex{militia=}`, aircraft launched from their
+  AIs, `ai.resign`, `ai.class`'s damage class / hit factors, aircraft launched from their
   airport by `ai.attack`, `ai.resource(id)` (documented, not bound), `ai.tile`'s continent under the fog;
 - the per-step command limits are counted per game ms, so a step and a micro in the same tick share them;
 - the deletion of `EECPNextArmy.cpp` once rush and balanced run on lib.groups; the engine's unload fixes (L6's

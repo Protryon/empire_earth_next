@@ -1924,7 +1924,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
 
-## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.40)
+## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.42)
 
 - **`ai.units{type = ...}` takes one class name, not a list.** AI_LUA_UNITS §2.2 says "a class id or a list", but
   `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
@@ -1939,6 +1939,26 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
   scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
   subfolder.
+
+## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.41)
+
+- **A unit killed arrives as a `converted` event, never as `died`.** `EECPUnitsOnTaken` calls a unit converted when
+  its hit points are above 0, but `EEComplexUnit::Kill` calls `UnitTaken` before it zeroes them; a priest's
+  conversion goes through `EEConvertUnit` -> `Kill(false, false, true)` with the swap flag, which the hook skips. So
+  every kill is `converted` and no script ever saw `died` (Age of AI's `diplo.lua` counts its losses from `died`).
+  Fixed: a unit is converted only while alive and another player's; `lib.defence` counts both kinds as losses.
+- **A released gatherer is on no runner list.** `ai.release` put only idle citizens back on the engine's idle list,
+  so a citizen sent back to its resource with `ai.gather` and then released worked unseen by the gatherer runner until
+  the resource ran out. `ai.release(ids, {gather = true})` puts it on its resource's list.
+- **A scout is no raid.** The first raid answer sent every citizen near any enemy soldier running: the rush's lone
+  scout walking through the town made 61 flights in 5 minutes. A group is a raid only once it is stronger than boom's
+  `THREAT_MIN` (2,500) or one of its units has hit an own unit in the last 15 s.
+- **Citizens do not fight ranged raiders, whatever the odds.** Against 2-3 rock throwers the square-law odds of 6-12
+  citizens came out at 3-4 x, and every such fight still lost a citizen (they kite, and their pierce armour takes 2
+  of a citizen's 5 attack). The militia now answers melee raids only; ranged ones are run from, to the towers.
+- **A militia counts per raid.** Re-deciding every second added one more citizen each time (the ones already fighting
+  were not counted), and a second raid nearby called the first raid's militia off at its own odds; the militia now
+  counts the citizens already fighting the raid nearest them.
 
 ## The classic computer player in Lua (2026-11-10, ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
 
@@ -1970,3 +1990,13 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   ai` reads the checkout's scripts at each game's start, so an edit mid-bench mixes versions; and bash reads a script
   as it runs, so rewriting the bench's own shell script made the old shell run garbage once sim_bench returned (it
   truncated the log). Benches here run from a copy of `ai/` taken at the start (`build/aisnap/<name>`).
+- **lib.groups drops an empty group in its step, so a sub-group waiting for Personnel's units vanished.** The
+  classic's sub-group lives through WaitForUnits with no units and open request slots; a lib.groups group with no
+  units is deleted ("group gone") on the next G.step. army.lua parks the empty waiting groups out of the table for
+  the length of G.step, and a package counts its groups' open slots as units (else UpdatePackages deleted the new
+  package every 8 s and CounterAttack made another).
+- **The needs ledger counts a tech's listed cost, not GetCost's.** EECPResourceManager::AddCosts takes the data's
+  mCosts (ScaleCost'ed); the port took `ai.class`'s `cost` (EETechTreeNode::GetCost), whose epoch factor makes the
+  future research sentinel (an epoch-14 tech, 2000 wood, 1000 stone, 2000 iron) cost nothing in the Prehistoric. The
+  classic personality splits its gatherers by the needs, so the C++ sent its first gatherers to stone and iron (and
+  its towers went up at the iron) while the port's went to wood; `data_cost` (AI_LUA_UNITS §11) is the ledger's cost.

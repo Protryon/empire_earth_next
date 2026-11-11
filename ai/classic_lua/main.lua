@@ -17,7 +17,7 @@ local U = require("classic_lua.units")
 local CIV = require("classic_lua.civ")
 local RS = require("classic_lua.research")
 local MIL = require("classic_lua.militia")
-local COMBAT = require("classic_lua.combat")
+local ARMY = require("classic_lua.army")
 local EXPLORE = require("classic_lua.explore")
 local C = T.C
 
@@ -258,6 +258,7 @@ local function events(view, memory)
             end
         end
     end
+    ARMY.on_events(view, memory, list)
 end
 
 function M.step(view, memory)
@@ -322,7 +323,7 @@ function M.step(view, memory)
     end
     CIV.update(view, memory)
     EXPLORE.step(view, memory)   -- (ExplorationManager: before the combat's defence takes the free soldiers)
-    COMBAT.step(view, memory)   -- (EECPCombatManager::Tick: the first army stage, combat.lua)
+    ARMY.step(view, memory)   -- (EECPCombatManager::Tick: army.lua)
     if view.time % 30000 < 1000 then
         keep_standing_army(view, memory)
     end
