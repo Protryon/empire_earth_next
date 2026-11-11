@@ -1,0 +1,968 @@
+config LobbyGlobal
+get String Cancel -> LobbyGlobal_Cancel_String
+get String Lan -> LobbyGlobal_Lan_String
+get String No -> LobbyGlobal_No_String
+get String OK -> LobbyGlobal_OK_String
+get String Yes -> LobbyGlobal_Yes_String
+get String QuickPlay -> LobbyGlobal_QuickPlay_String
+get Image Searching -> LobbyGlobal_Searching_Image
+get Image Firewall -> LobbyGlobal_Firewall_Image
+get Sound ButtonClick -> LobbyGlobal_ButtonClick_Sound
+get Sound LobbyMusic -> LobbyGlobal_LobbyMusic_Sound
+get Sound AllReady -> LobbyGlobal_AllReady_Sound
+get Sound AllNotReady -> LobbyGlobal_AllNotReady_Sound
+get Sound AskToJoinRecv -> LobbyGlobal_AskToJoinRecv_Sound
+get Sound Error -> LobbyGlobal_Error_Sound
+get Sound FriendJoined -> LobbyGlobal_FriendJoined_Sound
+get Sound FriendLeft -> LobbyGlobal_FriendLeft_Sound
+get Sound InviteRecv -> LobbyGlobal_InviteRecv_Sound
+get Sound PlayerJoined -> LobbyGlobal_PlayerJoined_Sound
+get Sound SierraLogon -> LobbyGlobal_SierraLogon_Sound
+get Sound WhisperRecv -> LobbyGlobal_WhisperRecv_Sound
+config AccountLogic
+get String InvalidCDKeyTitle -> AccountLogic_InvalidCDKeyTitle_String
+get String InvalidCDKeyDetails -> AccountLogic_InvalidCDKeyDetails_String
+config AddFriendDialog
+get String StatusTitle -> AddFriendDialog_StatusTitle_String
+get String StatusDetails -> AddFriendDialog_StatusDetails_String
+config AdminActionDialog
+get String Warn -> AdminActionDialog_Warn_String
+get String Mute -> AdminActionDialog_Mute_String
+get String UnMute -> AdminActionDialog_UnMute_String
+get String Kick -> AdminActionDialog_Kick_String
+get String Ban -> AdminActionDialog_Ban_String
+get String ExplanationOpt -> AdminActionDialog_ExplanationOpt_String
+get String ExplanationReq -> AdminActionDialog_ExplanationReq_String
+config BadUserDialog
+get String OneDay -> BadUserDialog_OneDay_String
+get String OneHour -> BadUserDialog_OneHour_String
+get String OneMinute -> BadUserDialog_OneMinute_String
+get String OneSecond -> BadUserDialog_OneSecond_String
+get String XDays -> BadUserDialog_XDays_String
+get String XHours -> BadUserDialog_XHours_String
+get String XMinutes -> BadUserDialog_XMinutes_String
+get String XSeconds -> BadUserDialog_XSeconds_String
+get String Infinite -> BadUserDialog_Infinite_String
+config ChatCommandLogic
+get String Whisper -> ChatCommandLogic_Whisper_String
+get String Block -> ChatCommandLogic_Block_String
+get String Emote -> ChatCommandLogic_Emote_String
+get String Ignore -> ChatCommandLogic_Ignore_String
+get String Away -> ChatCommandLogic_Away_String
+get String Invite -> ChatCommandLogic_Invite_String
+get String Uninvite -> ChatCommandLogic_Uninvite_String
+get String Reply -> ChatCommandLogic_Reply_String
+get String Clear -> ChatCommandLogic_Clear_String
+get String Help -> ChatCommandLogic_Help_String
+get String ShowTeam -> ChatCommandLogic_ShowTeam_String
+get String Moderator -> ChatCommandLogic_Moderator_String
+get String ServerMute -> ChatCommandLogic_ServerMute_String
+get String ServerBan -> ChatCommandLogic_ServerBan_String
+get String Mute -> ChatCommandLogic_Mute_String
+get String Ban -> ChatCommandLogic_Ban_String
+get String Unmute -> ChatCommandLogic_Unmute_String
+get String ServerUnmute -> ChatCommandLogic_ServerUnmute_String
+get String Unban -> ChatCommandLogic_Unban_String
+get String ServerUnban -> ChatCommandLogic_ServerUnban_String
+get String Alert -> ChatCommandLogic_Alert_String
+get String Warn -> ChatCommandLogic_Warn_String
+get String HelpHeader -> ChatCommandLogic_HelpHeader_String
+get String HelpHelp -> ChatCommandLogic_HelpHelp_String
+get String ShowTeamHelp -> ChatCommandLogic_ShowTeamHelp_String
+get String WhisperHelp -> ChatCommandLogic_WhisperHelp_String
+get String BlockHelp -> ChatCommandLogic_BlockHelp_String
+get String IgnoreHelp -> ChatCommandLogic_IgnoreHelp_String
+get String ReplyHelp -> ChatCommandLogic_ReplyHelp_String
+get String EmoteHelp -> ChatCommandLogic_EmoteHelp_String
+get String AwayHelp -> ChatCommandLogic_AwayHelp_String
+get String ClearHelp -> ChatCommandLogic_ClearHelp_String
+get String InviteHelp -> ChatCommandLogic_InviteHelp_String
+get String UninviteHelp -> ChatCommandLogic_UninviteHelp_String
+get String MuteHelp -> ChatCommandLogic_MuteHelp_String
+get String UnmuteHelp -> ChatCommandLogic_UnmuteHelp_String
+get String BanHelp -> ChatCommandLogic_BanHelp_String
+get String UnbanHelp -> ChatCommandLogic_UnbanHelp_String
+get String ModeratorHelp -> ChatCommandLogic_ModeratorHelp_String
+get String ServerMuteHelp -> ChatCommandLogic_ServerMuteHelp_String
+get String ServerUnmuteHelp -> ChatCommandLogic_ServerUnmuteHelp_String
+get String ServerBanHelp -> ChatCommandLogic_ServerBanHelp_String
+get String ServerUnbanHelp -> ChatCommandLogic_ServerUnbanHelp_String
+get String AlertHelp -> ChatCommandLogic_AlertHelp_String
+get String WarnHelp -> ChatCommandLogic_WarnHelp_String
+config ChatCtrl
+get String NormalChat -> ChatCtrl_NormalChat_String
+get String Emote -> ChatCtrl_Emote_String
+get String TeamChat -> ChatCtrl_TeamChat_String
+get String TeamEmote -> ChatCtrl_TeamEmote_String
+get String YouWhisperToYourself -> ChatCtrl_YouWhisperToYourself_String
+get String YouWhisper -> ChatCtrl_YouWhisper_String
+get String SomeoneWhispersToYou -> ChatCtrl_SomeoneWhispersToYou_String
+get String YouWarnSomeone -> ChatCtrl_YouWarnSomeone_String
+get String YouWarnYourself -> ChatCtrl_YouWarnYourself_String
+get String SomeoneWarnsYou -> ChatCtrl_SomeoneWarnsYou_String
+get String SomeoneWarnsSomeone -> ChatCtrl_SomeoneWarnsSomeone_String
+get String EnteringRoom -> ChatCtrl_EnteringRoom_String
+get String LeavingRoom -> ChatCtrl_LeavingRoom_String
+get String Disconnected -> ChatCtrl_Disconnected_String
+get String YouWereKicked -> ChatCtrl_YouWereKicked_String
+get String YouWereBannedMinute -> ChatCtrl_YouWereBannedMinute_String
+get String YouWereBannedMinutes -> ChatCtrl_YouWereBannedMinutes_String
+get String YouWereBannedHour -> ChatCtrl_YouWereBannedHour_String
+get String YouWereBannedHours -> ChatCtrl_YouWereBannedHours_String
+get String YouWereBannedDay -> ChatCtrl_YouWereBannedDay_String
+get String YouWereBannedDays -> ChatCtrl_YouWereBannedDays_String
+get String YouWereBannedIndefinitely -> ChatCtrl_YouWereBannedIndefinitely_String
+get String SomeoneWasKicked -> ChatCtrl_SomeoneWasKicked_String
+get String SomeoneWasBannedMinute -> ChatCtrl_SomeoneWasBannedMinute_String
+get String SomeoneWasBannedMinutes -> ChatCtrl_SomeoneWasBannedMinutes_String
+get String SomeoneWasBannedHour -> ChatCtrl_SomeoneWasBannedHour_String
+get String SomeoneWasBannedHours -> ChatCtrl_SomeoneWasBannedHours_String
+get String SomeoneWasBannedDay -> ChatCtrl_SomeoneWasBannedDay_String
+get String SomeoneWasBannedDays -> ChatCtrl_SomeoneWasBannedDays_String
+get String SomeoneWasBannedIndefinitely -> ChatCtrl_SomeoneWasBannedIndefinitely_String
+get String YouWereUnmuted -> ChatCtrl_YouWereUnmuted_String
+get String YouWereMutedMinute -> ChatCtrl_YouWereMutedMinute_String
+get String YouWereMutedMinutes -> ChatCtrl_YouWereMutedMinutes_String
+get String YouWereMutedHour -> ChatCtrl_YouWereMutedHour_String
+get String YouWereMutedHours -> ChatCtrl_YouWereMutedHours_String
+get String YouWereMutedDay -> ChatCtrl_YouWereMutedDay_String
+get String YouWereMutedDays -> ChatCtrl_YouWereMutedDays_String
+get String YouWereMutedIndefinitely -> ChatCtrl_YouWereMutedIndefinitely_String
+get String SomeoneWasUnmuted -> ChatCtrl_SomeoneWasUnmuted_String
+get String SomeoneWasMutedMinute -> ChatCtrl_SomeoneWasMutedMinute_String
+get String SomeoneWasMutedMinutes -> ChatCtrl_SomeoneWasMutedMinutes_String
+get String SomeoneWasMutedHour -> ChatCtrl_SomeoneWasMutedHour_String
+get String SomeoneWasMutedHours -> ChatCtrl_SomeoneWasMutedHours_String
+get String SomeoneWasMutedDay -> ChatCtrl_SomeoneWasMutedDay_String
+get String SomeoneWasMutedDays -> ChatCtrl_SomeoneWasMutedDays_String
+get String SomeoneWasMutedIndefinitely -> ChatCtrl_SomeoneWasMutedIndefinitely_String
+get String ModeratorComment -> ChatCtrl_ModeratorComment_String
+get String AlertComment -> ChatCtrl_AlertComment_String
+get String ServerAlert -> ChatCtrl_ServerAlert_String
+get String ServerShutdownStartedMinute -> ChatCtrl_ServerShutdownStartedMinute_String
+get String ServerShutdownStartedMinutes -> ChatCtrl_ServerShutdownStartedMinutes_String
+get String ServerShutdownStartedHour -> ChatCtrl_ServerShutdownStartedHour_String
+get String ServerShutdownStartedHours -> ChatCtrl_ServerShutdownStartedHours_String
+get String ServerShutdownStartedDay -> ChatCtrl_ServerShutdownStartedDay_String
+get String ServerShutdownStartedDays -> ChatCtrl_ServerShutdownStartedDays_String
+get String ServerShutdownAborted -> ChatCtrl_ServerShutdownAborted_String
+get String SomeoneInvitesYou -> ChatCtrl_SomeoneInvitesYou_String
+get String SomeoneUninvitesYou -> ChatCtrl_SomeoneUninvitesYou_String
+get String YouInviteSomeone -> ChatCtrl_YouInviteSomeone_String
+get String YouUninviteSomeone -> ChatCtrl_YouUninviteSomeone_String
+get String SomeoneInvitesYouExpl -> ChatCtrl_SomeoneInvitesYouExpl_String
+get String SomeoneUninvitesYouExpl -> ChatCtrl_SomeoneUninvitesYouExpl_String
+get String YouInviteSomeoneExpl -> ChatCtrl_YouInviteSomeoneExpl_String
+get String YouUninviteSomeoneExpl -> ChatCtrl_YouUninviteSomeoneExpl_String
+get String Accept -> ChatCtrl_Accept_String
+get String Reject -> ChatCtrl_Reject_String
+get String SomeoneAsksToJoin -> ChatCtrl_SomeoneAsksToJoin_String
+get String SomeoneAsksToJoinExpl -> ChatCtrl_SomeoneAsksToJoinExpl_String
+get String ClientNotOnServer -> ChatCtrl_ClientNotOnServer_String
+get String ClientInGame -> ChatCtrl_ClientInGame_String
+get String ClientInChat -> ChatCtrl_ClientInChat_String
+get String ClientInGameAndChat -> ChatCtrl_ClientInGameAndChat_String
+get String ClientIsAnonymous -> ChatCtrl_ClientIsAnonymous_String
+get String FriendIsChatting -> ChatCtrl_FriendIsChatting_String
+get String FriendIsInGameStaging -> ChatCtrl_FriendIsInGameStaging_String
+get String FriendIsPlaying -> ChatCtrl_FriendIsPlaying_String
+get String FriendIsOn -> ChatCtrl_FriendIsOn_String
+get String FriendIsNotOnline -> ChatCtrl_FriendIsNotOnline_String
+get String PlayerKicked -> ChatCtrl_PlayerKicked_String
+get String PlayerBanned -> ChatCtrl_PlayerBanned_String
+get String FriendJoined -> ChatCtrl_FriendJoined_String
+get String FriendLeft -> ChatCtrl_FriendLeft_String
+get String TeamMemberJoined -> ChatCtrl_TeamMemberJoined_String
+get String TeamMemberLeft -> ChatCtrl_TeamMemberLeft_String
+get String TeamMembers -> ChatCtrl_TeamMembers_String
+get String IgnoreList -> ChatCtrl_IgnoreList_String
+config ChooseNetworkAdapterDialog
+get String Default -> ChooseNetworkAdapterDialog_Default_String
+get String Unknown -> ChooseNetworkAdapterDialog_Unknown_String
+config ClientOptionsCtrl
+get String Whisper -> ClientOptionsCtrl_Whisper_String
+get String Invite -> ClientOptionsCtrl_Invite_String
+get String Uninvite -> ClientOptionsCtrl_Uninvite_String
+get String AddToFriends -> ClientOptionsCtrl_AddToFriends_String
+get String RemoveFromFriends -> ClientOptionsCtrl_RemoveFromFriends_String
+get String ClearAFK -> ClientOptionsCtrl_ClearAFK_String
+get String SetAFK -> ClientOptionsCtrl_SetAFK_String
+get String Ignore -> ClientOptionsCtrl_Ignore_String
+get String Unignore -> ClientOptionsCtrl_Unignore_String
+get String Block -> ClientOptionsCtrl_Block_String
+get String Unblock -> ClientOptionsCtrl_Unblock_String
+get String Warn -> ClientOptionsCtrl_Warn_String
+get String Mute -> ClientOptionsCtrl_Mute_String
+get String UnMute -> ClientOptionsCtrl_UnMute_String
+get String Kick -> ClientOptionsCtrl_Kick_String
+get String Ban -> ClientOptionsCtrl_Ban_String
+config DirectConnectionOptionsCtrl
+get String Connect -> DirectConnectionOptionsCtrl_Connect_String
+get String Refresh -> DirectConnectionOptionsCtrl_Refresh_String
+get String Remove -> DirectConnectionOptionsCtrl_Remove_String
+config FriendOptionsCtrl
+get String Locate -> FriendOptionsCtrl_Locate_String
+get String RefreshList -> FriendOptionsCtrl_RefreshList_String
+get String RemoveFromFriends -> FriendOptionsCtrl_RemoveFromFriends_String
+config FriendsListCtrl
+get Image Unknown -> FriendsListCtrl_Unknown_Image
+get Image NotFound -> FriendsListCtrl_NotFound_Image
+get Image InChat -> FriendsListCtrl_InChat_Image
+get Image InGame -> FriendsListCtrl_InGame_Image
+config GameOptionsPopup
+get String Join -> GameOptionsPopup_Join_String
+get String Ping -> GameOptionsPopup_Ping_String
+get String QueryDetails -> GameOptionsPopup_QueryDetails_String
+get String HideDetails -> GameOptionsPopup_HideDetails_String
+get String ShowDetails -> GameOptionsPopup_ShowDetails_String
+get String Remove -> GameOptionsPopup_Remove_String
+config GameStagingCtrl
+get String Ready -> GameStagingCtrl_Ready_String
+get String NotReady -> GameStagingCtrl_NotReady_String
+get String StartGame -> GameStagingCtrl_StartGame_String
+get String LeaveGame -> GameStagingCtrl_LeaveGame_String
+get String DissolveGame -> GameStagingCtrl_DissolveGame_String
+config GameStagingLogic
+get String KickedTitle -> GameStagingLogic_KickedTitle_String
+get String KickedDetails -> GameStagingLogic_KickedDetails_String
+get String BannedTitle -> GameStagingLogic_BannedTitle_String
+get String BannedDetails -> GameStagingLogic_BannedDetails_String
+get String ConnectWarningTitle1 -> GameStagingLogic_ConnectWarningTitle1_String
+get String ConnectWarningDetails1 -> GameStagingLogic_ConnectWarningDetails1_String
+get String ConnectWarningTitle2 -> GameStagingLogic_ConnectWarningTitle2_String
+get String ConnectWarningDetails2 -> GameStagingLogic_ConnectWarningDetails2_String
+get String ConnectWarningTitle3 -> GameStagingLogic_ConnectWarningTitle3_String
+get String ConnectWarningDetails3 -> GameStagingLogic_ConnectWarningDetails3_String
+get String NoPingReplyError -> GameStagingLogic_NoPingReplyError_String
+get String GettingGameInfoTitle -> GameStagingLogic_GettingGameInfoTitle_String
+get String GettingGameInfoDetails -> GameStagingLogic_GettingGameInfoDetails_String
+get String JoinGameErrorTitle -> GameStagingLogic_JoinGameErrorTitle_String
+get String VerifyingPingTitle -> GameStagingLogic_VerifyingPingTitle_String
+get String VerifyingPingDetails -> GameStagingLogic_VerifyingPingDetails_String
+get String DissolveGame -> GameStagingLogic_DissolveGame_String
+get String DissolveGameConfirm -> GameStagingLogic_DissolveGameConfirm_String
+get String LeaveGame -> GameStagingLogic_LeaveGame_String
+get String LeaveGameConfirm -> GameStagingLogic_LeaveGameConfirm_String
+get String NoQuickPlayGameTitle -> GameStagingLogic_NoQuickPlayGameTitle_String
+get String NoQuickPlayGameDetails -> GameStagingLogic_NoQuickPlayGameDetails_String
+config GameUserListCtrl
+get String Ban -> GameUserListCtrl_Ban_String
+get String Kick -> GameUserListCtrl_Kick_String
+get Image Ready -> GameUserListCtrl_Ready_Image
+config InternetQuickPlay
+get String Welcome -> InternetQuickPlay_Welcome_String
+get String UserWelcome -> InternetQuickPlay_UserWelcome_String
+config JoinResponse
+get String Joined -> JoinResponse_Joined_String
+get String ServerFull -> JoinResponse_ServerFull_String
+get String InviteOnly -> JoinResponse_InviteOnly_String
+get String AskToJoin -> JoinResponse_AskToJoin_String
+get String GameInProgress -> JoinResponse_GameInProgress_String
+get String InvalidPassword -> JoinResponse_InvalidPassword_String
+get String NotOnLAN -> JoinResponse_NotOnLAN_String
+get String Blocked -> JoinResponse_Blocked_String
+get String Unknown -> JoinResponse_Unknown_String
+config LANLogic
+get String SocketBindError -> LANLogic_SocketBindError_String
+get String SocketListenError -> LANLogic_SocketListenError_String
+get String ConnectToGameTitle -> LANLogic_ConnectToGameTitle_String
+get String ConnectToGameDetails -> LANLogic_ConnectToGameDetails_String
+get String CheckingAddressTitle -> LANLogic_CheckingAddressTitle_String
+get String CheckingAddressDetails -> LANLogic_CheckingAddressDetails_String
+get String RegisterTitle -> LANLogic_RegisterTitle_String
+get String RegisterDetails -> LANLogic_RegisterDetails_String
+get String JoinFailure -> LANLogic_JoinFailure_String
+get String JoinReplyError -> LANLogic_JoinReplyError_String
+get String InvalidSubnet -> LANLogic_InvalidSubnet_String
+config LobbyContainer
+get String InitStart -> LobbyContainer_InitStart_String
+get String InitFailed -> LobbyContainer_InitFailed_String
+get String CheckingVersion -> LobbyContainer_CheckingVersion_String
+get String QueryingServers -> LobbyContainer_QueryingServers_String
+get String NoConnection -> LobbyContainer_NoConnection_String
+get String DNSLookupFailed -> LobbyContainer_DNSLookupFailed_String
+get String DirLookupFailure -> LobbyContainer_DirLookupFailure_String
+get String VersionCheckFailure -> LobbyContainer_VersionCheckFailure_String
+get String InitComplete -> LobbyContainer_InitComplete_String
+get String NoServers -> LobbyContainer_NoServers_String
+get String AuthServers -> LobbyContainer_AuthServers_String
+get String AccountServers -> LobbyContainer_AccountServers_String
+get String VersionServers -> LobbyContainer_VersionServers_String
+get String CreateAccountTitle -> LobbyContainer_CreateAccountTitle_String
+get String CreateAccountDetails -> LobbyContainer_CreateAccountDetails_String
+get String RetrievePasswordTitle -> LobbyContainer_RetrievePasswordTitle_String
+get String RetrievePasswordDetails -> LobbyContainer_RetrievePasswordDetails_String
+get String RetrieveUsernameTitle -> LobbyContainer_RetrieveUsernameTitle_String
+get String RetrieveUsernameDetails -> LobbyContainer_RetrieveUsernameDetails_String
+get String QueryAccountTitle -> LobbyContainer_QueryAccountTitle_String
+get String QueryAccountDetails -> LobbyContainer_QueryAccountDetails_String
+get String UpdateAccountTitle -> LobbyContainer_UpdateAccountTitle_String
+get String UpdateAccountDetails -> LobbyContainer_UpdateAccountDetails_String
+get String LoginTitle -> LobbyContainer_LoginTitle_String
+get String LoginDetails -> LobbyContainer_LoginDetails_String
+get String GettingRoomsTitle -> LobbyContainer_GettingRoomsTitle_String
+get String GettingRoomsDetails -> LobbyContainer_GettingRoomsDetails_String
+get String VersionOutOfDataTitle -> LobbyContainer_VersionOutOfDataTitle_String
+get String VersionOutOfDataDetails -> LobbyContainer_VersionOutOfDataDetails_String
+config LobbyGameStatus
+get String Success -> LobbyGameStatus_Success_String
+get String GameFull -> LobbyGameStatus_GameFull_String
+get String GameInProgress -> LobbyGameStatus_GameInProgress_String
+get String UnpackFailure -> LobbyGameStatus_UnpackFailure_String
+get String NotInvited -> LobbyGameStatus_NotInvited_String
+get String CaptainRejectedYou -> LobbyGameStatus_CaptainRejectedYou_String
+get String InvalidPassword -> LobbyGameStatus_InvalidPassword_String
+get String DuplicateName -> LobbyGameStatus_DuplicateName_String
+config LobbyOptions
+get String DefaultName -> LobbyOptions_DefaultName_String
+get String CheckingAddress -> LobbyOptions_CheckingAddress_String
+get String AddressUnavailable -> LobbyOptions_AddressUnavailable_String
+config RoomCtrl
+get String QueryingServer -> RoomCtrl_QueryingServer_String
+get Image Password -> RoomCtrl_Password_Image
+config RoomLabelCtrl
+get String LabelPrefix -> RoomLabelCtrl_LabelPrefix_String
+get String LabelServer -> RoomLabelCtrl_LabelServer_String
+get String LabelUser -> RoomLabelCtrl_LabelUser_String
+get String LabelUsers -> RoomLabelCtrl_LabelUsers_String
+get String LabelDisconnected -> RoomLabelCtrl_LabelDisconnected_String
+config RoutingLogic
+get String GetClientListTitle -> RoutingLogic_GetClientListTitle_String
+get String GetClientListDetails -> RoutingLogic_GetClientListDetails_String
+get String GetGroupListTitle -> RoutingLogic_GetGroupListTitle_String
+get String GetGroupListDetails -> RoutingLogic_GetGroupListDetails_String
+get String GameDissolvedTitle -> RoutingLogic_GameDissolvedTitle_String
+get String GameDissolvedDetails -> RoutingLogic_GameDissolvedDetails_String
+get String NoServersTitle -> RoutingLogic_NoServersTitle_String
+get String NoServersDetails -> RoutingLogic_NoServersDetails_String
+get String TooManyFriendsTitle -> RoutingLogic_TooManyFriendsTitle_String
+get String TooManyFriendsDetails -> RoutingLogic_TooManyFriendsDetails_String
+get String AlreadyJoinedTitle -> RoutingLogic_AlreadyJoinedTitle_String
+get String AlreadyInGame -> RoutingLogic_AlreadyInGame_String
+get String AlreadyInRoom -> RoutingLogic_AlreadyInRoom_String
+get String JoinGroupTitle -> RoutingLogic_JoinGroupTitle_String
+get String JoinGroupDetails -> RoutingLogic_JoinGroupDetails_String
+get String ConnectTitle -> RoutingLogic_ConnectTitle_String
+get String ConnectDetails -> RoutingLogic_ConnectDetails_String
+get String RegisterTitle -> RoutingLogic_RegisterTitle_String
+get String RegisterDetails -> RoutingLogic_RegisterDetails_String
+get String QueryGroupsTitle -> RoutingLogic_QueryGroupsTitle_String
+get String QueryGroupsDetails -> RoutingLogic_QueryGroupsDetails_String
+get String CreateGroupTitle -> RoutingLogic_CreateGroupTitle_String
+get String CreateGroupDetails -> RoutingLogic_CreateGroupDetails_String
+get String GetBadUsersTitle -> RoutingLogic_GetBadUsersTitle_String
+get String GetBadUsersDetails -> RoutingLogic_GetBadUsersDetails_String
+get String DisconnectedTitle -> RoutingLogic_DisconnectedTitle_String
+get String DisconnectedDetails -> RoutingLogic_DisconnectedDetails_String
+get String AskingCaptainTitle -> RoutingLogic_AskingCaptainTitle_String
+get String AskingCaptainDetails -> RoutingLogic_AskingCaptainDetails_String
+get String CollectingPingsTitle -> RoutingLogic_CollectingPingsTitle_String
+get String CollectingPingsDetails -> RoutingLogic_CollectingPingsDetails_String
+get String GettingGameListTitle -> RoutingLogic_GettingGameListTitle_String
+get String GettingGameListDetails -> RoutingLogic_GettingGameListDetails_String
+get String MuteClientTitle -> RoutingLogic_MuteClientTitle_String
+get String UnmuteClientTitle -> RoutingLogic_UnmuteClientTitle_String
+get String BanClientTitle -> RoutingLogic_BanClientTitle_String
+get String KickClientTitle -> RoutingLogic_KickClientTitle_String
+get String ModerateDetails -> RoutingLogic_ModerateDetails_String
+get String FriendNotFoundTitle -> RoutingLogic_FriendNotFoundTitle_String
+get String FriendNotFoundDetails -> RoutingLogic_FriendNotFoundDetails_String
+get String ClientNotFound -> RoutingLogic_ClientNotFound_String
+get String ClientAmbiguous -> RoutingLogic_ClientAmbiguous_String
+get String InvalidCommand -> RoutingLogic_InvalidCommand_String
+get String RequireName -> RoutingLogic_RequireName_String
+get String BadTimeSpec -> RoutingLogic_BadTimeSpec_String
+get String Error -> RoutingLogic_Error_String
+get String NotCaptain -> RoutingLogic_NotCaptain_String
+config ServerListCtrl
+get String Pinging -> ServerListCtrl_Pinging_String
+get String PingFailed -> ServerListCtrl_PingFailed_String
+get String Querying -> ServerListCtrl_Querying_String
+get String QueryFailed -> ServerListCtrl_QueryFailed_String
+get String ListSummary -> ServerListCtrl_ListSummary_String
+get String ListPingSummary -> ServerListCtrl_ListPingSummary_String
+get String RefreshList -> ServerListCtrl_RefreshList_String
+get String StopRefresh -> ServerListCtrl_StopRefresh_String
+get String NoFilter -> ServerListCtrl_NoFilter_String
+get String AddRemove -> ServerListCtrl_AddRemove_String
+get String Add -> ServerListCtrl_Add_String
+get String Remove -> ServerListCtrl_Remove_String
+get String FullFilter -> ServerListCtrl_FullFilter_String
+get String NotFullFilter -> ServerListCtrl_NotFullFilter_String
+get String OpenFilter -> ServerListCtrl_OpenFilter_String
+get Image PingFailed -> ServerListCtrl_PingFailed_Image
+get Image GameExpanded -> ServerListCtrl_GameExpanded_Image
+get Image GameNotExpanded -> ServerListCtrl_GameNotExpanded_Image
+get Image GameAreInvited -> ServerListCtrl_GameAreInvited_Image
+get Image GameNone -> ServerListCtrl_GameNone_Image
+get Image GameAskToJoin -> ServerListCtrl_GameAskToJoin_Image
+get Image GameHasPassword -> ServerListCtrl_GameHasPassword_Image
+get Image GameNotInvited -> ServerListCtrl_GameNotInvited_Image
+get Image GameInProgress -> ServerListCtrl_GameInProgress_Image
+get Image SkillOpen -> ServerListCtrl_SkillOpen_Image
+get Image SkillNovice -> ServerListCtrl_SkillNovice_Image
+get Image SkillIntermediate -> ServerListCtrl_SkillIntermediate_Image
+get Image SkillAdvanced -> ServerListCtrl_SkillAdvanced_Image
+get Image SkillExpert -> ServerListCtrl_SkillExpert_Image
+config ServerOptionsCtrl
+get String Connect -> ServerOptionsCtrl_Connect_String
+get String RefreshServer -> ServerOptionsCtrl_RefreshServer_String
+get String HideDetails -> ServerOptionsCtrl_HideDetails_String
+get String ShowDetails -> ServerOptionsCtrl_ShowDetails_String
+get String ResfreshList -> ServerOptionsCtrl_ResfreshList_String
+config StagingLogic
+get String DisconnectedTitle -> StagingLogic_DisconnectedTitle_String
+get String DisconnectedDetails -> StagingLogic_DisconnectedDetails_String
+get String BannedTitle -> StagingLogic_BannedTitle_String
+get String BannedDetails -> StagingLogic_BannedDetails_String
+get String KickedTitle -> StagingLogic_KickedTitle_String
+get String KickedDetails -> StagingLogic_KickedDetails_String
+config UserListCtrl
+get String Ignore -> UserListCtrl_Ignore_String
+get String Unignore -> UserListCtrl_Unignore_String
+get Image Normal -> UserListCtrl_Normal_Image
+get Image Away -> UserListCtrl_Away_Image
+get Image Admin -> UserListCtrl_Admin_Image
+get Image Moderator -> UserListCtrl_Moderator_Image
+get Image Captain -> UserListCtrl_Captain_Image
+get Image Muted -> UserListCtrl_Muted_Image
+get Image Ignored -> UserListCtrl_Ignored_Image
+get Image Blocked -> UserListCtrl_Blocked_Image
+config WONStatus
+get String Success -> WONStatus_Success_String
+get String Killed -> WONStatus_Killed_String
+get String TimedOut -> WONStatus_TimedOut_String
+get String InvalidAddress -> WONStatus_InvalidAddress_String
+get String GeneralFailure -> WONStatus_GeneralFailure_String
+get String AuthFailure -> WONStatus_AuthFailure_String
+get String FTPFailure -> WONStatus_FTPFailure_String
+get String HTTPFailure -> WONStatus_HTTPFailure_String
+get String MOTDFailure -> WONStatus_MOTDFailure_String
+get String RoutingFailure -> WONStatus_RoutingFailure_String
+get String GameSpyFailure -> WONStatus_GameSpyFailure_String
+get String DirFailure -> WONStatus_DirFailure_String
+get String ChatFailure -> WONStatus_ChatFailure_String
+get String DatabaseFailure -> WONStatus_DatabaseFailure_String
+get String NotAllowed -> WONStatus_NotAllowed_String
+get String NotAuthorized -> WONStatus_NotAuthorized_String
+get String BehindFirewall -> WONStatus_BehindFirewall_String
+get String ExpiredCertificate -> WONStatus_ExpiredCertificate_String
+get String InvalidCDKey -> WONStatus_InvalidCDKey_String
+get String CDKeyBanned -> WONStatus_CDKeyBanned_String
+get String CDKeyInUse -> WONStatus_CDKeyInUse_String
+get String CRCFailed -> WONStatus_CRCFailed_String
+get String UserExists -> WONStatus_UserExists_String
+get String UserNotFound -> WONStatus_UserNotFound_String
+get String BadPassword -> WONStatus_BadPassword_String
+get String InvalidUserName -> WONStatus_InvalidUserName_String
+get String BadCommunity -> WONStatus_BadCommunity_String
+get String NotInCommunity -> WONStatus_NotInCommunity_String
+get String UserSeqInUse -> WONStatus_UserSeqInUse_String
+get String BlankNamesNotAllowed -> WONStatus_BlankNamesNotAllowed_String
+get String CaptainRejectedYou -> WONStatus_CaptainRejectedYou_String
+get String ClientAlreadyBanned -> WONStatus_ClientAlreadyBanned_String
+get String ClientAlreadyInGroup -> WONStatus_ClientAlreadyInGroup_String
+get String ClientAlreadyMuted -> WONStatus_ClientAlreadyMuted_String
+get String ClientBanned -> WONStatus_ClientBanned_String
+get String ClientDoesNotExist -> WONStatus_ClientDoesNotExist_String
+get String ClientNotBanned -> WONStatus_ClientNotBanned_String
+get String ClientNotInGroup -> WONStatus_ClientNotInGroup_String
+get String ClientNotInvited -> WONStatus_ClientNotInvited_String
+get String ClientNotMuted -> WONStatus_ClientNotMuted_String
+get String ConnectFailure -> WONStatus_ConnectFailure_String
+get String GroupAlreadyClaimed -> WONStatus_GroupAlreadyClaimed_String
+get String GroupAlreadyExists -> WONStatus_GroupAlreadyExists_String
+get String GroupClosed -> WONStatus_GroupClosed_String
+get String GroupDeleted -> WONStatus_GroupDeleted_String
+get String GroupDoesNotExist -> WONStatus_GroupDoesNotExist_String
+get String GroupFull -> WONStatus_GroupFull_String
+get String GuestNamesReserved -> WONStatus_GuestNamesReserved_String
+get String InvalidPassword -> WONStatus_InvalidPassword_String
+get String MustBeAdmin -> WONStatus_MustBeAdmin_String
+get String MustBeCaptain -> WONStatus_MustBeCaptain_String
+get String MustBeCaptainOrModerator -> WONStatus_MustBeCaptainOrModerator_String
+get String MustBeModerator -> WONStatus_MustBeModerator_String
+get String ServerFull -> WONStatus_ServerFull_String
+get String GroupNameExceedsMaximum -> WONStatus_GroupNameExceedsMaximum_String
+get String JoinCanceled -> WONStatus_JoinCanceled_String
+get String Throttled -> WONStatus_Throttled_String
+get String KeyNotUsed -> WONStatus_KeyNotUsed_String
+get String EMailPasswordDuplication -> WONStatus_EMailPasswordDuplication_String
+get String AccountCreateDisabled -> WONStatus_AccountCreateDisabled_String
+get String AgeNotOldEnough -> WONStatus_AgeNotOldEnough_String
+get String ItemHasDependencies -> WONStatus_ItemHasDependencies_String
+get String OutOfDate -> WONStatus_OutOfDate_String
+get String OutOfDateNoUpdate -> WONStatus_OutOfDateNoUpdate_String
+get String ValidNotLatest -> WONStatus_ValidNotLatest_String
+get String DataAlreadyExists -> WONStatus_DataAlreadyExists_String
+get String DBError -> WONStatus_DBError_String
+get String ConnRefused -> WONStatus_ConnRefused_String
+erase LobbyGlobal_Cancel_String
+erase LobbyGlobal_Lan_String
+erase LobbyGlobal_No_String
+erase LobbyGlobal_OK_String
+erase LobbyGlobal_Yes_String
+erase LobbyGlobal_QuickPlay_String
+release LobbyGlobal_Searching_Image
+release LobbyGlobal_Firewall_Image
+release LobbyGlobal_ButtonClick_Sound
+release LobbyGlobal_LobbyMusic_Sound
+release LobbyGlobal_AllReady_Sound
+release LobbyGlobal_AllNotReady_Sound
+release LobbyGlobal_AskToJoinRecv_Sound
+release LobbyGlobal_Error_Sound
+release LobbyGlobal_FriendJoined_Sound
+release LobbyGlobal_FriendLeft_Sound
+release LobbyGlobal_InviteRecv_Sound
+release LobbyGlobal_PlayerJoined_Sound
+release LobbyGlobal_SierraLogon_Sound
+release LobbyGlobal_WhisperRecv_Sound
+erase AccountLogic_InvalidCDKeyTitle_String
+erase AccountLogic_InvalidCDKeyDetails_String
+erase AddFriendDialog_StatusTitle_String
+erase AddFriendDialog_StatusDetails_String
+erase AdminActionDialog_Warn_String
+erase AdminActionDialog_Mute_String
+erase AdminActionDialog_UnMute_String
+erase AdminActionDialog_Kick_String
+erase AdminActionDialog_Ban_String
+erase AdminActionDialog_ExplanationOpt_String
+erase AdminActionDialog_ExplanationReq_String
+erase BadUserDialog_OneDay_String
+erase BadUserDialog_OneHour_String
+erase BadUserDialog_OneMinute_String
+erase BadUserDialog_OneSecond_String
+erase BadUserDialog_XDays_String
+erase BadUserDialog_XHours_String
+erase BadUserDialog_XMinutes_String
+erase BadUserDialog_XSeconds_String
+erase BadUserDialog_Infinite_String
+erase ChatCommandLogic_Whisper_String
+erase ChatCommandLogic_Block_String
+erase ChatCommandLogic_Emote_String
+erase ChatCommandLogic_Ignore_String
+erase ChatCommandLogic_Away_String
+erase ChatCommandLogic_Invite_String
+erase ChatCommandLogic_Uninvite_String
+erase ChatCommandLogic_Reply_String
+erase ChatCommandLogic_Clear_String
+erase ChatCommandLogic_Help_String
+erase ChatCommandLogic_ShowTeam_String
+erase ChatCommandLogic_Moderator_String
+erase ChatCommandLogic_ServerMute_String
+erase ChatCommandLogic_ServerBan_String
+erase ChatCommandLogic_Mute_String
+erase ChatCommandLogic_Ban_String
+erase ChatCommandLogic_Unmute_String
+erase ChatCommandLogic_ServerUnmute_String
+erase ChatCommandLogic_Unban_String
+erase ChatCommandLogic_ServerUnban_String
+erase ChatCommandLogic_Alert_String
+erase ChatCommandLogic_Warn_String
+erase ChatCommandLogic_HelpHeader_String
+erase ChatCommandLogic_HelpHelp_String
+erase ChatCommandLogic_ShowTeamHelp_String
+erase ChatCommandLogic_WhisperHelp_String
+erase ChatCommandLogic_BlockHelp_String
+erase ChatCommandLogic_IgnoreHelp_String
+erase ChatCommandLogic_ReplyHelp_String
+erase ChatCommandLogic_EmoteHelp_String
+erase ChatCommandLogic_AwayHelp_String
+erase ChatCommandLogic_ClearHelp_String
+erase ChatCommandLogic_InviteHelp_String
+erase ChatCommandLogic_UninviteHelp_String
+erase ChatCommandLogic_MuteHelp_String
+erase ChatCommandLogic_UnmuteHelp_String
+erase ChatCommandLogic_BanHelp_String
+erase ChatCommandLogic_UnbanHelp_String
+erase ChatCommandLogic_ModeratorHelp_String
+erase ChatCommandLogic_ServerMuteHelp_String
+erase ChatCommandLogic_ServerUnmuteHelp_String
+erase ChatCommandLogic_ServerBanHelp_String
+erase ChatCommandLogic_ServerUnbanHelp_String
+erase ChatCommandLogic_AlertHelp_String
+erase ChatCommandLogic_WarnHelp_String
+erase ChatCtrl_NormalChat_String
+erase ChatCtrl_Emote_String
+erase ChatCtrl_TeamChat_String
+erase ChatCtrl_TeamEmote_String
+erase ChatCtrl_YouWhisperToYourself_String
+erase ChatCtrl_YouWhisper_String
+erase ChatCtrl_SomeoneWhispersToYou_String
+erase ChatCtrl_YouWarnSomeone_String
+erase ChatCtrl_YouWarnYourself_String
+erase ChatCtrl_SomeoneWarnsYou_String
+erase ChatCtrl_SomeoneWarnsSomeone_String
+erase ChatCtrl_EnteringRoom_String
+erase ChatCtrl_LeavingRoom_String
+erase ChatCtrl_Disconnected_String
+erase ChatCtrl_YouWereKicked_String
+erase ChatCtrl_YouWereBannedMinute_String
+erase ChatCtrl_YouWereBannedMinutes_String
+erase ChatCtrl_YouWereBannedHour_String
+erase ChatCtrl_YouWereBannedHours_String
+erase ChatCtrl_YouWereBannedDay_String
+erase ChatCtrl_YouWereBannedDays_String
+erase ChatCtrl_YouWereBannedIndefinitely_String
+erase ChatCtrl_SomeoneWasKicked_String
+erase ChatCtrl_SomeoneWasBannedMinute_String
+erase ChatCtrl_SomeoneWasBannedMinutes_String
+erase ChatCtrl_SomeoneWasBannedHour_String
+erase ChatCtrl_SomeoneWasBannedHours_String
+erase ChatCtrl_SomeoneWasBannedDay_String
+erase ChatCtrl_SomeoneWasBannedDays_String
+erase ChatCtrl_SomeoneWasBannedIndefinitely_String
+erase ChatCtrl_YouWereUnmuted_String
+erase ChatCtrl_YouWereMutedMinute_String
+erase ChatCtrl_YouWereMutedMinutes_String
+erase ChatCtrl_YouWereMutedHour_String
+erase ChatCtrl_YouWereMutedHours_String
+erase ChatCtrl_YouWereMutedDay_String
+erase ChatCtrl_YouWereMutedDays_String
+erase ChatCtrl_YouWereMutedIndefinitely_String
+erase ChatCtrl_SomeoneWasUnmuted_String
+erase ChatCtrl_SomeoneWasMutedMinute_String
+erase ChatCtrl_SomeoneWasMutedMinutes_String
+erase ChatCtrl_SomeoneWasMutedHour_String
+erase ChatCtrl_SomeoneWasMutedHours_String
+erase ChatCtrl_SomeoneWasMutedDay_String
+erase ChatCtrl_SomeoneWasMutedDays_String
+erase ChatCtrl_SomeoneWasMutedIndefinitely_String
+erase ChatCtrl_ModeratorComment_String
+erase ChatCtrl_AlertComment_String
+erase ChatCtrl_ServerAlert_String
+erase ChatCtrl_ServerShutdownStartedMinute_String
+erase ChatCtrl_ServerShutdownStartedMinutes_String
+erase ChatCtrl_ServerShutdownStartedHour_String
+erase ChatCtrl_ServerShutdownStartedHours_String
+erase ChatCtrl_ServerShutdownStartedDay_String
+erase ChatCtrl_ServerShutdownStartedDays_String
+erase ChatCtrl_ServerShutdownAborted_String
+erase ChatCtrl_SomeoneInvitesYou_String
+erase ChatCtrl_SomeoneUninvitesYou_String
+erase ChatCtrl_YouInviteSomeone_String
+erase ChatCtrl_YouUninviteSomeone_String
+erase ChatCtrl_SomeoneInvitesYouExpl_String
+erase ChatCtrl_SomeoneUninvitesYouExpl_String
+erase ChatCtrl_YouInviteSomeoneExpl_String
+erase ChatCtrl_YouUninviteSomeoneExpl_String
+erase ChatCtrl_Accept_String
+erase ChatCtrl_Reject_String
+erase ChatCtrl_SomeoneAsksToJoin_String
+erase ChatCtrl_SomeoneAsksToJoinExpl_String
+erase ChatCtrl_ClientNotOnServer_String
+erase ChatCtrl_ClientInGame_String
+erase ChatCtrl_ClientInChat_String
+erase ChatCtrl_ClientInGameAndChat_String
+erase ChatCtrl_ClientIsAnonymous_String
+erase ChatCtrl_FriendIsChatting_String
+erase ChatCtrl_FriendIsInGameStaging_String
+erase ChatCtrl_FriendIsPlaying_String
+erase ChatCtrl_FriendIsOn_String
+erase ChatCtrl_FriendIsNotOnline_String
+erase ChatCtrl_PlayerKicked_String
+erase ChatCtrl_PlayerBanned_String
+erase ChatCtrl_FriendJoined_String
+erase ChatCtrl_FriendLeft_String
+erase ChatCtrl_TeamMemberJoined_String
+erase ChatCtrl_TeamMemberLeft_String
+erase ChatCtrl_TeamMembers_String
+erase ChatCtrl_IgnoreList_String
+erase ChooseNetworkAdapterDialog_Default_String
+erase ChooseNetworkAdapterDialog_Unknown_String
+erase ClientOptionsCtrl_Whisper_String
+erase ClientOptionsCtrl_Invite_String
+erase ClientOptionsCtrl_Uninvite_String
+erase ClientOptionsCtrl_AddToFriends_String
+erase ClientOptionsCtrl_RemoveFromFriends_String
+erase ClientOptionsCtrl_ClearAFK_String
+erase ClientOptionsCtrl_SetAFK_String
+erase ClientOptionsCtrl_Ignore_String
+erase ClientOptionsCtrl_Unignore_String
+erase ClientOptionsCtrl_Block_String
+erase ClientOptionsCtrl_Unblock_String
+erase ClientOptionsCtrl_Warn_String
+erase ClientOptionsCtrl_Mute_String
+erase ClientOptionsCtrl_UnMute_String
+erase ClientOptionsCtrl_Kick_String
+erase ClientOptionsCtrl_Ban_String
+erase DirectConnectionOptionsCtrl_Connect_String
+erase DirectConnectionOptionsCtrl_Refresh_String
+erase DirectConnectionOptionsCtrl_Remove_String
+erase FriendOptionsCtrl_Locate_String
+erase FriendOptionsCtrl_RefreshList_String
+erase FriendOptionsCtrl_RemoveFromFriends_String
+release FriendsListCtrl_Unknown_Image
+release FriendsListCtrl_NotFound_Image
+release FriendsListCtrl_InChat_Image
+release FriendsListCtrl_InGame_Image
+erase GameOptionsPopup_Join_String
+erase GameOptionsPopup_Ping_String
+erase GameOptionsPopup_QueryDetails_String
+erase GameOptionsPopup_HideDetails_String
+erase GameOptionsPopup_ShowDetails_String
+erase GameOptionsPopup_Remove_String
+erase GameStagingCtrl_Ready_String
+erase GameStagingCtrl_NotReady_String
+erase GameStagingCtrl_StartGame_String
+erase GameStagingCtrl_LeaveGame_String
+erase GameStagingCtrl_DissolveGame_String
+erase GameStagingLogic_KickedTitle_String
+erase GameStagingLogic_KickedDetails_String
+erase GameStagingLogic_BannedTitle_String
+erase GameStagingLogic_BannedDetails_String
+erase GameStagingLogic_ConnectWarningTitle1_String
+erase GameStagingLogic_ConnectWarningDetails1_String
+erase GameStagingLogic_ConnectWarningTitle2_String
+erase GameStagingLogic_ConnectWarningDetails2_String
+erase GameStagingLogic_ConnectWarningTitle3_String
+erase GameStagingLogic_ConnectWarningDetails3_String
+erase GameStagingLogic_NoPingReplyError_String
+erase GameStagingLogic_GettingGameInfoTitle_String
+erase GameStagingLogic_GettingGameInfoDetails_String
+erase GameStagingLogic_JoinGameErrorTitle_String
+erase GameStagingLogic_VerifyingPingTitle_String
+erase GameStagingLogic_VerifyingPingDetails_String
+erase GameStagingLogic_DissolveGame_String
+erase GameStagingLogic_DissolveGameConfirm_String
+erase GameStagingLogic_LeaveGame_String
+erase GameStagingLogic_LeaveGameConfirm_String
+erase GameStagingLogic_NoQuickPlayGameTitle_String
+erase GameStagingLogic_NoQuickPlayGameDetails_String
+erase GameUserListCtrl_Ban_String
+erase GameUserListCtrl_Kick_String
+release GameUserListCtrl_Ready_Image
+erase InternetQuickPlay_Welcome_String
+erase InternetQuickPlay_UserWelcome_String
+erase JoinResponse_Joined_String
+erase JoinResponse_ServerFull_String
+erase JoinResponse_InviteOnly_String
+erase JoinResponse_AskToJoin_String
+erase JoinResponse_GameInProgress_String
+erase JoinResponse_InvalidPassword_String
+erase JoinResponse_NotOnLAN_String
+erase JoinResponse_Blocked_String
+erase JoinResponse_Unknown_String
+erase LANLogic_SocketBindError_String
+erase LANLogic_SocketListenError_String
+erase LANLogic_ConnectToGameTitle_String
+erase LANLogic_ConnectToGameDetails_String
+erase LANLogic_CheckingAddressTitle_String
+erase LANLogic_CheckingAddressDetails_String
+erase LANLogic_RegisterTitle_String
+erase LANLogic_RegisterDetails_String
+erase LANLogic_JoinFailure_String
+erase LANLogic_JoinReplyError_String
+erase LANLogic_InvalidSubnet_String
+erase LobbyContainer_InitStart_String
+erase LobbyContainer_InitFailed_String
+erase LobbyContainer_CheckingVersion_String
+erase LobbyContainer_QueryingServers_String
+erase LobbyContainer_NoConnection_String
+erase LobbyContainer_DNSLookupFailed_String
+erase LobbyContainer_DirLookupFailure_String
+erase LobbyContainer_VersionCheckFailure_String
+erase LobbyContainer_InitComplete_String
+erase LobbyContainer_NoServers_String
+erase LobbyContainer_AuthServers_String
+erase LobbyContainer_AccountServers_String
+erase LobbyContainer_VersionServers_String
+erase LobbyContainer_CreateAccountTitle_String
+erase LobbyContainer_CreateAccountDetails_String
+erase LobbyContainer_RetrievePasswordTitle_String
+erase LobbyContainer_RetrievePasswordDetails_String
+erase LobbyContainer_RetrieveUsernameTitle_String
+erase LobbyContainer_RetrieveUsernameDetails_String
+erase LobbyContainer_QueryAccountTitle_String
+erase LobbyContainer_QueryAccountDetails_String
+erase LobbyContainer_UpdateAccountTitle_String
+erase LobbyContainer_UpdateAccountDetails_String
+erase LobbyContainer_LoginTitle_String
+erase LobbyContainer_LoginDetails_String
+erase LobbyContainer_GettingRoomsTitle_String
+erase LobbyContainer_GettingRoomsDetails_String
+erase LobbyContainer_VersionOutOfDataTitle_String
+erase LobbyContainer_VersionOutOfDataDetails_String
+erase LobbyGameStatus_Success_String
+erase LobbyGameStatus_GameFull_String
+erase LobbyGameStatus_GameInProgress_String
+erase LobbyGameStatus_UnpackFailure_String
+erase LobbyGameStatus_NotInvited_String
+erase LobbyGameStatus_CaptainRejectedYou_String
+erase LobbyGameStatus_InvalidPassword_String
+erase LobbyGameStatus_DuplicateName_String
+erase LobbyOptions_DefaultName_String
+erase LobbyOptions_CheckingAddress_String
+erase LobbyOptions_AddressUnavailable_String
+erase RoomCtrl_QueryingServer_String
+release RoomCtrl_Password_Image
+erase RoomLabelCtrl_LabelPrefix_String
+erase RoomLabelCtrl_LabelServer_String
+erase RoomLabelCtrl_LabelUser_String
+erase RoomLabelCtrl_LabelUsers_String
+erase RoomLabelCtrl_LabelDisconnected_String
+erase RoutingLogic_GetClientListTitle_String
+erase RoutingLogic_GetClientListDetails_String
+erase RoutingLogic_GetGroupListTitle_String
+erase RoutingLogic_GetGroupListDetails_String
+erase RoutingLogic_GameDissolvedTitle_String
+erase RoutingLogic_GameDissolvedDetails_String
+erase RoutingLogic_NoServersTitle_String
+erase RoutingLogic_NoServersDetails_String
+erase RoutingLogic_TooManyFriendsTitle_String
+erase RoutingLogic_TooManyFriendsDetails_String
+erase RoutingLogic_AlreadyJoinedTitle_String
+erase RoutingLogic_AlreadyInGame_String
+erase RoutingLogic_AlreadyInRoom_String
+erase RoutingLogic_JoinGroupTitle_String
+erase RoutingLogic_JoinGroupDetails_String
+erase RoutingLogic_ConnectTitle_String
+erase RoutingLogic_ConnectDetails_String
+erase RoutingLogic_RegisterTitle_String
+erase RoutingLogic_RegisterDetails_String
+erase RoutingLogic_QueryGroupsTitle_String
+erase RoutingLogic_QueryGroupsDetails_String
+erase RoutingLogic_CreateGroupTitle_String
+erase RoutingLogic_CreateGroupDetails_String
+erase RoutingLogic_GetBadUsersTitle_String
+erase RoutingLogic_GetBadUsersDetails_String
+erase RoutingLogic_DisconnectedTitle_String
+erase RoutingLogic_DisconnectedDetails_String
+erase RoutingLogic_AskingCaptainTitle_String
+erase RoutingLogic_AskingCaptainDetails_String
+erase RoutingLogic_CollectingPingsTitle_String
+erase RoutingLogic_CollectingPingsDetails_String
+erase RoutingLogic_GettingGameListTitle_String
+erase RoutingLogic_GettingGameListDetails_String
+erase RoutingLogic_MuteClientTitle_String
+erase RoutingLogic_UnmuteClientTitle_String
+erase RoutingLogic_BanClientTitle_String
+erase RoutingLogic_KickClientTitle_String
+erase RoutingLogic_ModerateDetails_String
+erase RoutingLogic_FriendNotFoundTitle_String
+erase RoutingLogic_FriendNotFoundDetails_String
+erase RoutingLogic_ClientNotFound_String
+erase RoutingLogic_ClientAmbiguous_String
+erase RoutingLogic_InvalidCommand_String
+erase RoutingLogic_RequireName_String
+erase RoutingLogic_BadTimeSpec_String
+erase RoutingLogic_Error_String
+erase RoutingLogic_NotCaptain_String
+erase ServerListCtrl_Pinging_String
+erase ServerListCtrl_PingFailed_String
+erase ServerListCtrl_Querying_String
+erase ServerListCtrl_QueryFailed_String
+erase ServerListCtrl_ListSummary_String
+erase ServerListCtrl_ListPingSummary_String
+erase ServerListCtrl_RefreshList_String
+erase ServerListCtrl_StopRefresh_String
+erase ServerListCtrl_NoFilter_String
+erase ServerListCtrl_AddRemove_String
+erase ServerListCtrl_Add_String
+erase ServerListCtrl_Remove_String
+erase ServerListCtrl_FullFilter_String
+erase ServerListCtrl_NotFullFilter_String
+erase ServerListCtrl_OpenFilter_String
+release ServerListCtrl_PingFailed_Image
+release ServerListCtrl_GameExpanded_Image
+release ServerListCtrl_GameNotExpanded_Image
+release ServerListCtrl_GameAreInvited_Image
+release ServerListCtrl_GameNone_Image
+release ServerListCtrl_GameAskToJoin_Image
+release ServerListCtrl_GameHasPassword_Image
+release ServerListCtrl_GameNotInvited_Image
+release ServerListCtrl_GameInProgress_Image
+release ServerListCtrl_SkillOpen_Image
+release ServerListCtrl_SkillNovice_Image
+release ServerListCtrl_SkillIntermediate_Image
+release ServerListCtrl_SkillAdvanced_Image
+release ServerListCtrl_SkillExpert_Image
+erase ServerOptionsCtrl_Connect_String
+erase ServerOptionsCtrl_RefreshServer_String
+erase ServerOptionsCtrl_HideDetails_String
+erase ServerOptionsCtrl_ShowDetails_String
+erase ServerOptionsCtrl_ResfreshList_String
+erase StagingLogic_DisconnectedTitle_String
+erase StagingLogic_DisconnectedDetails_String
+erase StagingLogic_BannedTitle_String
+erase StagingLogic_BannedDetails_String
+erase StagingLogic_KickedTitle_String
+erase StagingLogic_KickedDetails_String
+erase UserListCtrl_Ignore_String
+erase UserListCtrl_Unignore_String
+release UserListCtrl_Normal_Image
+release UserListCtrl_Away_Image
+release UserListCtrl_Admin_Image
+release UserListCtrl_Moderator_Image
+release UserListCtrl_Captain_Image
+release UserListCtrl_Muted_Image
+release UserListCtrl_Ignored_Image
+release UserListCtrl_Blocked_Image
+erase WONStatus_Success_String
+erase WONStatus_Killed_String
+erase WONStatus_TimedOut_String
+erase WONStatus_InvalidAddress_String
+erase WONStatus_GeneralFailure_String
+erase WONStatus_AuthFailure_String
+erase WONStatus_FTPFailure_String
+erase WONStatus_HTTPFailure_String
+erase WONStatus_MOTDFailure_String
+erase WONStatus_RoutingFailure_String
+erase WONStatus_GameSpyFailure_String
+erase WONStatus_DirFailure_String
+erase WONStatus_ChatFailure_String
+erase WONStatus_DatabaseFailure_String
+erase WONStatus_NotAllowed_String
+erase WONStatus_NotAuthorized_String
+erase WONStatus_BehindFirewall_String
+erase WONStatus_ExpiredCertificate_String
+erase WONStatus_InvalidCDKey_String
+erase WONStatus_CDKeyBanned_String
+erase WONStatus_CDKeyInUse_String
+erase WONStatus_CRCFailed_String
+erase WONStatus_UserExists_String
+erase WONStatus_UserNotFound_String
+erase WONStatus_BadPassword_String
+erase WONStatus_InvalidUserName_String
+erase WONStatus_BadCommunity_String
+erase WONStatus_NotInCommunity_String
+erase WONStatus_UserSeqInUse_String
+erase WONStatus_BlankNamesNotAllowed_String
+erase WONStatus_CaptainRejectedYou_String
+erase WONStatus_ClientAlreadyBanned_String
+erase WONStatus_ClientAlreadyInGroup_String
+erase WONStatus_ClientAlreadyMuted_String
+erase WONStatus_ClientBanned_String
+erase WONStatus_ClientDoesNotExist_String
+erase WONStatus_ClientNotBanned_String
+erase WONStatus_ClientNotInGroup_String
+erase WONStatus_ClientNotInvited_String
+erase WONStatus_ClientNotMuted_String
+erase WONStatus_ConnectFailure_String
+erase WONStatus_GroupAlreadyClaimed_String
+erase WONStatus_GroupAlreadyExists_String
+erase WONStatus_GroupClosed_String
+erase WONStatus_GroupDeleted_String
+erase WONStatus_GroupDoesNotExist_String
+erase WONStatus_GroupFull_String
+erase WONStatus_GuestNamesReserved_String
+erase WONStatus_InvalidPassword_String
+erase WONStatus_MustBeAdmin_String
+erase WONStatus_MustBeCaptain_String
+erase WONStatus_MustBeCaptainOrModerator_String
+erase WONStatus_MustBeModerator_String
+erase WONStatus_ServerFull_String
+erase WONStatus_GroupNameExceedsMaximum_String
+erase WONStatus_JoinCanceled_String
+erase WONStatus_Throttled_String
+erase WONStatus_KeyNotUsed_String
+erase WONStatus_EMailPasswordDuplication_String
+erase WONStatus_AccountCreateDisabled_String
+erase WONStatus_AgeNotOldEnough_String
+erase WONStatus_ItemHasDependencies_String
+erase WONStatus_OutOfDate_String
+erase WONStatus_OutOfDateNoUpdate_String
+erase WONStatus_ValidNotLatest_String
+erase WONStatus_DataAlreadyExists_String
+erase WONStatus_DBError_String
+erase WONStatus_ConnRefused_String

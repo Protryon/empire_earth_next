@@ -7,8 +7,8 @@
 // a memcpy and the save code's bytes are unchanged), reads as T, and every assignment form stores the value and then
 // reports it (EEUnitStoreWrote: the record of a unit in the store, the object checked). A holder has no conversion to
 // T& or T*, so the compiler finds every writer; a memcpy into one bypasses it (the hit points' load: a hooked write
-// follows, and the load runs before the insert). Derived fields are reported where they change: the class's category
-// and type at mUnitClass, the goal's kind at mGoalState, the complex flag at mComplexUnit.
+// follows, and the load runs before the insert). Derived fields are reported where they change: the class's category,
+// type, domains and land-building flag at mUnitClass, the goal's kind at mGoalState, the complex flag at mComplexUnit.
 //
 // TEST ONLY: EEUnitStoreCheck compares every unit of every player's list with its record (the simulation capture's
 // USCK record; a mismatch stops EE-SIM, exit code 3).
@@ -32,6 +32,8 @@ enum EEUnitStoreFieldID {
     kUnitFieldBuilt = 8,        // EEComplexUnit::mIsBuilt
     kUnitFieldGoal = 9          // EEComplexUnit::mGoalState (the record's goal kind)
 };
+// reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING): the class's
+// mDomains and IsLandBuilding(), both fixed by its constructor
 
 // a holder's member was written (EEUnitStore.cpp: the owner from the member's offset)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember);
@@ -95,6 +97,16 @@ void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_
                          const uint32_t* inPicked, size_t inPickedCount);
 // TEST ONLY: the pick over every player's units (USPK records; EE-SIM, every five game minutes)
 void EESelectPickSweep();
+class EEComplexUnit;
+// EEActiveGroup::Fill's test: the indices (in order) of the units of inUnits (a selection's, inCount) that an active
+// group takes for formation slot inSlot: valid, with hit points, in the slot; outIndices has room for inCount; the count
+size_t EEFillMembers(EEComplexUnit* const* inUnits, size_t inCount, long inSlot, uint32_t* outIndices);
+// TEST ONLY: a USFL record of one Fill test (inCase 100: EEActiveGroup::Fill; 1, 2: the sweep's), inPlayer the
+// selection's player
+void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* const* inUnits, size_t inCount, long inSlot,
+                   const uint32_t* inIndices, size_t inTaken);
+// TEST ONLY: the Fill test over every player's units for every slot (USFL records; EE-SIM, every five game minutes)
+void EEFillSweep();
 
 // TEST ONLY: every unit of every player's list against its record; the count compared. inWhere names the point
 // (0: after a physics tick, else the executed message's type). A mismatch prints the unit and field and exits 3.

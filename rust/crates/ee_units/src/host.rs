@@ -81,7 +81,8 @@ impl GoalHandle {
     }
 }
 
-/// The host's calls.
+/// The host's calls. A group made by `active_group_new` is the body's until `pending_push` hands it to the player
+/// or `group_release` drops it.
 pub trait Host {
     /// The group's units as ids, in the group's order.
     fn group_ids(&mut self, group: HostRef, out: &mut Vec<u32>);
@@ -91,6 +92,28 @@ pub trait Host {
     fn goal_kind(&mut self, goal: &GoalHandle) -> u8;
     /// Deletes a goal no call consumed.
     fn goal_release(&mut self, goal: GoalHandle);
+    /// `new EEActiveGroup(player)`
+    fn active_group_new(&mut self, player: HostRef) -> HostRef;
+    /// `EEActiveGroup::Fill(selection, sort, slot)` (its test is `group::fill_members`)
+    fn group_fill(&mut self, group: HostRef, selection: HostRef, sort: i32, slot: i32);
+    /// `group->Dereference()`: a group nothing took
+    fn group_release(&mut self, group: HostRef);
+    /// `player->mPendingGroups.push_back(group)` (the player takes the body's reference)
+    fn pending_push(&mut self, player: HostRef, group: HostRef);
+    /// `EEActiveGroup::KeepMobileUnits`
+    fn group_keep_mobile(&mut self, group: HostRef);
+    /// `EEActiveGroup::ClearGoal`
+    fn group_clear_goal(&mut self, group: HostRef);
+    /// `EEActiveGroup::SetGoal(goal, queued)`: the group takes the goal
+    fn group_set_goal(&mut self, group: HostRef, goal: GoalHandle, queued: bool);
+    /// `group->mAction = action`
+    fn group_set_action(&mut self, group: HostRef, action: i32);
+    /// `EEActiveGroup::Plan`
+    fn group_plan(&mut self, group: HostRef);
+    /// `gPhysics->GetRandom(low, high)` (the simulation's draw)
+    fn random(&mut self, low: i32, high: i32) -> i32;
+    /// `player->PlayAcknowledgement(group->GetUnit(index))`
+    fn play_acknowledgement(&mut self, player: HostRef, group: HostRef, index: i32);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -103,6 +126,17 @@ pub mod game {
         fn ee_units_host_goal_new(spec: *const EeGoalSpec) -> *mut c_void;
         fn ee_units_host_goal_kind(goal: *mut c_void) -> u8;
         fn ee_units_host_goal_release(goal: *mut c_void);
+        fn ee_units_host_active_group_new(player: *mut c_void) -> *mut c_void;
+        fn ee_units_host_group_fill(group: *mut c_void, selection: *mut c_void, sort: i32, slot: i32);
+        fn ee_units_host_group_release(group: *mut c_void);
+        fn ee_units_host_pending_push(player: *mut c_void, group: *mut c_void);
+        fn ee_units_host_group_keep_mobile(group: *mut c_void);
+        fn ee_units_host_group_clear_goal(group: *mut c_void);
+        fn ee_units_host_group_set_goal(group: *mut c_void, goal: *mut c_void, queued: u8);
+        fn ee_units_host_group_set_action(group: *mut c_void, action: i32);
+        fn ee_units_host_group_plan(group: *mut c_void);
+        fn ee_units_host_random(low: i32, high: i32) -> i32;
+        fn ee_units_host_play_acknowledgement(player: *mut c_void, group: *mut c_void, index: i32);
     }
 
     pub struct GameHost;
@@ -131,19 +165,78 @@ pub mod game {
             // SAFETY: as above; the handle is consumed
             unsafe { ee_units_host_goal_release(goal.as_ptr()) }
         }
+        // SAFETY (each call below): the references are objects the host handed out (the sender, its selection, a
+        // group from active_group_new) and live for the body's call
+        fn active_group_new(&mut self, player: HostRef) -> HostRef {
+            HostRef(unsafe { ee_units_host_active_group_new(player.0) })
+        }
+        fn group_fill(&mut self, group: HostRef, selection: HostRef, sort: i32, slot: i32) {
+            unsafe { ee_units_host_group_fill(group.0, selection.0, sort, slot) }
+        }
+        fn group_release(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_release(group.0) }
+        }
+        fn pending_push(&mut self, player: HostRef, group: HostRef) {
+            unsafe { ee_units_host_pending_push(player.0, group.0) }
+        }
+        fn group_keep_mobile(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_keep_mobile(group.0) }
+        }
+        fn group_clear_goal(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_clear_goal(group.0) }
+        }
+        fn group_set_goal(&mut self, group: HostRef, goal: GoalHandle, queued: bool) {
+            unsafe { ee_units_host_group_set_goal(group.0, goal.as_ptr(), queued as u8) }
+        }
+        fn group_set_action(&mut self, group: HostRef, action: i32) {
+            unsafe { ee_units_host_group_set_action(group.0, action) }
+        }
+        fn group_plan(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_plan(group.0) }
+        }
+        fn random(&mut self, low: i32, high: i32) -> i32 {
+            unsafe { ee_units_host_random(low, high) }
+        }
+        fn play_acknowledgement(&mut self, player: HostRef, group: HostRef, index: i32) {
+            unsafe { ee_units_host_play_acknowledgement(player.0, group.0, index) }
+        }
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::collections::BTreeMap;
 
-    /// A host over plain values: groups as id lists, goals as boxed kinds.
+    /// A host call as the mock saw it (goals by kind)
+    #[derive(Debug, PartialEq)]
+    pub(crate) enum Call {
+        NewGroup(HostRef, HostRef),
+        Fill(HostRef, HostRef, i32, i32),
+        Release(HostRef),
+        Pending(HostRef, HostRef),
+        KeepMobile(HostRef),
+        ClearGoal(HostRef),
+        GoalNew(u32, u8),
+        SetGoal(HostRef, u8, bool),
+        SetAction(HostRef, i32),
+        Plan(HostRef),
+        Random(i32, i32),
+        Acknowledge(HostRef, HostRef, i32),
+    }
+
+    /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
+    /// gives a group `fills[slot]`, KeepMobileUnits keeps the ids in `mobile`, the draws come from `draws` (else the
+    /// low bound). Every call is logged.
     #[derive(Default)]
-    struct MockHost {
-        groups: BTreeMap<usize, Vec<u32>>,
-        live: usize,
+    pub(crate) struct MockHost {
+        pub groups: BTreeMap<usize, Vec<u32>>,
+        pub live: usize,
+        pub calls: Vec<Call>,
+        pub fills: BTreeMap<i32, Vec<u32>>,
+        pub mobile: Vec<u32>,
+        pub draws: Vec<i32>,
+        made: usize,
     }
 
     impl Host for MockHost {
@@ -152,6 +245,7 @@ mod tests {
             out.extend(self.groups.get(&(group.0 as usize)).into_iter().flatten());
         }
         fn goal_new(&mut self, spec: &EeGoalSpec) -> Option<GoalHandle> {
+            self.calls.push(Call::GoalNew(spec.ctor, spec.flag_a));
             let kind = spec.kind()?;
             self.live += 1;
             GoalHandle::from_ptr(Box::into_raw(Box::new(kind)) as *mut c_void)
@@ -164,6 +258,57 @@ mod tests {
             self.live -= 1;
             // SAFETY: as above, released once
             drop(unsafe { Box::from_raw(goal.as_ptr() as *mut u8) });
+        }
+        fn active_group_new(&mut self, player: HostRef) -> HostRef {
+            self.made += 1;
+            let group = HostRef((0x1000 + self.made) as *mut c_void);
+            self.groups.insert(group.0 as usize, Vec::new());
+            self.calls.push(Call::NewGroup(player, group));
+            group
+        }
+        fn group_fill(&mut self, group: HostRef, selection: HostRef, sort: i32, slot: i32) {
+            let ids = self.fills.get(&slot).cloned().unwrap_or_default();
+            self.groups.insert(group.0 as usize, ids);
+            self.calls.push(Call::Fill(group, selection, sort, slot));
+        }
+        fn group_release(&mut self, group: HostRef) {
+            self.groups.remove(&(group.0 as usize));
+            self.calls.push(Call::Release(group));
+        }
+        fn pending_push(&mut self, player: HostRef, group: HostRef) {
+            self.calls.push(Call::Pending(player, group));
+        }
+        fn group_keep_mobile(&mut self, group: HostRef) {
+            let mobile = self.mobile.clone();
+            if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                ids.retain(|id| mobile.contains(id));
+            }
+            self.calls.push(Call::KeepMobile(group));
+        }
+        fn group_clear_goal(&mut self, group: HostRef) {
+            self.calls.push(Call::ClearGoal(group));
+        }
+        fn group_set_goal(&mut self, group: HostRef, goal: GoalHandle, queued: bool) {
+            let kind = self.goal_kind(&goal);
+            self.goal_release(goal);
+            self.calls.push(Call::SetGoal(group, kind, queued));
+        }
+        fn group_set_action(&mut self, group: HostRef, action: i32) {
+            self.calls.push(Call::SetAction(group, action));
+        }
+        fn group_plan(&mut self, group: HostRef) {
+            self.calls.push(Call::Plan(group));
+        }
+        fn random(&mut self, low: i32, high: i32) -> i32 {
+            self.calls.push(Call::Random(low, high));
+            if self.draws.is_empty() {
+                low
+            } else {
+                self.draws.remove(0)
+            }
+        }
+        fn play_acknowledgement(&mut self, player: HostRef, group: HostRef, index: i32) {
+            self.calls.push(Call::Acknowledge(player, group, index));
         }
     }
 

@@ -18,7 +18,9 @@
 #include "ee/wonapi/WONStatus.h"
 #include "rust/ee_rust.h"
 // The room messages' bytes, their reads, who acts on which and the ready state's sounds are ee_won's staging module
-// (rust/crates/ee_won/src/staging.rs); this class keeps the game, the clients, the join op, the events and sounds.
+// (rust/crates/ee_won/src/staging.rs), the flow's decisions (where a message goes, what hosting, joining, leaving,
+// readying, a kick or a game action does) its flow module (flow.rs); this class keeps the game, the clients, the
+// join op, the dialogs, the events and sounds.
 namespace WONAPI {
 void LobbyNetSendToCaptain(const ByteBuffer*);
 void LobbyNetBroadcastToGame(const ByteBuffer*);
@@ -111,17 +113,21 @@ void StagingLogic::HandlePlayerJoined(const EeWonRoomMsg& inMsg, ReadBuffer& inB
 {
     LobbyClient* aClient = this->mGame->FindClient(inMsg.id);
     if (aClient == NULL) return;
-    if (!aClient->HasPlayer()) {
+    switch (ee_won_stage_player_joined(aClient->HasPlayer(), aClient->HasPlayer() && this->IAmCaptain())) {
+    case 0: {
         SmartPtr<LobbyPlayer> aPlayer = LobbyPlayer::CreatePlayer();
         if (!aPlayer->ReadFromBuffer(inBuffer)) return;
         aClient->SetPlayer(aPlayer.get());
-    } else if (!this->IAmCaptain()) return;
+        break;
+    }
+    case 2: return;
+    }
     LobbyBroadcastEvent(new PlayerChangedEvent(aClient, 0), true);
     if (aClient->IsTeammate(this->mMyClient.get()))
         LobbyBroadcastEvent(new PlayerTeamChangedEvent(aClient, 0), true);
     this->mGame->HandlePlayerJoined(aClient);
     if (LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_PlayerJoined_Sound.get());
-    if (this->mLastAllReady && !aClient->IsReady()) this->mLastAllReady = false;
+    if (this->mLastAllReady) this->mLastAllReady = ee_won_stage_joined_keeps_all_ready(true, aClient->IsReady());
     this->NotifyStagingChange();
 }
 
@@ -192,7 +198,8 @@ void StagingLogic::ResetReadyFlags()
 // Host: marks the game as in progress or not and re-advertises it
 void StagingLogic::SetGameInProgress(bool inInProgress)
 {
-    if (this->mGame.get() == NULL || this->mGame->mInProgress == inInProgress || !this->IAmCaptain())
+    if (this->mGame.get() == NULL ||
+        !ee_won_stage_sets_in_progress(true, this->mGame->mInProgress, inInProgress, this->IAmCaptain()))
         return;
     this->mGame->mInProgress = inInProgress;
     LobbyNetSetGameInProgress(inInProgress);
@@ -267,9 +274,10 @@ void StagingLogic::HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient*
 // Sends a message to the host; the host handles its own message directly
 void StagingLogic::SendToCaptain(const ByteBuffer* inMessage)
 {
-    if (this->mGame.get() != NULL) {
-        if (this->IAmCaptain()) this->HandleMessageBuffer(inMessage, this->mMyClient.get());
-        else LobbyNetSendToCaptain(inMessage);
+    switch (ee_won_stage_send_to_captain(this->mGame.get() != NULL, this->IAmCaptain())) {
+    case EeWonStageRoute::Local: this->HandleMessageBuffer(inMessage, this->mMyClient.get()); break;
+    case EeWonStageRoute::Net: LobbyNetSendToCaptain(inMessage); break;
+    default: break;
     }
 }
 
@@ -277,7 +285,7 @@ void StagingLogic::SendToCaptain(const ByteBuffer* inMessage)
 // Host: handles a message itself and sends it to every client in the game
 void StagingLogic::BroadcastToGame(const ByteBuffer* inMessage)
 {
-    if (this->mGame.get() != NULL && this->IAmCaptain()) {
+    if (ee_won_stage_broadcast(this->mGame.get() != NULL, this->IAmCaptain()) == EeWonStageRoute::LocalAndNet) {
         this->HandleMessageBuffer(inMessage, this->mMyClient.get());
         LobbyNetBroadcastToGame(inMessage);
     }
@@ -287,7 +295,8 @@ void StagingLogic::BroadcastToGame(const ByteBuffer* inMessage)
 // Host: sends a message to one client in the game
 void StagingLogic::SendToClient(LobbyClient* inClient, const ByteBuffer* inMessage)
 {
-    if (this->mGame.get() != NULL && this->IAmCaptain()) LobbyNetSendToClient(inClient, inMessage);
+    if (ee_won_stage_send_to_client(this->mGame.get() != NULL, this->IAmCaptain()) == EeWonStageRoute::Net)
+        LobbyNetSendToClient(inClient, inMessage);
 }
 
 // FUNCTION: WON 0x007efe10
@@ -344,7 +353,7 @@ void StagingLogic::HandleGameAction(ComponentEvent* inEvent)
     GameActionEvent* anEvent = static_cast<GameActionEvent*>(inEvent);
     LobbyGame* aGame = anEvent->mGame.get();
     if (aGame == NULL) return;
-    switch (anEvent->mAction) {
+    switch (ee_won_stage_game_action(anEvent->mAction, aGame->GetGameType())) {
     case 7: this->ShowGameOptions(aGame); break;
     case 1: this->JoinGame(aGame); break;
     case 2:
@@ -352,7 +361,6 @@ void StagingLogic::HandleGameAction(ComponentEvent* inEvent)
         LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
         break;
     case 3:
-    case 4:
         LobbyQueryGameDetails(aGame);
         aGame->mShowDetails = true;
         LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
@@ -362,8 +370,7 @@ void StagingLogic::HandleGameAction(ComponentEvent* inEvent)
         LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
         break;
     case 6:
-        if (aGame->GetGameType() == 3)
-            LobbyDispatchEvent(new ChangeDirectConnectEvent(1, aGame));
+        LobbyDispatchEvent(new ChangeDirectConnectEvent(1, aGame));
         break;
     }
 }
@@ -410,14 +417,15 @@ void StagingLogic::SendStartGame()
 // Host: starts the game when it can; others toggle their ready flag if the game allows it
 void StagingLogic::ToggleReady()
 {
-    if (this->mMyClient.get() == NULL || this->mGame.get() == NULL) return;
-    if (this->IAmCaptain()) {
+    bool aHave = this->mMyClient.get() != NULL && this->mGame.get() != NULL;
+    EeWonToggleReady aToggle = ee_won_stage_toggle_ready(aHave, aHave, aHave && this->IAmCaptain(),
+                                                         aHave && this->mMyClient->IsReady());
+    if (aToggle.action == 1) {
         if (this->mGame->CanStartGame() && this->mGame->TryStartGame()) this->SendStartGame();
-    } else {
-        bool aReady = !this->mMyClient->IsReady();
-        if (aReady && !this->mGame->CanReady()) return;
-        this->mLastReady = aReady;
-        this->SendReady(aReady);
+    } else if (aToggle.action == 2) {
+        if (aToggle.ask_can_ready && !this->mGame->CanReady()) return;
+        this->mLastReady = aToggle.want_ready;
+        this->SendReady(aToggle.want_ready);
     }
 }
 
@@ -427,11 +435,16 @@ void StagingLogic::HostGame()
 {
     if (!this->LeaveGame(true)) return;
     int aGameType = LobbyGetGameScreenType();
-    if (aGameType == 0) return;
-    if (aGameType != 1 && LobbyGetShowConfirmations()) {
-        int aResult = 0x186a1;
-        if (!LobbyIsFirewallTestDone()) aResult = LobbyDoYesNoDialog(::GameStagingLogic_ConnectWarningTitle1_String, ::GameStagingLogic_ConnectWarningDetails1_String, true);
-        else if (LobbyIsBehindFirewall()) aResult = LobbyDoYesNoDialog(::GameStagingLogic_ConnectWarningTitle2_String, ::GameStagingLogic_ConnectWarningDetails2_String, true);
+    // the firewall state is asked only where the original asked it (an Internet or direct-connect game with
+    // confirmations on; behind the firewall only once the test is done)
+    bool aConfirm = aGameType != 0 && aGameType != 1 && LobbyGetShowConfirmations();
+    bool aDone = aConfirm && LobbyIsFirewallTestDone();
+    int aWarning = ee_won_stage_host_warning(aGameType, aConfirm, aDone, aDone && LobbyIsBehindFirewall());
+    if (aWarning < 0) return;
+    if (aWarning != 0) {
+        int aResult = aWarning == 1
+            ? LobbyDoYesNoDialog(::GameStagingLogic_ConnectWarningTitle1_String, ::GameStagingLogic_ConnectWarningDetails1_String, true)
+            : LobbyDoYesNoDialog(::GameStagingLogic_ConnectWarningTitle2_String, ::GameStagingLogic_ConnectWarningDetails2_String, true);
         if (aResult != 0x186a1) return;
     }
     this->mCreateGameDialog->SetGameType(aGameType);
@@ -468,7 +481,12 @@ bool StagingLogic::VerifyPingBeforeJoin(LobbyGame* inGame)
     if (inGame->GetGameType() != 2 || inGame->mPingReplied)
         return true;
     LobbyConfig* aConfig = GetLobbyConfig();
-    if (aConfig != NULL && !aConfig->mAllowJoinGameWithoutPing) {
+    bool aWait = aConfig != NULL && !aConfig->mAllowJoinGameWithoutPing;
+    // confirmations are asked only when the ping is not waited for, as the original asked
+    int aStep = ee_won_stage_verify_ping(inGame->GetGameType(), inGame->mPingReplied, aConfig != NULL,
+                                         aConfig != NULL && aConfig->mAllowJoinGameWithoutPing,
+                                         !aWait && LobbyGetShowConfirmations());
+    if (aStep == 1) {
         LobbyPingGame(inGame, true);
         LobbyBroadcastEvent(new GameChangedEvent(inGame, 2), true);
         while (inGame->IsPinging()) {
@@ -480,7 +498,7 @@ bool StagingLogic::VerifyPingBeforeJoin(LobbyGame* inGame)
             LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, ::GameStagingLogic_NoPingReplyError_String);
             return false;
         }
-    } else if (LobbyGetShowConfirmations()) {
+    } else if (aStep == 2) {
         return LobbyDoYesNoDialog(::GameStagingLogic_ConnectWarningTitle3_String, ::GameStagingLogic_ConnectWarningDetails3_String, true) == 0x186a1;
     }
     return true;
@@ -505,7 +523,7 @@ void StagingLogic::JoinGame(LobbyGame* inGame)
     if (!this->VerifyPingBeforeJoin(inGame)) return;
     short aStatus = inGame->GetJoinStatus();
     if (aStatus != 0) {
-        if (aStatus != 1) LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, inGame->GetStatusString(aStatus));
+        if (ee_won_stage_join_status_shown(aStatus)) LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, inGame->GetStatusString(aStatus));
         return;
     }
     if (!this->LeaveGame(true)) return;
@@ -525,7 +543,7 @@ void StagingLogic::JoinGame(LobbyGame* inGame)
     LobbyRunOpWithStatus(this->mJoinOp.get(), ::GameStagingLogic_GettingGameInfoTitle_String, ::GameStagingLogic_GettingGameInfoDetails_String, 1, 0);
     this->mJoinOp = NULL;
     if (this->mJoinStatus != 0) {
-        if (this->mJoinStatus != 1) LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, inGame->GetStatusString(this->mJoinStatus));
+        if (ee_won_stage_join_status_shown(this->mJoinStatus)) LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, inGame->GetStatusString(this->mJoinStatus));
         return;
     }
     aCleanup.mLeave = false;
@@ -542,9 +560,10 @@ bool StagingLogic::LeaveGame(bool inConfirm)
 {
     if (this->mGame.get() == NULL)
         return true;
-    if (inConfirm && LobbyGetShowConfirmations()) {
+    int aConfirm = ee_won_stage_leave_confirm(inConfirm, inConfirm && LobbyGetShowConfirmations(), this->IAmCaptain());
+    if (aConfirm != 0) {
         int aResult;
-        if (this->IAmCaptain()) aResult = LobbyDoYesNoDialog(::GameStagingLogic_DissolveGame_String, ::GameStagingLogic_DissolveGameConfirm_String, true);
+        if (aConfirm == 1) aResult = LobbyDoYesNoDialog(::GameStagingLogic_DissolveGame_String, ::GameStagingLogic_DissolveGameConfirm_String, true);
         else aResult = LobbyDoYesNoDialog(::GameStagingLogic_LeaveGame_String, ::GameStagingLogic_LeaveGameConfirm_String, true);
         if (aResult != 0x186a1) return false;
     }
@@ -591,15 +610,14 @@ void StagingLogic::HandleKicked(LobbyClient* inClient, bool inBan)
 {
     LobbyGame* aGame = this->mGame.get();
     if (inClient == NULL || aGame == NULL) return;
-    int aKind = !inBan;
     bool isMe = inClient == this->mMyClient.get();
-    int aFlags = aGame->GetGameType() == 2 ? 6 : 10;
-    LobbyBroadcastEvent(new ClientModeratedEvent(inClient, aFlags, this->mGame->mName,
-        aKind, 0, isMe, gEmptyGUIString), true);
-    if (!isMe)
+    EeWonKicked aKicked = ee_won_stage_kicked(inBan, aGame->GetGameType(), isMe);
+    LobbyBroadcastEvent(new ClientModeratedEvent(inClient, aKicked.flags, this->mGame->mName,
+        aKicked.kind, 0, isMe, gEmptyGUIString), true);
+    if (aKicked.message == 0)
         return;
     this->LeaveGame(false);
-    if (inBan) LobbyMessageBox(::StagingLogic_BannedTitle_String, ::StagingLogic_BannedDetails_String);
+    if (aKicked.message == 1) LobbyMessageBox(::StagingLogic_BannedTitle_String, ::StagingLogic_BannedDetails_String);
     else LobbyMessageBox(::StagingLogic_KickedTitle_String, ::StagingLogic_KickedDetails_String);
 }
 
@@ -607,7 +625,7 @@ void StagingLogic::HandleKicked(LobbyClient* inClient, bool inBan)
 // Removes a departed player from the game, reports it and re-advertises the game when hosting
 void StagingLogic::HandleClientLeft(LobbyClient* inClient)
 {
-    if (!inClient->HasPlayer() || this->mGame.get() == NULL)
+    if (!ee_won_stage_client_left(inClient->HasPlayer(), this->mGame.get() != NULL))
         return;
     LobbyBroadcastEvent(new PlayerChangedEvent(inClient, 1), true);
     if (inClient->IsTeammate(this->mMyClient.get()))
@@ -621,7 +639,9 @@ void StagingLogic::HandleClientLeft(LobbyClient* inClient)
 // Reports our new ping to the current game's host
 void StagingLogic::NotifyPingChange(LobbyGame* inGame)
 {
-    if (this->mGame.get() == NULL || this->IAmCaptain() || !inGame->IsSameGame(this->mGame.get()))
+    bool aHave = this->mGame.get() != NULL;
+    bool aCaptain = aHave && this->IAmCaptain();
+    if (!ee_won_stage_reports_ping(aHave, aCaptain, aHave && !aCaptain && inGame->IsSameGame(this->mGame.get())))
         return;
     this->SendToCaptain(StagingMessage(8, 0, false, inGame->GetPing()).get());
 }
@@ -630,7 +650,7 @@ void StagingLogic::NotifyPingChange(LobbyGame* inGame)
 // Host: kicks or bans a client from the game and tells everyone
 void StagingLogic::KickClient(LobbyClient* inClient, bool inBan)
 {
-    if (inClient == NULL || this->mGame.get() == NULL || !this->IAmCaptain())
+    if (!ee_won_stage_kicks(inClient != NULL, this->mGame.get() != NULL, this->IAmCaptain()))
         return;
     this->BroadcastToGame(StagingMessage(10, inClient->GetClientId(), inBan, 0).get());
     LobbyNetKickClient(inClient, inBan);

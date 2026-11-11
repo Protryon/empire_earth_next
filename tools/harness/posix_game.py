@@ -180,6 +180,8 @@ def run(a):
         samples, outcome = played['samples'], played['outcome']
         time.sleep(2)
         summary['captures']['end'] = g.capture('end')
+        if a.box_select and a.exercise == 'random-game':
+            summary['box_select'] = fixture_driver.box_select(g, GAME)
         summary.update(outcome=outcome, final=g.state()['telemetry'], wall_seconds=played['wall_seconds'])
         g.note(f'END {outcome}: {summary["final"]}')
         summary['result'] = 'PASS'
@@ -219,6 +221,8 @@ def main():
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')
     ap.add_argument('--max-game-seconds', type=float, default=0, help='stop at this game time')
     ap.add_argument('--capture-every', type=float, default=0, help='capture the window every S wall seconds')
+    ap.add_argument('--box-select', action='store_true',
+                    help='random-game: box selections in the game view after the play (fixture_driver.box_select)')
     ap.add_argument('--timeout', type=float, default=120, help='seconds to reach the main menu')
     ap.add_argument('--lobby-check', action='append', default=[], help='ai-game: CONTROL=0|1, a lobby check box')
     ap.add_argument('--zoom-captures', type=int, nargs='*', default=[],

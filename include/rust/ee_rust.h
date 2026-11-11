@@ -674,6 +674,19 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
+constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
+
+constexpr static const uint8_t EE_MOVEMENT_LAND = 2;
+
+constexpr static const uint8_t EE_MOVEMENT_SEA = 4;
+
+/// `kUnitCategorySubmergedNaval`
+constexpr static const int64_t EE_UNIT_CATEGORY_SUBMERGED_NAVAL = 10;
+
+/// `kActionFindUnexploredArea` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_FIND_UNEXPLORED_AREA = 11002;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -834,6 +847,12 @@ constexpr static const uint32_t EE_UNIT_FIELD_BUILT = 8;
 
 /// `EEComplexUnit::mGoalState`: the goal's `mKind`, -1 for none
 constexpr static const uint32_t EE_UNIT_FIELD_GOAL_KIND = 9;
+
+/// `EEUnit::mUnitClass` too: the class's `mDomains` (`kMovement*` bits) and whether it is a land building
+/// (`EEUnitClass::IsLandBuilding`), both fixed by the class's constructor (0: no class)
+constexpr static const uint32_t EE_UNIT_FIELD_DOMAINS = 10;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LAND_BUILDING = 11;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -1227,6 +1246,15 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunityTrust = 2,
 };
 
+/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
+enum class EeWonStageRoute {
+  Drop = 0,
+  Local = 1,
+  Net = 2,
+  /// Handled locally and handed to the network logic too (the host's broadcast).
+  LocalAndNet = 3,
+};
+
 /// The search or compare `ee_won_guistring_op` runs.
 enum class EeWonGuiStringOp {
   Compare,
@@ -1235,6 +1263,23 @@ enum class EeWonGuiStringOp {
   FindNoCase,
   FindOneOf,
   RFind,
+};
+
+/// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
+enum class EeWonLanRoute {
+  Drop = 0,
+  Local = 1,
+  Socket = 2,
+};
+
+/// What `JoinGame`'s loop does with a join reply's status: joined; give up; tell the wrong password and ask again;
+/// tell the other subnet and give up; send the request again as it was (any other status).
+enum class EeWonLanJoinStep {
+  Joined = 0,
+  Fail = 1,
+  WrongPassword = 2,
+  OtherSubnet = 3,
+  Again = 4,
 };
 
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
@@ -1273,6 +1318,13 @@ enum class EeWonPrefsEventKind {
   OptionsBegin,
   OptionName,
   OptionValue,
+};
+
+/// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
+enum class EeWonResKind {
+  String = 0,
+  Image = 1,
+  Sound = 2,
 };
 
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
@@ -3928,6 +3980,9 @@ struct EeUnitRecord {
   /// `EEUnit::mUnitClass->mCategory`, `->mUnitType` (-1: no class)
   int64_t category;
   int64_t unit_type;
+  /// `EEUnit::mUnitClass->mDomains`, `->IsLandBuilding()` (0: no class)
+  uint8_t domains;
+  uint8_t land_building;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -4209,6 +4264,107 @@ struct EeWonFileWriter {
   void *file;
 };
 
+/// `ToggleReady`: the host tries to start the game (1); another player asks for the other ready flag (2, ready
+/// in `want_ready`, when the game code allows readying: `CanReady` is asked only for ready); nothing without a
+/// client or game (0).
+struct EeWonToggleReady {
+  int32_t action;
+  bool want_ready;
+  bool ask_can_ready;
+};
+
+/// `HandleKicked`: the moderation event's kind (0 a ban, 1 a kick) and room flags (6 an Internet game, 10 the
+/// others), and the message when it is us (0 none, 1 banned, 2 kicked).
+struct EeWonKicked {
+  int32_t kind;
+  int32_t flags;
+  int32_t message;
+};
+
+/// `SetError`: the errors not ignored, and whether the player may ignore them (only no-Internet, 1, and
+/// account-server, 4, errors).
+struct EeWonInitErrors {
+  int32_t errors;
+  bool allow_ignore;
+};
+
+/// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
+/// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
+struct EeWonLanRecv {
+  bool handle;
+  bool stamp;
+  bool new_socket;
+};
+
+/// `HandleSocketClosed`: the host announces a player's departure (and unlinks it) and forgets the socket; a joiner
+/// whose host socket closed kills it and reports the lost game.
+struct EeWonLanClosed {
+  bool announce_left;
+  bool forget_socket;
+  bool lost_host;
+};
+
+/// `HandleGameSummary`: a summary read keeps the game (stamped) and reports it added (0) or changed (2); an
+/// unreadable one drops the game and reports a known game as changed (2: the original's `aFlag ? 2 : 1` under
+/// `if (aFlag)`), a new one not at all (-1).
+struct EeWonLanSummary {
+  bool keep;
+  int32_t event;
+};
+
+/// `HandleChatCommand`: what a typed command does in the LAN room.
+struct EeWonLanChatCommand {
+  /// 0 nothing, 1 send a chat line (`flags`, to the target when `whisper`), 2 toggle the target's ignore,
+  /// 3 the invalid command error.
+  int32_t action;
+  uint16_t flags;
+  bool whisper;
+};
+
+/// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
+struct EeWonSyncStep {
+  uint8_t kind;
+  uint32_t existing;
+  uint32_t incoming;
+};
+
+/// A server's population as `SyncGroups`, `AddClientToGroup` and `RemoveClientFromGroup` count it.
+struct EeWonPopulation {
+  /// The people in chat rooms (`mNumChatClients`).
+  int32_t chat;
+  /// The people in all rooms (`mNumClients`).
+  int32_t total;
+};
+
+/// What a client's flags say (`IsAnonymous`, `IsAway`, `IsAdmin`, `IsModerator`, `IsMuted`).
+struct EeWonClientStatus {
+  bool anonymous;
+  bool away;
+  bool admin;
+  bool moderator;
+  /// Muted server-wide or in the chat room / in the game.
+  bool muted_chat;
+  bool muted_game;
+};
+
+/// What a room's flags say.
+struct EeWonGroupKind {
+  bool password;
+  bool invite_only;
+  bool ask_to_join;
+  /// A chat room; otherwise a game.
+  bool chat;
+  /// A chat room anyone may enter: no password, invitation or approval.
+  bool public_chat;
+};
+
+/// A game member as `AreAllReady` sees it.
+struct EeWonMemberReady {
+  bool has_player;
+  bool game_captain;
+  bool ready;
+};
+
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
 struct EeWonTextList {
   const void *data;
@@ -4270,6 +4426,33 @@ struct EeWonPrefsEvent {
 
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
+struct EeWonResource {
+  const char *section;
+  const char *key;
+  const char *name;
+  EeWonResKind kind;
+  bool new_section;
+};
+
+/// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
+/// band, 0 the wanted skill, 10000 no skill, 20000 one below, 30000 one above, plus the ping, when the ping is
+/// under the ceiling and the limit); or, with an unknown ping (0xfffe) at or over the ceiling, pinged.
+struct EeWonQuickPlay {
+  /// 0 nothing, 1 ranked (`rank`), 2 ping it.
+  int32_t action;
+  int32_t rank;
+};
+
+/// A server as `GetDefaultServer` sees it.
+struct EeWonServerPick {
+  /// Its name is the last server's.
+  bool last_used;
+  int32_t clients;
+  /// It lists the lobby's language.
+  bool language;
+};
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -9331,6 +9514,21 @@ size_t ee_units_select_pick(uint64_t player,
                             size_t count,
                             uint32_t *out);
 
+/// `EEActiveGroup::Fill`'s test over the store (`group::fill_members`): the indices into `ids` of the units an active
+/// group takes for `slot`, in order, into `out` (room for `count`), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+size_t ee_units_fill_members(const uint32_t *ids,
+                             size_t count,
+                             int64_t slot,
+                             uint32_t *out);
+
+/// `EEMExplore::Execute`'s body (`group::explore`) for the sender `player` (an `EEPlayer*`) and its selection
+/// (`EEGroup*`), through the game's host calls.
+void ee_units_explore(void *player,
+                      void *selection);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -9338,6 +9536,28 @@ extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
 extern uint8_t ee_units_host_goal_kind(void *goal);
 
 extern void ee_units_host_goal_release(void *goal);
+
+extern void *ee_units_host_active_group_new(void *player);
+
+extern void ee_units_host_group_fill(void *group, void *selection, int32_t sort, int32_t slot);
+
+extern void ee_units_host_group_release(void *group);
+
+extern void ee_units_host_pending_push(void *player, void *group);
+
+extern void ee_units_host_group_keep_mobile(void *group);
+
+extern void ee_units_host_group_clear_goal(void *group);
+
+extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
+
+extern void ee_units_host_group_set_action(void *group, int32_t action);
+
+extern void ee_units_host_group_plan(void *group);
+
+extern int32_t ee_units_host_random(int32_t low, int32_t high);
+
+extern void ee_units_host_play_acknowledgement(void *player, void *group, int32_t index);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
@@ -10892,6 +11112,78 @@ int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
 
+EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_send_to_client(bool have_game, bool i_am_captain);
+
+int32_t ee_won_stage_player_joined(bool has_player, bool i_am_captain);
+
+bool ee_won_stage_joined_keeps_all_ready(bool last_all_ready, bool ready);
+
+bool ee_won_stage_sets_in_progress(bool have_game, bool in_progress, bool want, bool i_am_captain);
+
+EeWonToggleReady ee_won_stage_toggle_ready(bool have_client,
+                                           bool have_game,
+                                           bool i_am_captain,
+                                           bool i_am_ready);
+
+int32_t ee_won_stage_host_warning(int32_t game_type,
+                                  bool show_confirmations,
+                                  bool firewall_test_done,
+                                  bool behind_firewall);
+
+int32_t ee_won_stage_verify_ping(int32_t game_type,
+                                 bool ping_replied,
+                                 bool have_config,
+                                 bool allow_join_without_ping,
+                                 bool show_confirmations);
+
+bool ee_won_stage_join_status_shown(int16_t status);
+
+int32_t ee_won_stage_leave_confirm(bool confirm, bool show_confirmations, bool i_am_captain);
+
+EeWonKicked ee_won_stage_kicked(bool ban, int32_t game_type, bool is_me);
+
+int32_t ee_won_stage_game_action(int32_t action, int32_t game_type);
+
+bool ee_won_stage_reports_ping(bool have_game, bool i_am_captain, bool same_game);
+
+bool ee_won_stage_kicks(bool have_client, bool have_game, bool i_am_captain);
+
+bool ee_won_stage_client_left(bool has_player, bool have_game);
+
+EeWonInitErrors ee_won_init_errors(int32_t error, int32_t ignored);
+
+bool ee_won_init_no_internet(bool check_for_internet, bool has_connection);
+
+int32_t ee_won_init_dir_request_target(int32_t index, bool config_has_auth_servers);
+
+bool ee_won_init_dir_answered(int32_t status);
+
+int32_t ee_won_init_missing_servers(size_t auth, size_t account, size_t versions);
+
+int32_t ee_won_init_version_outcome(int32_t status);
+
+int32_t ee_won_init_accept_outcome(bool accepted, bool from_firewall_server);
+
+bool ee_won_init_tou_saved(int32_t doc_status, int32_t modified, int32_t saved);
+
+size_t ee_won_init_document_bytes(size_t length);
+
+int32_t ee_won_init_event(int32_t kind);
+
+/// `cross_promotion`: the link, then the image, each through the sink (each given once, maybe empty).
+///
+/// # Safety
+/// `doc` holds `length` bytes (or is NULL); the sink's contract.
+void ee_won_init_cross_promotion(const uint8_t *doc,
+                                 size_t length,
+                                 EeWonByteSink link,
+                                 EeWonByteSink image,
+                                 void *context);
+
 /// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
 ///
 /// # Safety
@@ -10961,6 +11253,138 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
+
+size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
+
+EeWonLanRoute ee_won_lanlogic_send_to_client(bool is_captain,
+                                             bool connected,
+                                             bool to_me,
+                                             bool has_socket);
+
+EeWonLanRoute ee_won_lanlogic_send_to_captain(bool connected,
+                                              bool is_captain,
+                                              bool has_server_socket);
+
+/// `broadcast` over `count` sockets: `send[i]` set for each socket sent to; returns whether it is handled locally.
+///
+/// # Safety
+/// Both arrays hold `count` entries (or are NULL with 0).
+bool ee_won_lanlogic_broadcast(bool is_captain,
+                               bool deliver_local,
+                               const bool *socket_has_client,
+                               bool *send,
+                               size_t count);
+
+EeWonLanClosed ee_won_lanlogic_socket_closed(bool have_socket,
+                                             bool is_captain,
+                                             bool has_client,
+                                             bool is_server_socket);
+
+EeWonLanSummary ee_won_lanlogic_summary(bool read_ok, bool existed);
+
+bool ee_won_lanlogic_can_broadcast(bool is_captain,
+                                   bool discovery,
+                                   bool have_game,
+                                   int32_t game_type);
+
+bool ee_won_lanlogic_advertises(int32_t game_type);
+
+bool ee_won_lanlogic_needs_peer_auth(int32_t game_type, bool cd_key_check);
+
+EeWonLanJoinStep ee_won_lanlogic_join_step(int32_t status);
+
+int32_t ee_won_lanlogic_reply_role(uint16_t id, uint16_t my_id, uint16_t captain_id);
+
+int32_t ee_won_lanlogic_client_action(bool connected,
+                                      int32_t room_spec,
+                                      bool has_client,
+                                      int32_t action);
+
+EeWonLanChatCommand ee_won_lanlogic_chat_command(bool connected,
+                                                 int32_t room_flags,
+                                                 int32_t command,
+                                                 bool has_target);
+
+bool ee_won_lanlogic_whisper_received(bool whisper, bool from_me);
+
+int32_t ee_won_lanlogic_refresh(int32_t screen);
+
+bool ee_won_lanlogic_name_accepted(int32_t result, size_t name_length);
+
+bool ee_won_lanlogic_port_accepted(int32_t result, int32_t old_port, int32_t new_port);
+
+int32_t ee_won_lanlogic_direct_default_port(bool have_config,
+                                            int32_t config_port,
+                                            int32_t lobby_port);
+
+bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
+
+int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
+///
+/// # Safety
+/// The id arrays hold their counts; `out` has room for both counts' sum.
+size_t ee_won_model_sync_plan(const uint16_t *existing,
+                              size_t existing_count,
+                              const uint16_t *incoming,
+                              size_t incoming_count,
+                              EeWonSyncStep *out);
+
+/// `EeWonPopulation::add_group` (0), `joined` (1) or `left` (2) in place.
+///
+/// # Safety
+/// `p` is valid and writable.
+void ee_won_model_population(EeWonPopulation *p, int32_t what, uint32_t flags, uint32_t members);
+
+int32_t ee_won_model_server_num_clients(bool connected, uint32_t live, int32_t listed);
+
+EeWonClientStatus ee_won_model_client_status(uint32_t flags,
+                                             uint8_t chat_member,
+                                             uint8_t game_member);
+
+EeWonGroupKind ee_won_model_group_kind(uint32_t flags);
+
+uint8_t ee_won_model_friend_status(bool in_chat, bool in_game);
+
+uint8_t ee_won_model_friend_start_locate();
+
+uint8_t ee_won_model_friend_end_locate(uint8_t flags);
+
+bool ee_won_model_game_pinging(uint16_t ping);
+
+bool ee_won_model_game_querying(uint16_t ping);
+
+bool ee_won_model_game_stale(int64_t now, int32_t last_seen, int32_t max_age);
+
+bool ee_won_model_game_list_by_id(int32_t game_type);
+
+bool ee_won_model_same_game(int32_t type_a,
+                            int32_t type_b,
+                            uint16_t group_a,
+                            uint16_t group_b,
+                            bool same_address);
+
+/// `status_text`: the text's index, or -1.
+int32_t ee_won_model_status_text(int16_t status);
+
+/// `all_ready` over `count` members.
+///
+/// # Safety
+/// `members` holds `count` entries (or is NULL with 0).
+bool ee_won_model_all_ready(const EeWonMemberReady *members, size_t count);
+
+/// `dir_object`: 1 a population (into `out_count`), 2 the address list, 0 anything else. `data` NULL: no data.
+///
+/// # Safety
+/// `kind` holds `kind_length` bytes, `data` `data_length` (or is NULL); `out_count` is writable.
+int32_t ee_won_model_dir_object(const uint8_t *kind,
+                                size_t kind_length,
+                                const uint8_t *data,
+                                size_t data_length,
+                                uint16_t *out_count);
 
 /// `SetFilePath`'s separators.
 ///
@@ -11122,6 +11546,51 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
 
+size_t ee_won_resource_count();
+
+/// Row `index` (below `ee_won_resource_count`) into `out`; false past the end.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// `room_spec`; a negative group is none.
+int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);
+
+int32_t ee_won_routing_group_of_spec(int32_t spec);
+
+uint16_t ee_won_routing_ping_ceiling(bool have_config, uint16_t config_ceiling);
+
+EeWonQuickPlay ee_won_routing_quick_play_rank(bool password,
+                                              bool ask_to_join,
+                                              bool can_join,
+                                              uint16_t ping,
+                                              int32_t skill,
+                                              int32_t wanted,
+                                              uint16_t ping_limit,
+                                              uint16_t ceiling);
+
+bool ee_won_routing_should_locate_friend(bool locating,
+                                         bool on_current_server,
+                                         size_t server_count,
+                                         bool connected,
+                                         uint32_t now,
+                                         uint32_t last_locate);
+
+/// `default_server` over `count` servers: the index, or -1.
+///
+/// # Safety
+/// `servers` holds `count` entries (or is NULL with 0).
+int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t count);
+
+/// The (mask, flags) of `anonymous_flags` (`which` 0) or `dirty_word_flags` (1) into the outs.
+///
+/// # Safety
+/// Both outs are writable.
+void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
+
+bool ee_won_routing_can_add_friend(size_t count);
+
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///
 /// # Safety
@@ -11188,6 +11657,51 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               EeWonGameSummary *out,
                               EeWonUnitSink name_sink,
                               void *context);
+
+/// Upper-cases (`upper`) or lower-cases `length` bytes in place.
+///
+/// # Safety
+/// `bytes` holds `length` writable bytes (or is NULL with 0).
+void ee_won_case_bytes(uint8_t *bytes, size_t length, bool upper);
+
+/// The same over 16-bit units (Windows' `wchar_t`).
+///
+/// # Safety
+/// `units` holds `count` writable units (or is NULL with 0).
+void ee_won_case_units16(uint16_t *units, size_t count, bool upper);
+
+/// The same over 32-bit units (POSIX's `wchar_t`).
+///
+/// # Safety
+/// `units` holds `count` writable units (or is NULL with 0).
+void ee_won_case_units32(uint32_t *units, size_t count, bool upper);
+
+/// `compare_no_case`.
+///
+/// # Safety
+/// Each holds its length (or is NULL with 0).
+int32_t ee_won_compare_no_case(const uint8_t *a,
+                               size_t a_length,
+                               const uint8_t *b,
+                               size_t b_length);
+
+/// `wide_compare_no_case` over 16-bit units (unsigned).
+///
+/// # Safety
+/// Each holds its count (or is NULL with 0).
+int32_t ee_won_compare_no_case16(const uint16_t *a,
+                                 size_t a_count,
+                                 const uint16_t *b,
+                                 size_t b_count);
+
+/// `wide_compare_no_case` over 32-bit units (signed, as POSIX's `wchar_t`).
+///
+/// # Safety
+/// Each holds its count (or is NULL with 0).
+int32_t ee_won_compare_no_case32(const int32_t *a,
+                                 size_t a_count,
+                                 const int32_t *b,
+                                 size_t b_count);
 
 }  // extern "C"
 

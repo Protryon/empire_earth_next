@@ -22,6 +22,10 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONRoutingTypes.h"
+#include "rust/ee_rust.h"
+// The room flags, Quick Play's pick, the friend search rule, the default server, the settings' client flags and
+// the friends list's limit are ee_won's routing module (rust/crates/ee_won/src/routing.rs); this unit keeps the
+// servers, rooms, connection, ops, dialogs and events (Internet only: the routing servers are gone).
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
 // Routes one server notification on a routing connection to a RoutingLogic handler for the op's server.
 // The original's RTTI names this class in the global namespace, not in WONAPI.
@@ -210,9 +214,9 @@ void RoutingLogic::ClearPendingServer()
 // Returns the room flags for a group id: 5 for the joined chat room, 6 for the joined game room, else 0
 int RoutingLogic::GetRoomSpec(unsigned short inGroupId)
 {
-    if (this->mChatGroup.get() != NULL && this->mChatGroup->mId == inGroupId) return 5;
-    if (this->mGameGroup.get() != NULL && this->mGameGroup->mId == inGroupId) return 6;
-    return 0;
+    return ee_won_routing_room_spec(inGroupId,
+                                    this->mChatGroup.get() != NULL ? (int32_t)this->mChatGroup->mId : -1,
+                                    this->mGameGroup.get() != NULL ? (int32_t)this->mGameGroup->mId : -1);
 }
 
 // FUNCTION: WON 0x007e72f0
@@ -248,8 +252,10 @@ RoutingConnection* RoutingLogic::GetConnection()
 // Returns the joined chat room or game room selected by the room flags, or NULL
 LobbyGroup* RoutingLogic::GetGroup(int inRoomSpec)
 {
-    if (inRoomSpec & 1) return this->mChatGroup.get();
-    if (inRoomSpec & 2) return this->mGameGroup.get();
+    switch (ee_won_routing_group_of_spec(inRoomSpec)) {
+    case 1: return this->mChatGroup.get();
+    case 2: return this->mGameGroup.get();
+    }
     return NULL;
 }
 
@@ -279,21 +285,21 @@ LobbyServer* RoutingLogic::GetDefaultServer()
 {
     LobbyConfig* aConfig = GetLobbyConfig();
     if (aConfig == NULL) return NULL;
-    LobbyServer* aBest = NULL;
-    LobbyServer* aPreferred = NULL;
+    std::vector<LobbyServer*> aList;
+    std::vector<EeWonServerPick> aPicks;
     const LobbyServerMap& aServers = this->mServerList->mServers;
-    LobbyServerMap::const_iterator anItr = aServers.begin();
-    while(anItr != aServers.end()) {
+    for (LobbyServerMap::const_iterator anItr = aServers.begin(); anItr != aServers.end(); ++anItr) {
         LobbyServer* aServer = anItr->second.get();
-        if (aServer->mName == LobbyGetLastServerName()) return aServer;
-        if (aBest == NULL || aServer->GetNumClients() > aBest->GetNumClients()) aBest = aServer;
-        if (aServer->HasAddress(aConfig->mLanguage)) {
-            if (aPreferred == NULL || aServer->GetNumClients() > aPreferred->GetNumClients())
-                aPreferred = aServer;
-        }
-        ++anItr;
+        EeWonServerPick aPick;
+        aPick.last_used = aServer->mName == LobbyGetLastServerName();
+        aPick.clients = aServer->GetNumClients();
+        aPick.language = aServer->HasAddress(aConfig->mLanguage);
+        aList.push_back(aServer);
+        aPicks.push_back(aPick);
+        if (aPick.last_used) break; // the original returned it at once
     }
-    return aPreferred != NULL ? aPreferred : aBest;
+    int64_t anIndex = ee_won_routing_default_server(aPicks.empty() ? NULL : &aPicks[0], aPicks.size());
+    return anIndex >= 0 ? aList[(size_t)anIndex] : NULL;
 }
 
 // FUNCTION: WON 0x007ed660
@@ -412,13 +418,11 @@ void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
 // Says whether a friend needs a server search: not already searching, not here, other servers, 30 s since the last
 bool RoutingLogic::ShouldLocateFriend(LobbyFriend* inFriend, unsigned long inNow)
 {
-    if (inFriend->mFlags & 4) return false;
     const LobbyServerMap& aServers = this->mServerList->mServers;
-    if (this->mCurrentServer.get() != NULL && inFriend->mAddress == this->mCurrentServer->mAddress)
-        return false;
-    if (aServers.empty()) return false;
-    if (aServers.size() == 1 && this->mCurrentServer.get() != NULL) return false;
-    return static_cast<long>(inNow - inFriend->mLastLocate) >= 30 ? true : false;
+    bool aLocating = (inFriend->mFlags & 4) != 0;
+    bool aHere = !aLocating && this->mCurrentServer.get() != NULL && inFriend->mAddress == this->mCurrentServer->mAddress;
+    return ee_won_routing_should_locate_friend(aLocating, aHere, aServers.size(), this->mCurrentServer.get() != NULL,
+                                               (uint32_t)inNow, (uint32_t)inFriend->mLastLocate);
 }
 
 // FUNCTION: WON 0x007ebd10
@@ -1057,34 +1061,25 @@ void RoutingLogic::FriendAction(FriendActionEvent* inEvent)
 // Picks a Quick Play game: open, skill closest to the wanted one, then lowest ping; pings unknown ones
 LobbyGame* RoutingLogic::SelectGame(int inGameType, unsigned short inPingLimit)
 {
-    unsigned short aPingCeiling = 10000;
     LobbyConfig* aConfig = GetLobbyConfig();
-    if (aConfig != NULL) {
-        aPingCeiling = aConfig->mPingCeiling;
-        if (aPingCeiling == 0 || aPingCeiling > 0xf000) aPingCeiling = 0xf000;
-    }
+    unsigned short aPingCeiling = ee_won_routing_ping_ceiling(aConfig != NULL,
+                                                              aConfig != NULL ? (uint16_t)aConfig->mPingCeiling : 0);
     typedef std::multimap<unsigned short, LobbyGame*> GameScoreMap;
     GameScoreMap aScores;
     this->mGameList->Rewind();
     while (this->mGameList->HasMore()) {
         LobbyGame* aGame = this->mGameList->Next();
-        if (aGame->GetHasPassword() || aGame->GetAskToJoin() || !aGame->CanJoin()) continue;
-        unsigned short aPing = aGame->GetPing();
-        if (aPing < aPingCeiling) {
-            int aSkill = aGame->GetSkill();
-            int aRank;
-            if (aSkill == inGameType) aRank = 0;
-            else if (aSkill == 0) aRank = 10000;
-            else if (aSkill + 1 == inGameType) aRank = 20000;
-            else if (aSkill - 1 == inGameType) aRank = 30000;
-            else continue;
-            if (aPing < inPingLimit) {
-                aRank += aPing;
-                aScores.insert(GameScoreMap::value_type(aRank, aGame));
-            }
-        } else if (aPing == 0xfffe) {
+        // CanJoin is asked only of a game without a password or approval, as the original's || asked it
+        bool aPassword = aGame->GetHasPassword();
+        bool anAsk = !aPassword && aGame->GetAskToJoin();
+        bool aCanJoin = !aPassword && !anAsk && aGame->CanJoin();
+        EeWonQuickPlay aPick = ee_won_routing_quick_play_rank(aPassword, anAsk, aCanJoin, aGame->GetPing(),
+                                                              aGame->GetSkill(), inGameType, inPingLimit,
+                                                              aPingCeiling);
+        if (aPick.action == 1)
+            aScores.insert(GameScoreMap::value_type((unsigned short)aPick.rank, aGame));
+        else if (aPick.action == 2)
             LobbyPingGame(aGame, false);
-        }
     }
     GameScoreMap::iterator anItr = aScores.begin();
     if (anItr != aScores.end()) return anItr->second;
@@ -2050,9 +2045,9 @@ void RoutingLogic::HandleAnonymousModeChange()
 {
     RoutingConnection* connection=this->GetConnection();
     if(connection==NULL) return;
-    unsigned long flags=0;
-    if(LobbyGetAnonymousToFriends()) flags|=0x40;
-    connection->SetClientFlags(0x40,flags,0,0,NULL);
+    uint32_t mask=0,flags=0;
+    ee_won_routing_client_flags(0,LobbyGetAnonymousToFriends(),&mask,&flags);
+    connection->SetClientFlags(mask,flags,0,0,NULL);
 }
 
 // FUNCTION: WON 0x007eb320
@@ -2061,9 +2056,9 @@ void RoutingLogic::HandleDirtyWordFilterChange()
 {
     RoutingConnection* connection=this->GetConnection();
     if(connection==NULL) return;
-    unsigned long flags=0;
-    if(LobbyGetFilterDirtyWords()!=true) flags|=4;
-    connection->SetClientFlags(4,flags,0,0,NULL);
+    uint32_t mask=0,flags=0;
+    ee_won_routing_client_flags(1,LobbyGetFilterDirtyWords()==true,&mask,&flags);
+    connection->SetClientFlags(mask,flags,0,0,NULL);
 }
 }
 
@@ -2072,7 +2067,7 @@ namespace WONAPI {
 // Returns false with a message box when the friends list already holds 255 entries
 bool RoutingLogic::CanAddFriend()
 {
-    if(LobbyFn35D270().size()>=255) {
+    if(!ee_won_routing_can_add_friend(LobbyFn35D270().size())) {
         LobbyMessageBox(::RoutingLogic_TooManyFriendsTitle_String,
                         ::RoutingLogic_TooManyFriendsDetails_String);
         return false;

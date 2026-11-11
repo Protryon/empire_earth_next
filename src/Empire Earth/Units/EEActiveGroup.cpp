@@ -47,6 +47,7 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAutoPathRequest.h"
+#include "ee/EEUnitStore.h"
 #include "ee/EEGroupPathRequest.h"
 #include "ee/EEPhysics.h"
 #include "lle/NEMessage.h"
@@ -730,10 +731,14 @@ void EEActiveGroup::Fill(EESelectedGroup* inGroup, long inSort, long inSlot)
     this->SetFormation(inGroup->mFormation);
     if (inSort == 0)
         inGroup->SortUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = inGroup->GetUnit(i);
-        if (!theUnit->mIsValid || !(theUnit->mHitPoints > 0) || !this->IsInFormationSlot(theUnit, inSlot))
-            continue;
+    // New (R5b.4): the test of the units the group takes (valid, with hit points, in the slot) is EEFillMembers
+    // (ee/EEUnitStore.h): their indices in the selection's order; each one is taken here in that order
+    std::vector<uint32_t> theTaken(theCount + 1);
+    EEComplexUnit* const* theUnits = theCount > 0 ? &inGroup->mUnits[0] : NULL;
+    size_t theTakenCount = EEFillMembers(theUnits, theCount, inSlot, &theTaken[0]);
+    EEFillCapture(100, inGroup->mPlayer, theUnits, theCount, inSlot, &theTaken[0], theTakenCount);   // TEST ONLY (off by default)
+    for (size_t k = 0; k < theTakenCount; k++) {
+        EEComplexUnit* theUnit = inGroup->GetUnit((long)theTaken[k]);
         if (theUnit->mActiveGroup)
             theUnit->mActiveGroup->RemoveUnit(theUnit);
         theUnit->SetActiveGroup(this);
