@@ -1090,8 +1090,14 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
             // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
             if (theGather->mWaiting && c->mCurrentPhysicsAction != 0)
                 EECPUnitsSetBool(L, "waiting", true);
-        } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g))
+        } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g)) {
             theTarget = theBuild->mTarget;
+            // a builder waiting for its foundation's site to clear while another unit holds it (the classic's
+            // FindStalledBuilder: CancelStalledBuilds cancels these)
+            if ((c->mCommand ? c->mCommand->mType : 0) == kActionWaitForBuildSiteToClear && theTarget != NULL
+                && theTarget->mComplexUnit != NULL && !theTarget->mComplexUnit->mIsBuilt && theBuild->IsBuildSiteTaken())
+                EECPUnitsSetBool(L, "stalled", true);
+        }
         else if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(g))
             theTarget = theAttack->mTarget;
         if (theTarget != NULL && theTarget->mIsValid)

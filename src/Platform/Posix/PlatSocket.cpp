@@ -4,7 +4,10 @@
 // poll thread, started by the first PlatSocketSelectEvent: each registered socket is "armed" until the poll finds
 // it ready, then its event is set and it is disarmed until the next receive or accept on it re-arms it (Winsock's
 // re-enabling rule: a recv that leaves data behind signals again). A self-pipe wakes the poll when the set changes.
-// Sends never raise SIGPIPE (MSG_NOSIGNAL / SO_NOSIGPIPE).
+// Sends never raise SIGPIPE (MSG_NOSIGNAL / SO_NOSIGPIPE). Stream sockets get SO_REUSEADDR: a listening port whose
+// last connection is in TIME_WAIT binds again at once, as on Windows (Linux refuses it for a minute without; the
+// headless simulation's benches bind one port pair per slot, game after game). Two live listeners still cannot
+// share a port.
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -258,10 +261,12 @@ extern "C" PlatSocket PlatSocketOpen(PlatSocketType inType)
         return PLAT_SOCKET_INVALID;
     }
     fcntl(theSocket, F_SETFD, FD_CLOEXEC);
-#if defined(SO_NOSIGPIPE)
     int theOn = 1;
+#if defined(SO_NOSIGPIPE)
     setsockopt(theSocket, SOL_SOCKET, SO_NOSIGPIPE, &theOn, sizeof(theOn));
 #endif
+    if (inType == PLAT_SOCKET_STREAM)
+        setsockopt(theSocket, SOL_SOCKET, SO_REUSEADDR, &theOn, sizeof(theOn));
     return theSocket;
 }
 

@@ -1,0 +1,93 @@
+name: sim-linux
+
+# The headless simulation on Linux (tools/xbuild.py sim -> ee-sim; README "Testing"): the build, then short seeded
+# AI games on the released data (tools/fetch_data.py, this repository's own releases) on a machine without display
+# or GPU (SDL's dummy video driver, Mesa's lavapipe), each seed twice: the repeats must print identical traces.
+# The reports and traces are uploaded (tools/sim_compare.py compares them with a Windows bench of the same command);
+# the data never is.
+on:
+  push:
+    branches: [sim-ci]
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "seeds (sim_bench.py --seeds)"
+        default: "2,3"
+      game_seconds:
+        description: "game seconds per run"
+        default: "900"
+
+permissions:
+  contents: read
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SEEDS: ${{ inputs.seeds || '2,3' }}
+      GAME_SECONDS: ${{ inputs.game_seconds || '900' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # the build's packages as posix.yml's (SDL3's development files for its build), lavapipe for the renderer's
+      # device; no Xvfb: the simulation needs no display
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld cmake ninja-build pkg-config \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxtst-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libdbus-1-dev \
+            mesa-vulkan-drivers libvulkan1
+          echo "net.ipv4.ip_local_port_range = 45000 65000" | sudo tee /etc/sysctl.d/60-ee-sim-ports.conf
+          sudo sysctl -p /etc/sysctl.d/60-ee-sim-ports.conf
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: toolchain/dl
+          key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
+
+      - name: Fetch wgpu-native, SDL3, fonts
+        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+
+      - name: Build ee-sim (linux-x86_64)
+        run: |
+          rc=0
+          python -I tools/xbuild.py sim -j 4 --smoke > sim-build.txt 2>&1 || rc=$?
+          tail -30 sim-build.txt
+          exit $rc
+
+      - name: Data release tags
+        id: tags
+        run: echo "tags=$(python -I tools/fetch_data.py --list | tr -s ' \n' '-_')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache data downloads
+        uses: actions/cache@v4
+        with:
+          path: build/data_cache
+          key: data-${{ steps.tags.outputs.tags }}
+
+      - name: Data (media and db parts)
+        run: |
+          python -I tools/fetch_data.py data --without textures-4x
+          python -I tools/open_data.py ai data
+
+      - name: Simulations (each seed twice)
+        run: |
+          python -I tools/sim_bench.py --name ci --data open --ai-scripts ai --seeds "$SEEDS" --repeat 2 \
+            --jobs 2 --game-seconds "$GAME_SECONDS" --difficulty Medium
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-linux
+          path: |
+            sim-build.txt
+            build/sim/bench/ci/results.*
+            build/sim/bench/ci/runs/

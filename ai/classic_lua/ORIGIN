@@ -81,7 +81,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 one-tile margin: `margin = true`, added for this port) - CanBuildAt's other rules (choke points, hills,
                 runway ends, gates and town centres near, walkable ground round the site) are not applied; the
                 granary's room for farms is not tested; the dock sites (CollectSiteTiles' water tiles: ai.water_sites)
-                are the explored ones, collected again every 60 s. NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
+                are the explored ones, collected again every 60 s. CancelStalledBuilds (a builder waiting for a site another unit holds: the
+                foundation deleted, the request back at the front without a site, the builder to the town centre). NOT
+                STARTED: BuildingAbandoned, BuilderLost's
                 replacement (AssignBuilders covers them every 2 minutes), the airport, anti-air, space and wonder
                 sites, the island coasts', gates' and choke points' towers.
   EECPResearchManager.cpp
@@ -222,7 +224,7 @@ ai.find_site's `margin` and `far` options, ai.water_sites (the dock sites), ai.a
 continent manager's areas: AssignSeaTask), ai.tuning's map tiles (water, land, space, the largest sea: GetDomainShare),
 ai.enemy_near with the manifest's sees_all (HasEnemyNear), ai.garrison_fill with its fills_garrison (FillGarrison),
 ai.class's `tech` and military data (ai_kind, counters, roles,
-influence, epoch, pop, domain), the own units' `target`, `gathers` and `waiting`, the view's
+influence, epoch, pop, domain), the own units' `target`, `gathers`, `waiting` and `stalled`, the view's
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
