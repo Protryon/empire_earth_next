@@ -77,6 +77,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Units/EEGroupCommandSweep.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
+                       # TEST ONLY: the fixture's orders (EE_TEST_UI; tools/harness/fixture_driver.py orders)
+                       "Empire Earth/Empire Earth/EETestFixtureOrders.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
                        "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)
