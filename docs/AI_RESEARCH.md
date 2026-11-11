@@ -3179,6 +3179,12 @@ same seeds, so a single row's defeats move by several games from chance alone.)
   the defence's training block, not reproduced here.
 - **E5's packing** (Age of AI's `tight_build`): boom places its buildings through the C++ `build near=` verb, so the
   packing code has no seam; E5 benched the Stone Age wood floor instead (the mines' settlements waited on wood).
+- **E3 against Age of AI** (32 seeds): 3-11-18 against the baseline's 10-9-13 (Copper 51.6 against 50.9, all 32
+  reached in both; citizens at 40 minutes 60.7 against 59.6). The mirror (E3 against main's boom, seeds 2-17 both
+  seats) stopped after 5 games when the disk filled up; not counted.
+- **Checks:** with every switch off, boom's traces equal main 1e422bd's line for line (seeds 2-4, 45 minutes: 3908,
+  3760 and 3743 lines); `--repeat 2` of that set (seeds 2-3, 45 minutes) and of E3 gives identical traces (4206 /
+  4059 and 4322 / 3963 lines).
 
 ### 8.9 Next
 
