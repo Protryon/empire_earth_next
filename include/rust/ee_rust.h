@@ -4437,6 +4437,13 @@ struct EeWonScrollArea {
   int32_t view_height;
 };
 
+/// One line break: the line ends at `pos`, the next starts at `next`; the line is `width` wide.
+struct EeWonBreak {
+  int32_t pos;
+  int32_t next;
+  int32_t width;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -11901,6 +11908,33 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// `wrap` over a `GUIString`'s units with their widths: the first `room` breaks into `out` (`2 * len + 1` is
+/// enough: a unit breaks at most twice, once inside a word and once more when it alone is wider than the line),
+/// their count returned (all of them, even past the room), the width into `out_width`.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes and `widths` `len` ints (or both are NULL with 0); `out` has room
+/// for `room` breaks; `out_width` is writable.
+size_t ee_won_gui_wrap(const void *text,
+                       uint16_t len,
+                       uint32_t wchar_size,
+                       const int32_t *widths,
+                       int32_t max_width,
+                       EeWonBreak *out,
+                       size_t room,
+                       int32_t *out_width);
+
+/// `max_width_change`: false when the width is unchanged, else true with the width and the rewrap in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_max_width(int32_t new_width,
+                          int32_t old_width,
+                          bool wrapping,
+                          bool has_breaks,
+                          int32_t *out_width,
+                          bool *out_rewrap);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 

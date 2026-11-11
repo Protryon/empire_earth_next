@@ -9,6 +9,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The word wrap and the rewrap rule are ee_won's guiwrap module (rust/crates/ee_won/src/guiwrap.rs); this unit
+// keeps the text, the font, the break list and the paint.
 
 
 
@@ -65,70 +68,24 @@ void WrappedText::CalcWrap()
 
 	this->mBreakList.clear();
 
-	int aBreakPos = -1, aBreakWidth = 0;
-	int aPos = 0, aWidth = 0, aMaxWidth = 0;
-	while(aPos<this->mText.length())
+	// the font measures each unit; the breaks are ee_won's guiwrap module
+	int aLength = this->mText.length();
+	std::vector<int> aWidths(aLength);
+	for(int i = 0; i < aLength; i++)
+		aWidths[i] = this->mFont->GetCharacterWidth(this->mText[i]);
+	std::vector<EeWonBreak> aBreaks(2*aLength+1);
+	int aWidth = 0;
+	size_t aCount = ee_won_gui_wrap(this->mText.mData->mText, (uint16_t)aLength, sizeof(wchar_t),
+		aLength ? &aWidths[0] : NULL, this->mMaxWidth, &aBreaks[0], aBreaks.size(), &aWidth);
+	if(aCount > aBreaks.size())
 	{
-		int aChar = this->mText[aPos];
-		int aCharWidth = this->mFont->GetCharacterWidth(aChar);
-		if(aChar==' ')
-		{
-			aBreakPos = aPos;
-			aBreakWidth = aWidth;
-		}
-		else if(aChar=='\r' || aChar=='\n')
-		{
-			aBreakPos = aPos;
-			aBreakWidth = aWidth;
-			if(aChar=='\r' && this->mText[aPos+1]=='\n')
-				aPos++;
-
-			aPos++;
-			this->mBreakList.push_back(BreakInfo(aBreakPos,aPos,aBreakWidth));
-			if(aBreakWidth > aMaxWidth)
-				aMaxWidth = aBreakWidth;
-
-			aBreakPos = -1;
-			aWidth = 0;
-			aBreakWidth = 0;
-			continue;
-		}
-
-		if(aWidth+aCharWidth>this->mMaxWidth)
-		{
-			if(aBreakPos!=-1)
-			{
-				this->mBreakList.push_back(BreakInfo(aBreakPos,aBreakPos+1,aBreakWidth));
-				aPos = aBreakPos;
-				if(aBreakWidth > aMaxWidth)
-					aMaxWidth = aBreakWidth;
-			}
-			else
-			{
-				this->mBreakList.push_back(BreakInfo(aPos,aPos,aWidth));
-				if(aWidth > aMaxWidth)
-					aMaxWidth = aWidth;
-	
-				if(aWidth>0)
-					aPos--;
-			}
-
-			aBreakPos = -1;
-			aWidth = 0;
-			aBreakWidth = 0;
-		}
-		else
-			aWidth += aCharWidth;
-
-		aPos++;
+		aBreaks.resize(aCount);
+		aCount = ee_won_gui_wrap(this->mText.mData->mText, (uint16_t)aLength, sizeof(wchar_t),
+			aLength ? &aWidths[0] : NULL, this->mMaxWidth, &aBreaks[0], aBreaks.size(), &aWidth);
 	}
-	if(aWidth>aMaxWidth)
-		aMaxWidth = aWidth;
-
-	if(aMaxWidth==0)
-		this->mWidth = aWidth;
-	else
-		this->mWidth = aMaxWidth;
+	for(size_t k = 0; k < aCount; k++)
+		this->mBreakList.push_back(BreakInfo(aBreaks[k].pos,aBreaks[k].next,aBreaks[k].width));
+	this->mWidth = aWidth;
 
 	this->mHeight = (this->mBreakList.size() + 1)*this->mFont->GetHeight();
 }
@@ -187,18 +144,12 @@ void WrappedText::SetFont(Font *theFont)
 // Sets the maximum line width (at least 0), rewrapping only when the new width can change the breaks
 void WrappedText::SetMaxWidth(int theMaxWidth)
 {
-	if(theMaxWidth<0)
-		theMaxWidth = 0;
-
-	if(theMaxWidth==this->mMaxWidth)
+	int aWidth = 0;
+	bool aRewrap = false;
+	if(!ee_won_gui_max_width(theMaxWidth, this->mMaxWidth, this->mWrap, !this->mBreakList.empty(), &aWidth, &aRewrap))
 		return;
-	int anOldMax = this->mMaxWidth;
-	this->mMaxWidth = theMaxWidth;
-	if(!this->mWrap)
-		return;
-
-	bool needCalc = anOldMax==0 || !this->mBreakList.empty() || this->mMaxWidth<anOldMax;
-	if(needCalc)
+	this->mMaxWidth = aWidth;
+	if(aRewrap)
 		this->CalcWrap();
 }
 

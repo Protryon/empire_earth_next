@@ -424,6 +424,8 @@ WON_TESTS = {
     # WONGUI's focus rules, hit-test verdict and buttons' state machine, the original's statements against ee_won's
     # guifocus module
     "won_guifocus_test": [],
+    # WONGUI's word wrap (WrappedText's breaks and rewrap rule), the original's loop against ee_won's guiwrap module
+    "won_guiwrap_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

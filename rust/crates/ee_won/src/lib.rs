@@ -31,6 +31,7 @@ pub mod guilayout;
 pub mod guilist;
 pub mod guiscroll;
 pub mod guistring;
+pub mod guiwrap;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;
