@@ -132,6 +132,15 @@ pub unsafe extern "C" fn ee_units_fill_members(ids: *const u32, count: usize, sl
     taken.len()
 }
 
+/// `EEMExplore::Execute`'s body (`group::explore`) for the sender `player` (an `EEPlayer*`) and its selection
+/// (`EEGroup*`), through the game's host calls.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_explore(player: *mut c_void, selection: *mut c_void) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::explore(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

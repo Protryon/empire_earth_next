@@ -681,6 +681,9 @@ constexpr static const uint8_t EE_MOVEMENT_SEA = 4;
 /// `kUnitCategorySubmergedNaval`
 constexpr static const int64_t EE_UNIT_CATEGORY_SUBMERGED_NAVAL = 10;
 
+/// `kActionFindUnexploredArea` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_FIND_UNEXPLORED_AREA = 11002;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -8802,6 +8805,11 @@ size_t ee_units_fill_members(const uint32_t *ids,
                              int64_t slot,
                              uint32_t *out);
 
+/// `EEMExplore::Execute`'s body (`group::explore`) for the sender `player` (an `EEPlayer*`) and its selection
+/// (`EEGroup*`), through the game's host calls.
+void ee_units_explore(void *player,
+                      void *selection);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -8809,6 +8817,28 @@ extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
 extern uint8_t ee_units_host_goal_kind(void *goal);
 
 extern void ee_units_host_goal_release(void *goal);
+
+extern void *ee_units_host_active_group_new(void *player);
+
+extern void ee_units_host_group_fill(void *group, void *selection, int32_t sort, int32_t slot);
+
+extern void ee_units_host_group_release(void *group);
+
+extern void ee_units_host_pending_push(void *player, void *group);
+
+extern void ee_units_host_group_keep_mobile(void *group);
+
+extern void ee_units_host_group_clear_goal(void *group);
+
+extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
+
+extern void ee_units_host_group_set_action(void *group, int32_t action);
+
+extern void ee_units_host_group_plan(void *group);
+
+extern int32_t ee_units_host_random(int32_t low, int32_t high);
+
+extern void ee_units_host_play_acknowledgement(void *player, void *group, int32_t index);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

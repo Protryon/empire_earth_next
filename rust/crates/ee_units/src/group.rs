@@ -1,5 +1,5 @@
 //! The group commands over the unit store (RUST_PLAN R5b.4 leaf 4 (c), leaf 5): which of a selection's units an
-//! active group takes (`EEActiveGroup::Fill`'s test).
+//! active group takes (`EEActiveGroup::Fill`'s test), and the first goal-giving body, Explore (`EEMExplore::Execute`).
 //!
 //! `EEActiveGroup::Fill(selection, sort, slot)` empties the active group, then takes each unit of the selection, in
 //! the selection's order, that is valid, has hit points and belongs to the formation slot
@@ -12,6 +12,7 @@
 //! a unit leaves its list only dead (`RTSPlayer::RemoveKilledUnits`), and the capture of the C++ test found no
 //! such unit it would take (PORT_LEARNINGS "R5b.4, fifth round").
 
+use crate::host::{EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_EXPLORE};
 use crate::store::{EeUnitRecord, UnitView};
 
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
@@ -20,6 +21,8 @@ pub const EE_MOVEMENT_LAND: u8 = 2;
 pub const EE_MOVEMENT_SEA: u8 = 4;
 /// `kUnitCategorySubmergedNaval`
 pub const EE_UNIT_CATEGORY_SUBMERGED_NAVAL: i64 = 0xa;
+/// `kActionFindUnexploredArea` (ee/EEUnitAction.h)
+pub const EE_ACTION_FIND_UNEXPLORED_AREA: i32 = 11002;
 
 /// `EEActiveGroup::IsInFormationSlot` over a record.
 pub fn in_formation_slot(unit: &EeUnitRecord, slot: i64) -> bool {
@@ -46,9 +49,42 @@ pub fn fill_members(view: &impl UnitView, ids: &[u32], slot: i64, out: &mut Vec<
     }
 }
 
+/// `EEMExplore::Execute`: for each formation slot 1..5 a new active group filled from the sender's selection
+/// (slowest first); a group that took units goes to the player's pending groups, keeps its mobile units, gets an
+/// Explore goal (`new EEUGExplore(false)`) with the action Find Unexplored Area and plans it, and one of its units,
+/// drawn by `GetRandom(0, n - 1)`, acknowledges; an empty group is released. The calls are the original's, in its
+/// order, and so is the one draw per group that kept a unit.
+pub fn explore(host: &mut impl Host, player: HostRef, selection: HostRef) {
+    let mut ids = Vec::new();
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_keep_mobile(group);
+        host.group_clear_goal(group);
+        let goal = host.goal_new(&EeGoalSpec::new(EE_GOAL_CTOR_EXPLORE));
+        if let Some(goal) = goal {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_FIND_UNEXPLORED_AREA);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::host::tests::{Call, MockHost};
     use std::collections::BTreeMap;
 
     fn unit(id: u32, domains: u8) -> EeUnitRecord {
@@ -97,5 +133,57 @@ mod tests {
         out.clear();
         fill_members(&view, &[], 0, &mut out);
         assert!(out.is_empty());
+    }
+
+    /// The host calls of `EEMExplore::Execute` for a selection whose land units fill slot 2 (the C++ body's order)
+    #[test]
+    fn explore_makes_the_original_calls_in_order() {
+        let mut host = MockHost::default();
+        let player = HostRef(0x500 as *mut std::ffi::c_void);
+        let selection = HostRef(0x600 as *mut std::ffi::c_void);
+        // the mock's Fill: slot 2 takes three units, KeepMobileUnits keeps two of them
+        host.fills.insert(2, vec![0x0100_0001, 0x0100_0002, 0x0100_0003]);
+        host.mobile = vec![0x0100_0001, 0x0100_0003];
+        host.draws = vec![1];
+        explore(&mut host, player, selection);
+        let g = |n: usize| HostRef((0x1000 + n) as *mut std::ffi::c_void);
+        let mut expected = Vec::new();
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 1, slot));
+            if slot != 2 {
+                expected.push(Call::Release(group));
+                continue;
+            }
+            expected.extend([
+                Call::Pending(player, group),
+                Call::KeepMobile(group),
+                Call::ClearGoal(group),
+                Call::GoalNew(EE_GOAL_CTOR_EXPLORE, 0),
+                Call::SetGoal(group, 10, false),
+                Call::SetAction(group, EE_ACTION_FIND_UNEXPLORED_AREA),
+                Call::Plan(group),
+                Call::Random(0, 1),
+                Call::Acknowledge(player, group, 1),
+            ]);
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0, "the goal went to the group");
+    }
+
+    #[test]
+    fn explore_draws_nothing_when_no_unit_stays_mobile() {
+        let mut host = MockHost::default();
+        host.fills.insert(1, vec![7]);
+        host.fills.insert(3, vec![8, 9]);
+        host.mobile = vec![9];
+        explore(&mut host, HostRef(std::ptr::null_mut()), HostRef(std::ptr::null_mut()));
+        let draws: Vec<_> = host.calls.iter().filter(|c| matches!(c, Call::Random(..))).collect();
+        assert_eq!(draws, vec![&Call::Random(0, 0)]);
+        let plans = host.calls.iter().filter(|c| matches!(c, Call::Plan(_))).count();
+        assert_eq!(plans, 2);
+        let releases = host.calls.iter().filter(|c| matches!(c, Call::Release(_))).count();
+        assert_eq!(releases, 3);
     }
 }

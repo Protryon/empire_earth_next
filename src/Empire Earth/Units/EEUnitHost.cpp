@@ -30,6 +30,8 @@
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
+#include "ee/EEActiveGroup.h"
+#include "ee/EEPhysics.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitStore.h"
 #include "rust/ee_rust.h"
@@ -97,4 +99,65 @@ extern "C" uint8_t ee_units_host_goal_kind(void* inGoal)
 extern "C" void ee_units_host_goal_release(void* inGoal)
 {
     delete static_cast<EEUnitGoal*>(inGoal);
+}
+
+// a group as Rust holds it: its EEGroup base (the address group_ids reads)
+static EEActiveGroup* ActiveOf(void* inGroup)
+{
+    return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(inGroup));
+}
+
+extern "C" void* ee_units_host_active_group_new(void* inPlayer)
+{
+    return static_cast<EEGroup*>(new EEActiveGroup(static_cast<EEPlayer*>(inPlayer)));
+}
+
+extern "C" void ee_units_host_group_fill(void* inGroup, void* inSelection, int32_t inSort, int32_t inSlot)
+{
+    ActiveOf(inGroup)->Fill(static_cast<EESelectedGroup*>(static_cast<EEGroup*>(inSelection)), inSort, inSlot);
+}
+
+extern "C" void ee_units_host_group_release(void* inGroup)
+{
+    ActiveOf(inGroup)->Dereference();
+}
+
+extern "C" void ee_units_host_pending_push(void* inPlayer, void* inGroup)
+{
+    static_cast<EEPlayer*>(inPlayer)->mPendingGroups.push_back(static_cast<EEGroup*>(inGroup));
+}
+
+extern "C" void ee_units_host_group_keep_mobile(void* inGroup)
+{
+    ActiveOf(inGroup)->KeepMobileUnits();
+}
+
+extern "C" void ee_units_host_group_clear_goal(void* inGroup)
+{
+    ActiveOf(inGroup)->ClearGoal();
+}
+
+extern "C" void ee_units_host_group_set_goal(void* inGroup, void* inGoal, uint8_t inQueued)
+{
+    ActiveOf(inGroup)->SetGoal(static_cast<EEUnitGoal*>(inGoal), inQueued != 0);
+}
+
+extern "C" void ee_units_host_group_set_action(void* inGroup, int32_t inAction)
+{
+    ActiveOf(inGroup)->mAction = inAction;
+}
+
+extern "C" void ee_units_host_group_plan(void* inGroup)
+{
+    ActiveOf(inGroup)->Plan();
+}
+
+extern "C" int32_t ee_units_host_random(int32_t inLow, int32_t inHigh)
+{
+    return (int32_t)gPhysics->GetRandom((long)inLow, (long)inHigh);
+}
+
+extern "C" void ee_units_host_play_acknowledgement(void* inPlayer, void* inGroup, int32_t inIndex)
+{
+    static_cast<EEPlayer*>(inPlayer)->PlayAcknowledgement(ActiveOf(inGroup)->GetUnit(inIndex));
 }

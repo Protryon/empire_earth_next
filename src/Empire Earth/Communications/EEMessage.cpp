@@ -2730,27 +2730,10 @@ bool EEMExplore::IsResponse(NEMessage* inMessage)
 void EEMExplore::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    for (unsigned long i = 1; i < 6; i++) {
-        EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 1, i);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            thePlayer->mPendingGroups.push_back(theActiveGroup);
-            theActiveGroup->KeepMobileUnits();
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGExplore(false), false);
-            theActiveGroup->mAction = kActionFindUnexploredArea;
-            theActiveGroup->Plan();
-            EEComplexUnit* theUnit;
-            if (theActiveGroup->GetNumUnits() > 0)
-                theUnit = theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1));
-            else
-                theUnit = NULL;
-            if (theUnit)
-                thePlayer->PlayAcknowledgement(theUnit);
-        } else
-            theActiveGroup->Dereference();
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs explore: per formation slot 1..5 an active group filled from
+    // the selection, given an Explore goal and planned, one unit drawn to acknowledge) over the world calls of
+    // EEUnitHost.cpp
+    ee_units_explore(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup));
 }
 
 // FUNCTION: EXE 0x4be6c6
