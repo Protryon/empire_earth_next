@@ -29,6 +29,7 @@ local ECON = {
     full_target = true,     -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
     food_dry = true,        -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
     wood_floor = true,      -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
+    account = false,        -- from the Copper Age the reserve is an epoch account of a share of the income (Age of AI)
 }
 
 local PLAN = {
@@ -108,6 +109,7 @@ local PLAN = {
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,
+        epoch_share = 50,       -- (ECON.account) percent of the income into the epoch account (Age of AI's 40, its army 65)
         town_centers = 2, tc_at = 30,
         claim_max = 45,
     },
@@ -556,6 +558,29 @@ function M.step(view, memory)
             unreachable = true
         end
     end
+    -- the epoch account (ECON.account): a share of each step's gathering, kept per resource; emptied when the epoch
+    -- changes or the advance is under way
+    memory.acc = memory.acc or {}
+    memory.acc_frac = memory.acc_frac or {}
+    if ECON.account and plan.epoch_share ~= nil and view.income_total ~= nil then
+        local was = memory.acc_seen or {}
+        local fresh = memory.acc_epoch ~= view.epoch or view.advancing
+        for _, r in ipairs(V.resources) do
+            local got = math.max((view.income_total[r] or 0) - (was[r] or view.income_total[r] or 0), 0)
+            if fresh then
+                memory.acc[r], memory.acc_frac[r] = 0, 0
+            else
+                local f = (memory.acc_frac[r] or 0) + got * plan.epoch_share
+                memory.acc[r] = math.min((memory.acc[r] or 0) + f // 100, cost[r])
+                memory.acc_frac[r] = f % 100
+            end
+        end
+        memory.acc_epoch = view.advancing and -1 or view.epoch
+        memory.acc_seen = {}
+        for _, r in ipairs(V.resources) do
+            memory.acc_seen[r] = view.income_total[r] or 0
+        end
+    end
     local reserve, differs = {}, false
     local epoch_need = {}   -- the advance's whole cost of each resource kept (the gatherers' target, ECON.full_target)
     for _, r in ipairs(V.resources) do
@@ -588,6 +613,14 @@ function M.step(view, memory)
                 want = math.max(want, math.min(memory.res_floor[r] or 0, cost[r]))
             end
             memory.res_floor[r] = (kept and not scramble) and want or 0
+        end
+        -- (§8.43, Age of AI's epoch account, ai/ageofai/econ.lua after upstream econ.c by Grille and the Age of AI
+        -- contributors, GPL-3.0): from the plan's account_epoch on, the reserve is an account that takes
+        -- plan.epoch_share percent of what is gathered (the remainder carried, PORT_LEARNINGS), up to the advance's
+        -- cost; the rest of the income is free for the army and the citizens. Upstream's army took 65% from farms on
+        -- and out-grew boom after 90 minutes (139 citizens / 64 soldiers against 102 / 25)
+        if ECON.account and plan.epoch_share ~= nil and kept and not scramble then
+            want = math.min(cost[r], memory.acc[r] or 0)
         end
         reserve[r] = want
         differs = differs or reserve[r] ~= view.reserve[r]
@@ -672,7 +705,7 @@ function M.step(view, memory)
         -- the light army short of iron the iron reserve was 0, the stock above the bank, no iron gatherer was wanted
         -- and the army and the Copper Age both waited on iron for the rest of the game
         local aim = reserve
-        if ECON.full_target then
+        if ECON.full_target or ECON.account then   -- (an account fills slowly: the gatherers aim at the cost)
             aim = {}
             for _, r in ipairs(V.resources) do
                 aim[r] = math.max(reserve[r], epoch_need[r] or 0)
