@@ -420,6 +420,12 @@ WON_TESTS = {
     "won_guistring_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
                                                            "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
                                                            "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+    # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
+    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
+                                                             "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringParser.cpp", "StringParserCollections.cpp",
+                                                             "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 
 

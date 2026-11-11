@@ -13,6 +13,7 @@ mod blowfish_tables;
 pub mod cdkey;
 pub mod chat;
 pub mod config;
+pub mod configobj;
 pub mod crc16;
 pub mod der;
 pub mod dir;

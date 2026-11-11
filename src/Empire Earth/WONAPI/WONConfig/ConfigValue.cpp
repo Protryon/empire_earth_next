@@ -30,11 +30,14 @@ template<class T> bool ConfigValue<T>::CopyValueHook(ConfigValueBase* source)
 }
 template<class T> void SimpleConfigValue<T>::InitializeDefaultHook() {this->mVal=this->mDefVal;}
 template<class T> bool SimpleConfigValue<T>::ReadValue(StringParser& parser) {return parser.ReadValue(this->mVal);}
+// The original assigned the int even when the read failed (uninitialised then); the value is kept now, as the
+// parser's sized reads do (PORT_LEARNINGS "R6: ... the chat parser, GUIStringData, ConfigObject's grammar")
 template<> bool SimpleConfigValue<unsigned short>::ReadValue(StringParser& parser)
 {
-    int value;
+    int value=0;
     bool result=parser.ReadValue(value);
-    this->mVal=(unsigned short)value;
+    if(result)
+        this->mVal=(unsigned short)value;
     return result;
 }
 template<class T> void SimpleConfigValue<T>::WriteValue(std::string& out) {StringParser::ValueToString(this->mVal,out);}

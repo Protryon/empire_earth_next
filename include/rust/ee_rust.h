@@ -1094,6 +1094,55 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -8800,6 +8849,51 @@ void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t c
 bool ee_won_config_open(EeWonConfigIo *io,
                         const char *path,
                         int32_t *status);
+
+/// `token_kind`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgToken ee_won_cfg_token_kind(const uint8_t *token, size_t length);
+
+/// `group_start_step`.
+///
+/// # Safety
+/// `token` holds `length` bytes; `state` is valid.
+EeWonCfgStart ee_won_cfg_group_start(int32_t *state, const uint8_t *token, size_t length);
+
+/// `group_instruction` (`value` false) or `value_instruction`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgInstruction ee_won_cfg_instruction(const uint8_t *token, size_t length, bool value);
+
+/// `condition_parses_first`.
+bool ee_won_cfg_condition(EeWonCfgInstruction instruction,
+                          bool found,
+                          bool expected_empty,
+                          bool matches);
+
+/// `is_else`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+bool ee_won_cfg_is_else(const uint8_t *token, size_t length);
+
+/// `optional_suffix`.
+EeWonCfgOptional ee_won_cfg_optional(bool comma, bool read, bool word_is_optional);
+
+/// `include_path`.
+///
+/// # Safety
+/// `path` and `base` hold their lengths' bytes; `sink` receives the path during the call.
+void ee_won_cfg_include_path(const uint8_t *path,
+                             size_t path_length,
+                             bool ignore_path,
+                             const uint8_t *base,
+                             size_t base_length,
+                             EeWonByteSink sink,
+                             void *context);
 
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
