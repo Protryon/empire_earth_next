@@ -372,6 +372,6 @@ SmartPtr<ServerContext> MultiPingOp::GetServerContext(bool discardNonResponsiveS
 		++anItr;
 	}
 
-	aContext->mShuffleAddresses = false;
+	aContext->SetShuffleAddresses(false);
 	return aContext;
 }

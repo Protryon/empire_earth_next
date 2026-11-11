@@ -1879,6 +1879,9 @@ struct EeDx7PolygonArray;
 /// A `GETransformation`'s rotation part.
 struct EeFormationRotation;
 
+/// The server list.
+struct EeWonServerList;
+
 /// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
 /// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
 struct EeDx7SoundRing;
@@ -5431,6 +5434,21 @@ struct EeWonServerPick {
   /// It lists the lobby's language.
   bool language;
 };
+
+/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
+struct EeWonAddr {
+  uint8_t sockaddr[16];
+  bool valid;
+  bool remember_host;
+  const uint8_t *host;
+  size_t host_len;
+};
+
+/// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
+using EeWonRand = int32_t(*)(bool seed);
+
+/// Receives each address of a copy, in order.
+using EeWonAddrSink = void(*)(void *context, const EeWonAddr *addr);
 
 /// The C++ primitives of one `ServerRequestOp` (`ctx` is the C++ glue's) and pointers to the members the exchange
 /// keeps. Each hook is called with `ctx`.
@@ -14637,6 +14655,57 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new, empty list (shuffling on).
+EeWonServerList *ee_won_ctx_new();
+
+/// # Safety
+/// `c` came from [`ee_won_ctx_new`] (or is NULL) and is not used after.
+void ee_won_ctx_free(EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_clear(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_add(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `addrs` holds `count` addresses.
+bool ee_won_ctx_replace(const EeWonServerList *c, const EeWonAddr *addrs, size_t count);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+void ee_won_ctx_notify_failed(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_remove(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list.
+size_t ee_won_ctx_len(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_set_shuffle(const EeWonServerList *c, bool shuffle);
+
+/// # Safety
+/// `c` is a live list.
+bool ee_won_ctx_shuffle(const EeWonServerList *c);
+
+/// `CopyAddresses(AddrList&)`: each address into `sink`, in order (outside the lock).
+///
+/// # Safety
+/// `c` is a live list; `sink` accepts `context`.
+void ee_won_ctx_copy(const EeWonServerList *c, EeWonRand rand, EeWonAddrSink sink, void *context);
+
+/// `CopyAddresses(AddrSet&)`: each address into `sink`, in the six bytes' order.
+///
+/// # Safety
+/// As [`ee_won_ctx_copy`].
+void ee_won_ctx_copy_sorted(const EeWonServerList *c, EeWonAddrSink sink, void *context);
 
 /// `ServerRequestOp::RunHook`.
 ///

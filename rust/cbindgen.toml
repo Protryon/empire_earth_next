@@ -173,6 +173,7 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "AuthBlock" = "EeWonAuth"
 "Socket" = "EeWonSocket"
 "OpTiming" = "EeWonOpTiming"
+"ServerList" = "EeWonServerList"
 "OpState" = "EeWonOpState"
 "TimerQueue" = "EeWonTimerQueue"
 "OpQueue" = "EeWonOpQueue"

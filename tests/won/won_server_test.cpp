@@ -891,6 +891,186 @@ static void TestRules()
     }
 }
 
+// ---- ServerContext: the original class's statements over an address value (the sockaddr, validity, host
+// string; ordered and compared by the six port and address bytes, as IPAddr) against ee_won's servctx list
+
+struct Addr {
+    unsigned char mSock[16];
+    bool mValid, mRemember;
+    std::string mHost;
+    bool operator<(const Addr& o) const { return memcmp(mSock + 2, o.mSock + 2, 6) < 0; }
+    bool operator==(const Addr& o) const
+    {
+        return !memcmp(mSock, o.mSock, 16) && mValid == o.mValid && mRemember == o.mRemember && mHost == o.mHost;
+    }
+};
+
+static int sCtxDraws[256];
+static int sCtxDrawAt, sCtxSeeds;
+static int OrigCtxRand() { return sCtxDraws[sCtxDrawAt++ & 255]; }
+static int32_t CtxRand(bool inSeed)
+{
+    if (inSeed) {
+        sCtxSeeds++;
+        return 0;
+    }
+    return sCtxDraws[sCtxDrawAt++ & 255];
+}
+
+struct OrigContext {
+    typedef std::list<Addr> AddrList;
+    bool mShuffleAddresses, mAddressesShuffled;
+    std::map<Addr, AddrList::iterator> mPingMap;
+    AddrList mAddresses;
+    OrigContext() : mShuffleAddresses(true), mAddressesShuffled(false) {}
+    void Clear()
+    {
+        this->mPingMap.clear();
+        this->mAddresses.clear();
+        this->mShuffleAddresses = true;
+        this->mAddressesShuffled = false;
+    }
+    bool AddAddress(const Addr& inAddress)
+    {
+        if (!inAddress.mValid) return false;
+        typedef std::map<Addr, AddrList::iterator> AddrMap;
+        std::pair<AddrMap::iterator, bool> inserted =
+            this->mPingMap.insert(AddrMap::value_type(inAddress, this->mAddresses.end()));
+        if (inserted.second) {
+            inserted.first->second = this->mAddresses.insert(this->mAddresses.end(), inAddress);
+            return true;
+        }
+        return false;
+    }
+    void NotifyFailed(const Addr& inAddress)
+    {
+        std::map<Addr, AddrList::iterator>::iterator it = this->mPingMap.find(inAddress);
+        if (it == this->mPingMap.end()) return;
+        this->mAddresses.erase(it->second);
+        it->second = this->mAddresses.insert(this->mAddresses.end(), it->first);
+    }
+    void CopyAddresses(AddrList& inCopy)
+    {
+        if (this->mShuffleAddresses && !this->mAddressesShuffled) {
+            std::vector<Addr> anAddresses;
+            for (AddrList::iterator anItr = this->mAddresses.begin(); anItr != this->mAddresses.end(); ++anItr)
+                anAddresses.push_back(*anItr);
+            sCtxSeeds++; // srand(time(NULL))
+            for (std::vector<Addr>::size_type i = 1; i < anAddresses.size(); ++i)
+                std::swap(anAddresses[i], anAddresses[OrigCtxRand() % (i + 1)]);
+            this->mPingMap.clear();
+            this->mAddresses.clear();
+            for (std::vector<Addr>::iterator aPos = anAddresses.begin(); aPos != anAddresses.end(); ++aPos) {
+                AddrList::iterator aLast = this->mAddresses.insert(this->mAddresses.end(), *aPos);
+                this->mPingMap[*aPos] = aLast;
+            }
+            this->mAddressesShuffled = true;
+        }
+        inCopy = this->mAddresses;
+    }
+    bool RemoveAddress(const Addr& theAddr)
+    {
+        std::map<Addr, AddrList::iterator>::iterator anItr = this->mPingMap.find(theAddr);
+        if (anItr == this->mPingMap.end()) return false;
+        this->mAddresses.erase(anItr->second);
+        this->mPingMap.erase(anItr);
+        return true;
+    }
+    void CopySet(std::vector<Addr>& theCopy)
+    {
+        theCopy.clear();
+        for (std::map<Addr, AddrList::iterator>::iterator i = this->mPingMap.begin(); i != this->mPingMap.end(); ++i)
+            theCopy.push_back(i->first);
+    }
+};
+
+static EeWonAddr CtxToRust(const Addr& a)
+{
+    EeWonAddr r;
+    memcpy(r.sockaddr, a.mSock, 16);
+    r.valid = a.mValid;
+    r.remember_host = a.mRemember;
+    r.host = reinterpret_cast<const uint8_t*>(a.mHost.data());
+    r.host_len = a.mHost.size();
+    return r;
+}
+static void CtxSink(void* inList, const EeWonAddr* r)
+{
+    Addr a;
+    memcpy(a.mSock, r->sockaddr, 16);
+    a.mValid = r->valid;
+    a.mRemember = r->remember_host;
+    a.mHost.assign(reinterpret_cast<const char*>(r->host), r->host_len);
+    static_cast<std::vector<Addr>*>(inList)->push_back(a);
+}
+
+static Addr AnAddr()
+{
+    Addr a;
+    memset(a.mSock, 0, 16);
+    a.mSock[0] = 2;
+    a.mSock[2] = (unsigned char)Pick(2);
+    a.mSock[3] = (unsigned char)Pick(4);
+    a.mSock[5] = (unsigned char)Pick(3);
+    a.mSock[7] = (unsigned char)Pick(2);
+    if (Pick(8) == 0) a.mSock[9] = (unsigned char)Pick(256); // padding the compare ignores
+    a.mValid = Pick(10) != 0;
+    a.mRemember = Pick(2) != 0;
+    static const char* const kHosts[] = { "", "dir.won.net", "1.2.3.4", "\xc3\xa9" };
+    a.mHost = kHosts[Pick(4)];
+    return a;
+}
+
+static void TestContext()
+{
+    for (int t = 0; t < 3000; t++) {
+        OrigContext o;
+        EeWonServerList* r = ee_won_ctx_new();
+        for (int i = 0; i < 256; i++) sCtxDraws[i] = Pick(0x8000);
+        sCtxDrawAt = 0;
+        int n = Pick(60);
+        for (int s = 0; s < n; s++) {
+            Addr a = AnAddr();
+            EeWonAddr ra = CtxToRust(a);
+            switch (Pick(9)) {
+            case 0: case 1: case 2: CHECK(ee_won_ctx_add(r, &ra) == o.AddAddress(a)); break;
+            case 3: o.NotifyFailed(a); ee_won_ctx_notify_failed(r, &ra); break;
+            case 4: CHECK(ee_won_ctx_remove(r, &ra) == o.RemoveAddress(a)); break;
+            case 5: if (Pick(6) == 0) { o.Clear(); ee_won_ctx_clear(r); } break;
+            case 6: {
+                bool aShuffle = Pick(3) != 0;
+                o.mShuffleAddresses = aShuffle;
+                ee_won_ctx_set_shuffle(r, aShuffle);
+                break;
+            }
+            case 7: {
+                int aSave = sCtxDrawAt, aSeeds = sCtxSeeds;
+                OrigContext::AddrList aWant;
+                o.CopyAddresses(aWant);
+                int aWantDraws = sCtxDrawAt, aWantSeeds = sCtxSeeds;
+                sCtxDrawAt = aSave;
+                sCtxSeeds = aSeeds;
+                std::vector<Addr> aGot;
+                ee_won_ctx_copy(r, CtxRand, CtxSink, &aGot);
+                CHECK(sCtxDrawAt == aWantDraws && sCtxSeeds == aWantSeeds);
+                CHECK(aGot == std::vector<Addr>(aWant.begin(), aWant.end()));
+                break;
+            }
+            case 8: {
+                std::vector<Addr> aWant, aGot;
+                o.CopySet(aWant);
+                ee_won_ctx_copy_sorted(r, CtxSink, &aGot);
+                CHECK(aGot == aWant);
+                break;
+            }
+            }
+            CHECK(ee_won_ctx_len(r) == o.mPingMap.size());
+            CHECK(ee_won_ctx_shuffle(r) == o.mShuffleAddresses);
+        }
+        ee_won_ctx_free(r);
+    }
+}
+
 int main(int argc, char** argv)
 {
     int aPrint = 0;
@@ -912,6 +1092,7 @@ int main(int argc, char** argv)
     TestRequests();
     TestReplies();
     TestRules();
+    TestContext();
     int aScenarios = 200000;
     for (int i = 0; i < aScenarios; i++) {
         Scenario s = Generate();

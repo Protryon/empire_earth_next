@@ -1691,15 +1691,18 @@ inline const char* GetBufferData(const ByteBufferPtr& inBuffer)
 // (provisional member names)
 typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
+// A shim over ee_won's server list (rust/crates/ee_won/src/servctx.rs: the addresses, their order, the one-time
+// shuffle and the lock); the original's 0x3c-byte layout is gone
 class ServerContext : public RefCount {
 public:
-    ServerContext() : mShuffleAddresses(true), mAddressesShuffled(false) {}
+    ServerContext();
+    virtual ~ServerContext();
     bool AddAddress(const IPAddr& inAddress); //2ac4b0, AL = success
     void Clear(); //2ac390
     void NotifyFailed(const IPAddr&); //2ac980
     bool AddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL); //2acab0/332
     void RemoveAllAddresses(); //2acc00, SDK name, 5-byte body
-    unsigned long GetNumAddresses() { return this->mPingMap.size(); }
+    unsigned long GetNumAddresses();
     typedef std::list<IPAddr> AddrList;
     void CopyAddresses(AddrList&); //2ac6d0, 685 bytes
     bool RemoveAddress(const IPAddr&);
@@ -1707,12 +1710,14 @@ public:
     bool AddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
     bool AtomicClearAndAddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL);
     bool AtomicClearAndAddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
+    // the original's public mShuffleAddresses (copies shuffle once while it is on)
+    void SetShuffleAddresses(bool inShuffle);
+    bool GetShuffleAddresses();
 
-    bool mShuffleAddresses;                 // +0x08
-    bool mAddressesShuffled;                // +0x09
-    CriticalSection mLock;                  // +0x0c
-    std::map<IPAddr, AddrList::iterator> mPingMap; //24; reverse priority-list iterator, not an integer
-    AddrList mAddresses; //30, owned IPAddr priority list
+private:
+    ServerContext(const ServerContext&);
+    ServerContext& operator=(const ServerContext&);
+    EeWonServerList* mList;
 };
 
 // AsyncOpWithTracker's op tracker (; the lock, then the maps: ~AsyncOpWithTracker 0x4cff95 addresses the

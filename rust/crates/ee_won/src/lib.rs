@@ -59,6 +59,7 @@ pub mod random;
 pub mod regkey;
 pub mod resource;
 pub mod routing;
+pub mod servctx;
 pub mod server;
 pub mod socket;
 pub mod staging;
