@@ -2876,6 +2876,14 @@ using EeFsFatVisitor = void(*)(void *context,
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
+/// One step of `EEMExchangeResources` (ee/EEMessageExecute.h): whether it applies, the traded resource's amount
+/// (`cost`) and the gold's (`amount`).
+struct EeNetMsgExchangeStep {
+  uint8_t apply;
+  int64_t cost;
+  int64_t amount;
+};
+
 /// One member of a message (see the module comment).
 struct EeNetMsgSlot {
   uint8_t *data;
@@ -7021,6 +7029,30 @@ uint8_t ee_netmsg_command_runs(uint8_t is_server,
                                uint8_t last_id);
 
 uint32_t ee_netmsg_selection_passes(uint8_t executing_selection);
+
+/// 0 nothing, 1 add, 2 take.
+uint8_t ee_netmsg_add_remove(uint8_t add, uint32_t amount, int64_t have);
+
+int64_t ee_netmsg_trade_price(float rate, int64_t trade, uint8_t buy);
+
+EeNetMsgExchangeStep ee_netmsg_exchange_step(uint8_t is_sell, int64_t price, int64_t have);
+
+/// The resources in `out_resources`; the count.
+///
+/// # Safety
+/// `amounts` points to 7 values, `out_resources` to room for 5.
+uint32_t ee_netmsg_tribute_order(const uint32_t *amounts, uint8_t text, uint8_t *out_resources);
+
+uint8_t ee_netmsg_tribute_viewer(uint8_t local_is_from, uint8_t local_is_to);
+
+/// 1 and the fraction in `out_fraction` when disbanded; 0 (`out_fraction` untouched) else.
+///
+/// # Safety
+/// `out_fraction` is writable.
+uint8_t ee_netmsg_disband_refund(int64_t hit_points,
+                                 int64_t max_hit_points,
+                                 uint8_t can_disband,
+                                 float *out_fraction);
 
 /// `ExportSize` of a class whose members are all fixed (its constant); 0 for a class with variable members.
 uint32_t ee_netmsg_fixed_size(uint32_t class_id);

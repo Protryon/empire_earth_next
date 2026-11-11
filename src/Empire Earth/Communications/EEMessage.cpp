@@ -113,7 +113,6 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EEMessageExecute.h"
 #include "rust/ee_rust.h"   // ee_netmsg
-static const float kDisbandRefund = 0.75f;   // EEMDisband (its own .rdata word: a named constant)
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
 static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
 
@@ -8426,80 +8425,3 @@ bool EEMSetUnitBehavior::IsResponse(NEMessage* inMessage)
 // TEMPLATE: EXE 0x4ca13d
 // TEMPLATE: EXE 0x4ca240
 // TEMPLATE: EXE 0x4ca290
-
-// ---- the Execute decisions (ee/EEMessageExecute.h; docs/RUST_PLAN.md R5b.4 leaf 4): the original bodies' tests and
-// arithmetic over plain values ----
-static const float kTradeLimitLow = 0.01f;    // EEGetTradePrice: kHeightEpsilon's word
-static const float kTradeCurve = 0.666666687f;   // 0x449af8 (provisional names)
-static const float kTradeScale = 5000.0f;        // 0x449afc
-
-extern "C" uint8_t ee_netmsg_add_remove(uint8_t add, uint32_t amount, int64_t have)
-{
-    if (add)
-        return 1;
-    if (amount > 0 && amount <= static_cast<uint32_t>(have))
-        return 2;
-    return 0;
-}
-
-extern "C" int64_t ee_netmsg_trade_price(float rate, int64_t trade, uint8_t buy)
-{
-    float theLimit = trade >= 0 ? kTradeLimitLow : 1000.0f;
-    float thePrice = 100.0f / (((rate - theLimit) * (kTradeCurve * rate - theLimit) * kTradeScale) /
-        ((kTradeCurve * rate - theLimit) * kTradeScale + (rate - kTradeCurve * rate) * (float)trade) + theLimit);
-    if (buy != 0)
-        thePrice -= 1.0f;
-    else
-        thePrice += 1.0f;
-    if (thePrice < 1.0f)
-        thePrice = 1.0f;
-    if (thePrice > 1000.0f)
-        thePrice = 1000.0f;
-    return (int32_t)UMFloatToLong(thePrice);
-}
-
-extern "C" EeNetMsgExchangeStep ee_netmsg_exchange_step(uint8_t is_sell, int64_t price, int64_t have)
-{
-    EeNetMsgExchangeStep theStep = {0, 100, price};
-    if (is_sell) {
-        if (have < 100) {
-            theStep.amount = (int32_t)UMFloatToLong((float)(have * price) * 0.01f);
-            theStep.cost = have;
-        }
-        theStep.apply = theStep.amount > 0;
-    } else {
-        theStep.apply = 1;
-        if (have < price) {
-            theStep.cost = (int32_t)UMFloatToLong(100.0f / (float)price * (float)have);
-            theStep.amount = have;
-            if (theStep.cost <= 0)
-                theStep.apply = 0;
-        }
-    }
-    return theStep;
-}
-
-extern "C" uint32_t ee_netmsg_tribute_order(const uint32_t* amounts, uint8_t text, uint8_t* out_resources)
-{
-    static const uint8_t kTribute[5] = {kResourceFood, kResourceGold, kResourceIron, kResourceStone, kResourceWood};
-    static const uint8_t kText[5] = {kResourceFood, kResourceWood, kResourceStone, kResourceGold, kResourceIron};
-    const uint8_t* theOrder = text ? kText : kTribute;
-    uint32_t theCount = 0;
-    for (int i = 0; i < 5; i++)
-        if (amounts[theOrder[i]] > 0)
-            out_resources[theCount++] = theOrder[i];
-    return theCount;
-}
-
-extern "C" uint8_t ee_netmsg_tribute_viewer(uint8_t local_is_from, uint8_t local_is_to)
-{
-    return local_is_from ? 1 : local_is_to ? 2 : 0;
-}
-
-extern "C" uint8_t ee_netmsg_disband_refund(int64_t hit_points, int64_t max_hit_points, uint8_t can_disband, float* out_fraction)
-{
-    if (!(hit_points > 0 && can_disband))
-        return 0;
-    *out_fraction = (float)hit_points / (float)max_hit_points * kDisbandRefund;
-    return 1;
-}
