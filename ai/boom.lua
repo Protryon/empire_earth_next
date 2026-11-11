@@ -30,6 +30,7 @@ local ECON = {
     food_dry = false,       -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
     wood_floor = false,     -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
     account = false,        -- from the Copper Age the reserve is an epoch account of a share of the income (Age of AI)
+    wood_surplus = false,   -- wood piled past what the plan spends soon: its gatherers down to WOOD_SURPLUS_KEEP (§8.51)
 }
 
 local PLAN = {
@@ -138,6 +139,8 @@ local BOATS_LOST_MS = 300000   -- fishing boats sunk within this long ...
 local BOATS_LOST_MAX = 3        -- ... this many times: none are replaced until fewer are
 local ARMY_FIRST_MIN = 5        -- minutes into the epoch the citizens wait at most for the army_first soldiers
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
+local WOOD_SURPLUS = 400        -- (ECON.wood_surplus) wood this far above its stock target is a surplus ...
+local WOOD_SURPLUS_KEEP = 3     -- ... and keeps this many on wood (the Stone Age's wood sat at 1000-3000 with 15 on it)
 local ESCORT_MIN = 2            -- soldiers an escort of a contested site takes at least (the guard keeps 2) ...
 local ESCORT_MAX = 6            -- ... and at most
 local ESCORT_WAIT = 120000      -- a new escort no sooner than this after the last one was sent
@@ -749,6 +752,11 @@ function M.step(view, memory)
             if n > plan.cap[r] then
                 n = plan.cap[r]
             end
+            -- (§8.51, seed 2 against the improved classic: from the Stone Age wood piled to 1000-3000 with 12-16
+            -- gatherers on it while the Copper Age waited on gold and food) a surplus keeps only a few on wood
+            if ECON.wood_surplus and r == "wood" and view.stock.wood > target.wood + WOOD_SURPLUS then
+                n = math.min(n, WOOD_SURPLUS_KEEP)
+            end
             want[r] = n
             others = others + n
         end
@@ -880,6 +888,9 @@ function M.step(view, memory)
                 spill = spill - n
             end
             local n = math.min(spill, math.max(plan.cap.wood - want.wood, 0))
+            if ECON.wood_surplus and view.stock.wood > target.wood + WOOD_SURPLUS then
+                n = 0   -- (the rest wait for places rather than pile more wood)
+            end
             want.wood = want.wood + n
         end
         local useful = food_cap + plan.cap.wood + 2
