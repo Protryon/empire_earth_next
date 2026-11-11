@@ -190,8 +190,9 @@ long UIRadioButton::DrawPolygons()
     if (this->mScaleBitmap && this->mCopiedBitmap) {
         float theXScale = this->mCopiedBitmap->GetXScale();
         float theYScale = this->mCopiedBitmap->GetYScale();
-        this->mCopiedBitmap->SetXYScale(theXScale * (this->GetCopiedDrawRectangle().GetHeight() * 0.05f),
-                                  theYScale * (this->GetCopiedDrawRectangle().GetHeight() * 0.05f));
+        float theScale[2];   // the box's height over 20 pixels (ee_ui draw.rs)
+        ee_ui_box_bitmap_scale(theXScale, theYScale, this->GetCopiedDrawRectangle().GetHeight(), false, 0, theScale);
+        this->mCopiedBitmap->SetXYScale(theScale[0], theScale[1]);
         theResult = UIButton::DrawPolygons();
         this->mCopiedBitmap->SetXYScale(theXScale, theYScale);
     } else

@@ -821,60 +821,39 @@ long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, 
     return kErrorOK;
 }
 
+// The text draw of a clipped text (ee_ui draw.rs): the text into one rectangle on the drawing surface
+struct UIFormTextDraw {
+    UIForm* mForm;
+    GEText* mText;
+};
+static long UIFormDrawTextPiece(void* inContext, const EeUiRect* inRectangle)
+{
+    UIFormTextDraw* theDraw = static_cast<UIFormTextDraw*>(inContext);
+    UIManager* theManager = theDraw->mForm->GetManager();
+    return theManager->GetRasterizer()->Draw(theDraw->mText, UIFormRust::Rect(*inRectangle), theManager->GetDrawingSurface());
+}
+
 // FUNCTION: LLE 0x10071e99
-// Draws text clipped around the IME candidate window, the copied popup or the form's clip rectangles
+// Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window (the pieces
+// are Rust's, ee_ui draw.rs; each piece is drawn here)
 long UIForm::DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl)
 {
-    std::vector<GERectangle> theRectangles;
-    std::vector<GERectangle> theRemaining;
-    long theResult = kErrorOK;
-    if (this->mClipRectangles.size() == 0) {
-        if (this->mCopiedPopup == NULL) {
-            if (!this->GetManager()->GetDrawCandidateWindow())
-                theResult = this->GetManager()->GetRasterizer()->Draw(inText, inRectangle, this->GetManager()->GetDrawingSurface());
-            else {
-                if (!inRectangle.Intersects(this->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle()))
-                    theResult = this->GetManager()->GetRasterizer()->Draw(inText, inRectangle,
-                                                                    this->GetManager()->GetDrawingSurface());
-                else {
-                    inRectangle.RemoveIntersectingRectangle(
-                        this->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle(), theRectangles);
-                    for (unsigned long i = 0; i < theRectangles.size() && theResult == kErrorOK; i++)
-                        theResult = this->GetManager()->GetRasterizer()->Draw(inText, theRectangles[i],
-                                                                    this->GetManager()->GetDrawingSurface());
-                }
-            }
-        } else if (inControl && this->mCopiedPopup == this->mControls[inControl->GetIndex()] ||
-                   !inRectangle.Intersects(this->mCopiedPopup->GetRectangle()))
-            theResult = this->GetManager()->GetRasterizer()->Draw(inText, inRectangle, this->GetManager()->GetDrawingSurface());
-        else {
-            inRectangle.RemoveIntersectingRectangle(this->mCopiedPopup->GetCopiedDrawRectangle(), theRectangles);
-            for (unsigned long i = 0; i < theRectangles.size() && theResult == kErrorOK; i++)
-                theResult = this->GetManager()->GetRasterizer()->Draw(inText, theRectangles[i],
-                                                                this->GetManager()->GetDrawingSurface());
+    EeUiClipInfo theInfo = {};
+    theInfo.clips = reinterpret_cast<const EeUiRect*>(this->mClipRectangles.data());
+    theInfo.clip_count = this->mClipRectangles.size();
+    if (theInfo.clip_count == 0) {
+        if (this->mCopiedPopup != NULL) {
+            theInfo.has_popup = true;
+            theInfo.popup_is_control = inControl && this->mCopiedPopup == this->mControls[inControl->GetIndex()];
+            theInfo.popup_rect = UIFormRust::Rect(this->mCopiedPopup->GetRectangle());
+            theInfo.popup_draw_rect = UIFormRust::Rect(this->mCopiedPopup->GetCopiedDrawRectangle());
+        } else if (this->GetManager()->GetDrawCandidateWindow()) {
+            theInfo.has_candidate = true;
+            theInfo.candidate_rect = UIFormRust::Rect(this->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle());
         }
-    } else {
-        bool theClipped = false;
-        for (unsigned long i = 0; i < this->mClipRectangles.size(); i++)
-            if (inRectangle.Intersects(this->mClipRectangles[i])) {
-                if (!theClipped) {
-                    theRectangles.push_back(inRectangle);
-                    theClipped = true;
-                }
-                theRemaining.clear();
-                for (unsigned long j = 0; j < theRectangles.size(); j++)
-                    theRectangles[j].RemoveIntersectingRectangle(this->mClipRectangles[i], theRemaining);
-                theRectangles.clear();
-                theRectangles = theRemaining;
-            }
-        if (!theClipped)
-            theResult = this->GetManager()->GetRasterizer()->Draw(inText, inRectangle, this->GetManager()->GetDrawingSurface());
-        else
-            for (unsigned long i = 0; i < theRectangles.size() && theResult == kErrorOK; i++)
-                theResult = this->GetManager()->GetRasterizer()->Draw(inText, theRectangles[i],
-                                                                this->GetManager()->GetDrawingSurface());
     }
-    return theResult;
+    UIFormTextDraw theDraw = {this, inText};
+    return ee_ui_form_draw_clipped_text(&theInfo, UIFormRust::Rect(inRectangle), UIFormDrawTextPiece, &theDraw);
 }
 
 // FUNCTION: LLE 0x1007229e

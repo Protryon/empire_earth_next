@@ -5478,3 +5478,72 @@ Graphics Engine owns no text logic in C++. There is no line breaking in the engi
 - **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, `rust_build.py gate`
   PASS, `sim_capture.py` digests of the four profiles equal to the goldens but USGC, which the next commit recorded):
   see the final report for the merged numbers. Not run: any harness session, macOS or Linux builds.
+
+## R6: the controls' drawing: borders, clipped text, labels, list boxes, check boxes and the edit box (ee_ui draw.rs, edit_draw.rs; branch rust-r6-ui6, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` as plans the C++ executes (it keeps every draw call, the line, rhombus, bitmap and
+text objects and their order; the classes keep their members, vtables and exported names, no header gained a
+member): `UIControl::DrawBorder`'s lines (`border_line`: side by side, row by row, which of the two border colours);
+`UIForm::DrawClippedText`'s pieces around the form's clip rectangles, the copied popup or the IME candidate window
+(`draw_clipped_text`, the one sequence run in Rust: its draws go back through a function the C++ passes); a
+`UITextLabel`'s one-line placement, its copied line range and each wrapped line's place and clip rectangle;
+`UIListBox<T>`'s copied line range, selection rectangle and focus lines (`UIListBox.h`), `UILBString`'s rows; the
+check box's and radio button's scaled bitmap (`draw.rs`); `UIEditBox::CopyData`'s copied selection and IME
+composition (single- and multi-line), `DrawPolygons`' selection spans, `GetSelectedTextRectangle`'s row,
+`DrawTextA`'s row and the IME underline loop (measures and draws through a function table, `edit_draw.rs`).
+
+- **What stays C++, on purpose.** The pure call sequences: `UIButton`/`UIBitmap`/`UISlider`/`UIScrollBar`/
+  `UIComboBox`/`UITriStateCheckBox`'s `DrawPolygons`/`DrawTextA` (each the base, then its parts' draws, no decision
+  beyond a null test), `UIForm::DrawPolygons`/`DrawTextA` (the draw list, the popup, the tool tip's shadow, whose
+  rectangle was already Rust) and `UIManager`'s; `UIControl::CopyData` and the parts' `CopyData` copies (member
+  copies). They are in the golden trace all the same (the `form` and `button` cases), so a later move has its pin.
+- **The golden driver** (`build/ui_draw_golden`, scratch, `build.py orig|cur [seeds]`): the UI units and `include/`
+  of 863e464c extracted with `git archive` (`orig`) or the worktree's (`cur`), compiled as the game compiles them
+  (`clang_build.compile_to`, `EE_INCLUDE` pointing at the tree's headers), with the real `GELine`, `GERhombus`,
+  `GERectangle`, `UString`, `UWideString` and a scratch Rust staticlib (ee_ui, ee_ge, ee_plat_core), under
+  `/FORCE:UNRESOLVED`. Controls are calloc'ed with their class's vtable (`??_7UITextLabel@@6B@` through an asm
+  label) and their members set under `#define private public`; the scroll bars are real (`UIScrollBar`, `UISlider`,
+  two `UIScrollButton`s), so their `CopyData` and draws run. The rasterizer is a calloc'ed block whose vptr is a
+  table of stubs (the `Draw` overloads at the slots the header's comments give: text 15, rhombus 17, line 20, bitmap
+  21; any other slot logs and exits); its vertex arrays are a real `GEVertexArray` subclass, so each draw logs what
+  the line or rhombus really holds (ends, per-vertex colour and opacity). Text is measured by a fake
+  `GEText::ComputeTextExtent` (a hash advance per code point times the font's height / 8 + 1). Cases: 200 borders
+  (thickness 0..5, border types 0, 1, 7), 400 clipped texts (0..4 clip rectangles, a popup that is or is not the
+  drawing control, the candidate window, a failing draw), 200 one-line and 200 multi-line labels (every alignment,
+  fitted or not, with and without a scroll bar at any value, empty, UTF-8 and emoji lines), 200 string list boxes
+  (selection inside, outside and absent, focus on and off, a line height whose row product wraps), 200 buttons,
+  check boxes and radio buttons (scaled and unscaled bitmaps, labels, copied texts), 100 forms (draw lists, popups,
+  tool tips with the shadow), 400 edit boxes (single- and multi-line, password, caret blinking, scrolled away,
+  selections both ways across and past the copied lines, IME compositions with random clause attributes, lines with
+  breaks). `golden_draw.txt` keeps each case's inputs and its log as a line count and an FNV-1a 64 digest (730 KB;
+  the full log is 1.7 MB). `draw/tests.rs` and `edit_draw/tests.rs` rebuild every case's whole log (the C++ glue
+  included: the background rhombus, the scroll thumb, the cursor line, the measures) over the Rust; the driver
+  relinked over the forwarders printed the same log byte for byte, and on seeds 2 and 3 at ten times the size (17 MB
+  each). Mutations checked: the label margin, the IME attribute test, the clipped selection end each fail a replay.
+- **Driver traps, new.**
+  - `UIForm::DrawPolygons`/`DrawTextA` are protected virtuals: under the override a qualified call references the
+    public name and lands at address 0. Call them by their decorated names through an asm label
+    (`?DrawPolygons@UIForm@@MEAAJXZ`). The same for `GERasterizer::sActiveRasterizer` (protected static,
+    `@@1PEAV1@EA`) and the strings' `sDefaultAllocationLength` (the driver's TU references the public name
+    `@@2KA`): define both names.
+  - `GERScreenState`'s inline constructor reaches members with out-of-line constructors: calloc it.
+  - `GEVertexArray`'s constructor and destructor are out of line (GEVertexArray.cpp): define them for the fake.
+  - A random world must keep the box's invariants or it measures the original's undefined behaviour: a list box
+    showing more lines than its rows has a scroll bar; a caret or anchor never sits after a line break; an IME
+    composition stays on the copied lines (one reaching past them reads past `mDisplayLines` in `DrawPolygons`, the
+    original's hazard, unreachable while the box scrolls to the composition).
+  - Disk: C: ran full mid-session (another agent's runs); an `Edit` failed with ENOSPC and left the file unchanged.
+- **Kept quirks.** A border line's end is `(right + 1) - i`; a check box's scale uses `2 * thickness` as an unsigned
+  product; a label's wrapped lines are centred on the control's rectangle but start from the copied text rectangle,
+  and move left by half the scroll bar's width whenever the label has one (shown or not); a string list box's row
+  is one pixel wider than its text rectangle; a selection rectangle that misses the text rectangle is drawn
+  unclipped (`And` leaves it); the multi-line edit box's measuring text keeps the last text the caret was measured
+  with; an IME composition's end is not clipped to the copied lines.
+- **Gates run:** after each of the two commits `build.py -j 4 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle (seeds
+  2-7, the main checkout's open tree) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game
+  or POSIX build was run.
+- **Only a tour exercises these** (EE-SIM draws no UI), both commits change what is drawn on every frame of every
+  menu: the borders of every control with one, every text of every control (each goes through `DrawClippedText`),
+  every label, list box (the map and civilization lists, the saved games), check box and radio button, the edit
+  boxes (the player name, chat, the lobby), the IME underlines only with an IME. The lead's tour must compare the
+  menu captures pixel for pixel against the build before this branch.
