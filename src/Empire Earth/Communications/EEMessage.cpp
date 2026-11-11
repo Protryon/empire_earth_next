@@ -2142,25 +2142,10 @@ void EEMDisband::Execute()
 void EEMDropoffResource::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    unsigned long theID = this->mDropoffID;
-    EEComplexUnit* theDropoff = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theID));
-    EEActiveGroup* theActiveGroup = NULL;
-    if (theUnit && theDropoff) {
-        theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->SpreadAroundTile(theDropoff->mTileX, theDropoff->mTileY);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGGather(NULL, theDropoff, true), false);
-            theActiveGroup->mAction = kActionDropoffResource;
-            theActiveGroup->Plan();
-            if (theActiveGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs dropoff_resource: with a selection and a complex drop-off, one
+    // active group of the selection spreads around the drop-off's tile, gets a Gather goal with no resource and the
+    // drop-off, the action Dropoff Resource, plans, one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
+    ee_units_dropoff_resource(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mDropoffID);
 }
 
 // EEMDropoffResource's members as the codec's slots, in wire order (ee_netmsg classes.rs)

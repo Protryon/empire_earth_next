@@ -387,6 +387,34 @@ void OriginalPathTo(EEPlayer* thePlayer, void* theSelection, float inX, float in
     }
 }
 
+// EEMDropoffResource::Execute (0x4bd93c) as it was, each world call through the host, the drop-off read on the object
+void OriginalDropoffResource(EEPlayer* thePlayer, void* theGroup, int32_t inDropoffID)
+{
+    uint32_t theUnit = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;   // theGroup->GetFirstUnit()
+    EEComplexUnit* theDropoff = EEUnitCast<EEComplexUnit>(gWorld.GetUnit((unsigned long)inDropoffID));
+    if (theUnit != kNone && theDropoff) {
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
+        ee_units_host_pending_push(thePlayer, theActiveGroup);
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX.Get(), (int64_t)theDropoff->mTileY.Get());
+        if (Count(theActiveGroup) > 0) {
+            ee_units_host_group_clear_goal(theActiveGroup);
+            EeGoalSpec theSpec;   // new EEUGGather(NULL, theDropoff, true)
+            memset(&theSpec, 0, sizeof(theSpec));
+            theSpec.ctor = EE_GOAL_CTOR_GATHER;
+            theSpec.unit_a = kNone;
+            theSpec.unit_b = IDOf(theDropoff);
+            theSpec.flag_a = 1;
+            ee_units_host_group_set_goal(theActiveGroup, ee_units_host_goal_new(&theSpec), 0);
+            ee_units_host_group_set_action(theActiveGroup, kActionDropoffResource);
+            ee_units_host_group_plan(theActiveGroup);
+            if (Count(theActiveGroup) > 0)
+                ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                   ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+        }
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -395,7 +423,8 @@ enum SweepBody {
     kSweepAddPatrolPoint = 5,
     kSweepAttackUnit = 6,
     kSweepHealUnit = 7,
-    kSweepPathTo = 8
+    kSweepPathTo = 8,
+    kSweepDropoffResource = 9
 };
 
 struct SweepCase {
@@ -457,6 +486,12 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
             OriginalPathTo(inPlayer, inSelection, inCase.mX, inCase.mY, inCase.mFacing, inCase.mFlags);
         break;
     }
+    case kSweepDropoffResource:
+        if (inRust)
+            ee_units_dropoff_resource(inPlayer, inSelection, (uint32_t)inCase.mTarget);
+        else
+            OriginalDropoffResource(inPlayer, inSelection, inCase.mTarget);
+        break;
     case kSweepRepair:
         if (inRust)
             ee_units_repair(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
@@ -666,6 +701,12 @@ void EEGroupCommandSweep()
             for (size_t t = 1; t < theTargets.size(); t++) {
                 if (thePathPoint != NULL && theTargets[t] == (int32_t)IDOf(thePathPoint))
                     continue;
+                theCase.mTarget = theTargets[t];
+                RunCase(theCase, p, thePlayer, theUnits);
+            }
+            // Dropoff Resource at its own first unit, the next player's, its path point and no unit
+            theCase.mBody = kSweepDropoffResource;
+            for (size_t t = 1; t < theTargets.size(); t++) {
                 theCase.mTarget = theTargets[t];
                 RunCase(theCase, p, thePlayer, theUnits);
             }

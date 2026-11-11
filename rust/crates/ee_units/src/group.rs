@@ -541,6 +541,46 @@ pub fn path_to(
     Some((x, y))
 }
 
+/// `kActionDropoffResource` (ee/EEUnitAction.h)
+pub const EE_ACTION_DROPOFF_RESOURCE: i32 = 4011;
+
+/// `EEMDropoffResource::Execute`: with a selection and a drop-off that is a complex unit
+/// (`EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))`), one active group of the whole selection (slot 0, unsorted) goes
+/// to the player's pending groups and spreads around the drop-off's tile; when it kept units it gets a Gather goal
+/// with no resource and the drop-off (`new EEUGGather(NULL, dropoff, true)`) with the action Dropoff Resource, plans,
+/// and one unit, drawn after the plan, acknowledges.
+pub fn dropoff_resource(host: &mut impl Host, player: HostRef, selection: HostRef, dropoff_id: u32) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let dropoff = world_complex_unit(host, dropoff_id).and_then(|id| host.unit(id));
+    let Some(dropoff) = dropoff else { return };
+    if ids.is_empty() {
+        return;
+    }
+    let group = host.active_group_new(player);
+    host.group_fill(group, selection, 0, 0);
+    host.pending_push(player, group);
+    host.group_spread_around_tile(group, dropoff.tile_x, dropoff.tile_y);
+    host.group_ids(group, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    host.group_clear_goal(group);
+    let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_GATHER);
+    spec.unit_b = dropoff_id;
+    spec.flag_a = 1;
+    if let Some(goal) = host.goal_new(&spec) {
+        host.group_set_goal(group, goal, false);
+    }
+    host.group_set_action(group, EE_ACTION_DROPOFF_RESOURCE);
+    host.group_plan(group);
+    host.group_ids(group, &mut ids);
+    if !ids.is_empty() {
+        let index = host.random(0, ids.len() as i32 - 1);
+        host.play_acknowledgement(player, group, index);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1188,5 +1228,70 @@ mod tests {
         let mut host = MockHost::default();
         assert_eq!(path_to(&mut host, player, selection, 1.0, 2.0, o), None);
         assert!(host.calls.is_empty());
+    }
+
+    /// `EEMDropoffResource::Execute`'s calls: one group of the whole selection spread around the drop-off's tile, the
+    /// Gather goal with no resource, the draw after the plan; nothing for a drop-off that is not a complex unit of the
+    /// id's player, or for no selection; a group the spread emptied stays pending with no goal
+    #[test]
+    fn dropoff_resource_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let dropoff = 0x0100_0007;
+        let mut host = MockHost { specs: true, ..Default::default() };
+        host.units.insert(dropoff, EeUnitRecord { tile_x: 30, tile_y: 41, ..complex(dropoff, 0x50) });
+        host.groups.insert(0x600, vec![0x0100_0001, 0x0100_0002]);
+        host.fills.insert(0, vec![0x0100_0001, 0x0100_0002]);
+        host.draws = vec![1];
+        dropoff_resource(&mut host, player, selection, dropoff);
+        let group = r(0x1001);
+        assert_eq!(
+            host.calls,
+            vec![
+                Call::NewGroup(player, group),
+                Call::Fill(group, selection, 0, 0),
+                Call::Pending(player, group),
+                Call::SpreadTile(group, 30, 41),
+                Call::ClearGoal(group),
+                Call::GoalNew(EE_GOAL_CTOR_GATHER, 1),
+                Call::Spec(EE_GOAL_CTOR_GATHER, EE_UNIT_ID_NONE, dropoff, [0; 3], 1, 0),
+                Call::SetGoal(group, 6, false),
+                Call::SetAction(group, EE_ACTION_DROPOFF_RESOURCE),
+                Call::Plan(group),
+                Call::Random(0, 1),
+                Call::Acknowledge(player, group, 1),
+            ]
+        );
+        assert_eq!(host.live, 0);
+        // a drop-off of another player's id, a simple unit, an unknown id, or no selection: nothing
+        for (id, record) in [
+            (dropoff, EeUnitRecord { owner: 2, ..complex(dropoff, 0x50) }),
+            (dropoff, EeUnitRecord { object_kind: crate::kinds::EE_OBJECT_UNIT, ..complex(dropoff, 0x50) }),
+            (0x0100_0099, complex(dropoff, 0x50)),
+        ] {
+            let mut host = MockHost::default();
+            host.units.insert(dropoff, record);
+            host.groups.insert(0x600, vec![0x0100_0001]);
+            dropoff_resource(&mut host, player, selection, id);
+            assert!(host.calls.is_empty());
+        }
+        let mut host = MockHost::default();
+        host.units.insert(dropoff, complex(dropoff, 0x50));
+        dropoff_resource(&mut host, player, selection, dropoff);
+        assert!(host.calls.is_empty());
+        // the group is empty after the spread (here: Fill took nobody): pending, no goal, no draw
+        let mut host = MockHost::default();
+        host.units.insert(dropoff, complex(dropoff, 0x50));
+        host.groups.insert(0x600, vec![0x0100_0001]);
+        dropoff_resource(&mut host, player, selection, dropoff);
+        let group = r(0x1001);
+        assert_eq!(
+            host.calls,
+            vec![
+                Call::NewGroup(player, group),
+                Call::Fill(group, selection, 0, 0),
+                Call::Pending(player, group),
+                Call::SpreadTile(group, 0, 0),
+            ]
+        );
     }
 }

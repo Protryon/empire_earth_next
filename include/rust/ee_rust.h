@@ -737,6 +737,9 @@ constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
 /// `EESendGroupCommand`'s move marker
 constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
 
+/// `kActionDropoffResource` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -10411,6 +10414,11 @@ void ee_units_repair(void *player,
                      void *selection,
                      uint32_t target,
                      bool queued);
+
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+void ee_units_dropoff_resource(void *player,
+                               void *selection,
+                               uint32_t dropoff);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 

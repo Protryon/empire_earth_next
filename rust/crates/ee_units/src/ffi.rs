@@ -277,6 +277,14 @@ pub extern "C" fn ee_units_repair(player: *mut c_void, selection: *mut c_void, t
     crate::group::repair(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target, queued);
 }
 
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_dropoff_resource(player: *mut c_void, selection: *mut c_void, dropoff: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::dropoff_resource(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), dropoff);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
