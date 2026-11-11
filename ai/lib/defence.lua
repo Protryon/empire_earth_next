@@ -49,6 +49,8 @@ M.opts = {
     militia_ms = 12000,   -- a militia citizen is back at work after this long, or once its raid is gone
     militia_ranged = false, -- the militia against a raid with ranged units (rock throwers and slingers kite the
                           -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
+    wave_n = 0,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
+                          -- refuge further from it (the settlements too), not to the nearest tower in its path
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -172,11 +174,11 @@ local function scan(tx, ty)
             end
         end
     end
-    for _, t in ipairs({"b_town_center", "b_capitol"}) do
-        for _, id in ipairs(ai.units{type = t, built = true, limit = 4}) do
+    for _, t in ipairs({"b_town_center", "b_capitol", "b_settlement"}) do
+        for _, id in ipairs(ai.units{type = t, built = true, limit = 8}) do
             local u = ai.unit(id)
             if u ~= nil then
-                REFUGES[#REFUGES + 1] = {id = id, x = u.x, y = u.y, tower = false, range = 0}
+                REFUGES[#REFUGES + 1] = {id = id, x = u.x, y = u.y, tower = false, range = 0, drop = t == "b_settlement"}
             end
         end
     end
@@ -217,12 +219,18 @@ end
 
 -- where a citizen at (x, y) runs from a raid centred at (rx, ry): the nearest refuge not further into the raid (a
 -- tower may be: the raiders that follow come under its fire), to the spot 2 tiles behind it from the raid
-local function refuge_for(x, y, rx, ry, ship)
+local function refuge_for(x, y, rx, ry, ship, wave)
     local best, bd = nil, nil
     local dc = d2(x, y, rx, ry)
     for _, r in ipairs(REFUGES) do
         local dr = d2(r.x, r.y, rx, ry)
-        if (r.tower and not ship) or dr >= dc then   -- (from a warship: away from it, a tower outranged)
+        local ok
+        if wave then
+            ok = dr >= dc + 16   -- (a wave: only away from it, settlements too)
+        else
+            ok = not r.drop and ((r.tower and not ship) or dr >= dc)
+        end
+        if ok then   -- (from a warship: away from it, a tower outranged)
             local d = d2(x, y, r.x, r.y)
             if bd == nil or d < bd then
                 best, bd = r, d
@@ -230,6 +238,12 @@ local function refuge_for(x, y, rx, ry, ship)
         end
     end
     if best == nil then
+        if wave then   -- (no refuge away from the wave: 14 tiles straight away from it, on the map)
+            local m = ai.map()
+            local dx, dy = x - rx, y - ry
+            local l = math.max(math.abs(dx), math.abs(dy), 1)
+            return math.max(2, math.min(x + dx * 14 // l, m.width - 3)), math.max(2, math.min(y + dy * 14 // l, m.height - 3))
+        end
         return nil
     end
     local dx, dy = best.x - rx, best.y - ry
@@ -479,7 +493,7 @@ local function handle(mem, cl, now)
         if not in_fight[u.id] then
             local a = mem.away[u.id]
             if a == nil or now - (a.sent or 0) >= o.reflee_ms then
-                local fx, fy = refuge_for(u.x, u.y, cl.x, cl.y, cl.ship)
+                local fx, fy = refuge_for(u.x, u.y, cl.x, cl.y, cl.ship, o.wave_n > 0 and cl.n >= o.wave_n)
                 if fx ~= nil and d2(u.x, u.y, fx, fy) > 4 then
                     a = go_away(mem, u, "flee", now)
                     a.t, a.sent = now, now
