@@ -9,11 +9,13 @@
 //! - `engine`: the engine messages' table (`NEMessage.cpp`; the players' inputs nested in the ticks);
 //! - `codec`: plain values in, bytes out, and bytes in, member spans out;
 //! - `units`: `CompressUnits`/`DecompressUnits`;
+//! - `execute`: the `Execute` bodies' decisions (the selection id check, the resources), with their C ABI;
 //! - `ffi`: the C ABI.
 
 pub mod classes;
 pub mod codec;
 pub mod engine;
+pub mod execute;
 pub mod ffi;
 pub mod schema;
 pub mod units;

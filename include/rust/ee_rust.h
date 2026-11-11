@@ -553,6 +553,12 @@ constexpr static const uint32_t EE_NETMSG_NE_XFER_MESSAGE = (EE_NETMSG_ENGINE_BA
 /// `NEMXferStatus`
 constexpr static const uint32_t EE_NETMSG_NE_XFER_STATUS = (EE_NETMSG_ENGINE_BASE + 27);
 
+/// `EEMGameRestarting`: always runs.
+constexpr static const uint8_t TYPE_GAME_RESTARTING = 145;
+
+/// `EEMMigrationSlotInfo`: runs on a client whatever its selection id.
+constexpr static const uint8_t TYPE_MIGRATION_SLOT_INFO = 124;
+
 /// No message has this type.
 constexpr static const uint8_t EE_NETMSG_KIND_NONE = 0;
 
@@ -7004,6 +7010,17 @@ int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t *buffer, uint32_t *received);
 /// # Safety
 /// `server` is a valid slot; `data` for `length`.
 int32_t ee_tcp_xfer_send_to(void **server, uint32_t index, const uint8_t *data, uint32_t length);
+
+uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
+
+uint8_t ee_netmsg_selection_copies(uint8_t is_local, uint8_t message_id, uint8_t current_id);
+
+uint8_t ee_netmsg_command_runs(uint8_t is_server,
+                               uint8_t message_type,
+                               uint8_t message_id,
+                               uint8_t last_id);
+
+uint32_t ee_netmsg_selection_passes(uint8_t executing_selection);
 
 /// `ExportSize` of a class whose members are all fixed (its constant); 0 for a class with variable members.
 uint32_t ee_netmsg_fixed_size(uint32_t class_id);

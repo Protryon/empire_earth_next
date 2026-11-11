@@ -8433,28 +8433,6 @@ static const float kTradeLimitLow = 0.01f;    // EEGetTradePrice: kHeightEpsilon
 static const float kTradeCurve = 0.666666687f;   // 0x449af8 (provisional names)
 static const float kTradeScale = 5000.0f;        // 0x449afc
 
-extern "C" uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local)
-{
-    return !is_server && is_local;
-}
-
-extern "C" uint8_t ee_netmsg_selection_copies(uint8_t is_local, uint8_t message_id, uint8_t current_id)
-{
-    return is_local && message_id == current_id;
-}
-
-extern "C" uint8_t ee_netmsg_command_runs(uint8_t is_server, uint8_t message_type, uint8_t message_id, uint8_t last_id)
-{
-    if (is_server)
-        return !(message_id != last_id && message_type != 0x91);
-    return !(message_id != last_id && message_type != 0x91 && message_type != 0x7c);
-}
-
-extern "C" uint32_t ee_netmsg_selection_passes(uint8_t executing_selection)
-{
-    return executing_selection ? 2 : 1;
-}
-
 extern "C" uint8_t ee_netmsg_add_remove(uint8_t add, uint32_t amount, int64_t have)
 {
     if (add)

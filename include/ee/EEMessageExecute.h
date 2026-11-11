@@ -6,6 +6,7 @@
 #define EE_EEMESSAGEEXECUTE_H
 
 #include <stdint.h>
+#include "rust/ee_rust.h"   // the selection id check (ee_netmsg execute.rs)
 
 // one step of EEMExchangeResources: apply it or not, the resource's amount (cost) and the gold's (amount)
 struct EeNetMsgExchangeStep {
@@ -15,14 +16,6 @@ struct EeNetMsgExchangeStep {
 };
 
 extern "C" {
-// ExecuteSelectionMessage: whether the client marks the world as executing the local selection (the sender is local)
-uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
-// ExecuteSelectionMessage, after Execute: whether the local sender's selected group copies the active group
-uint8_t ee_netmsg_selection_copies(uint8_t is_local, uint8_t message_id, uint8_t current_id);
-// ExecuteMessage: whether the command runs (else the sender's active group is reset to the selection)
-uint8_t ee_netmsg_command_runs(uint8_t is_server, uint8_t message_type, uint8_t message_id, uint8_t last_id);
-// the selection toggles' passes: twice while a selection is being replayed
-uint32_t ee_netmsg_selection_passes(uint8_t executing_selection);
 // EEMAddRemoveResources: 0 nothing, 1 add, 2 take
 uint8_t ee_netmsg_add_remove(uint8_t add, uint32_t amount, int64_t have);
 // EEGetTradePrice: a resource's market price (1..1000) from its rate and the player's trade balance in it
