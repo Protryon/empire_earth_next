@@ -396,7 +396,7 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     long theCategory = inUnit->mUnitClass->mCategory;
     if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
         // (the braces were missing: every unit lost counted in the citizens' by-killer and by-distance fields, and
-        // the buildings' and others' counts hung off the town-centre test; AI_RESEARCH §8.40)
+        // the buildings' and others' counts hung off the town-centre test; AI_RESEARCH §8.41)
         sLost[theID][0]++;
         EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
         sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;

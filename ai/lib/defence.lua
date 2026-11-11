@@ -1,5 +1,5 @@
 -- The town's answer to raids on its citizens, over the per-unit interface (docs/AI_LUA_UNITS.md §3, §11;
--- docs/AI_RESEARCH.md §8.40). require("lib.defence"). Generic: any script may use it; the numbers are options.
+-- docs/AI_RESEARCH.md §8.41). require("lib.defence"). Generic: any script may use it; the numbers are options.
 --
 --   D.setup(opts)           once (the script's init): the options; the engine's militia and danger-zone reflexes off
 --                           (ai.reflex), since this module does both
@@ -525,7 +525,7 @@ local function note(mem, events, now)
             end
         elseif (e.kind == "died" or e.kind == "converted") and e.type ~= nil then
             -- (a converted unit is lost as well; before the fix of 2026-11-10 the engine reported every kill as
-            -- "converted", AI_RESEARCH §8.40)
+            -- "converted", AI_RESEARCH §8.41)
             local c = class(e.type)
             if c.category == "citizen" then
                 mem.st.lost_cit = mem.st.lost_cit + 1

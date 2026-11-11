@@ -9,8 +9,8 @@
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
 local G = require("lib.groups")
-local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.40)
-local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.40)
+local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.41)
+local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
 
 local PLAN = {
     {   -- Prehistoric
@@ -53,7 +53,7 @@ local PLAN = {
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
         -- (balanced's standing army: a quarter of the citizens, at least 10; against a fixed 20 it lost fewer citizens
-        -- in every matchup, AI_RESEARCH §8.40)
+        -- in every matchup, AI_RESEARCH §8.41)
         army_per = 25, army_floor = 10,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
@@ -915,7 +915,7 @@ function M.step(view, memory)
     -- the soldiers, from each trainer in turn, while the army is short (the reserve keeps them off the advance's
     -- resources unless the town scrambles)
     if army_short then
-        -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.40)
+        -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
         GD.train(view, memory, soldiers_wanted, order, scramble and 3 or 2)
     end
 
@@ -923,7 +923,7 @@ function M.step(view, memory)
     -- the town together (a defence of the claim range: they fight what comes onto the claimed land and come back), and
     -- one of them scouts, the nearest claimed site not explored yet first (the gatherers go only to what the player
     -- has seen), then the land beyond
-    -- (lib.guard, AI_RESEARCH §8.40: the home guard waits at its post under a tower, fights the raids in the claim
+    -- (lib.guard, AI_RESEARCH §8.41: the home guard waits at its post under a tower, fights the raids in the claim
     -- range with focus fire and pulls its hurt back; an old save's defend group "home" is disbanded into it)
     local old_home = G.role(memory, "home")
     if old_home ~= nil then

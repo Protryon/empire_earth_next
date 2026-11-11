@@ -1,5 +1,5 @@
 -- The permanent scout and what it learns, over the per-unit interface (docs/AI_LUA_UNITS.md §3; docs/AI_RESEARCH.md
--- §8.40). require("lib.scout"). NOT WIRED YET: no script calls it.
+-- §8.41). require("lib.scout"). NOT WIRED YET: no script calls it.
 -- (The next round wires it into boom and benches it.) Generic: any script may use it.
 --
 --   SC.step(view, mem, opts)   every strategy step: keeps one soldier watching the enemy's town (a manual lib.groups

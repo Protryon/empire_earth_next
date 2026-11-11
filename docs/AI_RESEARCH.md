@@ -2769,7 +2769,63 @@ classic, 32 players).
   in every bench. **The other engines are unchanged** by the interface additions: boom and Age of AI against the
   classic, seed 2, 25 minutes, give the same traces on this build as on main's (1,887 and 2,541 lines).
 
-### 8.40 Boom's defence and army on the per-unit interface (2026-11-10, EE-SIM)
+### 8.40 The classic computer player in Lua, the army (2026-11-10, EE-SIM)
+
+The second stage of §8.39: `ai/classic_lua/army.lua` replaces the first army stage with the classic's army.
+- The attack (EECPCombatManager::Update on the attack timer: the target player, CreateGroup).
+- The attack groups: the unit selector's group size, held, counter and favourite units; Personnel's per-class
+  request slots with their 600 s deadline; the sub-groups' wait for units, gathering at the rally point, and the
+  task (AssignLandTask's territory targets, else the defence ladder).
+- The defence commander: an aid package per town (EEPlayer::AddUnitToTown's clusters), SendAid / SendBestSubGroup /
+  CounterAttack, Gather, Deploy, Recall, PlanAid, CreateDefendGroup, GetUnitAllowance, ComputeTownThreat over the
+  seen armies; NoteThreat on citizen deaths.
+- lib.groups moves and fights the groups. ORIGIN has the deviations (fog: the target files are what ai.memory holds)
+  and what is not started (special units, ChooseUnitsToKill, hills and choke points, naval, air, walls).
+
+Three economy differences under the classic personality, found while chasing the army's numbers, mattered more than
+the army itself:
+- **The needs ledger counted the in-game cost, not the listed one.** EECPResourceManager::AddCosts counts a tech's
+  listed cost (ScaleCost'ed); `ai.class`'s `cost` is GetCost's, whose epoch factor zeroes the future research
+  sentinel (2000 wood, 1000 stone, 2000 iron) in the Prehistoric. The classic personality splits gatherers by the
+  needs, so the C++ sent its first gatherers to stone and iron while the port's went to wood. `data_cost` (AI_LUA_UNITS
+  §11) is the ledger's cost now.
+- **BuildSettlementFor never ran.** The gather goal's storage search asks the C++ AI for a settlement by a far
+  resource; the engine hook skips a script's seat. Without it the classic personality's mines had no drop site, so
+  no tower site either (FindTowerSite works the centres with a drop site): 0-3 towers by 12 minutes against the
+  C++'s 11-23, and the raids walked in. econ.lua ports it (every 4 s over the gatherers at work).
+- **HasEnemyNear saw too little.** It took the enemies seen within 9 tiles; the C++ sums every enemy influence in
+  the regions round a site (up to 27 tiles across). Lua citizens died far from home (386 of 917 deaths beyond 30
+  tiles, 188 to towers). It now takes the armed enemies seen or remembered in the same box.
+
+Bench: Small, Hard, 2 AIs (Lua against the C++ classic in the same game), seeds 2-17, 90 minutes, open data;
+stage 1 (lua_bal4, lua_cls4) against this stage (a8_bal, a8_cls); classic with the retail Hard cheats on both AIs.
+
+| Matchup | AI | Stone | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Citizens at 90 min (wiped) | Won-lost |
+|---|---|---|---|---|---|---|---|
+| balanced, stage-1 | classic | 16/16, 25.2 | 15/16, 63.8 | 22.9/2.2 / 25.0/2.2 / 30.4/5.1 / 45.9/3.2 | 2.3 / 24.6 | 151 (0/16) | 12-1, 3 close |
+| balanced, stage-1 | classic_lua | 16/16, 24.9 | 9/16, 64.6 | 23.4/2.3 / 27.2/3.2 / 38.0/6.3 / 48.2/7.1 | 2.1 / 95.4 | 45 (2/16) | 1-12, 3 close |
+| balanced, stage-2 | classic | 15/16, 25.1 | 13/16, 61.2 | 22.7/2.5 / 25.2/1.9 / 30.0/6.2 / 46.8/4.4 | 2.6 / 28.0 | 136 (1/16) | 11-3, 2 close |
+| balanced, stage-2 | classic_lua | 16/16, 25.0 | 9/16, 65.9 | 23.6/2.8 / 26.7/3.3 / 33.9/7.2 / 43.4/9.3 | 2.0 / 66.4 | 50 (3/16) | 3-11, 2 close |
+| classic+cheats, stage-1 | classic | 16/16, 45.6 | - | 27.9/6.4 / 51.1/9.2 / 50.9/13.7 / 50.8/8.6 | 2.6 / 26.1 | 51 (0/16) | 12-1, 3 close |
+| classic+cheats, stage-1 | classic_lua | 16/16, 46.5 | - | 22.4/7.1 / 33.6/10.5 / 34.6/13.2 / 31.0/16.8 | 13.7 / 155.1 | 7 (4/16) | 1-12, 3 close |
+| classic+cheats, stage-2 | classic | 16/16, 45.6 | - | 25.9/5.9 / 50.3/4.1 / 49.9/4.6 / 49.4/2.4 | 7.6 / 76.5 | 50 (0/16) | 0-6, 10 close |
+| classic+cheats, stage-2 | classic_lua | 16/16, 46.4 | - | 22.2/7.9 / 37.2/14.3 / 44.0/39.6 / 45.9/42.3 | 9.9 / 68.2 | 56 (0/16) | 6-0, 10 close |
+
+Readings:
+- **Balanced:** the economy is level to 30 minutes and close at 40 (43.4 against 46.8 citizens); Lua keeps a larger
+  army (7-9 against 4-6) and loses more citizens (66 against 28 in all), and loses 3-11 (2 close). The losses come
+  later in the game, past the first epochs.
+- **Classic with the cheats:** Lua's economy trails at 20 minutes (37 against 50 citizens) and is level by 40; its
+  army grows to 40 while the C++'s falls to 2-5 (its attacks die at Lua's towers), and Lua wins 6-0 (10 close):
+  from level-ish to ahead, so the remaining gap is in the other direction.
+- An experiment that dropped the target file's floor at the own military (the suspected feedback that grows the
+  army) did not lower the army and was not kept.
+- Determinism: seeds 2 and 5, 60 minutes, `--repeat 2`: traces identical. 0 script errors.
+
+Next: the balanced late-game losses and army size (the attack groups' slots against the room), the classic
+personality's early citizens, then the special units, ChooseUnitsToKill and the walls.
+
+### 8.41 Boom's defence and army on the per-unit interface (2026-11-10, EE-SIM)
 
 The owner's brief: boom's raid answer, militia and Stone Age guard in Lua on the per-unit interface (AI_LUA_UNITS
 §3, §11), with the improved classic's rules (`balanced`) and the research's (STRATEGY_RESEARCH §4), as library

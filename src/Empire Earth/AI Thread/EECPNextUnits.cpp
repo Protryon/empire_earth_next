@@ -516,7 +516,7 @@ void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool in
         theKiller = (long)inUnit->mLastAttacker->mUnitID;
     // converted: alive and another player's now. A unit killed still has its hit points here (EEComplexUnit::Kill
     // calls UnitTaken before it zeroes them), so the hit points alone made every kill a "converted" event and no
-    // script ever saw "died" (AI_RESEARCH §8.40); a priest's conversion is a swap (EEConvertUnit), skipped above
+    // script ever saw "died" (AI_RESEARCH §8.41); a priest's conversion is a swap (EEConvertUnit), skipped above
     bool theConverted = inUnit->mHitPoints > 0 && inUnit->mPlayer != NULL && inUnit->mPlayer != inPlayer;
     EECPUnitsEventAdd(s, theConverted ? kEvConverted : kEvDied, theID, theKiller,
         inUnit->mUnitClass != NULL ? inUnit->mUnitClass->mUnitType : -1, 0);
@@ -1266,12 +1266,44 @@ static int LuaClass(lua_State* L)
             lua_setfield(L, -2, kNames[i]);
         }
         lua_setfield(L, -2, "cost");
+        lua_newtable(L);
+        for (long i = 0; i < 5; i++) {
+            lua_pushinteger(L, theNode != NULL ? (lua_Integer)me->ScaleCost(theNode->mData->mCosts[kResourceFood + i]) : 0);
+            lua_setfield(L, -2, kNames[i]);
+        }
+        lua_setfield(L, -2, "data_cost");   // the needs ledger's cost (EECPResourceManager::AddCosts)
     }
     EECPUnitsSetBool(L, "building", c->IsBuilding());
     EECPUnitsSetInt(L, "size", c->GetTileSize());
     EECPUnitsSetInt(L, "garrison", c->mGarrisonCapacity);
     EECPUnitsSetInt(L, "transport", c->mTransportCapacity);
     EECPUnitsSetBool(L, "can_garrison", c->mCanGarrison);
+    // the class's military data (the classic unit selector's: its AI kind, the kinds it counters, its roles,
+    // its influence and epoch, its domain)
+    EECPUnitsSetInt(L, "ai_kind", (long)c->mAIKind);
+    lua_createtable(L, 3, 0);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind1);
+    lua_rawseti(L, -2, 1);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind2);
+    lua_rawseti(L, -2, 2);
+    lua_pushinteger(L, (lua_Integer)c->mCounterKind3);
+    lua_rawseti(L, -2, 3);
+    lua_setfield(L, -2, "counters");
+    EECPUnitsSetBool(L, "attack_unit", c->mIsAttackUnit);
+    EECPUnitsSetBool(L, "defense_unit", c->mIsDefenseUnit);
+    EECPUnitsSetBool(L, "medic", c->mIsMedic);
+    EECPUnitsSetBool(L, "converts", c->mHasCalamityPowers || c->mConversionRate != 0.0f);
+    EECPUnitsSetBool(L, "is_transport", c->IsTransport());
+    EECPUnitsSetBool(L, "mine", c->mFamily == kUnitFamilyMines);
+    EECPUnitsSetInt(L, "influence", c->mInfluence);
+    EECPUnitsSetInt(L, "epoch", c->mEpoch);
+    EECPUnitsSetInt(L, "pop", c->GetPopulationCost());
+    {
+        unsigned char d = c->GetDomains();
+        const char* theDomain = ((d & kMovementAir) && !c->FliesOver()) ? "air"
+            : (d & kMovementSea) ? "sea" : (d & kMovementSpace) ? "space" : "land";
+        EECPUnitsSetStr(L, "domain", theDomain);
+    }
     if ((unsigned long)theType < me->mUnitClassUpgrades.size() && me->mUnitClassUpgrades[theType] != NULL) {
         EEUnitClassUpgrade* u = me->mUnitClassUpgrades[theType];
         EECPUnitsSetInt(L, "hp", u->mMaxHitPoints);
@@ -3410,6 +3442,14 @@ static void EECPUnitsPushCost(lua_State* L, EEComputerPlayer* me, EETechTreeNode
         lua_setfield(L, -2, kNames[i]);
     }
     lua_setfield(L, -2, "cost");
+    // the tech's listed cost as the classic's needs ledger counts it (EECPResourceManager::AddCosts: the data's
+    // mCosts, ScaleCost'ed, without GetCost's epoch and upgrade factors)
+    lua_createtable(L, 0, 5);
+    for (long i = 0; i < 5; i++) {
+        lua_pushinteger(L, (lua_Integer)me->ScaleCost(inNode->mData->mCosts[kResourceFood + i]));
+        lua_setfield(L, -2, kNames[i]);
+    }
+    lua_setfield(L, -2, "data_cost");
 }
 
 // ai.techs{epoch = n, id = tech} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the

@@ -105,7 +105,7 @@ function M.research(view, memory, id)
         rs.ids[e][#rs.ids[e] + 1] = id
     end
     if not is_epoch(id) or not T.cheat(memory, "epochs") then
-        R.add_costs(memory, t.cost or {}, 1)
+        R.add_costs(memory, t.data_cost or t.cost or {}, 1)
     end
     update_pending(rs)
 end

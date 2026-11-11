@@ -1,5 +1,5 @@
 -- Attacks from strength, over the per-unit interface and lib.groups (docs/AI_LUA_UNITS.md §3; docs/AI_RESEARCH.md
--- §8.40). require("lib.attack"). NOT WIRED YET: no script calls it.
+-- §8.41). require("lib.attack"). NOT WIRED YET: no script calls it.
 -- (The next round wires it into boom and benches it.) Generic: any script may use it; the numbers are options.
 --
 --   A.step(view, mem, opts)   every strategy step. opts: guard (the group the force comes from), keep (soldiers the

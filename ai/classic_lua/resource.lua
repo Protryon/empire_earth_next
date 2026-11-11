@@ -480,9 +480,22 @@ end
 -- EECPBuildManager::HasEnemyNear: armed enemy units in the box of a region (9 tiles) round a tile. DEVIATION (fog):
 -- the original sums every player's influence there, seen or not; the port counts the armed enemies it sees
 function M.enemy_near(x, y)
-    for _, id in ipairs(ai.seen{enemy = true, armed = true, near = {x, y, 13}}) do
-        local u = M.unit(id)
-        if u ~= nil and math.abs(u.x - x) <= 9 and math.abs(u.y - y) <= 9 and u.category ~= "citizen" then
+    -- HasEnemyNear: any enemy influence (an armed unit, a tower, an armed building) in the 9-tile influence regions
+    -- the box x +- 9, y +- 9 touches (up to 27 tiles across). DEVIATION (fog): the classic sums the influence table
+    -- over every player's units; the port takes the armed enemies it sees or remembers (ai.memory: buildings until
+    -- seen gone, units for 3 minutes)
+    local list = M.memo("enemy_armed", function()
+        local out = {}
+        local recs = ai.memory{enemy = true, armed = true}
+        for _, m in ipairs(recs) do
+            out[#out + 1] = {x = m.x, y = m.y}
+        end
+        return out
+    end)
+    local l, r = (x - 9) // 9 * 9, (x + 9) // 9 * 9 + 8
+    local t, b = (y - 9) // 9 * 9, (y + 9) // 9 * 9 + 8
+    for _, m in ipairs(list) do
+        if m.x >= l and m.x <= r and m.y >= t and m.y <= b then
             return true
         end
     end
