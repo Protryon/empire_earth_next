@@ -9,6 +9,7 @@
 #include "GEWindow.h"
 #include "lle/SECD.h"
 #include "lle/SEMixer.h"
+#include "rust/ee_rust.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -116,29 +117,19 @@ void SEInitializeCD(GEWindow* inWindow)
 }
 
 // FUNCTION: LLE 0x1005354b
-// Creates a mixer for every valid sound plug-in in the folder; kErrorNotFound when none loads
+// Creates a mixer for every valid sound plug-in of the plug-in table; kErrorNotFound when none loads (the choice:
+// rust/crates/ee_sound mixers.rs)
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
 {
-    PIMModule* theModule;
-    long theResult = PIMModule::GetFirstModule(inDirectory, ' snd', theModule);
-    if (theResult == kErrorOK) {
-        do {
-            SEMixer* theMixer = new SEMixer(theModule, inWindow);
-            if (!theMixer->IsValid())
-                delete theMixer;
-            theResult = PIMModule::GetNextModule(theModule);
-        } while (theResult == kErrorOK);
-    }
-    if (theResult == kErrorNoMoreFiles)
-        theResult = SEMixer::GetCount() > 0 ? kErrorOK : kErrorNotFound;
-    return theResult;
+    SEMixerStart theStart = {&inDirectory, inWindow, NULL};
+    return ee_mixers_initialize(&theStart);
 }
 
 // FUNCTION: LLE 0x100535e2
-// Restores the first CD drive's start-up volume, then deletes every CD drive and every mixer
+// Restores the first CD drive's start-up volume, then deletes every CD drive and every mixer (the first one until
+// none is left: ee_sound mixers.rs). There is no CD drive on this port: SEInitialize is never asked for one.
 void SEShutdown(bool inForced)
 {
-    SEMixer* theMixer = NULL;
     SECD* theCD = NULL;
     if (SECD::GetCount() > 0) {
         SECD::GetCD(0, theCD);
@@ -148,8 +139,5 @@ void SEShutdown(bool inForced)
         SECD::GetCD(0, theCD);
         delete theCD;
     }
-    while (SEMixer::GetCount() > 0) {
-        SEMixer::GetMixer(0, theMixer);
-        delete theMixer;
-    }
+    ee_mixers_delete_all();
 }

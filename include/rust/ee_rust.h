@@ -9220,6 +9220,42 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
 
+/// The constructor: a new mixer joins the registry.
+///
+/// # Safety
+/// `mixer` is a live `SEMixer*`.
+void ee_mixers_register(void *mixer);
+
+/// The destructor's decisions: the active mixer stops and deactivates, then the mixer leaves the registry.
+///
+/// # Safety
+/// `mixer` is the `SEMixer*` being destroyed.
+void ee_mixers_destroy(void *mixer);
+
+/// `SEMixer::GetCount`.
+uint32_t ee_mixers_count();
+
+/// `SEMixer::GetMixer`: `kErrorBeyondEnd` past the last (`out` untouched).
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_mixers_get(uint32_t index, void **out);
+
+/// `SEMixer::UseMixer` (null: none).
+///
+/// # Safety
+/// `mixer` is null or a live `SEMixer*`.
+int32_t ee_mixers_use(void *mixer_ptr);
+
+/// `SEInitializeMixers` over the C++ start state `ctx`.
+///
+/// # Safety
+/// `ctx` is what the trampolines expect.
+int32_t ee_mixers_initialize(void *ctx);
+
+/// `SEShutdown`'s mixers.
+void ee_mixers_delete_all();
+
 /// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
 /// one. True when the thread must end.
 ///

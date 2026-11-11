@@ -2,7 +2,8 @@
 //! an instance gets, the category and instance limits and priorities, the paused queue of looping sounds, the
 //! scavenger thread's decisions, one-shot sounds and the random start offsets; and `SEConductor`'s score table and
 //! decisions (`conductor`), over dmusic's objects which stay C++; and the game's music manager's decisions
-//! (`music`: `EEMusicManager`'s song changes, fades, intensity rules and timers).
+//! (`music`: `EEMusicManager`'s song changes, fades, intensity rules and timers); and the mixers' registry and the
+//! Sound Engine's start and shutdown decisions (`mixers`).
 //!
 //! C++ keeps the objects and their lifetimes: the instance nodes (pooled, intrusively reference counted, held by
 //! units, unit classes and effects), the samples (shared with the mixer plug-in), the sound path, the mixer, the
@@ -14,6 +15,7 @@
 
 pub mod conductor;
 pub mod manager;
+pub mod mixers;
 pub mod msvc_sort;
 pub mod music;
 
@@ -21,6 +23,8 @@ pub mod music;
 pub mod conductor_ffi;
 #[cfg(not(test))]
 pub mod ffi;
+#[cfg(not(test))]
+pub mod mixers_ffi;
 #[cfg(not(test))]
 pub mod music_ffi;
 
@@ -30,5 +34,7 @@ mod fake;
 mod golden;
 #[cfg(test)]
 mod golden_conductor;
+#[cfg(test)]
+mod golden_mixers;
 #[cfg(test)]
 mod golden_music;
