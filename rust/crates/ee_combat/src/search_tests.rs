@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::pursuer::pursuer_of;
 use crate::search::*;
 use crate::walks::EeCombatHandle;
 
@@ -318,4 +319,19 @@ fn search_along_list_ends_without_a_forward_neighbour() {
     i.attack = 0.0;
     search_along_list(&i, unit, &mut w);
     assert!(w.log.is_empty());
+}
+
+#[test]
+fn pursuer_of_keeps_the_first_nearest() {
+    let mut w = World::default();
+    let unit = w.add(enemy((5, 5), 0.0));
+    let a = w.add(Unit { footprint: (7, 5), ..Unit::default() });
+    let b = w.add(Unit { footprint: (5, 3), ..Unit::default() });
+    let c = w.add(Unit { footprint: (5, 6), ..Unit::default() });
+    w.tests.insert((EE_COMBAT_SEARCH_TEST_PURSUES, a));
+    w.tests.insert((EE_COMBAT_SEARCH_TEST_PURSUES, b));
+    w.list = vec![99, b, a, unit, c];
+    assert_eq!(pursuer_of(unit, 5, 5, &mut w), a);
+    // a (4) forward first, then c does not pursue, then b ties a and is not taken
+    assert_eq!(w.traces, vec![(a, 4, 0), (b, 4, 0)]);
 }

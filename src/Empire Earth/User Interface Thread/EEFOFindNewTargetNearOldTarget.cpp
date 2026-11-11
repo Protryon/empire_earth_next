@@ -3214,84 +3214,26 @@ EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRi
 
 // FUNCTION: EXE 0x645bc4
 // Returns the nearest unit that attacks or gathers from the unit
+// (new: the walk along the unit list and the choice are ee_combat's pursuer_of; the goal tests stay here)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
 {
-    long theBest = -1;
+    EESearchContext theContext;
+    theContext.mKind = kSearchPursuer;
+    theContext.mUnit = inUnit;
+    EeCombatSearchHost theHost = EESearchHost(&theContext);
     long theX = inUnit->GetTileX();
     long theY = inUnit->GetTileY();
-    EEComplexUnit* theResult = NULL;
-    EEUnit* theForward = static_cast<EEUnit*>(inUnit->mTileNode->mPrev);
-    EEUnit* theBackward = static_cast<EEUnit*>(inUnit->mTileNode->mNext);
-    bool theForwardDone;
-    bool theBackwardDone;
-    long theTileX;
-    long theTileY;
-    EEComplexUnit* theUnit;
-    EEUGAttackUnit* theAttack;
-    EEUGGather* theGather;
-    long theDistance;
-    std::vector<int32_t> theTrace;   // TEST ONLY (the CBPU capture: each pursuer and its distance)
-
-    if (RTSDummyHead(theForward) != NULL || theForward == NULL)
-        theForwardDone = true;
-    else
-        theForwardDone = false;
-    theBackwardDone = theBackward == NULL;
-    while (!theForwardDone || !theBackwardDone) {
-        if (!theForwardDone) {
-            theUnit = theForward->mComplexUnit;
-            if (theUnit != NULL && theUnit->mLauncherClass == NULL && theUnit->mGoalState != NULL) {
-                EEUnitGoal* theGoal = theUnit->mGoalState;
-                theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-                theGather = dynamic_cast<EEUGGather*>(theGoal);
-                if ((theAttack != NULL && theAttack->mTarget->mComplexUnit == inUnit)
-                    || (theGather != NULL && theGather->mResource == inUnit)) {
-                    inUnit->GetNearestFootprintTile(theForward, &theTileX, &theTileY);
-                    theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
-                    theTrace.push_back((int32_t)theUnit->GetUnitID());   // TEST ONLY
-                    theTrace.push_back((int32_t)theDistance);
-                    if (theBest == -1 || theDistance < theBest) {
-                        theResult = theUnit;
-                        theBest = theDistance;
-                    }
-                }
-            }
-            theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
-            if (RTSDummyHead(theForward) != NULL || theForward == NULL)
-                theForwardDone = true;
-            else
-                theForwardDone = false;
-        }
-        if (theBackwardDone)
-            continue;
-        theUnit = theBackward->mComplexUnit;
-        if (theUnit != NULL && theUnit->mLauncherClass == NULL && theUnit->mGoalState != NULL) {
-            EEUnitGoal* theGoal = theUnit->mGoalState;
-            theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-            theGather = dynamic_cast<EEUGGather*>(theGoal);
-            if ((theAttack != NULL && theAttack->mTarget->mComplexUnit == inUnit)
-                || (theGather != NULL && theGather->mResource == inUnit)) {
-                inUnit->GetNearestFootprintTile(theBackward, &theTileX, &theTileY);
-                theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
-                theTrace.push_back((int32_t)theUnit->GetUnitID());   // TEST ONLY
-                theTrace.push_back((int32_t)theDistance);
-                if (theBest == -1 || theDistance < theBest) {
-                    theResult = theUnit;
-                    theBest = theDistance;
-                }
-            }
-        }
-        theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
-        theBackwardDone = theBackward == NULL;
-    }
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBPU capture)
+    uint64_t thePursuer = ee_combat_pursuer_of((uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), (int32_t)theX,
+                                               (int32_t)theY, &theHost);
+    EEComplexUnit* theResult = thePursuer != 0 ? EESearchUnit(thePursuer)->mComplexUnit : NULL;
+    if (EESimCaptureRecord::Active()) {
         EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'P', 'U'));
         theRecord.I32((int32_t)inUnit->GetUnitID());
         theRecord.I32((int32_t)theX);
         theRecord.I32((int32_t)theY);
-        theRecord.I32((int32_t)(theTrace.size() / 2));
-        for (size_t i = 0; i < theTrace.size(); i++)
-            theRecord.I32(theTrace[i]);
+        theRecord.I32((int32_t)(theContext.mTrace.size() / 2));
+        for (size_t i = 0; i < theContext.mTrace.size(); i++)
+            theRecord.I32(theContext.mTrace[i]);
         theRecord.I32(theResult != NULL ? (int32_t)theResult->GetUnitID() : -1);
         theRecord.Commit();
     }

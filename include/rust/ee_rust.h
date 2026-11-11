@@ -3029,6 +3029,45 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
+struct EeCombatSearchTarget {
+  /// its class's `mTileSize > 1`
+  int32_t multiple;
+  /// its class's `mUnitType`
+  int32_t unit_type;
+  /// its stats' attack and maximum velocity
+  float attack;
+  float max_velocity;
+};
+
+/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
+/// function of the right type.
+struct EeCombatSearchHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
+  uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
+  int32_t (*dummy_head)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  void (*target)(void *ctx, uint64_t unit, EeCombatSearchTarget *out);
+  float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
+  float (*attack_factor)(void *ctx, uint64_t unit);
+  int32_t (*line_blocked)(void *ctx, uint64_t unit);
+  int32_t (*reachable)(void *ctx, uint64_t unit);
+  void (*ignore)(void *ctx, uint64_t unit);
+  void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
 struct EeCombatSearchOut {
   uint64_t best;
@@ -3068,45 +3107,6 @@ struct EeCombatSearchIn {
   float position_y;
   /// the targeting table, row by row
   int32_t table[30];
-};
-
-/// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
-struct EeCombatSearchTarget {
-  /// its class's `mTileSize > 1`
-  int32_t multiple;
-  /// its class's `mUnitType`
-  int32_t unit_type;
-  /// its stats' attack and maximum velocity
-  float attack;
-  float max_velocity;
-};
-
-/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
-/// function of the right type.
-struct EeCombatSearchHost {
-  void *ctx;
-  /// The regions' rectangle into `out` (left, top, right, bottom).
-  void (*regions)(void *ctx,
-                  int32_t left,
-                  int32_t top,
-                  int32_t right,
-                  int32_t bottom,
-                  int32_t (*out)[4]);
-  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
-  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
-  void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
-  uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
-  int32_t (*dummy_head)(void *ctx, uint64_t unit);
-  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
-  void (*target)(void *ctx, uint64_t unit, EeCombatSearchTarget *out);
-  float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
-  float (*attack_factor)(void *ctx, uint64_t unit);
-  int32_t (*line_blocked)(void *ctx, uint64_t unit);
-  int32_t (*reachable)(void *ctx, uint64_t unit);
-  void (*ignore)(void *ctx, uint64_t unit);
-  void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
-  void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
 };
 
 /// `EECanConvert`'s result and its out flag (written only when `flag_written`).
@@ -8059,6 +8059,12 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
+///
+/// # Safety
+/// `host` must point to a valid record whose callbacks are callable with its `ctx`.
+uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
 
 /// `EESearchTarget`.
 ///

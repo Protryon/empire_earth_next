@@ -15,6 +15,7 @@
 pub mod capture;
 pub mod decide;
 pub mod ffi;
+pub mod pursuer;
 pub mod search;
 pub mod search_ffi;
 #[cfg(test)]
