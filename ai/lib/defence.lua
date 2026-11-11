@@ -55,6 +55,8 @@ M.opts = {
     away_min = 6000,      -- a citizen stays away at least this long
     away_max = 150000,    -- and at most this long (then the engine has it again)
     reflee_ms = 3000,     -- a citizen still in danger is sent again after this long
+    return_max = 12,      -- citizens sent back at most a second (the micro step's 300k budget: 60 at once
+                          -- overran it in one 120-minute game)
     repair = true,        -- builders repair the towers hit
     repair_pct = 85,      -- a tower under this share of its hit points is repaired ...
     repair_n = 2,         -- ... by this many citizens ...
@@ -89,8 +91,15 @@ function M.setup(opts)
     end
 end
 
+-- (the land raids only: the guard does not chase warships)
 function M.clusters()
-    return CLUSTERS
+    local out = {}
+    for _, cl in ipairs(CLUSTERS) do
+        if not cl.ship then
+            out[#out + 1] = cl
+        end
+    end
+    return out
 end
 
 local function state(mem)
@@ -109,21 +118,32 @@ end
 local function scan(tx, ty)
     CLUSTERS, REFUGES = {}, {}
     local o = M.opts
+    -- (warships too, in their own clusters: the citizens a fled raid sent back to a shore under a warship's fire
+    -- died there - 68 to 274 citizens killed by ships against the classic before they counted)
     local ids = ai.seen{enemy = true, armed = true, category = "soldier", near = {tx, ty, o.scan_r}}
+    local nsol = #ids
+    for _, id in ipairs(ai.seen{enemy = true, armed = true, category = "ship", near = {tx, ty, o.scan_r}, limit = 16}) do
+        ids[#ids + 1] = id
+    end
     if #ids > 0 then
         local c = ai.get(ids, {"x", "y", "hp", "attack", "range"})
         for k = 1, #ids do
             local x, y = c.x[k], c.y[k]
+            local ship = k > nsol
             if x ~= nil then
                 local cl = nil
                 for _, q in ipairs(CLUSTERS) do
-                    if cl == nil and d2(x, y, q.sx, q.sy) <= o.cluster_r * o.cluster_r then
+                    if cl == nil and q.ship == ship and d2(x, y, q.sx, q.sy) <= o.cluster_r * o.cluster_r then
                         cl = q
                     end
                 end
                 if cl == nil then
-                    cl = {sx = x, sy = y, ids = {}, xs = {}, ys = {}, hp = 0, atk = 0, n = 0, ranged = 0, tx = 0, ty = 0}
+                    cl = {sx = x, sy = y, ids = {}, xs = {}, ys = {}, hp = 0, atk = 0, n = 0, ranged = 0, tx = 0, ty = 0,
+                          ship = ship, dr = o.danger_r}
                     CLUSTERS[#CLUSTERS + 1] = cl
+                end
+                if ship then
+                    cl.dr = math.max(cl.dr, (c.range[k] or 0) // 100 + 2)
                 end
                 cl.n = cl.n + 1
                 cl.ids[cl.n], cl.xs[cl.n], cl.ys[cl.n] = ids[k], x, y
@@ -174,7 +194,8 @@ end
 -- any raider of any cluster within r of a tile
 local function raided(x, y, r)
     for _, cl in ipairs(CLUSTERS) do
-        if raider_d2(cl, x, y) <= r * r then
+        local rr = r + cl.dr - M.opts.danger_r
+        if raider_d2(cl, x, y) <= rr * rr then
             return true
         end
     end
@@ -193,12 +214,12 @@ end
 
 -- where a citizen at (x, y) runs from a raid centred at (rx, ry): the nearest refuge not further into the raid (a
 -- tower may be: the raiders that follow come under its fire), to the spot 2 tiles behind it from the raid
-local function refuge_for(x, y, rx, ry)
+local function refuge_for(x, y, rx, ry, ship)
     local best, bd = nil, nil
     local dc = d2(x, y, rx, ry)
     for _, r in ipairs(REFUGES) do
         local dr = d2(r.x, r.y, rx, ry)
-        if r.tower or dr >= dc then
+        if (r.tower and not ship) or dr >= dc then   -- (from a warship: away from it, a tower outranged)
             local d = d2(x, y, r.x, r.y)
             if bd == nil or d < bd then
                 best, bd = r, d
@@ -290,7 +311,7 @@ local function returns(mem, now)
                     or (now >= a.t + o.away_min and not raided(a.x, a.y, o.clear_r) and not raided(u.x, u.y, o.danger_r)
                         and not hurt_near(mem, a.x, a.y, o.danger_r, now, o.clear_ms))
             end
-            if done then
+            if done and #back < o.return_max then
                 back[#back + 1] = {id = id, x = a.x, y = a.y, act = a.act}
                 mem.away[id] = nil
             end
@@ -376,7 +397,7 @@ local function handle(mem, cl, now)
                 sx, sy = a.x, a.y
             end
             local du = raider_d2(cl, u.x, u.y)
-            if du <= o.danger_r * o.danger_r or (a == nil and raider_d2(cl, sx, sy) <= o.danger_r * o.danger_r) then
+            if du <= cl.dr * cl.dr or (a == nil and raider_d2(cl, sx, sy) <= cl.dr * cl.dr) then
                 danger[#danger + 1] = {u = u, d = du}
             end
         end
@@ -455,7 +476,7 @@ local function handle(mem, cl, now)
         if not in_fight[u.id] then
             local a = mem.away[u.id]
             if a == nil or now - (a.sent or 0) >= o.reflee_ms then
-                local fx, fy = refuge_for(u.x, u.y, cl.x, cl.y)
+                local fx, fy = refuge_for(u.x, u.y, cl.x, cl.y, cl.ship)
                 if fx ~= nil and d2(u.x, u.y, fx, fy) > 4 then
                     a = go_away(mem, u, "flee", now)
                     a.t, a.sent = now, now
