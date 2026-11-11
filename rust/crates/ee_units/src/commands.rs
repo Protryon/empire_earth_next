@@ -302,12 +302,12 @@ pub fn cast_calamity(
                 if let Some(goal) = cast_goal(host, unit, target, x, y, technology) {
                     host.unit_set_goal(unit, goal);
                 }
-                let action = if unit_type(host, unit) == EE_UNIT_TYPE_CAPITOL || technology == EE_TECH_CONQUISTADORS_SPELL
-                {
-                    EE_ACTION_CALAMITY_PRE_CAST
-                } else {
-                    EE_ACTION_PREPARE_TO_MOVE
-                };
+                let action =
+                    if unit_type(host, unit) == EE_UNIT_TYPE_CAPITOL || technology == EE_TECH_CONQUISTADORS_SPELL {
+                        EE_ACTION_CALAMITY_PRE_CAST
+                    } else {
+                        EE_ACTION_PREPARE_TO_MOVE
+                    };
                 host.unit_start_action(unit, action);
                 host.group_add_member(group, unit);
                 break;
@@ -319,10 +319,12 @@ pub fn cast_calamity(
         loop {
             host.group_ids(selection, &mut ids);
             let Some(&unit) = ids.get(i) else { break };
-            let casts = hit_points(host, unit) > 0 && {
-                let kind = unit_type(host, unit);
-                host.technology_contains(player, technology, kind)
-            } && host.calamity_can_cast_at(class, unit, x, y, target) == 0;
+            let casts = hit_points(host, unit) > 0
+                && {
+                    let kind = unit_type(host, unit);
+                    host.technology_contains(player, technology, kind)
+                }
+                && host.calamity_can_cast_at(class, unit, x, y, target) == 0;
             if casts {
                 if let Some(goal) = cast_goal(host, unit, target, x, y, technology) {
                     host.unit_set_goal(unit, goal);
@@ -391,7 +393,7 @@ mod tests {
         host.leave_on_order = vec![b];
         host.draws = vec![1, 2];
         build_unit(&mut host, r(P), r(S), 77, 30, 40, false);
-        let sorted = vec![0x0100_0061, 0x0100_0062];
+        let sorted = [0x0100_0061, 0x0100_0062];
         assert_eq!(
             host.calls,
             vec![
@@ -570,10 +572,7 @@ mod tests {
         let mut host = host_with(&[a]);
         host.units.insert(0x0100_0040, complex(0x0100_0040));
         smart_farmers(&mut host, r(P), r(S), 0x0100_0040);
-        assert_eq!(
-            &host.calls[2..],
-            &[Call::KeepCitizens(r(G)), Call::Pending(r(P), r(G)), Call::Finish(r(G))]
-        );
+        assert_eq!(&host.calls[2..], &[Call::KeepCitizens(r(G)), Call::Pending(r(P), r(G)), Call::Finish(r(G))]);
     }
 
     #[test]
