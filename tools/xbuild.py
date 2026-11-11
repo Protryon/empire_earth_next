@@ -411,7 +411,7 @@ WON_TESTS = {
     # WONServer's exchange (ServerRequestOp's RunHook and CallbackHook over scripted servers, the time limits, the
     # ping requests and replies, MultiPingOp's rules and order, the context's shuffle), the original's statements
     # against ee_won's server module
-    "won_server_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_server_test": [],
     # WONGUI's layout arithmetic (rectangles, sizes, the child layout instructions and layouts, the LAYOUT rule), the
     # original's statements against ee_won's guilayout module
     "won_guilayout_test": [],
@@ -482,7 +482,7 @@ WON_TESTS = {
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
-    "won_dirops_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_dirops_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

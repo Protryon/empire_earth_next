@@ -1078,6 +1078,32 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
+constexpr static const int32_t GET_DIR = 0;
+
+constexpr static const int32_t GET_MULTI_DIR = 1;
+
+constexpr static const int32_t ALIAS_GET = 2;
+
+constexpr static const int32_t GET_SERVICE = 3;
+
+constexpr static const int32_t FIND = 4;
+
+constexpr static const int32_t ADD = 5;
+
+constexpr static const int32_t MODIFY = 6;
+
+constexpr static const int32_t REMOVE = 7;
+
+constexpr static const int32_t RENAME = 8;
+
+constexpr static const int32_t RENEW = 9;
+
+constexpr static const int32_t SET_DATA_OBJECTS = 10;
+
+constexpr static const int32_t MODIFY_DATA_OBJECTS = 11;
+
+constexpr static const int32_t CLEAR_DATA_OBJECTS = 12;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -2089,6 +2115,9 @@ struct EeDx7PolygonArray;
 
 /// A `GETransformation`'s rotation part.
 struct EeFormationRotation;
+
+/// The server list.
+struct EeWonServerList;
 
 /// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
 /// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
@@ -5572,6 +5601,79 @@ struct EeWonDirEntity {
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
 
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A data object.
+struct EeWonDirObject {
+  EeWonDirBytes data_type;
+  EeWonDirBytes data;
+};
+
+/// A data object change.
+struct EeWonDirMod {
+  uint16_t offset;
+  bool insert;
+  EeWonDirObject object;
+};
+
+/// A query: the path as UTF-16 LE bytes.
+struct EeWonDirQuery {
+  uint32_t flags;
+  EeWonDirBytes path;
+  const EeWonDirBytes *types;
+  size_t type_count;
+};
+
+/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
+struct EeWonDirRequest {
+  int32_t op;
+  bool is_service;
+  uint32_t flags;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+  EeWonDirBytes display_name;
+  EeWonDirBytes net_addr;
+  EeWonDirBytes new_name;
+  EeWonDirBytes new_display_name;
+  EeWonDirBytes new_net_addr;
+  uint32_t lifespan;
+  bool is_unique;
+  uint8_t mode;
+  uint8_t find_flags;
+  const EeWonDirObject *objects;
+  size_t object_count;
+  const EeWonDirMod *mods;
+  size_t mod_count;
+  const EeWonDirBytes *types;
+  size_t type_count;
+  const EeWonDirQuery *queries;
+  size_t query_count;
+  EeWonDirBytes product;
+};
+
+/// A status reply for the C++.
+struct EeWonDirStatusReply {
+  /// 0 read whole, 1 not a status reply, 2 cut short
+  int32_t end;
+  int16_t status;
+  /// a returned address: its offset and length in the reply
+  bool has_addr;
+  uint32_t addr_at;
+  uint32_t addr_len;
+};
+
+/// An entity for [`ee_won_dir_group_keys`]: its type, path and name as UTF-16 LE bytes.
+struct EeWonDirListed {
+  uint8_t kind;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+};
+
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
@@ -6317,6 +6419,98 @@ struct EeWonServerPick {
   /// It lists the lobby's language.
   bool language;
 };
+
+/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
+struct EeWonAddr {
+  uint8_t sockaddr[16];
+  bool valid;
+  bool remember_host;
+  const uint8_t *host;
+  size_t host_len;
+};
+
+/// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
+using EeWonRand = int32_t(*)(bool seed);
+
+/// Receives each address of a copy, in order.
+using EeWonAddrSink = void(*)(void *context, const EeWonAddr *addr);
+
+/// The C++ primitives of one `ServerRequestOp` (`ctx` is the C++ glue's) and pointers to the members the exchange
+/// keeps. Each hook is called with `ctx`.
+struct EeWonServerReqHooks {
+  void *ctx;
+  int32_t *last_error;
+  int32_t *get_cert_status;
+  bool *use_last;
+  bool *reusing;
+  bool *expired;
+  int32_t (*status)(void*);
+  uint32_t (*time_left)(void*);
+  bool (*is_async)(void*);
+  int32_t (*auth_type)(void*);
+  void (*finish)(void*, int32_t);
+  void (*finish_save_session)(void*, int32_t);
+  void (*kill)(void*);
+  bool (*prepare_addresses)(void*);
+  void (*rewind_addresses)(void*);
+  bool (*at_begin)(void*);
+  bool (*at_end)(void*);
+  bool (*has_context)(void*);
+  bool (*has_auth_context)(void*);
+  void (*notify_failed)(void*);
+  void (*next_addr)(void*);
+  void (*retreat_addr)(void*);
+  void (*reset_server)(void*);
+  void (*load_session)(void*);
+  void (*clear_session)(void*);
+  bool (*has_session)(void*);
+  void (*add_crypt)(void*);
+  void (*queue_connect)(void*);
+  int32_t (*connect_block)(void*);
+  void (*peer_auth_async)(void*);
+  bool (*peer_auth_block)(void*, int32_t*, int32_t*);
+  int32_t (*get_next_request)(void*);
+  void (*queue_send)(void*);
+  int32_t (*send_block)(void*);
+  void (*queue_recv)(void*);
+  int32_t (*recv_block)(void*);
+  /// `mResponse`'s bytes (NULL and 0: none)
+  void (*response)(void*, const uint8_t**, size_t*);
+  /// `CheckResponse()`; `*threw` set when it threw `ReadBufferException`
+  int32_t (*check_response)(void*, bool*);
+  void (*take_op_session)(void*);
+  void (*take_op_response)(void*);
+};
+
+/// A completed op the exchange tracks (`CallbackHook`'s argument): track id 2 the peer auth, 1 a socket op.
+struct EeWonServerReqDone {
+  bool killed;
+  int32_t status;
+  int32_t param;
+  /// the peer auth op's certificate status (param 2)
+  int32_t cert_status;
+  /// a receive op (`dynamic_cast<RecvMsgOp*>`)
+  bool is_recv;
+};
+
+/// A ping reply's fields for the C++ (`PingOp::CheckResponse`).
+struct EeWonPingReply {
+  /// 0 read whole, 1 not a ping reply, 2 cut short
+  int32_t end;
+  /// how many fields were read, in order: lag, app name, logical name, version, image, pid, ports, auth flag,
+  /// registration data, server data
+  uint32_t fields;
+  uint32_t lag;
+  int32_t version;
+  int32_t pid;
+  bool is_auth;
+  /// app name, logical name, image, ports, registration data, server data: offsets and lengths in the reply
+  uint32_t text_at[6];
+  uint32_t text_len[6];
+};
+
+/// `rand()` for [`ee_won_server_shuffle`].
+using EeWonDraw = int32_t(*)();
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -13030,6 +13224,59 @@ EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
                                       EeWonDirEntitySink sink,
                                       void *context);
 
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and everything it points to are valid; `sink` accepts `context`.
+void ee_won_dir_request(const EeWonDirRequest *r,
+                        uint8_t field_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
+///
+/// # Safety
+/// `q` and what it points to are valid; `sink` accepts `context`.
+void ee_won_dir_pack_query(const EeWonDirQuery *q, bool multi, EeWonByteSink sink, void *context);
+
+/// `AddServiceOp::SetNetAddrPort`'s two bytes into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_dir_port_net_addr(uint16_t port, EeWonByteSink sink, void *context);
+
+/// An entity change's status reply.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_dir_status_reply(const uint8_t *reply,
+                             size_t length,
+                             bool read_addr,
+                             EeWonDirStatusReply *out);
+
+/// The multi-directory ops' step: true when the current query is done (`*failed` counts a failure).
+///
+/// # Safety
+/// `failed` is valid.
+bool ee_won_dir_multi_step(int32_t status, int32_t *failed);
+
+/// The multi-directory ops' final status.
+int32_t ee_won_dir_multi_end(int32_t failed, size_t count);
+
+/// `FindEntityOp::CheckResponse`'s parser choice (true: single-entity).
+bool ee_won_dir_find_single(bool is_service, uint8_t find_flags);
+
+/// `GetEntityRequest::GetDirEntityMap`'s keys: for each of `count` entities its directory into `sink` (UTF-16
+/// LE bytes, one call per entity, in order).
+///
+/// # Safety
+/// `query_path`, `entities` (`count` entries) are valid; `sink` accepts `context`.
+void ee_won_dir_group_keys(EeWonDirBytes query_path,
+                           const EeWonDirListed *entities,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
+
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
 ///
@@ -16213,6 +16460,197 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new, empty list (shuffling on).
+EeWonServerList *ee_won_ctx_new();
+
+/// # Safety
+/// `c` came from [`ee_won_ctx_new`] (or is NULL) and is not used after.
+void ee_won_ctx_free(EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_clear(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_add(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `addrs` holds `count` addresses.
+bool ee_won_ctx_replace(const EeWonServerList *c, const EeWonAddr *addrs, size_t count);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+void ee_won_ctx_notify_failed(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_remove(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list.
+size_t ee_won_ctx_len(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_set_shuffle(const EeWonServerList *c, bool shuffle);
+
+/// # Safety
+/// `c` is a live list.
+bool ee_won_ctx_shuffle(const EeWonServerList *c);
+
+/// `CopyAddresses(AddrList&)`: each address into `sink`, in order (outside the lock).
+///
+/// # Safety
+/// `c` is a live list; `sink` accepts `context`.
+void ee_won_ctx_copy(const EeWonServerList *c, EeWonRand rand, EeWonAddrSink sink, void *context);
+
+/// `CopyAddresses(AddrSet&)`: each address into `sink`, in the six bytes' order.
+///
+/// # Safety
+/// As [`ee_won_ctx_copy`].
+void ee_won_ctx_copy_sorted(const EeWonServerList *c, EeWonAddrSink sink, void *context);
+
+/// `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `hooks` points to valid hooks whose member pointers stay valid for the call.
+void ee_won_server_req_run(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryNextServer`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_next(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryConnect`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_connect(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryPeerToPeerAuth`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_peer_auth(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Send`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_send(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Recv`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_recv(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CheckExpiredSession`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_check_expired(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CallbackHook`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`]; `done` is valid.
+bool ee_won_server_req_callback(const EeWonServerReqHooks *hooks, const EeWonServerReqDone *done);
+
+/// `ServerRequestOp::SetLastServerError` on the members.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_won_server_req_last_error(int32_t *last, bool *use_last, int32_t error);
+
+/// `ServerRequestOp::CleanupHook`'s plan (bit 1 notify the context, bit 2 close the socket).
+uint32_t ee_won_server_req_cleanup_plan(int32_t status,
+                                        bool killed,
+                                        bool has_context,
+                                        bool has_socket,
+                                        bool close_connection);
+
+/// `ServerOp`'s step limits.
+uint32_t ee_won_server_step_time(uint32_t max, bool is_async, uint32_t time_left);
+
+/// `PingOp::GetNextRequest`'s message into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_server_ping_request(uint8_t field_size,
+                                uint32_t start_tick,
+                                bool extended,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `MultiPingOp::GetRequest`'s datagram into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_multi_ping_request(int32_t ping_id, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::SendNoOp`'s message into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_no_op(uint8_t field_size, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::StartKeepAlive`'s timer in milliseconds (`*ms`); false: no timer.
+///
+/// # Safety
+/// `ms` is valid.
+bool ee_won_server_keep_alive_ms(uint32_t period_seconds, uint32_t *ms);
+
+/// `PingOp::CheckResponse`'s read.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_server_ping_reply(const uint8_t *reply,
+                              size_t length,
+                              uint32_t now,
+                              EeWonPingReply *out);
+
+/// `MultiPingOp::HandleResponse`: true when done (a ping reply with the id).
+///
+/// # Safety
+/// `reply` holds `length` bytes.
+bool ee_won_server_multi_ping_reply(const uint8_t *reply, size_t length, int32_t ping_id);
+
+/// `MultiPingOp::HandleResponsePrv`'s status rule (0 stop, 1 ignore, 2 match the reply).
+int32_t ee_won_server_multi_ping_recv_status(int32_t status);
+
+/// `MultiPingOp::RecvCallback`'s next step (0 wait, 1 finish, 2 next batch).
+int32_t ee_won_server_multi_ping_next(size_t in_flight, size_t waiting);
+
+/// `MultiPingOp::FinishBatch`'s give-up rule.
+bool ee_won_server_multi_ping_gives_up(int32_t failures, uint8_t max_failures);
+
+/// `MultiPingOp::ResponseTimeLeft`.
+uint32_t ee_won_server_multi_ping_time_left(uint32_t now,
+                                            uint32_t start,
+                                            uint32_t max_ping,
+                                            uint32_t time_left);
+
+/// `MultiPingOp::RunHook`'s blocking loop rule.
+bool ee_won_server_multi_ping_continues(int32_t status);
+
+/// `MultiPingOp::CleanupHook`'s order: `order` receives `count` indexes.
+///
+/// # Safety
+/// `ping_times` and `order` hold `count` entries.
+void ee_won_server_multi_ping_order(const int32_t *ping_times, size_t count, size_t *order);
+
+/// `MultiPingOp::GetServerContext`'s rule.
+bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
+
+/// `ServerContext::CopyAddresses`' shuffle: `order` receives `count` indexes, `draw` is `rand`.
+///
+/// # Safety
+/// `order` holds `count` entries.
+void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///
