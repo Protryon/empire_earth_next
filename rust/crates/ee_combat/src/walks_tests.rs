@@ -224,10 +224,10 @@ struct Field {
 }
 
 impl AreaHost for Field {
-    fn tile_first(&mut self, x: i32, y: i32) -> Handle {
+    fn tile_first(&mut self, x: i32, y: i32) -> EeCombatHandle {
         self.tiles.get(&(x, y)).and_then(|v| v.first()).map_or(0, |&u| u + 900)
     }
-    fn node_next(&mut self, node: Handle) -> Handle {
+    fn node_next(&mut self, node: EeCombatHandle) -> EeCombatHandle {
         let unit = node - 900;
         for v in self.tiles.values() {
             if let Some(p) = v.iter().position(|&u| u == unit) {
@@ -236,19 +236,19 @@ impl AreaHost for Field {
         }
         0
     }
-    fn node_unit(&mut self, node: Handle) -> Handle {
+    fn node_unit(&mut self, node: EeCombatHandle) -> EeCombatHandle {
         node - 900
     }
-    fn distance_squared(&mut self, unit: Handle) -> f32 {
+    fn distance_squared(&mut self, unit: EeCombatHandle) -> f32 {
         self.distance[&unit]
     }
-    fn targetable(&mut self, unit: Handle) -> bool {
+    fn targetable(&mut self, unit: EeCombatHandle) -> bool {
         !self.untargetable.contains(&unit)
     }
-    fn same_player(&mut self, unit: Handle) -> bool {
+    fn same_player(&mut self, unit: EeCombatHandle) -> bool {
         self.own.contains(&unit)
     }
-    fn hit(&mut self, unit: Handle) {
+    fn hit(&mut self, unit: EeCombatHandle) {
         self.log.push(format!("hit {unit}"));
     }
 }
@@ -292,22 +292,22 @@ impl TargetHost for Regions {
     fn region_len(&mut self, x: i32, y: i32) -> i32 {
         self.regions.get(&(x, y)).map_or(-1, |v| v.len() as i32)
     }
-    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> Handle {
+    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> EeCombatHandle {
         self.regions[&(x, y)][index as usize]
     }
-    fn unit_tile(&mut self, unit: Handle) -> (i32, i32) {
+    fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
         self.tiles[&unit]
     }
-    fn screen(&mut self, unit: Handle) -> bool {
+    fn screen(&mut self, unit: EeCombatHandle) -> bool {
         !self.screened.contains(&unit)
     }
-    fn multiple(&mut self, unit: Handle) -> bool {
+    fn multiple(&mut self, unit: EeCombatHandle) -> bool {
         self.big.contains(&unit)
     }
-    fn unit_id(&mut self, unit: Handle) -> u32 {
+    fn unit_id(&mut self, unit: EeCombatHandle) -> u32 {
         (1000 - unit) as u32
     }
-    fn test(&mut self, test: u32, unit: Handle) -> bool {
+    fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
         self.log.push(format!("{test} {unit}"));
         // a test "fails" for the unit when listed: the negative tests (enemy, disabled...) answer true then
         let listed = self.fails.get(&unit).is_some_and(|v| v.contains(&test));

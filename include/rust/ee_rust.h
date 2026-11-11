@@ -3103,7 +3103,7 @@ struct EeCombatAreaIn {
   float radius;
   /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
   float friendly_factor;
-  /// the direct target's complex unit (counted as hit already), or 0 (a `Handle`)
+  /// the direct target's complex unit (counted as hit already), or 0 (a `EeCombatHandle`)
   uint64_t target;
 };
 
@@ -3199,8 +3199,8 @@ struct EeDx7ScreenState {
   bool mDirtyRectangleSupport;
 };
 
-/// An opaque C++ object (a unit, a tile node); 0 is none.
-using EeDx7Handle = uint64_t;
+/// A C++ object seen from Rust.
+using EeDx7Handle = void*;
 
 /// `GETransformation`: row-major, translation in the last column.
 using EeDx7Transform = float[4][4];

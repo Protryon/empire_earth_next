@@ -120,31 +120,31 @@ pub struct EeCombatAreaHost {
 }
 
 impl AreaHost for EeCombatAreaHost {
-    fn tile_first(&mut self, x: i32, y: i32) -> Handle {
+    fn tile_first(&mut self, x: i32, y: i32) -> EeCombatHandle {
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.tile_first)(self.ctx, x, y) }
     }
-    fn node_next(&mut self, node: Handle) -> Handle {
+    fn node_next(&mut self, node: EeCombatHandle) -> EeCombatHandle {
         // SAFETY: as above
         unsafe { (self.node_next)(self.ctx, node) }
     }
-    fn node_unit(&mut self, node: Handle) -> Handle {
+    fn node_unit(&mut self, node: EeCombatHandle) -> EeCombatHandle {
         // SAFETY: as above
         unsafe { (self.node_unit)(self.ctx, node) }
     }
-    fn distance_squared(&mut self, unit: Handle) -> f32 {
+    fn distance_squared(&mut self, unit: EeCombatHandle) -> f32 {
         // SAFETY: as above
         unsafe { (self.distance_squared)(self.ctx, unit) }
     }
-    fn targetable(&mut self, unit: Handle) -> bool {
+    fn targetable(&mut self, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
         unsafe { (self.targetable)(self.ctx, unit) != 0 }
     }
-    fn same_player(&mut self, unit: Handle) -> bool {
+    fn same_player(&mut self, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
         unsafe { (self.same_player)(self.ctx, unit) != 0 }
     }
-    fn hit(&mut self, unit: Handle) {
+    fn hit(&mut self, unit: EeCombatHandle) {
         // SAFETY: as above
         unsafe { (self.hit)(self.ctx, unit) }
     }
@@ -192,29 +192,29 @@ impl TargetHost for EeCombatTargetHost {
         // SAFETY: as above
         unsafe { (self.region_len)(self.ctx, x, y) }
     }
-    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> Handle {
+    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> EeCombatHandle {
         // SAFETY: as above
         unsafe { (self.region_unit)(self.ctx, x, y, index) }
     }
-    fn unit_tile(&mut self, unit: Handle) -> (i32, i32) {
+    fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
         let mut out = [0i32; 2];
         // SAFETY: as above
         unsafe { (self.unit_tile)(self.ctx, unit, &mut out) };
         (out[0], out[1])
     }
-    fn screen(&mut self, unit: Handle) -> bool {
+    fn screen(&mut self, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
         unsafe { (self.screen)(self.ctx, unit) != 0 }
     }
-    fn multiple(&mut self, unit: Handle) -> bool {
+    fn multiple(&mut self, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
         unsafe { (self.multiple)(self.ctx, unit) != 0 }
     }
-    fn unit_id(&mut self, unit: Handle) -> u32 {
+    fn unit_id(&mut self, unit: EeCombatHandle) -> u32 {
         // SAFETY: as above
         unsafe { (self.unit_id)(self.ctx, unit) }
     }
-    fn test(&mut self, test: u32, unit: Handle) -> bool {
+    fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
         unsafe { (self.test)(self.ctx, test, unit) != 0 }
     }
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn ee_combat_choose_target(
 ) -> i32 {
     let mut host = unsafe { *host };
     // copied: the C++ list must not be borrowed across the host's calls
-    let candidates: Vec<Handle> =
+    let candidates: Vec<EeCombatHandle> =
         if count == 0 { Vec::new() } else { unsafe { std::slice::from_raw_parts(units, count as usize) }.to_vec() };
     choose_target(&candidates, skip_kind != 0, &mut host).map_or(-1, |n| n as i32)
 }

@@ -10,7 +10,7 @@
 use crate::ceil;
 
 /// An opaque C++ object (a unit, a tile node); 0 is none.
-pub type Handle = u64;
+pub type EeCombatHandle = u64;
 
 // ---- EEIsLineToUnitBlocked
 
@@ -138,33 +138,33 @@ pub struct EeCombatAreaIn {
     pub radius: f32,
     /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
     pub friendly_factor: f32,
-    /// the direct target's complex unit (counted as hit already), or 0 (a `Handle`)
+    /// the direct target's complex unit (counted as hit already), or 0 (a `EeCombatHandle`)
     pub target: u64,
 }
 
 /// The world `area_victims` walks.
 pub trait AreaHost {
     /// The first unit node of tile (x, y), 0 for none or no tile.
-    fn tile_first(&mut self, x: i32, y: i32) -> Handle;
+    fn tile_first(&mut self, x: i32, y: i32) -> EeCombatHandle;
     /// The node after `node` (read after the previous victim's hit, as the C++ did), 0 at the end.
-    fn node_next(&mut self, node: Handle) -> Handle;
+    fn node_next(&mut self, node: EeCombatHandle) -> EeCombatHandle;
     /// The node's unit's complex unit, 0 for none.
-    fn node_unit(&mut self, node: Handle) -> Handle;
+    fn node_unit(&mut self, node: EeCombatHandle) -> EeCombatHandle;
     /// `inUnit->DistanceSquaredTo(unit)`.
-    fn distance_squared(&mut self, unit: Handle) -> f32;
+    fn distance_squared(&mut self, unit: EeCombatHandle) -> f32;
     /// `EEUUGetIsUnitClassTargetable(inUnit, unit's class)`.
-    fn targetable(&mut self, unit: Handle) -> bool;
+    fn targetable(&mut self, unit: EeCombatHandle) -> bool;
     /// The unit is the attacker's player's.
-    fn same_player(&mut self, unit: Handle) -> bool;
+    fn same_player(&mut self, unit: EeCombatHandle) -> bool;
     /// The unit is a victim: the C++ applies the hit (the volcano's effect, the damage, kills and food).
-    fn hit(&mut self, unit: Handle);
+    fn hit(&mut self, unit: EeCombatHandle);
 }
 
 /// `ApplyAreaDamage`'s walk: every tile of the square of `ceil(radius)` around the attacker, column by column, each
 /// tile's units in list order; a unit is a victim once, within the radius, targetable, and the own player's only
 /// with a positive friendly factor. Each victim is hit before the walk goes on.
 pub fn area_victims(i: &EeCombatAreaIn, host: &mut dyn AreaHost) {
-    let mut hit: Vec<Handle> = Vec::new();
+    let mut hit: Vec<EeCombatHandle> = Vec::new();
     let radius_squared = i.radius * i.radius;
     if i.target != 0 {
         hit.push(i.target);
@@ -241,23 +241,23 @@ pub trait TargetHost {
     /// The size of region (x, y), -1 for none.
     fn region_len(&mut self, x: i32, y: i32) -> i32;
     /// The `index`th unit of region (x, y).
-    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> Handle;
+    fn region_unit(&mut self, x: i32, y: i32, index: i32) -> EeCombatHandle;
     /// The unit's tile.
-    fn unit_tile(&mut self, unit: Handle) -> (i32, i32);
+    fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32);
     /// The screen's `Virtual08(unit)`.
-    fn screen(&mut self, unit: Handle) -> bool;
+    fn screen(&mut self, unit: EeCombatHandle) -> bool;
     /// The unit's class's `mTileSize > 1`.
-    fn multiple(&mut self, unit: Handle) -> bool;
+    fn multiple(&mut self, unit: EeCombatHandle) -> bool;
     /// The unit's id (`mUnitID`).
-    fn unit_id(&mut self, unit: Handle) -> u32;
+    fn unit_id(&mut self, unit: EeCombatHandle) -> u32;
     /// One of the `TARGET_TEST_*` tests of a candidate.
-    fn test(&mut self, test: u32, unit: Handle) -> bool;
+    fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool;
 }
 
 /// `EEUUGetUnitsInArea`: the units of the area's unit regions (column by column, each region from its back) whose
 /// tile is in the area and that pass the screen; sorted by id and made unique when one of a class bigger than a tile
 /// was among them.
-pub fn units_in_area(i: &EeCombatFindTargetIn, host: &mut dyn TargetHost) -> Vec<Handle> {
+pub fn units_in_area(i: &EeCombatFindTargetIn, host: &mut dyn TargetHost) -> Vec<EeCombatHandle> {
     let mut out = Vec::new();
     let (left, top, right, bottom) = host.regions(i.left, i.top, i.right, i.bottom);
     let mut multiple = false;
@@ -285,7 +285,7 @@ pub fn units_in_area(i: &EeCombatFindTargetIn, host: &mut dyn TargetHost) -> Vec
     }
     if multiple {
         // `EESortUnique(EEUUUnitIDLess, EEUUUnitIDEqual)`: equal ids are the same unit, so any sort gives this
-        let mut keyed: Vec<(u32, Handle)> = out.iter().map(|&u| (host.unit_id(u), u)).collect();
+        let mut keyed: Vec<(u32, EeCombatHandle)> = out.iter().map(|&u| (host.unit_id(u), u)).collect();
         keyed.sort_by_key(|&(id, _)| id);
         keyed.dedup_by_key(|&mut (id, _)| id);
         out = keyed.into_iter().map(|(_, u)| u).collect();
@@ -296,7 +296,7 @@ pub fn units_in_area(i: &EeCombatFindTargetIn, host: &mut dyn TargetHost) -> Vec
 /// `EEFindNewTarget`'s choice among the candidates (in their order): the first enemy that is not disabled (nor an
 /// animal that did not attack the unit), not of a kind-6 technology, targetable, no foundation, seen, not a part
 /// left out, of a class the unit attacks and not ignored. Returns its index.
-pub fn choose_target(candidates: &[Handle], skip_kind: bool, host: &mut dyn TargetHost) -> Option<usize> {
+pub fn choose_target(candidates: &[EeCombatHandle], skip_kind: bool, host: &mut dyn TargetHost) -> Option<usize> {
     // `theKind` keeps its last value: -1 until asked, never asked with inArg6
     let mut kind_6 = false;
     for (n, &unit) in candidates.iter().enumerate() {
