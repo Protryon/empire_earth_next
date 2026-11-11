@@ -13,7 +13,7 @@ local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, 
 local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
 local D = require("lib.demand")        -- the split's stock correction and the saving ramp (balanced's rules)
 
--- the economy rules (docs/AI_RESEARCH.md §8.39): each one switchable for the bench
+-- the economy rules (docs/AI_RESEARCH.md §8.40): each one switchable for the bench
 local ECON = {
     demand = true,          -- the stock correction of the gatherer split (lib.demand.correct)
     unreachable = true,     -- no reserve for an advance with a short resource nobody can gather
@@ -57,7 +57,7 @@ local PLAN = {
         -- gold, 12-18 iron, 6 stone, 10-15 wood, the boats on top), then the Copper Age
         citizens = 64, citizens_max = 90, save_at = 60, save_after = 10,
         -- (ECON.ramp: the reserve grows from nothing to the whole cost over these minutes into the epoch or these
-        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.39)
+        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.40)
         save_ramp = {from_min = 6, full_min = 14, from_cit = 52, full_cit = 64},
         floor = {wood = 10, stone = 6, gold = 12, iron = 12},
         cap = {wood = 15, stone = 6, gold = 12, iron = 18},
@@ -526,7 +526,7 @@ function M.step(view, memory)
     -- the light army comes before the reserve: what its missing soldiers cost is left out of it
     local missing = plan.soldiers - view.army_count
     if ECON.army_slack and in_epoch >= ARMY_FIRST_MIN then
-        -- (§8.39) past the soldiers-first window the reserve leaves out only the first three quarters of the light
+        -- (§8.40) past the soldiers-first window the reserve leaves out only the first three quarters of the light
         -- army: a town 2 soldiers short (iron-bound, 18 of 20) kept the reserve at 0 for 10 minutes, and the citizens
         -- took the Copper Age's food
         missing = plan.soldiers * 3 // 4 - view.army_count
@@ -712,7 +712,7 @@ function M.step(view, memory)
         -- floor share for one the plan wants that is under 150 (the Stone Age's wood sat at 0-50 for 30 minutes with
         -- no gatherer: no boats, settlements or towers), taken from gold, stone and iron (iron kept while the army is
         -- short), then from food down to 4 under its minimum (with food and the army's iron the whole town, nothing
-        -- else could give, §8.39); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
+        -- else could give, §8.40); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
         if ECON.demand then
             local lacks = {wood = true}
             for _, r in ipairs({"stone", "gold", "iron"}) do

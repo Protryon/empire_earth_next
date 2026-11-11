@@ -1924,7 +1924,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
 
-## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.39)
+## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.40)
 
 - **`ai.units{type = ...}` takes one class name, not a list.** AI_LUA_UNITS §2.2 says "a class id or a list", but
   `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
@@ -1938,3 +1938,34 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
   scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
   subfolder.
+
+## The classic computer player in Lua (2026-11-10, ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
+
+- **A script's gatherers are invisible to `ai.resource`'s `workers`.** `EECPNextAssigned` counts the classic resource
+  manager's gatherer lists, and `AddGatherer` keeps every unit a script holds off them: the port's finder saw 0
+  gatherers on every bush and sent all 15 food gatherers to one (60 food a minute). `ai.gatherers()` (one scan of the
+  own units: the citizens whose gather goal is each resource) counts them whoever holds them.
+- **A class's tech is `ai.class(t).tech`, not the first tech that makes it.** Several tech tree nodes make the same
+  class (the citizen's own 1074 and others); a map from `ai.techs` keyed by `makes` took a later epoch's.
+- **The classic puts an epoch at the front of the town centre's queue** (`QueueResearch(id, true)`); a human's order
+  (EEMResearchTechnology) queues at the back, behind up to ten citizens (five minutes). The port cancels the citizens
+  queued behind the current one (`ai.cancel`, refunded), orders the epoch and queues them again.
+- **The classic attempts an epoch advance only with a later epoch's request standing** (or a human ahead): the first
+  update queues the "future research sentinel" (dbtechtree 15020, a Space Age wonder) for that, and it stays queued
+  all game. Leaving it out, the port never advanced.
+- **The engine's reflexes skip a script's units.** EECPRMNoteDanger and EECPRMMilitia ignore held (detached) citizens,
+  so a script that holds its citizens has no militia unless it runs one (militia.lua; `ai.reflex{militia = false,
+  danger = false}`).
+- **A step that asks per unit blows the 2M budget at 25 minutes** (the gather capacity's centres and the citizen
+  target were recomputed for every caller): a per-step cache of the records, the own units by class and the derived
+  numbers (`resource.lua` begin_step / unit / of_type / memo) keeps the step's charges bounded.
+- **The favourite land unit of a "soldier" class can be the Prehistoric domestic wolf** (trained at the town
+  centre): the favourite is drawn among the classes the barracks, archery range, stable and factories train.
+- **A bench slot that faults at the lobby every time is a port held by a stray EE-SIM.** An EE-SIM left over from an
+  earlier run kept listening on one slot's ports (40462/40463); every run that slot took faulted in
+  NERecordPlayback::Process before the game and sim_bench moved the next seeds onto the same slot (13 of 16 runs
+  failed). Another `--port-base` avoids it; `netstat -ano` names the holder.
+- **Editing a script that a running bench reads, or the shell script that runs it, spoils the bench.** `--ai-scripts
+  ai` reads the checkout's scripts at each game's start, so an edit mid-bench mixes versions; and bash reads a script
+  as it runs, so rewriting the bench's own shell script made the old shell run garbage once sim_bench returned (it
+  truncated the log). Benches here run from a copy of `ai/` taken at the start (`build/aisnap/<name>`).

@@ -271,6 +271,7 @@ struct EECPNextView {
     long advancing;             // 1: the epoch advance is queued or under way
     long stock[kNextResources];
     long income[kNextResources];    // gathered over the last 60 s
+    long income_total[kNextResources];   // gathered since the game's start (every AddResource: the classic ledger's Spend)
     long reserve[kNextResources];   // the reserve the strategy set
     long gatherers[kNextResources]; // land gatherers per resource (boats not counted)
     long wanted[kNextResources];    // the wanted land gatherers (gather)
