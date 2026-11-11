@@ -114,12 +114,9 @@ private:
     void GetText(unsigned long inStartLine, unsigned long inEndLine, unsigned long inStartIndex,
                  unsigned long inEndIndex, UWideString& outString) const;
     void IncrementCaretPos(long inCount);
-    bool ProcessControlInput(bool inRepeat);
     void ProcessDownKey();
     void ProcessEndKey();
     void ProcessHomeKey();
-    bool ProcessInput(bool inRepeat);
-    bool ProcessShiftInput(bool inRepeat);
     void ProcessUpKey();
     void RemoveIMECompositionString();
     void ScrollLeft();

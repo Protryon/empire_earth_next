@@ -3168,6 +3168,9 @@ struct EESavedTown {
     long mCounters[8];   // mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach
     bool mNearWater;
     bool mNearMapEdge;
+    // 0.268 on: the town's area as it is (EEWriteAreaBytes) and its continent
+    std::vector<unsigned char> mArea;
+    long mContinent;
 };
 
 // the counters a town's units summed as they came and went (the rebuild counts them once each, where the running
@@ -3180,6 +3183,7 @@ static long* EETownCounter(EETown* inTown, long inIndex)
 }
 static std::map<unsigned long, std::vector<EESavedTown> > sSavedTowns;   // by player id; empty when nothing pending
 static long sSavedTownIDCounter = -1;
+static bool sSavedTownAreas = false;   // the pending towns have their areas (0.268 on)
 
 long EESaveTowns(FSFile& outFile)
 {
@@ -3213,12 +3217,21 @@ long EESaveTowns(FSFile& outFile)
                 theResult = outFile.Write(theTown->mNearWater);
             if (theResult == kErrorOK)
                 theResult = outFile.Write(theTown->mNearMapEdge);
+            if (theResult == kErrorOK)   // port (0.268): the continent and the area as it is
+                theResult = outFile.Write((long)theTown->mContinent);
+            std::vector<unsigned char> theArea;
+            EEWriteAreaBytes(*theTown, theArea);
+            unsigned long theWritten = 0;
+            if (theResult == kErrorOK)
+                theResult = outFile.Write((unsigned long)theArea.size());
+            if (theResult == kErrorOK && !theArea.empty())
+                theResult = outFile.Write(&theArea[0], (unsigned long)theArea.size(), theWritten);
         }
     }
     return theResult;
 }
 
-long EELoadTowns(FSFile& inFile)
+long EELoadTowns(FSFile& inFile, bool inAreas)
 {
     std::map<unsigned long, std::vector<EESavedTown> > theTowns;
     long theCounter = 0;
@@ -3253,18 +3266,72 @@ long EELoadTowns(FSFile& inFile)
                 theResult = inFile.Read(theTown.mNearWater);
             if (theResult == kErrorOK)
                 theResult = inFile.Read(theTown.mNearMapEdge);
+            theTown.mContinent = 0;
+            if (inAreas) {
+                unsigned long theSize = 0, theRead = 0;
+                if (theResult == kErrorOK)
+                    theResult = inFile.Read(theTown.mContinent);
+                if (theResult == kErrorOK)
+                    theResult = inFile.Read(theSize);
+                if (theResult == kErrorOK && theSize > 0) {
+                    theTown.mArea.resize(theSize);
+                    theResult = inFile.Read(&theTown.mArea[0], theSize, theRead);
+                    if (theResult == kErrorOK && theRead != theSize)
+                        theResult = kErrorBeyondEnd;
+                }
+            }
             theTowns[p].push_back(theTown);
         }
     }
     if (theResult == kErrorOK) {
         sSavedTowns = theTowns;
         sSavedTownIDCounter = theCounter;
+        sSavedTownAreas = inAreas;
         EEAfterLoad([]() {   // the loaded game's own towns from here on
             sSavedTowns.clear();
             sSavedTownIDCounter = -1;
+            sSavedTownAreas = false;
         });
     }
     return theResult;
+}
+
+// port (0.268): the player's towns made from the save (each one's area, continent, counters and flags as saved, in
+// the saved order), in place of the rebuild from the buildings; false (nothing made) when the save has no areas or
+// one cannot be read: the towns are then rebuilt as for an older save. The towns take new serials here, as
+// AddUnitToTown gives them; the continent block gives them their saved ones (EERestoreContinentRegions)
+static bool EEMakeSavedTowns(EEPlayer* inPlayer)
+{
+    if (sSavedTownIDCounter < 0 || !sSavedTownAreas)
+        return false;
+    std::map<unsigned long, std::vector<EESavedTown> >::iterator theEntry = sSavedTowns.find(inPlayer->mPlayerID);
+    std::vector<EETown*> theMade;
+    if (theEntry != sSavedTowns.end())
+        for (size_t s = 0; s < theEntry->second.size(); s++) {
+            const EESavedTown& theSaved = theEntry->second[s];
+            EETown* theTown = new EETown(inPlayer, theSaved.mID);
+            if (!EEReadAreaBytes(theSaved.mArea, *theTown)) {
+                ESDebugOut("EEPlayer: player %lu's saved town %ld could not be read: its towns are rebuilt\n",
+                           (unsigned long)inPlayer->mPlayerID, theSaved.mID);
+                delete theTown;
+                for (size_t m = 0; m < theMade.size(); m++)
+                    delete theMade[m];
+                return false;
+            }
+            theTown->mContinent = (unsigned short)theSaved.mContinent;
+            for (long c = 0; c < 8; c++)
+                *EETownCounter(theTown, c) = theSaved.mCounters[c];
+            theTown->mNearWater = theSaved.mNearWater;
+            theTown->mNearMapEdge = theSaved.mNearMapEdge;
+            theMade.push_back(theTown);
+        }
+    for (size_t m = 0; m < theMade.size(); m++) {
+        theMade[m]->mSerial = ++gContinentManager.mLastSerial;
+        gContinentManager.AddArea(theMade[m]);
+        inPlayer->mTownsByID.insert(std::pair<long, EETown*>(theMade[m]->mTownID, theMade[m]));
+        inPlayer->mTowns.push_back(theMade[m]);
+    }
+    return true;
 }
 
 static void EEApplySavedTowns(EEPlayer* inPlayer)
@@ -3367,7 +3434,8 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     for (long theAirport = 0; theAirport < 4; theAirport++)
         theResult = mAirTraffic[theAirport]->RepairPointers(inFirst, inSecond);
     this->mLoadedUnitIDs.clear();
-    if (this->GetPlayerID() >= 1) {
+    // port (0.268): the towns as saved (EEMakeSavedTowns), else rebuilt from the buildings
+    if (this->GetPlayerID() >= 1 && !EEMakeSavedTowns(this)) {
         // port (0.254 on, no format change): a building placed as a foundation joins its town when it is finished
         // (UnitPlaced skips a foundation, UnitCompleted adds it; a farm is never a foundation), so the rebuilt towns
         // leave the unfinished buildings out as the running game had them (seed 4's 600 s save: a town of the loaded

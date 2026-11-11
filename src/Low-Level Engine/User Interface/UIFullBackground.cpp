@@ -50,6 +50,7 @@ struct UIFullBackgroundRust {
         return theBackground->mForm->GetManager()->GetRasterizer()->Draw(theBitmap, theScreen);
     }
 };
+extern "C" void ee_uicpp_ustring_assign(void* outString, const char* inText) { *static_cast<UString*>(outString) = inText; }
 extern "C" long ee_uicpp_background_full_draw(void* inBackground, unsigned long inIndex, const EeUiRect* inTile,
                                               const EeUiRect* inClipped)
 {
@@ -94,28 +95,13 @@ long UIFullBackground::DrawBackground(const GERectangle& inRectangle)
 // Loads one clamped, filtered texture per tile ("name_row_column.ext") into a new bitmap each; returns kErrorOK
 long UIFullBackground::LoadBackground(const GETextureDescription& inDescription)
 {
-    UString theColumnString;
-    UString theRowString;
     UString theFileName;
-    char theNumber[3];                  // 3, not 4: a 4-byte array takes the slot below theRow
     unsigned long theScreen = this->mForm->GetManager()->GetScreen();
     GETextureManager* theManager = this->mForm->GetManager()->GetRasterizer()->GetTextureManager(theScreen);
     for (unsigned long theRow = 0; theRow < this->mRows; theRow++) {
-        PlatIToA(theRow + 1, theNumber, 10);
-        theRowString = theNumber;
         for (unsigned long theColumn = 0; theColumn < this->mColumns; theColumn++) {
             unsigned long theIndex = this->mColumns * theRow + theColumn;
-            PlatIToA(theColumn + 1, theNumber, 10);
-            theColumnString = theNumber;
-            const char* theExtension = strrchr(this->mFileName, '.');
-            if (theExtension) {
-                char theBuffer[256];
-                unsigned long theLength = theExtension - (const char*)this->mFileName;
-                memcpy(theBuffer, (const char*)this->mFileName, theLength);
-                sprintf(theBuffer + theLength, "_%ld_%ld%s", theRow + 1, theColumn + 1, theExtension);
-                theFileName = theBuffer;
-            } else
-                theFileName = this->mFileName + "_" + theRowString + "_" + theColumnString;
+            ee_ui_background_full_tile_name(this->mFileName, theRow, theColumn, &theFileName);   // Rust: the name
             GETexture* theTexture = theManager->LoadTexture(theFileName, inDescription);
             theTexture->SetStageAlphaMode(kStageOpModulate, -1);
             theTexture->SetStageColorMode(kStageOpModulate, -1);

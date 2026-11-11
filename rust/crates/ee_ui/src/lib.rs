@@ -6,6 +6,7 @@
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
 pub mod background;
+pub mod background_table;
 pub mod button;
 pub mod button_variants;
 pub mod combo;
@@ -13,6 +14,8 @@ pub mod controls_table;
 pub mod draw;
 pub mod edit;
 pub mod edit_draw;
+pub mod edit_keys;
+pub mod event;
 pub mod font;
 pub mod form;
 pub mod form_state;
@@ -24,12 +27,17 @@ pub mod manager_media;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
+pub mod status;
 pub mod text;
 pub mod wrap;
 
 // imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod background_ffi;
+// imports the C++ database files, the background array and the events' owners (UIBackgroundTable.cpp, UIEvent.cpp),
+// absent from a test binary
+#[cfg(not(test))]
+mod background_table_ffi;
 // imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
 #[cfg(not(test))]
 mod button_ffi;
@@ -62,6 +70,8 @@ mod draw_ffi;
 // imports nothing: the edit box's measures and draws come as a function table
 mod edit_draw_ffi;
 mod layout_ffi;
+// imports nothing: the status bar's arithmetic takes and returns values
+mod status_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;

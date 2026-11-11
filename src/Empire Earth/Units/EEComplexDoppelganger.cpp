@@ -1056,7 +1056,11 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         this->GetPlayer()->AddStrandedUnit(this);
     unsigned long theBehavior = USavedID(this->mBehavior);
     if (theBehavior < 8) {
-        if (theBehavior == 3 || theBehavior == 4)
+        // port (saves from 0.254 on, no format change): the harass and cautious behaviours (3, 4) stay as saved. The
+        // original made them the class's: the computer players give their explorers harass on Hard
+        // (EECPExplorationManager), which can flee, and a loaded explorer stood and fought where the saved one ran
+        // (seed 7's 600 s save: ShouldIRun, 9 ticks after the load)
+        if ((theBehavior == 3 || theBehavior == 4) && !EESaveHasLiveState(inMajorVersion, inMinorVersion))
             this->mBehavior = NULL;
         else
             this->mBehavior = EEUnitBehavior::Get(theBehavior);

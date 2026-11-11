@@ -11,6 +11,7 @@ class UIForm;
 class UIManager;
 
 class LLE_API UIEvent : public UReferenceCounter {
+    friend struct UIEventRust;              // the Rust count's calls of the virtuals (UIEvent.cpp)
 public:
     UIEvent() { this->mInitializeCount = 0; }  // body assignment: the store follows the vptr load (exe 0x1aa9ef)
     virtual ~UIEvent() {}
