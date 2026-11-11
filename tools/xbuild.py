@@ -442,6 +442,11 @@ WON_TESTS = {
     # WONGUI's menus' keys and choices (a popup menu's keys and submenus, the menu bar's keys, items, menus,
     # presses and events), the original's statements against ee_won's guimenu module
     "won_guimenu_test": [],
+    # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
+    # against ee_won's guiconf tables, the names through the real GUIString
+    "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                         "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                         "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],

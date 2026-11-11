@@ -27,6 +27,7 @@ pub mod ffi_parse;
 pub mod file;
 pub mod flow;
 pub mod guicfg;
+pub mod guiconf;
 pub mod guictl;
 pub mod guiedit;
 pub mod guifocus;

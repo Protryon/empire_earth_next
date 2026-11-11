@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
 // FUNCTION: WON 0x00781880
@@ -23,15 +26,16 @@ void ButtonConfig::HandleButtonFlags()
         GUIString flag=this->ReadFlag(&on);
         if(flag.length()==0) break;
         int value;
-        if(flag.CompareNoCase("InvalidateOnMouseOver")==0) value=1;
-        else if(flag.CompareNoCase("RepeatFire")==0) value=2;
-        else if(flag.CompareNoCase("Checked")==0) value=4;
-        else if(flag.CompareNoCase("Radio")==0) value=8;
-        else if(flag.CompareNoCase("ActivateDown")==0) value=0x40;
-        else if(flag.CompareNoCase("WantDefault")==0) value=0x400;
-        else if(flag.CompareNoCase("EndDialog")==0) value=0x100;
-        else if(flag.CompareNoCase("NoActivate")==0) value=0x200;
-        else if(flag.CompareNoCase("WantDefault")==0) value=0x400;
+        const int aNameIdx_flag=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_BUTTONCONFIG_HANDLEBUTTONFLAGS_FLAG,flag.mData->mText,flag.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_flag==0) value=1;
+        else if(aNameIdx_flag==1) value=2;
+        else if(aNameIdx_flag==2) value=4;
+        else if(aNameIdx_flag==3) value=8;
+        else if(aNameIdx_flag==4) value=0x40;
+        else if(aNameIdx_flag==5) value=0x400;
+        else if(aNameIdx_flag==6) value=0x100;
+        else if(aNameIdx_flag==7) value=0x200;
+        else if(aNameIdx_flag==5) value=0x400;
         else throw ConfigObjectException("Unknown button flag"+(std::string)flag);
         this->mButton->SetButtonFlags(value,on);
     }
@@ -63,11 +67,12 @@ void ButtonConfig::HandleFitText()
 // Handles the BUTTONFLAGS, TEXT, SETCHECK, CLICKSOUND and FITTEXT instructions; others go to the base config
 bool ButtonConfig::Virtual24(const std::string& inInstruction)
 {
-    if(inInstruction=="BUTTONFLAGS") this->HandleButtonFlags();
-    else if(inInstruction=="TEXT") this->mButton->SetText(this->ReadString(false),true);
-    else if(inInstruction=="SETCHECK") this->mButton->SetCheck(this->ReadBool(),false);
-    else if(inInstruction=="CLICKSOUND") this->mButton->SetClickSound(this->ReadSound().get());
-    else if(inInstruction=="FITTEXT") this->HandleFitText();
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BUTTONCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) this->HandleButtonFlags();
+    else if(aKeyIdx==1) this->mButton->SetText(this->ReadString(false),true);
+    else if(aKeyIdx==2) this->mButton->SetCheck(this->ReadBool(),false);
+    else if(aKeyIdx==3) this->mButton->SetClickSound(this->ReadSound().get());
+    else if(aKeyIdx==4) this->HandleFitText();
     else return ComponentConfig::Virtual24(inInstruction);
     return true;
 }

@@ -14,6 +14,9 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyScreens.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x007bcad0
 // Creates a game player list entry for a client
@@ -253,7 +256,8 @@ namespace WONAPI {
 // Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
 bool GameUserListCtrlConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="CTRLLINKID") { }
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEUSERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) { }
     else return ContainerConfig::Virtual24(instruction);
     return true;
 }
