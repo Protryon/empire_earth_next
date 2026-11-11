@@ -1145,6 +1145,9 @@ struct EeRmapResult;
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
 
+/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
+struct EeSparseArray;
+
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
@@ -4692,6 +4695,93 @@ size_t ee_astar_adjacent_ids(const bool *flags,
 int32_t ee_astar_largest_continent(const EeContinentSize *continents,
                                    size_t count,
                                    int8_t kind);
+
+/// A new, empty set.
+EeSparseArray *ee_sparse_new();
+
+/// A copy of `s` (its points; the copy owns its own).
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed.
+EeSparseArray *ee_sparse_clone(const EeSparseArray *s);
+
+/// Releases a set.
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed yet (NULL is ignored).
+void ee_sparse_free(EeSparseArray *s);
+
+/// `Size()`.
+///
+/// # Safety
+/// `s` a live set.
+int32_t ee_sparse_size(const EeSparseArray *s);
+
+/// `Clear()`.
+///
+/// # Safety
+/// `s` a live set.
+void ee_sparse_clear(EeSparseArray *s);
+
+/// `Contains(point)`.
+///
+/// # Safety
+/// `s` a live set.
+bool ee_sparse_contains(const EeSparseArray *s, int32_t x, int32_t y);
+
+/// `Insert(point)`.
+///
+/// # Safety
+/// `s` a live set.
+void ee_sparse_insert(EeSparseArray *s, int32_t x, int32_t y);
+
+/// `Insert(list)` (`create` false) or `Create(list)` (`create` true) over `count` points.
+///
+/// # Safety
+/// `s` a live set, `points` valid for `count` (any pointer when `count` is 0).
+void ee_sparse_insert_list(EeSparseArray *s, const EePoint *points, size_t count, bool create);
+
+/// `Remove(point)`.
+///
+/// # Safety
+/// `s` a live set.
+bool ee_sparse_remove(EeSparseArray *s, int32_t x, int32_t y);
+
+/// `BuildPointList(step)` (`extremes` false) or `GetOnlyExtremeEdgePoints` (true): the list in the set's scratch,
+/// its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+const EePoint *ee_sparse_points(EeSparseArray *s,
+                                bool extremes,
+                                int32_t step,
+                                size_t *count);
+
+/// `operator[](index)`.
+///
+/// # Safety
+/// `s` a live set.
+EePoint ee_sparse_get(const EeSparseArray *s, int32_t index);
+
+/// `CountContainerNodes()`.
+///
+/// # Safety
+/// `s` a live set.
+int32_t ee_sparse_run_count(const EeSparseArray *s);
+
+/// `GetClosestPoint(point)`.
+///
+/// # Safety
+/// `s` a live set.
+EePoint ee_sparse_closest_point(const EeSparseArray *s, int32_t x, int32_t y);
+
+/// `GetRandomPoint(random)`: `generate(random)` is the caller's `URandom::Generate()`, called in the C++'s order.
+///
+/// # Safety
+/// `s` a live set; `generate` must not reach `s`.
+EePoint ee_sparse_random_point(const EeSparseArray *s,
+                               float (*generate)(void*),
+                               void *random);
 
 /// `UDataCompression::Compress`.
 ///
