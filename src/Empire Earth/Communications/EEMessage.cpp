@@ -1080,34 +1080,11 @@ bool EEMAttackPlayers::IsResponse(NEMessage* inMessage)
 void EEMAttackUnit::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    if (theUnit && theTarget && theTarget->mHitPoints > 0) {
-        for (unsigned long i = 1; i < 6; i++) {
-            EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-            theActiveGroup->Fill(theGroup, 1, i);
-            theActiveGroup->mIsQueued = this->mIsQueued;
-            if (theActiveGroup->GetNumUnits() > 0) {
-                thePlayer->mPendingGroups.push_back(theActiveGroup);
-                theActiveGroup->SpreadAroundUnit(theTarget, theTarget->mTileX, theTarget->mTileY);
-                if (theActiveGroup->GetNumUnits() > 0)
-                    theUnit = theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1));
-                else
-                    theUnit = NULL;
-                if (theUnit) {
-                    theActiveGroup->ClearGoal();
-                    theActiveGroup->SetGoal(new EEUGAttackUnit(theGroup->GetFirstUnit(), theTarget, 1, this->mIsConvert), this->mIsQueued);
-                    theActiveGroup->mAction = kActionAttackEnemyUnit;
-                    theActiveGroup->Plan();
-                    EESendGroupCommand(theActiveGroup, theTarget, thePlayerID, 0xb9, 0);
-                    thePlayer->PlayAcknowledgement(theUnit);
-                }
-            } else
-                theActiveGroup->Dereference();
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs attack_unit: with a selection and a living target, per formation
+    // slot 1..5 an active group of the selection takes the queued flag, spreads around the target, one unit drawn, an
+    // Attack Unit goal, planned, the attack marker, the drawn unit acknowledging) over the world calls of EEUnitHost.cpp
+    ee_units_attack_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID,
+                         this->mIsQueued, this->mIsConvert);
 }
 
 // EEMAttackUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -3299,25 +3276,10 @@ bool EEMHaltSelectedGroup::IsResponse(NEMessage* inMessage)
 void EEMHealUnit::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-    if (theTarget) {
-        EEComplexUnit* theComplexUnit = theTarget->GetComplexUnit();
-        for (unsigned long i = 1; i < 6; i++) {
-            EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-            theActiveGroup->Fill(theGroup, 1, i);
-            if (theActiveGroup->GetNumUnits() > 0) {
-                thePlayer->mPendingGroups.push_back(theActiveGroup);
-                theActiveGroup->ClearGoal();
-                theActiveGroup->SetGoal(new EEUGHealUnit(theComplexUnit, true), false);
-                theActiveGroup->mAction = kActionHealUnit;
-                theActiveGroup->Plan();
-                if (theActiveGroup->GetNumUnits() > 0)
-                    thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-            } else
-                theActiveGroup->Dereference();
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs heal_unit: with a target, per formation slot 1..5 an active group
+    // of the selection gets a Heal Unit goal on the target's complex unit, planned, one unit drawn to acknowledge) over
+    // the world calls of EEUnitHost.cpp
+    ee_units_heal_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID);
 }
 
 // EEMHealUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)

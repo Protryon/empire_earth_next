@@ -163,6 +163,30 @@ pub extern "C" fn ee_units_add_patrol_point(player: *mut c_void, selection: *mut
     crate::group::add_patrol_point(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), x, y);
 }
 
+/// `EEMAttackUnit::Execute`'s body (`group::attack_unit`) for the sender, its selection, the target id and the
+/// queued and convert flags.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_attack_unit(
+    player: *mut c_void,
+    selection: *mut c_void,
+    target: u32,
+    queued: bool,
+    convert: bool,
+) {
+    let mut host = crate::host::game::GameHost;
+    let (player, selection) = (crate::host::HostRef(player), crate::host::HostRef(selection));
+    crate::group::attack_unit(&mut host, player, selection, target, queued, convert);
+}
+
+/// `EEMHealUnit::Execute`'s body (`group::heal_unit`) for the sender, its selection and the target id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_heal_unit(player: *mut c_void, selection: *mut c_void, target: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::heal_unit(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
+}
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 #[cfg(not(test))]

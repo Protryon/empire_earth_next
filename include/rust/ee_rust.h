@@ -723,6 +723,11 @@ constexpr static const int64_t EE_UNIT_CATEGORY_LAND_CITIZEN = 6;
 
 constexpr static const int64_t EE_UNIT_CATEGORY_NAVAL_CITIZEN = 22;
 
+/// `kActionAttackEnemyUnit`, `kActionHealUnit` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_ATTACK_ENEMY_UNIT = 2001;
+
+constexpr static const int32_t EE_ACTION_HEAL_UNIT = 16001;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -9703,6 +9708,19 @@ void ee_units_add_patrol_point(void *player,
                                float x,
                                float y);
 
+/// `EEMAttackUnit::Execute`'s body (`group::attack_unit`) for the sender, its selection, the target id and the
+/// queued and convert flags.
+void ee_units_attack_unit(void *player,
+                          void *selection,
+                          uint32_t target,
+                          bool queued,
+                          bool convert);
+
+/// `EEMHealUnit::Execute`'s body (`group::heal_unit`) for the sender, its selection and the target id.
+void ee_units_heal_unit(void *player,
+                        void *selection,
+                        uint32_t target);
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 void ee_units_attack_ground(void *player,
@@ -9801,6 +9819,13 @@ extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
 extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
 
 extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
+
+extern void ee_units_host_group_spread_around_unit(void *group,
+                                                   uint32_t target,
+                                                   int64_t x,
+                                                   int64_t y);
+
+extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

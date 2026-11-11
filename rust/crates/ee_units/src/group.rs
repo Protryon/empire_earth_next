@@ -13,8 +13,8 @@
 //! such unit it would take (PORT_LEARNINGS "R5b.4, fifth round").
 
 use crate::host::{
-    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_EXPLORE, EE_GOAL_CTOR_GATHER,
-    EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
+    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_ATTACK_UNIT, EE_GOAL_CTOR_EXPLORE,
+    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -362,6 +362,107 @@ pub fn add_patrol_point(host: &mut impl Host, player: HostRef, selection: HostRe
             host.group_set_goal(group, goal, false);
         }
         host.group_set_action(group, EE_ACTION_MOVE_TO_NEXT_PATROL_POINT);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+    }
+}
+
+/// `kActionAttackEnemyUnit`, `kActionHealUnit` (ee/EEUnitAction.h)
+pub const EE_ACTION_ATTACK_ENEMY_UNIT: i32 = 2001;
+pub const EE_ACTION_HEAL_UNIT: i32 = 16001;
+
+/// `EEMAttackUnit::Execute`: with a selection and a living target (`gWorld.GetUnit`, hit points above 0), for each
+/// formation slot 1..5 a new active group filled from the selection (sorted, sort 1) takes the queued flag; one that
+/// took units goes to the player's pending groups and spreads around the target (`SpreadAroundUnit(target, its
+/// tile)`); when units are left one is drawn, the group gets an Attack Unit goal (`new EEUGAttackUnit(the selection's
+/// first unit as it is then, target, 1, convert)`, queued as the message says) with the action Attack Enemy Unit,
+/// plans, shows the attack marker on the target (0xb9) and the drawn unit acknowledges; an empty group is released.
+pub fn attack_unit(
+    host: &mut impl Host,
+    player: HostRef,
+    selection: HostRef,
+    target_id: u32,
+    queued: bool,
+    convert: bool,
+) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    let Some(target) = world_unit(host, target_id) else { return };
+    if target.hit_points <= 0 {
+        return;
+    }
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_set_queued(group, queued);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_spread_around_unit(group, target_id, target.tile_x, target.tile_y);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            continue;
+        }
+        let index = host.random(0, ids.len() as i32 - 1);
+        let unit = ids[index as usize];
+        host.group_clear_goal(group);
+        host.group_ids(selection, &mut ids);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_ATTACK_UNIT);
+        spec.unit_a = ids.first().copied().unwrap_or(EE_UNIT_ID_NONE);
+        spec.unit_b = target_id;
+        spec.flag_a = 1;
+        spec.flag_b = convert as u8;
+        if let Some(goal) = host.goal_new(&spec) {
+            host.group_set_goal(group, goal, queued);
+        }
+        host.group_set_action(group, EE_ACTION_ATTACK_ENEMY_UNIT);
+        host.group_plan(group);
+        host.send_group_command(group, target_id, player, EE_GROUP_COMMAND_ATTACK, 0);
+        host.acknowledge_unit(player, unit);
+    }
+}
+
+/// `EEMHealUnit::Execute`: with a target (`gWorld.GetUnit`), for each formation slot 1..5 a new active group filled
+/// from the selection (sort 1) that took units goes to the player's pending groups and gets a Heal Unit goal (`new
+/// EEUGHealUnit(the target's complex unit, true)`) with the action Heal Unit, plans, and one unit, drawn, acknowledges;
+/// an empty group is released. A target with no complex unit is refused before any group (the original built the
+/// goal over NULL and its Plan dereferenced it: a crash; the UI sends only complex targets).
+pub fn heal_unit(host: &mut impl Host, player: HostRef, selection: HostRef, target_id: u32) {
+    if world_unit(host, target_id).is_none() {
+        return;
+    }
+    let complex = host.unit_complex_id(target_id);
+    if complex == EE_UNIT_ID_NONE {
+        return;
+    }
+    let mut ids = Vec::new();
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_clear_goal(group);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_HEAL_UNIT);
+        spec.unit_a = complex;
+        spec.flag_a = 1;
+        if let Some(goal) = host.goal_new(&spec) {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_HEAL_UNIT);
         host.group_plan(group);
         host.group_ids(group, &mut ids);
         if !ids.is_empty() {
@@ -857,5 +958,117 @@ mod tests {
         assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_LAND_CITIZEN, ..soldier })));
         assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_NAVAL_CITIZEN, ..soldier })));
         assert!(!keeps_non_citizen(None));
+    }
+    /// `EEMAttackUnit::Execute`'s calls: the queued flag on every new group, the spread, the draw before the goal,
+    /// the goal's attacker the selection's first unit as it is then, the marker on the target, the drawn unit
+    #[test]
+    fn attack_unit_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0200_0009;
+        for (queued, convert) in [(false, false), (true, true)] {
+            let mut host = MockHost { specs: true, ..Default::default() };
+            host.units.insert(target, EeUnitRecord { tile_x: 7, tile_y: 8, ..complex(target, 5) });
+            host.groups.insert(0x600, vec![0x0100_0003, 0x0100_0001]);
+            host.fills.insert(2, vec![0x0100_0001, 0x0100_0003]);
+            host.fills.insert(4, vec![0x0100_0005]);
+            host.mobile = vec![0x0100_0001, 0x0100_0003];
+            host.draws = vec![1];
+            attack_unit(&mut host, player, selection, target, queued, convert);
+            let g = |n: usize| r(0x1000 + n);
+            let mut expected = Vec::new();
+            for slot in 1..6 {
+                let group = g(slot as usize);
+                expected.push(Call::NewGroup(player, group));
+                expected.push(Call::Fill(group, selection, 1, slot));
+                expected.push(Call::Queued(group, queued));
+                match slot {
+                    2 => expected.extend([
+                        Call::Pending(player, group),
+                        Call::SpreadUnit(group, target, 7, 8),
+                        Call::Random(0, 1),
+                        Call::ClearGoal(group),
+                        Call::GoalNew(EE_GOAL_CTOR_ATTACK_UNIT, 1),
+                        Call::Spec(EE_GOAL_CTOR_ATTACK_UNIT, 0x0100_0003, target, [0; 3], 1, 0),
+                        Call::SetGoal(group, 2, queued),
+                        Call::SetAction(group, EE_ACTION_ATTACK_ENEMY_UNIT),
+                        Call::Plan(group),
+                        Call::Send(group, target, player, EE_GROUP_COMMAND_ATTACK, 0),
+                        Call::AcknowledgeUnit(player, 0x0100_0003),
+                    ]),
+                    4 => expected.extend([Call::Pending(player, group), Call::SpreadUnit(group, target, 7, 8)]),
+                    _ => expected.push(Call::Release(group)),
+                }
+            }
+            assert_eq!(host.calls, expected);
+            assert_eq!(host.live, 0);
+        }
+    }
+
+    #[test]
+    fn attack_unit_needs_a_selection_and_a_living_target() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0200_0009;
+        for (hit_points, selected, owner) in [(0, true, 2), (-3, true, 2), (5, false, 2), (5, true, 3)] {
+            let mut host = MockHost::default();
+            host.units.insert(target, EeUnitRecord { hit_points, owner, ..complex(target, 5) });
+            if selected {
+                host.groups.insert(0x600, vec![0x0100_0001]);
+            }
+            host.fills.insert(1, vec![0x0100_0001]);
+            attack_unit(&mut host, player, selection, target, false, false);
+            assert!(host.calls.is_empty(), "{hit_points} {selected} {owner}");
+        }
+    }
+
+    /// `EEMHealUnit::Execute`'s calls: the target's complex unit read once, a goal per group that took units, the
+    /// draw after the plan; a target without a complex unit is refused
+    #[test]
+    fn heal_unit_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0100_0007;
+        let mut host = MockHost { specs: true, ..Default::default() };
+        host.units.insert(target, complex(target, 5));
+        host.complex_of.insert(target, 0x0100_0008);
+        host.fills.insert(5, vec![0x0100_0001, 0x0100_0002]);
+        host.draws = vec![1];
+        heal_unit(&mut host, player, selection, target);
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::ComplexOf(target)];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 1, slot));
+            if slot != 5 {
+                expected.push(Call::Release(group));
+                continue;
+            }
+            expected.extend([
+                Call::Pending(player, group),
+                Call::ClearGoal(group),
+                Call::GoalNew(EE_GOAL_CTOR_HEAL_UNIT, 1),
+                Call::Spec(EE_GOAL_CTOR_HEAL_UNIT, 0x0100_0008, EE_UNIT_ID_NONE, [0; 3], 1, 0),
+                Call::SetGoal(group, 15, false),
+                Call::SetAction(group, EE_ACTION_HEAL_UNIT),
+                Call::Plan(group),
+                Call::Random(0, 1),
+                Call::Acknowledge(player, group, 1),
+            ]);
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+        // no such unit, a unit of another list than its id names: nothing; no complex unit: refused after the read
+        for owner in [None, Some(3)] {
+            let mut host = MockHost::default();
+            if let Some(owner) = owner {
+                host.units.insert(target, EeUnitRecord { owner, ..complex(target, 5) });
+            }
+            heal_unit(&mut host, player, selection, target);
+            assert!(host.calls.is_empty());
+        }
+        let mut host = MockHost::default();
+        host.units.insert(target, complex(target, 5));
+        host.complex_of.insert(target, EE_UNIT_ID_NONE);
+        heal_unit(&mut host, player, selection, target);
+        assert_eq!(host.calls, vec![Call::ComplexOf(target)]);
     }
 }

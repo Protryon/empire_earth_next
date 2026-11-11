@@ -175,6 +175,10 @@ pub trait Host {
     /// a new patrol goal's route: `goal->mPatrolGroup->AddPoint(GE2DPoint(x, y), player->mPlayerID)`, then
     /// `player->AddPatrolGroup(goal->mPatrolGroup)`
     fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef);
+    /// `EEActiveGroup::SpreadAroundUnit(target, x, y)`
+    fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64);
+    /// `unit->GetComplexUnit()` as an id (EE_UNIT_ID_NONE: none), read on the object
+    fn unit_complex_id(&mut self, unit: u32) -> u32;
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -224,6 +228,8 @@ pub mod game {
         fn ee_units_host_unit_goal_patrol_route(unit: u32) -> *mut c_void;
         fn ee_units_host_patrol_add_point(route: *mut c_void, x: f32, y: f32, player: *mut c_void);
         fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
+        fn ee_units_host_group_spread_around_unit(group: *mut c_void, target: u32, x: i64, y: i64);
+        fn ee_units_host_unit_complex_id(unit: u32) -> u32;
     }
 
     pub struct GameHost;
@@ -355,6 +361,12 @@ pub mod game {
             // SAFETY: a goal the host created and nothing consumed yet
             unsafe { ee_units_host_goal_patrol_add_point(goal.as_ptr(), x, y, player.0) }
         }
+        fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64) {
+            unsafe { ee_units_host_group_spread_around_unit(group.0, target, x, y) }
+        }
+        fn unit_complex_id(&mut self, unit: u32) -> u32 {
+            unsafe { ee_units_host_unit_complex_id(unit) }
+        }
     }
 }
 
@@ -398,6 +410,8 @@ pub(crate) mod tests {
         GoalRoute(u32),
         AddPoint(HostRef, u32, u32, HostRef),
         GoalAddPoint(u8, u32, u32, HostRef),
+        SpreadUnit(HostRef, u32, i64, i64),
+        ComplexOf(u32),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
         Spec(u32, u32, u32, [u32; 3], u8, usize),
     }
@@ -424,6 +438,8 @@ pub(crate) mod tests {
         /// KeepNonCitizens keeps these; the units' patrol goals' routes
         pub non_citizens: Vec<u32>,
         pub goal_routes: BTreeMap<u32, usize>,
+        /// the units' complex units (absent: the unit itself)
+        pub complex_of: BTreeMap<u32, u32>,
         /// log the goals' arguments too (Call::Spec)
         pub specs: bool,
         pub made: usize,
@@ -594,6 +610,20 @@ pub(crate) mod tests {
         fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef) {
             let kind = self.goal_kind(goal);
             self.calls.push(Call::GoalAddPoint(kind, x.to_bits(), y.to_bits(), player));
+        }
+        fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64) {
+            // the spread keeps the ids in `mobile` when it is set
+            if !self.mobile.is_empty() {
+                let mobile = self.mobile.clone();
+                if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                    ids.retain(|id| mobile.contains(id));
+                }
+            }
+            self.calls.push(Call::SpreadUnit(group, target, x, y));
+        }
+        fn unit_complex_id(&mut self, unit: u32) -> u32 {
+            self.calls.push(Call::ComplexOf(unit));
+            self.complex_of.get(&unit).copied().unwrap_or(unit)
         }
     }
 

@@ -267,12 +267,89 @@ void OriginalAddPatrolPoint(EEPlayer* thePlayer, void* theGroup, float inX, floa
         ee_units_host_patrol_new_lone(thePlayer, inX, inY);   // new EEPPatrolGroup, AddPoint, AddPatrolGroup
 }
 
+// EEMAttackUnit::Execute (0x4bb869) as it was, each world call through the host, the target read on the object
+void OriginalAttackUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, bool inQueued, bool inConvert)
+{
+    EEUnit* theTarget = gWorld.GetUnit((unsigned long)inTargetID);
+    uint32_t theUnit = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;   // theGroup->GetFirstUnit()
+    if (theUnit != kNone && theTarget && theTarget->mHitPoints > 0) {
+        for (unsigned long i = 1; i < 6; i++) {
+            void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+            ee_units_host_group_fill(theActiveGroup, theGroup, 1, (int32_t)i);
+            ee_units_host_group_set_queued(theActiveGroup, inQueued);
+            if (Count(theActiveGroup) > 0) {
+                ee_units_host_pending_push(thePlayer, theActiveGroup);
+                ee_units_host_group_spread_around_unit(theActiveGroup, IDOf(theTarget), (int64_t)theTarget->mTileX.Get(),
+                                                       (int64_t)theTarget->mTileY.Get());
+                if (Count(theActiveGroup) > 0)
+                    theUnit = UnitAt(theActiveGroup, ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+                else
+                    theUnit = kNone;
+                if (theUnit != kNone) {
+                    ee_units_host_group_clear_goal(theActiveGroup);
+                    EeGoalSpec theSpec;   // new EEUGAttackUnit(theGroup->GetFirstUnit(), theTarget, 1, this->mIsConvert)
+                    memset(&theSpec, 0, sizeof(theSpec));
+                    theSpec.ctor = EE_GOAL_CTOR_ATTACK_UNIT;
+                    theSpec.unit_a = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;
+                    theSpec.unit_b = IDOf(theTarget);
+                    theSpec.flag_a = 1;
+                    theSpec.flag_b = inConvert ? 1 : 0;
+                    void* theGoal = ee_units_host_goal_new(&theSpec);
+                    if (theGoal != NULL)
+                        ee_units_host_group_set_goal(theActiveGroup, theGoal, inQueued);
+                    ee_units_host_group_set_action(theActiveGroup, kActionAttackEnemyUnit);
+                    ee_units_host_group_plan(theActiveGroup);
+                    ee_units_host_send_group_command(theActiveGroup, IDOf(theTarget), thePlayer, 0xb9, 0);
+                    ee_units_host_acknowledge_unit(thePlayer, theUnit);
+                }
+            } else
+                ee_units_host_group_release(theActiveGroup);
+        }
+    }
+}
+
+// EEMHealUnit::Execute (0x4bf9df) as it was, each world call through the host, the target read on the object
+void OriginalHealUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID)
+{
+    EEUnit* theTarget = gWorld.GetUnit((unsigned long)inTargetID);
+    if (theTarget) {
+        uint32_t theComplexUnit = ee_units_host_unit_complex_id(IDOf(theTarget));   // theTarget->GetComplexUnit()
+        if (theComplexUnit == kNone)
+            return;   // (the port refuses it: the original's Plan dereferenced the NULL target)
+        for (unsigned long i = 1; i < 6; i++) {
+            void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+            ee_units_host_group_fill(theActiveGroup, theGroup, 1, (int32_t)i);
+            if (Count(theActiveGroup) > 0) {
+                ee_units_host_pending_push(thePlayer, theActiveGroup);
+                ee_units_host_group_clear_goal(theActiveGroup);
+                EeGoalSpec theSpec;   // new EEUGHealUnit(theComplexUnit, true)
+                memset(&theSpec, 0, sizeof(theSpec));
+                theSpec.ctor = EE_GOAL_CTOR_HEAL_UNIT;
+                theSpec.unit_a = theComplexUnit;
+                theSpec.unit_b = kNone;
+                theSpec.flag_a = 1;
+                void* theGoal = ee_units_host_goal_new(&theSpec);
+                if (theGoal != NULL)
+                    ee_units_host_group_set_goal(theActiveGroup, theGoal, 0);
+                ee_units_host_group_set_action(theActiveGroup, kActionHealUnit);
+                ee_units_host_group_plan(theActiveGroup);
+                if (Count(theActiveGroup) > 0)
+                    ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                       ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+            } else
+                ee_units_host_group_release(theActiveGroup);
+        }
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
     kSweepGather = 3,
     kSweepRepair = 4,
-    kSweepAddPatrolPoint = 5
+    kSweepAddPatrolPoint = 5,
+    kSweepAttackUnit = 6,
+    kSweepHealUnit = 7
 };
 
 struct SweepCase {
@@ -280,7 +357,8 @@ struct SweepCase {
     unsigned long mSelection;   // which selection (the record's)
     float mX, mY;               // Attack Ground's and Add Patrol Point's point
     int32_t mTarget;            // Patrol's, Gather's and Repair's target id
-    bool mQueued;               // Gather's and Repair's
+    bool mQueued;               // Gather's, Repair's and Attack Unit's
+    bool mConvert;              // Attack Unit's
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -310,6 +388,18 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalAddPatrolPoint(inPlayer, inSelection, inCase.mX, inCase.mY);
         break;
+    case kSweepAttackUnit:
+        if (inRust)
+            ee_units_attack_unit(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued, inCase.mConvert);
+        else
+            OriginalAttackUnit(inPlayer, inSelection, inCase.mTarget, inCase.mQueued, inCase.mConvert);
+        break;
+    case kSweepHealUnit:
+        if (inRust)
+            ee_units_heal_unit(inPlayer, inSelection, (uint32_t)inCase.mTarget);
+        else
+            OriginalHealUnit(inPlayer, inSelection, inCase.mTarget);
+        break;
     case kSweepRepair:
         if (inRust)
             ee_units_repair(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
@@ -337,6 +427,8 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     theRecord.I32(inCase.mTarget);
     if (inCase.mBody == kSweepGather || inCase.mBody == kSweepRepair)
         theRecord.U32(inCase.mQueued ? 1u : 0u);
+    if (inCase.mBody == kSweepAttackUnit)
+        theRecord.U32((inCase.mQueued ? 1u : 0u) | (inCase.mConvert ? 2u : 0u));
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -430,6 +522,7 @@ void EEGroupCommandSweep()
             theCase.mSelection = s;
             theCase.mTarget = 0;
             theCase.mQueued = false;
+            theCase.mConvert = false;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -473,6 +566,31 @@ void EEGroupCommandSweep()
                     theCase.mTarget = theTargets[t];
                     RunCase(theCase, p, thePlayer, theUnits);
                 }
+                // Attack Unit: the next player's first unit, its own first unit, the resource, no unit; plain and
+                // queued, the first target also as a conversion
+                theCase.mBody = kSweepAttackUnit;
+                std::vector<int32_t> theAttackTargets(theTargets.begin() + 1, theTargets.end());
+                if (theResource != NULL)
+                    theAttackTargets.push_back((int32_t)IDOf(theResource));
+                for (size_t t = 0; t < theAttackTargets.size(); t++) {
+                    if (thePathPoint != NULL && theAttackTargets[t] == (int32_t)IDOf(thePathPoint))
+                        continue;
+                    theCase.mTarget = theAttackTargets[t];
+                    for (int c = 0; c < (t == 0 ? 2 : 1); c++) {
+                        theCase.mConvert = c != 0;
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+                }
+                theCase.mConvert = false;
+            }
+            // Heal Unit: its own first unit, the next player's, no unit
+            theCase.mBody = kSweepHealUnit;
+            theCase.mQueued = false;
+            for (size_t t = 1; t < theTargets.size(); t++) {
+                if (thePathPoint != NULL && theTargets[t] == (int32_t)IDOf(thePathPoint))
+                    continue;
+                theCase.mTarget = theTargets[t];
+                RunCase(theCase, p, thePlayer, theUnits);
             }
         }
     }

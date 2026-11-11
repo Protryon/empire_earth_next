@@ -105,7 +105,9 @@ enum DryEvent {
     kDryInsertPoint,      // unit, player id, x, y
     kDryGoalRoute,        // unit, the route (2 words)
     kDryAddPoint,         // the route (2 words), player id, x, y
-    kDryGoalAddPoint      // ctor, player id, x, y
+    kDryGoalAddPoint,     // ctor, player id, x, y
+    kDrySpreadUnit,       // tag, target, x, y
+    kDryComplexOf         // unit, its complex unit
 };
 
 struct DryGroup {
@@ -716,4 +718,25 @@ extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, flo
     EEUGPatrol* theGoal = static_cast<EEUGPatrol*>(static_cast<EEUnitGoal*>(inGoal));
     theGoal->mPatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
     thePlayer->AddPatrolGroup(theGoal->mPatrolGroup);
+}
+
+// the dry host does not spread: the group keeps its units (logged)
+extern "C" void ee_units_host_group_spread_around_unit(void* inGroup, uint32_t inTarget, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadUnit, Dry(inGroup)->mTag, inTarget, (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadAroundUnit(UnitOf(inTarget), (long)inX, (long)inY);
+}
+
+// the unit's complex unit (EEUnit::GetComplexUnit) as an id, 0xffffffff for none; a read
+extern "C" uint32_t ee_units_host_unit_complex_id(uint32_t inUnit)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+    uint32_t theID = theComplex != NULL ? static_cast<uint32_t>(theComplex->mUnitID) : 0xffffffffu;
+    if (sDry != NULL)
+        Log({kDryComplexOf, inUnit, theID});
+    return theID;
 }
