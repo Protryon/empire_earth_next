@@ -323,6 +323,64 @@ pub extern "C" fn ee_units_dropoff_resource(player: *mut c_void, selection: *mut
     crate::group::dropoff_resource(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), dropoff);
 }
 
+/// `EEMBuildUnit::Execute`'s body (`commands::build_unit`) for the sender, its selection, the technology, the tile
+/// (the message's point through the original's `(long)` casts) and the queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_build_unit(
+    player: *mut c_void,
+    selection: *mut c_void,
+    technology: i32,
+    x: i64,
+    y: i64,
+    queued: bool,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::build_unit(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        technology,
+        x,
+        y,
+        queued,
+    );
+}
+
+/// `EEMSmartFarmers::Execute`'s body (`commands::smart_farmers`) for the sender, its selection and the target id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_smart_farmers(player: *mut c_void, selection: *mut c_void, target: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::smart_farmers(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
+}
+
+/// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
+/// target id (-1: none), the tile and the technology.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_cast_calamity(
+    player: *mut c_void,
+    selection: *mut c_void,
+    caster: u32,
+    target: i32,
+    x: i32,
+    y: i32,
+    technology: i32,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::cast_calamity(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        caster,
+        target,
+        x,
+        y,
+        technology,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

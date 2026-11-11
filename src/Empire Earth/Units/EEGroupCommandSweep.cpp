@@ -35,9 +35,14 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EEMap.h"
+#include "lle/USingleton.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EETechTreeTechID.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitHost.h"
+#include "ee/EEUnitGoal.h"
 #include "rust/ee_rust.h"
 
 namespace {
@@ -501,6 +506,263 @@ void OriginalUnloadTransport(EEPlayer* thePlayer, void* theGroup, long inX, long
     }
 }
 
+// a two-call host list (the count, then the ids)
+void ReadFarms(uint32_t inUnit, std::vector<uint32_t>& outIDs)
+{
+    outIDs.resize(ee_units_host_free_farms(inUnit, NULL, 0));
+    if (!outIDs.empty())
+        ee_units_host_free_farms(inUnit, &outIDs[0], outIDs.size());
+}
+
+bool ReadDropSites(uint32_t inFarm, std::vector<uint32_t>& outIDs)
+{
+    uint8_t theFound = 0;
+    outIDs.resize(ee_units_host_farm_drop_sites(inFarm, NULL, 0, &theFound));
+    if (!outIDs.empty())
+        ee_units_host_farm_drop_sites(inFarm, &outIDs[0], outIDs.size(), &theFound);
+    return theFound != 0;
+}
+
+// EEMBuildUnit::Execute (0x4bbcc4) as it was, each world call through the host (the class read, the capitol count,
+// CanProduce, EECanPlaceOnTile, EEMakeBuilding, the farm search and sort, the orders), the units read on the objects
+void OriginalBuildUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology, long inX, long inY, bool inQueued)
+{
+    std::vector<uint32_t> theNearUnits;
+    std::vector<uint32_t> theMovedUnits;
+    if (Count(theGroup) > 0 && UnitAt(theGroup, 0) != kNone) {   // theGroup->GetFirstUnit()
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
+        ee_units_host_pending_push(thePlayer, theActiveGroup);
+        ee_units_host_group_keep_citizens(theActiveGroup);
+        if (Count(theActiveGroup) > 0) {   // theActiveGroup->GetFirstUnit()
+            uint8_t theFound = 0;
+            long theUnitType = (long)ee_units_host_technology_unit_class(thePlayer, inTechnology, &theFound);
+            if (!theFound)   // (the original read through the missing node; the Rust body refuses it)
+                return;
+            if (theUnitType != kUnitTypeCapitol || ee_units_host_player_num_capitols(thePlayer) == 0) {
+                if (ee_units_host_can_produce(thePlayer, inTechnology)) {
+                    if (ee_units_host_can_place_on_tile(thePlayer, theUnitType, inX, inY)) {
+                        uint32_t theBuilding = ee_units_host_make_building(thePlayer, theUnitType, inX, inY);
+                        bool theGranary = theUnitType == kUnitTypeGranary || theUnitType == kUnitTypeGranaryImproved;
+                        if (theGranary) {
+                            // do { EEFindFreeFarm(theBuilding->GetComplexUnit(), 1, &theCount) } while (a farm)
+                            ReadFarms(ee_units_host_unit_complex_id(theBuilding), theNearUnits);
+                            if (theNearUnits.size() > 0) {
+                                EEUnit* theFirst = ObjectOf(UnitAt(theActiveGroup, 0));
+                                ee_units_host_sort_farms(&theNearUnits[0], theNearUnits.size(), theFirst->mTileX.Get(),
+                                                         theFirst->mTileY.Get(), 0);
+                            }
+                        }
+                        unsigned long i = 0;
+                        unsigned long j = 0;
+                        for (; i < Count(theActiveGroup); i++, j++) {
+                            unsigned long theNumUnits = Count(theActiveGroup);
+                            uint32_t theWorker = UnitAt(theActiveGroup, (long)i);
+                            if (inQueued) {
+                                ee_units_host_unit_add_build_target(theWorker, theBuilding);
+                                EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theWorker));
+                                if (theObject->mGoalState.Get() && theObject->mGoalState->mKind != kGoalBuildRepair)
+                                    ee_units_host_unit_start_action(theWorker, kActionIdle);
+                            } else
+                                ee_units_host_unit_order_build(theWorker, theBuilding);
+                            if (theGranary) {
+                                if (j < theNearUnits.size())
+                                    ee_units_host_unit_add_farm_target(theWorker, theNearUnits[j]);
+                                else if (theNearUnits.size() > 0)
+                                    ee_units_host_unit_add_farm_target(
+                                        theWorker, theNearUnits[ee_units_host_random(0, (int32_t)theNearUnits.size() - 1)]);
+                            }
+                            if (Count(theActiveGroup) != theNumUnits) {
+                                i--;
+                                theMovedUnits.push_back(theWorker);
+                            }
+                        }
+                        for (i = 0; i < theMovedUnits.size(); i++)
+                            ee_units_host_group_add_member(theActiveGroup, theMovedUnits[i]);
+                        if (Count(theActiveGroup) > 0)
+                            ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                               ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+                    }
+                }
+            }
+        }
+    }
+}
+
+// EEMSmartFarmers::Execute (0x4c7739) as it was, each world call through the host (the farm search, the load goal's
+// farm, the drop sites, CanTake, the sort, the orders), the units read on the objects
+void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTargetID)
+{
+    std::vector<uint32_t> theFarms;
+    std::vector<uint32_t> theOccupants;
+    uint32_t theFirstUnit = Count(theSelection) > 0 ? UnitAt(theSelection, 0) : kNone;   // GetFirstUnit()
+    long theTargetID = inTargetID;
+    EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theTargetID));
+    if (theFirstUnit == kNone || theTarget == NULL)
+        return;
+    void* theGroup = ee_units_host_active_group_new(thePlayer);
+    ee_units_host_group_fill(theGroup, theSelection, 0, 0);
+    ee_units_host_group_keep_citizens(theGroup);
+    long theCount = (long)Count(theGroup);
+    if (theCount > 0) {
+        uint32_t theFarm;
+        ReadFarms(IDOf(theTarget), theFarms);   // do { EEFindFreeFarm(theTarget, 1, &theIndex) } while (a farm)
+        for (long i = 0; i < theCount; i++) {
+            uint32_t theUnit = UnitAt(theGroup, i);
+            theFarm = ee_units_host_unit_load_farm(theUnit);   // the load goal's farm
+            if (theFarm != kNone) {
+                theOccupants.clear();
+                if (ReadDropSites(theFarm, theOccupants)) {
+                    if (std::find(theOccupants.begin(), theOccupants.end(), IDOf(theTarget)) != theOccupants.end()
+                        && ee_units_host_can_take(IDOf(theTarget), theUnit)) {
+                        ee_units_host_unit_drop_gathered(theUnit);
+                        ee_units_host_unit_start_action(theUnit, kActionMoveToStorage);
+                        continue;
+                    }
+                } else
+                    theFarm = kNone;
+            }
+            if (theFarm == kNone && theFarms.size() > 0) {
+                EEUnit* theObject = ObjectOf(theUnit);
+                ee_units_host_sort_farms(&theFarms[0], theFarms.size(), theObject->mTileX.Get(), theObject->mTileY.Get(), 1);
+                theFarm = theFarms.back();
+                theFarms.pop_back();
+            }
+            if (theFarm != kNone) {
+                ee_units_host_work_farm(theFarm, theUnit);
+                continue;
+            }
+            EEUnit* theObject = ObjectOf(theUnit);
+            EeGoalSpec theSpec;
+            memset(&theSpec, 0, sizeof(theSpec));
+            theSpec.unit_a = kNone;
+            theSpec.unit_b = kNone;
+            long theAction;
+            if (theObject->mResourceAmount > 0 && ee_units_host_can_take(IDOf(theTarget), theUnit)) {
+                theSpec.ctor = EE_GOAL_CTOR_GATHER;   // new EEUGGather(NULL, theTarget, true)
+                theSpec.unit_b = IDOf(theTarget);
+                theSpec.flag_a = 1;
+                theAction = kActionMoveToStorage;
+            } else {
+                theSpec.ctor = EE_GOAL_CTOR_LOCATION_2D;   // new EEUGLocation(GE2DPoint(the target's tile), true, true, ..)
+                theSpec.point[0] = (float)theTarget->GetTileX();
+                theSpec.point[1] = (float)theTarget->GetTileY();
+                theAction = kActionPrepareToMove;
+            }
+            void* theGoal = ee_units_host_goal_new(&theSpec);
+            if (theGoal != NULL)
+                ee_units_host_unit_set_goal(theUnit, theGoal);
+            ee_units_host_unit_start_action(theUnit, (int32_t)theAction);
+        }
+        if (Count(theGroup) > 0)
+            ee_units_host_play_acknowledgement(thePlayer, theGroup, ee_units_host_random(0, (int32_t)Count(theGroup) - 1));
+    }
+    ee_units_host_pending_push(thePlayer, theGroup);
+    ee_units_host_group_finish(theGroup);
+}
+
+// a cast goal's spec (new EEUGCastCalamity(inUnit, inTarget, x, y, the technology, true))
+void* CastGoal(uint32_t inUnit, uint32_t inTarget, long inX, long inY, long inTechnology)
+{
+    EeGoalSpec theSpec;
+    memset(&theSpec, 0, sizeof(theSpec));
+    theSpec.ctor = EE_GOAL_CTOR_CAST_CALAMITY;
+    theSpec.unit_a = inUnit;
+    theSpec.unit_b = inTarget;
+    theSpec.ints[0] = inX;
+    theSpec.ints[1] = inY;
+    theSpec.ints[2] = inTechnology;
+    theSpec.flag_a = 1;
+    return ee_units_host_goal_new(&theSpec);
+}
+
+// EEMCastCalamity::Execute (0x4bc483) as it was, each world call through the host (the node and its class, CanCastAt,
+// Contains, the power and the cost, the caster's player, the split, the goals, the orders), the units read on the
+// objects
+void OriginalCastCalamity(EEPlayer* thePlayer, void* theSelection, int32_t inCasterID, int32_t inTargetID, int32_t inX,
+                          int32_t inY, int32_t inTechnology)
+{
+    unsigned long i;
+    EEUnit* theTarget = NULL;
+    bool theCast = false;
+    EEComplexUnit* theCaster = EEUnitCast<EEComplexUnit>(gWorld.GetUnit((unsigned long)inCasterID));
+    if (theCaster == NULL || theCaster->mHitPoints <= 0)
+        return;
+    int32_t theClassEnum = 0;
+    uint8_t theCastByAll = 0;
+    void* theClass = ee_units_host_calamity_of(thePlayer, inTechnology, &theClassEnum, &theCastByAll);
+    if (theClass == NULL)   // (no node: the original returned; no class: it read through NULL, the Rust body refuses)
+        return;
+    if (inTargetID != -1)
+        theTarget = gWorld.GetUnit((unsigned long)inTargetID);
+    uint32_t theTargetID = IDOf(theTarget);
+    if (theClassEnum == 0x12) {
+        if (ee_units_host_calamity_can_cast_at(theClass, IDOf(theCaster), inX, inY, theTargetID) != 0)
+            return;
+        void* theGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theGroup, theSelection, 0, 0);
+        ee_units_host_group_split_calamity_casters(theGroup, theClass, thePlayer, inTechnology, theTargetID);
+        if (Count(theGroup) > 0) {
+            std::vector<uint32_t> theUnits;
+            void* theGoal = CastGoal(IDOf(theCaster), theTargetID, inX, inY, inTechnology);
+            for (i = 0; i < Count(theGroup); i++)
+                theUnits.push_back(UnitAt(theGroup, (long)i));
+            for (std::vector<uint32_t>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end(); theIterator++) {
+                uint32_t theUnit = IDOf(ObjectOf(*theIterator)->GetComplexUnit());   // (*theIterator)->mComplexUnit
+                ee_units_host_group_remove_unit(theGroup, theUnit);
+                ee_units_host_unit_clear_goals(theUnit);
+                void* theCopy = theGoal != NULL ? ee_units_host_goal_clone(theGoal) : NULL;
+                if (theCopy != NULL)
+                    ee_units_host_unit_set_goal(theUnit, theCopy);
+                ee_units_host_unit_start_action(theUnit, kActionPrepareToMove);
+            }
+            if (theGoal != NULL)
+                ee_units_host_goal_release(theGoal);   // delete theGoal
+            ee_units_host_group_release(theGroup);
+        }
+        return;
+    }
+    void* theGroup = ee_units_host_active_group_new(ee_units_host_unit_player(IDOf(theCaster)));
+    if (inTechnology != kTechTeleport && !theCastByAll) {
+        unsigned long theCount = Count(theSelection);
+        for (i = 0; i < theCount && !theCast; i++) {
+            uint32_t theUnit = UnitAt(theSelection, (long)i);
+            EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theUnit));
+            long theResult = (long)ee_units_host_calamity_can_cast_at(theClass, theUnit, inX, inY, theTargetID);
+            int64_t thePower;
+            if (theObject->mHitPoints > 0 && theResult == 0
+                && ee_units_host_technology_contains(thePlayer, inTechnology, theObject->mUnitClass->mUnitType)
+                && (thePower = ee_units_host_unit_power(theUnit), thePower >= ee_units_host_calamity_cost(theClass))) {
+                void* theGoal = CastGoal(theUnit, theTargetID, inX, inY, inTechnology);
+                if (theGoal != NULL)
+                    ee_units_host_unit_set_goal(theUnit, theGoal);
+                if (theObject->mUnitClass->mUnitType == kUnitTypeCapitol || inTechnology == kTechConquistadorsSpell)
+                    ee_units_host_unit_start_action(theUnit, kActionCalamityPreCast);
+                else
+                    ee_units_host_unit_start_action(theUnit, kActionPrepareToMove);
+                ee_units_host_group_add_member(theGroup, theUnit);
+                theCast = true;
+            }
+        }
+    } else {
+        for (i = 0; i < Count(theSelection); i++) {
+            uint32_t theUnit = UnitAt(theSelection, (long)i);
+            EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theUnit));
+            if (theObject->mHitPoints > 0
+                && ee_units_host_technology_contains(thePlayer, inTechnology, theObject->mUnitClass->mUnitType)
+                && ee_units_host_calamity_can_cast_at(theClass, theUnit, inX, inY, theTargetID) == 0) {
+                void* theGoal = CastGoal(theUnit, theTargetID, inX, inY, inTechnology);
+                if (theGoal != NULL)
+                    ee_units_host_unit_set_goal(theUnit, theGoal);
+                ee_units_host_unit_start_action(theUnit, kActionPrepareToMove);
+                ee_units_host_group_add_member(theGroup, theUnit);
+            }
+        }
+    }
+    if (theGroup != NULL)
+        ee_units_host_pending_push(thePlayer, theGroup);
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -512,7 +774,10 @@ enum SweepBody {
     kSweepPathTo = 8,
     kSweepDropoffResource = 9,
     kSweepBuildWall = 10,
-    kSweepUnloadTransport = 11
+    kSweepUnloadTransport = 11,
+    kSweepBuildUnit = 12,
+    kSweepSmartFarmers = 13,
+    kSweepCastCalamity = 14
 };
 
 struct SweepCase {
@@ -525,6 +790,8 @@ struct SweepCase {
     float mFacing;              // Path To's
     unsigned long mFlags;       // Path To's: 1 forced, 2 rotating, 4 queued, 8 group movement
     float mEndX, mEndY;         // Build Wall's end (mX, mY its start; mTarget its technology)
+    int32_t mTechnology;        // Build Unit's and Cast Calamity's (mX, mY their tile; mTarget Cast Calamity's target)
+    int32_t mCaster;            // Cast Calamity's caster id
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -587,6 +854,27 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalUnloadTransport(inPlayer, inSelection, (long)inCase.mX, (long)inCase.mY);
         break;
+    case kSweepBuildUnit:
+        if (inRust)
+            ee_units_build_unit(inPlayer, inSelection, inCase.mTechnology, (int64_t)inCase.mX, (int64_t)inCase.mY,
+                                inCase.mQueued);
+        else
+            OriginalBuildUnit(inPlayer, inSelection, inCase.mTechnology, (long)inCase.mX, (long)inCase.mY, inCase.mQueued);
+        break;
+    case kSweepSmartFarmers:
+        if (inRust)
+            ee_units_smart_farmers(inPlayer, inSelection, (uint32_t)inCase.mTarget);
+        else
+            OriginalSmartFarmers(inPlayer, inSelection, inCase.mTarget);
+        break;
+    case kSweepCastCalamity:
+        if (inRust)
+            ee_units_cast_calamity(inPlayer, inSelection, (uint32_t)inCase.mCaster, inCase.mTarget, (int32_t)inCase.mX,
+                                   (int32_t)inCase.mY, inCase.mTechnology);
+        else
+            OriginalCastCalamity(inPlayer, inSelection, inCase.mCaster, inCase.mTarget, (int32_t)inCase.mX, (int32_t)inCase.mY,
+                                 inCase.mTechnology);
+        break;
     case kSweepDropoffResource:
         if (inRust)
             ee_units_dropoff_resource(inPlayer, inSelection, (uint32_t)inCase.mTarget);
@@ -630,6 +918,12 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
         theRecord.F32(inCase.mEndX);
         theRecord.F32(inCase.mEndY);
     }
+    if (inCase.mBody == kSweepBuildUnit)
+        theRecord.U32((unsigned int)inCase.mTechnology | (inCase.mQueued ? 0x80000000u : 0u));
+    if (inCase.mBody == kSweepCastCalamity) {
+        theRecord.I32(inCase.mTechnology);
+        theRecord.I32(inCase.mCaster);
+    }
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -649,6 +943,52 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
         EESimCaptureRecord::Flush();
         exit(3);
     }
+}
+
+// the player's technologies whose node makes inUnitType (the first one), or -1
+int32_t FindTechnology(EEPlayer* inPlayer, long inUnitType)
+{
+    EETechTree* theTree = inPlayer->mTechnologies;
+    for (long e = 0; e < theTree->mEpochs.size(); e++) {
+        std::vector<long> theIDs;
+        theTree->mEpochs[e].GetNodeIDs(theIDs);
+        for (size_t i = 0; i < theIDs.size(); i++) {
+            EETechTreeNode* theNode = theTree->Get(theIDs[i]);
+            if (theNode != NULL && theNode->mData != NULL && theNode->mData->mUnitClass == inUnitType)
+                return (int32_t)theIDs[i];
+        }
+    }
+    return -1;
+}
+
+// the player's calamity technologies: the first of each calamity class kind (class 0x12, cast by all the selected,
+// any other) and Teleport when the tree has it
+void FindCalamityTechnologies(EEPlayer* inPlayer, std::vector<int32_t>& outIDs)
+{
+    EETechTree* theTree = inPlayer->mTechnologies;
+    int32_t theGroupCast = -1, theByAll = -1, theOther = -1;
+    for (long e = 0; e < theTree->mEpochs.size(); e++) {
+        std::vector<long> theIDs;
+        theTree->mEpochs[e].GetNodeIDs(theIDs);
+        for (size_t i = 0; i < theIDs.size(); i++) {
+            EETechTreeNode* theNode = theTree->Get(theIDs[i]);
+            if (theNode == NULL || theNode->mData == NULL || theNode->mData->mCalamity == 0 || theIDs[i] == kTechTeleport)
+                continue;
+            EECalamityClass* theClass =
+                EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)theNode->mData->mCalamity);
+            if (theClass == NULL)
+                continue;
+            int32_t& theSlot = theClass->mClassEnum == 0x12 ? theGroupCast : theClass->mIsCastByAllSelected ? theByAll : theOther;
+            if (theSlot == -1)
+                theSlot = (int32_t)theIDs[i];
+        }
+    }
+    int32_t theFound[3] = {theGroupCast, theByAll, theOther};
+    for (int k = 0; k < 3; k++)
+        if (theFound[k] != -1)
+            outIDs.push_back(theFound[k]);
+    if (theTree->Get(kTechTeleport) != NULL)
+        outIDs.push_back(kTechTeleport);
 }
 
 } // namespace
@@ -728,6 +1068,8 @@ void EEGroupCommandSweep()
             theCase.mFlags = 0;
             theCase.mEndX = 0.0f;
             theCase.mEndY = 0.0f;
+            theCase.mTechnology = 0;
+            theCase.mCaster = 0;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -842,6 +1184,74 @@ void EEGroupCommandSweep()
             theCase.mX = (float)(long)theCenter;
             theCase.mY = (float)(long)theCenter;
             RunCase(theCase, p, thePlayer, theUnits);
+            // Build Unit: a granary, a house and a capitol (the technologies the player's tree makes them with) and a
+            // technology it has no node of, at the first unit's tile and the centre, plain and queued (the dry host
+            // lets every production and placement through)
+            theCase.mBody = kSweepBuildUnit;
+            int32_t theBuildTechs[4] = {FindTechnology(thePlayer, kUnitTypeGranary), FindTechnology(thePlayer, kUnitTypeHouse),
+                                        FindTechnology(thePlayer, kUnitTypeCapitol), 0x7e00};
+            for (int b = 0; b < 4; b++) {
+                if (theBuildTechs[b] == -1)
+                    continue;
+                theCase.mTechnology = theBuildTechs[b];
+                for (int q = 0; q < 2; q++) {
+                    theCase.mQueued = q != 0;
+                    theCase.mX = (float)(long)theFirstX;
+                    theCase.mY = (float)(long)theFirstY;
+                    RunCase(theCase, p, thePlayer, theUnits);
+                    if (b == 0) {
+                        theCase.mX = (float)(long)theCenter;
+                        theCase.mY = (float)(long)theCenter;
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+                }
+            }
+            theCase.mQueued = false;
+            // Smart Farmers at its own first unit, the next player's, its path point, no unit and its first granary
+            theCase.mBody = kSweepSmartFarmers;
+            theCase.mX = 0.0f;
+            theCase.mY = 0.0f;
+            std::vector<int32_t> theFarmTargets(theTargets.begin() + 1, theTargets.end());
+            for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
+                if (theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
+                    continue;
+                EEUnitClass* theClass = static_cast<EEComplexUnit*>(theUnit)->mUnitClass.Get();
+                if (theClass != NULL && (theClass->mUnitType == kUnitTypeGranary || theClass->mUnitType == kUnitTypeGranaryImproved)) {
+                    theFarmTargets.push_back((int32_t)IDOf(theUnit));
+                    break;
+                }
+            }
+            for (size_t t = 0; t < theFarmTargets.size(); t++) {
+                theCase.mTarget = theFarmTargets[t];
+                RunCase(theCase, p, thePlayer, theUnits);
+            }
+            // Cast Calamity: casters its first unit and its first unit with power; targets none and the next player's
+            // first unit; the calamity technologies of its tree (one of each class kind, Teleport); at the first unit's
+            // tile (the dry host answers every CanCastAt "can")
+            theCase.mBody = kSweepCastCalamity;
+            std::vector<int32_t> theCalamities;
+            FindCalamityTechnologies(thePlayer, theCalamities);
+            std::vector<int32_t> theCasters;
+            if (!theOwn.empty())
+                theCasters.push_back((int32_t)IDOf(theOwn[0]));
+            for (size_t k = 0; k < theOwn.size(); k++)
+                if (theOwn[k]->GetPower() > 0) {
+                    theCasters.push_back((int32_t)IDOf(theOwn[k]));
+                    break;
+                }
+            int32_t theCastTargets[2] = {-1, theTargets.size() > 2 ? theTargets[2] : -1};
+            theCase.mX = (float)(long)theFirstX;
+            theCase.mY = (float)(long)theFirstY;
+            for (size_t c = 0; c < theCasters.size(); c++)
+                for (int t = 0; t < 2; t++)
+                    for (size_t k = 0; k < theCalamities.size(); k++) {
+                        theCase.mCaster = theCasters[c];
+                        theCase.mTarget = theCastTargets[t];
+                        theCase.mTechnology = theCalamities[k];
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+            theCase.mCaster = 0;
+            theCase.mTechnology = 0;
         }
     }
 }
