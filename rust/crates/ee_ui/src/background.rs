@@ -190,6 +190,60 @@ pub fn full_draw(
     result
 }
 
+/// `UIBFull::DrawBackground`: a form-sized grid of `grid` (columns, rows) tiles, each `texture` (the first tile's
+/// texture size) scaled by the form's size plus one over the texture rectangle's; the tiles under the redraw
+/// rectangle's overlap with the form (the whole form when they do not overlap: `And` in place leaves it) drawn
+/// onto their overlap with it, rows then columns, in tiles `GERectangle(top left, width, height)` lays out (right
+/// and bottom one pixel in). The last draw's result (`kErrorOK` without one).
+pub fn bfull_draw(
+    h: &mut impl FullHost,
+    form: UiRect,
+    redraw: UiRect,
+    texture: (c_ulong, c_ulong),
+    texture_rect: UiRect,
+    grid: (c_ulong, c_ulong),
+) -> c_long {
+    let (columns, rows) = grid;
+    let mut draw = form;
+    and_in_place(&mut draw, &redraw);
+    let tile_w = (form.width() + 1.0) / texture_rect.width() * texture.0 as f32;
+    let tile_h = (form.height() + 1.0) / texture_rect.height() * texture.1 as f32;
+    let (left, top) = (form.left, form.top);
+    let first_row = um_floor((draw.top - top) / tile_h) as c_ulong;
+    let mut last_row = um_floor((draw.bottom - top) / tile_h) as c_ulong;
+    let first_column = um_floor((draw.left - left) / tile_w) as c_ulong;
+    let mut last_column = um_floor((draw.right - left) / tile_w) as c_ulong;
+    if last_row >= rows {
+        last_row = rows.wrapping_sub(1);
+    }
+    if last_column >= columns {
+        last_column = columns.wrapping_sub(1);
+    }
+    let mut result = 0;
+    let mut row = first_row;
+    while row <= last_row {
+        let mut column = first_column;
+        while column <= last_column {
+            let index = columns.wrapping_mul(row).wrapping_add(column);
+            let x = column as f32 * tile_w + left;
+            let y = row as f32 * tile_h + top;
+            let tile = UiRect::new(x, y, x + (tile_w - 1.0), y + (tile_h - 1.0));
+            if let Some(clipped) = and(&draw, &tile) {
+                result = h.draw(index, tile, clipped);
+            }
+            if column == c_ulong::MAX {
+                break;
+            }
+            column += 1;
+        }
+        if row == c_ulong::MAX {
+            break;
+        }
+        row += 1;
+    }
+    result
+}
+
 /// `UIFullBackground::LoadBackground`'s file name of the tile at `row`, `column` (from 0): the name with
 /// `_row_column` (from 1) before its extension, the text after its last `.` (kept: a `.` in a directory of a name
 /// without one takes the suffix before it), or after the whole name without a `.`. The C++ built the first form in a
@@ -321,3 +375,5 @@ pub fn form_tiles(h: &mut impl FormTileHost, rect: UiRect, draw: UiRect, tiles: 
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod bfull_tests;

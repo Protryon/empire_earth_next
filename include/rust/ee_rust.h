@@ -9392,6 +9392,17 @@ long ee_ui_background_full_draw(void *background,
                                 unsigned long columns,
                                 unsigned long rows);
 
+/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_bfull_draw(void *background,
+                                 EeUiRect form,
+                                 EeUiRect redraw,
+                                 unsigned long texture_width,
+                                 unsigned long texture_height,
+                                 EeUiRect texture_rect,
+                                 unsigned long columns,
+                                 unsigned long rows);
+
 /// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
 /// `RelayoutBackground` (never exclusive) lay a background out in.
 EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
