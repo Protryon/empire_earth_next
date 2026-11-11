@@ -5761,6 +5761,69 @@ moved wholly, so no unit was deleted.
   every capture digest of the four profiles equal to its golden but USGC, whose lines the next commit recorded; the
   live Rust-against-original comparison inside the sweep never stopped a game): see the final report. Not run: any harness session, macOS or Linux builds.
 
+## R4.4: the Graphics Thread mapped, the camera's math in Rust (ee_gfx camera.rs; branch rust-gfx7, 2026-11-11)
+
+RUST_PLAN's new row R4.4 holds the map of the Graphics Thread (what each part decides, which GE/GX calls it makes,
+what it reads). The first leaf is the camera's math (`EECameraControl.cpp`), in a new crate `ee_gfx` over `ee_ge`'s
+math. The class keeps its members, the key list, the followed units (handles), `MoveTo`, `KeepPose`, `Revolve`,
+`Rotate`, the setters and every viewport and world call; Rust gets plain values (the GE classes as their
+`#[repr(C)]` mirrors) and gives back values the C++ stores.
+
+- **What moved.** `GetPitch`; `GetOffset`/`GetLocation`; `GoTo`'s speed and its two snaps (the followed unit's
+  speed times the game speed is read in C++ only when following, as before); `ClampHeight`; `BuildView`;
+  `SetClippingDistances` with `EECameraRayDistance`; `ClipToEdges`; `GetGroundPoint`; `Scroll`'s ground direction,
+  its near test and its clamp to the map's edge planes; `Update`'s step of the move (wait out a key, the path's next
+  key, a jump, an advance) and its orthographic view. The terrain is three C++ callbacks over the mesh
+  (`GetIsValidTile`/`GetIsValidPoint` after `UMFloorUnsigned`, `GetMeshZ`), so the platform's `unsigned long`
+  stays on the C++ side.
+- **The camera is simulation code too.** `EEPhysics.cpp:756` calls `Update` every tick (EE-SIM included), which sets
+  the world's camera transformation, its yaw and pitch, the viewport and the minimap's view. RUST_PLAN 2.1 applies:
+  the C++'s `f32` order, `(float)pow((double)x, e)` and `(float)sqrt` through `f64`, the table trigonometry.
+- **`pow` through `black_box`.** The golden caught Rust's `pow(x, 0.5)` giving `+NaN` where the C++ gave `-NaN`
+  (mode 3 past zoom 1): LLVM rewrites a constant exponent of 0.5 as `fabs(sqrt(x))` unless fast-math is off for
+  libcalls, which it is not for Rust. The exponent now goes through `std::hint::black_box`, so the C library's
+  `pow` runs as the C++'s does.
+- **`Scroll` reads the zoom before its mode switch.** The original computes the delta's scale (`mZoom + 0.5`), the
+  pitch and the minimum height before `SetMode(0)`/`ResetZoom` (free camera outside a cinematic) reset the zoom to
+  1; the first forwarder passed the zoom after it and the golden failed 28 scroll cases. The forwarder passes the
+  scale taken first.
+- **One change of shape, none of behaviour.** The original built each of `SetClippingDistances`' three view rays
+  twice (`EECameraRayDistance` per limit); `EEMap::GetScreenLine` reads only the viewport, which changes after all
+  six, so the forwarder builds each ray once and the Rust measures it twice.
+- **A hazard found, not fixed: the free camera past zoom 1 crashes.** In mode 3 `GetPitch` is
+  `pow(1 - |zoom|, 0.5)`: NaN past zoom 1, and the port's farther zoom-out (`gCameraMaxZoom` 2) allows that zoom.
+  `SetOrientationYPR(NaN)` reaches the table cosine, which faults on a NaN angle (the C++ indexed at `INT_MIN`;
+  `ee_ge::um::um_cos` panics). `EESMEffect.cpp:2096/2152` and `EEACenterCamera.cpp:79` switch to mode 3 with the
+  current zoom, so a scenario's cinematic after a zoom past 1 likely crashes the game. Modes 0 and 1 clamp the zoom
+  at 1 for the pitch; mode 3 should too (a one-line fix in `camera::pitch`, a behaviour change left to the lead).
+- **The golden driver** (`build/camera_golden`, scratch, `build.py orig|cur [seed [scale [full]]]`): the camera unit
+  of 9432f6e7 (`git archive`) or the worktree's, compiled with the exe module's flags, linked with the real GE math
+  units and `GEViewport` (the lle module's flags) and a scratch Rust staticlib (ee_ge, ee_gfx, ee_plat_core) under
+  `/FORCE:UNRESOLVED`. The fakes: `gWorld` is zeroed storage under its decorated name (`__asm__` label), the map a
+  calloc'ed `EEMap` whose mesh (`#define private public` around `GETerrainMesh.h` only) has rectangle or diamond
+  rows, the real edge planes (`ee_ge_terrain_planes`) and a hash height per half tile; `EEMap::GetScreenLine` a ray
+  from the viewport's camera; `RTSMap::GetLocationOnLine` the hit at height 1; `EEWorld::SetCameraTransformation`
+  records the camera and sets the viewport's; the unit handles resolve to none. 24 meshes of 600 cases: GetPitch,
+  the interpolation, GoTo, ClampHeight, BuildView, SetClippingDistances, ClipToEdges and GetGroundPoint, Scroll
+  (with the free camera's mode switch), Update (with and without a key path, orthographic or not) and 60 cases of
+  the movers that stay C++ (MoveTo with locations, SetZoom, SetMode, Revolve, Rotate, SetLocation, SetOffset, the
+  turns, KeepPose). Each line is the case's FNV-1a 64 over its whole log (inputs, every height query with its
+  answer, the recorded camera, the outputs), 410 KB; `full` prints the logs. `golden_camera.rs` draws the same LCG
+  stream, rebuilds the generator's camera, viewport (`ee_ge`'s `GeViewport`) and mesh, runs each case through
+  `camera.rs` with the C++ glue rewritten in the test (KeepPose, GoTo, `MoveTo` without units for the mode switch,
+  NextKey, ResetPath) and compares the digests: 12,984 cases; the 1,440 C++-only movers only advance the stream.
+  The relinked driver printed the same file, and the same on seeds 2 and 3 at four times the size (57,696 lines
+  each). A mutation (the height clamp's `height + minimum`) fails the replay at its first case.
+- **Driver traps.** One random draw per statement: the order in which a call's arguments are evaluated is the
+  compiler's, and `GE3DPoint(F(), F(), F())` is not a stream the Rust can follow. A `std::vector` of the mesh's rows
+  destroys the old rows through `DeallocateInternalData` (out of line, unresolved): define it. The empty unit
+  handles call `EEUnitHandleResolve`: define it. The camera's file statics (`gGameVersion`) need `UString` and
+  `UWideString`. And never clean a scratch folder with `rm orig/g*.txt`: it took `golden_camera.txt` with it.
+- **Only a tour exercises this** beyond the sim's ticks: EE-SIM runs `Update` every tick (no unit followed, no
+  scroll), so the oracle covers the update's step, `BuildView` and the clipping distances on the perspective path;
+  scrolling, zooming, rotating, following a unit, a cinematic's key path and the orthographic view run only in the
+  windowed game.
+
 ## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
 
 Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and
@@ -5969,6 +6032,169 @@ vtables, events and every call; Rust decides which call happens. No class moved 
   of the four gated builds.
 - **Still C++ of WONGUI:** the objects and the calls above, the config readers' branch bodies, and the drawing (Surface,
   StretchImage's nine slices, the decoders, the platform backend, the paint).
+
+## R6: the mouse dispatch, the edit box's anchor fix, entity groups, the list's type-to-find, the text label's geometry and the scrolling label (ee_ui mouse.rs, entity_group.rs, find_key.rs, label_fit.rs, scrolling.rs; branch rust-r6-ui8, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIControl.h`,
+`UILBString.h`, `UITextLabel.h` and `UITLScrolling.h` gained a `friend struct`): `UIForm::UpdateMouse` and
+`UIControl::UpdateMouse` (`mouse.rs`: the captured control or the one under the mouse, the wheel, the form's eleven
+mouse events, a control's press, release and double-click dispatch and its button-down members);
+`UIEntityGroup::Disable`/`Enable`'s loops (`entity_group.rs`); `UILBString::UpdateTranslatedKey`'s search
+(`find_key.rs`); `UITextLabel::ComputeTextLabelRect`, `CheckScrollBar` and `SetLocation`'s rectangles
+(`label_fit.rs`); `UITLScrolling`'s `CopyData` scroll and snapshot, both `ScrollText`s, `Pause`/`Resume`/
+`StopScrolling` and `DrawTextA`'s line places (`scrolling.rs`). `RadioUnCheck` was already Rust (round 3's
+`RemoveOtherChecks`); what is left of it is `UIButtonRust::RadioSwap`'s reference counts.
+
+- **A fix, the owner's decision (the only behaviour change):** after an edit box's Backspace, Delete, Cut, Ctrl+L or
+  a paste over a selection, a selection anchor that is no longer a place in the text (its line gone, or its index
+  past its line's end) becomes the caret (`Edit::keep_anchor_in_text`, `edit_keys.rs`). The original kept it, so
+  round 7's two hazards read past the lines: typing Backspace while drag-selecting with the mouse (the drag's next
+  `MouseMove` selected from the old anchor), and Shift + the keypad's Del (Num Lock off) + an arrow in one frame
+  with a selection (the arrow selected from the deleted selection's far end). An anchor still inside the text stays
+  where it was, as in the original (a reset to the caret after every deletion would change nothing the game shows
+  but would move the printed anchor in 34 of the key golden's 60 boxes). Two Rust tests reproduce the hazards (they
+  failed before the fix); `golden_keys.txt` changed in 12 of its 60 boxes, each only in the anchor and the state
+  lines that follow from it, re-recorded from the key driver over the fixed forwarders (seeds 2-5: 158, 186, 149 and
+  185 of 600 boxes, the same kind of change only). Typing a character over a selection (`UpdateTranslatedKey`)
+  deletes it and ends the drag (`selecting` false), so it needs no reset.
+- **Mouse:** the captured control is read again after a control's handlers (they capture and release the mouse);
+  a control whose `MouseWheelTurned` fails is forgotten for the form's wheel event and the result is OK; a press
+  while the control thinks the button held is a press again (`MouseLButtonDown` once more), and a button up without
+  a release event still releases. `gISMouse->GetEntity`'s out pointer starts NULL in the host (the original's was
+  uninitialised; the real mouse always writes it).
+- **Type-to-find under D6:** `UWideString::operator[](0)` is a byte, so a key compares its lower- and upper-case
+  forms' first bytes with each line's first byte: `é` and `É` share the lead byte 0xc3 and match any line starting
+  with a two-byte Latin letter (kept).
+- **Text label:** `CheckScrollBar` does not look at the label type (a one-line label with more lines than rows gets
+  a scroll bar; the game never gives it more than one line). `ComputeTextLabelRect`'s visible lines run from the
+  slider's value for `mNumberLinesDisplayed` lines unchecked against the line count (the real slider's range keeps
+  them inside).
+- **Scrolling label:** the pixel offset is a `long` compared as a float, the snapshot loop's `y` an `unsigned long`
+  against a `long` bottom (a negative offset skips the loop), `ScrollText(time, end)` divides `time / lines` in
+  integers and its end delay wraps (`4294957151` in the golden): all kept.
+- **Golden drivers, new traps.**
+  - A calloc'ed form has no vtable: call `sForm->UIForm::UpdateMouse()` (qualified), or the virtual call jumps to 0.
+  - A vtable of `template <int N>` stubs that log their slot number finds the slots a unit calls without a layout
+    dump (`UIListBox<T>::ChangeSelectionIndex` is slot 36, `GetNumLines` 42, `HideControl` 12, `SetDirty` 25); then
+    give those slots typed stubs (a generic stub's extra argument registers hold garbage that differs per build).
+  - A fake class with an out-of-line constructor (the scroll bar, whose real one needs the manager's bitmaps):
+    define the constructor's decorated name (`??0UIScrollBar@@QEAA@KAEBVGE2DPoint@@MKPEAVUIForm@@KK@Z`) as an
+    `extern "C"` function taking `this` first and returning it, and fill the object there (memset, a stub vtable).
+  - Private statics of a unit that is not linked are defined by their decorated names in an `extern "C" { T v
+    __asm__("?sLMouseButton@UIManager@@0PEAVISEntity@@EA") = NULL; }` block; protected and private members called
+    from the driver under `#define protected public` link by their real decoration
+    (`?CheckScrollBar@UITextLabel@@MEAAXXZ`, `?ComputeTextLabelRect@UITextLabel@@AEAAXXZ`).
+  - `GERectangle::RoundToNearest` is GEBitmap.cpp's (copied into the driver); `UIManager::AddEventToTrigger` is
+    inline and pushes onto `mEventsToTrigger` (placement-new the deque in a calloc'ed manager; the event needs
+    `UIEvent`'s size for its `Reference`).
+- **Goldens:** `golden_mouse.txt` (1,500 worlds), `golden_group.txt` (400 groups and 400 lists),
+  `golden_label_fit.txt` (150 labels x 30 operations), `golden_scroll.txt` (120 labels x 40 operations). Each
+  replays whole in Rust; each driver relinked over the forwarders printed the same file, and the same on two more
+  seeds at ten times the size; the label and scroll replays also pass on those seeds. Mutations checked: the
+  wheel's forgotten control (mouse), the label margin and the centred left edge (label), the end offset's
+  comparison (scroll) each fail their replay; an equality-only change of the end comparison and a reassociation of
+  the vertical centring did not (no case lands on them).
+- **Gates run:** after each commit `build.py -j 3 --sim` (the first `-j 4`) 0/0 (EE-AOC, EE-SIM), the sim oracle
+  (seeds 2-7) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game or POSIX build was run.
+- **What a real game exercises (EE-SIM has no UI):** `UIForm::UpdateMouse` and `UIControl::UpdateMouse` run on every
+  frame of every menu with the mouse over a form (hover, clicks, the wheel over a list): every menu load of a tour.
+  `UIEntityGroup::Enable`/`Disable` run whenever the game enables or disables a group of buttons and hot keys
+  (greyed buttons). `ComputeTextLabelRect` and `CheckScrollBar` run on every text label's `SetText` and
+  `UITextLabel::SetLocation` on every label's move: every menu load; a scroll bar appears only on a multi-line label
+  with more lines than rows (long texts, the chat). The scrolling label is the
+  credits and the in-game scrolling texts (trigger 0x3f4): a tour reaches it only if it opens them.
+  `UILBString::UpdateTranslatedKey` runs only when a person types a letter into a focused string list (a combo
+  box's drop-down). The edit box fix changes only what a person's typing during a drag, or Shift + keypad Del with
+  an arrow, does.
+
+## R3.6, second round: the conductor, the music manager, the mixers' registry and the engine's start in Rust (ee_sound conductor.rs, music.rs, mixers.rs; branch rust-snd2, 2026-11-11)
+
+Moved to `rust/crates/ee_sound`, each over a `Host` trait and C++ trampolines, the C++ classes keeping every member
+the game reads and every exported name:
+
+- `SEConductor` (`conductor.rs`): the score table (names, ids, load counts, the loaded `SEScore*`; the member
+  `mScores` became the handle `mRust`), loading and the start's reload, the id counter's wrap past -1, start and
+  stop, `Play`/`Queue`/`Stop`, `TransitionTo`'s pattern, the volume curve (`volume^1.1512925` in double, silent at
+  0.01), the intensity and channel-group rules, `UnloadScore`. dmusic's loader and performance, the scores, the
+  mixer's music source and the lock stay C++; the trampolines `ee_conductorcpp_*` are the dmusic call sequences.
+- `EEMusicManager` (`music.rs`): the music thread's step (the intensity delay's countdown, what each wake-up does),
+  `DoStart`/`DoPause`/`DoStop`, `NextSong` (a random song of the epoch, a second draw against the same song),
+  `FadeIn`/`FadeOut`, the intensity rules (a drop waits 5 s) and the time to the next song (`lrintf(r * 120001 +
+  300000)`, 420001 taken as 420000). This is where "which piece next, fades, intensity, timers" live: `SEConductor`
+  and `SEScore` only carry them out. The manager has no Rust state; the members stay C++ (layout proven) and are
+  read and written one by one through the host in the original's order, because `SetIntensity` runs on the render
+  and simulation threads while the music thread is in a seconds-long fade (a copy in and out would lose their
+  writes).
+- `SEMixer` and `Sound Engine.cpp` (`mixers.rs`): the registry (`SEMixer::sMixers` became a Rust global behind a
+  lock that is never held across a trampoline: the destructor a trampoline runs comes back for it), `GetMixer`,
+  `GetCount` (out of line now), `UseMixer`'s stop/deactivate/activate decision, the destructor's, the start's walk
+  of the plug-in table (a mixer per sound module, the invalid ones deleted at once, `kErrorNotFound` for none) and
+  the shutdown's order. `sActiveMixer` stays a C++ static (the movie player reads it inline); the SPIM entry points,
+  the conductor and `new`/`delete` of the mixers stay C++.
+
+What did not move, and why:
+
+- **There is no volume, pan, 3D attenuation or channel allocation in `SEMixer`.** It is a table of the plug-in's
+  entry points. The mixing (volumes, pan, pitch, the channels' sums) is the plug-in's, in Rust since R3.1
+  (`ee_mixer`); which channel a sound gets and the voice limits are `SESoundManager`'s, in Rust since the first
+  round (`manager.rs`). The positional sound (volume and pan from the camera and the source) is the game's:
+  `EEComputeSoundParameters` (`EEFOFindNewTargetNearOldTarget.cpp` 2905; file-static copies in
+  `EEUCBasicPriest.cpp`, `EEUCBuildingPriest.cpp`), used by `PlayAnimationSound` (`EEGameUtilities.cpp`, falloff
+  4.0), the units, the calamities (`kCalamitySoundFalloff`), `EEAmbientSound`, `EEE3DRain`.
+- **`SEScore` has no decisions**: a dmusic segment's wrapper (repeat count, release). It stays C++ with dmusic.
+- **MCI CD audio is dead on this port**: `SEInitialize` is called with `inUseCD == false` (Empire Earth.cpp 2564),
+  so `SEInitializeCD`, `SECD` and the CD half of `SEShutdown` never run. Not ported.
+- **Microsoft DirectMusic is gone** (PORT_LEARNINGS "DirectMusic -> dmusic"); the vendored dmusic library
+  (`src/ThirdParty/dmusic`, C) plays the music and stays, D4-style, like miniaudio under the mixer.
+
+The sound triggers in the game (simulation lanes, not moved; for later):
+
+- unit acknowledgements: `EEMessage.cpp` picks the unit with `gPhysics->GetRandom` (the simulation's draw: it must
+  move with the message's Execute, RUST_PLAN 2.1), then `EEPlayer::PlayAcknowledgement` (Player/EEPlayer.cpp 2747:
+  the acknowledgement delay from `kWorldAcknowledgementDelay`, the group's change time) and
+  `EEUnitClassUpgrade::GetAcknowledgeSound(-1)` (a file-static alternation, `sModel74Index`);
+- selection sounds: `EEPlayer.cpp` 399/471 and `EEMessage.cpp` 6093 through `EEPlayForLocalPlayer`
+  (`EEGameUtilities.cpp` 89: local player only);
+- combat, death, construction and projectile sounds: `Units/` (17 units: `EEComplexUnit`, `EEUnit`, `EEUnitClass`,
+  the `EEUC*` classes, `EEUGBuildRepair`), with `EEComputeSoundParameters`;
+- calamities (16 units under `Calamities/`), the ambient sounds (`EEAmbientSound*.cpp`), the UI's clicks
+  (`User Interface Thread/`, 6 units), the music's intensity from the battle (`EERenderObject.cpp` 1627: the
+  fighting units' share every 250 ms, `gMusicFollowsBattle`).
+
+Golden drivers (each over the unmodified units, `#define private public`, the units included whole; relinked over
+the forwarders, each printed the same text):
+
+- **Fakes that answer must print their answers.** The music driver's fakes (the wait's result, the time, the random
+  generator, the songs, `GetScore`) draw from a seeded generator and print `name args -> answer`; the Rust fake
+  host takes its answers from the golden text at the point it asks, so the replay needs no copy of the driver's
+  generator and a call out of order fails at once ("wanted ..., the Rust asked ...").
+- **Other threads inside the wait.** The music driver's `WaitAny` may call `SetIntensity` or change the current
+  player before answering, as the render thread and the world would; the replay does the same at the same lines.
+- **Globals the unit reads by object** (`gWorld`, `gGamePreferences`, `PIMModule::sDirectory`) are zeroed storage
+  under `/ALTERNATENAME:<mangled>=storage`; `/FORCE:MULTIPLE` lets the driver's `PlatSleep` win over the Rust
+  library's.
+- **`#define private public` hides access errors in the forwarders.** The mixers' driver compiled the new
+  `SEMixer.cpp` with every member public, so its `extern "C"` trampolines reading `SEMixer::sActiveMixer` (private)
+  passed there and failed in the game's build: trampolines go through the nested `Rust` struct, and the full build
+  is the check, not the driver.
+- **cbindgen exports every `pub const` of the crate**: `WAIT_TIMEOUT` met Windows' macro of that name in the first
+  driver build. The modules' constants are `pub(crate)`; the conductor's (`OK`, `BUSY`, ...) had reached the
+  header in the conductor's commit and left it in the music manager's.
+
+- **The Rust gate under load**: `ee_plat_core`'s timer tests failed twice with eight agents on the machine ("0 ticks");
+  they pass alone (`--test-threads=1`), which is how this round's gate ran them.
+
+Behaviour changes: `EEMusicObject::GetRandom` returning NULL (no song for the epoch) crashed `DoStart` and `NextSong`
+(`LoadScore` on NULL); in Rust `DoStart` silences and asks to stop, `NextSong` keeps the old score id and plays
+whatever the conductor still has for it (pinned by a unit test; the shipped tables have songs for every epoch).
+`SEConductor::LoadScore(secondary)` with a name not in the table wrote entry `size - 1` (or `-1` when empty, UB);
+Rust writes the last entry or deletes the new score when the table is empty (unreachable: the start reloads names
+taken from the table).
+
+Only a played game with sound exercises these (EE-SIM has no conductor; the goldens are fakes; nobody has listened):
+the music's start at the first game frame (`EEWorld.cpp` 1053), every song change (5 to 7 minutes) and its fades,
+the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
+volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
 
 ## R6: WONGUI's drawing as plans the C++ executes (ee_won guidraw.rs; branch rust-r6-won11, 2026-11-11)
 

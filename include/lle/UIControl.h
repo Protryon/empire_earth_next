@@ -27,6 +27,7 @@ class UIHotKey;
 class LLE_API UIControl : public UIEntity {
     friend class UIForm;                    // the form's tabbing calls TabbedTo/TabbedFrom (protected)
     friend class UIComboBox;                // drives its parts' protected mouse/tab handlers (ui-edit)
+    friend struct UIControlRust;            // UIControl.cpp: the Rust mouse dispatch's calls (ee_ui mouse.rs)
 public:
     virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
     // the key statics are ISEntity*: GetValue() is slot 0x0c

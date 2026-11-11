@@ -169,6 +169,16 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// The free camera mode (`mMode == 3`).
+constexpr static const int32_t MODE_FREE = 3;
+
+/// What `Update` does after stepping: nothing more, the path's next key, or the view.
+constexpr static const int32_t CAMERA_STEP_DONE = 0;
+
+constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
+
+constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -693,6 +703,9 @@ constexpr static const unsigned long TRIGGER_SELECTION_CHANGED = 1003;
 constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
+
+/// `kControlTriggerScrollingFinished`.
+constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
 
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
@@ -1699,6 +1712,9 @@ struct EeAStarGraphStorage;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
+
+/// The score table, owned by the C++ `SEConductor` (created and destroyed with it).
+struct EeConductor;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
@@ -3670,6 +3686,76 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
+/// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
+/// end (a move shorter than 0.001).
+struct EeGfxCameraGoTo {
+  float speed;
+  bool snap_offset;
+  bool snap_focus;
+};
+
+/// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxGround {
+  void *context;
+  /// `GetIsValidTile(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_tile)(void *context, float x, float y);
+  /// `GetIsValidPoint(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_point)(void *context, float x, float y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
+};
+
+/// The camera's pose at a step of the move (`BuildView`'s inputs).
+struct EeGfxCameraPose {
+  /// `mQ014`, `mQ04C`: the view turn's start and end.
+  EeGeQuaternion view_start;
+  EeGeQuaternion view_end;
+  /// `mQ024`, `mQ05C`: the offset turn's.
+  EeGeQuaternion offset_start;
+  EeGeQuaternion offset_end;
+  EeGe3DPoint start_offset;
+  EeGe3DPoint end_offset;
+  EeGe3DPoint start_focus;
+  EeGe3DPoint end_focus;
+};
+
+/// The front and rear clipping distances `SetClippingDistances` gives the viewport.
+struct EeGfxClipping {
+  float front;
+  float rear;
+};
+
+/// The view rays through the screen's top, centre and bottom (`SetClippingDistances`' three screen lines).
+struct EeGfxCameraRays {
+  EeGe3DLine top;
+  EeGe3DLine center;
+  EeGe3DLine bottom;
+};
+
+/// The terrain mesh's four edge planes (`GetFrontPlane` .. `GetRightPlane`).
+struct EeGfxEdgePlanes {
+  EeGe3DPlane front;
+  EeGe3DPlane back;
+  EeGe3DPlane left;
+  EeGe3DPlane right;
+};
+
+/// The move's state `Update` steps.
+struct EeGfxCameraStep {
+  float fraction;
+  float rate;
+  float wait;
+  float waited;
+  bool changed;
+  bool locked;
+};
+
+/// The orthographic view and its rectangle's half size (`Update`'s orthographic branch).
+struct EeGfxOrthoView {
+  EeGeTransformation view;
+  float size;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3738,6 +3824,18 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// The conductor's scalar members (the C++ object's, read and written around each call).
+struct EeConductorFields {
+  float volume;
+  /// 0 stopped, 1 running.
+  uint32_t state;
+  uint32_t reverb_state;
+  int32_t next_score_id;
+  int32_t playing_id;
+  uint32_t intensity;
+  uint32_t channel_group_count;
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -8883,6 +8981,120 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
+/// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
+///
+/// # Safety
+/// `world` is valid.
+float ee_gfx_camera_pitch(float zoom,
+                          int32_t mode,
+                          const EeGeTransformation *world);
+
+/// `GetOffset`/`GetLocation`: `step` of the way from `start` to `end`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_lerp(const EeGe3DPoint *start,
+                        const EeGe3DPoint *end,
+                        float step,
+                        EeGe3DPoint *out);
+
+/// `GoTo`'s speed and snaps.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxCameraGoTo ee_gfx_camera_go_to(const EeGe3DPoint *start_offset,
+                                    const EeGe3DPoint *end_offset,
+                                    const EeGe3DPoint *start_focus,
+                                    const EeGe3DPoint *end_focus,
+                                    float key_rate,
+                                    bool following,
+                                    float follow_rate);
+
+/// `ClampHeight(ioTransformation)`.
+///
+/// # Safety
+/// `t` is valid; the callbacks are valid for the call.
+void ee_gfx_camera_clamp_height(EeGeTransformation *t,
+                                int32_t mode,
+                                float front_clipping,
+                                bool plain,
+                                EeGfxGround ground);
+
+/// `BuildView(out, step)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_build_view(const EeGfxCameraPose *pose,
+                              float step,
+                              int32_t mode,
+                              float front_clipping,
+                              bool plain,
+                              EeGfxGround ground,
+                              EeGeTransformation *out);
+
+/// `SetClippingDistances`' distances; `rays` is null in the orthographic view.
+///
+/// # Safety
+/// `rays` is null or valid; `camera` is valid.
+EeGfxClipping ee_gfx_camera_clipping(const EeGfxCameraRays *rays,
+                                     const EeGe3DPoint *camera,
+                                     int32_t mode,
+                                     float zoom,
+                                     bool free_camera,
+                                     bool far_rear_clipping);
+
+/// `ClipToEdges(line, ioPoint)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clip_to_edges(const EeGe3DLine *line,
+                                 const EeGfxEdgePlanes *planes,
+                                 EeGe3DPoint *point);
+
+/// `GetGroundPoint(line, out)`; `offset` is `GetOffset(mFraction)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_ground_point(const EeGe3DLine *line,
+                                const EeGfxEdgePlanes *planes,
+                                const EeGe3DPoint *offset,
+                                int32_t mode,
+                                EeGfxGround ground,
+                                EeGe3DPoint *out);
+
+/// `Scroll`'s ground direction (`scale`: the zoom + 0.5 as the scroll began).
+///
+/// # Safety
+/// `view` is valid.
+EeGeVector ee_gfx_camera_scroll_direction(const EeGeTransformation *view,
+                                          float dx,
+                                          float dy,
+                                          float scale);
+
+/// Whether `Scroll` looks for the ground under the screen (the offset within 10).
+///
+/// # Safety
+/// `offset` is valid.
+bool ee_gfx_camera_scroll_is_near(const EeGe3DPoint *offset);
+
+/// `Scroll`'s clamp of the target to the map's edge planes.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clamp_to_map(EeGe3DPoint *target, const EeGfxEdgePlanes *planes);
+
+/// `Update`'s step of the move (`CAMERA_STEP_*`).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
+
+/// `Update`'s orthographic view.
+///
+/// # Safety
+/// `focus` is valid.
+EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
+
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
 
@@ -9389,6 +9601,135 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
 
+/// An empty score table (the constructor).
+EeConductor *ee_conductor_create();
+
+/// Frees the table; its scores were deleted by the stop before (a stopped conductor holds none).
+///
+/// # Safety
+/// `c` from `ee_conductor_create`, not used afterwards.
+void ee_conductor_destroy(EeConductor *c);
+
+/// The constructor's scalar members.
+EeConductorFields ee_conductor_fields_new();
+
+/// `LoadScore(name, outID, secondary)`; `written` says whether the C++ wrote `outID` (then `out_id` holds it).
+///
+/// # Safety
+/// As `with`; `name` NUL-terminated, the outs valid.
+int32_t ee_conductor_load_score(EeConductor *c,
+                                void *ctx,
+                                EeConductorFields *f,
+                                const char *name,
+                                bool secondary,
+                                int32_t *out_id,
+                                bool *written);
+
+/// `SetConductorState`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_state(EeConductor *c, void *ctx, EeConductorFields *f, uint32_t state);
+
+/// `InitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_initialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `UninitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_uninitialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `Play`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_play(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Queue`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_queue(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Stop`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_stop(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `TransitionTo(id, command, flags)` (the flags are unused).
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_transition_to(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   int32_t id,
+                                   uint32_t command);
+
+/// `UnloadScore`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_unload_score(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `SetVolume`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_volume(EeConductor *c, void *ctx, EeConductorFields *f, float volume);
+
+/// `SetIntensity`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_intensity(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   uint32_t intensity,
+                                   bool immediate);
+
+/// `SetChannelGroupCount`.
+///
+/// # Safety
+/// `f` valid, the C++ lock held.
+int32_t ee_conductor_set_channel_group_count(EeConductorFields *f, uint32_t count);
+
+/// `GetCurrentlyPlayingScore`.
+///
+/// # Safety
+/// `f` valid.
+int32_t ee_conductor_currently_playing(const EeConductorFields *f);
+
+/// `GetScore`: the `SEScore*` (null: none).
+///
+/// # Safety
+/// As `with` (no host is reached).
+void *ee_conductor_score(EeConductor *c, int32_t id);
+
+/// `GetScoreID`.
+///
+/// # Safety
+/// As `with` (no host is reached).
+int32_t ee_conductor_score_id(EeConductor *c, void *score);
+
+/// One entry of the score table, for inspection (tests, the golden driver): false past the last. `name` gets at
+/// most `name_capacity - 1` bytes and a NUL.
+///
+/// # Safety
+/// As `with`; `name` has `name_capacity` bytes (> 0), the outs are valid.
+bool ee_conductor_entry(EeConductor *c,
+                        uint32_t index,
+                        char *name,
+                        uint32_t name_capacity,
+                        void **score,
+                        int32_t *id,
+                        uint32_t *load_count);
+
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
 
@@ -9561,6 +9902,69 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// The constructor: a new mixer joins the registry.
+///
+/// # Safety
+/// `mixer` is a live `SEMixer*`.
+void ee_mixers_register(void *mixer);
+
+/// The destructor's decisions: the active mixer stops and deactivates, then the mixer leaves the registry.
+///
+/// # Safety
+/// `mixer` is the `SEMixer*` being destroyed.
+void ee_mixers_destroy(void *mixer);
+
+/// `SEMixer::GetCount`.
+uint32_t ee_mixers_count();
+
+/// `SEMixer::GetMixer`: `kErrorBeyondEnd` past the last (`out` untouched).
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_mixers_get(uint32_t index, void **out);
+
+/// `SEMixer::UseMixer` (null: none).
+///
+/// # Safety
+/// `mixer` is null or a live `SEMixer*`.
+int32_t ee_mixers_use(void *mixer_ptr);
+
+/// `SEInitializeMixers` over the C++ start state `ctx`.
+///
+/// # Safety
+/// `ctx` is what the trampolines expect.
+int32_t ee_mixers_initialize(void *ctx);
+
+/// `SEShutdown`'s mixers.
+void ee_mixers_delete_all();
+
+/// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
+/// one. True when the thread must end.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+bool ee_music_step(void *ctx,
+                   int32_t wait,
+                   uint32_t elapsed);
+
+/// `SetIntensity`'s rule (the C++ sets the event after it).
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`.
+void ee_music_request_intensity(void *ctx, uint32_t intensity);
+
+/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_do(void *ctx, uint32_t what);
+
+/// `Update`.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_update(void *ctx, uint32_t elapsed);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///
@@ -10295,6 +10699,32 @@ long ee_ui_font_closest_size(unsigned long pixel_height);
 /// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
 size_t ee_ui_font_find_or_create(const void *query);
 
+/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
+void ee_ui_group_disable(void *group);
+
+/// `UIEntityGroup::Enable`'s loop.
+void ee_ui_group_enable(void *group);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
+
+/// `UITextLabel::ComputeTextLabelRect`.
+void ee_ui_label_compute_rect(void *label);
+
+/// `UITextLabel::CheckScrollBar`.
+void ee_ui_label_check_scroll_bar(void *label);
+
+/// `UITextLabel::SetLocation`'s rectangles after the control's move: the label's rectangle and border and whether
+/// it has a scroll bar -> the scroll bar strip in `scroll_bar`, the text rectangle in `text`.
+void ee_ui_label_location_rects(EeUiRect rect,
+                                unsigned long border,
+                                bool has_scroll_bar,
+                                EeUiRect *scroll_bar,
+                                EeUiRect *text);
+
 /// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
 unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
 
@@ -10444,6 +10874,39 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
+long ee_ui_control_update_mouse(void *control,
+                                const void *location);
+
+/// `UIForm::UpdateMouse` -> its result.
+long ee_ui_form_update_mouse(void *form);
+
+/// `UITLScrolling::CopyData` (after the C++ copied the label's text into the draw text) -> its result.
+long ee_ui_scrolling_copy_data(void *label);
+
+/// `UITLScrolling::ScrollText(speed, start delay, end delay, start offset, end offset)`.
+void ee_ui_scrolling_scroll_text(void *label,
+                                 float speed,
+                                 long start_delay,
+                                 long end_delay,
+                                 long start_offset,
+                                 long end_offset);
+
+/// `UITLScrolling::ScrollText(time, end delay)`.
+void ee_ui_scrolling_scroll_text_for(void *label, unsigned long time, unsigned long end_delay);
+
+/// `PauseScrolling` (`resume` false) or `ResumeScrolling`.
+void ee_ui_scrolling_pause(void *label, bool resume);
+
+/// `StopScrolling`.
+void ee_ui_scrolling_stop(void *label);
+
+/// `DrawTextA`'s place for snapshot line `i`.
+EeUiPoint ee_ui_scrolling_line_at(float draw_left,
+                                  unsigned long font_height,
+                                  unsigned long i,
+                                  unsigned long offset);
 
 /// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
 long ee_ui_status_fill(long value,

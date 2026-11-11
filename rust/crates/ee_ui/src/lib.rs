@@ -15,17 +15,22 @@ pub mod draw;
 pub mod edit;
 pub mod edit_draw;
 pub mod edit_keys;
+pub mod entity_group;
 pub mod event;
+pub mod find_key;
 pub mod font;
 pub mod form;
 pub mod form_state;
 pub mod hotkey;
+pub mod label_fit;
 pub mod layout;
 pub mod list;
 pub mod manager;
 pub mod manager_media;
+pub mod mouse;
 pub mod rect;
 pub mod scrollbar;
+pub mod scrolling;
 pub mod slider;
 pub mod status;
 pub mod text;
@@ -62,6 +67,13 @@ mod form_state_ffi;
 // imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod font_ffi;
+// imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent
+// from a test binary
+#[cfg(not(test))]
+mod group_ffi;
+// imports the C++ text label's members, text and scroll bar (UITextLabel.cpp), absent from a test binary
+#[cfg(not(test))]
+mod label_fit_ffi;
 // imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod hotkey_ffi;
@@ -70,6 +82,12 @@ mod draw_ffi;
 // imports nothing: the edit box's measures and draws come as a function table
 mod edit_draw_ffi;
 mod layout_ffi;
+// imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod mouse_ffi;
+// imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
+#[cfg(not(test))]
+mod scrolling_ffi;
 // imports nothing: the status bar's arithmetic takes and returns values
 mod status_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary

@@ -7,7 +7,9 @@
 //
 // A multi-line label's word wrapping (ReadWord 0x1007f5f8, ReadLine 0x1007f406 and SetText's line loop) is Rust
 // (rust/crates/ee_ui/src/wrap.rs, docs/RUST_PLAN.md R6); SetText forwards to it, and ee_uicpp_label_measure/_add_line
-// are its way back to the text object and the new lines.
+// are its way back to the text object and the new lines. The label's geometry (ComputeTextLabelRect's fit,
+// CheckScrollBar's decisions, SetLocation's rectangles) is Rust too (label_fit.rs); UITextLabelRust below answers its
+// questions and makes its calls (the scroll bar's construction and calls, the virtual SetRectangle and SetDirty).
 #include <windows.h>
 #include <mbstring.h>
 #include <stdlib.h>
@@ -109,79 +111,111 @@ void UITextLabel::ChangeFont(GEFont* inFont)
     this->ComputeTextLabelRect();
 }
 
+// The Rust geometry's view of a label (ee_ui label_fit.rs)
+struct UITextLabelRust {
+    static UITextLabel* L(void* inLabel) { return static_cast<UITextLabel*>(inLabel); }
+    static unsigned long Value(void* inLabel, int inWhich)
+    {
+        UITextLabel* l = L(inLabel);
+        switch (inWhich) {
+        case 0:
+            return l->mFitRectToText;
+        case 1:
+            return l->mLabelType;
+        case 2:
+            return l->mAlignment;
+        case 3:
+            return (unsigned long)l->mLines.size();
+        case 4:
+            return l->mNumberLinesDisplayed;
+        case 5:
+            return l->mScrollBar != NULL;
+        case 6:
+            return l->mScrollBarRemoved;
+        default:
+            return (unsigned long)l->mScrollBar->GetSlider()->GetCurrentRangeValue();
+        }
+    }
+    static EeUiRect Rect(void* inLabel, int inWhich)
+    {
+        UITextLabel* l = L(inLabel);
+        switch (inWhich) {
+        case 0:
+            return UITextLabelRect(l->mOriginalRectangle);
+        case 1:
+            return UITextLabelRect(l->mRectangle);
+        case 2:
+            return UITextLabelRect(l->mScrollBarRectangle);
+        default:
+            return UITextLabelRect(l->mScrollBar->GetRectangle());
+        }
+    }
+    static void Measure(void* inLabel, unsigned long inLine, float* outWidth, float* outHeight)
+    {
+        UITextLabel* l = L(inLabel);
+        l->mText->SetText(*l->mLines[inLine]);
+        *outWidth = l->mText->GetTextExtent().GetWidth();
+        *outHeight = l->mText->GetTextExtent().GetHeight();
+    }
+    static void Call(void* inLabel, int inCall, unsigned long inValue, const EeUiRect& inRectangle, float inLength)
+    {
+        UITextLabel* l = L(inLabel);
+        GERectangle theRectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+        switch (inCall) {
+        case 0:
+            l->mScrollBarRemoved = inValue != 0;
+            break;
+        case 1:
+            l->SetRectangle(theRectangle);
+            break;
+        case 2:
+            l->SetDirty(true);
+            break;
+        case 3:
+            l->SetBgRectangle(theRectangle);
+            break;
+        case 4:
+            l->mScrollBar->SetRange(0, inValue);
+            break;
+        case 5:
+            l->mScrollBar = new UIScrollBar(l->mId, l->mScrollBarRectangle.GetTopLeft(), inLength, 1, l->mForm, l->mIndex,
+                                            l->GetBorderThickness());
+            break;
+        case 6:
+            l->mScrollBar->SetPageSize(inValue);
+            break;
+        default:
+            l->mScrollBar->SetBgColor(l->mScrollBarBgColor);
+            l->mScrollBar->SetBgOpacity(l->mScrollBarBgOpacity);
+            break;
+        }
+    }
+};
+extern "C" unsigned long ee_uicpp_label_fit_value(void* inLabel, int inWhich) { return UITextLabelRust::Value(inLabel, inWhich); }
+extern "C" EeUiRect ee_uicpp_label_fit_rect(void* inLabel, int inWhich) { return UITextLabelRust::Rect(inLabel, inWhich); }
+extern "C" void ee_uicpp_label_fit_measure(void* inLabel, unsigned long inLine, float* outWidth, float* outHeight)
+{
+    UITextLabelRust::Measure(inLabel, inLine, outWidth, outHeight);
+}
+extern "C" void ee_uicpp_label_fit_call(void* inLabel, int inCall, unsigned long inValue, EeUiRect inRectangle, float inLength)
+{
+    UITextLabelRust::Call(inLabel, inCall, inValue, inRectangle, inLength);
+}
+
 // FUNCTION: LLE 0x1007e9cb
 // Creates, updates or marks for removal the scroll bar depending on whether the lines overflow the visible rows
+// (ee_ui label_fit.rs)
 void UITextLabel::CheckScrollBar()
 {
-    if (this->mScrollBar != NULL && !this->mScrollBarRemoved) {
-        if (this->mLines.size() <= this->mNumberLinesDisplayed) {
-            this->mScrollBarRemoved = true;
-            this->SetDirty(true);
-            this->SetBgRectangle(this->mRectangle);
-        } else
-            this->mScrollBar->SetRange(0, this->mLines.size() - this->mNumberLinesDisplayed);
-    } else if (this->mLines.size() > this->mNumberLinesDisplayed) {
-        if (this->mScrollBar == NULL) {
-            this->mScrollBar = new UIScrollBar(this->mId, this->mScrollBarRectangle.GetTopLeft(),
-                                         this->mScrollBarRectangle.GetBottom() + 1.0f - this->mScrollBarRectangle.GetTop(), 1,
-                                         this->mForm, this->mIndex, this->GetBorderThickness());
-            this->mScrollBar->SetRange(0, this->mLines.size() - this->mNumberLinesDisplayed);
-            this->mScrollBar->SetPageSize(this->mNumberLinesDisplayed > 1 ? this->mNumberLinesDisplayed - 1 : this->mNumberLinesDisplayed);
-            this->mScrollBar->SetBgColor(this->mScrollBarBgColor);
-            this->mScrollBar->SetBgOpacity(this->mScrollBarBgOpacity);
-            this->SetBgRectangle(GERectangle(this->mRectangle.GetLeft(), this->mRectangle.GetTop(),
-                                       this->mScrollBar->GetRectangle().GetLeft() - 1.0f, this->mRectangle.GetBottom()));
-        } else
-            this->mScrollBar->SetRange(0, this->mLines.size() - this->mNumberLinesDisplayed);
-        this->mScrollBarRemoved = false;
-    }
-    this->ComputeTextLabelRect();
+    ee_ui_label_check_scroll_bar(this);
 }
 
 // FUNCTION: LLE 0x1007ebf2
 // With fit-to-text on, shrinks the label rectangle around its (visible) lines and marks it dirty when it changed
+// (ee_ui label_fit.rs)
 void UITextLabel::ComputeTextLabelRect()
 {
-    GERectangle theRectangle = this->mOriginalRectangle;
-    if (!this->mFitRectToText)
-        return;
-    float theWidth;
-    float theHeight;
-    if (this->mLabelType == 0 && this->mLines.size() > 0) {
-        this->mText->SetText(*this->mLines[0]);
-        theWidth = this->mText->GetTextExtent().GetWidth();
-        theHeight = this->mText->GetTextExtent().GetHeight();
-        if (this->mAlignment == kTextAlignCenter)
-            theRectangle.SetLeft(theRectangle.GetWidth() * 0.5f + theRectangle.GetLeft() - theWidth * 0.5f);
-        else if (this->mAlignment == kTextAlignRight)
-            theRectangle.SetLeft(theRectangle.GetRight() - theWidth);
-        theRectangle.SetTop(theRectangle.GetHeight() * 0.5f + theRectangle.GetTop() - theHeight * 0.5f);
-    } else {
-        theHeight = 0.0f;
-        theWidth = 0.0f;
-        unsigned long i;
-        unsigned long theEnd;
-        if (this->mScrollBar != NULL && !this->mScrollBarRemoved) {
-            i = this->mScrollBar->GetSlider()->GetCurrentRangeValue();
-            theEnd = this->mNumberLinesDisplayed + i;
-        } else {
-            i = 0;
-            theEnd = this->mLines.size();
-        }
-        for (; i < theEnd; i++) {
-            this->mText->SetText(*this->mLines[i]);
-            theHeight += this->mText->GetTextExtent().GetHeight();
-            if (this->mText->GetTextExtent().GetWidth() > theWidth)
-                theWidth = this->mText->GetTextExtent().GetWidth();
-        }
-    }
-    theRectangle.SetRight(theRectangle.GetLeft() + kTextLabelMargin + theWidth);
-    theRectangle.SetBottom(theRectangle.GetTop() + theHeight);
-    theRectangle.RoundToNearest();
-    if (theRectangle != this->mRectangle) {
-        this->SetRectangle(theRectangle);
-        this->SetDirty(true);
-    }
+    ee_ui_label_compute_rect(this);
 }
 
 // FUNCTION: LLE 0x1007edf9
@@ -394,20 +428,18 @@ void UITextLabel::SetFitRectToText(bool inFit)
 }
 
 // FUNCTION: LLE 0x1007f85c
-// Moves the label, recomputing the text and scroll bar rectangles and moving the scroll bar
+// Moves the label, recomputing the text and scroll bar rectangles (ee_ui label_fit.rs) and moving the scroll bar
 void UITextLabel::SetLocation(const GE2DPoint& inLocation)
 {
     UIControl::SetLocation(inLocation);
-    this->mScrollBarRectangle = GERectangle(this->mRectangle.GetRight() - kScrollBarWidth + 1.0f, this->mRectangle.GetTop(),
-                                      this->mRectangle.GetRight(), this->mRectangle.GetBottom());
-    this->mTextRectangle.SetLeft(this->mRectangle.GetLeft() + this->GetBorderThickness() + 1.0f);
-    this->mTextRectangle.SetTop(this->mRectangle.GetTop() + this->GetBorderThickness() + 1.0f);
-    this->mTextRectangle.SetBottom(this->mRectangle.GetBottom() - this->GetBorderThickness() - 1.0f);
-    this->mTextRectangle.SetRight(this->mRectangle.GetRight() - this->GetBorderThickness() - 1.0f);
-    if (this->mScrollBar != NULL) {
-        this->mTextRectangle.SetRight(this->mTextRectangle.GetRight() - this->mScrollBarRectangle.GetWidth() - 1.0f);
+    EeUiRect theScrollBar;
+    EeUiRect theText;
+    ee_ui_label_location_rects(UITextLabelRect(this->mRectangle), this->GetBorderThickness(), this->mScrollBar != NULL,
+                               &theScrollBar, &theText);
+    this->mScrollBarRectangle = GERectangle(theScrollBar.left, theScrollBar.top, theScrollBar.right, theScrollBar.bottom);
+    this->mTextRectangle = GERectangle(theText.left, theText.top, theText.right, theText.bottom);
+    if (this->mScrollBar != NULL)
         this->mScrollBar->SetLocation(this->mScrollBarRectangle.GetTopLeft());
-    }
 }
 
 // FUNCTION: LLE 0x1007f960

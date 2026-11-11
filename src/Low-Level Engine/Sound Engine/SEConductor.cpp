@@ -4,6 +4,9 @@
 // pulls it (Render, through SEMixer::SetMusicSource). The score files (segments, styles, DLS banks) are read from the
 // music folder (Resolve). The public behaviour follows the original's: scores are loaded by name and remembered while
 // the conductor is stopped, played, stopped and transitioned to; the intensity is the master groove level.
+// The score table and every decision are Rust (rust/crates/ee_sound conductor.rs, docs/RUST_PLAN.md R3.6): this file
+// keeps dmusic's calls (the trampolines ee_conductorcpp_*), the scores, the lock and the scalar members, copied into
+// the Rust call and back under the lock (SEConductor::Rust::Fields).
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include <math.h>
@@ -16,33 +19,158 @@
 #include "lle/SEConductor.h"
 #include "lle/SEMixer.h"
 #include "lle/SEScore.h"
+#include "rust/ee_rust.h"
 
-// Creates the music conductor: volume 1, reverb on, not running
+// The C++ side of the Rust conductor
+struct SEConductor::Rust {
+    // the scalar members as the Rust call sees them, written back when the call returns (the lock is held)
+    struct Fields {
+        SEConductor* mConductor;
+        EeConductorFields mFields;
+        explicit Fields(SEConductor* inConductor) : mConductor(inConductor)
+        {
+            this->mFields.volume = inConductor->mVolume;
+            this->mFields.state = (uint32_t)inConductor->mConductorState;
+            this->mFields.reverb_state = (uint32_t)inConductor->mReverbState;
+            this->mFields.next_score_id = (int32_t)inConductor->mNextScoreID;
+            this->mFields.playing_id = (int32_t)inConductor->mPlayingID;
+            this->mFields.intensity = (uint32_t)inConductor->mIntensity;
+            this->mFields.channel_group_count = (uint32_t)inConductor->mChannelGroupCount;
+        }
+        ~Fields()
+        {
+            this->mConductor->mVolume = this->mFields.volume;
+            this->mConductor->mConductorState = this->mFields.state;
+            this->mConductor->mReverbState = this->mFields.reverb_state;
+            this->mConductor->mNextScoreID = this->mFields.next_score_id;
+            this->mConductor->mPlayingID = this->mFields.playing_id;
+            this->mConductor->mIntensity = this->mFields.intensity;
+            this->mConductor->mChannelGroupCount = this->mFields.channel_group_count;
+        }
+        Fields(const Fields&) = delete;
+        Fields& operator=(const Fields&) = delete;
+    };
+    static SEConductor* Of(void* inContext) { return static_cast<SEConductor*>(inContext); }
+    static uint32_t OutputRate(void* inContext)
+    {
+        SEConductor* theThis = Of(inContext);
+        return theThis->mMixer ? (uint32_t)theThis->mMixer->GetOutputRate() : 0;
+    }
+    // the loader (reading from the music folder) and the performance; on a failure nothing is kept
+    static bool Start(void* inContext, uint32_t inRate)
+    {
+        SEConductor* theThis = Of(inContext);
+        DmLoader* theLoader = NULL;
+        DmPerformance* thePerformance = NULL;
+        if (DmLoader_create(&theLoader, DmLoader_DOWNLOAD) != DmResult_SUCCESS)
+            return false;
+        if (DmLoader_addResolver(theLoader, SEConductor::Resolve, theThis) == DmResult_SUCCESS &&
+            DmPerformance_create(&thePerformance, inRate) == DmResult_SUCCESS) {
+            theThis->mLoader = theLoader;
+            theThis->mPerformance = thePerformance;
+            return true;
+        }
+        DmLoader_release(theLoader);
+        return false;
+    }
+    static void Release(void* inContext)
+    {
+        SEConductor* theThis = Of(inContext);
+        DmPerformance_release(theThis->mPerformance);
+        DmLoader_release(theThis->mLoader);
+        theThis->mPerformance = NULL;
+        theThis->mLoader = NULL;
+    }
+    static void SetMusicSource(void* inContext, bool inOn)
+    {
+        SEConductor* theThis = Of(inContext);
+        if (inOn)
+            theThis->mMixer->SetMusicSource(SEConductor::Render, theThis);
+        else if (theThis->mMixer)
+            theThis->mMixer->SetMusicSource(NULL, NULL);   // the device thread no longer renders after this returns
+    }
+    static void* Load(void* inContext, const char* inName)
+    {
+        DmSegment* theSegment = NULL;
+        if (DmLoader_getSegment(Of(inContext)->mLoader, inName, &theSegment) != DmResult_SUCCESS || theSegment == NULL)
+            return NULL;
+        return new SEScore(theSegment, false);
+    }
+    static void Delete(void* inScore) { delete static_cast<SEScore*>(inScore); }
+    static bool IsSecondary(void* inScore) { return static_cast<SEScore*>(inScore)->mIsSecondaryScore; }
+    static bool Play(void* inContext, void* inScore, uint32_t inTiming)
+    {
+        DmSegment* theSegment = inScore ? static_cast<SEScore*>(inScore)->GetSegment() : NULL;
+        return DmPerformance_playSegment(Of(inContext)->mPerformance, theSegment, (DmTiming)inTiming) ==
+               DmResult_SUCCESS;
+    }
+    static bool PlayTransition(void* inContext, void* inScore, uint32_t inPattern)
+    {
+        return DmPerformance_playTransition(Of(inContext)->mPerformance, static_cast<SEScore*>(inScore)->GetSegment(),
+                                            (DmEmbellishmentType)inPattern, DmTiming_MEASURE) == DmResult_SUCCESS;
+    }
+    static void SetVolume(void* inContext, float inAmplitude)
+    {
+        DmPerformance_setVolume(Of(inContext)->mPerformance, inAmplitude);
+    }
+    static void SetGrooveLevel(void* inContext, int8_t inLevel)
+    {
+        DmPerformance_setMasterGrooveLevel(Of(inContext)->mPerformance, inLevel);
+    }
+};
+
+extern "C" {
+uint32_t ee_conductorcpp_output_rate(void* inContext) { return SEConductor::Rust::OutputRate(inContext); }
+bool ee_conductorcpp_start(void* inContext, uint32_t inRate) { return SEConductor::Rust::Start(inContext, inRate); }
+void ee_conductorcpp_release(void* inContext) { SEConductor::Rust::Release(inContext); }
+void ee_conductorcpp_set_music_source(void* inContext, bool inOn) { SEConductor::Rust::SetMusicSource(inContext, inOn); }
+void* ee_conductorcpp_load(void* inContext, const char* inName) { return SEConductor::Rust::Load(inContext, inName); }
+void ee_conductorcpp_delete(void* inScore) { SEConductor::Rust::Delete(inScore); }
+bool ee_conductorcpp_is_secondary(void* inScore) { return SEConductor::Rust::IsSecondary(inScore); }
+bool ee_conductorcpp_play(void* inContext, void* inScore, uint32_t inTiming)
+{
+    return SEConductor::Rust::Play(inContext, inScore, inTiming);
+}
+bool ee_conductorcpp_play_transition(void* inContext, void* inScore, uint32_t inPattern)
+{
+    return SEConductor::Rust::PlayTransition(inContext, inScore, inPattern);
+}
+void ee_conductorcpp_set_volume(void* inContext, float inAmplitude) { SEConductor::Rust::SetVolume(inContext, inAmplitude); }
+void ee_conductorcpp_set_groove_level(void* inContext, int8_t inLevel)
+{
+    SEConductor::Rust::SetGrooveLevel(inContext, inLevel);
+}
+}
+
+// Creates the music conductor: volume 1, reverb on, not running, no scores
 SEConductor::SEConductor()
     : mMusicFolder(0x104)
 {
     for (unsigned long i = 0; i < 6; i++)
         this->mCallbacks[i] = NULL;
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mLock) == keseOK, 45);
+    EeConductorFields theFields = ee_conductor_fields_new();
+    this->mRust = ee_conductor_create();
     this->mMusicFolder = "";
-    this->mVolume = 1.0f;
-    this->mReverbState = 1;
+    this->mVolume = theFields.volume;
+    this->mReverbState = theFields.reverb_state;
     this->mMixer = NULL;
     this->mPerformance = NULL;
     this->mLoader = NULL;
-    this->mIntensity = 0;
-    this->mConductorState = 0;
-    this->mNextScoreID = 0;
-    this->mPlayingID = -1;
-    this->mChannelGroupCount = 1000;
+    this->mIntensity = theFields.intensity;
+    this->mConductorState = theFields.state;
+    this->mNextScoreID = theFields.next_score_id;
+    this->mPlayingID = theFields.playing_id;
+    this->mChannelGroupCount = theFields.channel_group_count;
 }
 
-// Destroys the conductor, stopping it first if it is running
+// Destroys the conductor, stopping it first if it is running (a stopped conductor holds no score)
 SEConductor::~SEConductor()
 {
     if (this->mConductorState == 1)
         this->UninitializeConductor();
-    this->mScores.clear();
+    ee_conductor_destroy(this->mRust);
+    this->mRust = NULL;
     TSScheduler::DestroyCriticalSection(this->mLock);
 }
 
@@ -86,7 +214,11 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
 long SEConductor::GetCurrentlyPlayingScore()
 {
     this->mLock->Enter();
-    long theID = this->mConductorState == 1 ? this->mPlayingID : -1;
+    long theID;
+    {
+        Rust::Fields theFields(this);
+        theID = ee_conductor_currently_playing(&theFields.mFields);
+    }
     this->mLock->Leave();
     return theID;
 }
@@ -94,12 +226,8 @@ long SEConductor::GetCurrentlyPlayingScore()
 // Returns the score with the given ID (NULL: none)
 SEScore* SEConductor::GetScore(long inID) const
 {
-    SEScore* theScore = NULL;
     this->mLock->Enter();
-    for (unsigned long i = 0; i < this->mScores.size() && theScore == NULL; i++) {
-        if (this->mScores[i].mID == inID)
-            theScore = this->mScores[i].mScore;
-    }
+    SEScore* theScore = static_cast<SEScore*>(ee_conductor_score(this->mRust, (int32_t)inID));
     this->mLock->Leave();
     return theScore;
 }
@@ -107,12 +235,8 @@ SEScore* SEConductor::GetScore(long inID) const
 // Returns the ID of the given score (-1: not found or NULL)
 long SEConductor::GetScoreID(SEScore* inScore) const
 {
-    long theID = -1;
     this->mLock->Enter();
-    for (unsigned long i = 0; i < this->mScores.size() && theID == -1; i++) {
-        if (this->mScores[i].mScore == inScore && inScore != NULL)
-            theID = this->mScores[i].mID;
-    }
+    long theID = ee_conductor_score_id(this->mRust, inScore);
     this->mLock->Leave();
     return theID;
 }
@@ -121,28 +245,11 @@ long SEConductor::GetScoreID(SEScore* inScore) const
 // volume and intensity, reloads the remembered scores and connects the performance to the mixer; returns 1 on failure
 long SEConductor::InitializeConductor()
 {
-    long theResult = 1;
     this->mLock->Enter();
-    unsigned long theRate = this->mMixer ? this->mMixer->GetOutputRate() : 0;
-    DmLoader* theLoader = NULL;
-    DmPerformance* thePerformance = NULL;
-    if (theRate && DmLoader_create(&theLoader, DmLoader_DOWNLOAD) == DmResult_SUCCESS) {
-        if (DmLoader_addResolver(theLoader, SEConductor::Resolve, this) == DmResult_SUCCESS &&
-            DmPerformance_create(&thePerformance, theRate) == DmResult_SUCCESS) {
-            this->mLoader = theLoader;
-            this->mPerformance = thePerformance;
-            this->mConductorState = 1;
-            this->mPlayingID = -1;
-            this->SetVolume(this->mVolume);
-            this->SetIntensity(this->mIntensity, true);
-            theResult = kErrorOK;
-            for (unsigned long i = 0; i < this->mScores.size() && theResult == kErrorOK; i++) {
-                long theID;
-                theResult = this->LoadScore(this->mScores[i].mName, theID, true);
-            }
-            this->mMixer->SetMusicSource(SEConductor::Render, this);
-        } else
-            DmLoader_release(theLoader);
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_initialize(this->mRust, this, &theFields.mFields);
     }
     this->mLock->Leave();
     return theResult;
@@ -152,48 +259,16 @@ long SEConductor::InitializeConductor()
 // running only the name is remembered (inSecondary reloads an entry at start-up)
 long SEConductor::LoadScore(const UWideString& inName, long& outID, bool inSecondary)
 {
-    SEConductorScore theScore;
-    bool theFound = false;
-    long theResult = kErrorOK;
-    unsigned long i;
     this->mLock->Enter();
-    for (i = 0; i < this->mScores.size() && !theFound; i++)
-        theFound = this->mScores[i].mName == inName;
-    if (theFound && !inSecondary) {
-        ++this->mScores[i - 1].mLoadCount;
-        outID = this->mScores[i - 1].mID;
-    } else if (this->mConductorState == 1) {
-        DmSegment* theSegment = NULL;
-        if (DmLoader_getSegment(this->mLoader, (const char*)inName, &theSegment) != DmResult_SUCCESS ||
-            theSegment == NULL) {
-            theResult = 1;
-        } else {
-            SEScore* theNewScore = new SEScore(theSegment, false);
-            if (inSecondary) {
-                this->mScores[i - 1].mScore = theNewScore;
-                outID = this->mScores[i - 1].mID;
-            } else {
-                theScore.mName = inName;
-                theScore.mID = this->mNextScoreID;
-                theScore.mScore = theNewScore;
-                theScore.mLoadCount = 1;
-                this->mScores.push_back(theScore);
-                this->mNextScoreID++;
-                if (this->mNextScoreID == -1)
-                    this->mNextScoreID = 0;
-                outID = theScore.mID;
-            }
-        }
-    } else if (!inSecondary) {
-        theScore.mName = inName;
-        theScore.mScore = NULL;
-        theScore.mID = this->mNextScoreID;
-        theScore.mLoadCount = 1;
-        this->mScores.push_back(theScore);
-        this->mNextScoreID++;
-        if (this->mNextScoreID == -1)
-            this->mNextScoreID = 0;
-        outID = theScore.mID;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        int32_t theID = 0;
+        bool theWritten = false;
+        theResult = ee_conductor_load_score(this->mRust, this, &theFields.mFields, (const char*)inName, inSecondary,
+                                            &theID, &theWritten);
+        if (theWritten)
+            outID = theID;
     }
     this->mLock->Leave();
     return theResult;
@@ -203,13 +278,10 @@ long SEConductor::LoadScore(const UWideString& inName, long& outID, bool inSecon
 long SEConductor::Play(long inID)
 {
     this->mLock->Enter();
-    SEScore* theScore = this->GetScore(inID);
-    long theResult = kErrorOK;
-    if (this->mConductorState == 1 && theScore) {
-        if (DmPerformance_playSegment(this->mPerformance, theScore->GetSegment(), DmTiming_INSTANT) == DmResult_SUCCESS)
-            this->mPlayingID = inID;
-        else
-            theResult = 1;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_play(this->mRust, this, &theFields.mFields, (int32_t)inID);
     }
     this->mLock->Leave();
     return theResult;
@@ -220,16 +292,10 @@ long SEConductor::Play(long inID)
 long SEConductor::Queue(long inID)
 {
     this->mLock->Enter();
-    SEScore* theScore = this->GetScore(inID);
-    long theResult = kErrorOK;
-    if (this->mConductorState == 1 && theScore) {
-        if (theScore->mIsSecondaryScore)
-            theResult = kErrorFailed;
-        else if (DmPerformance_playSegment(this->mPerformance, theScore->GetSegment(), DmTiming_MEASURE) ==
-                 DmResult_SUCCESS)
-            this->mPlayingID = inID;
-        else
-            theResult = 1;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_queue(this->mRust, this, &theFields.mFields, (int32_t)inID);
     }
     this->mLock->Leave();
     return theResult;
@@ -239,11 +305,11 @@ long SEConductor::Queue(long inID)
 long SEConductor::SetChannelGroupCount(unsigned long inCount)
 {
     this->mLock->Enter();
-    long theResult = kErrorOK;
-    if (this->mConductorState == 0)
-        this->mChannelGroupCount = inCount < 1000 ? inCount : 1000;
-    else
-        theResult = kErrorBusy;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_set_channel_group_count(&theFields.mFields, (uint32_t)inCount);
+    }
     this->mLock->Leave();
     return theResult;
 }
@@ -251,12 +317,12 @@ long SEConductor::SetChannelGroupCount(unsigned long inCount)
 // Starts (non-zero) or stops (0) the conductor when the requested state differs from the current one
 long SEConductor::SetConductorState(unsigned long inState)
 {
-    long theResult;
     this->mLock->Enter();
-    if (inState != this->mConductorState)
-        theResult = inState == 0 ? this->UninitializeConductor() : this->InitializeConductor();
-    else
-        theResult = kErrorOK;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_set_state(this->mRust, this, &theFields.mFields, (uint32_t)inState);
+    }
     this->mLock->Leave();
     return theResult;
 }
@@ -265,13 +331,13 @@ long SEConductor::SetConductorState(unsigned long inState)
 long SEConductor::SetIntensity(unsigned long inIntensity, bool inImmediate)
 {
     this->mLock->Enter();
-    if (inIntensity != this->mIntensity || inImmediate) {
-        this->mIntensity = inIntensity;
-        if (this->mConductorState == 1)
-            DmPerformance_setMasterGrooveLevel(this->mPerformance, (int8_t)inIntensity);
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_set_intensity(this->mRust, this, &theFields.mFields, (uint32_t)inIntensity, inImmediate);
     }
     this->mLock->Leave();
-    return kErrorOK;
+    return theResult;
 }
 
 // Sets the music folder, dropping the given name's last character (the trailing separator)
@@ -301,26 +367,27 @@ long SEConductor::SetReverbStyle(float inGain, float inHighFreqRTRatio, float in
 }
 
 // Sets the music volume (0..1; quieter than 0.01 is silent). The original set the port to 1000 * ln(volume)
-// hundredths of a decibel, an amplitude of volume^(ln 10 / 2)
+// hundredths of a decibel, an amplitude of volume^(ln 10 / 2) (ee_sound conductor.rs amplitude)
 long SEConductor::SetVolume(float inVolume)
 {
     this->mLock->Enter();
-    this->mVolume = inVolume;
-    if (this->mConductorState == 1)
-        DmPerformance_setVolume(this->mPerformance, inVolume > 0.01f ? (float)pow(inVolume, 1.1512925) : 0.0f);
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_set_volume(this->mRust, this, &theFields.mFields, inVolume);
+    }
     this->mLock->Leave();
-    return kErrorOK;
+    return theResult;
 }
 
 // Stops all music now while running; returns 1 on a dmusic error
 long SEConductor::Stop()
 {
-    long theResult = kErrorOK;
     this->mLock->Enter();
-    if (this->mConductorState == 1) {
-        if (DmPerformance_playSegment(this->mPerformance, NULL, DmTiming_INSTANT) != DmResult_SUCCESS)
-            theResult = 1;
-        this->mPlayingID = -1;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_stop(this->mRust, this, &theFields.mFields);
     }
     this->mLock->Leave();
     return theResult;
@@ -330,36 +397,11 @@ long SEConductor::Stop()
 // score (NULL: into silence) at the next measure; returns 1 on a dmusic error
 long SEConductor::TransitionTo(long inID, unsigned long inCommand, unsigned long inFlags)
 {
-    long theResult = kErrorOK;
     this->mLock->Enter();
-    SEScore* theScore = this->GetScore(inID);
-    if (this->mConductorState == 1) {
-        DmEmbellishmentType theEmbellishment;
-        switch (inCommand) {
-        case kMusicTransitionFill:
-            theEmbellishment = DmEmbellishment_FILL;
-            break;
-        case kMusicTransitionBreak:
-            theEmbellishment = DmEmbellishment_BREAK;
-            break;
-        case kMusicTransitionIntro:
-            theEmbellishment = DmEmbellishment_INTRO;
-            break;
-        case kMusicTransitionEnd:
-        case kMusicTransitionEndAndIntro:
-            theEmbellishment = DmEmbellishment_END;
-            break;
-        default:
-            theEmbellishment = DmEmbellishment_GROOVE;
-            break;
-        }
-        DmResult theError = theScore
-            ? DmPerformance_playTransition(this->mPerformance, theScore->GetSegment(), theEmbellishment, DmTiming_MEASURE)
-            : DmPerformance_playSegment(this->mPerformance, NULL, DmTiming_MEASURE);
-        if (theError == DmResult_SUCCESS)
-            this->mPlayingID = theScore ? inID : -1;
-        else
-            theResult = 1;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_transition_to(this->mRust, this, &theFields.mFields, (int32_t)inID, (uint32_t)inCommand);
     }
     this->mLock->Leave();
     return theResult;
@@ -370,51 +412,24 @@ long SEConductor::TransitionTo(long inID, unsigned long inCommand, unsigned long
 long SEConductor::UninitializeConductor()
 {
     this->mLock->Enter();
-    if (this->mConductorState == 1) {
-        if (this->mMixer)
-            this->mMixer->SetMusicSource(NULL, NULL);   // the device thread no longer renders after this returns
-        for (unsigned long i = 0; i < this->mScores.size(); i++) {
-            if (this->mScores[i].mScore)
-                delete this->mScores[i].mScore;
-            this->mScores[i].mScore = NULL;
-        }
-        DmPerformance_release(this->mPerformance);
-        DmLoader_release(this->mLoader);
-        this->mPerformance = NULL;
-        this->mLoader = NULL;
-        this->mPlayingID = -1;
-        this->mConductorState = 0;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_uninitialize(this->mRust, this, &theFields.mFields);
     }
     this->mLock->Leave();
-    return kErrorOK;
+    return theResult;
 }
 
 // Unloads one load of the score with the given ID, deleting it at the last; busy while it is playing
 long SEConductor::UnloadScore(long inID)
 {
-    long theResult;
     this->mLock->Enter();
-    unsigned long i;
-    for (i = 0; i < this->mScores.size() && this->mScores[i].mID != inID; i++)
-        ;
-    if (i < this->mScores.size()) {
-        SEScore* theScore = this->mScores[i].mScore;
-        if (inID == -1)
-            theResult = kErrorNotFound;
-        else if (inID == this->GetCurrentlyPlayingScore())
-            theResult = kErrorBusy;
-        else {
-            std::vector<SEConductorScore>::iterator theEntry = this->mScores.begin() + i;
-            if (theEntry->mLoadCount == 1) {
-                this->mScores.erase(theEntry);
-                if (theScore)
-                    delete theScore;
-            } else
-                theEntry->mLoadCount--;
-            theResult = kErrorOK;
-        }
-    } else
-        theResult = kErrorNotFound;
+    long theResult;
+    {
+        Rust::Fields theFields(this);
+        theResult = ee_conductor_unload_score(this->mRust, this, &theFields.mFields, (int32_t)inID);
+    }
     this->mLock->Leave();
     return theResult;
 }
