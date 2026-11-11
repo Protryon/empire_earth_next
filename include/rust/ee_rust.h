@@ -598,10 +598,6 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
-constexpr static const int32_t DM_ERROR = 1;
-
-constexpr static const int32_t BUSY = 5;
-
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -9223,6 +9219,33 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
+/// one. True when the thread must end.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+bool ee_music_step(void *ctx,
+                   int32_t wait,
+                   uint32_t elapsed);
+
+/// `SetIntensity`'s rule (the C++ sets the event after it).
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`.
+void ee_music_request_intensity(void *ctx, uint32_t intensity);
+
+/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_do(void *ctx, uint32_t what);
+
+/// `Update`.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_update(void *ctx, uint32_t elapsed);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///

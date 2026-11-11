@@ -11,11 +11,11 @@ use std::ffi::c_void;
 
 /// `kErrorOK`, `kErrorFailed`, `kErrorBusy`, `kErrorNotFound` (`lle/LowLevelEngine.h`); `1` is the conductor's
 /// "dmusic said no".
-pub const OK: i32 = 0;
-pub const DM_ERROR: i32 = 1;
-pub const BUSY: i32 = 5;
-pub const NOT_FOUND: i32 = 3;
-pub const FAILED: i32 = 9;
+pub(crate) const OK: i32 = 0;
+pub(crate) const DM_ERROR: i32 = 1;
+pub(crate) const BUSY: i32 = 5;
+pub(crate) const NOT_FOUND: i32 = 3;
+pub(crate) const FAILED: i32 = 9;
 
 /// An `SEScore*` (never null).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

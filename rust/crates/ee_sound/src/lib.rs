@@ -1,7 +1,8 @@
 //! The Sound Engine's sound manager (`docs/RUST_PLAN.md` R3.6) behind the C++ `SESoundManager` facade: which channel
 //! an instance gets, the category and instance limits and priorities, the paused queue of looping sounds, the
 //! scavenger thread's decisions, one-shot sounds and the random start offsets; and `SEConductor`'s score table and
-//! decisions (`conductor`), over dmusic's objects which stay C++.
+//! decisions (`conductor`), over dmusic's objects which stay C++; and the game's music manager's decisions
+//! (`music`: `EEMusicManager`'s song changes, fades, intensity rules and timers).
 //!
 //! C++ keeps the objects and their lifetimes: the instance nodes (pooled, intrusively reference counted, held by
 //! units, unit classes and effects), the samples (shared with the mixer plug-in), the sound path, the mixer, the
@@ -14,11 +15,14 @@
 pub mod conductor;
 pub mod manager;
 pub mod msvc_sort;
+pub mod music;
 
 #[cfg(not(test))]
 pub mod conductor_ffi;
 #[cfg(not(test))]
 pub mod ffi;
+#[cfg(not(test))]
+pub mod music_ffi;
 
 #[cfg(test)]
 mod fake;
@@ -26,3 +30,5 @@ mod fake;
 mod golden;
 #[cfg(test)]
 mod golden_conductor;
+#[cfg(test)]
+mod golden_music;
