@@ -385,6 +385,8 @@ WON_TESTS = {
                      *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpContainer.cpp",
                                                          "TimerThread.cpp", "Thread.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
+    # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
+    "won_asyncop_test": "won_ops_test",
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
     "won_lan_test": [],
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
@@ -548,6 +550,8 @@ def cmd_wontest(a):
     for name, units in WON_TESTS.items():
         if a.programs and name not in a.programs:
             continue
+        if isinstance(units, str):   # the same units as another program
+            units = WON_TESTS[units]
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:
