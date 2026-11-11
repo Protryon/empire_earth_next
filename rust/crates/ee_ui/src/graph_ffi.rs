@@ -19,9 +19,16 @@ mod sys {
         // which: 0 the title, 1 the y label, 2 the x label
         pub fn ee_uicpp_graph_text(graph: *mut c_void, which: c_int, width: *mut f32, height: *mut f32);
         // axis: 0 FormatXValues, 1 FormatYValues
-        pub fn ee_uicpp_graph_grid_value(graph: *mut c_void, axis: c_int, value: f32, width: *mut f32, height: *mut f32);
+        pub fn ee_uicpp_graph_grid_value(
+            graph: *mut c_void,
+            axis: c_int,
+            value: f32,
+            width: *mut f32,
+            height: *mut f32,
+        );
         pub fn ee_uicpp_graph_draw_grid_value(graph: *mut c_void, rect: *const UiRect, x: f32, y: f32) -> c_long;
-        pub fn ee_uicpp_graph_line(graph: *mut c_void, line: *mut c_void, x0: f32, y0: f32, x1: f32, y1: f32) -> c_long;
+        pub fn ee_uicpp_graph_line(graph: *mut c_void, line: *mut c_void, x0: f32, y0: f32, x1: f32, y1: f32)
+            -> c_long;
         pub fn ee_uicpp_graph_border(graph: *mut c_void, rect: *const UiRect, thickness: c_ulong) -> c_long;
         // which: 0 DrawTitleText, 1 DrawXAxisText, 2 DrawYAxisText, 3 DrawGridText
         pub fn ee_uicpp_graph_draw_text(graph: *mut c_void, which: c_int) -> c_long;
@@ -151,12 +158,24 @@ pub unsafe extern "C" fn ee_ui_graph_draw_grid_text(
     zoom: f32,
     range: GraphRange,
 ) -> c_long {
-    graph::draw_grid_text(&mut Raw { graph, line: core::ptr::null_mut() }, rect, (divisions_x, divisions_y), zoom, range)
+    graph::draw_grid_text(
+        &mut Raw { graph, line: core::ptr::null_mut() },
+        rect,
+        (divisions_x, divisions_y),
+        zoom,
+        range,
+    )
 }
 
 /// `UIGraph::DrawTextA` after the draw count's decrement.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ui_graph_draw_texts(graph: *mut c_void, title: bool, x: bool, y: bool, grid: bool) -> c_long {
+pub unsafe extern "C" fn ee_ui_graph_draw_texts(
+    graph: *mut c_void,
+    title: bool,
+    x: bool,
+    y: bool,
+    grid: bool,
+) -> c_long {
     graph::draw_texts(&mut Raw { graph, line: core::ptr::null_mut() }, [title, x, y, grid])
 }
 

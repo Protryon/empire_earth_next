@@ -374,6 +374,6 @@ pub fn form_tiles(h: &mut impl FormTileHost, rect: UiRect, draw: UiRect, tiles: 
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod bfull_tests;
+#[cfg(test)]
+mod tests;

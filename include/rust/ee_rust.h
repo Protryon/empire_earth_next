@@ -675,6 +675,12 @@ constexpr static const float TEXT_SPACING = 5.0;
 /// `kMaximumZoomScale`.
 constexpr static const float MAXIMUM_ZOOM = 4.0;
 
+/// `kKeyNone`: a hot key record's empty modifier.
+constexpr static const uint32_t KEY_NONE = 32767;
+
+/// Which key member `GetEntity` fills: a modifier slot (0 to 2) or the key.
+constexpr static const size_t KEY_SLOT = 3;
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -10073,6 +10079,15 @@ bool ee_ui_hotkey_fire_events(void *key);
 
 /// `UIForm::UpdateKeyboard` -> its result.
 long ee_ui_form_update_keyboard(void *form);
+
+/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
+void ee_ui_hotkey_set_event(void **slot, void *event);
+
+/// `UIHotKey::SetModifier(code, slot)`.
+void ee_ui_hotkey_set_modifier(void *key, unsigned long code, int slot);
+
+/// `UIHotKey::CreateHotKeys(file)` -> its result.
+long ee_ui_hotkey_create_hotkeys(void *file);
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 EeUiBorderLine ee_ui_border_line(EeUiRect r,

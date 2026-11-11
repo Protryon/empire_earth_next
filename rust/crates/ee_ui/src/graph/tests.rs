@@ -311,14 +311,15 @@ fn replay(golden: &str) -> usize {
         w.out.push(line.to_string());
         match t[1] {
             "graph" => {
-                let mut g = Graph {
-                    title: unhex(t[3]),
-                    x_label: unhex(t[5]),
-                    y_label: unhex(t[7]),
-                    ..Graph::default()
-                };
+                let mut g =
+                    Graph { title: unhex(t[3]), x_label: unhex(t[5]), y_label: unhex(t[7]), ..Graph::default() };
                 // UGraph::ClearAllSeries' empty range, then each AddSeries widening it
-                g.range = GraphRange { min_x: 0x7fffffff, max_x: i32::MIN as c_long, min_y: 0x7fffffff, max_y: i32::MIN as c_long };
+                g.range = GraphRange {
+                    min_x: 0x7fffffff,
+                    max_x: i32::MIN as c_long,
+                    min_y: 0x7fffffff,
+                    max_y: i32::MIN as c_long,
+                };
                 let n: usize = t[9].parse().unwrap();
                 for _ in 0..n {
                     let s: Vec<&str> = lines[i].split(' ').collect();
@@ -334,7 +335,12 @@ fn replay(golden: &str) -> usize {
                     one.color = [fx(s[k + 1]), fx(s[k + 2]), fx(s[k + 3])];
                     one.enabled = s[k + 5] == "1";
                     let r = one.points.iter().fold(
-                        GraphRange { min_x: 0x7fffffff, max_x: i32::MIN as c_long, min_y: 0x7fffffff, max_y: i32::MIN as c_long },
+                        GraphRange {
+                            min_x: 0x7fffffff,
+                            max_x: i32::MIN as c_long,
+                            min_y: 0x7fffffff,
+                            max_y: i32::MIN as c_long,
+                        },
                         |r, &(x, y)| GraphRange {
                             min_x: r.min_x.min(x),
                             max_x: r.max_x.max(x),
@@ -429,7 +435,8 @@ fn replay(golden: &str) -> usize {
                 w.draw_result = t[3].parse().unwrap();
                 let base = w.next();
                 w.out.push(format!("  base polygons -> {base}"));
-                let (border, rect, grid, div, zoom) = (w.border, w.copied_rect, w.copied_flags[0], w.divisions, w.copied_zoom);
+                let (border, rect, grid, div, zoom) =
+                    (w.border, w.copied_rect, w.copied_flags[0], w.divisions, w.copied_zoom);
                 let r = draw_grid(&mut Host { w: &mut w, grid_text: Vec::new() }, base, border, rect, grid, div, zoom);
                 let n = w.copied.series.len() as c_ulong;
                 let r = draw_series_list(&mut List(&mut w), r, n);
