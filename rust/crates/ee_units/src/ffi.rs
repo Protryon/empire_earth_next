@@ -113,6 +113,25 @@ pub unsafe extern "C" fn ee_units_select_pick(player: u64, ids: *const u32, coun
     picked.len()
 }
 
+/// `EEActiveGroup::Fill`'s test over the store (`group::fill_members`): the indices into `ids` of the units an active
+/// group takes for `slot`, in order, into `out` (room for `count`), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_fill_members(ids: *const u32, count: usize, slot: i64, out: *mut u32) -> usize {
+    if count == 0 {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let ids = unsafe { std::slice::from_raw_parts(ids, count) };
+    let mut taken = Vec::with_capacity(count);
+    with_store(|s| crate::group::fill_members(s, ids, slot, &mut taken));
+    // SAFETY: the caller's contract; at most one index per id
+    unsafe { std::ptr::copy_nonoverlapping(taken.as_ptr(), out, taken.len()) };
+    taken.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,5 +197,28 @@ mod tests {
         assert_eq!(&out[..n], &[0xfb00_0002, 0xfb00_0001]);
         assert_eq!(unsafe { ee_units_select_pick(0xfb00, std::ptr::null(), 0, std::ptr::null_mut()) }, 0);
         assert_eq!(ee_units_store_clear_player(0xfb00), 2);
+    }
+
+    #[test]
+    fn fill_reads_the_process_store() {
+        // ids and a player no other test of this crate uses
+        let rec = |id: u32, hit_points: i64| EeUnitRecord {
+            id,
+            player: 0xfa00,
+            valid: 1,
+            hit_points,
+            domains: crate::group::EE_MOVEMENT_LAND,
+            ..Default::default()
+        };
+        for (id, hp) in [(0xfa00_0001, 5), (0xfa00_0002, 0)] {
+            unsafe { ee_units_store_insert(&rec(id, hp)) };
+        }
+        let ids = [0xfa00_0002u32, 0xfa00_0009, 0xfa00_0001];
+        let mut out = [0u32; 3];
+        let n = unsafe { ee_units_fill_members(ids.as_ptr(), ids.len(), 2, out.as_mut_ptr()) };
+        assert_eq!(&out[..n], &[2]);
+        assert_eq!(unsafe { ee_units_fill_members(ids.as_ptr(), ids.len(), 1, out.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { ee_units_fill_members(std::ptr::null(), 0, 0, std::ptr::null_mut()) }, 0);
+        assert_eq!(ee_units_store_clear_player(0xfa00), 2);
     }
 }

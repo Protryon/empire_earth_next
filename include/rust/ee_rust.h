@@ -671,6 +671,16 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
+constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
+
+constexpr static const uint8_t EE_MOVEMENT_LAND = 2;
+
+constexpr static const uint8_t EE_MOVEMENT_SEA = 4;
+
+/// `kUnitCategorySubmergedNaval`
+constexpr static const int64_t EE_UNIT_CATEGORY_SUBMERGED_NAVAL = 10;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -8781,6 +8791,16 @@ size_t ee_units_select_pick(uint64_t player,
                             const uint32_t *ids,
                             size_t count,
                             uint32_t *out);
+
+/// `EEActiveGroup::Fill`'s test over the store (`group::fill_members`): the indices into `ids` of the units an active
+/// group takes for `slot`, in order, into `out` (room for `count`), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+size_t ee_units_fill_members(const uint32_t *ids,
+                             size_t count,
+                             int64_t slot,
+                             uint32_t *out);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 

@@ -278,49 +278,16 @@ void EESelectPickSweep()
     }
 }
 
-// GOLDEN (the C++ test of EEActiveGroup::Fill 0x5ed9d4, with EEActiveGroup::IsInFormationSlot 0x5edb21's body; its
-// goldens are USFL's): replaced by the Rust test over the store
-static bool InFormationSlot(EEComplexUnit* inUnit, long inSlot)
-{
-    bool theResult = false;
-    switch (inSlot) {
-    case 0:
-        theResult = true;
-        break;
-    case 1:
-        theResult = inUnit->mUnitClass->mDomains & kMovementAir;
-        break;
-    case 2:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementLand) || inUnit->mUnitClass->IsLandBuilding();
-        break;
-    case 3:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementSea) && inUnit->mUnitClass->mCategory != kUnitCategorySubmergedNaval;
-        break;
-    case 4:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementSea) && inUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval;
-        break;
-    case 5:
-        theResult = (inUnit->mUnitClass->mDomains >> 3) & 1;
-        break;
-    }
-    return theResult;
-}
-
+// EEActiveGroup::Fill's test over the unit store (ee_units group.rs: the loop of EEActiveGroup::Fill 0x5ed9d4 with
+// EEActiveGroup::IsInFormationSlot 0x5edb21 over the records in place of the objects)
 size_t EEFillMembers(EEComplexUnit* const* inUnits, size_t inCount, long inSlot, uint32_t* outIndices)
 {
-    size_t theTaken = 0;
-    for (size_t i = 0; i < inCount; i++) {
-        EEComplexUnit* theUnit = inUnits[i];
-        if (!theUnit->mIsValid || !(theUnit->mHitPoints > 0) || !InFormationSlot(theUnit, inSlot))
-            continue;
-        if (EESimCaptureRecord::Active() && !theUnit->mInUnitStore) {   // the store's rule: such a unit is not taken
-            fprintf(stderr, "EE-UNIT-STORE: Fill takes unit 0x%08lx, which is in no list\n", (unsigned long)theUnit->mUnitID);
-            EESimCaptureRecord::Flush();
-            exit(3);
-        }
-        outIndices[theTaken++] = (uint32_t)i;
-    }
-    return theTaken;
+    if (inCount == 0)
+        return 0;
+    std::vector<uint32_t> theIDs(inCount);
+    for (size_t i = 0; i < inCount; i++)
+        theIDs[i] = static_cast<uint32_t>(inUnits[i]->mUnitID);
+    return ee_units_fill_members(&theIDs[0], inCount, (int64_t)inSlot, outIndices);
 }
 
 void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* const* inUnits, size_t inCount, long inSlot,
