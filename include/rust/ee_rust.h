@@ -704,6 +704,9 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// `kControlTriggerScrollingFinished`.
+constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
@@ -10394,6 +10397,32 @@ long ee_ui_font_closest_size(unsigned long pixel_height);
 /// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
 size_t ee_ui_font_find_or_create(const void *query);
 
+/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
+void ee_ui_group_disable(void *group);
+
+/// `UIEntityGroup::Enable`'s loop.
+void ee_ui_group_enable(void *group);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
+
+/// `UITextLabel::ComputeTextLabelRect`.
+void ee_ui_label_compute_rect(void *label);
+
+/// `UITextLabel::CheckScrollBar`.
+void ee_ui_label_check_scroll_bar(void *label);
+
+/// `UITextLabel::SetLocation`'s rectangles after the control's move: the label's rectangle and border and whether
+/// it has a scroll bar -> the scroll bar strip in `scroll_bar`, the text rectangle in `text`.
+void ee_ui_label_location_rects(EeUiRect rect,
+                                unsigned long border,
+                                bool has_scroll_bar,
+                                EeUiRect *scroll_bar,
+                                EeUiRect *text);
+
 /// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
 unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
 
@@ -10543,6 +10572,39 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
+long ee_ui_control_update_mouse(void *control,
+                                const void *location);
+
+/// `UIForm::UpdateMouse` -> its result.
+long ee_ui_form_update_mouse(void *form);
+
+/// `UITLScrolling::CopyData` (after the C++ copied the label's text into the draw text) -> its result.
+long ee_ui_scrolling_copy_data(void *label);
+
+/// `UITLScrolling::ScrollText(speed, start delay, end delay, start offset, end offset)`.
+void ee_ui_scrolling_scroll_text(void *label,
+                                 float speed,
+                                 long start_delay,
+                                 long end_delay,
+                                 long start_offset,
+                                 long end_offset);
+
+/// `UITLScrolling::ScrollText(time, end delay)`.
+void ee_ui_scrolling_scroll_text_for(void *label, unsigned long time, unsigned long end_delay);
+
+/// `PauseScrolling` (`resume` false) or `ResumeScrolling`.
+void ee_ui_scrolling_pause(void *label, bool resume);
+
+/// `StopScrolling`.
+void ee_ui_scrolling_stop(void *label);
+
+/// `DrawTextA`'s place for snapshot line `i`.
+EeUiPoint ee_ui_scrolling_line_at(float draw_left,
+                                  unsigned long font_height,
+                                  unsigned long i,
+                                  unsigned long offset);
 
 /// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
 long ee_ui_status_fill(long value,

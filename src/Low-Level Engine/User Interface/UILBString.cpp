@@ -57,37 +57,33 @@ long UILBString::DrawTextA()
     return theResult;
 }
 
+// The Rust type-to-find's questions (ee_ui find_key.rs): the virtual line count and a line's first byte
+struct UILBStringRust {
+    static unsigned long Lines(UILBString* inList) { return inList->GetNumLines(); }
+};
+extern "C" unsigned long ee_uicpp_string_list_lines(void* inList)
+{
+    return UILBStringRust::Lines(static_cast<UILBString*>(inList));
+}
+extern "C" int ee_uicpp_string_list_first(void* inList, unsigned long inIndex)
+{
+    UWideString theLine = static_cast<UILBString*>(inList)->GetData(inIndex);
+    return theLine.GetLength() > 0 ? (unsigned char)theLine[0] : -1;
+}
+
 // FUNCTION: LLE 0x10078470
 // Selects the next line starting with the typed letter (any case), wrapping to the top; kErrorNotFound when none does
+// (the search is Rust: ee_ui find_key.rs)
 long UILBString::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    UWideString theLower(inKey);
-    UWideString theUpper(inKey);
-    UWideString theLine;
-    long i;
-    long theResult = kErrorNotFound;
-    long theStart = this->mCurrentSelection + 1;
-    if (theStart >= (long)this->GetNumLines())
-        theStart = 0;
-    theLower.ToLower();
-    theUpper.ToUpper();
-    for (i = theStart; (unsigned long)i < this->GetNumLines(); i++) {
-        theLine = this->mData[i];
-        if (theLine.GetLength() > 0 && (theLine[0] == theLower[0] || theLine[0] == theUpper[0]))
-            break;
-        if (theStart > 0 && i == this->GetNumLines() - 1) {
-            theStart = 0;
-            i = -1;
-        }
-    }
-    if ((unsigned long)i < this->GetNumLines()) {
-        if (this->mScrollBar)
-            this->mScrollBar->SetCurrentRangeValue(i);
-        this->ChangeSelectionIndex(i, true, true);
-        this->SetDirty(true);
-        theResult = kErrorOK;
-    }
-    return theResult;
+    long i = ee_ui_string_list_find(this, inKey, this->mCurrentSelection);
+    if (i < 0)
+        return kErrorNotFound;
+    if (this->mScrollBar)
+        this->mScrollBar->SetCurrentRangeValue(i);
+    this->ChangeSelectionIndex(i, true, true);
+    this->SetDirty(true);
+    return kErrorOK;
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

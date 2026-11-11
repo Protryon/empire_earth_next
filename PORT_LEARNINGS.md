@@ -5823,6 +5823,7 @@ math. The class keeps its members, the key list, the followed units (handles), `
   scroll), so the oracle covers the update's step, `BuildView` and the clipping distances on the perspective path;
   scrolling, zooming, rotating, following a unit, a cinematic's key path and the orthographic view run only in the
   windowed game.
+
 ## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
 
 Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and
@@ -6031,3 +6032,77 @@ vtables, events and every call; Rust decides which call happens. No class moved 
   of the four gated builds.
 - **Still C++ of WONGUI:** the objects and the calls above, the config readers' branch bodies, and the drawing (Surface,
   StretchImage's nine slices, the decoders, the platform backend, the paint).
+
+## R6: the mouse dispatch, the edit box's anchor fix, entity groups, the list's type-to-find, the text label's geometry and the scrolling label (ee_ui mouse.rs, entity_group.rs, find_key.rs, label_fit.rs, scrolling.rs; branch rust-r6-ui8, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIControl.h`,
+`UILBString.h`, `UITextLabel.h` and `UITLScrolling.h` gained a `friend struct`): `UIForm::UpdateMouse` and
+`UIControl::UpdateMouse` (`mouse.rs`: the captured control or the one under the mouse, the wheel, the form's eleven
+mouse events, a control's press, release and double-click dispatch and its button-down members);
+`UIEntityGroup::Disable`/`Enable`'s loops (`entity_group.rs`); `UILBString::UpdateTranslatedKey`'s search
+(`find_key.rs`); `UITextLabel::ComputeTextLabelRect`, `CheckScrollBar` and `SetLocation`'s rectangles
+(`label_fit.rs`); `UITLScrolling`'s `CopyData` scroll and snapshot, both `ScrollText`s, `Pause`/`Resume`/
+`StopScrolling` and `DrawTextA`'s line places (`scrolling.rs`). `RadioUnCheck` was already Rust (round 3's
+`RemoveOtherChecks`); what is left of it is `UIButtonRust::RadioSwap`'s reference counts.
+
+- **A fix, the owner's decision (the only behaviour change):** after an edit box's Backspace, Delete, Cut, Ctrl+L or
+  a paste over a selection, a selection anchor that is no longer a place in the text (its line gone, or its index
+  past its line's end) becomes the caret (`Edit::keep_anchor_in_text`, `edit_keys.rs`). The original kept it, so
+  round 7's two hazards read past the lines: typing Backspace while drag-selecting with the mouse (the drag's next
+  `MouseMove` selected from the old anchor), and Shift + the keypad's Del (Num Lock off) + an arrow in one frame
+  with a selection (the arrow selected from the deleted selection's far end). An anchor still inside the text stays
+  where it was, as in the original (a reset to the caret after every deletion would change nothing the game shows
+  but would move the printed anchor in 34 of the key golden's 60 boxes). Two Rust tests reproduce the hazards (they
+  failed before the fix); `golden_keys.txt` changed in 12 of its 60 boxes, each only in the anchor and the state
+  lines that follow from it, re-recorded from the key driver over the fixed forwarders (seeds 2-5: 158, 186, 149 and
+  185 of 600 boxes, the same kind of change only). Typing a character over a selection (`UpdateTranslatedKey`)
+  deletes it and ends the drag (`selecting` false), so it needs no reset.
+- **Mouse:** the captured control is read again after a control's handlers (they capture and release the mouse);
+  a control whose `MouseWheelTurned` fails is forgotten for the form's wheel event and the result is OK; a press
+  while the control thinks the button held is a press again (`MouseLButtonDown` once more), and a button up without
+  a release event still releases. `gISMouse->GetEntity`'s out pointer starts NULL in the host (the original's was
+  uninitialised; the real mouse always writes it).
+- **Type-to-find under D6:** `UWideString::operator[](0)` is a byte, so a key compares its lower- and upper-case
+  forms' first bytes with each line's first byte: `é` and `É` share the lead byte 0xc3 and match any line starting
+  with a two-byte Latin letter (kept).
+- **Text label:** `CheckScrollBar` does not look at the label type (a one-line label with more lines than rows gets
+  a scroll bar; the game never gives it more than one line). `ComputeTextLabelRect`'s visible lines run from the
+  slider's value for `mNumberLinesDisplayed` lines unchecked against the line count (the real slider's range keeps
+  them inside).
+- **Scrolling label:** the pixel offset is a `long` compared as a float, the snapshot loop's `y` an `unsigned long`
+  against a `long` bottom (a negative offset skips the loop), `ScrollText(time, end)` divides `time / lines` in
+  integers and its end delay wraps (`4294957151` in the golden): all kept.
+- **Golden drivers, new traps.**
+  - A calloc'ed form has no vtable: call `sForm->UIForm::UpdateMouse()` (qualified), or the virtual call jumps to 0.
+  - A vtable of `template <int N>` stubs that log their slot number finds the slots a unit calls without a layout
+    dump (`UIListBox<T>::ChangeSelectionIndex` is slot 36, `GetNumLines` 42, `HideControl` 12, `SetDirty` 25); then
+    give those slots typed stubs (a generic stub's extra argument registers hold garbage that differs per build).
+  - A fake class with an out-of-line constructor (the scroll bar, whose real one needs the manager's bitmaps):
+    define the constructor's decorated name (`??0UIScrollBar@@QEAA@KAEBVGE2DPoint@@MKPEAVUIForm@@KK@Z`) as an
+    `extern "C"` function taking `this` first and returning it, and fill the object there (memset, a stub vtable).
+  - Private statics of a unit that is not linked are defined by their decorated names in an `extern "C" { T v
+    __asm__("?sLMouseButton@UIManager@@0PEAVISEntity@@EA") = NULL; }` block; protected and private members called
+    from the driver under `#define protected public` link by their real decoration
+    (`?CheckScrollBar@UITextLabel@@MEAAXXZ`, `?ComputeTextLabelRect@UITextLabel@@AEAAXXZ`).
+  - `GERectangle::RoundToNearest` is GEBitmap.cpp's (copied into the driver); `UIManager::AddEventToTrigger` is
+    inline and pushes onto `mEventsToTrigger` (placement-new the deque in a calloc'ed manager; the event needs
+    `UIEvent`'s size for its `Reference`).
+- **Goldens:** `golden_mouse.txt` (1,500 worlds), `golden_group.txt` (400 groups and 400 lists),
+  `golden_label_fit.txt` (150 labels x 30 operations), `golden_scroll.txt` (120 labels x 40 operations). Each
+  replays whole in Rust; each driver relinked over the forwarders printed the same file, and the same on two more
+  seeds at ten times the size; the label and scroll replays also pass on those seeds. Mutations checked: the
+  wheel's forgotten control (mouse), the label margin and the centred left edge (label), the end offset's
+  comparison (scroll) each fail their replay; an equality-only change of the end comparison and a reassociation of
+  the vertical centring did not (no case lands on them).
+- **Gates run:** after each commit `build.py -j 3 --sim` (the first `-j 4`) 0/0 (EE-AOC, EE-SIM), the sim oracle
+  (seeds 2-7) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game or POSIX build was run.
+- **What a real game exercises (EE-SIM has no UI):** `UIForm::UpdateMouse` and `UIControl::UpdateMouse` run on every
+  frame of every menu with the mouse over a form (hover, clicks, the wheel over a list): every menu load of a tour.
+  `UIEntityGroup::Enable`/`Disable` run whenever the game enables or disables a group of buttons and hot keys
+  (greyed buttons). `ComputeTextLabelRect` and `CheckScrollBar` run on every text label's `SetText` and
+  `UITextLabel::SetLocation` on every label's move: every menu load; a scroll bar appears only on a multi-line label
+  with more lines than rows (long texts, the chat). The scrolling label is the
+  credits and the in-game scrolling texts (trigger 0x3f4): a tour reaches it only if it opens them.
+  `UILBString::UpdateTranslatedKey` runs only when a person types a letter into a focused string list (a combo
+  box's drop-down). The edit box fix changes only what a person's typing during a drag, or Shift + keypad Del with
+  an arrow, does.
