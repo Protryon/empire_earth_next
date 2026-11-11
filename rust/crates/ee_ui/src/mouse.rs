@@ -61,9 +61,7 @@ pub trait ControlMouseHost {
 pub fn control_update_mouse(h: &mut impl ControlMouseHost) -> c_long {
     if h.button(false, ButtonQuery::JustDoublePressed) {
         h.call(ControlMouseCall::LeftDouble);
-    } else if h.down(false)
-        && (h.button(false, ButtonQuery::JustUnpressed) || !h.button(false, ButtonQuery::Value))
-    {
+    } else if h.down(false) && (h.button(false, ButtonQuery::JustUnpressed) || !h.button(false, ButtonQuery::Value)) {
         h.set_down(false, false);
         h.call(ControlMouseCall::LeftUp);
     } else if h.button(false, ButtonQuery::JustPressed) {

@@ -18,7 +18,8 @@ mod sys {
         // call: 0..3 the left button's JustDoublePressed, JustUnpressed, GetValue != 0, JustPressed; 4..7 the right
         // button's; 8 mLeftButtonDown, 9 mRightButtonDown; 10 mLeftButtonDown = arg, 11 mRightButtonDown = arg;
         // 12 + ControlMouseCall: the handler (MouseMove(*location))
-        pub fn ee_uicpp_control_mouse(control: *mut c_void, location: *const c_void, call: c_int, arg: c_int) -> c_long;
+        pub fn ee_uicpp_control_mouse(control: *mut c_void, location: *const c_void, call: c_int, arg: c_int)
+            -> c_long;
         // which: 0 mMouseCaptured, 1 mMouseOverControl
         pub fn ee_uicpp_form_mouse_control(form: *mut c_void, which: c_int) -> *mut c_void;
         // call: 0 control->UpdateMouse(mMouseLocation), 1 UIManager::GetMouseWheel() != NULL,
