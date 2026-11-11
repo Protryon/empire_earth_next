@@ -2184,3 +2184,149 @@ pub unsafe extern "C" fn ee_hull_scan_lines(
         row(ctx, y, first, last);
     }
 }
+
+// ---- the areas' geometry (area_geom.rs): EEAIArea's and EEAIContinent's, over the C++ objects' points
+
+use crate::area_geom::{self, EeHullRect, ShoreHost};
+
+/// `EEAIArea::GetClosestHullPoint`.
+///
+/// # Safety
+/// `points` holds `count` points, `bounds` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_closest_hull_point(
+    points: *const EeHullPoint,
+    count: usize,
+    bounds: *const EeHullRect,
+    point: EeHullPoint,
+) -> EeHullPoint {
+    // SAFETY: the caller's contract
+    area_geom::closest_hull_point(unsafe { hull_points(points, count) }, unsafe { &*bounds }, point)
+}
+
+/// `EEAIArea::GetHullDistanceSquared`.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_hull_distance_squared(
+    points: *const EeHullPoint,
+    count: usize,
+    other: *const EeHullPoint,
+    other_count: usize,
+) -> f32 {
+    // SAFETY: the caller's contract
+    area_geom::hull_distance_squared(unsafe { hull_points(points, count) }, unsafe { hull_points(other, other_count) })
+}
+
+/// The loop of `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints`: false (the outputs untouched) for
+/// no points.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_closest_points_to_hull(
+    points: *const EeHullPoint,
+    count: usize,
+    other: *const EeHullPoint,
+    other_count: usize,
+    out_this: *mut EeHullPoint,
+    out_other: *mut EeHullPoint,
+) -> bool {
+    // SAFETY: the caller's contract
+    let found = area_geom::closest_points_to_hull(unsafe { hull_points(points, count) }, unsafe {
+        hull_points(other, other_count)
+    });
+    match found {
+        Some((a, b)) => {
+            // SAFETY: the caller's contract
+            unsafe {
+                *out_this = a;
+                *out_other = b;
+            }
+            true
+        }
+        None => false,
+    }
+}
+
+/// `EEAIArea::GetTiles`: `push(ctx, x, y)` for every tile under the hull, row by row.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_tiles(
+    points: *const EeHullPoint,
+    count: usize,
+    ctx: *mut c_void,
+    push: extern "C" fn(*mut c_void, c_long, c_long),
+) {
+    let mut tiles = Vec::new();
+    // SAFETY: the caller's contract
+    area_geom::tiles(unsafe { hull_points(points, count) }, &mut tiles);
+    for t in tiles {
+        push(ctx, t.x, t.y);
+    }
+}
+
+/// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
+#[repr(C)]
+pub struct EeShoreCallbacks {
+    pub ctx: *mut c_void,
+    /// the path area at the tile: false without one, else true and its region id of the kind in `id`
+    pub path_area_region: extern "C" fn(*mut c_void, c_long, c_long, bool, *mut u16) -> bool,
+    /// the continent at the tile exists and is land
+    pub is_land: extern "C" fn(*mut c_void, c_long, c_long) -> bool,
+    /// `GetContinent(tile, kind)`
+    pub region: extern "C" fn(*mut c_void, c_long, c_long, bool) -> u16,
+    pub map_width: u32,
+    pub map_height: u32,
+}
+
+impl ShoreHost for &EeShoreCallbacks {
+    fn path_area_region(&mut self, tile: EeHullPoint, space: bool) -> Option<u16> {
+        let mut id = 0u16;
+        (self.path_area_region)(self.ctx, tile.x, tile.y, space, &mut id).then_some(id)
+    }
+    fn is_land(&mut self, tile: EeHullPoint) -> bool {
+        (self.is_land)(self.ctx, tile.x, tile.y)
+    }
+    fn region(&mut self, tile: EeHullPoint, space: bool) -> u16 {
+        (self.region)(self.ctx, tile.x, tile.y, space)
+    }
+    fn map_size(&self) -> (u32, u32) {
+        (self.map_width, self.map_height)
+    }
+}
+
+/// `EEAIContinent::GetShoreInRegions`: `push(out, x, y)` for each shore tile found (the C++ clears its list first).
+///
+/// # Safety
+/// `shore` holds `count` points, `ids` `id_count`, `host` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_shore_in_regions(
+    shore: *const EeHullPoint,
+    count: usize,
+    ids: *const u16,
+    id_count: usize,
+    space: bool,
+    host: *const EeShoreCallbacks,
+    out: *mut c_void,
+    push: extern "C" fn(*mut c_void, c_long, c_long),
+) {
+    // SAFETY: the caller's contract
+    let host = unsafe { &*host };
+    let ids = if id_count == 0 || ids.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(ids, id_count) }
+    };
+    let mut tiles = Vec::new();
+    let mut h = host;
+    // SAFETY: the caller's contract
+    area_geom::shore_in_regions(unsafe { hull_points(shore, count) }, ids, space, &mut h, &mut tiles);
+    for t in tiles {
+        push(out, t.x, t.y);
+    }
+}

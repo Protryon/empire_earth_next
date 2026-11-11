@@ -31,8 +31,6 @@ public:
     // else +0x86) is listed, or, without one, a kind-1 continent's tiles next to a listed continent
     virtual void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
                            long inKind);
-    // New (port): GetShoreInRegions' body (that slot adds the capture's record)
-    void ShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles, long inKind);
 
     void AddPathAreaID(unsigned short inID);   // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac)
     EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint);   // 0x1dbf4: as EEAIPathSector's

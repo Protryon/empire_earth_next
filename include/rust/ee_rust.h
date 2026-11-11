@@ -1929,6 +1929,27 @@ struct EeHullShape {
   float area;
 };
 
+/// A hull's bounds (`U2DRectangle<long>`, its members in their order).
+struct EeHullRect {
+  long bottom;
+  long left;
+  long right;
+  long top;
+};
+
+/// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
+struct EeShoreCallbacks {
+  void *ctx;
+  /// the path area at the tile: false without one, else true and its region id of the kind in `id`
+  bool (*path_area_region)(void*, long, long, bool, uint16_t*);
+  /// the continent at the tile exists and is land
+  bool (*is_land)(void*, long, long);
+  /// `GetContinent(tile, kind)`
+  uint16_t (*region)(void*, long, long, bool);
+  uint32_t map_width;
+  uint32_t map_height;
+};
+
 /// `GE2DPoint` (sizeof 8).
 struct EeGe2DPoint {
   float x;
@@ -5382,6 +5403,57 @@ void ee_hull_scan_lines(const EeHullPoint *points,
                         size_t count,
                         void *ctx,
                         void (*row)(void*, long, long, long));
+
+/// `EEAIArea::GetClosestHullPoint`.
+///
+/// # Safety
+/// `points` holds `count` points, `bounds` valid.
+EeHullPoint ee_area_closest_hull_point(const EeHullPoint *points,
+                                       size_t count,
+                                       const EeHullRect *bounds,
+                                       EeHullPoint point);
+
+/// `EEAIArea::GetHullDistanceSquared`.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`.
+float ee_area_hull_distance_squared(const EeHullPoint *points,
+                                    size_t count,
+                                    const EeHullPoint *other,
+                                    size_t other_count);
+
+/// The loop of `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints`: false (the outputs untouched) for
+/// no points.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+bool ee_area_closest_points_to_hull(const EeHullPoint *points,
+                                    size_t count,
+                                    const EeHullPoint *other,
+                                    size_t other_count,
+                                    EeHullPoint *out_this,
+                                    EeHullPoint *out_other);
+
+/// `EEAIArea::GetTiles`: `push(ctx, x, y)` for every tile under the hull, row by row.
+///
+/// # Safety
+/// `points` holds `count` points.
+void ee_area_tiles(const EeHullPoint *points, size_t count, void *ctx, void (*push)(void*,
+                                                                                    long,
+                                                                                    long));
+
+/// `EEAIContinent::GetShoreInRegions`: `push(out, x, y)` for each shore tile found (the C++ clears its list first).
+///
+/// # Safety
+/// `shore` holds `count` points, `ids` `id_count`, `host` valid.
+void ee_area_shore_in_regions(const EeHullPoint *shore,
+                              size_t count,
+                              const uint16_t *ids,
+                              size_t id_count,
+                              bool space,
+                              const EeShoreCallbacks *host,
+                              void *out,
+                              void (*push)(void*, long, long));
 
 /// `UMCos`.
 float ee_ge_um_cos(float angle);

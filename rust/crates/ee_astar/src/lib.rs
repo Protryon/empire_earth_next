@@ -23,7 +23,8 @@
 //! whole (the C++ class owns a handle). `manager` is the manager's last loops over its objects (`GetTilesNextTo`,
 //! `PruneChokePoints` with the geometry behind a host, `CreateScenarioAreas`' choice), `path_splice` the path
 //! manager's path splicing and step budgets. `hull` is the AI's hulls (`U2DPolygon<long>`/`U2DConvexHull<long>`:
-//! every area's outline, on `ee_ge::hull`'s convex hull, which the engine's float hull shares).
+//! every area's outline, on `ee_ge::hull`'s convex hull, which the engine's float hull shares), `area_geom` the
+//! areas' geometry on them (`EEAIArea`'s and `EEAIContinent`'s closest points, hull point, tiles and shore walk).
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps; the hulls keep `c_long`, `U2DPoint<long>`'s layout, and the exe's `float` steps in
@@ -31,6 +32,7 @@
 //! `tools/sim_capture.py`'s A* records: every search of the six oracle games, its goal calls and view answers and its
 //! storage afterwards, digested and compared with the digests of the C++ machine.
 
+pub mod area_geom;
 pub mod area_goals;
 pub mod choke;
 pub mod continent_grid;
