@@ -740,6 +740,9 @@ constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
 /// `kActionDropoffResource` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 
+/// `kActionUnloadTransport` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -766,6 +769,12 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
 /// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
 /// forced, rotating, the facing, group movement)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
+
+/// `new EEUGUnloadTransport(unit_a's complex unit, (long)point[0], (long)point[1], flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
+
+/// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -10428,6 +10437,12 @@ void ee_units_build_wall(void *player,
                          float end_x,
                          float end_y);
 
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+void ee_units_unload_transport(void *player,
+                               void *selection,
+                               int64_t x,
+                               int64_t y);
+
 /// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
 void ee_units_dropoff_resource(void *player,
                                void *selection,
@@ -10531,6 +10546,16 @@ extern void *ee_units_host_wall_plan(void *player,
 extern void ee_units_host_wall_build(void *group, void *pieces);
 
 extern void ee_units_host_wall_release(void *pieces);
+
+extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
+
+extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
+
+extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
+
+extern uint8_t ee_units_host_goal_can_unload(void *goal);
+
+extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

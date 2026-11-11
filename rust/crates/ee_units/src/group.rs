@@ -14,8 +14,8 @@
 
 use crate::host::{
     EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_ATTACK_UNIT, EE_GOAL_CTOR_EXPLORE,
-    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_LOCATION, EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE,
-    EE_UNIT_ID_NONE,
+    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_LOCATION, EE_GOAL_CTOR_LOCATION_XY, EE_GOAL_CTOR_PATROL,
+    EE_GOAL_CTOR_PATROL_ROUTE, EE_GOAL_CTOR_UNLOAD_TRANSPORT, EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -627,6 +627,86 @@ pub fn build_wall(
         host.wall_build(group, pieces);
     }
     host.wall_release(pieces);
+}
+
+/// `kActionUnloadTransport` (ee/EEUnitAction.h)
+pub const EE_ACTION_UNLOAD_TRANSPORT: i32 = 12001;
+
+/// `EEMUnloadTransport::Execute`: with a selection, for each formation slot 1..5 a new active group filled from it
+/// (sort 1); one that took units goes to the player's pending groups and spreads for the unload at the tile (x, y);
+/// with units left, an unload goal is made for its first unit (`new EEUGUnloadTransport(first's complex unit, x, y,
+/// false)`) and its units are walked in order until one carries cargo. That transport, when the goal can unload at
+/// the destination with it (`SetTransport`, `CanUnloadAtDestination`), gets the group the goal with the action Unload
+/// Transport, a plan and its acknowledgement. Else the goal is deleted, a last unit (the transport, or the walk's last
+/// unit) still carrying cargo raises the "cannot unload there" event, and the group moves to the tile (`new
+/// EEUGLocation(x, y, 0, false, true, false, 0, false, 0)`, Prepare To Move), plans, shows the move marker (0xb8) and
+/// that unit acknowledges. An empty group is released.
+pub fn unload_transport(host: &mut impl Host, player: HostRef, selection: HostRef, x: i64, y: i64) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 1, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_spread_for_unload(group, x, y);
+        host.group_ids(group, &mut ids);
+        let Some(&first) = ids.first() else { continue };
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_UNLOAD_TRANSPORT);
+        spec.unit_a = first;
+        spec.point = [x as f32, y as f32, 0.0];
+        let goal = host.goal_new(&spec);
+        let mut unit = first;
+        let mut can_unload = false;
+        for &id in &ids {
+            if can_unload {
+                break;
+            }
+            unit = id;
+            can_unload = host.unit_can_unload(unit);
+        }
+        if let Some(goal) = goal {
+            let mut given = None;
+            if can_unload {
+                host.goal_set_transport(&goal, unit);
+                if host.goal_can_unload(&goal) {
+                    given = Some(goal);
+                } else {
+                    host.goal_release(goal);
+                }
+            } else {
+                host.goal_release(goal);
+            }
+            if let Some(goal) = given {
+                host.group_clear_goal(group);
+                host.group_set_goal(group, goal, false);
+                host.group_set_action(group, EE_ACTION_UNLOAD_TRANSPORT);
+                host.group_plan(group);
+                host.acknowledge_unit(player, unit);
+                continue;
+            }
+        }
+        if host.unit_can_unload(unit) {
+            host.unload_warning(player, x, y);
+        }
+        host.group_clear_goal(group);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_LOCATION_XY);
+        spec.point = [x as f32, y as f32, 0.0];
+        if let Some(goal) = host.goal_new(&spec) {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_PREPARE_TO_MOVE);
+        host.group_plan(group);
+        host.send_group_command(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0);
+        host.acknowledge_unit(player, unit);
+    }
 }
 
 #[cfg(test)]
@@ -1402,6 +1482,78 @@ mod tests {
         // no selection: nothing
         let mut host = MockHost::default();
         build_wall(&mut host, player, selection, 0x2a, (1.5, 2.5), (9.5, 2.5));
+        assert!(host.calls.is_empty());
+    }
+
+    /// `EEMUnloadTransport::Execute`'s calls: the unload goal for the group's first unit, the cargo walk stopping at
+    /// the first transport, the goal given when it can unload there; else deleted, the warning for a loaded last unit,
+    /// the move with its marker; a group the spread emptied stays pending with no goal
+    #[test]
+    fn unload_transport_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let (a, b, c) = (0x0100_0001, 0x0100_0002, 0x0100_0003);
+        let xy = [10.0f32.to_bits(), 12.0f32.to_bits(), 0];
+        for (there, cargo) in [(true, vec![b]), (false, vec![b]), (true, vec![])] {
+            let mut host = MockHost { specs: true, unload_there: there, cargo: cargo.clone(), ..Default::default() };
+            host.groups.insert(0x600, vec![a, b, c]);
+            host.fills.insert(2, vec![a, b, c]);
+            unload_transport(&mut host, player, selection, 10, 12);
+            let g = |n: usize| r(0x1000 + n);
+            let mut expected = Vec::new();
+            for slot in 1..6 {
+                let group = g(slot as usize);
+                expected.push(Call::NewGroup(player, group));
+                expected.push(Call::Fill(group, selection, 1, slot));
+                if slot != 2 {
+                    expected.push(Call::Release(group));
+                    continue;
+                }
+                expected.extend([
+                    Call::Pending(player, group),
+                    Call::SpreadUnload(group, 10, 12),
+                    Call::GoalNew(EE_GOAL_CTOR_UNLOAD_TRANSPORT, 0),
+                    Call::Spec(EE_GOAL_CTOR_UNLOAD_TRANSPORT, a, EE_UNIT_ID_NONE, xy, 0, 0),
+                    Call::CanUnload(a),
+                    Call::CanUnload(b),
+                ]);
+                let unit = if cargo.is_empty() {
+                    expected.push(Call::CanUnload(c));
+                    c
+                } else {
+                    expected.extend([Call::SetTransport(8, b), Call::CanUnloadThere(8)]);
+                    b
+                };
+                if there && !cargo.is_empty() {
+                    expected.extend([
+                        Call::ClearGoal(group),
+                        Call::SetGoal(group, 8, false),
+                        Call::SetAction(group, EE_ACTION_UNLOAD_TRANSPORT),
+                        Call::Plan(group),
+                        Call::AcknowledgeUnit(player, unit),
+                    ]);
+                    continue;
+                }
+                expected.push(Call::CanUnload(unit));
+                if !cargo.is_empty() {
+                    expected.push(Call::UnloadWarning(player, 10, 12));
+                }
+                expected.extend([
+                    Call::ClearGoal(group),
+                    Call::GoalNew(EE_GOAL_CTOR_LOCATION_XY, 0),
+                    Call::Spec(EE_GOAL_CTOR_LOCATION_XY, EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, xy, 0, 0),
+                    Call::SetGoal(group, 1, false),
+                    Call::SetAction(group, EE_ACTION_PREPARE_TO_MOVE),
+                    Call::Plan(group),
+                    Call::Send(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0),
+                    Call::AcknowledgeUnit(player, unit),
+                ]);
+            }
+            assert_eq!(host.calls, expected, "there {there} cargo {cargo:?}");
+            assert_eq!(host.live, 0, "every goal given or deleted");
+        }
+        // no selection: nothing
+        let mut host = MockHost::default();
+        unload_transport(&mut host, player, selection, 10, 12);
         assert!(host.calls.is_empty());
     }
 }

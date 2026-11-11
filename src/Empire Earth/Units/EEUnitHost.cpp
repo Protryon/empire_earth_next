@@ -33,6 +33,7 @@
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
 #include "ee/EEUGLocation.h"
+#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
@@ -114,7 +115,12 @@ enum DryEvent {
     kDryKeepCitizens,     // tag, the count, the ids kept
     kDryWallPlan,         // player id, technology, the start's and end's bits (the dry plan makes 2 pieces)
     kDryWallBuild,        // tag
-    kDryWallRelease       // -
+    kDryWallRelease,      // -
+    kDrySpreadUnload,     // tag, x, y
+    kDryCanUnload,        // unit, the answer
+    kDrySetTransport,     // ctor, unit
+    kDryCanUnloadThere,   // ctor (the dry answer: yes)
+    kDryUnloadWarning     // player id, x, y
 };
 
 struct DryGroup {
@@ -218,6 +224,8 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_PATROL:
     case EE_GOAL_CTOR_PATROL_ROUTE: theKind = kGoalPatrol; break;
     case EE_GOAL_CTOR_LOCATION: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_LOCATION_XY: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_UNLOAD_TRANSPORT: theKind = kGoalUnloadTransport; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     default: theMade = false; break;
     }
     Log({kDryGoalNew, inSpec->ctor, inSpec->unit_a, inSpec->unit_b, Bits(inSpec->point[0]), Bits(inSpec->point[1]),
@@ -406,6 +414,16 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         theGoal->mUseGroupMovement = inSpec->flag_c != 0;
         return static_cast<EEUnitGoal*>(theGoal);
     }
+    case EE_GOAL_CTOR_UNLOAD_TRANSPORT: {   // EEMUnloadTransport's: the first unit's complex unit, the tile
+        EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
+        if (theUnit == NULL)
+            return NULL;
+        return static_cast<EEUnitGoal*>(new EEUGUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
+                                                                (long)inSpec->point[1], theFlagA));
+    }
+    case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
+        return static_cast<EEUnitGoal*>(new EEUGLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
+                                                         0.0f, false, 0));
     default:
         return NULL;
     }
@@ -863,6 +881,57 @@ extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
         return;
     }
     EEBuildWall(ActiveOf(inGroup), *static_cast<std::vector<EEUnit*>*>(inPieces));
+}
+
+// the dry host does not spread: the group keeps its units (logged)
+extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadUnload, Dry(inGroup)->mTag, (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadForUnload((long)inX, (long)inY);
+}
+
+// a transport (or paratrooper bomber) with cargo; a read (the dry host's too)
+extern "C" uint8_t ee_units_host_unit_can_unload(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    bool theResult = (theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
+        && theUnit->mComplexUnit->GetNumCargoUnits() > 0;
+    if (sDry != NULL)
+        Log({kDryCanUnload, inUnit, theResult ? 1u : 0u});
+    return theResult ? 1 : 0;
+}
+
+extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDrySetTransport, static_cast<DryGoal*>(inGoal)->mCtor, inUnit});
+        return;
+    }
+    static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->SetTransport(ComplexOf(inUnit)->mComplexUnit);
+}
+
+// the dry goal is a record: it answers yes (logged)
+extern "C" uint8_t ee_units_host_goal_can_unload(void* inGoal)
+{
+    if (sDry != NULL) {
+        Log({kDryCanUnloadThere, static_cast<DryGoal*>(inGoal)->mCtor});
+        return 1;
+    }
+    return static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
+}
+
+extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDryUnloadWarning, PlayerID(inPlayer), (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    U2DPoint<long> theTile((long)inX, (long)inY);
+    thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, 0x7c3b, false);
 }
 
 extern "C" void ee_units_host_wall_release(void* inPieces)

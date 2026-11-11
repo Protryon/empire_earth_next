@@ -439,6 +439,68 @@ void OriginalBuildWall(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology
     }
 }
 
+// EEMUnloadTransport::Execute (0x4c8615) as it was, each world call through the host (the goal's SetTransport and
+// CanUnloadAtDestination, the class and cargo reads and the event are host calls)
+void OriginalUnloadTransport(EEPlayer* thePlayer, void* theGroup, long inX, long inY)
+{
+    bool theCanUnload = false;
+    if (Count(theGroup) == 0 || UnitAt(theGroup, 0) == kNone)   // theGroup->GetFirstUnit() == NULL
+        return;
+    for (unsigned long i = 1; i < 6; i++) {
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 1, (int32_t)i);
+        if (Count(theActiveGroup) > 0) {
+            ee_units_host_pending_push(thePlayer, theActiveGroup);
+            ee_units_host_group_spread_for_unload(theActiveGroup, inX, inY);
+            uint32_t theUnit = Count(theActiveGroup) > 0 ? UnitAt(theActiveGroup, 0) : kNone;   // GetFirstUnit()
+            if (theUnit == kNone)
+                continue;
+            EeGoalSpec theSpec;   // new EEUGUnloadTransport(theUnit->GetComplexUnit(), x, y, false)
+            memset(&theSpec, 0, sizeof(theSpec));
+            theSpec.ctor = EE_GOAL_CTOR_UNLOAD_TRANSPORT;
+            theSpec.unit_a = theUnit;
+            theSpec.unit_b = kNone;
+            theSpec.point[0] = (float)inX;
+            theSpec.point[1] = (float)inY;
+            void* theGoal = ee_units_host_goal_new(&theSpec);
+            unsigned long theCount = Count(theActiveGroup);
+            theCanUnload = false;
+            for (unsigned long j = 0; j < theCount && !theCanUnload; j++) {
+                theUnit = UnitAt(theActiveGroup, (long)j);
+                theCanUnload = ee_units_host_unit_can_unload(theUnit) != 0;
+            }
+            if (theCanUnload) {
+                ee_units_host_goal_set_transport(theGoal, theUnit);
+                if (theCanUnload && ee_units_host_goal_can_unload(theGoal)) {
+                    ee_units_host_group_clear_goal(theActiveGroup);
+                    ee_units_host_group_set_goal(theActiveGroup, theGoal, 0);
+                    ee_units_host_group_set_action(theActiveGroup, kActionUnloadTransport);
+                    ee_units_host_group_plan(theActiveGroup);
+                    ee_units_host_acknowledge_unit(thePlayer, theUnit);
+                    continue;
+                }
+            }
+            ee_units_host_goal_release(theGoal);   // delete theGoal
+            if (ee_units_host_unit_can_unload(theUnit))
+                ee_units_host_unload_warning(thePlayer, inX, inY);
+            ee_units_host_group_clear_goal(theActiveGroup);
+            EeGoalSpec theMove;   // new EEUGLocation((float)x, (float)y, 0.0f, false, true, false, 0.0f, false, 0)
+            memset(&theMove, 0, sizeof(theMove));
+            theMove.ctor = EE_GOAL_CTOR_LOCATION_XY;
+            theMove.unit_a = kNone;
+            theMove.unit_b = kNone;
+            theMove.point[0] = (float)inX;
+            theMove.point[1] = (float)inY;
+            ee_units_host_group_set_goal(theActiveGroup, ee_units_host_goal_new(&theMove), 0);
+            ee_units_host_group_set_action(theActiveGroup, kActionPrepareToMove);
+            ee_units_host_group_plan(theActiveGroup);
+            ee_units_host_send_group_command(theActiveGroup, kNone, thePlayer, 0xb8, 0);
+            ee_units_host_acknowledge_unit(thePlayer, theUnit);
+        } else
+            ee_units_host_group_release(theActiveGroup);
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -449,7 +511,8 @@ enum SweepBody {
     kSweepHealUnit = 7,
     kSweepPathTo = 8,
     kSweepDropoffResource = 9,
-    kSweepBuildWall = 10
+    kSweepBuildWall = 10,
+    kSweepUnloadTransport = 11
 };
 
 struct SweepCase {
@@ -517,6 +580,12 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
             ee_units_build_wall(inPlayer, inSelection, inCase.mTarget, inCase.mX, inCase.mY, inCase.mEndX, inCase.mEndY);
         else
             OriginalBuildWall(inPlayer, inSelection, inCase.mTarget, inCase.mX, inCase.mY, inCase.mEndX, inCase.mEndY);
+        break;
+    case kSweepUnloadTransport:
+        if (inRust)
+            ee_units_unload_transport(inPlayer, inSelection, (int64_t)inCase.mX, (int64_t)inCase.mY);
+        else
+            OriginalUnloadTransport(inPlayer, inSelection, (long)inCase.mX, (long)inCase.mY);
         break;
     case kSweepDropoffResource:
         if (inRust)
@@ -764,6 +833,15 @@ void EEGroupCommandSweep()
             RunCase(theCase, p, thePlayer, theUnits);
             theCase.mEndX = 0.0f;
             theCase.mEndY = 0.0f;
+            // Unload Transport at the first unit's tile (or the map's centre) and at the centre
+            theCase.mBody = kSweepUnloadTransport;
+            theCase.mTarget = 0;
+            theCase.mX = (float)(long)theFirstX;
+            theCase.mY = (float)(long)theFirstY;
+            RunCase(theCase, p, thePlayer, theUnits);
+            theCase.mX = (float)(long)theCenter;
+            theCase.mY = (float)(long)theCenter;
+            RunCase(theCase, p, thePlayer, theUnits);
         }
     }
 }

@@ -7702,57 +7702,11 @@ bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
 void EEMUnloadTransport::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    bool theCanUnload = false;
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup->GetFirstUnit() == NULL)
-        return;
-    for (unsigned long i = 1; i < 6; i++) {
-        EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 1, i);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            thePlayer->mPendingGroups.push_back(theActiveGroup);
-            theActiveGroup->SpreadForUnload(this->GetX(), this->GetY());
-            EEComplexUnit* theUnit = theActiveGroup->GetFirstUnit();
-            if (theUnit == NULL)
-                continue;
-            EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit->GetComplexUnit(), this->GetX(), this->GetY(), false);
-            unsigned long theCount = theActiveGroup->GetNumUnits();
-            theCanUnload = false;  // each part looks for its own loaded transport
-            for (unsigned long j = 0; j < theCount && !theCanUnload; j++) {
-                theUnit = theActiveGroup->GetUnit(j);
-                if ((theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
-                    && theUnit->mComplexUnit->GetNumCargoUnits() > 0)
-                    theCanUnload = true;
-                else
-                    theCanUnload = false;
-            }
-            if (theCanUnload) {
-                theGoal->SetTransport(theUnit->mComplexUnit);
-                if (theCanUnload && theGoal->CanUnloadAtDestination()) {
-                    theActiveGroup->ClearGoal();
-                    theActiveGroup->SetGoal(theGoal, false);
-                    theActiveGroup->mAction = kActionUnloadTransport;
-                    theActiveGroup->Plan();
-                    thePlayer->PlayAcknowledgement(theUnit);
-                    continue;
-                }
-            }
-            delete theGoal;
-            if ((theUnit->mUnitClass->IsTransport() || theUnit->mUnitClass->mIsParatrooperBomber)
-                && theUnit->mComplexUnit->GetNumCargoUnits() > 0) {
-                U2DPoint<long> theTile(this->GetX(), this->GetY());
-                thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, 0x7c3b, false);
-            }
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGLocation((float)this->GetX(), (float)this->GetY(), 0.0f, false, true, false, 0.0f, false, 0),
-                                    false);
-            theActiveGroup->mAction = kActionPrepareToMove;
-            theActiveGroup->Plan();
-            EESendGroupCommand(theActiveGroup, NULL, thePlayer->mPlayerID, 0xb8, 0);
-            thePlayer->PlayAcknowledgement(theUnit);
-        } else
-            theActiveGroup->Dereference();
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs unload_transport: per formation slot a group of the selection
+    // spreads for the unload; a loaded transport that can unload there gets the unload goal, else the group moves to
+    // the tile, with the warning event for a loaded one) over the world calls of EEUnitHost.cpp
+    ee_units_unload_transport(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (int64_t)this->GetX(),
+                              (int64_t)this->GetY());
 }
 
 // FUNCTION: EXE 0x4c889e

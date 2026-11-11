@@ -307,6 +307,14 @@ pub extern "C" fn ee_units_build_wall(
     );
 }
 
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_unload_transport(player: *mut c_void, selection: *mut c_void, x: i64, y: i64) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::unload_transport(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), x, y);
+}
+
 /// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
 #[cfg(not(test))]
 #[no_mangle]
