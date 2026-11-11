@@ -1075,6 +1075,9 @@ struct EeSoundManager;
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
+/// The parser's Rust state (opaque): the pushback and the define scopes.
+struct EeWonConfigLexer;
+
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
@@ -3551,14 +3554,48 @@ struct EeUiSliderFields {
   bool is_dragging;
 };
 
+/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
+/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
+struct EeWonFileReader {
+  void *file;
+  const uint8_t *buffer;
+  unsigned long length;
+  unsigned long position;
+  bool own_buffer;
+  bool memory_mode;
+};
+
+/// A parser's members the C++ keeps, for one call.
+struct EeWonConfigIo {
+  EeWonFileReader *reader;
+  int32_t *line;
+  bool unicode;
+};
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// A saved state across the C ABI: the file position, name and line, and the pushback's units.
+struct EeWonConfigState {
+  long pos;
+  const uint8_t *path;
+  size_t path_len;
+  int32_t line;
+  const uint16_t *back;
+  size_t back_len;
+};
+
+/// Receives a saved state; valid only during the call.
+using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
 /// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
 using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
 struct EeWonMd5 {
@@ -3670,20 +3707,6 @@ struct EeWonQueueDecision {
   int32_t completion;
   int32_t next;
   bool clear_current;
-};
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
-
-/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
-/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
-struct EeWonFileReader {
-  void *file;
-  const uint8_t *buffer;
-  unsigned long length;
-  unsigned long position;
-  bool own_buffer;
-  bool memory_mode;
 };
 
 /// `FileWriter`'s state.
@@ -8312,6 +8335,150 @@ bool ee_units_unregister(uint32_t id, void *unit);
 
 /// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
 void *ee_units_resolve(uint32_t id);
+
+EeWonConfigLexer *ee_won_config_new();
+
+/// # Safety
+/// `l` is from `ee_won_config_new` (or NULL), not used afterwards.
+void ee_won_config_free(EeWonConfigLexer *l);
+
+int32_t ee_won_config_line_count();
+
+void ee_won_config_reset_line_count();
+
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_reset(EeWonConfigLexer *l);
+
+/// # Safety
+/// `l` is a lexer, `io` the parser's members.
+bool ee_won_config_end_of_file(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_get_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_peek_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_unget_char(EeWonConfigLexer *l, EeWonConfigIo *io, int32_t ch);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `text` holds `length` bytes.
+void ee_won_config_unget_narrow(EeWonConfigLexer *l,
+                                EeWonConfigIo *io,
+                                const uint8_t *text,
+                                size_t length);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `units` holds `count` `wchar_t` values widened to 32 bits.
+void ee_won_config_unget_wide(EeWonConfigLexer *l,
+                              EeWonConfigIo *io,
+                              const uint32_t *units,
+                              size_t count);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_whitespace(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_line(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_block_comment(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// `ReadToken` (narrow when `wchar_size` is 0, else wide with `wchar_t` of that size): 0 no token, 1 a token, 2
+/// "Expecting end quote", 3 "Expecting closing '$'", 4 "Define not found: " + the name (given to `name`). The
+/// token as read (the whole token, or the part before an error) goes to `narrow` or `wide` unless the data had
+/// ended before the read (then the C++ leaves its token alone). `root` is the root parser's lexer, or NULL when this
+/// parser is the root.
+///
+/// # Safety
+/// `l` and a non-NULL `root` are distinct lexers, `io` the parser's members; the sinks take the text.
+int32_t ee_won_config_read_token(EeWonConfigLexer *l,
+                                 EeWonConfigIo *io,
+                                 const EeWonConfigLexer *root,
+                                 uint32_t wchar_size,
+                                 bool to_end_line,
+                                 bool skip,
+                                 EeWonByteSink narrow,
+                                 EeWonWideUnitSink wide,
+                                 EeWonByteSink name,
+                                 void *context);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_push_scope(EeWonConfigLexer *root);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_pop_scope(EeWonConfigLexer *root);
+
+/// `AddDefine` on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; the texts hold their lengths.
+int32_t ee_won_config_add_define(EeWonConfigLexer *root,
+                                 const uint8_t *name,
+                                 size_t name_len,
+                                 const uint8_t *value,
+                                 size_t value_len,
+                                 bool redefine);
+
+/// `GetDefine` on the root's lexer: the value to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_define(const EeWonConfigLexer *root,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `AddGroupDefine`'s insertion on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes, `state` is a state.
+int32_t ee_won_config_add_group(EeWonConfigLexer *root,
+                                const uint8_t *name,
+                                size_t name_len,
+                                const EeWonConfigState *state);
+
+/// `GetGroupDefine` on the root's lexer: the state to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_group(const EeWonConfigLexer *root,
+                             const uint8_t *name,
+                             size_t name_len,
+                             EeWonConfigStateSink sink,
+                             void *context);
+
+/// The pushback's units, to the sink (zero-extended).
+///
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_get_back(const EeWonConfigLexer *l, EeWonWideUnitSink sink, void *context);
+
+/// Replaces the pushback (each `wchar_t` truncated to 16 bits).
+///
+/// # Safety
+/// `l` is a lexer; `units` holds `count` values.
+void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t count);
+
+/// `OpenFile`'s open and UTF-16 sniff (the C++ has reset the line, the flag and the pushback and split the path):
+/// whether the reader is open; `status` is the reader's.
+///
+/// # Safety
+/// `io` is the parser's members; `path` a C string.
+bool ee_won_config_open(EeWonConfigIo *io,
+                        const char *path,
+                        int32_t *status);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

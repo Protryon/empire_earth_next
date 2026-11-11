@@ -394,6 +394,10 @@ WON_TESTS = {
     # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
     "won_file_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                          "FileWriter.cpp", "WONFile.cpp")],
+    # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won/src/golden_config.txt)
+    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringUtil.cpp")]],
 }
 
 

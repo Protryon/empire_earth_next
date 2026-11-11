@@ -1,6 +1,8 @@
 // C:\EEX\Empire Earth\WONAPI\WONConfig\ConfigParser.cpp
 // ConfigParser (0x88 bytes): config file reader with comments, pushback, defines and group defines
-// (file grouping inferred)
+// (file grouping inferred). The characters, comments, pushback, define scopes, group defines and the open's
+// UTF-16 sniff are ee_won's (rust/crates/ee_won/src/config.rs); this keeps the parent walk, the file names and the
+// error and warning texts.
 
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
@@ -8,14 +10,46 @@
 #include <list>
 #include <vector>
 #include <stdio.h>
-#include <ctype.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 namespace WONAPI {
 
-int ConfigParser::mLineCount = 0;
+static void ConfigAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static void ConfigAppendUnits(void* inContext, const uint32_t* inUnits, size_t inCount)
+{
+    std::wstring* aText = static_cast<std::wstring*>(inContext);
+    for (size_t i = 0; i < inCount; i++)
+        *aText += (wchar_t)inUnits[i];
+}
+static void ConfigWideUnits(const std::wstring& inText, std::vector<uint32_t>& outUnits)
+{
+    outUnits.resize(inText.length());
+    for (size_t i = 0; i < inText.length(); i++)
+        outUnits[i] = (uint32_t)inText[i];
+}
+
+ConfigParser* ConfigParser::Root()
+{
+    ConfigParser* aRoot = this;
+    while (aRoot->mParent != NULL)
+        aRoot = aRoot->mParent;
+    return aRoot;
+}
+
+EeWonConfigIo ConfigParser::Io()
+{
+    EeWonConfigIo anIo;
+    anIo.reader = &this->mFileReader.mCore;
+    anIo.line = &this->mLineNum;
+    anIo.unicode = this->mIsUnicode;
+    return anIo;
+}
+
 // FUNCTION: WON 0x007b1f90
 // Sets the parent parser and inherits its include-path and warnings-as-errors flags
 void ConfigParser::SetParent(ConfigParser* inParent)
@@ -30,119 +64,58 @@ void ConfigParser::SetParent(ConfigParser* inParent)
 // Returns true when the file is exhausted and no character is pushed back
 bool ConfigParser::EndOfFile()
 {
-    if(!this->mFileReader.EndOfFile()) return false;
-    return this->mBackStr.empty();
+    EeWonConfigIo anIo = this->Io();
+    return ee_won_config_end_of_file(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b32d0
 // Reads the next character (pushback first, 16-bit in Unicode files), turning CR LF and lone CR into LF
-// A carriage return reads the next character through GetChar recursively (each one counts a line)
 int ConfigParser::GetChar()
 {
-    int ch;
-    if (this->mBackStr.empty()) {
-        if (this->mIsUnicode) {
-            ch = this->mFileReader.TryReadByte();
-            ch |= this->mFileReader.TryReadByte() << 8;
-        } else {
-            ch = this->mFileReader.TryReadByte();
-        }
-    } else {
-        ch = this->mBackStr[this->mBackStr.length() - 1];
-        this->mBackStr.resize(this->mBackStr.length() - 1);
-    }
-    if (ch == '\r') {
-        int next = this->GetChar();
-        if (next != '\n') {
-            this->UngetChar(next);
-            ++ConfigParser::mLineCount;
-            ++this->mLineNum;
-        }
-        return '\n';
-    }
-    if (ch == '\n') {
-        ++ConfigParser::mLineCount;
-        ++this->mLineNum;
-    }
-    return ch;
+    EeWonConfigIo anIo = this->Io();
+    return ee_won_config_get_char(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b34b0
 // Returns the next character without consuming it, -1 at the end or with no file open
-// Returns -1 with no file open even when characters are pushed back
 int ConfigParser::PeekChar()
 {
-    if (this->mFileReader.IsOpen() && !this->EndOfFile()) {
-        int ch = this->GetChar();
-        this->UngetChar(ch);
-        return ch;
-    }
-    return -1;
+    EeWonConfigIo anIo = this->Io();
+    return ee_won_config_peek_char(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b34f0
 // Pushes a character back (EOF is ignored), uncounting a newline
-// The line counters drop before the append that may throw
 void ConfigParser::UngetChar(int inChar)
 {
-    if (inChar == -1) return;
-    if (inChar == '\n') {
-        --this->mLineNum;
-        --ConfigParser::mLineCount;
-    }
-    this->mBackStr += (wchar_t)inChar;
+    EeWonConfigIo anIo = this->Io();
+    ee_won_config_unget_char(this->mLexer, &anIo, inChar);
 }
 // FUNCTION: WON 0x007b35e0
-// Pushes a string back so it is read again in order
-// Characters are sign-extended before going into the wide pushback string
+// Pushes a string back so it is read again in order (each char sign-extended)
 void ConfigParser::UngetStr(const std::string& inString)
 {
-    for (int i = (int)inString.length() - 1; i >= 0; --i)
-        this->UngetChar(inString[i]);
+    EeWonConfigIo anIo = this->Io();
+    ee_won_config_unget_narrow(this->mLexer, &anIo, reinterpret_cast<const uint8_t*>(inString.data()),
+                               inString.length());
 }
 // FUNCTION: WON 0x007b3c50
 // Skips whitespace and #, // and /* */ comments
-// A slash that starts no comment is pushed back with the character after it
 void ConfigParser::SkipWhitespace()
 {
-    while (!this->EndOfFile()) {
-        int ch = this->GetChar();
-        if ((unsigned int)ch < 256 && isspace(ch))
-            continue;
-        if (ch == '#') {
-            this->SkipLine();
-            continue;
-        }
-        if (ch == '/') {
-            int next = this->GetChar();
-            if (next == '/') {
-                this->SkipLine();
-                continue;
-            }
-            if (next == '*') {
-                this->SkipBlockComment();
-                continue;
-            }
-            this->UngetChar(next);
-        }
-        this->UngetChar(ch);
-        return;
-    }
+    EeWonConfigIo anIo = this->Io();
+    ee_won_config_skip_whitespace(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b3ce0
 // Skips to the end of the line, consuming the newline
 void ConfigParser::SkipLine()
 {
-    while (!this->EndOfFile())
-        if (this->GetChar() == '\n') return;
+    EeWonConfigIo anIo = this->Io();
+    ee_won_config_skip_line(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b3d10
 // Skips to just past the closing */ of a block comment
 void ConfigParser::SkipBlockComment()
 {
-    bool star = false;
-    while (!this->EndOfFile()) {
-        int ch = this->GetChar();
-        if (star && ch == '/') return;
-        star = ch == '*';
-    }
+    EeWonConfigIo anIo = this->Io();
+    ee_won_config_skip_block_comment(this->mLexer, &anIo);
 }
 // FUNCTION: WON 0x007b1fb0
 // Records a parse error with file and line, unless one is already set and append is off
@@ -150,7 +123,7 @@ void ConfigParser::SetError(const std::string& inError, bool inAppend)
 {
     if (!this->mAbortReason.empty() && !inAppend) return;
     char location[1024];
-    sprintf(location, " (%s:%d)", this->mFileNameAndPath.c_str(), this->mLineNum);
+    snprintf(location, sizeof(location), " (%s:%d)", this->mFileNameAndPath.c_str(), this->mLineNum);
     this->mAbortReason += inError + location;
 }
 // FUNCTION: WON 0x007b20f0
@@ -160,7 +133,8 @@ void ConfigParser::AddWarning(const std::string& inWarning)
     if (!this->mAbortReason.empty()) return;
     if (this->mWarningsAsErrors) this->SetError(inWarning, false);
     char warning[1024];
-    sprintf(warning, "Warning (%s: %d) - %s\n", this->mFileNameAndPath.c_str(), this->mLineNum, inWarning.c_str());
+    snprintf(warning, sizeof(warning), "Warning (%s: %d) - %s\n", this->mFileNameAndPath.c_str(), this->mLineNum,
+             inWarning.c_str());
     this->mWarnings += warning;
 }
 // FUNCTION: WON 0x007b2310
@@ -181,7 +155,8 @@ const std::string& ConfigParser::GetAbortReason()
 // ConfigParserState (0x28 bytes): position +0, path +4, line +0x14, pushback +0x18
 void ConfigParser::GetState(ConfigParserState& outState)
 {
-    outState.mBackStr = this->mBackStr;
+    outState.mBackStr.erase();
+    ee_won_config_get_back(this->mLexer, ConfigAppendUnits, &outState.mBackStr);
     outState.mFileNameAndPath = this->mFileNameAndPath;
     outState.mFilePos = this->mFileReader.pos();
     outState.mLineNum = this->mLineNum;
@@ -197,7 +172,9 @@ bool ConfigParser::SetState(const ConfigParserState& inState)
     }
     this->mFileReader.SetPos(inState.mFilePos);
     this->mLineNum = inState.mLineNum;
-    this->mBackStr = inState.mBackStr;
+    std::vector<uint32_t> aUnits;
+    ConfigWideUnits(inState.mBackStr, aUnits);
+    ee_won_config_set_back(this->mLexer, aUnits.empty() ? NULL : &aUnits[0], aUnits.size());
     return true;
 }
 // FUNCTION: WON 0x007b3830
@@ -208,88 +185,54 @@ void ConfigParser::CloseFile()
 }
 // FUNCTION: WON 0x007b3620
 // Opens a config file (UTF-16 when it starts with FF FE), loads it into memory and notes its directory
-
 bool ConfigParser::OpenFile(const std::string& inPath)
 {
     this->CloseFile();
     this->mLineNum = 1;
     this->mIsUnicode = false;
-    this->mBackStr.erase();
+    ee_won_config_set_back(this->mLexer, NULL, 0);
     this->mFileNameAndPath = inPath;
     std::string::size_type sep = this->mFileNameAndPath.rfind('/');
     if (sep == std::string::npos) sep = this->mFileNameAndPath.rfind('\\');
     if (sep == std::string::npos) this->mFilePath = "";
     else this->mFilePath = this->mFileNameAndPath.substr(0, sep + 1);
-    this->mFileReader.OpenText(inPath.c_str());
-    if (this->mFileReader.IsOpen()) {
-        int first = this->mFileReader.TryReadByte();
-        int second = this->mFileReader.TryReadByte();
-        this->mFileReader.TryReadByte();
-        int fourth = this->mFileReader.TryReadByte();
-        if (first == 0xff && second == 0xfe && fourth == 0) {
-            this->mFileReader.Open(inPath.c_str());
-            this->mFileReader.SkipBytes(2);
-            this->mIsUnicode = true;
-        } else {
-            this->mFileReader.Rewind();
-        }
-    }
-    this->mFileReader.ReadIntoMemory();
-    return this->mFileReader.IsOpen();
+    EeWonConfigIo anIo = this->Io();
+    int32_t aStatus = 0;
+    bool anOpen = ee_won_config_open(&anIo, inPath.c_str(), &aStatus);
+    this->mIsUnicode = anIo.unicode;
+    if (aStatus != 0)
+        throw FileReaderException(ee_won_file_status_text(aStatus));
+    return anOpen;
 }
-// Unlike the archived WON SDK, the define map holds std::string values, not DefineStruct
 
 // FUNCTION: WON 0x007b2510
 // Opens a new (empty) define scope on the root parser
-void ConfigParser::PushDefineStack()
-{
-    ConfigParser* root=this;
-    while(root->mParent!=NULL) root=root->mParent;
-    root->mDefineStack.push_back(NULL);
-}
+void ConfigParser::PushDefineStack() { ee_won_config_push_scope(this->Root()->mLexer); }
 // FUNCTION: WON 0x007b25b0
 // Closes the innermost define scope of the root parser, if any
-void ConfigParser::PopDefineStack()
-{
-    ConfigParser* root=this;
-    while(root->mParent!=NULL) root=root->mParent;
-    if(!root->mDefineStack.empty()) root->mDefineStack.pop_back();
-}
+void ConfigParser::PopDefineStack() { ee_won_config_pop_scope(this->Root()->mLexer); }
 // FUNCTION: WON 0x007b2610
 // Adds a define to the innermost scope (REDEFINE replaces); warns about spaces or a redefinition
 // The warning text keeps the original misspelling "Redefintion"
 bool ConfigParser::AddDefine(const std::string& name,const std::string& value,bool redefine)
 {
-    ConfigParser* root=this;
-    while(root->mParent!=NULL) root=root->mParent;
-    if(name.find(' ')!=std::string::npos) {
-        root->AddWarning("Not allowed to have spaces in define names.");
-        return true;
-    }
-    if(root->mDefineStack.empty()) root->mDefineStack.push_back(new DefineMapContainer);
-    if(root->mDefineStack.back().get()==NULL) root->mDefineStack.back()=new DefineMapContainer;
-    DefineMapContainer::DefineMap& defines=root->mDefineStack.back()->mDefineMap;
-    if(redefine) defines[name]=value;
-    else if(!defines.insert(DefineMapContainer::DefineMap::value_type(name,value)).second)
-        root->AddWarning("Redefintion of "+name);
+    ConfigParser* root=this->Root();
+    int aResult=ee_won_config_add_define(root->mLexer,reinterpret_cast<const uint8_t*>(name.data()),name.length(),
+                                         reinterpret_cast<const uint8_t*>(value.data()),value.length(),redefine);
+    if(aResult==1) root->AddWarning("Not allowed to have spaces in define names.");
+    else if(aResult==2) root->AddWarning("Redefintion of "+name);
     return true;
 }
 // FUNCTION: WON 0x007b2b00
 // Looks a define up from the innermost scope outwards; returns whether it exists
 bool ConfigParser::GetDefine(const std::string& name,std::string& outValue)
 {
-    ConfigParser* root=this;
-    while(root->mParent!=NULL) root=root->mParent;
-    DefineStack::reverse_iterator i=root->mDefineStack.rbegin();
-    while(i!=root->mDefineStack.rend()) {
-        if(i->get()!=NULL) {
-            DefineMapContainer::DefineMap& defines=(*i)->mDefineMap;
-            DefineMapContainer::DefineMap::iterator found=defines.find(name);
-            if(found!=defines.end()) {outValue=found->second;return true;}
-        }
-        ++i;
-    }
-    return false;
+    std::string aValue;
+    if(!ee_won_config_get_define(this->Root()->mLexer,reinterpret_cast<const uint8_t*>(name.data()),name.length(),
+                                 ConfigAppendBytes,&aValue))
+        return false;
+    outValue=aValue;
+    return true;
 }
 // FUNCTION: WON 0x007b2be0
 // Looks a define up and returns its value as a wide string
@@ -300,59 +243,62 @@ bool ConfigParser::GetDefine(const std::string& name,std::wstring& outValue)
     outValue=StringToWString(value);
     return true;
 }
+static void ConfigTakeState(void* inContext, const EeWonConfigState* inState)
+{
+    ConfigParserState* aState = static_cast<ConfigParserState*>(inContext);
+    aState->mFilePos = inState->pos;
+    aState->mFileNameAndPath.assign(reinterpret_cast<const char*>(inState->path), inState->path_len);
+    aState->mLineNum = inState->line;
+    aState->mBackStr.erase();
+    for (size_t i = 0; i < inState->back_len; i++)
+        aState->mBackStr += (wchar_t)inState->back[i];
+}
 // FUNCTION: WON 0x007b2d20
 // Records a named group at the given (or current) parser state in the root's innermost scope
-// The local state is constructed even when the caller supplies one or a parent takes the call
+// (a name with spaces warns on this parser, a redefinition on the root)
 bool ConfigParser::AddGroupDefine(const std::string& name,ConfigParserState* state)
 {
-    if(name.find(' ')!=std::string::npos) {
-        this->AddWarning("Not allowed to have spaces in define names.");
-        return true;
-    }
     ConfigParserState localState;
     if(state==NULL) {this->GetState(localState);state=&localState;}
-    if(this->mParent!=NULL) return this->mParent->AddGroupDefine(name,state);
-    if(this->mDefineStack.empty()) this->mDefineStack.push_back(new DefineMapContainer);
-    if(this->mDefineStack.back().get()==NULL) this->mDefineStack.back()=new DefineMapContainer;
-    DefineMapContainer::GroupDefineMap& aMap=this->mDefineStack.back()->mGroupDefineMap;
-    if(!aMap.insert(DefineMapContainer::GroupDefineMap::value_type(name,*state)).second) {
-        this->AddWarning("Redefintion of "+name);
-        return true;
-    }
+    std::vector<uint16_t> aBack(state->mBackStr.length());
+    for(size_t i=0;i<aBack.size();i++) aBack[i]=(uint16_t)state->mBackStr[i];
+    EeWonConfigState aState;
+    aState.pos=state->mFilePos;
+    aState.path=reinterpret_cast<const uint8_t*>(state->mFileNameAndPath.data());
+    aState.path_len=state->mFileNameAndPath.length();
+    aState.line=state->mLineNum;
+    aState.back=aBack.empty()?NULL:&aBack[0];
+    aState.back_len=aBack.size();
+    ConfigParser* root=this->Root();
+    int aResult=ee_won_config_add_group(root->mLexer,reinterpret_cast<const uint8_t*>(name.data()),name.length(),
+                                        &aState);
+    if(aResult==1) this->AddWarning("Not allowed to have spaces in define names.");
+    else if(aResult==2) root->AddWarning("Redefintion of "+name);
     return true;
 }
 // FUNCTION: WON 0x007b31a0
 // Looks a group define up from the innermost scope outwards and copies its saved state
 bool ConfigParser::GetGroupDefine(const std::string& name,ConfigParserState& outState)
 {
-    ConfigParser* root=this;
-    while(root->mParent!=NULL) root=root->mParent;
-    DefineStack::reverse_iterator i=root->mDefineStack.rbegin();
-    while(i!=root->mDefineStack.rend()) {
-        if(i->get()!=NULL) {
-            DefineMapContainer::GroupDefineMap& groups=(*i)->mGroupDefineMap;
-            DefineMapContainer::GroupDefineMap::iterator found=groups.find(name);
-            if(found!=groups.end()) {outState=found->second;return true;}
-        }
-        ++i;
-    }
-    return false;
+    return ee_won_config_get_group(this->Root()->mLexer,reinterpret_cast<const uint8_t*>(name.data()),name.length(),
+                                   ConfigTakeState,&outState);
 }
 
-// The original leaves the Unicode flag (+0x5d) uninitialized
 // FUNCTION: WON 0x007b1d20
 // Creates a parser with no file, no parent and all flags off
 ConfigParser::ConfigParser()
 {
+    this->mLexer=ee_won_config_new();
     this->mLineNum=0;
     this->mParent=NULL;
     this->mStopped=false;
     this->mWarningsAsErrors=false;
     this->mIgnorePathOnIncludeFile=false;
+    this->mIsUnicode=false;
 }
 // FUNCTION: WON 0x007b1e10
 // Destroys the parser, closing its file
-ConfigParser::~ConfigParser() {this->CloseFile();}
+ConfigParser::~ConfigParser() {this->CloseFile();ee_won_config_free(this->mLexer);}
 
 }
 
@@ -360,23 +306,21 @@ namespace WONAPI {
 // No original address identified: WON SDK reset and wide pushback
 void ConfigParser::Reset(void)
 {
-//	mDefineMap.clear();
-	this->mDefineStack.clear();
+	ee_won_config_reset(this->mLexer);
 	this->mAbortReason.erase();
 	this->mWarnings.erase();
-	this->mBackStr.erase();
 
 	this->mLineNum = 1;
 	this->mStopped = false;
-//	if(mFile)
-//		rewind(mFile);
 	this->mFileReader.Rewind();
 }
 
 void ConfigParser::UngetStr(const std::wstring &theStr)
 {
-	for(int i=theStr.length()-1; i>=0; i--)
-		this->UngetChar(theStr[i]);
+	std::vector<uint32_t> aUnits;
+	ConfigWideUnits(theStr, aUnits);
+	EeWonConfigIo anIo = this->Io();
+	ee_won_config_unget_wide(this->mLexer, &anIo, aUnits.empty() ? NULL : &aUnits[0], aUnits.size());
 }
 }
 
