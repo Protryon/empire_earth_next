@@ -4296,6 +4296,30 @@ struct EeWonInitErrors {
   bool allow_ignore;
 };
 
+/// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
+struct EeWonSel {
+  int32_t start;
+  int32_t end;
+  bool backwards;
+};
+
+/// What Backspace (8) or Delete (46) keeps of the text: the left part `assign(text, 0, left_count)` when
+/// `left_count` is not negative (else empty) and the right part `assign(text, right_start)` when
+/// `right_start` is not negative (else empty), as the original assigned them. The cursor then sits at the left
+/// part's length.
+struct EeWonDeleteParts {
+  int32_t left_count;
+  int32_t right_start;
+};
+
+/// The cursor's blink state.
+struct EeWonBlink {
+  int32_t delay;
+  bool on;
+  /// The cursor changed (repaint).
+  bool changed;
+};
+
 /// A `WONRectangle` (x, y, width, height).
 struct EeWonRect {
   int32_t x;
@@ -11283,6 +11307,97 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// `move_cursor` over a `GUIString`'s units.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0).
+int32_t ee_won_gui_move_cursor(bool left,
+                               bool whole_word,
+                               const void *text,
+                               uint16_t len,
+                               uint32_t wchar_size,
+                               int32_t pos);
+
+EeWonSel ee_won_gui_select_range(int32_t start, int32_t end, int32_t len);
+
+/// `key_selection` in place: false (the selection unchanged) for a key it does not handle.
+///
+/// # Safety
+/// `sel` is valid; `text` holds `len` units of `wchar_size` bytes (or is NULL with 0).
+bool ee_won_gui_key_selection(int32_t key,
+                              bool shift,
+                              bool ctrl,
+                              EeWonSel *sel,
+                              const void *text,
+                              uint16_t len,
+                              uint32_t wchar_size);
+
+EeWonDeleteParts ee_won_gui_delete_parts(bool backspace, int32_t start, int32_t end, int32_t len);
+
+/// `control_cut` over a `GUIString`'s units.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0).
+int32_t ee_won_gui_control_cut(const void *text, uint16_t len, uint32_t wchar_size);
+
+/// `paste_allowed`: the allowed count, or -1 for no trim.
+int32_t ee_won_gui_paste_allowed(int32_t text_len,
+                                 int32_t paste_len,
+                                 int32_t start,
+                                 int32_t end,
+                                 int32_t max_chars);
+
+EeWonBlink ee_won_gui_blink(int32_t delay,
+                            int32_t delta,
+                            bool on,
+                            int32_t on_time,
+                            int32_t off_time);
+
+int32_t ee_won_gui_blink_off_time(int32_t on_time, int32_t off_time);
+
+/// `sel_x`, then `char_at` with `count` widths, then `extend_selection` into `sel`.
+///
+/// # Safety
+/// `widths` holds `count` ints (or is NULL with 0); `sel` is valid.
+void ee_won_gui_check_sel(int32_t x,
+                          int32_t width,
+                          int32_t horz_offset,
+                          int32_t text_left,
+                          int32_t prefix_width,
+                          int32_t sel_char,
+                          const int32_t *widths,
+                          size_t count,
+                          bool new_start,
+                          EeWonSel *sel);
+
+/// `sel_x`: the content x `CheckSel` measures against.
+int32_t ee_won_gui_sel_x(int32_t x, int32_t width, int32_t horz_offset, int32_t text_left);
+
+int32_t ee_won_gui_cursor_scroll(int32_t pre_width,
+                                 int32_t m_width,
+                                 int32_t horz_offset,
+                                 int32_t rect_width);
+
+/// `drag_scroll`: true with the offset in `out`, false while the mouse is inside the box.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_drag_scroll(int32_t x,
+                            int32_t y,
+                            int32_t width,
+                            int32_t height,
+                            int32_t char_pos,
+                            int32_t len,
+                            int32_t horz_offset,
+                            int32_t *out);
+
+int32_t ee_won_gui_drag_scroll_end(int32_t char_pos,
+                                   int32_t len,
+                                   int32_t text_width,
+                                   int32_t m_width,
+                                   int32_t rect_width,
+                                   int32_t horz_offset);
 
 /// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
 ///

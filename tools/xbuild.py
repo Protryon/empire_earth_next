@@ -415,6 +415,9 @@ WON_TESTS = {
     # WONGUI's scrolling (the scrollbar's thumb and steps, the scroll area's clamp and view, the scrollers'
     # conditions), the original's statements against ee_won's guiscroll module
     "won_guiscroll_test": [],
+    # WONGUI's input box text model (the selection, cursor moves, deletes, paste limit, blink, mouse character and
+    # scroll), the original's statements against ee_won's guiedit module
+    "won_guiedit_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
