@@ -23,6 +23,7 @@ extern template class LLE_API UIListBox<UWideString>;
 #endif
 
 class LLE_API UILBString : public UIListBox<UWideString> {
+    friend struct UILBStringRust;           // UILBString.cpp: the Rust type-to-find's questions (ee_ui find_key.rs)
 public:
     UILBString(unsigned long inId, std::vector<UWideString>& inData, GEFont* inFont, bool inAutoSelect,
                const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)

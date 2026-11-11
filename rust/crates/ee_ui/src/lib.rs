@@ -15,7 +15,9 @@ pub mod draw;
 pub mod edit;
 pub mod edit_draw;
 pub mod edit_keys;
+pub mod entity_group;
 pub mod event;
+pub mod find_key;
 pub mod font;
 pub mod form;
 pub mod form_state;
@@ -63,6 +65,10 @@ mod form_state_ffi;
 // imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod font_ffi;
+// imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent
+// from a test binary
+#[cfg(not(test))]
+mod group_ffi;
 // imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod hotkey_ffi;

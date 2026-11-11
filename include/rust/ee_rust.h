@@ -9851,6 +9851,18 @@ long ee_ui_font_closest_size(unsigned long pixel_height);
 /// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
 size_t ee_ui_font_find_or_create(const void *query);
 
+/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
+void ee_ui_group_disable(void *group);
+
+/// `UIEntityGroup::Enable`'s loop.
+void ee_ui_group_enable(void *group);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
+
 /// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
 unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
 
