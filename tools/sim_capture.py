@@ -42,6 +42,9 @@ bytes it came from, the bytes it exports again, its members as the import left t
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE
 the engine messages over edge payloads (with the players' inputs nested in the communications ticks). Their
 golden lines come from the C++ codec (EEMessage.cpp's original ExportMessage/ImportMessage bodies).
+NMDC is the messages' Execute decisions (ee/EEMessageExecute.h: the selection id check, the resources): every call in
+game, their tables over edge values once, the real players' prices, exchanges and refunds every five game minutes.
+Its golden lines come from the C++ decisions (R5b.4 leaf 4).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """

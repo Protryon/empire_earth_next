@@ -18,4 +18,22 @@ void EEMessageCaptureSweep();
 unsigned char EEMessageCaptureCompress(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
                                        std::vector<long>& outUnits);
 
+// the Execute decisions' kinds (ee/EEMessageExecute.h): one NMDC record per call, the kind and the call's values
+// (inputs, then outputs) as 64-bit integers (a float's bits)
+enum EEMessageDecisionKind {
+    kDecisionSelectionMarksLocal = 1,
+    kDecisionSelectionCopies,
+    kDecisionCommandRuns,
+    kDecisionSelectionPasses,
+    kDecisionAddRemove,
+    kDecisionTradePrice,
+    kDecisionExchangeStep,
+    kDecisionTributeOrder,
+    kDecisionTributeViewer,
+    kDecisionDisbandRefund
+};
+void EEMessageCaptureDecision(unsigned int inKind, const long long* inValues, unsigned int inCount);
+// the decisions over plain edge values (once) and over the real players and units (every call): NMDC records
+void EEMessageCaptureDecisionSweep();
+
 #endif

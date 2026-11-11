@@ -111,6 +111,7 @@
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEMessageCapture.h"
+#include "ee/EEMessageExecute.h"
 #include "rust/ee_rust.h"   // ee_netmsg
 static const float kDisbandRefund = 0.75f;   // EEMDisband (its own .rdata word: a named constant)
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
@@ -256,6 +257,89 @@ static size_t Slots(EEMImproveUnit* inMessage, EeNetMsgSlot* outSlots);
 static size_t Slots(EEMZoomInfo* inMessage, EeNetMsgSlot* outSlots);
 static size_t Slots(EEMSetUnitBehavior* inMessage, EeNetMsgSlot* outSlots);
 
+// the Execute decisions (ee/EEMessageExecute.h), each call recorded by the capture's NMDC record (off by default)
+static inline uint8_t DecideSelectionMarksLocal(uint8_t inServer, uint8_t inLocal)
+{
+    uint8_t theResult = ee_netmsg_selection_marks_local(inServer, inLocal);
+    long long theValues[] = {inServer, inLocal, theResult};
+    EEMessageCaptureDecision(kDecisionSelectionMarksLocal, theValues, 3);
+    return theResult;
+}
+
+static inline uint8_t DecideSelectionCopies(uint8_t inLocal, uint8_t inID, uint8_t inCurrentID)
+{
+    uint8_t theResult = ee_netmsg_selection_copies(inLocal, inID, inCurrentID);
+    long long theValues[] = {inLocal, inID, inCurrentID, theResult};
+    EEMessageCaptureDecision(kDecisionSelectionCopies, theValues, 4);
+    return theResult;
+}
+
+static inline uint8_t DecideCommandRuns(uint8_t inServer, uint8_t inType, uint8_t inID, uint8_t inLastID)
+{
+    uint8_t theResult = ee_netmsg_command_runs(inServer, inType, inID, inLastID);
+    long long theValues[] = {inServer, inType, inID, inLastID, theResult};
+    EEMessageCaptureDecision(kDecisionCommandRuns, theValues, 5);
+    return theResult;
+}
+
+// the selection toggles' passes (the communications object replaying a selection)
+static inline uint32_t DecideSelectionPasses()
+{
+    uint8_t theExecuting = (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
+        || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
+    uint32_t theResult = ee_netmsg_selection_passes(theExecuting);
+    long long theValues[] = {theExecuting, theResult};
+    EEMessageCaptureDecision(kDecisionSelectionPasses, theValues, 2);
+    return theResult;
+}
+
+static inline uint8_t DecideAddRemove(uint8_t inAdd, uint32_t inAmount, long inHave)
+{
+    uint8_t theResult = ee_netmsg_add_remove(inAdd, inAmount, inHave);
+    long long theValues[] = {inAdd, inAmount, inHave, theResult};
+    EEMessageCaptureDecision(kDecisionAddRemove, theValues, 4);
+    return theResult;
+}
+
+static inline EeNetMsgExchangeStep DecideExchangeStep(uint8_t inSell, long inPrice, long inHave)
+{
+    EeNetMsgExchangeStep theStep = ee_netmsg_exchange_step(inSell, inPrice, inHave);
+    long long theValues[] = {inSell, inPrice, inHave, theStep.apply, theStep.cost, theStep.amount};
+    EEMessageCaptureDecision(kDecisionExchangeStep, theValues, 6);
+    return theStep;
+}
+
+static inline uint32_t DecideTributeOrder(const uint32_t* inAmounts, uint8_t inText, uint8_t* outResources)
+{
+    uint32_t theCount = ee_netmsg_tribute_order(inAmounts, inText, outResources);
+    long long theValues[] = {inAmounts[2], inAmounts[3], inAmounts[4], inAmounts[5], inAmounts[6], inText, theCount,
+                             theCount > 0 ? outResources[0] : 0, theCount > 1 ? outResources[1] : 0,
+                             theCount > 2 ? outResources[2] : 0, theCount > 3 ? outResources[3] : 0,
+                             theCount > 4 ? outResources[4] : 0};
+    EEMessageCaptureDecision(kDecisionTributeOrder, theValues, 12);
+    return theCount;
+}
+
+static inline uint8_t DecideTributeViewer(uint8_t inFrom, uint8_t inTo)
+{
+    uint8_t theResult = ee_netmsg_tribute_viewer(inFrom, inTo);
+    long long theValues[] = {inFrom, inTo, theResult};
+    EEMessageCaptureDecision(kDecisionTributeViewer, theValues, 3);
+    return theResult;
+}
+
+static inline uint8_t DecideDisbandRefund(long inHitPoints, long inMaxHitPoints, uint8_t inCanDisband, float* outFraction)
+{
+    float theFraction = 0.0f;
+    uint8_t theResult = ee_netmsg_disband_refund(inHitPoints, inMaxHitPoints, inCanDisband, &theFraction);
+    uint32_t theBits;
+    memcpy(&theBits, &theFraction, 4);
+    long long theValues[] = {inHitPoints, inMaxHitPoints, inCanDisband, theResult, theBits};
+    EEMessageCaptureDecision(kDecisionDisbandRefund, theValues, 5);
+    *outFraction = theFraction;
+    return theResult;
+}
+
 // FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
@@ -272,33 +356,33 @@ void EEMessage::ExecuteSelectionMessage()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     if (thePlayer) {
-        if (gCommunications->IsServer()) {
-            static_cast<EEServer*>(gCommunications)->mFastSelectionLock->Enter();
-            if (thePlayer->mPlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
-                this->Execute();
-                if (this->mFastSelectionID == static_cast<EEServer*>(gCommunications)->mFastSelectionID) {
-                    thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-                    thePlayer->SetSelectedViewedUnit(thePlayer->mViewedUnit);
-                }
-            } else
-                this->Execute();
-            static_cast<EEServer*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->mPlayerID] = this->mFastSelectionID;
-            static_cast<EEServer*>(gCommunications)->mFastSelectionLock->Leave();
+        uint8_t theServer = gCommunications->IsServer() ? 1 : 0;
+        uint8_t theLocal = thePlayer->mPlayerID == gWorld.GetCurrentPlayer()->mPlayerID ? 1 : 0;
+        TSCriticalSection* theLock;
+        unsigned char* theCurrentID;
+        unsigned char* theLastIDs;
+        if (theServer) {
+            theLock = static_cast<EEServer*>(gCommunications)->mFastSelectionLock;
+            theCurrentID = &static_cast<EEServer*>(gCommunications)->mFastSelectionID;
+            theLastIDs = static_cast<EEServer*>(gCommunications)->mFastSelection;
         } else {
-            static_cast<EEClient*>(gCommunications)->mFastSelectionLock->Enter();
-            if (thePlayer->mPlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
-                gWorld.mExecutingLocalSelection = true;
-                this->Execute();
-                gWorld.mExecutingLocalSelection = false;
-                if (this->mFastSelectionID == static_cast<EEClient*>(gCommunications)->mFastSelectionID) {
-                    thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-                    thePlayer->SetSelectedViewedUnit(thePlayer->mViewedUnit);
-                }
-            } else
-                this->Execute();
-            static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->mPlayerID] = this->mFastSelectionID;
-            static_cast<EEClient*>(gCommunications)->mFastSelectionLock->Leave();
+            theLock = static_cast<EEClient*>(gCommunications)->mFastSelectionLock;
+            theCurrentID = &static_cast<EEClient*>(gCommunications)->mFastSelectionID;
+            theLastIDs = static_cast<EEClient*>(gCommunications)->mFastSelection;
         }
+        theLock->Enter();
+        uint8_t theMarks = DecideSelectionMarksLocal(theServer, theLocal);
+        if (theMarks)
+            gWorld.mExecutingLocalSelection = true;
+        this->Execute();
+        if (theMarks)
+            gWorld.mExecutingLocalSelection = false;
+        if (DecideSelectionCopies(theLocal, this->mFastSelectionID, *theCurrentID)) {
+            thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
+            thePlayer->SetSelectedViewedUnit(thePlayer->mViewedUnit);
+        }
+        theLastIDs[(unsigned char)thePlayer->mPlayerID] = this->mFastSelectionID;
+        theLock->Leave();
         if (thePlayer->mJITManufacturing) {
             thePlayer->mJITManufacturing = false;
             if (thePlayer == gWorld.GetCurrentPlayer())
@@ -309,32 +393,30 @@ void EEMessage::ExecuteSelectionMessage()
 
 // FUNCTION: EXE 0x4b8e86
 // Executes a command message if its selection id matches the sender's last selection; otherwise resets the sender's
-// active group to the selection (Game Restarting always runs; on clients Migration Slot Info too)
+// active group to the selection (Game Restarting always runs; on clients Migration Slot Info too: the Rust decision)
 void EEMessage::ExecuteMessage()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     if (thePlayer) {
-        if (gCommunications->IsServer()) {
-            static_cast<EEServer*>(gCommunications)->mFastSelectionLock->Enter();
-            unsigned char theSelectionID = static_cast<EEServer*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->mPlayerID];
-            this->GetMessageLabel();
-            if (this->mFastSelectionID != theSelectionID && this->mType != 0x91) {
-                thePlayer->UnselectAllUnits();
-                thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-            } else
-                this->Execute();
-            static_cast<EEServer*>(gCommunications)->mFastSelectionLock->Leave();
+        uint8_t theServer = gCommunications->IsServer() ? 1 : 0;
+        TSCriticalSection* theLock;
+        unsigned char* theLastIDs;
+        if (theServer) {
+            theLock = static_cast<EEServer*>(gCommunications)->mFastSelectionLock;
+            theLastIDs = static_cast<EEServer*>(gCommunications)->mFastSelection;
         } else {
-            static_cast<EEClient*>(gCommunications)->mFastSelectionLock->Enter();
-            unsigned char theSelectionID = static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->mPlayerID];
-            this->GetMessageLabel();
-            if (this->mFastSelectionID != theSelectionID && this->mType != 0x91 && this->mType != 0x7c) {
-                thePlayer->UnselectAllUnits();
-                thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-            } else
-                this->Execute();
-            static_cast<EEClient*>(gCommunications)->mFastSelectionLock->Leave();
+            theLock = static_cast<EEClient*>(gCommunications)->mFastSelectionLock;
+            theLastIDs = static_cast<EEClient*>(gCommunications)->mFastSelection;
         }
+        theLock->Enter();
+        unsigned char theSelectionID = theLastIDs[(unsigned char)thePlayer->mPlayerID];
+        this->GetMessageLabel();
+        if (!DecideCommandRuns(theServer, this->mType, this->mFastSelectionID, theSelectionID)) {
+            thePlayer->UnselectAllUnits();
+            thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
+        } else
+            this->Execute();
+        theLock->Leave();
     }
 }
 
@@ -680,14 +762,8 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
 void EEMAddAndRemoveUnitsFromSelectedGroup::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    bool theTwice;
-    if ((gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
-        || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection))
-        theTwice = true;
-    else
-        theTwice = false;
-    thePlayer->AddAndRemoveUnitsFromSelectedGroup(this->mUnitIDs);
-    if (theTwice)
+    uint32_t thePasses = DecideSelectionPasses();
+    for (uint32_t i = 0; i < thePasses; i++)
         thePlayer->AddAndRemoveUnitsFromSelectedGroup(this->mUnitIDs);
 }
 
@@ -836,9 +912,11 @@ bool EEMAddRemoveResources::IsResponse(NEMessage* inMessage)
 void EEMAddRemoveResources::Execute()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayerID];
-    if (this->mAdd)
+    // the take's test compares unsigned, as on Windows (the decision); an add reads nothing
+    uint8_t theDecision = DecideAddRemove(this->mAdd, this->mAmount, this->mAdd ? 0 : thePlayer->mResourceCaps[this->mResourceType]);
+    if (theDecision == 1)
         thePlayer->AddResource(this->mResourceType, this->mAmount);
-    else if (this->mAmount > 0 && this->mAmount <= static_cast<uint32_t>(thePlayer->mResourceCaps[this->mResourceType]))   // unsigned, as on Windows
+    else if (theDecision == 2)
         thePlayer->TakeResource(this->mResourceType, this->mAmount);
 }
 
@@ -848,18 +926,9 @@ void EEMAddUnitToSelectedGroup::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     EEUnit* theUnit = gWorld.GetUnit(this->mUnitID);
-    bool theTwice;
     if (theUnit) {
-        if ((gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
-            || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection))
-            theTwice = true;
-        else
-            theTwice = false;
-        if (thePlayer->mActiveGroup->Contains(theUnit->GetComplexUnit()))
-            thePlayer->RemoveUnitFromSelectedGroup(this->mUnitID);
-        else
-            thePlayer->AddUnitToSelectedGroup(this->mUnitID, true);
-        if (theTwice) {
+        uint32_t thePasses = DecideSelectionPasses();
+        for (uint32_t i = 0; i < thePasses; i++) {
             if (thePlayer->mActiveGroup->Contains(theUnit->GetComplexUnit()))
                 thePlayer->RemoveUnitFromSelectedGroup(this->mUnitID);
             else
@@ -2137,9 +2206,11 @@ void EEMDisband::Execute()
         unsigned long theNumUnits = theGroup->GetNumUnits();
         for (unsigned long i = 0; i < theNumUnits; i++) {
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mHitPoints > 0 && theUnit->mUnitClass->mCanDisband) {
+            float theFraction;
+            if (DecideDisbandRefund(theUnit->mHitPoints, theUnit->mHitPoints > 0 ? theUnit->mStats->mMaxHitPoints : 1,
+                                    theUnit->mHitPoints > 0 && theUnit->mUnitClass->mCanDisband, &theFraction)) {
                 thePlayer->RefundTechnology(thePlayer->mTechnologies->Get(theUnit->mUnitClass->mTechnology), theUnit->mUnitClass->mUnitType,
-                                     (float)theUnit->mHitPoints / theUnit->mStats->mMaxHitPoints * kDisbandRefund);
+                                     theFraction);
                 gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, 1, 0, 0);
                 theUnit->Kill(0, 0, 0);
             }
@@ -2600,32 +2671,20 @@ void EEMExchangeResources::Execute()
     if (this->mFiveTimes)
         theCount = 5;
     while (theCount > 0) {
-        long theAmount = EEGetTradePrice(thePlayer, this->mResourceType, this->mIsSell);
-        long theCost = 100;
-        if (this->mIsSell) {
-            long theHave = thePlayer->mResourceCaps[this->mResourceType];
-            if (theHave < theCost) {
-                theAmount = UMFloatToLong(theHave * theAmount * 0.01f);
-                theCost = thePlayer->mResourceCaps[this->mResourceType];
+        long thePrice = EEGetTradePrice(thePlayer, this->mResourceType, this->mIsSell);
+        long theHave = thePlayer->mResourceCaps[this->mIsSell ? this->mResourceType : kResourceGold];
+        EeNetMsgExchangeStep theStep = DecideExchangeStep(this->mIsSell, thePrice, theHave);
+        if (theStep.apply) {
+            if (this->mIsSell) {
+                thePlayer->TakeResource(this->mResourceType, (long)theStep.cost);
+                thePlayer->AddResource(kResourceGold, (long)theStep.amount);
+                thePlayer->mResourceTrade[this->mResourceType - 2] -= (long)theStep.cost;
+            } else {
+                thePlayer->AddResource(this->mResourceType, (long)theStep.cost);
+                thePlayer->TakeResource(kResourceGold, (long)theStep.amount);
+                thePlayer->mResourceTrade[this->mResourceType - 2] += (long)theStep.cost;
             }
-            if (theAmount > 0) {
-                thePlayer->TakeResource(this->mResourceType, theCost);
-                thePlayer->AddResource(kResourceGold, theAmount);
-                thePlayer->mResourceTrade[this->mResourceType - 2] -= theCost;
-            }
-        } else {
-            long theHave = thePlayer->mResourceCaps[kResourceGold];
-            if (theHave < theAmount) {
-                theCost = UMFloatToLong(100.0f / theAmount * theHave);
-                theAmount = thePlayer->mResourceCaps[kResourceGold];
-                if (theCost <= 0)
-                    goto next;
-            }
-            thePlayer->AddResource(this->mResourceType, theCost);
-            thePlayer->TakeResource(kResourceGold, theAmount);
-            thePlayer->mResourceTrade[this->mResourceType - 2] += theCost;
         }
-next:
         theCount--;
     }
     if (gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID == thePlayer->mPlayerID)
@@ -5093,35 +5152,14 @@ void EEMPayTribute::Execute()
     EEPlayer* theTo = gWorld.mPlayers[this->mReceiver];
     unsigned long theAmount;
     char theNumber[8];
-    theAmount = this->mFood;
-    if (theAmount > 0) {
-        theFrom->AddTribute(0, 2, theAmount);
-        theTo->AddResource(kResourceFood, theAmount);
-        theTo->AddTribute(1, 2, theAmount);
-    }
-    theAmount = this->mGold;
-    if (theAmount > 0) {
-        theFrom->AddTribute(0, 5, theAmount);
-        theTo->AddResource(kResourceGold, theAmount);
-        theTo->AddTribute(1, 5, theAmount);
-    }
-    theAmount = this->mIron;
-    if (theAmount > 0) {
-        theFrom->AddTribute(0, 6, theAmount);
-        theTo->AddResource(kResourceIron, theAmount);
-        theTo->AddTribute(1, 6, theAmount);
-    }
-    theAmount = this->mStone;
-    if (theAmount > 0) {
-        theFrom->AddTribute(0, 4, theAmount);
-        theTo->AddResource(kResourceStone, theAmount);
-        theTo->AddTribute(1, 4, theAmount);
-    }
-    theAmount = this->mWood;
-    if (theAmount > 0) {
-        theFrom->AddTribute(0, 3, theAmount);
-        theTo->AddResource(kResourceWood, theAmount);
-        theTo->AddTribute(1, 3, theAmount);
+    uint32_t theAmounts[7] = {0, 0, this->mFood, this->mWood, this->mStone, this->mGold, this->mIron};
+    uint8_t theOrder[5];
+    uint32_t theCount = DecideTributeOrder(theAmounts, 0, theOrder);
+    for (uint32_t i = 0; i < theCount; i++) {
+        theAmount = theAmounts[theOrder[i]];
+        theFrom->AddTribute(0, theOrder[i], theAmount);
+        theTo->AddResource(theOrder[i], theAmount);
+        theTo->AddTribute(1, theOrder[i], theAmount);
     }
     gResource->GetString(IDS_RESOURCE_NAME_STONE, theFood);
     gResource->GetString(IDS_RESOURCE_NAME_GOLD, theWood);
@@ -5131,47 +5169,24 @@ void EEMPayTribute::Execute()
         gResource->GetString(IDS_RESOURCE_NAME_WOOD, theStone);
     gResource->GetString(IDS_RESOURCE_NAME_FOOD, theGold);
     gResource->GetString(IDS_RESOURCE_NAME_IRON, theIron);
-    if (gWorld.GetCurrentPlayer() == theFrom) {
+    uint8_t theViewer = DecideTributeViewer(gWorld.GetCurrentPlayer() == theFrom, gWorld.GetCurrentPlayer() == theTo);
+    if (theViewer == 1) {
         gResource->GetString(IDS_YOU_TRIBUTE, theYouGave);
         sprintf(theText, "%s %s ", (const char*)theYouGave, (const char*)theTo->mName);
-    } else if (gWorld.GetCurrentPlayer() == theTo) {
+    } else if (theViewer == 2) {
         gResource->GetString(IDS_TRIBUTES_YOU, theYouGave);
         sprintf(theText, "%s %s ", (const char*)theFrom->mName, (const char*)theYouGave);
     } else
         return;
-    if (this->mFood > 0) {
-        PlatIToA(this->mFood, theNumber, 10);
+    // the chat line's names (the original's locals hold them crosswise: theGold is food's, theFood stone's, ...)
+    const char* theNames[7] = {NULL, NULL, (const char*)theGold, (const char*)theStone, (const char*)theFood,
+                               (const char*)theWood, (const char*)theIron};
+    theCount = DecideTributeOrder(theAmounts, 1, theOrder);
+    for (uint32_t i = 0; i < theCount; i++) {
+        PlatIToA(theAmounts[theOrder[i]], theNumber, 10);
         theText += theNumber;
         theText += theSpace;
-        theText += (const char*)theGold;
-        theText += theSpace;
-    }
-    if (this->mWood > 0) {
-        PlatIToA(this->mWood, theNumber, 10);
-        theText += theNumber;
-        theText += theSpace;
-        theText += (const char*)theStone;
-        theText += theSpace;
-    }
-    if (this->mStone > 0) {
-        PlatIToA(this->mStone, theNumber, 10);
-        theText += theNumber;
-        theText += theSpace;
-        theText += (const char*)theFood;
-        theText += theSpace;
-    }
-    if (this->mGold > 0) {
-        PlatIToA(this->mGold, theNumber, 10);
-        theText += theNumber;
-        theText += theSpace;
-        theText += (const char*)theWood;
-        theText += theSpace;
-    }
-    if (this->mIron > 0) {
-        PlatIToA(this->mIron, theNumber, 10);
-        theText += theNumber;
-        theText += theSpace;
-        theText += (const char*)theIron;
+        theText += theNames[theOrder[i]];
         theText += theSpace;
     }
     gUserInterface->AddChatLogEntry(theFrom->mColor, theFrom->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
@@ -8411,3 +8426,102 @@ bool EEMSetUnitBehavior::IsResponse(NEMessage* inMessage)
 // TEMPLATE: EXE 0x4ca13d
 // TEMPLATE: EXE 0x4ca240
 // TEMPLATE: EXE 0x4ca290
+
+// ---- the Execute decisions (ee/EEMessageExecute.h; docs/RUST_PLAN.md R5b.4 leaf 4): the original bodies' tests and
+// arithmetic over plain values ----
+static const float kTradeLimitLow = 0.01f;    // EEGetTradePrice: kHeightEpsilon's word
+static const float kTradeCurve = 0.666666687f;   // 0x449af8 (provisional names)
+static const float kTradeScale = 5000.0f;        // 0x449afc
+
+extern "C" uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local)
+{
+    return !is_server && is_local;
+}
+
+extern "C" uint8_t ee_netmsg_selection_copies(uint8_t is_local, uint8_t message_id, uint8_t current_id)
+{
+    return is_local && message_id == current_id;
+}
+
+extern "C" uint8_t ee_netmsg_command_runs(uint8_t is_server, uint8_t message_type, uint8_t message_id, uint8_t last_id)
+{
+    if (is_server)
+        return !(message_id != last_id && message_type != 0x91);
+    return !(message_id != last_id && message_type != 0x91 && message_type != 0x7c);
+}
+
+extern "C" uint32_t ee_netmsg_selection_passes(uint8_t executing_selection)
+{
+    return executing_selection ? 2 : 1;
+}
+
+extern "C" uint8_t ee_netmsg_add_remove(uint8_t add, uint32_t amount, int64_t have)
+{
+    if (add)
+        return 1;
+    if (amount > 0 && amount <= static_cast<uint32_t>(have))
+        return 2;
+    return 0;
+}
+
+extern "C" int64_t ee_netmsg_trade_price(float rate, int64_t trade, uint8_t buy)
+{
+    float theLimit = trade >= 0 ? kTradeLimitLow : 1000.0f;
+    float thePrice = 100.0f / (((rate - theLimit) * (kTradeCurve * rate - theLimit) * kTradeScale) /
+        ((kTradeCurve * rate - theLimit) * kTradeScale + (rate - kTradeCurve * rate) * (float)trade) + theLimit);
+    if (buy != 0)
+        thePrice -= 1.0f;
+    else
+        thePrice += 1.0f;
+    if (thePrice < 1.0f)
+        thePrice = 1.0f;
+    if (thePrice > 1000.0f)
+        thePrice = 1000.0f;
+    return (int32_t)UMFloatToLong(thePrice);
+}
+
+extern "C" EeNetMsgExchangeStep ee_netmsg_exchange_step(uint8_t is_sell, int64_t price, int64_t have)
+{
+    EeNetMsgExchangeStep theStep = {0, 100, price};
+    if (is_sell) {
+        if (have < 100) {
+            theStep.amount = (int32_t)UMFloatToLong((float)(have * price) * 0.01f);
+            theStep.cost = have;
+        }
+        theStep.apply = theStep.amount > 0;
+    } else {
+        theStep.apply = 1;
+        if (have < price) {
+            theStep.cost = (int32_t)UMFloatToLong(100.0f / (float)price * (float)have);
+            theStep.amount = have;
+            if (theStep.cost <= 0)
+                theStep.apply = 0;
+        }
+    }
+    return theStep;
+}
+
+extern "C" uint32_t ee_netmsg_tribute_order(const uint32_t* amounts, uint8_t text, uint8_t* out_resources)
+{
+    static const uint8_t kTribute[5] = {kResourceFood, kResourceGold, kResourceIron, kResourceStone, kResourceWood};
+    static const uint8_t kText[5] = {kResourceFood, kResourceWood, kResourceStone, kResourceGold, kResourceIron};
+    const uint8_t* theOrder = text ? kText : kTribute;
+    uint32_t theCount = 0;
+    for (int i = 0; i < 5; i++)
+        if (amounts[theOrder[i]] > 0)
+            out_resources[theCount++] = theOrder[i];
+    return theCount;
+}
+
+extern "C" uint8_t ee_netmsg_tribute_viewer(uint8_t local_is_from, uint8_t local_is_to)
+{
+    return local_is_from ? 1 : local_is_to ? 2 : 0;
+}
+
+extern "C" uint8_t ee_netmsg_disband_refund(int64_t hit_points, int64_t max_hit_points, uint8_t can_disband, float* out_fraction)
+{
+    if (!(hit_points > 0 && can_disband))
+        return 0;
+    *out_fraction = (float)hit_points / (float)max_hit_points * kDisbandRefund;
+    return 1;
+}
