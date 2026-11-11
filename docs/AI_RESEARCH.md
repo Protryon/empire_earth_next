@@ -3422,6 +3422,50 @@ Readings:
 Next: a per-unit death trace for the C++ seat (where and to what its soldiers die), then the fight itself; the C++
 fleet's edge under balanced.
 
+### 8.47 The classic computer player in Lua: where the soldiers die, the towers, the fleet (2026-11-11, EE-SIM)
+
+**A `unit.death` trace line** for every soldier, ship or other non-citizen unit a computer seat loses, the C++
+classic's too (EECPTraceUnitLost, trace only: seed 3's 60-minute samples identical with it): class, tile, distance
+from the town centre, goal, killer (player:class:kind) and its distance.
+
+**Where the soldiers die (classic with the cheats, seeds 2-9, 60 minutes).** The C++ lost 821 against the port's 417
+(path points left out); 600 of the C++'s died 35 tiles or more from its town, to the port's soldiers (299) and
+towers (298), with an attack goal - from minute 7 on, in the port's land (its upgraded settlements' towns). The port's
+died mostly 15-35 tiles out (306). Both seats attack equally often (§8.46); the C++'s soldiers go into the port's
+territory and die there, the port's stay nearer home. Not traced further yet: which of the C++'s groups (defence
+ladder, CheckNaval's, the counter-attacks) take them there.
+
+**The towers.** The port's FindBuildSite(tower) took the first placeable tile of the rings 2 .. range and tested the
+spacing only there; the C++ goes ring by ring below the range and tests HasEnemyNear (CanBuildAt) on each tile. Ported
+(with ai.enemy_near): towers 194 -> 123 in those 8 games (the C++ 125-135); over 32 games 579 against 480 under classic
+with the cheats, 318 against 261 under balanced. The C++'s remaining edge in losses did not move (790 against 461):
+the towers were not the cause.
+
+**The fleet (balanced, 32 games).** The port lost 26 ships and the C++ 73; ships killed 80 of the port's soldiers and
+65 of the C++'s. Of the port's 1866 citizens and boats lost, 336 died to the C++'s ships (292 to frigates) and 1442 to
+its land soldiers (spearmen 382, bowmen 320, macemen 199). 433 of the citizens died fighting (the militia), 54% of all
+after 60 minutes. The late gap under balanced is the C++'s army against the port's citizens, more than its fleet.
+
+**group_pop:** GetUnitAllowance's count of the groups' population now reads the units' classes in one ai.get (a budget
+error at 86 minutes with a large army); the same numbers.
+
+Bench (32 seeds; before = §8.46's g2, after = t1):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced, before | classic_lua | 23.2/2.7 / 26.3/3.3 / 35.0/5.8 / 45.0/5.7 | 1.7 / 53.0 | 9-16, 7 close |
+| balanced, after | classic_lua | 23.1/2.7 / 26.3/3.3 / 35.1/7.3 / 43.0/7.0 | 1.7 / 57.8 | 8-20, 4 close |
+| balanced, after | classic | 23.8/2.3 / 25.5/2.2 / 28.2/4.3 / 44.9/3.1 | 2.0 / 28.3 | 20-8 |
+| classic+cheats, before | classic_lua | 23.2/9.4 / 50.0/13.2 / 49.6/24.5 / 49.7/25.9 | 11.2 / 97.0 | 8-0, 24 close |
+| classic+cheats, after | classic_lua | 22.9/10.2 / 49.8/16.9 / 50.3/28.2 / 50.2/27.6 | 11.5 / 83.4 | 8-3, 21 close |
+| classic+cheats, after | classic | 26.6/5.8 / 50.6/5.2 / 51.0/11.3 / 50.4/6.0 | 3.1 / 23.4 | 3-8 |
+
+Determinism: seeds 2 and 5 (balanced) and 3 (classic with the cheats), 60 minutes, --repeat 2: identical. 0 script
+errors.
+
+Next: which C++ groups walk into the port's land (a group id on the death line), the militia's fights under balanced
+(433 citizens), then ChooseUnitsToKill, the special units, guard posts, walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
