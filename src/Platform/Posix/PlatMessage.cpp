@@ -98,7 +98,8 @@ extern "C" uint32_t PlatSystemMachineId(int* outOk)
 
 extern "C" void PlatMessageShow(const char* inTitle, const char* inText, uint32_t inFlags)
 {
-    PlatMessageHandler theHandler = sHandler.load();
+    // the headless simulation: stderr (as on Windows), never a box (it has no display, and a box would wait for ever)
+    PlatMessageHandler theHandler = gPlatSimMode ? NULL : sHandler.load();
     if (theHandler) {
         theHandler(inTitle ? inTitle : "", inText ? inText : "", inFlags);
         return;
