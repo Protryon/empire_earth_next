@@ -1,0 +1,439 @@
+t2 i00 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t2 i01 r=1 err=0 cmd=1 name=- target=-1 text=hello dur=0 inv=0
+t2 i02 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t2 i03 r=1 err=0 cmd=1 name=- target=-1 text=%20;x dur=0 inv=0
+t2 i04 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t2 i05 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t2 i06 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t2 i07 r=1 err=0 cmd=2 name=Alice target=1 text=hi%20;there dur=0 inv=0
+t2 i08 r=0 err=5 cmd=2 name=alice target=1 text=~ dur=0 inv=0
+t2 i09 r=0 err=5 cmd=2 name=alice target=1 text=~ dur=0 inv=0
+t2 i10 r=0 err=4 cmd=2 name=al target=-1 text=~ dur=0 inv=0
+t2 i11 r=0 err=4 cmd=2 name=ali target=-1 text=~ dur=0 inv=0
+t2 i12 r=1 err=0 cmd=2 name=Bob target=3 text=hi dur=0 inv=0
+t2 i13 r=0 err=4 cmd=2 name=bo target=-1 text=~ dur=0 inv=0
+t2 i14 r=1 err=0 cmd=2 name=Carl%20;Jr target=5 text=yo dur=0 inv=0
+t2 i15 r=0 err=3 cmd=2 name="Carl target=-1 text=~ dur=0 inv=0
+t2 i16 r=0 err=5 cmd=2 name=Carl target=5 text=~ dur=0 inv=0
+t2 i17 r=1 err=0 cmd=2 name=%e9;mile target=6 text=salut dur=0 inv=0
+t2 i18 r=0 err=3 cmd=2 name=%c9;MILE target=-1 text=~ dur=0 inv=0
+t2 i19 r=1 err=0 cmd=2 name=%263a; target=7 text=ok dur=0 inv=0
+t2 i20 r=0 err=4 cmd=2 name=dave target=-1 text=~ dur=0 inv=0
+t2 i21 r=0 err=4 cmd=2 name=DAVE target=-1 text=~ dur=0 inv=0
+t2 i22 r=0 err=4 cmd=2 name=Dav target=-1 text=~ dur=0 inv=0
+t2 i23 r=0 err=2 cmd=2 name=- target=-1 text=~ dur=0 inv=0
+t2 i24 r=1 err=0 cmd=3 name=- target=-1 text=waves dur=0 inv=0
+t2 i25 r=0 err=5 cmd=3 name=- target=-1 text=~ dur=0 inv=0
+t2 i26 r=0 err=5 cmd=3 name=- target=-1 text=~ dur=0 inv=0
+t2 i27 r=1 err=0 cmd=18 name=Bob target=3 text=- dur=0 inv=0
+t2 i28 r=1 err=0 cmd=2 name=Bob target=3 text=hey%20;you dur=0 inv=0
+t2 i29 r=1 err=0 cmd=18 name=Bob target=3 text=- dur=0 inv=0
+t2 i30 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=0 inv=0
+t2 i31 r=1 err=0 cmd=5 name=Bob target=3 text=~ dur=0 inv=0
+t2 i32 r=1 err=0 cmd=5 name=Bob target=3 text=~ dur=0 inv=0
+t2 i33 r=0 err=4 cmd=5 name=Bo target=-1 text=~ dur=0 inv=0
+t2 i34 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=0 inv=0
+t2 i35 r=1 err=0 cmd=4 name=Bobby target=4 text=~ dur=0 inv=0
+t2 i36 r=0 err=2 cmd=4 name=- target=-1 text=~ dur=0 inv=0
+t2 i37 r=0 err=2 cmd=4 name=- target=-1 text=~ dur=0 inv=0
+t2 i38 r=1 err=0 cmd=6 name=- target=-1 text=~ dur=0 inv=0
+t2 i39 r=1 err=0 cmd=6 name=- target=-1 text=~ dur=0 inv=0
+t2 i40 r=1 err=0 cmd=16 name=Bob target=3 text=- dur=0 inv=1
+t2 i41 r=1 err=0 cmd=16 name=Bob target=3 text=come dur=0 inv=1
+t2 i42 r=1 err=0 cmd=17 name=Bob target=3 text=- dur=0 inv=0
+t2 i43 r=1 err=0 cmd=19 name=- target=-1 text=~ dur=0 inv=0
+t2 i44 r=1 err=0 cmd=20 name=- target=-1 text=~ dur=0 inv=0
+t2 i45 r=1 err=0 cmd=20 name=- target=-1 text=~ dur=0 inv=0
+t2 i46 r=1 err=0 cmd=21 name=- target=-1 text=~ dur=0 inv=0
+t2 i47 r=1 err=0 cmd=7 name=- target=-1 text=~ dur=0 inv=0
+t2 i48 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=0 inv=0
+t2 i49 r=0 err=7 cmd=8 name=Bob target=3 text=~ dur=0 inv=0
+t2 i50 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=600 inv=0
+t2 i51 r=1 err=0 cmd=8 name=Bob target=3 text=being%20;rude dur=7200 inv=0
+t2 i52 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=86400 inv=0
+t2 i53 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=3 inv=0
+t2 i54 r=0 err=7 cmd=9 name=Bob target=3 text=~ dur=3 inv=0
+t2 i55 r=0 err=7 cmd=9 name=Bob target=3 text=~ dur=3 inv=0
+t2 i56 r=1 err=0 cmd=9 name=Bob target=3 text=reason dur=3 inv=0
+t2 i57 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=3 inv=0
+t2 i58 r=1 err=0 cmd=10 name=Bob target=3 text=- dur=300 inv=0
+t2 i59 r=1 err=0 cmd=11 name=Bob target=3 text=- dur=4294963696 inv=0
+t2 i60 r=1 err=0 cmd=11 name=Bob target=3 text=- dur=2820681344 inv=0
+t2 i61 r=0 err=7 cmd=11 name=Bob target=3 text=~ dur=2820681344 inv=0
+t2 i62 r=1 err=0 cmd=12 name=- target=-1 text=- dur=2820681344 inv=0
+t2 i63 r=1 err=0 cmd=12 name=Bob target=3 text=Bob dur=2820681344 inv=0
+t2 i64 r=0 err=3 cmd=12 name=Bob%20;%20;later target=-1 text=~ dur=2820681344 inv=0
+t2 i65 r=1 err=0 cmd=13 name=Bob target=3 text=Bob dur=2820681344 inv=0
+t2 i66 r=1 err=0 cmd=14 name=- target=-1 text=~ dur=2820681344 inv=0
+t2 i67 r=1 err=0 cmd=15 name=- target=-1 text=~ dur=2820681344 inv=0
+t2 i68 r=1 err=0 cmd=22 name=- target=-1 text=everyone dur=2820681344 inv=0
+t2 i69 r=0 err=2 cmd=25 name=- target=-1 text=~ dur=2820681344 inv=0
+t2 i70 r=0 err=5 cmd=25 name=Bob target=3 text=~ dur=2820681344 inv=0
+t2 i71 r=1 err=0 cmd=25 name=Bob target=3 text=stop dur=2820681344 inv=0
+t2 i72 r=1 err=0 cmd=23 name=- target=-1 text=- dur=300 inv=0
+t2 i73 r=1 err=0 cmd=24 name=- target=-1 text=~ dur=300 inv=0
+t2 i74 r=1 err=0 cmd=1 name=- target=-1 text=:smile dur=300 inv=0
+t2 i75 r=1 err=0 cmd=1 name=- target=-1 text=:%20; dur=300 inv=0
+t2 i76 r=1 err=0 cmd=1 name=- target=-1 text=: dur=300 inv=0
+t2 i77 r=1 err=0 cmd=2 name=Alice target=1 text=two%20;%20;spaces%20;%20; dur=300 inv=0
+t2 i78 r=0 err=2 cmd=2 name=- target=-1 text=~ dur=300 inv=0
+t2 i79 r=1 err=0 cmd=2 name=Alice target=1 text=x dur=300 inv=0
+t2 i80 r=1 err=0 cmd=1 name=- target=-1 text=%9;/w%20;Alice%20;x dur=300 inv=0
+t2 i81 r=1 err=0 cmd=2 name=Alice target=1 text=x dur=300 inv=0
+t2 i82 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=300 inv=0
+t2 i83 r=0 err=3 cmd=5 name="x target=-1 text=~ dur=300 inv=0
+t2 i84 r=0 err=3 cmd=5 name=ab target=-1 text=~ dur=300 inv=0
+t2 i85 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=300 inv=0
+t2 i86 r=1 err=0 cmd=2 name=Bob target=3 text="quoted" dur=300 inv=0
+t2 i87 r=1 err=0 cmd=12 name=Bob target=3 text=Bob dur=300 inv=0
+t2 i88 r=1 err=0 cmd=12 name=- target=-1 text=- dur=300 inv=0
+t3 i00 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t3 i01 r=1 err=0 cmd=1 name=- target=-1 text=hello dur=0 inv=0
+t3 i02 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t3 i03 r=1 err=0 cmd=1 name=- target=-1 text=%20;x dur=0 inv=0
+t3 i04 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t3 i05 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t3 i06 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=0 inv=0
+t3 i07 r=1 err=0 cmd=2 name=Alice target=1 text=hi%20;there dur=0 inv=0
+t3 i08 r=0 err=5 cmd=2 name=alice target=1 text=~ dur=0 inv=0
+t3 i09 r=0 err=5 cmd=2 name=alice target=1 text=~ dur=0 inv=0
+t3 i10 r=0 err=4 cmd=2 name=al target=-1 text=~ dur=0 inv=0
+t3 i11 r=0 err=4 cmd=2 name=ali target=-1 text=~ dur=0 inv=0
+t3 i12 r=1 err=0 cmd=2 name=Bob target=3 text=hi dur=0 inv=0
+t3 i13 r=0 err=4 cmd=2 name=bo target=-1 text=~ dur=0 inv=0
+t3 i14 r=1 err=0 cmd=2 name=Carl%20;Jr target=5 text=yo dur=0 inv=0
+t3 i15 r=0 err=3 cmd=2 name="Carl target=-1 text=~ dur=0 inv=0
+t3 i16 r=0 err=3 cmd=2 name=Carl target=5 text=~ dur=0 inv=0
+t3 i17 r=1 err=0 cmd=2 name=%e9;mile target=6 text=salut dur=0 inv=0
+t3 i18 r=0 err=3 cmd=2 name=%c9;MILE target=-1 text=~ dur=0 inv=0
+t3 i19 r=1 err=0 cmd=2 name=%263a; target=7 text=ok dur=0 inv=0
+t3 i20 r=0 err=4 cmd=2 name=dave target=-1 text=~ dur=0 inv=0
+t3 i21 r=0 err=4 cmd=2 name=DAVE target=-1 text=~ dur=0 inv=0
+t3 i22 r=0 err=4 cmd=2 name=Dav target=-1 text=~ dur=0 inv=0
+t3 i23 r=0 err=2 cmd=2 name=- target=-1 text=~ dur=0 inv=0
+t3 i24 r=1 err=0 cmd=3 name=- target=-1 text=waves dur=0 inv=0
+t3 i25 r=0 err=5 cmd=3 name=- target=-1 text=~ dur=0 inv=0
+t3 i26 r=0 err=5 cmd=3 name=- target=-1 text=~ dur=0 inv=0
+t3 i27 r=1 err=0 cmd=18 name=Bob target=3 text=- dur=0 inv=0
+t3 i28 r=1 err=0 cmd=2 name=Bob target=3 text=hey%20;you dur=0 inv=0
+t3 i29 r=1 err=0 cmd=18 name=Bob target=3 text=- dur=0 inv=0
+t3 i30 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=0 inv=0
+t3 i31 r=1 err=0 cmd=5 name=Bob target=3 text=~ dur=0 inv=0
+t3 i32 r=1 err=0 cmd=5 name=Bob target=3 text=~ dur=0 inv=0
+t3 i33 r=0 err=4 cmd=5 name=Bo target=-1 text=~ dur=0 inv=0
+t3 i34 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=0 inv=0
+t3 i35 r=1 err=0 cmd=4 name=Bobby target=4 text=~ dur=0 inv=0
+t3 i36 r=0 err=2 cmd=4 name=- target=-1 text=~ dur=0 inv=0
+t3 i37 r=0 err=2 cmd=4 name=- target=-1 text=~ dur=0 inv=0
+t3 i38 r=1 err=0 cmd=6 name=- target=-1 text=~ dur=0 inv=0
+t3 i39 r=1 err=0 cmd=6 name=- target=-1 text=~ dur=0 inv=0
+t3 i40 r=1 err=0 cmd=16 name=Bob target=3 text=- dur=0 inv=1
+t3 i41 r=1 err=0 cmd=16 name=Bob target=3 text=come dur=0 inv=1
+t3 i42 r=1 err=0 cmd=17 name=Bob target=3 text=- dur=0 inv=0
+t3 i43 r=1 err=0 cmd=19 name=- target=-1 text=~ dur=0 inv=0
+t3 i44 r=1 err=0 cmd=20 name=- target=-1 text=~ dur=0 inv=0
+t3 i45 r=1 err=0 cmd=20 name=- target=-1 text=~ dur=0 inv=0
+t3 i46 r=1 err=0 cmd=21 name=- target=-1 text=~ dur=0 inv=0
+t3 i47 r=1 err=0 cmd=7 name=- target=-1 text=~ dur=0 inv=0
+t3 i48 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=0 inv=0
+t3 i49 r=0 err=7 cmd=8 name=Bob target=3 text=~ dur=0 inv=0
+t3 i50 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=600 inv=0
+t3 i51 r=1 err=0 cmd=8 name=Bob target=3 text=being%20;rude dur=7200 inv=0
+t3 i52 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=86400 inv=0
+t3 i53 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=3 inv=0
+t3 i54 r=0 err=7 cmd=9 name=Bob target=3 text=~ dur=3 inv=0
+t3 i55 r=0 err=7 cmd=9 name=Bob target=3 text=~ dur=3 inv=0
+t3 i56 r=1 err=0 cmd=9 name=Bob target=3 text=reason dur=3 inv=0
+t3 i57 r=1 err=0 cmd=9 name=Bob target=3 text=- dur=3 inv=0
+t3 i58 r=1 err=0 cmd=10 name=Bob target=3 text=- dur=300 inv=0
+t3 i59 r=1 err=0 cmd=11 name=Bob target=3 text=- dur=4294963696 inv=0
+t3 i60 r=1 err=0 cmd=11 name=Bob target=3 text=- dur=2820681344 inv=0
+t3 i61 r=0 err=7 cmd=11 name=Bob target=3 text=~ dur=2820681344 inv=0
+t3 i62 r=1 err=0 cmd=12 name=- target=-1 text=- dur=2820681344 inv=0
+t3 i63 r=1 err=0 cmd=12 name=Bob target=3 text=Bob dur=2820681344 inv=0
+t3 i64 r=0 err=3 cmd=12 name=Bob%20;%20;later target=-1 text=~ dur=2820681344 inv=0
+t3 i65 r=1 err=0 cmd=13 name=Bob target=3 text=Bob dur=2820681344 inv=0
+t3 i66 r=1 err=0 cmd=14 name=- target=-1 text=~ dur=2820681344 inv=0
+t3 i67 r=1 err=0 cmd=15 name=- target=-1 text=~ dur=2820681344 inv=0
+t3 i68 r=1 err=0 cmd=22 name=- target=-1 text=everyone dur=2820681344 inv=0
+t3 i69 r=0 err=2 cmd=25 name=- target=-1 text=~ dur=2820681344 inv=0
+t3 i70 r=0 err=5 cmd=25 name=Bob target=3 text=~ dur=2820681344 inv=0
+t3 i71 r=1 err=0 cmd=25 name=Bob target=3 text=stop dur=2820681344 inv=0
+t3 i72 r=1 err=0 cmd=23 name=- target=-1 text=- dur=300 inv=0
+t3 i73 r=1 err=0 cmd=24 name=- target=-1 text=~ dur=300 inv=0
+t3 i74 r=1 err=0 cmd=3 name=- target=-1 text=smile dur=300 inv=0
+t3 i75 r=0 err=5 cmd=3 name=- target=-1 text=%20; dur=300 inv=0
+t3 i76 r=0 err=5 cmd=3 name=- target=-1 text=- dur=300 inv=0
+t3 i77 r=1 err=0 cmd=2 name=Alice target=1 text=two%20;%20;spaces%20;%20; dur=300 inv=0
+t3 i78 r=0 err=2 cmd=2 name=- target=-1 text=~ dur=300 inv=0
+t3 i79 r=1 err=0 cmd=2 name=Alice target=1 text=x dur=300 inv=0
+t3 i80 r=1 err=0 cmd=1 name=- target=-1 text=%9;/w%20;Alice%20;x dur=300 inv=0
+t3 i81 r=1 err=0 cmd=2 name=Alice target=1 text=x dur=300 inv=0
+t3 i82 r=0 err=1 cmd=0 name=- target=-1 text=~ dur=300 inv=0
+t3 i83 r=0 err=3 cmd=5 name="x target=-1 text=~ dur=300 inv=0
+t3 i84 r=0 err=3 cmd=5 name=ab target=-1 text=~ dur=300 inv=0
+t3 i85 r=1 err=0 cmd=5 name=- target=-1 text=~ dur=300 inv=0
+t3 i86 r=1 err=0 cmd=2 name=Bob target=3 text="quoted" dur=300 inv=0
+t3 i87 r=1 err=0 cmd=12 name=Bob target=3 text=Bob dur=300 inv=0
+t3 i88 r=1 err=0 cmd=12 name=- target=-1 text=- dur=300 inv=0
+t1 i00 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t1 i01 r=1 err=0 cmd=1 name=- target=-1 text=hello dur=0 inv=0
+t1 i02 r=0 err=5 cmd=1 name=- target=-1 text=~ dur=0 inv=0
+t1 i03 r=1 err=0 cmd=1 name=- target=-1 text=%20;x dur=0 inv=0
+t1 i04 r=1 err=0 cmd=1 name=- target=-1 text=/ dur=0 inv=0
+t1 i05 r=1 err=0 cmd=1 name=- target=-1 text=/%20; dur=0 inv=0
+t1 i06 r=1 err=0 cmd=1 name=- target=-1 text=/nosuch dur=0 inv=0
+t1 i07 r=1 err=0 cmd=1 name=- target=-1 text=/W%20;Alice%20;hi%20;there dur=0 inv=0
+t1 i08 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;alice dur=0 inv=0
+t1 i09 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;alice%20; dur=0 inv=0
+t1 i10 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;al%20;hi dur=0 inv=0
+t1 i11 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;ali%20;hi dur=0 inv=0
+t1 i12 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;Bob%20;hi dur=0 inv=0
+t1 i13 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;bo%20;hi dur=0 inv=0
+t1 i14 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;"Carl%20;Jr"%20;yo dur=0 inv=0
+t1 i15 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;"Carl%20;Jr%20;yo dur=0 inv=0
+t1 i16 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;Carl dur=0 inv=0
+t1 i17 r=1 err=0 cmd=1 name=- target=-1 text=/tell%20;%e9;mile%20;salut dur=0 inv=0
+t1 i18 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;%c9;MILE%20;x dur=0 inv=0
+t1 i19 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;%263a;%20;ok dur=0 inv=0
+t1 i20 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;dave%20;x dur=0 inv=0
+t1 i21 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;DAVE%20;x dur=0 inv=0
+t1 i22 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;Dav%20;x dur=0 inv=0
+t1 i23 r=1 err=0 cmd=1 name=- target=-1 text=/whisper dur=0 inv=0
+t1 i24 r=1 err=0 cmd=1 name=- target=-1 text=/e%20;waves dur=0 inv=0
+t1 i25 r=1 err=0 cmd=1 name=- target=-1 text=/me dur=0 inv=0
+t1 i26 r=1 err=0 cmd=1 name=- target=-1 text=/em%20;%20; dur=0 inv=0
+t1 i27 r=1 err=0 cmd=1 name=- target=-1 text=/r dur=0 inv=0
+t1 i28 r=1 err=0 cmd=1 name=- target=-1 text=/r%20;hey%20;you dur=0 inv=0
+t1 i29 r=1 err=0 cmd=1 name=- target=-1 text=/reply%20;%20;%20; dur=0 inv=0
+t1 i30 r=1 err=0 cmd=1 name=- target=-1 text=/i dur=0 inv=0
+t1 i31 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;Bob dur=0 inv=0
+t1 i32 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;"Bob" dur=0 inv=0
+t1 i33 r=1 err=0 cmd=1 name=- target=-1 text=/ignore%20;Bo dur=0 inv=0
+t1 i34 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;B dur=0 inv=0
+t1 i35 r=1 err=0 cmd=1 name=- target=-1 text=/block%20;Bobby dur=0 inv=0
+t1 i36 r=1 err=0 cmd=1 name=- target=-1 text=/block dur=0 inv=0
+t1 i37 r=1 err=0 cmd=1 name=- target=-1 text=/block%20;x dur=0 inv=0
+t1 i38 r=1 err=0 cmd=1 name=- target=-1 text=/away dur=0 inv=0
+t1 i39 r=1 err=0 cmd=1 name=- target=-1 text=/afk%20;now dur=0 inv=0
+t1 i40 r=1 err=0 cmd=1 name=- target=-1 text=/invite%20;Bob dur=0 inv=0
+t1 i41 r=1 err=0 cmd=1 name=- target=-1 text=/invite%20;Bob%20;come dur=0 inv=0
+t1 i42 r=1 err=0 cmd=1 name=- target=-1 text=/uninvite%20;Bob dur=0 inv=0
+t1 i43 r=1 err=0 cmd=1 name=- target=-1 text=/cls dur=0 inv=0
+t1 i44 r=1 err=0 cmd=1 name=- target=-1 text=/? dur=0 inv=0
+t1 i45 r=1 err=0 cmd=1 name=- target=-1 text=/h%20;extra dur=0 inv=0
+t1 i46 r=1 err=0 cmd=1 name=- target=-1 text=/team dur=0 inv=0
+t1 i47 r=1 err=0 cmd=1 name=- target=-1 text=/mod dur=0 inv=0
+t1 i48 r=1 err=0 cmd=1 name=- target=-1 text=/smute%20;Bob dur=0 inv=0
+t1 i49 r=1 err=0 cmd=1 name=- target=-1 text=/smute%20;Bob%20;10 dur=0 inv=0
+t1 i50 r=1 err=0 cmd=1 name=- target=-1 text=/smute%20;Bob%20;10m dur=0 inv=0
+t1 i51 r=1 err=0 cmd=1 name=- target=-1 text=/smute%20;Bob%20;2h%20;being%20;rude dur=0 inv=0
+t1 i52 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;1d dur=0 inv=0
+t1 i53 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;3s dur=0 inv=0
+t1 i54 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;x dur=0 inv=0
+t1 i55 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;0s dur=0 inv=0
+t1 i56 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;INFINITE%20;reason dur=0 inv=0
+t1 i57 r=1 err=0 cmd=1 name=- target=-1 text=/sban%20;Bob%20;infinite dur=0 inv=0
+t1 i58 r=1 err=0 cmd=1 name=- target=-1 text=/mute%20;Bob%20;5M dur=0 inv=0
+t1 i59 r=1 err=0 cmd=1 name=- target=-1 text=/ban%20;Bob%20;-1h dur=0 inv=0
+t1 i60 r=1 err=0 cmd=1 name=- target=-1 text=/ban%20;Bob%20;99999999d dur=0 inv=0
+t1 i61 r=1 err=0 cmd=1 name=- target=-1 text=/ban%20;Bob%20;10%e9; dur=0 inv=0
+t1 i62 r=1 err=0 cmd=1 name=- target=-1 text=/unmute dur=0 inv=0
+t1 i63 r=1 err=0 cmd=1 name=- target=-1 text=/unmute%20;Bob dur=0 inv=0
+t1 i64 r=1 err=0 cmd=1 name=- target=-1 text=/unmute%20;Bob%20;%20;later%20;%20; dur=0 inv=0
+t1 i65 r=1 err=0 cmd=1 name=- target=-1 text=/sunmute%20;Bob dur=0 inv=0
+t1 i66 r=1 err=0 cmd=1 name=- target=-1 text=/unban%20;Bob dur=0 inv=0
+t1 i67 r=1 err=0 cmd=1 name=- target=-1 text=/sunban%20;Bob dur=0 inv=0
+t1 i68 r=1 err=0 cmd=1 name=- target=-1 text=/alert%20;everyone dur=0 inv=0
+t1 i69 r=1 err=0 cmd=1 name=- target=-1 text=/warn dur=0 inv=0
+t1 i70 r=1 err=0 cmd=1 name=- target=-1 text=/warn%20;Bob dur=0 inv=0
+t1 i71 r=1 err=0 cmd=1 name=- target=-1 text=/warn%20;Bob%20;stop dur=0 inv=0
+t1 i72 r=1 err=0 cmd=1 name=- target=-1 text=/startshutdown%20;5m dur=0 inv=0
+t1 i73 r=1 err=0 cmd=1 name=- target=-1 text=/abortshutdown dur=0 inv=0
+t1 i74 r=1 err=0 cmd=1 name=- target=-1 text=:smile dur=0 inv=0
+t1 i75 r=1 err=0 cmd=1 name=- target=-1 text=:%20; dur=0 inv=0
+t1 i76 r=1 err=0 cmd=1 name=- target=-1 text=: dur=0 inv=0
+t1 i77 r=1 err=0 cmd=1 name=- target=-1 text=/W%20;%20;"Alice"%20;%20;%20;two%20;%20;spaces%20;%20; dur=0 inv=0
+t1 i78 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;""%20;x dur=0 inv=0
+t1 i79 r=1 err=0 cmd=1 name=- target=-1 text=/w%20;"Alice"x dur=0 inv=0
+t1 i80 r=1 err=0 cmd=1 name=- target=-1 text=%9;/w%20;Alice%20;x dur=0 inv=0
+t1 i81 r=1 err=0 cmd=1 name=- target=-1 text=/%9;w%20;Alice%20;x dur=0 inv=0
+t1 i82 r=1 err=0 cmd=1 name=- target=-1 text=/w%9;Alice%20;x dur=0 inv=0
+t1 i83 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;"x dur=0 inv=0
+t1 i84 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;ab dur=0 inv=0
+t1 i85 r=1 err=0 cmd=1 name=- target=-1 text=/i%20;a%20; dur=0 inv=0
+t1 i86 r=1 err=0 cmd=1 name=- target=-1 text=/r%20;"quoted" dur=0 inv=0
+t1 i87 r=1 err=0 cmd=1 name=- target=-1 text=/unmute%20;"Bob"%20;"q" dur=0 inv=0
+t1 i88 r=1 err=0 cmd=1 name=- target=-1 text=/unmute%20;B dur=0 inv=0
+none i00 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i01 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i02 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i03 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i04 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i05 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i06 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i07 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i08 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i09 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i10 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i11 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i12 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i13 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i14 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i15 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i16 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i17 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i18 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i19 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i20 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i21 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i22 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i23 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i24 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i25 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i26 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i27 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i28 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i29 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i30 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i31 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i32 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i33 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i34 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i35 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i36 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i37 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i38 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i39 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i40 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i41 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i42 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i43 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i44 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i45 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i46 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i47 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i48 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i49 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i50 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i51 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i52 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i53 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i54 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i55 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i56 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i57 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i58 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i59 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i60 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i61 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i62 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i63 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i64 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i65 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i66 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i67 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i68 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i69 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i70 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i71 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i72 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i73 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i74 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i75 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i76 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i77 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i78 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i79 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i80 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i81 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i82 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i83 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i84 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i85 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i86 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i87 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+none i88 r=0 err=6 cmd=-1 name=- target=-1 text=~ dur=0 inv=0
+command 0 name= string=-
+command 1 name= string=-
+command 2 name=w string=w
+command 3 name=em string=e
+command 4 name=b string=block
+command 5 name=i string=i
+command 6 name=afk string=away
+command 7 name=mod string=mod
+command 8 name=smute string=smute
+command 9 name=sban string=sban
+command 10 name=mute string=mute
+command 11 name=ban string=ban
+command 12 name=unmute string=unmute
+command 13 name=sunmute string=sunmute
+command 14 name=unban string=unban
+command 15 name=sunban string=sunban
+command 16 name=invite string=invite
+command 17 name=uninvite string=uninvite
+command 18 name=r string=r
+command 19 name=cls string=clr
+command 20 name=? string=?
+command 21 name=team string=team
+command 22 name=alert string=alert
+command 23 name=startshutdown string=startshutdown
+command 24 name=abortshutdown string=abortshutdown
+command 25 name=warn string=warn
+command 26 name= string=-
+help flags=0 client=0 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=1 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=2 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=3 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>InviteHelp<n>UninviteHelp<n>MuteHelp<n>UnmuteHelp<n>BanHelp<n>UnbanHelp<n>ModeratorHelp<n>ServerMuteHelp<n>ServerUnmuteHelp<n>ServerBanHelp<n>ServerUnbanHelp<n>WarnHelp<n>
+help flags=0 client=4 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>MuteHelp<n>UnmuteHelp<n>BanHelp<n>UnbanHelp<n>AlertHelp<n>
+help flags=0 client=5 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=6 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>InviteHelp<n>UninviteHelp<n>MuteHelp<n>UnmuteHelp<n>BanHelp<n>UnbanHelp<n>ModeratorHelp<n>ServerMuteHelp<n>ServerUnmuteHelp<n>ServerBanHelp<n>ServerUnbanHelp<n>WarnHelp<n>AlertHelp<n>
+help flags=0 client=7 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=0 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=0 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=1 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=2 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=3 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>InviteHelp<n>UninviteHelp<n>MuteHelp<n>UnmuteHelp<n>BanHelp<n>UnbanHelp<n>ModeratorHelp<n>ServerMuteHelp<n>ServerUnmuteHelp<n>ServerBanHelp<n>ServerUnbanHelp<n>WarnHelp<n>
+help flags=2 client=4 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>AlertHelp<n>
+help flags=2 client=5 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=6 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>InviteHelp<n>UninviteHelp<n>MuteHelp<n>UnmuteHelp<n>BanHelp<n>UnbanHelp<n>ModeratorHelp<n>ServerMuteHelp<n>ServerUnmuteHelp<n>ServerBanHelp<n>ServerUnbanHelp<n>WarnHelp<n>AlertHelp<n>
+help flags=2 client=7 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=2 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>BlockHelp<n>AwayHelp<n>
+help flags=8 client=0 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=1 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=2 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=3 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=4 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=5 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=6 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=7 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=8 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>
+help flags=10 client=0 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=1 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=2 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=3 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=4 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=5 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=6 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=7 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=10 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=0 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=1 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=2 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=3 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=4 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=5 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=6 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=7 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help flags=15 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
+help nolist Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>

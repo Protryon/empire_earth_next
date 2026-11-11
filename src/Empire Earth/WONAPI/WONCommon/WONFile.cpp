@@ -14,6 +14,25 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatString.h"
+#include "rust/ee_rust.h"
+#include <stdexcept>
+// The path logic (separators, splits, normalisation, the absolute and relative paths) is ee_won's path module
+// (rust/crates/ee_won/src/path.rs); this class keeps the strings, the cache flags and the platform calls.
+namespace {
+void WONFileSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+const uint8_t* WONFileBytes(const std::string& inText)
+{
+    return reinterpret_cast<const uint8_t*>(inText.data());
+}
+// Where the original's substr threw (NormalizePath of ".")
+void WONFileOutOfRange()
+{
+    throw std::out_of_range("invalid string position");
+}
+}
 namespace WONAPI {
 // FUNCTION: WON 0x006a7610
 // Creates a file object for the given path
@@ -42,10 +61,7 @@ void WONFile::Reset()
 void WONFile::SetFilePath(const std::string& inPath)
 {
     this->Reset();
-    this->mPath = inPath;
-    for (std::string::size_type i = 0; i < this->mPath.length(); ++i)
-        if (this->mPath[i] == '/')
-            this->mPath[i] = '\\';
+    ee_won_path_given(WONFileBytes(inPath), inPath.length(), WONFileSink, &this->mPath);
 }
 // FUNCTION: WON 0x006a7960
 // Deletes the file, first clearing its read-only flag when asked; returns success
@@ -108,8 +124,8 @@ void WONFile::CalcFileInfo()
 // Splits the path at the last backslash into the cached directory and file name
 void WONFile::CalcFileDirectory()
 {
-    std::string::size_type sep = this->mPath.rfind('\\');
-    if (sep != std::string::npos)
+    intptr_t sep = ee_won_path_directory_split(WONFileBytes(this->mPath), this->mPath.length());
+    if (sep >= 0)
         this->mFileDirectory = this->mPath.substr(0, sep);
     this->mFileName = this->mPath.substr(sep + 1);
     this->mFileDirectoryValid = true;
@@ -122,38 +138,28 @@ void WONFile::CalcFullPath()
     // _fullpath: a path not starting at a volume's root joined to the current directory, "." and ".." resolved
     this->mFullPathValid = true;
     const std::string& path = this->mPath;
-    std::string full = path;
-    bool hasVolume = path.length() >= 2 && path[1] == ':';
-    bool rooted = path.length() > (hasVolume ? 2u : 0u) && path[hasVolume ? 2 : 0] == '\\';
-    if (!(hasVolume && rooted) && path.compare(0, 2, "\\\\") != 0) {
+    std::string current;
+    bool needsCurrent = ee_won_path_needs_current(WONFileBytes(path), path.length());
+    if (needsCurrent) {
         char directory[PLAT_MAX_PATH];
         uint32_t length = PlatGetCurrentDirectory(directory, sizeof(directory));
         if (length == 0 || length >= sizeof(directory))
             return;
-        std::string current(directory, length);
-        if (current.empty() || current[current.length() - 1] != '\\')
-            current += '\\';
-        std::string volume = current.length() >= 2 && current[1] == ':' ? current.substr(0, 2) : std::string();
-        if (rooted)                                     // "\dir": on the current volume
-            full = volume + path;
-        else if (!hasVolume)                            // relative to the current directory
-            full = current + path;
-        else if (PlatStrNICmp(volume.c_str(), path.c_str(), 2) == 0)   // "C:dir" on the current volume
-            full = current + path.substr(2);
-        else                                            // "D:dir": the root of another volume
-            full = path.substr(0, 2) + "\\" + path.substr(2);
+        current.assign(directory, length);
     }
-    WONFile normalized(full);
-    normalized.NormalizePath();
-    this->mFullPath = normalized.mPath;
+    std::string full;
+    if (ee_won_path_absolute(WONFileBytes(path), path.length(), needsCurrent ? WONFileBytes(current) : NULL,
+                             current.length(), WONFileSink, &full) != 1)
+        WONFileOutOfRange();
+    this->mFullPath = full;
 }
 // FUNCTION: WON 0x006a7d80
 // Splits the file name at the last dot into the cached extension and base name
 void WONFile::CalcFileExtension()
 {
     this->GetFileName();
-    std::string::size_type dot = this->mFileName.rfind('.');
-    if (dot != std::string::npos) {
+    intptr_t dot = ee_won_path_extension_split(WONFileBytes(this->mFileName), this->mFileName.length());
+    if (dot >= 0) {
         this->mFileExtension = this->mFileName.substr(dot + 1);
         this->mFileNameNoExtension = this->mFileName.substr(0, dot);
     } else {
@@ -226,8 +232,6 @@ bool WONFile::CreateAsDirectory(bool inUnused)
 }
 }
 
-#include <vector>
-#include <ctype.h>
 namespace WONAPI {
 using namespace std;
 // No original address identified: WON SDK path separator (Windows branch)
@@ -236,74 +240,15 @@ const char WONFile::PATH_SEP = '\\';
 // No original address identified: WON SDK method
 bool WONFile::NormalizePath()
 {
-	if(this->mPath.empty())
-		return false;
-
 	std::string aFilePath;
-	bool firstIsSlash = false;
-	if(this->mPath[0]!=WONFile::PATH_SEP)
-		aFilePath = WONFile::PATH_SEP + this->mPath;
-	else
-	{
-		firstIsSlash = true;
-		aFilePath = this->mPath;
-	}
-
-	typedef std::vector<int> DirPosVec;
-	DirPosVec aVec;
-	
-	int aPos = 0;
-	while(aPos < aFilePath.length())
-	{
-		if(aFilePath[aPos]==WONFile::PATH_SEP)
-		{
-			bool hadReplacement = false;
-			if(aPos+2<aFilePath.length() && aFilePath[aPos+1]=='.' && aFilePath[aPos+2]=='.')
-			{
-				if(aPos+3>=aFilePath.length() || aFilePath[aPos+3]==WONFile::PATH_SEP)
-				{
-					hadReplacement = true;
-
-					// -----> /../
-					if(!aVec.empty())
-					{
-						int aPrevDirPos = aVec.back();
-						aFilePath = aFilePath.substr(0,aPrevDirPos) + aFilePath.substr(aPos+3);
-						aPos = aPrevDirPos; 
-						aVec.pop_back();
-					}
-					else
-						aPos++;
-				}
-			}
-			else if(aPos+1<aFilePath.length() && aFilePath[aPos+1]=='.')
-			{
-				// ----> /./
-				if(aPos+2>=aFilePath.length() || aFilePath[aPos+2]==WONFile::PATH_SEP)  
-				{
-					hadReplacement = true;
-					aFilePath = aFilePath.substr(0,aPos) + aFilePath.substr(aPos+2);
-				}
-			}
-
-			if(!hadReplacement)
-			{
-				aVec.insert(aVec.end(),(DirPosVec::size_type)1,aPos);
-				aPos++;
-			}
-		}
-		else						
-			aPos++;
-	}
-
-	if(!firstIsSlash)
-		this->mPath = aFilePath.substr(1);
-	else
-		this->mPath = aFilePath;
-
+	int aResult = ee_won_path_normalize(WONFileBytes(this->mPath), this->mPath.length(), WONFileSink, &aFilePath);
+	if(aResult == 0)
+		return false;
+	if(aResult != 1)
+		WONFileOutOfRange();
+	this->mPath = aFilePath;
 	this->mFileDirectory.erase();
 	this->mFileDirectoryValid = false;
-	
 	return true;
 }
 
@@ -312,26 +257,10 @@ std::string WONFile::GetRelativePath(const WONFile &theSubFile)
 {
 	const std::string &aPath1 = this->GetFileDirectory();
 	const std::string &aPath2 = theSubFile.mPath;
-	if(aPath2.length() > aPath1.length())
-	{
-		int i;
-		for(i=0; i<aPath1.length(); i++)
-		{
-			unsigned char char1 = aPath1[i];
-			unsigned char char2 = aPath2[i];
-
-			char1 = toupper(char1);
-			char2 = toupper(char2);
-			if(char1!=char2)
-				break;
-		}
-
-		if(i==aPath1.length() && aPath2[i]==WONFile::PATH_SEP) // paths match
-			return aPath2.substr(i+1);
-	}
-
-	// no match --> return absolute path
-	return aPath2;
+	std::string aRelative;
+	ee_won_path_relative(WONFileBytes(aPath1), aPath1.length(), WONFileBytes(aPath2), aPath2.length(),
+	                     WONFileSink, &aRelative);
+	return aRelative;
 }
 
 // No original address identified: WON SDK method
