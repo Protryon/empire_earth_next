@@ -5627,3 +5627,91 @@ edge and wrapping ints).
   the popups and modality), TextArea and its segments (the chat's rich text wrap), ComboBox, TabCtrl, Splitter,
   MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
   value readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the platform backend).
+
+## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
+
+Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and
+`UIEvent.h` gained a `friend struct`; `UIEditBox.h` lost three private members): `UIEditBox::UpdateKeyboard`'s repeat
+(the 500 ms delay, then 50 ms steps, the caret shown while a key is held), `ProcessInput`, `ProcessShiftInput` and
+`ProcessControlInput` (deleted from the C++: which keys move, select, delete, cut, copy, paste, clear a line, scroll
+or fire Enter), `Cut`/`Copy`/`Paste`, `AddIMEResultString`'s typing and `MouseMove`'s drag selection and auto-scroll
+(`edit_keys.rs`); `UIBackgroundTable::Create`'s loop and record copy (`background_table.rs`);
+`UIEvent::CreateControlEvents`/`CreateFormEvents`' loop and `Initialize`/`Uninitialize`'s count (`event.rs`);
+`UIFullBackground::LoadBackground`'s tile file names (`background.rs`); `UIStatusBar`'s value clamp, fill width, move
+rectangles and `CopyData`'s inset fill and centred text (`status.rs`).
+
+- **Keys are host questions, asked as the C++ asked them.** `UIControl`'s predicates stay C++ (`DeleteKeyPressed`
+  reads the keypad's Del only with Num Lock off, `CutKeyPressed` is Ctrl+X or Shift+Del, `ShiftKeyPressed` reads
+  `JustPressed` then `GetValue`), so Rust asks `ee_uicpp_edit_key(k)` at each place the C++ called one, in its order,
+  short-circuits included. The golden driver's key entities digest every read (`reads <n> <fnv>` per operation), so a
+  reordered or extra question fails the replay. The four timers are `TMPoll`s behind `ee_uicpp_edit_poll`.
+- **Two calls come back into the box.** `ProcessEnterKey` is virtual (the scenario editor's `EESETSAEditBox`
+  overrides it) and an IME result's characters go through `UIManager::UpdateTranslatedKey` to the focused control's
+  `UpdateTranslatedKey`: both run inside `Edit::call` (the record stored before, reloaded after). The driver checked
+  the virtual stays virtual with a subclass whose vtable is `UIEditBox`'s with slot 35 replaced.
+- **UTF-8 (D6):** every editing key's golden includes characters of one to four bytes; Backspace, Delete, the arrows
+  and an IME result step whole code points (the model's `Mbcs`), and Rust's unit tests say so on `a€😀` and `日本語`.
+- **Kept quirks:** Shift+Del without a selection deletes backwards (only the keypad's Del reaches it: the main Del
+  with Shift is Cut, which returns first); Ctrl+A, Ctrl+L and Ctrl+Enter do not count as handled (no repeat);
+  Shift+Right moves `mCharScroll` characters; a drag's line moves wrap their unsigned arithmetic as the C++ did.
+  `Uninitialize` decrements a count already at 0 (it wraps); a background record whose read fails keeps the previous
+  record's bytes (a second entry from it); a full background's name with no `.` in its file part but one in a
+  directory takes the numbers before the directory's `.`; a status bar's value is clamped below the minimum first (a
+  reversed range takes its minimum).
+- **Original hazards, found by the drivers, left as they were (each reachable only as described):**
+  - a multi-line box narrower than its widest character adds lines forever (known; the driver keeps boxes wide);
+  - `SetText` or `SetText`-like edits during an IME composition leave the composition's start past the text, and the
+    next typed key reads past `mLines` (the game's text input closes the composition first);
+  - `AddIMEResultString` with no composition open reads the stale composition start (the IME sends a result only
+    during a composition);
+  - an edit during a mouse drag (Backspace deleting the anchor's line, or `SetText`) leaves the drag's anchor past
+    the text, and the next `MouseMove` selects from it: **a person can reach this** by typing while dragging a
+    selection;
+  - Shift held with a deletion and a move in the same frame (Shift+keypad Del with Num Lock off, plus an arrow): the
+    deletion leaves the anchor at the selection's far end, the move then selects from it, past the text when it was
+    the end. **A person can reach this** too. Neither is fixed here (no behaviour change); a fix would reset the
+    anchor after a deletion.
+  - `UIBackgroundTable::Create` and the events' loops copy an uninitialised record when the first record's read
+    fails (the Rust starts from zeros; the driver never fails the first record read);
+  - `LoadBackground` built a name in 256 bytes and the no-extension numbers in 3: names over about 240 bytes or grids
+    over 99 overflowed; the Rust name is whole (the only divergence, unreachable from the UI database).
+- **Golden drivers, new traps.**
+  - With `-DLOWLEVELENGINE_EXPORTS` every dllexport class's inline members are emitted in the driver's unit, and
+    under `#define private public` those copies reference the statics by their public names (`@@2`), so a COMDAT
+    from the driver can win and read address 0. Compile the driver with `-DEE_STATIC -DLLE_CURRENT_HEADERS
+    -DLLE_EXE_HEADERS` (no dllexport) and reach private statics by their decorated names
+    (`?sEnterKey@UIControl@@1PEAVISEntity@@EA`, `?sShiftKey@UIForm@@0...`, the controls array's `@@0V?$vector...`).
+  - A driver-side subclass of a unit's class gets a vtable naming the base's protected virtuals by the public
+    decoration (address 0), and the MS ABI emits a vftable only where a constructor runs; clang-cl crashed building a
+    subclass constructor under `EE_STATIC`. Copy the real vtable (`??_7UIEditBox@@6B@`) into an array and replace one
+    slot, checking it holds the member's address first.
+  - `-Xclang -fdump-vtable-layouts` on a two-line unit with a derived class whose constructor is inline prints a
+    class's slots (FSFileSpec's: Close 2, Open 12, `Read(int32_t&)` 22, `Read(uint32_t&)` 23,
+    `Read(unsigned char*, ...)` 25); a fake file is then a block whose vptr is a table of stubs.
+  - `GERhombus::SetRectangle` is inline and calls the private `ComputeRotation`: call it from a unit without the
+    `private` define; `GERectangle::Contains` and `UILayoutUtility()` are out of line (GEBitmap.cpp,
+    UITrampolines.cpp): define them in the driver.
+  - A random world that holds a box's invariants: the frame's `CheckScrollBar` after every operation (CopyData calls
+    it first), no `SetText` or press during a composition, no edit during a drag, a shown control needs entity groups
+    (`SetRectangle`/`SetLocation` reach `GetEntityGroupById`): set `mDisplayMode` 0. `HeapValidate` after every
+    operation (`UI_GOLDEN_HEAPCHECK=1`) turned a heap corruption at a later allocation into the operation that caused
+    it.
+  - The driver's clipboard is the process's: the replay carries it from one box to the next.
+  - Run driver builds with their own `EE_ORIG_SRC_ROOT`: `clang_build.compile_to` stages a unit at the same path as
+    the game's build, and a driver build during a game build races on it.
+- **Goldens:** `golden_keys.txt` (60 boxes x 70 operations, 688 KB), `golden_bg.txt` (100 background files, 200 event
+  files, 100 count sequences, 60 full backgrounds; 706 KB), `golden_status.txt` (100 bars x 25 operations, 527 KB).
+  Each replays whole in Rust; each driver relinked over the forwarders printed the same file, and the same on three or
+  four more seeds at ten times the size (the Rust replays also pass on those). Mutations checked: Shift+Right's
+  `mCharScroll`, Shift+Del's backward deletion each fail the key replay.
+- **Gates run:** after each commit `build.py -j 4 --sim` 0/0 (EE-AOC, EE-SIM), the sim oracle (seeds 2-7, the main
+  checkout's open tree) identical to `ref`, `rust_build.py gate` PASS. No tour, screenshot, LAN game or POSIX build
+  was run.
+- **What a real game exercises (EE-SIM has no UI):** the key dispatch runs on every frame an edit box has the
+  keyboard: the lobby's player-name and chat boxes, the save game name, the scenario editor's boxes, multiplayer chat
+  in a game. The fixture's `wonkey` only types characters (`UpdateTranslatedKey`, already Rust before this round), so
+  only a person reaches the keys: Backspace, Delete, the arrows, Home/End, Shift selections, Ctrl+X/C/V/A/L, Enter in
+  a single-line box (the chat's send), a mouse drag selection, an IME. The background table and the form and control
+  events load once at start-up (every menu's backgrounds and every button's event come from them); the full
+  background's names load the scenario editor's 4 x 3 picture (`textures\Scenfull_<row>_<column>`); the status bar
+  draws the post-game summary's bars.
