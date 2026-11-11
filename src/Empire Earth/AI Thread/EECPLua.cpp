@@ -92,6 +92,25 @@ EECPLuaValue& EECPLuaValue::Push(const EECPLuaValue& inValue)
     return this->mItems.back();
 }
 
+EECPLuaValue& EECPLuaValue::Push(EECPLuaValue&& inValue)
+{
+    this->mItems.push_back(std::move(inValue));
+    return this->mItems.back();
+}
+
+EECPLuaValue& EECPLuaValue::Set(const EECPLuaKey& inKey, EECPLuaValue&& inValue)
+{
+    std::vector<EECPLuaKey>::iterator it = std::lower_bound(this->mKeys.begin(), this->mKeys.end(), inKey);
+    size_t i = (size_t)(it - this->mKeys.begin());
+    if (it != this->mKeys.end() && *it == inKey) {
+        this->mItems[i] = std::move(inValue);
+        return this->mItems[i];
+    }
+    this->mKeys.insert(it, inKey);
+    this->mItems.insert(this->mItems.begin() + (ptrdiff_t)i, std::move(inValue));
+    return this->mItems[i];
+}
+
 EECPLuaValue& EECPLuaValue::Set(const EECPLuaKey& inKey, const EECPLuaValue& inValue)
 {
     std::vector<EECPLuaKey>::iterator it = std::lower_bound(this->mKeys.begin(), this->mKeys.end(), inKey);
@@ -479,7 +498,7 @@ struct Converter {
             EECPLuaValue theValue;
             theOK = this->Convert(lua_gettop(L), theValue);
             if (theOK)
-                theFields.push_back(std::make_pair(theKey, theValue));
+                theFields.push_back(std::make_pair(std::move(theKey), std::move(theValue)));
             this->mPath.resize(thePathLength);
             lua_pop(L, 1);
         }
@@ -497,9 +516,9 @@ struct Converter {
         outValue = theArray ? EECPLuaValue::NewArray() : EECPLuaValue::NewMap();
         for (size_t i = 0; i < theFields.size(); i++) {
             if (theArray)
-                outValue.Push(theFields[i].second);
+                outValue.Push(std::move(theFields[i].second));
             else
-                outValue.Set(theFields[i].first, theFields[i].second);   // in order: appends
+                outValue.Set(theFields[i].first, std::move(theFields[i].second));   // in order: appends
         }
         return true;
     }
