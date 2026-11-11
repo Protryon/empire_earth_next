@@ -68,7 +68,8 @@ local PLAN = {
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
-        town_centers = 2, tc_at = 30,   -- (balanced: early_town_centers 2; research §4.2: a second citizen producer)
+        town_centers = 2, tc_at = 30,   -- (balanced: early_town_centers 2; research §4.2: a second citizen producer;
+                                -- tc_float = n: only while the food floats n above the reserve, not benched yet)
         towers = 7,
         settlements = 12,       -- (§8.36: every worked mine has its own)
         barracks = 2, ranges = 1,
@@ -644,7 +645,8 @@ function M.step(view, memory)
     ES.step(view, memory, view.citizens + making < cap)
     memory.econ = memory.econ or {}
     if ECON.tc then
-        EU.town_centers(view, memory.econ, {want = plan.town_centers, min_citizens = plan.tc_at, safe = not threatened})
+        EU.town_centers(view, memory.econ, {want = plan.town_centers, min_citizens = plan.tc_at,
+                                              float = plan.tc_float, safe = not threatened})
     end
 
     local tower = tower_class(view)

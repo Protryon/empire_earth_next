@@ -51,7 +51,11 @@ function M.town_centers(view, mem, opts)
         end
         mem.tc_walkers = nil
     end
+    -- opts.float: only while the food above the reserve is at least this (the one producer, not the food, holds the
+    -- town back; a fill at the Stone Age's first minute took 5 citizens from a town still short of food and army)
+    local floating = opts.float == nil or view.stock.food - (view.reserve.food or 0) >= opts.float
     if tcs >= want or view.citizens < (opts.min_citizens or 0) or opts.safe == false or mem.tc_walkers ~= nil
+            or not floating
             or view.time - (mem.tc_sent or -TC_EVERY) < TC_EVERY then
         return
     end
