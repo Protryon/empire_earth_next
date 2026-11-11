@@ -110,6 +110,7 @@
 #include "ee/EEARemovePlayer.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMessageCapture.h"
+#include "ee/EEUnitStore.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
@@ -827,6 +828,7 @@ void AfterTick()
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
         EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
+        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
         if (!sMessageSweepDone) {
             sMessageSweepDone = true;

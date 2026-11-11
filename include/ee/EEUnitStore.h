@@ -42,7 +42,8 @@ class EEUnitStoreField {
 public:
     typedef T ValueType;
     EEUnitStoreField() {}   // as the plain member: the constructors write it
-    EEUnitStoreField(const EEUnitStoreField& inOther) : mValue(inOther.mValue) {}
+    // not copied: a holder lives only inside its unit (a copy's write would report from outside one)
+    EEUnitStoreField(const EEUnitStoreField& inOther) = delete;
 
     operator T() const { return this->mValue; }
     T Get() const { return this->mValue; }
@@ -84,6 +85,16 @@ void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* 
 void EEUnitStoreRemove(RTSUnit* inUnit);
 // a player object goes (~RTSPlayer): the records of its list go, by the object (temporary players may share an id)
 void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer);
+
+class EEPlayer;
+// the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
+// invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count
+size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs);
+// TEST ONLY: a USPK record of one pick (inCase 100: the game's EEPlayer::SelectUnits; 1..4: the sweep's)
+void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,
+                         const uint32_t* inPicked, size_t inPickedCount);
+// TEST ONLY: the pick over every player's units (USPK records; EE-SIM, every five game minutes)
+void EESelectPickSweep();
 
 // TEST ONLY: every unit of every player's list against its record; the count compared. inWhere names the point
 // (0: after a physics tick, else the executed message's type). A mismatch prints the unit and field and exits 3.

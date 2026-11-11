@@ -1,5 +1,6 @@
 // New (port): the unit store's C++ side (ee/EEUnitStore.h; docs/RUST_PLAN.md R5b.4 leaf 5): the holders' write
-// reports, the insert's seed, the removal, and the TEST ONLY consistency check. The records are Rust's
+// reports, the insert's seed, the removal, the box selection's pick, and the TEST ONLY consistency check and pick
+// records. The records are Rust's
 // (rust/crates/ee_units/src/store.rs).
 #include <windows.h>
 #include <stdio.h>
@@ -21,6 +22,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEUnitClassIDs.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -202,4 +204,92 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
         exit(3);
     }
     return theListed;
+}
+
+// the original's pick (EEPlayer::SelectUnits 0x56a658) over the objects: the player's unit of each id
+// (RTSPlayer::GetUnit: its list), its complex unit, not in the group yet (the group was cleared: the valid ones taken so
+// far, EESelectedGroup::AddIfAbsent), built, not a path point
+size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs)
+{
+    std::vector<EEComplexUnit*> theAdded;
+    size_t theCount = 0;
+    for (size_t i = 0; i < inCount; i++) {
+        RTSUnit* theUnit = inPlayer->GetUnit(inIDs[i]);
+        if (theUnit == NULL)
+            continue;
+        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit.Get();
+        // declared (ee_units select.rs): a unit that is not its own complex unit is skipped; the original
+        // dereferenced it (NULL) or read past a simple unit; no unit of a player's list is one (the USCK check)
+        if (theComplexUnit == NULL || static_cast<EEUnit*>(theComplexUnit) != static_cast<EEUnit*>(theUnit)
+            || theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
+            continue;
+        if (std::find(theAdded.begin(), theAdded.end(), theComplexUnit) == theAdded.end() && theComplexUnit->mIsBuilt != false
+            && theComplexUnit->mUnitClass->mUnitType != kUnitTypePathPoint) {
+            outIDs[theCount++] = static_cast<uint32_t>(theComplexUnit->mUnitID);
+            if (theComplexUnit->mIsValid)
+                theAdded.push_back(theComplexUnit);
+        }
+    }
+    return theCount;
+}
+
+void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,
+                         const uint32_t* inPicked, size_t inPickedCount)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(0x4b505355u);   // "USPK"
+    theRecord.U32((unsigned int)inCase);
+    theRecord.I32((int)gWorld.GetPlayerIndex(inPlayer));
+    theRecord.U32((unsigned int)inCount);
+    theRecord.Bytes(inIDs, (unsigned int)(inCount * 4));
+    theRecord.U32((unsigned int)inPickedCount);
+    theRecord.Bytes(inPicked, (unsigned int)(inPickedCount * 4));
+    theRecord.Commit();
+}
+
+static void PickCase(unsigned long inCase, EEPlayer* inPlayer, const std::vector<uint32_t>& inIDs)
+{
+    std::vector<uint32_t> thePicked(inIDs.size() + 1);
+    const uint32_t* theIDs = inIDs.empty() ? NULL : &inIDs[0];
+    size_t theCount = EESelectPick(inPlayer, theIDs, inIDs.size(), &thePicked[0]);
+    EESelectPickCapture(inCase, inPlayer, theIDs, inIDs.size(), &thePicked[0], theCount);
+}
+
+void EESelectPickSweep()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    unsigned long theNumPlayers = gWorld.GetNumPlayers();
+    for (unsigned long p = 0; p < theNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<uint32_t> theOwn;
+        for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
+            theOwn.push_back(static_cast<uint32_t>(theUnit->mUnitID));
+        // 1: every unit of its list in the list's order; 2: reversed, then again (every id twice)
+        PickCase(1, thePlayer, theOwn);
+        std::vector<uint32_t> theTwice(theOwn.rbegin(), theOwn.rend());
+        theTwice.insert(theTwice.end(), theOwn.begin(), theOwn.end());
+        PickCase(2, thePlayer, theTwice);
+        // 3: ids that are not its units (the next player's, the ids after its own, none, 0), then its own
+        std::vector<uint32_t> theOthers;
+        EEPlayer* theNext = gWorld.GetPlayer((p + 1) % theNumPlayers);
+        if (theNext != NULL)
+            for (RTSUnit* theUnit = theNext->mFirstUnit; theUnit != NULL && theOthers.size() < 200; theUnit = theUnit->mNext)
+                theOthers.push_back(static_cast<uint32_t>(theUnit->mUnitID));
+        for (size_t i = 0; i < theOwn.size() && i < 100; i++)
+            theOthers.push_back(theOwn[i] + 1);
+        theOthers.push_back(0xffffffffu);
+        theOthers.push_back(0);
+        theOthers.insert(theOthers.end(), theOwn.begin(), theOwn.end());
+        PickCase(3, thePlayer, theOthers);
+        // 4: the selections the game sends (at most 63 ids)
+        for (size_t i = 0; i < theOwn.size(); i += 63) {
+            size_t theEnd = i + 63 < theOwn.size() ? i + 63 : theOwn.size();
+            std::vector<uint32_t> theChunk(theOwn.begin() + i, theOwn.begin() + theEnd);
+            PickCase(4, thePlayer, theChunk);
+        }
+    }
 }
