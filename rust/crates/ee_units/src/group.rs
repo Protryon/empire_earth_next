@@ -14,7 +14,7 @@
 
 use crate::host::{
     EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_EXPLORE, EE_GOAL_CTOR_GATHER,
-    EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
+    EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -302,6 +302,72 @@ pub fn repair(host: &mut impl Host, player: HostRef, selection: HostRef, target_
     if !ids.is_empty() {
         let index = host.random(0, ids.len() as i32 - 1);
         host.play_acknowledgement(player, group, index);
+    }
+}
+
+/// `EEActiveGroup::KeepNonCitizens`' test over the store: a commandable, living unit that is not a citizen (land or
+/// naval). A unit in no list has no record and is not kept.
+pub fn keeps_non_citizen(unit: Option<&EeUnitRecord>) -> bool {
+    unit.is_some_and(|u| {
+        u.commandable != 0
+            && u.hit_points > 0
+            && u.category != EE_UNIT_CATEGORY_LAND_CITIZEN
+            && u.category != EE_UNIT_CATEGORY_NAVAL_CITIZEN
+    })
+}
+
+/// `kUnitCategoryLandCitizen`, `kUnitCategoryNavalCitizen`
+pub const EE_UNIT_CATEGORY_LAND_CITIZEN: i64 = 6;
+pub const EE_UNIT_CATEGORY_NAVAL_CITIZEN: i64 = 0x16;
+
+/// `EEMAddPatrolPoint::Execute`: with a first selected unit that is a path point, the point goes into its route after
+/// it (`InsertPatrolPointAt`); a first unit patrolling adds the point to its goal's route; else for each formation slot
+/// 1..5 a new active group filled from the selection goes to the player's pending groups, keeps its mobile units and
+/// its non-citizens and gets a new patrol (`new EEUGPatrol(true)`, the point added to its route, the route registered
+/// with the player) with the action Move To Next Patrol Point, plans, and one unit, drawn, acknowledges; an empty
+/// group is released. With nothing selected, a lone patrol group with the point is registered with the player.
+pub fn add_patrol_point(host: &mut impl Host, player: HostRef, selection: HostRef, x: f32, y: f32) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let Some(&first) = ids.first() else {
+        host.patrol_new_lone(player, x, y);
+        return;
+    };
+    if unit_type(host, first) == EE_UNIT_TYPE_PATH_POINT {
+        host.patrol_insert_point_at(first, x, y, player);
+        return;
+    }
+    let route = host.unit_goal_patrol_route(first);
+    if !route.0.is_null() {
+        host.patrol_add_point(route, x, y, player);
+        return;
+    }
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 0, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_keep_mobile(group);
+        host.group_keep_non_citizens(group);
+        let goal = host.goal_new(&EeGoalSpec { flag_a: 1, ..EeGoalSpec::new(EE_GOAL_CTOR_PATROL) });
+        if let Some(goal) = &goal {
+            host.goal_patrol_add_point(goal, x, y, player);
+        }
+        host.group_clear_goal(group);
+        if let Some(goal) = goal {
+            host.group_set_goal(group, goal, false);
+        }
+        host.group_set_action(group, EE_ACTION_MOVE_TO_NEXT_PATROL_POINT);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
     }
 }
 
@@ -704,5 +770,92 @@ mod tests {
         host.units.insert(target, resource(target, 0));
         repair(&mut host, player, selection, target, false);
         assert!(host.calls.is_empty());
+    }
+    /// `EEMAddPatrolPoint::Execute`'s calls: the keeps, the new patrol's point before the clear, the draw last
+    #[test]
+    fn add_patrol_point_makes_the_original_calls_in_order() {
+        let mut host = MockHost { specs: true, ..Default::default() };
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        host.units.insert(first, complex(first, 3));
+        host.groups.insert(0x600, vec![first, 0x0100_0002, 0x0100_0003]);
+        host.fills.insert(2, vec![first, 0x0100_0002, 0x0100_0003]);
+        host.fills.insert(3, vec![0x0100_0004]);
+        host.mobile = vec![first, 0x0100_0002, 0x0100_0003];
+        host.non_citizens = vec![0x0100_0002, 0x0100_0003];
+        host.draws = vec![1];
+        add_patrol_point(&mut host, player, selection, 12.5, 30.0);
+        let (x, y) = (12.5f32.to_bits(), 30.0f32.to_bits());
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::GoalRoute(first)];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 0, slot));
+            match slot {
+                2 | 3 => {
+                    expected.extend([
+                        Call::Pending(player, group),
+                        Call::KeepMobile(group),
+                        Call::KeepNonCitizens(group),
+                        Call::GoalNew(EE_GOAL_CTOR_PATROL, 1),
+                        Call::Spec(EE_GOAL_CTOR_PATROL, EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, [0; 3], 1, 0),
+                        Call::GoalAddPoint(9, x, y, player),
+                        Call::ClearGoal(group),
+                        Call::SetGoal(group, 9, false),
+                        Call::SetAction(group, EE_ACTION_MOVE_TO_NEXT_PATROL_POINT),
+                        Call::Plan(group),
+                    ]);
+                    if slot == 2 {
+                        expected.extend([Call::Random(0, 1), Call::Acknowledge(player, group, 1)]);
+                    }
+                }
+                _ => expected.push(Call::Release(group)),
+            }
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+    }
+
+    #[test]
+    fn add_patrol_point_routes() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        let (x, y) = (4.0f32.to_bits(), 5.0f32.to_bits());
+        // nothing selected: a lone patrol
+        let mut host = MockHost::default();
+        add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+        assert_eq!(host.calls, vec![Call::LonePatrol(player, x, y)]);
+        // a path point first: the point into its route (out of the store: its type read on the object)
+        for in_store in [true, false] {
+            let mut host = MockHost::default();
+            host.groups.insert(0x600, vec![first]);
+            if in_store {
+                host.units.insert(first, complex(first, EE_UNIT_TYPE_PATH_POINT));
+            } else {
+                host.object_types.insert(first, EE_UNIT_TYPE_PATH_POINT);
+            }
+            add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+            let tail = host.calls.last().unwrap();
+            assert_eq!(tail, &Call::InsertPoint(first, x, y, player));
+        }
+        // a patrolling first unit: the point added to its goal's route
+        let mut host = MockHost::default();
+        host.groups.insert(0x600, vec![first]);
+        host.units.insert(first, complex(first, 3));
+        host.goal_routes.insert(first, 0x7700);
+        add_patrol_point(&mut host, player, selection, 4.0, 5.0);
+        assert_eq!(host.calls, vec![Call::GoalRoute(first), Call::AddPoint(r(0x7700), x, y, player)]);
+    }
+
+    #[test]
+    fn the_non_citizens_test() {
+        let soldier = EeUnitRecord { commandable: 1, category: 1, ..complex(1, 3) };
+        assert!(keeps_non_citizen(Some(&soldier)));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { commandable: 0, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { hit_points: 0, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_LAND_CITIZEN, ..soldier })));
+        assert!(!keeps_non_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_NAVAL_CITIZEN, ..soldier })));
+        assert!(!keeps_non_citizen(None));
     }
 }

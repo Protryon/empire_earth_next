@@ -148,6 +148,21 @@ pub extern "C" fn ee_units_keeps_ground_attacker(id: u32) -> bool {
     with_store(|s| crate::group::keeps_ground_attacker(s.get(id)))
 }
 
+/// `EEActiveGroup::KeepNonCitizens`' test over the store (`group::keeps_non_citizen`): whether the group keeps the
+/// unit.
+#[no_mangle]
+pub extern "C" fn ee_units_keeps_non_citizen(id: u32) -> bool {
+    with_store(|s| crate::group::keeps_non_citizen(s.get(id)))
+}
+
+/// `EEMAddPatrolPoint::Execute`'s body (`group::add_patrol_point`) for the sender, its selection and the point.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_add_patrol_point(player: *mut c_void, selection: *mut c_void, x: f32, y: f32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::add_patrol_point(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), x, y);
+}
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 #[cfg(not(test))]

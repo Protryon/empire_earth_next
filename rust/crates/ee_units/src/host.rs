@@ -161,6 +161,20 @@ pub trait Host {
     fn unit_order_repair(&mut self, unit: u32, target: u32);
     /// `group->AddMember(unit->mComplexUnit->mComplexUnit, true)`
     fn group_add_member(&mut self, group: HostRef, unit: u32);
+    /// `EEActiveGroup::KeepNonCitizens` (its test is `group::keeps_non_citizen` over the store)
+    fn group_keep_non_citizens(&mut self, group: HostRef);
+    /// `new EEPPatrolGroup`, `AddPoint(GE2DPoint(x, y), player->mPlayerID)`, `player->AddPatrolGroup(it)`, the
+    /// body's reference released
+    fn patrol_new_lone(&mut self, player: HostRef, x: f32, y: f32);
+    /// `unit->mPatrolGroup->InsertPatrolPointAt(GE2DPoint(x, y), player->mPlayerID, unit)`
+    fn patrol_insert_point_at(&mut self, unit: u32, x: f32, y: f32, player: HostRef);
+    /// the route of the unit's current goal when it is a patrol (`EEGoalCast<EEUGPatrol>(unit->GetGoal())`), else null
+    fn unit_goal_patrol_route(&mut self, unit: u32) -> HostRef;
+    /// `route->AddPoint(GE2DPoint(x, y), player->mPlayerID)`
+    fn patrol_add_point(&mut self, route: HostRef, x: f32, y: f32, player: HostRef);
+    /// a new patrol goal's route: `goal->mPatrolGroup->AddPoint(GE2DPoint(x, y), player->mPlayerID)`, then
+    /// `player->AddPatrolGroup(goal->mPatrolGroup)`
+    fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -204,6 +218,12 @@ pub mod game {
         fn ee_units_host_unit_add_build_target(unit: u32, target: u32);
         fn ee_units_host_unit_order_repair(unit: u32, target: u32);
         fn ee_units_host_group_add_member(group: *mut c_void, unit: u32);
+        fn ee_units_host_group_keep_non_citizens(group: *mut c_void);
+        fn ee_units_host_patrol_new_lone(player: *mut c_void, x: f32, y: f32);
+        fn ee_units_host_patrol_insert_point_at(unit: u32, x: f32, y: f32, player: *mut c_void);
+        fn ee_units_host_unit_goal_patrol_route(unit: u32) -> *mut c_void;
+        fn ee_units_host_patrol_add_point(route: *mut c_void, x: f32, y: f32, player: *mut c_void);
+        fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
     }
 
     pub struct GameHost;
@@ -316,6 +336,25 @@ pub mod game {
         fn group_add_member(&mut self, group: HostRef, unit: u32) {
             unsafe { ee_units_host_group_add_member(group.0, unit) }
         }
+        fn group_keep_non_citizens(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_keep_non_citizens(group.0) }
+        }
+        fn patrol_new_lone(&mut self, player: HostRef, x: f32, y: f32) {
+            unsafe { ee_units_host_patrol_new_lone(player.0, x, y) }
+        }
+        fn patrol_insert_point_at(&mut self, unit: u32, x: f32, y: f32, player: HostRef) {
+            unsafe { ee_units_host_patrol_insert_point_at(unit, x, y, player.0) }
+        }
+        fn unit_goal_patrol_route(&mut self, unit: u32) -> HostRef {
+            HostRef(unsafe { ee_units_host_unit_goal_patrol_route(unit) })
+        }
+        fn patrol_add_point(&mut self, route: HostRef, x: f32, y: f32, player: HostRef) {
+            unsafe { ee_units_host_patrol_add_point(route.0, x, y, player.0) }
+        }
+        fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef) {
+            // SAFETY: a goal the host created and nothing consumed yet
+            unsafe { ee_units_host_goal_patrol_add_point(goal.as_ptr(), x, y, player.0) }
+        }
     }
 }
 
@@ -353,6 +392,12 @@ pub(crate) mod tests {
         AddBuildTarget(u32, u32),
         OrderRepair(u32, u32),
         AddMember(HostRef, u32),
+        KeepNonCitizens(HostRef),
+        LonePatrol(HostRef, u32, u32),
+        InsertPoint(u32, u32, u32, HostRef),
+        GoalRoute(u32),
+        AddPoint(HostRef, u32, u32, HostRef),
+        GoalAddPoint(u8, u32, u32, HostRef),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
         Spec(u32, u32, u32, [u32; 3], u8, usize),
     }
@@ -376,6 +421,9 @@ pub(crate) mod tests {
         pub town_point: Option<u32>,
         pub routes: BTreeMap<u32, usize>,
         pub object_types: BTreeMap<u32, i64>,
+        /// KeepNonCitizens keeps these; the units' patrol goals' routes
+        pub non_citizens: Vec<u32>,
+        pub goal_routes: BTreeMap<u32, usize>,
         /// log the goals' arguments too (Call::Spec)
         pub specs: bool,
         pub made: usize,
@@ -522,6 +570,30 @@ pub(crate) mod tests {
         }
         fn group_add_member(&mut self, group: HostRef, unit: u32) {
             self.calls.push(Call::AddMember(group, unit));
+        }
+        fn group_keep_non_citizens(&mut self, group: HostRef) {
+            let keep = self.non_citizens.clone();
+            if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                ids.retain(|id| keep.contains(id));
+            }
+            self.calls.push(Call::KeepNonCitizens(group));
+        }
+        fn patrol_new_lone(&mut self, player: HostRef, x: f32, y: f32) {
+            self.calls.push(Call::LonePatrol(player, x.to_bits(), y.to_bits()));
+        }
+        fn patrol_insert_point_at(&mut self, unit: u32, x: f32, y: f32, player: HostRef) {
+            self.calls.push(Call::InsertPoint(unit, x.to_bits(), y.to_bits(), player));
+        }
+        fn unit_goal_patrol_route(&mut self, unit: u32) -> HostRef {
+            self.calls.push(Call::GoalRoute(unit));
+            HostRef(self.goal_routes.get(&unit).copied().unwrap_or(0) as *mut c_void)
+        }
+        fn patrol_add_point(&mut self, route: HostRef, x: f32, y: f32, player: HostRef) {
+            self.calls.push(Call::AddPoint(route, x.to_bits(), y.to_bits(), player));
+        }
+        fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef) {
+            let kind = self.goal_kind(goal);
+            self.calls.push(Call::GoalAddPoint(kind, x.to_bits(), y.to_bits(), player));
         }
     }
 

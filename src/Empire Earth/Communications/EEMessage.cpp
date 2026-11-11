@@ -779,43 +779,12 @@ char* EEMAddAndRemoveUnitsFromSelectedGroup::GetMessageLabel() const
 void EEMAddPatrolPoint::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    if (theUnit) {
-        if (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
-            theUnit->mPatrolGroup->InsertPatrolPointAt(this->mPoint, thePlayer->mPlayerID, theUnit);
-        else {
-            EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(theUnit->GetGoal());
-            if (theGoal)
-                theGoal->mPatrolGroup->AddPoint(this->mPoint, thePlayer->mPlayerID);
-            else {
-                for (unsigned long i = 1; i < 6; i++) {
-                    EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-                    theActiveGroup->Fill(theGroup, 0, i);
-                    if (theActiveGroup->GetNumUnits() > 0) {
-                        thePlayer->mPendingGroups.push_back(theActiveGroup);
-                        theActiveGroup->KeepMobileUnits();
-                        theActiveGroup->KeepNonCitizens();
-                        EEUGPatrol* theNewGoal = new EEUGPatrol(true);
-                        theNewGoal->mPatrolGroup->AddPoint(this->mPoint, thePlayer->mPlayerID);
-                        thePlayer->AddPatrolGroup(theNewGoal->mPatrolGroup);
-                        theActiveGroup->ClearGoal();
-                        theActiveGroup->SetGoal(theNewGoal, false);
-                        theActiveGroup->mAction = kActionMoveToNextPatrolPoint;
-                        theActiveGroup->Plan();
-                        if (theActiveGroup->GetNumUnits() > 0)
-                            thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-                    } else
-                        theActiveGroup->Dereference();
-                }
-            }
-        }
-    } else {
-        EEPPatrolGroup* thePatrolGroup = new EEPPatrolGroup();
-        thePatrolGroup->AddPoint(this->mPoint, thePlayer->mPlayerID);
-        thePlayer->AddPatrolGroup(thePatrolGroup);
-        thePatrolGroup->Dereference();
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs add_patrol_point: a selected path point takes the point into its
+    // route, a patrolling first unit adds it to its goal's route, else per formation slot 1..5 an active group of the
+    // mobile non-citizens gets a new patrol with the point, planned, one unit drawn to acknowledge; nothing selected:
+    // a lone patrol group) over the world calls of EEUnitHost.cpp
+    ee_units_add_patrol_point(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mPoint.GetX(),
+                              this->mPoint.GetY());
 }
 
 // EEMAddPatrolPoint's members as the codec's slots, in wire order (ee_netmsg classes.rs)

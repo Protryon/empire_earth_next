@@ -718,6 +718,11 @@ constexpr static const int32_t EE_GROUP_COMMAND_TARGET = 186;
 /// `kActionGatherResource` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_GATHER_RESOURCE = 4004;
 
+/// `kUnitCategoryLandCitizen`, `kUnitCategoryNavalCitizen`
+constexpr static const int64_t EE_UNIT_CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const int64_t EE_UNIT_CATEGORY_NAVAL_CITIZEN = 22;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -9688,6 +9693,16 @@ void ee_units_explore(void *player,
 /// the unit.
 bool ee_units_keeps_ground_attacker(uint32_t id);
 
+/// `EEActiveGroup::KeepNonCitizens`' test over the store (`group::keeps_non_citizen`): whether the group keeps the
+/// unit.
+bool ee_units_keeps_non_citizen(uint32_t id);
+
+/// `EEMAddPatrolPoint::Execute`'s body (`group::add_patrol_point`) for the sender, its selection and the point.
+void ee_units_add_patrol_point(void *player,
+                               void *selection,
+                               float x,
+                               float y);
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 void ee_units_attack_ground(void *player,
@@ -9774,6 +9789,18 @@ extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
 extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
 
 extern void ee_units_host_group_add_member(void *group, uint32_t unit);
+
+extern void ee_units_host_group_keep_non_citizens(void *group);
+
+extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
+
+extern void ee_units_host_patrol_insert_point_at(uint32_t unit, float x, float y, void *player);
+
+extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
+
+extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
+
+extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

@@ -223,17 +223,62 @@ void OriginalRepair(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, boo
     }
 }
 
+// EEMAddPatrolPoint::Execute (0x4bae4b) as it was, each world call through the host, the first unit read on the object
+void OriginalAddPatrolPoint(EEPlayer* thePlayer, void* theGroup, float inX, float inY)
+{
+    uint32_t theUnit = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;   // theGroup->GetFirstUnit()
+    if (theUnit != kNone) {
+        if (ObjectOf(theUnit)->mUnitClass->mUnitType == kUnitTypePathPoint)
+            ee_units_host_patrol_insert_point_at(theUnit, inX, inY, thePlayer);   // ->mPatrolGroup->InsertPatrolPointAt
+        else {
+            void* theRoute = ee_units_host_unit_goal_patrol_route(theUnit);   // EEGoalCast<EEUGPatrol>(GetGoal())
+            if (theRoute)
+                ee_units_host_patrol_add_point(theRoute, inX, inY, thePlayer);   // theGoal->mPatrolGroup->AddPoint
+            else {
+                for (unsigned long i = 1; i < 6; i++) {
+                    void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+                    ee_units_host_group_fill(theActiveGroup, theGroup, 0, (int32_t)i);
+                    if (Count(theActiveGroup) > 0) {
+                        ee_units_host_pending_push(thePlayer, theActiveGroup);
+                        ee_units_host_group_keep_mobile(theActiveGroup);
+                        ee_units_host_group_keep_non_citizens(theActiveGroup);
+                        EeGoalSpec theSpec;   // new EEUGPatrol(true)
+                        memset(&theSpec, 0, sizeof(theSpec));
+                        theSpec.ctor = EE_GOAL_CTOR_PATROL;
+                        theSpec.unit_a = kNone;
+                        theSpec.unit_b = kNone;
+                        theSpec.flag_a = 1;
+                        void* theNewGoal = ee_units_host_goal_new(&theSpec);
+                        // theNewGoal->mPatrolGroup->AddPoint(this->mPoint, ...), thePlayer->AddPatrolGroup(...)
+                        ee_units_host_goal_patrol_add_point(theNewGoal, inX, inY, thePlayer);
+                        ee_units_host_group_clear_goal(theActiveGroup);
+                        ee_units_host_group_set_goal(theActiveGroup, theNewGoal, 0);
+                        ee_units_host_group_set_action(theActiveGroup, kActionMoveToNextPatrolPoint);
+                        ee_units_host_group_plan(theActiveGroup);
+                        if (Count(theActiveGroup) > 0)
+                            ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                               ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+                    } else
+                        ee_units_host_group_release(theActiveGroup);
+                }
+            }
+        }
+    } else
+        ee_units_host_patrol_new_lone(thePlayer, inX, inY);   // new EEPPatrolGroup, AddPoint, AddPatrolGroup
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
     kSweepGather = 3,
-    kSweepRepair = 4
+    kSweepRepair = 4,
+    kSweepAddPatrolPoint = 5
 };
 
 struct SweepCase {
     unsigned long mBody;
     unsigned long mSelection;   // which selection (the record's)
-    float mX, mY;               // Attack Ground's point
+    float mX, mY;               // Attack Ground's and Add Patrol Point's point
     int32_t mTarget;            // Patrol's, Gather's and Repair's target id
     bool mQueued;               // Gather's and Repair's
 };
@@ -258,6 +303,12 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
             ee_units_gather(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
         else
             OriginalGather(inPlayer, inSelection, inCase.mTarget, inCase.mQueued);
+        break;
+    case kSweepAddPatrolPoint:
+        if (inRust)
+            ee_units_add_patrol_point(inPlayer, inSelection, inCase.mX, inCase.mY);
+        else
+            OriginalAddPatrolPoint(inPlayer, inSelection, inCase.mX, inCase.mY);
         break;
     case kSweepRepair:
         if (inRust)
@@ -284,7 +335,7 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     theRecord.F32(inCase.mX);
     theRecord.F32(inCase.mY);
     theRecord.I32(inCase.mTarget);
-    if (inCase.mBody >= kSweepGather)
+    if (inCase.mBody == kSweepGather || inCase.mBody == kSweepRepair)
         theRecord.U32(inCase.mQueued ? 1u : 0u);
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
@@ -388,8 +439,16 @@ void EEGroupCommandSweep()
             theCase.mX = theOnMap ? (float)theUnits[0]->mTileX.Get() + 0.5f : theCenter;
             theCase.mY = theOnMap ? (float)theUnits[0]->mTileY.Get() + 0.5f : theCenter;
             RunCase(theCase, p, thePlayer, theUnits);
+            float theFirstX = theCase.mX, theFirstY = theCase.mY;
             theCase.mX = theCenter;
             theCase.mY = theCenter;
+            RunCase(theCase, p, thePlayer, theUnits);
+            // Add Patrol Point at the same two points (the selection with a path point first takes the point into its
+            // route; the empty one makes a lone patrol)
+            theCase.mBody = kSweepAddPatrolPoint;
+            RunCase(theCase, p, thePlayer, theUnits);
+            theCase.mX = theFirstX;
+            theCase.mY = theFirstY;
             RunCase(theCase, p, thePlayer, theUnits);
             theCase.mBody = kSweepPatrol;
             theCase.mX = 0.0f;

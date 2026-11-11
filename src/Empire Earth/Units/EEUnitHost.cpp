@@ -50,6 +50,7 @@
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
+#include "ee/EEUnitKind.h"
 #include "rust/ee_rust.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -98,7 +99,13 @@ enum DryEvent {
     kDrySpreadTile,       // tag, x, y
     kDryAddBuildTarget,   // unit, target
     kDryOrderRepair,      // unit, target
-    kDryAddMember         // tag, unit
+    kDryAddMember,        // tag, unit
+    kDryKeepNonCitizens,  // tag, the count, the ids kept
+    kDryLonePatrol,       // player id, x, y
+    kDryInsertPoint,      // unit, player id, x, y
+    kDryGoalRoute,        // unit, the route (2 words)
+    kDryAddPoint,         // the route (2 words), player id, x, y
+    kDryGoalAddPoint      // ctor, player id, x, y
 };
 
 struct DryGroup {
@@ -264,6 +271,27 @@ void DryKeepGroundAttackers(void* inGroup)
             theIndex++;
     }
     Log({kDryKeepGround, theGroup->mTag});
+    LogUnits(theGroup->mUnits);
+}
+
+void DryKeepNonCitizens(void* inGroup)
+{
+    // EEActiveGroup::KeepNonCitizens' loop over the store's test, compared with the object's
+    DryGroup* theGroup = Dry(inGroup);
+    for (unsigned long theIndex = 0; theIndex < theGroup->mUnits.size();) {
+        EEComplexUnit* theUnit = theGroup->mUnits[theIndex];
+        bool theKeeps = ee_units_keeps_non_citizen(static_cast<uint32_t>(theUnit->mUnitID));
+        bool theObject = theUnit->mIsCommandable && theUnit->mHitPoints > 0
+            && theUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen
+            && theUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen;
+        if (theKeeps != theObject)
+            sDry->mMismatches++;
+        if (!theKeeps)
+            DryRemove(theGroup, theUnit);
+        else
+            theIndex++;
+    }
+    Log({kDryKeepNonCitizens, theGroup->mTag});
     LogUnits(theGroup->mUnits);
 }
 
@@ -618,4 +646,74 @@ extern "C" void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit)
     }
     EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
     ActiveOf(inGroup)->AddMember(theUnit->mComplexUnit, true);
+}
+
+extern "C" void ee_units_host_group_keep_non_citizens(void* inGroup)
+{
+    if (sDry != NULL) {
+        DryKeepNonCitizens(inGroup);
+        return;
+    }
+    ActiveOf(inGroup)->KeepNonCitizens();
+}
+
+// EEMAddPatrolPoint with nothing selected: a lone patrol group with the point, registered with the player
+extern "C" void ee_units_host_patrol_new_lone(void* inPlayer, float inX, float inY)
+{
+    if (sDry != NULL) {
+        Log({kDryLonePatrol, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    EEPPatrolGroup* thePatrolGroup = new EEPPatrolGroup();
+    thePatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    thePlayer->AddPatrolGroup(thePatrolGroup);
+    thePatrolGroup->Dereference();
+}
+
+// a selected path point: the point into its route after it
+extern "C" void ee_units_host_patrol_insert_point_at(uint32_t inUnit, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryInsertPoint, inUnit, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->mPatrolGroup->InsertPatrolPointAt(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID, theUnit);
+}
+
+// the route of the unit's current goal when it is a patrol (EEGoalCast<EEUGPatrol>(GetGoal())), else NULL; a read
+extern "C" void* ee_units_host_unit_goal_patrol_route(uint32_t inUnit)
+{
+    EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(ComplexOf(inUnit)->GetGoal());
+    EEPPatrolGroup* theRoute = theGoal != NULL ? theGoal->mPatrolGroup : NULL;
+    if (sDry != NULL) {
+        Log({kDryGoalRoute, inUnit});
+        LogRoute(theRoute);
+    }
+    return theRoute;
+}
+
+extern "C" void ee_units_host_patrol_add_point(void* inRoute, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryAddPoint});
+        LogRoute(inRoute);
+        Log({PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    static_cast<EEPPatrolGroup*>(inRoute)->AddPoint(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID);
+}
+
+// a new patrol goal's route: the point added, the route registered with the player
+extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, float inY, void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryGoalAddPoint, static_cast<DryGoal*>(inGoal)->mCtor, PlayerID(inPlayer), Bits(inX), Bits(inY)});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    EEUGPatrol* theGoal = static_cast<EEUGPatrol*>(static_cast<EEUnitGoal*>(inGoal));
+    theGoal->mPatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    thePlayer->AddPatrolGroup(theGoal->mPatrolGroup);
 }
