@@ -27,6 +27,7 @@ pub mod file;
 pub mod flow;
 pub mod guiedit;
 pub mod guilayout;
+pub mod guilist;
 pub mod guiscroll;
 pub mod guistring;
 /// cbindgen:ignore

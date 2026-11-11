@@ -13,6 +13,17 @@
 namespace WONAPI {
 // ListItem's out-of-line members precede ListArea in the original object: VC6 sees the ctor's body before
 // `new ListItem` in ListArea::ListArea and drops the delete-on-throw guard (0x6fa570).
+// The lines, their selection walk, the keys' targets and the scrolls inserts, refreshes and deletes leave are
+// ee_won's guilist module (rust/crates/ee_won/src/guilist.rs); this unit keeps the list, its items, their sorting,
+// measuring, painting and events. The Rust reads the items' tops and selectable flags through these:
+static int32_t ListTopOf(const void* inItems, uintptr_t i)
+{
+    return (*static_cast<const std::vector<SmartPtr<ListItem> >*>(inItems))[i]->mTop;
+}
+static bool ListSelectableOf(const void* inItems, uintptr_t i)
+{
+    return (*static_cast<const std::vector<SmartPtr<ListItem> >*>(inItems))[i]->mSelectable;
+}
 // FUNCTION: WON 0x006fa280
 // Creates an unselected, selectable list item with zero position and size
 ListItem::ListItem()
@@ -47,12 +58,7 @@ struct ListItemTopLess {
 std::vector<SmartPtr<ListItem> >::iterator ListArea::FindLineAt(int y)
 {
     this->mSearchLine->mTop=y;
-    std::vector<SmartPtr<ListItem> >::iterator first=std::lower_bound(this->mItems.begin(),this->mItems.end(),this->mSearchLine,ListItemTopLess());
-    if(first==this->mItems.end() || (*first)->mTop>y)
-    {
-        if(first!=this->mItems.begin()) --first;
-    }
-    return first;
+    return this->mItems.begin()+ee_won_gui_list_line_at(this->mItems.size(),y,ListTopOf,&this->mItems);
 }
 // FUNCTION: WON 0x006fad80
 // Returns the item at a vertical position, or NULL when the position is below every item
@@ -61,7 +67,7 @@ ListItem* ListArea::FindItemAt(int y)
     std::vector<SmartPtr<ListItem> >::iterator i=this->FindLineAt(y);
     if(i==this->mItems.end()) return NULL;
     ListItem* item=i->get();
-    return item->mTop+item->mHeight<y ? NULL : item;
+    return ee_won_gui_list_covers(item->mTop,item->mHeight,y) ? item : NULL;
 }
 // FUNCTION: WON 0x006fadc0
 // Records the index of the item at the top of the visible area
@@ -74,19 +80,14 @@ void ListArea::FindTopLine()
 // Returns whether the item is in view (only its top needs to be when partial lines are shown)
 bool ListArea::IsItemVisible(ListItem* item)
 {
-    if(item->mTop+item->mHeight<this->mVertOffset) return false;
-    int last=item->mTop;
-    if(!this->ListFlagSet(0x80)) last+=item->mHeight;
-    return last<=this->mVertOffset+this->mScrollArea.height;
+    return ee_won_gui_list_visible(item->mTop,item->mHeight,this->mVertOffset,this->mScrollArea.height,
+                                   this->ListFlagSet(0x80));
 }
 // FUNCTION: WON 0x006faf60
 // Scrolls the list just enough to bring the item fully into view
 void ListArea::EnsureVisible(ListItem* item)
 {
-    int offset=this->mVertOffset;
-    if(item->mTop+item->mHeight>this->mVertOffset+this->mScrollArea.height)
-        offset=item->mTop-this->mScrollArea.height+item->mHeight;
-    if(offset>item->mTop) offset=item->mTop;
+    int offset=ee_won_gui_list_ensure_visible(item->mTop,item->mHeight,this->mVertOffset,this->mScrollArea.height);
     if(offset!=this->mVertOffset) this->SetVertOffset(offset);
 }
 // FUNCTION: WON 0x006fb200
@@ -120,12 +121,8 @@ bool ListArea::SetSelItem(ListItem* item,bool add,bool fire)
 void ListArea::SelectRange(int start,int end)
 {
     this->ClearSelectionPrv(false);
-    if(start>=(int)this->mItems.size()) start=this->mItems.size()-1;
-    if(end>=(int)this->mItems.size()) end=this->mItems.size()-1;
-    if(start<0) start=0;
-    if(end<0) end=0;
-    if(start>=(int)this->mItems.size() || end>=(int)this->mItems.size()) return;
-    int step=start<=end ? 1 : -1;
+    int step=1;
+    if(!ee_won_gui_list_select_range(start,end,(int)this->mItems.size(),&start,&end,&step)) return;
     for(int i=start;i!=end+step;i+=step) this->GetItem(i)->mSelected=true;
     this->SetSelItem(this->GetItem(start),false,true);
 }
@@ -233,14 +230,16 @@ void ListArea::Clear(bool fire)
 void ListArea::EnforceInvariants()
 {
     if(this->mDoingMultiChange) return;
-    std::vector<SmartPtr<ListItem> >::iterator i=this->mItems.begin();
-    this->mTotalHeight=this->mTotalWidth=0;
-    for(;i!=this->mItems.end();++i) {
-        ListItem* item=i->get();
-        item->SetPos(0,this->mTotalHeight);
-        this->mTotalHeight+=item->mHeight;
-        if(item->mWidth>this->mTotalWidth) this->mTotalWidth=item->mWidth;
+    size_t aCount=this->mItems.size();
+    std::vector<int> aHeights(aCount), aWidths(aCount), aTops(aCount);
+    for(size_t n=0;n<aCount;++n) {
+        aHeights[n]=this->mItems[n]->mHeight;
+        aWidths[n]=this->mItems[n]->mWidth;
     }
+    ee_won_gui_list_stack(aCount?&aHeights[0]:NULL,aCount?&aWidths[0]:NULL,aCount?&aTops[0]:NULL,aCount,
+                          &this->mTotalHeight,&this->mTotalWidth);
+    for(size_t n=0;n<aCount;++n)
+        this->mItems[n]->SetPos(0,aTops[n]);
     this->AdjustPosition(false);
 }
 // FUNCTION: WON 0x006fcad0
@@ -281,8 +280,8 @@ void ListArea::AdjustPosition(bool scrollbar)
         std::vector<SmartPtr<ListItem> >::iterator i=this->FindLineAt(this->mTotalHeight-this->mScrollArea.height+1);
         if(i!=this->mItems.end()) {
             ListItem* item=i->get();
-            this->mExtraHeight=item->mTop+item->mHeight+this->mScrollArea.height-this->mTotalHeight;
-            if(this->mExtraHeight<0) this->mExtraHeight=0;
+            this->mExtraHeight=ee_won_gui_list_full_line_extra(this->mTotalHeight,this->mScrollArea.height,item->mTop,
+                                                               item->mHeight);
         }
     }
     ScrollArea::AdjustPosition(scrollbar);
@@ -347,19 +346,10 @@ void ListArea::CheckMouseSel(ListItem* item,int x,int y,bool down)
 // NULL when there is none
 ListItem* ListArea::FindSelectableItem(int start,bool up,bool opposite)
 {
-    int step=up ? -1 : 1;
-    int i=start;
-    ListItem* item=this->GetItem(start);
-    for(;item!=NULL;item=this->GetItem(i)) {
-        if(item->mSelectable) return item;
-        i+=step;
-    }
-    if(this->ListFlagSet(0x800)) {
-        if(up) return this->FindSelectableItem(this->mItems.size()-1,false,false);
-        else return this->FindSelectableItem(0,true,false);
-    }
-    if(opposite) return this->FindSelectableItem(start,!up,false);
-    return NULL;
+    // with the wrap flag and neither end selectable the original called itself without end; this finds none
+    long long i=ee_won_gui_list_find_selectable(this->mItems.size(),start,up,opposite,this->ListFlagSet(0x800),
+                                                ListSelectableOf,&this->mItems);
+    return i<0 ? NULL : this->mItems[(size_t)i].get();
 }
 // FUNCTION: WON 0x006fc510
 // Inserts an item at its place (sorted or given), sizes it and lays the list out, keeping the view on
@@ -378,17 +368,15 @@ ListItem* ListArea::InsertItem(ListItem* item,int position)
         item->SetPos(0,this->mTotalHeight);
         this->mTotalHeight+=item->mHeight;
         if(item->mWidth>this->mTotalWidth) this->mTotalWidth=item->mWidth;
-        if(!this->ListFlagSet(0x1000) && this->OnBottom()) this->mVertOffset+=item->mHeight;
+        this->mVertOffset=ee_won_gui_list_insert_scroll(true,this->ListFlagSet(0x1000),this->OnBottom(),
+            this->mTopLineVectorPos,position,this->mTotalHeight,this->mScrollArea.height,this->mVertOffset,item->mHeight);
         this->AdjustPosition(false);
     } else {
-        if(!this->ListFlagSet(0x1000) && (this->mTopLineVectorPos>=position || this->OnBottom()) && this->mTotalHeight>this->mScrollArea.height)
-            this->mVertOffset+=item->mHeight;
+        this->mVertOffset=ee_won_gui_list_insert_scroll(false,this->ListFlagSet(0x1000),this->OnBottom(),
+            this->mTopLineVectorPos,position,this->mTotalHeight,this->mScrollArea.height,this->mVertOffset,item->mHeight);
         if(this->mDoingMultiChange) {
-            int prev=position==0 ? 0 : this->mItems[position-1]->mTop;
-            int next=this->mItems[position+1]->mTop;
-            int y=prev+1;
-            if(y>next) y=next;
-            item->mTop=y;
+            item->mTop=ee_won_gui_list_batch_top(position!=0,position==0 ? 0 : this->mItems[position-1]->mTop,
+                                                 this->mItems[position+1]->mTop);
         } else this->EnforceInvariants();
     }
     return item;
@@ -422,10 +410,7 @@ void ListArea::RefreshItem(ListItem* item)
             SmartPtr<ListItem> hold=item;
             if(prev!=NULL) this->mItems[position]=prev;
             else this->mItems[position]=next;
-            int insert=this->FindInsertPos(item,0);
-            if(position<insert) --insert;
-            if(insert>=this->mItems.size()) insert=this->mItems.size()-1;
-            if(insert<0) insert=0;
+            int insert=ee_won_gui_list_refresh_place(position,this->FindInsertPos(item,0),this->mItems.size());
             if(position>insert) {
                 for(int i=position;i>insert;--i) { this->mItems[i]=this->mItems[i-1]; }
             } else if(position<insert) {
@@ -436,8 +421,8 @@ void ListArea::RefreshItem(ListItem* item)
     }
     if(position<0)
         return;
-    if(!this->ListFlagSet(0x1000) && (this->mVertOffset>=item->mTop || this->OnBottom()) && this->mTotalHeight>this->mScrollArea.Height())
-        this->mVertOffset+=item->mHeight-oldHeight;
+    this->mVertOffset=ee_won_gui_list_refresh_scroll(this->ListFlagSet(0x1000),this->OnBottom(),item->mTop,
+        this->mVertOffset,this->mTotalHeight,this->mScrollArea.Height(),item->mHeight,oldHeight);
     this->EnforceInvariants();
 }
 // FUNCTION: WON 0x006fca50
@@ -447,7 +432,7 @@ void ListArea::DeleteItemPrv(int position)
 {
     ListItem* item=this->mItems[position].get();
     item->SetViewport(this,NULL);
-    if(!this->ListFlagSet(0x1000) && this->mVertOffset>=item->mTop) this->mVertOffset-=item->mHeight;
+    this->mVertOffset=ee_won_gui_list_delete_scroll(this->ListFlagSet(0x1000),item->mTop,this->mVertOffset,item->mHeight);
     if(item==this->mSelItem) { item->mSelected=false;this->SetSelItem(-1,true); }
     if(item==this->mKeyItem) this->mKeyItem=NULL;
     if(item==this->mMouseItem) this->NotifyMouseItemGone();
@@ -466,10 +451,8 @@ void ListArea::RemoveItem(ListItem* item)
 // Removes the items from start up to end (clamped to the list) and re-lays the list out
 void ListArea::DeleteRange(int start,int end)
 {
-    if(end<0 || (unsigned int)end>this->mItems.size()) end=this->mItems.size();
-    if(start<0 || end<=start) return;
-    int amount=end-start;
-    if((unsigned int)(start+amount)>this->mItems.size()) amount=this->mItems.size()-start;
+    int amount=0;
+    if(!ee_won_gui_list_delete_range(start,end,this->mItems.size(),&start,&amount)) return;
     for(int i=0;i<amount;++i) this->DeleteItemPrv(start+i);
     if(this->mSelItemItr>=start) this->mSelItemItr-=amount;
     std::vector<SmartPtr<ListItem> >::iterator first=this->mItems.begin()+start;
@@ -560,34 +543,16 @@ bool ListArea::KeyDown(int theKey)
 
 
 	int y = this->mKeyItem->mTop;
-	int height = this->mKeyItem->mHeight+1;
 	int anItemPos = -1;
+	bool up = false;
 
-	switch(theKey)
-	{
-		case VK_RIGHT: this->mHorzOffset+=10; break;
-		case VK_LEFT: this->mHorzOffset-=10; break;
-		case VK_DOWN: anItemPos = y+height; break;
-		case VK_UP: anItemPos = y-1; break;
-		case VK_NEXT: anItemPos = y+this->mScrollArea.height; break;
-		case VK_PRIOR: anItemPos = y+height-this->mScrollArea.height; break;
-		default: return false;
-	}
-
-	bool up = anItemPos<y;
-	if(this->ListFlagSet(0x800))
-	{
-		if(anItemPos<0)
-		{
-			anItemPos = this->mTotalHeight;
-			up = true;
-		}
-		else if(anItemPos>=this->mTotalHeight)
-		{
-			anItemPos = 0;
-			up = false;
-		}
-	}
+	if(theKey==VK_RIGHT) this->mHorzOffset+=10;
+	else if(theKey==VK_LEFT) this->mHorzOffset-=10;
+	// left and right look for no line (-1), unless the selection wraps: then -1 wraps to the end as the original's
+	// did
+	if(!ee_won_gui_list_key_target(theKey,y,this->mKeyItem->mHeight,this->mScrollArea.height,this->mTotalHeight,
+		this->ListFlagSet(0x800),&anItemPos,&up))
+		return false;
 
 	if(anItemPos!=-1)
 	{
@@ -612,10 +577,8 @@ bool ListArea::KeyDown(int theKey)
 			}
 
 			this->mKeyItem = anItem;
-			if(anItem->mTop+anItem->mHeight > this->mVertOffset+this->mScrollArea.height)
-				this->mVertOffset = anItem->mTop+anItem->mHeight-this->mScrollArea.height + this->mExtraHeight;
-			if(anItem->mTop < this->mVertOffset)
-				this->mVertOffset = anItem->mTop;
+			this->mVertOffset = ee_won_gui_list_key_scroll(anItem->mTop,anItem->mHeight,this->mVertOffset,
+				this->mScrollArea.height,this->mExtraHeight);
 		}
 	}
 
@@ -654,10 +617,9 @@ void ListArea::MouseMove(int x,int y) {
     if(!this->ListFlagSet(0x2000))
         return;
     bool show=false;
-    if(this->mMouseItem!=NULL && this->mMouseItem->mWidth>this->mScrollArea.width) {
-        int half=this->mMouseItem->mHeight>>1;
-        if(this->mMouseItem->mTop+half>this->mVertOffset && this->mMouseItem->mTop+half<this->mVertOffset+this->mScrollArea.height) show=true;
-    }
+    if(this->mMouseItem!=NULL)
+        show=ee_won_gui_list_item_tip(this->mMouseItem->mWidth,this->mMouseItem->mHeight,this->mMouseItem->mTop,
+            this->mScrollArea.width,this->mVertOffset,this->mScrollArea.height);
     if(show) {
         if(this->mItemToolTip.get()==NULL) this->mItemToolTip=new ListAreaToolTip(this);
         this->mItemToolTip->DoTip(this->mMouseItem);

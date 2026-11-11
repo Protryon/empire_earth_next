@@ -4358,6 +4358,12 @@ struct EeWonFlowItem {
   int32_t height;
 };
 
+/// An item's top (`i` below the count), read from the C++ list.
+using EeWonTopOf = int32_t(*)(const void *ctx, size_t i);
+
+/// Whether item `i` (below the count) is selectable.
+using EeWonSelectableOf = bool(*)(const void *ctx, size_t i);
+
 /// `LayoutThumb`'s answer: `hidden` (everything fits: the thumb is hidden and nothing else changes), else the
 /// thumb's size and, when `set_pos`, its new top.
 struct EeWonThumbOut {
@@ -11525,6 +11531,122 @@ void ee_won_gui_vertical_flow(const EeWonFlowItem *items,
                               int32_t left,
                               int32_t top,
                               int32_t *out);
+
+/// `find_line_at` over `count` items whose tops `top_of(ctx, i)` gives.
+size_t ee_won_gui_list_line_at(size_t count, int32_t y, EeWonTopOf top_of, const void *ctx);
+
+bool ee_won_gui_list_covers(int32_t top, int32_t height, int32_t y);
+
+bool ee_won_gui_list_visible(int32_t top,
+                             int32_t height,
+                             int32_t offset,
+                             int32_t view_height,
+                             bool partial);
+
+/// `ensure_visible`: the new offset, or `offset` when the view stays.
+int32_t ee_won_gui_list_ensure_visible(int32_t top,
+                                       int32_t height,
+                                       int32_t offset,
+                                       int32_t view_height);
+
+/// `stack` over `count` items; the totals into the outs.
+///
+/// # Safety
+/// `heights` and `widths` hold, and `tops` has room for, `count` ints (or all are NULL with 0); the outs are
+/// writable.
+void ee_won_gui_list_stack(const int32_t *heights,
+                           const int32_t *widths,
+                           int32_t *tops,
+                           size_t count,
+                           int32_t *out_height,
+                           int32_t *out_width);
+
+int32_t ee_won_gui_list_full_line_extra(int32_t total_height,
+                                        int32_t view_height,
+                                        int32_t item_top,
+                                        int32_t item_height);
+
+/// `find_selectable`: the index, or -1.
+int64_t ee_won_gui_list_find_selectable(size_t count,
+                                        int32_t start,
+                                        bool up,
+                                        bool opposite,
+                                        bool wrap,
+                                        EeWonSelectableOf selectable_of,
+                                        const void *ctx);
+
+/// `select_range`: true with the bounds and step in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_list_select_range(int32_t start,
+                                  int32_t end,
+                                  int32_t size,
+                                  int32_t *out_start,
+                                  int32_t *out_end,
+                                  int32_t *out_step);
+
+/// `key_target`: true with the line and direction in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_list_key_target(int32_t key,
+                                int32_t top,
+                                int32_t height,
+                                int32_t view_height,
+                                int32_t total_height,
+                                bool wrap,
+                                int32_t *out_y,
+                                bool *out_up);
+
+int32_t ee_won_gui_list_key_scroll(int32_t top,
+                                   int32_t height,
+                                   int32_t offset,
+                                   int32_t view_height,
+                                   int32_t extra_height);
+
+int32_t ee_won_gui_list_insert_scroll(bool at_end,
+                                      bool fixed,
+                                      bool on_bottom,
+                                      int32_t top_line,
+                                      int32_t position,
+                                      int32_t total_height,
+                                      int32_t view_height,
+                                      int32_t offset,
+                                      int32_t height);
+
+/// `batch_top`; `has_prev` false for the first item.
+int32_t ee_won_gui_list_batch_top(bool has_prev, int32_t prev_top, int32_t next_top);
+
+int32_t ee_won_gui_list_refresh_place(int32_t position, int32_t insert, size_t size);
+
+int32_t ee_won_gui_list_refresh_scroll(bool fixed,
+                                       bool on_bottom,
+                                       int32_t top,
+                                       int32_t offset,
+                                       int32_t total_height,
+                                       int32_t view_height,
+                                       int32_t height,
+                                       int32_t old_height);
+
+int32_t ee_won_gui_list_delete_scroll(bool fixed, int32_t top, int32_t offset, int32_t height);
+
+/// `delete_range`: true with (start, amount) in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_list_delete_range(int32_t start,
+                                  int32_t end,
+                                  size_t size,
+                                  int32_t *out_start,
+                                  int32_t *out_amount);
+
+bool ee_won_gui_list_item_tip(int32_t width,
+                              int32_t height,
+                              int32_t top,
+                              int32_t view_width,
+                              int32_t offset,
+                              int32_t view_height);
 
 EeWonThumbOut ee_won_gui_thumb_layout(EeWonThumbIn t);
 
