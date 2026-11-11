@@ -4608,6 +4608,7 @@ stretched, full screen), `DrawTiledBackground`, `UIBackground::Open`/`RelayoutBa
   every form's open and close; the hot keys on every keyboard update of a form (the game's shortcuts, Tab between
   controls); the font table when the UI database loads and every scaled control; the music at every menu change and
   the volume slider; the IME only with an IME; the backgrounds on every redraw of a menu or panel.
+
 ## R5b.4, second round: the engine messages and the players' inputs in the codec, the message kind, the object kind (ee_netmsg engine.rs, ee_units kinds.rs; branch rust-r5b4-core, 2026-11-10)
 
 **The engine messages.** `rust/crates/ee_netmsg/src/engine.rs` holds the wire layout of `NEMessage.cpp`'s 28
@@ -4790,3 +4791,47 @@ servers reach (AuthContext's login data, the directory replies), each captured o
 - Still C++ of WON: peer auth, AuthContext's sessions and certificate flow, GetCertOp, the other services' requests
   and replies (directory requests, routing, DB, HTTP, FTP, misc, the server connection), ConfigObject /
   ConfigValue (the object model on virtual hooks), WONFile, RegKey, the lobby logic and WONGUI.
+
+## R5b.4, third round: the messages' Execute decisions, the selection id check and the resources (ee_netmsg execute.rs; branch rust-r5b4-core, 2026-11-10)
+
+Leaf 4's (a) and (b) (RUST_PLAN R5b.4, "Leaf 4"): the decisions of the `Execute` bodies over plain values are
+`rust/crates/ee_netmsg/src/execute.rs`; the C++ reads the values, asks (ee/EEMessageExecute.h), and applies the
+answer, keeping the objects, the locks and every world call.
+
+- **The selection id check** (`EEMessage::ExecuteSelectionMessage`, `ExecuteMessage`): whether a client marks the
+  local selection as executing (`gWorld.mExecutingLocalSelection`), whether the local sender's selected group copies
+  the active group after `Execute` (asked after it, as the original compared after it), whether a command runs
+  (its id is the sender's last; Game Restarting 0x91 always; Migration Slot Info 0x7c on a client), and the
+  selection toggles' passes (twice while a selection is replayed: `EEMAddUnitToSelectedGroup`,
+  `EEMAddAndRemoveUnitsFromSelectedGroup`). The two entry points now take the server's or the client's lock, ids
+  and last ids once, and run one body instead of two copies.
+- **The resources:** `EEMAddRemoveResources`' take test (a positive amount up to the have, compared unsigned on the
+  have's low 32 bits, as on Windows), the market price (`EEGetTradePrice`'s curve: EEWheel.cpp keeps the world
+  table's rates and the trade balance, the formula and its two words moved), `EEMExchangeResources`' step (sell 100
+  or all that is left at the price; buy 100 or what the gold pays for, nothing when that rounds to 0), `EEMPayTribute`'s
+  two orders (tributes food, gold, iron, stone, wood; the chat line food, wood, stone, gold, iron) and whose line it
+  is, `EEMDisband`'s refund (hit points over the maximum times 0.75, f32 in that order).
+- **The gate: NMDC**, a new capture record (ee/EEMessageCapture.h): every decision call in game (its kind, inputs
+  and outputs as 64-bit values, a float's bits), the decisions' tables over edge values once per game (the command
+  check over all 256 types, both roles and edge ids; the take test over amounts and haves past 32 bits; the price
+  over rates 0..1000 and negative and trade balances of +-1,000,000; the exchange steps over prices and haves; every
+  tribute subset; the refund over edge hit points, a maximum of 0), and every five game minutes the real players'
+  prices for every resource both ways through `EEGetTradePrice`, the exchange steps and take tests from what they
+  have, and the refund of every unit (about 14,400 records per oracle game). Its goldens came from the C++ decisions
+  (the bodies factored into C++ functions of the same names and signatures as the Rust ones, the oracle identical),
+  recorded as pure insertions into the four profiles' golden files; the Rust decisions give them.
+- **What the games do not reach.** Only a LAN game runs the client side of the check (the client's lock and ids,
+  `mExecutingLocalSelection`, the 0x7c exception): a single-player game is the server. The selection toggles'
+  second pass and the copy into the selected group run when the local human selects (`EEServer::PrepareLocalInput`
+  executes the selection at once with `mIsExecutingSelection` set, and the physics again later): a played game or a
+  tour reaches them, EE-SIM's idle human never. The captures cover these only through the tables.
+- **Leaf 4 (c), mapped, not moved.** 15 bodies split the selection by category and give goals (`EEActiveGroup::Fill`
+  for categories 1..5, then `SpreadAround*`, one `gPhysics->GetRandom` draw for the acknowledging unit, `new EEUG*`,
+  `Plan`, `EESendGroupCommand`): AddPatrolPoint, AttackGround, AttackUnit, BuildUnit, BuildWall, CastCalamity,
+  DropoffResource, Explore, GatherResource, HealUnit, PathTo, Patrol, RepairUnit, SmartFarmers, UnloadTransport; 18
+  construct goals, 24 look units up by id. Their decisions are reads of the units' plain state (category, hit
+  points, built, type, tile, goal kind) interleaved with world calls that change it (a unit removed from a group by
+  `Fill`, a goal replaced by `ClearGoal`/`SetGoal`), so moving them first needs the unit store (leaf 5): each unit's
+  plain state readable by id from Rust without a call into C++, the active group as an id list, and goal creation
+  as a host call returning a handle. The box selection's pick (`EEPlayer::SelectUnits`: built, not a path point, not
+  already in the group) is the first candidate once the store exists. 22 bodies call the UI and stay C++ until R6.

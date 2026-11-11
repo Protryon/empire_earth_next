@@ -826,6 +826,7 @@ void AfterTick()
         EEFormationCaptureSweep();
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+        EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
         static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
         if (!sMessageSweepDone) {
             sMessageSweepDone = true;

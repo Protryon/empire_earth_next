@@ -13,6 +13,9 @@
 // NMNE: the engine messages (NEMessage.cpp, types 0x20..0x3c) over edge payloads, built by NEMessage::BuildNEMessage:
 //       the bytes in, the export (ExportSize, the bytes), the members as Import filled them; the two communications
 //       ticks with nested players' inputs (none, game and engine messages, unknown types, a tick in a tick, 255).
+// NMDC: the Execute decisions (ee/EEMessageExecute.h): every call in game (its kind, inputs and outputs), the
+//       decisions' tables over edge values (once), and every five game minutes the real players' market
+//       prices, exchange steps and take tests and the disband refund of every unit.
 #include <windows.h>
 #include "platform/PlatSim.h"
 #include <string.h>
@@ -121,6 +124,8 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEMessageCapture.h"
+#include "ee/EEMessageExecute.h"
+#include <initializer_list>
 
 static bool sSweeping = false;
 
@@ -1617,4 +1622,147 @@ void EEMessageCaptureSweep()
         Build(theData);
     }
     EngineSweep();
+}
+
+// ---- NMDC: the Execute decisions (ee/EEMessageExecute.h) ----
+long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);   // EEWheel.cpp
+
+void EEMessageCaptureDecision(unsigned int inKind, const long long* inValues, unsigned int inCount)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(0x43444d4eu);   // NMDC
+    theRecord.U32(inKind);
+    theRecord.U32(inCount);
+    theRecord.Bytes(inValues, inCount * 8);
+    theRecord.Commit();
+}
+
+static void Decision(unsigned int inKind, std::initializer_list<long long> inValues)
+{
+    std::vector<long long> theValues(inValues);
+    EEMessageCaptureDecision(inKind, &theValues[0], (unsigned int)theValues.size());
+}
+
+static long long FloatBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+static void Exchange(uint8_t inSell, long long inPrice, long long inHave)
+{
+    EeNetMsgExchangeStep s = ee_netmsg_exchange_step(inSell, inPrice, inHave);
+    Decision(kDecisionExchangeStep, {inSell, inPrice, inHave, s.apply, s.cost, s.amount});
+}
+
+static void AddRemove(uint8_t inAdd, uint32_t inAmount, long long inHave)
+{
+    Decision(kDecisionAddRemove, {inAdd, inAmount, inHave, ee_netmsg_add_remove(inAdd, inAmount, inHave)});
+}
+
+static void Disband(long long inHitPoints, long long inMax, uint8_t inCan)
+{
+    float theFraction = -1.0f;
+    uint8_t theResult = ee_netmsg_disband_refund(inHitPoints, inMax, inCan, &theFraction);
+    Decision(kDecisionDisbandRefund, {inHitPoints, inMax, inCan, theResult, theResult ? FloatBits(theFraction) : 0});
+}
+
+// the decisions over plain edge values: their whole tables where they are small
+static void DecisionTables()
+{
+    const uint8_t kIDs[] = {0, 1, 2, 0x7f, 0x80, 0xfe, 0xff};
+    const uint8_t kLastIDs[] = {0, 1, 0xff};
+    for (uint8_t s = 0; s < 2; s++)
+        for (uint8_t l = 0; l < 2; l++)
+            Decision(kDecisionSelectionMarksLocal, {s, l, ee_netmsg_selection_marks_local(s, l)});
+    for (uint8_t l = 0; l < 2; l++)
+        for (uint8_t a : kIDs)
+            for (uint8_t b : kIDs)
+                Decision(kDecisionSelectionCopies, {l, a, b, ee_netmsg_selection_copies(l, a, b)});
+    for (uint8_t s = 0; s < 2; s++)
+        for (unsigned int t = 0; t < 256; t++)
+            for (uint8_t a : kIDs)
+                for (uint8_t b : kLastIDs)
+                    Decision(kDecisionCommandRuns, {s, t, a, b, ee_netmsg_command_runs(s, (uint8_t)t, a, b)});
+    for (uint8_t e = 0; e < 2; e++)
+        Decision(kDecisionSelectionPasses, {e, ee_netmsg_selection_passes(e)});
+    const uint32_t kAmounts[] = {0, 1, 2, 99, 100, 0x7fffffffu, 0x80000000u, 0xffffffffu};
+    const long long kHaves[] = {-1, 0, 1, 99, 100, 0x7fffffffLL, -0x80000000LL, 0x100000000LL, 0x1ffffffffLL};
+    for (uint8_t a = 0; a < 2; a++)
+        for (uint32_t m : kAmounts)
+            for (long long h : kHaves)
+                AddRemove(a, m, h);
+    const float kRates[] = {0.0f, 0.25f, 0.5f, 0.666666687f, 1.0f, 1.5f, 2.0f, 3.0f, 10.0f, 1000.0f, -1.0f};
+    const long long kTrades[] = {-1000000, -100000, -1000, -101, -100, -1, 0, 1, 100, 101, 1000, 7500, 100000, 1000000};
+    for (float r : kRates)
+        for (long long t : kTrades)
+            for (uint8_t b = 0; b < 2; b++)
+                Decision(kDecisionTradePrice, {FloatBits(r), t, b, ee_netmsg_trade_price(r, t, b)});
+    const long long kPrices[] = {1, 2, 3, 50, 99, 100, 101, 333, 999, 1000};
+    const long long kExchangeHaves[] = {-5000, -50, -1, 0, 1, 2, 3, 49, 50, 99, 100, 101, 333, 999, 1000, 1001, 5000};
+    for (uint8_t s = 0; s < 2; s++)
+        for (long long p : kPrices)
+            for (long long h : kExchangeHaves)
+                Exchange(s, p, h);
+    for (unsigned int m = 0; m < 32; m++)
+        for (uint8_t t = 0; t < 2; t++) {
+            uint32_t theAmounts[7] = {0, 0, 0, 0, 0, 0, 0};
+            for (int i = 0; i < 5; i++)
+                if (m & (1u << i))
+                    theAmounts[2 + i] = i == 4 ? 0xffffffffu : 1 + i * 37;
+            uint8_t theOrder[5] = {0, 0, 0, 0, 0};
+            uint32_t n = ee_netmsg_tribute_order(theAmounts, t, theOrder);
+            Decision(kDecisionTributeOrder, {theAmounts[2], theAmounts[3], theAmounts[4], theAmounts[5], theAmounts[6], t, n,
+                                             theOrder[0], theOrder[1], theOrder[2], theOrder[3], theOrder[4]});
+        }
+    for (uint8_t f = 0; f < 2; f++)
+        for (uint8_t t = 0; t < 2; t++)
+            Decision(kDecisionTributeViewer, {f, t, ee_netmsg_tribute_viewer(f, t)});
+    const long long kHitPoints[] = {-1, 0, 1, 3, 50, 99, 100, 250, 1001};
+    const long long kMaxHitPoints[] = {0, 1, 3, 100, 250, 7777};
+    for (long long h : kHitPoints)
+        for (long long m : kMaxHitPoints)
+            for (uint8_t c = 0; c < 2; c++)
+                Disband(h, m, c);
+}
+
+void EEMessageCaptureDecisionSweep()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    static bool sTablesDone = false;
+    if (!sTablesDone) {
+        sTablesDone = true;
+        DecisionTables();
+    }
+    // the real players: every resource's market price both ways (EEGetTradePrice, the world table's rates), the
+    // exchange's steps and the take's test from what they have; the disband refund of every unit
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        for (long r = kResourceFood; r <= kResourceIron; r++) {
+            for (uint8_t b = 0; b < 2; b++) {
+                long thePrice = EEGetTradePrice(thePlayer, r, b);
+                Decision(kDecisionTradePrice, {(long long)p, r, b, (long long)thePlayer->mResourceTrade[r - 2], thePrice});
+                long theHave = thePlayer->mResourceCaps[b ? r : kResourceGold];
+                Exchange(b, thePrice, theHave);
+                Exchange(b, thePrice, theHave / 3);
+                Exchange(b, thePrice, thePrice - 1);
+            }
+            long theHave = thePlayer->mResourceCaps[r];
+            AddRemove(0, 1, theHave);
+            AddRemove(0, (uint32_t)theHave, theHave);
+            AddRemove(0, (uint32_t)theHave + 1, theHave);
+            AddRemove(0, 100, theHave);
+        }
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex == NULL || theComplex->mStats == NULL || theComplex->mUnitClass == NULL)
+                continue;
+            Disband(theComplex->mHitPoints, theComplex->mStats->mMaxHitPoints, theComplex->mUnitClass->mCanDisband);
+        }
+    }
 }
