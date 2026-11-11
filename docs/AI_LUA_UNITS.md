@@ -966,6 +966,10 @@ from data, so that a script can make its decisions with the same numbers:
   `ai.forest_point(x, y, r, pick, seed)` -> x, y, n: a random point of one of the continent manager's forests on the
   land mass at (x, y) whose hull holds the tile or comes within r tiles (the (pick mod n)-th of the n found; the
   classic defence ladder's forest, AssignSubGroupTask).
+  `ai.hill_point(x, y, r, pick, seed)` -> x, y, n: the same over the continent manager's hills (EEAIHill).
+  `ai.choke_point(x, y, nearest, pick, seed)` -> x, y, n: a random point of one of the choke points (EEAIChokePoint)
+  of the land mass at (x, y) - of the `nearest` ones to the tile when nearest > 0, else of all n (the defence ladder's
+  choke point).
 - **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
   only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
   `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.

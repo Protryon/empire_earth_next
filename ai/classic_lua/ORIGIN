@@ -187,11 +187,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 (defensive_unit_cap), ComputeTownThreat (the Hard 55-tile range; the armies inside the hull twice,
                 outside by distance; the own armies' cover; over the own land strength), GetWorstThreats,
                 FindThreatenedTown, AssignSubGroupTask (a forest whose hull comes within 35 tiles 80% for foot soldiers (a random point of it:
-                ai.forest_point), a threatened
+                ai.forest_point), a hill within 35 tiles 35% (ai.hill_point), a choke point of the land by guard_chokepoint_percentage (ai.choke_point), a threatened
                 town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
-                the hills and choke points of the ladder (no query), AidAllies, CheckRaids / Retaliate, BuildUp
+                the adjacent continents' step of the ladder, AidAllies, CheckRaids / Retaliate, BuildUp
                 (deathmatch), CheckSpace, CheckSpecials. CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
                 kind 5; its ChooseUnitsToKill and the carrier fighters: NOT STARTED).
@@ -228,6 +228,6 @@ influence, epoch, pop, domain), the own units' `target`, `gathers`, `waiting` an
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
-Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests beyond ai.forest_point,
-choke points and hills; the epoch's
+Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's areas beyond ai.forest_point,
+ai.hill_point and ai.choke_point; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.
