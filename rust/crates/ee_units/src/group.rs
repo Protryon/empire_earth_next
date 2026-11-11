@@ -13,8 +13,8 @@
 //! such unit it would take (PORT_LEARNINGS "R5b.4, fifth round").
 
 use crate::host::{
-    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_EXPLORE, EE_GOAL_CTOR_PATROL_ROUTE,
-    EE_UNIT_ID_NONE,
+    EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_EXPLORE, EE_GOAL_CTOR_GATHER,
+    EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -215,6 +215,93 @@ pub fn patrol(host: &mut impl Host, player: HostRef, selection: HostRef, target_
             let index = host.random(0, ids.len() as i32 - 1);
             host.play_acknowledgement(player, group, index);
         }
+    }
+}
+
+/// `kActionGatherResource` (ee/EEUnitAction.h)
+pub const EE_ACTION_GATHER_RESOURCE: i32 = 4004;
+
+/// `gWorld.GetUnit(id)` over the store: the unit when its record is in the list of the player whose index is the
+/// id's top byte (`RTSWorld::GetUnit` -> `RTSPlayer::GetUnit`).
+pub fn world_unit(host: &mut impl Host, id: u32) -> Option<EeUnitRecord> {
+    host.unit(id).filter(|unit| unit.owner == id >> 24)
+}
+
+/// `EEMGatherResource::Execute`: with a selection and a target that has resources left (`mResourceAmount > 0`), one
+/// active group of the whole selection (slot 0, the selection sorted first) goes to the player's pending groups,
+/// takes the queued flag and spreads around the resource; when it kept units it gets a Gather goal
+/// (`new EEUGGather(target, NULL, true)`, queued as the message says) with the action Gather Resource, plans, shows
+/// the target marker on the resource (0xba) and one unit, drawn after the plan, acknowledges.
+pub fn gather(host: &mut impl Host, player: HostRef, selection: HostRef, target_id: u32, queued: bool) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let Some(target) = world_unit(host, target_id) else { return };
+    if ids.is_empty() || target.resource_amount <= 0 {
+        return;
+    }
+    let group = host.active_group_new(player);
+    host.group_fill(group, selection, 0, 0);
+    host.pending_push(player, group);
+    host.group_set_queued(group, queued);
+    host.group_spread_around_resource(group, target_id);
+    host.group_ids(group, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    host.group_clear_goal(group);
+    let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_GATHER);
+    spec.unit_a = target_id;
+    spec.flag_a = 1;
+    if let Some(goal) = host.goal_new(&spec) {
+        host.group_set_goal(group, goal, queued);
+    }
+    host.group_set_action(group, EE_ACTION_GATHER_RESOURCE);
+    host.group_plan(group);
+    host.send_group_command(group, target_id, player, EE_GROUP_COMMAND_TARGET, 0);
+    host.group_ids(group, &mut ids);
+    if !ids.is_empty() {
+        let index = host.random(0, ids.len() as i32 - 1);
+        host.play_acknowledgement(player, group, index);
+    }
+}
+
+/// `EEMRepairUnit::Execute`: with a selection and a target, one active group of the whole selection (slot 0, sorted
+/// first) goes to the player's pending groups and spreads around the target's tile; queued, each of its units adds
+/// the target as a build target (and marks the build shift-queued); else each orders the repair (`OrderRepair`, the
+/// idle action, the class's `ActionChanged`), and once all have, each is added back to the group (`AddMember(unit,
+/// true)`). Then one unit, drawn, acknowledges.
+pub fn repair(host: &mut impl Host, player: HostRef, selection: HostRef, target_id: u32, queued: bool) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let Some(target) = world_unit(host, target_id) else { return };
+    if ids.is_empty() {
+        return;
+    }
+    let group = host.active_group_new(player);
+    host.group_fill(group, selection, 0, 0);
+    host.pending_push(player, group);
+    host.group_spread_around_tile(group, target.tile_x, target.tile_y);
+    host.group_ids(group, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    let units = ids.clone();
+    if queued {
+        for &unit in &units {
+            host.unit_add_build_target(unit, target_id);
+        }
+    } else {
+        for &unit in &units {
+            host.unit_order_repair(unit, target_id);
+        }
+        for &unit in &units {
+            host.group_add_member(group, unit);
+        }
+    }
+    host.group_ids(group, &mut ids);
+    if !ids.is_empty() {
+        let index = host.random(0, ids.len() as i32 - 1);
+        host.play_acknowledgement(player, group, index);
     }
 }
 
@@ -514,5 +601,108 @@ mod tests {
         host.units.insert(0x0100_0002, complex(0x0100_0002, 3));
         patrol(&mut host, player, selection, 0x0100_0002);
         assert_eq!(host.calls, vec![Call::ObjectType(first), Call::AddUnitTile(first, 0x0100_0002, player)]);
+    }
+
+    fn resource(id: u32, amount: i64) -> EeUnitRecord {
+        EeUnitRecord { resource_amount: amount, tile_x: 40, tile_y: 41, ..complex(id, 7) }
+    }
+
+    /// `EEMGatherResource::Execute`'s calls: one group of the whole selection, the queued flag before the spread, the
+    /// goal queued as the message says, the marker on the resource, the draw after the plan
+    #[test]
+    fn gather_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0000_0042;
+        for queued in [false, true] {
+            let mut host = MockHost { specs: true, ..Default::default() };
+            host.units.insert(target, resource(target, 300));
+            host.groups.insert(0x600, vec![0x0100_0001, 0x0100_0002]);
+            host.fills.insert(0, vec![0x0100_0001, 0x0100_0002]);
+            host.draws = vec![1];
+            gather(&mut host, player, selection, target, queued);
+            let group = r(0x1001);
+            assert_eq!(
+                host.calls,
+                vec![
+                    Call::NewGroup(player, group),
+                    Call::Fill(group, selection, 0, 0),
+                    Call::Pending(player, group),
+                    Call::Queued(group, queued),
+                    Call::SpreadResource(group, target),
+                    Call::ClearGoal(group),
+                    Call::GoalNew(EE_GOAL_CTOR_GATHER, 1),
+                    Call::Spec(EE_GOAL_CTOR_GATHER, target, EE_UNIT_ID_NONE, [0; 3], 1, 0),
+                    Call::SetGoal(group, 6, queued),
+                    Call::SetAction(group, EE_ACTION_GATHER_RESOURCE),
+                    Call::Plan(group),
+                    Call::Send(group, target, player, EE_GROUP_COMMAND_TARGET, 0),
+                    Call::Random(0, 1),
+                    Call::Acknowledge(player, group, 1),
+                ]
+            );
+            assert_eq!(host.live, 0);
+        }
+    }
+
+    #[test]
+    fn gather_needs_a_selection_and_a_resource_left() {
+        let (player, selection) = (r(0x500), r(0x600));
+        for (amount, selected, owner) in [(0, true, 0), (-1, true, 0), (5, false, 0), (5, true, 3)] {
+            let mut host = MockHost::default();
+            host.units.insert(0x42, EeUnitRecord { owner, ..resource(0x42, amount) });
+            if selected {
+                host.groups.insert(0x600, vec![0x0100_0001]);
+            }
+            host.fills.insert(0, vec![0x0100_0001]);
+            gather(&mut host, player, selection, 0x42, false);
+            assert!(host.calls.is_empty(), "{amount} {selected} {owner}");
+        }
+        // the spread left no unit: pending, no goal
+        let mut host = MockHost { mobile: vec![0x0100_0009], ..Default::default() };
+        host.units.insert(0x42, resource(0x42, 5));
+        host.groups.insert(0x600, vec![0x0100_0001]);
+        host.fills.insert(0, vec![0x0100_0001]);
+        gather(&mut host, player, selection, 0x42, false);
+        assert!(matches!(host.calls.last(), Some(Call::SpreadResource(..))));
+    }
+
+    /// `EEMRepairUnit::Execute`'s calls: the spread around the target's tile; queued: build targets only; else every
+    /// unit orders the repair, then every one is added back; the draw last
+    #[test]
+    fn repair_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let target = 0x0100_0007;
+        let units = [0x0100_0001, 0x0100_0002];
+        for queued in [false, true] {
+            let mut host = MockHost::default();
+            host.units.insert(target, resource(target, 0));
+            host.groups.insert(0x600, units.to_vec());
+            host.fills.insert(0, units.to_vec());
+            repair(&mut host, player, selection, target, queued);
+            let group = r(0x1001);
+            let mut expected = vec![
+                Call::NewGroup(player, group),
+                Call::Fill(group, selection, 0, 0),
+                Call::Pending(player, group),
+                Call::SpreadTile(group, 40, 41),
+            ];
+            if queued {
+                expected.extend(units.iter().map(|&u| Call::AddBuildTarget(u, target)));
+            } else {
+                expected.extend(units.iter().map(|&u| Call::OrderRepair(u, target)));
+                expected.extend(units.iter().map(|&u| Call::AddMember(group, u)));
+            }
+            expected.extend([Call::Random(0, 1), Call::Acknowledge(player, group, 0)]);
+            assert_eq!(host.calls, expected);
+        }
+        // no target, no selection: nothing
+        let mut host = MockHost::default();
+        host.groups.insert(0x600, units.to_vec());
+        repair(&mut host, player, selection, 0x0100_0099, false);
+        assert!(host.calls.is_empty());
+        let mut host = MockHost::default();
+        host.units.insert(target, resource(target, 0));
+        repair(&mut host, player, selection, target, false);
+        assert!(host.calls.is_empty());
     }
 }

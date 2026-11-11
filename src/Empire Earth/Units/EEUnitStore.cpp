@@ -99,6 +99,12 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
         }
         break;
     }
+    case kUnitFieldResourceAmount: {
+        EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mResourceAmount));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_RESOURCE_AMOUNT, (int64_t)theUnit->mResourceAmount.Get());
+        break;
+    }
     case kUnitFieldComplex: {
         EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mComplexUnit));
         if (theUnit->mInUnitStore)
@@ -152,6 +158,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     if (inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT) {
         EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
         outRecord.hit_points = (int64_t)theUnit->mHitPoints.Get();
+        outRecord.resource_amount = (int64_t)theUnit->mResourceAmount.Get();
         outRecord.complex = (uint8_t)ComplexOf(theUnit);
         EEUnitClass* theClass = theUnit->mUnitClass.Get();
         if (theClass != NULL) {

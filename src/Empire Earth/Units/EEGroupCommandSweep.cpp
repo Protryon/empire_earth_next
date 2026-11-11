@@ -159,16 +159,83 @@ void OriginalPatrol(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID)
     }
 }
 
+// EEMGatherResource::Execute (0x4bf0a3) as it was, each world call through the host, the target read on the object
+void OriginalGather(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, bool inQueued)
+{
+    uint32_t theUnit = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;   // theGroup->GetFirstUnit()
+    EEUnit* theTarget = gWorld.GetUnit((unsigned long)inTargetID);
+    if (theTarget && theUnit != kNone && theTarget->mResourceAmount > 0) {
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
+        ee_units_host_pending_push(thePlayer, theActiveGroup);
+        ee_units_host_group_set_queued(theActiveGroup, inQueued);   // theActiveGroup->mIsQueued = this->mIsQueued
+        ee_units_host_group_spread_around_resource(theActiveGroup, IDOf(theTarget));
+        if (Count(theActiveGroup)) {
+            ee_units_host_group_clear_goal(theActiveGroup);
+            EeGoalSpec theSpec;   // new EEUGGather(theTarget, NULL, true)
+            memset(&theSpec, 0, sizeof(theSpec));
+            theSpec.ctor = EE_GOAL_CTOR_GATHER;
+            theSpec.unit_a = IDOf(theTarget);
+            theSpec.unit_b = kNone;
+            theSpec.flag_a = 1;
+            ee_units_host_group_set_goal(theActiveGroup, ee_units_host_goal_new(&theSpec), inQueued);
+            ee_units_host_group_set_action(theActiveGroup, kActionGatherResource);
+            ee_units_host_group_plan(theActiveGroup);
+            ee_units_host_send_group_command(theActiveGroup, IDOf(theTarget), thePlayer, 0xba, 0);
+            if (Count(theActiveGroup) > 0)
+                ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                   ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+        }
+    }
+}
+
+// EEMRepairUnit::Execute (0x4c3e31) as it was, each world call through the host, the target read on the object
+void OriginalRepair(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, bool inQueued)
+{
+    std::vector<uint32_t> theUnits;
+    std::vector<uint32_t> theRepairers;
+    EEUnit* theTarget = gWorld.GetUnit((unsigned long)inTargetID);
+    if (Count(theGroup) > 0 && theTarget) {   // theGroup->GetFirstUnit() && theTarget
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
+        ee_units_host_pending_push(thePlayer, theActiveGroup);
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theTarget->mTileX.Get(), (int64_t)theTarget->mTileY.Get());
+        if (Count(theActiveGroup) > 0) {
+            unsigned long i;
+            for (i = 0; i < Count(theActiveGroup); i++)
+                theUnits.push_back(UnitAt(theActiveGroup, (long)i));
+            for (std::vector<uint32_t>::iterator it = theUnits.begin(); it != theUnits.end();) {
+                if (inQueued) {
+                    ee_units_host_unit_add_build_target(*it, IDOf(theTarget));
+                    ++it;
+                } else {
+                    ee_units_host_unit_order_repair(*it, IDOf(theTarget));
+                    theRepairers.push_back(*it);
+                    it = theUnits.erase(it);
+                }
+            }
+            for (i = 0; i < theRepairers.size(); i++)
+                ee_units_host_group_add_member(theActiveGroup, theRepairers[i]);
+            if (Count(theActiveGroup) > 0)
+                ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                   ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+        }
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
-    kSweepPatrol = 2
+    kSweepPatrol = 2,
+    kSweepGather = 3,
+    kSweepRepair = 4
 };
 
 struct SweepCase {
     unsigned long mBody;
     unsigned long mSelection;   // which selection (the record's)
     float mX, mY;               // Attack Ground's point
-    int32_t mTarget;            // Patrol's target id
+    int32_t mTarget;            // Patrol's, Gather's and Repair's target id
+    bool mQueued;               // Gather's and Repair's
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -185,6 +252,18 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
             ee_units_patrol(inPlayer, inSelection, inCase.mTarget);
         else
             OriginalPatrol(inPlayer, inSelection, inCase.mTarget);
+        break;
+    case kSweepGather:
+        if (inRust)
+            ee_units_gather(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
+        else
+            OriginalGather(inPlayer, inSelection, inCase.mTarget, inCase.mQueued);
+        break;
+    case kSweepRepair:
+        if (inRust)
+            ee_units_repair(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
+        else
+            OriginalRepair(inPlayer, inSelection, inCase.mTarget, inCase.mQueued);
         break;
     }
 }
@@ -205,6 +284,8 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     theRecord.F32(inCase.mX);
     theRecord.F32(inCase.mY);
     theRecord.I32(inCase.mTarget);
+    if (inCase.mBody >= kSweepGather)
+        theRecord.U32(inCase.mQueued ? 1u : 0u);
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -236,6 +317,16 @@ void EEGroupCommandSweep()
     // skip them (lle/U2DPolygon.h)
     EEGeomCaptureScope theScope;
     unsigned long theNumPlayers = gWorld.GetNumPlayers();
+    // the first unit of any list with resources left (a mine, a tree, a herd animal)
+    RTSUnit* theResource = NULL;
+    for (unsigned long p = 0; p < theNumPlayers && theResource == NULL; p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL && theResource == NULL; theUnit = theUnit->mNext)
+            if (theUnit->mObjectKind.mValue >= EE_OBJECT_UNIT && static_cast<EEUnit*>(theUnit)->mResourceAmount > 0)
+                theResource = theUnit;
+    }
     for (unsigned long p = 0; p < theNumPlayers; p++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(p);
         if (thePlayer == NULL)
@@ -274,6 +365,12 @@ void EEGroupCommandSweep()
         if (thePathPoint != NULL)
             theTargets.push_back((int32_t)IDOf(thePathPoint));
         theTargets.push_back(0x7e000001);
+        std::vector<int32_t> theGatherTargets;
+        if (theResource != NULL)
+            theGatherTargets.push_back((int32_t)IDOf(theResource));
+        if (!theOwn.empty())
+            theGatherTargets.push_back((int32_t)IDOf(theOwn[0]));
+        theGatherTargets.push_back(0x7e000001);
         for (unsigned long s = 0; s < 4; s++) {
             const std::vector<EEComplexUnit*>& theUnits = *theSelections[s];
             if (s == 3 && theUnits.empty())
@@ -281,6 +378,7 @@ void EEGroupCommandSweep()
             SweepCase theCase;
             theCase.mSelection = s;
             theCase.mTarget = 0;
+            theCase.mQueued = false;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -299,6 +397,23 @@ void EEGroupCommandSweep()
             for (size_t t = 0; t < theTargets.size(); t++) {
                 theCase.mTarget = theTargets[t];
                 RunCase(theCase, p, thePlayer, theUnits);
+            }
+            // Gather from the world's first resource with something left, from its first unit and from no unit;
+            // Repair its first unit, the next player's and no unit; each plain and queued
+            for (int q = 0; q < 2; q++) {
+                theCase.mQueued = q != 0;
+                theCase.mBody = kSweepGather;
+                for (size_t t = 0; t < theGatherTargets.size(); t++) {
+                    theCase.mTarget = theGatherTargets[t];
+                    RunCase(theCase, p, thePlayer, theUnits);
+                }
+                theCase.mBody = kSweepRepair;
+                for (size_t t = 1; t < theTargets.size(); t++) {
+                    if (thePathPoint != NULL && theTargets[t] == (int32_t)IDOf(thePathPoint))
+                        continue;
+                    theCase.mTarget = theTargets[t];
+                    RunCase(theCase, p, thePlayer, theUnits);
+                }
             }
         }
     }

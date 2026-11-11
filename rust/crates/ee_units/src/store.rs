@@ -37,6 +37,8 @@ pub const EE_UNIT_FIELD_COMMANDABLE: u32 = 12;
 pub const EE_UNIT_FIELD_FORMATION_SLOT: u32 = 13;
 /// `EEUnit::mUnitClass` too: the class's `mCanAttackGround`, fixed by its constructor (0: no class)
 pub const EE_UNIT_FIELD_CAN_ATTACK_GROUND: u32 = 14;
+/// `EEUnit::mResourceAmount` (what a resource has left)
+pub const EE_UNIT_FIELD_RESOURCE_AMOUNT: u32 = 15;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -85,6 +87,8 @@ pub struct EeUnitRecord {
     pub commandable: u8,
     /// `EEComplexUnit::mFormationSlot` (an `unsigned long`)
     pub formation_slot: i64,
+    /// `EEUnit::mResourceAmount`
+    pub resource_amount: i64,
 }
 
 impl EeUnitRecord {
@@ -105,6 +109,7 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_COMMANDABLE => self.commandable = value as u8,
             EE_UNIT_FIELD_FORMATION_SLOT => self.formation_slot = value,
             EE_UNIT_FIELD_CAN_ATTACK_GROUND => self.can_attack_ground = value as u8,
+            EE_UNIT_FIELD_RESOURCE_AMOUNT => self.resource_amount = value,
             _ => return false,
         }
         true
@@ -135,6 +140,7 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_COMMANDABLE, self.commandable == other.commandable),
             (EE_UNIT_FIELD_FORMATION_SLOT, self.formation_slot == other.formation_slot),
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, self.can_attack_ground == other.can_attack_ground),
+            (EE_UNIT_FIELD_RESOURCE_AMOUNT, self.resource_amount == other.resource_amount),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -306,6 +312,7 @@ mod tests {
             can_attack_ground: 1,
             commandable: 1,
             formation_slot: 3,
+            resource_amount: 0,
         }
     }
 
@@ -344,6 +351,7 @@ mod tests {
             (EE_UNIT_FIELD_COMMANDABLE, 0),
             (EE_UNIT_FIELD_FORMATION_SLOT, 0xffff_ffff),
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, 0),
+            (EE_UNIT_FIELD_RESOURCE_AMOUNT, 1500),
         ] {
             let before = r;
             assert!(r.set(f, v));

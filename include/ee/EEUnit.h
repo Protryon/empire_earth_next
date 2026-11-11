@@ -300,7 +300,7 @@ public:
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
     unsigned long mResourceType;            // +0x38 (saved)
     EEUnitStoreField<long, kUnitFieldHitPoints> mHitPoints;   // +0x3c (the unit store's) (> 0: alive) (provisional name)
-    long mResourceAmount;                   // +0x40 (saved)
+    EEUnitStoreField<long, kUnitFieldResourceAmount> mResourceAmount;   // +0x40 (saved) (the unit store's)
     unsigned char mHiddenFlags;             // +0x44 flags (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90)
 };
 

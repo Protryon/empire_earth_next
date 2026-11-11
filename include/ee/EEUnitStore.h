@@ -32,7 +32,8 @@ enum EEUnitStoreFieldID {
     kUnitFieldBuilt = 8,        // EEComplexUnit::mIsBuilt
     kUnitFieldGoal = 9,         // EEComplexUnit::mGoalState (the record's goal kind)
     kUnitFieldCommandable = 12, // EEComplexUnit::mIsCommandable
-    kUnitFieldFormationSlot = 13   // EEComplexUnit::mFormationSlot
+    kUnitFieldFormationSlot = 13,  // EEComplexUnit::mFormationSlot
+    kUnitFieldResourceAmount = 15  // EEUnit::mResourceAmount
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor

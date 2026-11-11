@@ -7,7 +7,8 @@
 // record of its arguments, a draw a counter), so a body's decisions over the live world can be recorded at any point
 // of a game without changing it. The reads (the map's height, the nearest town's patrol point, a route, a unit's
 // type) are the real ones; Fill takes the selection's units by EEFillMembers (the store), the keeps test the objects
-// as the originals did (KeepGroundAttackers' test is the store's: the dry keep compares it with the object's).
+// as the originals did (KeepGroundAttackers' test is the store's: the dry keep compares it with the object's); the
+// spreads keep the group as it is (logged).
 #ifndef EE_EEUNITHOST_H
 #define EE_EEUNITHOST_H
 
@@ -42,6 +43,12 @@ uint32_t ee_units_host_town_patrol_point(uint32_t inUnit, uint8_t* outFound);
 void ee_units_host_patrol_add_unit_tile(uint32_t inUnit, uint32_t inTarget, void* inPlayer);
 void* ee_units_host_unit_patrol_group(uint32_t inUnit);
 int64_t ee_units_host_object_unit_type(uint32_t inUnit);
+void ee_units_host_group_set_queued(void* inGroup, uint8_t inQueued);
+void ee_units_host_group_spread_around_resource(void* inGroup, uint32_t inTarget);
+void ee_units_host_group_spread_around_tile(void* inGroup, int64_t inX, int64_t inY);
+void ee_units_host_unit_add_build_target(uint32_t inUnit, uint32_t inTarget);
+void ee_units_host_unit_order_repair(uint32_t inUnit, uint32_t inTarget);
+void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit);
 }
 
 // TEST ONLY: the dry host (above). Begin makes the selection (a dry group of inUnits, returned as the reference the

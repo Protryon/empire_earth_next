@@ -3060,27 +3060,10 @@ bool EEMGameSpeed::IsResponse(NEMessage* inMessage)
 void EEMGatherResource::Execute()
 {
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    EEActiveGroup* theActiveGroup = NULL;
-    if (theTarget && theUnit && theTarget->mResourceAmount > 0) {
-        theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->mIsQueued = this->mIsQueued;
-        theActiveGroup->SpreadAroundResource(theTarget);
-        if (theActiveGroup->GetNumUnits()) {
-            theActiveGroup->ClearGoal();
-            theActiveGroup->SetGoal(new EEUGGather(theTarget, NULL, true), this->mIsQueued);
-            theActiveGroup->mAction = kActionGatherResource;
-            theActiveGroup->Plan();
-            EESendGroupCommand(theActiveGroup, theTarget, thePlayerID, 0xba, 0);
-            if (theActiveGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs gather: with a selection and a resource with something left, one
+    // active group of the selection takes the queued flag, spreads around the resource, gets a Gather goal, plans, the
+    // target marker, one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
+    ee_units_gather(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID, this->mIsQueued);
 }
 
 // EEMGatherResource's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -5454,41 +5437,11 @@ bool EEMRemoveUnitFromSelectedGroup::IsResponse(NEMessage* inMessage)
 // acknowledges by voice
 void EEMRepairUnit::Execute()
 {
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theRepairers;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-    if (theGroup->GetFirstUnit() && theTarget) {
-        EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->SpreadAroundTile(theTarget->mTileX, theTarget->mTileY);
-        if (theActiveGroup->GetNumUnits() > 0) {
-            unsigned long i;
-            for (i = 0; i < theActiveGroup->GetNumUnits(); i++)
-                theUnits.push_back(theActiveGroup->GetUnit(i));
-            for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ) {
-                EEComplexUnit* theUnit = (*it)->mComplexUnit;
-                if (this->mIsQueued) {
-                    theUnit->AddBuildTarget(theTarget);
-                    // Port: no smart task after a shift-queued repair (EEUGBuildRepair::Step)
-                    theUnit->mHasShiftQueuedBuild = true;
-                    ++it;
-                } else {
-                    theUnit->OrderRepair(theTarget);
-                    theUnit->StartAction(kActionIdle);
-                    theUnit->mUnitClass->ActionChanged(theUnit);
-                    theRepairers.push_back(theUnit);
-                    it = theUnits.erase(it);
-                }
-            }
-            for (i = 0; i < theRepairers.size(); i++)
-                theActiveGroup->AddMember(theRepairers[i]->mComplexUnit, true);
-            if (theActiveGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs repair: one active group of the selection spreads around the
+    // target's tile; queued, its units add the target as a build target, else each orders the repair and all are
+    // added back; one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
+    ee_units_repair(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID, this->mIsQueued);
 }
 
 // EEMRepairUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)

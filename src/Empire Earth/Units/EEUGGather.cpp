@@ -467,7 +467,7 @@ void EEUGGather::GetDebugLine(UWideString& ioText)
         ioText += "gather";
         if (this->mResource != NULL) {
             sprintf(theText, "(uid %ld, at %ld,%ld, type %ld, amount %ld)", this->mResource->mUnitID & 0xffffff,
-                    this->mResource->mTileX.Get(), this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount);
+                    this->mResource->mTileX.Get(), this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount.Get());
             ioText += theText;
         }
     } else {
@@ -490,7 +490,7 @@ void EEUGGather::GetDebugText(UWideString& ioText)
         ioText += "Gathering\n";
         if (this->mResource != NULL) {
             sprintf(theText, "Unit: %s at (%ld,%ld)\nType:%ld\nAmount:%ld\n", (const char*)this->mResource->mUnitClass->mName,
-                    this->mResource->mTileX.Get(), this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount);
+                    this->mResource->mTileX.Get(), this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount.Get());
             ioText += theText;
         }
     } else {

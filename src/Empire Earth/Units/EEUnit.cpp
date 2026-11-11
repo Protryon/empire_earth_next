@@ -347,7 +347,7 @@ void EEUnit::Describe(UWideString& ioString)
     UWideString theString;
     RTSUnit::Describe(theString);
     ioString += theString;
-    sprintf(theString, "res %ld / %ld:", this->mResourceType, this->mResourceAmount);
+    sprintf(theString, "res %ld / %ld:", this->mResourceType, this->mResourceAmount.Get());
     ioString += theString;
     sprintf(theString, "obj %ld:", this->mUnitClass->mUnitType);
     ioString += theString;
@@ -371,7 +371,7 @@ void EEUnit::DescribeLong(UWideString& ioString)
         ioString += theString;
     }
     if (this->mResourceType != kResourceNone) {
-        sprintf(theString, "Resource Type/Amount:%ld / %ld\n", this->mResourceType, this->mResourceAmount);
+        sprintf(theString, "Resource Type/Amount:%ld / %ld\n", this->mResourceType, this->mResourceAmount.Get());
         ioString += theString;
     }
     sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", this->mHitPoints.Get(), this->mStats->mMaxHitPoints,
@@ -540,7 +540,7 @@ long EEUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
             theResult = inFile.Read(theFraction);
             memcpy(&this->mHitPoints, &theFraction, 4);
             if (theResult == 0) {
-                theResult = inFile.Read(this->mResourceAmount);
+                theResult = EEUnitStoreRead(inFile, this->mResourceAmount);
                 if (theResult == 0)
                     theResult = inFile.Read(theUnused);
             }

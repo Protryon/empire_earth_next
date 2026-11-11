@@ -698,6 +698,9 @@ constexpr static const int32_t EE_GROUP_COMMAND_ATTACK = 185;
 
 constexpr static const int32_t EE_GROUP_COMMAND_TARGET = 186;
 
+/// `kActionGatherResource` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_GATHER_RESOURCE = 4004;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -876,6 +879,9 @@ constexpr static const uint32_t EE_UNIT_FIELD_FORMATION_SLOT = 13;
 
 /// `EEUnit::mUnitClass` too: the class's `mCanAttackGround`, fixed by its constructor (0: no class)
 constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
+
+/// `EEUnit::mResourceAmount` (what a resource has left)
+constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -4012,6 +4018,8 @@ struct EeUnitRecord {
   uint8_t commandable;
   /// `EEComplexUnit::mFormationSlot` (an `unsigned long`)
   int64_t formation_slot;
+  /// `EEUnit::mResourceAmount`
+  int64_t resource_amount;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -9591,6 +9599,19 @@ void ee_units_patrol(void *player,
                      void *selection,
                      int32_t target);
 
+/// `EEMGatherResource::Execute`'s body (`group::gather`) for the sender, its selection, the target id and the
+/// queued flag.
+void ee_units_gather(void *player,
+                     void *selection,
+                     uint32_t target,
+                     bool queued);
+
+/// `EEMRepairUnit::Execute`'s body (`group::repair`) for the sender, its selection, the target id and the queued flag.
+void ee_units_repair(void *player,
+                     void *selection,
+                     uint32_t target,
+                     bool queued);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -9640,6 +9661,18 @@ extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, v
 extern void *ee_units_host_unit_patrol_group(uint32_t unit);
 
 extern int64_t ee_units_host_object_unit_type(uint32_t unit);
+
+extern void ee_units_host_group_set_queued(void *group, uint8_t queued);
+
+extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
+
+extern void ee_units_host_group_spread_around_tile(void *group, int64_t x, int64_t y);
+
+extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_group_add_member(void *group, uint32_t unit);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

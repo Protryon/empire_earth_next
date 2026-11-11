@@ -165,6 +165,23 @@ pub extern "C" fn ee_units_patrol(player: *mut c_void, selection: *mut c_void, t
     crate::group::patrol(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
 }
 
+/// `EEMGatherResource::Execute`'s body (`group::gather`) for the sender, its selection, the target id and the
+/// queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_gather(player: *mut c_void, selection: *mut c_void, target: u32, queued: bool) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::gather(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target, queued);
+}
+
+/// `EEMRepairUnit::Execute`'s body (`group::repair`) for the sender, its selection, the target id and the queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_repair(player: *mut c_void, selection: *mut c_void, target: u32, queued: bool) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::repair(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target, queued);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -32,6 +32,7 @@
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
+#include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
 #include "lle/U2DRectangle.h"
@@ -91,7 +92,13 @@ enum DryEvent {
     kDryTownPoint,        // unit, found, the point
     kDryAddUnitTile,      // unit, target, player id, the target's tile x, y
     kDryRoute,            // unit, the route (2 words)
-    kDryUnitType          // unit, its class's type
+    kDryUnitType,         // unit, its class's type
+    kDryQueued,           // tag, queued
+    kDrySpreadResource,   // tag, target
+    kDrySpreadTile,       // tag, x, y
+    kDryAddBuildTarget,   // unit, target
+    kDryOrderRepair,      // unit, target
+    kDryAddMember         // tag, unit
 };
 
 struct DryGroup {
@@ -549,4 +556,66 @@ extern "C" int64_t ee_units_host_object_unit_type(uint32_t inUnit)
     EEUnit* theUnit = UnitOf(inUnit);
     EEUnitClass* theClass = theUnit != NULL ? theUnit->mUnitClass.Get() : NULL;
     return theClass != NULL ? (int64_t)theClass->mUnitType : -1;
+}
+
+extern "C" void ee_units_host_group_set_queued(void* inGroup, uint8_t inQueued)
+{
+    if (sDry != NULL) {
+        Log({kDryQueued, Dry(inGroup)->mTag, inQueued});
+        return;
+    }
+    ActiveOf(inGroup)->mIsQueued = inQueued != 0;
+}
+
+// the dry host does not spread: the group keeps its units (logged)
+extern "C" void ee_units_host_group_spread_around_resource(void* inGroup, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadResource, Dry(inGroup)->mTag, inTarget});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadAroundResource(UnitOf(inTarget));
+}
+
+extern "C" void ee_units_host_group_spread_around_tile(void* inGroup, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadTile, Dry(inGroup)->mTag, (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadAroundTile((long)inX, (long)inY);
+}
+
+extern "C" void ee_units_host_unit_add_build_target(uint32_t inUnit, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDryAddBuildTarget, inUnit, inTarget});
+        return;
+    }
+    EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
+    theUnit->AddBuildTarget(UnitOf(inTarget));
+    // Port: no smart task after a shift-queued repair (EEUGBuildRepair::Step)
+    theUnit->mHasShiftQueuedBuild = true;
+}
+
+extern "C" void ee_units_host_unit_order_repair(uint32_t inUnit, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDryOrderRepair, inUnit, inTarget});
+        return;
+    }
+    EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
+    theUnit->OrderRepair(UnitOf(inTarget));
+    theUnit->StartAction(kActionIdle);
+    theUnit->mUnitClass->ActionChanged(theUnit);
+}
+
+extern "C" void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryAddMember, Dry(inGroup)->mTag, inUnit});
+        return;
+    }
+    EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
+    ActiveOf(inGroup)->AddMember(theUnit->mComplexUnit, true);
 }

@@ -149,6 +149,18 @@ pub trait Host {
     fn unit_patrol_group(&mut self, unit: u32) -> HostRef;
     /// `unit->mUnitClass->mUnitType` read on the object (-1: no class), for a unit the store does not hold
     fn object_unit_type(&mut self, unit: u32) -> i64;
+    /// `group->mIsQueued = queued`
+    fn group_set_queued(&mut self, group: HostRef, queued: bool);
+    /// `EEActiveGroup::SpreadAroundResource(target)`
+    fn group_spread_around_resource(&mut self, group: HostRef, target: u32);
+    /// `EEActiveGroup::SpreadAroundTile(x, y)`
+    fn group_spread_around_tile(&mut self, group: HostRef, x: i64, y: i64);
+    /// `unit->mComplexUnit->AddBuildTarget(target)`, then its `mHasShiftQueuedBuild = true`
+    fn unit_add_build_target(&mut self, unit: u32, target: u32);
+    /// `unit->mComplexUnit`'s `OrderRepair(target)`, `StartAction(kActionIdle)`, `mUnitClass->ActionChanged(it)`
+    fn unit_order_repair(&mut self, unit: u32, target: u32);
+    /// `group->AddMember(unit->mComplexUnit->mComplexUnit, true)`
+    fn group_add_member(&mut self, group: HostRef, unit: u32);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -186,6 +198,12 @@ pub mod game {
         fn ee_units_host_patrol_add_unit_tile(unit: u32, target: u32, player: *mut c_void);
         fn ee_units_host_unit_patrol_group(unit: u32) -> *mut c_void;
         fn ee_units_host_object_unit_type(unit: u32) -> i64;
+        fn ee_units_host_group_set_queued(group: *mut c_void, queued: u8);
+        fn ee_units_host_group_spread_around_resource(group: *mut c_void, target: u32);
+        fn ee_units_host_group_spread_around_tile(group: *mut c_void, x: i64, y: i64);
+        fn ee_units_host_unit_add_build_target(unit: u32, target: u32);
+        fn ee_units_host_unit_order_repair(unit: u32, target: u32);
+        fn ee_units_host_group_add_member(group: *mut c_void, unit: u32);
     }
 
     pub struct GameHost;
@@ -280,6 +298,24 @@ pub mod game {
         fn object_unit_type(&mut self, unit: u32) -> i64 {
             unsafe { ee_units_host_object_unit_type(unit) }
         }
+        fn group_set_queued(&mut self, group: HostRef, queued: bool) {
+            unsafe { ee_units_host_group_set_queued(group.0, queued as u8) }
+        }
+        fn group_spread_around_resource(&mut self, group: HostRef, target: u32) {
+            unsafe { ee_units_host_group_spread_around_resource(group.0, target) }
+        }
+        fn group_spread_around_tile(&mut self, group: HostRef, x: i64, y: i64) {
+            unsafe { ee_units_host_group_spread_around_tile(group.0, x, y) }
+        }
+        fn unit_add_build_target(&mut self, unit: u32, target: u32) {
+            unsafe { ee_units_host_unit_add_build_target(unit, target) }
+        }
+        fn unit_order_repair(&mut self, unit: u32, target: u32) {
+            unsafe { ee_units_host_unit_order_repair(unit, target) }
+        }
+        fn group_add_member(&mut self, group: HostRef, unit: u32) {
+            unsafe { ee_units_host_group_add_member(group.0, unit) }
+        }
     }
 }
 
@@ -311,6 +347,12 @@ pub(crate) mod tests {
         AddUnitTile(u32, u32, HostRef),
         Route(u32),
         ObjectType(u32),
+        Queued(HostRef, bool),
+        SpreadResource(HostRef, u32),
+        SpreadTile(HostRef, i64, i64),
+        AddBuildTarget(u32, u32),
+        OrderRepair(u32, u32),
+        AddMember(HostRef, u32),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
         Spec(u32, u32, u32, [u32; 3], u8, usize),
     }
@@ -455,6 +497,31 @@ pub(crate) mod tests {
         fn object_unit_type(&mut self, unit: u32) -> i64 {
             self.calls.push(Call::ObjectType(unit));
             self.object_types.get(&unit).copied().unwrap_or(-1)
+        }
+        fn group_set_queued(&mut self, group: HostRef, queued: bool) {
+            self.calls.push(Call::Queued(group, queued));
+        }
+        fn group_spread_around_resource(&mut self, group: HostRef, target: u32) {
+            // the spread keeps the ids in `mobile` when it is set (a unit that cannot reach the resource leaves)
+            if !self.mobile.is_empty() {
+                let mobile = self.mobile.clone();
+                if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                    ids.retain(|id| mobile.contains(id));
+                }
+            }
+            self.calls.push(Call::SpreadResource(group, target));
+        }
+        fn group_spread_around_tile(&mut self, group: HostRef, x: i64, y: i64) {
+            self.calls.push(Call::SpreadTile(group, x, y));
+        }
+        fn unit_add_build_target(&mut self, unit: u32, target: u32) {
+            self.calls.push(Call::AddBuildTarget(unit, target));
+        }
+        fn unit_order_repair(&mut self, unit: u32, target: u32) {
+            self.calls.push(Call::OrderRepair(unit, target));
+        }
+        fn group_add_member(&mut self, group: HostRef, unit: u32) {
+            self.calls.push(Call::AddMember(group, unit));
         }
     }
 
