@@ -758,6 +758,22 @@ public:
         this->ComputeCenter();
     }
 
+    // port (save version 0.263, the continent manager's regions in a saved game): the hull as it is (a hull is not
+    // always its tiles' hull: EEAIArea::AddTiles may leave it). W and R: the save's byte writer and reader
+    // (EEAIContinentSave.cpp: Points, Rect, Point, Bytes)
+    template <class W> void PortWrite(W& ioWriter) const
+    {
+        ioWriter.Points(this->mPoints);
+        ioWriter.Rect(this->mBounds);
+        ioWriter.Point(this->mCenter);
+        ioWriter.Bytes(&this->mArea, sizeof(this->mArea));
+    }
+    template <class R> bool PortRead(R& ioReader)
+    {
+        return ioReader.Points(this->mPoints) && ioReader.Rect(this->mBounds) && ioReader.Point(this->mCenter)
+            && ioReader.Bytes(&this->mArea, sizeof(this->mArea));
+    }
+
 protected:
 #ifdef LLE_EXE_HEADERS
     float mArea;                            // +0x2c (exe: a float, Clear 0x412922 fldz/fstp)

@@ -140,6 +140,57 @@ public:
     long Size() const { return this->mCount; }  // exported 0x40127 (ICF)
     U2DPoint<long> operator[](long inIndex) const;
 
+    // port (save version 0.263, the continent manager's regions in a saved game): the set as it is, its columns
+    // (empty ones too: GetRandomPoint draws a column) and each column's runs in their order. W and R are the
+    // save's byte writer and reader (EEAIContinentSave.cpp: U32, I32, Flag)
+    template <class W> void PortWrite(W& ioWriter) const
+    {
+        ioWriter.I32(this->mOffset);
+        ioWriter.I32(this->mCount);
+        ioWriter.U32((unsigned long)this->mArray.size());
+        for (size_t i = 0; i < this->mArray.size(); i++) {
+            const U2DSparseArrayPointContainerListHeader* theList = this->mArray[i];
+            ioWriter.Flag(theList != NULL);
+            if (theList == NULL)
+                continue;
+            ioWriter.I32(theList->mSize);
+            ioWriter.U32(theList->mList.mCount);
+            for (UListNode<U2DSparseArrayPointContainerNode>* theNode = theList->mList.mHead; theNode; theNode = theNode->mNext) {
+                ioWriter.I32(theNode->mData.mStart);
+                ioWriter.I32(theNode->mData.mEnd);
+            }
+        }
+    }
+    template <class R> bool PortRead(R& ioReader)
+    {
+        this->Clear();
+        unsigned long theColumns = 0;
+        if (!ioReader.I32(this->mOffset) || !ioReader.I32(this->mCount) || !ioReader.U32(theColumns))
+            return false;
+        this->mArray.resize(theColumns, NULL);
+        for (unsigned long i = 0; i < theColumns; i++) {
+            bool thePresent = false;
+            if (!ioReader.Flag(thePresent))
+                return false;
+            if (!thePresent)
+                continue;
+            U2DSparseArrayPointContainerListHeader* theList = new U2DSparseArrayPointContainerListHeader;
+            this->mArray[i] = theList;
+            unsigned long theRuns = 0;
+            if (!ioReader.I32(theList->mSize) || !ioReader.U32(theRuns))
+                return false;
+            UListNode<U2DSparseArrayPointContainerNode>* theLast = NULL;
+            for (unsigned long r = 0; r < theRuns; r++) {
+                U2DSparseArrayPointContainerNode theRun;
+                if (!ioReader.I32(theRun.mStart) || !ioReader.I32(theRun.mEnd))
+                    return false;
+                theList->mList.InsertAfter(theLast, theRun);
+                theLast = theLast != NULL ? theLast->mNext : theList->mList.mHead;
+            }
+        }
+        return true;
+    }
+
 protected:
     void ExpandArrayForPoint(const U2DPoint<long>& inPoint);
     bool GetArrayBoundaryPoints(const std::vector<U2DPoint<long> >& inPoints, U2DPoint<long>& outMinimum,

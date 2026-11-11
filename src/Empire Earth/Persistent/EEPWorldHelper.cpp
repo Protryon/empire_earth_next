@@ -671,8 +671,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && EECPLoadExperimentTimers(inFile) == kErrorOK   // port (0.258): the computer players' experiment timers
             && EESaveHasTowns(inMajorVersion, inMinorVersion)
             && EELoadTowns(inFile) == kErrorOK   // port (0.260): the towns' ids and order
-            && EESaveHasGhosts(inMajorVersion, inMinorVersion))
-            LoadGhosts(inFile);   // port (0.262): the dead attackers the units still hold
+            && EESaveHasGhosts(inMajorVersion, inMinorVersion)
+            && LoadGhosts(inFile) == kErrorOK   // port (0.262): the dead attackers the units still hold
+            && EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
+            EELoadContinentRegions(inFile);   // port (0.263): the continent manager as it was
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -735,6 +737,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 EESaveTowns(outFile);   // port (0.260): the towns' ids and order
             if (EESaveHasGhosts(inMajorVersion, inMinorVersion))
                 SaveGhosts(outFile);   // port (0.262): the dead attackers the units still hold
+            if (EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
+                EESaveContinentRegions(outFile);   // port (0.263): the continent manager as it is
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

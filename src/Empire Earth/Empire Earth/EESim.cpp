@@ -626,6 +626,11 @@ void DumpState(const std::string& inPath)
                     (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2),
                     x->mWaypoints.size(), x->mIsPathDone ? 1 : 0, x->mHasArrived ? 1 : 0, (double)x->GetVelocity(),
                     x->mBlockingUnit != NULL ? x->mBlockingUnit->mUnitID : 0UL);
+            fprintf(f, " wps=");   // the path's points (location, distance, start distance)
+            for (size_t w = 0; w < x->mWaypoints.size(); w++)
+                fprintf(f, "%a,%a,%a/%a/%a;", (double)x->mWaypoints[w].mLocation.GetX(), (double)x->mWaypoints[w].mLocation.GetY(),
+                        (double)x->mWaypoints[w].mLocation.GetZ(), (double)x->mWaypoints[w].mDistance,
+                        (double)x->mWaypoints[w].mStartDistance);
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
                 std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
