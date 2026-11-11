@@ -145,7 +145,7 @@ def main():
                                                             "engine's scripts from this folder first (e.g. ai)")
     a = ap.parse_args()
     if not a.exe.exists():
-        sys.exit(f"{a.exe} is missing: python -I build.py --sim")
+        sys.exit(f"{a.exe} is missing: {sim.BUILD_HINT}")
     variants = [[]]
     for v in a.vary:
         key, _, values = v.partition("=")

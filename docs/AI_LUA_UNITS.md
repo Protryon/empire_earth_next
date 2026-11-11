@@ -947,7 +947,8 @@ from data, so that a script can make its decisions with the same numbers:
   the epoch and upgrade factors of `cost` (what the classic's needs ledger counts: EECPResourceManager::AddCosts).
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind), and `waiting` (a gatherer waiting for
-  room at its resource, which the classic resource manager's AssignGatherers takes as idle).
+  room at its resource, which the classic resource manager's AssignGatherers takes as idle), and `stalled` (a
+  builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder).
 - `ai.used()` -> used, budget: the instructions and helper charges the current call has used so far and its budget
   (a script's own profiling; it changes nothing).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
