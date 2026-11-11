@@ -6,6 +6,7 @@
 #define EE_EESAVEGAMEFILES_H
 
 #include <functional>
+#include <vector>
 
 class EEGameOptions;
 class FSFile;
@@ -66,7 +67,8 @@ inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVe
 // the towns' block (EEPlayer.cpp): written by EEPWorldHelper::Save; a load keeps it for EEPlayer::RepairPointers,
 // which gives the rebuilt towns their saved ids and order
 long EESaveTowns(FSFile& outFile);
-long EELoadTowns(FSFile& inFile);
+// inAreas: the save has the towns' areas (EESaveHasTownAreas)
+long EELoadTowns(FSFile& inFile, bool inAreas);
 // port: from 0.261 a save holds the computer players' gatherer lists (EECPResourceManager): a load filed the citizens
 // again in its own order, most of them twice (their resource's list and the idle list)
 inline bool EESaveHasGathererOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -93,6 +95,36 @@ inline bool EESaveHasSubGroupPosition(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 264;
 }
+// port: from 0.265 a save holds the computer players' claim ranges and danger zones after the continent manager
+// (EECPSaveResourceState, ee/EECPExperimentTimers.h): FindResourceTarget reads them, a load started them empty
+inline bool EESaveHasResourceState(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 265;
+}
+// port: from 0.266 a save holds the order of each class's units the computer players' unit managers track
+// (EECPUnitManager::mUnits): a load filed them again in its own order
+inline bool EESaveHasUnitManagerOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 266;
+}
+// port: from 0.267 a save holds the computer players' repair, airport site and space dock site timers
+// (EECPCivilizationManager): a load started them at 0
+inline bool EESaveHasCivilizationTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 267;
+}
+// port: from 0.268 the towns' block holds each town's area as it is (its tiles, hull, bounds and continent): a load
+// rebuilt the towns from their buildings in its own order, and a building the saved town's hull had taken could start
+// a town of its own (seed 6's 2100 s save: two towns and an extra patrol group where the saved game had one)
+inline bool EESaveHasTownAreas(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 268;
+}
+// an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
+// (EEAIContinentSave.cpp; the towns' block)
+class EEAIArea;
+void EEWriteAreaBytes(const EEAIArea& inArea, std::vector<unsigned char>& outBytes);
+bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outArea);
 long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
 long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
 // whether the save being loaded has the block (EEWorld::StartGame of a loaded game)

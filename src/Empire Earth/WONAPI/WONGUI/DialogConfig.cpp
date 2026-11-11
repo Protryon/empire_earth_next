@@ -11,23 +11,27 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00789f80
 // Handles the dialog config instructions ALLOWDRAG, KEEPINROOT, ENDONESCAPE, DONTENDONESCAPE and
 // DEFAULTBUTTON; passes others to the container config
 bool DialogConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="ALLOWDRAG") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_DIALOGCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) {
         bool value=this->ReadBool();
         this->mDialog->mAllowDrag=value;
-    } else if(instruction=="KEEPINROOT") {
+    } else if(aKeyIdx==1) {
         bool value=this->ReadBool();
         this->mDialog->mKeepInRoot=value;
-    } else if(instruction=="ENDONESCAPE") {
+    } else if(aKeyIdx==2) {
         int id=this->ReadInt();
         this->mDialog->SetEndOnEscape(id);
-    } else if(instruction=="DONTENDONESCAPE") this->mDialog->SetDontEndOnEscape();
-    else if(instruction=="DEFAULTBUTTON") {
+    } else if(aKeyIdx==3) this->mDialog->SetDontEndOnEscape();
+    else if(aKeyIdx==4) {
         Button* button=SafeConfigGetComponent<Button*>(this->ReadComponent(),"Button");
         this->mDialog->SetDefaultButton(button);
     } else return ContainerConfig::Virtual24(instruction);

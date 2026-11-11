@@ -3,9 +3,10 @@
 //! NUL-terminated; a text the C++ returns is copied before the next host call.
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_char, c_long, c_short, c_ulong, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_short, c_ulong, c_void, CStr};
 
 use crate::edit::{Edit, EditFields, EditHost, EditState};
+use crate::edit_keys::{EditKey, EditKeysHost, EditPoll, PollOp};
 use crate::rect::{UiPoint, UiRect};
 use crate::text::Platform;
 
@@ -22,7 +23,7 @@ pub struct EditRefs {
 
 /// cbindgen:ignore
 mod sys {
-    use core::ffi::{c_char, c_long, c_ulong, c_void};
+    use core::ffi::{c_char, c_int, c_long, c_ulong, c_void};
 
     use crate::rect::UiRect;
 
@@ -47,6 +48,13 @@ mod sys {
         pub fn ee_uicpp_edit_base_set_location(edit: *mut c_void, x: f32, y: f32);
         pub fn ee_uicpp_edit_fire(edit: *mut c_void, event: c_ulong);
         pub fn ee_uicpp_wide_assign(out: *mut c_void, text: *const c_char);
+        pub fn ee_uicpp_edit_key(edit: *mut c_void, key: c_int) -> bool;
+        pub fn ee_uicpp_edit_poll(edit: *mut c_void, poll: c_int, op: c_int) -> c_ulong;
+        pub fn ee_uicpp_edit_process_enter_key(edit: *mut c_void);
+        pub fn ee_uicpp_edit_clipboard_set(text: *const c_char);
+        pub fn ee_uicpp_edit_clipboard_get() -> *mut c_char;
+        pub fn ee_uicpp_edit_clipboard_free(text: *mut c_char);
+        pub fn ee_uicpp_edit_translated_key(edit: *mut c_void, text: *const c_char);
     }
 }
 
@@ -135,6 +143,33 @@ impl EditHost for Raw {
     }
     fn fire(&mut self, event: c_ulong) {
         unsafe { sys::ee_uicpp_edit_fire(self.0.edit, event) }
+    }
+}
+
+impl EditKeysHost for Raw {
+    fn key(&mut self, k: EditKey) -> bool {
+        unsafe { sys::ee_uicpp_edit_key(self.0.edit, k as c_int) }
+    }
+    fn poll(&mut self, p: EditPoll, op: PollOp) -> c_ulong {
+        unsafe { sys::ee_uicpp_edit_poll(self.0.edit, p as c_int, op as c_int) }
+    }
+    fn process_enter_key(&mut self) {
+        unsafe { sys::ee_uicpp_edit_process_enter_key(self.0.edit) }
+    }
+    fn clipboard_set(&mut self, text: &[u8]) {
+        unsafe { sys::ee_uicpp_edit_clipboard_set(cstr(text)) }
+    }
+    fn clipboard_get(&mut self) -> Option<Vec<u8>> {
+        let p = unsafe { sys::ee_uicpp_edit_clipboard_get() };
+        if p.is_null() {
+            return None;
+        }
+        let text = copy(p);
+        unsafe { sys::ee_uicpp_edit_clipboard_free(p) };
+        Some(text)
+    }
+    fn translated_key(&mut self, text: &[u8]) {
+        unsafe { sys::ee_uicpp_edit_translated_key(self.0.edit, cstr(text)) }
     }
 }
 
@@ -395,4 +430,41 @@ pub unsafe extern "C" fn ee_ui_edit_ime_remove(refs: *const EditRefs) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_edit_type_key(refs: *const EditRefs, key: *const c_char, repeat: c_short) {
     run(refs, |e| e.type_key(text_of(key), repeat))
+}
+
+/// `UIEditBox::UpdateKeyboard`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_update_keyboard(refs: *const EditRefs) -> c_long {
+    run(refs, |e| e.update_keyboard())
+}
+
+/// `UIEditBox::Copy`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_copy(refs: *const EditRefs) {
+    run(refs, |e| e.copy())
+}
+
+/// `UIEditBox::Cut`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_cut(refs: *const EditRefs) {
+    run(refs, |e| e.cut())
+}
+
+/// `UIEditBox::Paste`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_paste(refs: *const EditRefs) {
+    run(refs, |e| e.paste())
+}
+
+/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_add_ime_result(refs: *const EditRefs, text: *const c_char) {
+    let text = text_of(text).to_vec();
+    run(refs, |e| e.add_ime_result(&text))
+}
+
+/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_drag(refs: *const EditRefs, at: UiPoint) {
+    run(refs, |e| e.drag_to(at))
 }

@@ -11,27 +11,31 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySplitterConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00794ed0
 // Reads a quadrant name (Left, Right, Top, Bottom, TopLeft ...); throws a config error for any other name
 Splitter::QuadrantPosition SplitterConfig::ReadQuadrant()
 {
 	GUIString aStr = this->ReadString(false);
-	if(aStr.CompareNoCase("Left")==0)
+	const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SPLITTERCONFIG_READQUADRANT_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+	if(aNameIdx_aStr==0)
 		return Splitter::Position_Left;
-	else if(aStr.CompareNoCase("Right")==0)
+	else if(aNameIdx_aStr==1)
 		return Splitter::Position_Right;
-	else if(aStr.CompareNoCase("Top")==0)
+	else if(aNameIdx_aStr==2)
 		return Splitter::Position_Top;
-	else if(aStr.CompareNoCase("Bottom")==0)
+	else if(aNameIdx_aStr==3)
 		return Splitter::Position_Bottom;
-	else if(aStr.CompareNoCase("TopLeft")==0)
+	else if(aNameIdx_aStr==4)
 		return Splitter::Position_TopLeft;
-	else if(aStr.CompareNoCase("TopRight")==0)
+	else if(aNameIdx_aStr==5)
 		return Splitter::Position_TopRight;
-	else if(aStr.CompareNoCase("BottomLeft")==0)
+	else if(aNameIdx_aStr==6)
 		return Splitter::Position_BottomLeft;
-	else if(aStr.CompareNoCase("BottomRight")==0)
+	else if(aNameIdx_aStr==7)
 		return Splitter::Position_BottomRight;
 	else
 		throw ConfigObjectException("Invalid quadrant: " + (std::string)aStr);
@@ -44,19 +48,20 @@ Splitter::QuadrantPosition SplitterConfig::ReadQuadrant()
 Splitter::SplitterType SplitterConfig::ReadSplitterType()
 {
 	GUIString aStr = this->ReadString(false);
-	if(aStr.CompareNoCase("LeftRight")==0)
+	const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SPLITTERCONFIG_READSPLITTERTYPE_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+	if(aNameIdx_aStr==0)
 		return Splitter::Splitter_LeftRight;
-	else if(aStr.CompareNoCase("UpDown")==0)
+	else if(aNameIdx_aStr==1)
 		return Splitter::Splitter_UpDown;
-	else if(aStr.CompareNoCase("LeftRight_Top")==0)
+	else if(aNameIdx_aStr==2)
 		return Splitter::Splitter_LeftRight_Top;
-	else if(aStr.CompareNoCase("LeftRight_Bottom")==0)
+	else if(aNameIdx_aStr==3)
 		return Splitter::Splitter_LeftRight_Bottom;
-	else if(aStr.CompareNoCase("UpDown_Left")==0)
+	else if(aNameIdx_aStr==4)
 		return Splitter::Splitter_UpDown_Left;
-	else if(aStr.CompareNoCase("UpDown_Right")==0)
+	else if(aNameIdx_aStr==5)
 		return Splitter::Splitter_UpDown_Right;
-	else if(aStr.CompareNoCase("Center")==0)
+	else if(aNameIdx_aStr==6)
 		return Splitter::Splitter_Center;
 	else
 		throw ConfigObjectException("Invalid splitter type: " + (std::string)aStr);
@@ -70,19 +75,20 @@ Splitter::SplitterType SplitterConfig::ReadSplitterType()
 // config. The restore key is spelled UNMAXQUADRAN
 bool SplitterConfig::Virtual24(const std::string& theInstruction)
 {
-	if(theInstruction=="ADDQUADRANT")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SPLITTERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 	{
 		Component *aComponent = this->ReadComponent(); this->EnsureComma();
 		Splitter::QuadrantPosition aPosition = this->ReadQuadrant();
 		this->mSplitter->AddQuadrant(aComponent,aPosition);
 	}
-	else if(theInstruction=="ADDSPLITTER")
+	else if(aKeyIdx==1)
 	{
 		Component *aComponent = this->ReadComponent(); this->EnsureComma();
 		Splitter::SplitterType aType = this->ReadSplitterType();
 		this->mSplitter->AddSplitter(aComponent,aType);
 	}
-	else if(theInstruction=="ADDINVISIBLESPLITTER")
+	else if(aKeyIdx==2)
 	{
 		Splitter::SplitterType aType = this->ReadSplitterType();
 		int aSize = 10;
@@ -93,7 +99,7 @@ bool SplitterConfig::Virtual24(const std::string& theInstruction)
 		}
 		this->mSplitter->AddInvisibleSplitter(aType,aSize);
 	}
-	else if(theInstruction=="ADDCOMPLEXSPLITTER")
+	else if(aKeyIdx==3)
 	{
 		Container *aContainer= SafeConfigGetComponent<Container*>(this->ReadComponent(),"Container"); this->EnsureComma();
 		Splitter::SplitterType aType = this->ReadSplitterType();
@@ -105,35 +111,35 @@ bool SplitterConfig::Virtual24(const std::string& theInstruction)
 		}
 		this->mSplitter->AddComplexSplitter(aContainer,aType,aDragComponent);
 	}
-	else if(theInstruction=="MINLEFTRIGHT")
+	else if(aKeyIdx==4)
 	{
 		int minLeft = this->ReadInt(); this->EnsureComma();
 		int minRight = this->ReadInt(); 
 		this->mSplitter->SetMinLeftRight(minLeft,minRight);
 	}
-	else if(theInstruction=="MINTOPBOTTOM")
+	else if(aKeyIdx==5)
 	{
 		int minTop = this->ReadInt(); this->EnsureComma();
 		int minBottom = this->ReadInt();
 		this->mSplitter->SetMinTopBottom(minTop,minBottom);
 	}
-	else if(theInstruction=="SPLITTERPERCENTAGES")
+	else if(aKeyIdx==6)
 	{
 		int leftPercent = this->ReadInt(); this->EnsureComma();
 		int topPercent = this->ReadInt();
 		this->mSplitter->SetPercentages(leftPercent,topPercent);
 	}
-	else if(theInstruction=="MAXQUADRANT")
+	else if(aKeyIdx==7)
 		this->mSplitter->MaxQuadrant(this->ReadQuadrant());
-	else if(theInstruction=="UNMAXQUADRAN")
+	else if(aKeyIdx==8)
 		this->mSplitter->UnMaxQuadrant();
-	else if(theInstruction=="SPLITTERPOS")
+	else if(aKeyIdx==9)
 	{
 		int x = this->ReadInt(); this->EnsureComma();
 		int y = this->ReadInt();
 		this->mSplitter->SetSplitterPos(x,y);
 	}
-	else if(theInstruction=="REGISTERMAXBUTTON")
+	else if(aKeyIdx==10)
 	{
 		Button *aButton = SafeConfigGetComponent<Button*>(this->ReadComponent(),"Button"); this->EnsureComma();
 		Splitter::QuadrantPosition aPosition = this->ReadQuadrant();

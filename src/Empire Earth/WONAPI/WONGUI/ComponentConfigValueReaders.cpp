@@ -12,6 +12,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x007842f0
 // Reads a string value, or the string resource named after '@'
@@ -134,12 +137,13 @@ SmartPtr<RawImage> ComponentConfig::ReadRawImage()
 StandardCursor ComponentConfig::ReadStandardCursor()
 {
     GUIString name=this->ReadString(false);
-    if(name.CompareNoCase("Arrow")==0) return StandardCursor_Arrow;
-    if(name.CompareNoCase("Hand")==0) return StandardCursor_Hand;
-    if(name.CompareNoCase("IBeam")==0) return StandardCursor_IBeam;
-    if(name.CompareNoCase("EastWest")==0) return StandardCursor_EastWest;
-    if(name.CompareNoCase("NorthSouth")==0) return StandardCursor_NorthSouth;
-    if(name.CompareNoCase("NorthSouthEastWest")==0) return StandardCursor_NorthSouthEastWest;
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READSTANDARDCURSOR_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_name==0) return StandardCursor_Arrow;
+    if(aNameIdx_name==1) return StandardCursor_Hand;
+    if(aNameIdx_name==2) return StandardCursor_IBeam;
+    if(aNameIdx_name==3) return StandardCursor_EastWest;
+    if(aNameIdx_name==4) return StandardCursor_NorthSouth;
+    if(aNameIdx_name==5) return StandardCursor_NorthSouthEastWest;
     throw ConfigObjectException("Invalid predefined cursor type: "+(std::string)name);
 }
 // FUNCTION: WON 0x00785380
@@ -147,7 +151,8 @@ StandardCursor ComponentConfig::ReadStandardCursor()
 SmartPtr<Cursor> ComponentConfig::ReadCursor()
 {
     GUIString type=this->ReadString(false);
-    if(type.CompareNoCase("Predefined")==0) {
+    const int aNameIdx_type=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READCURSOR_TYPE,type.mData->mText,type.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_type==0) {
         this->EnsureComma();
         return Cursor::GetStandardCursor(this->ReadStandardCursor());
     }
@@ -162,14 +167,15 @@ SelectionColor ComponentConfig::ReadSelectionColor()
     if(this->EndOfString()) return background;
     this->EnsureComma();
     GUIString type=this->ReadString(false);
-    if(type.CompareNoCase("USEFOREGROUND")==0) {
+    const int aNameIdx_type=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READSELECTIONCOLOR_TYPE,type.mData->mText,type.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_type==0) {
         this->EnsureComma();
         DWORD foreground=this->ReadColor();
         return SelectionColor(background,foreground);
     }
-    if(type.CompareNoCase("INVERTORIGINAL")==0)
+    if(aNameIdx_type==1)
         return SelectionColor(background,ForegroundSelectionMode_InvertOriginalColor);
-    if(type.CompareNoCase("USEORIGINAL")==0)
+    if(aNameIdx_type==2)
         return SelectionColor(background,ForegroundSelectionMode_UseOriginalColor);
     throw ConfigObjectException("Invalid SelectionColor");
 }

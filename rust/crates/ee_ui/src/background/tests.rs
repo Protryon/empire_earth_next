@@ -202,3 +202,45 @@ fn screen_rectangles() {
     assert_eq!(screen_rect(640, 480, false), UiRect::new(0.0, 0.0, 639.0, 479.0));
     assert_eq!(screen_rect(640, 480, true), UiRect::new(0.0, 0.0, 640.0, 480.0));
 }
+
+/// `UIFullBackground::LoadBackground`'s tile names against the real C++ (`golden_bg.txt`, its `full` cases: 60 file
+/// names with and without an extension, a `.` in a directory, UTF-8, grids up to 16 x 16, each tile's `LoadTexture`
+/// name a trace line; `background_table/tests.rs` has the driver).
+#[test]
+fn full_tile_names_replay_the_cpp_golden() {
+    let lines: Vec<&str> = include_str!("../golden_bg.txt").lines().collect();
+    let mut cases = 0;
+    for (i, line) in lines.iter().enumerate() {
+        let t: Vec<&str> = line.split(' ').collect();
+        if t[0] != "full" {
+            continue;
+        }
+        cases += 1;
+        let mut name = crate::background_table::tests::unhex(t[3]);
+        name.push(0);
+        let (columns, rows): (c_ulong, c_ulong) = (t[5].parse().unwrap(), t[7].parse().unwrap());
+        let loaded: Vec<&str> = lines[i + 1..]
+            .iter()
+            .take_while(|l| l.starts_with("  "))
+            .filter_map(|l| l.strip_prefix("  load "))
+            .map(|l| l.split(' ').next().unwrap())
+            .collect();
+        let mut want = Vec::new();
+        for row in 0..rows {
+            for column in 0..columns {
+                let tile = full_tile_name(&name, row, column);
+                want.push(crate::background_table::tests::hex(&tile[..tile.len() - 1]));
+            }
+        }
+        assert_eq!(loaded, want, "{line}");
+    }
+    assert_eq!(cases, 60);
+}
+
+#[test]
+fn full_tile_names_put_the_numbers_before_the_last_dot() {
+    assert_eq!(full_tile_name(b"Data/credits.sst\0", 0, 2), b"Data/credits_1_3.sst\0");
+    assert_eq!(full_tile_name(b"bg\0", 11, 0), b"bg_12_1\0");
+    assert_eq!(full_tile_name(b"dir.v2/file\0", 1, 1), b"dir_2_2.v2/file\0");
+    assert_eq!(full_tile_name(b"\0", 0, 0), b"_1_1\0");
+}

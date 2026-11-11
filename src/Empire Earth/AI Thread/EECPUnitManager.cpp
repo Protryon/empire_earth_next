@@ -623,6 +623,58 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
             });
         }
     }
+    // port (0.266): the order of the tracked units of each class. UnitAdded files a building by its distance to the
+    // town centre of the moment (and the rest in arrival order), so the running game's order is its history; Restore's
+    // AddAllUnits filed them again in the unit list's order with the town centre of the load. The producers and the
+    // citizens are walked in that order (StartProduction's round robin, RepairBuildings' and FindBuilder's workers):
+    // seed 6's 600 s save trained at the other of two barracks 50 s after the load. Put back at the first tick, after
+    // AddAllUnits: the saved units in the saved order, then any other the load tracks
+    if (theResult == 0 && EESaveHasUnitManagerOrder(inMajorVersion, inMinorVersion)) {
+        std::vector<std::pair<long, std::vector<unsigned long> > > theOrder;
+        unsigned long theClasses = 0;
+        theResult = inFile.Read(theClasses);
+        for (unsigned long c = 0; c < theClasses && theResult == 0; c++) {
+            long theType = 0;
+            unsigned long theUnits = 0;
+            theResult = inFile.Read(theType);
+            if (theResult == 0)
+                theResult = inFile.Read(theUnits);
+            theOrder.push_back(std::make_pair(theType, std::vector<unsigned long>()));
+            for (unsigned long u = 0; u < theUnits && theResult == 0; u++) {
+                unsigned long theID = 0;
+                theResult = inFile.Read(theID);
+                theOrder.back().second.push_back(theID);
+            }
+        }
+        if (theResult == 0) {
+            EECPUnitManager* theSelf = this;
+            unsigned long thePlayerID = this->mPlayer != NULL ? this->mPlayer->mPlayerID : (unsigned long)-1;
+            EEAfterLoad([theSelf, thePlayerID, theOrder]() {
+                EEPlayer* thePlayer = thePlayerID < gWorld.mNumPlayers ? gWorld.mPlayers[thePlayerID] : NULL;
+                EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+                if (theCP == NULL || theCP->mCivilizationManager == NULL || theCP->mCivilizationManager->mUnitManager != theSelf)
+                    return;   // not that player's unit manager any more
+                for (size_t c = 0; c < theOrder.size(); c++) {
+                    std::deque<EEComplexUnit*>* theUnits = theSelf->GetUnits(theOrder[c].first);
+                    if (theUnits == NULL)
+                        continue;
+                    std::vector<bool> theTaken(theUnits->size(), false);
+                    std::deque<EEComplexUnit*> theSorted;
+                    for (size_t k = 0; k < theOrder[c].second.size(); k++)
+                        for (size_t u = 0; u < theUnits->size(); u++)
+                            if (!theTaken[u] && (*theUnits)[u] != NULL && (*theUnits)[u]->mUnitID == theOrder[c].second[k]) {
+                                theTaken[u] = true;
+                                theSorted.push_back((*theUnits)[u]);
+                                break;
+                            }
+                    for (size_t u = 0; u < theUnits->size(); u++)
+                        if (!theTaken[u])
+                            theSorted.push_back((*theUnits)[u]);
+                    theUnits->swap(theSorted);   // the same units (and references), in the saved order
+                }
+            });
+        }
+    }
     return theResult;
 }
 
@@ -868,6 +920,19 @@ long EECPUnitManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
                     theResult = outFile.Write(this->mProductionEnabled);
                 if (theResult == 0 && EESaveHasProductionCount(inMajorVersion, inMinorVersion))
                     theResult = outFile.Write(this->mNumInProduction);   // port (0.259): the units in production
+                if (theResult == 0 && EESaveHasUnitManagerOrder(inMajorVersion, inMinorVersion)) {
+                    // port (0.266): each class's tracked units in order (Load)
+                    theResult = outFile.Write((unsigned long)this->mUnits.size());
+                    for (std::map<long, std::deque<EEComplexUnit*>*>::iterator c = this->mUnits.begin();
+                         c != this->mUnits.end() && theResult == 0; ++c) {
+                        theResult = outFile.Write((long)c->first);
+                        unsigned long theUnits = c->second != NULL ? (unsigned long)c->second->size() : 0;
+                        if (theResult == 0)
+                            theResult = outFile.Write(theUnits);
+                        for (unsigned long u = 0; u < theUnits && theResult == 0; u++)
+                            theResult = outFile.Write((*c->second)[u] != NULL ? (unsigned long)(*c->second)[u]->mUnitID : 0UL);
+                    }
+                }
             }
         }
     }
