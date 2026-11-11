@@ -10,6 +10,9 @@
 // NMSW: the same for the sweep: every game message type built from edge payloads (all 0x00, all 0xff, 0x7f, 0x80, a
 //       counting pattern, random bytes; strings of 0..300 bytes, unit lists of 0..63 ids, upgrade lists).
 // NMCU: the box selection's packing: the owner and the ids in, CompressUnits' bytes and DecompressUnits' ids out.
+// NMNE: the engine messages (NEMessage.cpp, types 0x20..0x3c) over edge payloads, built by NEMessage::BuildNEMessage:
+//       the bytes in, the export (ExportSize, the bytes), the members as Import filled them; the two communications
+//       ticks with nested players' inputs (none, game and engine messages, unknown types, a tick in a tick, 255).
 #include <windows.h>
 #include "platform/PlatSim.h"
 #include <string.h>
@@ -920,9 +923,11 @@ static void Members(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
     }
 }
 
+static bool sEngineSweep = false;   // the engine sweep: the nested game inputs are in its NMNE records
+
 void EEMessageCaptureImport(NEMessage* inMessage, const unsigned char* inData)
 {
-    if (inMessage == NULL || !EESimCaptureRecord::Active())
+    if (inMessage == NULL || !EESimCaptureRecord::Active() || sEngineSweep)
         return;
     EESimCaptureRecord theRecord(sSweeping ? 0x57534d4eu /* NMSW */ : 0x4d494d4eu /* NMIM */);
     unsigned long theSize = inMessage->ExportSize();
@@ -1212,6 +1217,340 @@ static void UnitLists()
     }
 }
 
+// ---- NMNE: the engine messages (NEMessage.cpp, 0x20..0x3c) over edge payloads, with the players' inputs nested in
+// the two communications ticks (game and engine messages, unknown types, a tick in a tick, 255 inputs) ----
+
+static void EngineMessage(EESimCaptureRecord& ioRecord, NEMessage* inMessage);
+
+// a message's export: its type, ExportSize, the bytes ExportMessage writes
+static void Exported(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
+{
+    unsigned char* theData = NULL;
+    unsigned long theDataSize = 0;
+    ioRecord.U32(inMessage->GetType());
+    ioRecord.U32((unsigned int)inMessage->ExportSize());
+    inMessage->ExportMessage(&theData, theDataSize);
+    ioRecord.U32((unsigned int)theDataSize);
+    if (theData != NULL) {
+        ioRecord.Bytes(theData, (unsigned int)theDataSize);
+        delete[] theData;
+    }
+}
+
+static void Inputs(EESimCaptureRecord& ioRecord, NEMPlayerInput* inMessage)
+{
+    ioRecord.U32((unsigned int)inMessage->mPlayerInputs.size());
+    for (size_t i = 0; i < inMessage->mPlayerInputs.size(); i++) {
+        NEMessage* theInput = inMessage->mPlayerInputs[i];
+        if (theInput->GetType() >= 0x20 && theInput->GetType() <= 0x3c) {
+            EngineMessage(ioRecord, theInput);
+        } else {
+            Exported(ioRecord, theInput);
+            Members(ioRecord, theInput);
+        }
+    }
+}
+
+#define EE_FIELD(m) ioRecord.Bytes(&m, sizeof(m))
+// an engine message: its export, then its members as Import filled them
+static void EngineMessage(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
+{
+    Exported(ioRecord, inMessage);
+    ioRecord.U32(inMessage->GetForSpecificSlot());
+    ioRecord.U32(inMessage->GetOriginatingSlot());
+    switch (inMessage->GetType()) {
+    case kNetMessageAddPlayer: {
+        NEMAddPlayer* m = static_cast<NEMAddPlayer*>(inMessage);
+        EE_FIELD(m->mPlayerIndex);
+        Wide(ioRecord, m->mPlayerName);
+        break;
+    }
+    case kNetMessageClientConnectionRequest: {
+        NEMClientConnectionRequest* m = static_cast<NEMClientConnectionRequest*>(inMessage);
+        EE_FIELD(m->mIsBehindFirewall);
+        Wide(ioRecord, m->mVersion);
+        Wide(ioRecord, m->mPlayerName);
+        EE_FIELD(m->mBinaryChecksum);
+        break;
+    }
+    case kNetMessageClientConnectionRequestResponse: {
+        NEMClientConnectionRequestResponse* m = static_cast<NEMClientConnectionRequestResponse*>(inMessage);
+        EE_FIELD(m->mError);
+        EE_FIELD(m->mUISlotNumber);
+        EE_FIELD(m->mSendToSlot);
+        EE_FIELD(m->mCurrentCT);
+        Wide(ioRecord, m->mVersion);
+        break;
+    }
+    case kNetMessageClientDisconnectionNotification:
+        EE_FIELD(static_cast<NEMClientDisconnectionNotification*>(inMessage)->mIsExiting);
+        break;
+    case kNetMessageClientDisconnectionNotificationResponse:
+        EE_FIELD(static_cast<NEMClientDisconnectionNotificationResponse*>(inMessage)->mError);
+        break;
+    case kNetMessageClientReconnectionRequest: {
+        NEMClientReconnectionRequest* m = static_cast<NEMClientReconnectionRequest*>(inMessage);
+        EE_FIELD(m->mCurrentCT);
+        EE_FIELD(m->mPlayerNumber);
+        break;
+    }
+    case kNetMessageClientReconnectionRequestResponse: {
+        NEMClientReconnectionRequestResponse* m = static_cast<NEMClientReconnectionRequestResponse*>(inMessage);
+        EE_FIELD(m->mError);
+        EE_FIELD(m->mNewSendToSlot);
+        EE_FIELD(m->mCurrentCT);
+        break;
+    }
+    case kNetMessageCommunicationsTick: {
+        NEMCommunicationsTick* m = static_cast<NEMCommunicationsTick*>(inMessage);
+        EE_FIELD(m->mCurrentCommunicationsTick);
+        EE_FIELD(m->mPhysicsTicksToPerform);
+        EE_FIELD(m->mPhysicsTicksPerSecond);
+        EE_FIELD(m->mGenerateChecksum);
+        EE_FIELD(m->mDumpTheWorld);
+        Inputs(ioRecord, m);
+        break;
+    }
+    case kNetMessageCommunicationsTickResponse: {
+        NEMCommunicationsTickResponse* m = static_cast<NEMCommunicationsTickResponse*>(inMessage);
+        EE_FIELD(m->mLastCommunicationsTickProcessed);
+        EE_FIELD(m->mServersCommunicationTick);
+        EE_FIELD(m->mAveragePhysicsTickTime);
+        Inputs(ioRecord, m);
+        break;
+    }
+    case kNetMessagePauseGame: {
+        NEMPauseGame* m = static_cast<NEMPauseGame*>(inMessage);
+        EE_FIELD(m->mUniqueID);
+        EE_FIELD(m->mSendToAllAndWaitMessageID);
+        break;
+    }
+    case kNetMessageUnPauseGame: {
+        NEMUnPauseGame* m = static_cast<NEMUnPauseGame*>(inMessage);
+        EE_FIELD(m->mUniqueID);
+        EE_FIELD(m->mSendToAllAndWaitMessageID);
+        break;
+    }
+    case kNetMessagePauseGameResponse:
+        EE_FIELD(static_cast<NEMPauseGameResponse*>(inMessage)->mUniqueID);
+        break;
+    case kNetMessageUnPauseGameResponse:
+        EE_FIELD(static_cast<NEMUnPauseGameResponse*>(inMessage)->mUniqueID);
+        break;
+    case kNetMessagePhysicsTick: {   // (mPhysicsTicksPerSecond is not on the wire)
+        NEMPhysicsTick* m = static_cast<NEMPhysicsTick*>(inMessage);
+        EE_FIELD(m->mNumberOfPlayerInputs);
+        EE_FIELD(m->mPhysicsTicksToPerform);
+        EE_FIELD(m->mGenerateChecksum);
+        EE_FIELD(m->mDumpTheWorld);
+        break;
+    }
+    case kNetMessagePlayerConnectionCheck:
+        EE_FIELD(static_cast<NEMPlayerConnectionCheck*>(inMessage)->mPingTimeStart);
+        break;
+    case kNetMessagePlayerConnectionCheckResponse:
+        EE_FIELD(static_cast<NEMPlayerConnectionCheckResponse*>(inMessage)->mPingTimeStart);
+        break;
+    case kNetMessageRemovePlayer: {
+        NEMRemovePlayer* m = static_cast<NEMRemovePlayer*>(inMessage);
+        EE_FIELD(m->mPlayerIndex);
+        EE_FIELD(m->mPlayerIsOOS);
+        EE_FIELD(m->mGameIsExiting);
+        EE_FIELD(m->mWasBooted);
+        break;
+    }
+    case kNetMessageStartGame:
+        EE_FIELD(static_cast<NEMStartGame*>(inMessage)->mOffsetStartTime);
+        break;
+    case kNetMessageStartGameResponse:
+        EE_FIELD(static_cast<NEMStartGameResponse*>(inMessage)->mApplicationTimeAtStart);
+        break;
+    case kNetMessageWorldDatabaseChecksum: {
+        NEMWorldDatabaseChecksum* m = static_cast<NEMWorldDatabaseChecksum*>(inMessage);
+        EE_FIELD(m->mPhysicsTickTrigger);
+        EE_FIELD(m->mDumpWorld);
+        break;
+    }
+    case kNetMessageWorldDatabaseChecksumResponse: {
+        NEMWorldDatabaseChecksumResponse* m = static_cast<NEMWorldDatabaseChecksumResponse*>(inMessage);
+        EE_FIELD(m->mCommunicationsTick);
+        EE_FIELD(m->mWorldDatabaseChecksum);
+        break;
+    }
+    case kNetMessageXferMessage: {
+        NEMXferMessage* m = static_cast<NEMXferMessage*>(inMessage);
+        EE_FIELD(m->mID);
+        EE_FIELD(m->mDataSize);
+        EE_FIELD(m->mData);
+        break;
+    }
+    case kNetMessageXferStatus: {
+        NEMXferStatus* m = static_cast<NEMXferStatus*>(inMessage);
+        EE_FIELD(m->mClientSlot);
+        EE_FIELD(m->mPercentDone);
+        EE_FIELD(m->mXferID);
+        EE_FIELD(m->mStatusID);
+        break;
+    }
+    default:   // the header-only messages
+        break;
+    }
+}
+#undef EE_FIELD
+
+static void BuildEngine(std::vector<unsigned char>& ioData)
+{
+    unsigned int theLength = (unsigned int)ioData.size();
+    ioData.resize(ioData.size() + 64, 0);   // slack past the message
+    EESimCaptureRecord theRecord(0x454e4d4eu);   // NMNE
+    theRecord.U32(theLength);
+    theRecord.Bytes(&ioData[0], theLength);
+    sEngineSweep = true;
+    NEMessage* theMessage = NEMessage::BuildNEMessage(&ioData[0]);
+    sEngineSweep = false;
+    if (theMessage != NULL) {
+        EngineMessage(theRecord, theMessage);
+        theMessage->Dereference();
+    } else {
+        theRecord.U32(0xffffffffu);
+    }
+    theRecord.Commit();
+}
+
+static size_t RowOf(unsigned char inType)
+{
+    for (size_t r = 0; r < sizeof(kSweepRows) / sizeof(kSweepRows[0]); r++)
+        if (kSweepRows[r].mType == inType)
+            return r;
+    return 0;
+}
+
+// a fixed game message of the sweep's rows with pattern p
+static void PutGameMessage(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
+{
+    std::vector<unsigned char> theMessage;
+    Header(theMessage, inType, inPattern);
+    Pattern(theMessage, kSweepRows[RowOf(inType)].mPrefix - 4, inPattern);
+    ioData.insert(ioData.end(), theMessage.begin(), theMessage.end());
+}
+
+// a header of pattern p appended
+static void PutHeader(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
+{
+    std::vector<unsigned char> theHeader;
+    Header(theHeader, inType, inPattern);
+    ioData.insert(ioData.end(), theHeader.begin(), theHeader.end());
+}
+
+// the players' inputs list number l (a count byte, then the messages)
+static void PutInputs(std::vector<unsigned char>& ioData, int inList, int inPattern)
+{
+    switch (inList) {
+    case 0:   // none
+        ioData.push_back(0);
+        break;
+    case 1:   // one game message
+        ioData.push_back(1);
+        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
+        break;
+    case 2: {   // a chat, an engine message, a wall
+        ioData.push_back(3);
+        PutHeader(ioData, kMessageChat, inPattern);
+        Pattern(ioData, 2, inPattern);
+        PutString(ioData, kStringLengths[inPattern % 8], inPattern & 1);
+        PutHeader(ioData, kNetMessagePauseGame, inPattern);
+        Pattern(ioData, 8, inPattern);
+        PutGameMessage(ioData, kMessageBuildWall, inPattern);
+        break;
+    }
+    case 3:   // an unknown type first: the import does not advance, so every input is skipped
+        ioData.push_back(2);
+        PutHeader(ioData, 0x05, inPattern);
+        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
+        break;
+    case 4:   // a known input, then an unknown type, then one the import never reaches
+        ioData.push_back(3);
+        PutGameMessage(ioData, kMessageGameSpeed, inPattern);
+        PutHeader(ioData, 0xfe, inPattern);
+        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
+        break;
+    case 5:   // a communications tick in the inputs, with its own input
+        ioData.push_back(2);
+        PutHeader(ioData, kNetMessageCommunicationsTick, inPattern);
+        Pattern(ioData, 8, inPattern);
+        PutInputs(ioData, 1, (inPattern + 1) % 9);
+        PutGameMessage(ioData, kMessageExplore, inPattern);
+        break;
+    case 6:   // 255 inputs, the most the list holds
+        ioData.push_back(255);
+        for (int i = 0; i < 255; i++)
+            PutHeader(ioData, kNetMessageServerIsAlive, (inPattern + i) % 5);
+        break;
+    }
+}
+
+struct EEEngineSweepRow {
+    unsigned char mType;
+    unsigned long mFixed;   // the fixed bytes after the header (before the strings, the inputs)
+    int mStrings;           // the strings after them (a 4-byte member follows two)
+    bool mInputs;
+};
+static const EEEngineSweepRow kEngineRows[] = {
+    {kNetMessageAddPlayer, 1, 1, false},
+    {kNetMessageAddPlayerResponse, 0, 0, false},
+    {kNetMessageClientConnectionRequest, 1, 2, false},
+    {kNetMessageClientConnectionRequestResponse, 10, 1, false},
+    {kNetMessageClientDisconnectionNotification, 1, 0, false},
+    {kNetMessageClientDisconnectionNotificationResponse, 4, 0, false},
+    {kNetMessageCommunicationsTick, 8, 0, true},
+    {kNetMessageCommunicationsTickResponse, 10, 0, true},
+    {kNetMessagePhysicsTick, 7, 0, false},
+    {kNetMessagePlayerConnectionCheck, 4, 0, false},
+    {kNetMessagePlayerConnectionCheckResponse, 4, 0, false},
+    {kNetMessageRemovePlayer, 4, 0, false},
+    {kNetMessageStartGame, 4, 0, false},
+    {kNetMessageStartGameResponse, 4, 0, false},
+    {kNetMessageStopGame, 0, 0, false},
+    {kNetMessageStopGameResponse, 0, 0, false},
+    {kNetMessageWorldDatabaseChecksum, 5, 0, false},
+    {kNetMessageWorldDatabaseChecksumResponse, 8, 0, false},
+    {kNetMessagePauseGame, 8, 0, false},
+    {kNetMessagePauseGameResponse, 4, 0, false},
+    {kNetMessageUnPauseGame, 8, 0, false},
+    {kNetMessageUnPauseGameResponse, 4, 0, false},
+    {kNetMessageClientReconnectionRequest, 8, 0, false},
+    {kNetMessageClientReconnectionRequestResponse, 9, 0, false},
+    {kNetMessageClientRequestPause, 0, 0, false},
+    {kNetMessageServerIsAlive, 0, 0, false},
+    {kNetMessageXferMessage, 0x405, 0, false},
+    {kNetMessageXferStatus, 7, 0, false},
+};
+
+static void EngineSweep()
+{
+    for (size_t r = 0; r < sizeof(kEngineRows) / sizeof(kEngineRows[0]); r++) {
+        const EEEngineSweepRow& theRow = kEngineRows[r];
+        for (int p = 0; p < 9; p++) {
+            int theVariants = theRow.mInputs ? 7 : theRow.mStrings > 0 ? 8 : 1;
+            for (int v = 0; v < theVariants; v++) {
+                std::vector<unsigned char> theData;
+                Header(theData, theRow.mType, p);
+                Pattern(theData, theRow.mFixed, p);
+                if (theRow.mInputs) {
+                    PutInputs(theData, v, p);
+                } else if (theRow.mStrings > 0) {
+                    PutString(theData, kStringLengths[v], p & 1);
+                    if (theRow.mStrings > 1) {
+                        PutString(theData, kStringLengths[(v + 3) % 8], (p + 1) & 1);
+                        Pattern(theData, 4, p);
+                    }
+                }
+                BuildEngine(theData);
+            }
+        }
+    }
+}
+
 void EEMessageCaptureSweep()
 {
     if (!EESimCaptureRecord::Active())
@@ -1277,4 +1616,5 @@ void EEMessageCaptureSweep()
         theData.insert(theData.end(), theBuffer, theBuffer + theSize);
         Build(theData);
     }
+    EngineSweep();
 }

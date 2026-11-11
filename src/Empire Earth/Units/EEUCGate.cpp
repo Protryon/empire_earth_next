@@ -199,7 +199,7 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
         thePlayer->RemoveKilledUnits();
     }
     if (thePlayer->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && theClass->GetUnitType() != kUnitTypeGatePalisades)
-        EECreateSpaceGateEnergyWall(dynamic_cast<EEComplexUnit*>(theGate[2]));
+        EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(theGate[2]));
 }
 
 // FUNCTION: EXE 0x610e53

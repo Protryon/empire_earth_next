@@ -32,12 +32,20 @@ public:
     // 0x84, 0x96 record their selection id (mU0C) per player, the rest execute only when it is the current one
     void ExecuteSelectionMessage();                              // 0xb8cf7
     void ExecuteMessage();                                       // 0xb8e86
-    // New (port): the header's members as the codec's first four slots (ee_netmsg; EEMessage.cpp)
-    void GetHeaderSlots(EeNetMsgSlot* outSlots);
 
     unsigned char mFastSelectionID;         // +0x0c (provisional name; not set by the ctor; EEMSelectPlayerChatType 0x1d2b36 stores +0x0d)
     bool mCanSendWhenOut;                   // +0x0d
 };
+
+// New (port): dynamic_cast<EEMessage*>(inMessage) as the message kind of its type (ee_netmsg: a message is an
+// EEMessage exactly when its type is a game type, 0x41..0xfd); NULL stays NULL
+extern "C" uint8_t ee_netmsg_message_kind(uint8_t message_type);   // rust/ee_rust.h
+inline EEMessage* EEGameMessageCast(NEMessage* inMessage)
+{
+    return inMessage != NULL && ee_netmsg_message_kind(inMessage->GetType()) == 2 /* EE_NETMSG_KIND_GAME */
+               ? static_cast<EEMessage*>(inMessage)
+               : NULL;
+}
 
 // The local player changes the formation of the selected group (vtable 0x43de14). sizeof 0x18.
 class EEMChangeFormation : public EEMessage {

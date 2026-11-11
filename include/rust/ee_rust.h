@@ -463,6 +463,106 @@ constexpr static const uint32_t EE_NETMSG_ZOOM_INFO = 103;
 
 constexpr static const size_t CLASS_COUNT = 104;
 
+/// The first engine class id.
+constexpr static const uint32_t EE_NETMSG_ENGINE_BASE = (uint32_t)CLASS_COUNT;
+
+/// How many engine classes there are.
+constexpr static const size_t EE_NETMSG_ENGINE_CLASS_COUNT = 28;
+
+/// `NEMAddPlayer`
+constexpr static const uint32_t EE_NETMSG_NE_ADD_PLAYER = EE_NETMSG_ENGINE_BASE;
+
+/// `NEMAddPlayerResponse`
+constexpr static const uint32_t EE_NETMSG_NE_ADD_PLAYER_RESPONSE = (EE_NETMSG_ENGINE_BASE + 1);
+
+/// `NEMClientConnectionRequest`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST = (EE_NETMSG_ENGINE_BASE + 2);
+
+/// `NEMClientConnectionRequestResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_CONNECTION_REQUEST_RESPONSE = (EE_NETMSG_ENGINE_BASE + 3);
+
+/// `NEMClientDisconnectionNotification`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION = (EE_NETMSG_ENGINE_BASE + 4);
+
+/// `NEMClientDisconnectionNotificationResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_DISCONNECTION_NOTIFICATION_RESPONSE = (EE_NETMSG_ENGINE_BASE + 5);
+
+/// `NEMClientReconnectionRequest`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST = (EE_NETMSG_ENGINE_BASE + 6);
+
+/// `NEMClientReconnectionRequestResponse`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_RECONNECTION_REQUEST_RESPONSE = (EE_NETMSG_ENGINE_BASE + 7);
+
+/// `NEMClientRequestPause`
+constexpr static const uint32_t EE_NETMSG_NE_CLIENT_REQUEST_PAUSE = (EE_NETMSG_ENGINE_BASE + 8);
+
+/// `NEMCommunicationsTick`
+constexpr static const uint32_t EE_NETMSG_NE_COMMUNICATIONS_TICK = (EE_NETMSG_ENGINE_BASE + 9);
+
+/// `NEMCommunicationsTickResponse`
+constexpr static const uint32_t EE_NETMSG_NE_COMMUNICATIONS_TICK_RESPONSE = (EE_NETMSG_ENGINE_BASE + 10);
+
+/// `NEMPauseGame`
+constexpr static const uint32_t EE_NETMSG_NE_PAUSE_GAME = (EE_NETMSG_ENGINE_BASE + 11);
+
+/// `NEMPauseGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_PAUSE_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 12);
+
+/// `NEMPhysicsTick`
+constexpr static const uint32_t EE_NETMSG_NE_PHYSICS_TICK = (EE_NETMSG_ENGINE_BASE + 13);
+
+/// `NEMPlayerConnectionCheck`
+constexpr static const uint32_t EE_NETMSG_NE_PLAYER_CONNECTION_CHECK = (EE_NETMSG_ENGINE_BASE + 14);
+
+/// `NEMPlayerConnectionCheckResponse`
+constexpr static const uint32_t EE_NETMSG_NE_PLAYER_CONNECTION_CHECK_RESPONSE = (EE_NETMSG_ENGINE_BASE + 15);
+
+/// `NEMRemovePlayer`
+constexpr static const uint32_t EE_NETMSG_NE_REMOVE_PLAYER = (EE_NETMSG_ENGINE_BASE + 16);
+
+/// `NEMServerIsAlive`
+constexpr static const uint32_t EE_NETMSG_NE_SERVER_IS_ALIVE = (EE_NETMSG_ENGINE_BASE + 17);
+
+/// `NEMStartGame`
+constexpr static const uint32_t EE_NETMSG_NE_START_GAME = (EE_NETMSG_ENGINE_BASE + 18);
+
+/// `NEMStartGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_START_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 19);
+
+/// `NEMStopGame`
+constexpr static const uint32_t EE_NETMSG_NE_STOP_GAME = (EE_NETMSG_ENGINE_BASE + 20);
+
+/// `NEMStopGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_STOP_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 21);
+
+/// `NEMUnPauseGame`
+constexpr static const uint32_t EE_NETMSG_NE_UN_PAUSE_GAME = (EE_NETMSG_ENGINE_BASE + 22);
+
+/// `NEMUnPauseGameResponse`
+constexpr static const uint32_t EE_NETMSG_NE_UN_PAUSE_GAME_RESPONSE = (EE_NETMSG_ENGINE_BASE + 23);
+
+/// `NEMWorldDatabaseChecksum`
+constexpr static const uint32_t EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM = (EE_NETMSG_ENGINE_BASE + 24);
+
+/// `NEMWorldDatabaseChecksumResponse`
+constexpr static const uint32_t EE_NETMSG_NE_WORLD_DATABASE_CHECKSUM_RESPONSE = (EE_NETMSG_ENGINE_BASE + 25);
+
+/// `NEMXferMessage`
+constexpr static const uint32_t EE_NETMSG_NE_XFER_MESSAGE = (EE_NETMSG_ENGINE_BASE + 26);
+
+/// `NEMXferStatus`
+constexpr static const uint32_t EE_NETMSG_NE_XFER_STATUS = (EE_NETMSG_ENGINE_BASE + 27);
+
+/// No message has this type.
+constexpr static const uint8_t EE_NETMSG_KIND_NONE = 0;
+
+/// An engine message (`NEMessage::BuildNEMessage` builds it).
+constexpr static const uint8_t EE_NETMSG_KIND_ENGINE = 1;
+
+/// A game message: the types the game registers its factory for (`EEMessage::RegisterKnownMessages`, 0x41..0xfd),
+/// the types every `EEMessage` class takes (`EEMEndCinematic`'s 0x9d too, which the factory does not build).
+constexpr static const uint8_t EE_NETMSG_KIND_GAME = 2;
+
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
@@ -506,8 +606,39 @@ constexpr static const long ERROR_OK = 0;
 
 constexpr static const long ERROR_FAILED = 9;
 
+/// `kFontStyleBold`, `kFontStyleItalic`, `kFontStyleUnderline`, `kFontStyleShadow`.
+constexpr static const unsigned long STYLE_BOLD = 1;
+
+constexpr static const unsigned long STYLE_ITALIC = 2;
+
+constexpr static const unsigned long STYLE_UNDERLINE = 4;
+
+constexpr static const unsigned long STYLE_SHADOW = 16;
+
+/// The screen's `LOGPIXELSY` as the game saw it (a DPI-unaware process): fonts are sized in game pixels.
+constexpr static const int64_t LOG_PIXELS_Y = 96;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
+
+/// `kDisplayModeHidden` / `kDisplayModeShown`.
+constexpr static const unsigned long HIDDEN = 0;
+
+constexpr static const unsigned long SHOWN = 1;
+
+/// `UIEntity::GetType` of a control (`kControlTypeButton`: every `UIControl` is entity type 1).
+constexpr static const unsigned long ENTITY_CONTROL = 1;
+
+/// `kDbControlHelpTextLabel`, `kDbControlMultiLineHelpTextLabel`.
+constexpr static const unsigned long DB_HELP_TEXT_LABEL = 24;
+
+constexpr static const unsigned long DB_MULTI_LINE_HELP_TEXT_LABEL = 25;
+
+/// `kToolTipShadowOffset`.
+constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
+
+/// `kFadeInRate`.
+constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
@@ -633,6 +764,19 @@ constexpr static const uint64_t EE_CLASS_KIND_LAND_MILITARY_HERO = 8589934592;
 constexpr static const uint64_t EE_CLASS_KIND_SPACESHIP = 17179869184;
 
 constexpr static const uint64_t EE_CLASS_KIND_PLANET_SPACESHIP = 34359738368;
+
+/// The unit object classes (`EEUnit`, `EEComplexUnit`).
+constexpr static const uint32_t EE_OBJECT_KIND_UNIT = 1;
+
+constexpr static const uint32_t EE_OBJECT_KIND_COMPLEX_UNIT = 2;
+
+/// `RTSUnit::mObjectKind`'s values: an `RTSUnit` alone (only while its base part is built or destroyed), an
+/// `EEUnit`, an `EEComplexUnit`.
+constexpr static const uint8_t EE_OBJECT_RTS_UNIT = 0;
+
+constexpr static const uint8_t EE_OBJECT_UNIT = 1;
+
+constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -2734,6 +2878,9 @@ struct EeNetMsgSlot {
   uint32_t offset;
 };
 
+/// Builds one nested input from the bytes at `data`: its `ExportSize`, or 0 when no message has its type.
+using EeNetMsgBuildInput = uint32_t(*)(void *context, const uint8_t *data);
+
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 struct EeOfBytes {
   uint8_t *ptr;
@@ -2934,6 +3081,19 @@ struct EeUiRect {
   float left;
   float right;
   float top;
+};
+
+/// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
+/// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
+/// the tile size.
+struct EeUiTilePlan {
+  EeUiRect clip;
+  unsigned long first_row;
+  unsigned long last_row;
+  unsigned long first_column;
+  unsigned long last_column;
+  float w;
+  float h;
 };
 
 /// `GE2DPoint`: x, y.
@@ -3252,6 +3412,32 @@ struct EeUiEditRefs {
   const unsigned long *border;
 };
 
+/// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
+/// and size.
+struct EeUiFontEntry {
+  bool present;
+  unsigned long string_id;
+  unsigned long style;
+  unsigned long quality;
+  unsigned long size;
+};
+
+/// `UIDbDataFonts`: one font record of the UI database (0x80 bytes on every target).
+struct EeUiDbFont {
+  /// Empty: no font.
+  char font_name[108];
+  /// The face name's string-table ID.
+  uint32_t string_id;
+  uint32_t size;
+  uint32_t quality;
+  uint8_t bold;
+  uint8_t italic;
+  uint8_t underline;
+  uint8_t style10;
+  uint8_t style08;
+  char pad[3];
+};
+
 /// The host functions of one `UIListBox<T>` instantiation.
 struct EeUiListHost {
   unsigned long (*num_lines)(void *list);
@@ -3564,6 +3750,12 @@ struct EeUiTrigger {
   void *event;
   void *form;
   void *entity;
+};
+
+/// `UIDirtyRectangle`: a rectangle and the surfaces it still has to be redrawn on.
+struct EeUiDirtyRect {
+  EeUiRect rect;
+  unsigned long surface_count;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -6842,8 +7034,40 @@ void ee_netmsg_import(uint32_t class_id,
                       EeNetMsgSlot *slots,
                       size_t count);
 
-/// The class the game's factory builds for message type `message_type`, or `u32::MAX`.
+/// The class the game's or the engine's factory builds for message type `message_type`, or `u32::MAX`.
 uint32_t ee_netmsg_class_of_type(uint8_t message_type);
+
+/// The message kind of a type: engine, game, or none. A message object is an `EEMessage` exactly when its type is a
+/// game type: every class's constructor passes its type, and the import constructors take the type the factory
+/// dispatched on.
+uint8_t ee_netmsg_message_kind(uint8_t message_type);
+
+/// `NEMPlayerInput::ExportSize`: the count byte and the travelling inputs' sizes (`inputs`: one slot per input of
+/// the list, its `size` its `ExportSize`).
+///
+/// # Safety
+/// `inputs` points to `count` slots.
+uint32_t ee_netmsg_inputs_size(const EeNetMsgSlot *inputs,
+                               size_t count);
+
+/// `NEMPlayerInput::ExportMessage`: the count byte and the travelling inputs' bytes into `out` (`out_size` bytes);
+/// returns the bytes written.
+///
+/// # Safety
+/// `inputs` points to `count` slots, each with its exported bytes; `out` holds `out_size` bytes.
+uint32_t ee_netmsg_inputs_export(const EeNetMsgSlot *inputs,
+                                 size_t count,
+                                 uint8_t *out,
+                                 size_t out_size);
+
+/// `NEMPlayerInput::ImportMessage`: reads the count byte at `data` and has `build` make each input in turn
+/// (`codec::walk_inputs`); returns the offset after the last input built.
+///
+/// # Safety
+/// `data` holds a received inputs list; `build` is safe to call with `context` and a pointer into it.
+uint32_t ee_netmsg_inputs_import(const uint8_t *data,
+                                 EeNetMsgBuildInput build,
+                                 void *context);
 
 /// `CompressUnits`: packs `count` ids for `owner` into `out` (256 bytes); returns the byte count.
 ///
@@ -7268,6 +7492,57 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
 
 /// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
 EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
+
+/// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
+long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
+
+/// The tiling classes' `DrawBackground(redraw)` up to `DrawTiledBackground`: `kind` 0 tiled, 1 left-right,
+/// 2 top-bottom, 3 stretched (`across` x `down` tiles) -> whether the redraw rectangle meets the background, the
+/// plan in `out`.
+bool ee_ui_background_tiled_plan(int kind,
+                                 float across,
+                                 float down,
+                                 EeUiRect rect,
+                                 EeUiRect texture,
+                                 EeUiRect redraw,
+                                 EeUiTilePlan *out);
+
+/// `UITiledBackground::DrawTiledBackground(clip, rows, columns, w, h)` (`rect`: the background's).
+long ee_ui_background_draw_tiled(void *background,
+                                 EeUiRect rect,
+                                 EeUiRect clip,
+                                 unsigned long first_row,
+                                 unsigned long last_row,
+                                 unsigned long first_column,
+                                 unsigned long last_column,
+                                 float w,
+                                 float h);
+
+/// `UIFullBackground::DrawBackground(redraw)`: the first tile's texture size, the window's, the designed screen's
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_full_draw(void *background,
+                                EeUiRect redraw,
+                                unsigned long texture_width,
+                                unsigned long texture_height,
+                                unsigned long window_width,
+                                unsigned long window_height,
+                                unsigned long designed_width,
+                                unsigned long designed_height,
+                                unsigned long columns,
+                                unsigned long rows);
+
+/// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
+/// `RelayoutBackground` (never exclusive) lay a background out in.
+EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
+
+/// `UIBackground::SetRectangle(rect)`.
+void ee_ui_background_set_rectangle(void *background, EeUiRect rect);
+
+/// `UIBackground::SetVisibility(visible)`.
+void ee_ui_background_set_visibility(void *background, bool visible);
+
+/// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
+void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
 
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
@@ -7698,6 +7973,68 @@ void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
 /// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
 bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
 
+/// `UIForm::AddCopyDirtyRectangle(rect)`.
+void ee_ui_form_add_copy_dirty_rectangle(void *form, const EeUiRect *rect);
+
+/// `UIForm::AddDirtyRectangle(rect)` after its popup test (`surfaces`: the manager's surface count).
+void ee_ui_form_add_dirty_rectangle(void *form,
+                                    const EeUiRect *rect,
+                                    unsigned long surfaces);
+
+/// `UIForm::CopyData` -> its result.
+long ee_ui_form_copy_data(void *form);
+
+/// `UIForm::Open`.
+void ee_ui_form_open(void *form);
+
+/// `UIForm::Close`.
+void ee_ui_form_close(void *form);
+
+/// `UIForm::SetPopup(control)`.
+void ee_ui_form_set_popup(void *form, void *control);
+
+/// `UIForm::RedrawIntersectControls(rect)`.
+void ee_ui_form_redraw_intersect_controls(void *form, const EeUiRect *rect);
+
+/// `UIForm::SetAllControlsDirty`.
+void ee_ui_form_set_all_controls_dirty(void *form);
+
+/// `UIForm::GetToolTipShadowRectangle(rect, out)`.
+EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
+
+/// `UIFontTable::Create`'s reading of one font record.
+EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
+
+/// `UIFontTable::CreateClosestFont`'s point size for a pixel height.
+long ee_ui_font_closest_size(unsigned long pixel_height);
+
+/// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
+size_t ee_ui_font_find_or_create(const void *query);
+
+/// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
+unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
+
+/// `UIHotKeySorter::operator()`.
+bool ee_ui_hotkey_before(bool left_always,
+                         unsigned long left_keys,
+                         bool right_always,
+                         unsigned long right_keys);
+
+/// `UIHotKey::GetHotKeyName`: the modifiers' names (NULL: no modifier) and the key's, as C strings -> the name in
+/// `out` (`capacity` bytes, NUL-terminated); returns its length. The C++ sizes `out` from the names' lengths.
+size_t ee_ui_hotkey_name(const char *m0,
+                         const char *m1,
+                         const char *m2,
+                         const char *key,
+                         uint8_t *out,
+                         size_t capacity);
+
+/// `UIHotKey::FireEvents` -> whether an event fired.
+bool ee_ui_hotkey_fire_events(void *key);
+
+/// `UIForm::UpdateKeyboard` -> its result.
+long ee_ui_form_update_keyboard(void *form);
+
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);
 
@@ -7796,6 +8133,49 @@ void ee_ui_manager_process_all_events(void *manager);
 
 /// `UIManager::ProcessAllEventsForForm(form)`.
 void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
+
+/// `UIManager::SetMusicVolume(volume)`.
+void ee_ui_manager_set_music_volume(void *manager, float volume);
+
+/// `UIManager::StartMusic(name)` (the name as a C string).
+void ee_ui_manager_start_music(void *manager, const char *name);
+
+/// `UIManager::StopMusic`.
+void ee_ui_manager_stop_music(void *manager);
+
+/// `UIManager::SetSoundInstance(instance)`.
+void ee_ui_manager_set_sound_instance(void *manager, void *instance);
+
+/// `UIManager::RemoveSoundInstance`.
+void ee_ui_manager_remove_sound_instance(void *manager);
+
+/// `UIManager::RemoveAndStopSoundInstance`.
+void ee_ui_manager_remove_and_stop_sound_instance(void *manager);
+
+/// `UIManager::UpdateUI`'s music step (inside the lock).
+void ee_ui_manager_update_music(void *manager);
+
+/// `UIManager::AddIMEResultString` (call 0), `ChangeIMECompositionString` (1), `CloseIMECompositionString` (2),
+/// `OpenIMECompositionString` (3): `args` are the call's arguments for the host -> the form's result.
+long ee_ui_manager_ime_form_call(void *manager,
+                                 int call,
+                                 const void *args);
+
+/// `UIManager::ChangeIMECandidateWindow(list)`: `list` is the C++ list (for `SetCandidateList`), with its style and
+/// count.
+long ee_ui_manager_change_candidate_window(void *manager,
+                                           const void *list,
+                                           unsigned long style,
+                                           unsigned long count);
+
+/// `UIManager::OpenIMECandidateWindow`.
+long ee_ui_manager_open_candidate_window(void *manager);
+
+/// `UIManager::CloseIMECandidateWindow`.
+long ee_ui_manager_close_candidate_window(void *manager);
+
+/// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
+long ee_ui_manager_copy_candidate_window(void *manager, long result);
 
 /// The constructor's geometry ([`scrollbar::layout`]).
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);

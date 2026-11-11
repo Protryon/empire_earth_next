@@ -957,10 +957,10 @@ void EEPhysics::DrainInput()
             case kMessageSavedGroupAddSelection:
             case kMessageSavedGroupSelect:
             case kMessageSelectTheseUnits:
-                dynamic_cast<EEMessage*>(theInput)->ExecuteSelectionMessage();
+                EEGameMessageCast(theInput)->ExecuteSelectionMessage();
                 break;
             default: {
-                EEMessage* theGameMessage = dynamic_cast<EEMessage*>(theInput);
+                EEMessage* theGameMessage = EEGameMessageCast(theInput);
                 if (theGameMessage != NULL)
                     theGameMessage->ExecuteMessage();
                 else

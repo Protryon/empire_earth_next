@@ -16,6 +16,7 @@ class UIForm;
 #endif
 
 class LLE_API UIBackground {
+    friend struct UIBackgroundRust;         // UIBackground.cpp: the Rust moves' view (ee_ui background.rs)
 public:
     UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
                  unsigned long inDrawPriority, bool inVisible);

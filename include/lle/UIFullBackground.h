@@ -12,6 +12,7 @@ class UIForm;
 struct GETextureDescription;
 
 class LLE_API UIFullBackground {
+    friend struct UIFullBackgroundRust;     // UIFullBackground.cpp: the Rust tiles' draws (ee_ui background.rs)
 public:
     UIFullBackground(const UString& inFileName, unsigned long inColumns, unsigned long inRows, UIForm* inForm,
                      unsigned long inDesignedWidth, unsigned long inDesignedHeight);

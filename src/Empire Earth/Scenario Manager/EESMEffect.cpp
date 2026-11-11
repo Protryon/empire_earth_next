@@ -3,6 +3,7 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/UWideString.h"
+#include "ee/EEUnitKind.h"
 #include "ee/EESMDialogMessage.h"
 #include "lle/FSFile.h"
 #include <vector>
@@ -318,7 +319,7 @@ void EESMEffect::CreateAIMilitaryGroup()
                 if (theObject != NULL && theObject->mUnits.size() != 0) {
                     theUnitID = *theObject->mUnits.begin();
                     for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[k]));
+                        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[k]));
                         if (theUnit != NULL && theUnit->GetHitPoints() > 0) {
                             theUnitID = theUnit->GetUnitID();
                             theTask.SetUnit(theUnit);
@@ -333,7 +334,7 @@ void EESMEffect::CreateAIMilitaryGroup()
                 theTask.mLocation = theLocation;
                 theTargetPlayer = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
             } else if (theUnitID != 0) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theUnitID));
+                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theUnitID));
                 if (theUnit != NULL) {
                     theTargetPlayer = theUnit->mPlayer;
                     if (theUnit->mContainer != NULL)
@@ -452,7 +453,7 @@ void EESMEffect::ModifyAIMilitaryTarget()
         if (theObject != NULL && theObject->mUnits.size() > 0) {
             theUnitID = *theObject->mUnits.begin();
             for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[k]));
+                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[k]));
                 if (theUnit != NULL && theUnit->GetHitPoints() > 0)
                     theUnitID = theUnit->GetUnitID();
             }
@@ -1648,7 +1649,7 @@ void EESMEffect::FaceObject()
     theObject->Evaluate(0);
     unsigned long theCount = theObject->mUnits.size();
     for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[i]));
+        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[i]));
         if (theUnit == NULL || !(theUnit->GetHitPoints() > 0) ||
             (theUnit->GetGoal() != NULL && theUnit->GetCommandType() != kActionIdle) || !(theUnit->GetMaxAngularVelocity() > 0.0f))
             continue;
@@ -1689,7 +1690,7 @@ void EESMEffect::FreezeUnits(bool inFlag)
         theObject->Evaluate(0);
     unsigned long theNumUnits = theObject->mUnits.size();
     for (unsigned long i = 0; i < theNumUnits; ++i) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[i]));
+        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[i]));
         if (theUnit == NULL || !(theUnit->GetHitPoints() > 0))
             continue;
         if (inFlag == true) {

@@ -6,6 +6,7 @@
 // chains start at 0x10078c81.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -15,6 +16,14 @@
 #include "lle/UIBitmapBackground.h"
 #include "lle/UITiledBackground.h"
 #include "lle/UILRTiledBackground.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top); guarded: a golden driver includes several
+// background units in one translation unit
+#ifndef UI_BACKGROUND_RECT_HELPERS
+#define UI_BACKGROUND_RECT_HELPERS
+static inline EeUiRect UIBgRect(const GERectangle& r) { return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop}; }
+static inline GERectangle UIBgRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+#endif
 
 // FUNCTION: LLE 0x10078b83
 // Creates a left-to-right tiled background (the texture repeats across its layout rectangle)
@@ -37,16 +46,12 @@ UILRTiledBackground::~UILRTiledBackground()
 // Redraws the tiles of its single row that overlap the rectangle
 long UILRTiledBackground::DrawBackground(const GERectangle& inRectangle)
 {
-    GERectangle theClip;
-    long theResult = 0;
-    if (inRectangle.And(this->mRectangle, theClip)) {
-        float theWidth = this->mTextureRectangle.GetWidth() - 1.0f;
-        float theHeight = this->mRectangle.GetHeight();
-        long theFirstColumn = UMFloor((theClip.GetLeft() - this->mRectangle.GetLeft()) / theWidth);
-        long theLastColumn = UMFloor((theClip.GetRight() - this->mRectangle.GetLeft()) / theWidth);
-        theResult = this->DrawTiledBackground(theClip, 0, 0, theFirstColumn, theLastColumn, theWidth, theHeight);
-    }
-    return theResult;
+    EeUiTilePlan thePlan;
+    if (!ee_ui_background_tiled_plan(1, 0.0f, 0.0f, UIBgRect(this->mRectangle), UIBgRect(this->mTextureRectangle),
+                                     UIBgRect(inRectangle), &thePlan))
+        return 0;
+    return this->DrawTiledBackground(UIBgRect(thePlan.clip), thePlan.first_row, thePlan.last_row, thePlan.first_column,
+                                     thePlan.last_column, thePlan.w, thePlan.h);
 }
 
 // Implicit copy members and ??_E of UITiledBackground and UILRTiledBackground

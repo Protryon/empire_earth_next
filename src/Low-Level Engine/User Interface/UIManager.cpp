@@ -112,6 +112,74 @@ struct UIManagerRust {
             break;
         }
     }
+    // ChangeIMECompositionString's arguments, through the Rust IME call
+    struct Composition {
+        const UWideString* mString;
+        const UString* mAttributes;
+        unsigned long mCursor;
+    };
+    static long Value(void* inManager, int inWhich)
+    {
+        UIManager* theManager = Manager(inManager);
+        switch (inWhich) {
+        case 0:
+            return theManager->mSoundManager != NULL;
+        case 1:
+            return theManager->mMusicID;
+        case 2:
+            return theManager->mStartMusic;
+        default:
+            return theManager->mStopMusic;
+        }
+    }
+    static void SetValue(void* inManager, int inWhich, long inValue)
+    {
+        UIManager* theManager = Manager(inManager);
+        switch (inWhich) {
+        case 1:
+            theManager->mMusicID = inValue;
+            break;
+        case 2:
+            theManager->mStartMusic = inValue != 0;
+            break;
+        default:
+            theManager->mStopMusic = inValue != 0;
+            break;
+        }
+    }
+    static float& Volume(void* inManager) { return Manager(inManager)->mMusicVolume; }
+    static UWideString& MusicFileName(void* inManager) { return Manager(inManager)->mMusicFileName; }
+    static SESMInstanceNode*& Instance(void* inManager) { return Manager(inManager)->mMusicInstance; }
+    static SESoundManager* Sound(void* inManager) { return Manager(inManager)->mSoundManager; }
+    static TSCriticalSection* Lock(void* inManager) { return Manager(inManager)->mCriticalSection; }
+    static long ImeFormCall(void* inManager, int inCall, const void* inArguments)
+    {
+        UIForm* theForm = Manager(inManager)->mFormStack.back();
+        switch (inCall) {
+        case 0:
+            theForm->AddIMEResultString(*static_cast<const UWideString*>(inArguments));
+            return kErrorOK;
+        case 1: {
+            const Composition* theArguments = static_cast<const Composition*>(inArguments);
+            return theForm->ChangeIMECompositionString(*theArguments->mString, *theArguments->mAttributes, theArguments->mCursor);
+        }
+        case 2:
+            return theForm->CloseIMECompositionString();
+        default:
+            return theForm->OpenIMECompositionString();
+        }
+    }
+    static UIControl* Captured(void* inManager, bool inCurrent)
+    {
+        UIManager* theManager = Manager(inManager);
+        UIForm* theForm = inCurrent ? theManager->GetCurrentForm() : theManager->mFormStack.back();
+        return theForm ? theForm->GetKeyboardCaptured() : NULL;
+    }
+    static bool& Flag(void* inManager, int inFlag)
+    {
+        return inFlag == 0 ? Manager(inManager)->mCandidateWindowOpen : Manager(inManager)->mDrawCandidateWindow;
+    }
+    static UIIMECandidate* Candidate(void* inManager) { return Manager(inManager)->mCandidateWindow; }
     static void FormRectCall(UIForm* inForm, int inCall, const GERectangle& inRectangle)
     {
         switch (inCall) {
@@ -203,6 +271,97 @@ extern "C" void ee_uicpp_manager_event_push(void* inManager, const EeUiTrigger* 
     theTrigger.mEntity = static_cast<UIEntity*>(inTrigger->entity);
     UIManagerRust::Events(inManager).push_back(theTrigger);
 }
+
+// UIManager's music bookkeeping and IME members (ee_ui manager_media.rs)
+extern "C" long ee_uicpp_manager_music_value(void* inManager, int inWhich) { return UIManagerRust::Value(inManager, inWhich); }
+extern "C" void ee_uicpp_manager_music_set_value(void* inManager, int inWhich, long inValue)
+{
+    UIManagerRust::SetValue(inManager, inWhich, inValue);
+}
+extern "C" float ee_uicpp_manager_music_volume(void* inManager) { return UIManagerRust::Volume(inManager); }
+extern "C" void ee_uicpp_manager_music_set_volume(void* inManager, float inVolume) { UIManagerRust::Volume(inManager) = inVolume; }
+extern "C" const char* ee_uicpp_manager_music_name(void* inManager) { return UIManagerRust::MusicFileName(inManager); }
+extern "C" void ee_uicpp_manager_music_set_name(void* inManager, const char* inName) { UIManagerRust::MusicFileName(inManager) = inName; }
+extern "C" void ee_uicpp_manager_music_lower(const char* inName, unsigned char* outName, size_t inCapacity)
+{
+    UWideString theName(inName);
+    PlatMbsLwr((unsigned char*)(const char*)theName);
+    strncpy((char*)outName, theName, inCapacity);
+    outName[inCapacity - 1] = 0;
+}
+extern "C" void* ee_uicpp_manager_music_instance(void* inManager) { return UIManagerRust::Instance(inManager); }
+extern "C" void ee_uicpp_manager_music_set_instance(void* inManager, void* inInstance)
+{
+    UIManagerRust::Instance(inManager) = static_cast<SESMInstanceNode*>(inInstance);
+}
+extern "C" void ee_uicpp_manager_music_instance_call(void* inManager, int inCall, void* inInstance)
+{
+    SESMInstanceNode* theInstance = static_cast<SESMInstanceNode*>(inInstance);
+    if (inCall == 0)
+        theInstance->Reference();
+    else if (inCall == 1)
+        theInstance->Dereference();
+    else
+        UIManagerRust::Sound(inManager)->Stop(theInstance, false);
+}
+extern "C" void ee_uicpp_manager_music_unload(void* inManager, long inID) { UIManagerRust::Sound(inManager)->Unload(inID); }
+extern "C" long ee_uicpp_manager_music_load(void* inManager, const char* inName)
+{
+    return UIManagerRust::Sound(inManager)->Load(inName, 0, 1);
+}
+extern "C" void* ee_uicpp_manager_music_play(void* inManager, long inID, float inVolume)
+{
+    return UIManagerRust::Sound(inManager)->PlayAndReturnReferencedNode(inID, inVolume, 0.0f, 1.0f, true, NULL);
+}
+extern "C" void ee_uicpp_manager_music_set_parameters(void* inManager, void* inInstance, float inVolume)
+{
+    UIManagerRust::Sound(inManager)->SetSoundParameters(static_cast<SESMInstanceNode*>(inInstance), inVolume, 0.0f, 1.0f);
+}
+extern "C" void ee_uicpp_manager_lock(void* inManager, int inLeave)
+{
+    if (inLeave)
+        UIManagerRust::Lock(inManager)->Leave();
+    else
+        UIManagerRust::Lock(inManager)->Enter();
+}
+extern "C" bool ee_uicpp_manager_ime_has_form(void* inManager) { return UIManagerRust::List(inManager, 0).size() > 0; }
+extern "C" long ee_uicpp_manager_ime_form_call(void* inManager, int inCall, const void* inArguments)
+{
+    return UIManagerRust::ImeFormCall(inManager, inCall, inArguments);
+}
+extern "C" bool ee_uicpp_manager_ime_captured(void* inManager, bool inCurrent)
+{
+    UIControl* theControl = UIManagerRust::Captured(inManager, inCurrent);
+    return theControl && theControl->GetIMEEnabled() == true;
+}
+extern "C" EeUiRect ee_uicpp_manager_ime_captured_rect(void* inManager, bool inCurrent)
+{
+    return UIManagerRust::Rect(UIManagerRust::Captured(inManager, inCurrent)->GetRectangle());
+}
+extern "C" bool ee_uicpp_manager_ime_window(void* inManager, float* outOrigin, unsigned long* outSize)
+{
+    UIManager* theManager = UIManagerRust::Manager(inManager);
+    GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+    if (!theWindow)
+        return false;
+    outOrigin[0] = theWindow->GetClientOrigin().GetX();
+    outOrigin[1] = theWindow->GetClientOrigin().GetY();
+    outSize[0] = theWindow->GetWidth();
+    outSize[1] = theWindow->GetHeight();
+    return true;
+}
+extern "C" bool ee_uicpp_manager_ime_flag(void* inManager, int inFlag) { return UIManagerRust::Flag(inManager, inFlag); }
+extern "C" void ee_uicpp_manager_ime_set_flag(void* inManager, int inFlag, bool inValue) { UIManagerRust::Flag(inManager, inFlag) = inValue; }
+extern "C" void ee_uicpp_manager_ime_set_list(void* inManager, const void* inList, float inLeft)
+{
+    UIManagerRust::Candidate(inManager)->SetCandidateList(*static_cast<const UIIMECandidateList*>(inList), inLeft);
+}
+extern "C" void ee_uicpp_manager_ime_open_window(void* inManager, const EeUiRect* inScreen, const EeUiRect* inControl)
+{
+    UIManagerRust::Candidate(inManager)->OpenCandidateWindow(UIManagerRust::Rect(*inScreen), UIManagerRust::Rect(*inControl));
+}
+extern "C" void ee_uicpp_manager_ime_close_window(void* inManager) { UIManagerRust::Candidate(inManager)->CloseCandidateWindow(); }
+extern "C" long ee_uicpp_manager_ime_copy(void* inManager) { return UIManagerRust::Candidate(inManager)->CopyData(); }
 
 // FUNCTION: LLE 0x10078ee4
 // Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
@@ -420,10 +579,7 @@ void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm
 // Passes an IME result string to the top form, under the UI lock
 void UIManager::AddIMEResultString(const UWideString& inString)
 {
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0)
-        this->mFormStack.back()->AddIMEResultString(inString);
-    this->mCriticalSection->Leave();
+    ee_ui_manager_ime_form_call(this, 0, &inString);
 }
 
 // FUNCTION: LLE 0x1007a074
@@ -431,19 +587,7 @@ void UIManager::AddIMEResultString(const UWideString& inString)
 // most one candidate, else shows it at the control; returns OK
 long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
 {
-    this->mCriticalSection->Enter();
-    if (this->GetCurrentForm() && this->GetCurrentForm()->GetKeyboardCaptured() &&
-        this->GetCurrentForm()->GetKeyboardCaptured()->GetIMEEnabled() == true) {
-        if ((inList.mStyle & 2) && inList.mCount <= 1)
-            this->mCandidateWindowOpen = false;
-        else {
-            this->mCandidateWindowOpen = true;
-            this->mCandidateWindow->SetCandidateList(inList,
-                                               this->GetCurrentForm()->GetKeyboardCaptured()->GetRectangle().GetLeft());
-        }
-    }
-    this->mCriticalSection->Leave();
-    return kErrorOK;
+    return ee_ui_manager_change_candidate_window(this, &inList, inList.mStyle, inList.mCount);
 }
 
 // FUNCTION: LLE 0x1007a102
@@ -451,33 +595,22 @@ long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
 long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                            unsigned long inCursor)
 {
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0)
-        theResult = this->mFormStack.back()->ChangeIMECompositionString(inString, inAttributes, inCursor);
-    this->mCriticalSection->Leave();
-    return theResult;
+    UIManagerRust::Composition theArguments = {&inString, &inAttributes, inCursor};
+    return ee_ui_manager_ime_form_call(this, 1, &theArguments);
 }
 
 // FUNCTION: LLE 0x1007a149
 // Closes the IME candidate window; returns OK
 long UIManager::CloseIMECandidateWindow()
 {
-    this->mCandidateWindow->CloseCandidateWindow();
-    this->mCandidateWindowOpen = false;
-    return kErrorOK;
+    return ee_ui_manager_close_candidate_window(this);
 }
 
 // FUNCTION: LLE 0x1007a162
 // Tells the top form the IME composition string closed, under the UI lock; returns its result
 long UIManager::CloseIMECompositionString()
 {
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0)
-        theResult = this->mFormStack.back()->CloseIMECompositionString();
-    this->mCriticalSection->Leave();
-    return theResult;
+    return ee_ui_manager_ime_form_call(this, 2, NULL);
 }
 
 // FUNCTION: LLE 0x1007a19b
@@ -490,10 +623,7 @@ long UIManager::CopyData()
         theResult = this->mVisibleForms[i]->CopyData();
         this->mCopiedForms.push_back(this->mVisibleForms[i]);
     }
-    this->mDrawCandidateWindow = this->mCandidateWindowOpen;
-    if (this->mDrawCandidateWindow == true)
-        theResult = this->mCandidateWindow->CopyData();
-    return theResult;
+    return ee_ui_manager_copy_candidate_window(this, theResult);
 }
 
 // FUNCTION: LLE 0x1007a216
@@ -750,36 +880,14 @@ void UIManager::LoadTexture(const UString& inName, GETexture*& outTexture)
 // Opens the IME candidate window over the client area for the focused IME-enabled control; returns OK
 long UIManager::OpenIMECandidateWindow()
 {
-    GERectangle theRectangle;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0) {
-        UIControl* theControl = this->mFormStack.back()->GetKeyboardCaptured();
-        if (theControl && theControl->GetIMEEnabled() == true) {
-            GEWindow* theWindow = this->mRasterizer->GetWindow(this->mScreen);
-            if (theWindow) {
-                this->mCandidateWindowOpen = true;
-                theRectangle.SetLeft(theWindow->GetClientOrigin().GetX());
-                theRectangle.SetRight(theWindow->GetWidth() + theRectangle.GetLeft());
-                theRectangle.SetTop(theWindow->GetClientOrigin().GetY());
-                theRectangle.SetBottom(theWindow->GetHeight() + theRectangle.GetTop());
-                this->mCandidateWindow->OpenCandidateWindow(theRectangle, theControl->GetRectangle());
-            }
-        }
-    }
-    this->mCriticalSection->Leave();
-    return kErrorOK;
+    return ee_ui_manager_open_candidate_window(this);
 }
 
 // FUNCTION: LLE 0x1007ac9b
 // Tells the top form an IME composition string opened, under the UI lock; returns its result
 long UIManager::OpenIMECompositionString()
 {
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0)
-        theResult = this->mFormStack.back()->OpenIMECompositionString();
-    this->mCriticalSection->Leave();
-    return theResult;
+    return ee_ui_manager_ime_form_call(this, 3, NULL);
 }
 
 // FUNCTION: LLE 0x1007acd4
@@ -856,19 +964,14 @@ void UIManager::ProcessAllEventsForForm(UIForm* inForm)
 // Stops the playing music and releases its instance
 void UIManager::RemoveAndStopSoundInstance()
 {
-    if (this->mMusicInstance) {
-        this->mSoundManager->Stop(this->mMusicInstance, false);
-        this->RemoveSoundInstance();
-    }
+    ee_ui_manager_remove_and_stop_sound_instance(this);
 }
 
 // FUNCTION: LLE 0x1007b310
 // Releases the music instance
 void UIManager::RemoveSoundInstance()
 {
-    if (this->mMusicInstance)
-        this->mMusicInstance->Dereference();
-    this->mMusicInstance = NULL;
+    ee_ui_manager_remove_sound_instance(this);
 }
 
 // FUNCTION: LLE 0x1007b338
@@ -884,12 +987,7 @@ void UIManager::RemoveDatabase()
 // Replaces the music instance, moving the reference to the new one
 void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
 {
-    if (inInstance == this->mMusicInstance)
-        return;
-    this->RemoveSoundInstance();
-    this->mMusicInstance = inInstance;
-    if (this->mMusicInstance)
-        this->mMusicInstance->Reference();
+    ee_ui_manager_set_sound_instance(this, inInstance);
 }
 
 // FUNCTION: LLE 0x1007b36e
@@ -920,66 +1018,21 @@ void UIManager::SetMouseLeftHanded(bool inLeftHanded)
 // Sets the music volume; stops the music at 0 and restarts the last track (or the intro) when raised from 0
 void UIManager::SetMusicVolume(float inVolume)
 {
-    if (this->mMusicVolume > 0.0f && inVolume <= 0.0f)
-        this->StopMusic();
-    else if (this->mMusicVolume <= 0.0f && inVolume > 0.0f) {
-        if (this->mMusicFileName == "") {
-            UWideString theIntro("sounds\\eeintro.mp3");
-            this->StartMusic(theIntro);
-        } else {
-            UWideString theFileName(this->mMusicFileName);
-            this->mMusicFileName = "";
-            this->StartMusic(theFileName);
-        }
-    }
-    this->mMusicVolume = inVolume;
-    if (this->mMusicInstance)
-        this->mSoundManager->SetSoundParameters(this->mMusicInstance, inVolume, 0.0f, 1.0f);
+    ee_ui_manager_set_music_volume(this, inVolume);
 }
 
 // FUNCTION: LLE 0x1007b616
 // Loads and starts a music track unless it is the current one (names compared lower-cased)
 void UIManager::StartMusic(const UWideString& inFileName)
 {
-    UWideString theFileName(inFileName);
-    if (!this->mSoundManager)
-        return;
-    PlatMbsLwr((unsigned char*)(const char*)theFileName);
-    if (this->mMusicFileName != theFileName) {
-        this->mStopMusic = true;
-        if (this->mMusicID != -1) {
-            this->RemoveAndStopSoundInstance();
-            this->mSoundManager->Unload(this->mMusicID);
-        }
-        this->mMusicID = this->mSoundManager->Load((const char*)inFileName, 0, 1);
-        if (this->mMusicID != -1) {
-            // Fixed: stored the name as given while the check above compares lower-cased names, so restarting the
-            // current track with a mixed-case name reloaded it
-            this->mMusicFileName = theFileName;
-            this->mStartMusic = true;
-            this->mCriticalSection->Enter();
-            if (this->mMusicInstance == NULL) {
-                this->SetSoundInstance(
-                    this->mSoundManager->PlayAndReturnReferencedNode(this->mMusicID, this->mMusicVolume, 0.0f, 1.0f, true, NULL));
-                if (this->mMusicInstance)
-                    this->mMusicInstance->Dereference();
-            }
-            this->mCriticalSection->Leave();
-        }
-    }
+    ee_ui_manager_start_music(this, inFileName);
 }
 
 // FUNCTION: LLE 0x1007b743
 // Stops the music and unloads the track
 void UIManager::StopMusic()
 {
-    this->RemoveAndStopSoundInstance();
-    if (this->mMusicID == -1)
-        return;
-    this->mSoundManager->Unload(this->mMusicID);
-    this->mMusicID = -1;
-    this->mMusicFileName = "";
-    this->mStopMusic = true;
+    ee_ui_manager_stop_music(this);
 }
 
 // FUNCTION: LLE 0x1007b786
@@ -1036,18 +1089,7 @@ long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
     this->mForceUIUpdate = false;
     this->mCriticalSection->Enter();
     ee_ui_manager_process_all_events(this);
-    if (this->mStopMusic == true) {
-        this->RemoveAndStopSoundInstance();
-        this->mStopMusic = false;
-    }
-    if (this->mStartMusic == true) {
-        if (this->mMusicInstance == NULL) {
-            this->SetSoundInstance(this->mSoundManager->PlayAndReturnReferencedNode(this->mMusicID, this->mMusicVolume, 0.0f, 1.0f, true, NULL));
-            if (this->mMusicInstance)
-                this->mMusicInstance->Dereference();
-        }
-        this->mStartMusic = false;
-    }
+    ee_ui_manager_update_music(this);
     this->mCriticalSection->Leave();
     return theResult;
 }

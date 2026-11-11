@@ -22,6 +22,11 @@ pub enum Kind {
     Records32(u32),
     /// as many bytes as the member before it (a u8) says (`EEMSelectUnits`' compressed buffer)
     Blob,
+    /// a fixed block of this many bytes (`NEMXferMessage`'s data)
+    Raw(u32),
+    /// the players' inputs (`NEMPlayerInput`): a u8 count (the C++ `(unsigned char)size()`; only that many of the
+    /// list travel), then each nested message's own bytes. Always the last member.
+    Inputs,
 }
 
 impl Kind {
@@ -32,8 +37,9 @@ impl Kind {
             Kind::U16 => Some(2),
             Kind::I32 | Kind::U32 | Kind::F32 => Some(4),
             Kind::Point2 => Some(8),
+            Kind::Raw(n) => Some(n as usize),
             Kind::Vec3 => Some(12),
-            Kind::WStr | Kind::Records8(_) | Kind::Records32(_) | Kind::Blob => None,
+            Kind::WStr | Kind::Records8(_) | Kind::Records32(_) | Kind::Blob | Kind::Inputs => None,
         }
     }
 }

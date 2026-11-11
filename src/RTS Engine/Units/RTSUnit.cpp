@@ -161,6 +161,7 @@ RTSUnit::RTSUnit()
 // Destroys the unit and its tile node (asserts it was invalidated)
 RTSUnit::~RTSUnit()
 {
+    this->mObjectKind.mValue = 0;   // New (port): an RTSUnit again (ee/EEUnitKind.h)
     ESVERIFY_AT(this->mIsValid == false, 62);
     delete this->mTileNode;
 }

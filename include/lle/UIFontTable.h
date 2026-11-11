@@ -12,6 +12,7 @@ class GEFont;
 class UIManager;
 
 class LLE_API UIFontTable {
+    friend struct UIFontTableRust;          // UIFontTable.cpp: the Rust search's view of sFont (ee_ui font.rs)
 public:
     UIFontTable();
     virtual ~UIFontTable() {}
