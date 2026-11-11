@@ -1,177 +1,72 @@
-// ConfigParser token reader (wide and narrow), with quotes, line joins and $define$ expansion
+// ConfigParser token reader (wide and narrow), with quotes, line joins and $define$ expansion. The reading is
+// ee_won's (rust/crates/ee_won/src/config.rs read_token); the errors it names are set here.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
 #include <list>
 #include <map>
 #include <vector>
-#include <ctype.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 namespace WONAPI {
-template<class T> bool ReadToken(ConfigParser*,std::basic_string<T>&,bool,bool);
+struct ConfigTokenOut {
+    std::string* mNarrow;
+    std::wstring* mWide;
+    std::string mName;
+    static void Narrow(void* inContext, const uint8_t* inBytes, size_t inLength)
+    {
+        static_cast<ConfigTokenOut*>(inContext)->mNarrow->assign(reinterpret_cast<const char*>(inBytes), inLength);
+    }
+    static void Wide(void* inContext, const uint32_t* inUnits, size_t inCount)
+    {
+        std::wstring* aText = static_cast<ConfigTokenOut*>(inContext)->mWide;
+        aText->erase();
+        for (size_t i = 0; i < inCount; i++)
+            *aText += (wchar_t)inUnits[i];
+    }
+    static void Name(void* inContext, const uint8_t* inBytes, size_t inLength)
+    {
+        static_cast<ConfigTokenOut*>(inContext)->mName.assign(reinterpret_cast<const char*>(inBytes), inLength);
+    }
+};
+
+// Nothing changes at the end of the data; otherwise the token is what was read (the whole token, or the part
+// before an error)
+static bool ConfigReadToken(ConfigParser* inParser, std::string* outNarrow, std::wstring* outWide, bool inToEndLine,
+                            bool inSkip)
+{
+    ConfigTokenOut anOut;
+    anOut.mNarrow = outNarrow;
+    anOut.mWide = outWide;
+    ConfigParser* aRoot = inParser->Root();
+    EeWonConfigIo anIo = inParser->Io();
+    int aResult = ee_won_config_read_token(inParser->mLexer, &anIo, aRoot == inParser ? NULL : aRoot->mLexer,
+                                           outWide != NULL ? (uint32_t)sizeof(wchar_t) : 0, inToEndLine, inSkip,
+                                           ConfigTokenOut::Narrow, ConfigTokenOut::Wide, ConfigTokenOut::Name,
+                                           &anOut);
+    switch (aResult) {
+    case 1: return true;
+    case 2: inParser->SetError("Expecting end quote", false); return false;
+    case 3: inParser->SetError("Expecting closing '$'", false); return false;
+    case 4: inParser->SetError("Define not found: " + anOut.mName, false); return false;
+    default: return false;
+    }
+}
+
 // FUNCTION: WON 0x007b5cf0
-// Reads the next wide token (or the rest of the line), expanding $name$ defines; false at the end or on an error
-template<> bool ReadToken<wchar_t>(ConfigParser* parser, std::wstring& token,bool toEndLine,bool skip)
-{
-    if(parser->EndOfFile()) return false;
-    token.erase();
-    int line=parser->mLineNum;
-    parser->SkipWhitespace();
-    if(toEndLine && line!=parser->mLineNum) return true;
-    bool quoted=false;
-    bool escaped=false;
-    int ch=0;
-    while(!parser->EndOfFile()) {
-        escaped=(ch=='\\' && !escaped);
-        ch=parser->GetChar();
-        if(ch==-1) break;
-        if(((unsigned int)ch<256 ? isspace(ch) : 0)) {
-            if(!quoted) {
-                if(!toEndLine) {parser->UngetChar(ch);break;}
-                if(ch=='\n' && !escaped) {parser->UngetChar(ch);break;}
-                if(!skip) token+=(wchar_t)' ';
-                line=parser->mLineNum;
-                parser->SkipWhitespace();
-                if(line!=parser->mLineNum) break;
-                continue;
-            }
-            if(ch=='\n') {parser->SetError("Expecting end quote",false);return false;}
-        } else if(ch=='}') {
-            if(!quoted) {
-                if(token.empty() && !skip) token+=(wchar_t)'}';
-                else parser->UngetChar(ch);
-                break;
-            }
-        } else if(ch==';') {
-            if(!quoted) break;
-        } else if(ch=='/') {
-            if(!quoted) {
-                int next=parser->PeekChar();
-                if(next=='*' || next=='/') {parser->UngetChar(ch);break;}
-            }
-        } else if(ch=='#') {
-            if(!quoted) {parser->UngetChar(ch);break;}
-        } else if(ch=='"') {
-            if(quoted) {
-                if(!escaped) quoted=false;
-            } else quoted=true;
-        } else if(ch=='\\') {
-            int next=parser->GetChar();
-            if(next=='\n') continue;
-            parser->UngetChar(next);
-        } else if(ch=='$') {
-            if(skip) continue;
-            if(!quoted || !escaped) {
-                std::string name;
-                std::wstring value;
-                while(!parser->EndOfFile()) {
-                    int next=parser->GetChar();
-                    if(((unsigned int)next<256 ? isspace(next) : 0)) {
-                        parser->SetError("Expecting closing '$'",false);
-                        return false;
-                    }
-                    if(next=='$') break;
-                    name+=(char)next;
-                }
-                if(!parser->GetDefine(name,value)) {
-                    parser->SetError("Define not found: "+name,false);
-                    return false;
-                }
-                token+=value;
-                continue;
-            }
-        }
-        if(!skip) token+=(wchar_t)ch;
-    }
-    return skip || !token.empty();
-}
-
-// FUNCTION: WON 0x007b6370
-// Reads the next token (or the rest of the line), expanding $name$ defines; false at the end or on an error
-template<> bool ReadToken<char>(ConfigParser* parser, std::string& token,bool toEndLine,bool skip)
-{
-    if(parser->EndOfFile()) return false;
-    token.erase();
-    int line=parser->mLineNum;
-    parser->SkipWhitespace();
-    if(toEndLine && line!=parser->mLineNum) return true;
-    bool quoted=false;
-    bool escaped=false;
-    int ch=0;
-    while(!parser->EndOfFile()) {
-        escaped=(ch=='\\' && !escaped);
-        ch=parser->GetChar();
-        if(ch==-1) break;
-        if(((unsigned int)ch<256 ? isspace(ch) : 0)) {
-            if(!quoted) {
-                if(!toEndLine) {parser->UngetChar(ch);break;}
-                if(ch=='\n' && !escaped) {parser->UngetChar(ch);break;}
-                if(!skip) token+=(char)' ';
-                line=parser->mLineNum;
-                parser->SkipWhitespace();
-                if(line!=parser->mLineNum) break;
-                continue;
-            }
-            if(ch=='\n') {parser->SetError("Expecting end quote",false);return false;}
-        } else if(ch=='}') {
-            if(!quoted) {
-                if(token.empty() && !skip) token+=(char)'}';
-                else parser->UngetChar(ch);
-                break;
-            }
-        } else if(ch==';') {
-            if(!quoted) break;
-        } else if(ch=='/') {
-            if(!quoted) {
-                int next=parser->PeekChar();
-                if(next=='*' || next=='/') {parser->UngetChar(ch);break;}
-            }
-        } else if(ch=='#') {
-            if(!quoted) {parser->UngetChar(ch);break;}
-        } else if(ch=='"') {
-            if(quoted) {
-                if(!escaped) quoted=false;
-            } else quoted=true;
-        } else if(ch=='\\') {
-            int next=parser->GetChar();
-            if(next=='\n') continue;
-            parser->UngetChar(next);
-        } else if(ch=='$') {
-            if(skip) continue;
-            if(!quoted || !escaped) {
-                std::string name;
-                std::string value;
-                while(!parser->EndOfFile()) {
-                    int next=parser->GetChar();
-                    if(((unsigned int)next<256 ? isspace(next) : 0)) {
-                        parser->SetError("Expecting closing '$'",false);
-                        return false;
-                    }
-                    if(next=='$') break;
-                    name+=(char)next;
-                }
-                if(!parser->GetDefine(name,value)) {
-                    parser->SetError("Define not found: "+name,false);
-                    return false;
-                }
-                token+=value;
-                continue;
-            }
-        }
-        if(!skip) token+=(char)ch;
-    }
-    return skip || !token.empty();
-}
-
+// (ReadToken<wchar_t>) The wide token reader, ee_won's now
 // FUNCTION: WON 0x007b3d50
-// Reads the next token as a wide string
+// Reads the next token as a wide string (or the rest of the line), expanding $name$ defines; false at the end or
+// on an error
 bool ConfigParser::ReadToken(std::wstring& token,bool toEndLine,bool skip)
-{ return WONAPI::ReadToken<wchar_t>(this,token,toEndLine,skip); }
+{ return ConfigReadToken(this,NULL,&token,toEndLine,skip); }
+// FUNCTION: WON 0x007b6370
+// (ReadToken<char>) The narrow token reader, ee_won's now
 // FUNCTION: WON 0x007b3d70
-// Reads the next token as a narrow string
+// Reads the next token as a narrow string (or the rest of the line), expanding $name$ defines; false at the end or
+// on an error
 bool ConfigParser::ReadToken(std::string& token,bool toEndLine,bool skip)
-{ return WONAPI::ReadToken<char>(this,token,toEndLine,skip); }
+{ return ConfigReadToken(this,&token,NULL,toEndLine,skip); }
 }

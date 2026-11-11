@@ -1594,3 +1594,450 @@ pub unsafe extern "C" fn ee_astar_largest_continent(continents: *const EeContine
     };
     queries::largest_continent(continents, kind)
 }
+
+// ---- the sparse point set (sparse.rs) ----
+
+use crate::sparse::{PointList, SparseArray};
+
+/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
+#[derive(Clone, Default)]
+pub struct EeSparseArray {
+    set: SparseArray,
+    scratch: Vec<EePoint>,
+    raw: Vec<i32>,
+}
+
+/// A new, empty set.
+#[no_mangle]
+pub extern "C" fn ee_sparse_new() -> *mut EeSparseArray {
+    Box::into_raw(Box::default())
+}
+
+/// A copy of `s` (its points; the copy owns its own).
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_clone(s: *const EeSparseArray) -> *mut EeSparseArray {
+    // SAFETY: the caller's contract
+    let s = unsafe { &*s };
+    Box::into_raw(Box::new(EeSparseArray { set: s.set.clone(), scratch: Vec::new(), raw: Vec::new() }))
+}
+
+/// The set as numbers (`SparseArray::raw`: a saved game's continent manager), its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_raw(s: *mut EeSparseArray, count: *mut usize) -> *const i32 {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    s.set.raw(&mut s.raw);
+    // SAFETY: the caller's contract
+    unsafe { *count = s.raw.len() };
+    s.raw.as_ptr()
+}
+
+/// The set from `ee_sparse_raw`'s numbers; false (the set then empty) when they are not such a list.
+///
+/// # Safety
+/// `s` a live set, `data` `count` numbers (NULL with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_set_raw(s: *mut EeSparseArray, data: *const i32, count: usize) -> bool {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    let data = if count == 0 || data.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, count) }
+    };
+    s.set.set_raw(data)
+}
+
+/// Releases a set.
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed yet (NULL is ignored).
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_free(s: *mut EeSparseArray) {
+    if !s.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(s) });
+    }
+}
+
+/// `Size()`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_size(s: *const EeSparseArray) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe { &*s }.set.size()
+}
+
+/// `Clear()`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_clear(s: *mut EeSparseArray) {
+    // SAFETY: the caller's contract
+    unsafe { &mut *s }.set.clear();
+}
+
+/// `Contains(point)`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_contains(s: *const EeSparseArray, x: i32, y: i32) -> bool {
+    // SAFETY: the caller's contract
+    unsafe { &*s }.set.contains(EePoint { x, y })
+}
+
+/// `Insert(point)`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_insert(s: *mut EeSparseArray, x: i32, y: i32) {
+    // SAFETY: the caller's contract
+    unsafe { &mut *s }.set.insert(EePoint { x, y });
+}
+
+/// `Insert(list)` (`create` false) or `Create(list)` (`create` true) over `count` points.
+///
+/// # Safety
+/// `s` a live set, `points` valid for `count` (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_insert_list(
+    s: *mut EeSparseArray,
+    points: *const EePoint,
+    count: usize,
+    create: bool,
+) {
+    let points = if count == 0 || points.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(points, count) }
+    };
+    // SAFETY: the caller's contract
+    let set = &mut unsafe { &mut *s }.set;
+    if create {
+        set.create(points);
+    } else {
+        set.insert_all(points);
+    }
+}
+
+/// `Remove(point)`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_remove(s: *mut EeSparseArray, x: i32, y: i32) -> bool {
+    // SAFETY: the caller's contract
+    unsafe { &mut *s }.set.remove(EePoint { x, y })
+}
+
+/// `BuildPointList(step)` (`extremes` false) or `GetOnlyExtremeEdgePoints` (true): the list in the set's scratch,
+/// its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_points(
+    s: *mut EeSparseArray,
+    extremes: bool,
+    step: i32,
+    count: *mut usize,
+) -> *const EePoint {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    let list = if extremes { PointList::Extremes } else { PointList::All(step) };
+    s.set.points(list, &mut s.scratch);
+    // SAFETY: the caller's contract
+    unsafe { *count = s.scratch.len() };
+    s.scratch.as_ptr()
+}
+
+/// `operator[](index)`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_get(s: *const EeSparseArray, index: i32) -> EePoint {
+    // SAFETY: the caller's contract
+    unsafe { &*s }.set.get(index)
+}
+
+/// `CountContainerNodes()`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_run_count(s: *const EeSparseArray) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe { &*s }.set.run_count()
+}
+
+/// `GetClosestPoint(point)`.
+///
+/// # Safety
+/// `s` a live set.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_closest_point(s: *const EeSparseArray, x: i32, y: i32) -> EePoint {
+    // SAFETY: the caller's contract
+    unsafe { &*s }.set.closest_point(EePoint { x, y })
+}
+
+/// `GetRandomPoint(random)`: `generate(random)` is the caller's `URandom::Generate()`, called in the C++'s order.
+///
+/// # Safety
+/// `s` a live set; `generate` must not reach `s`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_random_point(
+    s: *const EeSparseArray,
+    generate: extern "C" fn(*mut c_void) -> f32,
+    random: *mut c_void,
+) -> EePoint {
+    // SAFETY: the caller's contract
+    let set = &unsafe { &*s }.set;
+    set.random_point(&mut || generate(random))
+}
+
+// ---- the manager's last loops (manager.rs) ----
+
+use crate::manager::{self, EeScenarioArea, EeScenarioAreaPlan, PruneHost};
+
+/// `GetTilesNextTo(x, y, id)`: `continent(ctx, x, y)` is the manager's `GetContinentID`, `flags` its adjacency
+/// matrix (`flags_count` cells, NULL for none), `out` room for the 8 ring tiles; their count in `out_count`.
+///
+/// # Safety
+/// `flags` valid for `flags_count` cells (or NULL), `out` for 8 points, `out_count` valid; `continent` must not
+/// call back into `ee_astar`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tiles_next_to(
+    x: i32,
+    y: i32,
+    id: u16,
+    width: u32,
+    height: u32,
+    flags: *const bool,
+    flags_count: usize,
+    flags_width: i32,
+    continent: extern "C" fn(*mut c_void, i32, i32) -> u16,
+    ctx: *mut c_void,
+    out: *mut EePoint,
+    out_count: *mut usize,
+) -> bool {
+    let flags = if flags.is_null() || flags_count == 0 {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(flags, flags_count) }
+    };
+    let mut tiles = Vec::new();
+    let mut lookup = |x, y| continent(ctx, x, y);
+    let result = manager::tiles_next_to(x, y, id, width, height, flags, flags_width, &mut lookup, &mut tiles);
+    let n = tiles.len().min(8);
+    // SAFETY: the caller's contract (room for 8)
+    unsafe {
+        std::ptr::copy_nonoverlapping(tiles.as_ptr(), out, n);
+        *out_count = n;
+    }
+    result
+}
+
+/// What `PruneChokePoints` asks the C++ manager (`manager::PruneHost`), as C function pointers over `ctx`.
+#[repr(C)]
+pub struct EePruneCallbacks {
+    pub ctx: *mut c_void,
+    pub choke_exists: extern "C" fn(*mut c_void, usize) -> bool,
+    pub area_count: extern "C" fn(*mut c_void, usize) -> usize,
+    pub area: extern "C" fn(*mut c_void, usize, usize) -> i32,
+    /// `k` -1 for the choke point itself
+    pub is_near: extern "C" fn(*mut c_void, usize, usize, isize) -> bool,
+    pub remove: extern "C" fn(*mut c_void, usize),
+}
+
+struct PruneCalls<'a>(&'a EePruneCallbacks);
+
+impl PruneHost for PruneCalls<'_> {
+    fn choke_exists(&mut self, choke: usize) -> bool {
+        (self.0.choke_exists)(self.0.ctx, choke)
+    }
+    fn area_count(&mut self, choke: usize) -> usize {
+        (self.0.area_count)(self.0.ctx, choke)
+    }
+    fn area(&mut self, choke: usize, k: usize) -> i32 {
+        (self.0.area)(self.0.ctx, choke, k)
+    }
+    fn near(&mut self, edge: usize, choke: usize, k: Option<usize>) -> bool {
+        (self.0.is_near)(self.0.ctx, edge, choke, k.map_or(-1, |k| k as isize))
+    }
+    fn remove(&mut self, choke: usize) {
+        (self.0.remove)(self.0.ctx, choke)
+    }
+}
+
+/// `PruneChokePoints` over the continents' `categories` (`count` of them, -1 for none) and `chokes` choke points.
+///
+/// # Safety
+/// `categories` valid for `count` (any pointer when 0), `cb` valid and its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_prune_choke_points(
+    categories: *const i32,
+    count: usize,
+    chokes: usize,
+    cb: *const EePruneCallbacks,
+) {
+    let categories = if count == 0 || categories.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(categories, count) }
+    };
+    // SAFETY: the caller's contract
+    let mut host = PruneCalls(unsafe { &*cb });
+    manager::prune_choke_points(categories, chokes, &mut host);
+}
+
+/// `CreateScenarioAreas`' choice over `count` scenario areas: the areas to create into `out` (room for `count`);
+/// returns their number.
+///
+/// # Safety
+/// `areas` and `out` valid for `count` records (any pointer when 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_scenario_area_plan(
+    areas: *const EeScenarioArea,
+    count: usize,
+    out: *mut EeScenarioAreaPlan,
+) -> usize {
+    if count == 0 || areas.is_null() {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let plan = manager::scenario_area_plan(unsafe { std::slice::from_raw_parts(areas, count) });
+    // SAFETY: the caller's contract; at most `count` records
+    unsafe { std::ptr::copy_nonoverlapping(plan.as_ptr(), out, plan.len()) };
+    plan.len()
+}
+
+// ---- the path manager's splicing (path_splice.rs) ----
+
+use crate::path_splice::{self, EePathBounds, EePathPoint};
+
+/// A point list from C++ (`GE3DPoint`s; any pointer when `count` is 0).
+///
+/// # Safety
+/// `points` valid for `count`.
+unsafe fn path_points<'a>(points: *const EePathPoint, count: usize) -> &'a [EePathPoint] {
+    if count == 0 || points.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(points, count) }
+    }
+}
+
+/// `TrimPath`'s cut: the index to erase the path from, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_trim_index(
+    path: *const EePathPoint,
+    count: usize,
+    waypoints: usize,
+    unit_x: f32,
+    unit_y: f32,
+) -> isize {
+    // SAFETY: the caller's contract
+    let path = unsafe { path_points(path, count) };
+    path_splice::trim_index(path, waypoints, unit_x, unit_y).map_or(-1, |i| i as isize)
+}
+
+/// `AppendWaypoints` after no cut: the points to append to the path (`count` of them) from the unit's
+/// `waypoint_count` waypoints, into `out` (room for `waypoint_count`); returns their number.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` and `out` for `waypoint_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_append_waypoints(
+    path: *const EePathPoint,
+    count: usize,
+    waypoints: *const EePathPoint,
+    waypoint_count: usize,
+    out: *mut EePathPoint,
+) -> usize {
+    // SAFETY: the caller's contract
+    let (path, waypoints) = unsafe { (path_points(path, count), path_points(waypoints, waypoint_count)) };
+    let mut joined = path.to_vec();
+    path_splice::append_waypoints(&mut joined, waypoints);
+    let added = &joined[path.len()..];
+    // SAFETY: the caller's contract; at most `waypoint_count` points are added
+    unsafe { std::ptr::copy_nonoverlapping(added.as_ptr(), out, added.len()) };
+    added.len()
+}
+
+/// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
+/// takes the path up to that point and the detour).
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_join_paths(
+    path: *const EePathPoint,
+    count: usize,
+    detour: *const EePathPoint,
+    detour_count: usize,
+    join: usize,
+) -> bool {
+    // SAFETY: the caller's contract
+    let (path, detour) = unsafe { (path_points(path, count), path_points(detour, detour_count)) };
+    path_splice::join_paths(path, detour, join).is_some()
+}
+
+/// `FinishFailedPath`'s detour search: the count from the path's end, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_detour_join_count(
+    path: *const EePathPoint,
+    count: usize,
+    detour: *const EePathPoint,
+    detour_count: usize,
+) -> isize {
+    // SAFETY: the caller's contract
+    let (path, detour) = unsafe { (path_points(path, count), path_points(detour, detour_count)) };
+    path_splice::detour_join_count(path, detour).map_or(-1, |n| n as isize)
+}
+
+/// `TryShortPath`'s revolutions.
+#[no_mangle]
+pub extern "C" fn ee_path_short_path_revs(queued: i32, from_x: i32, from_y: i32, to_x: i32, to_y: i32) -> i32 {
+    path_splice::short_path_revs(queued, (from_x, from_y), (to_x, to_y))
+}
+
+/// The bounds `margin` tiles around a tile, clipped to the map.
+#[no_mangle]
+pub extern "C" fn ee_path_bounds_around(x: i32, y: i32, margin: i32, map_size: i32) -> EePathBounds {
+    path_splice::bounds_around((x, y), margin, map_size)
+}
+
+/// `SetGraphRevs`' step budget (`repeated`: the path history's same-tile request).
+#[no_mangle]
+pub extern "C" fn ee_path_graph_revs(distance: i32, kind_allowed: bool, repeated: bool) -> i32 {
+    path_splice::graph_revs(distance, kind_allowed, repeated)
+}
+
+/// `SetPathRevs`' step budget.
+#[no_mangle]
+pub extern "C" fn ee_path_path_revs(distance: i32, amphibious: bool, same_continent: bool) -> i32 {
+    path_splice::path_revs(distance, amphibious, same_continent)
+}

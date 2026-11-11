@@ -28,7 +28,7 @@ pub const EE_WON_AUTH_CERTIFICATE2: u32 = 2;
 /// `AuthPubKeyBlock`.
 pub const EE_WON_AUTH_PUB_KEY_BLOCK: u32 = 3;
 
-unsafe fn bytes<'a>(data: *const u8, length: usize) -> &'a [u8] {
+pub(crate) unsafe fn bytes<'a>(data: *const u8, length: usize) -> &'a [u8] {
     if length == 0 || data.is_null() {
         &[]
     } else {
@@ -46,7 +46,7 @@ unsafe fn units<'a>(data: *const u16, count: usize) -> &'a [u16] {
     }
 }
 
-unsafe fn give(sink: EeWonByteSink, context: *mut c_void, data: &[u8]) {
+pub(crate) unsafe fn give(sink: EeWonByteSink, context: *mut c_void, data: &[u8]) {
     // SAFETY: the sink's contract: `data` is valid during the call
     unsafe { sink(context, data.as_ptr(), data.len()) }
 }

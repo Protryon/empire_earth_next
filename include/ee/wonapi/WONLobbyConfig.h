@@ -21,12 +21,11 @@ class ConfigParser {
 private:
     ConfigParser(const ConfigParser&);
     ConfigParser& operator=(const ConfigParser&);
-protected:
-    static int mLineCount; // 0x966b54 (static: no storage in the object)
 public:
     ConfigParser(); // 0x7b1d20
-    static void ResetLineCount() { ConfigParser::mLineCount=0; }
-    static int GetLineCount() { return ConfigParser::mLineCount; }
+    // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won/src/config.rs)
+    static void ResetLineCount() { ee_won_config_reset_line_count(); }
+    static int GetLineCount() { return ee_won_config_line_count(); }
     virtual ~ConfigParser(); // 0x7b1e10 (closes the file; the only virtual)
     bool ReadToken(std::string&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d70
     bool ReadToken(std::wstring&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d50
@@ -59,29 +58,22 @@ public:
     bool GetGroupDefine(const std::string&, ConfigParserState&);
     void GetState(ConfigParserState&);
     bool SetState(const ConfigParserState&);
-    struct DefineMapContainer; // defined after this class
-    typedef std::vector<SmartPtr<DefineMapContainer> > DefineStack;
-    DefineStack mDefineStack; // 0x04..0x14
+    ConfigParser* Root(); // the topmost parent (the defines' owner)
+    EeWonConfigIo Io(); // the members ee_won reads and writes in a call
+    // The characters, tokens, pushback and define scopes are ee_won's (config.rs): the pushback (0x2c) and the
+    // define stack (0x04..0x14: scopes of a define map and a group define map) live in mLexer.
+    EeWonConfigLexer* mLexer;
     ConfigParser* mParent; // 0x14
     FileReader mFileReader; // 0x18..0x2c (0x14 bytes)
-    std::wstring mBackStr; // 0x2c
     std::string mAbortReason; // 0x3c
     std::string mWarnings; // 0x4c
     bool mWarningsAsErrors; // 0x5c
-    bool mIsUnicode; // 0x5d (the constructor leaves it uninitialized)
+    bool mIsUnicode; // 0x5d (the original constructor left it uninitialized; false now)
     int mLineNum; // 0x60
     std::string mFilePath; // 0x64
     std::string mFileNameAndPath; // 0x74
     bool mIgnorePathOnIncludeFile; // 0x84
     bool mStopped; // 0x85 (0x88 bytes in all)
-};
-
-// one scope of the parser's defines (0x20 bytes; the SDK's DefineStruct is from another revision)
-struct ConfigParser::DefineMapContainer : public RefCount {
-    typedef std::map<std::string, std::string, StringLessNoCase> DefineMap;
-    typedef std::map<std::string, ConfigParserState, StringLessNoCase> GroupDefineMap;
-    DefineMap mDefineMap; // 0x08 (0x0c bytes)
-    GroupDefineMap mGroupDefineMap; // 0x14 (0x0c bytes; 0x20 bytes in all)
 };
 
 // a registry key (RTTI RegKey, three virtual slots; constructor and destructor out of line). The port keeps no

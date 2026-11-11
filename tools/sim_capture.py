@@ -26,6 +26,10 @@ counters, the per-tile continent and sub sector ids and tile values, the contine
 path area, path sector, sub sector, choke point, hill, forest and rectangle area with its tiles, ids and links, the
 shore tiles. Their golden lines come from the C++ analysis (the continent manager, the choke point pass and the area
 classes unchanged; the tile and graph A* searches under it already Rust and equal by ASRN/ASGR).
+CNTN is every GetTilesNextTo call of the continent manager (the tile, the continent id, the result, the neighbour
+tiles), PMSP the path manager's splicing (EEPathManager.cpp: TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's
+detour search, the bounded searches' revolutions and bounds; a kind, the inputs, the outputs). Their golden lines
+come from the C++ (R5b.1, branch rust-r5b-cont2).
 CB** are the combat and unit formulas' records (ee/EECombatFormulas.h: damage, attack factor, elevation, morale, hit
 points, healing, conversion, the ballistic pitch, the projectile arc, the reach and range tests, the damage rows): one
 per call, the input record's bytes and the output's. Their golden lines come from the C++ formulas (R5b.2).
@@ -42,6 +46,13 @@ bytes it came from, the bytes it exports again, its members as the import left t
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE
 the engine messages over edge payloads (with the players' inputs nested in the communications ticks). Their
 golden lines come from the C++ codec (EEMessage.cpp's original ExportMessage/ImportMessage bodies).
+NMDC is the messages' Execute decisions (ee/EEMessageExecute.h: the selection id check, the resources): every call in
+game, their tables over edge values once, the real players' prices, exchanges and refunds every five game minutes.
+Its golden lines come from the C++ decisions (R5b.4 leaf 4).
+USCK is the unit store's check (ee/EEUnitStore.h, R5b.4 leaf 5): at every physics tick and before every executed game
+message, every unit of every player's list against its Rust record (the units compared; a difference stops EE-SIM with
+exit code 3). USPK is the box selection's pick (EESelectPick): every game call and, every five game minutes, a sweep
+over every player's units; its golden lines come from the C++ pick (EEPlayer::SelectUnits' loop).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """

@@ -1585,7 +1585,7 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             theLink = theLink->mNextPart;
         }
         if (inTarget->mUnitClass->GetCategory() == kUnitCategoryGate) {
-            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass)->GetLastLinkedCarrier(
+            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass.Get())->GetLastLinkedCarrier(
                 theLink->GetOutermostCarrier());
             EEComplexUnit* theSecond = dynamic_cast<EEUCGate*>(inTarget->GetUnitClass())->GetLastLinked(
                 theFirst->GetOutermostCarrier());
@@ -1798,7 +1798,7 @@ bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget)
     EEComplexUnit* theTarget = inTarget->mComplexUnit;
     bool theResult = false;
     if (!inUnit->mUnitClass->mIsTower && theTarget != NULL && theTarget->mGoalState != NULL) {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->mGoalState);
+        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->mGoalState.Get());
         if (theGoal != NULL)
             theResult = theGoal->mTarget == inUnit;
     }
@@ -3800,7 +3800,7 @@ EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
             theCommand = theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
             if (theCommand != kActionWaitForOpenPosition || theUnit->mGoalState == NULL || theUnit->mGoalState->mKind != kGoalGather)
                 continue;
-            EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->mGoalState);
+            EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->mGoalState.Get());
             if (theGoal != NULL && theGoal->mResource == inUnit)
                 theResult = theUnit;
         }

@@ -207,7 +207,7 @@ void EEUGAttackUnit::GetDebugLine(UWideString& ioText)
     UWideString theText;
     ioText += "attack";
     if (this->mTarget != NULL) {
-        sprintf(theText, " unit (uid %ld, hp %ld):", this->mTarget->mUnitID & 0xffffff, this->mTarget->mHitPoints);
+        sprintf(theText, " unit (uid %ld, hp %ld):", this->mTarget->mUnitID & 0xffffff, this->mTarget->mHitPoints.Get());
         ioText += theText;
     }
 }
@@ -221,7 +221,7 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
     if (this->mTarget == NULL)
         return;
     sprintf(theText, "Target Unit: %s at (%ld,%ld)\nTarget Health: %ld/%ld (%.2f%%)\n",
-            (const char*)this->mTarget->mUnitClass->mName, this->mTarget->mTileX, this->mTarget->mTileY, this->mTarget->mHitPoints,
+            (const char*)this->mTarget->mUnitClass->mName, this->mTarget->mTileX.Get(), this->mTarget->mTileY.Get(), this->mTarget->mHitPoints.Get(),
             this->mTarget->mStats->mMaxHitPoints, (float)this->mTarget->mHitPoints / this->mTarget->mStats->mMaxHitPoints);
     ioText += theText;
 }

@@ -10,6 +10,17 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatString.h"
+#include "rust/ee_rust.h"
+// The grammar's decisions (a token's kind, the group header's sequence, the instructions, a condition's branch, the
+// optional suffix, an included file's path) are ee_won's configobj module (rust/crates/ee_won/src/configobj.rs);
+// this class keeps the objects, maps, virtual hooks, lexer calls and the error and warning texts.
+namespace {
+const uint8_t* CfgBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+void CfgSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+}
 namespace WONAPI {
 class ConfigDefineScope {
     ConfigParser& mParser;
@@ -104,24 +115,31 @@ void ConfigObject::AddChild(ConfigObject* child)
 // Reads a group header "[name] [: base] {"; sets a parse error unless it ends in '{'
 bool ConfigObject::ReadGroupStart(ConfigParser& parser,std::string& name,std::string& inherited)
 {
-    std::string token;
-    if(!parser.ReadToken(token,false,false)) return false;
-    if(token!="{") {
-        StringParser stringParser(token.c_str());
-        if(token!=":") {
+    int32_t state=0;
+    StringParser stringParser("");
+    std::string token,base;
+    while(true) {
+        if(!parser.ReadToken(token,false,false)) return false;
+        switch(ee_won_cfg_group_start(&state,CfgBytes(token),token.length())) {
+        case EeWonCfgStart::Name:
+            base=token; // the parser reads the name from its own copy
+            stringParser.Set(base.c_str());
             stringParser.ReadString(name,false);
-            if(!parser.ReadToken(token,false,false)) return false;
-        }
-        if(token==":") {
-            std::string base;
-            if(!parser.ReadToken(base,false,false)) return false;
+            break;
+        case EeWonCfgStart::Colon:
+            break;
+        case EeWonCfgStart::Base:
+            base=token;
             stringParser.Set(base.c_str());
             stringParser.ReadString(inherited,false);
-            if(!parser.ReadToken(token,false,false)) return false;
+            break;
+        case EeWonCfgStart::Open:
+            return true;
+        default:
+            parser.SetError("Expecting '{' but got "+token,false);
+            return false;
         }
     }
-    if(token!="{") {parser.SetError("Expecting '{' but got "+token,false);return false;}
-    return true;
 }
 // The default parse hooks share one always-true function in the original (0x7099f0)
 bool ConfigObject::PreParse(ConfigParser*) {return true;}
@@ -154,11 +172,12 @@ bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bo
                 break;
             }
             StringToUpperCaseInPlace(token);
-            if(token=="}") {
+            EeWonCfgToken kind=ee_won_cfg_token_kind(CfgBytes(token),token.length());
+            if(kind==EeWonCfgToken::Close) {
                 if(!checkBraces) {parser.SetError("Unexpected '}'",false);return false;}
                 break;
             }
-            if(token[token.length()-1]==':') {
+            if(kind==EeWonCfgToken::Key) {
                 token.resize(token.length()-1);
                 std::string value;
                 std::wstring wideValue;
@@ -242,12 +261,9 @@ void ConfigObject::RegisterKeyValue(const char* key,ConfigValueBase* value)
 // Parses another config file (relative to this one) into this group; a missing required file is an error
 bool ConfigObject::IncludeFile(ConfigParser& parser,const std::string& path,bool required)
 {
-    std::string file=path;
-    std::string::size_type slash=file.find_last_of("/");
-    if(slash==std::string::npos) slash=file.find_last_of("\\");
-    if(parser.GetIgnorePathOnIncludeFile() && slash!=std::string::npos)
-        file=file.substr(slash+1,file.length()-slash-1);
-    file=parser.mFilePath+file;
+    std::string file;
+    ee_won_cfg_include_path(CfgBytes(path),path.length(),parser.GetIgnorePathOnIncludeFile(),CfgBytes(parser.mFilePath),
+                            parser.mFilePath.length(),CfgSink,&file);
     ConfigParser included;
     included.SetParent(&parser);
     if(included.OpenFile(file)) {
@@ -280,58 +296,34 @@ bool ConfigObject::IncludeGroup(ConfigParser& parser,const std::string& name,boo
 // Handles GROUPDEFINE, IFDEFINED/IFNOTDEFINED ... else blocks and registered child groups; false when unknown
 bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& instruction)
 {
-    if(instruction=="GROUPDEFINE") {
+    EeWonCfgInstruction kind=ee_won_cfg_instruction(CfgBytes(instruction),instruction.length(),false);
+    if(kind==EeWonCfgInstruction::GroupDefine) {
         std::string name,inherited;
         if(!this->ReadGroupStart(*parser,name,inherited)) return false;
         parser->AddGroupDefine(name,NULL);
         return this->SkipGroup(*parser,true,false);
     }
-    if(instruction=="IFDEFINED") {
+    if(kind==EeWonCfgInstruction::IfDefined || kind==EeWonCfgInstruction::IfNotDefined) {
         std::string name,expected;
         if(!this->ReadGroupStart(*parser,name,expected)) return true;
         std::string actual;
-        bool selected=false;
-        if(parser->GetDefine(name,actual) && (expected.empty() || StringCompareNoCase(expected,actual)==0)) {
-            selected=true;
-            this->ParseGroup(*parser,true,false,false,false);
-        } else this->SkipGroup(*parser,true,false);
-        std::string token;
-        parser->ReadToken(token,false,false);
-        if(PlatStrICmp(token.c_str(),"else")!=0) {
-            parser->UngetStr(token);
-            return true;
-        }
-        parser->ReadToken(token,false,false);
-        if(token!="{") {
-            parser->SetError("Expecting '{'",false);
-            return true;
-        }
-        if(selected) this->SkipGroup(*parser,true,false);
-        else this->ParseGroup(*parser,true,false,false,false);
-        return true;
-    }
-    if(instruction=="IFNOTDEFINED") {
-        std::string name,expected;
-        if(!this->ReadGroupStart(*parser,name,expected)) return true;
-        std::string actual;
-        bool selected=false;
-        if(parser->GetDefine(name,actual) && (expected.empty() || StringCompareNoCase(expected,actual)==0)) {
-            selected=true;
-            this->SkipGroup(*parser,true,false);
-        } else this->ParseGroup(*parser,true,false,false,false);
-        std::string token;
-        parser->ReadToken(token,false,false);
-        if(PlatStrICmp(token.c_str(),"else")!=0) {
-            parser->UngetStr(token);
-            return true;
-        }
-        parser->ReadToken(token,false,false);
-        if(token!="{") {
-            parser->SetError("Expecting '{'",false);
-            return true;
-        }
-        if(selected) this->ParseGroup(*parser,true,false,false,false);
+        bool found=parser->GetDefine(name,actual);
+        bool first=ee_won_cfg_condition(kind,found,expected.empty(),found && StringCompareNoCase(expected,actual)==0);
+        if(first) this->ParseGroup(*parser,true,false,false,false);
         else this->SkipGroup(*parser,true,false);
+        std::string token;
+        parser->ReadToken(token,false,false);
+        if(!ee_won_cfg_is_else(CfgBytes(token),token.length())) {
+            parser->UngetStr(token);
+            return true;
+        }
+        parser->ReadToken(token,false,false);
+        if(token!="{") {
+            parser->SetError("Expecting '{'",false);
+            return true;
+        }
+        if(first) this->SkipGroup(*parser,true,false);
+        else this->ParseGroup(*parser,true,false,false,false);
         return true;
     }
     KeyGroupMap::iterator itr=this->mKeyGroupMap.find(instruction);
@@ -342,47 +334,43 @@ bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& ins
 // Handles DEFINE/REDEFINE, INCLUDEGROUP, INCLUDEFILE and registered keys; false for an unknown key
 bool ConfigObject::HandleValueInstruction(ConfigParser* parser,const std::string& instruction,StringParser& value)
 {
-    if(instruction=="DEFINE" || instruction=="REDEFINE") {
+    EeWonCfgInstruction kind=ee_won_cfg_instruction(CfgBytes(instruction),instruction.length(),true);
+    if(kind==EeWonCfgInstruction::Define || kind==EeWonCfgInstruction::Redefine) {
         std::string name;
         if(!value.ReadString(name,true)) {parser->AddWarning("Invalid define.");return true;}
         value.SkipWhitespace();
         if(value.GetIsWString()) {
             std::wstring rest=value.GetWStr()+value.GetPos();
-            parser->AddDefine(name,WStringToString(rest),instruction=="REDEFINE");
+            parser->AddDefine(name,WStringToString(rest),kind==EeWonCfgInstruction::Redefine);
         } else {
             std::string rest=value.GetStr()+value.GetPos();
-            parser->AddDefine(name,rest,instruction=="REDEFINE");
+            parser->AddDefine(name,rest,kind==EeWonCfgInstruction::Redefine);
         }
         return true;
     }
-    if(instruction=="INCLUDEGROUP") {
-        std::string name;
-        value.ReadString(name,false);
+    if(kind==EeWonCfgInstruction::IncludeGroup || kind==EeWonCfgInstruction::IncludeFile) {
+        bool group=kind==EeWonCfgInstruction::IncludeGroup;
+        std::string target;
+        value.ReadString(target,false);
+        bool comma=value.CheckNextChar(',');
+        std::string optional;
+        bool read=comma && value.ReadString(optional,false);
+        bool isOptional=read && StringCompareNoCase(optional,std::string("optional"))==0;
         bool required=true;
-        if(value.CheckNextChar(',')) {
-            std::string optional;
-            if(!value.ReadString(optional,false))
-                parser->AddWarning("Expecting string: 'optional' after include group, include is required.");
-            else if(StringCompareNoCase(optional,std::string("optional"))!=0)
-                parser->AddWarning("Expecting string: optional after include group, include is required.");
-            else required=false;
+        switch(ee_won_cfg_optional(comma,read,isOptional)) {
+        case EeWonCfgOptional::Optional: required=false; break;
+        case EeWonCfgOptional::WarnNoString:
+            parser->AddWarning(group ? "Expecting string: 'optional' after include group, include is required."
+                                     : "Expecting string: 'optional' after include file, include is required.");
+            break;
+        case EeWonCfgOptional::WarnOtherWord:
+            parser->AddWarning(group ? "Expecting string: optional after include group, include is required."
+                                     : "Expecting string: optional after include file, include is required.");
+            break;
+        default: break;
         }
-        this->IncludeGroup(*parser,name,required);
-        return true;
-    }
-    if(instruction=="INCLUDEFILE") {
-        std::string path;
-        value.ReadString(path,false);
-        bool required=true;
-        if(value.CheckNextChar(',')) {
-            std::string optional;
-            if(!value.ReadString(optional,false))
-                parser->AddWarning("Expecting string: 'optional' after include file, include is required.");
-            else if(StringCompareNoCase(optional,std::string("optional"))!=0)
-                parser->AddWarning("Expecting string: optional after include file, include is required.");
-            else required=false;
-        }
-        this->IncludeFile(*parser,path,required);
+        if(group) this->IncludeGroup(*parser,target,required);
+        else this->IncludeFile(*parser,target,required);
         return true;
     }
     KeyValMap::iterator itr=this->mKeyMap.find(instruction);

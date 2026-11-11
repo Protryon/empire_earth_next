@@ -224,8 +224,8 @@ void EEUGLoadContainer::GetDebugText(UWideString& ioText)
     UWideString theText;
     sprintf(theText, "Load Container.\n");
     if (this->mContainer != NULL) {
-        sprintf(theText, "Container: %s, (%ld,%ld)\n", (const char*)this->mContainer->mUnitClass->mName, this->mContainer->mTileX,
-                this->mContainer->mTileY);
+        sprintf(theText, "Container: %s, (%ld,%ld)\n", (const char*)this->mContainer->mUnitClass->mName, this->mContainer->mTileX.Get(),
+                this->mContainer->mTileY.Get());
         ioText += theText;
     }
     sprintf(theText, "Passengers: %ld\n", this->mUnits.GetSize());
@@ -233,8 +233,8 @@ void EEUGLoadContainer::GetDebugText(UWideString& ioText)
     if (this->mUnits.GetSize() > 0) {
         for (std::vector<EEComplexUnit*>::iterator theIterator = this->mUnits.mItems.begin();
              theIterator != this->mUnits.mItems.end(); ++theIterator) {
-            sprintf(theText, "%s at %ld,%ld\n", (const char*)(*theIterator)->mUnitClass->mName, (*theIterator)->mTileX,
-                    (*theIterator)->mTileY);
+            sprintf(theText, "%s at %ld,%ld\n", (const char*)(*theIterator)->mUnitClass->mName, (*theIterator)->mTileX.Get(),
+                    (*theIterator)->mTileY.Get());
             ioText += theText;
         }
     }

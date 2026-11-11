@@ -223,11 +223,35 @@ struct Reader {
 
 // ---- writing
 
+// a sparse point set as it is (U2DSparseArrayPointContainer::GetRaw): the offset, the count, the columns (a flag,
+// then the size, the run count and the runs)
+void WriteSparse(Writer& ioWriter, const U2DSparseArrayPointContainer& inSet)
+{
+    std::vector<long> theRaw;
+    inSet.GetRaw(theRaw);
+    size_t at = 0;
+    for (int i = 0; i < 2 && at < theRaw.size(); i++)
+        ioWriter.I32(theRaw[at++]);
+    unsigned long theColumns = at < theRaw.size() ? (unsigned long)theRaw[at++] : 0;
+    ioWriter.U32(theColumns);
+    for (unsigned long c = 0; c < theColumns && at < theRaw.size(); c++) {
+        bool thePresent = theRaw[at++] != 0;
+        ioWriter.Flag(thePresent);
+        if (!thePresent || at + 1 >= theRaw.size())
+            continue;
+        ioWriter.I32(theRaw[at++]);
+        unsigned long theRuns = (unsigned long)theRaw[at++];
+        ioWriter.U32(theRuns);
+        for (unsigned long r = 0; r < theRuns * 2 && at < theRaw.size(); r++)
+            ioWriter.I32(theRaw[at++]);
+    }
+}
+
 void WriteArea(Writer& ioWriter, const EEAIArea& inArea)
 {
     ioWriter.U32(inArea.mSerial);
     ioWriter.I32(inArea.mAreaType);
-    inArea.mTiles.PortWrite(ioWriter);
+    WriteSparse(ioWriter, inArea.mTiles);
     inArea.mHull.PortWrite(ioWriter);
     ioWriter.Rect(inArea.mBounds);
 }
@@ -494,7 +518,7 @@ void WriteRegions(Writer& ioWriter)
             if (theManager.mPathSectors[s] == theSubSector->mSector)
                 theSector = (long)s;
         ioWriter.I32(theSector);
-        theSubSector->mTiles.PortWrite(ioWriter);
+        WriteSparse(ioWriter, theSubSector->mTiles);
         ioWriter.U32((unsigned long)theSubSector->mNeighbors.size());
         for (size_t n = 0; n < theSubSector->mNeighbors.size(); n++)
             ioWriter.U32(theNumber.Of(theSubSector->mNeighbors[n]));
@@ -544,11 +568,44 @@ void WriteRegions(Writer& ioWriter)
 
 // ---- reading
 
+bool ReadSparse(Reader& ioReader, U2DSparseArrayPointContainer& outSet)
+{
+    std::vector<long> theRaw;
+    long theValue = 0;
+    unsigned long theColumns = 0;
+    if (!ioReader.I32(theValue))
+        return false;
+    theRaw.push_back(theValue);
+    if (!ioReader.I32(theValue) || !ioReader.Count(theColumns))
+        return false;
+    theRaw.push_back(theValue);
+    theRaw.push_back((long)theColumns);
+    for (unsigned long c = 0; c < theColumns; c++) {
+        bool thePresent = false;
+        if (!ioReader.Flag(thePresent))
+            return false;
+        theRaw.push_back(thePresent ? 1 : 0);
+        if (!thePresent)
+            continue;
+        unsigned long theRuns = 0;
+        if (!ioReader.I32(theValue) || !ioReader.Count(theRuns))
+            return false;
+        theRaw.push_back(theValue);
+        theRaw.push_back((long)theRuns);
+        for (unsigned long r = 0; r < theRuns * 2; r++) {
+            if (!ioReader.I32(theValue))
+                return false;
+            theRaw.push_back(theValue);
+        }
+    }
+    return outSet.SetRaw(theRaw);
+}
+
 bool ReadArea(Reader& ioReader, EEAIArea& outArea)
 {
     unsigned long theSerial = 0;
     long theType = 0;
-    if (!ioReader.U32(theSerial) || !ioReader.I32(theType) || !outArea.mTiles.PortRead(ioReader)
+    if (!ioReader.U32(theSerial) || !ioReader.I32(theType) || !ReadSparse(ioReader, outArea.mTiles)
         || !outArea.mHull.PortRead(ioReader) || !ioReader.Rect(outArea.mBounds))
         return false;
     outArea.mSerial = theSerial;
@@ -809,7 +866,7 @@ bool ReadRegions(Reader& ioReader)
         theSubSectors[i] = theSubSector;
         long theSector = -1;
         unsigned long theNeighborCount = 0, theLinkCount = 0;
-        if (!ioReader.I32(theSector) || !theSubSector->mTiles.PortRead(ioReader) || !ioReader.Count(theNeighborCount))
+        if (!ioReader.I32(theSector) || !ReadSparse(ioReader, theSubSector->mTiles) || !ioReader.Count(theNeighborCount))
             return false;
         theSubSector->mSector = theSector >= 0 && (size_t)theSector < theManager.mPathSectors.size()
             ? theManager.mPathSectors[theSector] : NULL;

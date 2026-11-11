@@ -1,0 +1,97 @@
+open open=1 block=776f6e2e534f4654574152452e5369657272612e574f4e4c6f626279 path=534f4654574152455c5369657272615c574f4e4c6f626279
+missing 5573654c6f63616c4950 dword=1/0 value=1/- binary=1/none
+set dword=1
+dword 5573654c6f63616c4950 dword=0/1 value=0/31 binary=2/none
+set big=1
+big 426967 dword=0/4294967295 value=0/2d31 binary=2/none
+set wide=1
+wide 57696465 dword=0/591751049 value=0/353931373531303439 binary=2/none
+set text=1
+text 54657874 dword=2/0 value=0/68656c6c6f20776f726c64 binary=2/none
+set hextext=1
+hextext 48657854657874 dword=2/0 value=0/30613142 binary=0/0a1b
+set oddtext=1
+oddtext 4f646454657874 dword=2/0 value=0/616263 binary=2/none
+set badhex=1
+badhex 426164486578 dword=2/0 value=0/7a7a binary=2/none
+set numtext=1
+numtext 4e756d54657874 dword=0/42 value=0/3432 binary=0/42
+set binary=1
+binary 42696e dword=2/0 value=0/30303031376638306666 binary=0/00017f80ff
+set empty=1
+empty 456d707479 dword=2/0 value=0/- binary=4/none
+set emptytext=1
+emptytext 456d70747954657874 dword=2/0 value=0/- binary=4/none
+name00 set=1 get=0/6e616d653030
+name01 set=1 get=0/6e616d653031
+name02 set=1 get=0/6e616d653032
+name03 set=1 get=0/6e616d653033
+name04 set=1 get=0/6e616d653034
+name05 set=1 get=0/6e616d653035
+name06 set=1 get=0/6e616d653036
+name07 set=1 get=0/6e616d653037
+name08 set=1 get=0/6e616d653038
+name09 set=1 get=0/6e616d653039
+name10 set=1 get=0/6e616d653130
+name11 set=1 get=0/6e616d653131
+name12 set=1 get=0/6e616d653132
+yaml won:
+yaml   SOFTWARE:
+yaml     Sierra:
+yaml       WONLobby:
+yaml         UseLocalIP: name11
+yaml         Big: -1
+yaml         Wide: 591751049
+yaml         Text: hello world
+yaml         HexText: "0a1B"
+yaml         OddText: abc
+yaml         BadHex: zz
+yaml         NumText: "42"
+yaml         Bin: "00017f80ff"
+yaml         Empty: ""
+yaml         EmptyText: ""
+yaml         (default): name01
+yaml         Plain: name02
+yaml         padded: name03
+yaml         dot_ted: name04
+yaml         co_lon: name05
+yaml         tab_here: name06
+yaml         __: name07
+yaml         Sierra\WONLobby: name08
+yaml         a/b: name09
+yaml         été: name10
+yaml         x _ y: name12
+delete=1
+delete again=0
+deleted 54657874 dword=1/0 value=1/- binary=1/none
+getsub=1
+sub open=1 block=776f6e2e534f4654574152452e5369657272612e574f4e4c6f6262792e5375622e4b6579 path=5375625c4b6579
+sub set=1
+getsub empty=0
+sub after empty open=1 block=776f6e2e534f4654574152452e5369657272612e574f4e4c6f6262792e5375622e4b6579 path=5375625c4b6579
+enum sub=1 values=1
+opensub=1
+opened open=1 block=776f6e2e534f4654574152452e5369657272612e574f4e4c6f6262792e4465657065722e5374696c6c path=4465657065722f5374696c6c
+opensub empty=0
+deeper set=1
+root7 open=0 block=- path=-
+root7 5573654c6f63616c4950 dword=1/0 value=1/- binary=1/none
+root7 set=0 delete=0
+root-1 open=0 block=- path=-
+emptypath open=0 block=- path=-
+separators open=1 block=776f6e2e6c6561642e747261696c path=5c5c6c6561645c5c5c747261696c5c
+slashes open=1 block=776f6e2e534f4654574152452e5369657272612e574f4e4c6f626279 path=534f4654574152452f5369657272612f574f4e4c6f626279
+slashes 5573654c6f63616c4950 dword=2/0 value=0/6e616d653131 binary=2/none
+reopen=1
+reopened open=1 block=776f6e2e4f74686572 path=4f74686572
+reopen empty=0
+reopened empty open=0 block=776f6e2e4f74686572 path=4f74686572
+deletesub missing=0
+deletesub empty=0
+deletesub child=1
+child open=0 block=776f6e2e574f4e4c6f6262792e537562 path=574f4e4c6f6262795c537562
+deletesub lobby=1
+after delete 5573654c6f63616c4950 dword=1/0 value=1/- binary=1/none
+closed deletesub=0
+yaml won:
+yaml   SOFTWARE:

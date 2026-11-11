@@ -6,18 +6,25 @@
 
 pub mod asyncop;
 pub mod auth;
+pub mod authctx;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
 pub mod cdkey;
+pub mod chat;
+pub mod config;
+pub mod configobj;
 pub mod crc16;
 pub mod der;
+pub mod dir;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
 pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
+pub mod file;
+pub mod guistring;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;
@@ -26,14 +33,20 @@ pub mod md5;
 pub mod netstats;
 pub mod ops;
 pub mod parser;
+pub mod path;
+pub mod persist;
 pub mod plaintext;
 pub mod random;
+pub mod regkey;
 pub mod socket;
+pub mod staging;
 /// cbindgen:ignore
 pub mod status;
 pub mod text;
 pub mod wire;
 
+#[cfg(test)]
+mod chat_golden;
 #[cfg(test)]
 mod golden;
 #[cfg(test)]

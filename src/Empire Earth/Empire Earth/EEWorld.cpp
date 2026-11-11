@@ -1993,7 +1993,7 @@ void EEWorld::PlaceQueuedUnits()
         // link or looped for good: the macOS playtests' crash and freezes). It is not placed.
         if (!theUnit->mIsValid) {
             fprintf(stderr, "EE-UNITLIST: placement skips a removed unit (id %08lx, %s, tile %ld,%ld)\n",
-                    theUnit->mUnitID, (const char*)theUnit->mUnitClass->mName, theUnit->mTileX, theUnit->mTileY);
+                    theUnit->mUnitID, (const char*)theUnit->mUnitClass->mName, theUnit->mTileX.Get(), theUnit->mTileY.Get());
             continue;
         }
         // likewise the unit to place it after (its creator) may have left the list: search from the head instead

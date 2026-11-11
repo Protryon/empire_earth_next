@@ -12,6 +12,7 @@
 enum {
     kContinentCaptureBuild = 0x42544e43,    // "CNTB": after BuildRegions
     kContinentCaptureRebuild = 0x52544e43,  // "CNTR": after Rebuild
+    kContinentCaptureNextTo = 0x4e544e43,   // "CNTN": every GetTilesNextTo (x, y, id, result, the tiles)
 };
 
 // One record of gContinentManager's state under inTag; nothing unless the capture is on

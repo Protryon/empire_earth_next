@@ -19,8 +19,22 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyParser.h"
+#include "rust/ee_rust.h"
+// LobbyGame's join rules, its listing summary's fields and the join request's and a player's heads are ee_won's
+// staging module (rust/crates/ee_won/src/staging.rs); the classes keep their members, lists and the game code's hooks.
 namespace WONAPI {
 LobbyClientMap& GetEmptyClientMap();
+
+static void ModelAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static void ModelAppendUnits(void* inContext, const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring* anOut = static_cast<std::wstring*>(inContext);
+    for (size_t i = 0; i < inCount; i++)
+        WideAppendUtf16Unit(*anOut, inUnits[i]);
+}
 
 // FUNCTION: WON 0x7a51a0
 // Creates a lobby client with no id, no room or game membership and no flags
@@ -454,13 +468,7 @@ LobbyClient* LobbyGame::FindClient(unsigned short inId)
 // Returns whether the game suits the room: Internet games for flag 4, LAN or direct-connect games for flag 8
 bool LobbyGame::MatchesRoomSpec(long inFlags)
 {
-    if (inFlags & 4) {
-        if (this->mGameType == 2) return true;
-    }
-    else if (inFlags & 8) {
-        if (this->mGameType == 1 || this->mGameType == 3) return true;
-    }
-    return false;
+    return ee_won_game_matches_room_spec((int32_t)inFlags, (int32_t)this->mGameType);
 }
 
 // FUNCTION: WON 0x7a6d70
@@ -499,53 +507,54 @@ void LobbyGame::PostNetLeaveGame() { this->PostNetLeaveGameHook(); }
 // Writes the game's listing summary (address or product id, name, skill, join flags, players, slots)
 void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
 {
+    EeWonGameSummary aSummary;
+    memset(&aSummary, 0, sizeof(aSummary));
+    aSummary.game_type = (int32_t)this->mGameType;
     if (this->mGameType == 2)
-        outBuffer.AppendBytes(this->mAddress.GetSixByte(), 6);
+        memcpy(aSummary.address, this->mAddress.GetSixByte(), 6);
     else
-        outBuffer.AppendShort(GetLobbyProductId());
-    outBuffer.AppendBool(this->mInProgress);
+        aSummary.product_id = GetLobbyProductId();
+    aSummary.in_progress = this->mInProgress;
+    aSummary.has_password = this->mPassword.length() != 0;
+    aSummary.invite_only = this->mInviteOnly;
+    aSummary.ask_to_join = this->mAskToJoin;
+    aSummary.skill = (int32_t)this->mSkill;
+    aSummary.players = (int32_t)this->mNumPlayers;
+    aSummary.open_slots = (int32_t)this->mNumOpenSlots;
+    std::string aName, aBytes;
     if (this->mGameType != 2)
-        outBuffer.AppendWString(this->mName, 2);
-    outBuffer.AppendByte(this->mSkill);
-    if (this->mGameType != 2) {
-        unsigned char aFlags = 0;
-        if (this->mPassword.length() != 0) aFlags = 1;
-        if (this->mInviteOnly) aFlags |= 2;
-        if (this->mAskToJoin) aFlags |= 4;
-        outBuffer.AppendByte(aFlags);
-    }
-    outBuffer.AppendShort(this->mNumPlayers);
-    outBuffer.AppendShort(this->mNumOpenSlots);
+        WideAppendUtf16LE(aName, (std::wstring)this->mName);
+    ee_won_game_write_summary(&aSummary, reinterpret_cast<const uint8_t*>(aName.data()), aName.length(),
+                              ModelAppendBytes, &aBytes);
+    outBuffer.AppendBytes(aBytes.data(), aBytes.length());
     this->WriteSummaryHook(outBuffer);
 }
 
 // FUNCTION: WON 0x7a7000
 // Reads a game's listing summary; false for another product or a short buffer
+// (a short summary keeps the fields read before the cut, as the original assigned them while reading)
 bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
 {
+    long aStart = inBuffer.pos();
+    EeWonGameSummary aSummary;
+    std::wstring aName;
+    ee_won_game_read_summary(reinterpret_cast<const uint8_t*>(inBuffer.data()) + aStart,
+                             (size_t)(inBuffer.length() - aStart), (int32_t)this->mGameType, GetLobbyProductId(),
+                             &aSummary, ModelAppendUnits, &aName);
+    if (aSummary.read & 1) this->mAddress.SetSixByte(aSummary.address);
+    if (aSummary.read & 2) this->mInProgress = aSummary.in_progress;
+    if (aSummary.read & 4) this->mName = GUIString(new GUIStringData(aName));
+    if (aSummary.read & 8) this->mSkill = aSummary.skill;
+    if (aSummary.read & 0x10) {
+        this->mHasPassword = aSummary.has_password;
+        this->mInviteOnly = aSummary.invite_only;
+        this->mAskToJoin = aSummary.ask_to_join;
+    }
+    if (aSummary.read & 0x20) this->mNumPlayers = aSummary.players;
+    if (aSummary.read & 0x40) this->mNumOpenSlots = aSummary.open_slots;
+    if (!aSummary.ok) return false;
+    inBuffer.SetPos((int)(aStart + aSummary.rest));
     try {
-        if (this->mGameType == 2)
-            this->mAddress.SetSixByte(inBuffer.ReadBytes(6));
-        else {
-            short aProductId = inBuffer.ReadShort();
-            if (aProductId != GetLobbyProductId()) return false;
-        }
-        this->mInProgress = inBuffer.ReadBool();
-        if (this->mGameType != 2) {
-            std::wstring aName;
-            inBuffer.ReadWString(aName, 2);
-            this->mName = GUIString(new GUIStringData(aName));
-        }
-        this->mSkill = (char)inBuffer.ReadByte();
-        if (this->mSkill < 0 || this->mSkill >= 5) this->mSkill = 0;
-        if (this->mGameType != 2) {
-            unsigned char aFlags = inBuffer.ReadByte();
-            this->mHasPassword = (aFlags & 1) != 0;
-            this->mInviteOnly = ((aFlags >> 1) & 1) != 0;
-            this->mAskToJoin = ((aFlags >> 2) & 1) != 0;
-        }
-        this->mNumPlayers = inBuffer.ReadShort();
-        this->mNumOpenSlots = inBuffer.ReadShort();
         return this->ReadSummaryHook(inBuffer);
     }
     catch (ReadBufferException&) { return false; }
@@ -599,7 +608,7 @@ void LobbyGame::HandleGameMessage(unsigned char inType, ReadBuffer& inBuffer, Lo
 
 // FUNCTION: WON 0x7a7a00
 // Returns whether every open slot is taken (never full without slots)
-bool LobbyGame::IsFull() { return this->mNumOpenSlots > 0 && this->mNumPlayers >= this->mNumOpenSlots; }
+bool LobbyGame::IsFull() { return ee_won_game_is_full((int32_t)this->mNumPlayers, (int32_t)this->mNumOpenSlots); }
 
 // FUNCTION: WON 0x7a7a20
 // Returns whether the local player may join the game
@@ -609,10 +618,9 @@ bool LobbyGame::CanJoin() { return this->GetJoinStatus() == 0; }
 // Returns why the game cannot be joined (full, not invited, in progress, game code's reason) or 0
 short LobbyGame::GetJoinStatus()
 {
-    if (this->IsFull()) return 2;
-    if (this->mInviteOnly && !this->mInvited && !this->mIsHost) return 5;
-    if (this->mInProgress) return 3;
-    return this->GetJoinStatusHook();
+    short aStatus = ee_won_game_join_status(this->IsFull(), this->mInviteOnly, this->mInvited, this->mIsHost,
+                                            this->mInProgress);
+    return aStatus >= 0 ? aStatus : this->GetJoinStatusHook();
 }
 
 // FUNCTION: WON 0x7a8a90
@@ -764,8 +772,9 @@ bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
 // Writes the player's ping, ready state and game data
 void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)
 {
-    outBuffer.AppendShort(this->mPing);
-    outBuffer.AppendBool(this->mIsReady);
+    std::string aHead;
+    ee_won_room_player_head(this->mPing, this->mIsReady, ModelAppendBytes, &aHead);
+    outBuffer.AppendBytes(aHead.data(), aHead.length());
     this->WriteData(outBuffer);
 }
 
@@ -1060,8 +1069,13 @@ bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
 {
     WriteBuffer buffer(0,true);
-    buffer.AppendByte(1);
-    buffer.AppendShort(this->mPing);
+    EeWonRoomMsg head;
+    memset(&head,0,sizeof(head));
+    head.kind=1;
+    head.ping=this->mPing;
+    std::string bytes;
+    ee_won_room_message(&head,ModelAppendBytes,&bytes);
+    buffer.AppendBytes(bytes.data(),bytes.length());
     this->GetJoinGameRequestHook(buffer);
     return buffer.ToByteBuffer(true);
 }
@@ -1097,8 +1111,8 @@ bool LobbyGame::CanStartGame()
 short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,WriteBuffer& outBuffer)
 {
     SmartPtr<LobbyPlayer> player;
-    if (this->IsFull()) return 2;
-    if (this->mInProgress) return 3;
+    short check=ee_won_game_host_join_check(this->IsFull(),this->mInProgress);
+    if (check!=0) return check;
     LobbyConfig* config=GetLobbyConfig();
     if (config!=NULL && !config->mAllowDuplicateNames) {
         for (LobbyClientMap::iterator it=this->mClients->mClients.begin(); it!=this->mClients->mClients.end(); ++it)

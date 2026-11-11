@@ -570,7 +570,7 @@ LoadFlags:
         || (theResult = inFile.Read(this->mIsPathDone)) != 0
         || (theResult = inFile.Read(this->mIsClearanceGranted)) != 0)
         goto LoadLegacy;
-    theResult = inFile.Read(this->mIsBuilt);
+    theResult = EEUnitStoreRead(inFile, this->mIsBuilt);   // a unit store holder (ee/EEUnitStore.h)
 LoadLegacy:
     if (inMinorVersion <= 0x1b) {
         if (theResult == 0)

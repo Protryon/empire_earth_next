@@ -20,6 +20,7 @@ class TSCriticalSection;
 class UIControl;
 class UITextLabel;
 
+struct EeWonAuthSecrets; // rust/ee_rust.h
 namespace WONAPI {
 // 0x2a6280 (WONAPI string utilities, /GX): narrows a wide string
 std::string WStringToString(const std::wstring& inString);
@@ -340,13 +341,6 @@ public:
     static bool LoadVerifierKey(const std::string&); //2df440 actual cdecl/ret0
     void SetServerContext(ServerContext*); //2df330 support0
     SmartPtr<ServerContext> GetServerContext(); //2df3e0 support0
-    struct SecretData {
-        time_t mExpireTime; //00
-        ConstSmartPtr<ByteBuffer> mSecret; //04, real SDK ByteBufferPtr const-owner, extent08
-        inline SecretData(); // inline, defined where ByteBuffer is complete (AuthContext::AddSecret 0x6e1650 expands it)
-        inline SecretData(time_t expires,const ByteBuffer* secret);
-    };
-    typedef std::list<SecretData> SecretList;
     void ClearCDKeyCommunityJoins(); //2e0510 genuine SDK locked one-time CDKey join map clear
     void ClearUserData(); //2e05e0 genuine SDK locked one-time community user-data map clear
     void ClearOneTimeData(); //2e06b0 genuine SDK ClearUserData then ClearCDKeyCommunityJoins dispatcher
@@ -406,7 +400,8 @@ public:
     std::wstring mPassword; //60..70, genuine owned string
     std::string mLoginSecretFile; //70..80
     std::map<std::wstring,AuthLoginCommunityData> mCommunityMap; //80..8c, untouched by secret source; true full3c mapped value already complete above
-    SecretList mSecretList; //8c allocator/90header/94count
+    // the login secrets (0x8c..0x98, a std::list of expiry and 8-byte key): ee_won's (authctx.rs), owned here
+    EeWonAuthSecrets* mSecrets;
     std::map<std::wstring,CDKey> mCDKeyCommunityJoinMap; //98..a4, true completeCDKey1c
     std::map<std::wstring,ConstSmartPtr<ByteBuffer> > mSetCommunityUserDataMap; //a4..b0
     std::map<std::wstring,std::wstring> mNicknameMap; //b0..bc

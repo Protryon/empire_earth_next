@@ -14,9 +14,11 @@ class EEAIAStarGraphMachineBase;        // ee/EEAIAStarMachine.h
 template <class S>
 class EEAIAStarGraphGoalBase {
 public:
+    // port: the sectors start at 0 as Reset leaves them (the original left them as the memory had them; the
+    // continental chain goal never sets them, and the ASGR capture reads them)
     EEAIAStarGraphGoalBase()
-        : mStorage(NULL), mMachine(NULL), mPlayerID(0), mRevLimit(-1), mMaxRevs(-1),
-          mSearchFailed(false), mB31(false), mAcceptNearest(false), mB33(false), mB34(false), mTookNearest(false)
+        : mStorage(NULL), mMachine(NULL), mPlayerID(0), mRevLimit(-1), mMaxRevs(-1), mGoalSector(0),
+          mStartSector(0), mSearchFailed(false), mB31(false), mAcceptNearest(false), mB33(false), mB34(false), mTookNearest(false)
     {
     }
     virtual ~EEAIAStarGraphGoalBase() {}    // +0x00

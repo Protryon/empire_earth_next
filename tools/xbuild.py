@@ -388,9 +388,53 @@ WON_TESTS = {
                      WON_SRC / "WONAPI.cpp"],
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
     "won_lan_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
+    # staging module
+    "won_staging_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
+    # persist module
+    "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
+                                                            "FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                            "FileWriter.cpp", "WONFile.cpp", "CRC16.cpp",
+                                                            "StringUtil.cpp")],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],
+    # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
+    "won_file_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                         "FileWriter.cpp", "WONFile.cpp")],
+    # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won/src/golden_config.txt)
+    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringUtil.cpp")]],
+    # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
+    "won_auth_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                      WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
+    # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
+    "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                     *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+                     WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
+    "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
+    # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
+    "won_regkey_test": [*[WON_SRC / "WONCommon" / f for f in ("RegKey.cpp", "ByteBuffer.cpp")]],
+    # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
+    "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
+                      *[WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                       "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                       "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+                      *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
+                                                           "StringParserLists.cpp", "StringUtil.cpp")]],
+    # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
+    "won_guistring_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
+                                                           "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
+                                                           "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+    # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
+    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
+                                                             "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringParser.cpp", "StringParserCollections.cpp",
+                                                             "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 
 
