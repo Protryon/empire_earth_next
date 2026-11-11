@@ -2551,39 +2551,8 @@ template <class F> long EEUUSearchTiles(const GE2DPoint& inPosition, const U2DPo
     return outUnits.size();
 }
 
-// 0x250806 (an inline COMDAT after the range): the units in inArea's unit regions that inScreen passes (+0x08), sorted
-// and made unique when a unit of a class bigger than one region was among them and inUnique; their number (inferred)
-// name (the screen twin of ee/EEUnitCollector.h's EEGetUnitsInRectangle)
-inline long EEUUGetUnitsInArea(const U2DRectangle<long>& inArea, std::vector<EEUnit*>& outUnits,
-                               EEFOFindNewTargetScreenBase* inScreen, bool inUnique)
-{
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(inArea);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-    U2DPoint<long> theEndX = theRegions.GetBottomRight();
-    U2DPoint<long> theEndY = theRegions.GetBottomRight();
-    bool theMultiple = false;
-    U2DPoint<long> theStart = theRegions.GetTopLeft();
-    for (long x = theStart.mX; x <= theEndX.mX; x++) {
-        U2DPoint<long> theRowStart = theRegions.GetTopLeft();
-        for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-            if (!theRegion)
-                continue;
-            for (long i = theRegion->size() - 1; i >= 0; i--) {
-                EEComplexUnit* theUnit = (*theRegion)[i];
-                if (!inArea.Contains(theUnit->GetTileX(), theUnit->GetTileY()) ||
-                    !inScreen->Virtual08(theUnit))
-                    continue;
-                if (theUnit->mUnitClass->mTileSize > 1)
-                    theMultiple = true;
-                outUnits.push_back(theUnit);
-            }
-        }
-    }
-    if (inUnique && theMultiple)
-        EESortUnique(outUnits, EEUUUnitIDLess(), EEUUUnitIDEqual());
-    return outUnits.size();
-}
+// (0x250806, EEUUGetUnitsInArea, the units of an area's unit regions that a screen passes: ee_combat's units_in_area,
+// called from EEFindNewTarget below)
 
 // the circle screen of 0x24bf01 (ctor 0x24bfd3 out of line right after its first user; operator() 0x250d37 an inline
 // COMDAT for EEGetUnitsInRectangle 0x250b99) (provisional names; moved here from ee/EEUnitUtilities.h)
@@ -3447,64 +3416,140 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// TEST ONLY: a unit's id in the CB** walk records (-1: none)
+// a unit's id in the CB** capture records (-1: none)
 static int32_t EECombatCaptureID(EEUnit* inUnit)
 {
     return inUnit != NULL ? (int32_t)inUnit->GetUnitID() : -1;
 }
 
+// The world of the new target search (ee_combat units_in_area and choose_target, walks.rs): the unit regions, the
+// screen, the candidates and their tests. Handles are the units' pointers.
+struct EENewTargetHost {
+    EEFOFindNewTargetScreenBase* mScreen;
+    EEComplexUnit* mUnit;
+    long mIgnoreArgument;
+    std::vector<EEComplexUnit*> mUnits;
+};
+
+static EEComplexUnit* EENewTargetUnit(uint64_t inHandle)
+{
+    return (EEComplexUnit*)(uintptr_t)inHandle;
+}
+
+static void EENewTargetRegions(void* inContext, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom,
+                               int32_t (*outRegions)[4])
+{
+    U2DRectangle<long> theArea;
+    theArea.mLeft = inLeft;
+    theArea.mTop = inTop;
+    theArea.mRight = inRight;
+    theArea.mBottom = inBottom;
+    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(theArea);
+    (*outRegions)[0] = (int32_t)theRegions.GetTopLeft().mX;
+    (*outRegions)[1] = (int32_t)theRegions.GetTopLeft().mY;
+    (*outRegions)[2] = (int32_t)theRegions.GetBottomRight().mX;
+    (*outRegions)[3] = (int32_t)theRegions.GetBottomRight().mY;
+}
+
+static int32_t EENewTargetRegionLength(void* inContext, int32_t inX, int32_t inY)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return theRegion != NULL ? (int32_t)theRegion->size() : -1;
+}
+
+static uint64_t EENewTargetRegionUnit(void* inContext, int32_t inX, int32_t inY, int32_t inIndex)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
+}
+
+static void EENewTargetUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
+{
+    (*outTile)[0] = (int32_t)EENewTargetUnit(inUnit)->GetTileX();
+    (*outTile)[1] = (int32_t)EENewTargetUnit(inUnit)->GetTileY();
+}
+
+static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
+{
+    return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
+}
+
+static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
+{
+    return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
+}
+
+static uint32_t EENewTargetUnitID(void* inContext, uint64_t inUnit)
+{
+    return (uint32_t)EENewTargetUnit(inUnit)->GetUnitID();
+}
+
+static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
+{
+    EENewTargetHost* theHost = (EENewTargetHost*)inContext;
+    EEComplexUnit* inUnit = theHost->mUnit;
+    EEComplexUnit* theUnit = EENewTargetUnit(inHandle);
+    EEPlayer* thePlayer = inUnit->GetPlayer();
+    EEPlayer* theOwner = theUnit->GetPlayer();
+    switch (inTest) {
+    case EE_COMBAT_TARGET_TEST_TECH_KIND_6: {
+        EETechnology* theTechnology = thePlayer->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
+        return theTechnology != NULL && theTechnology->mData->mKind == 6;
+    }
+    case EE_COMBAT_TARGET_TEST_NOT_ENEMY:
+        return theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0;
+    case EE_COMBAT_TARGET_TEST_DISABLED:
+        return theUnit->mIsDisabled && !theUnit->IsProtected();
+    case EE_COMBAT_TARGET_TEST_NATURE:
+        return theOwner->GetPlayerID() == 0;
+    case EE_COMBAT_TARGET_TEST_ATTACKED_BY:
+        return EEIsAttackedBy(inUnit, theUnit);
+    case EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS:
+        return EECanTargetClass(inUnit, theUnit->GetUnitClass());
+    case EE_COMBAT_TARGET_TEST_FOUNDATION:
+        return theUnit->IsFoundation();
+    case EE_COMBAT_TARGET_TEST_SEEN:
+        return EEIsSeenBy(theUnit, inUnit->GetPlayer(), true);
+    case EE_COMBAT_TARGET_TEST_PART_LEFT_OUT:
+        return theUnit->GetUnitClass()->IsPartLeftOut(theUnit);
+    case EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS:
+        return inUnit->CanAttackClass(theUnit->GetUnitClass());
+    case EE_COMBAT_TARGET_TEST_IGNORED:
+        return inUnit->mIgnoredTargets.size() != 0 && inUnit->IsTargetIgnored(theUnit, theHost->mIgnoreArgument != 0);
+    }
+    return 0;
+}
+
+static void EENewTargetPush(void* inContext, uint64_t inUnit)
+{
+    ((EENewTargetHost*)inContext)->mUnits.push_back(EENewTargetUnit(inUnit));
+}
+
 // FUNCTION: EXE 0x645dd6
 // Gives a unit's goal the first enemy near a tile that passes a screen; false when none
+// (new: the region walk under it and the choice are ee_combat's; the tests and the retarget stay here)
 bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, EEComplexUnit* inUnit,
                 EETileCoordinate* inTile, long inRadius, bool inArg6, long inArg7)
 {
-    int32_t theChosen = -1;   // TEST ONLY (the CBFT capture)
-    std::vector<EEUnit*> theUnits;
-    U2DRectangle<long> theArea;
-    bool theFound = false;
-    unsigned long i;
-    unsigned long theCount;
-    long theKind = -1;
-
-    theArea.mLeft = inTile->GetX() - inRadius;
-    theArea.mTop = inTile->GetY() - inRadius;
-    theArea.mRight = inTile->GetX() + inRadius;
-    theArea.mBottom = inTile->GetY() + inRadius;
-    EEUUGetUnitsInArea(theArea, theUnits, inScreen, true);
-    if (theUnits.size() > 0 && (theCount = theUnits.size()) != 0) {
-        EEPlayer* thePlayer = inUnit->GetPlayer();
-        for (i = 0; i < theCount; i++) {
-            EEPlayer* theOwner = theUnits[i]->GetPlayer();
-            if (!inArg6) {
-                EETechnology* theTechnology =
-                    thePlayer->GetTechTree()->Get(theUnits[i]->GetUnitClass()->GetTechnology());
-                if (theTechnology != NULL)
-                    theKind = theTechnology->mData->mKind;
-                else
-                    theKind = -1;
-            }
-
-            if (theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0)
-                continue;
-            if (static_cast<EEComplexUnit*>(theUnits[i])->mIsDisabled && !static_cast<EEComplexUnit*>(theUnits[i])->IsProtected())
-                continue;
-            if (theOwner->GetPlayerID() == 0 && !EEIsAttackedBy(inUnit, theUnits[i]))
-                continue;
-            if (theKind == 6 || !EECanTargetClass(inUnit, theUnits[i]->GetUnitClass()))
-                continue;
-            if (theUnits[i]->IsFoundation() || !EEIsSeenBy(theUnits[i], inUnit->GetPlayer(), true)
-                || theUnits[i]->GetUnitClass()->IsPartLeftOut(static_cast<EEComplexUnit*>(theUnits[i]))
-                || !inUnit->CanAttackClass(theUnits[i]->GetUnitClass()))
-                continue;
-            if (inUnit->mIgnoredTargets.size() != 0 && inUnit->IsTargetIgnored(static_cast<EEComplexUnit*>(theUnits[i]), inArg7 != 0))
-                continue;
-            if (EESimCaptureRecord::Active())
-                theChosen = EECombatCaptureID(theUnits[i]);
-            EERetargetAttack(inUnit, inGoal, static_cast<EEComplexUnit*>(theUnits[i]));
-            theFound = true;
-            break;
-        }
-    }
+    EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
+    EeCombatTargetHost theHost = {&theContext, EENewTargetRegions, EENewTargetRegionLength, EENewTargetRegionUnit,
+                                  EENewTargetUnitTile, EENewTargetScreen, EENewTargetMultiple, EENewTargetUnitID,
+                                  EENewTargetTest, EENewTargetPush};
+    EeCombatFindTargetIn in = {};
+    in.left = (int32_t)(inTile->GetX() - inRadius);
+    in.top = (int32_t)(inTile->GetY() - inRadius);
+    in.right = (int32_t)(inTile->GetX() + inRadius);
+    in.bottom = (int32_t)(inTile->GetY() + inRadius);
+    in.skip_kind = inArg6;
+    ee_combat_units_in_area(&in, &theHost);
+    std::vector<uint64_t> theHandles;
+    for (size_t i = 0; i < theContext.mUnits.size(); i++)
+        theHandles.push_back((uint64_t)(uintptr_t)theContext.mUnits[i]);
+    int32_t theChoice = ee_combat_choose_target(theHandles.empty() ? NULL : &theHandles[0], (uint32_t)theHandles.size(),
+                                                inArg6, &theHost);
+    bool theFound = theChoice >= 0;
+    if (theFound)
+        EERetargetAttack(inUnit, inGoal, theContext.mUnits[theChoice]);
     if (EESimCaptureRecord::Active()) {
         EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'F', 'T'));
         theRecord.I32(EECombatCaptureID(inUnit));
@@ -3513,11 +3558,11 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
         theRecord.I32((int32_t)inRadius);
         theRecord.I32(inArg6);
         theRecord.I32((int32_t)inArg7);
-        theRecord.I32((int32_t)theUnits.size());
-        for (unsigned long j = 0; j < theUnits.size(); j++)
-            theRecord.I32(EECombatCaptureID(theUnits[j]));
+        theRecord.I32((int32_t)theContext.mUnits.size());
+        for (size_t j = 0; j < theContext.mUnits.size(); j++)
+            theRecord.I32(EECombatCaptureID(theContext.mUnits[j]));
         theRecord.I32(theFound);
-        theRecord.I32(theChosen);
+        theRecord.I32(theFound ? EECombatCaptureID(theContext.mUnits[theChoice]) : -1);
         theRecord.Commit();
     }
     return theFound;

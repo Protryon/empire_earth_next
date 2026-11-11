@@ -890,73 +890,109 @@ bool EEUnitClass::ComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTar
 // armour, scaled by the height factor (at least one point more or less) and, for the own player's units, by the
 // class's friendly damage factor at
 // +0x198; the 0x16f class only plays its effect on them
+// (new: the walk and the victims' screens are ee_combat's area_victims, walks.rs; each victim's hit stays here)
+struct EEAreaDamageHost {
+    EEUnitClass* mClass;            // this
+    EEUnitClass* mDamageClass;      // the launcher's class or this
+    EEComplexUnit* mUnit;
+    float mDamage;
+    long mKind;
+    long mColumn;
+    std::vector<int32_t> mVictims;  // TEST ONLY (the CBAD capture)
+};
+
+static EEComplexUnit* EEAreaDamageUnit(uint64_t inHandle)
+{
+    return (EEComplexUnit*)(uintptr_t)inHandle;
+}
+
+static uint64_t EEAreaDamageTileFirst(void* inContext, int32_t inX, int32_t inY)
+{
+    EEMapTile* theTile = ::gWorld.mMap->GetTile((long)inX, (long)inY);
+    return theTile != NULL ? (uint64_t)(uintptr_t)theTile->mUnits : 0;
+}
+
+static uint64_t EEAreaDamageNodeNext(void* inContext, uint64_t inNode)
+{
+    return (uint64_t)(uintptr_t)((RTSTileUnitNode*)(uintptr_t)inNode)->mNext;
+}
+
+static uint64_t EEAreaDamageNodeUnit(void* inContext, uint64_t inNode)
+{
+    return (uint64_t)(uintptr_t)((RTSTileUnitNode*)(uintptr_t)inNode)->mUnit->GetComplexUnit();
+}
+
+static float EEAreaDamageDistance(void* inContext, uint64_t inUnit)
+{
+    return ((EEAreaDamageHost*)inContext)->mUnit->DistanceSquaredTo(EEAreaDamageUnit(inUnit));
+}
+
+static int32_t EEAreaDamageTargetable(void* inContext, uint64_t inUnit)
+{
+    return EEUUGetIsUnitClassTargetable(((EEAreaDamageHost*)inContext)->mUnit, EEAreaDamageUnit(inUnit)->GetUnitClass());
+}
+
+static int32_t EEAreaDamageSamePlayer(void* inContext, uint64_t inUnit)
+{
+    return EEAreaDamageUnit(inUnit)->GetPlayer() == ((EEAreaDamageHost*)inContext)->mUnit->GetPlayer();
+}
+
+// one victim: the volcano's effect only, else the splash damage, the kill count and a hunted animal's food
+static void EEAreaDamageHit(void* inContext, uint64_t inHandle)
+{
+    EEAreaDamageHost* theHost = (EEAreaDamageHost*)inContext;
+    EEComplexUnit* inUnit = theHost->mUnit;
+    EEComplexUnit* theUnit = EEAreaDamageUnit(inHandle);
+    EEUnitClass* theClass = theHost->mDamageClass;
+    EEGraphicEffect* theEffect = NULL;
+    if (EESimCaptureRecord::Active())
+        theHost->mVictims.push_back((int32_t)theUnit->GetUnitID());
+    if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcanoProjectile && theUnit->GetEffect(3, theEffect)) {
+        if (theEffect != NULL)
+            gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
+        return;
+    }
+    long theAmount;
+    if (!theHost->mClass->ComputeDamage(kDamageSplash, inUnit, theUnit, theHost->mDamage, theHost->mKind, theHost->mColumn,
+                                        theClass->mFriendlyDamageFactor, theAmount))
+        return;
+    long theHitPoints = theUnit->GetHitPoints();
+    theUnit->TakeHit(inUnit, theAmount, inUnit->GetPlayer()->GetPlayerID(), 1);
+    if (theUnit->GetHitPoints() <= 0)
+        inUnit->mExperience++;
+    if (theClass->GetCategory() == kUnitCategoryLandCitizen || theHitPoints == 0 || theUnit->GetHitPoints() != 0
+        || theUnit->GetUnitClass()->GetCategory() != kUnitCategoryLand || theUnit->mResourceType != kResourceFood)
+        return;
+    long theRemaining = UMCeil(theUnit->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
+    if (theUnit->mResourceAmount != theRemaining)
+        theUnit->mResourceAmount = theRemaining;
+}
+
 void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float inDamage, long inKind, long inColumn,
                            EEUnit* inTarget)
 {
-    std::vector<EEComplexUnit*> theHit;
-    std::vector<int32_t> theVictims;   // TEST ONLY (the CBAD capture)
-    float theRadiusSquared = inRadius * inRadius;
-    EEGraphicEffect* theEffect = NULL;
-    long theX = inUnit->GetTileX();
-    long theY = inUnit->GetTileY();
-    EEMap* theMap = ::gWorld.mMap;
     EEUnitClass* theClass = inUnit->mLauncherClass != NULL ? inUnit->mLauncherClass : this;
-    if (inTarget != NULL && inTarget->GetComplexUnit() != NULL)
-        theHit.push_back(inTarget->GetComplexUnit());
-    long theRange = UMCeil(inRadius);
-    for (long x = theX - theRange; x <= theX + theRange; x++) {
-        for (long y = theY - theRange; y <= theY + theRange; y++) {
-            EEMapTile* theTile = theMap->GetTile(x, y);
-            if (theTile == NULL)
-                continue;
-            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                EEComplexUnit* theUnit = theNode->mUnit->GetComplexUnit();
-                if (theUnit == NULL)
-                    continue;
-                if (std::find(theHit.begin(), theHit.end(), theUnit) != theHit.end())
-                    continue;
-                if (inUnit->DistanceSquaredTo(theUnit) > theRadiusSquared)
-                    continue;
-                if (!EEUUGetIsUnitClassTargetable(inUnit, theUnit->GetUnitClass()))
-                    continue;
-                if (theUnit->GetPlayer() == inUnit->GetPlayer() && !(theClass->mFriendlyDamageFactor > 0.0f))
-                    continue;
-                theHit.push_back(theUnit);
-                if (EESimCaptureRecord::Active())
-                    theVictims.push_back((int32_t)theUnit->GetUnitID());
-                if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcanoProjectile && theUnit->GetEffect(3, theEffect)) {
-                    if (theEffect != NULL)
-                        gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
-                    continue;
-                }
-                long theAmount;
-                if (!this->ComputeDamage(kDamageSplash, inUnit, theUnit, inDamage, inKind, inColumn,
-                                         theClass->mFriendlyDamageFactor, theAmount))
-                    continue;
-                long theHitPoints = theUnit->GetHitPoints();
-                theUnit->TakeHit(inUnit, theAmount, inUnit->GetPlayer()->GetPlayerID(), 1);
-                if (theUnit->GetHitPoints() <= 0)
-                    inUnit->mExperience++;
-                if (theClass->GetCategory() == kUnitCategoryLandCitizen || theHitPoints == 0 || theUnit->GetHitPoints() != 0
-                    || theUnit->GetUnitClass()->GetCategory() != kUnitCategoryLand || theUnit->mResourceType != kResourceFood)
-                    continue;
-                long theRemaining = UMCeil(theUnit->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
-                if (theUnit->mResourceAmount != theRemaining)
-                    theUnit->mResourceAmount = theRemaining;
-            }
-        }
-    }
+    EEAreaDamageHost theContext = {this, theClass, inUnit, inDamage, inKind, inColumn, std::vector<int32_t>()};
+    EeCombatAreaHost theHost = {&theContext, EEAreaDamageTileFirst, EEAreaDamageNodeNext, EEAreaDamageNodeUnit,
+                                EEAreaDamageDistance, EEAreaDamageTargetable, EEAreaDamageSamePlayer, EEAreaDamageHit};
+    EeCombatAreaIn in = {};
+    in.tile_x = (int32_t)inUnit->GetTileX();
+    in.tile_y = (int32_t)inUnit->GetTileY();
+    in.radius = inRadius;
+    in.friendly_factor = theClass->mFriendlyDamageFactor;
+    in.target = inTarget != NULL && inTarget->GetComplexUnit() != NULL ? (uint64_t)(uintptr_t)inTarget->GetComplexUnit() : 0;
+    ee_combat_area_victims(&in, &theHost);
     if (EESimCaptureRecord::Active()) {
         EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'A', 'D'));
         theRecord.I32((int32_t)inUnit->GetUnitID());
-        theRecord.I32((int32_t)theX);
-        theRecord.I32((int32_t)theY);
+        theRecord.I32(in.tile_x);
+        theRecord.I32(in.tile_y);
         theRecord.F32(inRadius);
         theRecord.I32(theClass->mFriendlyDamageFactor > 0.0f);
         theRecord.I32(inTarget != NULL && inTarget->GetComplexUnit() != NULL ? (int32_t)inTarget->GetUnitID() : -1);
-        theRecord.I32((int32_t)theVictims.size());
-        for (size_t i = 0; i < theVictims.size(); i++)
-            theRecord.I32(theVictims[i]);
+        theRecord.I32((int32_t)theContext.mVictims.size());
+        for (size_t i = 0; i < theContext.mVictims.size(); i++)
+            theRecord.I32(theContext.mVictims[i]);
         theRecord.Commit();
     }
 }
