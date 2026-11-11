@@ -3790,47 +3790,25 @@ void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::
 
 // FUNCTION: EXE 0x646bf2
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
-// TEST ONLY (the golden of the CBCH capture): the decision's inputs, gathered from the world
-struct EECanHealCaptureIn {
-    int32_t has_set, repairable, hit_points, maximum;
-    float threshold;
-    int32_t same_unit, same_player, allied, in_set;
-};
-static bool EECanHealOriginal(EEUnit* inUnit, EEComplexUnit* inTarget);
-
+// (new: the decision is ee_combat's can_heal over a record of pure reads; the unit set is looked up only for a set
+// in the manager's range, which the original indexed unchecked)
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
 {
-    EECanHealCaptureIn in = {};
-    if (EESimCaptureRecord::Active()) {
-        unsigned long theSet = inUnit->mStats->mWonderUnitSet;
-        in.has_set = theSet > 0;
-        in.repairable = inTarget->IsRepairable();
-        in.hit_points = (int32_t)inTarget->mHitPoints;
-        in.maximum = (int32_t)inTarget->mStats->mMaxHitPoints;
-        in.threshold = inUnit->mUnitClass->GetHealThreshold();
-        in.same_unit = inTarget == inUnit;
-        in.same_player = inUnit->mPlayer == inTarget->mPlayer;
-        in.allied = inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0;
-        in.in_set = theSet != 0 && theSet < gUnitSetManager.GetSize()
-                    && gUnitSetManager.Contains(inTarget->mUnitClass->mUnitType, theSet);
-    }
-    int32_t theResult = EECanHealOriginal(inUnit, inTarget);
+    unsigned long theSet = inUnit->mStats->mWonderUnitSet;
+    EeCombatCanHealIn in = {};
+    in.has_set = theSet > 0;
+    in.repairable = inTarget->IsRepairable();
+    in.hit_points = (int32_t)inTarget->mHitPoints;
+    in.maximum = (int32_t)inTarget->mStats->mMaxHitPoints;
+    in.threshold = inUnit->mUnitClass->GetHealThreshold();
+    in.same_unit = inTarget == inUnit;
+    in.same_player = inUnit->mPlayer == inTarget->mPlayer;
+    in.allied = inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0;
+    in.in_set = theSet != 0 && theSet < gUnitSetManager.GetSize()
+                && gUnitSetManager.Contains(inTarget->mUnitClass->mUnitType, theSet);
+    int32_t theResult = ee_combat_can_heal(&in);
     EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'H'), in, theResult);
     return theResult != 0;
-}
-
-static bool EECanHealOriginal(EEUnit* inUnit, EEComplexUnit* inTarget)
-{
-    long theHitPoints = inTarget->mHitPoints;
-    long theMaximum = inTarget->mStats->mMaxHitPoints;
-    unsigned long theType = inTarget->mUnitClass->mUnitType;
-    unsigned long theSet = inUnit->mStats->mWonderUnitSet;
-    if (theSet > 0 && inTarget->IsRepairable() && (float)theHitPoints / theMaximum <= inUnit->mUnitClass->GetHealThreshold()
-        && inTarget != inUnit
-        && (inUnit->mPlayer == inTarget->mPlayer || inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0)
-        && gUnitSetManager.Contains(theType, theSet))
-        return true;
-    return false;
 }
 
 // FUNCTION: EXE 0x646c87
@@ -4796,51 +4774,46 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
 // Finds where a dropped unit lands on a target: the model's drop point (lower when damaged) or its tile
 // Where a unit dropped onto inTarget (its goal's target when NULL) lands: the model's drop point (scaled down with
 // a damaged unit's health), else its tile; *outTarget the target (NULL when not placed)
-// TEST ONLY (the golden of the CBDP capture): the computation's inputs as the original reads them (kind 0: the goal's
-// location, 1: the model's drop point, 2: the tile, 3: neither) and its outputs
-struct EEDropCaptureIn {
-    int32_t kind;
-    float offset[3];
-    float scale;
-    int32_t built, hit_points, max_hit_points;
-    float transformation[16];
-    int32_t tile_x, tile_y;
-    float tile_height;
-};
-static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget);
-
+// (new: the model's and the tile's point are ee_combat's drop_point; the goal's location and the target stay here)
 void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
 {
-    EEDropCaptureIn in = {};
-    if (EESimCaptureRecord::Active()) {
-        EEUnitGoal* theGoal = inUnit->mActiveGoal;
-        EEUnit* theTarget = inTarget;
-        if (theTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
-            in.kind = 0;
+    EEUnitGoal* theGoal = inUnit->mActiveGoal;
+    GE3DPoint theLocation;
+    EeCombatDropIn in = {};
+    if (inTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
+        in.kind = EE_COMBAT_DROP_KIND_GOAL;
+        theGoal->GetGoalLocation(theLocation);
+    } else {
+        if (inTarget == NULL)
+            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
+            in.kind = EE_COMBAT_DROP_KIND_MODEL;
+            in.offset[0] = inTarget->GetModel()->mDefaultPoint.GetX();
+            in.offset[1] = inTarget->GetModel()->mDefaultPoint.GetY();
+            in.offset[2] = inTarget->GetModel()->mDefaultPoint.GetZ();
+            in.scale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
+            in.built = inTarget->mComplexUnit->mIsBuilt;
+            in.hit_points = (int32_t)inTarget->mHitPoints;
+            in.max_hit_points = (int32_t)inTarget->mStats->mMaxHitPoints;
+            memcpy(in.transformation, inTarget->mComplexUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.transformation));
+        } else if (inTarget->mTile != NULL) {
+            in.kind = EE_COMBAT_DROP_KIND_TILE;
+            in.tile_x = (int32_t)inTarget->GetTileX();
+            in.tile_y = (int32_t)inTarget->GetTileY();
+            in.tile_height = inTarget->mTile->GetHeight();
         } else {
-            if (theTarget == NULL)
-                theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-            if (theTarget->mComplexUnit != NULL && theTarget->GetModel()->mModel != NULL) {
-                in.kind = 1;
-                in.offset[0] = theTarget->GetModel()->mDefaultPoint.GetX();
-                in.offset[1] = theTarget->GetModel()->mDefaultPoint.GetY();
-                in.offset[2] = theTarget->GetModel()->mDefaultPoint.GetZ();
-                in.scale = theTarget->mComplexUnit->mPhysicalModel.GetScale();
-                in.built = theTarget->mComplexUnit->mIsBuilt;
-                in.hit_points = (int32_t)theTarget->mHitPoints;
-                in.max_hit_points = (int32_t)theTarget->mStats->mMaxHitPoints;
-                memcpy(in.transformation, theTarget->mComplexUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.transformation));
-            } else if (theTarget->mTile != NULL) {
-                in.kind = 2;
-                in.tile_x = (int32_t)theTarget->GetTileX();
-                in.tile_y = (int32_t)theTarget->GetTileY();
-                in.tile_height = theTarget->mTile->GetHeight();
-            } else {
-                in.kind = 3;
-            }
+            in.kind = EE_COMBAT_DROP_KIND_NONE;
+            inTarget = NULL;
+        }
+        if (in.kind != EE_COMBAT_DROP_KIND_NONE) {
+            EeCombatDropOut thePoint = ee_combat_drop_point(&in);
+            theLocation.SetX(thePoint.x);
+            theLocation.SetY(thePoint.y);
+            theLocation.SetZ(thePoint.z);
         }
     }
-    EEFindDropLocationOriginal(inUnit, outTarget, outLocation, inTarget);
+    *outTarget = inTarget;
+    *outLocation = theLocation;
     if (EESimCaptureRecord::Active()) {
         struct { float x, y, z; int32_t target; } theOut = {outLocation->GetX(), outLocation->GetY(), outLocation->GetZ(),
                                                             EECombatCaptureID(*outTarget)};
