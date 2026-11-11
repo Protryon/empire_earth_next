@@ -236,6 +236,9 @@ end
 -- a site the gatherers can be sent to now: no enemy or danger near, not by another player's land (a claimed site not
 -- seen yet is gathered from all the same: the first gatherer there explores it)
 local function open_site(s)
+    if D.site_blocked(s.x, s.y) then
+        return false   -- (lib.defence hurt_safety: hurt there lately, AI_RESEARCH §8.41)
+    end
     return s.blocked == nil or s.blocked == "unexplored"
 end
 
@@ -824,7 +827,7 @@ function M.step(view, memory)
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
         -- threat one more at the town
-        if tower_wanted and not towers_busy and view.citizens >= 10 then
+        if tower_wanted and not towers_busy and view.citizens >= (plan.tower_at or 10) then
             if towers == 0 or (threatened and towers < 2) then
                 order("tower_town", {verb = "build", type = tower, near = "town"})
             else
@@ -956,6 +959,7 @@ function M.step(view, memory)
         end
     end
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
+    memory.epoch_now = view.epoch
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
     if plan.watch then
@@ -1016,7 +1020,7 @@ end
 -- every 250 game ms (docs/AI_LUA_UNITS.md §5): the raid answer (lib.defence) on the events since the last call
 function M.micro(info, memory)
     memory.def = memory.def or {}
-    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y)
+    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y, memory.epoch_now)
     return nil
 end
 

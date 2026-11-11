@@ -51,6 +51,14 @@ M.opts = {
                           -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
     wave_n = 0,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
                           -- refuge further from it (the settlements too), not to the nearest tower in its path
+    bait = false,         -- [ageofai tactics.lua tower_bait, upstream early.c] a citizen with an enemy soldier within
+                          -- 5 tiles, out of its towers' reach, runs to the spot 1.5 tiles behind the nearest
+                          -- shooting building within 25 (to the Copper Age): the raider follows under its fire
+    hurt_safety = false,  -- [ageofai safety.lua, upstream attack.c citizens_safety] a work spot within 6 tiles of a
+                          -- citizen hit in the last 2 minutes (20 s with the attacker in sight; minerals: 3 hits) is
+                          -- dangerous unless the town holds it (raid_held): its gatherers go to the nearest drop
+                          -- site, and M.dangerous tells the script's claims to leave the site while it lasts
+    raid_held = 150,      -- percent: own soldiers and towers within 8 against the raiders within 8
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -319,6 +327,10 @@ local function returns(mem, now)
             local done = false
             if a.why == "militia" then
                 done = now >= a.t + o.militia_ms or not raided(u.x, u.y, o.near_r)
+            elseif a.why == "bait" then
+                done = now >= a.t + 20000 or (math.abs(u.x - a.bx) <= 2 and math.abs(u.y - a.by) <= 2)
+            elseif a.why == "hurt" then
+                done = now >= a.t + o.away_max or (now >= a.t + o.away_min and not M.dangerous(mem, a.x, a.y, now))
             elseif a.why == "repair" then
                 local t = ai.unit(a.tower or -1)
                 done = t == nil or t.hp * 100 >= t.hp_max * 98 or now >= a.t + o.repair_ms
@@ -536,7 +548,11 @@ local function note(mem, events, now)
             end
             if v ~= nil and v.category == "citizen" then
                 local k = mem.hurt_at % 32 + 1
-                mem.hurt[k] = {x = v.x, y = v.y, t = now}
+                local seen = false
+                if M.opts.hurt_safety then   -- [ageofai safety.lua hurt_seen_short]
+                    seen = #ai.seen{enemy = true, armed = true, category = "soldier", near = {v.x, v.y, 6}, limit = 1} > 0
+                end
+                mem.hurt[k] = {x = v.x, y = v.y, t = now, seen = seen}
                 mem.hurt_at = mem.hurt_at + 1
                 mem.st.hits = mem.st.hits + 1
             end
@@ -557,9 +573,184 @@ local function note(mem, events, now)
     end
 end
 
-function M.micro(mem, events, now, tx, ty)
+-- [ageofai tactics.lua M.bait, a port of upstream early.c tower_bait; GPL-3.0, used with Grille's permission] every
+-- 2 s up to the Copper Age: a working citizen with an enemy soldier within 5 tiles (or one that hit it) and out of its
+-- own towers' reach walks to the spot 1.5 tiles behind the nearest shooting building within 25 tiles from that soldier
+local function bait(mem, events, now, bx, by, epoch)
+    if (epoch or 0) > 2 or now - (mem.bait_t or -1000000) < 2000 then
+        return
+    end
+    mem.bait_t = now
+    local cov = {}
+    for _, r in ipairs(REFUGES) do
+        if r.tower then
+            cov[#cov + 1] = r
+        end
+    end
+    if #cov == 0 then
+        return
+    end
+    local en = ai.seen{enemy = true, armed = true, category = "soldier", near = {bx, by, 36}, limit = 64}
+    if #en == 0 then
+        return
+    end
+    local ec = ai.get(en, {"x", "y"})
+    local victim_of = {}
+    for _, e in ipairs(events) do
+        if e.kind == "attacked" and e.attacker ~= nil then
+            victim_of[e.unit] = e.attacker
+        end
+    end
+    local cits = ai.units{category = "citizen", held = "engine", near = {bx, by, 32}, limit = 120}
+    if #cits == 0 then
+        return
+    end
+    local cx = ai.get(cits, {"x", "y", "action", "tx", "ty"})
+    local sent = 0
+    for k, id in ipairs(cits) do
+        local ux, uy = cx.x[k], cx.y[k]
+        if ux ~= nil and mem.away[id] == nil and sent < 12 then
+            local hit = nil
+            for j = 1, #en do
+                local ex, ey = ec.x[j], ec.y[j]
+                if ex ~= nil and (victim_of[id] == en[j] or (math.abs(ex - ux) <= 5 and math.abs(ey - uy) <= 5)) then
+                    hit = j
+                    break
+                end
+            end
+            if hit ~= nil then
+                local best, bd, covered = nil, 25 * 25, false
+                for _, r in ipairs(cov) do
+                    local d = d2(r.x, r.y, ux, uy)
+                    if d * 4 <= (2 * r.range - 1) * (2 * r.range - 1) then
+                        covered = true   -- (covered already: the tower fights)
+                        break
+                    end
+                    if d < bd then
+                        bd, best = d, r
+                    end
+                end
+                if not covered and best ~= nil then
+                    local ex, ey = ec.x[hit], ec.y[hit]
+                    local dx, dy = best.x - ex, best.y - ey
+                    local len = math.max(math.abs(dx), math.abs(dy), 1)
+                    local sx, sy = best.x + dx * 3 // (2 * len), best.y + dy * 3 // (2 * len)
+                    if sx == best.x and sy == best.y then
+                        sx = best.x + (dx >= 0 and 1 or -1)
+                    end
+                    ai.move({id}, sx, sy, {forced = true})
+                    local u = {id = id, x = ux, y = uy, action = cx.action[k], tx = cx.tx[k], ty = cx.ty[k]}
+                    local a = go_away(mem, u, "bait", now)
+                    a.t, a.bx, a.by = now, sx, sy
+                    sent = sent + 1
+                end
+            end
+        end
+    end
+    if sent > 0 then
+        mem.st.bait = (mem.st.bait or 0) + sent
+    end
+end
+
+-- [ageofai safety.lua] the live hurt spots within 6 tiles of a spot (a hit with the attacker in sight counts 20 s,
+-- else 2 minutes)
+local function hurt_count(mem, x, y, now)
+    local n = 0
+    for _, h in ipairs(mem.hurt) do
+        local life = h.seen and 20000 or 120000
+        if now - h.t <= life and math.abs(h.x - x) <= 6 and math.abs(h.y - y) <= 6 then
+            n = n + 1
+        end
+    end
+    return n
+end
+
+-- whether a site is dangerous by the hurt spots (a script's claims leave it alone meanwhile): mem.site_danger, kept
+-- by safety()
+function M.dangerous(mem, x, y, now)
+    local d = mem.site_danger
+    if d == nil then
+        return false
+    end
+    for _, k in ipairs(ai.keys(d)) do
+        if d[k].t <= now then
+            d[k] = nil
+        elseif math.abs(d[k].x - x) <= 6 and math.abs(d[k].y - y) <= 6 then
+            return true
+        end
+    end
+    return false
+end
+
+-- [ageofai safety.lua M.step, a port of upstream attack.c citizens_safety; GPL-3.0, used with Grille's permission] a
+-- sixteenth of the gathering citizens every micro step (each looked at every 4 s): a citizen whose work spot is
+-- raided (an enemy soldier within 6) or hurt (1 hurt spot within 6; 3 for the minerals) and not held by the town
+-- goes to the nearest drop site, and the spot is dangerous for 30 s (raided) or 2 minutes (hurt)
+local function safety(mem, now)
+    if #mem.hurt == 0 and #CLUSTERS == 0 then
+        return
+    end
+    local all = ai.units{category = "citizen", held = "engine", action = "gather"}
+    if #all == 0 then
+        return
+    end
+    local per = math.max(1, (#all + 15) // 16)
+    local cursor = (mem.safety_k or 0) % #all
+    local ids = {}
+    for k = 1, per do
+        ids[k] = all[(cursor + k - 1) % #all + 1]
+    end
+    mem.safety_k = (cursor + per) % #all
+    local c = ai.get(ids, {"x", "y", "tx", "ty", "gathers", "action"})
+    mem.site_danger = mem.site_danger or {}
+    for k, id in ipairs(ids) do
+        local sx, sy = c.tx[k] or c.x[k], c.ty[k] or c.y[k]
+        if sx ~= nil and mem.away[id] == nil then
+            local raid = raided(sx, sy, 6)
+            local kind = c.gathers[k]
+            local mineral = kind == "stone" or kind == "gold" or kind == "iron"
+            local hurt = not raid and hurt_count(mem, sx, sy, now) >= (mineral and 3 or 1)
+            if raid or hurt then
+                -- the town holds it: own soldiers and towers within 8 beat the raiders within 8 by raid_held
+                local foes = ai.seen{enemy = true, armed = true, category = "soldier", near = {sx, sy, 8}, limit = 20}
+                local held = false
+                if #foes > 0 then
+                    local own = ai.units{armed = true, near = {sx, sy, 8}, limit = 40}
+                    held = #own > 0 and ai.strength(own) * 100 >= ai.strength(foes) * M.opts.raid_held
+                end
+                if not held then
+                    local did, _, dx, dy = ai.drop_site(sx, sy, mineral and "stone" or "food")
+                    if did ~= nil and dx ~= nil and not (math.abs(dx - sx) <= 3 and math.abs(dy - sy) <= 3) then
+                        ai.move({id}, dx, dy, {forced = true})
+                        local a = go_away(mem, {id = id, x = c.x[k], y = c.y[k], action = c.action[k], tx = c.tx[k],
+                                                ty = c.ty[k]}, "hurt", now)
+                        a.t = now
+                        mem.st.hurt_sent = (mem.st.hurt_sent or 0) + 1
+                    end
+                    local key = sx * 10000 + sy
+                    mem.site_danger[key] = {x = sx, y = sy, t = now + (raid and 30000 or 120000)}
+                end
+            end
+        end
+    end
+end
+
+-- whether the script's claims should leave a site now (hurt_safety; false when it is off)
+local LAST = nil
+function M.site_blocked(x, y)
+    return M.opts.hurt_safety and LAST ~= nil and M.dangerous(LAST, x, y, ai.time())
+end
+
+function M.micro(mem, events, now, tx, ty, epoch)
+    LAST = mem
     state(mem)
     note(mem, events, now)
+    if M.opts.hurt_safety and tx ~= nil and tx >= 0 then
+        safety(mem, now)
+    end
+    if M.opts.bait and tx ~= nil and tx >= 0 then
+        bait(mem, events, now, tx, ty, epoch)
+    end
     if tx == nil or tx < 0 then
         return
     end
