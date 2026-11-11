@@ -277,6 +277,36 @@ pub extern "C" fn ee_units_repair(player: *mut c_void, selection: *mut c_void, t
     crate::group::repair(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target, queued);
 }
 
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+#[no_mangle]
+pub extern "C" fn ee_units_keeps_citizen(id: u32) -> bool {
+    with_store(|s| crate::group::keeps_citizen(s.get(id)))
+}
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_build_wall(
+    player: *mut c_void,
+    selection: *mut c_void,
+    technology: i32,
+    start_x: f32,
+    start_y: f32,
+    end_x: f32,
+    end_y: f32,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::build_wall(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        technology,
+        (start_x, start_y),
+        (end_x, end_y),
+    );
+}
+
 /// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
 #[cfg(not(test))]
 #[no_mangle]

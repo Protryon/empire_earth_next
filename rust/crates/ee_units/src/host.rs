@@ -193,6 +193,15 @@ pub trait Host {
     fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32);
     /// `EEActiveGroup::ResetUnitsPaths`
     fn group_reset_paths(&mut self, group: HostRef);
+    /// `EEActiveGroup::KeepCitizens` (its test is `group::keeps_citizen` over the store)
+    fn group_keep_citizens(&mut self, group: HostRef);
+    /// `EEPlanWall(start, end, gUnitClassTable[the technology's unit class], player, true, false, pieces)`: the new
+    /// pieces (a list the host owns until `wall_release`) and their count
+    fn wall_plan(&mut self, player: HostRef, technology: i32, start: (f32, f32), end: (f32, f32)) -> (HostRef, usize);
+    /// `EEBuildWall(group, pieces)`
+    fn wall_build(&mut self, group: HostRef, pieces: HostRef);
+    /// the pieces' list goes
+    fn wall_release(&mut self, pieces: HostRef);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -246,6 +255,18 @@ pub mod game {
         fn ee_units_host_unit_complex_id(unit: u32) -> u32;
         fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
         fn ee_units_host_group_reset_paths(group: *mut c_void);
+        fn ee_units_host_group_keep_citizens(group: *mut c_void);
+        fn ee_units_host_wall_plan(
+            player: *mut c_void,
+            technology: i32,
+            start_x: f32,
+            start_y: f32,
+            end_x: f32,
+            end_y: f32,
+            count: *mut usize,
+        ) -> *mut c_void;
+        fn ee_units_host_wall_build(group: *mut c_void, pieces: *mut c_void);
+        fn ee_units_host_wall_release(pieces: *mut c_void);
     }
 
     pub struct GameHost;
@@ -392,6 +413,28 @@ pub mod game {
         fn group_reset_paths(&mut self, group: HostRef) {
             unsafe { ee_units_host_group_reset_paths(group.0) }
         }
+        fn group_keep_citizens(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_keep_citizens(group.0) }
+        }
+        fn wall_plan(
+            &mut self,
+            player: HostRef,
+            technology: i32,
+            start: (f32, f32),
+            end: (f32, f32),
+        ) -> (HostRef, usize) {
+            let mut count = 0usize;
+            // SAFETY: the count is written for the call
+            let pieces =
+                unsafe { ee_units_host_wall_plan(player.0, technology, start.0, start.1, end.0, end.1, &mut count) };
+            (HostRef(pieces), count)
+        }
+        fn wall_build(&mut self, group: HostRef, pieces: HostRef) {
+            unsafe { ee_units_host_wall_build(group.0, pieces.0) }
+        }
+        fn wall_release(&mut self, pieces: HostRef) {
+            unsafe { ee_units_host_wall_release(pieces.0) }
+        }
     }
 }
 
@@ -439,6 +482,11 @@ pub(crate) mod tests {
         ComplexOf(u32),
         PathPoint(u32, u32, u32),
         ResetPaths(HostRef),
+        KeepCitizens(HostRef),
+        /// player, technology, the points' bits
+        WallPlan(HostRef, i32, [u32; 4]),
+        WallBuild(HostRef, HostRef),
+        WallRelease(HostRef),
         /// a location goal's facing and group movement flag
         Location(u32, u8, u8),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
@@ -471,6 +519,9 @@ pub(crate) mod tests {
         pub complex_of: BTreeMap<u32, u32>,
         /// Path To's point as the host adjusts it (x, y, z; None: unchanged, height 0)
         pub path_point: Option<(f32, f32, f32)>,
+        /// KeepCitizens keeps these; the wall's pieces (EEPlanWall's count)
+        pub citizens: Vec<u32>,
+        pub wall_pieces: usize,
         /// log the goals' arguments too (Call::Spec)
         pub specs: bool,
         pub made: usize,
@@ -665,6 +716,30 @@ pub(crate) mod tests {
         }
         fn group_reset_paths(&mut self, group: HostRef) {
             self.calls.push(Call::ResetPaths(group));
+        }
+        fn group_keep_citizens(&mut self, group: HostRef) {
+            let keep = self.citizens.clone();
+            if let Some(ids) = self.groups.get_mut(&(group.0 as usize)) {
+                ids.retain(|id| keep.contains(id));
+            }
+            self.calls.push(Call::KeepCitizens(group));
+        }
+        fn wall_plan(
+            &mut self,
+            player: HostRef,
+            technology: i32,
+            start: (f32, f32),
+            end: (f32, f32),
+        ) -> (HostRef, usize) {
+            let bits = [start.0.to_bits(), start.1.to_bits(), end.0.to_bits(), end.1.to_bits()];
+            self.calls.push(Call::WallPlan(player, technology, bits));
+            (HostRef(0x7700 as *mut c_void), self.wall_pieces)
+        }
+        fn wall_build(&mut self, group: HostRef, pieces: HostRef) {
+            self.calls.push(Call::WallBuild(group, pieces));
+        }
+        fn wall_release(&mut self, pieces: HostRef) {
+            self.calls.push(Call::WallRelease(pieces));
         }
     }
 

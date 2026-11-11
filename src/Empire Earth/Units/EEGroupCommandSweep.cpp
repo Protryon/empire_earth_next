@@ -415,6 +415,30 @@ void OriginalDropoffResource(EEPlayer* thePlayer, void* theGroup, int32_t inDrop
     }
 }
 
+// EEMBuildWall::Execute (0x4bc12c) as it was, each world call through the host (the plan and the build are host calls)
+void OriginalBuildWall(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology, float inStartX, float inStartY,
+                       float inEndX, float inEndY)
+{
+    void* thePieces = NULL;   // std::vector<EEUnit*> thePieces
+    uintptr_t theCount = 0;
+    if (Count(theGroup) > 0 && UnitAt(theGroup, 0) != kNone) {   // theGroup->GetFirstUnit()
+        void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
+        ee_units_host_pending_push(thePlayer, theActiveGroup);
+        ee_units_host_group_keep_citizens(theActiveGroup);
+        if (Count(theActiveGroup) > 0) {   // theActiveGroup->GetFirstUnit()
+            thePieces = ee_units_host_wall_plan(thePlayer, inTechnology, inStartX, inStartY, inEndX, inEndY, &theCount);
+            if (Count(theActiveGroup) > 0)
+                ee_units_host_play_acknowledgement(thePlayer, theActiveGroup,
+                                                   ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
+        }
+        if (theCount > 0)
+            ee_units_host_wall_build(theActiveGroup, thePieces);
+        if (thePieces != NULL)   // (the vector's end of life)
+            ee_units_host_wall_release(thePieces);
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -424,7 +448,8 @@ enum SweepBody {
     kSweepAttackUnit = 6,
     kSweepHealUnit = 7,
     kSweepPathTo = 8,
-    kSweepDropoffResource = 9
+    kSweepDropoffResource = 9,
+    kSweepBuildWall = 10
 };
 
 struct SweepCase {
@@ -436,6 +461,7 @@ struct SweepCase {
     bool mConvert;              // Attack Unit's
     float mFacing;              // Path To's
     unsigned long mFlags;       // Path To's: 1 forced, 2 rotating, 4 queued, 8 group movement
+    float mEndX, mEndY;         // Build Wall's end (mX, mY its start; mTarget its technology)
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -486,6 +512,12 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
             OriginalPathTo(inPlayer, inSelection, inCase.mX, inCase.mY, inCase.mFacing, inCase.mFlags);
         break;
     }
+    case kSweepBuildWall:
+        if (inRust)
+            ee_units_build_wall(inPlayer, inSelection, inCase.mTarget, inCase.mX, inCase.mY, inCase.mEndX, inCase.mEndY);
+        else
+            OriginalBuildWall(inPlayer, inSelection, inCase.mTarget, inCase.mX, inCase.mY, inCase.mEndX, inCase.mEndY);
+        break;
     case kSweepDropoffResource:
         if (inRust)
             ee_units_dropoff_resource(inPlayer, inSelection, (uint32_t)inCase.mTarget);
@@ -524,6 +556,10 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     if (inCase.mBody == kSweepPathTo) {
         theRecord.U32((unsigned int)inCase.mFlags);
         theRecord.F32(inCase.mFacing);
+    }
+    if (inCase.mBody == kSweepBuildWall) {
+        theRecord.F32(inCase.mEndX);
+        theRecord.F32(inCase.mEndY);
     }
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
@@ -621,6 +657,8 @@ void EEGroupCommandSweep()
             theCase.mConvert = false;
             theCase.mFacing = 0.0f;
             theCase.mFlags = 0;
+            theCase.mEndX = 0.0f;
+            theCase.mEndY = 0.0f;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -710,6 +748,22 @@ void EEGroupCommandSweep()
                 theCase.mTarget = theTargets[t];
                 RunCase(theCase, p, thePlayer, theUnits);
             }
+            // Build Wall from the first unit's tile (or the map's centre) eight tiles east, and a one-tile wall at the
+            // centre (the dry host plans nothing: the technology is only logged)
+            theCase.mBody = kSweepBuildWall;
+            theCase.mTarget = 0x2a;
+            theCase.mX = theFirstX;
+            theCase.mY = theFirstY;
+            theCase.mEndX = theFirstX + 8.0f;
+            theCase.mEndY = theFirstY;
+            RunCase(theCase, p, thePlayer, theUnits);
+            theCase.mX = theCenter;
+            theCase.mY = theCenter;
+            theCase.mEndX = theCenter;
+            theCase.mEndY = theCenter;
+            RunCase(theCase, p, thePlayer, theUnits);
+            theCase.mEndX = 0.0f;
+            theCase.mEndY = 0.0f;
         }
     }
 }

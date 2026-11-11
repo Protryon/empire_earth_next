@@ -110,7 +110,11 @@ enum DryEvent {
     kDrySpreadUnit,       // tag, target, x, y
     kDryComplexOf,        // unit, its complex unit
     kDryPathPoint,        // unit, x, y in, x, y out, the height (bits)
-    kDryResetPaths        // tag
+    kDryResetPaths,       // tag
+    kDryKeepCitizens,     // tag, the count, the ids kept
+    kDryWallPlan,         // player id, technology, the start's and end's bits (the dry plan makes 2 pieces)
+    kDryWallBuild,        // tag
+    kDryWallRelease       // -
 };
 
 struct DryGroup {
@@ -302,6 +306,30 @@ void DryKeepNonCitizens(void* inGroup)
     Log({kDryKeepNonCitizens, theGroup->mTag});
     LogUnits(theGroup->mUnits);
 }
+
+void DryKeepCitizens(void* inGroup)
+{
+    // EEActiveGroup::KeepCitizens' loop over the store's test, compared with the object's
+    DryGroup* theGroup = Dry(inGroup);
+    for (unsigned long theIndex = 0; theIndex < theGroup->mUnits.size();) {
+        EEComplexUnit* theUnit = theGroup->mUnits[theIndex];
+        bool theKeeps = ee_units_keeps_citizen(static_cast<uint32_t>(theUnit->mUnitID));
+        bool theObject = theUnit->mIsCommandable && theUnit->mHitPoints > 0
+            && (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen
+                || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen);
+        if (theKeeps != theObject)
+            sDry->mMismatches++;
+        if (!theKeeps)
+            DryRemove(theGroup, theUnit);
+        else
+            theIndex++;
+    }
+    Log({kDryKeepCitizens, theGroup->mTag});
+    LogUnits(theGroup->mUnits);
+}
+
+// the dry plan's pieces (never read: the dry build only logs)
+int sDryPieces = 0;
 
 } // namespace
 
@@ -797,4 +825,51 @@ extern "C" void ee_units_host_group_reset_paths(void* inGroup)
         return;
     }
     ActiveOf(inGroup)->ResetUnitsPaths();
+}
+
+extern "C" void ee_units_host_group_keep_citizens(void* inGroup)
+{
+    if (sDry != NULL) {
+        DryKeepCitizens(inGroup);
+        return;
+    }
+    ActiveOf(inGroup)->KeepCitizens();
+}
+
+// EEMBuildWall's plan: the wall of the technology's unit class from start to end as paid foundations (EEPlanWall(..,
+// true, false, pieces)); the new pieces in a list the caller releases. The dry host plans nothing (it would place
+// units): two pieces, logged
+extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, float inStartX, float inStartY, float inEndX,
+                                         float inEndY, uintptr_t* outCount)
+{
+    if (sDry != NULL) {
+        Log({kDryWallPlan, PlayerID(inPlayer), (uint32_t)inTechnology, Bits(inStartX), Bits(inStartY), Bits(inEndX),
+             Bits(inEndY)});
+        *outCount = 2;
+        return &sDryPieces;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    std::vector<EEUnit*>* thePieces = new std::vector<EEUnit*>();
+    EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
+    EEPlanWall(GE2DPoint(inStartX, inStartY), GE2DPoint(inEndX, inEndY), theClass, thePlayer, 1, 0, *thePieces);
+    *outCount = thePieces->size();
+    return thePieces;
+}
+
+extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
+{
+    if (sDry != NULL) {
+        Log({kDryWallBuild, Dry(inGroup)->mTag});
+        return;
+    }
+    EEBuildWall(ActiveOf(inGroup), *static_cast<std::vector<EEUnit*>*>(inPieces));
+}
+
+extern "C" void ee_units_host_wall_release(void* inPieces)
+{
+    if (sDry != NULL) {
+        Log({kDryWallRelease});
+        return;
+    }
+    delete static_cast<std::vector<EEUnit*>*>(inPieces);
 }

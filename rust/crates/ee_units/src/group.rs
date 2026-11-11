@@ -581,6 +581,54 @@ pub fn dropoff_resource(host: &mut impl Host, player: HostRef, selection: HostRe
     }
 }
 
+/// `EEActiveGroup::KeepCitizens`' test over the store: a commandable, living land or naval citizen. A unit in no list
+/// has no record and is not kept.
+pub fn keeps_citizen(unit: Option<&EeUnitRecord>) -> bool {
+    unit.is_some_and(|u| {
+        u.commandable != 0
+            && u.hit_points > 0
+            && (u.category == EE_UNIT_CATEGORY_LAND_CITIZEN || u.category == EE_UNIT_CATEGORY_NAVAL_CITIZEN)
+    })
+}
+
+/// `EEMBuildWall::Execute` (the sender is the message's player, `gWorld.mPlayers[mPlayerID]`): with a selection, one
+/// active group of the whole selection (slot 0, unsorted) goes to the player's pending groups and keeps its citizens;
+/// when some are left the wall of the technology's class is planned from start to end as foundations
+/// (`EEPlanWall(.., true, false, pieces)`) and one unit, drawn, acknowledges; then, when the plan made pieces, the
+/// group builds them (`EEBuildWall`).
+pub fn build_wall(
+    host: &mut impl Host,
+    player: HostRef,
+    selection: HostRef,
+    technology: i32,
+    start: (f32, f32),
+    end: (f32, f32),
+) {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    let group = host.active_group_new(player);
+    host.group_fill(group, selection, 0, 0);
+    host.pending_push(player, group);
+    host.group_keep_citizens(group);
+    host.group_ids(group, &mut ids);
+    if ids.is_empty() {
+        return;
+    }
+    let (pieces, count) = host.wall_plan(player, technology, start, end);
+    host.group_ids(group, &mut ids);
+    if !ids.is_empty() {
+        let index = host.random(0, ids.len() as i32 - 1);
+        host.play_acknowledgement(player, group, index);
+    }
+    if count > 0 {
+        host.wall_build(group, pieces);
+    }
+    host.wall_release(pieces);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1293,5 +1341,67 @@ mod tests {
                 Call::SpreadTile(group, 0, 0),
             ]
         );
+    }
+
+    #[test]
+    fn keeps_citizen_tests_the_store() {
+        let citizen = EeUnitRecord { commandable: 1, category: EE_UNIT_CATEGORY_LAND_CITIZEN, ..complex(1, 0x20) };
+        assert!(keeps_citizen(Some(&citizen)));
+        assert!(keeps_citizen(Some(&EeUnitRecord { category: EE_UNIT_CATEGORY_NAVAL_CITIZEN, ..citizen })));
+        assert!(!keeps_citizen(Some(&EeUnitRecord { category: 1, ..citizen })));
+        assert!(!keeps_citizen(Some(&EeUnitRecord { commandable: 0, ..citizen })));
+        assert!(!keeps_citizen(Some(&EeUnitRecord { hit_points: 0, ..citizen })));
+        assert!(!keeps_citizen(None));
+    }
+
+    /// `EEMBuildWall::Execute`'s calls: the plan after the keep, the draw before the build, the pieces always
+    /// released; no plan when no citizen is left, no build when the plan made no piece
+    #[test]
+    fn build_wall_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let pieces = r(0x7700);
+        let bits = [1.5f32.to_bits(), 2.5f32.to_bits(), 9.5f32.to_bits(), 2.5f32.to_bits()];
+        for count in [3usize, 0] {
+            let mut host = MockHost { wall_pieces: count, ..Default::default() };
+            host.groups.insert(0x600, vec![0x0100_0001, 0x0100_0002, 0x0100_0003]);
+            host.fills.insert(0, vec![0x0100_0001, 0x0100_0002, 0x0100_0003]);
+            host.citizens = vec![0x0100_0001, 0x0100_0003];
+            host.draws = vec![1];
+            build_wall(&mut host, player, selection, 0x2a, (1.5, 2.5), (9.5, 2.5));
+            let group = r(0x1001);
+            let mut expected = vec![
+                Call::NewGroup(player, group),
+                Call::Fill(group, selection, 0, 0),
+                Call::Pending(player, group),
+                Call::KeepCitizens(group),
+                Call::WallPlan(player, 0x2a, bits),
+                Call::Random(0, 1),
+                Call::Acknowledge(player, group, 1),
+            ];
+            if count > 0 {
+                expected.push(Call::WallBuild(group, pieces));
+            }
+            expected.push(Call::WallRelease(pieces));
+            assert_eq!(host.calls, expected, "{count} pieces");
+        }
+        // no citizen left: pending, kept, nothing planned
+        let mut host = MockHost::default();
+        host.groups.insert(0x600, vec![0x0100_0001]);
+        host.fills.insert(0, vec![0x0100_0001]);
+        build_wall(&mut host, player, selection, 0x2a, (1.5, 2.5), (9.5, 2.5));
+        let group = r(0x1001);
+        assert_eq!(
+            host.calls,
+            vec![
+                Call::NewGroup(player, group),
+                Call::Fill(group, selection, 0, 0),
+                Call::Pending(player, group),
+                Call::KeepCitizens(group),
+            ]
+        );
+        // no selection: nothing
+        let mut host = MockHost::default();
+        build_wall(&mut host, player, selection, 0x2a, (1.5, 2.5), (9.5, 2.5));
+        assert!(host.calls.is_empty());
     }
 }

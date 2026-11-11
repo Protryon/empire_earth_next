@@ -10415,6 +10415,19 @@ void ee_units_repair(void *player,
                      uint32_t target,
                      bool queued);
 
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+bool ee_units_keeps_citizen(uint32_t id);
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+void ee_units_build_wall(void *player,
+                         void *selection,
+                         int32_t technology,
+                         float start_x,
+                         float start_y,
+                         float end_x,
+                         float end_y);
+
 /// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
 void ee_units_dropoff_resource(void *player,
                                void *selection,
@@ -10504,6 +10517,20 @@ extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
 extern void ee_units_host_group_reset_paths(void *group);
+
+extern void ee_units_host_group_keep_citizens(void *group);
+
+extern void *ee_units_host_wall_plan(void *player,
+                                     int32_t technology,
+                                     float start_x,
+                                     float start_y,
+                                     float end_x,
+                                     float end_y,
+                                     size_t *count);
+
+extern void ee_units_host_wall_build(void *group, void *pieces);
+
+extern void ee_units_host_wall_release(void *pieces);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
