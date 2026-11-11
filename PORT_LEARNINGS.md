@@ -1924,6 +1924,27 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
 
+## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.43)
+
+- **`ai.units{type = ...}` takes one class name, not a list.** AI_LUA_UNITS §2.2 says "a class id or a list", but
+  `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
+  then matches nothing. Boom's first second-town-centre rule counted its town centres as 0 that way and filled one
+  settlement after another (5 citizens each) every 20 s.
+  `ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
+  Fixed since: the filters take a list of names (AI_LUA_UNITS §11, `tests/ai_units/types.lua`).
+- **A town centre filled from a settlement uses its citizens up.** `ai.garrison(ids, settlement)` with the
+  settlement's garrison capacity (5) makes it a town centre. Releasing the citizens right after the order (as the
+  Age of AI port does) hands them to the gatherer runner while they walk: hold them until they are inside (gone) and
+  release only the ones still out after a minute.
+- **Stopping a background shell leaves its bench loop running.** A queue script started in the background and
+  stopped from the agent's task list kept its child `bash` loop alive; when the hold it waited on was lifted, it
+  started its benches beside the new queue's, both on the same port offsets, and 24 of the first 32 games died at
+  the main menu (`EE-SIM FAULT` in `NERecordPlayback::Process`, the known two-benches-on-one-port start fault, §8.29).
+  Kill the loop's own processes, and let a bench script take a lock directory before it starts.
+- **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
+  scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
+  subfolder.
+
 ## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.41)
 
 - **A unit killed arrives as a `converted` event, never as `died`.** `EECPUnitsOnTaken` calls a unit converted when
@@ -1984,3 +2005,14 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   future research sentinel (an epoch-14 tech, 2000 wood, 1000 stone, 2000 iron) cost nothing in the Prehistoric. The
   classic personality splits its gatherers by the needs, so the C++ sent its first gatherers to stone and iron (and
   its towers went up at the iron) while the port's went to wood; `data_cost` (AI_LUA_UNITS §11) is the ledger's cost.
+- **A script's granary plants its farms later than the classic's, and its builder builds them.** EEMakeBuilding (the
+  C++ classic's placement) sends EEMReplantFarms at once, so the farm foundations stand unbuilt while the granary goes
+  up, and CheckBuildingCounts sees them unbuilt and queues farm requests (48 a bench). `ai.build` places through
+  EEMBuildUnit: the farms are planted when the granary is finished (EEComplexUnit::SetBuilt), and its builder builds
+  them in turn (EEUGBuildRepair::TendNextFarm), so the port's count check finds them built and queues the granary
+  only. Counting the farm build orders said "the port builds no farms"; the farmers say otherwise (3.3 against 4.3 at
+  90 minutes over 32 games). Compare a building's effect (its workers), not its orders.
+- **A site finder that asks for a builder at every candidate blows the step's budget.** FindShoreSite tries every water
+  site with FindBuilderForTile; in Lua each test is an `ai.reach` per available citizen, and with the reveal cheat the
+  sites run to hundreds: 300 budget errors a bench. The port asks at the first 8 placeable sites (asking at the
+  first only halved its docks: `ai.reach` to a water tile fails at some sites a builder reaches at the next).

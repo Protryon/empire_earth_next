@@ -48,6 +48,8 @@
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/EEMapDimensions.h"
+#include "ee/RTSRegionTable.h"
+#include "ee/EEInfluenceTable.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
@@ -57,6 +59,9 @@
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
+#include "ee/EEAIContinent.h"
+#include "ee/EEAIForest.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -822,8 +827,11 @@ static int LuaMap(lua_State* L)
 }
 
 // the filters of ai.units / ai.seen / ai.resources
+static const long kUnitsMaxTypes = 16;   // class names in one filter's `type` list
 struct EECPUnitsFilter {
-    long mType = -1;
+    long mType = -1;   // -1 any class, -2 an unknown name (nothing), -3 the list mTypes
+    long mTypes[kUnitsMaxTypes] = {0};
+    long mTypeCount = 0;
     const char* mCategory = NULL;
     bool mHasNear = false;
     long mX = 0, mY = 0, mR = 0;
@@ -841,10 +849,24 @@ static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
     if (lua_type(L, inTable) != LUA_TTABLE)
         return;
     lua_getfield(L, inTable, "type");
-    if (!lua_isnil(L, -1))
-        f.mType = EECPUnitsClassArg(L, lua_gettop(L));
-    if (!lua_isnil(L, -1) && f.mType < 0)
-        f.mType = -2;   // an unknown name: matches nothing
+    if (lua_type(L, -1) == LUA_TTABLE) {
+        // a list of class names (or ids): any of them; the unknown ones are left out (none known: nothing)
+        int theList = lua_gettop(L);
+        lua_Integer theLength = (lua_Integer)lua_rawlen(L, theList);
+        for (lua_Integer k = 1; k <= theLength && f.mTypeCount < kUnitsMaxTypes; k++) {
+            lua_rawgeti(L, theList, k);
+            long theType = EECPUnitsClassArg(L, lua_gettop(L));
+            lua_pop(L, 1);
+            if (theType >= 0)
+                f.mTypes[f.mTypeCount++] = theType;
+        }
+        f.mType = -3;
+    } else {
+        if (!lua_isnil(L, -1))
+            f.mType = EECPUnitsClassArg(L, lua_gettop(L));
+        if (!lua_isnil(L, -1) && f.mType < 0)
+            f.mType = -2;   // an unknown name: matches nothing
+    }
     lua_pop(L, 1);
     f.mCategory = EECPUnitsOptString(L, inTable, "category");
     f.mHasNear = EECPUnitsOptNear(L, inTable, f.mX, f.mY, f.mR);
@@ -877,10 +899,23 @@ static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
         f.mKind = 99;
 }
 
+// a class against a filter's `type` (one class, a list, or any)
+static bool EECPUnitsTypeMatch(const EECPUnitsFilter& f, long inType)
+{
+    if (f.mType == -1)
+        return true;
+    if (f.mType != -3)
+        return inType == f.mType;
+    for (long k = 0; k < f.mTypeCount; k++)
+        if (f.mTypes[k] == inType)
+            return true;
+    return false;
+}
+
 // the common tests of a filter; outKey the sort key (the squared distance with near, else 0)
 static bool EECPUnitsPasses(EEUnit* inUnit, const EECPUnitsFilter& f, long long& outKey)
 {
-    if (f.mType != -1 && inUnit->mUnitClass->mUnitType != f.mType)
+    if (!EECPUnitsTypeMatch(f, inUnit->mUnitClass->mUnitType))
         return false;
     if (f.mCategory != NULL && strcmp(EECPUnitsCategory(inUnit), f.mCategory) != 0)
         return false;
@@ -1052,6 +1087,9 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
             static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
             if (r >= 0 && r < 5)
                 EECPUnitsSetStr(L, "gathers", kKinds[r]);
+            // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
+            if (theGather->mWaiting && c->mCurrentPhysicsAction != 0)
+                EECPUnitsSetBool(L, "waiting", true);
         } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g))
             theTarget = theBuild->mTarget;
         else if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(g))
@@ -1175,7 +1213,7 @@ static int LuaMemory(lua_State* L)
     s->mSorted.clear();
     for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
         const Remembered& r = it->second;
-        if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || (f.mType != -1 && r.mType != f.mType) || r.mSeen < theSince
+        if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || !EECPUnitsTypeMatch(f, r.mType) || r.mSeen < theSince
             || (theBuildings >= 0 && r.mBuilding != theBuildings))
             continue;
         if (f.mCategory != NULL && (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
@@ -2578,6 +2616,273 @@ static int LuaShore(lua_State* L)
     return 0;
 }
 
+// ai.water_sites(x, y, {max = 64}) -> {{x, y}, ...}: the water tiles by the shore for docks, nearest (x, y) first, at
+// most max (up to 512): the largest water body's shore tiles next to the land mass at (x, y) and the water tiles
+// round them (EECPBuildManager::CollectSiteTiles(2)), explored ones only; an empty table when that water body does
+// not touch the land mass
+static int LuaWaterSites(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    lua_newtable(L);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
+        return 1;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+    long theMax = 64;
+    EECPUnitsOptInt(L, 3, "max", theMax);
+    theMax = theMax < 1 ? 1 : theMax > 512 ? 512 : theMax;
+    EECPUnitsCharge(L, kCostCall);
+    unsigned short theWaterID = (unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater);
+    EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theWater == NULL || theLand == NULL
+        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->mID])
+        return 1;
+    std::vector<U2DPoint<long> > theShore;
+    theWater->GetShoreNextTo(theLand->mID, theShore);
+    EECPUnitsCharge(L, (int64_t)theShore.size() * 9 * kCostScan);
+    std::vector<U2DPoint<long> > theTiles;
+    theTiles.reserve(theShore.size() * 9);
+    for (size_t i = 0; i < theShore.size(); i++)
+        for (long dy = -1; dy <= 1; dy++)
+            for (long dx = -1; dx <= 1; dx++)
+                theTiles.push_back(U2DPoint<long>(theShore[i].mX + dx, theShore[i].mY + dy));
+    std::sort(theTiles.begin(), theTiles.end());
+    theTiles.erase(std::unique(theTiles.begin(), theTiles.end()), theTiles.end());
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    std::vector<std::pair<long, std::pair<long, long> > > theSites;
+    for (size_t i = 0; i < theTiles.size(); i++) {
+        long tx = theTiles[i].mX, ty = theTiles[i].mY;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h)
+            continue;
+        EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty));
+        if (theTile == NULL || !theTile->IsVisibleTo(me)
+            || (theTile->GetTerrainType() != kTerrainDeepWater && theTile->GetTerrainType() != kTerrainShallowWater))
+            continue;
+        theSites.push_back(std::make_pair(EECPUnitsD2(tx, ty, x, y), std::make_pair(ty, tx)));
+    }
+    std::sort(theSites.begin(), theSites.end());   // the distance, then the tile: the same order on every machine
+    long n = 0;
+    for (size_t i = 0; i < theSites.size() && n < theMax; i++) {
+        lua_createtable(L, 2, 0);
+        lua_pushinteger(L, (lua_Integer)theSites[i].second.second);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, (lua_Integer)theSites[i].second.first);
+        lua_rawseti(L, -2, 2);
+        lua_rawseti(L, -2, (lua_Integer)++n);
+    }
+    EECPUnitsCharge(L, n * kCostField * 3);
+    return 1;
+}
+
+// ai.enemy_near(x, y) -> whether armed enemy units stand near the tile: the classic build manager's HasEnemyNear.
+// The fog-honest default (every AI): the enemies the seat sees or remembers (EECPNextSiteThreat: soldiers seen
+// lately within its range, an enemy tower or armed building in range). An AI whose manifest entry declares
+// "sees_all" (the classic's information cheat) gets the original: every armed unit not its own in the influence
+// regions round the tile (one tile on small island and planet maps), seen or not, idle searchers (target search
+// timer above 60 s) left out
+static int LuaEnemyNear(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall + 20 * kCostScan);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    long inX = (long)lua_tointeger(L, 1), inY = (long)lua_tointeger(L, 2);
+    if (!EECPEngineSeesAll(me)) {
+        lua_pushboolean(L, EECPNextSiteThreat(me, inX, inY, false, NULL) != 0 ? 1 : 0);
+        return 1;
+    }
+    std::vector<EEComplexUnit*> theUnits;
+    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
+    EEMap* theMap = gWorld.mMap;
+    U2DRectangle<long> theRect;
+    long theCount = 0;
+    if (theTable != NULL) {
+        if (((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap
+                || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)
+            && theMap->mL195610 <= 0x2a) {
+            theRect.mLeft = inX - 1;
+            theRect.mRight = inX + 1;
+            theRect.mTop = inY - 1;
+            theRect.mBottom = inY + 1;
+        } else {
+            long theSize = theTable->mRegionSize;
+            theRect.mLeft = inX - theSize;
+            theRect.mRight = inX + theSize;
+            theRect.mTop = inY - theSize;
+            theRect.mBottom = theSize + inY;
+        }
+        theCount = theTable->SumEnemyValue(me->mPlayerID, theTable->GetRegions(theRect), true);
+        if (theCount > 0) {
+            theMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+            theCount = 0;
+            for (size_t i = 0; i < theUnits.size(); i++) {
+                EEComplexUnit* u = theUnits[i];
+                if (u->mPlayer != me && u->mStats->mAttack != 0.0f && !(u->mTargetSearchTimer > 60000))
+                    theCount++;
+            }
+        }
+    }
+    lua_pushboolean(L, theCount > 0 ? 1 : 0);
+    return 1;
+}
+
+// ai.enemy_force(player, x, y, r) -> n, hp, attack: the player's land soldiers (an attack, a land unit or hero, not a
+// building) within r tiles of the tile, counted and summed - every one, seen or not, as the classic's militia counts
+// the raiders (EECPRMMilitia). Only for an AI whose manifest entry declares "sees_all" (the classic's information
+// cheat); nothing for every other AI (ai.seen is the fog-honest count)
+static int LuaEnemyForce(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall);
+    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isinteger(L, 3)
+        || !lua_isinteger(L, 4))
+        return 0;
+    lua_Integer thePlayer = lua_tointeger(L, 1);
+    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
+        return 0;
+    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3), r = (long)lua_tointeger(L, 4);
+    long n = 0, theHP = 0, theAttack = 0, theScanned = 0;
+    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
+        theScanned++;
+        if (u->mComplexUnit == NULL || !(u->mHitPoints > 0) || u->mStats == NULL || u->mStats->mAttack == 0.0f
+            || u->mUnitClass->IsLandBuilding())
+            continue;
+        long theCategory = u->mUnitClass->mCategory;
+        if (theCategory != kUnitCategoryLand && theCategory != kUnitCategoryLandMilitaryHero)
+            continue;
+        long dx = u->GetTileX() - x, dy = u->GetTileY() - y;
+        if (dx * dx + dy * dy > r * r)
+            continue;
+        n++;
+        theHP += (long)u->mHitPoints;
+        theAttack += UMFloatToLong(u->mStats->mAttack);
+    }
+    EECPUnitsCharge(L, theScanned * kCostScan);
+    lua_pushinteger(L, (lua_Integer)n);
+    lua_pushinteger(L, (lua_Integer)theHP);
+    lua_pushinteger(L, (lua_Integer)theAttack);
+    return 3;
+}
+
+// ai.garrison_fill(id, n) -> ok: an own finished building's garrison count raised by n with no citizen going in, as the
+// classic's FillGarrison does when it has too few idle citizens (EEComplexUnit::AddGarrison(count + n, population):
+// the original's call, which takes only into an empty garrison). Only for an AI whose manifest entry declares
+// "fills_garrison" (the classic's garrison cheat); false for every other AI
+static int LuaGarrisonFill(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCommand);
+    if (!EECPEngineFillsGarrison(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    EEComplexUnit* c = EECPUnitsOwn(me, (long)lua_tointeger(L, 1));
+    long n = (long)lua_tointeger(L, 2);
+    bool theDone = false;
+    if (c != NULL && n > 0 && c->mIsBuilt && c->mHitPoints > 0 && c->mUnitClass->mGarrisonCapacity > 0)
+        theDone = c->AddGarrison(c->mGarrisonCount + n, c->mGarrisonPopulation);
+    if (gCPTraceOn) {
+        EECPTraceScope theScope("next");
+        EECPTraceOut(me, "next.garrison_fill", "id=%ld n=%ld done=%d", (long)lua_tointeger(L, 1), n, theDone ? 1 : 0);
+    }
+    lua_pushboolean(L, theDone ? 1 : 0);
+    return 1;
+}
+
+// ai.area(id) or ai.area(x, y) -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles = n}: an
+// area of the continent manager (a land mass, a water body: the classic's continents, as ai.tuning's largest_sea) by
+// its id or the one at a tile, its kind and size; nil for none
+static int LuaArea(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    EEAIContinent* theArea = NULL;
+    if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
+        long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+        long w, h;
+        EECPUnitsMapSize(w, h);
+        if (x >= 0 && y >= 0 && x < w && y < h)
+            theArea = gContinentManager.GetContinentAt(x, y);
+    } else if (lua_isinteger(L, 1)) {
+        lua_Integer theID = lua_tointeger(L, 1);
+        if (theID > 0 && (size_t)theID < gContinentManager.mContinents.size())
+            theArea = gContinentManager.GetContinentByID((unsigned short)theID);
+    }
+    if (theArea == NULL)
+        return 0;
+    lua_createtable(L, 0, 3);
+    EECPUnitsSetInt(L, "id", (long)theArea->mID);
+    EECPUnitsSetInt(L, "category", (long)theArea->mCategory);
+    EECPUnitsSetInt(L, "tiles", (long)theArea->mTiles.Size());
+    return 1;
+}
+
+// ai.forest_point(x, y, r, pick, seed) -> x, y, n: a random point of one of the forests of the continent manager
+// (EEAIForest, the classic's forests) on the land mass at (x, y) whose hull holds the tile or comes within r tiles of
+// it - the (pick mod n)-th of the n found, its point drawn from a stream seeded with the script's number
+// (EECPDefenseCommander::AssignSubGroupTask's forest); nil when none
+static int LuaForestPoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    for (int i = 1; i <= 5; i++)
+        if (!lua_isinteger(L, i))
+            return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2), r = (long)lua_tointeger(L, 3);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    if (x < 0 || y < 0 || x >= w || y >= h)
+        return 0;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theLand == NULL)
+        return 0;
+    U2DPoint<long> theFrom(x, y);
+    std::vector<EEAIForest*> theForests;
+    for (size_t i = 0; i < theLand->mForestIDs.size(); i++) {
+        unsigned short theID = theLand->mForestIDs[i];
+        EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
+        if (theForest != NULL && (theForest->mHull.BoundedContains(theFrom)
+                || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
+            theForests.push_back(theForest);
+    }
+    EECPUnitsCharge(L, (int64_t)theLand->mForestIDs.size() * kCostScan * 4);
+    if (theForests.empty())
+        return 0;
+    long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theForests.size());
+    if (thePick < 0)
+        thePick += (long)theForests.size();
+    URandom theRandom((unsigned long)lua_tointeger(L, 5));
+    EEAIForest* theForest = theForests[thePick];
+    if (!(theForest->mTiles.Size() > 0))
+        return 0;
+    U2DPoint<long> thePoint = theForest->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    lua_pushinteger(L, (lua_Integer)theForests.size());
+    return 3;
+}
+
+// ai.area_point(id, seed) -> x, y: a random tile of the area (EEAIArea::GetRandomPoint), drawn from a stream seeded
+// with the script's number (the game's random stream is left alone); nil for no such area or an empty one
+static int LuaAreaPoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+        return 0;
+    lua_Integer theID = lua_tointeger(L, 1);
+    if (theID <= 0 || (size_t)theID >= gContinentManager.mContinents.size())
+        return 0;
+    EEAIContinent* theArea = gContinentManager.GetContinentByID((unsigned short)theID);
+    if (theArea == NULL || !(theArea->mTiles.Size() > 0))
+        return 0;
+    URandom theRandom((unsigned long)lua_tointeger(L, 2));
+    U2DPoint<long> thePoint = theArea->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    return 2;
+}
+
 // ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
 // point (every `grid` tiles) on the land mass nearest (x, y) (EECPNextArmy's scout), scored by its distance less
 // half its distance from `away` (further from the town first); points within grid of a skip entry are left out.
@@ -3177,6 +3482,13 @@ static int LuaTuning(lua_State* L)
     EECPUnitsSetBool(L, "planets", (theKind & kRMMapPlanetsMap) != 0);
     EECPUnitsSetBool(L, "waterless", (theKind & kRMMapWaterlessMap) != 0);
     EECPUnitsSetBool(L, "space", theMap != NULL && theMap->mTerrainMesh.GetIsSpaceMap());
+    // the map's tiles by kind (the continent manager's counts: the classic's domain shares weigh the sea by them)
+    EECPUnitsSetInt(L, "water_tiles", gContinentManager.GetNumWaterTiles());
+    EECPUnitsSetInt(L, "land_tiles", gContinentManager.GetNumLandTiles());
+    EECPUnitsSetInt(L, "space_tiles", gContinentManager.GetNumSpaceTiles());
+    EECPUnitsSetInt(L, "largest_sea", gContinentManager.GetLargestContinent(kContinentCategoryWater));
+    EECPUnitsSetBool(L, "fills_garrison", EECPEngineFillsGarrison(me));   // the manifest's "fills_garrison" (ai.garrison_fill)
+    EECPUnitsSetBool(L, "sees_all", EECPEngineSeesAll(me));   // the manifest's "sees_all" (ai.enemy_near reads through the fog)
     EECPUnitsSetInt(L, "population_limit", me->EEPlayer::GetPopulationLimit(0));   // the game's (the AI's cap: the view)
     // the cheats
     lua_createtable(L, 0, 7);
@@ -3601,7 +3913,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

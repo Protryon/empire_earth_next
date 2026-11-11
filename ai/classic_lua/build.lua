@@ -242,7 +242,9 @@ function M.tower_near(view, x, y, r2)
 end
 
 -- FindBuildSite(tower): by a worked centre's gold and iron (and its food while active: the port's rule of the C++
--- classic), in the rings 2 .. the tower's range, not within the tower spacing of another tower
+-- classic), ring by ring from 2 to below the tower's range, a site not within the tower spacing of another tower and
+-- with no enemy near (CanBuildAt's HasEnemyNear: ai.enemy_near). DEVIATION: the first placeable tile of each ring
+-- (the classic tries every tile of the ring, nearest the drop site first, skipping the nearest three)
 local function centre_tower_site(view, memory, c, class)
     local cls = ai.class(class)
     local range = cls ~= nil and (cls.range or 0) // 100 or 0
@@ -253,9 +255,11 @@ local function centre_tower_site(view, memory, c, class)
     for _, id in ipairs(c.u) do
         local u = R.unit(id)
         if u ~= nil and (u.kind == "gold" or u.kind == "iron" or (u.kind == "food" and c.active)) then
-            local x, y = ai.find_site(class, u.x, u.y, {min = 2, max = range, margin = true})
-            if x ~= nil and not M.tower_near(view, x, y, spacing * spacing) then
-                return x, y
+            for ring = 2, range - 1 do
+                local x, y = ai.find_site(class, u.x, u.y, {min = ring, max = ring, margin = true})
+                if x ~= nil and not M.tower_near(view, x, y, spacing * spacing) and not R.enemy_near(x, y) then
+                    return x, y
+                end
             end
         end
     end
@@ -372,31 +376,63 @@ local function find_production_site(view, memory, class)
     return nil
 end
 
--- FindShoreSite: a dock site on the water nearest the town, 8+ tiles from the other docks. DEVIATION: the classic
--- collects the water site tiles of the largest water next to the town's land (CollectSiteTiles); the port takes the
--- shore nearest the town (ai.shore) and the free site there
-local function find_shore_site(view, memory, class)
+-- FindShoreSite: the first water site tile (CollectSiteTiles(2): the largest water body's tiles by the shore of the
+-- town's land, nearest the town first; ai.water_sites) more than sqrt(75) tiles from every dock and navy yard, where
+-- the dock can stand with no enemy near and a builder can reach it. DEVIATIONS (fog): the explored site tiles,
+-- the 128 nearest, collected again every 60 s (the classic collects the whole map's once); CanBuildAt's strict rules are
+-- ai.can_place's
+local WATER_SITES_MS = 60000
+
+local function water_sites(view, memory)
+    local bm = M.state(memory)
     local tx, ty = R.town(view)
     if tx == nil then
+        return {}
+    end
+    if bm.water_sites == nil or view.time - bm.water_sites_at >= WATER_SITES_MS then
+        bm.water_sites = ai.water_sites(tx, ty, {max = 128})
+        bm.water_sites_at = view.time
+    end
+    return bm.water_sites
+end
+
+local function find_shore_site(view, memory, class)
+    local sites = water_sites(view, memory)
+    if #sites == 0 then
         return nil
     end
-    local sx, sy = ai.shore(tx, ty, {max = 30})
-    if sx == nil then
-        return nil
-    end
-    local x, y = ai.find_site(class, sx, sy, {min = 0, max = 6})
-    if x == nil then
-        return nil
-    end
+    local docks = {}
     for _, t in ipairs({C.dock, C.navy_yard}) do
         for _, id in ipairs(ai.units{type = t}) do
             local u = R.unit(id)
-            if u ~= nil and d2(u.x, u.y, x, y) <= 75 then
+            if u ~= nil then
+                docks[#docks + 1] = u
+            end
+        end
+    end
+    local asked = 0
+    for _, s in ipairs(sites) do
+        local x, y = s[1], s[2]
+        local near = false
+        for _, u in ipairs(docks) do
+            if d2(u.x, u.y, x, y) <= 75 then
+                near = true
+                break
+            end
+        end
+        if not near and ai.can_place(class, x, y) and not R.enemy_near(x, y) then
+            -- (the classic asks FindBuilderForTile at every site, which blew the step's budget: the port asks at the
+            -- first 8 placeable sites)
+            if M.find_builder(memory, x, y, class) ~= nil then
+                return x, y
+            end
+            asked = asked + 1
+            if asked >= 8 then
                 return nil
             end
         end
     end
-    return x, y
+    return nil
 end
 
 -- the house site (EECPResourceCenter::FindBuildSite(house) through QueueMoraleBuilding): next to the centre's drop

@@ -865,6 +865,12 @@ end
 -- its (2) "walking to within 3 tiles of the base" is that base point's too. Citizens the script holds (a landing,
 -- an outpost's ferry, a new town) are not the engine's and are left alone.
 local TOWN_TYPES = {"b_settlement", "b_town_center", "b_capitol"}
+-- (the squared distance of two tiles; this function never ran before ai.units took a list of types, and the global
+-- it called did not exist)
+local function d2(x1, y1, x2, y2)
+    local dx, dy = x1 - x2, y1 - y2
+    return dx * dx + dy * dy
+end
 local function citizens_home(view, mem)
     if not S.citizens_home or view.town_x < 0 or view.time - (mem.home_t or 0) < 3000 then
         return

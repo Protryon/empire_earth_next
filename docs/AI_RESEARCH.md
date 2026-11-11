@@ -3119,6 +3119,395 @@ Readings:
 Next: the farms (CheckBuildingCounts' farm entry never queues one in the port), the dock's water sites, then
 ChooseUnitsToKill, the special units, the guard posts and the navy; walls last (the C++ built none in 90 minutes).
 
+### 8.43 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
+
+The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `ai/boom.lua`, each
+behind a switch of its `ECON` table, the logic in new library modules: `lib.econ_units` (orders on single citizens),
+`lib.demand` (the split's stock correction, the saving ramp), `lib.econ_stats` (the bench metrics: the `econ` trace
+line each minute with the idle town-centre seconds, the patches with more than 6 gatherers sent, the town centres).
+
+Bench: EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 90 minutes, `--ai-scripts` (a copy of `ai/` with
+`rush` registered and the baseline as `boom0`), the worktree's open tree, 16 games a row (seeds 2-17 unless noted;
+a row with fewer seats lost runs to the lobby's "slot 0 human" start fault). Boom is seat p2. "Result" is the mixed
+score (§8.29) against the other seat.
+
+| Row (boom against classic `balanced`) | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C (defeated) |
+|---|---|---|---|---|---|---|
+| baseline (main + the metrics; identical after the merge of main) | 24.7 | 56.2 (12/16) | 2/16 | 33.7 / 36.6 / 45.6 | 63.7 | 5-9-2 (3) |
+| + second town centre (Stone, from 30 citizens) | 24.7 | 57.9 (13/16) | 5/16 | 33.4 / 36.2 / 49.5 | 63.2 | 4-6-6 (2) |
+| + stock correction v1, unreachable, ramp (Prehistoric too) | 22.7 | 53.2 (9/16) | 4/16 | 27.9 / 36.2 / 49.9 | 63.6 | 2-8-6 (2) |
+| the same without the ramp | 24.7 | 55.7 (10/16) | 5/16 | 33.4 / 36.5 / 49.9 | 64.1 | 3-8-5 (1) |
+| the same without the stock correction | 22.7 | 56.9 (8/16) | 4/16 | 27.9 / 35.4 / 48.8 | 59.2 | 2-9-5 (1) |
+| v1 + army slack, no ramp | 24.7 | 54.5 (10/16) | 1/16 | 33.4 / 36.4 / 47.8 | 65.1 | 3-11-2 (2) |
+| v1 + army slack + Stone ramp | 24.7 | 55.2 (10/16) | 2/16 | 33.4 / 36.4 / 47.4 | 55.9 | 4-10-2 (1) |
+| stock correction v2 (food gives to wood), no ramp | 23.7 | 61.5 (14/16) | 0/16 | 32.6 / 33.9 / 52.1 | 86.9 | 0-9-7 (0) |
+| v2 + Stone ramp | 23.6 | 60.1 (11/13) | 1/13 | 32.4 / 33.5 / 51.1 | 78.3 | 0-8-5 (0) |
+| **as committed** (second town centre + unreachable) | 24.5 | 56.5 (10/13) | 4/13 | 33.5 / 38.7 / 55.3 | 62.8 | 4-5-4 (0) |
+| baseline, seeds 18-33 | 27.8 | 52.4 (7/16) | 3/16 | 31.4 / 30.1 / 39.6 | 65.4 | 2-11-3 (2) |
+| as committed, seeds 18-33 | 27.8 | 58.9 (7/16) | 3/16 | 31.4 / 29.9 / 40.6 | 69.4 | 1-12-3 (5) |
+
+| Other matchups | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C |
+|---|---|---|---|---|---|---|
+| baseline against `rush` | 21.5 | 47.8 (16/16) | 14/16 | 33.9 / 43.2 / 56.1 | 3.1 | 16-0-0 |
+| as committed against `rush` | 21.5 | 49.6 (16/16) | 13/16 | 32.8 / 43.1 / 60.8 | 7.9 | 16-0-0 |
+| baseline against `ageofai` | 22.3 | 49.5 (16/16) | 8/16 | 33.7 / 42.4 / 60.4 | 6.4 | 9-0-7 |
+| as committed against `ageofai` | 22.3 | 49.6 (14/16) | 8/16 | 33.2 / 41.8 / 62.6 | 10.6 | 6-2-8 |
+| mirror: as committed (boom) against the baseline (boom0), seeds 2-9 both seats | 22.0 / 21.5 | 52.9 (13/14) / 51.7 (14/14) | 6 / 7 | 33.4 / 43.7 / 64.4 against 34.6 / 45.4 / 64.4 | 11.6 / 20.5 | 4-2-8 |
+
+What the rows show:
+- **The second town centre** (`lib.econ_units.town_centers`: the finished settlement nearest the town with no enemy
+  soldier within 12 tiles is filled with 5 citizens, idle ones first, held until they are inside; only below 2 town
+  centres and before the Bronze Age) buys citizens, not pace: 4-9 more at 40 minutes in every matchup, the Copper Age
+  0-2 minutes later (5 citizens and the growth that follows come out of the saving). Against the classic AI it lost
+  fewer games on seeds 2-17 (6 and 5 against 9) and more on 18-33 (12 against 11, 5 defeated against 2): within the
+  noise of 16 games. Against `ageofai` 6-2 against the baseline's 9-0 (Copper reached 14 against 16). The idle town-centre seconds roughly double with two producers: food, not training, holds the
+  town back from the Stone Age's tenth minute (the one producer is the limit only in the first 6-8 minutes).
+- **The stock correction** (`lib.demand.correct`, balanced's surplus 1000 / cut 50% and low stock 150 / floor
+  shares): v1 took the low resource's gatherers from gold, stone and iron only, and never fired in the Stone Age's
+  wood famine (wood under 50 in half its minutes: food 18 and the army's iron were the whole town). v2 lets food give
+  down to 4 under its minimum: the famine minutes fell from 263 to 211 of about 650, the Copper Age is reached more
+  often (14/16) but later (61.5 against 56-58), the citizens at 30 minutes fall (33.9) and 87 citizens are lost
+  against 63. **Off by default.**
+- **The saving ramp** (`lib.demand.pressure`, balanced's epoch_pressure start/full: the reserve grows from 0 to the
+  whole cost): in the Prehistoric it started the reserve before the owner's 32 citizens and held them at 28 (the
+  Stone Age 2 minutes sooner, the Copper Age reached less often); from the Stone Age it changed little. **Off by
+  default**; the Stone and Copper plans keep `save_ramp` fields for the switch.
+- **No reserve for an unreachable advance** (balanced's claim_needed): the reserve is dropped while a resource of the
+  advance is short, no reachable site holds it (`memory.no_site`) and nobody gathers it. On; no trace line counts its
+  firings yet.
+- **The army slack** (past the soldiers-first window the reserve waits for 3/4 of the light army only): a trace
+  showed a town 2 soldiers short (iron-bound, 18 of 20) with a food reserve of 0 for 10 minutes while it saved for
+  the Copper Age (the missing army's cap `stock - missing x cost` follows the stock to 0), and its citizens took the
+  food. The slack lost more games (11 against 8). **Off.**
+- **Already in place** (no change needed): the gatherers sent to a patch never pass 6 in the C++ runner (`crowd` 0-0.4
+  samples a game, at most 7 sent for a moment); the busy gatherers moved per 10 s are balanced's moves_per_cycle 3 in
+  the C++ Rebalance, which a next seat runs; fishing from the Stone Age, boats on top of the food citizens; at most 2
+  barracks and 1-2 ranges before the Copper Age; the claim range grows when the patches cannot take the food wanted.
+- **The rush script is no test:** boom won 32 of 32 against it and lost 3-8 citizens a game.
+- **Determinism:** the `--repeat 2` run of the committed state was held back by the gates (not run); the baseline's 16 games after the merge of main (857f6aa, new C++ queries) equal the ones before
+  it in every number above.
+
+Open: the Stone Age's 15-minute stall (citizens 32-36 from minute 15 to 30: the Prehistoric reserve, then the army
+first) is where the Copper Age's 10 minutes against the owner's 46 go; the food places (18 on food, about 11 boats)
+bind from there. The per-unit gatherer placement, builders and rally points (items 6-8 of the economy plan) are not
+built: the runner already keeps the patches at 6.
+
+**The second round** (after the merge of boom's defence, cfc4c9e: the light army a quarter of the citizens, at least
+10; 32 games a row, seeds 2-33 against the improved classic, Small, Hard, 90 min; "Copper by 60" counts the seats
+in the Copper Age by minute 60; the median over all seats takes a seat that never got there as last):
+
+| Row | Stone (reached) | Copper (reached, median) | Copper by 50 / 60 min | Citizens 20 / 30 / 40 | Lost | W-L-C (defeated) |
+|---|---|---|---|---|---|---|
+| main's boom (the defence, no economy rules) | 25.0 (30/32) | 17/32, 59.9 | 2 / 9 | 31.0 / 36.6 / 52.9 | 43.8 | 5-15-12 (3) |
+| + second town centre, ratchet, full target, unreachable | 25.0 (30/32) | **20/32, 56.4** | 3 / **12** | 30.6 / 35.6 / 55.6 | 54.6 | 6-14-12 (4) |
+| the same without the second town centre | 25.0 (28/30) | 14/30, 57.0 | 1 / 10 | 31.0 / 36.2 / 52.3 | 43.0 | 3-15-12 (3) |
+| the same with the citizens beside the army (parallel) | 25.0 (30/32) | 22/32, 56.8 | 4 / 14 | 30.6 / 36.2 / 53.4 | 49.6 | 6-16-10 (**6**) |
+| main's boom against `ageofai` (16) | 22.3 | 16/16, 48.4 | 9 / 14 | 33.7 / 43.6 / 60.9 | 10.1 | 3-2-11 |
+| the economy rules against `ageofai` (16) | 22.3 | 15/16, 47.4 | 10 / 14 | 32.9 / 42.9 / 68.2 | 12.2 | 2-4-10 |
+
+- **What holds the citizens from minute 15 to 30** (`plan` lines classified, 32 games): 79% of the minutes 15-20 the
+  Prehistoric plan's 32 citizens (the saving for the Stone Age: by design); 20-25 the same and the Stone Age's
+  soldiers-first window (15%); 25-40 below every cap with under 50 food (52-63%): the soldiers, the citizens and the
+  boats share a food income bound by about 18 food places.
+- **What holds the Copper Age:** 5 minutes before the advance the furthest resource from its cost was gold or iron in
+  about 3 of 4 games (food in the rest). Two causes found in the traces:
+  - **the iron reserve at 0**: the missing light army's cap took the iron reserve to 0, the stock stood above the bank,
+    so `stock_targets` wanted no iron gatherer and the army and the Copper Age waited on iron for the rest of the game
+    (a third of the saving minutes had a short metal no gatherer was wanted for; 11 of 32 games 10 minutes or more).
+    The gatherers now aim at the advance's whole cost (`full_target`), and the reserve ratchets (`ratchet`: what came
+    in stays saved; the army and the citizens share only the missing soldiers' margin above it);
+  - **the mines' settlements unpaid**: with wood at 5-55 the settlements by the home gold and iron mines were queued
+    unpaid for minutes (`afford=0`), so those mines had no drop site and no gatherer. `wood_floor` keeps wood at its
+    plan floor in the give-way while it is under 150 (benched below once the gates allow).
+- **The second town centre** now pays: with the defence's larger army it is the rule that moves the Copper Age (20
+  against 14 reached; 12 against 10 by minute 60).
+- **The citizens beside the army** (the owner's "in parallel"): more Copper Ages (22) but 6 defeated against 4: off.
+- **`ai.units{type = {...}}`** now takes a list (C++, `tests/ai_units/types.lua`: a list's ids are the union of its
+  names' ids). Age of AI's `citizens_home` (econ.lua) had never run: with the list working it called an undefined
+  global `d2` and every step from about minute 1 aborted there (1,274 script errors in one game) - fixed with a local
+  helper. Its traces differ from about line 60 on.
+
+**The overnight experiments E1-E5** (2026-11-11; the coordinator's protocol). Each one switch of `ECON` over main
+1e422bd's boom (the baseline: its own `boom.lua`; with every switch off this boom's traces equal it until the switch
+first acts - checked seed by seed), seeds 2-33, Small, Hard, 2 AIs, 120 minutes, against the improved classic (`cl`:
+`--cheats none --personality balanced`) and the cheating classic (`cx`: Hard's seven cheats for the classic seat). All
+on this branch's EE-SIM (the `ai.units` type-list fix included). A row keeps its rule only if the defeats do not rise in
+any matchup and it gains somewhere. Stone and Copper are the median minute of the seats that got there (reached);
+"Copper by 60" counts seats in the Copper Age by minute 60; W-L-C the mixed score.
+
+| Experiment | Matchup | Stone (reached) | Copper (reached) | Copper by 60 | Citizens 20 / 40 | Defeated | W-L-C |
+|---|---|---|---|---|---|---|---|
+| baseline (main's boom) | cl | 24.9 (31/32) | 61.6 (20/32) | 7 | 32.9 / 54.6 | 6 | 1-28-3 |
+| baseline | cx | 28.0 (22/32) | 74.7 (8/32) | 1 | 28.8 / 27.5 | 13 | 1-29-2 |
+| E1: reserve ratchet + gatherers aim at the whole cost (the stall fix) | cl | 24.9 (31/32) | 61.0 (19/32) | 9 | 32.9 / 54.8 | 11 | 5-26-1 |
+| E1 | cx | 28.0 (22/32) | 72.9 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-27-4 |
+| E1 + the citizens beside the army (parallel) | cl | 24.9 (31/32) | 58.9 (20/32) | 11 | 32.9 / 58.2 | 9 | 1-27-4 |
+| E1 + parallel | cx | 28.0 (22/32) | 68.2 (7/32) | 2 | 28.8 / 29.3 | 18 | 0-28-4 |
+| E2: the forage-runs-dry claim (claim and hunting to 42 tiles) | cl | 24.3 (32/32) | 62.1 (23/32) | 9 | 33.0 / 55.1 | 7 | 2-26-4 |
+| E2 | cx (31) | 29.2 (25/31) | 92.4 (7/31) | 1 | 27.7 / 30.6 | 14 | 0-27-4 |
+| E3: the second town centre (alone; E1 lost) | cl | 24.9 (31/32) | 62.0 (21/32) | 9 | 32.8 / 59.5 | 8 | 2-23-7 |
+| E3 | cx | 29.3 (22/32) | 75.4 (8/32) | 2 | 28.7 / 32.2 | 13 | 1-28-3 |
+| E4: Age of AI's epoch account from Copper (50% of the income; aims at the cost) | cl | 24.9 (31/32) | 60.2 (18/32) | 9 | 32.9 / 54.8 | 12 | 2-26-4 |
+| E4 | cx | 28.0 (22/32) | 68.8 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-28-3 |
+| E5: wood keeps its floor under 150 (packing does not apply to boom's verbs) | cl | 24.9 (31/32) | 65.1 (20/32) | 8 | 32.9 / 55.2 | 10 | 3-27-2 |
+| E5 | cx | 28.0 (22/32) | 71.0 (4/32) | 1 | 28.8 / 27.5 | 16 | 1-30-1 |
+
+(E3's `cl` row merges 27 games with the 5 seeds re-run after the lobby's "slot 0 human" start fault; E2's `cx` lost
+seed 17 to it. The baseline's `cl` games show 6 defeats; the variants that act only after minute 20 range 6-12 on the
+same seeds, so a single row's defeats move by several games from chance alone.)
+
+- **Nothing is kept.** Every rule raised the defeats in at least one matchup. The closest:
+  - E3, the second town centre: 4-5 more citizens at 40 minutes in both matchups, Copper reached about as often, the
+    same 13 defeats under the cheats, 8 against 6 without;
+  - E2, the forage fallback: Stone reached in every `cl` game and in 25 against 22 `cx` games, but one defeat more in
+    each.
+- **E1** (the stall fix the coordinator asked for) moves Copper by 60 minutes from 7 to 9 (11 with parallel citizens)
+  and the citizens at 40 minutes up to 58, but the extra saving (and parallel citizens) cost the town 3-5 more
+  defeats in both matchups. The defence's army floor of 20 needs the food the ratchet keeps.
+- **E4** is not Age of AI's whole economy: only its epoch account in boom's reserve (the account implies aiming at the
+  cost, so E4 also carries E1's `full_target`). The army share that let Age of AI out-grow boom after 90 minutes is
+  the defence's training block, not reproduced here.
+- **E5's packing** (Age of AI's `tight_build`): boom places its buildings through the C++ `build near=` verb, so the
+  packing code has no seam; E5 benched the Stone Age wood floor instead (the mines' settlements waited on wood).
+- **E3 against Age of AI** (32 seeds): 3-11-18 against the baseline's 10-9-13 (Copper 51.6 against 50.9, all 32
+  reached in both; citizens at 40 minutes 60.7 against 59.6). The mirror (E3 against main's boom, seeds 2-17 both
+  seats) stopped after 5 games when the disk filled up; not counted.
+- **Checks:** with every switch off, boom's traces equal main 1e422bd's line for line (seeds 2-4, 45 minutes: 3908,
+  3760 and 3743 lines); `--repeat 2` of that set (seeds 2-3, 45 minutes) and of E3 gives identical traces (4206 /
+  4059 and 4322 / 3963 lines).
+### 8.44 The classic computer player in Lua: farms, docks, fishing (2026-11-11, EE-SIM)
+
+The "Lua built no farms" of §8.42 counted farm build orders. The C++ classic places its granary with EEMakeBuilding,
+which plants the farm foundations at once, and CheckBuildingCounts queues a farm request per unbuilt foundation (48
+in 32 games). A script's granary (`ai.build`, EEMBuildUnit) plants its farms when finished, and the builder builds
+them itself (TendNextFarm), so the port never orders one. The farmers are level: 3.5 against 3.8 at 90 minutes, farms
+in 13 games each, the first at 74 and 78 minutes.
+
+Changes:
+- **FindShoreSite** tries the water site tiles in turn (`ai.water_sites`, new: CollectSiteTiles(2), the largest water
+  body's tiles by the town's land, nearest first), skipping those within sqrt(75) of a dock, unplaceable, threatened
+  or without a builder (asked at the first 8 placeable sites). The port took the one shore nearest the town:
+  docks built 16 -> 31 in 32 balanced games (the C++ 51).
+- **AssignGatherers** takes the gatherers waiting for room at their resource as idle, as the classic's list does
+  (the own units' new `waiting` field).
+
+Bench: as §8.42 (seeds 2-33, 90 minutes, open data); before = §8.42's b5, after = c3 (one balanced game failed at
+the lobby in each).
+
+| Matchup | AI | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Fishers at 90 min | Won-lost |
+|---|---|---|---|---|---|---|
+| balanced, before | classic | 26/31, 65.2 | 23.3/2.4 / 25.2/2.3 / 28.6/4.6 / 41.9/3.7 | 2.1 / 30.5 | 20.8 | 18-6, 7 close |
+| balanced, before | classic_lua | 20/31, 60.4 | 23.4/2.7 / 26.4/3.1 / 34.3/6.1 / 45.3/7.0 | 2.0 / 51.8 | 2.6 | 6-18, 7 close |
+| balanced, after | classic | 25/31, 64.5 | 23.2/2.3 / 25.2/2.2 / 28.5/4.5 / 40.4/3.7 | 2.0 / 30.9 | 21.9 | 16-8, 7 close |
+| balanced, after | classic_lua | 22/31, 58.3 | 23.2/2.7 / 27.0/3.3 / 35.6/6.5 / 48.1/6.8 | 1.5 / 52.3 | 2.4 | 8-16, 7 close |
+| classic+cheats, before | classic | - | 25.8/6.0 / 50.8/6.5 / 50.9/9.7 / 50.5/5.4 | 5.1 / 36.0 | - | 6-12, 14 close |
+| classic+cheats, before | classic_lua | - | 21.3/4.0 / 35.2/5.8 / 40.0/14.7 / 41.3/22.2 | 11.3 / 79.8 | - | 12-6, 14 close |
+| classic+cheats, after | classic | - | 25.8/6.0 / 50.8/5.4 / 50.8/9.4 / 50.5/5.1 | 4.8 / 30.8 | - | 8-10, 14 close |
+| classic+cheats, after | classic_lua | - | 21.4/4.2 / 35.4/4.7 / 39.9/14.1 / 42.2/26.4 | 11.3 / 91.6 | - | 10-8, 14 close |
+
+Readings:
+- Within noise of §8.42 on both personalities; the docks do not yet make fishers. **The fishing gap is the navy:**
+  the C++ trains war rafts at its docks (its sea share) and they sink the port's fishing boats, 18-27 a game where
+  the port fished (seeds 11, 12, 14, 18, 20 of the balanced bench); the port has no warships and its boats sit idle
+  after the naval flight. Its fishers peak at 10-16 and fall; the C++'s grow to 22.
+- **Classic with the cheats, the early economy:** with cost100=1 the citizens cost nothing and the town centre's
+  training time sets the pace; the port loses 11 citizens by 20 minutes against 5, two in five of them builders far
+  from home (killed by clubmen, rock throwers and the C++'s towers). Up to 20 minutes it starts 443 towers against
+  308 and orders 212 settlements against 142 (BuildSettlementFor). The C++'s HasEnemyNear reads every player's
+  influence, seen or not; the port's sees what it saw (the fog deviation of ORIGIN), so its builders walk into the
+  C++'s soldiers.
+- Hospitals 22 against 39 and temples 57 against 70 started (balanced, b5): CheckBuildingCounts runs less often in the
+  port (manager 4 in few rounds) - not yet looked into.
+- Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors (the first version of the shore
+  finder had 300 budget errors a bench under the reveal cheat).
+
+Next: the navy (warships from the docks: the sea share of ComputeDomainShares), the builders' and settlements' danger
+test, the building-count check's frequency, then ChooseUnitsToKill (only at the population limit: low effect at
+these caps), the special units, guard posts, walls.
+
+### 8.45 The classic computer player in Lua: the navy and the information cheat (2026-11-11, EE-SIM)
+
+§8.44 found the C++'s war rafts and frigates sinking the port's fishing boats and shooting its citizens on the shore
+(287 of the port's units in 32 balanced games); the port trained no warship. Ported:
+- **The sea in the unit selector:** ComputeDomainShares' sea share (GetDomainShare: the water tiles' share of the map,
+  the own sea strength against the target's, the air unit weight's pull) and Calculate, the sea's candidate classes,
+  the held units and counter classes within each domain's count, ChooseFavoriteSeaType and the favourite sea units
+  (none: the count goes to land). A group's warships form a sea sub-group with AssignSeaTask (a known unit of the
+  target on its water a quarter of the time, else a random point of that water).
+- **CheckNaval:** every ship_maintenance_timer minutes the warships are topped up to ships_to_maintain (Hard: 1) by a
+  sea-only group; **the sea explorers** (num_sea_explorers: 1, the fastest warship class).
+- New generic queries: `ai.area` / `ai.area_point` (the continent manager's areas: the sea task's random point) and
+  `ai.tuning()`'s map tiles.
+
+**The information cheat as a capability.** The C++ classic's HasEnemyNear reads every player's units through the fog;
+the port's read what it saw, so under classic with the cheats its builders walked into the C++'s soldiers (157 of its
+citizens died building in the first 20 minutes over 32 games). A manifest entry may now declare `"sees_all": true`
+(only classic_lua does); the seat's trace start line ends in `sees_all=1`, and `ai.enemy_near(x, y)` is then the C++
+test; for every other AI it is the fog-honest EECPNextSiteThreat (AI_LUA_UNITS §11). Builder deaths by 20 minutes:
+157 -> 87.
+
+**The building-count check's frequency:** the port's EnableManagers and the civilization manager's 30-second check
+match the C++ line for line; manager 4 runs when wood and stone stand at enable_stock_build. The C++ queues more
+temples, universities and hospitals because its stock is higher more often, not by a different rule.
+
+Bench (as §8.42; before = §8.44's c3; navy = n8 without sees_all; after = s1 with both):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Fishers at 90 | Won-lost |
+|---|---|---|---|---|---|
+| balanced, before | classic | 23.2/2.3 / 25.2/2.2 / 28.5/4.5 / 40.4/3.7 | 2.0 / 30.9 | 21.9 | 16-8, 7 close |
+| balanced, before | classic_lua | 23.2/2.7 / 27.0/3.3 / 35.6/6.5 / 48.1/6.8 | 1.5 / 52.3 | 2.4 | 8-16 |
+| balanced, navy | classic | 23.5/2.1 / 25.7/2.5 / 30.0/4.8 / 46.7/3.7 | 1.8 / 26.8 | 22.3 | 19-6, 7 close |
+| balanced, navy | classic_lua | 23.0/2.8 / 26.7/3.2 / 34.9/6.2 / 44.8/7.1 | 1.4 / 45.8 | 5.2 | 6-19 |
+| balanced, after | classic | 23.9/2.4 / 25.8/2.7 / 30.6/6.0 / 45.7/3.3 | 1.6 / 23.4 | - | 20-6, 6 close |
+| balanced, after | classic_lua | 23.2/2.8 / 26.4/3.3 / 34.6/6.2 / 44.4/6.4 | 1.4 / 58.8 | - | 6-20 |
+| classic+cheats, before | classic | 25.8/6.0 / 50.8/5.4 / 50.8/9.4 / 50.5/5.1 | 4.8 / 30.8 | - | 8-10, 14 close |
+| classic+cheats, before | classic_lua | 21.4/4.2 / 35.4/4.7 / 39.9/14.1 / 42.2/26.4 | 11.3 / 91.6 | - | 10-8 |
+| classic+cheats, navy | classic | 26.4/6.2 / 50.7/5.6 / 51.2/10.5 / 50.5/6.3 | 3.5 / 24.5 | - | 6-10, 16 close |
+| classic+cheats, navy | classic_lua | 22.7/9.8 / 36.7/16.1 / 40.8/30.0 / 44.2/33.8 | 10.4 / 80.5 | - | 10-6 |
+| classic+cheats, after | classic | 26.4/6.4 / 51.1/6.3 / 51.1/12.2 / 50.9/6.5 | 3.6 / 17.7 | - | 3-11, 18 close |
+| classic+cheats, after | classic_lua | 23.2/9.1 / 40.0/16.2 / 44.8/25.3 / 44.7/30.8 | 6.8 / 69.8 | - | 11-3 |
+
+Readings:
+- **Balanced:** the port's fishers 2.4 -> 5.2 (the C++ 22); its units sunk by the C++'s ships 287 -> 280: the C++ fleet
+  still wins at sea. The won-lost moved within noise (8-16, 6-19, 6-20). The late economy (citizens at 90 minutes)
+  remains the gap.
+- **Classic with the cheats:** the port's early economy is nearer (40 against 51 citizens at 20 minutes, from 35), its
+  losses by 20 minutes halved; its army is now 2-3 times the C++'s at 20-40 minutes (it was 1.5 times before the
+  navy; not yet explained) - the port now outplays the C++ here (11-3), the opposite of the goal.
+- Determinism: seeds 2 and 5 (balanced) and 3 (classic with the cheats), 60 minutes, --repeat 2: identical. 0
+  script errors.
+
+Next: why the port's army outgrows the C++'s under classic with the cheats (its groups' slots and the sea shares),
+the C++ fleet's edge at sea, then ChooseUnitsToKill, the special units, guard posts, walls.
+
+### 8.46 The classic computer player in Lua: the garrison cheat, and why its army outgrew the C++'s (2026-11-11, EE-SIM)
+
+Under classic with the cheats the port's citizens trailed (35 against 51 at 20 minutes) and its army was 2-3 times
+the C++'s. With the cost cheat (cost100=1) a citizen costs nothing; the town centre's 28 s per citizen sets the pace.
+A trace of the C++'s StartProduction showed it training at a capitol and one, then two town centres from minute 5:
+its FillGarrison sends the idle citizens into a settlement and **tops the rest of the garrison up with no
+citizens** (EEComplexUnit::AddGarrison(count + room)), so a settlement becomes a town centre for 1-4 citizens every
+town_center_upgrade_timer (5) minutes. The port could only garrison citizens it had, found few idle ones, and never
+upgraded a settlement.
+
+Ported as a second explicit capability, `"fills_garrison"` (AI_LUA_UNITS §11; classic_lua only, `fills_garrison=1` in
+the start line): `ai.garrison_fill(id, n)` is the original's call. The port's FillGarrison takes the waiting gatherers
+too, fills the rest once citizens are on their way, and sends new citizens to the garrison every 2 s (UnitAdded).
+
+Bench (as §8.42; before = §8.45's s1, after = g2):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced, before | classic | 23.9/2.4 / 25.8/2.7 / 30.6/6.0 / 45.7/3.3 | 1.6 / 23.4 | 20-6, 6 close |
+| balanced, before | classic_lua | 23.2/2.8 / 26.4/3.3 / 34.6/6.2 / 44.4/6.4 | 1.4 / 58.8 | 6-20 |
+| balanced, after | classic | 23.8/2.4 / 25.6/2.7 / 29.8/5.0 / 44.5/3.1 | 1.8 / 30.1 | 16-9, 7 close |
+| balanced, after | classic_lua | 23.2/2.7 / 26.3/3.3 / 35.0/5.8 / 45.0/5.7 | 1.7 / 53.0 | 9-16 |
+| classic+cheats, before | classic | 26.4/6.4 / 51.1/6.3 / 51.1/12.2 / 50.9/6.5 | 3.6 / 17.7 | 3-11, 18 close |
+| classic+cheats, before | classic_lua | 23.2/9.1 / 40.0/16.2 / 44.8/25.3 / 44.7/30.8 | 6.8 / 69.8 | 11-3 |
+| classic+cheats, after | classic | 26.3/6.4 / 50.8/6.5 / 51.0/11.4 / 50.5/6.7 | 3.7 / 23.4 | 0-8, 24 close |
+| classic+cheats, after | classic_lua | 23.2/9.4 / 50.0/13.2 / 49.6/24.5 / 49.7/25.9 | 11.2 / 97.0 | 8-0 |
+
+Readings:
+- **Classic with the cheats:** the citizens are level from 20 minutes (50 against 51); 24 games close of 32.
+- **The army gap is losses, not production.** Over the 32 games the C++ lost 6270 military units (the trace's
+  `cp losses` other) against the port's 3882 (balanced: 3450 against 1932). The C++ requests more soldiers than the
+  port (381 against 93 in seed 14 by 40 minutes) but loses them faster. Both attack equally often (4 attacks in an
+  hour in seeds 10, 14 and 18, nearly all at the empty human seat), so the losses come from the other groups' fights
+  (the defence, counter-attack and ships-to-maintain groups) - where lib.groups' fighting stands in for the
+  C++'s sub-group state machines (ORIGIN: EECPAttackSubGroup, the ASG* classes). Not yet traced to a cause: the trace
+  has no per-unit deaths for a C++ seat.
+- **Balanced:** level to 40 minutes; one script budget error (group_pop at 86 minutes, a large army).
+- Determinism: seeds 3 (classic with the cheats), 2 and 5 (balanced), 60 minutes, --repeat 2: identical.
+
+Next: a per-unit death trace for the C++ seat (where and to what its soldiers die), then the fight itself; the C++
+fleet's edge under balanced.
+
+### 8.47 The classic computer player in Lua: where the soldiers die, the towers, the fleet (2026-11-11, EE-SIM)
+
+**A `unit.death` trace line** for every soldier, ship or other non-citizen unit a computer seat loses, the C++
+classic's too (EECPTraceUnitLost, trace only: seed 3's 60-minute samples identical with it): class, tile, distance
+from the town centre, goal, killer (player:class:kind) and its distance.
+
+**Where the soldiers die (classic with the cheats, seeds 2-9, 60 minutes).** The C++ lost 821 against the port's 417
+(path points left out); 600 of the C++'s died 35 tiles or more from its town, to the port's soldiers (299) and
+towers (298), with an attack goal - from minute 7 on, in the port's land (its upgraded settlements' towns). The port's
+died mostly 15-35 tiles out (306). Both seats attack equally often (§8.46); the C++'s soldiers go into the port's
+territory and die there, the port's stay nearer home. Not traced further yet: which of the C++'s groups (defence
+ladder, CheckNaval's, the counter-attacks) take them there.
+
+**The towers.** The port's FindBuildSite(tower) took the first placeable tile of the rings 2 .. range and tested the
+spacing only there; the C++ goes ring by ring below the range and tests HasEnemyNear (CanBuildAt) on each tile. Ported
+(with ai.enemy_near): towers 194 -> 123 in those 8 games (the C++ 125-135); over 32 games 579 against 480 under classic
+with the cheats, 318 against 261 under balanced. The C++'s remaining edge in losses did not move (790 against 461):
+the towers were not the cause.
+
+**The fleet (balanced, 32 games).** The port lost 26 ships and the C++ 73; ships killed 80 of the port's soldiers and
+65 of the C++'s. Of the port's 1866 citizens and boats lost, 336 died to the C++'s ships (292 to frigates) and 1442 to
+its land soldiers (spearmen 382, bowmen 320, macemen 199). 433 of the citizens died fighting (the militia), 54% of all
+after 60 minutes. The late gap under balanced is the C++'s army against the port's citizens, more than its fleet.
+
+**group_pop:** GetUnitAllowance's count of the groups' population now reads the units' classes in one ai.get (a budget
+error at 86 minutes with a large army); the same numbers.
+
+Bench (32 seeds; before = §8.46's g2, after = t1):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced, before | classic_lua | 23.2/2.7 / 26.3/3.3 / 35.0/5.8 / 45.0/5.7 | 1.7 / 53.0 | 9-16, 7 close |
+| balanced, after | classic_lua | 23.1/2.7 / 26.3/3.3 / 35.1/7.3 / 43.0/7.0 | 1.7 / 57.8 | 8-20, 4 close |
+| balanced, after | classic | 23.8/2.3 / 25.5/2.2 / 28.2/4.3 / 44.9/3.1 | 2.0 / 28.3 | 20-8 |
+| classic+cheats, before | classic_lua | 23.2/9.4 / 50.0/13.2 / 49.6/24.5 / 49.7/25.9 | 11.2 / 97.0 | 8-0, 24 close |
+| classic+cheats, after | classic_lua | 22.9/10.2 / 49.8/16.9 / 50.3/28.2 / 50.2/27.6 | 11.5 / 83.4 | 8-3, 21 close |
+| classic+cheats, after | classic | 26.6/5.8 / 50.6/5.2 / 51.0/11.3 / 50.4/6.0 | 3.1 / 23.4 | 3-8 |
+
+Determinism: seeds 2 and 5 (balanced) and 3 (classic with the cheats), 60 minutes, --repeat 2: identical. 0 script
+errors.
+
+Next: which C++ groups walk into the port's land (a group id on the death line), the militia's fights under balanced
+(433 citizens), then ChooseUnitsToKill, the special units, guard posts, walls.
+
+### 8.48 The classic computer player in Lua: which groups die, the forests, the militia's odds, priests (2026-11-11, EE-SIM)
+
+**The death line names the group** (trace only; seed 3's samples identical): the classic's sub-group holding the unit
+(id, mission, its task's type, mode and distance) and its group's task. Over seeds 2-9 (classic with the cheats, 60
+minutes) the C++'s soldiers lost 35+ tiles from home were mostly in defence sub-groups (mission 1) on a location task
+in defence mode (180 of ~700), sub-groups whose attack found no territory (mission 0, 105) and counter-attacks
+(mission 3, 92); most died 12-30 or 30+ tiles short of their task: on the way. Their places come from
+AssignSubGroupTask's ladder - the forest is the continent manager's forest whose hull comes within 35 tiles, and the
+place a random point of the whole forest, which can lie far off; the port took a tree within 35 tiles.
+
+Changes:
+- **The ladder's forest** through a new generic query, `ai.forest_point(x, y, r, pick, seed)` (AI_LUA_UNITS §11):
+  the port's soldiers now walk as far as the C++'s (48% of the soldiers it lost died 35+ tiles from home under classic
+  with the cheats, from 36%; it lost 3920 against the C++'s 5386, from 3074 against 5143).
+- **The militia's odds** count every raider, seen or not (`ai.enemy_force`, only with `sees_all`), as EECPRMMilitia:
+  within noise (the citizens lost fighting under balanced 442 against 433).
+- **The priests and prophets** of AllocateSpecialUnits (15% of the groups, 1-3 priests, a prophet; 2% and 20% of the
+  population limit): within noise.
+
+Bench (32 seeds, 90 minutes; the port's line; the C++ about as before):
+
+| Matchup | stage | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced | §8.47 (t1) | 23.1/2.7 / 26.3/3.3 / 35.1/7.3 / 43.0/7.0 | 1.7 / 57.8 | 8-20, 4 close |
+| balanced | militia (m1) | 23.1/2.8 / 26.2/3.1 / 34.0/7.0 / 42.9/6.7 | 1.8 / 54.3 | 8-17, 7 close |
+| balanced | forests (f1) | 23.1/2.8 / 26.2/3.1 / 33.8/7.1 / 44.2/6.8 | 1.8 / 53.8 | 9-17, 6 close |
+| balanced | priests (sp) | 23.3/2.8 / 26.4/3.0 / 33.2/7.2 / 41.7/6.3 | 1.9 / 57.6 | 7-18, 7 close |
+| classic+cheats | §8.47 (t1) | 22.9/10.2 / 49.8/16.9 / 50.3/28.2 / 50.2/27.6 | 11.5 / 83.4 | 8-3, 21 close |
+| classic+cheats | militia (m1) | identical (the classic personality has no militia) | | 8-3 |
+| classic+cheats | forests (f1) | 22.9/9.2 / 50.2/13.6 / 49.8/29.4 / 49.8/28.7 | 10.7 / 89.1 | 11-1, 20 close |
+| classic+cheats | priests (sp) | 24.0/9.4 / 49.2/12.6 / 49.7/25.6 / 49.7/29.3 | 11.7 / 83.6 | 10-2, 20 close |
+
+Readings: under classic with the cheats the port's army is still 2-3 times the C++'s from 30 minutes; its soldiers now
+walk as far and die more, but the C++'s die more still (5386 against 3920): the fights themselves (lib.groups against
+the C++'s sub-group state machines) are the remaining suspect. Under balanced the C++'s land army against the port's
+citizens late in the game is the gap (§8.47). 3 budget errors at 85-89 minutes in 2 balanced games (late, large
+economies: the step's load, not one place). Determinism: seeds 2, 5 (balanced) and 3 (classic with the cheats), 60
+minutes, --repeat 2: identical.
+
+Next: a fight trace (who shoots whom, the targets' choice) to compare lib.groups with the C++'s sub-groups; the late
+step's budget; ChooseUnitsToKill (only at the population limit); guard posts on hills and choke points; walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

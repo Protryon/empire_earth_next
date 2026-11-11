@@ -725,11 +725,12 @@ local function assign_gatherers(view, memory)
     local ids = R.refresh_lists(memory)
     local records = {}
     if #ids > 0 then
-        local cols = ai.get(ids, {"action", "target", "category", "x", "y", "gathers", "inside", "id"})
+        local cols = ai.get(ids, {"action", "target", "category", "x", "y", "gathers", "inside", "waiting", "id"})
         for k, id in ipairs(ids) do
             if cols.action[k] ~= nil then
                 records[id] = {id = id, action = cols.action[k], target = cols.target[k], category = cols.category[k],
-                               x = cols.x[k], y = cols.y[k], gathers = cols.gathers[k], inside = cols.inside[k]}
+                               x = cols.x[k], y = cols.y[k], gathers = cols.gathers[k], inside = cols.inside[k],
+                               waiting = cols.waiting[k]}
             end
         end
     end
@@ -761,8 +762,10 @@ local function assign_gatherers(view, memory)
                     if key == "idle" and u.action == "idle" then
                         boats[#boats + 1] = u
                     end
-                elseif u.action == "idle" or u.action == "explore" then
-                    idle[#idle + 1] = u   -- (an exploring citizen: one with nothing known to gather)
+                elseif u.action == "idle" or u.action == "explore" or (u.action == "gather" and u.waiting) then
+                    -- (an exploring citizen: one with nothing known to gather; a gatherer waiting for room at its
+                    -- resource, as the classic's idle list takes it)
+                    idle[#idle + 1] = u
                 end
             end
         end
