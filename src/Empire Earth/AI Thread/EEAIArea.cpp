@@ -61,6 +61,23 @@ struct EEAIAreaHullContainsUnit {
 
 // cdecl template 0xdcbe / 0xde7f: EEGetUnitsInRectangle (ee/EEUnitCollector.h) with these filters
 
+// Port: the hull geometry of GetHullDistanceSquared, GetClosestHullPoint, GetClosestPoints' loop and GetTiles is Rust
+// (ee_astar area_geom.rs, docs/RUST_PLAN.md R5b.1, branch rust-r5b-cont3); these forward the hull's points
+static EeHullRect EEAIAreaHullRect(const U2DRectangle<long>& inBounds)
+{
+    EeHullRect theRect;
+    theRect.bottom = inBounds.mBottom;
+    theRect.left = inBounds.mLeft;
+    theRect.right = inBounds.mRight;
+    theRect.top = inBounds.mTop;
+    return theRect;
+}
+
+static void EEAIAreaPushTile(void* inTiles, long inX, long inY)
+{
+    static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY));
+}
+
 // FUNCTION: EXE 0x40d6e3
 // Adds tiles to the area and, when asked, rebuilds its hull and influence-region bounds
 void EEAIArea::AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate)
@@ -102,10 +119,18 @@ void EEAIArea::UpdateBounds(EEInfluenceTable* inTable)
 // Returns the squared distance between the closest points of this area's hull and another's
 float EEAIArea::GetHullDistanceSquared(EEAIArea* inOther)
 {
-    U2DPoint<long> theThis;
-    U2DPoint<long> theOther;
-    this->mHull.GetClosestPoints(inOther->mHull, theThis, theOther);
-    return theThis.DistanceToSquaredF(theOther);
+    EEGeomCaptureScope theScope;
+    float theResult = ee_area_hull_distance_squared(U2DHullPoints(this->mHull.GetPoints()), this->mHull.GetPointCount(),
+                                                    U2DHullPoints(inOther->mHull.GetPoints()),
+                                                    inOther->mHull.GetPointCount());
+    if (theScope.mOuter) {   // TEST ONLY: AREA 4
+        EEGeomCaptureBegin(kGeomCaptureArea, 4);
+        EEGeomCapturePoints(this->mHull.GetPoints(), false);
+        EEGeomCapturePoints(inOther->mHull.GetPoints(), false);
+        EEGeomCaptureFloat(theResult);
+        EEGeomCaptureCommit();
+    }
+    return theResult;
 }
 
 // FUNCTION: EXE 0x40d859
@@ -132,11 +157,17 @@ void EEAIArea::GetUnitsInHull(std::vector<EEUnit*>& outUnits)
 // Returns the point itself when it is inside the area's hull, else the closest point on the hull outline
 U2DPoint<long> EEAIArea::GetClosestHullPoint(const U2DPoint<long>& inPoint)
 {
-    U2DPoint<long> theResult;
-    if (!this->mHull.BoundedContains(inPoint))
-        theResult = this->mHull.GetClosestOutlinePoint(inPoint);
-    else
-        theResult = inPoint;
+    EEGeomCaptureScope theScope;
+    EeHullRect theBounds = EEAIAreaHullRect(this->mHull.GetBounds());
+    U2DPoint<long> theResult = U2DHullPoint(ee_area_closest_hull_point(
+        U2DHullPoints(this->mHull.GetPoints()), this->mHull.GetPointCount(), &theBounds, U2DHullPointOf(inPoint)));
+    if (theScope.mOuter) {   // TEST ONLY: AREA 3
+        EEGeomCaptureBegin(kGeomCaptureArea, 3);
+        EEGeomCapturePoints(this->mHull.GetPoints(), false);
+        EEGeomCapturePoint(inPoint);
+        EEGeomCapturePoint(theResult);
+        EEGeomCaptureCommit();
+    }
     return theResult;
 }
 
@@ -152,9 +183,10 @@ U2DPoint<long> EEAIArea::GetClosestPoint(const U2DPoint<long>& inPoint)
 // when either area is empty
 bool EEAIArea::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
 {
+    EEGeomCaptureScope theScope;
     std::vector<U2DPoint<long> > thePoints;
-    std::vector<U2DPoint<long> > theOtherPoints;
-    U2DPoint<long> theCandidate;
+    EeHullPoint theThis;
+    EeHullPoint theOther;
     bool theResult;
     if (this->mTiles.Size() != 0 && inOther->mTiles.Size() != 0)
         theResult = true;
@@ -164,21 +196,24 @@ bool EEAIArea::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DP
     outThis.mY = 0;
     outOther.mX = 0;
     outOther.mY = 0;
-    inOther->mHull.GetPointCount();
     if (theResult) {
         this->mTiles.BuildPointList(thePoints, 1);
-        outThis = thePoints.back();
-        outOther = inOther->mHull.GetClosestOutlinePoint(outThis);
-        long theBest = outThis.DistanceToSquared(outOther);
-        for (long i = thePoints.size() - 2; i >= 0; i--) {
-            theCandidate = inOther->mHull.GetClosestOutlinePoint(thePoints[i]);
-            long theDistance = theCandidate.DistanceToSquared(thePoints[i]);
-            if (theDistance >= theBest)
-                continue;
-            theBest = theDistance;
-            outThis = thePoints[i];
-            outOther = theCandidate;
+        if (ee_area_closest_points_to_hull(U2DHullPoints(thePoints), thePoints.size(),
+                                           U2DHullPoints(inOther->mHull.GetPoints()), inOther->mHull.GetPointCount(),
+                                           &theThis, &theOther)) {
+            outThis = U2DHullPoint(theThis);
+            outOther = U2DHullPoint(theOther);
         }
+    }
+    if (theScope.mOuter) {   // TEST ONLY: AREA 1
+        EEGeomCaptureBegin(kGeomCaptureArea, 1);
+        EEGeomCaptureValue(this->mTiles.Size());
+        EEGeomCapturePoints(thePoints, false);
+        EEGeomCapturePoints(inOther->mHull.GetPoints(), false);
+        EEGeomCaptureValue(theResult);
+        EEGeomCapturePoint(outThis);
+        EEGeomCapturePoint(outOther);
+        EEGeomCaptureCommit();
     }
     return theResult;
 }
@@ -197,13 +232,15 @@ U2DPoint<long> EEAIArea::GetRandomPoint()
 // Appends every tile inside the area's hull, row by row
 void EEAIArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
 {
-    std::map<long, std::pair<long, long> > theRows;
-    std::map<long, std::pair<long, long> >::iterator theRow;
-    this->mHull.GetScanLines(theRows);
-    for (theRow = theRows.begin(); theRow != theRows.end(); ++theRow) {
-        long theY = theRow->first;
-        for (long theX = theRow->second.first; theX <= theRow->second.second; theX++)
-            outTiles.push_back(U2DPoint<long>(theX, theY));
+    EEGeomCaptureScope theScope;
+    size_t theFirst = outTiles.size();
+    ee_area_tiles(U2DHullPoints(this->mHull.GetPoints()), this->mHull.GetPointCount(), &outTiles, EEAIAreaPushTile);
+    if (theScope.mOuter) {   // TEST ONLY: AREA 5, the tiles appended
+        EEGeomCaptureBegin(kGeomCaptureArea, 5);
+        EEGeomCapturePoints(this->mHull.GetPoints(), false);
+        EEGeomCaptureValue((long)theFirst);
+        EEGeomCapturePoints(std::vector<U2DPoint<long> >(outTiles.begin() + theFirst, outTiles.end()), false);
+        EEGeomCaptureCommit();
     }
 }
 

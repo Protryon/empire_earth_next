@@ -30,6 +30,12 @@ CNTN is every GetTilesNextTo call of the continent manager (the tile, the contin
 tiles), PMSP the path manager's splicing (EEPathManager.cpp: TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's
 detour search, the bounded searches' revolutions and bounds; a kind, the inputs, the outputs). Their golden lines
 come from the C++ (R5b.1, branch rust-r5b-cont2).
+HULL is the AI hulls' geometry (lle/U2DPolygon.h, U2DConvexHull<long>: every SetPoints with its input and the whole
+hull, GetClosestOutlinePoint, GetClosestPoints, GetClosestPoint, Contains and GetScanLines with a hash of the hull, the
+input and the result), AREA the areas' geometry on it (EEAIArea::GetClosestPoints, GetClosestHullPoint,
+GetHullDistanceSquared, GetTiles; EEAIContinent::GetClosestPoints, GetShoreInRegions). Only the outermost call of a
+thread is recorded, not the calls it makes inside. Their golden lines come from the C++ (R5b.1, branch
+rust-r5b-cont3).
 CB** are the combat and unit formulas' records (ee/EECombatFormulas.h: damage, attack factor, elevation, morale, hit
 points, healing, conversion, the ballistic pitch, the projectile arc, the reach and range tests, the damage rows): one
 per call, the input record's bytes and the output's. Their golden lines come from the C++ formulas (R5b.2).

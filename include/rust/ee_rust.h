@@ -49,6 +49,14 @@ constexpr static const int32_t REPAIR_SINGLE = 2;
 /// The tile gets a new area.
 constexpr static const int32_t REPAIR_NEW = 3;
 
+/// The side of `SetGlobalWaterState`'s water texture grid.
+constexpr static const size_t WATER_GRID = 33;
+
+/// `GETerrainMesh::mTerrainPolygons`' and `mWaterPolygons`' sizes.
+constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
+
+constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
+
 constexpr static const int32_t CODE_OK = 0;
 
 constexpr static const int32_t CODE_NOT_COMPRESSED = 19;
@@ -78,14 +86,6 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
-
-/// The side of `SetGlobalWaterState`'s water texture grid.
-constexpr static const size_t WATER_GRID = 33;
-
-/// `GETerrainMesh::mTerrainPolygons`' and `mWaterPolygons`' sizes.
-constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
-
-constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
 
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
@@ -1964,286 +1964,42 @@ struct EePathBounds {
   int32_t right;
 };
 
-/// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
-using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
-
-/// `EEToHitTable::GetAttackFactor`'s inputs.
-struct EeCombatAttackFactorIn {
-  /// `gDamageTable[the target class's family][the attack kind]`
-  float factor;
-  /// the target class `CanBeAttacked`
-  int32_t attackable;
-  /// both players exist
-  int32_t players_present;
-  /// `IsHuman` and not player 0
-  int32_t attacker_human;
-  int32_t target_human;
-  /// the game's difficulty has a gameoptions.yaml rule
-  int32_t has_rule;
-  /// that rule's scales (0 without one)
-  float scale_human_target;
-  float scale_human_attacker;
+/// `U2DPoint<long>` (the C++ class's layout: two `long`s).
+struct EeHullPoint {
+  long x;
+  long y;
 };
 
-/// `EEUnitClass::ComputeDamage`'s inputs.
-struct EeCombatDamageIn {
-  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
-  int32_t form;
-  float attack;
-  /// `EEToHitTable::GetAttackFactor` (0, unread, for a direct hit without attack)
-  float attack_factor;
-  /// `gWeaponToHitFactors[the target class's weapon][the attack's weapon]`
-  float weapon_factor;
-  /// the target's armour of the attack's weapon
-  float armor;
-  /// `GetElevationFactor` (1 unless the C++ filled it: not a trample, a positive hit factor)
-  float elevation;
-  /// a direct hit by a cloaked attacker (or owner)
-  int32_t fanatic;
-  int32_t same_player;
-  /// the attacker's player is not an enemy of the target's
-  int32_t allied;
-  /// the attacker is a herd animal
-  int32_t herd;
-  /// splash on the own player's units
-  float friendly_factor;
-  /// combat.yaml
-  int32_t minimum_damage;
-  float fanatic_factor;
-  float elevation_step;
-  float ally_factor;
-  float herd_ally_factor;
-  int32_t trample_damage;
-  float trample_threshold;
+/// What `SetPoints` leaves besides the points: the input's bounds (`U2DRectangle<long>`'s members in their order),
+/// the center and the area.
+struct EeHullShape {
+  long bottom;
+  long left;
+  long right;
+  long top;
+  EeHullPoint center;
+  float area;
 };
 
-struct EeCombatDamageOut {
-  /// the hit does damage
-  int32_t hit;
-  int32_t amount;
+/// A hull's bounds (`U2DRectangle<long>`, its members in their order).
+struct EeHullRect {
+  long bottom;
+  long left;
+  long right;
+  long top;
 };
 
-/// `EEUnitClass::GetElevationFactor`'s inputs.
-struct EeCombatElevationIn {
-  /// a combat.yaml elevation attacker against an elevation target
-  int32_t applies;
-  /// the attacker's height (its launch height for a projectile)
-  float own_z;
-  float target_z;
-  /// dbworld high_ground_height, low_ground_height (scaled by `ELEVATION_SCALE`)
-  float high_height;
-  float low_height;
-  /// the player's high ground bonus
-  float high_bonus;
-  /// dbworld high_ground_attack_factor, low_ground_attack_factor
-  float high_factor;
-  float low_factor;
-};
-
-/// `EEComplexUnit::ApplyMorale`'s inputs.
-struct EeCombatMoraleIn {
-  int32_t value;
-  /// the unit's positive and negative morale counts
-  int32_t positive;
-  int32_t negative;
-  /// combat.yaml
-  float positive_share;
-  float negative_share;
-};
-
-struct EeCombatHitPointsOut {
-  /// at least 0
-  int32_t hit_points;
-  /// the hit crossed a tenth of the maximum
-  int32_t badly_hurt;
-};
-
-/// `EEUnit::TakeHit`'s hit points.
-struct EeCombatHitPointsIn {
-  int32_t hit_points;
-  int32_t damage;
-  int32_t max_hit_points;
-};
-
-/// `EEUnit::TakeHit`: whether the hit crosses the class's damage effect threshold.
-struct EeCombatDamageEffectIn {
-  int32_t old_hit_points;
-  int32_t hit_points;
-  int32_t max_hit_points;
-  /// the effect's second parameter (a share of the maximum)
-  float threshold;
-};
-
-struct EeCombatRegenerateOut {
-  int32_t timer;
-  int32_t hit_points;
-  /// the hit points change (a living unit)
-  int32_t set;
-};
-
-/// `EEUnitClass::Regenerate`'s inputs.
-struct EeCombatRegenerateIn {
-  int32_t timer;
-  int32_t tick_ms;
-  int32_t hit_points;
-  int32_t regeneration;
-  int32_t max_hit_points;
-  /// combat.yaml regeneration_interval
-  int32_t interval;
-};
-
-struct EeCombatTimerOut {
-  int32_t timer;
-  int32_t due;
-};
-
-/// `EEUnitClass::HealGarrison`'s timer.
-struct EeCombatTimerIn {
-  int32_t timer;
-  int32_t tick_ms;
-  int32_t interval;
-};
-
-struct EeCombatHealOut {
-  /// at most the maximum
-  int32_t hit_points;
-  /// a living unit
-  int32_t set;
-};
-
-/// `EEUnitClass::HealGarrison` per unit, `EEUGHealUnit::Work`.
-struct EeCombatHealIn {
-  int32_t hit_points;
-  int32_t healing;
-  int32_t max_hit_points;
-};
-
-struct EeCombatHealStepOut {
-  uint32_t elapsed;
-  int32_t due;
-};
-
-/// `EEUGHealUnit::Work`'s clock.
-struct EeCombatHealStepIn {
-  uint32_t elapsed;
-  int32_t tick_ms;
-};
-
-/// `EEGetConversionCost`'s inputs.
-struct EeCombatConversionCostIn {
-  /// dbworld conversion_faith_cost
-  int32_t cost;
-  /// the unit's maximum power
-  int32_t power;
-};
-
-struct EeCombatConversionOut {
-  /// the work timer after this tick (no attempt)
-  int32_t timer;
-  /// a second has gone: one attempt
-  int32_t due;
-  /// the attempt converts when the draw is at most this
-  float threshold;
-  /// the work timer after a failed attempt
-  int32_t miss_timer;
-};
-
-/// `EEUCBasicPriest::UpdateConversion`'s (and `EEUCBuildingPriest`'s) inputs.
-struct EeCombatConversionIn {
-  int32_t work_timer;
-  float tick_seconds;
-  /// the target's conversion resistance
-  float resistance;
-  /// the adaptation power lowers a town centre's full resistance (the C++ fills it at resistance 1 only)
-  int32_t adaptation;
-  /// the priest's conversion rate
-  float rate;
-  /// the target player's conversion factor
-  float factor;
-};
-
-struct EeCombatBallisticOut {
-  int32_t reached;
-  float angle;
-};
-
-/// `EEGetBallisticPitch`'s inputs.
-struct EeCombatBallisticIn {
-  float from_x;
-  float from_y;
-  float from_z;
-  float to_x;
-  float to_y;
-  float to_z;
-  /// the launch speed
-  float speed;
-  /// the projectile class's gravity
-  float acceleration;
-  /// the high arc (the class shoots high, or fires over walls high in animation 8)
-  int32_t high;
-};
-
-struct EeCombatArcOut {
-  /// the move from the launch point in the yaw's frame (x is 0)
-  float move_y;
-  float move_z;
-  /// the nose along the arc
-  float pitch;
-};
-
-/// `EEPMProjectile::Step0`'s arc.
-struct EeCombatArcIn {
-  int32_t flight_time_ms;
-  float gravity;
-  float pitch;
-  /// flies straight at `max_velocity`, no gravity
-  int32_t meteor;
-  float max_velocity;
-  /// the launcher class's launch speed (else the projectile's own)
-  float launcher_speed;
-  float own_speed;
-};
-
-/// `EEIsInRangeToHit`'s distance test.
-struct EeCombatRangeIn {
-  float range;
-  /// a crusader's range
-  float heal_range;
-  int32_t crusader;
-  /// `EEGetHitDistanceSquared`
-  float distance_squared;
-  /// the target is a land building: half its inner sphere counts
-  int32_t building;
-  float inner_sphere;
-};
-
-/// `EECanReach`, `EEIsInWorkReach`, `EEIsInGatherReach`.
-struct EeCombatReachIn {
-  float distance_squared;
-  float radius;
-  float other_radius;
-  /// `EECanReach`'s scale (0 for the work and gather tests)
-  float scale;
-  /// work: the target is a wall; gather: the target is a tree
-  int32_t flag_a;
-  /// work: a robotic farm; gather: the unit is a naval citizen
-  int32_t flag_b;
-};
-
-/// One row of the damage tables (`EETerrainTypeTable::LoadDamageTables`).
-struct EeCombatDamageRowIn {
-  int32_t percent[EE_COMBAT_DAMAGE_COLUMNS];
-  /// percent to fraction (`kHeightEpsilon`)
-  float scale;
-  /// dbworld difficulty_damage_scale F, F2
-  float twin1;
-  float twin2;
-};
-
-struct EeCombatDamageRowOut {
-  float base[EE_COMBAT_DAMAGE_COLUMNS];
-  float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
-  float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
+/// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
+struct EeShoreCallbacks {
+  void *ctx;
+  /// the path area at the tile: false without one, else true and its region id of the kind in `id`
+  bool (*path_area_region)(void*, long, long, bool, uint16_t*);
+  /// the continent at the tile exists and is land
+  bool (*is_land)(void*, long, long);
+  /// `GetContinent(tile, kind)`
+  uint16_t (*region)(void*, long, long, bool);
+  uint32_t map_width;
+  uint32_t map_height;
 };
 
 /// `GE2DPoint` (sizeof 8).
@@ -2653,6 +2409,288 @@ struct EeGeBitmapStretch {
   float uv[4][2];
   float x_scale;
   float y_scale;
+};
+
+/// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
+using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// `EEToHitTable::GetAttackFactor`'s inputs.
+struct EeCombatAttackFactorIn {
+  /// `gDamageTable[the target class's family][the attack kind]`
+  float factor;
+  /// the target class `CanBeAttacked`
+  int32_t attackable;
+  /// both players exist
+  int32_t players_present;
+  /// `IsHuman` and not player 0
+  int32_t attacker_human;
+  int32_t target_human;
+  /// the game's difficulty has a gameoptions.yaml rule
+  int32_t has_rule;
+  /// that rule's scales (0 without one)
+  float scale_human_target;
+  float scale_human_attacker;
+};
+
+/// `EEUnitClass::ComputeDamage`'s inputs.
+struct EeCombatDamageIn {
+  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
+  int32_t form;
+  float attack;
+  /// `EEToHitTable::GetAttackFactor` (0, unread, for a direct hit without attack)
+  float attack_factor;
+  /// `gWeaponToHitFactors[the target class's weapon][the attack's weapon]`
+  float weapon_factor;
+  /// the target's armour of the attack's weapon
+  float armor;
+  /// `GetElevationFactor` (1 unless the C++ filled it: not a trample, a positive hit factor)
+  float elevation;
+  /// a direct hit by a cloaked attacker (or owner)
+  int32_t fanatic;
+  int32_t same_player;
+  /// the attacker's player is not an enemy of the target's
+  int32_t allied;
+  /// the attacker is a herd animal
+  int32_t herd;
+  /// splash on the own player's units
+  float friendly_factor;
+  /// combat.yaml
+  int32_t minimum_damage;
+  float fanatic_factor;
+  float elevation_step;
+  float ally_factor;
+  float herd_ally_factor;
+  int32_t trample_damage;
+  float trample_threshold;
+};
+
+struct EeCombatDamageOut {
+  /// the hit does damage
+  int32_t hit;
+  int32_t amount;
+};
+
+/// `EEUnitClass::GetElevationFactor`'s inputs.
+struct EeCombatElevationIn {
+  /// a combat.yaml elevation attacker against an elevation target
+  int32_t applies;
+  /// the attacker's height (its launch height for a projectile)
+  float own_z;
+  float target_z;
+  /// dbworld high_ground_height, low_ground_height (scaled by `ELEVATION_SCALE`)
+  float high_height;
+  float low_height;
+  /// the player's high ground bonus
+  float high_bonus;
+  /// dbworld high_ground_attack_factor, low_ground_attack_factor
+  float high_factor;
+  float low_factor;
+};
+
+/// `EEComplexUnit::ApplyMorale`'s inputs.
+struct EeCombatMoraleIn {
+  int32_t value;
+  /// the unit's positive and negative morale counts
+  int32_t positive;
+  int32_t negative;
+  /// combat.yaml
+  float positive_share;
+  float negative_share;
+};
+
+struct EeCombatHitPointsOut {
+  /// at least 0
+  int32_t hit_points;
+  /// the hit crossed a tenth of the maximum
+  int32_t badly_hurt;
+};
+
+/// `EEUnit::TakeHit`'s hit points.
+struct EeCombatHitPointsIn {
+  int32_t hit_points;
+  int32_t damage;
+  int32_t max_hit_points;
+};
+
+/// `EEUnit::TakeHit`: whether the hit crosses the class's damage effect threshold.
+struct EeCombatDamageEffectIn {
+  int32_t old_hit_points;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the effect's second parameter (a share of the maximum)
+  float threshold;
+};
+
+struct EeCombatRegenerateOut {
+  int32_t timer;
+  int32_t hit_points;
+  /// the hit points change (a living unit)
+  int32_t set;
+};
+
+/// `EEUnitClass::Regenerate`'s inputs.
+struct EeCombatRegenerateIn {
+  int32_t timer;
+  int32_t tick_ms;
+  int32_t hit_points;
+  int32_t regeneration;
+  int32_t max_hit_points;
+  /// combat.yaml regeneration_interval
+  int32_t interval;
+};
+
+struct EeCombatTimerOut {
+  int32_t timer;
+  int32_t due;
+};
+
+/// `EEUnitClass::HealGarrison`'s timer.
+struct EeCombatTimerIn {
+  int32_t timer;
+  int32_t tick_ms;
+  int32_t interval;
+};
+
+struct EeCombatHealOut {
+  /// at most the maximum
+  int32_t hit_points;
+  /// a living unit
+  int32_t set;
+};
+
+/// `EEUnitClass::HealGarrison` per unit, `EEUGHealUnit::Work`.
+struct EeCombatHealIn {
+  int32_t hit_points;
+  int32_t healing;
+  int32_t max_hit_points;
+};
+
+struct EeCombatHealStepOut {
+  uint32_t elapsed;
+  int32_t due;
+};
+
+/// `EEUGHealUnit::Work`'s clock.
+struct EeCombatHealStepIn {
+  uint32_t elapsed;
+  int32_t tick_ms;
+};
+
+/// `EEGetConversionCost`'s inputs.
+struct EeCombatConversionCostIn {
+  /// dbworld conversion_faith_cost
+  int32_t cost;
+  /// the unit's maximum power
+  int32_t power;
+};
+
+struct EeCombatConversionOut {
+  /// the work timer after this tick (no attempt)
+  int32_t timer;
+  /// a second has gone: one attempt
+  int32_t due;
+  /// the attempt converts when the draw is at most this
+  float threshold;
+  /// the work timer after a failed attempt
+  int32_t miss_timer;
+};
+
+/// `EEUCBasicPriest::UpdateConversion`'s (and `EEUCBuildingPriest`'s) inputs.
+struct EeCombatConversionIn {
+  int32_t work_timer;
+  float tick_seconds;
+  /// the target's conversion resistance
+  float resistance;
+  /// the adaptation power lowers a town centre's full resistance (the C++ fills it at resistance 1 only)
+  int32_t adaptation;
+  /// the priest's conversion rate
+  float rate;
+  /// the target player's conversion factor
+  float factor;
+};
+
+struct EeCombatBallisticOut {
+  int32_t reached;
+  float angle;
+};
+
+/// `EEGetBallisticPitch`'s inputs.
+struct EeCombatBallisticIn {
+  float from_x;
+  float from_y;
+  float from_z;
+  float to_x;
+  float to_y;
+  float to_z;
+  /// the launch speed
+  float speed;
+  /// the projectile class's gravity
+  float acceleration;
+  /// the high arc (the class shoots high, or fires over walls high in animation 8)
+  int32_t high;
+};
+
+struct EeCombatArcOut {
+  /// the move from the launch point in the yaw's frame (x is 0)
+  float move_y;
+  float move_z;
+  /// the nose along the arc
+  float pitch;
+};
+
+/// `EEPMProjectile::Step0`'s arc.
+struct EeCombatArcIn {
+  int32_t flight_time_ms;
+  float gravity;
+  float pitch;
+  /// flies straight at `max_velocity`, no gravity
+  int32_t meteor;
+  float max_velocity;
+  /// the launcher class's launch speed (else the projectile's own)
+  float launcher_speed;
+  float own_speed;
+};
+
+/// `EEIsInRangeToHit`'s distance test.
+struct EeCombatRangeIn {
+  float range;
+  /// a crusader's range
+  float heal_range;
+  int32_t crusader;
+  /// `EEGetHitDistanceSquared`
+  float distance_squared;
+  /// the target is a land building: half its inner sphere counts
+  int32_t building;
+  float inner_sphere;
+};
+
+/// `EECanReach`, `EEIsInWorkReach`, `EEIsInGatherReach`.
+struct EeCombatReachIn {
+  float distance_squared;
+  float radius;
+  float other_radius;
+  /// `EECanReach`'s scale (0 for the work and gather tests)
+  float scale;
+  /// work: the target is a wall; gather: the target is a tree
+  int32_t flag_a;
+  /// work: a robotic farm; gather: the unit is a naval citizen
+  int32_t flag_b;
+};
+
+/// One row of the damage tables (`EETerrainTypeTable::LoadDamageTables`).
+struct EeCombatDamageRowIn {
+  int32_t percent[EE_COMBAT_DAMAGE_COLUMNS];
+  /// percent to fraction (`kHeightEpsilon`)
+  float scale;
+  /// dbworld difficulty_damage_scale F, F2
+  float twin1;
+  float twin2;
+};
+
+struct EeCombatDamageRowOut {
+  float base[EE_COMBAT_DAMAGE_COLUMNS];
+  float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
+  float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
 /// `GXVIEWPORT`.
@@ -5468,239 +5506,137 @@ int32_t ee_path_graph_revs(int32_t distance, bool kind_allowed, bool repeated);
 /// `SetPathRevs`' step budget.
 int32_t ee_path_path_revs(int32_t distance, bool amphibious, bool same_continent);
 
-/// `UDataCompression::Compress`.
+/// `U2DConvexHull<long>::SetPoints`: the hull of `count` points written to `out` (room for `count`), its length
+/// returned; the input's bounds, the hull's center and area in `shape`.
 ///
 /// # Safety
-/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
-int32_t ee_compress(const uint8_t *input,
-                    uint32_t input_length,
-                    uint8_t *output,
-                    uint32_t capacity,
-                    uint32_t *out_length,
-                    uint32_t level);
+/// `points` holds `count` points, `out` room for `count` (it may not overlap `points`), `shape` valid.
+size_t ee_hull_set_points(const EeHullPoint *points,
+                          size_t count,
+                          bool is_sorted,
+                          EeHullPoint *out,
+                          EeHullShape *shape);
 
-/// `UDataCompression::Decompress`.
+/// `U2DPolygon<long>::Sort`: the points sorted and scanned in place, the new length returned.
 ///
 /// # Safety
-/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
-int32_t ee_decompress(const uint8_t *input,
-                      uint32_t input_length,
-                      uint8_t *output,
-                      uint32_t capacity,
-                      uint32_t *out_length);
+/// `points` holds `count` points.
+size_t ee_hull_sort(EeHullPoint *points, size_t count);
 
-/// `UDataCompression::GetDecompressedSize`.
+/// `ComputeCenter`.
 ///
 /// # Safety
-/// `input` is valid for `input_length` bytes, `out_size` for a write.
-int32_t ee_decompressed_size(const uint8_t *input, uint32_t input_length, uint32_t *out_size);
+/// `points` holds `count` points.
+EeHullPoint ee_hull_center(const EeHullPoint *points, size_t count);
 
-/// `UDataCompression::GetIsCompressed`.
+/// `ComputeArea`.
 ///
 /// # Safety
-/// `input` is valid for `input_length` bytes.
-bool ee_is_compressed(const uint8_t *input, uint32_t input_length);
+/// `points` holds `count` points.
+float ee_hull_area(const EeHullPoint *points, size_t count);
 
-/// `UEEncryptUString`. `capacity` is the input `UString`'s allocated size.
+/// `ProjectPoint`.
+EeHullPoint ee_hull_project_point(EeHullPoint point,
+                                  float scale,
+                                  EeHullPoint start,
+                                  EeHullPoint end);
+
+/// `GetClosestOutlinePoint`.
 ///
 /// # Safety
-/// `text` is valid for `length` bytes; `sink` is called once.
-void ee_ue_encrypt_ustring(const uint8_t *text,
-                           size_t length,
-                           size_t capacity,
-                           EeCodecSink sink,
-                           void *context);
+/// `points` holds `count` points.
+EeHullPoint ee_hull_closest_outline_point(const EeHullPoint *points,
+                                          size_t count,
+                                          EeHullPoint point);
 
-/// `UEDecryptUString`. Returns whether the checksum matches.
+/// `GetClosestPoints`: this outline's and the other's points of the closest pair.
 ///
 /// # Safety
-/// `text` is valid for `length` bytes; `sink` is called once.
-bool ee_ue_decrypt_ustring(const uint8_t *text, size_t length, EeCodecSink sink, void *context);
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+void ee_hull_closest_points(const EeHullPoint *points,
+                            size_t count,
+                            const EeHullPoint *other,
+                            size_t other_count,
+                            EeHullPoint *out_point,
+                            EeHullPoint *out_other);
 
-/// `UEEncryptAuthorizationCode`.
+/// `GetClosestPoint`.
 ///
 /// # Safety
-/// `code` is valid for `length` bytes; `sink` is called once.
-void ee_ue_encrypt_authorization_code(const uint8_t *code,
-                                      size_t length,
-                                      EeCodecSink sink,
-                                      void *context);
+/// `points` holds `count` points.
+EeHullPoint ee_hull_closest_point(const EeHullPoint *points, size_t count, EeHullPoint point);
 
-/// `UEDecryptAuthorizationCode`.
+/// `GetClosestPointIndex`.
 ///
 /// # Safety
-/// `code` is valid for `length` bytes; `first` and `second` for a write.
-void ee_ue_decrypt_authorization_code(const uint8_t *code,
-                                      size_t length,
-                                      uint32_t *first,
-                                      uint32_t *second);
+/// `points` holds `count` points.
+long ee_hull_closest_point_index(const EeHullPoint *points, size_t count, EeHullPoint point);
 
-/// `UEEncryptExpiration`.
+/// `U2DConvexHull<long>::Contains`.
 ///
 /// # Safety
-/// `sink` is called once.
-void ee_ue_encrypt_expiration(uint32_t first, uint32_t second, EeCodecSink sink, void *context);
+/// `points` holds `count` points.
+bool ee_hull_contains(const EeHullPoint *points, size_t count, EeHullPoint point);
 
-/// `UEDecryptExpiration`. Returns whether the checksum matches.
+/// `GetScanLines`: `row(ctx, y, first x, last x)` for each row under the outline, by y.
 ///
 /// # Safety
-/// `text` is valid for `length` bytes; `first` and `second` for a write.
-bool ee_ue_decrypt_expiration(const uint8_t *text,
-                              size_t length,
-                              uint32_t *first,
-                              uint32_t *second);
+/// `points` holds `count` points; `row` may not call back into the hull functions with these points mutated.
+void ee_hull_scan_lines(const EeHullPoint *points,
+                        size_t count,
+                        void *ctx,
+                        void (*row)(void*, long, long, long));
 
-/// `UEEncryptGUID`. `sink_guid` receives the padded GUID (written back into the caller's string), then `sink_out` the
-/// encrypted text.
+/// `EEAIArea::GetClosestHullPoint`.
 ///
 /// # Safety
-/// `guid` is valid for `length` bytes; each sink is called once.
-void ee_ue_encrypt_guid(uint32_t value,
-                        const uint8_t *guid,
-                        size_t length,
-                        size_t capacity,
-                        uint32_t key,
-                        EeCodecSink sink_guid,
-                        void *context_guid,
-                        EeCodecSink sink_out,
-                        void *context_out);
+/// `points` holds `count` points, `bounds` valid.
+EeHullPoint ee_area_closest_hull_point(const EeHullPoint *points,
+                                       size_t count,
+                                       const EeHullRect *bounds,
+                                       EeHullPoint point);
 
-/// `UEDecryptGUID`: the GUID is appended to `prefix` (capped at `capacity`). Returns whether the checksum matches.
+/// `EEAIArea::GetHullDistanceSquared`.
 ///
 /// # Safety
-/// `text` is valid for `length` bytes, `prefix` for `prefix_length`, `value` for a write; `sink` is called once.
-bool ee_ue_decrypt_guid(const uint8_t *text,
-                        size_t length,
-                        uint32_t key,
-                        uint32_t *value,
-                        const uint8_t *prefix,
-                        size_t prefix_length,
-                        size_t capacity,
-                        EeCodecSink sink,
-                        void *context);
+/// `points` holds `count` points, `other` `other_count`.
+float ee_area_hull_distance_squared(const EeHullPoint *points,
+                                    size_t count,
+                                    const EeHullPoint *other,
+                                    size_t other_count);
 
-/// `EEToHitTable::GetAttackFactor`.
+/// The loop of `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints`: false (the outputs untouched) for
+/// no points.
 ///
 /// # Safety
-/// `input` must point to a valid record.
-float ee_combat_attack_factor(const EeCombatAttackFactorIn *input);
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+bool ee_area_closest_points_to_hull(const EeHullPoint *points,
+                                    size_t count,
+                                    const EeHullPoint *other,
+                                    size_t other_count,
+                                    EeHullPoint *out_this,
+                                    EeHullPoint *out_other);
 
-/// The to-hit factor `ee_combat_damage` uses (the C++ reads the elevation only when it is positive).
+/// `EEAIArea::GetTiles`: `push(ctx, x, y)` for every tile under the hull, row by row.
 ///
 /// # Safety
-/// `input` must point to a valid record.
-float ee_combat_hit_factor(const EeCombatDamageIn *input);
+/// `points` holds `count` points.
+void ee_area_tiles(const EeHullPoint *points, size_t count, void *ctx, void (*push)(void*,
+                                                                                    long,
+                                                                                    long));
 
-/// `EEUnitClass::ComputeDamage`.
+/// `EEAIContinent::GetShoreInRegions`: `push(out, x, y)` for each shore tile found (the C++ clears its list first).
 ///
 /// # Safety
-/// `input` must point to a valid record.
-EeCombatDamageOut ee_combat_damage(const EeCombatDamageIn *input);
-
-/// `EEUnitClass::GetElevationFactor`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-float ee_combat_elevation(const EeCombatElevationIn *input);
-
-/// `EEComplexUnit::ApplyMorale`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_morale(const EeCombatMoraleIn *input);
-
-/// `EEUnit::TakeHit`'s hit points.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatHitPointsOut ee_combat_hit_points(const EeCombatHitPointsIn *input);
-
-/// `EEUnit::TakeHit`'s damage effect test.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_damage_effect(const EeCombatDamageEffectIn *input);
-
-/// `EEUnitClass::Regenerate`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatRegenerateOut ee_combat_regenerate(const EeCombatRegenerateIn *input);
-
-/// `EEUnitClass::HealGarrison`'s timer.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatTimerOut ee_combat_timer(const EeCombatTimerIn *input);
-
-/// A heal (`HealGarrison`, `EEUGHealUnit::Work`).
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatHealOut ee_combat_heal(const EeCombatHealIn *input);
-
-/// `EEUGHealUnit::Work`'s clock.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatHealStepOut ee_combat_heal_step(const EeCombatHealStepIn *input);
-
-/// `EEGetConversionCost`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_conversion_cost(const EeCombatConversionCostIn *input);
-
-/// `UpdateConversion`'s clock and chance.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatConversionOut ee_combat_conversion(const EeCombatConversionIn *input);
-
-/// `EEGetBallisticPitch`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatBallisticOut ee_combat_ballistic(const EeCombatBallisticIn *input);
-
-/// `EEPMProjectile::Step0`'s arc.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatArcOut ee_combat_arc(const EeCombatArcIn *input);
-
-/// `EEIsInRangeToHit`'s distance test.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_range(const EeCombatRangeIn *input);
-
-/// `EECanReach`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_can_reach(const EeCombatReachIn *input);
-
-/// `EEIsInWorkReach`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_work_reach(const EeCombatReachIn *input);
-
-/// `EEIsInGatherReach`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_gather_reach(const EeCombatReachIn *input);
-
-/// `EEUGHealUnit::IsInRange`.
-int32_t ee_combat_within_range(float distance_squared, float range);
-
-/// One damage table row.
-///
-/// # Safety
-/// `input` must point to a valid record and `output` to writable room for one.
-void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+/// `shore` holds `count` points, `ids` `id_count`, `host` valid.
+void ee_area_shore_in_regions(const EeHullPoint *shore,
+                              size_t count,
+                              const uint16_t *ids,
+                              size_t id_count,
+                              bool space,
+                              const EeShoreCallbacks *host,
+                              void *out,
+                              void (*push)(void*, long, long));
 
 /// `UMCos`.
 float ee_ge_um_cos(float angle);
@@ -6761,6 +6697,240 @@ void ee_ge_bitmap_stretch(const EeGeRectangle *texture,
                           unsigned long height,
                           unsigned long drop,
                           EeGeBitmapStretch *out);
+
+/// `UDataCompression::Compress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_compress(const uint8_t *input,
+                    uint32_t input_length,
+                    uint8_t *output,
+                    uint32_t capacity,
+                    uint32_t *out_length,
+                    uint32_t level);
+
+/// `UDataCompression::Decompress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_decompress(const uint8_t *input,
+                      uint32_t input_length,
+                      uint8_t *output,
+                      uint32_t capacity,
+                      uint32_t *out_length);
+
+/// `UDataCompression::GetDecompressedSize`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `out_size` for a write.
+int32_t ee_decompressed_size(const uint8_t *input, uint32_t input_length, uint32_t *out_size);
+
+/// `UDataCompression::GetIsCompressed`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes.
+bool ee_is_compressed(const uint8_t *input, uint32_t input_length);
+
+/// `UEEncryptUString`. `capacity` is the input `UString`'s allocated size.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_ustring(const uint8_t *text,
+                           size_t length,
+                           size_t capacity,
+                           EeCodecSink sink,
+                           void *context);
+
+/// `UEDecryptUString`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+bool ee_ue_decrypt_ustring(const uint8_t *text, size_t length, EeCodecSink sink, void *context);
+
+/// `UEEncryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      EeCodecSink sink,
+                                      void *context);
+
+/// `UEDecryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `first` and `second` for a write.
+void ee_ue_decrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      uint32_t *first,
+                                      uint32_t *second);
+
+/// `UEEncryptExpiration`.
+///
+/// # Safety
+/// `sink` is called once.
+void ee_ue_encrypt_expiration(uint32_t first, uint32_t second, EeCodecSink sink, void *context);
+
+/// `UEDecryptExpiration`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `first` and `second` for a write.
+bool ee_ue_decrypt_expiration(const uint8_t *text,
+                              size_t length,
+                              uint32_t *first,
+                              uint32_t *second);
+
+/// `UEEncryptGUID`. `sink_guid` receives the padded GUID (written back into the caller's string), then `sink_out` the
+/// encrypted text.
+///
+/// # Safety
+/// `guid` is valid for `length` bytes; each sink is called once.
+void ee_ue_encrypt_guid(uint32_t value,
+                        const uint8_t *guid,
+                        size_t length,
+                        size_t capacity,
+                        uint32_t key,
+                        EeCodecSink sink_guid,
+                        void *context_guid,
+                        EeCodecSink sink_out,
+                        void *context_out);
+
+/// `UEDecryptGUID`: the GUID is appended to `prefix` (capped at `capacity`). Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes, `prefix` for `prefix_length`, `value` for a write; `sink` is called once.
+bool ee_ue_decrypt_guid(const uint8_t *text,
+                        size_t length,
+                        uint32_t key,
+                        uint32_t *value,
+                        const uint8_t *prefix,
+                        size_t prefix_length,
+                        size_t capacity,
+                        EeCodecSink sink,
+                        void *context);
+
+/// `EEToHitTable::GetAttackFactor`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_attack_factor(const EeCombatAttackFactorIn *input);
+
+/// The to-hit factor `ee_combat_damage` uses (the C++ reads the elevation only when it is positive).
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_factor(const EeCombatDamageIn *input);
+
+/// `EEUnitClass::ComputeDamage`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatDamageOut ee_combat_damage(const EeCombatDamageIn *input);
+
+/// `EEUnitClass::GetElevationFactor`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_elevation(const EeCombatElevationIn *input);
+
+/// `EEComplexUnit::ApplyMorale`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_morale(const EeCombatMoraleIn *input);
+
+/// `EEUnit::TakeHit`'s hit points.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHitPointsOut ee_combat_hit_points(const EeCombatHitPointsIn *input);
+
+/// `EEUnit::TakeHit`'s damage effect test.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_damage_effect(const EeCombatDamageEffectIn *input);
+
+/// `EEUnitClass::Regenerate`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatRegenerateOut ee_combat_regenerate(const EeCombatRegenerateIn *input);
+
+/// `EEUnitClass::HealGarrison`'s timer.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatTimerOut ee_combat_timer(const EeCombatTimerIn *input);
+
+/// A heal (`HealGarrison`, `EEUGHealUnit::Work`).
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealOut ee_combat_heal(const EeCombatHealIn *input);
+
+/// `EEUGHealUnit::Work`'s clock.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealStepOut ee_combat_heal_step(const EeCombatHealStepIn *input);
+
+/// `EEGetConversionCost`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_conversion_cost(const EeCombatConversionCostIn *input);
+
+/// `UpdateConversion`'s clock and chance.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatConversionOut ee_combat_conversion(const EeCombatConversionIn *input);
+
+/// `EEGetBallisticPitch`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatBallisticOut ee_combat_ballistic(const EeCombatBallisticIn *input);
+
+/// `EEPMProjectile::Step0`'s arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatArcOut ee_combat_arc(const EeCombatArcIn *input);
+
+/// `EEIsInRangeToHit`'s distance test.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_range(const EeCombatRangeIn *input);
+
+/// `EECanReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_can_reach(const EeCombatReachIn *input);
+
+/// `EEIsInWorkReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_work_reach(const EeCombatReachIn *input);
+
+/// `EEIsInGatherReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_gather_reach(const EeCombatReachIn *input);
+
+/// `EEUGHealUnit::IsInRange`.
+int32_t ee_combat_within_range(float distance_squared, float range);
+
+/// One damage table row.
+///
+/// # Safety
+/// `input` must point to a valid record and `output` to writable room for one.
+void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,

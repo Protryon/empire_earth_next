@@ -43,6 +43,8 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
+/// cbindgen:ignore
+pub mod hull;
 pub mod io;
 /// cbindgen:ignore
 pub mod line;

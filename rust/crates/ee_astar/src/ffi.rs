@@ -2009,3 +2009,324 @@ pub extern "C" fn ee_path_graph_revs(distance: i32, kind_allowed: bool, repeated
 pub extern "C" fn ee_path_path_revs(distance: i32, amphibious: bool, same_continent: bool) -> i32 {
     path_splice::path_revs(distance, amphibious, same_continent)
 }
+
+// ---- the AI's hulls (hull.rs): U2DPolygon<long> / U2DConvexHull<long>'s algorithms over the C++ class's points
+
+use crate::hull::{self as hull_long, EeHullPoint, EeHullShape};
+use std::ffi::c_long;
+
+/// The C++ class's point vector (`count` points at `points`; null with none).
+unsafe fn hull_points<'a>(points: *const EeHullPoint, count: usize) -> &'a [EeHullPoint] {
+    if count == 0 || points.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(points, count) }
+    }
+}
+
+/// `U2DConvexHull<long>::SetPoints`: the hull of `count` points written to `out` (room for `count`), its length
+/// returned; the input's bounds, the hull's center and area in `shape`.
+///
+/// # Safety
+/// `points` holds `count` points, `out` room for `count` (it may not overlap `points`), `shape` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_set_points(
+    points: *const EeHullPoint,
+    count: usize,
+    is_sorted: bool,
+    out: *mut EeHullPoint,
+    shape: *mut EeHullShape,
+) -> usize {
+    // SAFETY: the caller's contract
+    let (outline, s) = hull_long::set_points(unsafe { hull_points(points, count) }, is_sorted);
+    debug_assert!(outline.len() <= count);
+    // SAFETY: the caller's contract (a hull has no more points than its input)
+    unsafe {
+        std::ptr::copy_nonoverlapping(outline.as_ptr(), out, outline.len());
+        *shape = s;
+    }
+    outline.len()
+}
+
+/// `U2DPolygon<long>::Sort`: the points sorted and scanned in place, the new length returned.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_sort(points: *mut EeHullPoint, count: usize) -> usize {
+    // SAFETY: the caller's contract
+    let outline = hull_long::sort(unsafe { hull_points(points, count) });
+    // SAFETY: the caller's contract (the scan keeps at most the input's points)
+    unsafe { std::ptr::copy(outline.as_ptr(), points, outline.len()) };
+    outline.len()
+}
+
+/// `ComputeCenter`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_center(points: *const EeHullPoint, count: usize) -> EeHullPoint {
+    // SAFETY: the caller's contract
+    hull_long::center(unsafe { hull_points(points, count) })
+}
+
+/// `ComputeArea`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_area(points: *const EeHullPoint, count: usize) -> f32 {
+    // SAFETY: the caller's contract
+    hull_long::area(unsafe { hull_points(points, count) })
+}
+
+/// `ProjectPoint`.
+#[no_mangle]
+pub extern "C" fn ee_hull_project_point(
+    point: EeHullPoint,
+    scale: f32,
+    start: EeHullPoint,
+    end: EeHullPoint,
+) -> EeHullPoint {
+    hull_long::project_point(point, scale, start, end)
+}
+
+/// `GetClosestOutlinePoint`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_closest_outline_point(
+    points: *const EeHullPoint,
+    count: usize,
+    point: EeHullPoint,
+) -> EeHullPoint {
+    // SAFETY: the caller's contract
+    hull_long::closest_outline_point(unsafe { hull_points(points, count) }, point)
+}
+
+/// `GetClosestPoints`: this outline's and the other's points of the closest pair.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_closest_points(
+    points: *const EeHullPoint,
+    count: usize,
+    other: *const EeHullPoint,
+    other_count: usize,
+    out_point: *mut EeHullPoint,
+    out_other: *mut EeHullPoint,
+) {
+    // SAFETY: the caller's contract
+    let (a, b) =
+        hull_long::closest_points(unsafe { hull_points(points, count) }, unsafe { hull_points(other, other_count) });
+    // SAFETY: the caller's contract
+    unsafe {
+        *out_point = a;
+        *out_other = b;
+    }
+}
+
+/// `GetClosestPoint`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_closest_point(
+    points: *const EeHullPoint,
+    count: usize,
+    point: EeHullPoint,
+) -> EeHullPoint {
+    // SAFETY: the caller's contract
+    hull_long::closest_point(unsafe { hull_points(points, count) }, point)
+}
+
+/// `GetClosestPointIndex`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_closest_point_index(
+    points: *const EeHullPoint,
+    count: usize,
+    point: EeHullPoint,
+) -> c_long {
+    // SAFETY: the caller's contract
+    hull_long::closest_point_index(unsafe { hull_points(points, count) }, point)
+}
+
+/// `U2DConvexHull<long>::Contains`.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_contains(points: *const EeHullPoint, count: usize, point: EeHullPoint) -> bool {
+    // SAFETY: the caller's contract
+    hull_long::contains(unsafe { hull_points(points, count) }, point)
+}
+
+/// `GetScanLines`: `row(ctx, y, first x, last x)` for each row under the outline, by y.
+///
+/// # Safety
+/// `points` holds `count` points; `row` may not call back into the hull functions with these points mutated.
+#[no_mangle]
+pub unsafe extern "C" fn ee_hull_scan_lines(
+    points: *const EeHullPoint,
+    count: usize,
+    ctx: *mut c_void,
+    row: extern "C" fn(*mut c_void, c_long, c_long, c_long),
+) {
+    // SAFETY: the caller's contract
+    for (y, first, last) in hull_long::scan_lines(unsafe { hull_points(points, count) }) {
+        row(ctx, y, first, last);
+    }
+}
+
+// ---- the areas' geometry (area_geom.rs): EEAIArea's and EEAIContinent's, over the C++ objects' points
+
+use crate::area_geom::{self, EeHullRect, ShoreHost};
+
+/// `EEAIArea::GetClosestHullPoint`.
+///
+/// # Safety
+/// `points` holds `count` points, `bounds` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_closest_hull_point(
+    points: *const EeHullPoint,
+    count: usize,
+    bounds: *const EeHullRect,
+    point: EeHullPoint,
+) -> EeHullPoint {
+    // SAFETY: the caller's contract
+    area_geom::closest_hull_point(unsafe { hull_points(points, count) }, unsafe { &*bounds }, point)
+}
+
+/// `EEAIArea::GetHullDistanceSquared`.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_hull_distance_squared(
+    points: *const EeHullPoint,
+    count: usize,
+    other: *const EeHullPoint,
+    other_count: usize,
+) -> f32 {
+    // SAFETY: the caller's contract
+    area_geom::hull_distance_squared(unsafe { hull_points(points, count) }, unsafe { hull_points(other, other_count) })
+}
+
+/// The loop of `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints`: false (the outputs untouched) for
+/// no points.
+///
+/// # Safety
+/// `points` holds `count` points, `other` `other_count`; the outputs valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_closest_points_to_hull(
+    points: *const EeHullPoint,
+    count: usize,
+    other: *const EeHullPoint,
+    other_count: usize,
+    out_this: *mut EeHullPoint,
+    out_other: *mut EeHullPoint,
+) -> bool {
+    // SAFETY: the caller's contract
+    let found = area_geom::closest_points_to_hull(unsafe { hull_points(points, count) }, unsafe {
+        hull_points(other, other_count)
+    });
+    match found {
+        Some((a, b)) => {
+            // SAFETY: the caller's contract
+            unsafe {
+                *out_this = a;
+                *out_other = b;
+            }
+            true
+        }
+        None => false,
+    }
+}
+
+/// `EEAIArea::GetTiles`: `push(ctx, x, y)` for every tile under the hull, row by row.
+///
+/// # Safety
+/// `points` holds `count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_tiles(
+    points: *const EeHullPoint,
+    count: usize,
+    ctx: *mut c_void,
+    push: extern "C" fn(*mut c_void, c_long, c_long),
+) {
+    let mut tiles = Vec::new();
+    // SAFETY: the caller's contract
+    area_geom::tiles(unsafe { hull_points(points, count) }, &mut tiles);
+    for t in tiles {
+        push(ctx, t.x, t.y);
+    }
+}
+
+/// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
+#[repr(C)]
+pub struct EeShoreCallbacks {
+    pub ctx: *mut c_void,
+    /// the path area at the tile: false without one, else true and its region id of the kind in `id`
+    pub path_area_region: extern "C" fn(*mut c_void, c_long, c_long, bool, *mut u16) -> bool,
+    /// the continent at the tile exists and is land
+    pub is_land: extern "C" fn(*mut c_void, c_long, c_long) -> bool,
+    /// `GetContinent(tile, kind)`
+    pub region: extern "C" fn(*mut c_void, c_long, c_long, bool) -> u16,
+    pub map_width: u32,
+    pub map_height: u32,
+}
+
+impl ShoreHost for &EeShoreCallbacks {
+    fn path_area_region(&mut self, tile: EeHullPoint, space: bool) -> Option<u16> {
+        let mut id = 0u16;
+        (self.path_area_region)(self.ctx, tile.x, tile.y, space, &mut id).then_some(id)
+    }
+    fn is_land(&mut self, tile: EeHullPoint) -> bool {
+        (self.is_land)(self.ctx, tile.x, tile.y)
+    }
+    fn region(&mut self, tile: EeHullPoint, space: bool) -> u16 {
+        (self.region)(self.ctx, tile.x, tile.y, space)
+    }
+    fn map_size(&self) -> (u32, u32) {
+        (self.map_width, self.map_height)
+    }
+}
+
+/// `EEAIContinent::GetShoreInRegions`: `push(out, x, y)` for each shore tile found (the C++ clears its list first).
+///
+/// # Safety
+/// `shore` holds `count` points, `ids` `id_count`, `host` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_area_shore_in_regions(
+    shore: *const EeHullPoint,
+    count: usize,
+    ids: *const u16,
+    id_count: usize,
+    space: bool,
+    host: *const EeShoreCallbacks,
+    out: *mut c_void,
+    push: extern "C" fn(*mut c_void, c_long, c_long),
+) {
+    // SAFETY: the caller's contract
+    let host = unsafe { &*host };
+    let ids = if id_count == 0 || ids.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(ids, id_count) }
+    };
+    let mut tiles = Vec::new();
+    let mut h = host;
+    // SAFETY: the caller's contract
+    area_geom::shore_in_regions(unsafe { hull_points(shore, count) }, ids, space, &mut h, &mut tiles);
+    for t in tiles {
+        push(out, t.x, t.y);
+    }
+}

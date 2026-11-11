@@ -71,13 +71,45 @@ void EEAIContinent::AddPathAreaID(unsigned short inID)
     }
 }
 
+// Port: the closest points' loop and GetShoreInRegions' walk are Rust (ee_astar area_geom.rs, docs/RUST_PLAN.md
+// R5b.1, branch rust-r5b-cont3); the manager's lookups stay behind EeShoreCallbacks
+static void EEAIContinentPushTile(void* inTiles, long inX, long inY)
+{
+    static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY));
+}
+
+static bool EEAIShorePathAreaRegion(void*, long inX, long inY, bool inSpace, uint16_t* outID)
+{
+    EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(U2DPoint<long>(inX, inY));
+    if (theArea == NULL)
+        return false;
+    *outID = inSpace ? theArea->mSpaceRegionID : theArea->mWaterBodyID;
+    return true;
+}
+
+static bool EEAIShoreIsLand(void*, long inX, long inY)
+{
+    EEAIContinent* theContinent = gContinentManager.GetContinentAt(inX, inY);
+    return theContinent != NULL && theContinent->mCategory == kContinentCategoryLand;
+}
+
+static uint16_t EEAIShoreRegion(void*, long inX, long inY, bool inSpace)
+{
+    EETileCoordinate theNeighbor;
+    theNeighbor.mX = inX;
+    theNeighbor.mY = inY;
+    return gContinentManager.GetContinent(theNeighbor, inSpace ? kAIPathSpaceRegion : kAIPathWaterBody);
+}
+
 // FUNCTION: EXE 0x41da61
 // Finds this continent's shore tile and the other continent's hull outline point closest to each other; falls
 // back to the area version when the other is not a continent or either has no shore. Returns success
 bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
 {
+    EEGeomCaptureScope theScope;
     EEAIContinent* theOther = dynamic_cast<EEAIContinent*>(inOther);
-    U2DPoint<long> theCandidate;
+    EeHullPoint theThis;
+    EeHullPoint theOtherPoint;
     bool theResult;
     if (this->mShoreTiles.size() != 0 && theOther && theOther->mShoreTiles.size() != 0)
         theResult = true;
@@ -88,24 +120,27 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     outOther.mX = 0;
     outOther.mY = 0;
     if (theOther) {
-        theOther->mHull.GetPointCount();
         if (theResult) {
-            outThis = this->mShoreTiles.back();
-            outOther = theOther->mHull.GetClosestOutlinePoint(outThis);
-            long theBest = outThis.DistanceToSquared(outOther);
-            for (long i = this->mShoreTiles.size() - 2; i >= 0; i--) {
-                theCandidate = theOther->mHull.GetClosestOutlinePoint(this->mShoreTiles[i]);
-                long theDistance = theCandidate.DistanceToSquared(this->mShoreTiles[i]);
-                if (theDistance >= theBest)
-                    continue;
-                theBest = theDistance;
-                outThis = this->mShoreTiles[i];
-                outOther = theCandidate;
-            }
+            ee_area_closest_points_to_hull(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
+                                           U2DHullPoints(theOther->mHull.GetPoints()), theOther->mHull.GetPointCount(),
+                                           &theThis, &theOtherPoint);
+            outThis = U2DHullPoint(theThis);
+            outOther = U2DHullPoint(theOtherPoint);
         } else
             theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
     } else
         theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
+    if (theScope.mOuter) {   // TEST ONLY: AREA 2
+        EEGeomCaptureBegin(kGeomCaptureArea, 2);
+        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCaptureValue(theOther != NULL);
+        EEGeomCaptureValue(inOther->mTiles.Size());
+        EEGeomCapturePoints(inOther->mHull.GetPoints(), false);
+        EEGeomCaptureValue(theResult);
+        EEGeomCapturePoint(outThis);
+        EEGeomCapturePoint(outOther);
+        EEGeomCaptureCommit();
+    }
     return theResult;
 }
 
@@ -135,140 +170,36 @@ void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<lon
     }
 }
 
-// The eight neighbour tests are written out as the original lays them out (y-1, y, y+1 for x-1, then x,
-// then x+1). As in the original, the path area's id is read before its NULL test (bytes 0x41dda7) and
-// the neighbour test always asks for water-body ids, also for space regions (bytes 0x41df09)
 // FUNCTION: EXE 0x41dccf
 // Collects the shore tiles whose path area lies in one of the water-body (or space-region) ids, or land tiles
-// with a neighbour in one of those water bodies; all shore tiles when the list is empty or holds a 0
+// with a neighbour in one of those regions; all shore tiles when the list is empty or holds a 0 (Rust:
+// area_geom.rs shore_in_regions; the original read the path area's id before its NULL test, bytes 0x41dda7, and
+// asked the neighbours' water bodies also for space regions, bytes 0x41df09: the port reads the id of an area only
+// and asks the requested kind)
 void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
                               long inKind)
 {
-    EETileCoordinate theNeighbor;
-    long theZeros;
-    long i;
-    long j;
-    bool theFound;
-    theNeighbor.mX = 0;
-    theNeighbor.mY = 0;
-    theZeros = 0;
+    EEGeomCaptureScope theScope;
+    EeShoreCallbacks theHost;
+    theHost.ctx = NULL;
+    theHost.path_area_region = EEAIShorePathAreaRegion;
+    theHost.is_land = EEAIShoreIsLand;
+    theHost.region = EEAIShoreRegion;
+    theHost.map_width = (uint32_t)gMapWidth;
+    theHost.map_height = (uint32_t)gMapHeight;
     outTiles.clear();
-    for (i = inIDs.size() - 1; i >= 0; i--) {
-        if (inIDs[i] == 0)
-            theZeros++;
-    }
-    if (inIDs.empty() || theZeros != 0) {
-        outTiles = this->mShoreTiles;
-        return;
-    }
-    for (i = this->mShoreTiles.size() - 1; i >= 0; i--) {
-        EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(this->mShoreTiles[i]);
-        // read the area's ids only once the area is known to exist (a tile without a path area has none)
-        unsigned short theID = 0;
-        if (theArea != NULL)
-            theID = inKind == kAIPathSpaceRegion ? theArea->mSpaceRegionID : theArea->mWaterBodyID;
-        if (theArea && theID) {
-            for (j = inIDs.size() - 1; j >= 0; j--) {
-                if (theID == inIDs[j]) {
-                    outTiles.push_back(this->mShoreTiles[i]);
-                    break;
-                }
-            }
-            continue;
-        }
-        EEAIContinent* theContinent =
-            gContinentManager.GetContinentAt(this->mShoreTiles[i].mX, this->mShoreTiles[i].mY);
-        if (theContinent == NULL || theContinent->mCategory != kContinentCategoryLand)
-            continue;
-        theFound = false;
-        // the neighbours' region of the requested kind (was always the water body)
-        long theKind = inKind == kAIPathSpaceRegion ? kAIPathSpaceRegion : kAIPathWaterBody;
-        theNeighbor.mX = this->mShoreTiles[i].mX - 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY - 1;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX - 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX - 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY + 1;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX;
-        theNeighbor.mY = this->mShoreTiles[i].mY - 1;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX;
-        theNeighbor.mY = this->mShoreTiles[i].mY + 1;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX + 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY - 1;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX + 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY;
-        if ((unsigned long)theNeighbor.mX < gMapWidth &&
-            (unsigned long)theNeighbor.mY < gMapHeight) {
-            for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-            if (theFound) {
-                outTiles.push_back(this->mShoreTiles[i]);
-                continue;
-            }
-        }
-        theNeighbor.mX = this->mShoreTiles[i].mX + 1;
-        theNeighbor.mY = this->mShoreTiles[i].mY + 1;
-        if (!((unsigned long)theNeighbor.mX < gMapWidth) ||
-            !((unsigned long)theNeighbor.mY < gMapHeight))
-            continue;
-        for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-            theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
-        if (theFound)
-            outTiles.push_back(this->mShoreTiles[i]);
+    ee_area_shore_in_regions(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
+                             inIDs.empty() ? NULL : &inIDs[0], inIDs.size(), inKind == kAIPathSpaceRegion, &theHost,
+                             &outTiles, EEAIContinentPushTile);
+    if (theScope.mOuter) {   // TEST ONLY: AREA 6
+        EEGeomCaptureBegin(kGeomCaptureArea, 6);
+        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCaptureValue((long)inIDs.size());
+        for (size_t i = 0; i < inIDs.size(); i++)
+            EEGeomCaptureValue(inIDs[i]);
+        EEGeomCaptureValue(inKind);
+        EEGeomCapturePoints(outTiles, false);
+        EEGeomCaptureCommit();
     }
 }
 

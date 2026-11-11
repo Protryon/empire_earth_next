@@ -6,3 +6,7 @@ publish.workspace = true
 
 [lib]
 crate-type = ["rlib"]
+
+[dependencies]
+# the convex hull and the scan lines shared with the engine's float hull, GEVector's Normalize, the float sqrt
+ee_ge = { path = "../ee_ge" }

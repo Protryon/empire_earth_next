@@ -5235,3 +5235,64 @@ table's golden is the original's statements read out of the C++.
 - **Still C++ of WON:** WONGUI's components and layout (39.3k lines, next), RoutingLogic's flow over its ops and
   servers, the lobby's dialogs, and everything only the gone internet servers reach (peer auth, AuthContext's
   sessions and certificate flow, GetCertOp, the services' requests and replies).
+
+## R5b.1, the geometry: the AI's hulls and the areas' geometry on them in Rust (ee_astar hull.rs, area_geom.rs; ee_ge hull.rs; branch rust-r5b-cont3, 2026-11-10)
+
+The third round of the continent analysis' map (RUST_PLAN's R5b.1 row): `U2DPolygon<long>`/`U2DConvexHull<long>`
+and the area classes' geometry on them, each its own commit, after a capture recorded from the unchanged C++.
+
+- **Two capture records first** (`HULL`, `AREA`; `tools/sim_capture.py`): every hull `SetPoints` with its input and
+  the whole hull (bounds, center, area), `GetClosestOutlinePoint`, `GetClosestPoints`, `GetClosestPoint`, `Contains`
+  and `GetScanLines` with a 32-bit FNV hash of the hull as its identity, the input and the result; and the areas'
+  `GetClosestPoints` (both classes), `GetClosestHullPoint`, `GetHullDistanceSquared`, `GetTiles` and
+  `GetShoreInRegions`. **Only the outermost call of a thread is recorded** (`EEGeomCaptureScope`, a thread-local
+  depth): a hull call made inside an area call, or inside another hull call, never reaches the digest, so the digests
+  stay the same when the inner calls leave the C++ with their caller. Without that, moving
+  `EEAIArea::GetClosestPoints` to Rust would have dropped thousands of `GetClosestOutlinePoint` records and failed
+  the gate it was meant to pass. About 13,000 HULL and 700-2,000 AREA records a game.
+- **The template is the exe's alone now.** R4.3 had moved the engine's `U2DConvexHull<float>` (the terrain
+  volume's) to `ee_ge`, so nothing instantiated the float bodies: `U2DPolygon.h` lost them with
+  `U2DGrahamsAlgorithm`, `U2DPointLess` and the engine's `std::less<U2DPoint<float> >`. The class keeps its members
+  and slots; its points pass to Rust in place (`EeHullPoint` is two `c_long`s, `U2DPoint<long>`'s layout, asserted),
+  so the Linux build's 64-bit `long` keeps its arithmetic too. Gone as dead: the polygon's crossing-number `Contains`
+  (its one subclass overrides it; the slot is pure) and the hull's `AddScanLine`/`Compute` slots.
+- **Shared, not duplicated:** the Graham scan, the point order, the side test (`double` from `T` differences) and the
+  scan line walk moved from `terrain_volume.rs` into `ee_ge::hull`, generic over `f32` and `c_long`;
+  `ee_astar` depends on `ee_ge` for it and for `GEVector`'s `Normalize`. The long hull's own arithmetic is the exe
+  view's: `DistanceToSquaredF` is `(float)(dx * dx) + (float)(dy * dy)`, `ProjectPoint` scales `DistanceToF`
+  and truncates `dir * d + start` (a C cast: truncation is right, not `lrintf`), the center is a float mean from
+  the last point truncated once, the area a float fan from the first point.
+- **The angle sort is exact for `long` without MSVC's sort.** The C++ comparator deleted the nearer of two collinear
+  points as a side effect of the comparisons `std::sort` happened to make. With integer points the side test is
+  exact, so the comparator is a strict weak order (angle around the lowest point, then distance) and any correct sort
+  compares every two neighbours of its result: exactly the non-farthest point of each ray gets deleted, whatever the
+  sort. A unit test replays the C++ comparator, side effects on the value being inserted included, through MSVC's
+  insertion sort (its `std::sort` below 33 elements) on 3,000 crowded grids and gets the shared hull every time.
+  (For `float` points the rounded side test can break the order; that hull is the renderer's only.)
+- **Undefined behaviour kept out:** `GetClosestPoints` with an empty other hull read its point -1 (index -1 passed
+  `-1 < (long)size()`); Rust returns (0, 0) twice there. The scan's `theStack[size - 2]` with one point on the stack
+  cannot happen with an exact side test (kept as a guard).
+- **The areas' geometry** (`area_geom.rs`): the closest points' loop of `EEAIArea` (over `BuildPointList(1)`) and
+  `EEAIContinent` (over the shore) is one function; `GetClosestHullPoint` takes the bounds; `GetTiles` pushes through
+  a callback; `GetShoreInRegions` asks the manager through `EeShoreCallbacks` (path area region, land test,
+  `GetContinent`) in the C++'s order and number, `GetContinent` once per id as the C++ loop did. `PruneChokePoints`'
+  near test reaches this through the areas' virtual `GetClosestPoints`, so it asks no C++ geometry any more.
+- **Not moved, mapped** (RUST_PLAN's row): the object bookkeeping of `Rebuild`/`RepairPathArea` and the manager's
+  object queries (`GetChokePointAt`, `GetNearestLandTile`, `GetRandomArea`, `RemoveForestTile`, `UpdateWallUnit`)
+  walk the C++ area objects through their virtuals. The objects cannot move with them yet: `EEAIArea` has nine
+  subclasses (the seven analysis areas plus `EETown`, `EEHerd` and `EECPIArmy`, which are AI decision objects and
+  saved state), 48 AI and unit files read their members directly (`mHull`, `mTiles`, `mShoreTiles`, `mCategory`,
+  the id lists), and the continent is also a graph node (`AStarGraphableObjectBase`). A handle per area needs
+  accessors at every one of those sites and the save layout's owner (branch rust-r5a-aisave3).
+- **Disk:** the stage slots of old capture runs (`build/sim/stage/capture-*`) hold copies of the written folders;
+  delete them with their runs.
+- **Gates** (each step on its own exe): `build.py -j 4 --sim` 0/0 for EE-AOC and EE-SIM at every step; the sim
+  oracle identical on seeds 2-7 for the capture, hull and area builds (2,691-2,825 lines a seed); `sim_capture.py
+  check` PASS in the four profiles for the capture build (285, 300, 289, 301 digests: the capture changes nothing),
+  then for the hull and the area builds with HULL and AREA gated (297, 312, 301 and 313 digests, none ungated);
+  `rust_build.py gate` PASS (1,490 tests; ee_astar 122, 14 new); the windowed-software test profile 0/0. The merge
+  of `rust` was a no-op (no new commits). C: ran full during the area build's space profile (other agents' runs
+  too): its truncated captures failed every tag by count, so that profile was rerun alone and passed. Not run:
+  `gates.sh` or any harness session, macOS or Linux builds. **Tour only:** the terrain volume's hull
+  (`terrain_volume.rs`) now calls the shared `ee_ge::hull` (same code moved; `trunc_long` saturates at `c_long`'s
+  limits, the same on Windows); nothing else here is drawn.
