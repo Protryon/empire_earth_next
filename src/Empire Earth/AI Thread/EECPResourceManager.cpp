@@ -65,6 +65,7 @@
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPExperimentTimers.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
 // SYNTHETIC: EXE 0x48e702   (wrapper)
@@ -1573,6 +1574,54 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
         }
         this->mLoadedLists = theResult == 0;
     }
+    // port (0.261): the gatherer lists as saved, in order. A load files the citizens again: Restore puts each one with
+    // a gather goal in its resource's list and the unit manager's AddAllUnits puts every citizen in the idle list as
+    // well, so a loaded player counted about twice its gatherers when it split them by demand (seed 4's 600 s save);
+    // and the order was the load's, where the assignment takes the first fitting one (seed 5's 1350 s save: two
+    // citizens swapped their resources 50 s after the load). The lists are made the saved ones at the first tick
+    if (theResult == 0 && EESaveHasGathererOrder(inMajorVersion, inMinorVersion)) {
+        std::vector<std::vector<unsigned long> > theOrder(7);
+        for (unsigned long r = 0; r < 7 && theResult == 0; r++) {
+            unsigned long theCount = 0;
+            theResult = inFile.Read(theCount);
+            for (unsigned long k = 0; k < theCount && theResult == 0; k++) {
+                unsigned long theID = 0;
+                theResult = inFile.Read(theID);
+                theOrder[r].push_back(theID);
+            }
+        }
+        if (theResult == 0) {
+            EECPResourceManager* theSelf = this;
+            unsigned long thePlayerID = this->mManager != NULL && this->mManager->mPlayer != NULL
+                ? this->mManager->mPlayer->mPlayerID : (unsigned long)-1;
+            EEAfterLoad([theSelf, thePlayerID, theOrder]() {
+                EEPlayer* thePlayer = thePlayerID < gWorld.mNumPlayers ? gWorld.mPlayers[thePlayerID] : NULL;
+                EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+                if (theCP == NULL || theCP->mCivilizationManager == NULL || theCP->mCivilizationManager->mResourceManager != theSelf)
+                    return;   // not that player's resource manager any more
+                unsigned long theMissing = 0;
+                for (unsigned long r = 0; r < 7; r++) {
+                    std::deque<EEComplexUnit*>& theList = theSelf->mGatherers[r];
+                    for (size_t n = 0; n < theList.size(); n++)
+                        if (theList[n] != NULL)
+                            theList[n]->Dereference();
+                    theList.clear();
+                    for (size_t k = 0; k < theOrder[r].size(); k++) {
+                        EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theOrder[r][k]));
+                        EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+                        if (theComplex == NULL) {
+                            theMissing++;   // a dead unit the saved list still held
+                            continue;
+                        }
+                        theList.push_back(theComplex);
+                        theComplex->Reference();
+                    }
+                }
+                if (theMissing != 0)
+                    ESDebugOut("EECPResourceManager: player %lu: %lu saved gatherers are not in the loaded game\n", thePlayerID, theMissing);
+            });
+        }
+    }
     return theResult;
 }
 
@@ -1771,6 +1820,12 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
                 theResult = outFile.Write((unsigned long)(*theLists[l])[i]->mUnitID);
         }
     }
+    if (theResult == 0 && EESaveHasGathererOrder(inMajorVersion, inMinorVersion))   // port (0.261): the gatherer lists
+        for (unsigned long r = 0; r < 7 && theResult == 0; r++) {
+            theResult = outFile.Write((unsigned long)this->mGatherers[r].size());
+            for (size_t k = 0; k < this->mGatherers[r].size() && theResult == 0; k++)
+                theResult = outFile.Write(this->mGatherers[r][k] != NULL ? (unsigned long)this->mGatherers[r][k]->mUnitID : (unsigned long)-1);
+        }
     return theResult;
 }
 
@@ -2013,8 +2068,8 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
         // the experiment "boatrush2" (docs/AI_RESEARCH.md §8.29): boatrush lost 29-45 boats a game to warships by 60
         // minutes and spent its wood rebuying them; after a boat is lost none is bought for kBoatHoldMs
         if (EECPExperiment(theManager->mPlayer, "boatrush2")) {
-            static long sBoats[64];
-            static unsigned long sHold[64];
+            long (&sBoats)[64] = gCPExperimentTimers.mBoats;   // port: saved (ee/EECPExperimentTimers.h)
+            unsigned long (&sHold)[64] = gCPExperimentTimers.mBoatHold;
             unsigned long theID = theManager->mPlayer->mPlayerID < 64 ? theManager->mPlayer->mPlayerID : 63;
             unsigned long theNow = gPhysics->mGameTime;
             if (sHold[theID] > theNow + kBoatHoldMs)
@@ -2267,7 +2322,7 @@ static const unsigned long kSettleMs = 20000;
 
 static void EECPRMSettlePatches(EECPResourceManager* inManager)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mSettleLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
@@ -2326,7 +2381,7 @@ static const float kGuardRange = 8.0f;
 
 static void EECPRMGuardSites(EECPResourceManager* inManager)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mGuardLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
@@ -2740,7 +2795,7 @@ static bool EECPRMNear(EEUnit* inUnit, long inX, long inY, long inRange)
 
 static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mMilitiaLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
     if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kMilitiaMs)
@@ -2901,7 +2956,7 @@ static const unsigned long kNavalFleeMs = 4000;
 
 void EECPRMNavalFlee(EECPResourceManager* inManager, EEUnit* inVictim, EEComplexUnit* inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long (&sLast)[64] = gCPExperimentTimers.mNavalFleeLast;   // port: saved (ee/EECPExperimentTimers.h)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     if (inAttacker == NULL || !(inAttacker->mHitPoints > 0))
         return;

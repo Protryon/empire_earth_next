@@ -993,7 +993,12 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     this->mGatheredResource = NULL;
     if (theLink != NULL && (theLink->GetUnitID() != 0 || theLink->mResourceType != kResourceNone))
         this->SetGatheredResource(theLink);
-    this->mLastAttacker = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mLastAttacker)));
+    {
+        unsigned long theAttackerID = USavedID(this->mLastAttacker);
+        this->mLastAttacker = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theAttackerID));
+        if (this->mLastAttacker == NULL && EESaveHasGhosts(inMajorVersion, inMinorVersion))
+            this->mLastAttacker = EEFindLoadedGhost(theAttackerID);   // port (0.262): an attacker that died, as the saved game kept it
+    }
     if (this->mLastAttacker != NULL)
         this->mLastAttacker->Reference();
     if (this->mOwner == (EEComplexUnit*)-1 || this->mOwner == NULL)

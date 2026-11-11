@@ -39,6 +39,50 @@ inline bool EESaveHasRunningState(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 256;
 }
+// port: from 0.257 a save holds the order of the units in each map region (EEMap::mUnitRegions, EEPWorldHelper): a
+// load added them in its own order, and the projectiles' impact test and the target searches take the first match
+inline bool EESaveHasRegionOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 257;
+}
+// port: from 0.258 a save holds the computer players' experiment timers (ee/EECPExperimentTimers.h, EEPWorldHelper):
+// they were function statics, 0 in a loaded game's new process
+inline bool EESaveHasExperimentTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 258;
+}
+// port: from 0.259 a save holds the computer players' count of units in production (EECPUnitManager): a loaded game
+// counted from 0 and made room for more units
+inline bool EESaveHasProductionCount(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 259;
+}
+// port: from 0.260 a save holds the towns' ids, order and counters (EESaveTowns): a load rebuilt the towns with new
+// ids in its own order
+inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 260;
+}
+// the towns' block (EEPlayer.cpp): written by EEPWorldHelper::Save; a load keeps it for EEPlayer::RepairPointers,
+// which gives the rebuilt towns their saved ids and order
+long EESaveTowns(FSFile& outFile);
+long EELoadTowns(FSFile& inFile);
+// port: from 0.261 a save holds the computer players' gatherer lists (EECPResourceManager): a load filed the citizens
+// again in its own order, most of them twice (their resource's list and the idle list)
+inline bool EESaveHasGathererOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 261;
+}
+// port: from 0.262 a save holds the dead units the units' last attackers still reference (EEPWorldHelper): a load
+// read NULL where the running game kept the dead attacker
+inline bool EESaveHasGhosts(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 262;
+}
+// the dead attacker of that id, made from the save as a unit out of the world (EEComplexUnit::RepairPointers); NULL
+// when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
+class EEComplexUnit;
+EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

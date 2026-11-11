@@ -4654,3 +4654,69 @@ is an `EEUnit`: no other class derives from it).
   `EEUGCastCalamity`, `EEUGGather`, `EEUGPatrol` and `EEAirTrafficControl` 3: the save work's files), the AI's 31,
   the graphics thread's 3, `EEPWorldHelper`, the UI's and `EESim.cpp`'s one each, and the 8 `dynamic_cast<EEUnit*>`.
 ||||||| abb66a9f
+
+## R5a.2, third round: region order, AI timers, favourites, production, towns, gatherers, dead attackers (save 0.257-0.262, branch rust-r5a-aisave2, 2026-11-10)
+
+Continues "R5a.2, second round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
+Each save version below keeps the older ones' load path (an older save loads without the new block).
+
+- **What changed, in commit order** (each measured on the 18 saves; the no-save oracle identical to ref on seeds 2-7
+  after every one, sim_capture's four profiles PASS on the tree through 0.261):
+  - *0.257, the units' order in each map region* (EEMap::mUnitRegions): a load added them in its own order, and
+    FindImpactUnit and the target searches take the first match. Put back at the first tick when the region holds
+    the same units. No change at CT granularity alone.
+  - *0.258, the AI experiments' timers*: ten per-player function statics (patch settlements, guard towers, militia,
+    naval flee, boatrush2's hold, the epoch schedule, the army threat check) were 0 in a loaded game's new process,
+    so a loaded player queued a settlement at its first update (the "drop site" of the second round). Now one struct
+    (ee/EECPExperimentTimers.h), saved by the world helper. Seed 3 600 s 0 -> 94 CT lines, 3 2100 s 0 -> 2, 5 2100 s
+    12 -> 23. **Lesson: grep the AI for function statics** (`static (unsigned )?long s...[64]`): the port's own
+    experiments keep state there, outside every saved object.
+  - *favourite unit types* (no format change): the load enters each epoch again (EnterEpoch), which picks new
+    favourites at random after EEComputerPlayer::Load read the saved ones, so the loaded game costed another army
+    (class 207 for 24). Put back at the first tick.
+  - *0.259, mNumInProduction*: never saved; also counted down by the load's AddAllUnits, so it goes back at the first
+    tick. With the favourites: seed 2 2100 s 0 -> 1, 5 1350 s 11 -> 57, 7 1350 s 22 -> 57.
+  - *unfinished buildings out of the rebuilt towns* (no format change): a building placed as a foundation joins its
+    town at UnitCompleted, but RepairPointers added every unit; a town took a building under construction, grew a
+    hull and made two patrol points the saved game did not have.
+  - *0.260, the towns' ids, order and counters*: the rebuild numbered the towns on from the saved counter (6, 7 for
+    the saved 2, 4), while the saved AI names towns by id; the counters differ because the running game counts a farm
+    at its placement and again at its completion. A rebuilt town with a saved hull takes the saved id, counters and
+    order (EEApplySavedTowns, in RepairPointers before the patrol groups are adopted).
+  - *0.261, the gatherer lists*: Restore filed each citizen with a gather goal in its resource's list and the unit
+    manager's AddAllUnits put every citizen in the idle list too, so a loaded player counted about twice its gatherers
+    (45 for 23) when it split them by demand. The seven lists are saved by id and made the saved ones at the first
+    tick. With the two town commits: seed 2 600 s 4 -> 58, 4 600 s 0 -> 6, 5 600 s 0 -> 23, 5 1350 s 57 -> 91, 6 600 s
+    20 -> 59, 6 1350 s 11 -> 16, 7 1350 s 57 -> 178; the AI part no longer differs at the first line of seeds 4 and
+    6 at 2100 s.
+  - *0.262, the dead attackers*: mLastAttacker holds a reference, so the running game keeps a dead attacker out of the
+    world (its id stays registered for the handles until the last reference) and reads its class and tile. Each one is
+    saved once and made again at load as a registered, invalid unit out of the world (EEFindLoadedGhost, for
+    EEComplexUnit::RepairPointers). Seed 4 2100 s: the units' references now match tick by tick for 8 ticks; no
+    change at CT granularity.
+  - *the managers restored after every player* (no format change): CreatePlayers restored each computer player's
+    managers right after its own RepairPointers, before later players' towns existed. Now after the last player
+    (gDeferComputerPlayerRestore) for saves from 0.260 on. No change at CT granularity alone.
+- **The numbers** (first divergent CT line after the load, 600/1350/2100 s; base = the start of this round):
+  seed 2 4/2/0 -> 58/2/1, seed 3 0/0/0 -> 94/0/2, seed 4 0/1/0 -> 6/1/0, seed 5 0/11/12 -> 23/91/23, seed 6 20/11/0
+  -> 59/16/0, seed 7 3/22/1 -> 3/178/1. Still **0 of 18** saves continue identically to the end.
+- **Tools** (TEST ONLY, committed): the state dumps' REGION, TOWN and PATROL lines, and the ASG line's task, next
+  waypoint and task area (`area=kind/serial/exists`). The scratch scripts under the worktree's build/hunt
+  (`pair.py`: a continued and a loaded game of one save with a dump after each of the first N ticks and the AI
+  trace; `dd.py`: the first differing dump, the unit raw bytes named by layout.json with pointer-like values left
+  out; `split.py`: the working tree written as one commit per cause) are not committed. Two runs with the same
+  oracle NAME (saveload and run) share EE-SIM stage slots and break each other (`engine no Data/ai/ais.json`).
+- **Still different after a load** (the next causes, measured):
+  - *a task's town location* (seed 3 1350 s, seed 7 600 s): an EECPILocation made from a town area keeps mPlayer 0,
+    so Update finds no town (it looks in player 0's towns) and drops the area. The running game keeps the area until
+    its next group refresh; the loaded game's restore, and the group refresh the load runs (UpdateGroups through
+    RefreshResourceCenters / the regroup), drop it at once, and the attack sub group then checks its task and draws
+    where the saved game does not. A Restore that searched every player's towns was tried and did not help, because
+    the refresh during the load calls Update again: the fix is either to save the location's town owner or to keep
+    the load from refreshing the groups before the first tick;
+  - *seed 2 2100 s, tick 17*: player 2's land sub group goes idle (state 2003 -> 0, a new task) in the loaded game,
+    likely the same task check;
+  - *seed 4 2100 s, tick 9*: player 3's iron gatherer is sent to another mine; the AI trace's trip distances differ
+    for it at that update while the dumps are equal, so the state is not in the dumps yet;
+  - dead units held by handles or other pointers than mLastAttacker (mLastResource, the AI's target handles) are not
+    made again; the continent manager is rebuilt at load, the path searches are asked again.

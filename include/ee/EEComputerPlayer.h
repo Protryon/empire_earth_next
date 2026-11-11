@@ -27,6 +27,8 @@ public:
     virtual ~EEComputerPlayer();            // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x2fd50 (no /Og)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x20 0x3cff8
+    // port: RepairPointers' managers part, run by EEWorld::CreatePlayers once every player is repaired (gDeferComputerPlayerRestore)
+    long RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x3d677
     // the computer player's overrides (ret N from the bodies) and members (provisional names)
     EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x2cf7e
@@ -553,5 +555,10 @@ float EECPPressureBonus(EEComputerPlayer* inPlayer);
 // epoch reserve and the standing army waits
 bool EECPBooming(EEComputerPlayer* inPlayer);
 unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
+
+// port: true while EEWorld::CreatePlayers repairs a loaded game's players (EEComputerPlayer::RestoreManagers)
+extern bool gDeferComputerPlayerRestore;
+// the managers of the computer players repaired meanwhile, in that order
+void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inMinorVersion);
 
 #endif
