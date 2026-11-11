@@ -4970,3 +4970,50 @@ id and the sound.
 - **Only a played game reaches the game call** (the local human's selection, `EEMSelectUnits`): EE-SIM's idle human
   never selects, so USPK's game records are empty in every capture and the sweep is the coverage. A tour or a played
   game must show box selection working (select, add, re-select a group with a dead unit).
+
+## R5b.4, fifth round: a box selection through the real input path, the active groups' Fill test and Explore in Rust (ee_units group.rs; branch rust-r5b4-core, 2026-11-10)
+
+- **The box selection exercise** (TEST ONLY; EETestFixture.cpp "the box selection", fixture_driver.box_select,
+  `fixture_game.py --exercise random-game --play-seconds N --box-select`, also posix_game.py). No gate reached
+  `EEMSelectUnits` before: EE-SIM's human never selects. The fixture's `boxselect` command drags a box on its own
+  thread: the pointer set as the `pointer` command does (the game's mouse is relative, DirectInput-style: a
+  platform motion event's delta is scaled by `RTSMouse::Update`, so an exact position is set, under the mouse's
+  input lock), the left button pressed and released through `ISHandleEvent` (the platform's event path), Shift as
+  a key event for the add variant. The game form starts the drag (`EEModeNormal` -> `EEUICSelectUnits::
+  StartSelection`), the release builds the message (`EEALasso::SelectUnits`), the physics executes it (the Rust
+  pick). The fixture sees each message's decoded ids through a TEST ONLY hook in `EEMSelectUnits`' ctor
+  (`gEESelectUnitsTestHook`, NULL unless the fixture runs) and compares the local player's selected group with the
+  original's rule over those ids, applied to the objects (not through the store); the driver waits until they
+  match on two polls in a row.
+  - The dead variant: a unit that can be killed at the player's command is needed. `EEMSelfDestruct` kills only
+    classes with a death spawn (the Furies' bomb: one class), `EEMDisband` only classes with `mCanDisband` (none in
+    the open db): the Delete key's `EEMKillUnit(0)` (the first selected unit, if `CanDelete`) is the one. The
+    fixture queues `EEMSelectTheseUnits([unit])` and `EEMKillUnit(0)` as UI actions just before the release, so the
+    box's ids are picked while the unit lives and the physics kills it before it executes the box selection.
+  - Locks: the selection is read under the world's read lock before the fixture takes the UI lock, never inside it
+    (the UI thread takes the world's read lock, then the UI manager's lock; the actions take the UI lock, then the
+    world's write lock).
+  - Not run here (no harness sessions): the lead's run is the only evidence that it works in the game.
+- **The store's class fields:** `domains` (`EEUnitClass::mDomains`) and `land_building` (`IsLandBuilding()`), both
+  fixed by the class's constructor, reported at the `mUnitClass` write with the category and type; USCK compares them.
+- **Fill's test** (`EEActiveGroup::Fill`: valid, hit points, `IsInFormationSlot`) is `ee_units` group.rs
+  `fill_members` over the store, for every caller of `Fill` (the 15 group-command bodies of EEMessage.cpp).
+  Golden-driver pattern: the loop's test was first factored into a C++ `EEFillMembers` (the units in, the taken
+  indices out) with a USFL capture record (every `Fill`, and every five game minutes every player's units in every
+  slot 0..6, forward and reversed), whose digests from that C++ became the goldens (pure insertions); then the body became the Rust over the store. `Fill` keeps the clear, the formation,
+  the sort and each taken unit's move. A unit in no list has no record and is not taken: the original read the
+  object, but `RTSPlayer::RemoveKilledUnits` invalidates a unit right after unlinking it (`Invalidate`, the only way
+  out of a list), so its test was false too (the C++ phase also stopped EE-SIM if it ever took such a unit).
+  **Coverage:** the late profile's computer players build walls (`EECPWallManager` sends `EEMBuildWall`, whose
+  body fills a group): 4 to 16 game calls a game, 60 over the six; the oracle, space and calamity games have none.
+  The rest is the sweep (every five game minutes, every player's units in slots 0..6, forward and reversed: 504
+  records an oracle game, 630 a late one).
+- **Explore** (`EEMExplore::Execute`) is `ee_units` group.rs `explore` over host calls (EEUnitHost.cpp: a new active
+  group, `Fill`, the pending list, `KeepMobileUnits`, `ClearGoal`, a goal from the host (`EeGoalSpec`), `SetGoal`, the
+  action, `Plan`, `GetRandom`, the acknowledgement, the release), in the original's order with one draw per group
+  that kept a unit. The coverage: unit tests of the call order over a mock host; `Fill`'s test by USFL. No capture
+  game sends Explore (the computer players send no game messages but walls; EE-SIM's human idles), and a sweep cannot
+  run the body: it creates goals (the goals' global counter) and gives them to units. A played game must show it
+  (select units, the Explore button).
+- **Gates:** each commit built 0/0 (EE-AOC, EE-SIM) and the oracle was identical on seeds 2-7; the C++ Fill factor
+  and the Rust Fill gave all four capture profiles PASS (with the USFL goldens); the Rust gate PASS.
