@@ -937,6 +937,8 @@ from data, so that a script can make its decisions with the same numbers:
   `defense_unit` (the attack and defence group roles), `medic`, `converts` (a priest's or calamity powers),
   `is_transport`, `mine`, `influence` (its weight in the classic's strength sums), `epoch`, `pop` (its population cost)
   and `domain` (`land`, `sea`, `air` or `space`).
+- `ai.class` and the `ai.techs` records have `data_cost`: the tech's listed cost as the cost cheat scales it, without
+  the epoch and upgrade factors of `cost` (what the classic's needs ledger counts: EECPResourceManager::AddCosts).
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).

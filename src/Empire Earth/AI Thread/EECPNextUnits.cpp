@@ -1247,6 +1247,12 @@ static int LuaClass(lua_State* L)
             lua_setfield(L, -2, kNames[i]);
         }
         lua_setfield(L, -2, "cost");
+        lua_newtable(L);
+        for (long i = 0; i < 5; i++) {
+            lua_pushinteger(L, theNode != NULL ? (lua_Integer)me->ScaleCost(theNode->mData->mCosts[kResourceFood + i]) : 0);
+            lua_setfield(L, -2, kNames[i]);
+        }
+        lua_setfield(L, -2, "data_cost");   // the needs ledger's cost (EECPResourceManager::AddCosts)
     }
     EECPUnitsSetBool(L, "building", c->IsBuilding());
     EECPUnitsSetInt(L, "size", c->GetTileSize());
@@ -3416,6 +3422,14 @@ static void EECPUnitsPushCost(lua_State* L, EEComputerPlayer* me, EETechTreeNode
         lua_setfield(L, -2, kNames[i]);
     }
     lua_setfield(L, -2, "cost");
+    // the tech's listed cost as the classic's needs ledger counts it (EECPResourceManager::AddCosts: the data's
+    // mCosts, ScaleCost'ed, without GetCost's epoch and upgrade factors)
+    lua_createtable(L, 0, 5);
+    for (long i = 0; i < 5; i++) {
+        lua_pushinteger(L, (lua_Integer)me->ScaleCost(inNode->mData->mCosts[kResourceFood + i]));
+        lua_setfield(L, -2, kNames[i]);
+    }
+    lua_setfield(L, -2, "data_cost");
 }
 
 // ai.techs{epoch = n, id = tech} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the
