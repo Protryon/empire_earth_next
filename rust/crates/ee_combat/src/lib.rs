@@ -13,9 +13,14 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 pub mod capture;
+pub mod decide;
 pub mod ffi;
 #[cfg(test)]
 mod tests;
+pub mod walks;
+pub mod walks_ffi;
+#[cfg(test)]
+mod walks_tests;
 
 use ee_ge::um::{lrintf, sqrt, um_arccos, um_arctan, um_cos, HALF_PI};
 

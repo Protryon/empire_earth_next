@@ -104,6 +104,54 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// `EEFindDropLocation`'s point kinds (`EeCombatDropIn::kind`).
+/// The goal's location (the C++ asks the goal; not computed here).
+constexpr static const int32_t EE_COMBAT_DROP_KIND_GOAL = 0;
+
+/// The target model's drop point.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_MODEL = 1;
+
+/// The middle of the target's tile.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
+
+/// Neither: no target.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
+
+/// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
+/// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
+/// call's `inArg6` is false; no technology: -1).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_TECH_KIND_6 = 1;
+
+/// The candidate's owner is the unit's player or not its enemy.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NOT_ENEMY = 2;
+
+/// The candidate is disabled and not protected.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_DISABLED = 3;
+
+/// The candidate's owner is player 0 (nature).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NATURE = 4;
+
+/// `EEIsAttackedBy(unit, candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_ATTACKED_BY = 5;
+
+/// `EECanTargetClass(unit, candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS = 6;
+
+/// The candidate `IsFoundation`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_FOUNDATION = 7;
+
+/// `EEIsSeenBy(candidate, unit's player, true)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_SEEN = 8;
+
+/// The candidate's class `IsPartLeftOut(candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_PART_LEFT_OUT = 9;
+
+/// `unit->CanAttackClass(candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS = 10;
+
+/// The unit has ignored targets and `IsTargetIgnored(candidate, inArg7 != 0)` (which may drop expired ones).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_IGNORED = 11;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -2891,6 +2939,218 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// `EECanConvert`'s result and its out flag (written only when `flag_written`).
+struct EeCombatCanConvertOut {
+  int32_t result;
+  int32_t flag_written;
+  /// the target is shielded (0 when not written)
+  int32_t flag;
+};
+
+/// `EECanConvert`'s inputs (`inPriest`, `inTarget`; every flag 0 or 1).
+struct EeCombatCanConvertIn {
+  /// the priest's class `IsCrusader`
+  int32_t crusader;
+  /// the priest's class is a building priest (`kUnitCategoryBuildingPriest`)
+  int32_t building_priest;
+  /// the priest's player has the adaptation power
+  int32_t adaptation;
+  int32_t same_player;
+  /// the priest's player is the target's enemy
+  int32_t enemy;
+  /// the priest's `mConversionRate`
+  float conversion_rate;
+  int32_t target_disabled;
+  /// the target `IsProtected`
+  int32_t target_protected;
+  /// the target's `mConversionResistance`
+  float resistance;
+  int32_t target_town_center;
+  int32_t target_settlement;
+  int32_t target_hit_points;
+  /// the target's class `CanBeAttacked`
+  int32_t attackable;
+  /// `gDamageTable[the target class's family][the priest class's ammo]` (0 for a negative ammo)
+  float damage;
+  /// both classes have the same category
+  int32_t same_category;
+  int32_t converts_priests;
+  /// the priest's faith (`GetPower`)
+  int32_t power;
+  /// `EEGetConversionCost(priest)`
+  int32_t cost;
+  /// the target's class is a land priest
+  int32_t target_land_priest;
+  int32_t converts_buildings;
+  /// the target's class `IsLandBuilding`
+  int32_t target_land_building;
+  /// the priest's player is in the Copper Age or later
+  int32_t at_copper;
+  /// both locations (a building priest's range test)
+  float priest_x;
+  float priest_y;
+  float priest_z;
+  float target_x;
+  float target_y;
+  float target_z;
+  /// the priest's `mRange`
+  float range;
+  int32_t priest_cyber;
+  int32_t target_cyber;
+  /// the target `HasEffect(4)`
+  int32_t shielded;
+};
+
+/// `EECanHeal`'s inputs (`inUnit` heals `inTarget`).
+struct EeCombatCanHealIn {
+  /// the healer's `mWonderUnitSet` is not 0
+  int32_t has_set;
+  /// the target `IsRepairable`
+  int32_t repairable;
+  int32_t hit_points;
+  int32_t maximum;
+  /// the healer's class `GetHealThreshold`
+  float threshold;
+  int32_t same_unit;
+  int32_t same_player;
+  /// the target's player is not the healer's enemy
+  int32_t allied;
+  /// the healer's unit set holds the target's type (0 for a set out of the manager's range)
+  int32_t in_set;
+};
+
+/// The drop point.
+struct EeCombatDropOut {
+  float x;
+  float y;
+  float z;
+};
+
+/// `EEFindDropLocation`'s inputs: the kind, then the model's (`DROP_KIND_MODEL`) or the tile's (`DROP_KIND_TILE`) values.
+struct EeCombatDropIn {
+  int32_t kind;
+  /// the target model's `mDefaultPoint`
+  float offset[3];
+  /// the target's physical model's scale
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the target's physical model's location (`GETransformation::mMatrix`)
+  float transformation[4][4];
+  int32_t tile_x;
+  int32_t tile_y;
+  /// the target tile's height
+  float tile_height;
+};
+
+/// The result: blocked, and the last tile reached.
+struct EeCombatLineOut {
+  int32_t blocked;
+  int32_t x;
+  int32_t y;
+};
+
+/// `EEIsLineToUnitBlocked`'s inputs (`inUnit` shooting at `inTarget`).
+struct EeCombatLineIn {
+  int32_t from_x;
+  int32_t from_y;
+  int32_t to_x;
+  int32_t to_y;
+  /// the shooter's class `mSkipsLineOfFireCheck`
+  int32_t skips_check;
+  /// the target's hit points are positive
+  int32_t target_alive;
+  /// the shooter's class `mIsMelee`: the walls' bare test, no shot height
+  int32_t bare;
+};
+
+/// The target's top, as the C++ reads it (`EeCombatLineHost::target_top`).
+struct EeCombatTargetTop {
+  /// the target is a complex unit (else nothing below is read)
+  int32_t present;
+  /// the z of its model's bounding box's top right back corner at its frame
+  float box_top;
+  /// its stats' `GetScale`
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// its location's z
+  float z;
+};
+
+/// `EEIsLineToUnitBlocked`'s world (see `LineHost`).
+struct EeCombatLineHost {
+  void *ctx;
+  float (*start_height)(void *ctx, int32_t bare);
+  /// The tile line as `count` (x, y) pairs, valid until the next call.
+  const int32_t *(*tile_line)(void *ctx,
+                              int32_t from_x,
+                              int32_t from_y,
+                              int32_t to_x,
+                              int32_t to_y,
+                              uint32_t *count);
+  void (*target_top)(void *ctx, EeCombatTargetTop *out);
+  int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
+};
+
+/// `ApplyAreaDamage`'s inputs.
+struct EeCombatAreaIn {
+  /// the attacker's tile
+  int32_t tile_x;
+  int32_t tile_y;
+  float radius;
+  /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
+  float friendly_factor;
+  /// the direct target's complex unit (counted as hit already), or 0 (a `Handle`)
+  uint64_t target;
+};
+
+/// `ApplyAreaDamage`'s world (see `AreaHost`).
+struct EeCombatAreaHost {
+  void *ctx;
+  uint64_t (*tile_first)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*node_next)(void *ctx, uint64_t node);
+  uint64_t (*node_unit)(void *ctx, uint64_t node);
+  float (*distance_squared)(void *ctx, uint64_t unit);
+  int32_t (*targetable)(void *ctx, uint64_t unit);
+  int32_t (*same_player)(void *ctx, uint64_t unit);
+  void (*hit)(void *ctx, uint64_t unit);
+};
+
+/// `EEFindNewTarget`'s inputs.
+struct EeCombatFindTargetIn {
+  /// the area's tiles, inclusive (the tile less and plus the radius)
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+  /// `inArg6`: skip the technology kind test
+  int32_t skip_kind;
+};
+
+/// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
+struct EeCombatTargetHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  int32_t (*screen)(void *ctx, uint64_t unit);
+  int32_t (*multiple)(void *ctx, uint64_t unit);
+  uint32_t (*unit_id)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
+  void (*push)(void *ctx, uint64_t unit);
+};
+
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -2939,8 +3199,8 @@ struct EeDx7ScreenState {
   bool mDirtyRectangleSupport;
 };
 
-/// A C++ object seen from Rust.
-using EeDx7Handle = void*;
+/// An opaque C++ object (a unit, a tile node); 0 is none.
+using EeDx7Handle = uint64_t;
 
 /// `GETransformation`: row-major, translation in the last column.
 using EeDx7Transform = float[4][4];
@@ -7494,6 +7754,54 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EECanConvert`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
+
+/// `EECanHeal`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
+
+/// `EEFindDropLocation`'s drop point.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
+
+/// `EEIsLineToUnitBlocked`.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
+                                       const EeCombatLineHost *host);
+
+/// `ApplyAreaDamage`'s walk: calls `host.hit` for every victim in order.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+void ee_combat_area_victims(const EeCombatAreaIn *input,
+                            const EeCombatAreaHost *host);
+
+/// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+uint32_t ee_combat_units_in_area(const EeCombatFindTargetIn *input,
+                                 const EeCombatTargetHost *host);
+
+/// `EEFindNewTarget`'s choice among `count` candidates: the index of the first that passes, -1 for none.
+///
+/// # Safety
+/// `units` must point to `count` handles, `host` to a valid record whose callbacks are callable with its `ctx`.
+int32_t ee_combat_choose_target(const uint64_t *units,
+                                uint32_t count,
+                                int32_t skip_kind,
+                                const EeCombatTargetHost *host);
 
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
