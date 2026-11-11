@@ -56,7 +56,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
                 FillGarrison (early_town_centers), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
-                readable (a drop site with fewer than 4 houses within 8 tiles counts as not full); the island map's
+                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); the island map's
                 hired garrison citizens are not ported; GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp

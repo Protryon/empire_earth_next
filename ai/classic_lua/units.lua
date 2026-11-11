@@ -385,6 +385,33 @@ function M.request(view, memory, class, n)
     end
 end
 
+-- CancelRequest: up to n of a class's unstarted requests dropped (the earliest epochs' first); their costs leave the
+-- needs. Returns how many
+function M.cancel_request(memory, class, n)
+    local um = M.state(memory)
+    local left = n
+    for e = 1, 15 do
+        local list = um.req[e]
+        local k = 1
+        while left > 0 and k <= #list do
+            local q = list[k]
+            if q.class == class then
+                local take = math.min(left, q.n)
+                q.n = q.n - take
+                left = left - take
+                R.remove_costs(memory, M.ledger_cost(class), take)
+                um.waiting[class] = math.max(0, (um.waiting[class] or 0) - take)
+                if q.n <= 0 then
+                    table.remove(list, k)
+                    k = k - 1
+                end
+            end
+            k = k + 1
+        end
+    end
+    return n - left
+end
+
 -- DropObsoleteRequests: the requests filed before an epoch whose class went obsolete
 function M.drop_obsolete(view, memory, epoch)
     local um = M.state(memory)

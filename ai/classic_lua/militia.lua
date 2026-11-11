@@ -123,6 +123,12 @@ local function militia(memory, victim, attacker_player, time)
         for _, rid in ipairs(ai.keys(by)) do
             ai.attack(by[rid], rid)
         end
+        -- (the soldiers sent stay in the fight: their groups give them no orders for the militia's period - in the
+        -- classic the militia's goal outlasts the sub-group's next order, which the port's groups would give at once)
+        mi.fight = mi.fight or {}
+        for _, s in ipairs(soldiers) do
+            mi.fight[s.id] = time + 20000
+        end
     else
         local hx, hy
         local tx, ty = memory.town_x, memory.town_y
