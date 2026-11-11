@@ -20,6 +20,13 @@
       "script": "rush",
       "random": false,
       "description": "An early army from two barracks, raids on the enemy's gatherers and waves at its town from the Prehistoric; falls back to a boom when two waves are lost (a test opponent for the other AIs' defence)."
+    },
+    {
+      "id": "classic_lua",
+      "name": "Classic (Lua)",
+      "script": "classic_lua.main",
+      "random": false,
+      "description": "A port of the classic computer player's managers to Lua (ai/classic_lua/ORIGIN): the resource centres and the gatherer split, the request queues of units, buildings and research, the epoch timer, the building counts, the garrisons; the personality and difficulty from the rules data as the C++ classic reads them."
     }
   ]
 }

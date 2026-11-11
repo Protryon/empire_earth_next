@@ -1,0 +1,173 @@
+Classic (Lua): a port of the classic computer player (src/Empire Earth/AI Thread/, the C++ classic of this
+repository, the "classic" engine of the lobby) to the per-unit Lua interface (docs/AI_LUA_UNITS.md). Its manifest
+entry is `classic_lua` (ai/ais.json). docs/AI_RESEARCH.md §8.39 has the benches.
+
+What is ported: the decisions (what to train, build and research and when; the gatherer split; the epoch timer; the
+building counts; the resource centres' claims; the attack timer, the targets and the groups' tasks), with the C++
+classic's thresholds and timings read from the same data. What stays C++ (ENGINE): pathfinding, movement, formations,
+combat, the units' own goals (the gather/return loop, auto-acquire), the production queues, and the cheats that act
+in the engine. The C++ classic is the reference, including this repository's changes to it (the `balanced`
+personality's rules behind aipersonalities.yaml switches); the `classic` personality switches them off.
+
+Personality and difficulty: ai.tuning() (a query added for this port, docs/AI_LUA_UNITS.md §11) returns what the C++
+classic reads for the seat: the personality as EECPPersonality picks it (aipersonalities.yaml `assign`, the TEST ONLY
+EE_AI_PERSONALITY override, the EE_AI_EXP experiment switches folded in), the difficulty, the cheats on
+(gameoptions.yaml ai_cheats, EE_AI_CHEATS), the map's kind and every dbcpbehavior value EEComputerPlayer::Init copies.
+Floats come as thousandths (keys ending _k). tune.lua holds the classic's accessors that pick a value by difficulty.
+
+The cheats on a Lua seat:
+  cost     ENGINE: EEComputerPlayer::ScaleCost (mIsCheating from EECPCheatOn in Init) scales what the seat pays and
+           what ai.class / ai.techs / the view report; the same as for a classic seat.
+  reveal   ENGINE: EEComputerPlayer::Update's first tick explores the map (before the engine branch).
+  extra    ENGINE: the same first tick adds the gold and iron.
+  popband  ENGINE: WorkOutPopulation runs in EECPNextUpdate as in the classic tick; view.population_cap is the cap.
+  epochs   ENGINE for the payment (EEComputerPlayer::Pay skips an epoch's cost; EECPNextCanAfford answers yes for an
+           epoch); the port's own CanAfford and the needs ledger skip the epoch's cost as the classic's do.
+  catchup  PORTED (civ.lua): the epoch timer's scale ahead of / behind the humans, the 60 s hold when ahead, and
+           CatchUpEpoch's pull when a human reaches an epoch (the engine calls the C++ manager's; the port watches the
+           humans' epochs in the view). DEVIATION: the humans' epochs are those the view's enemies carry.
+  retire   ENGINE: EnterEpoch -> Personnel::RetireObsoleteUnits runs for any computer seat.
+
+The engine's reflexes for this seat: the militia and the danger zones (EECPRMMilitia / EECPRMNoteDanger) skip the
+units a script holds, and every citizen of this seat is held, so militia.lua ports them (ai.reflex{militia = false,
+danger = false}); the naval flight stays the engine's (it does not skip held units).
+
+Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / NOT STARTED.
+
+  EEComputerPlayer.cpp
+                PARTLY -> main.lua: the start (EnableManagers, SetNextAttackTime, SetNextExpansionTime, the resource
+                centres grouped), Update's order, EnableManagers (the combat state's priority lists, the stock
+                thresholds, the shuffled "other" managers, max_enabled_managers + 1), FlagGroup on the expansion
+                timer, KeepStandingArmy every 30 s, ChooseFavoriteLandType at each epoch, CanAfford (units.lua: the
+                epoch reserve by the pressure, the recovery citizens, the Prehistoric army cap with EECPArmyThreat,
+                claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). The combat state is the script's (1 once
+                another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
+                EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
+                ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. NOT STARTED: the favourite sea,
+                air and space types, Regroup's island fishing rule beyond mUsesFishing, ChooseUnitsToKill.
+                DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
+                and factories train (the favourite screener's AI lines are not exposed).
+  EECPCivilizationManager.cpp
+                PORTED -> civ.lua: the first update (the future research sentinel queued, the wanted citizens' cost in
+                the needs), SetNextEpochAdvanceTime (with the catchup scale), AttemptEpochAdvance (the personality's
+                early start and stone_span schedule, the safe bonus; ResearchCheapest for the SOL; the obsolete
+                requests dropped; the epoch researched), CatchUpEpoch, CheckBuildingCounts (AdjustUnitCount's counts
+                recounted from the own units every check; the units-per shares, the maxima, the difficulty's first
+                military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
+                RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
+                FillGarrison (early_town_centers), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
+                readable (a drop site with fewer than 4 houses within 8 tiles counts as not full); the island map's
+                hired garrison citizens are not ported; GetFarmType's robotic farm (Nano) is not ported; the gate
+                chains' repair end is not ported.
+  EECPUnitManager.cpp
+                PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
+                available producer class ordered), Update (the citizens up to GetWantedCitizens, 10 at a time, 5 on an
+                island map; the requests started while the population has room, all at once when affordable, else one),
+                StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
+                GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
+                queue lengths; IsInProduction sees the item being made, not the queue behind it; the transports'
+                priority (ChooseTransportClass) is not ported (the navy stage); BalanceProduction is not ported.
+  EECPBuildManager.cpp
+                PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric
+                houses, early_trainers), Update (every 3 s, up to 4 producible and affordable requests tried, one
+                started), StartBuilding (FindSite, FindBuilder: the nearest available citizen on the site's land,
+                ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
+                centres nearest home, the rings from the drop-off distance + 5 inward), FindCenterSite, FindGranarySite,
+                FindTowerSite (the worked centres' gold, iron and active food, the tower spacing), FindShoreSite, the
+                farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
+                one-tile margin: `margin = true`, added for this port) - CanBuildAt's other rules (choke points, hills,
+                runway ends, gates and town centres near, walkable ground round the site) are not applied; the
+                granary's room for farms is not tested; the shore site is the shore nearest the town (CollectSiteTiles'
+                water tiles are not readable). NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
+                replacement (AssignBuilders covers them every 2 minutes), the airport, anti-air, space and wonder
+                sites, the island coasts', gates' and choke points' towers.
+  EECPResearchManager.cpp
+                PORTED -> research.lua: the per-epoch lists (an epoch first), Research (IsWanted; the producer
+                ordered), TryResearch (an idle producer, CanAfford, ai.research), BuildCandidates, ChooseResearch every
+                research_frequency s (a citizen upgrade first, else a random wanted tech whose producer stands),
+                ResearchCheapest (the cheapest SOL buildings with a site), the pending epoch. DEVIATIONS: the random
+                shuffle is the script's stream; with no SOL building at all the classic adds to the next epoch's SOL
+                count itself (EETechTreeEpoch::AddSOL) - a script cannot, it logs `sol none`.
+  EECPResourceManager.cpp
+                PARTLY -> econ.lua, resource.lua: the gatherer lists, the needs ledger (AddCosts / RemoveCosts / Earn,
+                Spend from the view's income_total), UpdateWantedGatherers with the stock correction and the army
+                floor (demand_split false) or EECPRMSplitByDemand with GetDemand's tiers and GetGatherCapacity
+                (demand_split true), EECPRMActivateNeeded (the patches kept claimed, claim_needed), EECPRMSettlePatches,
+                EECPRMGuardSites, the claim range and its growth, RebalanceGatherers (the done builders freed,
+                moves_per_cycle), AssignGatherers (food: the bushes near with a drop site, the idle farms, the game
+                near, the bushes near and far, the game far, the unfinished farms, the boats; wood: the forest; the
+                minerals from the last active centre), AssignIdleGatherers, the boats (EECPRMRequestBoats with
+                coast_fishing), the finders FindMines / FindFarm / FindResourceTarget / FindFish, RefreshResources.
+                ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
+                `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
+                nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
+                other players' area hull test; HasEnemyNear counts the armed enemies seen within a region (9 tiles),
+                not every player's influence; BuildSettlementFor (the gather goal's storage search asks the AI for a
+                settlement when the drop site is far: a hook a script cannot get) - the patch settlements of
+                forage_patches stand in. NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
+                CitizenLost's re-cost.
+  EECPResourceCenter.cpp
+                PORTED -> resource.lua (update_groups, flag_group, centre_middle, find_resource_unit) and build.lua
+                (centre_drop: AdoptDropSite). DEVIATION (fog): the original groups every resource of the map at the
+                start (nature's unit list); the port groups what is explored, again every 15 s (with the reveal cheat
+                the same as the original). GetCenter's free-tile search is not ported (the box's middle).
+  EECPWallManager.cpp           NOT STARTED (the defence stage; ai.wall, ai.gate)
+  EECPCombatManager.cpp         PARTLY -> combat.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
+                main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
+                the target player (computers by the aggression's chance when humans are there too), the personality's
+                peace rules (prehistoric_attacks, stone_attacks: EECPACPrehistoricPeace), one attack group sent at
+                the target's nearest known building or town. DEVIATIONS (fog): the target is the nearest known enemy
+                (the C++ front overlap, weakest gatherers and revenge read every player's units); the target's
+                strength is what ai.memory holds. NOT STARTED: the wonder race, NoteThreat, Attack (flares, cover
+                landings), the ICBM, EpochReached's WW1 groups, AttackPlayer / DefendPlayer.
+  EECPCombatStrategy.cpp        NOT STARTED (the domain shares: land only so far)
+  EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp, EECPAttackSubGroupUnit.cpp, EECPASG*.cpp,
+  EECPASGU*.cpp, EECPASTargetUnit.cpp, EECPAttackFormation*.cpp, EECPAGTask.cpp, EECPAGOrder.cpp
+                NOT STARTED (the army stage; plan: the group tasks and their timers ported, the sub-groups' movement,
+                fighting and retreat on lib.groups; the formations ENGINE: ai.formation / ai.move{formation})
+  EECPUnitSelector.cpp          PARTLY -> combat.lua: ComputeGroupSize (the attack and defence shares of the
+                target's strength, the difficulty's group modifier); the group takes the free soldiers and requests the
+                favourite land unit for the rest. NOT STARTED: the domain shares, the counter units, the specials
+                (priests, prophets, heroes, carriers, paratroopers), the held-units requirement, KeepBestClasses.
+  EECPPersonnel.cpp             NOT STARTED (the army stage; RetireObsoleteUnits ENGINE)
+  EECPIntelligence.cpp, EECPIArmy.cpp, EECPILocation.cpp
+                NOT STARTED (the army stage; from ai.memory: the C++ reads every player's units)
+  EECPDefenseCommander.cpp, EECPMilitaryAidPackage.cpp
+                PARTLY -> combat.lua: AidOwnTowns (the home town's package: its first gathering staffs a defence group,
+                its later ones every 20 s while the town's threat is over aid_threat_threshold, else every 35 s),
+                PlanAid on defensive_unit_update (the first after the replenish delay; the town-guard chance;
+                CreateDefendGroup with GetUnitAllowance's defensive_unit_cap), one defend group at home (lib.groups).
+                DEVIATIONS: the town threat is the seen enemies' strength within 30 tiles over the own soldiers' there
+                (ComputeTownThreat reads the influence table); the defend groups join the home group (the guard
+                ladder of AssignSubGroupTask: choke points, forests, hills, other towns - not ported). NOT STARTED:
+                AidAllies, CheckRaids / Retaliate, BuildUp (deathmatch), CheckNaval, CheckSpace, CheckSpecials.
+  EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
+                class drafted or requested, explore with the difficulty's stance, every 30 s). NOT STARTED: the sea,
+                space and air explorers.
+  EECPDiplomacyManager.cpp      empty in the original: nothing to port
+  EECPPlayerInteractionManager.cpp
+                NOT STARTED (chat taunts: no chat command in the interface)
+  EECPNext*.cpp, EECPLua.cpp, EECPEngine.cpp, EECPTrace.cpp
+                ENGINE (the Lua engine, its helpers and the traces)
+  EEAI*.cpp (A*, continents, path sectors, choke points), EEPathManager.cpp, EEInfluenceTable.cpp, EETown.cpp,
+  EEHerd.cpp, EEArtificialIntelligence.cpp, EEHumanPlayer.cpp, EEAIFunctionObjects.cpp
+                ENGINE
+  EECPResourceManager.cpp's reflexes (EECPRMMilitia, EECPRMNoteDanger, EECPRMFleeRaids)
+                PORTED -> militia.lua (the micro step answers the hits; the zones' flight every step). DEVIATION (fog):
+                the raiders are the attacker's soldiers seen.
+
+The army's movement, fighting and retreat run on lib.groups (ai/lib/groups.lua: forming, legs, per-unit targets,
+the raid flight, the retreat), standing in for EECPAttackGroup / EECPAttackSubGroup / the ASG* state machines.
+
+DEVIATION (fog) at the start: the C++ classic's forest finder and resource centres read the whole map; the port sees
+what is explored (a town centre's few tiles at the start), so an idle citizen with nothing known to gather explores
+(econ.lua) until the finders know a resource.
+
+Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
+ai.find_site's `margin` and `far` options, ai.class's `tech`, the own units' `target` and `gathers`, the view's
+`income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
+lists only, which never hold a script's units).
+
+Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
+choke points and hills; the water site tiles; the gather goal's storage-search hook (BuildSettlementFor); the epoch's
+SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.
