@@ -3042,6 +3042,34 @@ D3b and D3c are each one switch over D2, against D2's 32-seed rows above.
   - But more towns are wiped out later. The tower spending, or the towers at the town that the plan builds first,
     does not stop the waves that kill the town.
 
+**D6 and D7, the Prehistoric rule measured for the owner (2026-11-11).** Both are off by default; each is one switch
+over D2. 32 seeds (2-33), against D2's rows.
+- D6, `plan.emergency = N`: up to N soldiers, and a barracks, while a wave of 8 or more is seen in the claim range.
+  Training stops 60 s after the wave is gone.
+- D7, `tower_militia`: in the Prehistoric, a raid in a tower's reach is fought by the militia whatever its size or
+  kind, when the citizens and the towers win by the square law at 3 x.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Citizens at 20 min | Lost |
+|---|---|---|---|---|---|---|---|
+| D2 | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 28.6 | 87.1 |
+| D6, N = 4 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 115.5 |
+| | cheating classic | 13/32 | 6/19/7 | 23, 29.3 | 6, 75.5 | 28.7 | 86.3 |
+| D6, N = 8 | improved classic | 5/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 32.9 | 122.4 |
+| | cheating classic | 12/32 | 6/18/8 | 23, 29.4 | 7, 75.8 | 28.7 | 88.4 |
+| D7 | improved classic | 6/32 | 0/28/4 | 32, 24.3 | 21, 63.2 | 32.9 | 119.5 |
+| | cheating classic | 16/31 | 8/20/3 | 21, 27.4 | 6, 73.9 | 28.4 | 76.1 |
+
+- **Neither helps, and neither costs the economy anything measurable:** the Stone Age minute and the citizens at 20
+  minutes are within 0.2 of D2's.
+- **D6** changes almost nothing. The Prehistoric town has no barracks when a wave arrives (it stands from 28
+  citizens), so the soldiers ordered come after the wave: 23 plan lines with soldiers in the 32 games against the
+  cheating classic. An emergency army would have to be built before the wave is seen, which is the rule the owner
+  set.
+- **D7** adds defeats (6 and 16). Its militia rarely triggers: a Prehistoric tower reaches 4 tiles, and the waves
+  stand outside that (938 militia lines against D2's 917).
+- No 64-seed run: none is better than D2.
+
 **Open.**
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
