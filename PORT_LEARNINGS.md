@@ -4654,3 +4654,74 @@ is an `EEUnit`: no other class derives from it).
   `EEUGCastCalamity`, `EEUGGather`, `EEUGPatrol` and `EEAirTrafficControl` 3: the save work's files), the AI's 31,
   the graphics thread's 3, `EEPWorldHelper`, the UI's and `EESim.cpp`'s one each, and the 8 `dynamic_cast<EEUnit*>`.
 ||||||| abb66a9f
+
+## R6: WON's file reader and writer, the config parser, AuthContext's data and the directory replies in Rust (ee_won file.rs, config.rs, authctx.rs, dir.rs; branch rust-r6-won4, 2026-11-10)
+
+The map of what is left of WON (sizes, reach, dependencies) is in RUST_PLAN's "R6 WON, the rest" row. This round
+took the leaves that everything else stands on (FileReader, ConfigParser) and two pieces that only the gone
+servers reach (AuthContext's login data, the directory replies), each captured over the C++ first.
+
+- **FileReader / FileWriter (`file.rs`).** The state is a `#[repr(C)]` core the classes embed (`mCore`: the
+  `FILE*`, the memory buffer, length, position, owned and memory-mode flags; the writer's `FILE*`). Every read,
+  seek and write is Rust, on the C runtime's stdio exactly as before (`PlatFOpen`'s `FILE*`, `fread`, `fgetc`,
+  `fseek`, `ftell`, `feof`, `rewind`; an owned buffer is `malloc`/`free`), so a text-mode open still turns CR LF
+  into LF on every system and the quirks stay: `length()` sets the memory-mode flag, `ReadIntoMemory` at the end
+  of the data throws after the buffer is open (at 0), a file seek past the end succeeds and the next read fails.
+  The C++ throws `FileReaderException` / `FileWriterException` with the text a status names, and keeps the
+  string loops (a failed read leaves the part read) and the writer's read-only retry (`WONFile`). ConfigParser,
+  ImageDecoder and WONSound read the core instead of the old members. `won_file_test` (252 steps: writes, reads in
+  file, text and memory modes, every exception) recorded the golden over the C++; the Rust test `file_golden`
+  reads the script out of the test's source and replays it on real files in a temporary directory; the driver
+  relinked over the forwarders prints the same.
+- **ConfigParser (`config.rs`).** The characters (pushback first, 16-bit units in a UTF-16 file, CR LF and a lone CR
+  as LF, the parser's line and the process-wide line count), the comments, `ReadToken` (narrow and wide, a key's
+  value to the end of its line with `\` joins, skipping, `$name$` expansion through the root parser's scopes),
+  the define scopes and the group defines with their saved states, and the open's UTF-16 sniff (FF FE ?? 00: reopen
+  binary past two bytes) are Rust. The C++ keeps the reader, `mLineNum` and `mIsUnicode` (handed in per call as an
+  `EeWonConfigIo`), the parent walk (it passes the root's lexer), the file names and the error and warning texts
+  with their formatting. The define names compare through the CRT's `toupper` of each signed `char`, and the
+  white space is the CRT's `isspace` (`ffi_parse::CrtCtype`): the English locale makes 0xA0 a space, which the
+  golden's two passes show.
+  - **Behaviour changes:** the pushback is 16-bit units on every system (as `std::wstring` on Windows; on POSIX a
+    sign-extended byte now reads back as 0xffe9 like on Windows); `mIsUnicode` starts false (the original left it
+    uninitialised); a token cut by an error keeps the part read (as before) but is assigned once at the end.
+  - **The golden needed sequenced lines.** The first capture printed garbage for a group define's state: in
+    `Line("x " + (Get(...) ? "1" : "0") + Int(state.pos))` clang evaluated `Int(state.pos)` before the call (the
+    operands of a chain of overloaded `+` are not sequenced, also in C++17). Every value is computed into a local
+    first now. `won_config_test` has 31 inputs, each as a plain and a UTF-16 file, six passes each (tokens, a token
+    then its line, wide, wide to the line, skipped, characters with pushback) plus scenarios (scopes, parents,
+    group defines across files, errors, reset): 4060 lines in the C and English locales, recorded over the C++,
+    the same over the port; `config_golden` replays the C pass (2028 lines) through the Rust with the C++ glue
+    modelled. `won_config_test --files DIR` prints each .cfg file's token stream CRC: the 63 lobby files of the open
+    tree give the same over the C++ and the port.
+- **AuthContext's data (`authctx.rs`).** The login secrets are a Rust list the context owns (`mSecrets`; the
+  `std::list<SecretData>` is gone): the `_wonlogin.ks` file read with the original's stdio loop semantics (an EOF
+  count byte is 255, one more zero record after a file that ends exactly at a record, a cut record keeps the bytes
+  read; the original left the rest of a cut key uninitialised, zeros now), saved with the count's low byte and
+  every record, added in front, removed (the first uncommitted match), committed (`unsigned long` sum + 120, the
+  expired dropped, the list cut below 256). The login request's community data block (types 1, 7, 8, 6, 4, 3,
+  the 16-bit lengths as the original's `short`s, the community count's low byte) and its hashes block (MD5 of the
+  challenge and the section hashes) are built in Rust from the maps' entries in their order; `StartAutoRefresh`'s
+  wait is Rust. The lock, maps, sessions, certificate ops and timers stay C++. `won_auth_test` runs the original's
+  statements (copied before the port, over the same lists, maps, WriteBuffer and MD5Digest) next to the Rust ABI:
+  237 checks, the same (files after every add, remove and commit, odd files, 306 communities, a wrapped count).
+  Reached only by the internet login (gone) and, through `GetCertOp`, nothing else: peer auth reads the
+  certificate, not these.
+- **The directory replies (`dir.rs`).** `ParseMultiEntityReply` / `ParseSingleEntityReply` read in Rust; the C++
+  makes the `DirEntity` objects from the fields read (a bit per field, the rest keep the constructor's values),
+  converts the ACL values as the originals' locals did and throws `ReadBufferException` for a cut reply, keeping
+  the entities read whole before the cut. `won_dir_test`: 548 replies (each get flag alone and together, services,
+  directories and untyped entities, wrong headers, statuses, every cut), recorded over the C++, the same over the
+  port. Reached by nothing: the directory servers are gone.
+- **LobbyLanSocket** stays as it is: a `BlockingSocket` subclass (vtable, `Duplicate`) with a client link and a
+  last-message time, whose stale rule is `lan.rs` already; nothing of its logic was left to move.
+- **The header is the compiler's while a build runs:** `cargo run -p xtask -- cbindgen` failed with "user-mapped
+  section open" during a full build (the compiler had `include/rust/ee_rust.h` mapped); the header was intact. Do
+  not regenerate it, or edit sources (staged per compile job), while a build of the same worktree runs.
+- **What only the lobby exercises:** FileReader / FileWriter and ConfigParser are read by every lobby load (the
+  lobby's .cfg layout, its persistent data, its images and sounds): the LAN game (`lan_game.py`) or a lobby tour
+  is their end-to-end check. The goldens cover them in isolation only; nothing of this round touches the
+  simulation (the oracle is identical after each commit).
+- Still C++ of WON: peer auth, AuthContext's sessions and certificate flow, GetCertOp, the other services' requests
+  and replies (directory requests, routing, DB, HTTP, FTP, misc, the server connection), ConfigObject /
+  ConfigValue (the object model on virtual hooks), WONFile, RegKey, the lobby logic and WONGUI.
