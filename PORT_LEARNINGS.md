@@ -4653,7 +4653,6 @@ is an `EEUnit`: no other class derives from it).
   **Left** (54 of the 82 sites, one of them in a header): the 17 of the load path (`EEComplexDoppelganger.cpp` 10, the `RepairPointers` of `EEUGAttackUnit`,
   `EEUGCastCalamity`, `EEUGGather`, `EEUGPatrol` and `EEAirTrafficControl` 3: the save work's files), the AI's 31,
   the graphics thread's 3, `EEPWorldHelper`, the UI's and `EESim.cpp`'s one each, and the 8 `dynamic_cast<EEUnit*>`.
-||||||| abb66a9f
 
 ## R5a.2, third round: region order, AI timers, favourites, production, towns, gatherers, dead attackers (save 0.257-0.262, branch rust-r5a-aisave2, 2026-11-10)
 
