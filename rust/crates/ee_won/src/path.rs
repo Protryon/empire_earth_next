@@ -10,7 +10,7 @@ use crate::ffi_parse::CrtCtype;
 use crate::parser::Ctype;
 
 /// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
-pub const SEP: u8 = b'\\';
+pub(crate) const SEP: u8 = b'\\';
 
 /// The original threw `std::out_of_range` here (a `substr` past the end).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

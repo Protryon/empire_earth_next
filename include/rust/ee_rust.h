@@ -104,6 +104,54 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// `EEFindDropLocation`'s point kinds (`EeCombatDropIn::kind`).
+/// The goal's location (the C++ asks the goal; not computed here).
+constexpr static const int32_t EE_COMBAT_DROP_KIND_GOAL = 0;
+
+/// The target model's drop point.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_MODEL = 1;
+
+/// The middle of the target's tile.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
+
+/// Neither: no target.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
+
+/// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
+/// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
+/// call's `inArg6` is false; no technology: -1).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_TECH_KIND_6 = 1;
+
+/// The candidate's owner is the unit's player or not its enemy.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NOT_ENEMY = 2;
+
+/// The candidate is disabled and not protected.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_DISABLED = 3;
+
+/// The candidate's owner is player 0 (nature).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NATURE = 4;
+
+/// `EEIsAttackedBy(unit, candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_ATTACKED_BY = 5;
+
+/// `EECanTargetClass(unit, candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS = 6;
+
+/// The candidate `IsFoundation`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_FOUNDATION = 7;
+
+/// `EEIsSeenBy(candidate, unit's player, true)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_SEEN = 8;
+
+/// The candidate's class `IsPartLeftOut(candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_PART_LEFT_OUT = 9;
+
+/// `unit->CanAttackClass(candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS = 10;
+
+/// The unit has ignored targets and `IsTargetIgnored(candidate, inArg7 != 0)` (which may drop expired ones).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_IGNORED = 11;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -178,6 +226,9 @@ constexpr static const int32_t CAMERA_STEP_DONE = 0;
 constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
+/// `kBarFraction`: the filled part's share of a bar's own width.
+constexpr static const float BAR_FRACTION = 0.75;
 
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
@@ -734,6 +785,21 @@ constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
 /// `kFadeInRate`.
 constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
+/// `kHelpTextOffset`: the tool tip's gap below the mouse.
+constexpr static const float HELP_TEXT_OFFSET = 32.0;
+
+/// `kTextSpacing`: the gap around the title, the axis labels and the grid values.
+constexpr static const float TEXT_SPACING = 5.0;
+
+/// `kMaximumZoomScale`.
+constexpr static const float MAXIMUM_ZOOM = 4.0;
+
+/// `kKeyNone`: a hot key record's empty modifier.
+constexpr static const uint32_t KEY_NONE = 32767;
+
+/// Which key member `GetEntity` fills: a modifier slot (0 to 2) or the key.
+constexpr static const size_t KEY_SLOT = 3;
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -805,6 +871,12 @@ constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
 /// `EESendGroupCommand`'s move marker
 constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
 
+/// `kActionDropoffResource` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
+
+/// `kActionUnloadTransport` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -831,6 +903,12 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
 /// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
 /// forced, rotating, the facing, group movement)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
+
+/// `new EEUGUnloadTransport(unit_a's complex unit, (long)point[0], (long)point[1], flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
+
+/// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -991,6 +1069,10 @@ constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
 /// `EEUnit::mResourceAmount` (what a resource has left)
 constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 
+/// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
+/// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
+constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -1005,72 +1087,31 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
-/// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
-constexpr static const int32_t MORE_REPLIES = 100059;
+constexpr static const int32_t GET_DIR = 0;
 
-constexpr static const uint32_t DIRS_ONLY_MASK = 2;
+constexpr static const int32_t GET_MULTI_DIR = 1;
 
-constexpr static const uint32_t SERVICES_ONLY_MASK = 5;
+constexpr static const int32_t ALIAS_GET = 2;
 
-constexpr static const uint32_t ADD_TYPE = 16;
+constexpr static const int32_t GET_SERVICE = 3;
 
-constexpr static const uint32_t ADD_DISPLAY_NAME = 32;
+constexpr static const int32_t FIND = 4;
 
-constexpr static const uint32_t ADD_CREATED = 64;
+constexpr static const int32_t ADD = 5;
 
-constexpr static const uint32_t ADD_TOUCHED = 128;
+constexpr static const int32_t MODIFY = 6;
 
-constexpr static const uint32_t ADD_LIFESPAN = 256;
+constexpr static const int32_t REMOVE = 7;
 
-constexpr static const uint32_t ADD_DO_TYPE = 512;
+constexpr static const int32_t RENAME = 8;
 
-constexpr static const uint32_t ADD_DO_DATA = 1024;
+constexpr static const int32_t RENEW = 9;
 
-constexpr static const uint32_t ADD_DATA_OBJECTS = 2048;
+constexpr static const int32_t SET_DATA_OBJECTS = 10;
 
-constexpr static const uint32_t ADD_ACLS = 4096;
+constexpr static const int32_t MODIFY_DATA_OBJECTS = 11;
 
-constexpr static const uint32_t ADD_CRC = 8192;
-
-constexpr static const uint32_t ADD_UIDS = 16384;
-
-constexpr static const uint32_t ADD_IPS = 32768;
-
-constexpr static const uint32_t DIR_ADD_PATH = 65536;
-
-constexpr static const uint32_t DIR_ADD_NAME = 131072;
-
-constexpr static const uint32_t DIR_ADD_REQ_UNIQUE = 262144;
-
-constexpr static const uint32_t SERV_ADD_PATH = 16777216;
-
-constexpr static const uint32_t SERV_ADD_NAME = 33554432;
-
-constexpr static const uint32_t SERV_ADD_NET_ADDR = 67108864;
-
-constexpr static const uint32_t TYPE = 1;
-
-constexpr static const uint32_t PATH = 2;
-
-constexpr static const uint32_t NAME = 4;
-
-constexpr static const uint32_t NET_ADDR = 8;
-
-constexpr static const uint32_t REQ_UNIQUE = 16;
-
-constexpr static const uint32_t DISPLAY_NAME = 32;
-
-constexpr static const uint32_t LIFESPAN = 64;
-
-constexpr static const uint32_t CREATED = 128;
-
-constexpr static const uint32_t TOUCHED = 256;
-
-constexpr static const uint32_t CRC = 512;
-
-constexpr static const uint32_t IPS = 1024;
-
-constexpr static const uint32_t IDS = 2048;
+constexpr static const int32_t CLEAR_DATA_OBJECTS = 12;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -1414,109 +1455,63 @@ constexpr static const int32_t EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_A
 /// UserListCtrlConfig::Virtual24(instruction) in UserListCtrl.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION = 102;
 
-constexpr static const int32_t POSITION_LEFT = 1;
+/// `Graphics::SetColor(a)` (the colour's bits).
+constexpr static const int32_t EE_WON_DRAW_SET_COLOR = 1;
 
-constexpr static const int32_t POSITION_TOP = 2;
+/// `Graphics::SetSysColor(a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_SYS_COLOR = 2;
 
-constexpr static const int32_t POSITION_RIGHT = 4;
+/// `Graphics::FillRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_RECT = 3;
 
-constexpr static const int32_t POSITION_BOTTOM = 8;
+/// `Graphics::DrawRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_RECT = 4;
 
-constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+/// `Graphics::DrawDottedRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_DOTTED_RECT = 5;
 
-constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+/// `Graphics::DrawLine(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_LINE = 6;
 
-/// The component flags these rules read.
-constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
+/// `Graphics::DrawImage(image a, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE = 7;
 
-constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
+/// `image a->SetSize(b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE_SIZE = 8;
 
-/// A child a modal state does not block.
-constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+/// `Graphics::PushClipRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_PUSH_CLIP = 9;
 
-/// The text flags (TextFlags in the C++).
-constexpr static const int32_t WORD_WRAP = 1;
+/// `Graphics::PopClipRect()`.
+constexpr static const int32_t EE_WON_DRAW_POP_CLIP = 10;
 
-constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+/// `Graphics::Translate(a, b)`.
+constexpr static const int32_t EE_WON_DRAW_TRANSLATE = 11;
 
-constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+/// `Graphics::SetFont(font a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_FONT = 12;
 
-constexpr static const int32_t SCROLL_FULL_LINE = 16;
+/// `Graphics::DrawString(string a, b, c, d, e)` (offset, length, x, y; the offset and length as `unsigned short`).
+constexpr static const int32_t EE_WON_DRAW_STRING = 13;
 
-constexpr static const int32_t DELAY_WORD_WRAP = 32;
+/// `Graphics::DrawString(string a, b, c)` (the whole string at x, y).
+constexpr static const int32_t EE_WON_DRAW_STRING_ALL = 14;
 
-/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
-/// its last segment stands for the trimmed one.
-constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+/// `wrapped text a->Paint(g, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_TEXT = 15;
 
-constexpr static const uint32_t LINE_HAS_SEGS = 2;
+/// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
+constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 
-constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+/// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
+constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
-constexpr static const int32_t POPUP_WANT_INPUT = 128;
+/// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
+/// height).
+constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
-constexpr static const int32_t POPUP_IS_MODAL = 256;
-
-constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
-
-constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
-
-constexpr static const int32_t POPUP_ADDITIONAL = 4096;
-
-constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
-
-constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
-
-constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
-
-constexpr static const uint8_t JOIN_REQUEST = 1;
-
-constexpr static const uint8_t JOIN_REPLY = 2;
-
-constexpr static const uint8_t CLIENT_JOINED = 3;
-
-constexpr static const uint8_t CLIENT_LEFT = 4;
-
-constexpr static const uint8_t CHAT_REQUEST = 5;
-
-constexpr static const uint8_t CHAT_LINE = 6;
-
-constexpr static const uint8_t PING = 7;
-
-constexpr static const uint8_t STAGING = 8;
-
-constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
-
-constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
-
-constexpr static const uint8_t DISCOVERY_REMOVED = 3;
-
-constexpr static const uint8_t DISCOVERY_QUERY = 4;
-
-/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
-constexpr static const int16_t JOIN_OK = 0;
-
-constexpr static const int32_t JOIN_BAD_REPLY = 1;
-
-constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
-
-constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
-
-/// Chat flags: a whisper to the target, a line to the sender's team.
-constexpr static const uint16_t CHAT_WHISPER = 4;
-
-constexpr static const uint16_t CHAT_TEAM = 256;
-
-/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
-/// host re-sends its full summary instead of a keep-alive after this many.
-constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
-
-constexpr static const int64_t JOINER_PING_IDLE = 120;
-
-constexpr static const int64_t SUMMARY_REPEAT = 30;
-
-/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
-constexpr static const uint8_t SEP = 92;
+/// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
+constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -2123,14 +2118,27 @@ struct EeSubSectorLinks;
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
+/// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
+struct EeWonByteBuffer;
+
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
+struct EeWonOpContainer;
+
+/// `ThreadBase` + `Thread`'s state.
+struct EeWonThread;
+
+/// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
+/// signal and the thread that pumps it.
+struct EeWonTimerThread;
+
+/// `WriteBuffer`'s state.
+struct EeWonWriteBuffer;
+
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
-
-/// `AsyncOpContainer::mOpQueue`.
-struct EeWonOpQueue;
 
 /// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
 struct EeWonOpSet;
@@ -2144,6 +2152,9 @@ struct EeDx7PolygonArray;
 /// A `GETransformation`'s rotation part.
 struct EeFormationRotation;
 
+/// The server list.
+struct EeWonServerList;
+
 /// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
 /// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
 struct EeDx7SoundRing;
@@ -2154,12 +2165,6 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
-
-/// `TimerThread`'s two maps: the deadlines of this tick-count era and, past the 32-bit wrap, of the next
-/// (`mTimerMap`, `mWrapAroundMap`), each in deadline order and, among equal deadlines, in insertion order (the
-/// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
-/// the first map, which left the ops' iterators dangling).
-struct EeWonTimerQueue;
 
 /// The plan of one frame.
 struct EeGeVisiblePlan;
@@ -3478,6 +3483,218 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// `EECanConvert`'s result and its out flag (written only when `flag_written`).
+struct EeCombatCanConvertOut {
+  int32_t result;
+  int32_t flag_written;
+  /// the target is shielded (0 when not written)
+  int32_t flag;
+};
+
+/// `EECanConvert`'s inputs (`inPriest`, `inTarget`; every flag 0 or 1).
+struct EeCombatCanConvertIn {
+  /// the priest's class `IsCrusader`
+  int32_t crusader;
+  /// the priest's class is a building priest (`kUnitCategoryBuildingPriest`)
+  int32_t building_priest;
+  /// the priest's player has the adaptation power
+  int32_t adaptation;
+  int32_t same_player;
+  /// the priest's player is the target's enemy
+  int32_t enemy;
+  /// the priest's `mConversionRate`
+  float conversion_rate;
+  int32_t target_disabled;
+  /// the target `IsProtected`
+  int32_t target_protected;
+  /// the target's `mConversionResistance`
+  float resistance;
+  int32_t target_town_center;
+  int32_t target_settlement;
+  int32_t target_hit_points;
+  /// the target's class `CanBeAttacked`
+  int32_t attackable;
+  /// `gDamageTable[the target class's family][the priest class's ammo]` (0 for a negative ammo)
+  float damage;
+  /// both classes have the same category
+  int32_t same_category;
+  int32_t converts_priests;
+  /// the priest's faith (`GetPower`)
+  int32_t power;
+  /// `EEGetConversionCost(priest)`
+  int32_t cost;
+  /// the target's class is a land priest
+  int32_t target_land_priest;
+  int32_t converts_buildings;
+  /// the target's class `IsLandBuilding`
+  int32_t target_land_building;
+  /// the priest's player is in the Copper Age or later
+  int32_t at_copper;
+  /// both locations (a building priest's range test)
+  float priest_x;
+  float priest_y;
+  float priest_z;
+  float target_x;
+  float target_y;
+  float target_z;
+  /// the priest's `mRange`
+  float range;
+  int32_t priest_cyber;
+  int32_t target_cyber;
+  /// the target `HasEffect(4)`
+  int32_t shielded;
+};
+
+/// `EECanHeal`'s inputs (`inUnit` heals `inTarget`).
+struct EeCombatCanHealIn {
+  /// the healer's `mWonderUnitSet` is not 0
+  int32_t has_set;
+  /// the target `IsRepairable`
+  int32_t repairable;
+  int32_t hit_points;
+  int32_t maximum;
+  /// the healer's class `GetHealThreshold`
+  float threshold;
+  int32_t same_unit;
+  int32_t same_player;
+  /// the target's player is not the healer's enemy
+  int32_t allied;
+  /// the healer's unit set holds the target's type (0 for a set out of the manager's range)
+  int32_t in_set;
+};
+
+/// The drop point.
+struct EeCombatDropOut {
+  float x;
+  float y;
+  float z;
+};
+
+/// `EEFindDropLocation`'s inputs: the kind, then the model's (`DROP_KIND_MODEL`) or the tile's (`DROP_KIND_TILE`) values.
+struct EeCombatDropIn {
+  int32_t kind;
+  /// the target model's `mDefaultPoint`
+  float offset[3];
+  /// the target's physical model's scale
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the target's physical model's location (`GETransformation::mMatrix`)
+  float transformation[4][4];
+  int32_t tile_x;
+  int32_t tile_y;
+  /// the target tile's height
+  float tile_height;
+};
+
+/// The result: blocked, and the last tile reached.
+struct EeCombatLineOut {
+  int32_t blocked;
+  int32_t x;
+  int32_t y;
+};
+
+/// `EEIsLineToUnitBlocked`'s inputs (`inUnit` shooting at `inTarget`).
+struct EeCombatLineIn {
+  int32_t from_x;
+  int32_t from_y;
+  int32_t to_x;
+  int32_t to_y;
+  /// the shooter's class `mSkipsLineOfFireCheck`
+  int32_t skips_check;
+  /// the target's hit points are positive
+  int32_t target_alive;
+  /// the shooter's class `mIsMelee`: the walls' bare test, no shot height
+  int32_t bare;
+};
+
+/// The target's top, as the C++ reads it (`EeCombatLineHost::target_top`).
+struct EeCombatTargetTop {
+  /// the target is a complex unit (else nothing below is read)
+  int32_t present;
+  /// the z of its model's bounding box's top right back corner at its frame
+  float box_top;
+  /// its stats' `GetScale`
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// its location's z
+  float z;
+};
+
+/// `EEIsLineToUnitBlocked`'s world (see `LineHost`).
+struct EeCombatLineHost {
+  void *ctx;
+  float (*start_height)(void *ctx, int32_t bare);
+  /// The tile line as `count` (x, y) pairs, valid until the next call.
+  const int32_t *(*tile_line)(void *ctx,
+                              int32_t from_x,
+                              int32_t from_y,
+                              int32_t to_x,
+                              int32_t to_y,
+                              uint32_t *count);
+  void (*target_top)(void *ctx, EeCombatTargetTop *out);
+  int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
+};
+
+/// `ApplyAreaDamage`'s inputs.
+struct EeCombatAreaIn {
+  /// the attacker's tile
+  int32_t tile_x;
+  int32_t tile_y;
+  float radius;
+  /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
+  float friendly_factor;
+  /// the direct target's complex unit (counted as hit already), or 0 (a `EeCombatHandle`)
+  uint64_t target;
+};
+
+/// `ApplyAreaDamage`'s world (see `AreaHost`).
+struct EeCombatAreaHost {
+  void *ctx;
+  uint64_t (*tile_first)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*node_next)(void *ctx, uint64_t node);
+  uint64_t (*node_unit)(void *ctx, uint64_t node);
+  float (*distance_squared)(void *ctx, uint64_t unit);
+  int32_t (*targetable)(void *ctx, uint64_t unit);
+  int32_t (*same_player)(void *ctx, uint64_t unit);
+  void (*hit)(void *ctx, uint64_t unit);
+};
+
+/// `EEFindNewTarget`'s inputs.
+struct EeCombatFindTargetIn {
+  /// the area's tiles, inclusive (the tile less and plus the radius)
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+  /// `inArg6`: skip the technology kind test
+  int32_t skip_kind;
+};
+
+/// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
+struct EeCombatTargetHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  int32_t (*screen)(void *ctx, uint64_t unit);
+  int32_t (*multiple)(void *ctx, uint64_t unit);
+  uint32_t (*unit_id)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
+  void (*push)(void *ctx, uint64_t unit);
+};
+
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -4132,6 +4349,43 @@ struct EeGfxCameraStep {
 struct EeGfxOrthoView {
   EeGeTransformation view;
   float size;
+};
+
+/// What `Update`'s move did: the new position (clamped) when the mouse moved, and whether each smallest move
+/// changed (the C++'s debug lines).
+struct EeGfxMouseMove {
+  EeGe2DPoint position;
+  /// the mouse moved: `position` is the new one (else it is the old one, unclamped as before)
+  bool moved;
+  bool min_x_changed;
+  bool min_y_changed;
+};
+
+/// The pointer's inputs for `Update`'s move.
+struct EeGfxMouseInput {
+  EeGe2DPoint position;
+  EeGeRectangle bounds;
+  uint32_t desktop_width;
+  uint32_t desktop_height;
+  float sensitivity;
+  /// the axes' `GetNormalizedValue`
+  int32_t move_x;
+  int32_t move_y;
+};
+
+/// The bars' size for a frame (`sBarWidth`, `sBarHeight`, `sBarStep`).
+struct EeGfxBarSizes {
+  uint32_t width;
+  float height;
+  float step;
+};
+
+/// A bar's rectangles, in the C++'s order of use. `kind` 0: full (fill, back), 1: partial (fill, its back, the
+/// rest, the rest's back), 2: empty (the rest, its back); `count` rectangles are set.
+struct EeGfxBarRects {
+  uint32_t kind;
+  uint32_t count;
+  EeGeRectangle rects[4];
 };
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
@@ -4948,6 +5202,61 @@ struct EeUiDbFont {
   char pad[3];
 };
 
+/// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
+struct EeUiGraphLayout {
+  EeUiRect title;
+  EeUiRect y_axis;
+  EeUiRect x_axis;
+  EeUiRect graph;
+};
+
+/// Which texts `CopyData` lays out: each label's flag (`mLabelGraph` ..) and whether its text exists (`SetFont`
+/// made them).
+struct EeUiGraphTexts {
+  bool label_graph;
+  bool has_title;
+  bool label_grid;
+  bool has_grid;
+  bool label_y;
+  bool has_y;
+  bool label_x;
+  bool has_x;
+};
+
+/// A graph's value range (`UGraph`'s or the displayed one, `UIGraph::mMinX` ..).
+struct EeUiGraphRange {
+  long min_x;
+  long max_x;
+  long min_y;
+  long max_y;
+};
+
+/// What `SetCandidateList` leaves: the window's left and right edges and the selected line within the page.
+struct EeUiCandidateFit {
+  float left;
+  float right;
+  long selection;
+};
+
+/// One line of the window's border.
+struct EeUiCandidateLine {
+  float x0;
+  float y0;
+  float x1;
+  float y1;
+  /// The light border colour (else the dark one).
+  bool light;
+};
+
+/// `DrawPolygons`' plan after the background: the selection bar (when `selection` is not negative: the selected
+/// line, two pixels in from each side, clipped to the window) and the two-pixel bevelled border, top (dark),
+/// bottom (light), left (dark), right (light), in the C++'s order.
+struct EeUiCandidateFrame {
+  bool has_selection;
+  EeUiRect selection;
+  EeUiCandidateLine lines[8];
+};
+
 /// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
 /// dark one (`sDarkBorder`).
 struct EeUiBorderLine {
@@ -5161,6 +5470,8 @@ struct EeUnitRecord {
   int64_t formation_slot;
   /// `EEUnit::mResourceAmount`
   int64_t resource_amount;
+  /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
+  uint8_t on_map;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -5209,6 +5520,14 @@ struct EeWonAuthEntry {
   const uint8_t *extra;
   size_t extra_len;
   bool present;
+};
+
+/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
+struct EeWonReadBuffer {
+  /// the read position
+  long pos;
+  const uint8_t *data;
+  long length;
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
@@ -5324,6 +5643,79 @@ struct EeWonDirEntity {
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
 
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A data object.
+struct EeWonDirObject {
+  EeWonDirBytes data_type;
+  EeWonDirBytes data;
+};
+
+/// A data object change.
+struct EeWonDirMod {
+  uint16_t offset;
+  bool insert;
+  EeWonDirObject object;
+};
+
+/// A query: the path as UTF-16 LE bytes.
+struct EeWonDirQuery {
+  uint32_t flags;
+  EeWonDirBytes path;
+  const EeWonDirBytes *types;
+  size_t type_count;
+};
+
+/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
+struct EeWonDirRequest {
+  int32_t op;
+  bool is_service;
+  uint32_t flags;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+  EeWonDirBytes display_name;
+  EeWonDirBytes net_addr;
+  EeWonDirBytes new_name;
+  EeWonDirBytes new_display_name;
+  EeWonDirBytes new_net_addr;
+  uint32_t lifespan;
+  bool is_unique;
+  uint8_t mode;
+  uint8_t find_flags;
+  const EeWonDirObject *objects;
+  size_t object_count;
+  const EeWonDirMod *mods;
+  size_t mod_count;
+  const EeWonDirBytes *types;
+  size_t type_count;
+  const EeWonDirQuery *queries;
+  size_t query_count;
+  EeWonDirBytes product;
+};
+
+/// A status reply for the C++.
+struct EeWonDirStatusReply {
+  /// 0 read whole, 1 not a status reply, 2 cut short
+  int32_t end;
+  int16_t status;
+  /// a returned address: its offset and length in the reply
+  bool has_addr;
+  uint32_t addr_at;
+  uint32_t addr_len;
+};
+
+/// An entity for [`ee_won_dir_group_keys`]: its type, path and name as UTF-16 LE bytes.
+struct EeWonDirListed {
+  uint8_t kind;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+};
+
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
@@ -5424,14 +5816,6 @@ struct EeWonOpState {
 /// A sink for the ops a queue hands back.
 using EeWonOpSink = void(*)(void *context, void *op);
 
-/// `AsyncOpContainer::Pump`'s accounting: how many ops to run and how long to go on (a value the C++ keeps on its
-/// stack across the pump).
-struct EeWonPumpPlan {
-  uint32_t start;
-  uint32_t wait;
-  int32_t remaining;
-};
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -5503,6 +5887,217 @@ struct EeWonSplit {
   int32_t right;
   int32_t top;
   int32_t bottom;
+};
+
+/// The filter's inputs (`StretchImageFilter`'s members and the source image's size).
+struct EeWonStretchFilter {
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
+  int32_t src_width;
+  int32_t src_height;
+  bool tile_horz;
+  bool tile_vert;
+  bool skip_center;
+};
+
+/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
+struct EeWonDrawOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+  int32_t f;
+  int32_t g;
+  int32_t h;
+};
+
+/// A frame to paint (`WONFrame::Paint`'s inputs): its image's size (slot `slot`), the component's size and the
+/// paddings left out of the frame.
+struct EeWonFrame {
+  bool has_image;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+};
+
+/// A background to paint (`Background`'s members, its image's size and the rectangle and offsets).
+struct EeWonBackground {
+  bool has_image;
+  bool stretch_image;
+  bool use_offsets;
+  bool has_component;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t color;
+  int32_t border_color;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t x_offset;
+  int32_t y_offset;
+};
+
+/// A WONButton to paint: its size, flags and members, and its state's image (slot 0) and text (slot 0).
+struct EeWonButtonPaint {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  bool scale_image;
+  bool has_image;
+  bool has_text;
+  bool pressed;
+  bool disabled;
+  bool draw_gray_text;
+  /// the focus style is set, the button has the focus and its parent has used the dialog keys
+  bool focus_shown;
+  int32_t h_align;
+  int32_t v_align;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t color;
+  int32_t left_text_pad;
+  int32_t top_text_pad;
+  int32_t right_text_pad;
+  int32_t bottom_text_pad;
+  int32_t left_focus_pad;
+  int32_t top_focus_pad;
+  int32_t right_focus_pad;
+  int32_t bottom_focus_pad;
+  int32_t push_dx;
+  int32_t push_dy;
+};
+
+/// A WONSimpleButton to paint (its four images' presence and sizes, slots 0..3).
+struct EeWonSimpleButtonPaint {
+  bool disabled;
+  bool check_mouse_down;
+  bool pressed;
+  bool mouse_over;
+  bool scale_image;
+  uint8_t mouse_down_state;
+  bool has_image[4];
+  int32_t image_width[4];
+  int32_t image_height[4];
+  int32_t width;
+  int32_t height;
+};
+
+/// One line break of a wrapped text (`WrappedText::BreakInfo`).
+struct EeWonLineBreak {
+  uint16_t break_pos;
+  uint16_t next_start;
+  uint16_t width;
+};
+
+/// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
+/// `string_width(ctx, offset, length)` is `Font::GetStringWidth(text, offset, length)`, `char_width(ctx, index)`
+/// is `Font::GetCharacterWidth(text[index])`, or of 'M' for a negative index.
+struct EeWonTextMeasure {
+  void *ctx;
+  int32_t (*string_width)(void*, int32_t, int32_t);
+  int32_t (*char_width)(void*, int32_t);
+};
+
+/// A row's or line's place, as the list callback answers it (`top`, `height`; a text line's `x` too).
+struct EeWonRowPlace {
+  int32_t x;
+  int32_t top;
+  int32_t height;
+};
+
+/// Answers the place of row `index` (`ctx` is the C++ caller's).
+using EeWonRowOf = EeWonRowPlace(*)(const void *ctx, size_t index);
+
+/// A multi-column row to paint (`MultiListItem::Paint`'s inputs; `has_cell` and `cell_width` are the column's
+/// cell when the column is one of the row's).
+struct EeWonMultiRowPaint {
+  int32_t column;
+  bool selected;
+  bool full_row_select;
+  bool has_cell;
+  uint32_t cell_count;
+  uint32_t selection_color;
+  int32_t total_width;
+  int32_t height;
+  uint8_t align;
+  int32_t paint_width;
+  int32_t cell_width;
+};
+
+/// A selection's colours (`SelectionColor`: background, foreground and the foreground's mode).
+struct EeWonSelColor {
+  uint32_t background;
+  uint32_t foreground;
+  int32_t mode;
+};
+
+/// A text row to paint (`TextListItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+struct EeWonTextRowPaint {
+  bool selected;
+  bool full_row_select;
+  bool no_image_select;
+  bool has_image;
+  EeWonSelColor sel;
+  uint32_t color;
+  int32_t paint_width;
+  int32_t width;
+  int32_t height;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t font_height;
+};
+
+/// An input box to paint (its members; icon slot 0, font slot 0, string slot 0 the shown text).
+struct EeWonInputPaint {
+  bool disabled_look;
+  bool has_icon;
+  bool has_focus;
+  bool cursor_on;
+  bool underline_cursor;
+  bool backwards_sel;
+  int32_t width;
+  int32_t height;
+  int32_t horz_offset;
+  int32_t text_color;
+  int32_t disabled_text_color;
+  int32_t icon_height;
+  int32_t text_x;
+  int32_t text_y;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t sel_start;
+  int32_t sel_end;
+  int32_t length;
+  int32_t font_height;
+  EeWonSelColor sel;
+};
+
+/// A text segment's range to paint (`TextSegment::Paint`'s inputs; font slot 0, string slot 0 the segment's text).
+struct EeWonSegmentPaint {
+  int32_t area_sel_start;
+  int32_t area_sel_end;
+  int32_t abs_start;
+  int32_t start;
+  int32_t end;
+  int32_t x;
+  int32_t y;
+  int32_t line_height;
+  uint32_t color;
+  EeWonSelColor sel;
 };
 
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
@@ -5867,6 +6462,98 @@ struct EeWonServerPick {
   bool language;
 };
 
+/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
+struct EeWonAddr {
+  uint8_t sockaddr[16];
+  bool valid;
+  bool remember_host;
+  const uint8_t *host;
+  size_t host_len;
+};
+
+/// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
+using EeWonRand = int32_t(*)(bool seed);
+
+/// Receives each address of a copy, in order.
+using EeWonAddrSink = void(*)(void *context, const EeWonAddr *addr);
+
+/// The C++ primitives of one `ServerRequestOp` (`ctx` is the C++ glue's) and pointers to the members the exchange
+/// keeps. Each hook is called with `ctx`.
+struct EeWonServerReqHooks {
+  void *ctx;
+  int32_t *last_error;
+  int32_t *get_cert_status;
+  bool *use_last;
+  bool *reusing;
+  bool *expired;
+  int32_t (*status)(void*);
+  uint32_t (*time_left)(void*);
+  bool (*is_async)(void*);
+  int32_t (*auth_type)(void*);
+  void (*finish)(void*, int32_t);
+  void (*finish_save_session)(void*, int32_t);
+  void (*kill)(void*);
+  bool (*prepare_addresses)(void*);
+  void (*rewind_addresses)(void*);
+  bool (*at_begin)(void*);
+  bool (*at_end)(void*);
+  bool (*has_context)(void*);
+  bool (*has_auth_context)(void*);
+  void (*notify_failed)(void*);
+  void (*next_addr)(void*);
+  void (*retreat_addr)(void*);
+  void (*reset_server)(void*);
+  void (*load_session)(void*);
+  void (*clear_session)(void*);
+  bool (*has_session)(void*);
+  void (*add_crypt)(void*);
+  void (*queue_connect)(void*);
+  int32_t (*connect_block)(void*);
+  void (*peer_auth_async)(void*);
+  bool (*peer_auth_block)(void*, int32_t*, int32_t*);
+  int32_t (*get_next_request)(void*);
+  void (*queue_send)(void*);
+  int32_t (*send_block)(void*);
+  void (*queue_recv)(void*);
+  int32_t (*recv_block)(void*);
+  /// `mResponse`'s bytes (NULL and 0: none)
+  void (*response)(void*, const uint8_t**, size_t*);
+  /// `CheckResponse()`; `*threw` set when it threw `ReadBufferException`
+  int32_t (*check_response)(void*, bool*);
+  void (*take_op_session)(void*);
+  void (*take_op_response)(void*);
+};
+
+/// A completed op the exchange tracks (`CallbackHook`'s argument): track id 2 the peer auth, 1 a socket op.
+struct EeWonServerReqDone {
+  bool killed;
+  int32_t status;
+  int32_t param;
+  /// the peer auth op's certificate status (param 2)
+  int32_t cert_status;
+  /// a receive op (`dynamic_cast<RecvMsgOp*>`)
+  bool is_recv;
+};
+
+/// A ping reply's fields for the C++ (`PingOp::CheckResponse`).
+struct EeWonPingReply {
+  /// 0 read whole, 1 not a ping reply, 2 cut short
+  int32_t end;
+  /// how many fields were read, in order: lag, app name, logical name, version, image, pid, ports, auth flag,
+  /// registration data, server data
+  uint32_t fields;
+  uint32_t lag;
+  int32_t version;
+  int32_t pid;
+  bool is_auth;
+  /// app name, logical name, image, ports, registration data, server data: offsets and lengths in the reply
+  uint32_t text_at[6];
+  uint32_t text_len[6];
+};
+
+/// `rand()` for [`ee_won_server_shuffle`].
+using EeWonDraw = int32_t(*)();
+
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -5912,6 +6599,39 @@ struct EeWonGameSummary {
   bool ok;
   uint32_t read;
   size_t rest;
+};
+
+/// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
+/// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
+struct EeWonThreadBody {
+  void (*run)(void *context);
+  void (*destroy)(void *context);
+  void *context;
+};
+
+/// An op callback: the op (a C++ `AsyncOp*`) and the context given with the table.
+using EeWonOpCall = void(*)(void *context, void *op);
+
+/// The C++ steps the timer thread takes on an op: `due` (it timed out: `Finish(WS_TimedOut)`, then the timer's
+/// reference released) and `purged` (the queue let it go: `Kill(true)`, then the reference released).
+struct EeWonTimerHooks {
+  EeWonOpCall due;
+  EeWonOpCall purged;
+  void *context;
+};
+
+/// The C++ steps the container takes on an op (`AsyncOp*`): references, its status, its run and its completion.
+struct EeWonContainerHooks {
+  EeWonOpCall add_ref;
+  EeWonOpCall release;
+  /// `mStatus==WS_Pending`
+  bool (*is_pending)(void *context, void *op);
+  bool (*completion_pending)(void *context, void *op);
+  EeWonOpCall start_run_async;
+  EeWonOpCall complete;
+  /// `Kill(true)`
+  EeWonOpCall kill;
+  void *context;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -8404,6 +9124,54 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
+/// `EECanConvert`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
+
+/// `EECanHeal`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
+
+/// `EEFindDropLocation`'s drop point.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
+
+/// `EEIsLineToUnitBlocked`.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
+                                       const EeCombatLineHost *host);
+
+/// `ApplyAreaDamage`'s walk: calls `host.hit` for every victim in order.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+void ee_combat_area_victims(const EeCombatAreaIn *input,
+                            const EeCombatAreaHost *host);
+
+/// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+uint32_t ee_combat_units_in_area(const EeCombatFindTargetIn *input,
+                                 const EeCombatTargetHost *host);
+
+/// `EEFindNewTarget`'s choice among `count` candidates: the index of the first that passes, -1 for none.
+///
+/// # Safety
+/// `units` must point to `count` handles, `host` to a valid record whose callbacks are callable with its `ctx`.
+int32_t ee_combat_choose_target(const uint64_t *units,
+                                uint32_t count,
+                                int32_t skip_kind,
+                                const EeCombatTargetHost *host);
+
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
                          EeDx7ScreenState *state,
@@ -9419,6 +10187,59 @@ int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
 /// # Safety
 /// `focus` is valid.
 EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
+
+/// `RTSMouse::ClampPosition`: `*position` kept inside `*bounds`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_mouse_clamp(EeGe2DPoint *position, const EeGeRectangle *bounds);
+
+/// `RTSMouse::Update`'s move (not frozen): `min_x`/`min_y` are the unit's smallest moves (`sMinXValue`/`sMinYValue`).
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxMouseMove ee_gfx_mouse_update_move(const EeGfxMouseInput *input,
+                                        int32_t *min_x,
+                                        int32_t *min_y);
+
+/// `GetScreenPoint` (`EEROUnits.cpp`): `*point` to window coordinates in the game view `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_units_screen_point(const EeGeViewport *viewport,
+                               bool orthographic,
+                               const EeGe3DPoint *point,
+                               EeGe2DPoint *out);
+
+/// `DrawBars`' bar sizes from the window's size.
+EeGfxBarSizes ee_gfx_units_bar_sizes(uint32_t window_width, uint32_t window_height);
+
+/// `DrawBar`'s rectangles: the unit's bar tag (`bar` scaled by `scale` through `*transformation`) projected through
+/// `*viewport`, moved to row `row` and split by `fraction`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_unit_bar(const EeGeViewport *viewport,
+                                    bool orthographic,
+                                    const EeGeTransformation *transformation,
+                                    const EeGe3DPoint *bar,
+                                    float scale,
+                                    float fraction,
+                                    int32_t row,
+                                    const EeGfxBarSizes *sizes);
+
+/// `DrawObjectBars`' rectangles: the object's bar tag (`*location` plus `bar` scaled by `scale`) projected through
+/// `*viewport` and split by `health`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_object_bar(const EeGeViewport *viewport,
+                                      bool orthographic,
+                                      const EeGe3DPoint *location,
+                                      const EeGe3DPoint *bar,
+                                      float scale,
+                                      float health,
+                                      const EeGfxBarSizes *sizes);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
@@ -10588,6 +11409,17 @@ long ee_ui_background_full_draw(void *background,
                                 unsigned long columns,
                                 unsigned long rows);
 
+/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
+/// and the grid (columns, rows) -> the last draw's result.
+long ee_ui_background_bfull_draw(void *background,
+                                 EeUiRect form,
+                                 EeUiRect redraw,
+                                 unsigned long texture_width,
+                                 unsigned long texture_height,
+                                 EeUiRect texture_rect,
+                                 unsigned long columns,
+                                 unsigned long rows);
+
 /// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
 /// `RelayoutBackground` (never exclusive) lay a background out in.
 EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
@@ -11099,6 +11931,11 @@ void ee_ui_form_set_all_controls_dirty(void *form);
 /// `UIForm::GetToolTipShadowRectangle(rect, out)`.
 EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
 
+/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
+EeUiPoint ee_ui_form_help_location(EeUiPoint mouse,
+                                   EeUiRect label,
+                                   EeUiRect form);
+
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
 
@@ -11119,6 +11956,81 @@ void ee_ui_group_enable(void *group);
 long ee_ui_string_list_find(void *list,
                             const char *key,
                             unsigned long selection);
+
+/// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
+EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
+                                        EeUiRect rect,
+                                        EeUiGraphTexts texts,
+                                        long max_x,
+                                        long max_y);
+
+/// `UIGraph::CopyData`'s displayed range.
+EeUiGraphRange ee_ui_graph_copy_range(float zoom, EeUiGraphRange displayed, EeUiGraphRange graph);
+
+/// `ZoomIn` (`zoom_in`) or `ZoomOut`: the new zoom; `out` the displayed range.
+float ee_ui_graph_zoom(bool zoom_in,
+                       float zoom,
+                       float increment,
+                       EeUiGraphRange graph,
+                       EeUiGraphRange *out);
+
+/// `UIGraph::DrawPolygons` after `UIControl::DrawPolygons` (`result`), the grid lines drawn with `line`.
+long ee_ui_graph_draw_grid(void *graph,
+                           void *line,
+                           long result,
+                           unsigned long thickness,
+                           EeUiRect rect,
+                           bool grid,
+                           unsigned long divisions_x,
+                           unsigned long divisions_y,
+                           float zoom);
+
+/// `UIGraph::DrawGridText`.
+long ee_ui_graph_draw_grid_text(void *graph,
+                                EeUiRect rect,
+                                unsigned long divisions_x,
+                                unsigned long divisions_y,
+                                float zoom,
+                                EeUiGraphRange range);
+
+/// `UIGraph::DrawTextA` after the draw count's decrement.
+long ee_ui_graph_draw_texts(void *graph, bool title, bool x, bool y, bool grid);
+
+/// `UILineGraph::DrawPolygons` after `UIGraph::DrawPolygons` (`result`), over the copied graph's `count` series.
+long ee_ui_linegraph_draw_list(void *graph,
+                               long result,
+                               unsigned long count);
+
+/// `UILineGraph::DrawSeries` of `series` (`count` points), drawn with `line`.
+long ee_ui_linegraph_draw_series(void *graph,
+                                 void *line,
+                                 const void *series,
+                                 unsigned long count,
+                                 long series_min_x,
+                                 EeUiGraphRange copied,
+                                 EeUiGraphRange displayed,
+                                 EeUiRect rect);
+
+/// `OpenCandidateWindow`'s rectangle.
+EeUiRect ee_ui_ime_open_rect(EeUiRect screen,
+                             EeUiRect control,
+                             float width_ratio,
+                             float height_ratio);
+
+/// `SetCandidateList`'s page, lines and width.
+EeUiCandidateFit ee_ui_ime_candidate_list(void *list,
+                                          float height,
+                                          long font_height,
+                                          unsigned long selection,
+                                          unsigned long count,
+                                          unsigned long window_width,
+                                          float left);
+
+/// `DrawPolygons`' selection bar and border.
+EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long height);
+
+/// `DrawTextA`'s row of line `index`.
+EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
 /// `UITextLabel::ComputeTextLabelRect`.
 void ee_ui_label_compute_rect(void *label);
@@ -11157,6 +12069,15 @@ bool ee_ui_hotkey_fire_events(void *key);
 
 /// `UIForm::UpdateKeyboard` -> its result.
 long ee_ui_form_update_keyboard(void *form);
+
+/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
+void ee_ui_hotkey_set_event(void **slot, void *event);
+
+/// `UIHotKey::SetModifier(code, slot)`.
+void ee_ui_hotkey_set_modifier(void *key, unsigned long code, int slot);
+
+/// `UIHotKey::CreateHotKeys(file)` -> its result.
+long ee_ui_hotkey_create_hotkeys(void *file);
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 EeUiBorderLine ee_ui_border_line(EeUiRect r,
@@ -11595,6 +12516,18 @@ void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
 
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+uint64_t ee_units_store_checksum_flag1();
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+uint32_t ee_units_store_check_on_map(const uint32_t *ids,
+                                     const uint64_t *objects,
+                                     size_t count);
+
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
 ///
@@ -11687,6 +12620,30 @@ void ee_units_repair(void *player,
                      uint32_t target,
                      bool queued);
 
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+bool ee_units_keeps_citizen(uint32_t id);
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+void ee_units_build_wall(void *player,
+                         void *selection,
+                         int32_t technology,
+                         float start_x,
+                         float start_y,
+                         float end_x,
+                         float end_y);
+
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+void ee_units_unload_transport(void *player,
+                               void *selection,
+                               int64_t x,
+                               int64_t y);
+
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+void ee_units_dropoff_resource(void *player,
+                               void *selection,
+                               uint32_t dropoff);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -11772,6 +12729,30 @@ extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
 extern void ee_units_host_group_reset_paths(void *group);
 
+extern void ee_units_host_group_keep_citizens(void *group);
+
+extern void *ee_units_host_wall_plan(void *player,
+                                     int32_t technology,
+                                     float start_x,
+                                     float start_y,
+                                     float end_x,
+                                     float end_y,
+                                     size_t *count);
+
+extern void ee_units_host_wall_build(void *group, void *pieces);
+
+extern void ee_units_host_wall_release(void *pieces);
+
+extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
+
+extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
+
+extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
+
+extern uint8_t ee_units_host_goal_can_unload(void *goal);
+
+extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
+
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
 /// # Safety
@@ -11846,6 +12827,155 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool force,
                                       bool peer_valid,
                                       int64_t expire_delta);
+
+/// `ByteBuffer(data, length, false)`: a copy.
+///
+/// # Safety
+/// `data` holds `length` bytes (or `length` is 0).
+EeWonByteBuffer *ee_won_bytes_copy(const uint8_t *data, unsigned long length);
+
+/// `ByteBuffer(const char*)`: the text and its terminator; null gives no bytes.
+///
+/// # Safety
+/// `text` is null or a NUL-terminated string.
+EeWonByteBuffer *ee_won_bytes_text(const char *text);
+
+/// # Safety
+/// `b` came from an `ee_won_bytes_*` constructor or `ee_won_writer_to_bytes` and is not used again.
+void ee_won_bytes_free(EeWonByteBuffer *b);
+
+/// `data()`: null for a buffer of no bytes at all.
+///
+/// # Safety
+/// `b` is valid.
+const uint8_t *ee_won_bytes_data(const EeWonByteBuffer *b);
+
+/// `length()`.
+///
+/// # Safety
+/// `b` is valid.
+unsigned long ee_won_bytes_length(const EeWonByteBuffer *b);
+
+/// `WriteBuffer(lengthFieldSize, lengthIncludesField)`.
+EeWonWriteBuffer *ee_won_writer_new(uint8_t field_size, bool includes_field);
+
+/// # Safety
+/// `w` came from `ee_won_writer_new` and is not used again.
+void ee_won_writer_free(EeWonWriteBuffer *w);
+
+/// `data()`: the data's start (null before the first growth); `capacity()` bytes may be written there until the
+/// next call that grows, resets or releases.
+///
+/// # Safety
+/// `w` is valid.
+uint8_t *ee_won_writer_data(EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_length(const EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_capacity(const EeWonWriteBuffer *w);
+
+/// `Reset` (and `Release`, which forgot the allocation another owner had taken: no caller takes it any more).
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reset(EeWonWriteBuffer *w);
+
+/// `Reserve`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve(EeWonWriteBuffer *w, unsigned long capacity);
+
+/// `CheckWrite`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_check_write(EeWonWriteBuffer *w, unsigned long add);
+
+/// `ReserveChunk`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve_chunk(EeWonWriteBuffer *w, unsigned long total, unsigned long max);
+
+/// `SetSize`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_set_size(EeWonWriteBuffer *w, unsigned long size);
+
+/// `SkipBytes`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_skip(EeWonWriteBuffer *w, unsigned long n);
+
+/// `AppendBytes` (and the byte, bool, short and long appends of their little-endian bytes).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes and is not the writer's own.
+void ee_won_writer_append(EeWonWriteBuffer *w, const uint8_t *data, unsigned long length);
+
+/// `AppendLength`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_append_length(EeWonWriteBuffer *w, unsigned long length, uint8_t size);
+
+/// `AppendString` / `AppendBuffer`: a `size`-byte length field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_field(EeWonWriteBuffer *w,
+                                const uint8_t *data,
+                                unsigned long length,
+                                uint8_t size);
+
+/// `AppendWString` of `length` UTF-16 little-endian bytes: a unit count field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
+                                  const uint8_t *data,
+                                  unsigned long length,
+                                  uint8_t size);
+
+/// `SetBytes` (and `SetByte`, `SetShort`).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes.
+void ee_won_writer_set(EeWonWriteBuffer *w,
+                       unsigned long at,
+                       const uint8_t *data,
+                       unsigned long length);
+
+/// `ToByteBuffer`: a new byte buffer (the caller frees it with `ee_won_bytes_free`).
+///
+/// # Safety
+/// `w` is valid.
+EeWonByteBuffer *ee_won_writer_to_bytes(EeWonWriteBuffer *w, bool release);
+
+/// `ReadBuffer(data, length)` / `SetData`: points the reader at the bytes, rewound.
+///
+/// # Safety
+/// `r` is valid.
+void ee_won_reader_set(EeWonReadBuffer *r, const uint8_t *data, unsigned long length);
+
+/// `ReadBytes`: the next `amount` bytes into `*out`, skipped; false past the end (nothing moves).
+///
+/// # Safety
+/// `r` and `out` are valid; the reader's bytes are alive.
+bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out);
+
+/// `ReadLength`: into `*out`; false past the end.
+///
+/// # Safety
+/// As `ee_won_reader_take`.
+bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
@@ -12152,6 +13282,59 @@ EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
                                       EeWonDirEntitySink sink,
                                       void *context);
 
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and everything it points to are valid; `sink` accepts `context`.
+void ee_won_dir_request(const EeWonDirRequest *r,
+                        uint8_t field_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
+///
+/// # Safety
+/// `q` and what it points to are valid; `sink` accepts `context`.
+void ee_won_dir_pack_query(const EeWonDirQuery *q, bool multi, EeWonByteSink sink, void *context);
+
+/// `AddServiceOp::SetNetAddrPort`'s two bytes into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_dir_port_net_addr(uint16_t port, EeWonByteSink sink, void *context);
+
+/// An entity change's status reply.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_dir_status_reply(const uint8_t *reply,
+                             size_t length,
+                             bool read_addr,
+                             EeWonDirStatusReply *out);
+
+/// The multi-directory ops' step: true when the current query is done (`*failed` counts a failure).
+///
+/// # Safety
+/// `failed` is valid.
+bool ee_won_dir_multi_step(int32_t status, int32_t *failed);
+
+/// The multi-directory ops' final status.
+int32_t ee_won_dir_multi_end(int32_t failed, size_t count);
+
+/// `FindEntityOp::CheckResponse`'s parser choice (true: single-entity).
+bool ee_won_dir_find_single(bool is_service, uint8_t find_flags);
+
+/// `GetEntityRequest::GetDirEntityMap`'s keys: for each of `count` entities its directory into `sink` (UTF-16
+/// LE bytes, one call per entity, in order).
+///
+/// # Safety
+/// `query_path`, `entities` (`count` entries) are valid; `sink` accepts `context`.
+void ee_won_dir_group_keys(EeWonDirBytes query_path,
+                           const EeWonDirListed *entities,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
+
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
 ///
@@ -12221,49 +13404,6 @@ void ee_won_utf8_from_wide(const void *wide,
                            size_t count,
                            EeWonByteSink sink,
                            void *context);
-
-/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
-uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
-
-/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
-uint64_t ee_won_write_chunk(uint64_t capacity,
-                            uint64_t total,
-                            uint64_t max);
-
-/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
-///
-/// # Safety
-/// `out` has 4 bytes.
-size_t ee_won_encode_length(uint32_t length,
-                            uint8_t size,
-                            uint8_t *out);
-
-/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
-///
-/// # Safety
-/// `out` has 6 bytes.
-size_t ee_won_length_prefix(uint8_t field_size,
-                            bool includes_field,
-                            uint32_t length,
-                            uint8_t *out);
-
-/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
-///
-/// # Safety
-/// `pos` is valid.
-bool ee_won_read_take(uint64_t length,
-                      int64_t *pos,
-                      uint64_t amount);
-
-/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
-///
-/// # Safety
-/// `data` holds `length` bytes; `pos` and `out` are valid.
-bool ee_won_read_length(const uint8_t *data,
-                        uint64_t length,
-                        int64_t *pos,
-                        uint8_t size,
-                        uint32_t *out);
 
 /// `CRC16::Put`: the register after the bytes.
 ///
@@ -12705,14 +13845,9 @@ bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
 /// `lan::summary_due`.
 bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
 
-/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
-/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
-///
-/// # Safety
-/// `buffer` has `size` bytes.
-const char *ee_won_status_name(long s,
-                               char *buffer,
-                               size_t size);
+/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
+/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
+const char *ee_won_status_text(long s);
 
 void ee_won_netstats_enable(bool on);
 
@@ -13039,90 +14174,6 @@ void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
 /// # Safety
 /// `state` is valid.
 void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
-
-EeWonTimerQueue *ee_won_timers_new();
-
-/// # Safety
-/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
-void ee_won_timers_destroy(EeWonTimerQueue *timers);
-
-/// The tick the wait times count from (`ThreadFunc`'s start).
-///
-/// # Safety
-/// `timers` is live.
-void ee_won_timers_set_last_tick(EeWonTimerQueue *timers);
-
-/// `TimerThread::AddTimerOp` now -> the entry's key.
-///
-/// # Safety
-/// `timers` is live; `op` stays alive while the entry exists.
-uint64_t ee_won_timers_add(EeWonTimerQueue *timers, uint32_t timeout, void *op);
-
-/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
-///
-/// # Safety
-/// `timers` is live.
-void *ee_won_timers_remove(EeWonTimerQueue *timers, uint64_t key);
-
-/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
-///
-/// # Safety
-/// `timers` is live during the call.
-void ee_won_timers_pump(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
-
-/// `TimerThread::GetWaitTime`.
-///
-/// # Safety
-/// `timers` is live.
-uint32_t ee_won_timers_wait_time(const EeWonTimerQueue *timers);
-
-/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
-///
-/// # Safety
-/// `timers` is live during the call.
-void ee_won_timers_purge(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
-
-EeWonOpQueue *ee_won_opqueue_new();
-
-/// # Safety
-/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
-void ee_won_opqueue_destroy(EeWonOpQueue *queue);
-
-/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
-/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
-///
-/// # Safety
-/// `queue` is live; a queued `op` stays alive until popped.
-int32_t ee_won_opqueue_queue(EeWonOpQueue *queue,
-                             void *op,
-                             void *current,
-                             bool current_pending,
-                             bool purging);
-
-/// The front op, taken (null: none).
-///
-/// # Safety
-/// `queue` is live.
-void *ee_won_opqueue_pop(EeWonOpQueue *queue);
-
-/// # Safety
-/// `queue` is live.
-size_t ee_won_opqueue_len(const EeWonOpQueue *queue);
-
-/// `AsyncOpContainer::Pump`'s accounting, started now.
-EeWonPumpPlan ee_won_pump_plan_new(uint32_t wait, int32_t max_ops, size_t queued);
-
-/// Whether to wait for the signal before pumping.
-///
-/// # Safety
-/// `plan` is valid.
-bool ee_won_pump_plan_should_wait(const EeWonPumpPlan *plan, size_t queued);
-
-/// After one op: whether to go on with the next.
-///
-/// # Safety
-/// `plan` is valid.
-bool ee_won_pump_plan_go_on(EeWonPumpPlan *plan);
 
 EeWonOpSet *ee_won_opset_new();
 
@@ -13682,6 +14733,202 @@ int32_t ee_won_gui_split_drag(int32_t x,
                               int32_t sx,
                               int32_t sy,
                               int32_t *out_y);
+
+/// `StretchImageFilter::Filter`'s placement: the new image's size, then the pixel operations.
+///
+/// # Safety
+/// `f`, `out_width` and `out_height` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_filter(const EeWonStretchFilter *f,
+                                      int32_t *out_width,
+                                      int32_t *out_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_paint(bool skip_center,
+                                     int32_t left,
+                                     int32_t right,
+                                     int32_t top,
+                                     int32_t bottom,
+                                     int32_t width,
+                                     int32_t height,
+                                     EeWonDrawOp *out,
+                                     size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_center(int32_t width,
+                                      int32_t height,
+                                      int32_t center_width,
+                                      int32_t center_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_frame(const EeWonFrame *f, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_combo_frame(bool draw_frame,
+                                   bool button_in_frame,
+                                   bool button_visible,
+                                   int32_t button_width,
+                                   const EeWonFrame *f,
+                                   EeWonDrawOp *out,
+                                   size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_scroll_container(bool vert_visible,
+                                        bool horz_visible,
+                                        bool transparent,
+                                        bool has_corner,
+                                        int32_t vert_left,
+                                        int32_t vert_bottom,
+                                        const EeWonFrame *f,
+                                        EeWonDrawOp *out,
+                                        size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_background(const EeWonBackground *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button_text(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_simple_button(const EeWonSimpleButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_header_arrow(int32_t sort,
+                                    int32_t color,
+                                    bool has_text,
+                                    int32_t text_width,
+                                    int32_t left_text_pad,
+                                    int32_t width,
+                                    int32_t height,
+                                    bool pressed,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `pads` holds four ints (left, top, right, bottom); `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_label(int32_t width,
+                             int32_t height,
+                             const int32_t *pads,
+                             int32_t h_align,
+                             int32_t v_align,
+                             int32_t text_width,
+                             int32_t text_height,
+                             int32_t color,
+                             EeWonDrawOp *out,
+                             size_t cap);
+
+/// # Safety
+/// `breaks` holds `count` breaks; `m` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_wrapped_text(bool has_font,
+                                    int32_t length,
+                                    bool centered,
+                                    int32_t width,
+                                    int32_t font_height,
+                                    const EeWonLineBreak *breaks,
+                                    size_t count,
+                                    int32_t x,
+                                    int32_t y,
+                                    const EeWonTextMeasure *m,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `row_of` answers every index below `count` for `ctx`; `paint_width_out` is valid; `out` has room for `cap`
+/// operations (or is NULL).
+size_t ee_won_gui_draw_list(int32_t total_width,
+                            int32_t view_width,
+                            int32_t paint_width,
+                            size_t first,
+                            size_t count,
+                            int32_t offset,
+                            int32_t view_height,
+                            bool partial,
+                            EeWonRowOf row_of,
+                            const void *ctx,
+                            int32_t *paint_width_out,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
+/// # Safety
+/// As `ee_won_gui_draw_list`.
+size_t ee_won_gui_draw_text_lines(size_t first,
+                                  size_t count,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  bool partial,
+                                  EeWonRowOf row_of,
+                                  const void *ctx,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `columns` holds `count` widths; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_list(const int32_t *columns,
+                                  size_t count,
+                                  int32_t border,
+                                  int32_t total_width,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_row(const EeWonMultiRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_row(const EeWonTextRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_input_box(const EeWonInputPaint *b,
+                                 const EeWonTextMeasure *m,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `s` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_segment(const EeWonSegmentPaint *s,
+                               const EeWonTextMeasure *m,
+                               EeWonDrawOp *out,
+                               size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_image(int32_t area_sel_start,
+                                  int32_t area_sel_end,
+                                  int32_t abs_start,
+                                  int32_t abs_end,
+                                  int32_t x,
+                                  int32_t y,
+                                  int32_t width,
+                                  int32_t line_height,
+                                  uint32_t sel_background,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// `SelectionColor::GetForegroundColor`.
+uint32_t ee_won_gui_sel_foreground(uint32_t background,
+                                   uint32_t foreground,
+                                   int32_t mode,
+                                   uint32_t original);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
@@ -15272,6 +16519,197 @@ void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uin
 
 bool ee_won_routing_can_add_friend(size_t count);
 
+/// A new, empty list (shuffling on).
+EeWonServerList *ee_won_ctx_new();
+
+/// # Safety
+/// `c` came from [`ee_won_ctx_new`] (or is NULL) and is not used after.
+void ee_won_ctx_free(EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_clear(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_add(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `addrs` holds `count` addresses.
+bool ee_won_ctx_replace(const EeWonServerList *c, const EeWonAddr *addrs, size_t count);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+void ee_won_ctx_notify_failed(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list, `a` valid.
+bool ee_won_ctx_remove(const EeWonServerList *c, const EeWonAddr *a);
+
+/// # Safety
+/// `c` is a live list.
+size_t ee_won_ctx_len(const EeWonServerList *c);
+
+/// # Safety
+/// `c` is a live list.
+void ee_won_ctx_set_shuffle(const EeWonServerList *c, bool shuffle);
+
+/// # Safety
+/// `c` is a live list.
+bool ee_won_ctx_shuffle(const EeWonServerList *c);
+
+/// `CopyAddresses(AddrList&)`: each address into `sink`, in order (outside the lock).
+///
+/// # Safety
+/// `c` is a live list; `sink` accepts `context`.
+void ee_won_ctx_copy(const EeWonServerList *c, EeWonRand rand, EeWonAddrSink sink, void *context);
+
+/// `CopyAddresses(AddrSet&)`: each address into `sink`, in the six bytes' order.
+///
+/// # Safety
+/// As [`ee_won_ctx_copy`].
+void ee_won_ctx_copy_sorted(const EeWonServerList *c, EeWonAddrSink sink, void *context);
+
+/// `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `hooks` points to valid hooks whose member pointers stay valid for the call.
+void ee_won_server_req_run(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryNextServer`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_next(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryConnect`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_connect(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryPeerToPeerAuth`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_peer_auth(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Send`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_send(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Recv`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_recv(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CheckExpiredSession`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_check_expired(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CallbackHook`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`]; `done` is valid.
+bool ee_won_server_req_callback(const EeWonServerReqHooks *hooks, const EeWonServerReqDone *done);
+
+/// `ServerRequestOp::SetLastServerError` on the members.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_won_server_req_last_error(int32_t *last, bool *use_last, int32_t error);
+
+/// `ServerRequestOp::CleanupHook`'s plan (bit 1 notify the context, bit 2 close the socket).
+uint32_t ee_won_server_req_cleanup_plan(int32_t status,
+                                        bool killed,
+                                        bool has_context,
+                                        bool has_socket,
+                                        bool close_connection);
+
+/// `ServerOp`'s step limits.
+uint32_t ee_won_server_step_time(uint32_t max, bool is_async, uint32_t time_left);
+
+/// `PingOp::GetNextRequest`'s message into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_server_ping_request(uint8_t field_size,
+                                uint32_t start_tick,
+                                bool extended,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `MultiPingOp::GetRequest`'s datagram into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_multi_ping_request(int32_t ping_id, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::SendNoOp`'s message into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_no_op(uint8_t field_size, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::StartKeepAlive`'s timer in milliseconds (`*ms`); false: no timer.
+///
+/// # Safety
+/// `ms` is valid.
+bool ee_won_server_keep_alive_ms(uint32_t period_seconds, uint32_t *ms);
+
+/// `PingOp::CheckResponse`'s read.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_server_ping_reply(const uint8_t *reply,
+                              size_t length,
+                              uint32_t now,
+                              EeWonPingReply *out);
+
+/// `MultiPingOp::HandleResponse`: true when done (a ping reply with the id).
+///
+/// # Safety
+/// `reply` holds `length` bytes.
+bool ee_won_server_multi_ping_reply(const uint8_t *reply, size_t length, int32_t ping_id);
+
+/// `MultiPingOp::HandleResponsePrv`'s status rule (0 stop, 1 ignore, 2 match the reply).
+int32_t ee_won_server_multi_ping_recv_status(int32_t status);
+
+/// `MultiPingOp::RecvCallback`'s next step (0 wait, 1 finish, 2 next batch).
+int32_t ee_won_server_multi_ping_next(size_t in_flight, size_t waiting);
+
+/// `MultiPingOp::FinishBatch`'s give-up rule.
+bool ee_won_server_multi_ping_gives_up(int32_t failures, uint8_t max_failures);
+
+/// `MultiPingOp::ResponseTimeLeft`.
+uint32_t ee_won_server_multi_ping_time_left(uint32_t now,
+                                            uint32_t start,
+                                            uint32_t max_ping,
+                                            uint32_t time_left);
+
+/// `MultiPingOp::RunHook`'s blocking loop rule.
+bool ee_won_server_multi_ping_continues(int32_t status);
+
+/// `MultiPingOp::CleanupHook`'s order: `order` receives `count` indexes.
+///
+/// # Safety
+/// `ping_times` and `order` hold `count` entries.
+void ee_won_server_multi_ping_order(const int32_t *ping_times, size_t count, size_t *order);
+
+/// `MultiPingOp::GetServerContext`'s rule.
+bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
+
+/// `ServerContext::CopyAddresses`' shuffle: `order` receives `count` indexes, `draw` is `rand`.
+///
+/// # Safety
+/// `order` holds `count` entries.
+void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///
 /// # Safety
@@ -15383,6 +16821,124 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+EeWonThread *ee_won_thread_new(EeWonThreadBody body);
+
+/// # Safety
+/// `t` came from `ee_won_thread_new`; its thread does not run any more (or never ran).
+void ee_won_thread_free(EeWonThread *t);
+
+/// # Safety
+/// `t` is valid and stays at its address while its thread runs.
+void ee_won_thread_start(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_mark_stopped(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_is_stopped(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_stopped(const EeWonThread *t, bool stopped);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_is_running(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_auto_delete(const EeWonThread *t, bool on);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_signal(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_wait_signal(const EeWonThread *t, uint32_t milliseconds);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_in_this_thread(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_wait_for_stop(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_priority(const EeWonThread *t, int32_t priority);
+
+EeWonTimerThread *ee_won_timer_thread_new(EeWonTimerHooks hooks);
+
+/// # Safety
+/// `t` came from `ee_won_timer_thread_new`; its thread does not run any more.
+void ee_won_timer_thread_free(EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_start(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_stop(const EeWonTimerThread *t, bool wait);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_wait_for_stop(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid; the caller took a reference on `op` for the queue.
+bool ee_won_timer_thread_add(const EeWonTimerThread *t, void *op, uint32_t timeout);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_timer_thread_remove(const EeWonTimerThread *t, void *op);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_pump(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_purge(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+uint32_t ee_won_timer_thread_wait_time(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_timer_thread_len(const EeWonTimerThread *t);
+
+EeWonOpContainer *ee_won_container_new(EeWonContainerHooks hooks);
+
+/// # Safety
+/// `c` came from `ee_won_container_new`.
+void ee_won_container_free(EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid; `op` is a live op.
+void ee_won_container_queue(const EeWonOpContainer *c, void *op);
+
+/// # Safety
+/// `c` is valid.
+void ee_won_container_purge(const EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid.
+void ee_won_container_pump(const EeWonOpContainer *c, uint32_t wait, int32_t max_ops);
+
+/// # Safety
+/// `c` is valid.
+size_t ee_won_container_len(const EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid.
+void *ee_won_container_current(const EeWonOpContainer *c);
 
 }  // extern "C"
 

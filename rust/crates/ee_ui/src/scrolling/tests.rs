@@ -1,6 +1,6 @@
 //! The scrolling label against the real C++ (`golden_scroll.txt`): a scratch driver (`build/ui_scroll_golden`) ran
 //! the unmodified `UITLScrolling.cpp` (with the real `UITextLabel.cpp`, `UIControl.cpp` and `UIForm.cpp`; the
-//! driver's timers log every start, pause, resume and poll, and poll what the driver says) over 120 labels (three
+//! driver's timers log every start, pause, resume and poll, and poll what the driver says) over 120 labels (then 30 on whole pixels scrolled a pixel a frame to the end, round 9) (three
 //! font heights, borders, up to 29 lines, a finished trigger or none) of 40 random operations: both `ScrollText`s
 //! (speeds, delays, offsets, times shorter and longer than the scroll), `CopyData` with each timer firing or not,
 //! `PauseScrolling`, `ResumeScrolling`, `StopScrolling` and moves, printing the scroll's members, the timers'
@@ -242,7 +242,7 @@ fn replays_the_cpp_golden() {
         assert_eq!(a, b, "line {}", n + 1);
     }
     assert_eq!(out.len(), golden.len(), "line count");
-    assert_eq!(labels, 120);
+    assert_eq!(labels, 150);
 }
 
 #[test]

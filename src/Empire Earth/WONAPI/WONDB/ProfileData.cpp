@@ -49,7 +49,7 @@ void ProfileData::ClearNewsletterSubs()
 void ProfileData::PackRequestData(WriteBuffer& inMsg,bool inIsSet)
 {
     unsigned short fieldCount=0;
-    unsigned long fieldCountPos=inMsg.mLength;
+    unsigned long fieldCountPos=inMsg.length();
     inMsg.AppendShort(0);
     std::map<unsigned short,bool>::iterator it=this->mNewsletterSubs.begin();
     while (it!=this->mNewsletterSubs.end()) {

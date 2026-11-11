@@ -4,9 +4,14 @@
 // 0x100774b9..0x10077f75: the U2D key init chains, the ctor, the dtor, then the out-of-line members in alphabetical
 // order. The implicit copy members and ??_E are emitted by UIForm.cpp (first includer of UIIMECandidate.h).
 // UILayoutUtility.cpp starts at 0x10077f75.
+//
+// The layout is Rust (rust/crates/ee_ui/src/ime.rs, docs/RUST_PLAN.md R6): where the window opens, the candidate
+// list's page, numbers and width, the selection bar, the border's lines and the text rows. The strings' walk, the
+// texts, rhombi, line and draws stay here.
 #include <windows.h>
 #include <mbstring.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -33,6 +38,42 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIIMECandidate.h"
+
+// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top)
+static inline EeUiRect UIIMERect(const GERectangle& r) { return EeUiRect{r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()}; }
+static inline GERectangle UIIMERect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
+
+// The Rust SetCandidateList's walk over the list's strings (ee_ui ime.rs)
+struct UIIMECandidateRust {
+    struct List {
+        UIIMECandidate* mWindow;
+        const unsigned char* mString;
+    };
+    static float Line(List* inList, const char* inNumber, unsigned long inLength)
+    {
+        UWideString theNumber;
+        UWideString theCandidate;
+        UWideString theLine;
+        theNumber.CopyString(inNumber, inLength);   // ASCII: characters are bytes
+        unsigned long theLength = PlatMbsLen(inList->mString);
+        theCandidate.CopyString(reinterpret_cast<const char*>(inList->mString), theLength);
+        theLine = theNumber + theCandidate;
+        inList->mWindow->mText->SetText(theLine);
+        inList->mWindow->mCandidateStrings.push_back(theLine);
+        inList->mString = PlatMbsNInc(inList->mString, theLength) + 1;
+        return inList->mWindow->mText->GetTextExtent().GetWidth();
+    }
+};
+extern "C" void ee_uicpp_ime_skip(void* inList)
+{
+    UIIMECandidateRust::List* theList = static_cast<UIIMECandidateRust::List*>(inList);
+    theList->mString = PlatMbsNInc(theList->mString, PlatMbsLen(theList->mString)) + 1;
+}
+extern "C" float ee_uicpp_ime_line(void* inList, const unsigned char* inNumber, unsigned long inLength)
+{
+    return UIIMECandidateRust::Line(static_cast<UIIMECandidateRust::List*>(inList), reinterpret_cast<const char*>(inNumber),
+                                    inLength);
+}
 
 // FUNCTION: LLE 0x100775d9
 // Creates the IME candidate window with its screen-size ratios and font, a blue selection bar and black background
@@ -84,49 +125,20 @@ long UIIMECandidate::DrawPolygons()
     GELine theLine;
     GEColor theDarkColor;
     GEColor theLightColor;
-    GERectangle theRectangle;
     unsigned long theHeight = this->mCopyText->GetFont()->GetHeight();
-    unsigned long i;
     this->mBackgroundRhombus.SetRectangle(this->mCopyCandidateRectangle);
     theResult = this->mManager->GetRasterizer()->Draw(&this->mBackgroundRhombus, this->mManager->GetScreen());
-    if (this->mCopySelection >= 0) {
-        theRectangle.SetLeft(this->mCopyCandidateRectangle.GetLeft() + 2.0f);
-        theRectangle.SetRight(this->mCopyCandidateRectangle.GetRight() - 2.0f);
-        theRectangle.SetTop(this->mCopySelection * theHeight + this->mCopyCandidateRectangle.GetTop());
-        theRectangle.SetBottom(theRectangle.GetTop() + theHeight);
-        theRectangle.And(this->mCopyCandidateRectangle);
-        this->mSelectionRhombus.SetRectangle(theRectangle);
+    EeUiCandidateFrame theFrame = ee_ui_ime_frame(UIIMERect(this->mCopyCandidateRectangle), this->mCopySelection, theHeight);
+    if (theFrame.has_selection) {
+        this->mSelectionRhombus.SetRectangle(UIIMERect(theFrame.selection));
         theResult = this->mManager->GetRasterizer()->Draw(&this->mSelectionRhombus, this->mManager->GetScreen());
     }
     UIControl::GetBorderColors(theDarkColor, theLightColor);
-    for (i = 0; i < 2; i++) {
-        theLine.SetColor(theDarkColor);
-        theLine.SetStartPoint(GE2DPoint(this->mCopyCandidateRectangle.GetLeft(), this->mCopyCandidateRectangle.GetTop() + i));
-        theLine.SetEndPoint(GE2DPoint(this->mCopyCandidateRectangle.GetRight() + 1.0f - i,
-                                      this->mCopyCandidateRectangle.GetTop() + i));
-        theResult = this->mManager->GetRasterizer()->Draw(&theLine, 1, this->mManager->GetScreen());
-    }
-    for (i = 0; i < 2; i++) {
-        theLine.SetColor(theLightColor);
-        theLine.SetStartPoint(GE2DPoint(this->mCopyCandidateRectangle.GetLeft() + i,
-                                        this->mCopyCandidateRectangle.GetBottom() - i));
-        theLine.SetEndPoint(GE2DPoint(this->mCopyCandidateRectangle.GetRight() + 1.0f,
-                                      this->mCopyCandidateRectangle.GetBottom() - i));
-        theResult = this->mManager->GetRasterizer()->Draw(&theLine, 1, this->mManager->GetScreen());
-    }
-    for (i = 0; i < 2; i++) {
-        theLine.SetColor(theDarkColor);
-        theLine.SetStartPoint(GE2DPoint(this->mCopyCandidateRectangle.GetLeft() + i, this->mCopyCandidateRectangle.GetTop()));
-        theLine.SetEndPoint(GE2DPoint(this->mCopyCandidateRectangle.GetLeft() + i,
-                                      this->mCopyCandidateRectangle.GetBottom() + 1.0f - i));
-        theResult = this->mManager->GetRasterizer()->Draw(&theLine, 1, this->mManager->GetScreen());
-    }
-    for (i = 0; i < 2; i++) {
-        theLine.SetColor(theLightColor);
-        theLine.SetStartPoint(GE2DPoint(this->mCopyCandidateRectangle.GetRight() - i,
-                                        this->mCopyCandidateRectangle.GetTop() + i));
-        theLine.SetEndPoint(GE2DPoint(this->mCopyCandidateRectangle.GetRight() - i,
-                                      this->mCopyCandidateRectangle.GetBottom() + 1.0f));
+    for (unsigned long i = 0; i < 8; i++) {
+        const EeUiCandidateLine& l = theFrame.lines[i];
+        theLine.SetColor(l.light ? theLightColor : theDarkColor);
+        theLine.SetStartPoint(GE2DPoint(l.x0, l.y0));
+        theLine.SetEndPoint(GE2DPoint(l.x1, l.y1));
         theResult = this->mManager->GetRasterizer()->Draw(&theLine, 1, this->mManager->GetScreen());
     }
     return theResult;
@@ -136,13 +148,9 @@ long UIIMECandidate::DrawPolygons()
 // Draws each candidate line onto the secondary surface
 long UIIMECandidate::DrawTextA()
 {
-    GERectangle theRectangle;
     unsigned long theHeight = this->mCopyText->GetFont()->GetHeight();
-    theRectangle.SetLeft(this->mCopyCandidateRectangle.GetLeft() + 2.0f);
-    theRectangle.SetRight(this->mCopyCandidateRectangle.GetRight() - 2.0f);
     for (unsigned long i = 0; i < this->mCopyCandidateStrings.size(); i++) {
-        theRectangle.SetTop(this->mCopyCandidateRectangle.GetTop() + i * theHeight + 2.0f);
-        theRectangle.SetBottom(theRectangle.GetTop() + theHeight + 2.0f);
+        GERectangle theRectangle = UIIMERect(ee_ui_ime_row(UIIMERect(this->mCopyCandidateRectangle), i, theHeight));
         this->mCopyText->SetLocation(theRectangle.GetTopLeft());
         this->mCopyText->SetText(this->mCopyCandidateStrings[i]);
         this->mManager->GetRasterizer()->Draw(this->mCopyText, theRectangle,
@@ -156,69 +164,27 @@ long UIIMECandidate::DrawTextA()
 // the IME page size it sets comes from the window's previous height
 void UIIMECandidate::OpenCandidateWindow(const GERectangle& inScreenRectangle, const GERectangle& inControlRectangle)
 {
-    GEWindow* theWindow = this->mManager->GetRasterizer()->GetWindow(this->mManager->GetScreen());
-    long thePageSize = UMFloor(this->mCandidateRectangle.GetHeight() / this->mText->GetFont()->GetHeight());
-    this->mCandidateRectangle.SetLeft(inControlRectangle.GetLeft());
-    this->mCandidateRectangle.SetTop(inControlRectangle.GetBottom() + 1.0f);
-    this->mCandidateRectangle.SetRight(inScreenRectangle.GetWidth() * this->mWidthRatio + inControlRectangle.GetLeft());
-    this->mCandidateRectangle.SetBottom(inScreenRectangle.GetHeight() * this->mHeightRatio + inControlRectangle.GetTop());
-    if (!inScreenRectangle.Contains(this->mCandidateRectangle)) {
-        if (this->mCandidateRectangle.GetLeft() < inScreenRectangle.GetLeft()) {
-            this->mCandidateRectangle.SetLeft(inScreenRectangle.GetLeft());
-            this->mCandidateRectangle.SetRight(inScreenRectangle.GetWidth() * this->mWidthRatio + inScreenRectangle.GetLeft());
-        } else if (this->mCandidateRectangle.GetRight() > inScreenRectangle.GetRight()) {
-            this->mCandidateRectangle.SetRight(inScreenRectangle.GetRight());
-            this->mCandidateRectangle.SetLeft(inScreenRectangle.GetRight() -
-                                        inScreenRectangle.GetWidth() * this->mWidthRatio);
-        }
-        if (this->mCandidateRectangle.GetBottom() > inScreenRectangle.GetBottom()) {
-            this->mCandidateRectangle.SetTop(inControlRectangle.GetTop() - inScreenRectangle.GetHeight() * this->mHeightRatio -
-                                       1.0f);
-            this->mCandidateRectangle.SetBottom(inControlRectangle.GetTop() - 1.0f);
-        }
-        this->mCandidateRectangle.And(inScreenRectangle);
-    }
-    // (the page size went to the IME with ImmNotifyIME(NI_SETCANDIDATE_PAGESIZE); the system draws the list now)
-    (void)thePageSize;
+    // (the IME page size the original computed here from the window's previous height went to
+    // ImmNotifyIME(NI_SETCANDIDATE_PAGESIZE); the system draws the list now)
+    this->mCandidateRectangle = UIIMERect(ee_ui_ime_open_rect(UIIMERect(inScreenRectangle), UIIMERect(inControlRectangle),
+                                                              this->mWidthRatio, this->mHeightRatio));
 }
 
 // FUNCTION: LLE 0x10077d28
 // Fills the window with the current page of IME candidates ("n: text"), sizes it to fit and marks the selected line
 void UIIMECandidate::SetCandidateList(const UIIMECandidateList& inList, float inLeft)
 {
-    UWideString theNumber;
-    UWideString theCandidate;
-    UWideString theLine;
     GEWindow* theWindow = this->mManager->GetRasterizer()->GetWindow(this->mManager->GetScreen());
-    unsigned long theMaxWidth = 0;
-    unsigned long thePageSize = UMFloor(this->mCandidateRectangle.GetHeight() / this->mText->GetFont()->GetHeight());
     this->mCandidateStrings.clear();
-    const unsigned char* theString = reinterpret_cast<const unsigned char*>(&inList) + inList.mOffset[0];
-    unsigned long thePageStart = inList.mSelection / thePageSize * thePageSize;
-    unsigned long i;
-    for (i = 0; i < thePageStart; i++)
-        theString = PlatMbsNInc(theString, PlatMbsLen(theString)) + 1;
-    for (; i < inList.mCount && i < thePageStart + thePageSize; i++) {
-        sprintf(theNumber, "%2ld: ", i + 1);
-        unsigned long theLength = PlatMbsLen(theString);
-        theCandidate.CopyString(reinterpret_cast<const char*>(theString), theLength);
-        theLine = theNumber + theCandidate;
-        this->mText->SetText(theLine);
-        if (theMaxWidth < this->mText->GetTextExtent().GetWidth())
-            theMaxWidth = UMFloor(this->mText->GetTextExtent().GetWidth() + 4.0f);
-        this->mCandidateStrings.push_back(theLine);
-        theString = PlatMbsNInc(theString, theLength) + 1;
-    }
-    if (theMaxWidth > theWindow->GetWidth())
-        theMaxWidth = theWindow->GetWidth();
-    float theWidth = theMaxWidth;
-    if (theWidth + inLeft > theWindow->GetWidth())
-        inLeft = theWindow->GetWidth() - theWidth;
+    UIIMECandidateRust::List theList = {this, reinterpret_cast<const unsigned char*>(&inList) + inList.mOffset[0]};
+    EeUiCandidateFit theFit = ee_ui_ime_candidate_list(&theList, this->mCandidateRectangle.GetHeight(),
+                                                       this->mText->GetFont()->GetHeight(), inList.mSelection,
+                                                       inList.mCount, theWindow->GetWidth(), inLeft);
     this->mManager->AddDirtyRectangle(this->mCandidateRectangle, this->mManager->GetCurrentForm());
     this->mManager->GetCurrentForm()->RedrawIntersectControls(this->mCandidateRectangle);
-    this->mCandidateRectangle.SetLeft(inLeft);
-    this->mCandidateRectangle.SetRight(theWidth + inLeft);
-    this->mSelection = inList.mSelection - thePageStart;
+    this->mCandidateRectangle.SetLeft(theFit.left);
+    this->mCandidateRectangle.SetRight(theFit.right);
+    this->mSelection = theFit.selection;
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

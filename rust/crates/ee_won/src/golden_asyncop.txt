@@ -1,0 +1,128 @@
+queued: a status 100000 refs 1 pending 0 killed 0 | b status 100000 refs 1 pending 0 killed 0
+a RunHook status 100000
+a CleanupHook
+a completed status 0 killed 0
+b RunHook status 100000
+pumped: a status 0 refs 0 pending 0 killed 0 | b status 100000 refs 0 pending 0 killed 0
+pumped again: a status 0 refs 0 pending 0 killed 0 | b status 100000 refs 0 pending 0 killed 0
+b finished: b status 0 refs 1 pending 1 killed 0
+b CleanupHook
+b completed status 0 killed 0
+b delivered: b status 0 refs 0 pending 0 killed 0
+rerun a -> 100000
+a RunHook status 100000
+a CleanupHook
+a completed status 0 killed 0
+a rerun pumped: a status 0 refs 0 pending 0 killed 0
+d killed: d status 100000 refs 1 pending 0 killed 1
+d RunHook status 100000
+d pumped: d status 100000 refs 0 pending 0 killed 1
+d killed finishing: d status 100002 refs 1 pending 1 killed 1
+d CleanupHook
+d completed status 100002 killed 1
+d delivered: d status 100002 refs 0 pending 0 killed 1
+e RunHook status 100000
+e requeued itself
+e RunHook status 100000
+e pumped: e status 100000 refs 0 pending 0 killed 0
+e pumped again: e status 100000 refs 0 pending 0 killed 0
+e CleanupHook
+e completed status 100002 killed 0
+e delivered: e status 100002 refs 0 pending 0 killed 0
+f RunHook status 100000
+f CleanupHook
+f completed status 0 killed 0
+g RunHook status 100000
+g CleanupHook
+g completed status 0 killed 0
+limit 2: f status 0 refs 0 pending 0 killed 0 | g status 0 refs 0 pending 0 killed 0 | h status 100000 refs 1 pending 0 killed 0
+h RunHook status 100000
+h CleanupHook
+h completed status 0 killed 0
+limit 2 again: f status 0 refs 0 pending 0 killed 0 | g status 0 refs 0 pending 0 killed 0 | h status 0 refs 0 pending 0 killed 0
+rest: f status 0 refs 0 pending 0 killed 0 | g status 0 refs 0 pending 0 killed 0 | h status 0 refs 0 pending 0 killed 0
+i RunHook status 100000
+i immediate: i status 0 refs 1 pending 1 killed 0
+i CleanupHook
+i completed status 0 killed 0
+i delivered: i status 0 refs 0 pending 0 killed 0
+j RunHook status 100000
+j CleanupHook
+j completed status 0 killed 0
+j block -> 1
+j: j status 0 refs 0 pending 0 killed 0
+k RunHook status 100000
+k CleanupHook
+k completed status 100001 killed 0
+k zero timeout: k status 100001 refs 0 pending 0 killed 0
+k delivered: k status 100001 refs 0 pending 0 killed 0
+before purge: l status 100000 refs 1 pending 0 killed 0 | m status 100000 refs 1 pending 0 killed 0 | n status 0 refs 2 pending 1 killed 0
+l CleanupHook
+l completed status 100002 killed 1
+m CleanupHook
+m completed status 100002 killed 1
+n CleanupHook
+n completed status 0 killed 0
+purged: l status 100002 refs 0 pending 0 killed 1 | m status 100002 refs 0 pending 0 killed 1 | n status 0 refs 1 pending 0 killed 0
+before delete: o status 100000 refs 1 pending 0 killed 0
+o CleanupHook
+o completed status 100002 killed 1
+container deleted: o status 100002 refs 0 pending 0 killed 1
+ops released
+o destroyed
+n destroyed
+m destroyed
+l destroyed
+k destroyed
+j destroyed
+i destroyed
+h destroyed
+g destroyed
+f destroyed
+e destroyed
+d destroyed
+b destroyed
+a destroyed
+containers done
+ta RunHook status 100000
+tb RunHook status 100000
+td RunHook status 100000
+added: ta status 100000 refs 1 pending 0 killed 0 | tb status 100000 refs 1 pending 0 killed 0
+b added again: tb status 100000 refs 1 pending 0 killed 0
+pumped: ta status 100001 refs 1 pending 1 killed 0 | tb status 100000 refs 1 pending 0 killed 0
+ta CleanupHook
+ta completed status 100001 killed 0
+delivered: ta status 100001 refs 0 pending 0 killed 0 | tb status 100000 refs 1 pending 0 killed 0
+b removed: tb status 100000 refs 0 pending 0 killed 0
+b removed again: tb status 100000 refs 0 pending 0 killed 0
+wait time below an hour+1 -> 1
+purged: tb status 100002 refs 1 pending 1 killed 1 | td status 100002 refs 1 pending 1 killed 1
+tb CleanupHook
+tb completed status 100002 killed 1
+td CleanupHook
+td completed status 100002 killed 1
+purged delivered: tb status 100002 refs 0 pending 0 killed 1 | td status 100002 refs 0 pending 0 killed 1
+te as timer (no core): te status 100002 refs 1 pending 1 killed 1
+te CleanupHook
+te completed status 100002 killed 1
+tf RunHook status 100000
+tf timed out on the thread: tf status 100001 refs 1 pending 1 killed 0
+tf added after stop: tf status 100001 refs 2 pending 1 killed 0
+timer thread deleted: tf status 100001 refs 1 pending 1 killed 1
+tf CleanupHook
+tf completed status 100001 killed 1
+tf delivered: tf status 100001 refs 0 pending 0 killed 1
+te delivered: te status 100002 refs 0 pending 0 killed 1
+tf destroyed
+te destroyed
+td destroyed
+tb destroyed
+ta destroyed
+timers done
+before start in this thread -> 0
+ThreadFunc saw InThisThread -> 1
+main in this thread -> 0
+stopped
+t1 thread destroyed
+t2 thread destroyed
+threads done

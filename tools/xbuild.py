@@ -366,10 +366,11 @@ def cmd_tcptest(a):
 WON_SRC = ROOT / "src" / "Empire Earth" / "WONAPI"
 # program -> the WON units it links besides its test source and the platform layer
 WON_TESTS = {
-    "won_wire_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_wire_test": [],
+    # the message buffers' script (golden: rust/crates/ee_won/src/golden_buffer.txt, recorded over the C++ classes)
+    "won_buffer_test": [],
     # the forwarders to ee_won (rust/crates/ee_won)
-    "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
-                                                                "CRC16.cpp", "MD5.cpp")],
+    "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")],
                         *[WON_SRC / "WONAuth" / f for f in ("AuthBase.cpp", "AuthPubKeyBlock.cpp")]],
     "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
@@ -381,20 +382,18 @@ WON_TESTS = {
                                                          "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
                                                          "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
                                                          "SocketThread.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
-                                                         "AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpContainer.cpp",
-                                                         "TimerThread.cpp", "Thread.cpp", "WONDebug.cpp",
-                                                         "WONStatus.cpp")],
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
+    # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
+    "won_asyncop_test": "won_ops_test",
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
-    "won_lan_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_lan_test": [],
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
     # staging module
-    "won_staging_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_staging_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
-    "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
-                                                            "FileReader.cpp", "FileReaderWideStrings.cpp",
+    "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                             "FileWriter.cpp", "WONFile.cpp", "CRC16.cpp",
                                                             "StringUtil.cpp")],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
@@ -409,6 +408,10 @@ WON_TESTS = {
     # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
     # statements against ee_won's routing module
     "won_routing_test": [],
+    # WONServer's exchange (ServerRequestOp's RunHook and CallbackHook over scripted servers, the time limits, the
+    # ping requests and replies, MultiPingOp's rules and order, the context's shuffle), the original's statements
+    # against ee_won's server module
+    "won_server_test": [],
     # WONGUI's layout arithmetic (rectangles, sizes, the child layout instructions and layouts, the LAYOUT rule), the
     # original's statements against ee_won's guilayout module
     "won_guilayout_test": [],
@@ -473,16 +476,17 @@ WON_TESTS = {
                         *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                              "StringUtil.cpp")]],
     # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
-    "won_auth_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
-                      WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
+    "won_auth_test": [WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
     # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
-    "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
-                     *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+    "won_dir_test": [*[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
+    # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
+    "won_dirops_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
-    "won_regkey_test": [*[WON_SRC / "WONCommon" / f for f in ("RegKey.cpp", "ByteBuffer.cpp")]],
+    "won_regkey_test": [WON_SRC / "WONCommon" / "RegKey.cpp"],
     # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
                       *[WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
@@ -552,6 +556,8 @@ def cmd_wontest(a):
     for name, units in WON_TESTS.items():
         if a.programs and name not in a.programs:
             continue
+        if isinstance(units, str):   # the same units as another program
+            units = WON_TESTS[units]
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:

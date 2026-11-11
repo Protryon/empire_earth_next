@@ -33,6 +33,7 @@
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
 #include "ee/EEUGLocation.h"
+#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
@@ -110,7 +111,16 @@ enum DryEvent {
     kDrySpreadUnit,       // tag, target, x, y
     kDryComplexOf,        // unit, its complex unit
     kDryPathPoint,        // unit, x, y in, x, y out, the height (bits)
-    kDryResetPaths        // tag
+    kDryResetPaths,       // tag
+    kDryKeepCitizens,     // tag, the count, the ids kept
+    kDryWallPlan,         // player id, technology, the start's and end's bits (the dry plan makes 2 pieces)
+    kDryWallBuild,        // tag
+    kDryWallRelease,      // -
+    kDrySpreadUnload,     // tag, x, y
+    kDryCanUnload,        // unit, the answer
+    kDrySetTransport,     // ctor, unit
+    kDryCanUnloadThere,   // ctor (the dry answer: yes)
+    kDryUnloadWarning     // player id, x, y
 };
 
 struct DryGroup {
@@ -214,6 +224,8 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_PATROL:
     case EE_GOAL_CTOR_PATROL_ROUTE: theKind = kGoalPatrol; break;
     case EE_GOAL_CTOR_LOCATION: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_LOCATION_XY: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_UNLOAD_TRANSPORT: theKind = kGoalUnloadTransport; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     default: theMade = false; break;
     }
     Log({kDryGoalNew, inSpec->ctor, inSpec->unit_a, inSpec->unit_b, Bits(inSpec->point[0]), Bits(inSpec->point[1]),
@@ -303,6 +315,30 @@ void DryKeepNonCitizens(void* inGroup)
     LogUnits(theGroup->mUnits);
 }
 
+void DryKeepCitizens(void* inGroup)
+{
+    // EEActiveGroup::KeepCitizens' loop over the store's test, compared with the object's
+    DryGroup* theGroup = Dry(inGroup);
+    for (unsigned long theIndex = 0; theIndex < theGroup->mUnits.size();) {
+        EEComplexUnit* theUnit = theGroup->mUnits[theIndex];
+        bool theKeeps = ee_units_keeps_citizen(static_cast<uint32_t>(theUnit->mUnitID));
+        bool theObject = theUnit->mIsCommandable && theUnit->mHitPoints > 0
+            && (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen
+                || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen);
+        if (theKeeps != theObject)
+            sDry->mMismatches++;
+        if (!theKeeps)
+            DryRemove(theGroup, theUnit);
+        else
+            theIndex++;
+    }
+    Log({kDryKeepCitizens, theGroup->mTag});
+    LogUnits(theGroup->mUnits);
+}
+
+// the dry plan's pieces (never read: the dry build only logs)
+int sDryPieces = 0;
+
 } // namespace
 
 void* EEUnitHostDryBegin(const std::vector<EEComplexUnit*>& inUnits)
@@ -378,6 +414,16 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         theGoal->mUseGroupMovement = inSpec->flag_c != 0;
         return static_cast<EEUnitGoal*>(theGoal);
     }
+    case EE_GOAL_CTOR_UNLOAD_TRANSPORT: {   // EEMUnloadTransport's: the first unit's complex unit, the tile
+        EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
+        if (theUnit == NULL)
+            return NULL;
+        return static_cast<EEUnitGoal*>(new EEUGUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
+                                                                (long)inSpec->point[1], theFlagA));
+    }
+    case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
+        return static_cast<EEUnitGoal*>(new EEUGLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
+                                                         0.0f, false, 0));
     default:
         return NULL;
     }
@@ -797,4 +843,102 @@ extern "C" void ee_units_host_group_reset_paths(void* inGroup)
         return;
     }
     ActiveOf(inGroup)->ResetUnitsPaths();
+}
+
+extern "C" void ee_units_host_group_keep_citizens(void* inGroup)
+{
+    if (sDry != NULL) {
+        DryKeepCitizens(inGroup);
+        return;
+    }
+    ActiveOf(inGroup)->KeepCitizens();
+}
+
+// EEMBuildWall's plan: the wall of the technology's unit class from start to end as paid foundations (EEPlanWall(..,
+// true, false, pieces)); the new pieces in a list the caller releases. The dry host plans nothing (it would place
+// units): two pieces, logged
+extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, float inStartX, float inStartY, float inEndX,
+                                         float inEndY, uintptr_t* outCount)
+{
+    if (sDry != NULL) {
+        Log({kDryWallPlan, PlayerID(inPlayer), (uint32_t)inTechnology, Bits(inStartX), Bits(inStartY), Bits(inEndX),
+             Bits(inEndY)});
+        *outCount = 2;
+        return &sDryPieces;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    std::vector<EEUnit*>* thePieces = new std::vector<EEUnit*>();
+    EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
+    EEPlanWall(GE2DPoint(inStartX, inStartY), GE2DPoint(inEndX, inEndY), theClass, thePlayer, 1, 0, *thePieces);
+    *outCount = thePieces->size();
+    return thePieces;
+}
+
+extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
+{
+    if (sDry != NULL) {
+        Log({kDryWallBuild, Dry(inGroup)->mTag});
+        return;
+    }
+    EEBuildWall(ActiveOf(inGroup), *static_cast<std::vector<EEUnit*>*>(inPieces));
+}
+
+// the dry host does not spread: the group keeps its units (logged)
+extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDrySpreadUnload, Dry(inGroup)->mTag, (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    ActiveOf(inGroup)->SpreadForUnload((long)inX, (long)inY);
+}
+
+// a transport (or paratrooper bomber) with cargo; a read (the dry host's too)
+extern "C" uint8_t ee_units_host_unit_can_unload(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    bool theResult = (theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
+        && theUnit->mComplexUnit->GetNumCargoUnits() > 0;
+    if (sDry != NULL)
+        Log({kDryCanUnload, inUnit, theResult ? 1u : 0u});
+    return theResult ? 1 : 0;
+}
+
+extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDrySetTransport, static_cast<DryGoal*>(inGoal)->mCtor, inUnit});
+        return;
+    }
+    static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->SetTransport(ComplexOf(inUnit)->mComplexUnit);
+}
+
+// the dry goal is a record: it answers yes (logged)
+extern "C" uint8_t ee_units_host_goal_can_unload(void* inGoal)
+{
+    if (sDry != NULL) {
+        Log({kDryCanUnloadThere, static_cast<DryGoal*>(inGoal)->mCtor});
+        return 1;
+    }
+    return static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
+}
+
+extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDryUnloadWarning, PlayerID(inPlayer), (uint32_t)inX, (uint32_t)inY});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    U2DPoint<long> theTile((long)inX, (long)inY);
+    thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, 0x7c3b, false);
+}
+
+extern "C" void ee_units_host_wall_release(void* inPieces)
+{
+    if (sDry != NULL) {
+        Log({kDryWallRelease});
+        return;
+    }
+    delete static_cast<std::vector<EEUnit*>*>(inPieces);
 }

@@ -104,8 +104,9 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=(), more=()):
             else:
                 failed.append(job)
                 print(f"FAILED {job[0]} {units.rel_src(job[1])}\n{log[-2000:]}", flush=True)
-    print(f"{len(work) - len(failed)}/{len(work)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}",
-          flush=True)
+    import objcache
+    print(f"{len(work) - len(failed)}/{len(work)} units{objcache.summary()} in {time.time() - t0:.0f} s -> "
+          f"{out / 'obj'}", flush=True)
     if failed:
         sys.exit(1)
 

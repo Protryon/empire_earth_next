@@ -89,6 +89,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
+#include "rust/ee_rust.h"   // ee_units_store_checksum_flag1
 #include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -326,8 +327,17 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         fclose(theFile);
         ESEndRecording();
     }
-    for (theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
-        theChecksum += static_cast<EEUnit*>(theUnit)->GetChecksum(inFlags);
+    // New (R5b.4): the units' flag 1 (hit points + tile y + tile x of every complex unit on the map) is the unit
+    // store's sum over its records on the map (ee_units store.rs checksum_flag1; USCK checks it against this walk's
+    // GetChecksum(1)); the walk keeps the other unit flags (2, 0x20, 8). The sums wrap and commute, so the total is the
+    // original's. The game's own out-of-sync check (flag 1 alone) walks no unit.
+    if (inFlags & 1)
+        theChecksum += (unsigned long)ee_units_store_checksum_flag1();
+    const unsigned long theUnitFlags = inFlags & ~1ul;
+    if (theUnitFlags & (2 | 0x20 | 8)) {
+        for (theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
+            theChecksum += static_cast<EEUnit*>(theUnit)->GetChecksum(theUnitFlags);
+    }
     for (i = 0; i < gWorld.mNumPlayers; i++) {
         thePlayer = gWorld.mPlayers[i];
         if (inFlags & 0x200) {

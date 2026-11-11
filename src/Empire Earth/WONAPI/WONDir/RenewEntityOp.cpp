@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONDirExtended.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 using namespace std;
 using namespace WONAPI;
 
@@ -41,21 +42,13 @@ RenewEntityOp::RenewEntityOp(const IPAddr &theAddr, bool isService) : ServerRequ
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RenewEntityOp::GetNextRequest()
 {
-	WriteBuffer aMsg(this->mLengthFieldSize,true);
-	aMsg.AppendByte(5);						// Small message
-	aMsg.AppendShort(2);					// Directory Server
-	aMsg.AppendShort(this->mIsService?205:204);	// RenewService : RenewDir
-	aMsg.AppendWString(this->mPath,2);				// Directory path
-
-	if(this->mIsService)
-	{
-		aMsg.AppendWString(this->mName,2);				// Entity name
-		aMsg.AppendBuffer(this->mNetAddr,1);
-	}
-
-	aMsg.AppendLong(this->mLifespan);
-
-	this->mRequest = aMsg.ToByteBuffer(true);
+	// the message's bytes are Rust's (ee_won dirops.rs)
+	DirRequestFields aFields(9, this->mIsService);
+	aFields.mReq.path = aFields.Text(this->mPath);
+	aFields.mReq.name = aFields.Text(this->mName);
+	aFields.mReq.net_addr = DirRequestFields::Buffer(this->mNetAddr.get());
+	aFields.mReq.lifespan = (uint32_t)this->mLifespan;
+	this->mRequest = aFields.Build(this->mLengthFieldSize);
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -63,15 +56,9 @@ WONStatus RenewEntityOp::GetNextRequest()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RenewEntityOp::CheckResponse()
 {
-	ReadBuffer aMsg(this->mResponse->data(),this->mResponse->length());
-	unsigned char aHeaderType = aMsg.ReadByte();
-	unsigned short aServiceType = aMsg.ReadShort();
-	unsigned short aMessageType = aMsg.ReadShort();
-
-	if(aHeaderType!=5 || aServiceType!=2 || aMessageType!=1)
+	// the reply's read is Rust's (ee_won dirops.rs)
+	WONStatus aStatus = DirStatusReply(this->mResponse.get(), false, NULL);
+	if(aStatus==(WONStatus)WS_ServerReq_InvalidReplyHeader)
 		return this->InvalidReplyHeader();
-
-
-	short aStatus = aMsg.ReadShort();
-	return (WONStatus)aStatus;
+	return aStatus;
 }

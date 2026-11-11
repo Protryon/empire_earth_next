@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/ee_rust.h"
+#include "ee/wonapi/WONGUIDraw.h"
 // The word wrap and the rewrap rule are ee_won's guiwrap module (rust/crates/ee_won/src/guiwrap.rs); this unit
 // keeps the text, the font, the break list and the paint.
 
@@ -162,34 +163,26 @@ void WrappedText::Paint(Graphics &g, int x, int y)
 	if(this->mFont.get()==NULL)
 		return;
 
-	g.SetFont(this->mFont.get());
-
-	int aYPos = y;
-	int aStrPos = 0;
+	// each broken line, centred when set, then the rest (guidraw.rs wrapped_text)
+	std::vector<EeWonLineBreak> aBreaks;
 	for(BreakList::iterator anItr = this->mBreakList.begin(); anItr!=this->mBreakList.end(); ++anItr)
 	{
-		if(aStrPos>=this->mText.length())
-			break;
-
-		int aBreakPos = anItr->mBreakPos;
-		int anXPos = x;
-		if(this->mIsCentered)
-			anXPos += (this->mWidth - anItr->mWidth)/2;
-
-		g.DrawString(this->mText, aStrPos, aBreakPos - aStrPos, anXPos, aYPos);
-		aYPos += this->mFont->GetHeight();
-		aStrPos = anItr->mNextStartPos;
+		EeWonLineBreak b;
+		b.break_pos = anItr->mBreakPos;
+		b.next_start = anItr->mNextStartPos;
+		b.width = anItr->mWidth;
+		aBreaks.push_back(b);
 	}
-	if(!(aStrPos<this->mText.length()))
-		return;
-	if(this->mIsCentered && !this->mBreakList.empty())
-	{
-		int aWidth = this->mFont->GetStringWidth(this->mText,aStrPos,this->mText.length()-aStrPos);
-		int anXPos = x + (this->mWidth - aWidth)/2;
-		g.DrawString(this->mText, aStrPos, this->mText.length()-aStrPos, anXPos, aYPos);
-	}
-	else
-		g.DrawString(this->mText, aStrPos, this->mText.length()-aStrPos, x, aYPos);
+	WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
+	EeWonTextMeasure m = aMeasure.Get();
+	int aFontHeight = this->mFont->GetHeight();
+	WONDrawSlots aSlots;
+	aSlots.mFont = this->mFont.get();
+	aSlots.mString = &this->mText;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_wrapped_text(true,this->mText.length(),this->mIsCentered,this->mWidth,aFontHeight,
+			aBreaks.empty() ? NULL : &aBreaks[0],aBreaks.size(),x,y,&m,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }	
 
 namespace WONAPI {

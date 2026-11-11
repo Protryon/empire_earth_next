@@ -53,8 +53,8 @@ WONStatus AuthSession::Encrypt(ByteBufferPtr &theMsg)
 		aMsg.AppendShort(this->mId);
 		aSeqBuf.AppendShort(++this->mOutSeq);
 		aSeqBuf.AppendBytes(aBuf,aLen);
-		aBuf = aSeqBuf.mData;
-		aLen = aSeqBuf.mLength;
+		aBuf = aSeqBuf.data();
+		aLen = aSeqBuf.length();
 	}
 
 	ByteBufferPtr anEncrypt = this->mKey.Encrypt(aBuf,aLen);
@@ -101,7 +101,7 @@ WONStatus AuthSession::Decrypt(ByteBufferPtr &theMsg)
 				return WS_AuthSession_DecryptSessionIdMismatch;
 		}
 
-		ByteBufferPtr aDecrypt = this->mKey.Decrypt(anIn.mData + anIn.mPos, anIn.mLength - anIn.mPos);
+		ByteBufferPtr aDecrypt = this->mKey.Decrypt(anIn.data() + anIn.pos(), anIn.length() - anIn.pos());
 		if(aDecrypt.get()==NULL)
 			return WS_AuthSession_DecryptFailure;
 

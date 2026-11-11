@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "rust/ee_rust.h"
+#include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 // The lines' metrics, alignment and wrap test, the bottom rule, the delayed wrap, the limits' trims and the
 // renumbering after them, the segment and selection under a point and the scrolls are ee_won's guitext module
@@ -148,22 +149,28 @@ void TextArea::NotifyRootVisibility(bool visible) {
     }
 }
 
+// a line's place for the draw plan
+static EeWonRowPlace TextLinePlaceOf(const void* ctx,size_t index) {
+    const TextArea::LineVector& lines=*(const TextArea::LineVector*)ctx;
+    EeWonRowPlace r;
+    r.x=lines[index]->mx;
+    r.top=lines[index]->my;
+    r.height=lines[index]->mHeight;
+    return r;
+}
+
 // FUNCTION: WON 0x007130d0
 // Paints the segments of every visible line, starting at the top line
 void TextArea::ScrollPaint(Graphics& g) {
-    LineVector::iterator lineItr=this->mLineVector.begin()+this->mTopLineVectorPos;
-    while(lineItr!=this->mLineVector.end()) {
-        TextLine* line=(*lineItr).get();
-        if(!this->IsLineVisible(line)) break;
-        TextLine::SegmentList::iterator segItr=line->mSegmentList.begin();
-        g.Translate(line->mx,line->my);
-        while(segItr!=line->mSegmentList.end()) {
+    // each visible line from the top line, translated to its place, its segments painted (guidraw.rs text_lines)
+    WONDrawOps ops([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_text_lines((size_t)this->mTopLineVectorPos,
+        this->mLineVector.size(),this->mVertOffset,this->mScrollArea.height,this->TextFlagSet(TextFlag_ShowPartialLines),
+        TextLinePlaceOf,&this->mLineVector,o,n); });
+    WONDrawRun(g,ops,WONDrawSlots(),[&](const EeWonDrawOp& o) {
+        TextLine* line=this->mLineVector[o.b].get();
+        for(TextLine::SegmentList::iterator segItr=line->mSegmentList.begin();segItr!=line->mSegmentList.end();++segItr)
             segItr->get()->Paint(g,this);
-            ++segItr;
-        }
-        g.Translate(-line->mx,-line->my);
-        ++lineItr;
-    }
+    });
 }
 
 // FUNCTION: WON 0x007131b0

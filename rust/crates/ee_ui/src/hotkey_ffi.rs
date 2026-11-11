@@ -171,3 +171,110 @@ pub unsafe extern "C" fn ee_ui_hotkey_fire_events(key: *mut c_void) -> bool {
 pub unsafe extern "C" fn ee_ui_form_update_keyboard(form: *mut c_void) -> c_long {
     hotkey::update_keyboard(&mut Form(form))
 }
+
+/// cbindgen:ignore
+mod keys_sys {
+    use core::ffi::{c_int, c_long, c_ulong, c_void};
+
+    use crate::hotkey::DbHotKey;
+
+    extern "C" {
+        // call: 0 Uninitialize, 1 Dereference, 2 Reference, 3 Initialize
+        pub fn ee_uicpp_hotkey_event_call(event: *mut c_void, call: c_int);
+        // member: a modifier slot 0..2, 3 the key
+        pub fn ee_uicpp_hotkey_get_entity(key: *mut c_void, code: c_ulong, member: c_int) -> c_long;
+        pub fn ee_uicpp_hotkey_modifier_state(code: c_ulong) -> c_ulong;
+        pub fn ee_uicpp_hotkey_state(key: *mut c_void) -> c_ulong;
+        pub fn ee_uicpp_hotkey_set_state(key: *mut c_void, state: c_ulong);
+        pub fn ee_uicpp_hotkey_clear_modifier(key: *mut c_void, slot: c_int);
+        pub fn ee_uicpp_hotkey_count_keys(key: *mut c_void);
+        pub fn ee_uicpp_hotkey_create() -> *mut c_void;
+        pub fn ee_uicpp_hotkey_push(key: *mut c_void);
+        // the UI database files' reads (UIEvent.cpp)
+        pub fn ee_uicpp_file_open(file: *mut c_void);
+        pub fn ee_uicpp_file_read_count(file: *mut c_void, count: *mut c_ulong) -> c_long;
+        pub fn ee_uicpp_file_read(file: *mut c_void, data: *mut u8, length: c_ulong) -> c_long;
+        pub fn ee_uicpp_file_close(file: *mut c_void);
+    }
+
+    const _: () = assert!(core::mem::size_of::<DbHotKey>() == 124);
+}
+
+/// One of a hot key's event members (`UIEvent**`).
+struct Slot(*mut *mut c_void);
+
+impl hotkey::EventSlotHost for Slot {
+    fn get(&self) -> hotkey::Event {
+        unsafe { self.0.read() }
+    }
+    fn set(&mut self, e: hotkey::Event) {
+        unsafe { self.0.write(e) }
+    }
+    fn call(&mut self, e: hotkey::Event, c: hotkey::EventCall) {
+        unsafe { keys_sys::ee_uicpp_hotkey_event_call(e, c as c_int) }
+    }
+}
+
+/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_hotkey_set_event(slot: *mut *mut c_void, event: *mut c_void) {
+    hotkey::set_event(&mut Slot(slot), event)
+}
+
+/// The hot keys' keys, and `CreateHotKeys`' database file (`FSFileSpec*`, NULL for `SetModifier`).
+struct Keys(*mut c_void);
+
+impl hotkey::KeysHost for Keys {
+    fn get_entity(&mut self, key: HotKey, code: c_ulong, member: usize) -> c_long {
+        unsafe { keys_sys::ee_uicpp_hotkey_get_entity(key, code, member as c_int) }
+    }
+    fn modifier_state(&mut self, code: c_ulong) -> c_ulong {
+        unsafe { keys_sys::ee_uicpp_hotkey_modifier_state(code) }
+    }
+    fn state(&self, key: HotKey) -> c_ulong {
+        unsafe { keys_sys::ee_uicpp_hotkey_state(key) }
+    }
+    fn set_state(&mut self, key: HotKey, state: c_ulong) {
+        unsafe { keys_sys::ee_uicpp_hotkey_set_state(key, state) }
+    }
+    fn clear_modifier(&mut self, key: HotKey, slot: usize) {
+        unsafe { keys_sys::ee_uicpp_hotkey_clear_modifier(key, slot as c_int) }
+    }
+    fn count_keys(&mut self, key: HotKey) {
+        unsafe { keys_sys::ee_uicpp_hotkey_count_keys(key) }
+    }
+}
+
+impl hotkey::CreateHost for Keys {
+    fn open(&mut self) {
+        unsafe { keys_sys::ee_uicpp_file_open(self.0) }
+    }
+    fn read_count(&mut self, count: &mut c_ulong) -> c_long {
+        unsafe { keys_sys::ee_uicpp_file_read_count(self.0, count) }
+    }
+    fn read_record(&mut self, record: &mut hotkey::DbHotKey) -> c_long {
+        let p = (record as *mut hotkey::DbHotKey).cast::<u8>();
+        unsafe { keys_sys::ee_uicpp_file_read(self.0, p, core::mem::size_of::<hotkey::DbHotKey>() as c_ulong) }
+    }
+    fn create(&mut self) -> HotKey {
+        unsafe { keys_sys::ee_uicpp_hotkey_create() }
+    }
+    fn push(&mut self, key: HotKey) {
+        unsafe { keys_sys::ee_uicpp_hotkey_push(key) }
+    }
+    fn close(&mut self) {
+        unsafe { keys_sys::ee_uicpp_file_close(self.0) }
+    }
+}
+
+/// `UIHotKey::SetModifier(code, slot)`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_hotkey_set_modifier(key: *mut c_void, code: c_ulong, slot: c_int) {
+    hotkey::set_modifier(&mut Keys(core::ptr::null_mut()), key, code, slot as usize)
+}
+
+/// `UIHotKey::CreateHotKeys(file)` -> its result.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_hotkey_create_hotkeys(file: *mut c_void) -> c_long {
+    hotkey::create(&mut Keys(file))
+}

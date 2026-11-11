@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONDirExtended.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 using namespace std;
 using namespace WONAPI;
 
@@ -43,39 +44,18 @@ ModifyEntityOp::ModifyEntityOp(const IPAddr &theAddr, bool isService) : ServerRe
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus ModifyEntityOp::GetNextRequest()
 {
-	WriteBuffer aMsg(this->mLengthFieldSize,true);
-	aMsg.AppendByte(5);						// Small message
-	aMsg.AppendShort(2);					// Directory Server
-	aMsg.AppendShort(this->mIsService?217:216);	// ModifyService : ModifyDirectory
-	aMsg.AppendByte(this->mFlags);				// Entity Flags
-	aMsg.AppendWString(this->mPath,2);				// Directory path
-
-	if(this->mIsService)
-	{
-		aMsg.AppendWString(this->mName,2);				// Entity name
-		aMsg.AppendBuffer(this->mNetAddr,1);
-	}
-
-	aMsg.AppendWString(this->mNewName,2);
-	if(this->mIsService)
-		aMsg.AppendBuffer(this->mNewNetAddr,1);
-
-	aMsg.AppendWString(this->mNewDisplayName,2);	// Entity display name
-	aMsg.AppendLong(this->mNewLifespan);			// Entity lifespan
-	aMsg.AppendShort(this->mDataObjects.size());	// num data objects
-	
-	DirDataObjectList::iterator anItr = this->mDataObjects.begin();
-	while(anItr!=this->mDataObjects.end())
-	{
-		DirDataObject &aDataObject = *anItr;
-		aMsg.AppendString(aDataObject.mDataType,1);
-		aMsg.AppendBuffer(aDataObject.mData,2);
-		
-		++anItr;
-	}
-
-	aMsg.AppendShort(0); // num permissions
-	this->mRequest = aMsg.ToByteBuffer(true);
+	// the message's bytes are Rust's (ee_won dirops.rs)
+	DirRequestFields aFields(6, this->mIsService);
+	aFields.mReq.path = aFields.Text(this->mPath);
+	aFields.mReq.name = aFields.Text(this->mName);
+	aFields.mReq.net_addr = DirRequestFields::Buffer(this->mNetAddr.get());
+	aFields.mReq.flags = this->mFlags;
+	aFields.mReq.new_name = aFields.Text(this->mNewName);
+	aFields.mReq.new_net_addr = DirRequestFields::Buffer(this->mNewNetAddr.get());
+	aFields.mReq.new_display_name = aFields.Text(this->mNewDisplayName);
+	aFields.mReq.lifespan = (uint32_t)this->mNewLifespan;
+	aFields.Objects(this->mDataObjects);
+	this->mRequest = aFields.Build(this->mLengthFieldSize);
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -83,24 +63,9 @@ WONStatus ModifyEntityOp::GetNextRequest()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus ModifyEntityOp::CheckResponse()
 {
-	ReadBuffer aMsg(this->mResponse->data(),this->mResponse->length());
-	unsigned char aHeaderType = aMsg.ReadByte();
-	unsigned short aServiceType = aMsg.ReadShort();
-	unsigned short aMessageType = aMsg.ReadShort();
-
-	if(aHeaderType!=5 || aServiceType!=2 || aMessageType!=1)
+	// the reply's read is Rust's (ee_won dirops.rs)
+	WONStatus aStatus = DirStatusReply(this->mResponse.get(), this->mIsService && (this->mFlags & DIR_UF_SERVRETURNADDR)!=0, &this->mNetAddr);
+	if(aStatus==(WONStatus)WS_ServerReq_InvalidReplyHeader)
 		return this->InvalidReplyHeader();
-
-
-	short aStatus = aMsg.ReadShort();
-	if(aStatus>=0 && this->mIsService)
-	{
-		if((this->mFlags & DIR_UF_SERVRETURNADDR)!=0)
-	{
-			unsigned char aLen = aMsg.ReadByte();
-			this->mNetAddr = new ByteBuffer(aMsg.ReadBytes(aLen),aLen,false);
-		}
-	}
-
-	return (WONStatus)aStatus;
+	return aStatus;
 }

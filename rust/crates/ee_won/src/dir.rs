@@ -12,42 +12,42 @@ use crate::wire::{PastEnd, Reader};
 
 /// The get flags' bits the parsers read (`DIR_GF_*`).
 pub mod flags {
-    pub const DIRS_ONLY_MASK: u32 = 0x2;
-    pub const SERVICES_ONLY_MASK: u32 = 0x5;
-    pub const ADD_TYPE: u32 = 0x10;
-    pub const ADD_DISPLAY_NAME: u32 = 0x20;
-    pub const ADD_CREATED: u32 = 0x40;
-    pub const ADD_TOUCHED: u32 = 0x80;
-    pub const ADD_LIFESPAN: u32 = 0x100;
-    pub const ADD_DO_TYPE: u32 = 0x200;
-    pub const ADD_DO_DATA: u32 = 0x400;
-    pub const ADD_DATA_OBJECTS: u32 = 0x800;
-    pub const ADD_ACLS: u32 = 0x1000;
-    pub const ADD_CRC: u32 = 0x2000;
-    pub const ADD_UIDS: u32 = 0x4000;
-    pub const ADD_IPS: u32 = 0x8000;
-    pub const DIR_ADD_PATH: u32 = 0x0001_0000;
-    pub const DIR_ADD_NAME: u32 = 0x0002_0000;
-    pub const DIR_ADD_REQ_UNIQUE: u32 = 0x0004_0000;
-    pub const SERV_ADD_PATH: u32 = 0x0100_0000;
-    pub const SERV_ADD_NAME: u32 = 0x0200_0000;
-    pub const SERV_ADD_NET_ADDR: u32 = 0x0400_0000;
+    pub(crate) const DIRS_ONLY_MASK: u32 = 0x2;
+    pub(crate) const SERVICES_ONLY_MASK: u32 = 0x5;
+    pub(crate) const ADD_TYPE: u32 = 0x10;
+    pub(crate) const ADD_DISPLAY_NAME: u32 = 0x20;
+    pub(crate) const ADD_CREATED: u32 = 0x40;
+    pub(crate) const ADD_TOUCHED: u32 = 0x80;
+    pub(crate) const ADD_LIFESPAN: u32 = 0x100;
+    pub(crate) const ADD_DO_TYPE: u32 = 0x200;
+    pub(crate) const ADD_DO_DATA: u32 = 0x400;
+    pub(crate) const ADD_DATA_OBJECTS: u32 = 0x800;
+    pub(crate) const ADD_ACLS: u32 = 0x1000;
+    pub(crate) const ADD_CRC: u32 = 0x2000;
+    pub(crate) const ADD_UIDS: u32 = 0x4000;
+    pub(crate) const ADD_IPS: u32 = 0x8000;
+    pub(crate) const DIR_ADD_PATH: u32 = 0x0001_0000;
+    pub(crate) const DIR_ADD_NAME: u32 = 0x0002_0000;
+    pub(crate) const DIR_ADD_REQ_UNIQUE: u32 = 0x0004_0000;
+    pub(crate) const SERV_ADD_PATH: u32 = 0x0100_0000;
+    pub(crate) const SERV_ADD_NAME: u32 = 0x0200_0000;
+    pub(crate) const SERV_ADD_NET_ADDR: u32 = 0x0400_0000;
 }
 
 /// Which of an entity's fields a reply carried (`EeWonDirEntity::fields`).
 pub mod read {
-    pub const TYPE: u32 = 1;
-    pub const PATH: u32 = 2;
-    pub const NAME: u32 = 4;
-    pub const NET_ADDR: u32 = 8;
-    pub const REQ_UNIQUE: u32 = 0x10;
-    pub const DISPLAY_NAME: u32 = 0x20;
-    pub const LIFESPAN: u32 = 0x40;
-    pub const CREATED: u32 = 0x80;
-    pub const TOUCHED: u32 = 0x100;
-    pub const CRC: u32 = 0x200;
-    pub const IPS: u32 = 0x400;
-    pub const IDS: u32 = 0x800;
+    pub(crate) const TYPE: u32 = 1;
+    pub(crate) const PATH: u32 = 2;
+    pub(crate) const NAME: u32 = 4;
+    pub(crate) const NET_ADDR: u32 = 8;
+    pub(crate) const REQ_UNIQUE: u32 = 0x10;
+    pub(crate) const DISPLAY_NAME: u32 = 0x20;
+    pub(crate) const LIFESPAN: u32 = 0x40;
+    pub(crate) const CREATED: u32 = 0x80;
+    pub(crate) const TOUCHED: u32 = 0x100;
+    pub(crate) const CRC: u32 = 0x200;
+    pub(crate) const IPS: u32 = 0x400;
+    pub(crate) const IDS: u32 = 0x800;
 }
 
 /// A data object: its type (when the flags carry it) and its data (`None`: not carried).
@@ -102,7 +102,7 @@ pub enum Reply {
 }
 
 /// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
-pub const MORE_REPLIES: i32 = 100059;
+pub(crate) const MORE_REPLIES: i32 = 100059;
 
 fn header(r: &mut Reader, message_type: u16) -> Result<Option<Reply>, PastEnd> {
     let h = r.read_byte()?;

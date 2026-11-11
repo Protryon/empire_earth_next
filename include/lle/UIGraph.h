@@ -20,6 +20,8 @@ inline float UMCeilFloat(float inValue)
 }
 
 class LLE_API UIGraph : public UIControl {
+    friend struct UIGraphRust;              // UIGraph.cpp: the Rust layout's and draws' view (ee_ui graph.rs)
+    friend struct UILineGraphRust;          // UILineGraph.cpp: the Rust series draws' view
 public:
     UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
             unsigned long inBorderThickness);
