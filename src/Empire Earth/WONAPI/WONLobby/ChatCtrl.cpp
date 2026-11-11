@@ -21,6 +21,9 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // A clickable link in the chat output (a client, friend, room or Accept/Reject). The original's RTTI names it in
 // the global namespace (vtable 0x852df8, 0x8c bytes).
@@ -651,33 +654,35 @@ namespace WONAPI {
 // Reads a chat panel layout key: GROUPTYPE (CHAT, GAME or TEAM) or a text color; false for an unknown key
 bool ChatCtrlConfig::Virtual24(const std::string& inKey)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY,inKey.data(),inKey.size());
     if(ContainerConfig::Virtual24(inKey))
         return true;
-    if(inKey=="GROUPTYPE") {
+    if(aKeyIdx==0) {
         GUIString group=this->ReadString(false);
-        if(group.CompareNoCase("CHAT")==0) {
+        const int aNameIdx_group=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CHATCTRLCONFIG_VIRTUAL24_GROUP,group.mData->mText,group.mData->mLength,sizeof(wchar_t));
+        if(aNameIdx_group==0) {
             ChatCtrl* aCtrl=this->mChatCtrl; aCtrl->mRoomSpecFlags=1; }
-        else if(group.CompareNoCase("GAME")==0) {
+        else if(aNameIdx_group==1) {
             ChatCtrl* aCtrl=this->mChatCtrl; aCtrl->mRoomSpecFlags=2; }
-        else if(group.CompareNoCase("TEAM")==0) {
+        else if(aNameIdx_group==2) {
             ChatCtrl* aCtrl=this->mChatCtrl; aCtrl->mRoomSpecFlags=0x12; }
         else {
             throw ConfigObjectException("Invalid Group Type: "+(std::string)group);
         }
     }
-    else if(inKey=="CTRLLINKID")
+    else if(aKeyIdx==1)
         ;
-    else if(inKey=="COLOR_DEFAULT") this->mChatCtrl->mDefaultColor=this->ReadColor();
-    else if(inKey=="COLOR_ERROR") this->mChatCtrl->mErrorColor=this->ReadColor();
-    else if(inKey=="COLOR_HELP") this->mChatCtrl->mHelpColor=this->ReadColor();
-    else if(inKey=="COLOR_USER") this->mChatCtrl->mUserColor=this->ReadColor();
-    else if(inKey=="COLOR_EMOTE") this->mChatCtrl->mEmoteColor=this->ReadColor();
-    else if(inKey=="COLOR_WHISPER") this->mChatCtrl->mWhisperColor=this->ReadColor();
-    else if(inKey=="COLOR_WARNING") this->mChatCtrl->mWarningColor=this->ReadColor();
-    else if(inKey=="COLOR_GROUP") this->mChatCtrl->mGroupColor=this->ReadColor();
-    else if(inKey=="COLOR_MESSAGE") this->mChatCtrl->mMessageColor=this->ReadColor();
-    else if(inKey=="COLOR_ACCEPT") this->mChatCtrl->mAcceptColor=this->ReadColor();
-    else if(inKey=="COLOR_REJECT") this->mChatCtrl->mRejectColor=this->ReadColor();
+    else if(aKeyIdx==2) this->mChatCtrl->mDefaultColor=this->ReadColor();
+    else if(aKeyIdx==3) this->mChatCtrl->mErrorColor=this->ReadColor();
+    else if(aKeyIdx==4) this->mChatCtrl->mHelpColor=this->ReadColor();
+    else if(aKeyIdx==5) this->mChatCtrl->mUserColor=this->ReadColor();
+    else if(aKeyIdx==6) this->mChatCtrl->mEmoteColor=this->ReadColor();
+    else if(aKeyIdx==7) this->mChatCtrl->mWhisperColor=this->ReadColor();
+    else if(aKeyIdx==8) this->mChatCtrl->mWarningColor=this->ReadColor();
+    else if(aKeyIdx==9) this->mChatCtrl->mGroupColor=this->ReadColor();
+    else if(aKeyIdx==10) this->mChatCtrl->mMessageColor=this->ReadColor();
+    else if(aKeyIdx==11) this->mChatCtrl->mAcceptColor=this->ReadColor();
+    else if(aKeyIdx==12) this->mChatCtrl->mRejectColor=this->ReadColor();
     else return false;
     return true;
 }

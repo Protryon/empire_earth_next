@@ -169,6 +169,16 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// The free camera mode (`mMode == 3`).
+constexpr static const int32_t MODE_FREE = 3;
+
+/// What `Update` does after stepping: nothing more, the path's next key, or the view.
+constexpr static const int32_t CAMERA_STEP_DONE = 0;
+
+constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
+
+constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -694,6 +704,9 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// `kControlTriggerScrollingFinished`.
+constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
@@ -721,6 +734,22 @@ constexpr static const int32_t EE_GROUP_COMMAND_TARGET = 186;
 /// `kActionGatherResource` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_GATHER_RESOURCE = 4004;
 
+/// `kUnitCategoryLandCitizen`, `kUnitCategoryNavalCitizen`
+constexpr static const int64_t EE_UNIT_CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const int64_t EE_UNIT_CATEGORY_NAVAL_CITIZEN = 22;
+
+/// `kActionAttackEnemyUnit`, `kActionHealUnit` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_ATTACK_ENEMY_UNIT = 2001;
+
+constexpr static const int32_t EE_ACTION_HEAL_UNIT = 16001;
+
+/// `kActionPrepareToMove` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
+
+/// `EESendGroupCommand`'s move marker
+constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -743,6 +772,10 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
 
 /// `new EEUGPatrol(object, unit_a, flag_a)` (the route, a patrol group from `Host::unit_patrol_group`; the target)
 constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
+
+/// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
+/// forced, rotating, the facing, group movement)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -1017,6 +1050,327 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+/// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
+
+/// BrowserComponentConfig::Virtual24(instruction) in BrowserComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_VIRTUAL24_INSTRUCTION = 1;
+
+/// BrowserComponentConfig::Virtual24(value) in BrowserComponentConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_BROWSERCOMPONENTCONFIG_VIRTUAL24_VALUE = 2;
+
+/// ButtonConfig::HandleButtonFlags(flag) in ButtonConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_BUTTONCONFIG_HANDLEBUTTONFLAGS_FLAG = 3;
+
+/// ButtonConfig::Virtual24(inInstruction) in ButtonConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_BUTTONCONFIG_VIRTUAL24_ININSTRUCTION = 4;
+
+/// ComboBoxConfig::Virtual24(key) in ComboBoxConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMBOBOXCONFIG_VIRTUAL24_KEY = 5;
+
+/// ComboBoxConfig::GetPredefinedComponent(name) in ComboBoxConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMBOBOXCONFIG_GETPREDEFINEDCOMPONENT_NAME = 6;
+
+/// ComponentConfig::ReadDirection(value) in ComponentConfigRead.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READDIRECTION_VALUE = 7;
+
+/// ComponentConfig::ReadHorzAlign(value) in ComponentConfigRead.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READHORZALIGN_VALUE = 8;
+
+/// ComponentConfig::ReadVertAlign(value) in ComponentConfigRead.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READVERTALIGN_VALUE = 9;
+
+/// ComponentConfig::GetNamedValue(inName) in ComponentConfigRead.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_GETNAMEDVALUE_INNAME = 10;
+
+/// ComponentConfig::CallNamedFunction(inName) in ComponentConfigRead.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_CALLNAMEDFUNCTION_INNAME = 11;
+
+/// ComponentConfig::HandleInstruction(type) in ComponentConfigResource.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEINSTRUCTION_TYPE = 12;
+
+/// ComponentConfig::GetComponentConfig(name) in ComponentConfigResource.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_GETCOMPONENTCONFIG_NAME = 13;
+
+/// ComponentConfig::HandleValueInstruction(key) in ComponentConfigResource.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEVALUEINSTRUCTION_KEY = 14;
+
+/// ComponentConfig::Virtual24(key) in ComponentConfigResource.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY = 15;
+
+/// ComponentConfig::Virtual24(name) in ComponentConfigResource.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME = 16;
+
+/// ComponentConfig::ReadStandardCursor(name) in ComponentConfigValueReaders.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READSTANDARDCURSOR_NAME = 17;
+
+/// ComponentConfig::ReadCursor(type) in ComponentConfigValueReaders.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READCURSOR_TYPE = 18;
+
+/// ComponentConfig::ReadSelectionColor(type) in ComponentConfigValueReaders.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READSELECTIONCOLOR_TYPE = 19;
+
+/// PercentLayoutConfig::Virtual24(instruction) in ComponentLayoutConfigs.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_PERCENTLAYOUTCONFIG_VIRTUAL24_INSTRUCTION = 20;
+
+/// ColorSchemeConfig::Virtual24(instruction) in ComponentLayoutConfigs.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_COLORSCHEMECONFIG_VIRTUAL24_INSTRUCTION = 21;
+
+/// ContainerConfig::HandleInstruction(type) in ContainerConfigGroups.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_CONTAINERCONFIG_HANDLEINSTRUCTION_TYPE = 22;
+
+/// ContainerConfig::Virtual24(theInstruction) in ContainerConfigInstructions.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION = 23;
+
+/// ContainerConfig::HandleNoOverlapLayout(aStr) in ContainerConfigLayouts.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR = 24;
+
+/// DialogConfig::Virtual24(instruction) in DialogConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_DIALOGCONFIG_VIRTUAL24_INSTRUCTION = 25;
+
+/// FontConfig::GetNamedValue(name) in FontConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_FONTCONFIG_GETNAMEDVALUE_NAME = 26;
+
+/// FontConfig::Virtual24(instruction) in FontConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION = 27;
+
+/// FontConfig::Virtual24(flag) in FontConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG = 28;
+
+/// ImageButtonConfig::Virtual24(instruction) in ImageButtonConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGEBUTTONCONFIG_VIRTUAL24_INSTRUCTION = 29;
+
+/// ImageConfig::GetNamedValue(inName) in ImageConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME = 30;
+
+/// ImageConfig::Virtual24(inInstruction) in ImageConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION = 31;
+
+/// ImageFilterConfig::HandleFilter(name) in ImageConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME = 32;
+
+/// ImageFilterConfig::Virtual24(inInstruction) in ImageConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION = 33;
+
+/// InputBoxConfig::Virtual24(inInstruction) in InputBoxConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_INPUTBOXCONFIG_VIRTUAL24_ININSTRUCTION = 34;
+
+/// LabelConfig::Virtual24(instruction) in LabelConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION = 35;
+
+/// ListAreaConfig::ReadSortType(name) in ListAreaConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_LISTAREACONFIG_READSORTTYPE_NAME = 36;
+
+/// ListAreaConfig::ReadListFlags(name) in ListAreaConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_LISTAREACONFIG_READLISTFLAGS_NAME = 37;
+
+/// ListAreaConfig::Virtual24(inInstruction) in ListAreaConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_LISTAREACONFIG_VIRTUAL24_ININSTRUCTION = 38;
+
+/// MSButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSBUTTONCONFIG_VIRTUAL24_KEY = 39;
+
+/// MSArrowButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSARROWBUTTONCONFIG_VIRTUAL24_KEY = 40;
+
+/// MSArrowButtonConfig::Virtual24(direction) in MSComponentConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_MSARROWBUTTONCONFIG_VIRTUAL24_DIRECTION = 41;
+
+/// MSTabButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSTABBUTTONCONFIG_VIRTUAL24_KEY = 42;
+
+/// MS3DFrameConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MS3DFRAMECONFIG_VIRTUAL24_KEY = 43;
+
+/// MSComboBoxConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSCOMBOBOXCONFIG_VIRTUAL24_KEY = 44;
+
+/// MSScrollbarConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSSCROLLBARCONFIG_VIRTUAL24_KEY = 45;
+
+/// MSEtchedFrameGroupConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSETCHEDFRAMEGROUPCONFIG_VIRTUAL24_KEY = 46;
+
+/// MSTabCtrlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSTABCTRLCONFIG_VIRTUAL24_KEY = 47;
+
+/// MSScrollContainerConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSSCROLLCONTAINERCONFIG_VIRTUAL24_KEY = 48;
+
+/// MSHeaderControlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSHEADERCONTROLCONFIG_VIRTUAL24_KEY = 49;
+
+/// MSListCtrlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MSLISTCTRLCONFIG_VIRTUAL24_KEY = 50;
+
+/// MultiListAreaConfig::Virtual24(instruction) in MultiListBoxConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MULTILISTAREACONFIG_VIRTUAL24_INSTRUCTION = 51;
+
+/// MultiListAreaConfig::Virtual24(name) in MultiListBoxConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_MULTILISTAREACONFIG_VIRTUAL24_NAME = 52;
+
+/// MultiListHeaderConfig::Virtual24(instruction) in MultiListBoxConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_MULTILISTHEADERCONFIG_VIRTUAL24_INSTRUCTION = 53;
+
+/// ResourceConfig::HandleValueInstruction(key) in ResourceConfigDispatch.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_RESOURCECONFIG_HANDLEVALUEINSTRUCTION_KEY = 54;
+
+/// ScrollAreaConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION = 55;
+
+/// ScrollerConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION = 56;
+
+/// ScrollbarScrollerConfig::GetScrollbarCondition(condition) in ResourceTableQueries.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_SCROLLBARSCROLLERCONFIG_GETSCROLLBARCONDITION_CONDITION = 57;
+
+/// ScrollbarScrollerConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION = 58;
+
+/// ButtonScrollerConfig::GetScrollButtonCondition(aStr) in ResourceTableQueries.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_BUTTONSCROLLERCONFIG_GETSCROLLBUTTONCONDITION_ASTR = 59;
+
+/// ButtonScrollerConfig::Virtual24(theInstruction) in ResourceTableQueries.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_BUTTONSCROLLERCONFIG_VIRTUAL24_THEINSTRUCTION = 60;
+
+/// ScrollbarConfig::Virtual24(instruction) in ScrollbarConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARCONFIG_VIRTUAL24_INSTRUCTION = 61;
+
+/// ScrollbarConfig::GetPredefinedComponent(name) in ScrollbarConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARCONFIG_GETPREDEFINEDCOMPONENT_NAME = 62;
+
+/// RectangleComponentConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_RECTANGLECOMPONENTCONFIG_VIRTUAL24_KEY = 63;
+
+/// RectangleComponent3DConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_RECTANGLECOMPONENT3DCONFIG_VIRTUAL24_KEY = 64;
+
+/// ImageComponentConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECOMPONENTCONFIG_VIRTUAL24_KEY = 65;
+
+/// ScreenContainerConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SCREENCONTAINERCONFIG_VIRTUAL24_KEY = 66;
+
+/// SplitterConfig::ReadQuadrant(aStr) in SplitterConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_SPLITTERCONFIG_READQUADRANT_ASTR = 67;
+
+/// SplitterConfig::ReadSplitterType(aStr) in SplitterConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_SPLITTERCONFIG_READSPLITTERTYPE_ASTR = 68;
+
+/// SplitterConfig::Virtual24(theInstruction) in SplitterConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SPLITTERCONFIG_VIRTUAL24_THEINSTRUCTION = 69;
+
+/// StretchImageConfig::Virtual24(instruction) in StretchImageConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION = 70;
+
+/// StretchCenterImageConfig::Virtual24(instruction) in StretchImageConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION = 71;
+
+/// TabCtrlConfig::Virtual24(key) in TabCtrlConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_TABCTRLCONFIG_VIRTUAL24_KEY = 72;
+
+/// TabCtrlConfig::GetPredefinedComponent(name) in TabCtrlConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_TABCTRLCONFIG_GETPREDEFINEDCOMPONENT_NAME = 73;
+
+/// TextAreaConfig::Virtual24(key) in TextAreaConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_TEXTAREACONFIG_VIRTUAL24_KEY = 74;
+
+/// TextAreaConfig::Virtual24(flag) in TextAreaConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_TEXTAREACONFIG_VIRTUAL24_FLAG = 75;
+
+/// TreeAreaConfig::Virtual24(instruction) in TreeAreaConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_TREEAREACONFIG_VIRTUAL24_INSTRUCTION = 76;
+
+/// WONSimpleButtonConfig::HandleButtonState(aStateStr) in WONButtonConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_WONSIMPLEBUTTONCONFIG_HANDLEBUTTONSTATE_ASTATESTR = 77;
+
+/// WONSimpleButtonConfig::Virtual24(theInstruction) in WONButtonConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONSIMPLEBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION = 78;
+
+/// WONButtonConfig::HandleSetButtonState(aStateStr) in WONButtonConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_WONBUTTONCONFIG_HANDLESETBUTTONSTATE_ASTATESTR = 79;
+
+/// WONButtonConfig::Virtual24(theInstruction) in WONButtonConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION = 80;
+
+/// WONFrameComponentConfig::Virtual24(key) in WONFrameConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONFRAMECOMPONENTCONFIG_VIRTUAL24_KEY = 81;
+
+/// WONFrameComponentConfig::GetNamedValue(key) in WONFrameConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONFRAMECOMPONENTCONFIG_GETNAMEDVALUE_KEY = 82;
+
+/// WONComboBoxConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONCOMBOBOXCONFIG_VIRTUAL24_KEY = 83;
+
+/// WONTabCtrlConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONTABCTRLCONFIG_VIRTUAL24_KEY = 84;
+
+/// WONScrollContainerConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONSCROLLCONTAINERCONFIG_VIRTUAL24_KEY = 85;
+
+/// WONScrollbarConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONSCROLLBARCONFIG_VIRTUAL24_KEY = 86;
+
+/// WONHeaderControlConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONHEADERCONTROLCONFIG_VIRTUAL24_KEY = 87;
+
+/// WONListCtrlConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONLISTCTRLCONFIG_VIRTUAL24_KEY = 88;
+
+/// WONSkinConfig::ReadVert(text) in WONSkinConfig.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT = 89;
+
+/// WONSkinConfig::Virtual24(theInstruction) in WONSkinConfig.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION = 90;
+
+/// ChatCtrlConfig::Virtual24(inKey) in ChatCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY = 91;
+
+/// ChatCtrlConfig::Virtual24(group) in ChatCtrl.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_CHATCTRLCONFIG_VIRTUAL24_GROUP = 92;
+
+/// CreditsDialogConfig::Virtual24(inInstruction) in CreditsDialog.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_CREDITSDIALOGCONFIG_VIRTUAL24_ININSTRUCTION = 93;
+
+/// CrossPromotionButtonConfig::Virtual24(key) in CrossPromotionButton.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_CROSSPROMOTIONBUTTONCONFIG_VIRTUAL24_KEY = 94;
+
+/// ImageTextButtonConfig::Virtual24(key) in CrossPromotionButton.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_IMAGETEXTBUTTONCONFIG_VIRTUAL24_KEY = 95;
+
+/// GameBrowserCtrlConfig::Virtual24(instruction) in GameBrowserCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_GAMEBROWSERCTRLCONFIG_VIRTUAL24_INSTRUCTION = 96;
+
+/// GameUserListCtrlConfig::Virtual24(instruction) in GameUserListCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_GAMEUSERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION = 97;
+
+/// RoomLabelCtrlConfig::Virtual24(inKey) in RoomLabelCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_ROOMLABELCTRLCONFIG_VIRTUAL24_INKEY = 98;
+
+/// ServerListCtrlConfig::GetNamedValue(inName) in ServerListCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_GETNAMEDVALUE_INNAME = 99;
+
+/// ServerListCtrlConfig::Virtual24(inInstruction) in ServerListCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_VIRTUAL24_ININSTRUCTION = 100;
+
+/// ServerListCtrlConfig::Virtual24(aType) in ServerListCtrl.cpp: names (ignoring case).
+constexpr static const int32_t EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE = 101;
+
+/// UserListCtrlConfig::Virtual24(instruction) in UserListCtrl.cpp: instruction keys (exact).
+constexpr static const int32_t EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION = 102;
+
+constexpr static const int32_t POSITION_LEFT = 1;
+
+constexpr static const int32_t POSITION_TOP = 2;
+
+constexpr static const int32_t POSITION_RIGHT = 4;
+
+constexpr static const int32_t POSITION_BOTTOM = 8;
+
+constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+
+constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+
 /// The component flags these rules read.
 constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
 
@@ -1024,6 +1378,41 @@ constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
 
 /// A child a modal state does not block.
 constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+
+/// The text flags (TextFlags in the C++).
+constexpr static const int32_t WORD_WRAP = 1;
+
+constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+
+constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+
+constexpr static const int32_t SCROLL_FULL_LINE = 16;
+
+constexpr static const int32_t DELAY_WORD_WRAP = 32;
+
+/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
+/// its last segment stands for the trimmed one.
+constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+
+constexpr static const uint32_t LINE_HAS_SEGS = 2;
+
+constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+
+constexpr static const int32_t POPUP_WANT_INPUT = 128;
+
+constexpr static const int32_t POPUP_IS_MODAL = 256;
+
+constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
+
+constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
+
+constexpr static const int32_t POPUP_ADDITIONAL = 4096;
+
+constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
+
+constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
+
+constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
 
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
@@ -1439,6 +1828,9 @@ struct EeAStarGraphStorage;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
+
+/// The score table, owned by the C++ `SEConductor` (created and destroyed with it).
+struct EeConductor;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
@@ -3410,6 +3802,76 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
+/// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
+/// end (a move shorter than 0.001).
+struct EeGfxCameraGoTo {
+  float speed;
+  bool snap_offset;
+  bool snap_focus;
+};
+
+/// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxGround {
+  void *context;
+  /// `GetIsValidTile(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_tile)(void *context, float x, float y);
+  /// `GetIsValidPoint(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_point)(void *context, float x, float y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
+};
+
+/// The camera's pose at a step of the move (`BuildView`'s inputs).
+struct EeGfxCameraPose {
+  /// `mQ014`, `mQ04C`: the view turn's start and end.
+  EeGeQuaternion view_start;
+  EeGeQuaternion view_end;
+  /// `mQ024`, `mQ05C`: the offset turn's.
+  EeGeQuaternion offset_start;
+  EeGeQuaternion offset_end;
+  EeGe3DPoint start_offset;
+  EeGe3DPoint end_offset;
+  EeGe3DPoint start_focus;
+  EeGe3DPoint end_focus;
+};
+
+/// The front and rear clipping distances `SetClippingDistances` gives the viewport.
+struct EeGfxClipping {
+  float front;
+  float rear;
+};
+
+/// The view rays through the screen's top, centre and bottom (`SetClippingDistances`' three screen lines).
+struct EeGfxCameraRays {
+  EeGe3DLine top;
+  EeGe3DLine center;
+  EeGe3DLine bottom;
+};
+
+/// The terrain mesh's four edge planes (`GetFrontPlane` .. `GetRightPlane`).
+struct EeGfxEdgePlanes {
+  EeGe3DPlane front;
+  EeGe3DPlane back;
+  EeGe3DPlane left;
+  EeGe3DPlane right;
+};
+
+/// The move's state `Update` steps.
+struct EeGfxCameraStep {
+  float fraction;
+  float rate;
+  float wait;
+  float waited;
+  bool changed;
+  bool locked;
+};
+
+/// The orthographic view and its rectangle's half size (`Update`'s orthographic branch).
+struct EeGfxOrthoView {
+  EeGeTransformation view;
+  float size;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3478,6 +3940,18 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// The conductor's scalar members (the C++ object's, read and written around each call).
+struct EeConductorFields {
+  float volume;
+  /// 0 stopped, 1 running.
+  uint32_t state;
+  uint32_t reverb_state;
+  int32_t next_score_id;
+  int32_t playing_id;
+  uint32_t intensity;
+  uint32_t channel_group_count;
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -3647,10 +4121,73 @@ struct EeUiTilePlan {
   float h;
 };
 
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
+/// One record of the backgrounds database file (`UIDbDataBackgrounds`, 308 bytes on every target).
+struct EeUiDbBackground {
+  uint8_t name[100];
+  uint8_t texture_file[100];
+  float top_offset;
+  float bottom_offset;
+  float left_offset;
+  float right_offset;
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  int32_t id;
+  uint32_t background_id;
+  uint32_t form_id;
+  int32_t texture_top;
+  int32_t texture_left;
+  int32_t texture_bottom;
+  int32_t texture_right;
+  uint32_t background_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  int32_t num_cols;
+  int32_t num_rows;
+  int32_t draw_priority;
+  int32_t red;
+  int32_t green;
+  int32_t blue;
+  uint8_t visible;
+  uint8_t has_alpha;
+  uint8_t attribute1;
+  uint8_t attribute2;
+  uint8_t attribute3;
+  uint8_t pad[3];
+};
+
+/// `UIBackgroundTable`'s members from `mTileWidthPercent` (+0x50 in the original) to `mAttribute3`, in order
+/// (offsets `static_assert`ed in `UIBackgroundTable.cpp`).
+struct EeUiBackgroundTableFields {
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  long id;
+  unsigned long background_id;
+  unsigned long form_id;
+  unsigned long background_type;
+  long num_cols;
+  long num_rows;
+  unsigned long draw_priority;
+  bool visible;
+  bool has_alpha;
+  bool attribute1;
+  bool attribute2;
+  bool attribute3;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
 };
 
 /// `GEColor`: red, green, blue.
@@ -3658,6 +4195,20 @@ struct EeUiColor {
   float red;
   float green;
   float blue;
+};
+
+/// One table entry as Rust writes it: its record from `mTileWidthPercent` on, `mLayout`, `mTextureRect`, `mColor`.
+struct EeUiBackgroundTableRefs {
+  EeUiBackgroundTableFields *fields;
+  EeUiLayout *layout;
+  EeUiRect *texture_rect;
+  EeUiColor *color;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
 };
 
 /// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
@@ -3809,18 +4360,6 @@ struct EeUiControlsTableFields {
   bool fit_rect_to_text;
   bool scale_to_control;
   bool loop_movie;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// Where one `UIControlsTable` keeps what the Rust side writes.
@@ -4229,6 +4768,9 @@ struct EeGoalSpec {
   uint8_t flag_b;
   /// an object the host handed out for the goal (a route)
   void *object;
+  /// a value (the location's facing)
+  float value;
+  uint8_t flag_c;
 };
 
 /// Receives bytes; valid only during the call.
@@ -4509,6 +5051,40 @@ struct EeWonInitErrors {
   bool allow_ignore;
 };
 
+/// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
+/// the operand threw).
+struct EeWonExprHost {
+  void *ctx;
+  void (*skip_whitespace)(void *ctx);
+  uint8_t (*peek)(void *ctx);
+  void (*advance)(void *ctx, int32_t n);
+  bool (*int_value)(void *ctx, int32_t *out);
+};
+
+/// Whether item `i` (below the count) matches, read from the C++ list.
+using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
+
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
+using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
+
+/// The split's state (`SetSplitterPos`): the point and the bars' edges.
+struct EeWonSplit {
+  int32_t x;
+  int32_t y;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
+};
+
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
 struct EeWonSel {
   int32_t start;
@@ -4577,6 +5153,21 @@ using EeWonTopOf = int32_t(*)(const void *ctx, size_t i);
 /// Whether item `i` (below the count) is selectable.
 using EeWonSelectableOf = bool(*)(const void *ctx, size_t i);
 
+/// A header button's place (`NotifyColumnChange`).
+struct EeWonHeaderCol {
+  int32_t x;
+  int32_t width;
+  bool enabled;
+};
+
+/// A header button as `GetDragComponent` reads it.
+struct EeWonHeaderButton {
+  bool present;
+  int32_t left;
+  int32_t right;
+  int32_t width;
+};
+
 /// `LayoutThumb`'s answer: `hidden` (everything fits: the thumb is hidden and nothing else changes), else the
 /// thumb's size and, when `set_pos`, its new top.
 struct EeWonThumbOut {
@@ -4615,6 +5206,73 @@ struct EeWonScrollArea {
   int32_t view_width;
   int32_t view_height;
 };
+
+/// A line's vertical metrics (`TextLine`'s height, baseline and descent).
+struct EeWonTextLineM {
+  int32_t height;
+  int32_t baseline;
+  int32_t descent;
+};
+
+/// A line's place: its y and height.
+struct EeWonTextLineY {
+  int32_t y;
+  int32_t height;
+};
+
+/// A line's flags (`i` below the count), read from the C++ area.
+using EeWonLineFlagsOf = uint32_t(*)(const void *ctx, size_t i);
+
+/// A unit's width (`i` a position in the segment's text), read from the C++ font.
+using EeWonCharWidthOf = int32_t(*)(const void *ctx, int32_t i);
+
+/// The font's width of a text's units from `start` to its end, read from the C++ font.
+using EeWonRestWidthOf = int32_t(*)(const void *ctx, int32_t start);
+
+/// One step of a segment's wrap (`TextSegment::Wrap`): a piece of the text on the current line
+/// (`kind` 0: units [start, end), `width` wide), or a new line (`kind` 1: `width` its starting width, the wrap
+/// indent on a left-aligned area).
+struct EeWonTextWrapOp {
+  int32_t kind;
+  int32_t start;
+  int32_t end;
+  int32_t width;
+};
+
+/// One line of `AddFormatedText`: units [start, start + len), with a line break after it.
+struct EeWonTextPart {
+  int32_t start;
+  int32_t len;
+  bool line_break;
+};
+
+/// One step of `LobbyAppendFormattedText`: `kind` 0 appends units [a, a + b) to the pending text, 1 appends
+/// '<', 2 adds the pending text as a segment in the current colour and font and empties it, 3 a line break,
+/// 4 the colour becomes colour `a`, 5 the font becomes font `a` (when not NULL), 6 adds string `a` as a segment
+/// (when not NULL), 7 adds segment `a` (when not NULL), 8 adds the pending text as the last segment, breaking
+/// the line when `b` is 1.
+struct EeWonFormatOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
+};
+
+/// The C++'s answers and steps over its items (each `node` a `TreeItem*`).
+struct EeWonTreeOps {
+  void *ctx;
+  void *(*parent)(void *ctx, void *node);
+  int32_t (*index)(void *ctx, void *node);
+  size_t (*count)(void *ctx, void *node);
+  void *(*child)(void *ctx, void *node, size_t i);
+  bool (*is_open)(void *ctx, void *node);
+  /// `InsertChildren`'s step: the item's row at a list position.
+  void (*insert)(void *ctx, void *node, int32_t pos);
+  /// `CloseAll`'s step: the item marked closed.
+  void (*close)(void *ctx, void *node);
+};
+
+/// The C++'s `Contains` of the remembered (0) or the new (1) wrapped item at the mouse.
+using EeWonTreeContains = bool(*)(void *ctx, int32_t which);
 
 /// One line break: the line ends at `pos`, the next starts at `next`; the line is `width` wide.
 struct EeWonBreak {
@@ -8228,6 +8886,120 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
+/// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
+///
+/// # Safety
+/// `world` is valid.
+float ee_gfx_camera_pitch(float zoom,
+                          int32_t mode,
+                          const EeGeTransformation *world);
+
+/// `GetOffset`/`GetLocation`: `step` of the way from `start` to `end`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_lerp(const EeGe3DPoint *start,
+                        const EeGe3DPoint *end,
+                        float step,
+                        EeGe3DPoint *out);
+
+/// `GoTo`'s speed and snaps.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxCameraGoTo ee_gfx_camera_go_to(const EeGe3DPoint *start_offset,
+                                    const EeGe3DPoint *end_offset,
+                                    const EeGe3DPoint *start_focus,
+                                    const EeGe3DPoint *end_focus,
+                                    float key_rate,
+                                    bool following,
+                                    float follow_rate);
+
+/// `ClampHeight(ioTransformation)`.
+///
+/// # Safety
+/// `t` is valid; the callbacks are valid for the call.
+void ee_gfx_camera_clamp_height(EeGeTransformation *t,
+                                int32_t mode,
+                                float front_clipping,
+                                bool plain,
+                                EeGfxGround ground);
+
+/// `BuildView(out, step)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_build_view(const EeGfxCameraPose *pose,
+                              float step,
+                              int32_t mode,
+                              float front_clipping,
+                              bool plain,
+                              EeGfxGround ground,
+                              EeGeTransformation *out);
+
+/// `SetClippingDistances`' distances; `rays` is null in the orthographic view.
+///
+/// # Safety
+/// `rays` is null or valid; `camera` is valid.
+EeGfxClipping ee_gfx_camera_clipping(const EeGfxCameraRays *rays,
+                                     const EeGe3DPoint *camera,
+                                     int32_t mode,
+                                     float zoom,
+                                     bool free_camera,
+                                     bool far_rear_clipping);
+
+/// `ClipToEdges(line, ioPoint)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clip_to_edges(const EeGe3DLine *line,
+                                 const EeGfxEdgePlanes *planes,
+                                 EeGe3DPoint *point);
+
+/// `GetGroundPoint(line, out)`; `offset` is `GetOffset(mFraction)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_ground_point(const EeGe3DLine *line,
+                                const EeGfxEdgePlanes *planes,
+                                const EeGe3DPoint *offset,
+                                int32_t mode,
+                                EeGfxGround ground,
+                                EeGe3DPoint *out);
+
+/// `Scroll`'s ground direction (`scale`: the zoom + 0.5 as the scroll began).
+///
+/// # Safety
+/// `view` is valid.
+EeGeVector ee_gfx_camera_scroll_direction(const EeGeTransformation *view,
+                                          float dx,
+                                          float dy,
+                                          float scale);
+
+/// Whether `Scroll` looks for the ground under the screen (the offset within 10).
+///
+/// # Safety
+/// `offset` is valid.
+bool ee_gfx_camera_scroll_is_near(const EeGe3DPoint *offset);
+
+/// `Scroll`'s clamp of the target to the map's edge planes.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clamp_to_map(EeGe3DPoint *target, const EeGfxEdgePlanes *planes);
+
+/// `Update`'s step of the move (`CAMERA_STEP_*`).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
+
+/// `Update`'s orthographic view.
+///
+/// # Safety
+/// `focus` is valid.
+EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
+
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
 
@@ -8734,6 +9506,135 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
 
+/// An empty score table (the constructor).
+EeConductor *ee_conductor_create();
+
+/// Frees the table; its scores were deleted by the stop before (a stopped conductor holds none).
+///
+/// # Safety
+/// `c` from `ee_conductor_create`, not used afterwards.
+void ee_conductor_destroy(EeConductor *c);
+
+/// The constructor's scalar members.
+EeConductorFields ee_conductor_fields_new();
+
+/// `LoadScore(name, outID, secondary)`; `written` says whether the C++ wrote `outID` (then `out_id` holds it).
+///
+/// # Safety
+/// As `with`; `name` NUL-terminated, the outs valid.
+int32_t ee_conductor_load_score(EeConductor *c,
+                                void *ctx,
+                                EeConductorFields *f,
+                                const char *name,
+                                bool secondary,
+                                int32_t *out_id,
+                                bool *written);
+
+/// `SetConductorState`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_state(EeConductor *c, void *ctx, EeConductorFields *f, uint32_t state);
+
+/// `InitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_initialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `UninitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_uninitialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `Play`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_play(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Queue`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_queue(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Stop`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_stop(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `TransitionTo(id, command, flags)` (the flags are unused).
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_transition_to(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   int32_t id,
+                                   uint32_t command);
+
+/// `UnloadScore`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_unload_score(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `SetVolume`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_volume(EeConductor *c, void *ctx, EeConductorFields *f, float volume);
+
+/// `SetIntensity`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_intensity(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   uint32_t intensity,
+                                   bool immediate);
+
+/// `SetChannelGroupCount`.
+///
+/// # Safety
+/// `f` valid, the C++ lock held.
+int32_t ee_conductor_set_channel_group_count(EeConductorFields *f, uint32_t count);
+
+/// `GetCurrentlyPlayingScore`.
+///
+/// # Safety
+/// `f` valid.
+int32_t ee_conductor_currently_playing(const EeConductorFields *f);
+
+/// `GetScore`: the `SEScore*` (null: none).
+///
+/// # Safety
+/// As `with` (no host is reached).
+void *ee_conductor_score(EeConductor *c, int32_t id);
+
+/// `GetScoreID`.
+///
+/// # Safety
+/// As `with` (no host is reached).
+int32_t ee_conductor_score_id(EeConductor *c, void *score);
+
+/// One entry of the score table, for inspection (tests, the golden driver): false past the last. `name` gets at
+/// most `name_capacity - 1` bytes and a NUL.
+///
+/// # Safety
+/// As `with`; `name` has `name_capacity` bytes (> 0), the outs are valid.
+bool ee_conductor_entry(EeConductor *c,
+                        uint32_t index,
+                        char *name,
+                        uint32_t name_capacity,
+                        void **score,
+                        int32_t *id,
+                        uint32_t *load_count);
+
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
 
@@ -8906,6 +9807,69 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// The constructor: a new mixer joins the registry.
+///
+/// # Safety
+/// `mixer` is a live `SEMixer*`.
+void ee_mixers_register(void *mixer);
+
+/// The destructor's decisions: the active mixer stops and deactivates, then the mixer leaves the registry.
+///
+/// # Safety
+/// `mixer` is the `SEMixer*` being destroyed.
+void ee_mixers_destroy(void *mixer);
+
+/// `SEMixer::GetCount`.
+uint32_t ee_mixers_count();
+
+/// `SEMixer::GetMixer`: `kErrorBeyondEnd` past the last (`out` untouched).
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_mixers_get(uint32_t index, void **out);
+
+/// `SEMixer::UseMixer` (null: none).
+///
+/// # Safety
+/// `mixer` is null or a live `SEMixer*`.
+int32_t ee_mixers_use(void *mixer_ptr);
+
+/// `SEInitializeMixers` over the C++ start state `ctx`.
+///
+/// # Safety
+/// `ctx` is what the trampolines expect.
+int32_t ee_mixers_initialize(void *ctx);
+
+/// `SEShutdown`'s mixers.
+void ee_mixers_delete_all();
+
+/// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
+/// one. True when the thread must end.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+bool ee_music_step(void *ctx,
+                   int32_t wait,
+                   uint32_t elapsed);
+
+/// `SetIntensity`'s rule (the C++ sets the event after it).
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`.
+void ee_music_request_intensity(void *ctx, uint32_t intensity);
+
+/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_do(void *ctx, uint32_t what);
+
+/// `Update`.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_update(void *ctx, uint32_t elapsed);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///
@@ -9132,6 +10096,28 @@ void ee_ui_background_set_visibility(void *background, bool visible);
 
 /// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
 void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
+
+/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
+void ee_ui_background_full_tile_name(const char *name,
+                                     unsigned long row,
+                                     unsigned long column,
+                                     void *out);
+
+/// `UIBackgroundTable::Create`.
+long ee_ui_background_table_create(void *file);
+
+/// The new table entry's members from a record (`Create`'s copy; the C++ copies the texture file name).
+void ee_ui_background_table_from_record(const EeUiDbBackground *record,
+                                        EeUiBackgroundTableRefs out);
+
+/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
+long ee_ui_event_create(void *file, int kind, void *manager);
+
+/// `UIEvent::Initialize`.
+long ee_ui_event_initialize(unsigned long *count, void *event);
+
+/// `UIEvent::Uninitialize`.
+long ee_ui_event_uninitialize(unsigned long *count, void *event);
 
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
@@ -9550,6 +10536,24 @@ void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
 /// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
 void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
 
+/// `UIEditBox::UpdateKeyboard`.
+long ee_ui_edit_update_keyboard(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Copy`.
+void ee_ui_edit_copy(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Cut`.
+void ee_ui_edit_cut(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Paste`.
+void ee_ui_edit_paste(const EeUiEditRefs *refs);
+
+/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
+void ee_ui_edit_add_ime_result(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
+void ee_ui_edit_drag(const EeUiEditRefs *refs, EeUiPoint at);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -9599,6 +10603,32 @@ long ee_ui_font_closest_size(unsigned long pixel_height);
 
 /// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
 size_t ee_ui_font_find_or_create(const void *query);
+
+/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
+void ee_ui_group_disable(void *group);
+
+/// `UIEntityGroup::Enable`'s loop.
+void ee_ui_group_enable(void *group);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
+
+/// `UITextLabel::ComputeTextLabelRect`.
+void ee_ui_label_compute_rect(void *label);
+
+/// `UITextLabel::CheckScrollBar`.
+void ee_ui_label_check_scroll_bar(void *label);
+
+/// `UITextLabel::SetLocation`'s rectangles after the control's move: the label's rectangle and border and whether
+/// it has a scroll bar -> the scroll bar strip in `scroll_bar`, the text rectangle in `text`.
+void ee_ui_label_location_rects(EeUiRect rect,
+                                unsigned long border,
+                                bool has_scroll_bar,
+                                EeUiRect *scroll_bar,
+                                EeUiRect *text);
 
 /// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
 unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
@@ -9749,6 +10779,56 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
+long ee_ui_control_update_mouse(void *control,
+                                const void *location);
+
+/// `UIForm::UpdateMouse` -> its result.
+long ee_ui_form_update_mouse(void *form);
+
+/// `UITLScrolling::CopyData` (after the C++ copied the label's text into the draw text) -> its result.
+long ee_ui_scrolling_copy_data(void *label);
+
+/// `UITLScrolling::ScrollText(speed, start delay, end delay, start offset, end offset)`.
+void ee_ui_scrolling_scroll_text(void *label,
+                                 float speed,
+                                 long start_delay,
+                                 long end_delay,
+                                 long start_offset,
+                                 long end_offset);
+
+/// `UITLScrolling::ScrollText(time, end delay)`.
+void ee_ui_scrolling_scroll_text_for(void *label, unsigned long time, unsigned long end_delay);
+
+/// `PauseScrolling` (`resume` false) or `ResumeScrolling`.
+void ee_ui_scrolling_pause(void *label, bool resume);
+
+/// `StopScrolling`.
+void ee_ui_scrolling_stop(void *label);
+
+/// `DrawTextA`'s place for snapshot line `i`.
+EeUiPoint ee_ui_scrolling_line_at(float draw_left,
+                                  unsigned long font_height,
+                                  unsigned long i,
+                                  unsigned long offset);
+
+/// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
+long ee_ui_status_fill(long value,
+                       long min,
+                       long max,
+                       unsigned long width,
+                       EeUiRect fill,
+                       EeUiRect *out);
+
+/// `SetLocation`'s fill and text rectangles from the moved control rectangle.
+void ee_ui_status_location(EeUiRect rect, unsigned long border, EeUiRect *fill, EeUiRect *text);
+
+/// `CopyData`'s fill: whether the border insets it (`out` then the inset rectangle).
+bool ee_ui_status_copy_fill(EeUiRect fill, unsigned long border, EeUiRect *out);
+
+/// `CopyData`'s text rectangle for a text of `width` x `height`.
+EeUiRect ee_ui_status_copy_text(EeUiRect text, float width, float height);
 
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
@@ -10040,6 +11120,44 @@ void ee_units_explore(void *player,
 /// the unit.
 bool ee_units_keeps_ground_attacker(uint32_t id);
 
+/// `EEActiveGroup::KeepNonCitizens`' test over the store (`group::keeps_non_citizen`): whether the group keeps the
+/// unit.
+bool ee_units_keeps_non_citizen(uint32_t id);
+
+/// `EEMAddPatrolPoint::Execute`'s body (`group::add_patrol_point`) for the sender, its selection and the point.
+void ee_units_add_patrol_point(void *player,
+                               void *selection,
+                               float x,
+                               float y);
+
+/// `EEMAttackUnit::Execute`'s body (`group::attack_unit`) for the sender, its selection, the target id and the
+/// queued and convert flags.
+void ee_units_attack_unit(void *player,
+                          void *selection,
+                          uint32_t target,
+                          bool queued,
+                          bool convert);
+
+/// `EEMHealUnit::Execute`'s body (`group::heal_unit`) for the sender, its selection and the target id.
+void ee_units_heal_unit(void *player,
+                        void *selection,
+                        uint32_t target);
+
+/// `EEMPathTo::Execute`'s body (`group::path_to`) for the sender, its selection, the message's point (read, and
+/// written back as the body adjusted it) and its options.
+///
+/// # Safety
+/// `x` and `y` point to the message's floats for the call.
+void ee_units_path_to(void *player,
+                      void *selection,
+                      float *x,
+                      float *y,
+                      float facing,
+                      bool forced,
+                      bool rotating,
+                      bool queued,
+                      bool group_movement);
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 void ee_units_attack_ground(void *player,
@@ -10126,6 +11244,29 @@ extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
 extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
 
 extern void ee_units_host_group_add_member(void *group, uint32_t unit);
+
+extern void ee_units_host_group_keep_non_citizens(void *group);
+
+extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
+
+extern void ee_units_host_patrol_insert_point_at(uint32_t unit, float x, float y, void *player);
+
+extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
+
+extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
+
+extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
+
+extern void ee_units_host_group_spread_around_unit(void *group,
+                                                   uint32_t target,
+                                                   int64_t x,
+                                                   int64_t y);
+
+extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
+
+extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
+
+extern void ee_units_host_group_reset_paths(void *group);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
@@ -10453,6 +11594,41 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              size_t base_length,
                              EeWonByteSink sink,
                              void *context);
+
+bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
+
+bool ee_won_dlg_name_enabled(uint32_t name_len);
+
+int32_t ee_won_dlg_skill_level(int32_t sel);
+
+bool ee_won_dlg_internet_access(int32_t game_type);
+
+bool ee_won_dlg_lan_port_ok(int32_t port, uint16_t game_port);
+
+/// `adapter_order`: the order, or 2 when the columns decide.
+int32_t ee_won_dlg_adapter_order(int32_t host, int32_t other);
+
+uint32_t ee_won_dlg_selected_address(bool has_selection, uint32_t selected, uint32_t local_host);
+
+int32_t ee_won_dlg_status_body_width(int32_t text_width, int32_t m_width, int32_t root_width);
+
+/// `status_pad`: -1 for 5 lines or more.
+int32_t ee_won_dlg_status_pad(int32_t label_height, int32_t line_height);
+
+/// `status_extra_width`: false when the dialog keeps its shape, else true with the extra width in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_dlg_status_extra_width(int32_t new_width,
+                                   int32_t new_height,
+                                   int32_t root_height,
+                                   int32_t width_change,
+                                   int32_t old_width,
+                                   int32_t *out);
+
+bool ee_won_dlg_status_young(uint32_t now, uint32_t start);
+
+int32_t ee_won_dlg_growth(int32_t new_, int32_t old);
 
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
@@ -11752,6 +12928,257 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink image,
                                  void *context);
 
+/// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `out` is writable.
+int32_t ee_won_cfg_expr(const EeWonExprHost *host, int32_t level, int32_t *out);
+
+bool ee_won_cfg_name_char(int8_t c);
+
+/// `name_kind` over `len` bytes: the kind, the offset into `out_at`.
+///
+/// # Safety
+/// `name` holds `len` bytes (or is NULL with 0); `out_at` is writable.
+int32_t ee_won_cfg_name_kind(const uint8_t *name, size_t len, size_t *out_at);
+
+/// `key_index` over `len` bytes of an instruction (`std::string::data()`).
+///
+/// # Safety
+/// `key` has `len` bytes (may be NULL when 0).
+int32_t ee_won_gui_cfg_key(int32_t table, const char *key, size_t len);
+
+/// `name_index` over a GUIString's units (its `mText`, `mLength`), compared as `GUIStringData::CompareNoCase`
+/// compares with narrow text.
+///
+/// # Safety
+/// `text` as `ee_won_guistring_compare_narrow`'s.
+int32_t ee_won_gui_cfg_name(int32_t table,
+                            const void *text,
+                            uint16_t len,
+                            uint32_t wchar_size);
+
+/// The number of tables, for the drivers.
+int32_t ee_won_gui_cfg_table_count();
+
+/// A table's kind (0 keys, 1 names, -1 none) and its `i`th name into `out` (room for `room` bytes; the name's
+/// length is returned through `out_len`, -1 past the end), for the drivers.
+///
+/// # Safety
+/// `out` has room for `room` bytes; `out_len` is writable.
+int32_t ee_won_gui_cfg_table_name(int32_t table,
+                                  size_t i,
+                                  uint8_t *out,
+                                  size_t room,
+                                  int64_t *out_len);
+
+/// `combo_list_size` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_combo_list_size(int32_t max_width,
+                                int32_t max_height,
+                                int32_t box_width,
+                                int32_t area_width,
+                                int32_t right_pad,
+                                int32_t left_pad,
+                                int32_t total_width,
+                                int32_t combo_width,
+                                int32_t total_height,
+                                int32_t *out_width,
+                                int32_t *out_height);
+
+bool ee_won_gui_combo_select_to_end(int32_t item_width, int32_t edit_width);
+
+int32_t ee_won_gui_combo_key(int32_t key, bool visible);
+
+/// `first_match`: the index, or -1.
+int64_t ee_won_gui_first_match(size_t count, EeWonMatchOf matches, const void *ctx);
+
+int32_t ee_won_gui_tab_x(int32_t id, size_t count, int32_t prev_right, int32_t overlap);
+
+int32_t ee_won_gui_tab_neighbour(int32_t old);
+
+/// `tab_keep_in_view`: false when in view, else true with the scroll in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_keep_in_view(int32_t left, int32_t width, int32_t limit, int32_t *out);
+
+/// `tab_scroll`: the new x; true with the arrows' states in the outs when the tabs overflow.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_tab_scroll(int32_t old_x,
+                           int32_t amount,
+                           int32_t width,
+                           int32_t container_width,
+                           int32_t *out_x,
+                           bool *out_left,
+                           bool *out_right);
+
+EeWonRect4 ee_won_gui_tab_page_rect(int32_t left_pad,
+                                    int32_t right_pad,
+                                    int32_t top_pad,
+                                    int32_t bottom_pad,
+                                    int32_t area_top,
+                                    int32_t area_height,
+                                    int32_t width);
+
+/// `tab_area`: the top, the height into `out_height`.
+///
+/// # Safety
+/// `out_height` is writable.
+int32_t ee_won_gui_tab_area(bool on_bottom,
+                            int32_t height,
+                            int32_t bar_top,
+                            int32_t bar_bottom,
+                            int32_t overlap,
+                            int32_t *out_height);
+
+/// `tab_arrows`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_tab_arrows(bool on_left,
+                              bool on_bottom,
+                              int32_t width,
+                              int32_t right_width,
+                              int32_t left_width,
+                              int32_t left_height,
+                              int32_t area_top,
+                              int32_t area_bottom,
+                              int32_t *out_y);
+
+int32_t ee_won_gui_tab_bottom_height(int32_t bar_height, int32_t overlap, int32_t top_offset);
+
+/// `tab_vert`: the top container's y, the bottom container's into `out_bottom_y`.
+///
+/// # Safety
+/// `out_bottom_y` is writable.
+int32_t ee_won_gui_tab_vert(bool on_bottom,
+                            int32_t height,
+                            int32_t bottom_height,
+                            int32_t top_offset,
+                            int32_t *out_bottom_y);
+
+/// `tab_horz` (an arrow's edge is read only when the arrow is there and visible): the left, the right into
+/// `out_right`.
+///
+/// # Safety
+/// `out_right` is writable.
+int32_t ee_won_gui_tab_horz(bool need_arrows,
+                            bool arrows_on_left,
+                            bool right_arrow_shown,
+                            int32_t right_arrow_right,
+                            bool left_arrow_shown,
+                            int32_t left_arrow_left,
+                            bool on_right,
+                            int32_t width,
+                            int32_t bar_width,
+                            int32_t left_offset,
+                            int32_t *out_right);
+
+int32_t ee_won_gui_tab_bar_height(int32_t current, int32_t tab_height);
+
+/// `tab_key_target`: false for another key, else true with the tab in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_key_target(int32_t key,
+                               int32_t old,
+                               size_t count,
+                               EeWonDisabledOf disabled,
+                               const void *ctx,
+                               int32_t *out);
+
+int32_t ee_won_gui_tab_after_remove(int32_t removed, int32_t current);
+
+/// `split_max` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_split_max(int32_t pos,
+                          int32_t width,
+                          int32_t height,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t *out_x,
+                          int32_t *out_y,
+                          bool *out_lr,
+                          bool *out_ud);
+
+int32_t ee_won_gui_split_button_quadrant(int32_t control_id);
+
+bool ee_won_gui_split_is_max_button(int32_t control_id);
+
+/// `split_set`: false when unchanged, else true with the split in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_set(int32_t x,
+                          int32_t y,
+                          bool lr_max,
+                          bool ud_max,
+                          int32_t min_left,
+                          int32_t min_right,
+                          int32_t min_top,
+                          int32_t min_bottom,
+                          int32_t width,
+                          int32_t height,
+                          bool valid,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          EeWonSplit *out);
+
+/// `split_percent`: false when the size is not positive, else true with the percentage in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_percent(int32_t v, int32_t size, double *out);
+
+int32_t ee_won_gui_split_at(int32_t size, double percent, int32_t offset);
+
+/// `split_layout`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_layout(bool have_max,
+                                int32_t quadrant,
+                                double left_pct,
+                                double top_pct,
+                                int32_t bar_w,
+                                int32_t bar_h,
+                                int32_t width,
+                                int32_t height,
+                                int32_t *out_y);
+
+EeWonRect4 ee_won_gui_split_pane(int32_t pos, int32_t width, int32_t height, EeWonSplit s);
+
+EeWonRect4 ee_won_gui_split_bar(int32_t kind, int32_t width, int32_t height, EeWonSplit s);
+
+int32_t ee_won_gui_split_cursor(int32_t kind);
+
+/// `split_drag`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_drag(int32_t x,
+                              int32_t y,
+                              int32_t child_x,
+                              int32_t child_y,
+                              int32_t drag_x,
+                              int32_t drag_y,
+                              bool lr,
+                              bool ud,
+                              int32_t sx,
+                              int32_t sy,
+                              int32_t *out_y);
+
 /// `move_cursor` over a `GUIString`'s units.
 ///
 /// # Safety
@@ -11842,6 +13269,168 @@ int32_t ee_won_gui_drag_scroll_end(int32_t char_pos,
                                    int32_t m_width,
                                    int32_t rect_width,
                                    int32_t horz_offset);
+
+bool ee_won_gui_win_mouse_enters(bool in_client, bool left_down);
+
+bool ee_won_gui_win_move_ends_double(bool detecting, int32_t x, int32_t y, int32_t dx, int32_t dy);
+
+bool ee_won_gui_win_release_exits(int32_t button, bool in_client);
+
+/// `double_click`: whether it is a double click; whether detection starts into `out_start`, whether the button's
+/// tick changes into `out_set` and the new tick into `out_tick`.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_win_double_click(int32_t event_type,
+                                 bool detecting,
+                                 uint32_t prev_tick,
+                                 uint32_t now,
+                                 bool *out_start,
+                                 bool *out_set,
+                                 uint32_t *out_tick);
+
+bool ee_won_gui_win_size_resizes(int32_t width,
+                                 int32_t height,
+                                 int32_t root_width,
+                                 int32_t root_height);
+
+bool ee_won_gui_win_resize_due(bool need,
+                               uint32_t tick,
+                               uint32_t last,
+                               uint32_t delay,
+                               int32_t suspended);
+
+bool ee_won_gui_win_cursor_forced(bool in_client, uint32_t tick, uint32_t last);
+
+/// `hover_elapsed`: whether to hover, the elapsed time into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_win_hover(bool in_client,
+                          uint32_t last_move,
+                          bool down0,
+                          bool down1,
+                          bool down2,
+                          uint32_t now,
+                          uint32_t *out);
+
+/// `exit_point`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_win_exit_point(int32_t left,
+                                  int32_t top,
+                                  int32_t width,
+                                  int32_t height,
+                                  int32_t *out_y);
+
+bool ee_won_gui_win_center_on_parent(bool in_parent, bool has_parent, bool parent_visible);
+
+/// `center`: left, top into `out_top`.
+///
+/// # Safety
+/// `out_top` is writable.
+int32_t ee_won_gui_win_center(int32_t sx,
+                              int32_t sy,
+                              int32_t sw,
+                              int32_t sh,
+                              int32_t width,
+                              int32_t height,
+                              int32_t *out_top);
+
+bool ee_won_gui_win_cursor_refresh(bool force, bool same);
+
+uint8_t ee_won_gui_win_close_step(int32_t state);
+
+/// `timer_step`: whether the step runs, the elapsed time into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_wm_timer_step(uint32_t tick, uint32_t last, uint32_t *out);
+
+uint8_t ee_won_gui_wm_popup_focus_step(bool popup_up,
+                                       bool focus_is_owner,
+                                       int32_t flags,
+                                       bool has_focus,
+                                       bool focus_is_popup,
+                                       bool end_pending);
+
+bool ee_won_gui_wm_restore_due(uint32_t last_lose, bool has_focus, uint32_t tick);
+
+bool ee_won_gui_wm_press_focuses(bool focus_is_window, bool is_popup, bool not_modal);
+
+bool ee_won_gui_wm_capture_changes(int32_t button, bool popup_up, bool capture_support);
+
+bool ee_won_gui_wm_move_ends_popup(bool popup_up, int32_t flags);
+
+bool ee_won_gui_wm_wheel_to_popup(bool popup_up, int32_t flags);
+
+uint8_t ee_won_gui_wm_popup_key(bool popup_up, int32_t event_type, int32_t flags, int32_t key);
+
+/// `size_merge` in place over `next` (x, y, width, height).
+///
+/// # Safety
+/// `this` and `next` have 4 entries.
+void ee_won_gui_wm_size_merge(const int32_t *this_, int32_t *next);
+
+bool ee_won_gui_wm_close_ends_popup(bool popup_up, bool is_owner, bool is_popup);
+
+uint8_t ee_won_gui_wm_popup_click_step(bool has_child,
+                                       bool is_input,
+                                       uint32_t bits,
+                                       bool has_input,
+                                       bool is_container);
+
+bool ee_won_gui_root_drag_starts(int32_t button, bool allow, bool child_drags);
+
+/// `drag_place`: whether the root moves, its place into the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_root_drag_place(int32_t left,
+                                int32_t top,
+                                int32_t x,
+                                int32_t y,
+                                int32_t drag_x,
+                                int32_t drag_y,
+                                int32_t *out_x,
+                                int32_t *out_y);
+
+/// `drag_window`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_root_drag_window(int32_t rx, int32_t ry, int32_t nx, int32_t ny, int32_t *out_y);
+
+bool ee_won_gui_root_drag_ends(int32_t button);
+
+/// `cursor_place`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_root_cursor_place(int32_t x,
+                                     int32_t y,
+                                     int32_t hot_x,
+                                     int32_t hot_y,
+                                     int32_t *out_y);
+
+uint8_t ee_won_gui_ct_mouse_child(bool same, bool has_old, bool has_new);
+
+bool ee_won_gui_ct_release_to_child(bool has_child, bool same_as_old);
+
+/// `desired_size` over `count` children's (left, top, width, height): the width, the height into `out_h`.
+///
+/// # Safety
+/// `rects` has `4 * count` entries (may be NULL when 0); `out_h` is writable.
+int32_t ee_won_gui_ct_desired_size(const int32_t *rects,
+                                   size_t count,
+                                   int32_t *out_h);
+
+/// `find_top` over `count` children's always-on-top flags (non-zero: on top).
+///
+/// # Safety
+/// `on_top` has `count` entries (may be NULL when 0); `from <= count`.
+size_t ee_won_gui_ct_find_top(const uint8_t *on_top, size_t count, size_t from);
 
 bool ee_won_gui_want_focus(uint32_t flags, bool visible, bool disabled, bool parent_modal);
 
@@ -12148,6 +13737,166 @@ bool ee_won_gui_list_item_tip(int32_t width,
                               int32_t offset,
                               int32_t view_height);
 
+uint8_t ee_won_gui_menu_popup_key(bool has_sub, int32_t key, bool sub_has_sel);
+
+uint8_t ee_won_gui_menu_check_sub(bool is_item,
+                                  bool has_cur_sub,
+                                  bool same_sub,
+                                  bool item_has_sub,
+                                  bool disabled);
+
+int32_t ee_won_gui_menu_submenu_flags();
+
+uint8_t ee_won_gui_menu_popup_event(bool from_sub, int32_t event_type);
+
+bool ee_won_gui_menu_sel_clears_sub(bool keyboard, bool has_sub, bool sel_is_sub_item);
+
+bool ee_won_gui_menubar_key_asks_popup(int32_t state);
+
+/// `bar_key`: the step; the state and the item into the outs.
+///
+/// # Safety
+/// The outs are writable.
+uint8_t ee_won_gui_menubar_key(int32_t state,
+                               int32_t key,
+                               int32_t id,
+                               size_t count,
+                               int32_t *out_state,
+                               int32_t *out_id);
+
+uint8_t ee_won_gui_menubar_check(int32_t state,
+                                 bool has_cur,
+                                 bool has_check,
+                                 bool check_is_cur,
+                                 bool check_is_item);
+
+int32_t ee_won_gui_menubar_popup_flags();
+
+/// `bar_popup_place`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_menubar_popup_place(int32_t left, int32_t top, int32_t height, int32_t *out_y);
+
+/// `bar_popup_avoid` into `out` (x, y, width, height).
+///
+/// # Safety
+/// `out` has room for 4.
+void ee_won_gui_menubar_popup_avoid(int32_t root_y, int32_t height, int32_t *out);
+
+uint8_t ee_won_gui_menubar_event(int32_t event_type, int32_t state);
+
+bool ee_won_gui_menu_item_chosen(bool is_item, bool has_sub, bool disabled);
+
+/// `bar_press`: whether the bar opens; the state into `out_state`.
+///
+/// # Safety
+/// `out_state` is writable.
+bool ee_won_gui_menubar_press(int32_t state, int32_t *out_state);
+
+bool ee_won_gui_menubar_moved(int32_t x, int32_t y, int32_t last_x, int32_t last_y);
+
+/// `bar_item_place`: x, y into `out_y` (`has_prev` false: the first item).
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_menubar_item_place(bool has_prev,
+                                      int32_t left,
+                                      int32_t top,
+                                      int32_t width,
+                                      int32_t *out_y);
+
+/// `bar_item_size`: width, height into `out_h`.
+///
+/// # Safety
+/// `out_h` is writable.
+int32_t ee_won_gui_menubar_item_size(int32_t text_width, int32_t font_height, int32_t *out_h);
+
+/// `column_at` over `count` columns.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int32_t ee_won_gui_ml_column_at(const int32_t *xs, const int32_t *widths, size_t count, int32_t x);
+
+/// `set_column_width` over `count` columns in place.
+///
+/// # Safety
+/// The arrays hold `count` entries (or are NULL with 0); `total` is writable.
+bool ee_won_gui_ml_set_width(int32_t *widths,
+                             const uint8_t *modes,
+                             const int32_t *partners,
+                             int32_t *xs,
+                             size_t count,
+                             int32_t *total,
+                             int32_t max_total,
+                             int32_t col,
+                             int32_t width,
+                             bool from_size);
+
+/// `dynamic_delta`: 0 when nothing changes.
+int32_t ee_won_gui_ml_dynamic_delta(int32_t column,
+                                    size_t count,
+                                    int32_t view_width,
+                                    int32_t old_width,
+                                    int32_t total);
+
+/// `grow_column`: -1 when the cell fits.
+int32_t ee_won_gui_ml_grow(int32_t item_width, int32_t border, int32_t column_width);
+
+bool ee_won_gui_ml_relink(uint8_t old_mode, uint8_t new_mode);
+
+/// `link_partners` over `count` columns in place.
+///
+/// # Safety
+/// `modes` and `partners` hold `count` entries (or are NULL with 0).
+void ee_won_gui_ml_link_partners(const uint8_t *modes, int32_t *partners, size_t count);
+
+/// `header_layout` for `count` header columns over `columns` list columns into `out` (room for `count`).
+///
+/// # Safety
+/// `has_button` holds and `out` has room for `count` entries, `widths` holds `columns` ints (each may be NULL
+/// with a 0 count).
+void ee_won_gui_mh_layout(const bool *has_button,
+                          size_t count,
+                          const int32_t *widths,
+                          size_t columns,
+                          int32_t horz,
+                          EeWonHeaderCol *out);
+
+int32_t ee_won_gui_mh_toggle(int32_t sort_type, bool is_current);
+
+int32_t ee_won_gui_mh_sort_type(int32_t column, size_t count, int32_t current, int32_t sort_type);
+
+/// `header_drag` over `count` buttons and `columns` list columns: the column (and the grab x into `out_drag_x`),
+/// or -1.
+///
+/// # Safety
+/// `buttons` holds `count` entries and the column arrays `columns` (each may be NULL with a 0 count);
+/// `out_drag_x` is writable.
+int32_t ee_won_gui_mh_drag(int32_t x,
+                           const EeWonHeaderButton *buttons,
+                           size_t count,
+                           const int32_t *widths,
+                           const uint8_t *modes,
+                           const int32_t *partners,
+                           size_t columns,
+                           int32_t *out_drag_x);
+
+int32_t ee_won_gui_mh_drag_width(int32_t x, int32_t drag_x);
+
+bool ee_won_gui_tree_box_hit(int32_t x, int32_t indent);
+
+/// `tree_child`: the indent, the place into `out_pos`.
+///
+/// # Safety
+/// `out_pos` is writable.
+int32_t ee_won_gui_tree_child(bool parent_is_root,
+                              int32_t tree_flags,
+                              int32_t parent_indent,
+                              int32_t pos,
+                              size_t count,
+                              size_t *out_pos);
+
 EeWonThumbOut ee_won_gui_thumb_layout(EeWonThumbIn t);
 
 /// `thumb_drag`: the new top into `out_top`, the position returned.
@@ -12305,6 +14054,355 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// `add_seg_metrics` on the line and the total height in place.
+///
+/// # Safety
+/// `line` and `total_height` are writable.
+bool ee_won_gui_text_add_seg(EeWonTextLineM *line,
+                             int32_t seg_height,
+                             int32_t seg_ascent,
+                             int32_t *total_height);
+
+int32_t ee_won_gui_text_align_x(int32_t view_width, int32_t line_width, int32_t align);
+
+bool ee_won_gui_text_seg_fits(int32_t area_width,
+                              int32_t line_width,
+                              int32_t seg_width,
+                              int32_t view_width,
+                              bool word_wrap,
+                              bool been_visible);
+
+bool ee_won_gui_text_scroll_on_bottom(int32_t flags,
+                                      bool user_scrolled,
+                                      size_t count,
+                                      EeWonTextLineY last,
+                                      EeWonTextLineY prev,
+                                      int32_t offset,
+                                      int32_t view_height);
+
+bool ee_won_gui_text_delay_wrap(int32_t flags, int32_t chars);
+
+bool ee_won_gui_text_wrap_due(int32_t ticks, int32_t chars);
+
+/// `max_chars_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_chars_excess(int32_t max_chars, int32_t last_end);
+
+/// `max_chars_cut` over `count` segment ends.
+///
+/// # Safety
+/// `ends` holds `count` ints (or is NULL with 0).
+size_t ee_won_gui_text_chars_cut(const int32_t *ends, size_t count, int32_t excess);
+
+/// `max_lines_excess`: 0 when nothing is trimmed.
+int32_t ee_won_gui_text_lines_excess(int32_t max_lines, int32_t num_lines);
+
+/// `max_lines_cut` over `count` segments' line-break flags.
+///
+/// # Safety
+/// `breaks` holds `count` bools (or is NULL with 0).
+size_t ee_won_gui_text_lines_cut(const bool *breaks, size_t count, int32_t excess);
+
+/// `remove_lines_stop` over `count` lines whose flags `flags_of(ctx, i)` gives.
+size_t ee_won_gui_text_remove_stop(size_t count, EeWonLineFlagsOf flags_of, const void *ctx);
+
+/// `renumber` over `lines` lines and `segs` segments in place; the totals and the line count into `out` (3
+/// ints).
+///
+/// # Safety
+/// Each array holds its count of entries (or is NULL with 0); the scalars and `out` are writable.
+void ee_won_gui_text_renumber(const int32_t *line_widths,
+                              const int32_t *line_heights,
+                              int32_t *line_ys,
+                              size_t lines,
+                              int32_t *seg_starts,
+                              int32_t *seg_ends,
+                              const bool *seg_breaks,
+                              size_t segs,
+                              int32_t *sel_start,
+                              int32_t *sel_end,
+                              int32_t *offset,
+                              int32_t *out);
+
+/// `find_clamp` in place.
+///
+/// # Safety
+/// `x` and `y` are writable.
+void ee_won_gui_text_find_clamp(int32_t *x, int32_t *y, int32_t total_width, int32_t total_height);
+
+bool ee_won_gui_text_find_cached(int32_t x,
+                                 int32_t y,
+                                 int32_t line_x,
+                                 int32_t line_y,
+                                 int32_t line_height,
+                                 int32_t seg_x,
+                                 int32_t seg_width);
+
+/// `find_pick` over the line's `count` segments: the index, -1 for no segment, -2 below the line.
+///
+/// # Safety
+/// `xs` and `widths` hold `count` ints (or are NULL with 0).
+int64_t ee_won_gui_text_find_pick(int32_t x,
+                                  int32_t y,
+                                  int32_t line_y,
+                                  int32_t line_height,
+                                  const int32_t *xs,
+                                  const int32_t *widths,
+                                  size_t count,
+                                  bool lenient);
+
+int32_t ee_won_gui_text_char_at(int32_t width,
+                                int32_t start,
+                                int32_t end,
+                                int32_t abs_start,
+                                EeWonCharWidthOf char_width,
+                                const void *ctx);
+
+int32_t ee_won_gui_text_base_char_at(int32_t x,
+                                     int32_t seg_x,
+                                     int32_t seg_width,
+                                     int32_t abs_start,
+                                     int32_t abs_end);
+
+/// `check_sel` in place.
+///
+/// # Safety
+/// The three are writable.
+void ee_won_gui_text_check_sel(int32_t *start,
+                               int32_t *end,
+                               bool *backwards,
+                               int32_t at,
+                               bool new_start);
+
+/// `drag_scroll`: false while inside, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_drag_scroll(int32_t x,
+                                 int32_t y,
+                                 int32_t width,
+                                 int32_t height,
+                                 bool full_line,
+                                 int32_t down,
+                                 int32_t up,
+                                 int32_t *vert,
+                                 int32_t *horz);
+
+/// `key_scroll`: false for another key, else true with the offsets in place.
+///
+/// # Safety
+/// `vert` and `horz` are writable.
+bool ee_won_gui_text_key_scroll(int32_t key,
+                                int32_t *vert,
+                                int32_t *horz,
+                                int32_t down,
+                                int32_t up,
+                                int32_t view_height);
+
+/// `sel_part`: false when nothing is selected, else true with the offset and length in the outs.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_text_sel_part(int32_t sel_start,
+                              int32_t sel_end,
+                              int32_t abs_start,
+                              int32_t abs_end,
+                              int32_t *out_offset,
+                              int32_t *out_len);
+
+bool ee_won_gui_text_sel_break(bool text,
+                               bool line_break,
+                               int32_t sel_start,
+                               int32_t sel_end,
+                               int32_t abs_start,
+                               int32_t abs_end);
+
+int32_t ee_won_gui_text_anchor_line(int32_t line, size_t count);
+
+/// `wrap_segment` over a `GUIString`'s units with their widths: the first `room` steps into `out` (`3 * len + 8`
+/// is enough), their count returned (all of them, even past the room).
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes and `widths` `len` ints (or both are NULL with 0); `out` has room
+/// for `room` steps.
+size_t ee_won_gui_text_wrap(const void *text,
+                            uint16_t len,
+                            uint32_t wchar_size,
+                            const int32_t *widths,
+                            int32_t box_width,
+                            int32_t line_width,
+                            bool line_empty,
+                            bool align_left,
+                            int32_t indent,
+                            EeWonRestWidthOf rest_width,
+                            const void *ctx,
+                            EeWonTextWrapOp *out,
+                            size_t room);
+
+/// `split_lines` over a `GUIString`'s units: the first `room` parts into `out` (`len` is enough), their count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` parts.
+size_t ee_won_gui_text_split(const void *text,
+                             uint16_t len,
+                             uint32_t wchar_size,
+                             bool line_break,
+                             EeWonTextPart *out,
+                             size_t room);
+
+/// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
+/// count.
+///
+/// # Safety
+/// `text` holds `len` units of `wchar_size` bytes (or is NULL with 0); `out` has room for `room` steps.
+size_t ee_won_gui_text_format(const void *text,
+                              uint16_t len,
+                              uint32_t wchar_size,
+                              int32_t num_strings,
+                              int32_t num_colors,
+                              int32_t num_fonts,
+                              int32_t num_segments,
+                              bool line_break,
+                              EeWonFormatOp *out,
+                              size_t room);
+
+bool ee_won_gui_tree_is_last(int32_t index, size_t count);
+
+bool ee_won_gui_tree_child_in_range(int32_t pos, size_t count);
+
+/// `next_non_child`: the item, or NULL.
+///
+/// # Safety
+/// `ops` is valid and its callbacks answer for live items, `node` among them.
+void *ee_won_gui_tree_next_non_child(const EeWonTreeOps *ops, void *node);
+
+/// `insert_children` through `ops.insert`.
+///
+/// # Safety
+/// As `ee_won_gui_tree_next_non_child`; the steps leave the children vectors as they are.
+void ee_won_gui_tree_insert_children(const EeWonTreeOps *ops, void *node, int32_t pos);
+
+/// `close_all` through `ops.close`.
+///
+/// # Safety
+/// As `ee_won_gui_tree_insert_children`.
+void ee_won_gui_tree_close_all(const EeWonTreeOps *ops, void *node);
+
+uint8_t ee_won_gui_tree_set_open_action(bool open, bool want, bool no_children);
+
+/// `open_scroll`: whether to scroll, the offset into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tree_open_scroll(int32_t total_height,
+                                 bool has_sibling,
+                                 int32_t sibling_top,
+                                 int32_t vert_offset,
+                                 int32_t view_height,
+                                 int32_t item_top,
+                                 int32_t *out);
+
+uint8_t ee_won_gui_tree_insert_row(bool parent_open, bool on_end);
+
+uint8_t ee_won_gui_tree_remove_plan(bool child_open, bool parent_open, size_t count_before);
+
+uint8_t ee_won_gui_tree_sort_plan(bool sort_none, bool is_root, bool open, int32_t row);
+
+/// `mouse_item`.
+///
+/// # Safety
+/// `contains` is callable with `ctx`.
+uint8_t ee_won_gui_tree_mouse_item(bool has_col,
+                                   bool same,
+                                   bool has_new,
+                                   EeWonTreeContains contains,
+                                   void *ctx);
+
+bool ee_won_gui_tree_can_select(bool selectable, int32_t x, int32_t indent);
+
+/// `local_x`: whether right of the indent, the x into `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tree_local_x(int32_t x, int32_t indent, int32_t *out);
+
+int32_t ee_won_gui_tree_row_width(int32_t indent, int32_t item_width);
+
+bool ee_won_gui_tree_is_expand_press(int32_t event_type, int32_t control_id);
+
+int32_t ee_won_gui_tree_flags(int32_t flags, int32_t which, bool on);
+
+/// `popup_adjust`: the `SetPos` calls into `out` (room for 4), their count.
+///
+/// # Safety
+/// `out` has room for 4 pairs (8 ints).
+size_t ee_won_gui_popup_adjust(EeWonRect4 popup, EeWonRect4 bounds, EeWonRect4 avoid, int32_t *out);
+
+bool ee_won_gui_popup_additional(int32_t flags, bool open);
+
+/// `popup_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_popup_place(int32_t x,
+                               int32_t y,
+                               int32_t mouse_x,
+                               int32_t mouse_y,
+                               int32_t *out_y);
+
+bool ee_won_gui_popup_own_window(int32_t flags, bool default_);
+
+bool ee_won_gui_rect_contains(EeWonRect4 r, int32_t x, int32_t y);
+
+/// `popup_window_at` over `count` rectangles: the index, or -1.
+///
+/// # Safety
+/// `rects` holds `count` rectangles (or is NULL with 0).
+int64_t ee_won_gui_popup_window_at(const EeWonRect4 *rects, size_t count, int32_t x, int32_t y);
+
+bool ee_won_gui_popup_click_ends(int32_t flags, int32_t button);
+
+uint32_t ee_won_gui_modality(bool popups_open, int32_t flags, bool has_dialog);
+
+bool ee_won_gui_window_modal(bool is_dialog_window, bool popup_up, bool dialog_is_root, bool modal);
+
+bool ee_won_gui_ends_dialog(bool window_given,
+                            bool window_is_modal,
+                            bool dialog_given,
+                            bool dialog_is_modal);
+
+/// `menu_timer`: the new total into `acc`, the check into `out_check`, whether the timer stays.
+///
+/// # Safety
+/// `acc` and `out_check` are writable.
+bool ee_won_gui_menu_timer(bool keyboard, int32_t *acc, int32_t delta, bool *out_check);
+
+/// `menu_mouse_up`: the count in place, whether the release goes on.
+///
+/// # Safety
+/// `count` is writable.
+bool ee_won_gui_menu_mouse_up(int32_t button, int32_t *count);
+
+/// `menu_mouse_move`: -1 ignore the move, 1 leave keyboard mode first, 0 track it.
+int32_t ee_won_gui_menu_mouse_move(bool keyboard,
+                                   int32_t x,
+                                   int32_t y,
+                                   int32_t last_x,
+                                   int32_t last_y);
+
+/// `menu_item_size` in place.
+///
+/// # Safety
+/// `width` and `height` are writable.
+void ee_won_gui_menu_item_size(int32_t *width, int32_t *height);
+
+/// `submenu_place`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_submenu_place(int32_t view_width, int32_t item_top, int32_t *out_y);
+
+EeWonRect4 ee_won_gui_submenu_avoid(int32_t root_x, int32_t view_width);
 
 /// `wrap` over a `GUIString`'s units with their widths: the first `room` breaks into `out` (`2 * len + 1` is
 /// enough: a unit breaks at most twice, once inside a word and once more when it alone is wider than the line),

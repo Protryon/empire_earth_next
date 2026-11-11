@@ -6,6 +6,8 @@
 // UIEPolledEvent.cpp starts at 0x1006e5a8.
 #include <windows.h>
 
+#include "rust/ee_rust.h"
+
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -29,28 +31,50 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+// The Rust loops' questions and calls on the group's entities (ee_ui entity_group.rs)
+extern "C" unsigned long ee_uicpp_group(void* inGroup, int inCall, unsigned long inIndex, bool inArg)
+{
+    UIEntityGroup* theGroup = static_cast<UIEntityGroup*>(inGroup);
+    if (inCall == 0)
+        return theGroup->GetEntityCount();
+    UIEntity* theEntity = theGroup->GetEntity(inIndex);
+    UIControl* theControl = static_cast<UIControl*>(theEntity);
+    switch (inCall) {
+    case 1:
+        return theEntity->GetType() == kControlTypeButton;
+    case 2:
+        return theControl->GetDisplayMode() == kDisplayModeShown;
+    case 3:
+        return theControl->GetForm() == theControl->GetForm()->GetManager()->GetCurrentForm();
+    case 4:
+        theControl->GetForm()->GetManager()->AddDirtyRectangle(theControl->GetRectangle(), theControl->GetForm());
+        return 0;
+    case 5:
+        theControl->HideControl();
+        return 0;
+    case 6:
+        theControl->SetDirty(true);
+        return 0;
+    case 7:
+        return theControl->GetForm()->GetTabbingOn();
+    case 8:
+        return theControl->GetForm()->GetTabStop() == theControl->GetIndex();
+    case 9:
+        theControl->GetForm()->Tab();
+        return 0;
+    default:
+        (static_cast<UIHotKey*>(theEntity))->SetEnabled(inArg);
+        return 0;
+    }
+}
+
 // FUNCTION: LLE 0x1006e424
 // Disables the group: hides its shown buttons on the current form (tabbing past them) and disables its hotkeys
+// (the loop is Rust: ee_ui entity_group.rs)
 void UIEntityGroup::Disable()
 {
     this->mDisableCount = 1;
-    for (long i = this->GetEntityCount() - 1; i >= 0; i--) {
-        UIEntity* theEntity = this->mEntities[i];
-        if (theEntity->GetType() == kControlTypeButton) {
-            UIControl* theControl = static_cast<UIControl*>(theEntity);
-            if (theControl->GetDisplayMode() == kDisplayModeShown
-                && theControl->GetForm() == theControl->GetForm()->GetManager()->GetCurrentForm()) {
-                theControl->GetForm()->GetManager()->AddDirtyRectangle(theControl->GetRectangle(),
-                                                                      theControl->GetForm());
-                theControl->HideControl();
-                theControl->SetDirty(true);
-            }
-            if (theControl->GetForm()->GetTabbingOn()
-                && theControl->GetForm()->GetTabStop() == theControl->GetIndex())
-                theControl->GetForm()->Tab();
-        } else
-            (static_cast<UIHotKey*>(theEntity))->SetEnabled(false);
-    }
+    ee_ui_group_disable(this);
 }
 
 // FUNCTION: LLE 0x1006e4df
@@ -58,13 +82,7 @@ void UIEntityGroup::Disable()
 void UIEntityGroup::Enable()
 {
     this->mDisableCount = 0;
-    for (long i = this->GetEntityCount() - 1; i >= 0; i--) {
-        UIEntity* theEntity = this->mEntities[i];
-        if (theEntity->GetType() == kControlTypeButton)
-            (static_cast<UIControl*>(theEntity))->SetDirty(true);
-        else
-            (static_cast<UIHotKey*>(theEntity))->SetEnabled(true);
-    }
+    ee_ui_group_enable(this);
 }
 
 // FUNCTION: LLE 0x1006e520

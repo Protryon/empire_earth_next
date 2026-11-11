@@ -28,6 +28,7 @@ mod sys {
         pub fn ee_uicpp_form_tile_draw(form: *mut c_void, bitmap: *mut c_void, piece: *const UiRect, x: f32, y: f32);
         // value: 0 mIsVisible, 1 its form is the current form
         pub fn ee_uicpp_background_value(background: *mut c_void, which: c_int) -> bool;
+        pub fn ee_uicpp_ustring_assign(out: *mut c_void, text: *const core::ffi::c_char);
         pub fn ee_uicpp_background_set_visible(background: *mut c_void, visible: bool);
         pub fn ee_uicpp_background_rect(background: *mut c_void) -> UiRect;
         pub fn ee_uicpp_background_set_rect(background: *mut c_void, r: *const UiRect);
@@ -197,4 +198,17 @@ pub unsafe extern "C" fn ee_ui_form_draw_tiles(
     tiles: UiRect,
 ) {
     background::form_tiles(&mut FormTiles { form, bitmap }, rect, draw, tiles);
+}
+
+/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_background_full_tile_name(
+    name: *const core::ffi::c_char,
+    row: c_ulong,
+    column: c_ulong,
+    out: *mut c_void,
+) {
+    let name = core::ffi::CStr::from_ptr(name).to_bytes_with_nul();
+    let tile = background::full_tile_name(name, row, column);
+    sys::ee_uicpp_ustring_assign(out, tile.as_ptr().cast());
 }

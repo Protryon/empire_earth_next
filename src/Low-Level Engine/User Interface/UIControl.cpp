@@ -453,29 +453,62 @@ bool UIControl::ShiftKeyPressed()
     return false;
 }
 
+// The Rust mouse dispatch's view of a control (ee_ui mouse.rs): the buttons' entities, the button-down members and
+// the protected handlers
+struct UIControlRust {
+    static long Mouse(UIControl* inControl, const GE2DPoint* inLocation, int inCall, int inArg)
+    {
+        ISEntity* theButton = inCall >= 4 && inCall < 8 ? UIManager::GetRMouseButton() : UIManager::GetLMouseButton();
+        switch (inCall) {
+        case 0:
+        case 4:
+            return theButton->JustDoublePressed();
+        case 1:
+        case 5:
+            return theButton->JustUnpressed();
+        case 2:
+        case 6:
+            return theButton->GetValue() != 0;
+        case 3:
+        case 7:
+            return theButton->JustPressed();
+        case 8:
+            return inControl->mLeftButtonDown;
+        case 9:
+            return inControl->mRightButtonDown;
+        case 10:
+            inControl->mLeftButtonDown = inArg != 0;
+            return 0;
+        case 11:
+            inControl->mRightButtonDown = inArg != 0;
+            return 0;
+        case 12:
+            return inControl->MouseLButtonDoublePressed();
+        case 13:
+            return inControl->MouseLButtonUp();
+        case 14:
+            return inControl->MouseLButtonDown();
+        case 15:
+            return inControl->MouseRButtonUp();
+        case 16:
+            return inControl->MouseRButtonDown();
+        default:
+            return inControl->MouseMove(*inLocation);
+        }
+    }
+};
+extern "C" long ee_uicpp_control_mouse(void* inControl, const void* inLocation, int inCall, int inArg)
+{
+    return UIControlRust::Mouse(static_cast<UIControl*>(inControl), static_cast<const GE2DPoint*>(inLocation), inCall,
+                                inArg);
+}
+
 // FUNCTION: LLE 0x10065de1
 // Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
+// (ee_ui mouse.rs)
 long UIControl::UpdateMouse(const GE2DPoint& inLocation)
 {
-    if (UIManager::GetLMouseButton()->JustDoublePressed())
-        this->MouseLButtonDoublePressed();
-    else if (this->mLeftButtonDown &&
-             (UIManager::GetLMouseButton()->JustUnpressed() || !UIManager::GetLMouseButton()->GetValue())) {
-        this->mLeftButtonDown = false;
-        this->MouseLButtonUp();
-    } else if (UIManager::GetLMouseButton()->JustPressed()) {
-        this->mLeftButtonDown = true;
-        this->MouseLButtonDown();
-    }
-    if (this->mRightButtonDown &&
-        (UIManager::GetRMouseButton()->JustUnpressed() || !UIManager::GetRMouseButton()->GetValue())) {
-        this->mRightButtonDown = false;
-        this->MouseRButtonUp();
-    } else if (UIManager::GetRMouseButton()->JustPressed()) {
-        this->mRightButtonDown = true;
-        this->MouseRButtonDown();
-    }
-    return this->MouseMove(inLocation);
+    return ee_ui_control_update_mouse(this, &inLocation);
 }
 
 // FUNCTION: LLE 0x10065eb3

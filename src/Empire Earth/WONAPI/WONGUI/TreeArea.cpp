@@ -9,6 +9,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The expand button's event, the sort's plan and the tree flags are ee_won's guitree module
+// (rust/crates/ee_won/src/guitree.rs); this unit keeps the root, the items and the list rows.
 namespace WONAPI {
 // FUNCTION: WON 0x00715030
 // Sets how the tree's items are sorted and re-sorts when it changes
@@ -97,7 +100,7 @@ void TreeArea::MouseDown(int x, int y, int theButton)
 // list area
 void TreeArea::HandleComponentEvent(ComponentEvent *theEvent)
 {
-	if(theEvent->mType==ComponentEvent_ButtonPressed && theEvent->mComponent->mControlId==100003)
+	if(ee_won_gui_tree_is_expand_press(theEvent->mType, theEvent->mComponent->mControlId))
 	{
 			TreeItem* anItem = static_cast<TreeItem*>(this->FindItemAt(theEvent->mComponent->Top()));
 			if(anItem!=NULL)
@@ -129,10 +132,13 @@ namespace WONAPI {
 // Tree sorting, string items, closing and tree flags (not identified in the original exe)
 void TreeArea::Sort(TreeItem *theItem, bool recursive)
 {
-	if(this->mTreeSortType==ListSortType_None)
+	uint8_t aPlan = ee_won_gui_tree_sort_plan(this->mTreeSortType==ListSortType_None, theItem==NULL,
+	                                          theItem!=NULL && theItem->IsOpen(),
+	                                          theItem!=NULL && theItem->IsOpen() ? this->GetItemPos(theItem) : -1);
+	if(aPlan==0)
 		return;
 
-	if(theItem==NULL)
+	if(aPlan==1)
 	{
 		// Do Root
 		ListArea::Clear(false);
@@ -141,7 +147,7 @@ void TreeArea::Sort(TreeItem *theItem, bool recursive)
 		return;
 	}
 		
-	bool isVisible = theItem->IsOpen() && this->GetItemPos(theItem)>=0;
+	bool isVisible = aPlan==3;
 
 	// if the item open and visible then remove the children, sort them and then reinsert them
 	if(isVisible)
@@ -170,10 +176,7 @@ void TreeArea::CloseItem(TreeItem *theItem, bool closeAll, bool sendEvent)
 
 void TreeArea::SetTreeFlags(int theFlags, bool on)
 {
-	if(on)
-		this->mTreeFlags |= theFlags;
-	else
-		this->mTreeFlags &= ~theFlags;
+	this->mTreeFlags = ee_won_gui_tree_flags(this->mTreeFlags, theFlags, on);
 }
 }
 

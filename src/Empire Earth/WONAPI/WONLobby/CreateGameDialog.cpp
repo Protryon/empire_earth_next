@@ -9,6 +9,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 namespace WONAPI {
 // FUNCTION: WON 0x7f63e0
 // Creates the create-game dialog with no game type chosen
@@ -52,7 +55,7 @@ void CreateGameDialog::Reset(bool inClear)
 void CreateGameDialog::SetGameType(int inType)
 {
     this->mGameType = inType;
-    bool aInternet = inType == 2;
+    bool aInternet = ee_won_dlg_internet_access(inType);
     if (this->mInviteOnlyRadio->IsChecked() || this->mAskToJoinRadio->IsChecked())
         this->mOpenToAllRadio->SetCheck(true, false);
     this->mInviteOnlyRadio->SetVisible(aInternet);
@@ -68,22 +71,16 @@ SmartPtr<LobbyGame> CreateGameDialog::GetGame()
         aGame->SetPassword(this->mPasswordInput->GetText());
     aGame->SetAskToJoin(this->mAskToJoinRadio->IsChecked());
     aGame->SetInviteOnly(this->mInviteOnlyRadio->IsChecked());
-    int aSkill = this->mSkillCombo->GetSelItem();
-    if (aSkill < 0 || aSkill >= 5)
-        aSkill = 0;
-    aGame->SetSkill(aSkill);
+    aGame->SetSkill(ee_won_dlg_skill_level(this->mSkillCombo->GetSelItem()));
     return aGame;
 }
 // FUNCTION: WON 0x7f6920
 // Enables the create button only with a game name and, when shown, a password
 void CreateGameDialog::CheckInput()
 {
-    bool aEnable = true;
-    if (this->mNameInput->GetText().length() == 0)
-        aEnable = false;
-    else if (this->mPasswordInput->IsVisible() && this->mPasswordInput->mText.length() == 0)
-        aEnable = false;
-    this->mCreateButton->SetEnabled(aEnable);
+    this->mCreateButton->SetEnabled(ee_won_dlg_create_enabled(this->mNameInput->GetText().length(),
+                                                              this->mPasswordInput->IsVisible(),
+                                                              this->mPasswordInput->mText.length()));
 }
 // FUNCTION: WON 0x7f6980
 // Shows the password field only while the password radio is checked

@@ -14,6 +14,7 @@
 class TMPoll;
 
 class LLE_API UITLScrolling : public UITextLabel {
+    friend struct UITLScrollingRust;        // UITLScrolling.cpp: the Rust scroll's questions (ee_ui scrolling.rs)
 public:
     UITLScrolling(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);

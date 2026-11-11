@@ -132,7 +132,7 @@ fn idx(v: c_long) -> usize {
 
 /// One call into the model: the members as of its start, written back by [`Edit::finish`].
 pub struct Edit<'a, M: Mbcs, H: EditHost> {
-    m: &'a M,
+    pub(crate) m: &'a M,
     pub h: &'a mut H,
     pub s: EditState,
 }
@@ -149,17 +149,17 @@ impl<'a, M: Mbcs, H: EditHost> Edit<'a, M, H> {
     }
 
     /// A host call with side effects: the members go out before it and come back after.
-    fn call(&mut self, f: impl FnOnce(&mut H)) {
+    pub(crate) fn call(&mut self, f: impl FnOnce(&mut H)) {
         self.h.store(&self.s);
         f(self.h);
         self.s = self.h.load();
     }
 
-    fn set_dirty(&mut self) {
+    pub(crate) fn set_dirty(&mut self) {
         self.call(|h| h.set_dirty());
     }
 
-    fn set_scroll_value(&mut self, v: c_ulong) {
+    pub(crate) fn set_scroll_value(&mut self, v: c_ulong) {
         self.call(|h| h.set_scroll_value(v));
     }
 
@@ -168,15 +168,15 @@ impl<'a, M: Mbcs, H: EditHost> Edit<'a, M, H> {
     }
 
     /// `mLines[i].GetLength()`.
-    fn len(&self, i: c_ulong) -> c_ulong {
+    pub(crate) fn len(&self, i: c_ulong) -> c_ulong {
         char_len(self.m, &self.line(i)) as c_ulong
     }
 
-    fn last_line(&self) -> usize {
+    pub(crate) fn last_line(&self) -> usize {
         self.h.line_count().wrapping_sub(1)
     }
 
-    fn selection_changed(&mut self) {
+    pub(crate) fn selection_changed(&mut self) {
         let f = &mut self.s.f;
         f.is_text_selected = f.selection_start_line != f.caret_line || f.selection_start_index != f.caret_index;
     }

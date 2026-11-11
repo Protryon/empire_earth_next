@@ -9,7 +9,34 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The +/- box test and a child's indent and place are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs);
+// the walks over the items, the range, last-child, open, insert, remove and mouse rules are its guitree module
+// (guitree.rs); this unit keeps the rows, their children, the list rows and the paint.
 namespace WONAPI {
+// guitree's questions about the items and its steps (the context is the tree area)
+static void* TreeOpParent(void*, void* n) { return static_cast<TreeItem*>(n)->mParent; }
+static int TreeOpIndex(void*, void* n) { return static_cast<TreeItem*>(n)->mIndex; }
+static size_t TreeOpCount(void*, void* n) { return static_cast<TreeItem*>(n)->mChildren.size(); }
+static void* TreeOpChild(void*, void* n, size_t i) { return static_cast<TreeItem*>(n)->mChildren[i].get(); }
+static bool TreeOpIsOpen(void*, void* n) { return static_cast<TreeItem*>(n)->IsOpen(); }
+static void TreeOpInsert(void* ctx, void* n, int pos)
+{
+	static_cast<TreeArea*>(ctx)->ListArea::InsertItem(static_cast<TreeItem*>(n), pos);
+}
+static void TreeOpClose(void*, void* n) { static_cast<TreeItem*>(n)->mOpen = false; }
+static EeWonTreeOps TreeOps(TreeArea* theTreeArea)
+{
+	EeWonTreeOps anOps = { theTreeArea, TreeOpParent, TreeOpIndex, TreeOpCount, TreeOpChild, TreeOpIsOpen, TreeOpInsert,
+	                       TreeOpClose };
+	return anOps;
+}
+struct TreeMouseCtx { ListItem* mItems[2]; int x, y; };
+static bool TreeOpContains(void* ctx, int which)
+{
+	TreeMouseCtx* c = static_cast<TreeMouseCtx*>(ctx);
+	return c->mItems[which]->Contains(c->x, c->y);
+}
 static void DrawHorzDottedLine(Graphics &g, int x, int y, int length)
 {
 	DWORD aColor = g.mColor;
@@ -40,7 +67,10 @@ ListItem* TreeItem::GetMouseItem(ListArea *theListArea, int &x, int &y)
 	TreeArea *aTree = static_cast<TreeArea*>(theListArea);
 	ListItem *aNewMouseItem = this->mItem.get();
 	ListItem *aMouseColItem = aTree->mMouseColItem;
-	if(aMouseColItem!=NULL && (aMouseColItem!=aNewMouseItem || !aMouseColItem->Contains(x,y+this->mTop)))
+	TreeMouseCtx aCtx = { { aMouseColItem, aNewMouseItem }, x, y+this->mTop };
+	uint8_t aSteps = ee_won_gui_tree_mouse_item(aMouseColItem!=NULL, aMouseColItem==aNewMouseItem, aNewMouseItem!=NULL,
+	                                            TreeOpContains, &aCtx);
+	if(aSteps & 1)
 	{
 		aMouseColItem->MouseExit(theListArea);
 		theListArea->SetCursor(NULL);
@@ -48,14 +78,10 @@ ListItem* TreeItem::GetMouseItem(ListArea *theListArea, int &x, int &y)
 		aTree->mMouseColItem = NULL;
 	}
 
-
-	if(aMouseColItem==NULL)
+	if(aSteps & 2)
 	{
-		if(aNewMouseItem!=NULL && aNewMouseItem->Contains(x,y+this->mTop))
-		{
-			aTree->mMouseColItem = aNewMouseItem;
-			aNewMouseItem->MouseEnter(theListArea,x,y);
-		}
+		aTree->mMouseColItem = aNewMouseItem;
+		aNewMouseItem->MouseEnter(theListArea,x,y);
 	}
 
 	x-=this->mX;
@@ -118,7 +144,7 @@ void TreeItem::MouseDown(ListArea *theListArea, int x, int y, int theButton)
 	if(theButton==0)
 	{
 		TreeArea *aTreeArea = static_cast<TreeArea*>(theListArea);
-		if((x < this->mX && x > this->mX-14) || (theListArea->CheckDoubleClick(theButton) && aTreeArea->TreeFlagSet(8)))
+		if(ee_won_gui_tree_box_hit(x, this->mX) || (theListArea->CheckDoubleClick(theButton) && aTreeArea->TreeFlagSet(8)))
 		{
 			this->ToggleOpen(aTreeArea, aTreeArea->TreeFlagSet(4));
 			return;
@@ -134,7 +160,7 @@ void TreeItem::MouseDown(ListArea *theListArea, int x, int y, int theButton)
 // Returns the child at the given position, or NULL when out of range
 TreeItem* TreeItem::GetChild(int thePos)
 {
-	if(thePos<0 || thePos>=this->mChildren.size())
+	if(!ee_won_gui_tree_child_in_range(thePos, this->mChildren.size()))
 		return NULL;
 
 	return this->mChildren[thePos].get();
@@ -144,12 +170,8 @@ TreeItem* TreeItem::GetChild(int thePos)
 // Returns the next item after this subtree (next sibling, else the parent's next), or NULL at the end
 TreeItem* TreeItem::GetNextNonChild()
 {
-	if(this->mParent==NULL)
-		return NULL;
-	else if(this->mIndex>=this->mParent->mChildren.size()-1)
-		return this->mParent->GetNextNonChild();
-	else
-		return this->mParent->mChildren[this->mIndex+1].get();
+	EeWonTreeOps anOps = TreeOps(NULL);
+	return static_cast<TreeItem*>(ee_won_gui_tree_next_non_child(&anOps, this));
 }
 
 // FUNCTION: WON 0x007144b0
@@ -177,13 +199,10 @@ int TreeItem::GetInsertPos(TreeArea* tree,TreeItem* item,int position) {
 void TreeItem::InsertChild(TreeArea *theTreeArea, TreeItem *theItem, int thePos)
 {
 	thePos = this->GetInsertPos(theTreeArea,theItem,thePos);
-	if(this->mParent==NULL && !theTreeArea->TreeFlagSet(2 | 1))
-		theItem->mX = 0;
-	else
-		theItem->mX = this->mX + 15;
-
-	if(thePos<0 || thePos>this->mChildren.size())
-		thePos = this->mChildren.size();
+	size_t aPlace;
+	theItem->mX = ee_won_gui_tree_child(this->mParent==NULL, theTreeArea->TreeFlagSet(2 | 1) ? 1 : 0, this->mX, thePos,
+	                                    this->mChildren.size(), &aPlace);
+	thePos = (int)aPlace;
 
 	bool onEnd = thePos==this->mChildren.size();
 
@@ -196,10 +215,11 @@ void TreeItem::InsertChild(TreeArea *theTreeArea, TreeItem *theItem, int thePos)
 		anItem->mIndex = i;
 	}
 
-	if(!this->IsOpen())
+	uint8_t aRow = ee_won_gui_tree_insert_row(this->IsOpen(), onEnd);
+	if(aRow==0)
 		return;
 	int aPos;
-	if(onEnd)
+	if(aRow==1)
 		aPos = this->GetNextNonChildPos(theTreeArea);
 	else
 		aPos = theTreeArea->GetItemPos(this->mChildren[thePos+1].get());
@@ -222,17 +242,18 @@ void TreeItem::RemoveChild(TreeArea *theTreeArea, TreeItem *theItem)
 {
 	theTreeArea->BeginUpdate();
 
-	if(theItem->IsOpen())
+	uint8_t aPlan = ee_won_gui_tree_remove_plan(theItem->IsOpen(), this->IsOpen(), this->mChildren.size());
+	if(aPlan & 1)
 		theItem->SetOpen(theTreeArea, false,false,false);
 
-	if(this->IsOpen())
+	if(aPlan & 2)
 		theTreeArea->ListArea::RemoveItem(theItem);
 
 	this->mChildren.erase(this->mChildren.begin() + theItem->mIndex);
 	for(int i=0; i<this->mChildren.size(); i++)
 		this->mChildren[i]->mIndex = i;
 
-	if(this->mChildren.empty())
+	if(aPlan & 4)
 		theTreeArea->Invalidate(); // need to do this in order to redraw the button (don't need button anymore)
 
 	theTreeArea->EndUpdate();
@@ -253,26 +274,16 @@ void TreeItem::RemoveFromParent(TreeArea *theTreeArea)
 // Marks this item and its whole subtree closed (rows are not touched)
 void TreeItem::CloseAll()
 {
-	this->mOpen = false;
-	std::vector<SmartPtr<TreeItem> >::iterator anItr = this->mChildren.begin();
-	while(anItr!=this->mChildren.end())
-	{
-		(*anItr)->CloseAll();
-		++anItr;
-	}
+	EeWonTreeOps anOps = TreeOps(NULL);
+	ee_won_gui_tree_close_all(&anOps, this);
 }
 
 // FUNCTION: WON 0x00714880
 // Adds the rows of the children (and of open grandchildren) at the given list position
 void TreeItem::InsertChildren(TreeArea *theTreeArea, int thePos)
 {
-	for(int i=this->mChildren.size()-1; i>=0; i--)
-	{
-		TreeItem *anItem = this->mChildren[i].get();
-		theTreeArea->ListArea::InsertItem(anItem,thePos);
-		if(anItem->IsOpen())
-			anItem->InsertChildren(theTreeArea, thePos+1);
-	}
+	EeWonTreeOps anOps = TreeOps(theTreeArea);
+	ee_won_gui_tree_insert_children(&anOps, this, thePos);
 }
 
 // FUNCTION: WON 0x007148e0
@@ -280,15 +291,16 @@ void TreeItem::InsertChildren(TreeArea *theTreeArea, int thePos)
 // closes the whole subtree and sends an item-opened event
 void TreeItem::SetOpen(TreeArea *theTreeArea, bool isOpen, bool closeAll, bool sendEvent)
 {
-	if(this->mOpen==isOpen)
+	uint8_t anAction = ee_won_gui_tree_set_open_action(this->mOpen, isOpen, this->mChildren.empty());
+	if(anAction==0)
 		return;
 
 	this->mOpen = isOpen;
 
-	if(this->mChildren.empty())
+	if(anAction==1)
 		return;
 
-	if(!isOpen)
+	if(anAction==2)
 	{
 		int aPos1 = theTreeArea->GetItemPos(this->mChildren.front().get());
 		int aPos2 = this->GetNextNonChildPos(theTreeArea);
@@ -302,20 +314,12 @@ void TreeItem::SetOpen(TreeArea *theTreeArea, bool isOpen, bool closeAll, bool s
 		this->InsertChildren(theTreeArea, theTreeArea->GetItemPos(this)+1);
 		theTreeArea->EndUpdate();
 
-		int aSiblingYPos = theTreeArea->mTotalHeight;
 		TreeItem *anItem = this->GetNextNonChild();
-		if(anItem!=NULL)
-			aSiblingYPos = anItem->mTop;
-
-		int aVertOffset = theTreeArea->mVertOffset;
-		if(aSiblingYPos > aVertOffset + theTreeArea->mScrollArea.height)
-		{
-			aVertOffset = aSiblingYPos - theTreeArea->mScrollArea.height;
-			if(this->mTop < aVertOffset)
-				aVertOffset = this->mTop;
-
+		int aVertOffset;
+		if(ee_won_gui_tree_open_scroll(theTreeArea->mTotalHeight, anItem!=NULL, anItem!=NULL ? anItem->mTop : 0,
+		                               theTreeArea->mVertOffset, theTreeArea->mScrollArea.height, this->mTop,
+		                               &aVertOffset))
 			theTreeArea->SetVertOffset(aVertOffset);
-		}		
 	}
 
 	if(sendEvent)
@@ -333,7 +337,7 @@ void TreeItem::ToggleOpen(TreeArea *theTreeArea, bool closeAll, bool sendEvent)
 // Returns whether the item is its parent's last child (false for the root)
 bool TreeItem::IsLastChild()
 {
-	return this->mParent!=NULL && this->mIndex>=this->mParent->mChildren.size()-1;
+	return this->mParent!=NULL && ee_won_gui_tree_is_last(this->mIndex, this->mParent->mChildren.size());
 }
 
 // FUNCTION: WON 0x00714b40
@@ -414,7 +418,7 @@ void TreeItem::SetViewport(ListArea *theListArea, Container *theViewport)
 void TreeItem::CalcDimensions(ListArea *theListArea)
 {
 	this->mItem->CalcDimensions(theListArea);
-	this->mWidth = this->mX+this->mItem->mWidth;
+	this->mWidth = ee_won_gui_tree_row_width(this->mX, this->mItem->mWidth);
 	this->mHeight = this->mItem->mHeight;
 }
 
@@ -429,17 +433,18 @@ int TreeItem::Compare(const ListItem *theItem, ListArea *theListArea) const
 // Returns whether the item is selectable and the point is right of the indent
 bool TreeItem::CanSelect(ListArea *theListArea, int x, int y)
 {
-	return this->mSelectable && x>=this->mX;
+	return ee_won_gui_tree_can_select(this->mSelectable, x, this->mX);
 }
 
 // FUNCTION: WON 0x00714e60
 // Returns whether the point lies on the wrapped item (right of the indent)
 bool TreeItem::ContainsPoint(int x, int y)
 {
-	if(x<this->mX)
+	int aX;
+	if(!ee_won_gui_tree_local_x(x, this->mX, &aX))
 		return false;
 
-	return this->mItem->Contains(x-this->mX,y+this->mTop);
+	return this->mItem->Contains(aX,y+this->mTop);
 }
 
 }

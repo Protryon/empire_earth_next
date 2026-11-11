@@ -607,6 +607,86 @@ def box_select(g, form):
     return dict(view=st['view'], grew=len(steps[2]['selection']) > len(steps[1]['selection']), steps=steps)
 
 
+ORDER_KINDS = {'gather': 0, 'repair': 1, 'repair-queued': 2, 'patrol': 3, 'attack-ground': 4, 'move': 5}
+# the refusals a random map's start may give (no siege unit, no button for the group, nothing in view): a skipped step
+ORDER_SKIPS = ('no-unit', 'no-button', 'no-target', 'no-point')
+# the steps a random map's start must give (citizens, a tree or mine and a building in view)
+ORDER_REQUIRED = ('gather', 'repair', 'repair-queued')
+
+
+def order_state(text):
+    """The fixture's order lines (EETestFixtureOrders.cpp) -> dict(order=dict(seq, kind, phase, type, target, point,
+    queued, units, ok, bad, skip, note) or None, units=[dict(seq, id, verdict, expected, found)])."""
+    out = dict(order=None, units=[])
+    for line in text.splitlines():
+        p = line.split()
+        try:
+            if p[:1] == ['order'] and len(p) == 26:
+                out['order'] = dict(seq=int(p[2]), kind=int(p[4]), phase=int(p[6]), type=int(p[8]), target=int(p[10]),
+                                    point=(float(p[12]), float(p[13])), queued=int(p[15]), units=int(p[17]),
+                                    ok=int(p[19]), bad=int(p[21]), skip=int(p[23]), note=p[25])
+            elif p[:1] == ['orderunit'] and len(p) == 6:
+                out['units'].append(dict(seq=int(p[1]), id=int(p[2]), verdict=p[3], expected=p[4], found=p[5]))
+        except (IndexError, ValueError):
+            pass
+    return out
+
+
+def order_step(g, form, name, timeout=40):
+    """One order through the fixture's order command (EETestFixtureOrders.cpp: the group selected, the order given
+    through the real input path, every unit judged by the original's rule after the message executed) -> the step's
+    evidence (skipped: the refusal when the start does not give the case); raises on a bad unit, no message or no
+    verdict."""
+    seq = g.command(f'order {form} {ORDER_KINDS[name]}')
+    end = time.monotonic() + timeout
+    while g.verdict(seq) not in ('order-done', 'order-refused', 'order-busy', 'rejected') and time.monotonic() < end:
+        g.check_alive()
+        time.sleep(0.25)
+    verdict = g.verdict(seq)
+    last = None
+    end = time.monotonic() + 10
+    while time.monotonic() < end:   # the next poll's lines
+        g.check_alive()
+        last = order_state(g.raw())
+        o = last['order']
+        if o and o['seq'] == seq and o['phase'] in (3, 9):
+            break
+        time.sleep(0.25)
+    o = (last or {}).get('order') or {}
+    units = [u for u in (last or {}).get('units', []) if u['seq'] == seq]
+    row = dict(step=name, seq=seq, verdict=verdict, phase=o.get('phase'), note=o.get('note'), type=o.get('type'),
+               target=o.get('target'), point=o.get('point'), queued=o.get('queued'), ok=o.get('ok'), bad=o.get('bad'),
+               skip=o.get('skip'), units=units, skipped=None)
+    if verdict == 'order-refused' and o.get('note') in ORDER_SKIPS:
+        row['skipped'] = o['note']
+        g.note(f'ORDER {name}: skipped ({o["note"]})')
+        return row
+    g.note(f'ORDER {name}: {verdict} target {row["target"]} queued {row["queued"]} units {len(units)} ok {row["ok"]} '
+           f'bad {row["bad"]} skip {row["skip"]} note {row["note"]}')
+    for u in units:
+        if u['verdict'] == 'bad':
+            g.note(f'ORDER {name}: unit {u["id"]} expected {u["expected"]} found {u["found"]}')
+    if verdict != 'order-done' or o.get('seq') != seq or o.get('phase') != 3:
+        raise RuntimeError(f'order {name}: the fixture says {verdict!r}, phase {o.get("phase")} note {o.get("note")}: {row}')
+    if row['bad'] or not row['ok']:
+        raise RuntimeError(f'order {name}: {row["bad"]} units differ from the original rule, {row["ok"]} agree: {row}')
+    return row
+
+
+def orders(g, form, names=tuple(ORDER_KINDS)):
+    """The orders exercise on the game form (EETestFixtureOrders.cpp): gather, repair, repair queued (Shift), patrol,
+    attack ground and move, each on a group of the local player's units, each unit judged after the message executed.
+    The steps in ORDER_REQUIRED must run; the others may be skipped when the start does not give them (no siege unit,
+    no Patrol button for the group) -> evidence; raises on a failure."""
+    steps = [order_step(g, form, name) for name in names]
+    missing = [r['step'] for r in steps if r['skipped'] and r['step'] in ORDER_REQUIRED]
+    if missing:
+        raise RuntimeError(f'orders: the required steps {missing} were not reached: '
+                           f'{[(r["step"], r["skipped"]) for r in steps]}')
+    return dict(steps=steps, ran=[r['step'] for r in steps if not r['skipped']],
+                skipped={r['step']: r['skipped'] for r in steps if r['skipped']})
+
+
 GAME_LINE = re.compile(r'^EE-GAME (\d+) p(\d+) (\w+)(.*)$')
 
 

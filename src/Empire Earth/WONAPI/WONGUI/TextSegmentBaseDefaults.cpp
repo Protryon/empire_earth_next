@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 // Returns 1: a plain segment counts as one character (the linker folds this body into the identical one at 0x006be2e0)
 int TextSegmentBase::GetLength() { return 1; }
@@ -28,8 +29,7 @@ void TextSegmentBase::Paint(Graphics&,TextArea*) {}
 // Returns the segment's start character for an x left of its middle, otherwise its end character
 int TextSegmentBase::CharAt(int x)
 {
-    if(x<this->mx+this->mWidth/2) return this->mAbsStartChar;
-    else return this->mAbsEndChar;
+    return ee_won_gui_text_base_char_at(x,this->mx,this->mWidth,this->mAbsStartChar,this->mAbsEndChar);
 }
 // Returns false: a plain segment is not a link (the linker folds this body into the identical one at
 // 0x0070a7b0)

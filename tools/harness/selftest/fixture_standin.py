@@ -7,7 +7,8 @@ clock runs at 1000 game ms per 100 ms; "click 11 5" opens the civilization build
 "TEST UI clock factor ..." and "TEST UI seed ..." for EE_TEST_TIME_FACTOR / EE_TEST_SEED, as the game does. On the game
 form, "boxselect 11 <mode> <x0> <y0> <x1> <y1>" selects among ten units at x = 100 + 60 k, y = 250 of the view
 0 0 800 500 (mode 1 adds, mode 2 deletes the selection's first unit before the box executes), with the fixture's
-"selection", "view" and "boxselect" lines.
+"selection", "view" and "boxselect" lines; "order 11 <kind>" judges two units ok ("order" and "orderunit" lines), but
+attack ground (kind 4), which it refuses with "no-unit", as a start without a siege unit does.
 """
 import os
 import pathlib
@@ -22,7 +23,7 @@ if os.environ.get('EE_TEST_SEED'):
     print(f'TEST UI seed {os.environ["EE_TEST_SEED"]}', file=sys.stderr, flush=True)
 stack, last, frames, game_ms, ticks, ct, civ = [12], 0, 0, 0, 0, 0, 0
 units = {100 + k: 100 + 60 * k for k in range(10)}   # id -> x (all at y 250)
-selection, box = [], None
+selection, box, order = [], None, None
 
 
 def ids(values):
@@ -74,8 +75,18 @@ while True:
             lines.append(f'boxselect seq {box["seq"]} mode {box["mode"]} phase 3 lasso {ids(box["lasso"])} before '
                          f'{ids(box["before"])} expected {ids(selection)} match 1 dead {box["dead"]} dead_in_lasso '
                          f'{box["dead_in_lasso"]} dead_state {box["dead_state"]}')
+    if form == 11 and order:
+        lines.append(f'order seq {order["seq"]} kind {order["kind"]} phase {order["phase"]} type 0 target 7 point 0.000 '
+                     f'0.000 queued {int(order["kind"] == 2)} units {len(order["units"])} ok {len(order["units"])} bad 0 '
+                     f'skip 0 note {order["note"]}')
+        lines += [f'orderunit {order["seq"]} {u} ok gather:7 gather:7' for u in order['units']]
     (ui / 'ui-state.tmp').write_text('\n'.join(lines) + '\n')
-    os.replace(ui / 'ui-state.tmp', ui / 'ui-state.txt')
+    for attempt in range(20):   # Windows refuses the rename while the driver reads the file
+        try:
+            os.replace(ui / 'ui-state.tmp', ui / 'ui-state.txt')
+            break
+        except PermissionError:
+            time.sleep(0.01)
     try:
         part = (ui / 'test.command').read_text().split()
         seq, op, a, b = int(part[0]), part[1], int(part[2]), int(part[3])
@@ -91,6 +102,19 @@ while True:
                   file=sys.stderr, flush=True)
         else:
             print(f'TEST UI rejected boxselect control {b} value 0 on form {a} (seq {seq}, top form {form})',
+                  file=sys.stderr, flush=True)
+    elif seq > last and op == 'order':
+        last = seq
+        if a == form == 11 and 0 <= b <= 5:
+            print(f'TEST UI order-started order control {b} value 0 on form {a} (seq {seq}, top form {form})',
+                  file=sys.stderr, flush=True)
+            refused = b == 4
+            order = dict(seq=seq, kind=b, phase=9 if refused else 3, note='no-unit' if refused else '-',
+                         units=[] if refused else [101, 102])
+            print(f'TEST UI order-{"refused" if refused else "done"} order control {b} value 0 on form 0 (seq {seq}, '
+                  f'top form 0)', file=sys.stderr, flush=True)
+        else:
+            print(f'TEST UI rejected order control {b} value 0 on form {a} (seq {seq}, top form {form})',
                   file=sys.stderr, flush=True)
     elif seq > last:
         last = seq
