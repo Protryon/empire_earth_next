@@ -409,6 +409,10 @@ WON_TESTS = {
     # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
     # statements against ee_won's routing module
     "won_routing_test": [],
+    # WONServer's exchange (ServerRequestOp's RunHook and CallbackHook over scripted servers, the time limits, the
+    # ping requests and replies, MultiPingOp's rules and order, the context's shuffle), the original's statements
+    # against ee_won's server module
+    "won_server_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
     # WONGUI's layout arithmetic (rectangles, sizes, the child layout instructions and layouts, the LAYOUT rule), the
     # original's statements against ee_won's guilayout module
     "won_guilayout_test": [],

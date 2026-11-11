@@ -5432,6 +5432,83 @@ struct EeWonServerPick {
   bool language;
 };
 
+/// The C++ primitives of one `ServerRequestOp` (`ctx` is the C++ glue's) and pointers to the members the exchange
+/// keeps. Each hook is called with `ctx`.
+struct EeWonServerReqHooks {
+  void *ctx;
+  int32_t *last_error;
+  int32_t *get_cert_status;
+  bool *use_last;
+  bool *reusing;
+  bool *expired;
+  int32_t (*status)(void*);
+  uint32_t (*time_left)(void*);
+  bool (*is_async)(void*);
+  int32_t (*auth_type)(void*);
+  void (*finish)(void*, int32_t);
+  void (*finish_save_session)(void*, int32_t);
+  void (*kill)(void*);
+  bool (*prepare_addresses)(void*);
+  void (*rewind_addresses)(void*);
+  bool (*at_begin)(void*);
+  bool (*at_end)(void*);
+  bool (*has_context)(void*);
+  bool (*has_auth_context)(void*);
+  void (*notify_failed)(void*);
+  void (*next_addr)(void*);
+  void (*retreat_addr)(void*);
+  void (*reset_server)(void*);
+  void (*load_session)(void*);
+  void (*clear_session)(void*);
+  bool (*has_session)(void*);
+  void (*add_crypt)(void*);
+  void (*queue_connect)(void*);
+  int32_t (*connect_block)(void*);
+  void (*peer_auth_async)(void*);
+  bool (*peer_auth_block)(void*, int32_t*, int32_t*);
+  int32_t (*get_next_request)(void*);
+  void (*queue_send)(void*);
+  int32_t (*send_block)(void*);
+  void (*queue_recv)(void*);
+  int32_t (*recv_block)(void*);
+  /// `mResponse`'s bytes (NULL and 0: none)
+  void (*response)(void*, const uint8_t**, size_t*);
+  /// `CheckResponse()`; `*threw` set when it threw `ReadBufferException`
+  int32_t (*check_response)(void*, bool*);
+  void (*take_op_session)(void*);
+  void (*take_op_response)(void*);
+};
+
+/// A completed op the exchange tracks (`CallbackHook`'s argument): track id 2 the peer auth, 1 a socket op.
+struct EeWonServerReqDone {
+  bool killed;
+  int32_t status;
+  int32_t param;
+  /// the peer auth op's certificate status (param 2)
+  int32_t cert_status;
+  /// a receive op (`dynamic_cast<RecvMsgOp*>`)
+  bool is_recv;
+};
+
+/// A ping reply's fields for the C++ (`PingOp::CheckResponse`).
+struct EeWonPingReply {
+  /// 0 read whole, 1 not a ping reply, 2 cut short
+  int32_t end;
+  /// how many fields were read, in order: lag, app name, logical name, version, image, pid, ports, auth flag,
+  /// registration data, server data
+  uint32_t fields;
+  uint32_t lag;
+  int32_t version;
+  int32_t pid;
+  bool is_auth;
+  /// app name, logical name, image, ports, registration data, server data: offsets and lengths in the reply
+  uint32_t text_at[6];
+  uint32_t text_len[6];
+};
+
+/// `rand()` for [`ee_won_server_shuffle`].
+using EeWonDraw = int32_t(*)();
+
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -14560,6 +14637,146 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `hooks` points to valid hooks whose member pointers stay valid for the call.
+void ee_won_server_req_run(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryNextServer`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_next(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryConnect`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_connect(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::TryPeerToPeerAuth`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_try_peer_auth(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Send`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_send(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::Recv`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+int32_t ee_won_server_req_recv(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CheckExpiredSession`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`].
+bool ee_won_server_req_check_expired(const EeWonServerReqHooks *hooks);
+
+/// `ServerRequestOp::CallbackHook`.
+///
+/// # Safety
+/// As [`ee_won_server_req_run`]; `done` is valid.
+bool ee_won_server_req_callback(const EeWonServerReqHooks *hooks, const EeWonServerReqDone *done);
+
+/// `ServerRequestOp::SetLastServerError` on the members.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_won_server_req_last_error(int32_t *last, bool *use_last, int32_t error);
+
+/// `ServerRequestOp::CleanupHook`'s plan (bit 1 notify the context, bit 2 close the socket).
+uint32_t ee_won_server_req_cleanup_plan(int32_t status,
+                                        bool killed,
+                                        bool has_context,
+                                        bool has_socket,
+                                        bool close_connection);
+
+/// `ServerOp`'s step limits.
+uint32_t ee_won_server_step_time(uint32_t max, bool is_async, uint32_t time_left);
+
+/// `PingOp::GetNextRequest`'s message into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_server_ping_request(uint8_t field_size,
+                                uint32_t start_tick,
+                                bool extended,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `MultiPingOp::GetRequest`'s datagram into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_multi_ping_request(int32_t ping_id, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::SendNoOp`'s message into `sink`.
+///
+/// # Safety
+/// As [`ee_won_server_ping_request`].
+void ee_won_server_no_op(uint8_t field_size, EeWonByteSink sink, void *context);
+
+/// `ServerConnection::StartKeepAlive`'s timer in milliseconds (`*ms`); false: no timer.
+///
+/// # Safety
+/// `ms` is valid.
+bool ee_won_server_keep_alive_ms(uint32_t period_seconds, uint32_t *ms);
+
+/// `PingOp::CheckResponse`'s read.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_server_ping_reply(const uint8_t *reply,
+                              size_t length,
+                              uint32_t now,
+                              EeWonPingReply *out);
+
+/// `MultiPingOp::HandleResponse`: true when done (a ping reply with the id).
+///
+/// # Safety
+/// `reply` holds `length` bytes.
+bool ee_won_server_multi_ping_reply(const uint8_t *reply, size_t length, int32_t ping_id);
+
+/// `MultiPingOp::HandleResponsePrv`'s status rule (0 stop, 1 ignore, 2 match the reply).
+int32_t ee_won_server_multi_ping_recv_status(int32_t status);
+
+/// `MultiPingOp::RecvCallback`'s next step (0 wait, 1 finish, 2 next batch).
+int32_t ee_won_server_multi_ping_next(size_t in_flight, size_t waiting);
+
+/// `MultiPingOp::FinishBatch`'s give-up rule.
+bool ee_won_server_multi_ping_gives_up(int32_t failures, uint8_t max_failures);
+
+/// `MultiPingOp::ResponseTimeLeft`.
+uint32_t ee_won_server_multi_ping_time_left(uint32_t now,
+                                            uint32_t start,
+                                            uint32_t max_ping,
+                                            uint32_t time_left);
+
+/// `MultiPingOp::RunHook`'s blocking loop rule.
+bool ee_won_server_multi_ping_continues(int32_t status);
+
+/// `MultiPingOp::CleanupHook`'s order: `order` receives `count` indexes.
+///
+/// # Safety
+/// `ping_times` and `order` hold `count` entries.
+void ee_won_server_multi_ping_order(const int32_t *ping_times, size_t count, size_t *order);
+
+/// `MultiPingOp::GetServerContext`'s rule.
+bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
+
+/// `ServerContext::CopyAddresses`' shuffle: `order` receives `count` indexes, `draw` is `rand`.
+///
+/// # Safety
+/// `order` holds `count` entries.
+void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

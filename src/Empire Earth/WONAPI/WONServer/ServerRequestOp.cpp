@@ -71,12 +71,13 @@ void ServerRequestOp::FinishSaveSession(WONStatus inStatus)
     this->mCurSession=NULL;
 }
 // FUNCTION: WON 0x006ad660
-// Records a server error; the final status uses it only while every server failed the same way
+// Records a server error; the final status uses it only while every server failed the same way (Rust:
+// ee_won server.rs)
 void ServerRequestOp::SetLastServerError(WONStatus inError)
 {
-    if(this->mLastServerError==WS_None) this->mUseLastServerErrorForFinishStatus=true;
-    else if(inError!=this->mLastServerError) this->mUseLastServerErrorForFinishStatus=false;
-    this->mLastServerError=inError;
+    int32_t aLast = this->mLastServerError;
+    ee_won_server_req_last_error(&aLast, &this->mUseLastServerErrorForFinishStatus, inError);
+    this->mLastServerError = static_cast<WONStatus>(aLast);
 }
 // FUNCTION: WON 0x006ad6a0
 // Records an invalid reply header and asks to try the next server
@@ -85,254 +86,244 @@ WONStatus ServerRequestOp::InvalidReplyHeader()
     this->SetLastServerError(WS_ServerReq_InvalidReplyHeader);
     return WS_ServerReq_TryNextServer;
 }
+
+// The exchange's steps run in Rust (ee_won server.rs) over these primitives of the op; the members it keeps
+// (mLastServerError, mGetCertStatus, mUseLastServerErrorForFinishStatus, mReusingSession, mSessionExpired) are
+// handed over as pointers and read and written at each step.
+struct ServerRequestGlue {
+    ServerRequestOp* mOp;
+    AsyncOp* mDone; // CallbackHook's completed op
+};
+static ServerRequestOp* Op(void* inGlue) { return static_cast<ServerRequestGlue*>(inGlue)->mOp; }
+static int32_t ReqStatus(void* g) { return Op(g)->GetStatus(); }
+static uint32_t ReqTimeLeft(void* g) { return static_cast<uint32_t>(Op(g)->TimeLeft()); }
+static bool ReqIsAsync(void* g) { return Op(g)->mRunMode == OP_MODE_ASYNC; }
+static int32_t ReqAuthType(void* g) { return Op(g)->mAuthType; }
+static void ReqFinish(void* g, int32_t s) { Op(g)->Finish(static_cast<WONStatus>(s)); }
+static void ReqFinishSave(void* g, int32_t s) { Op(g)->FinishSaveSession(static_cast<WONStatus>(s)); }
+static void ReqKill(void* g) { Op(g)->Kill(true); }
+static bool ReqPrepare(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    o->mUsedSession = NULL;
+    if (o->mServerContext.get() != NULL) o->mServerContext->CopyAddresses(o->mAddrList);
+    return !o->mAddrList.empty();
+}
+static void ReqRewind(void* g) { Op(g)->mAddrItr = Op(g)->mAddrList.begin(); }
+static bool ReqAtBegin(void* g) { return Op(g)->mAddrItr == Op(g)->mAddrList.begin(); }
+static bool ReqAtEnd(void* g) { return Op(g)->mAddrItr == Op(g)->mAddrList.end(); }
+static bool ReqHasContext(void* g) { return Op(g)->mServerContext.get() != NULL; }
+static bool ReqHasAuthContext(void* g) { return Op(g)->mAuthContext.get() != NULL; }
+static void ReqNotify(void* g) { Op(g)->mServerContext->NotifyFailed(Op(g)->mCurAddr); }
+static void ReqNextAddr(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    o->mSocket = new BlockingSocket(0);
+    o->mSocket->SetLengthFieldSize(o->mLengthFieldSize);
+    o->mCurAddr = *o->mAddrItr;
+    ++o->mAddrItr;
+}
+static void ReqRetreat(void* g) { --Op(g)->mAddrItr; }
+static void ReqReset(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    o->mTracker.KillAll();
+    o->Reset();
+    if (o->mSocket.get() != NULL) {
+        o->mSocket->Close();
+        o->mSocket = NULL;
+    }
+}
+static void ReqLoadSession(void* g) { Op(g)->mCurSession = Op(g)->mAuthContext->GetSession(Op(g)->mCurAddr); }
+static void ReqClearSession(void* g) { Op(g)->mCurSession = NULL; }
+static bool ReqHasSession(void* g) { return Op(g)->mCurSession.get() != NULL; }
+static void ReqAddCrypt(void* g) { Op(g)->mSocket->AddMsgTransform(new CryptTransform(Op(g)->mCurSession.get())); }
+static void ReqQueueConnect(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    o->QueueSocketOp(new ConnectOp(o->mCurAddr), o->ConnectTime());
+}
+static int32_t ReqConnectBlock(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    return o->mSocket->Connect(o->mCurAddr, o->ConnectTime());
+}
+static SmartPtr<PeerAuthOp> ReqNewPeerAuth(ServerRequestOp* o)
+{
+    SmartPtr<PeerAuthOp> peerAuth = new PeerAuthOp(o->mCurAddr, o->mAuthContext.get(), o->mAuthType, o->mSocket.get(),
+                                                   o->mUseAuth2);
+    peerAuth->CopyMaxTimes(o);
+    peerAuth->SetClientKeySize(o->mClientKeySize, o->mUseClientKey);
+    return peerAuth;
+}
+static void ReqPeerAuthAsync(void* g)
+{
+    SmartPtr<PeerAuthOp> peerAuth = ReqNewPeerAuth(Op(g));
+    Op(g)->Track(peerAuth.get(), 2);
+    peerAuth->RunAsync(-1);
+}
+static bool ReqPeerAuthBlock(void* g, int32_t* outStatus, int32_t* outCert)
+{
+    ServerRequestOp* o = Op(g);
+    SmartPtr<PeerAuthOp> peerAuth = ReqNewPeerAuth(o);
+    if (peerAuth->RunBlock(o->TimeLeft())) {
+        o->mCurSession = peerAuth->GetSession();
+        return true;
+    }
+    *outStatus = peerAuth->GetStatus();
+    *outCert = peerAuth->GetGetCertStatus();
+    return false;
+}
+static int32_t ReqGetNextRequest(void* g) { return Op(g)->GetNextRequest(); }
+static void ReqQueueSend(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    o->QueueSocketOp(new SendMsgOp(o->mRequest.get()), o->SendTime());
+}
+static int32_t ReqSendBlock(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    return o->mSocket->SendMsg(o->mRequest.get(), o->SendTime());
+}
+static void ReqQueueRecv(void* g) { Op(g)->QueueSocketOp(new RecvMsgOp, Op(g)->RecvTime()); }
+static int32_t ReqRecvBlock(void* g)
+{
+    ServerRequestOp* o = Op(g);
+    return o->mSocket->RecvMsg(o->mResponse, o->RecvTime());
+}
+static void ReqResponse(void* g, const uint8_t** outData, size_t* outLength)
+{
+    ServerRequestOp* o = Op(g);
+    if (o->mResponse.get() == NULL) {
+        *outData = NULL;
+        *outLength = 0;
+        return;
+    }
+    *outData = reinterpret_cast<const uint8_t*>(o->mResponse->data());
+    *outLength = o->mResponse->length();
+}
+static int32_t ReqCheckResponse(void* g, bool* outThrew)
+{
+    try {
+        *outThrew = false;
+        return Op(g)->CheckResponse();
+    } catch (ReadBufferException&) {
+        *outThrew = true;
+        return 0;
+    }
+}
+static void ReqTakeOpSession(void* g)
+{
+    Op(g)->mCurSession = static_cast<PeerAuthOp*>(static_cast<ServerRequestGlue*>(g)->mDone)->GetSession();
+}
+static void ReqTakeOpResponse(void* g)
+{
+    Op(g)->mResponse = static_cast<RecvMsgOp*>(static_cast<ServerRequestGlue*>(g)->mDone)->GetMsg();
+}
+static EeWonServerReqHooks ReqHooks(ServerRequestGlue* inGlue)
+{
+    ServerRequestOp* o = inGlue->mOp;
+    EeWonServerReqHooks h = {inGlue,
+                             reinterpret_cast<int32_t*>(&o->mLastServerError),
+                             reinterpret_cast<int32_t*>(&o->mGetCertStatus),
+                             &o->mUseLastServerErrorForFinishStatus,
+                             &o->mReusingSession,
+                             &o->mSessionExpired,
+                             ReqStatus, ReqTimeLeft, ReqIsAsync, ReqAuthType, ReqFinish, ReqFinishSave, ReqKill,
+                             ReqPrepare, ReqRewind, ReqAtBegin, ReqAtEnd, ReqHasContext, ReqHasAuthContext,
+                             ReqNotify, ReqNextAddr, ReqRetreat, ReqReset, ReqLoadSession, ReqClearSession,
+                             ReqHasSession, ReqAddCrypt, ReqQueueConnect, ReqConnectBlock, ReqPeerAuthAsync,
+                             ReqPeerAuthBlock, ReqGetNextRequest, ReqQueueSend, ReqSendBlock, ReqQueueRecv,
+                             ReqRecvBlock, ReqResponse, ReqCheckResponse, ReqTakeOpSession, ReqTakeOpResponse};
+    return h;
+}
+
 // FUNCTION: WON 0x006ad6b0
 // Connects to the current server (reusing a cached session), then sends when asynchronous
 bool ServerRequestOp::TryConnect()
 {
-    if(this->mCurSession.get()!=NULL) {
-        this->mSocket->AddMsgTransform(new CryptTransform(this->mCurSession.get()));
-        this->mReusingSession=true;
-    }
-    if(this->mRunMode==OP_MODE_ASYNC) {
-        ConnectOp* aConnectOp=new ConnectOp(this->mCurAddr);
-        this->QueueSocketOp(aConnectOp,this->ConnectTime());
-        this->Send();
-        return true;
-    }
-    WONStatus aStatus=this->mSocket->Connect(this->mCurAddr,this->ConnectTime());
-    if(aStatus==0) return true;
-    this->SetLastServerError(aStatus);
-    return false;
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return ee_won_server_req_try_connect(&aHooks);
 }
 // FUNCTION: WON 0x006add80
 // Moves to the next server address and connects or authenticates; finishes when none are left
 bool ServerRequestOp::TryNextServer()
 {
-    if(this->mStatus!=WS_Pending) return false;
-    for(;;) {
-        this->mTracker.KillAll();
-        this->Reset();
-        if(this->mSocket.get()!=NULL) {
-            this->mSocket->Close();
-            this->mSocket=NULL;
-        }
-        if(this->mAddrItr!=this->mAddrList.begin() && !this->mSessionExpired && this->mServerContext.get()!=NULL)
-            this->mServerContext->NotifyFailed(this->mCurAddr);
-        if(this->mAddrItr==this->mAddrList.end()) {
-            if(this->mUseLastServerErrorForFinishStatus)
-                this->Finish(this->mLastServerError);
-            else
-                this->Finish(WS_ServerReq_FailedAllServers);
-            return false;
-        }
-        this->mSocket=new BlockingSocket(0);
-        this->mSocket->SetLengthFieldSize(this->mLengthFieldSize);
-        this->mCurAddr=*this->mAddrItr;
-        bool wasReusingSession=this->mReusingSession;
-        this->mReusingSession=false;
-        this->mSessionExpired=false;
-        ++this->mAddrItr;
-        if(!wasReusingSession && this->mAuthType==AUTH_TYPE_SESSION)
-            this->mCurSession=this->mAuthContext->GetSession(this->mCurAddr);
-        else this->mCurSession=NULL;
-        if(this->mCurSession.get()!=NULL || this->mAuthType==AUTH_TYPE_NONE) {
-            if(this->TryConnect()) return true;
-        } else {
-            if(this->TryPeerToPeerAuth()) return true;
-            if(this->GetStatus()!=WS_Pending) return false;
-        }
-        if(this->TimeLeft()<=0) {
-            this->Finish(WS_TimedOut);
-            return false;
-        }
-    }
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return ee_won_server_req_try_next(&aHooks);
 }
 // FUNCTION: WON 0x006ae050
 // Sends the requests GetNextRequest builds until one needs a reply; returns the next step
 WONStatus ServerRequestOp::Send()
 {
-    for(;;) {
-        WONStatus aReqStatus=this->GetNextRequest();
-        if(aReqStatus!=WS_ServerReq_Send && aReqStatus!=WS_ServerReq_Recv) return aReqStatus;
-        if(this->mRunMode==OP_MODE_ASYNC) {
-            SendMsgOp* aSendOp=new SendMsgOp(this->mRequest.get());
-            this->QueueSocketOp(aSendOp,this->SendTime());
-        } else {
-            WONStatus aStatus=this->mSocket->SendMsg(this->mRequest.get(),this->SendTime());
-            if(aStatus!=0) {
-                this->SetLastServerError(aStatus);
-                return WS_ServerReq_TryNextServer;
-            }
-        }
-        if(aReqStatus!=WS_ServerReq_Recv)
-            continue;
-        if(this->IsAsync()) {
-            RecvMsgOp* aRecvOp=new RecvMsgOp;
-            this->QueueSocketOp(aRecvOp,this->RecvTime());
-        }
-        return aReqStatus;
-    }
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return static_cast<WONStatus>(ee_won_server_req_send(&aHooks));
 }
 // FUNCTION: WON 0x006ae200
 // Returns true (and retries the same server) when a reused session was rejected as expired
 bool ServerRequestOp::CheckExpiredSession()
 {
-    if(!this->mReusingSession || this->mResponse->length()<10) return false;
-    try {
-        ReadBuffer aBuf(this->mResponse->data(),this->mResponse->length());
-        unsigned long aServiceType=aBuf.ReadLong();
-        unsigned long aMessageType=aBuf.ReadLong();
-        if(aServiceType==1 && aMessageType==15) {
-            this->mSessionExpired=true;
-            --this->mAddrItr;
-            return true;
-        }
-    } catch(ReadBufferException&) {}
-    return false;
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return ee_won_server_req_check_expired(&aHooks);
 }
 // FUNCTION: WON 0x006ae2d0
 // Receives replies and checks them until the exchange moves on; returns the next step
 WONStatus ServerRequestOp::Recv()
 {
-    for(;;) {
-        WONStatus aStatus=this->mSocket->RecvMsg(this->mResponse,this->RecvTime());
-        if(aStatus!=0) {
-            this->SetLastServerError(aStatus);
-            return WS_ServerReq_TryNextServer;
-        }
-        if(this->CheckExpiredSession()) return WS_ServerReq_SessionExpired;
-        try {
-            aStatus=this->CheckResponse();
-            if(aStatus!=100059) return aStatus;
-        } catch(ReadBufferException&) {
-            this->SetLastServerError(WS_ServerReq_UnpackFailure);
-            return WS_ServerReq_TryNextServer;
-        }
-    }
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return static_cast<WONStatus>(ee_won_server_req_recv(&aHooks));
 }
 // FUNCTION: WON 0x006ae390
 // Runs the request: asynchronously, or blocking over each server until one completes
 void ServerRequestOp::RunHook()
 {
-    this->mLastServerError=this->mGetCertStatus=WS_None;
-    this->mUseLastServerErrorForFinishStatus=false;
-    this->mUsedSession=NULL;
-    if(this->mServerContext.get()!=NULL) this->mServerContext->CopyAddresses(this->mAddrList);
-    if(this->mAddrList.empty()) {
-        this->Finish(WS_ServerReq_NoServersSpecified);
-        return;
-    }
-    this->mAddrItr=this->mAddrList.begin();
-    this->mReusingSession=false;
-    this->mSessionExpired=false;
-    if(this->mAuthType!=AUTH_TYPE_NONE && this->mAuthContext.get()==NULL) {
-        this->Finish(WS_ServerReq_NeedAuthContext);
-        return;
-    }
-    if(this->IsAsync()) {
-        this->TryNextServer();
-        return;
-    }
-    while(this->TryNextServer()) {
-        for(;;) {
-            WONStatus aStatus;
-            do { aStatus=this->Send(); } while(aStatus==100058);
-            if(aStatus==100057) break;
-            do { aStatus=this->Recv(); } while(aStatus==100059);
-            if(aStatus==100057 || aStatus==100061) break;
-            if(aStatus==100058) continue;
-            this->FinishSaveSession(aStatus);
-            return;
-        }
-        if(this->TimeLeft()<=0) {
-            this->Finish(WS_TimedOut);
-            return;
-        }
-    }
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    ee_won_server_req_run(&aHooks);
 }
 // FUNCTION: WON 0x006ae4c0
 // Marks a timed-out or killed server as failed and closes the socket unless it should stay open
 void ServerRequestOp::CleanupHook()
 {
     AsyncOpWithTracker::CleanupHook();
-    if(this->GetStatus()!=WS_Success && (this->GetStatus()==WS_TimedOut || this->mKilled) && this->mServerContext.get()!=NULL)
-        this->mServerContext->NotifyFailed(this->mCurAddr);
-    if(this->mSocket.get()!=NULL && (this->mCloseConnection || this->GetStatus()!=WS_Success || this->mKilled)) {
+    uint32_t aPlan = ee_won_server_req_cleanup_plan(this->GetStatus(), this->mKilled, this->mServerContext.get() != NULL,
+                                                    this->mSocket.get() != NULL, this->mCloseConnection);
+    if (aPlan & 1) this->mServerContext->NotifyFailed(this->mCurAddr);
+    if (aPlan & 2) {
         this->mSocket->Close();
-        this->mSocket=NULL;
+        this->mSocket = NULL;
     }
-    this->mCurSession=NULL;
+    this->mCurSession = NULL;
 }
 
 // FUNCTION: WON 0x006ad950
 // Runs peer authentication with the current server; true when started or done, false on failure
 bool ServerRequestOp::TryPeerToPeerAuth()
 {
-    SmartPtr<PeerAuthOp> peerAuth=new PeerAuthOp(this->mCurAddr,this->mAuthContext.get(),this->mAuthType,this->mSocket.get(),this->mUseAuth2);
-    peerAuth->CopyMaxTimes(this);
-    peerAuth->SetClientKeySize(this->mClientKeySize,this->mUseClientKey);
-    if(this->mRunMode==OP_MODE_ASYNC) {
-        this->Track(peerAuth.get(),2);
-        peerAuth->RunAsync(-1);
-        return true;
-    }
-    if(peerAuth->RunBlock(this->TimeLeft())) {
-        this->mCurSession=peerAuth->GetSession();
-        return true;
-    }
-    if(peerAuth->GetStatus()==WS_PeerAuth_GetCertFailure) {
-        this->mGetCertStatus=peerAuth->GetGetCertStatus();
-        this->Finish(WS_ServerReq_GetCertFailure);
-    } else this->SetLastServerError(peerAuth->GetStatus());
-    return false;
+    ServerRequestGlue aGlue = {this, NULL};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return ee_won_server_req_try_peer_auth(&aHooks);
 }
 // FUNCTION: WON 0x006adb10
 // Advances the asynchronous exchange on peer auth and socket completions; false for unknown ops
 bool ServerRequestOp::CallbackHook(AsyncOp* op,int param)
 {
-    if(op->mKilled) {
-        this->Kill(true);
-        return true;
-    }
-    if(op->GetStatus()!=WS_Success) {
-        if(param==2 && op->GetStatus()==WS_PeerAuth_GetCertFailure) {
-            this->mGetCertStatus=static_cast<PeerAuthOp*>(op)->GetGetCertStatus();
-            this->Finish(WS_ServerReq_GetCertFailure);
-            return true;
-        }
-        this->SetLastServerError(op->GetStatus());
-        this->TryNextServer();
-        return true;
-    }
-    switch(param) {
-    case 2:
-        this->mCurSession=static_cast<PeerAuthOp*>(op)->GetSession();
-        this->Send();
-        break;
-    case 1: {
-        RecvMsgOp* receive=dynamic_cast<RecvMsgOp*>(op);
-        if(receive!=NULL) {
-            this->mResponse=receive->GetMsg();
-            if(this->CheckExpiredSession()) {
-                this->TryNextServer();
-                return true;
-            }
-            try {
-                WONStatus status=this->CheckResponse();
-                if(status==WS_ServerReq_TryNextServer) this->TryNextServer();
-                else if(status==WS_ServerReq_Send) this->Send();
-                else if(status==WS_ServerReq_Recv) this->QueueSocketOp(new RecvMsgOp,this->RecvTime());
-                else if(status!=WS_ServerReq_ExitCommunicationLoop) this->FinishSaveSession(status);
-            } catch(ReadBufferException&) {
-                this->SetLastServerError(WS_ServerReq_UnpackFailure);
-                this->TryNextServer();
-            }
-        }
-        break;
-    }
-    default: return false;
-    }
-    return true;
+    EeWonServerReqDone aDone;
+    aDone.killed = op->mKilled;
+    aDone.status = op->GetStatus();
+    aDone.param = param;
+    aDone.cert_status = 0;
+    if (param == 2 && !op->mKilled && op->GetStatus() == WS_PeerAuth_GetCertFailure)
+        aDone.cert_status = static_cast<PeerAuthOp*>(op)->GetGetCertStatus();
+    aDone.is_recv = param == 1 && dynamic_cast<RecvMsgOp*>(op) != NULL;
+    ServerRequestGlue aGlue = {this, op};
+    EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
+    return ee_won_server_req_callback(&aHooks, &aDone);
 }
 }
 

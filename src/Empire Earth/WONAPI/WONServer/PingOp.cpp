@@ -25,49 +25,42 @@ PingOp::PingOp(const IPAddr &theAddr, unsigned char theLengthFieldSize, bool ext
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+static void PingAppend(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+	static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
+}
+
+// the request's bytes are Rust's (ee_won server.rs)
 WONStatus PingOp::GetNextRequest()
 {
-	WriteBuffer aBuf(this->mLengthFieldSize,true);
-	aBuf.AppendByte(3);					// mini message
-	aBuf.AppendByte(1);					// common service
-	aBuf.AppendByte(5);					// ping message
-	aBuf.AppendLong(WONTickCount());	// start tick
-	aBuf.AppendBool(this->mExtended);			// extended ping flag
-	this->mRequest = aBuf.ToByteBuffer(true);
+	std::string aBytes;
+	ee_won_server_ping_request(this->mLengthFieldSize, WONTickCount(), this->mExtended, PingAppend, &aBytes);
+	this->mRequest = new ByteBuffer(aBytes.data(), (unsigned long)aBytes.length(), false);
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+// the reply's read is Rust's (ee_won server.rs): the fields read before a cut are assigned, then the cut throws
 WONStatus PingOp::CheckResponse()
 {
-	ReadBuffer aMsg(this->mResponse->data(),this->mResponse->length());
-	unsigned char aHeaderType = aMsg.ReadByte();
-	unsigned char aServiceType = aMsg.ReadByte();
-	unsigned char aMessageType = aMsg.ReadByte();
-	if(aHeaderType!=3 || aServiceType!=1 || aMessageType!=6)
+	const char* aData = this->mResponse->data();
+	EeWonPingReply aReply;
+	ee_won_server_ping_reply(reinterpret_cast<const uint8_t*>(aData), this->mResponse->length(), WONTickCount(), &aReply);
+	if(aReply.end==1)
 		return this->InvalidReplyHeader();
-
-	// Read startTick and determine lag
-	this->mLag = WONTickCount() - aMsg.ReadLong();
-
-	if(aMsg.Available()>0)
-	{
-		aMsg.ReadString(this->mAppName);
-		aMsg.ReadString(this->mLogicalName);
-		this->mVersion = aMsg.ReadLong();
-		aMsg.ReadString(this->mImage);
-		this->mPID = aMsg.ReadLong();
-		aMsg.ReadString(this->mPorts);
-		this->mIsAuth = aMsg.ReadBool();
-		if (aMsg.Available()>0)
-		{
-			aMsg.ReadString(this->mRegData);
-			aMsg.ReadString(this->mServData);
-		}
-	}
-
+	std::string* aTexts[6] = { &this->mAppName, &this->mLogicalName, &this->mImage, &this->mPorts, &this->mRegData,
+	                           &this->mServData };
+	static const unsigned kTextField[6] = { 2, 3, 5, 7, 9, 10 };
+	if(aReply.fields>=1) this->mLag = aReply.lag;
+	for(int i=0; i<6; i++)
+		if(aReply.fields>=kTextField[i]) aTexts[i]->assign(aData+aReply.text_at[i], aReply.text_len[i]);
+	if(aReply.fields>=4) this->mVersion = aReply.version;
+	if(aReply.fields>=6) this->mPID = aReply.pid;
+	if(aReply.fields>=8) this->mIsAuth = aReply.is_auth;
+	if(aReply.end==2)
+		throw ReadBufferException("Attempt to read past end of buffer.");
 	return (WONStatus)WS_Success;
 }
 	

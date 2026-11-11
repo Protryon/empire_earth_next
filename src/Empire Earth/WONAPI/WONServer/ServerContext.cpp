@@ -67,6 +67,7 @@ bool ServerContext::AddAddressesFromDir(const DirEntityList& inEntities,const wc
     return added;
 }
 
+static int32_t ContextRand() { return rand(); }
 // FUNCTION: WON 0x006ac6d0
 // Copies the address list, shuffling it randomly the first time
 void ServerContext::CopyAddresses(AddrList& inCopy)
@@ -78,14 +79,16 @@ void ServerContext::CopyAddresses(AddrList& inCopy)
         for (AddrList::iterator anItr=this->mAddresses.begin();anItr!=this->mAddresses.end();++anItr)
             anAddresses.push_back(*anItr);
         srand(time(NULL));
-        // std::random_shuffle (removed in C++17) over rand(), as the original
-        for (std::vector<IPAddr>::size_type i=1;i<anAddresses.size();++i)
-            std::swap(anAddresses[i],anAddresses[rand()%(i+1)]);
+        // std::random_shuffle (removed in C++17) over rand(), as the original: the order is Rust's
+        // (ee_won server.rs), the draws the CRT's
+        std::vector<size_t> anOrder(anAddresses.size());
+        if (!anAddresses.empty()) ee_won_server_shuffle(anAddresses.size(),ContextRand,&anOrder[0]);
         this->mPingMap.clear();
         this->mAddresses.clear();
-        for (std::vector<IPAddr>::iterator aPos=anAddresses.begin();aPos!=anAddresses.end();++aPos) {
-            AddrList::iterator aLast=this->mAddresses.insert(this->mAddresses.end(),*aPos);
-            this->mPingMap[*aPos]=aLast;
+        for (size_t k=0;k<anOrder.size();++k) {
+            const IPAddr& aPos=anAddresses[anOrder[k]];
+            AddrList::iterator aLast=this->mAddresses.insert(this->mAddresses.end(),aPos);
+            this->mPingMap[aPos]=aLast;
         }
         this->mAddressesShuffled=true;
     }

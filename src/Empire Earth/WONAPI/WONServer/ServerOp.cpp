@@ -30,25 +30,25 @@ void ServerOp::SetMaxTimes(int inConnect,int inSend,int inRecv)
 // Returns the connect time limit, capped by the time left when blocking
 DWORD ServerOp::ConnectTime()
 {
-    DWORD aTime=this->mMaxConnectTime;
-    if(this->mRunMode!=OP_MODE_ASYNC && this->TimeLeft()<aTime) aTime=this->TimeLeft();
-    return aTime;
+    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
+    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxConnectTime;
+    return ee_won_server_step_time(this->mMaxConnectTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006ace80
 // Returns the send time limit, capped by the time left when blocking
 DWORD ServerOp::SendTime()
 {
-    DWORD aTime=this->mMaxSendTime;
-    if(this->mRunMode!=OP_MODE_ASYNC && this->TimeLeft()<aTime) aTime=this->TimeLeft();
-    return aTime;
+    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
+    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxSendTime;
+    return ee_won_server_step_time(this->mMaxSendTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006aceb0
 // Returns the receive time limit, capped by the time left when blocking
 DWORD ServerOp::RecvTime()
 {
-    DWORD aTime=this->mMaxRecvTime;
-    if(this->mRunMode!=OP_MODE_ASYNC && this->TimeLeft()<aTime) aTime=this->TimeLeft();
-    return aTime;
+    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
+    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxRecvTime;
+    return ee_won_server_step_time(this->mMaxRecvTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006acee0
 // Copies the time limits of another server op
