@@ -801,6 +801,12 @@ constexpr static const int32_t EE_ACTION_PREPARE_TO_MOVE = 8000;
 /// `EESendGroupCommand`'s move marker
 constexpr static const int32_t EE_GROUP_COMMAND_MOVE = 184;
 
+/// `kActionDropoffResource` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
+
+/// `kActionUnloadTransport` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -827,6 +833,12 @@ constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
 /// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
 /// forced, rotating, the facing, group movement)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION = 8;
+
+/// `new EEUGUnloadTransport(unit_a's complex unit, (long)point[0], (long)point[1], flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
+
+/// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -986,6 +998,10 @@ constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
 
 /// `EEUnit::mResourceAmount` (what a resource has left)
 constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
+
+/// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
+/// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
+constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -5041,6 +5057,8 @@ struct EeUnitRecord {
   int64_t formation_slot;
   /// `EEUnit::mResourceAmount`
   int64_t resource_amount;
+  /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
+  uint8_t on_map;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -11492,6 +11510,18 @@ void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
 
+/// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
+uint64_t ee_units_store_checksum_flag1();
+
+/// TEST ONLY: the world's unit chain (`count` units: their ids and objects, in order) against the records' on-map
+/// flags (`Store::check_on_map`); the mismatches.
+///
+/// # Safety
+/// `ids` and `objects` point to `count` values each (either may be null when `count` is 0).
+uint32_t ee_units_store_check_on_map(const uint32_t *ids,
+                                     const uint64_t *objects,
+                                     size_t count);
+
 /// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
 /// `ids` into `out` (room for `count`: a pick never has more), their number.
 ///
@@ -11584,6 +11614,30 @@ void ee_units_repair(void *player,
                      uint32_t target,
                      bool queued);
 
+/// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
+bool ee_units_keeps_citizen(uint32_t id);
+
+/// `EEMBuildWall::Execute`'s body (`group::build_wall`) for the message's player, its selection, the technology and
+/// the wall's two points.
+void ee_units_build_wall(void *player,
+                         void *selection,
+                         int32_t technology,
+                         float start_x,
+                         float start_y,
+                         float end_x,
+                         float end_y);
+
+/// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
+void ee_units_unload_transport(void *player,
+                               void *selection,
+                               int64_t x,
+                               int64_t y);
+
+/// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
+void ee_units_dropoff_resource(void *player,
+                               void *selection,
+                               uint32_t dropoff);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -11668,6 +11722,30 @@ extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
 extern void ee_units_host_group_reset_paths(void *group);
+
+extern void ee_units_host_group_keep_citizens(void *group);
+
+extern void *ee_units_host_wall_plan(void *player,
+                                     int32_t technology,
+                                     float start_x,
+                                     float start_y,
+                                     float end_x,
+                                     float end_y,
+                                     size_t *count);
+
+extern void ee_units_host_wall_build(void *group, void *pieces);
+
+extern void ee_units_host_wall_release(void *pieces);
+
+extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
+
+extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
+
+extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
+
+extern uint8_t ee_units_host_goal_can_unload(void *goal);
+
+extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
