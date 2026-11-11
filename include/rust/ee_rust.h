@@ -4159,6 +4159,32 @@ struct EeUiGraphRange {
   long max_y;
 };
 
+/// What `SetCandidateList` leaves: the window's left and right edges and the selected line within the page.
+struct EeUiCandidateFit {
+  float left;
+  float right;
+  long selection;
+};
+
+/// One line of the window's border.
+struct EeUiCandidateLine {
+  float x0;
+  float y0;
+  float x1;
+  float y1;
+  /// The light border colour (else the dark one).
+  bool light;
+};
+
+/// `DrawPolygons`' plan after the background: the selection bar (when `selection` is not negative: the selected
+/// line, two pixels in from each side, clipped to the window) and the two-pixel bevelled border, top (dark),
+/// bottom (light), left (dark), right (light), in the C++'s order.
+struct EeUiCandidateFrame {
+  bool has_selection;
+  EeUiRect selection;
+  EeUiCandidateLine lines[8];
+};
+
 /// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
 /// dark one (`sDarkBorder`).
 struct EeUiBorderLine {
@@ -9988,6 +10014,27 @@ long ee_ui_linegraph_draw_series(void *graph,
                                  EeUiGraphRange copied,
                                  EeUiGraphRange displayed,
                                  EeUiRect rect);
+
+/// `OpenCandidateWindow`'s rectangle.
+EeUiRect ee_ui_ime_open_rect(EeUiRect screen,
+                             EeUiRect control,
+                             float width_ratio,
+                             float height_ratio);
+
+/// `SetCandidateList`'s page, lines and width.
+EeUiCandidateFit ee_ui_ime_candidate_list(void *list,
+                                          float height,
+                                          long font_height,
+                                          unsigned long selection,
+                                          unsigned long count,
+                                          unsigned long window_width,
+                                          float left);
+
+/// `DrawPolygons`' selection bar and border.
+EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long height);
+
+/// `DrawTextA`'s row of line `index`.
+EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
 /// `UITextLabel::ComputeTextLabelRect`.
 void ee_ui_label_compute_rect(void *label);

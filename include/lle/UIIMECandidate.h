@@ -28,6 +28,7 @@ struct UIIMECandidateList {
 };
 
 class LLE_API UIIMECandidate {
+    friend struct UIIMECandidateRust;       // UIIMECandidate.cpp: the Rust list's walk (ee_ui ime.rs)
 public:
     UIIMECandidate(UIManager* inManager, float inHeightRatio, float inWidthRatio, GEFont* inFont);
     virtual ~UIIMECandidate();

@@ -23,6 +23,7 @@ pub mod form;
 pub mod form_state;
 pub mod graph;
 pub mod hotkey;
+pub mod ime;
 pub mod label_fit;
 pub mod layout;
 pub mod list;
@@ -75,6 +76,9 @@ mod group_ffi;
 // imports the C++ graphs' texts, lines and draws (UIGraph.cpp, UILineGraph.cpp), absent from a test binary
 #[cfg(not(test))]
 mod graph_ffi;
+// imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
+#[cfg(not(test))]
+mod ime_ffi;
 // imports the C++ text label's members, text and scroll bar (UITextLabel.cpp), absent from a test binary
 #[cfg(not(test))]
 mod label_fit_ffi;

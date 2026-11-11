@@ -169,6 +169,9 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "GraphRange" = "EeUiGraphRange"
 "GraphTexts" = "EeUiGraphTexts"
 "GraphLayout" = "EeUiGraphLayout"
+"CandidateFit" = "EeUiCandidateFit"
+"CandidateFrame" = "EeUiCandidateFrame"
+"CandidateLine" = "EeUiCandidateLine"
 # ee_won
 "Md5" = "EeWonMd5"
 "Blowfish" = "EeWonBlowfish"
