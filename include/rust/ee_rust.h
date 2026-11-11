@@ -104,6 +104,54 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// `EEFindDropLocation`'s point kinds (`EeCombatDropIn::kind`).
+/// The goal's location (the C++ asks the goal; not computed here).
+constexpr static const int32_t EE_COMBAT_DROP_KIND_GOAL = 0;
+
+/// The target model's drop point.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_MODEL = 1;
+
+/// The middle of the target's tile.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
+
+/// Neither: no target.
+constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
+
+/// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
+/// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
+/// call's `inArg6` is false; no technology: -1).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_TECH_KIND_6 = 1;
+
+/// The candidate's owner is the unit's player or not its enemy.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NOT_ENEMY = 2;
+
+/// The candidate is disabled and not protected.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_DISABLED = 3;
+
+/// The candidate's owner is player 0 (nature).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_NATURE = 4;
+
+/// `EEIsAttackedBy(unit, candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_ATTACKED_BY = 5;
+
+/// `EECanTargetClass(unit, candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS = 6;
+
+/// The candidate `IsFoundation`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_FOUNDATION = 7;
+
+/// `EEIsSeenBy(candidate, unit's player, true)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_SEEN = 8;
+
+/// The candidate's class `IsPartLeftOut(candidate)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_PART_LEFT_OUT = 9;
+
+/// `unit->CanAttackClass(candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS = 10;
+
+/// The unit has ignored targets and `IsTargetIgnored(candidate, inArg7 != 0)` (which may drop expired ones).
+constexpr static const uint32_t EE_COMBAT_TARGET_TEST_IGNORED = 11;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -178,6 +226,9 @@ constexpr static const int32_t CAMERA_STEP_DONE = 0;
 constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
+/// `kBarFraction`: the filled part's share of a bar's own width.
+constexpr static const float BAR_FRACTION = 0.75;
 
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
@@ -1855,6 +1906,9 @@ struct EeAStarGraphStorage;
 /// One storage (opaque to C++).
 struct EeAStarStorage;
 
+/// The score table, owned by the C++ `SEConductor` (created and destroyed with it).
+struct EeConductor;
+
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
 
@@ -3242,6 +3296,218 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// `EECanConvert`'s result and its out flag (written only when `flag_written`).
+struct EeCombatCanConvertOut {
+  int32_t result;
+  int32_t flag_written;
+  /// the target is shielded (0 when not written)
+  int32_t flag;
+};
+
+/// `EECanConvert`'s inputs (`inPriest`, `inTarget`; every flag 0 or 1).
+struct EeCombatCanConvertIn {
+  /// the priest's class `IsCrusader`
+  int32_t crusader;
+  /// the priest's class is a building priest (`kUnitCategoryBuildingPriest`)
+  int32_t building_priest;
+  /// the priest's player has the adaptation power
+  int32_t adaptation;
+  int32_t same_player;
+  /// the priest's player is the target's enemy
+  int32_t enemy;
+  /// the priest's `mConversionRate`
+  float conversion_rate;
+  int32_t target_disabled;
+  /// the target `IsProtected`
+  int32_t target_protected;
+  /// the target's `mConversionResistance`
+  float resistance;
+  int32_t target_town_center;
+  int32_t target_settlement;
+  int32_t target_hit_points;
+  /// the target's class `CanBeAttacked`
+  int32_t attackable;
+  /// `gDamageTable[the target class's family][the priest class's ammo]` (0 for a negative ammo)
+  float damage;
+  /// both classes have the same category
+  int32_t same_category;
+  int32_t converts_priests;
+  /// the priest's faith (`GetPower`)
+  int32_t power;
+  /// `EEGetConversionCost(priest)`
+  int32_t cost;
+  /// the target's class is a land priest
+  int32_t target_land_priest;
+  int32_t converts_buildings;
+  /// the target's class `IsLandBuilding`
+  int32_t target_land_building;
+  /// the priest's player is in the Copper Age or later
+  int32_t at_copper;
+  /// both locations (a building priest's range test)
+  float priest_x;
+  float priest_y;
+  float priest_z;
+  float target_x;
+  float target_y;
+  float target_z;
+  /// the priest's `mRange`
+  float range;
+  int32_t priest_cyber;
+  int32_t target_cyber;
+  /// the target `HasEffect(4)`
+  int32_t shielded;
+};
+
+/// `EECanHeal`'s inputs (`inUnit` heals `inTarget`).
+struct EeCombatCanHealIn {
+  /// the healer's `mWonderUnitSet` is not 0
+  int32_t has_set;
+  /// the target `IsRepairable`
+  int32_t repairable;
+  int32_t hit_points;
+  int32_t maximum;
+  /// the healer's class `GetHealThreshold`
+  float threshold;
+  int32_t same_unit;
+  int32_t same_player;
+  /// the target's player is not the healer's enemy
+  int32_t allied;
+  /// the healer's unit set holds the target's type (0 for a set out of the manager's range)
+  int32_t in_set;
+};
+
+/// The drop point.
+struct EeCombatDropOut {
+  float x;
+  float y;
+  float z;
+};
+
+/// `EEFindDropLocation`'s inputs: the kind, then the model's (`DROP_KIND_MODEL`) or the tile's (`DROP_KIND_TILE`) values.
+struct EeCombatDropIn {
+  int32_t kind;
+  /// the target model's `mDefaultPoint`
+  float offset[3];
+  /// the target's physical model's scale
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the target's physical model's location (`GETransformation::mMatrix`)
+  float transformation[4][4];
+  int32_t tile_x;
+  int32_t tile_y;
+  /// the target tile's height
+  float tile_height;
+};
+
+/// The result: blocked, and the last tile reached.
+struct EeCombatLineOut {
+  int32_t blocked;
+  int32_t x;
+  int32_t y;
+};
+
+/// `EEIsLineToUnitBlocked`'s inputs (`inUnit` shooting at `inTarget`).
+struct EeCombatLineIn {
+  int32_t from_x;
+  int32_t from_y;
+  int32_t to_x;
+  int32_t to_y;
+  /// the shooter's class `mSkipsLineOfFireCheck`
+  int32_t skips_check;
+  /// the target's hit points are positive
+  int32_t target_alive;
+  /// the shooter's class `mIsMelee`: the walls' bare test, no shot height
+  int32_t bare;
+};
+
+/// The target's top, as the C++ reads it (`EeCombatLineHost::target_top`).
+struct EeCombatTargetTop {
+  /// the target is a complex unit (else nothing below is read)
+  int32_t present;
+  /// the z of its model's bounding box's top right back corner at its frame
+  float box_top;
+  /// its stats' `GetScale`
+  float scale;
+  int32_t built;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// its location's z
+  float z;
+};
+
+/// `EEIsLineToUnitBlocked`'s world (see `LineHost`).
+struct EeCombatLineHost {
+  void *ctx;
+  float (*start_height)(void *ctx, int32_t bare);
+  /// The tile line as `count` (x, y) pairs, valid until the next call.
+  const int32_t *(*tile_line)(void *ctx,
+                              int32_t from_x,
+                              int32_t from_y,
+                              int32_t to_x,
+                              int32_t to_y,
+                              uint32_t *count);
+  void (*target_top)(void *ctx, EeCombatTargetTop *out);
+  int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
+};
+
+/// `ApplyAreaDamage`'s inputs.
+struct EeCombatAreaIn {
+  /// the attacker's tile
+  int32_t tile_x;
+  int32_t tile_y;
+  float radius;
+  /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
+  float friendly_factor;
+  /// the direct target's complex unit (counted as hit already), or 0 (a `EeCombatHandle`)
+  uint64_t target;
+};
+
+/// `ApplyAreaDamage`'s world (see `AreaHost`).
+struct EeCombatAreaHost {
+  void *ctx;
+  uint64_t (*tile_first)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*node_next)(void *ctx, uint64_t node);
+  uint64_t (*node_unit)(void *ctx, uint64_t node);
+  float (*distance_squared)(void *ctx, uint64_t unit);
+  int32_t (*targetable)(void *ctx, uint64_t unit);
+  int32_t (*same_player)(void *ctx, uint64_t unit);
+  void (*hit)(void *ctx, uint64_t unit);
+};
+
+/// `EEFindNewTarget`'s inputs.
+struct EeCombatFindTargetIn {
+  /// the area's tiles, inclusive (the tile less and plus the radius)
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+  /// `inArg6`: skip the technology kind test
+  int32_t skip_kind;
+};
+
+/// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
+struct EeCombatTargetHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  int32_t (*screen)(void *ctx, uint64_t unit);
+  int32_t (*multiple)(void *ctx, uint64_t unit);
+  uint32_t (*unit_id)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
+  void (*push)(void *ctx, uint64_t unit);
+};
+
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -3898,6 +4164,43 @@ struct EeGfxOrthoView {
   float size;
 };
 
+/// What `Update`'s move did: the new position (clamped) when the mouse moved, and whether each smallest move
+/// changed (the C++'s debug lines).
+struct EeGfxMouseMove {
+  EeGe2DPoint position;
+  /// the mouse moved: `position` is the new one (else it is the old one, unclamped as before)
+  bool moved;
+  bool min_x_changed;
+  bool min_y_changed;
+};
+
+/// The pointer's inputs for `Update`'s move.
+struct EeGfxMouseInput {
+  EeGe2DPoint position;
+  EeGeRectangle bounds;
+  uint32_t desktop_width;
+  uint32_t desktop_height;
+  float sensitivity;
+  /// the axes' `GetNormalizedValue`
+  int32_t move_x;
+  int32_t move_y;
+};
+
+/// The bars' size for a frame (`sBarWidth`, `sBarHeight`, `sBarStep`).
+struct EeGfxBarSizes {
+  uint32_t width;
+  float height;
+  float step;
+};
+
+/// A bar's rectangles, in the C++'s order of use. `kind` 0: full (fill, back), 1: partial (fill, its back, the
+/// rest, the rest's back), 2: empty (the rest, its back); `count` rectangles are set.
+struct EeGfxBarRects {
+  uint32_t kind;
+  uint32_t count;
+  EeGeRectangle rects[4];
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3966,6 +4269,18 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// The conductor's scalar members (the C++ object's, read and written around each call).
+struct EeConductorFields {
+  float volume;
+  /// 0 stopped, 1 running.
+  uint32_t state;
+  uint32_t reverb_state;
+  int32_t next_score_id;
+  int32_t playing_id;
+  uint32_t intensity;
+  uint32_t channel_group_count;
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -8163,6 +8478,54 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
+/// `EECanConvert`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
+
+/// `EECanHeal`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
+
+/// `EEFindDropLocation`'s drop point.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
+
+/// `EEIsLineToUnitBlocked`.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
+                                       const EeCombatLineHost *host);
+
+/// `ApplyAreaDamage`'s walk: calls `host.hit` for every victim in order.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+void ee_combat_area_victims(const EeCombatAreaIn *input,
+                            const EeCombatAreaHost *host);
+
+/// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+uint32_t ee_combat_units_in_area(const EeCombatFindTargetIn *input,
+                                 const EeCombatTargetHost *host);
+
+/// `EEFindNewTarget`'s choice among `count` candidates: the index of the first that passes, -1 for none.
+///
+/// # Safety
+/// `units` must point to `count` handles, `host` to a valid record whose callbacks are callable with its `ctx`.
+int32_t ee_combat_choose_target(const uint64_t *units,
+                                uint32_t count,
+                                int32_t skip_kind,
+                                const EeCombatTargetHost *host);
+
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
                          EeDx7ScreenState *state,
@@ -9179,6 +9542,59 @@ int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
 /// `focus` is valid.
 EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
 
+/// `RTSMouse::ClampPosition`: `*position` kept inside `*bounds`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_mouse_clamp(EeGe2DPoint *position, const EeGeRectangle *bounds);
+
+/// `RTSMouse::Update`'s move (not frozen): `min_x`/`min_y` are the unit's smallest moves (`sMinXValue`/`sMinYValue`).
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxMouseMove ee_gfx_mouse_update_move(const EeGfxMouseInput *input,
+                                        int32_t *min_x,
+                                        int32_t *min_y);
+
+/// `GetScreenPoint` (`EEROUnits.cpp`): `*point` to window coordinates in the game view `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_units_screen_point(const EeGeViewport *viewport,
+                               bool orthographic,
+                               const EeGe3DPoint *point,
+                               EeGe2DPoint *out);
+
+/// `DrawBars`' bar sizes from the window's size.
+EeGfxBarSizes ee_gfx_units_bar_sizes(uint32_t window_width, uint32_t window_height);
+
+/// `DrawBar`'s rectangles: the unit's bar tag (`bar` scaled by `scale` through `*transformation`) projected through
+/// `*viewport`, moved to row `row` and split by `fraction`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_unit_bar(const EeGeViewport *viewport,
+                                    bool orthographic,
+                                    const EeGeTransformation *transformation,
+                                    const EeGe3DPoint *bar,
+                                    float scale,
+                                    float fraction,
+                                    int32_t row,
+                                    const EeGfxBarSizes *sizes);
+
+/// `DrawObjectBars`' rectangles: the object's bar tag (`*location` plus `bar` scaled by `scale`) projected through
+/// `*viewport` and split by `health`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxBarRects ee_gfx_units_object_bar(const EeGeViewport *viewport,
+                                      bool orthographic,
+                                      const EeGe3DPoint *location,
+                                      const EeGe3DPoint *bar,
+                                      float scale,
+                                      float health,
+                                      const EeGfxBarSizes *sizes);
+
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
 
@@ -9685,6 +10101,135 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
 
+/// An empty score table (the constructor).
+EeConductor *ee_conductor_create();
+
+/// Frees the table; its scores were deleted by the stop before (a stopped conductor holds none).
+///
+/// # Safety
+/// `c` from `ee_conductor_create`, not used afterwards.
+void ee_conductor_destroy(EeConductor *c);
+
+/// The constructor's scalar members.
+EeConductorFields ee_conductor_fields_new();
+
+/// `LoadScore(name, outID, secondary)`; `written` says whether the C++ wrote `outID` (then `out_id` holds it).
+///
+/// # Safety
+/// As `with`; `name` NUL-terminated, the outs valid.
+int32_t ee_conductor_load_score(EeConductor *c,
+                                void *ctx,
+                                EeConductorFields *f,
+                                const char *name,
+                                bool secondary,
+                                int32_t *out_id,
+                                bool *written);
+
+/// `SetConductorState`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_state(EeConductor *c, void *ctx, EeConductorFields *f, uint32_t state);
+
+/// `InitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_initialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `UninitializeConductor`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_uninitialize(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `Play`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_play(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Queue`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_queue(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `Stop`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_stop(EeConductor *c, void *ctx, EeConductorFields *f);
+
+/// `TransitionTo(id, command, flags)` (the flags are unused).
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_transition_to(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   int32_t id,
+                                   uint32_t command);
+
+/// `UnloadScore`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_unload_score(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+
+/// `SetVolume`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_volume(EeConductor *c, void *ctx, EeConductorFields *f, float volume);
+
+/// `SetIntensity`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_conductor_set_intensity(EeConductor *c,
+                                   void *ctx,
+                                   EeConductorFields *f,
+                                   uint32_t intensity,
+                                   bool immediate);
+
+/// `SetChannelGroupCount`.
+///
+/// # Safety
+/// `f` valid, the C++ lock held.
+int32_t ee_conductor_set_channel_group_count(EeConductorFields *f, uint32_t count);
+
+/// `GetCurrentlyPlayingScore`.
+///
+/// # Safety
+/// `f` valid.
+int32_t ee_conductor_currently_playing(const EeConductorFields *f);
+
+/// `GetScore`: the `SEScore*` (null: none).
+///
+/// # Safety
+/// As `with` (no host is reached).
+void *ee_conductor_score(EeConductor *c, int32_t id);
+
+/// `GetScoreID`.
+///
+/// # Safety
+/// As `with` (no host is reached).
+int32_t ee_conductor_score_id(EeConductor *c, void *score);
+
+/// One entry of the score table, for inspection (tests, the golden driver): false past the last. `name` gets at
+/// most `name_capacity - 1` bytes and a NUL.
+///
+/// # Safety
+/// As `with`; `name` has `name_capacity` bytes (> 0), the outs are valid.
+bool ee_conductor_entry(EeConductor *c,
+                        uint32_t index,
+                        char *name,
+                        uint32_t name_capacity,
+                        void **score,
+                        int32_t *id,
+                        uint32_t *load_count);
+
 /// The constructor's state: categories each allowed every channel.
 EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
 
@@ -9857,6 +10402,69 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// The constructor: a new mixer joins the registry.
+///
+/// # Safety
+/// `mixer` is a live `SEMixer*`.
+void ee_mixers_register(void *mixer);
+
+/// The destructor's decisions: the active mixer stops and deactivates, then the mixer leaves the registry.
+///
+/// # Safety
+/// `mixer` is the `SEMixer*` being destroyed.
+void ee_mixers_destroy(void *mixer);
+
+/// `SEMixer::GetCount`.
+uint32_t ee_mixers_count();
+
+/// `SEMixer::GetMixer`: `kErrorBeyondEnd` past the last (`out` untouched).
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_mixers_get(uint32_t index, void **out);
+
+/// `SEMixer::UseMixer` (null: none).
+///
+/// # Safety
+/// `mixer` is null or a live `SEMixer*`.
+int32_t ee_mixers_use(void *mixer_ptr);
+
+/// `SEInitializeMixers` over the C++ start state `ctx`.
+///
+/// # Safety
+/// `ctx` is what the trampolines expect.
+int32_t ee_mixers_initialize(void *ctx);
+
+/// `SEShutdown`'s mixers.
+void ee_mixers_delete_all();
+
+/// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
+/// one. True when the thread must end.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+bool ee_music_step(void *ctx,
+                   int32_t wait,
+                   uint32_t elapsed);
+
+/// `SetIntensity`'s rule (the C++ sets the event after it).
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`.
+void ee_music_request_intensity(void *ctx, uint32_t intensity);
+
+/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_do(void *ctx, uint32_t what);
+
+/// `Update`.
+///
+/// # Safety
+/// `ctx` is the live `EEMusicManager*`, called from its thread.
+void ee_music_update(void *ctx, uint32_t elapsed);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///

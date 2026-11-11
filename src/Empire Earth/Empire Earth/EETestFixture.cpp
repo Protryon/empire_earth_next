@@ -12,8 +12,10 @@
 //     game telemetry: "game ms <t> ticks <n> over <0|1> players <n> map <0|1> local <i>" (ticks: the completed
 //     physics ticks, PTs), "comm ct <n> last <n> paused <0|1> multiplayer <0|1>" (the communications ticks processed,
 //     the last received, the pause), one "player <i> observer <0|1> result <r> population <n> victory <n> civ <locked>
-//     <chosen> stock <f>/<w>/<s>/<g>/<i>" per world player, and "clock <num>/<den> ms <t> frames <n>" (the harness
-//     clock's factor and time, the frames written so far);
+//     <chosen> stock <f>/<w>/<s>/<g>/<i>" per world player, "clock <num>/<den> ms <t> frames <n>" (the harness
+//     clock's factor and time, the frames written so far), and with a map "camera <x> <y> <z> target <x> <y> zoom
+//     <z> mode <m> valid <0|1> <0|1> size <n>" (the camera's focus now and its move's target, in tiles, whether each
+//     is a point of the terrain mesh, the map's tiles per side: fixture_driver.scroll_check);
 //   - when <dir>/frame.request exists, removes it and writes the next presented frame to <dir>/frame.bmp (a top-down
 //     32-bit BMP, through the renderer's GXTestSetPresentHook / GXTestReadFrame);
 //   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
@@ -23,7 +25,10 @@
 //     events deliver them (ISHandleEvent): a click through the real hit test, or
 //     "<seq> boxselect <form> <mode> <x0> <y0> <x1> <y1>", a box selection in the game view: see "the box selection"
 //     below, or "<seq> order <form> <kind>", an order to a group of the local player's units through the real input
-//     path, judged unit by unit once its message executed: see EETestFixtureOrders.cpp),
+//     path, judged unit by unit once its message executed: see EETestFixtureOrders.cpp, or
+//     "<seq> key <form> <dik> <ms>", a key (its DIK_* scan code) pressed, held ms milliseconds and released as the
+//     platform's key events deliver them (ISHandleEvent: the arrow keys' scroll and the zoom hot keys), or
+//     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -113,6 +118,9 @@
 #include "ee/EEGameOptions.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EECameraControl.h"
+#include "ee/EEMap.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -266,6 +274,19 @@ void WriteTelemetry(FILE* outFile)
     PlatSimGetTimeFactor(&theNum, &theDen);
     fprintf(outFile, "clock %lu/%lu ms %lu frames %lu\n", (unsigned long)theNum, (unsigned long)theDen,
             (unsigned long)PlatTimeMilliseconds(), sFramesWritten.load());
+    EEMap* theMap = gWorld.GetMap();
+    if (theMap != NULL) {   // the camera (plain reads: the scroll check compares polls a second apart)
+        EECameraControl& theCamera = gWorld.mCameraControl;
+        GE3DPoint theFocus;
+        theCamera.GetLocation(theCamera.mFraction, theFocus);
+        GE3DPoint theTarget = theCamera.mEndFocus;
+        GETerrainMesh& theMesh = theMap->mTerrainMesh;
+        bool theFocusValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theFocus.GetX()), UMFloorUnsigned(theFocus.GetY()));
+        bool theTargetValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY()));
+        fprintf(outFile, "camera %.3f %.3f %.3f target %.3f %.3f zoom %.4f mode %ld valid %d %d size %ld\n",
+                theFocus.GetX(), theFocus.GetY(), theFocus.GetZ(), theTarget.GetX(), theTarget.GetY(), theCamera.mZoom,
+                (long)theCamera.mMode, theFocusValid ? 1 : 0, theTargetValid ? 1 : 0, (long)theMap->GetSize());
+    }
 }
 
 // ---- the WON lobby (TEST ONLY). The lobby owns the UI thread while it is open and runs its own message loop
@@ -833,6 +854,35 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             ISHandleEvent(theEvent);
         }).detach();
         theVerdict = "clicked";
+    } else if (!strcmp(theOp, "key") && theFields >= 5 && a == inFormID && b > 0 && b < 0x100 && c <= 10000) {
+        // "<seq> key <form> <dik> <ms>": a key held through the platform's key events (not under the UI lock)
+        unsigned long theCode = b, theHold = c;
+        std::thread([theCode, theHold]() {
+            PlatInputEvent theEvent;
+            memset(&theEvent, 0, sizeof(theEvent));
+            theEvent.mType = PLAT_EVENT_KEY_DOWN;
+            theEvent.mKey.mScanCode = (uint32_t)theCode;
+            ISHandleEvent(theEvent);
+            std::this_thread::sleep_for(std::chrono::milliseconds(theHold));
+            theEvent.mType = PLAT_EVENT_KEY_UP;
+            ISHandleEvent(theEvent);
+        }).detach();
+        theVerdict = "key-pressed";
+    } else if (!strcmp(theOp, "wheel") && theFields >= 5 && a == inFormID && b <= 1 && c > 0 && c <= 20) {
+        // "<seq> wheel <form> <0|1> <n>": n wheel notches, away from the user (0) or towards (1)
+        float theNotch = b == 0 ? 1.0f : -1.0f;
+        unsigned long theCount = c;
+        std::thread([theNotch, theCount]() {
+            for (unsigned long k = 0; k < theCount; k++) {
+                PlatInputEvent theEvent;
+                memset(&theEvent, 0, sizeof(theEvent));
+                theEvent.mType = PLAT_EVENT_MOUSE_WHEEL;
+                theEvent.mMouse.mWheel = theNotch;
+                ISHandleEvent(theEvent);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }).detach();
+        theVerdict = "wheeled";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
         theVerdict = BoxStart(theSeq, theLine);
     } else if (!strcmp(theOp, "order") && a == inFormID) {
