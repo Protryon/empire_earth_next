@@ -407,6 +407,8 @@ WON_TESTS = {
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
+    # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
+    "won_regkey_test": [*[WON_SRC / "WONCommon" / f for f in ("RegKey.cpp", "ByteBuffer.cpp")]],
 }
 
 

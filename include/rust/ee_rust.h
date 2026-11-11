@@ -9981,6 +9981,44 @@ void ee_won_path_relative(const uint8_t *directory,
                           EeWonByteSink sink,
                           void *context);
 
+/// `config_name`.
+///
+/// # Safety
+/// `name` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_regkey_name(const uint8_t *name, size_t length, EeWonByteSink sink, void *context);
+
+/// `config_block`; `parent` NULL for the root block.
+///
+/// # Safety
+/// `parent` (when not NULL) and `path` hold their lengths' bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_block(const uint8_t *parent,
+                         size_t parent_length,
+                         const uint8_t *path,
+                         size_t path_length,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// `binary_text`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_binary_text(const uint8_t *data,
+                               size_t length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `binary_value`: its code; the sink gets the bytes only for 0.
+///
+/// # Safety
+/// `text` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+int32_t ee_won_regkey_binary_value(const uint8_t *text,
+                                   size_t length,
+                                   EeWonByteSink sink,
+                                   void *context);
+
+/// `root_valid`.
+bool ee_won_regkey_root_valid(int32_t root);
+
 }  // extern "C"
 
 #endif  // EE_RUST_H

@@ -33,6 +33,7 @@ pub mod parser;
 pub mod path;
 pub mod plaintext;
 pub mod random;
+pub mod regkey;
 pub mod socket;
 /// cbindgen:ignore
 pub mod status;
