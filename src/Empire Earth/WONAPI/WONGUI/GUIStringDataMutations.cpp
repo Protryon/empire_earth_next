@@ -10,6 +10,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 // FUNCTION: WON 0x00727460
 // Constructs the global empty GUIString and registers its exit-time destructor
@@ -41,12 +42,22 @@ GUIStringData::GUIStringData(const char* text) { this->Init(); this->AssignStr(t
 GUIStringData::GUIStringData(const wchar_t* text) { this->Init(); this->AssignWStr(text,wcslen(text)); }
 GUIStringData::GUIStringData(const std::string& text) { this->Init(); this->AssignStr(text.c_str(),text.length()); }
 GUIStringData::GUIStringData(const std::wstring& text) { this->Init(); this->AssignWStr(text.c_str(),text.length()); }
+// The sink of ee_won_guistring_widen: the decoded units become the text
+static void GUIStringDataAssignUnits(void* context, const void* units, size_t count)
+{
+    GUIStringData* data=static_cast<GUIStringData*>(context);
+    data->resize((int)count,false);
+    if(count!=0) memcpy(data->mText,units,count*sizeof(wchar_t));
+}
 // FUNCTION: WON 0x00727a20
-// Replaces the text with narrow text of the given length, widening each byte
+// Replaces the text with narrow text of the given length, the game's UTF-8 (D6; the original widened each byte:
+// Latin-1); a stray byte becomes U+FFFD (ee_won guistring.rs)
 void GUIStringData::AssignStr(const char* text,int length)
 {
-    this->resize(length,false);
-    for(int i=0;i<length;++i) this->mText[i]=(unsigned char)text[i];
+    this->resize(0,false);
+    if(length>0)
+        ee_won_guistring_widen(reinterpret_cast<const uint8_t*>(text),(size_t)length,sizeof(wchar_t),
+                               GUIStringDataAssignUnits,this);
 }
 // FUNCTION: WON 0x00727ac0
 // Replaces the text with wide text of the given length

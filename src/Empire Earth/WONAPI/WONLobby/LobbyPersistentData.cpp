@@ -321,14 +321,15 @@ void LobbyRemoveFriend(unsigned long inUserId)
 namespace WONAPI {
 
 // FUNCTION: WON 0x0075ee80
-// Reads a length-prefixed 8-bit string from a preferences file
+// Reads a length-prefixed 8-bit string from a preferences file: UTF-8, as WriteByteString writes it (D6; the
+// original widened each byte)
 GUIString LobbyPersistentData::ReadByteString(FileReader& inReader)
 {
     unsigned short aLength = inReader.ReadShort();
-    GUIString aString(new GUIStringData(aLength));
+    std::string aBytes(aLength, '\0');
     for (int i = 0; i < aLength; ++i)
-        aString.append((wchar_t)inReader.ReadByte());
-    return aString;
+        aBytes[i] = (char)inReader.ReadByte();
+    return GUIString(aBytes);
 }
 // FUNCTION: WON 0x0075f000
 // Reads a length-prefixed 16-bit (unencrypted) string from a preferences file
@@ -341,7 +342,7 @@ GUIString LobbyPersistentData::ReadWideString(FileReader& inReader)
     return aString;
 }
 // FUNCTION: WON 0x0075f3d0
-// Writes a string as a length-prefixed 8-bit string
+// Writes a string as a length-prefixed 8-bit string (UTF-8: GetString)
 void LobbyPersistentData::WriteByteString(FileWriter& outWriter, const GUIString& inText)
 {
     std::string aString = (std::string)inText;

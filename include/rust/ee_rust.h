@@ -10219,11 +10219,26 @@ int32_t ee_won_guistring_to_int(const void *a,
 /// `a` holds `a_length` writable units of `wchar_size` bytes.
 void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
 
-/// `GetString` into `out` (room for `a_length` bytes).
+/// `GetString`: the text as UTF-8, given to the sink once.
 ///
 /// # Safety
-/// `a` as `ee_won_guistring_find_char`; `out` has room for `a_length` bytes.
-void ee_won_guistring_narrow(const void *a, uint16_t a_length, uint8_t *out, uint32_t wchar_size);
+/// `a` as `ee_won_guistring_find_char`; the sink's contract (`EeWonByteSink`).
+void ee_won_guistring_narrow(const void *a,
+                             uint16_t a_length,
+                             uint32_t wchar_size,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The narrow constructors' and `AssignStr`'s text: `length` bytes of UTF-8 as `wchar_t` units, given to the sink
+/// once (`count` units of `wchar_size` bytes; none for empty text).
+///
+/// # Safety
+/// `narrow` holds `length` bytes (or is NULL with 0); the sink's contract (`EeWonWideSink`).
+void ee_won_guistring_widen(const uint8_t *narrow,
+                            size_t length,
+                            uint32_t wchar_size,
+                            EeWonWideSink sink,
+                            void *context);
 
 /// `SetFilePath`'s separators.
 ///
