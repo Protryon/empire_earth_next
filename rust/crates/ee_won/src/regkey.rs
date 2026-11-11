@@ -72,7 +72,7 @@ fn hex_digit(c: u8) -> Option<u8> {
 
 /// A value's text as binary data (either case of hex digit).
 pub fn binary_value(text: &[u8]) -> Binary {
-    if text.len() % 2 != 0 {
+    if !text.len().is_multiple_of(2) {
         return Binary::BadType;
     }
     let mut out = Vec::with_capacity(text.len() / 2);

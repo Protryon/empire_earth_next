@@ -188,10 +188,15 @@ fn units(t: &[u32]) -> String {
         .collect()
 }
 
+/// Every (name, id) in registration order.
+type Names = Vec<(Vec<u32>, i32)>;
+/// Each id's display string.
+type Display = Vec<(i32, Vec<u32>)>;
+
 /// The command tables: every (name, id) in registration order, and each id's display string.
-fn tables() -> (Vec<(Vec<u32>, i32)>, Vec<(i32, Vec<u32>)>) {
+fn tables() -> (Names, Display) {
     let mut names = Vec::new();
-    let mut display: Vec<(i32, Vec<u32>)> = Vec::new();
+    let mut display: Display = Vec::new();
     for &(id, list) in COMMANDS {
         let parts: Vec<String> = list.split(',').map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect();
         let parts = if parts.is_empty() { vec![command_name(id).to_str().unwrap().to_string()] } else { parts };
