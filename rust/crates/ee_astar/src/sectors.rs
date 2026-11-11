@@ -63,7 +63,7 @@ pub fn choke_passes(size_class: i32) -> i32 {
 }
 
 /// `lrintf` on x86-64: round half to even; the conversion's "indefinite" value out of range.
-fn lrintf(value: f32) -> i32 {
+pub(crate) fn lrintf(value: f32) -> i32 {
     let rounded = value.round_ties_even();
     if (-2_147_483_648.0..2_147_483_648.0).contains(&rounded) {
         rounded as i32

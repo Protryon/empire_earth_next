@@ -19,6 +19,11 @@
 //! `path_area_kind` the region fills' start tests, `repair` the path area repair's choice and region id lookup, `queries` the
 //! manager's chain, adjacency and largest continent queries.
 //!
+//! The engine's sparse point set (`U2DSparseArrayPointContainer`: the areas' and sub sectors' tiles) is `sparse`,
+//! whole (the C++ class owns a handle). `manager` is the manager's last loops over its objects (`GetTilesNextTo`,
+//! `PruneChokePoints` with the geometry behind a host, `CreateScenarioAreas`' choice), `path_splice` the path
+//! manager's path splicing and step budgets.
+//!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
 //! `tools/sim_capture.py`'s A* records: every search of the six oracle games, its goal calls and view answers and its
@@ -31,12 +36,15 @@ pub mod ffi;
 pub mod goals;
 pub mod graph;
 pub mod machine;
+pub mod manager;
 pub mod modifiers;
 pub mod path_area_kind;
 pub mod path_goals;
+pub mod path_splice;
 pub mod queries;
 pub mod repair;
 pub mod sectors;
+pub mod sparse;
 pub mod storage;
 pub mod sub_sector_links;
 pub mod tile_kind;

@@ -15,6 +15,9 @@ constexpr static const int32_t KIND_AREA = 54;
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
 
+/// `kContinentCategoryMapEdge`.
+constexpr static const int32_t CATEGORY_MAP_EDGE = 5;
+
 /// `kAIPathWaterBody`, `kAIPathLandMass`, `kAIPathSpaceRegion`, `kAIPathNonSpace` (ee/EEAIKindIDs.h).
 constexpr static const int32_t PATH_WATER_BODY = 1;
 
@@ -1314,6 +1317,9 @@ struct EeRmapResult;
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
 
+/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
+struct EeSparseArray;
+
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
@@ -1857,6 +1863,53 @@ struct EeContinentSize {
   uint8_t category;
   /// `mTiles.Size()` (a `long`)
   int32_t size;
+};
+
+/// What `PruneChokePoints` asks the C++ manager (`manager::PruneHost`), as C function pointers over `ctx`.
+struct EePruneCallbacks {
+  void *ctx;
+  bool (*choke_exists)(void*, size_t);
+  size_t (*area_count)(void*, size_t);
+  int32_t (*area)(void*, size_t, size_t);
+  /// `k` -1 for the choke point itself
+  bool (*is_near)(void*, size_t, size_t, ptrdiff_t);
+  void (*remove)(void*, size_t);
+};
+
+/// A scenario area as `CreateScenarioAreas` reads it: whether it exists and is set, and its rectangle's sides.
+struct EeScenarioArea {
+  bool set;
+  float top;
+  float bottom;
+  float left;
+  float right;
+  float height;
+  float width;
+};
+
+/// One rectangle area to create: the scenario area's index, its id, its tile rectangle.
+struct EeScenarioAreaPlan {
+  int32_t index;
+  uint16_t id;
+  int32_t top;
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
+};
+
+/// A path point (`GE3DPoint`).
+struct EePathPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// A search's bounds (`EEAIAStarBounds`: top, left, bottom, right).
+struct EePathBounds {
+  int32_t top;
+  int32_t left;
+  int32_t bottom;
+  int32_t right;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -5050,6 +5103,187 @@ size_t ee_astar_adjacent_ids(const bool *flags,
 int32_t ee_astar_largest_continent(const EeContinentSize *continents,
                                    size_t count,
                                    int8_t kind);
+
+/// A new, empty set.
+EeSparseArray *ee_sparse_new();
+
+/// A copy of `s` (its points; the copy owns its own).
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed.
+EeSparseArray *ee_sparse_clone(const EeSparseArray *s);
+
+/// Releases a set.
+///
+/// # Safety
+/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed yet (NULL is ignored).
+void ee_sparse_free(EeSparseArray *s);
+
+/// `Size()`.
+///
+/// # Safety
+/// `s` a live set.
+int32_t ee_sparse_size(const EeSparseArray *s);
+
+/// `Clear()`.
+///
+/// # Safety
+/// `s` a live set.
+void ee_sparse_clear(EeSparseArray *s);
+
+/// `Contains(point)`.
+///
+/// # Safety
+/// `s` a live set.
+bool ee_sparse_contains(const EeSparseArray *s, int32_t x, int32_t y);
+
+/// `Insert(point)`.
+///
+/// # Safety
+/// `s` a live set.
+void ee_sparse_insert(EeSparseArray *s, int32_t x, int32_t y);
+
+/// `Insert(list)` (`create` false) or `Create(list)` (`create` true) over `count` points.
+///
+/// # Safety
+/// `s` a live set, `points` valid for `count` (any pointer when `count` is 0).
+void ee_sparse_insert_list(EeSparseArray *s, const EePoint *points, size_t count, bool create);
+
+/// `Remove(point)`.
+///
+/// # Safety
+/// `s` a live set.
+bool ee_sparse_remove(EeSparseArray *s, int32_t x, int32_t y);
+
+/// `BuildPointList(step)` (`extremes` false) or `GetOnlyExtremeEdgePoints` (true): the list in the set's scratch,
+/// its length in `count`.
+///
+/// # Safety
+/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
+const EePoint *ee_sparse_points(EeSparseArray *s,
+                                bool extremes,
+                                int32_t step,
+                                size_t *count);
+
+/// `operator[](index)`.
+///
+/// # Safety
+/// `s` a live set.
+EePoint ee_sparse_get(const EeSparseArray *s, int32_t index);
+
+/// `CountContainerNodes()`.
+///
+/// # Safety
+/// `s` a live set.
+int32_t ee_sparse_run_count(const EeSparseArray *s);
+
+/// `GetClosestPoint(point)`.
+///
+/// # Safety
+/// `s` a live set.
+EePoint ee_sparse_closest_point(const EeSparseArray *s, int32_t x, int32_t y);
+
+/// `GetRandomPoint(random)`: `generate(random)` is the caller's `URandom::Generate()`, called in the C++'s order.
+///
+/// # Safety
+/// `s` a live set; `generate` must not reach `s`.
+EePoint ee_sparse_random_point(const EeSparseArray *s,
+                               float (*generate)(void*),
+                               void *random);
+
+/// `GetTilesNextTo(x, y, id)`: `continent(ctx, x, y)` is the manager's `GetContinentID`, `flags` its adjacency
+/// matrix (`flags_count` cells, NULL for none), `out` room for the 8 ring tiles; their count in `out_count`.
+///
+/// # Safety
+/// `flags` valid for `flags_count` cells (or NULL), `out` for 8 points, `out_count` valid; `continent` must not
+/// call back into `ee_astar`.
+bool ee_astar_tiles_next_to(int32_t x,
+                            int32_t y,
+                            uint16_t id,
+                            uint32_t width,
+                            uint32_t height,
+                            const bool *flags,
+                            size_t flags_count,
+                            int32_t flags_width,
+                            uint16_t (*continent)(void*, int32_t, int32_t),
+                            void *ctx,
+                            EePoint *out,
+                            size_t *out_count);
+
+/// `PruneChokePoints` over the continents' `categories` (`count` of them, -1 for none) and `chokes` choke points.
+///
+/// # Safety
+/// `categories` valid for `count` (any pointer when 0), `cb` valid and its functions callable.
+void ee_astar_prune_choke_points(const int32_t *categories,
+                                 size_t count,
+                                 size_t chokes,
+                                 const EePruneCallbacks *cb);
+
+/// `CreateScenarioAreas`' choice over `count` scenario areas: the areas to create into `out` (room for `count`);
+/// returns their number.
+///
+/// # Safety
+/// `areas` and `out` valid for `count` records (any pointer when 0).
+size_t ee_astar_scenario_area_plan(const EeScenarioArea *areas,
+                                   size_t count,
+                                   EeScenarioAreaPlan *out);
+
+/// `TrimPath`'s cut: the index to erase the path from, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count` points.
+ptrdiff_t ee_path_trim_index(const EePathPoint *path,
+                             size_t count,
+                             size_t waypoints,
+                             float unit_x,
+                             float unit_y);
+
+/// `AppendWaypoints` after no cut: the points to append to the path (`count` of them) from the unit's
+/// `waypoint_count` waypoints, into `out` (room for `waypoint_count`); returns their number.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` and `out` for `waypoint_count` points.
+size_t ee_path_append_waypoints(const EePathPoint *path,
+                                size_t count,
+                                const EePathPoint *waypoints,
+                                size_t waypoint_count,
+                                EePathPoint *out);
+
+/// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
+/// takes the path up to that point and the detour).
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+bool ee_path_join_paths(const EePathPoint *path,
+                        size_t count,
+                        const EePathPoint *detour,
+                        size_t detour_count,
+                        size_t join);
+
+/// `FinishFailedPath`'s detour search: the count from the path's end, -1 for none.
+///
+/// # Safety
+/// `path` valid for `count`, `detour` for `detour_count` points.
+ptrdiff_t ee_path_detour_join_count(const EePathPoint *path,
+                                    size_t count,
+                                    const EePathPoint *detour,
+                                    size_t detour_count);
+
+/// `TryShortPath`'s revolutions.
+int32_t ee_path_short_path_revs(int32_t queued,
+                                int32_t from_x,
+                                int32_t from_y,
+                                int32_t to_x,
+                                int32_t to_y);
+
+/// The bounds `margin` tiles around a tile, clipped to the map.
+EePathBounds ee_path_bounds_around(int32_t x, int32_t y, int32_t margin, int32_t map_size);
+
+/// `SetGraphRevs`' step budget (`repeated`: the path history's same-tile request).
+int32_t ee_path_graph_revs(int32_t distance, bool kind_allowed, bool repeated);
+
+/// `SetPathRevs`' step budget.
+int32_t ee_path_path_revs(int32_t distance, bool amphibious, bool same_continent);
 
 /// `UDataCompression::Compress`.
 ///
