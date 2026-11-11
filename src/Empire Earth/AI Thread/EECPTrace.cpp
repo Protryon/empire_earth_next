@@ -394,7 +394,9 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     if (theID >= kMaxTracedPlayers || inUnit == NULL || inUnit->mUnitClass == NULL || inUnit->mComplexUnit == NULL)
         return;
     long theCategory = inUnit->mUnitClass->mCategory;
-    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
+    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
+        // (the braces were missing: every unit lost counted in the citizens' by-killer and by-distance fields, and
+        // the buildings' and others' counts hung off the town-centre test; AI_RESEARCH §8.40)
         sLost[theID][0]++;
         EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
         sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
@@ -405,7 +407,7 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             long theSquared = theDX * theDX + theDY * theDY;
             sLostNear[theID][theSquared < 225 ? 0 : theSquared < 900 ? 1 : 2]++;
         }
-    else if (EECPIsBuildingCategory(theCategory))
+    } else if (EECPIsBuildingCategory(theCategory))
         sLost[theID][1]++;
     else if (theCategory != kUnitCategoryProjectile)
         sLost[theID][2]++;
