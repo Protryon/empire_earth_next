@@ -738,6 +738,13 @@ void EECPOutOfSynchDump(FILE* inFile)
             // EnableManagers' other inputs
             fprintf(inFile, " combat=%lu damaged=%d/%d attacks=%ld", (unsigned long)theCP->mCombatState,
                     theCP->mBuildingDamaged ? 1 : 0, theCP->mCitizenDamaged ? 1 : 0, (long)theCP->mNumAttacks);
+            {   // the managers' timers (save 0.269)
+                unsigned long theTimers[kEECPManagerTimers];
+                theCP->GetManagerTimers(theTimers);
+                fprintf(inFile, " timers=");
+                for (long t = 0; t < kEECPManagerTimers; t++)
+                    fprintf(inFile, "%s%lu", t ? "," : "", theTimers[t]);
+            }
         }
         fprintf(inFile, "\n");
         // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request

@@ -876,8 +876,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 266 the order of the units their unit managers track (EESaveHasUnitManagerOrder)
 // 267 their repair and site timers (EESaveHasCivilizationTimers)
 // 268 the towns' areas (EESaveHasTownAreas)
+// 269 the computer players' manager timers (EESaveHasManagerTimers)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 268;
+const unsigned long kSaveGameMinorVersion = 269;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

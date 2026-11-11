@@ -56,6 +56,7 @@
 #include "ee/EECPPersonnel.h"
 #include "ee/EECPDefenseCommander.h"
 #include "ee/EECPBuildManager.h"
+#include "ee/EECPAttackCommander.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EECalamityManager.h"
@@ -5062,7 +5063,55 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             });
         }
     }
+    // port (0.269): the managers' timers the original never saved (game ms), put back at the first tick. A loaded
+    // player started them at 0: it explored and dropped its spent attack groups at its first update and on a new
+    // schedule from there (seed 2's 2100 s save requested an explorer 6 s late, seed 4's dropped a group 45 s after
+    // the load that the continued game kept), and its personnel, builder and raid checks ran at once
+    if (theResult == kErrorOK && EESaveHasManagerTimers(inMajorVersion, inMinorVersion)) {
+        unsigned long theTimers[kEECPManagerTimers] = {};
+        for (long i = 0; i < kEECPManagerTimers && theResult == kErrorOK; i++)
+            theResult = inFile.Read(theTimers[i]);
+        if (theResult == kErrorOK) {
+            EEComputerPlayer* theSelf = this;
+            unsigned long thePlayerID = this->mPlayerID;
+            std::vector<unsigned long> theValues(theTimers, theTimers + kEECPManagerTimers);
+            EEAfterLoad([theSelf, thePlayerID, theValues]() {
+                if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                    || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
+                    return;   // not the world's computer player of that id any more
+                theSelf->SetManagerTimers(theValues.data());
+            });
+        }
+    }
     return theResult;
+}
+
+// port (0.269, Load/Save): the managers' timers the original kept out of the save, in the save's order
+void EEComputerPlayer::GetManagerTimers(unsigned long* outTimers) const
+{
+    EECPCombatManager* theCombat = this->mCombatManager;
+    EECPCivilizationManager* theCiv = this->mCivilizationManager;
+    outTimers[0] = theCombat != NULL && theCombat->mAttackCommander != NULL ? (unsigned long)theCombat->mAttackCommander->mNextDropTime : 0;
+    outTimers[1] = this->mExplorationManager != NULL ? this->mExplorationManager->mNextTime : 0;
+    outTimers[2] = theCombat != NULL && theCombat->mPersonnel != NULL ? theCombat->mPersonnel->mNextUpdateTime : 0;
+    outTimers[3] = theCiv != NULL && theCiv->mBuildManager != NULL ? theCiv->mBuildManager->mNextBuilderCheckTime : 0;
+    outTimers[4] = theCombat != NULL && theCombat->mDefenseCommander != NULL ? theCombat->mDefenseCommander->mNextRaidCheckTime : 0;
+}
+
+void EEComputerPlayer::SetManagerTimers(const unsigned long* inTimers)
+{
+    EECPCombatManager* theCombat = this->mCombatManager;
+    EECPCivilizationManager* theCiv = this->mCivilizationManager;
+    if (theCombat != NULL && theCombat->mAttackCommander != NULL)
+        theCombat->mAttackCommander->mNextDropTime = (long)inTimers[0];
+    if (this->mExplorationManager != NULL)
+        this->mExplorationManager->mNextTime = inTimers[1];
+    if (theCombat != NULL && theCombat->mPersonnel != NULL)
+        theCombat->mPersonnel->mNextUpdateTime = inTimers[2];
+    if (theCiv != NULL && theCiv->mBuildManager != NULL)
+        theCiv->mBuildManager->mNextBuilderCheckTime = inTimers[3];
+    if (theCombat != NULL && theCombat->mDefenseCommander != NULL)
+        theCombat->mDefenseCommander->mNextRaidCheckTime = inTimers[4];
 }
 #pragma optimize("g", on)
 
@@ -5889,6 +5938,12 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         if ((theResult = outFile.Write(this->mPopulationCap)) == kErrorOK && (theResult = outFile.Write(this->mIsEnableTimeSet)) == kErrorOK
             && (theResult = outFile.Write(this->mRegroupPending)) == kErrorOK && (theResult = outFile.Write(this->mNextPopulationTime)) == kErrorOK)
             theResult = outFile.Write(this->mLastDamagedTime);
+    }
+    if (theResult == kErrorOK && EESaveHasManagerTimers(inMajorVersion, inMinorVersion)) {   // port (0.269, Load)
+        unsigned long theTimers[kEECPManagerTimers];
+        this->GetManagerTimers(theTimers);
+        for (long i = 0; i < kEECPManagerTimers && theResult == kErrorOK; i++)
+            theResult = outFile.Write(theTimers[i]);
     }
     return theResult;
 }
