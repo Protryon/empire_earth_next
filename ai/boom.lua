@@ -25,6 +25,7 @@ local ECON = {
     ratchet = true,         -- the epoch reserve never shrinks while kept (the army's margin cannot eat it)
     parallel = false,       -- the Stone Age's citizens and soldiers in parallel (the owner: no citizen stop for the army)
     full_target = true,     -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
+    food_dry = true,        -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
 }
 
 local PLAN = {
@@ -56,6 +57,7 @@ local PLAN = {
         tc_at = 0,              -- ... from this many citizens
         boats = 0, docks = 0,
         claim_max = 30,
+        claim_dry = 42,         -- (ECON.food_dry) the claim's reach while the food places are under half the food wanted
     },
     {   -- Stone
         -- first 20 soldiers (spearmen from two barracks, one defend group at home), then the citizens (18 food, 12
@@ -766,8 +768,15 @@ function M.step(view, memory)
             hunt_cap = math.max(hunt_cap, plan.food - patch_places)
             hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         end
+        -- (§8.42, the defence agent's seed 7: the forage ran out before the Stone Age, 24-29 citizens on 5-55 food a
+        -- minute for 25 minutes) with fewer food places than half the plan's food the claim, and with it the hunting
+        -- and the patches, may grow to claim_dry
+        local claim_max = plan.claim_max
+        if ECON.food_dry and plan.claim_dry ~= nil and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
+            claim_max = math.max(claim_max, plan.claim_dry)
+        end
         if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
-                and range < math.min(plan.claim_max, view.claim_range_max) then
+                and range < math.min(claim_max, view.claim_range_max) then
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
