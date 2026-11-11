@@ -5627,6 +5627,7 @@ edge and wrapping ints).
   the popups and modality), TextArea and its segments (the chat's rich text wrap), ComboBox, TabCtrl, Splitter,
   MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
   value readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the platform backend).
+
 ## R5a.2, fifth round: claim ranges, behaviours, unit order, attack counts, repair timers, towns (save 0.265-0.268, branch rust-r5a-aisave4, 2026-11-11)
 
 Continues "R5a.2, fourth round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
