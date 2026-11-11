@@ -671,6 +671,29 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
+/// `new EEUGExplore(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
+
+/// `new EEUGAttackGround(point, flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_GROUND = 2;
+
+/// `new EEUGAttackUnit(unit_a, unit_b, flag_a, flag_b)` (the attacker's complex unit, the target, the third
+/// argument, convert)
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_UNIT = 3;
+
+/// `new EEUGGather(unit_a, unit_b, flag_a)` (the resource, the drop-off; either may be none)
+constexpr static const uint32_t EE_GOAL_CTOR_GATHER = 4;
+
+/// `new EEUGHealUnit(unit_a, flag_a)` (the healed complex unit)
+constexpr static const uint32_t EE_GOAL_CTOR_HEAL_UNIT = 5;
+
+/// `new EEUGPatrol(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
+
+/// "no unit" in a spec (`EEUnitHandle::kNone`)
+constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
+
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
 
@@ -783,6 +806,39 @@ constexpr static const uint8_t EE_OBJECT_RTS_UNIT = 0;
 constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
+
+/// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
+constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
+
+/// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
+constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
+
+constexpr static const uint32_t EE_UNIT_FIELD_TILE_Y = 2;
+
+constexpr static const uint32_t EE_UNIT_FIELD_VALID = 3;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HIT_POINTS = 4;
+
+/// `EEUnit::mUnitClass`: the value is the class's category, `EE_UNIT_FIELD_UNIT_TYPE` its type (both -1: none)
+constexpr static const uint32_t EE_UNIT_FIELD_CATEGORY = 5;
+
+constexpr static const uint32_t EE_UNIT_FIELD_UNIT_TYPE = 6;
+
+/// `EEUnit::mComplexUnit`: `EE_UNIT_COMPLEX_*`
+constexpr static const uint32_t EE_UNIT_FIELD_COMPLEX = 7;
+
+constexpr static const uint32_t EE_UNIT_FIELD_BUILT = 8;
+
+/// `EEComplexUnit::mGoalState`: the goal's `mKind`, -1 for none
+constexpr static const uint32_t EE_UNIT_FIELD_GOAL_KIND = 9;
+
+/// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
+/// `ResetEEUnit` clears it)
+constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
+
+constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
+
+constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
@@ -3749,6 +3805,63 @@ struct EeUiSliderFields {
   long max_thumb_pixel;
   long drag_offset;
   bool is_dragging;
+};
+
+/// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
+/// built flag and goal) are 0 / -1.
+struct EeUnitRecord {
+  /// `RTSUnit::mUnitID`, the key
+  uint32_t id;
+  /// the player id of the list the unit is in (`RTSPlayer::mPlayerID` at the insert)
+  uint32_t owner;
+  /// the object's address: a write from an object that is not the one inserted under its id is ignored
+  uint64_t object;
+  /// the player object whose list holds it (`~RTSPlayer` drops its records by the object: temporary players of
+  /// the editor's forms may share an id)
+  uint64_t player;
+  /// `RTSUnit::mObjectKind` (ee_units' `EE_OBJECT_*`)
+  uint8_t object_kind;
+  /// `EE_UNIT_COMPLEX_*`
+  uint8_t complex;
+  /// `RTSUnit::mIsValid`
+  uint8_t valid;
+  /// `EEComplexUnit::mIsBuilt`
+  uint8_t built;
+  /// `EEComplexUnit::mGoalState->mKind`, -1 for none
+  int32_t goal_kind;
+  /// `EEUnit::mHitPoints`
+  int64_t hit_points;
+  /// `RTSUnit::mTileX`, `mTileY`
+  int64_t tile_x;
+  int64_t tile_y;
+  /// `EEUnit::mUnitClass->mCategory`, `->mUnitType` (-1: no class)
+  int64_t category;
+  int64_t unit_type;
+};
+
+/// The result of a consistency check (`Store::check`).
+struct EeUnitStoreCheck {
+  /// the objects compared
+  uint32_t compared;
+  /// the objects whose record is missing or differs, plus the records no object named
+  uint32_t mismatches;
+  /// the records in the store
+  uint32_t records;
+  /// the first mismatch: its id (0xffffffff: none, or a record no object named) and field (`first_difference`;
+  /// 0xff: no record)
+  uint32_t first_id;
+  uint32_t first_field;
+};
+
+/// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
+struct EeGoalSpec {
+  uint32_t ctor;
+  uint32_t unit_a;
+  uint32_t unit_b;
+  /// a location (`GE3DPoint`)
+  float point[3];
+  uint8_t flag_a;
+  uint8_t flag_b;
 };
 
 /// Receives bytes; valid only during the call.
@@ -8770,6 +8883,57 @@ bool ee_units_unregister(uint32_t id, void *unit);
 
 /// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
 void *ee_units_resolve(uint32_t id);
+
+/// A unit enters a player's list: its record (replacing any under its id).
+///
+/// # Safety
+/// `record` points to a valid record.
+void ee_units_store_insert(const EeUnitRecord *record);
+
+/// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
+bool ee_units_store_remove(uint32_t id,
+                           uint64_t object);
+
+/// A player object goes: the records of its list. The count removed.
+uint32_t ee_units_store_clear_player(uint64_t player);
+
+/// A holder's write (`EE_UNIT_FIELD_*`); ignored unless the record under `id` is `object`'s.
+bool ee_units_store_set(uint32_t id, uint64_t object, uint32_t field, int64_t value);
+
+/// The record under `id` into `out`; false (and `out` untouched) when there is none.
+///
+/// # Safety
+/// `out` points to writable memory for one record.
+bool ee_units_store_get(uint32_t id, EeUnitRecord *out);
+
+/// The number of records.
+uint32_t ee_units_store_count();
+
+/// TEST ONLY: the objects' fields (every unit of every player's list) against the records.
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0); `out` to writable memory for the result.
+void ee_units_store_check(const EeUnitRecord *objects,
+                          size_t count,
+                          EeUnitStoreCheck *out);
+
+/// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
+/// `ids` into `out` (room for `count`: a pick never has more), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+size_t ee_units_select_pick(uint64_t player,
+                            const uint32_t *ids,
+                            size_t count,
+                            uint32_t *out);
+
+extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
+
+extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
+
+extern uint8_t ee_units_host_goal_kind(void *goal);
+
+extern void ee_units_host_goal_release(void *goal);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

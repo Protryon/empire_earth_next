@@ -45,7 +45,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
 | **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Then (branch `rust-r5a-handles2`): the registry is Rust (`ee_units`, a lock-free radix tree of atomic pointers, 9 tests), so any thread resolves handles; the UI portrait, the editor's undo records and selection, the camera's followed units, the improvement action, EEWorld's five containers (the stepped units, the queues, the active map, the resource users) and 12 of the AI's containers (vectors, deques and a type-keyed multimap of referenced units: their order is the elements' order) are handles; the prophet analyzers' members too (PORT_LEARNINGS "R5a.4, finished"). Open: `EECPUnitManager`'s class-keyed deques (the type reaches ~20 units through `GetUnits`/`CountUnits`), the function objects' containers (one call's life: left as pointers), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
 | D6 game text is UTF-8 | Done (branch `rust-d6-utf8`, a declared rebaseline; PORT_LEARNINGS "D6: game text is UTF-8"): `ee_plat_core::utf8` is the one text implementation (`PlatStrICmp`, the `PlatMbs*` family, the case folding, the wide conversions) on every system, the CRT and the POSIX single-byte port gone; `PlatFont` renders by code point (U+0020..U+00FF at creation, the rest on first use), `GEFontBitmap` keeps its Windows-1252 cells; `ee_ui`'s `text.rs`, SDL text input, the clipboard, WON's `StringUtil` (through `ee_won`'s `text.rs`), `PlatGUIFont`, `PlatClipboard` and the lobby's pages are UTF-8; the text compiler keeps UTF-8 in the records (the Python importer the same, retail transcoded once at load), the Language strings are UTF-8; saves are version 0.255, older saves and files without a version convert their strings from Windows-1252 on load. Sim oracle identical, the Rust gate, eedata check/cppgate, plat_test, font_test and the WON tests pass; the menus' pixels are for the lead's tours. Left: the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK), `GEFontBitmap` draws only what Windows-1252 has, `_mbs*` stubs in tools/rmap_gate, campaign archive tags are not converted |
-| **R5b.4 world and units** | **Started** (branch `rust-r5b4-core`): the map (section 5, R5b item 4: 657 `dynamic_cast` sites, 337 of them unit goal, object and class tests; 133 message codecs). The game messages' codec is Rust (`ee_netmsg`: the wire layout of the 104 game message classes, the box selection's packing; the C++ classes hand their members as slots), gated by an NM** capture (every executed message, a sweep of every type over edge payloads, the packings) equal to the C++ goldens in the four profiles. Unit kinds are Rust tables (`ee_units` kinds.rs: the goal classes per `mKind`, the unit classes per category; `ee/EEUnitKind.h`); 118 goal casts and 34 unit class casts of the simulation (Units, Physics Thread, Communications, Player) are kind reads. Second round: the 28 engine messages (`NEMessage.cpp`) and the players' inputs nested in the ticks are in the codec too (`ee_netmsg` engine.rs; gate NMNE, 549 engine messages per game, equal to the C++ goldens in the four profiles); the message kind by type (`ee_netmsg_message_kind`) replaces the four `dynamic_cast<EEMessage*>`; the object kind (`RTSUnit::mObjectKind`, `EE_UNIT_OBJECT_KINDS`) replaces 28 `dynamic_cast<EEComplexUnit*>` of the simulation; leaf 4 (the `Execute` bodies) mapped. Third round: leaf 4 (a) and (b) in Rust (`ee_netmsg` execute.rs, ee/EEMessageExecute.h): the selection id check of the two entry points and the toggles' passes; the take test, the market price (`EEGetTradePrice`'s curve), the exchange step, the tribute's orders and viewer, the disband refund; gate NMDC (every call, the decisions' tables, the real players' prices and units every five game minutes) equal to the C++ goldens in the four profiles; (c) mapped: it needs the unit store. Open: the 54 other `EEComplexUnit` casts (17 on the load path, 31 AI), the AI's, UI's and editor's casts, the goal-giving `Execute` bodies (leaf 4 c, after the store), the unit store, the tick, the save codec (PORT_LEARNINGS "R5b.4", "R5b.4, second round", "R5b.4, third round") |
+| **R5b.4 world and units** | **Started** (branch `rust-r5b4-core`): the map (section 5, R5b item 4: 657 `dynamic_cast` sites, 337 of them unit goal, object and class tests; 133 message codecs). The game messages' codec is Rust (`ee_netmsg`: the wire layout of the 104 game message classes, the box selection's packing; the C++ classes hand their members as slots), gated by an NM** capture (every executed message, a sweep of every type over edge payloads, the packings) equal to the C++ goldens in the four profiles. Unit kinds are Rust tables (`ee_units` kinds.rs: the goal classes per `mKind`, the unit classes per category; `ee/EEUnitKind.h`); 118 goal casts and 34 unit class casts of the simulation (Units, Physics Thread, Communications, Player) are kind reads. Second round: the 28 engine messages (`NEMessage.cpp`) and the players' inputs nested in the ticks are in the codec too (`ee_netmsg` engine.rs; gate NMNE, 549 engine messages per game, equal to the C++ goldens in the four profiles); the message kind by type (`ee_netmsg_message_kind`) replaces the four `dynamic_cast<EEMessage*>`; the object kind (`RTSUnit::mObjectKind`, `EE_UNIT_OBJECT_KINDS`) replaces 28 `dynamic_cast<EEComplexUnit*>` of the simulation; leaf 4 (the `Execute` bodies) mapped. Third round: leaf 4 (a) and (b) in Rust (`ee_netmsg` execute.rs, ee/EEMessageExecute.h): the selection id check of the two entry points and the toggles' passes; the take test, the market price (`EEGetTradePrice`'s curve), the exchange step, the tribute's orders and viewer, the disband refund; gate NMDC (every call, the decisions' tables, the real players' prices and units every five game minutes) equal to the C++ goldens in the four profiles; (c) mapped: it needs the unit store. Fourth round: the unit store's first stage (`ee_units` store.rs: each unit's plain state as a Rust record by id, kept current by write-through holders on eight C++ members, ee/EEUnitStore.h; gate USCK: the store equals every unit at every tick and before every executed message in the four profiles), the world calls of Rust decisions (host.rs: a group's units as ids, goal creation returning a handle), the box selection's pick in Rust over the store (select.rs; gate USPK, equal to the C++ pick's goldens). Open: the 54 other `EEComplexUnit` casts (17 on the load path, 31 AI), the AI's, UI's and editor's casts, the goal-giving `Execute` bodies (leaf 4 c, on the store now), the store's next fields and positions, the tick, the save codec (PORT_LEARNINGS "R5b.4", "R5b.4, second round", "R5b.4, third round", "R5b.4, fourth round") |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera** (branch `rust-r5a-snap`; PORT_LEARNINGS "R5a.3", with the measured read table): FrameStarting under the existing read lock is the capture (`ee/EERenderSnapshot.h`, the render lists, the effects' `Queue`); after it the render phase reads no unit, player or physics state, and the unit picker holds ids, so the graphics thread takes no unit references. Left: the effects' own state (stepped by the tick while drawn), the terrain mesh's heights, the see-through flags written in the capture, the UI's CopyData. Sim oracle identical; no tour run |
 
 
@@ -555,6 +555,72 @@ decisions read units' plain state between world calls that change it, so they ne
 from Rust without a call into C++ (category, hit points, built, type, tile, goal kind), the active group as an id
 list, goal creation as a host call returning a handle. The box selection's pick (`EEPlayer::SelectUnits`) is the
 first once the store exists.
+
+**Leaf 5, the unit store, stage one: the design (2026-11-10, fourth round).** What the store is for first: the
+decisions of the selection pick and the 15 goal-giving bodies read units' plain state by id between world calls that
+change it, so the state must be current at every point of the tick, not only between ticks.
+
+- **Where the plain state lives.** A Rust-owned record per unit (`ee_units` store.rs, `UnitRecord`: the owner's
+  player id, the object kind, whether the unit is its own complex unit, valid, hit points, the tile, the class's
+  category and unit type, for a complex unit built and the current goal's kind), keyed by the unit id. Its lifetime
+  is the player list's: inserted by `RTSPlayer::InsertUnit` (seeded whole from the object: a new unit, a loaded one,
+  a kept id), removed by `RTSPlayer::RemoveKilledUnits` when the unit leaves the list (and by `RTSUnit::FreeNode`
+  after a teardown), and a player's records dropped by `~RTSPlayer`, by the player object. That is exactly the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit` (the ids the bodies
+  look up); the registry behind `EEUnitHandle<T>` keeps its own, longer lifetime (to `FreeNode`, where the UI
+  thread's last `Dereference` may run) and stays the way to the object. Every store write happens where the C++
+  member is written, under the world's write lock (the physics tick, the loads, the editor); the store has its own
+  mutex as well, so a read from another thread is never torn.
+- **How it stays current: the members become write-through holders.** Each mirrored C++ member becomes an
+  `EEUnitStoreField<T, F>` (ee/EEUnitStore.h): the same size and layout as `T` (offsets, `memcpy`, the save code's
+  bytes unchanged), read implicitly as `T`, and every assignment form (`=`, `+=`, `-=`, `++`, `--`, holder to
+  holder) stores the value and reports it to the store when the unit is in it (`RTSUnit::mInUnitStore`, set by the
+  insert, cleared by the removal). The compiler finds every writer (no reference or pointer to a holder converts to
+  `T&`/`T*`; a load reads through `EEUnitStoreRead`; a holder is not copyable), so no write but a `memcpy` can bypass
+  the store (the hit points' load, before the insert). Derived fields
+  are reported at the write that changes them: the class's category and type at `mUnitClass` (a class's own
+  category and type are written only by its constructor), the goal's kind at `mGoalState` (fixed by the goal's
+  constructor), the complex flag at `mComplexUnit`.
+- **The alternative, a per-call view** (C++ fills plain records of the units a decision reads, before each call):
+  nothing at the writes, but every decision needs its own filling code, a view goes stale at the first world call
+  that changes a unit (`Fill`, `ClearGoal`, `SetGoal`) so an interleaved body must refill, and the C++ members stay
+  the truth forever. The holders cost one store call per write and a second copy of each value until the members go;
+  they buy a store that is current everywhere and a path to deleting the members: once every reader of a field
+  reads the store (Rust, or C++ through `EEUnitStore` accessors), the holder drops its inline value and becomes an
+  accessor over the store, and the member goes when the save codec writes from the store (leaf 7).
+- **Determinism.** The game only looks records up by id (a `BTreeMap`: no hash order anywhere, and the only walk,
+  the check's and a player's reset, is in id order and observes nothing the game reads). The game's own orders (a
+  player's list, a group's vector) stay the C++ containers' until the tick moves; then the store gains the per-player
+  order as an id list kept at the list's insert and unlink, never the map's order. A write is a plain store: no
+  random draw, no float operation (the values are copied as they are, hit points and tiles as the C++ `long`).
+- **Saves.** The store is not saved: the format is the save work's (0.262) and does not change. A load rebuilds it,
+  since every loaded unit passes `InsertUnit` (seeded from the object as loaded) and the Restore pass writes the
+  pointers (`mGoalState`, ...) through the holders.
+- **Handles and the store.** A unit handle stays the id; the store is the second thing an id resolves to (the plain
+  state, for decisions), the registry the first (the object, for world calls). Rust decisions read the store and
+  hand ids back; C++ resolves them for the world calls. Goals have no ids: a Rust decision gets a goal as an opaque
+  handle from a host call (`new EEUG*` behind it, one reference owned by the handle), hands it to the host's group
+  calls and never dereferences it.
+- **The gate.** TEST ONLY, with the simulation capture on: after every physics tick and before every game message
+  the physics executes, C++ walks every player's list and hands every unit's fields to the store, which compares them
+  with its records and counts the records (a USCK record per check: the units compared, the mismatches; a mismatch
+  prints the unit and field and stops EE-SIM with exit code 3). So the store equals the objects on every unit at every
+  point where a decision reads it, over the oracle games and the four capture profiles.
+- **The path to the tick.** Stage one: the fields above, the active group as ids, goal creation as a host call, the
+  pick. Then the fields the bodies' helpers read (the formation slot, mobility, the resource amount), the 15 bodies;
+  then positions and the out-of-sync checksum over the store (leaf 5's end); then each unit step moves with the
+  fields it writes, the holders turning into accessors as their last C++ readers go, and the physics tick (leaf 6)
+  iterates the store's per-player orders.
+
+**Leaf 5, stage one, done (2026-11-10, fourth round).** The store is `ee_units` store.rs (records by id: owner and
+player object, object kind, complex flag, valid, hit points, tile, category, unit type, built, goal kind), kept by
+eight holders (`RTSUnit::mTileX`, `mTileY`, `mIsValid`, `EEUnit::mUnitClass`, `mComplexUnit`, `mHitPoints`,
+`EEComplexUnit::mIsBuilt`, `mGoalState`; ee/EEUnitStore.h); the USCK check found no difference over the 24 capture
+games (every tick, every executed message). The world calls are `ee_units` host.rs (a group's units as ids, goals
+from an `EeGoalSpec` as owning handles; six constructors), not called in game yet. The box selection's pick is Rust
+(`ee_units` select.rs over the store; USPK equal to the C++ pick's goldens in the four profiles); only a played game
+reaches its game call. Next: the first of the 15 bodies (Explore is the smallest: the host calls of `EEActiveGroup`'s
+`Fill`, `KeepMobileUnits`, `ClearGoal`, `SetGoal`, `Plan`, the pending list, one `GetRandom` draw and the
+acknowledgement), then the fields their helpers read (PORT_LEARNINGS "R5b.4, fourth round").
 
 ### R6: UI, events, editor
 

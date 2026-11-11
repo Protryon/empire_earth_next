@@ -219,7 +219,7 @@ void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce
                 this->mBounds.Extend(theTile);
                 if (theUnit->GetUnitClass()->mCategory == kUnitCategoryLandCitizen && theComplex->mGoalState != NULL
                     && theComplex->mGoalState->mKind == kGoalGather) {
-                    theResource = dynamic_cast<EEUGGather*>(theComplex->mGoalState)->mResource;
+                    theResource = dynamic_cast<EEUGGather*>(theComplex->mGoalState.Get())->mResource;
                     if (theResource != NULL)
                         theResources.push_back(theResource);
                 }

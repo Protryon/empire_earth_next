@@ -293,13 +293,13 @@ public:
     // (provisional name)
     static bool IsCarbonRock(unsigned long inUnitType);
 
-    EEUnitClass* mUnitClass;                // +0x2c
+    EEUnitStoreField<EEUnitClass*, kUnitFieldUnitClass> mUnitClass;   // +0x2c (the unit store's)
     // +0x30: the complex unit this unit belongs to (the calamities read its hit points, transformation +0x130 and
     // goals through it: 0xafe2c, 0xb1a5d) (provisional name)
-    EEComplexUnit* mComplexUnit;
+    EEUnitStoreField<EEComplexUnit*, kUnitFieldComplex> mComplexUnit;   // (the unit store's)
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
     unsigned long mResourceType;            // +0x38 (saved)
-    long mHitPoints;                        // +0x3c (> 0: alive) (provisional name)
+    EEUnitStoreField<long, kUnitFieldHitPoints> mHitPoints;   // +0x3c (the unit store's) (> 0: alive) (provisional name)
     long mResourceAmount;                   // +0x40 (saved)
     unsigned char mHiddenFlags;             // +0x44 flags (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90)
 };
@@ -816,7 +816,7 @@ public:
     // +0x1f0 the unit's goal (EEMAddPatrolPoint dynamic_casts it to EEUGPatrol, src TD EEUnitGoal). Its
     // mKind 0xb = not to be cloaked (EECCCloaking). Name is provisional
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
-    EEUnitGoal* mGoalState;
+    EEUnitStoreField<EEUnitGoal*, kUnitFieldGoal> mGoalState;   // (the unit store's)
     RTSUnit* mLastResource;                 // +0x1f4
     EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
     EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
@@ -928,7 +928,7 @@ public:
     bool mIsTinted;                         // +0x349
     bool mIsPathDone;                       // +0x34a
     bool mHasArrived;                       // +0x34b
-    bool mIsBuilt;                          // +0x34c (drop object: a valid target)
+    EEUnitStoreField<bool, kUnitFieldBuilt> mIsBuilt;   // +0x34c (the unit store's) (drop object: a valid target)
     bool GetIsDetachedFromAI() const { return this->mIsDetachedFromAI; }
     bool mIsDetachedFromAI;                 // +0x34d
     bool mIsFiringHigh;                     // +0x34e

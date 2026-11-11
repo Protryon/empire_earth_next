@@ -51,6 +51,7 @@ RTSPlayer::RTSPlayer(const UWideString& inName, unsigned long inPlayerID)
 // Destroys the player
 RTSPlayer::~RTSPlayer()
 {
+    EEUnitStoreClearPlayer(this);   // New (R5b.4): its list's records leave the unit store (ee/EEUnitStore.h)
 }
 
 // FUNCTION: EXE 0x56f1f3
@@ -98,6 +99,7 @@ void RTSPlayer::RemoveKilledUnits()
         else if (this->mUnitBuckets[theBucket].mCount == 0)
             this->mUnitBuckets[theBucket].mFirst = NULL;
         theUnit->RemoveFromList();
+        EEUnitStoreRemove(theUnit);   // New (R5b.4): out of the list, out of the unit store (ee/EEUnitStore.h)
         this->UnitRemoved(theUnit);
         this->mUnitCount--;
         theUnit->Invalidate();
@@ -177,6 +179,7 @@ void RTSPlayer::InsertUnit(RTSUnit* inUnit)
     inUnit->Reference();
     RTSRegisterUnit(inUnit);   // New (R5a.4): its id resolves to it from here (ee/EEUnitHandle.h)
     inUnit->mPlayer = static_cast<EEPlayer*>(this);
+    EEUnitStoreInsert(inUnit, this->mPlayerID, this);   // New (R5b.4): its record, seeded from the object (ee/EEUnitStore.h)
     this->mUnitCount++;
     theBucket &= 0x7f;
     if (this->mFirstUnit == NULL) {
