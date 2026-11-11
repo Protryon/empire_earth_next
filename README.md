@@ -160,7 +160,14 @@ python -I tools/sim_bench.py --name base --seeds 2-7 --repeat 2 --jobs 2      # 
 python -I tools/sim_bench.py --name floor --seeds 2-7 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
 python -I tools/sim.py -- --seed 3 --engine next,classic --report r.json     # p2 the next engine, p3 classic
 python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;next,classic"   # ';' between variants
+python -I tools/sim_bench.py --name base --seeds 2-33 --engine boom,classic --cache    # a rerun reuses the games
 ```
+
+`--cache` keeps every finished game (report, gzipped trace, progress) in the main checkout's `build/sim/cache`, keyed
+by everything the game depends on: the EE-SIM exe's bytes, the data tree, the rules documents, the AI scripts'
+contents (`--ai-scripts` by content, not by path), every option and `EE_*` variable, the seed. A bench whose runs
+have all been played before (e.g. the baseline of each round) takes seconds; any change to the exe or the scripts
+misses.
 
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
 EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic, next, random;
