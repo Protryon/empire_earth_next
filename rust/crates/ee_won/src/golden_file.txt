@@ -1,0 +1,252 @@
+r.isopen -> false
+r.pos -> 0
+r.length -> 0
+r.eof -> true
+r.tryb -> -1
+r.byte -> throw NULL File.
+r.skip 1 -> throw NULL File.
+r.maxbytes 4 -> throw NULL File.
+r.setpos 3 -> ok
+r.rewind -> ok
+w.pos -> 0
+w.byte 1 -> throw NULL File.
+w.setpos 5 -> ok
+w.open - -> false
+w.open N/x.bin 0 -> false
+w.open A 0 -> true
+w.pos -> 0
+w.byte 0x41 -> ok
+w.short 0x4243 -> ok
+w.long -2 -> ok
+w.length 7 1 -> ok
+w.length 0x1234 2 -> ok
+w.length 0x89abcdef 4 -> ok
+w.length 9 3 -> ok
+w.string hello 1 -> ok
+w.string ab 2 -> ok
+w.string c 4 -> ok
+w.string - 1 -> ok
+w.rawstring xyz -> ok
+w.wstring 263a.41.e9 2 -> ok
+w.wstring 7a 1 -> ok
+w.rawwstring 31.32 -> ok
+w.pos -> 48
+w.setpos 1 -> ok
+w.byte 0x5a -> ok
+w.setpos 0x7fffffff -> ok
+w.pos -> 2147483647
+w.setpos 2 -> ok
+w.close -> ok
+w.pos -> 0
+w.close -> ok
+dump A -> 415a42feffffff073412efcdab890568656c6c6f0200616201000000630078797a03003a264100e900017a0031003200
+r.open - -> false
+r.open N -> false
+r.isopen -> false
+r.open A -> true
+r.isopen -> true
+r.pos -> 0
+r.eof -> false
+r.byte -> 65
+r.byte -> 90
+r.short -> 65090
+r.pos -> 4
+r.long -> 134217727
+r.rlen 1 -> 52
+r.rlen 2 -> 61202
+r.rlen 4 -> 92908493
+r.rlen 3 -> 0
+r.pos -> 15
+r.setpos 14 -> ok
+r.string 1 -> 68656c6c6f
+r.string 2 -> 6162
+r.string 4 -> 63
+r.string 1 -> -
+r.rawstring 3 -> 78797a
+r.wstring 2 -> 263a.0041.00e9
+r.wstring 1 -> 007a
+r.rawwstring 2 -> 0031.0032
+r.pos -> 48
+r.setpos 15 -> ok
+r.string 1 -> throw Attempt to read past end of file. / 656c6c6f0200616201000000630078797a03003a264100e900017a0031003200 / 0075.006e.0073.0065.0074
+r.string 2 -> throw Attempt to read past end of file. / 756e736574 / 0075.006e.0073.0065.0074
+r.string 4 -> throw Attempt to read past end of file. / 756e736574 / 0075.006e.0073.0065.0074
+r.string 1 -> throw Attempt to read past end of file. / 756e736574 / 0075.006e.0073.0065.0074
+r.rawstring 3 -> throw Attempt to read past end of file. / - / 0075.006e.0073.0065.0074
+r.wstring 2 -> throw Attempt to read past end of file. / 756e736574 / 0075.006e.0073.0065.0074
+r.wstring 1 -> throw Attempt to read past end of file. / 756e736574 / 0075.006e.0073.0065.0074
+r.rawwstring 2 -> throw Attempt to read past end of file. / 756e736574 / -
+r.pos -> 48
+r.length -> 48
+r.avail -> 0
+r.eof -> false
+r.tryb -> -1
+r.eof -> true
+r.byte -> throw Attempt to read past end of file.
+r.setpos 1000 -> ok
+r.pos -> 1000
+r.eof -> false
+r.tryb -> -1
+r.skip 5 -> ok
+r.pos -> 1005
+r.setpos 2 -> ok
+r.maxbytes 3 -> 3 42feff
+r.maxbytes 0 -> 0 -
+r.pos -> 5
+r.rewind -> ok
+r.pos -> 0
+r.maxbytes 100 -> 48 415a42feffffff073412efcdab890568656c6c6f0200616201000000630078797a03003a264100e900017a0031003200
+r.pos -> 48
+r.eof -> true
+r.rewind -> ok
+r.skip 4 -> ok
+r.intomem -> ok
+r.pos -> 4
+r.length -> 48
+r.short -> 65535
+r.long -> 305399807
+r.eof -> false
+r.setpos 0 -> ok
+r.byte -> 65
+r.setpos 48 -> throw Attempt to setpos past end of mem buffer.
+r.setpos 47 -> ok
+r.byte -> 0
+r.eof -> true
+r.tryb -> -1
+r.byte -> throw Attempt to read past end of mem buffer.
+r.skip 1 -> throw Attempt to read past end of mem buffer.
+r.rewind -> ok
+r.skip 46 -> ok
+r.skip 2 -> ok
+r.pos -> 48
+r.skip 1 -> throw Attempt to read past end of mem buffer.
+r.eof -> true
+r.maxbytes 9 -> 0 -
+r.rewind -> ok
+r.maxbytes 2 -> 2 415a
+r.pos -> 2
+r.intomem -> ok
+r.pos -> 2
+r.close -> ok
+r.isopen -> false
+r.pos -> 0
+r.length -> 0
+r.eof -> true
+r.tryb -> -1
+r.open A -> true
+r.length -> 48
+r.pos -> 0
+r.byte -> 65
+r.length -> 48
+r.pos -> 1
+r.setpos 45 -> ok
+r.intomem -> ok
+r.pos -> 45
+r.maxbytes 8 -> 3 003200
+r.pos -> 48
+r.intomem -> ok
+r.close -> ok
+r.open A -> true
+r.setpos 48 -> ok
+r.intomem -> throw Attempt to setpos past end of mem buffer.
+r.isopen -> true
+r.pos -> 0
+r.length -> 48
+r.eof -> false
+r.close -> ok
+r.open A -> true
+r.setpos 49 -> ok
+r.intomem -> throw Attempt to setpos past end of mem buffer.
+r.isopen -> true
+r.pos -> 0
+r.length -> 48
+r.close -> ok
+w.open B 0 -> true
+w.rawstring a -> ok
+w.byte 13 -> ok
+w.byte 10 -> ok
+w.rawstring b -> ok
+w.byte 13 -> ok
+w.rawstring c -> ok
+w.byte 13 -> ok
+w.byte 10 -> ok
+w.close -> ok
+dump B -> 610d0a620d630d0a
+r.opentext - -> false
+r.opentext N -> false
+r.opentext B -> true
+r.length -> 8
+r.tryb -> 97
+r.tryb -> 10
+r.tryb -> 98
+r.pos -> 4
+r.tryb -> 13
+r.tryb -> 99
+r.tryb -> 10
+r.eof -> false
+r.tryb -> -1
+r.eof -> true
+r.rewind -> ok
+r.intomem -> ok
+r.length -> 6
+r.maxbytes 10 -> 6 610a620d630a
+r.close -> ok
+r.open B -> true
+r.length -> 8
+r.maxbytes 10 -> 8 610d0a620d630d0a
+r.close -> ok
+w.open B 1 -> true
+w.close -> ok
+dump B -> -
+r.open B -> true
+r.length -> 0
+r.eof -> false
+r.tryb -> -1
+r.eof -> true
+r.intomem -> ok
+r.isopen -> true
+r.length -> 0
+r.close -> ok
+r.mem 0102030405 -> ok
+r.isopen -> true
+r.length -> 5
+r.pos -> 0
+r.byte -> 1
+r.short -> 770
+r.avail -> 2
+r.skip 2 -> ok
+r.eof -> true
+r.tryb -> -1
+r.skip 0 -> ok
+r.skip 1 -> throw Attempt to read past end of mem buffer.
+r.setpos 5 -> throw Attempt to setpos past end of mem buffer.
+r.setpos 4 -> ok
+r.byte -> 5
+r.eof -> true
+r.rewind -> ok
+r.rlen 4 -> 67305985
+r.rewind -> ok
+r.maxbytes 9 -> 5 0102030405
+r.pos -> 5
+r.intomem -> ok
+r.rewind -> ok
+r.rawstring 6 -> throw Attempt to read past end of mem buffer. / 0102030405 / 0075.006e.0073.0065.0074
+r.pos -> 5
+r.rewind -> ok
+r.rawwstring 3 -> throw Attempt to read past end of mem buffer. / 756e736574 / 0201.0403
+r.pos -> 4
+r.rewind -> ok
+r.string 1 -> 02
+r.pos -> 2
+r.close -> ok
+r.isopen -> false
+r.mem - -> ok
+r.isopen -> true
+r.length -> 0
+r.eof -> true
+r.tryb -> -1
+r.setpos 0 -> throw Attempt to setpos past end of mem buffer.
+r.byte -> throw Attempt to read past end of mem buffer.
+r.maxbytes 1 -> 0 -
+r.skip 0 -> ok
+r.close -> ok

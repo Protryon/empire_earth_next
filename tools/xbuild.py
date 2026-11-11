@@ -391,6 +391,9 @@ WON_TESTS = {
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],
+    # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
+    "won_file_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                         "FileWriter.cpp", "WONFile.cpp")],
 }
 
 

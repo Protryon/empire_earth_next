@@ -16,10 +16,11 @@
 
 namespace WONAPI {
 // FileReader: 0x14 bytes (ConfigParser embeds one at 0x18; constructor 0x7b1d20). FileWriter: 4 bytes
-// (constructor 0x6a1e10, destructor 0x6a1e20).
+// (constructor 0x6a1e10, destructor 0x6a1e20). Both are ee_won's (rust/crates/ee_won/src/file.rs): the state is
+// its #[repr(C)] core, these methods forward and throw the exceptions its statuses name.
 class FileReader {
 public:
-    bool IsOpen() { return this->mFile!=NULL || this->mBuffer!=NULL; }
+    bool IsOpen() { return this->mCore.file!=NULL || this->mCore.buffer!=NULL; }
     FileReader(); // 0x6a0d00
     FileReader(const char* inPath); // 0x6a0d10
     FileReader(const void* theMemDataP, unsigned long theMemDataLen);
@@ -42,6 +43,7 @@ public:
     bool EndOfFile(); // 0x6a1de0
 private:
     void Init(); // 0x6a0ce0 (zeroes the six fields)
+    void Check(int inStatus); // throws FileReaderException for a failed status
 public:
     ~FileReader(); // 0x6a0d30
     bool Open(const char* inPath); // 0x6a0d40
@@ -50,12 +52,12 @@ public:
     unsigned char ReadByte(); // 0x6a1b20
     unsigned short ReadShort(); // 0x6a1b40
     int32_t ReadLong(); // 0x6a1b60 (32-bit on every OS)
-    FILE* mFile; // 0x00
-    const char* mBuffer; // 0x04 (memory source; delete[] when mOwnBuffer)
-    unsigned long mLength; // 0x08
-    unsigned long mPosition; // 0x0c
-    bool mOwnBuffer; // 0x10
-    bool mMemoryMode; // 0x11 (set by the memory Open at 0x6a0dd6, cleared by the file Open)
+    // the file (0x00), the memory source (0x04; freed when owned), length (0x08), position (0x0c), owned (0x10)
+    // and memory mode (0x11: set by the memory Open at 0x6a0dd6 and by length(), cleared by the file Open)
+    EeWonFileReader mCore;
+private:
+    FileReader(const FileReader&);
+    FileReader& operator=(const FileReader&);
 };
 // closes a FILE* when it goes out of scope
 struct AutoFile {
@@ -80,7 +82,10 @@ public:
     void WriteByte(unsigned char inValue); // 0x6a25f0
     void WriteShort(unsigned short inValue); // 0x6a2600
     void WriteLong(int32_t inValue); // 0x6a2610 (32-bit on every OS)
-    FILE* mFile; // 0x00
+    EeWonFileWriter mCore; // the file (0x00)
+private:
+    FileWriter(const FileWriter&);
+    FileWriter& operator=(const FileWriter&);
 };
 
 // both derive from std::exception (RTTI); only the destructor is overridden

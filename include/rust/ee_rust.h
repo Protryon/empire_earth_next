@@ -790,6 +790,27 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
 
+/// No error.
+constexpr static const int32_t WON_FILE_OK = 0;
+
+/// "NULL File.": a read with nothing open, or a write with no file.
+constexpr static const int32_t WON_FILE_NULL = 1;
+
+/// "Attempt to read past end of mem buffer."
+constexpr static const int32_t WON_FILE_PAST_END_MEM = 2;
+
+/// "Attempt to read past end of file."
+constexpr static const int32_t WON_FILE_PAST_END_FILE = 3;
+
+/// "Attempt to setpos past end of mem buffer."
+constexpr static const int32_t WON_FILE_SETPOS_MEM = 4;
+
+/// "Attempt to setpos past end of file."
+constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
+
+/// "fwrite failed (disk full)"
+constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
+
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
 constexpr static const uint8_t JOIN_REPLY = 2;
@@ -3653,6 +3674,22 @@ struct EeWonQueueDecision {
 
 /// Receives wide units (`wchar_t` values); valid only during the call.
 using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
+/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
+struct EeWonFileReader {
+  void *file;
+  const uint8_t *buffer;
+  unsigned long length;
+  unsigned long position;
+  bool own_buffer;
+  bool memory_mode;
+};
+
+/// `FileWriter`'s state.
+struct EeWonFileWriter {
+  void *file;
+};
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
@@ -9414,6 +9451,75 @@ extern int isalnum(int c);
 extern int toupper(int c);
 
 extern int tolower(int c);
+
+/// The exception text of a status.
+const char *ee_won_file_status_text(int32_t status);
+
+void ee_won_file_reader_init(EeWonFileReader *reader);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open(EeWonFileReader *reader, const char *path);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open_text(EeWonFileReader *reader, const char *path);
+
+/// The buffer is not owned and must outlive the reading.
+void ee_won_file_reader_open_memory(EeWonFileReader *reader,
+                                    const void *data,
+                                    unsigned long length);
+
+void ee_won_file_reader_close(EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_pos(const EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_length(EeWonFileReader *reader, int32_t *status);
+
+int32_t ee_won_file_reader_set_pos(EeWonFileReader *reader, unsigned long pos);
+
+/// # Safety
+/// `out` holds `max` bytes.
+int ee_won_file_reader_read_max(EeWonFileReader *reader, void *out, int max, int32_t *status);
+
+/// # Safety
+/// `out` holds `length` bytes.
+int32_t ee_won_file_reader_read_bytes(EeWonFileReader *reader, void *out, unsigned long length);
+
+int ee_won_file_reader_try_read_byte(EeWonFileReader *reader);
+
+int32_t ee_won_file_reader_skip(EeWonFileReader *reader, unsigned long length);
+
+int32_t ee_won_file_reader_read_into_memory(EeWonFileReader *reader);
+
+/// A 1, 2 or 4 byte length field (0 for another size), into `value`.
+int32_t ee_won_file_reader_read_length(EeWonFileReader *reader, int field_size, int *value);
+
+void ee_won_file_reader_rewind(EeWonFileReader *reader);
+
+bool ee_won_file_reader_end_of_file(const EeWonFileReader *reader);
+
+void ee_won_file_writer_init(EeWonFileWriter *writer);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_writer_open(EeWonFileWriter *writer, const char *path);
+
+void ee_won_file_writer_close(EeWonFileWriter *writer);
+
+unsigned long ee_won_file_writer_pos(const EeWonFileWriter *writer);
+
+int32_t ee_won_file_writer_set_pos(EeWonFileWriter *writer, unsigned long pos);
+
+/// # Safety
+/// `data` holds `length` bytes.
+int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
+                                       const void *data,
+                                       unsigned long length);
+
+int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
+                                        unsigned long length,
+                                        uint8_t field_size);
 
 }  // extern "C"
 

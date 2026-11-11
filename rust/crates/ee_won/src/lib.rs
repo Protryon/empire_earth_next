@@ -18,6 +18,7 @@ pub mod ffi_lan;
 pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
+pub mod file;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;

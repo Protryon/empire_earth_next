@@ -70,7 +70,7 @@ int ConfigParser::GetChar()
 // Returns -1 with no file open even when characters are pushed back
 int ConfigParser::PeekChar()
 {
-    if ((this->mFileReader.mFile != NULL || this->mFileReader.mBuffer != NULL) && !this->EndOfFile()) {
+    if (this->mFileReader.IsOpen() && !this->EndOfFile()) {
         int ch = this->GetChar();
         this->UngetChar(ch);
         return ch;
