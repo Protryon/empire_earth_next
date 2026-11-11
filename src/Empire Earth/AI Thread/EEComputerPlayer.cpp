@@ -1150,6 +1150,74 @@ long EECPLoadExperimentTimers(FSFile& inFile)
     return theResult;
 }
 
+// the claim ranges' two arrays, then per player id (gWorld.mNumPlayers of them) the danger zones of its computer
+// player's resource manager: the count, then each zone's tile and game ms (a player with none writes 0)
+long EECPSaveResourceState(FSFile& outFile)
+{
+    long theResult = EECPSaveTimerArray(outFile, gCPExperimentTimers.mClaimSteps);
+    if (theResult == kErrorOK)
+        theResult = EECPSaveTimerArray(outFile, gCPExperimentTimers.mClaimLast);
+    if (theResult == kErrorOK)
+        theResult = outFile.Write((unsigned long)gWorld.mNumPlayers);
+    for (unsigned long p = 0; p < gWorld.mNumPlayers && theResult == kErrorOK; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+        EECPResourceManager* theManager = theCP != NULL && theCP->mCivilizationManager != NULL
+            ? theCP->mCivilizationManager->mResourceManager : NULL;
+        unsigned long theCount = theManager != NULL ? (unsigned long)theManager->mDangerZones.size() : 0;
+        theResult = outFile.Write(theCount);
+        for (unsigned long z = 0; z < theCount && theResult == kErrorOK; z++) {
+            theResult = outFile.Write((long)theManager->mDangerZones[z].first.mX);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write((long)theManager->mDangerZones[z].first.mY);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write((unsigned long)theManager->mDangerZones[z].second);
+        }
+    }
+    return theResult;
+}
+
+long EECPLoadResourceState(FSFile& inFile)
+{
+    EECPExperimentTimers t = {};
+    long theResult = EECPLoadTimerArray(inFile, t.mClaimSteps);
+    if (theResult == kErrorOK)
+        theResult = EECPLoadTimerArray(inFile, t.mClaimLast);
+    unsigned long thePlayers = 0;
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(thePlayers);
+    std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > theZones;
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        unsigned long theCount = 0;
+        theResult = inFile.Read(theCount);
+        theZones.push_back(std::vector<std::pair<U2DPoint<long>, unsigned long> >());
+        for (unsigned long z = 0; z < theCount && theResult == kErrorOK; z++) {
+            long theX = 0, theY = 0;
+            unsigned long theTime = 0;
+            theResult = inFile.Read(theX);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theY);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theTime);
+            theZones.back().push_back(std::make_pair(U2DPoint<long>(theX, theY), theTime));
+        }
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([t, theZones]() {   // after the experiment timers' fixup, which zeroes the claim ranges
+            for (long i = 0; i < EECPExperimentTimers::kPlayers; i++) {
+                gCPExperimentTimers.mClaimSteps[i] = t.mClaimSteps[i];
+                gCPExperimentTimers.mClaimLast[i] = t.mClaimLast[i];
+            }
+            for (unsigned long p = 0; p < theZones.size() && p < gWorld.mNumPlayers; p++) {
+                EEPlayer* thePlayer = gWorld.mPlayers[p];
+                EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+                if (theCP != NULL && theCP->mCivilizationManager != NULL && theCP->mCivilizationManager->mResourceManager != NULL)
+                    theCP->mCivilizationManager->mResourceManager->mDangerZones = theZones[p];
+            }
+        });
+    return theResult;
+}
+
 // the Prehistoric counts from the game's start; a later epoch from when the player was first seen in it (TEST ONLY
 // bookkeeping; saved from 0.258, ee/EECPExperimentTimers.h; the AI asks often enough that the lag is a few seconds)
 unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime)

@@ -93,6 +93,12 @@ inline bool EESaveHasSubGroupPosition(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 264;
 }
+// port: from 0.265 a save holds the computer players' claim ranges and danger zones after the continent manager
+// (EECPSaveResourceState, ee/EECPExperimentTimers.h): FindResourceTarget reads them, a load started them empty
+inline bool EESaveHasResourceState(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 265;
+}
 long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
 long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
 // whether the save being loaded has the block (EEWorld::StartGame of a loaded game)
