@@ -2728,6 +2728,44 @@ static int LuaEnemyNear(lua_State* L)
     return 1;
 }
 
+// ai.enemy_force(player, x, y, r) -> n, hp, attack: the player's land soldiers (an attack, a land unit or hero, not a
+// building) within r tiles of the tile, counted and summed - every one, seen or not, as the classic's militia counts
+// the raiders (EECPRMMilitia). Only for an AI whose manifest entry declares "sees_all" (the classic's information
+// cheat); nothing for every other AI (ai.seen is the fog-honest count)
+static int LuaEnemyForce(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall);
+    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isinteger(L, 3)
+        || !lua_isinteger(L, 4))
+        return 0;
+    lua_Integer thePlayer = lua_tointeger(L, 1);
+    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
+        return 0;
+    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3), r = (long)lua_tointeger(L, 4);
+    long n = 0, theHP = 0, theAttack = 0, theScanned = 0;
+    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
+        theScanned++;
+        if (u->mComplexUnit == NULL || !(u->mHitPoints > 0) || u->mStats == NULL || u->mStats->mAttack == 0.0f
+            || u->mUnitClass->IsLandBuilding())
+            continue;
+        long theCategory = u->mUnitClass->mCategory;
+        if (theCategory != kUnitCategoryLand && theCategory != kUnitCategoryLandMilitaryHero)
+            continue;
+        long dx = u->GetTileX() - x, dy = u->GetTileY() - y;
+        if (dx * dx + dy * dy > r * r)
+            continue;
+        n++;
+        theHP += (long)u->mHitPoints;
+        theAttack += UMFloatToLong(u->mStats->mAttack);
+    }
+    EECPUnitsCharge(L, theScanned * kCostScan);
+    lua_pushinteger(L, (lua_Integer)n);
+    lua_pushinteger(L, (lua_Integer)theHP);
+    lua_pushinteger(L, (lua_Integer)theAttack);
+    return 3;
+}
+
 // ai.garrison_fill(id, n) -> ok: an own finished building's garrison count raised by n with no citizen going in, as the
 // classic's FillGarrison does when it has too few idle citizens (EEComplexUnit::AddGarrison(count + n, population):
 // the original's call, which takes only into an empty garrison). Only for an AI whose manifest entry declares
@@ -3830,7 +3868,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
