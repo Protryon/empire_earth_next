@@ -4970,6 +4970,7 @@ id and the sound.
 - **Only a played game reaches the game call** (the local human's selection, `EEMSelectUnits`): EE-SIM's idle human
   never selects, so USPK's game records are empty in every capture and the sweep is the coverage. A tour or a played
   game must show box selection working (select, add, re-select a group with a dead unit).
+
 ## R6: GUIString's narrow text as UTF-8, the lobby's game room and its saved settings in Rust (ee_won guistring.rs, staging.rs, persist.rs; branch rust-r6-won6, 2026-11-10)
 
 Round 6 of R6 (the map of what is left is in RUST_PLAN's "R6 WON, the rest" row). Each piece was captured over the
