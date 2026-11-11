@@ -3137,6 +3137,49 @@ in the Copper Age by minute 60; the median over all seats takes a seat that neve
   global `d2` and every step from about minute 1 aborted there (1,274 script errors in one game) - fixed with a local
   helper. Its traces differ from about line 60 on.
 
+**The overnight experiments E1-E5** (2026-11-11; the coordinator's protocol). Each one switch of `ECON` over main
+1e422bd's boom (the baseline: its own `boom.lua`; with every switch off this boom's traces equal it until the switch
+first acts - checked seed by seed), seeds 2-33, Small, Hard, 2 AIs, 120 minutes, against the improved classic (`cl`:
+`--cheats none --personality balanced`) and the cheating classic (`cx`: Hard's seven cheats for the classic seat). All
+on this branch's EE-SIM (the `ai.units` type-list fix included). A row keeps its rule only if the defeats do not rise in
+any matchup and it gains somewhere. Stone and Copper are the median minute of the seats that got there (reached);
+"Copper by 60" counts seats in the Copper Age by minute 60; W-L-C the mixed score.
+
+| Experiment | Matchup | Stone (reached) | Copper (reached) | Copper by 60 | Citizens 20 / 40 | Defeated | W-L-C |
+|---|---|---|---|---|---|---|---|
+| baseline (main's boom) | cl | 24.9 (31/32) | 61.6 (20/32) | 7 | 32.9 / 54.6 | 6 | 1-28-3 |
+| baseline | cx | 28.0 (22/32) | 74.7 (8/32) | 1 | 28.8 / 27.5 | 13 | 1-29-2 |
+| E1: reserve ratchet + gatherers aim at the whole cost (the stall fix) | cl | 24.9 (31/32) | 61.0 (19/32) | 9 | 32.9 / 54.8 | 11 | 5-26-1 |
+| E1 | cx | 28.0 (22/32) | 72.9 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-27-4 |
+| E1 + the citizens beside the army (parallel) | cl | 24.9 (31/32) | 58.9 (20/32) | 11 | 32.9 / 58.2 | 9 | 1-27-4 |
+| E1 + parallel | cx | 28.0 (22/32) | 68.2 (7/32) | 2 | 28.8 / 29.3 | 18 | 0-28-4 |
+| E2: the forage-runs-dry claim (claim and hunting to 42 tiles) | cl | 24.3 (32/32) | 62.1 (23/32) | 9 | 33.0 / 55.1 | 7 | 2-26-4 |
+| E2 | cx (31) | 29.2 (25/31) | 92.4 (7/31) | 1 | 27.7 / 30.6 | 14 | 0-27-4 |
+| E3: the second town centre (alone; E1 lost) | cl | 24.9 (31/32) | 62.0 (21/32) | 9 | 32.8 / 59.5 | 8 | 2-23-7 |
+| E3 | cx | 29.3 (22/32) | 75.4 (8/32) | 2 | 28.7 / 32.2 | 13 | 1-28-3 |
+| E4: Age of AI's epoch account from Copper (50% of the income; aims at the cost) | cl | 24.9 (31/32) | 60.2 (18/32) | 9 | 32.9 / 54.8 | 12 | 2-26-4 |
+| E4 | cx | 28.0 (22/32) | 68.8 (8/32) | 2 | 28.8 / 28.3 | 16 | 1-28-3 |
+| E5: wood keeps its floor under 150 (packing does not apply to boom's verbs) | cl | 24.9 (31/32) | 65.1 (20/32) | 8 | 32.9 / 55.2 | 10 | 3-27-2 |
+| E5 | cx | 28.0 (22/32) | 71.0 (4/32) | 1 | 28.8 / 27.5 | 16 | 1-30-1 |
+
+(E3's `cl` row merges 27 games with the 5 seeds re-run after the lobby's "slot 0 human" start fault; E2's `cx` lost
+seed 17 to it. The baseline's `cl` games show 6 defeats; the variants that act only after minute 20 range 6-12 on the
+same seeds, so a single row's defeats move by several games from chance alone.)
+
+- **Nothing is kept.** Every rule raised the defeats in at least one matchup. The closest:
+  - E3, the second town centre: 4-5 more citizens at 40 minutes in both matchups, Copper reached about as often, the
+    same 13 defeats under the cheats, 8 against 6 without;
+  - E2, the forage fallback: Stone reached in every `cl` game and in 25 against 22 `cx` games, but one defeat more in
+    each.
+- **E1** (the stall fix the coordinator asked for) moves Copper by 60 minutes from 7 to 9 (11 with parallel citizens)
+  and the citizens at 40 minutes up to 58, but the extra saving (and parallel citizens) cost the town 3-5 more
+  defeats in both matchups. The defence's army floor of 20 needs the food the ratchet keeps.
+- **E4** is not Age of AI's whole economy: only its epoch account in boom's reserve (the account implies aiming at the
+  cost, so E4 also carries E1's `full_target`). The army share that let Age of AI out-grow boom after 90 minutes is
+  the defence's training block, not reproduced here.
+- **E5's packing** (Age of AI's `tight_build`): boom places its buildings through the C++ `build near=` verb, so the
+  packing code has no seam; E5 benched the Stone Age wood floor instead (the mines' settlements waited on wood).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
