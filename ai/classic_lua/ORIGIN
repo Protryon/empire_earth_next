@@ -159,7 +159,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 a random favourite candidate, none: the count to land; the favourite land type, else a random favourite
                 candidate); the sea's classes and counts as the land's (the counter classes 3-5 at sea, the held units
                 within each domain's count). DEVIATION: the target file's counts (see EECPIntelligence).
-                NOT STARTED: AllocateSpecialUnits (priests, prophets, heroes, carriers, paratroopers), the deathmatch
+                AllocateSpecialUnits: the priests and prophets (the chance, the most per group, the population share). NOT STARTED: its heroes, carriers and paratroopers, the deathmatch
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
                 one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
