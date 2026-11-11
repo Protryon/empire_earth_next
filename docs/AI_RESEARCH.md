@@ -2959,6 +2959,49 @@ dropped 1-2 games a row):
 - Raids routed around towers.
 - The late-game answer to the classic's waves and warships.
 
+### 8.42 The classic computer player in Lua, parity of the armies (2026-11-10, EE-SIM)
+
+After §8.40 Lua beat the C++ classic under the classic personality with the cheats (a 40-strong army against 2-5)
+and lost under balanced. The causes, each a port bug against the C++:
+- **The attack picked a computer over the humans 100% of the time, not 10%.** mComputerAggression (10) is read as
+  thousandths; the port compared a thousandth roll with it times 10. The C++ attacks the bench's human seat, which
+  has no units, nine times in ten: one or two units, which then defend. The port's attacks went at the C++ every
+  time, sized from a 30-40 strength, and waited ten minutes at home for their last slot.
+- **The enemy list skipped players with no units** (the classic skips only observers), and the target file's mirror
+  floor (§8.40: at least the own counts) inflated the strength of a seat never seen with anything; it now applies
+  only to a player known to have a town or buildings.
+- **Personnel's Cancel:** a request past its deadline now drops one production order per open slot.
+- **QueueMoraleBuilding:** only the town centre (2 houses in its 10-tile square) and the capitol (4) carry the morale
+  effect; the port built 4 houses at every drop site, settlements too: 514 houses in 32 games against 98.
+- **The militia's soldiers** stay in the fight for its 20 s; the port's groups re-ordered them at once and the citizens
+  fought alone (340 of the late Lua citizen deaths were "fight").
+
+Bench: Small, Hard, 2 AIs (Lua against the C++ classic in the same game), seeds 2-33, 90 minutes, open data; before
+(b1: §8.40 plus a deadline re-order, not kept) and after (b5).
+
+| Matchup | AI | Stone | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Citizens at 90 min (wiped) | Won-lost |
+|---|---|---|---|---|---|---|---|
+| balanced, before | classic | 31/32, 25.0 | 25/32, 60.8 | 23.7/2.3 / 25.8/2.3 / 29.9/5.3 / 45.3/4.4 | 1.8 / 21.1 | 135 (1/32) | 21-6, 5 close |
+| balanced, before | classic_lua | 31/32, 25.0 | 19/32, 61.6 | 23.3/2.8 / 26.0/3.1 / 32.9/7.4 / 42.4/8.6 | 2.3 / 61.1 | 57 (4/32) | 6-21, 5 close |
+| balanced, after | classic | 29/31, 25.0 | 26/31, 65.2 | 23.3/2.4 / 25.2/2.3 / 28.6/4.6 / 41.9/3.7 | 2.1 / 30.5 | 132 (2/31) | 18-6, 7 close |
+| balanced, after | classic_lua | 29/31, 24.9 | 20/31, 60.4 | 23.4/2.7 / 26.4/3.1 / 34.3/6.1 / 45.3/7.0 | 2.0 / 51.8 | 70 (2/31) | 6-18, 7 close |
+| classic+cheats, before | classic | 31/31, 48.0 | - | 25.5/6.4 / 49.7/5.4 / 50.2/6.8 / 50.2/5.5 | 7.1 / 61.5 | 48 (0/31) | 3-14, 14 close |
+| classic+cheats, before | classic_lua | 31/31, 45.2 | - | 22.0/8.2 / 36.1/17.0 / 40.5/39.4 / 43.6/36.4 | 11.0 / 88.5 | 55 (0/31) | 14-3, 14 close |
+| classic+cheats, after | classic | 32/32, 47.9 | - | 25.8/6.0 / 50.8/6.5 / 50.9/9.7 / 50.5/5.4 | 5.1 / 36.0 | 50 (0/32) | 6-12, 14 close |
+| classic+cheats, after | classic_lua | 32/32, 45.4 | - | 21.3/4.0 / 35.2/5.8 / 40.0/14.7 / 41.3/22.2 | 11.3 / 79.8 | 49 (1/32) | 12-6, 14 close |
+
+Readings:
+- **Classic with the cheats:** Lua's economy still trails (35 against 51 citizens at 20 minutes, 41 against 50 at
+  40); the army gap fell from 39 against 7 to 15 against 10 at 30 minutes; Lua's citizens lost by 20
+  minutes stay about twice the C++'s. Won-lost 12-6 (14 close): near, still on Lua's side.
+- **Balanced:** level to 40 minutes (45.3 against 41.9 citizens), then the C++ grows to 132 citizens at 90 minutes and
+  Lua to 70; Lua loses 52 citizens against 31. Won-lost 6-18. The late economy is the gap: in 32 games the C++ built
+  33 farms (Lua none), 53 docks (Lua 15), 29 granaries (11), 30 hospitals (10).
+- Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
+
+Next: the farms (CheckBuildingCounts' farm entry never queues one in the port), the dock's water sites, then
+ChooseUnitsToKill, the special units, the guard posts and the navy; walls last (the C++ built none in 90 minutes).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
