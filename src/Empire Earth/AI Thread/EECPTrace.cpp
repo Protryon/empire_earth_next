@@ -387,6 +387,53 @@ void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
         sIncome[theID][inResource] += inAmount;
 }
 
+// A soldier, ship or other non-citizen unit lost (any computer seat, the classic's too): one "unit.death" line - its
+// class, tile and distance from the town centre, its goal, and the killer (player:class:kind, its distance). The AI
+// trace only (gCPTraceOn): it reads the dead unit and its last attacker and changes nothing
+static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    EEComplexUnit* c = inUnit->mComplexUnit;
+    long theX = inUnit->mTileX, theY = inUnit->mTileY;
+    long theTown = -1;
+    U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
+        ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+    if (theCenter.mX != -10000 && theX != -10000) {
+        long theDX = theX - theCenter.mX, theDY = theY - theCenter.mY;
+        theTown = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+    }
+    const char* theGoal = "none";
+    if (c->mActiveGoal != NULL) {
+        switch (c->mActiveGoal->mKind) {
+        case kGoalLocation: theGoal = "move"; break;
+        case kGoalAttackUnit: theGoal = "attack"; break;
+        case kGoalAttackGround: theGoal = "attack_ground"; break;
+        case kGoalPatrol: theGoal = "patrol"; break;
+        case kGoalExplore: theGoal = "explore"; break;
+        case kGoalGather: theGoal = "gather"; break;
+        case kGoalLoadGarrison: theGoal = "garrison"; break;
+        default: theGoal = "other"; break;
+        }
+    }
+    EEComplexUnit* theKiller = c->mLastAttacker;
+    long theKillerPlayer = -1, theKillerClass = -1, theKillerDistance = -1;
+    char theKind = '-';
+    if (theKiller != NULL && theKiller->mUnitClass != NULL) {
+        theKillerPlayer = theKiller->mPlayer != NULL ? (long)theKiller->mPlayer->mPlayerID : -1;
+        theKillerClass = theKiller->mUnitClass->mUnitType;
+        if (theKiller->GetTileX() != -10000 && theX != -10000) {
+            long theDX = theKiller->GetTileX() - theX, theDY = theKiller->GetTileY() - theY;
+            theKillerDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+        }
+        EEUnitClass* theClass = theKiller->mUnitClass;
+        theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
+            : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : (theClass->mDomains & kMovementSea) ? 'n' : 's';
+    }
+    EECPTraceScope theScope("cp");
+    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld",
+        EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
+        theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance);
+}
+
 // A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
 void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
 {
@@ -409,8 +456,10 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         }
     } else if (EECPIsBuildingCategory(theCategory))
         sLost[theID][1]++;
-    else if (theCategory != kUnitCategoryProjectile)
+    else if (theCategory != kUnitCategoryProjectile) {
         sLost[theID][2]++;
+        EECPTraceSoldierLost(inPlayer, inUnit);
+    }
 }
 
 // One "stats" line per player every 30 game s: epoch, population and its caps, citizens (idle: no goal; free: the
