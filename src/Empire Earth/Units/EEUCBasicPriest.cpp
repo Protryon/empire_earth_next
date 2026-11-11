@@ -189,9 +189,73 @@ void EEUCBasicPriest::UnitCreated(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x60da86
 // Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
 // temple's range); outFlag is set when the target is shielded
+// TEST ONLY (the golden of the CBCN capture): the decision's inputs, gathered from the world, and its outputs
+struct EECanConvertCaptureIn {
+    int32_t crusader, building_priest, adaptation, same_player, enemy;
+    float conversion_rate;
+    int32_t target_disabled, target_protected;
+    float resistance;
+    int32_t target_town_center, target_settlement, target_hit_points, attackable;
+    float damage;
+    int32_t same_category, converts_priests, power, cost, target_land_priest, converts_buildings, target_land_building,
+        at_copper;
+    float priest_x, priest_y, priest_z, target_x, target_y, target_z, range;
+    int32_t priest_cyber, target_cyber, shielded;
+};
+struct EECanConvertCaptureOut {
+    int32_t result, flag_written, flag;
+};
+static bool EECanConvertOriginal(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag, long theCost, bool& outWritten);
+
 bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag)
 {
     long theCost = EEGetConversionCost(inPriest);
+    EECanConvertCaptureIn in = {};
+    if (EESimCaptureRecord::Active()) {
+        EEUnitClass* theClass = inTarget->mUnitClass;
+        EEUnitClass* thePriestClass = inPriest->mUnitClass;
+        in.crusader = thePriestClass->IsCrusader();
+        in.building_priest = thePriestClass->mCategory == kUnitCategoryBuildingPriest;
+        in.adaptation = gCivPowersManager.HasPower(inPriest->GetPlayer(), kCivPowerAdaptation);
+        in.same_player = inTarget->mPlayer == inPriest->mPlayer;
+        in.enemy = inPriest->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0;
+        in.conversion_rate = inPriest->mStats->mConversionRate;
+        in.target_disabled = inTarget->mIsDisabled;
+        in.target_protected = inTarget->IsProtected();
+        in.resistance = inTarget->mStats->mConversionResistance;
+        in.target_town_center = theClass->mUnitType == kUnitTypeTownCenter;
+        in.target_settlement = theClass->mUnitType == kUnitTypeSettlement;
+        in.target_hit_points = (int32_t)inTarget->mHitPoints;
+        in.attackable = theClass->CanBeAttacked();
+        in.damage = thePriestClass->mAmmoType >= 0 ? gDamageTable[theClass->mFamily][thePriestClass->mAmmoType] : 0.0f;
+        in.same_category = theClass->mCategory == thePriestClass->mCategory;
+        in.converts_priests = inPriest->mStats->mConvertsPriests;
+        in.power = (int32_t)inPriest->GetPower();
+        in.cost = (int32_t)theCost;
+        in.target_land_priest = theClass->mCategory == kUnitCategoryLandPriest;
+        in.converts_buildings = inPriest->mStats->mConvertsBuildings;
+        in.target_land_building = theClass->IsLandBuilding();
+        in.at_copper = inPriest->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochCopper;
+        in.priest_x = inPriest->mPhysicalModel.GetLocation().GetX();
+        in.priest_y = inPriest->mPhysicalModel.GetLocation().GetY();
+        in.priest_z = inPriest->mPhysicalModel.GetLocation().GetZ();
+        in.target_x = inTarget->mPhysicalModel.GetLocation().GetX();
+        in.target_y = inTarget->mPhysicalModel.GetLocation().GetY();
+        in.target_z = inTarget->mPhysicalModel.GetLocation().GetZ();
+        in.range = inPriest->mStats->mRange;
+        in.priest_cyber = thePriestClass->mIsCyber;
+        in.target_cyber = theClass->mIsCyber;
+        in.shielded = inTarget->HasEffect(4);
+    }
+    bool theWritten = false;
+    bool theResult = EECanConvertOriginal(inPriest, inTarget, outFlag, theCost, theWritten);
+    EECanConvertCaptureOut theOut = {theResult, theWritten, theWritten ? (int32_t)outFlag : 0};
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'N'), in, theOut);
+    return theResult;
+}
+
+static bool EECanConvertOriginal(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag, long theCost, bool& outWritten)
+{
     bool theResult = false;
     bool thePower;
     if (!inPriest->mUnitClass->IsCrusader() && inPriest->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
@@ -227,6 +291,7 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
     if (theResult && !inPriest->mUnitClass->mIsCyber && !theClass->mIsCyber) {
         bool theShielded = inTarget->HasEffect(4);
         outFlag = theShielded;
+        outWritten = true;
         theResult = !theShielded;
     }
     return theResult;

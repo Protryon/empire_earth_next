@@ -3447,11 +3447,18 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// TEST ONLY: a unit's id in the CB** walk records (-1: none)
+static int32_t EECombatCaptureID(EEUnit* inUnit)
+{
+    return inUnit != NULL ? (int32_t)inUnit->GetUnitID() : -1;
+}
+
 // FUNCTION: EXE 0x645dd6
 // Gives a unit's goal the first enemy near a tile that passes a screen; false when none
 bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, EEComplexUnit* inUnit,
                 EETileCoordinate* inTile, long inRadius, bool inArg6, long inArg7)
 {
+    int32_t theChosen = -1;   // TEST ONLY (the CBFT capture)
     std::vector<EEUnit*> theUnits;
     U2DRectangle<long> theArea;
     bool theFound = false;
@@ -3491,10 +3498,27 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
                 continue;
             if (inUnit->mIgnoredTargets.size() != 0 && inUnit->IsTargetIgnored(static_cast<EEComplexUnit*>(theUnits[i]), inArg7 != 0))
                 continue;
+            if (EESimCaptureRecord::Active())
+                theChosen = EECombatCaptureID(theUnits[i]);
             EERetargetAttack(inUnit, inGoal, static_cast<EEComplexUnit*>(theUnits[i]));
             theFound = true;
             break;
         }
+    }
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'F', 'T'));
+        theRecord.I32(EECombatCaptureID(inUnit));
+        theRecord.I32((int32_t)inTile->GetX());
+        theRecord.I32((int32_t)inTile->GetY());
+        theRecord.I32((int32_t)inRadius);
+        theRecord.I32(inArg6);
+        theRecord.I32((int32_t)inArg7);
+        theRecord.I32((int32_t)theUnits.size());
+        for (unsigned long j = 0; j < theUnits.size(); j++)
+            theRecord.I32(EECombatCaptureID(theUnits[j]));
+        theRecord.I32(theFound);
+        theRecord.I32(theChosen);
+        theRecord.Commit();
     }
     return theFound;
 }
@@ -3766,7 +3790,36 @@ void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::
 
 // FUNCTION: EXE 0x646bf2
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
+// TEST ONLY (the golden of the CBCH capture): the decision's inputs, gathered from the world
+struct EECanHealCaptureIn {
+    int32_t has_set, repairable, hit_points, maximum;
+    float threshold;
+    int32_t same_unit, same_player, allied, in_set;
+};
+static bool EECanHealOriginal(EEUnit* inUnit, EEComplexUnit* inTarget);
+
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
+{
+    EECanHealCaptureIn in = {};
+    if (EESimCaptureRecord::Active()) {
+        unsigned long theSet = inUnit->mStats->mWonderUnitSet;
+        in.has_set = theSet > 0;
+        in.repairable = inTarget->IsRepairable();
+        in.hit_points = (int32_t)inTarget->mHitPoints;
+        in.maximum = (int32_t)inTarget->mStats->mMaxHitPoints;
+        in.threshold = inUnit->mUnitClass->GetHealThreshold();
+        in.same_unit = inTarget == inUnit;
+        in.same_player = inUnit->mPlayer == inTarget->mPlayer;
+        in.allied = inTarget->mPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] == 0;
+        in.in_set = theSet != 0 && theSet < gUnitSetManager.GetSize()
+                    && gUnitSetManager.Contains(inTarget->mUnitClass->mUnitType, theSet);
+    }
+    int32_t theResult = EECanHealOriginal(inUnit, inTarget);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'H'), in, theResult);
+    return theResult != 0;
+}
+
+static bool EECanHealOriginal(EEUnit* inUnit, EEComplexUnit* inTarget)
 {
     long theHitPoints = inTarget->mHitPoints;
     long theMaximum = inTarget->mStats->mMaxHitPoints;
@@ -4743,7 +4796,59 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
 // Finds where a dropped unit lands on a target: the model's drop point (lower when damaged) or its tile
 // Where a unit dropped onto inTarget (its goal's target when NULL) lands: the model's drop point (scaled down with
 // a damaged unit's health), else its tile; *outTarget the target (NULL when not placed)
+// TEST ONLY (the golden of the CBDP capture): the computation's inputs as the original reads them (kind 0: the goal's
+// location, 1: the model's drop point, 2: the tile, 3: neither) and its outputs
+struct EEDropCaptureIn {
+    int32_t kind;
+    float offset[3];
+    float scale;
+    int32_t built, hit_points, max_hit_points;
+    float transformation[16];
+    int32_t tile_x, tile_y;
+    float tile_height;
+};
+static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget);
+
 void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
+{
+    EEDropCaptureIn in = {};
+    if (EESimCaptureRecord::Active()) {
+        EEUnitGoal* theGoal = inUnit->mActiveGoal;
+        EEUnit* theTarget = inTarget;
+        if (theTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
+            in.kind = 0;
+        } else {
+            if (theTarget == NULL)
+                theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            if (theTarget->mComplexUnit != NULL && theTarget->GetModel()->mModel != NULL) {
+                in.kind = 1;
+                in.offset[0] = theTarget->GetModel()->mDefaultPoint.GetX();
+                in.offset[1] = theTarget->GetModel()->mDefaultPoint.GetY();
+                in.offset[2] = theTarget->GetModel()->mDefaultPoint.GetZ();
+                in.scale = theTarget->mComplexUnit->mPhysicalModel.GetScale();
+                in.built = theTarget->mComplexUnit->mIsBuilt;
+                in.hit_points = (int32_t)theTarget->mHitPoints;
+                in.max_hit_points = (int32_t)theTarget->mStats->mMaxHitPoints;
+                memcpy(in.transformation, theTarget->mComplexUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.transformation));
+            } else if (theTarget->mTile != NULL) {
+                in.kind = 2;
+                in.tile_x = (int32_t)theTarget->GetTileX();
+                in.tile_y = (int32_t)theTarget->GetTileY();
+                in.tile_height = theTarget->mTile->GetHeight();
+            } else {
+                in.kind = 3;
+            }
+        }
+    }
+    EEFindDropLocationOriginal(inUnit, outTarget, outLocation, inTarget);
+    if (EESimCaptureRecord::Active()) {
+        struct { float x, y, z; int32_t target; } theOut = {outLocation->GetX(), outLocation->GetY(), outLocation->GetZ(),
+                                                            EECombatCaptureID(*outTarget)};
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'P'), in, theOut);
+    }
+}
+
+static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
 {
     EEUnitGoal* theGoal = inUnit->mActiveGoal;
     GE3DPoint theOffset;
@@ -6242,7 +6347,27 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
 // Tells whether something on the tile line from a unit to a target blocks its shot
 // Whether something on the tile line from inUnit to inTarget blocks inUnit's shot (the shot's height runs from
 // inUnit's weapon point to the top of inTarget); outX/outY: the last tile reached (inferred)
+// TEST ONLY (the golden of the CBLB capture): the call's units and tiles, the result, the last tile, the blocker
+static bool EEIsLineToUnitBlockedOriginal(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
+
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
+{
+    EEUnit* const kUnwritten = (EEUnit*)(uintptr_t)1;   // EEIsTileTopAbove writes the blocker, never reads it
+    EEUnit* theBlocker = kUnwritten;
+    bool theResult = EEIsLineToUnitBlockedOriginal(inUnit, inTarget, &theBlocker, outArg4, outArg5);
+    if (theBlocker != kUnwritten)
+        *outArg3 = theBlocker;
+    if (EESimCaptureRecord::Active()) {
+        int32_t theIn[6] = {EECombatCaptureID(inUnit), EECombatCaptureID(inTarget), (int32_t)inUnit->GetTileX(),
+                            (int32_t)inUnit->GetTileY(), (int32_t)inTarget->GetTileX(), (int32_t)inTarget->GetTileY()};
+        int32_t theOut[5] = {theResult, (int32_t)*outArg4, (int32_t)*outArg5, theBlocker != kUnwritten,
+                             theBlocker != kUnwritten ? EECombatCaptureID(theBlocker) : -1};
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'L', 'B'), theIn, theOut);
+    }
+    return theResult;
+}
+
+static bool EEIsLineToUnitBlockedOriginal(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5)
 {
     std::vector<U2DPoint<long> > theTiles;
     GE3DPoint theStart;

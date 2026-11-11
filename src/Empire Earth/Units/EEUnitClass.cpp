@@ -894,6 +894,7 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                            EEUnit* inTarget)
 {
     std::vector<EEComplexUnit*> theHit;
+    std::vector<int32_t> theVictims;   // TEST ONLY (the CBAD capture)
     float theRadiusSquared = inRadius * inRadius;
     EEGraphicEffect* theEffect = NULL;
     long theX = inUnit->GetTileX();
@@ -921,6 +922,8 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                 if (theUnit->GetPlayer() == inUnit->GetPlayer() && !(theClass->mFriendlyDamageFactor > 0.0f))
                     continue;
                 theHit.push_back(theUnit);
+                if (EESimCaptureRecord::Active())
+                    theVictims.push_back((int32_t)theUnit->GetUnitID());
                 if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcanoProjectile && theUnit->GetEffect(3, theEffect)) {
                     if (theEffect != NULL)
                         gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
@@ -942,6 +945,19 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                     theUnit->mResourceAmount = theRemaining;
             }
         }
+    }
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'A', 'D'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)theX);
+        theRecord.I32((int32_t)theY);
+        theRecord.F32(inRadius);
+        theRecord.I32(theClass->mFriendlyDamageFactor > 0.0f);
+        theRecord.I32(inTarget != NULL && inTarget->GetComplexUnit() != NULL ? (int32_t)inTarget->GetUnitID() : -1);
+        theRecord.I32((int32_t)theVictims.size());
+        for (size_t i = 0; i < theVictims.size(); i++)
+            theRecord.I32(theVictims[i]);
+        theRecord.Commit();
     }
 }
 
