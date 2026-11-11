@@ -5906,3 +5906,53 @@ are load and save code: they run in the real game's Load Game screen as in EE-SI
 - **Still different after a load** (not traced this round): seed 2 2100 s at CT 27, seed 4 2100 s at CT 52 (an `ai`
   checksum only: the computer players' state, no unit), seed 5 2100 s at 71, seed 6 2100 s at 101, the 600 s and
   1350 s saves after 200 to 680 CTs.
+
+## R5b.4, eighth round: the fixture's gather scout, the store's on-the-map flag and the checksum's flag 1, Dropoff Resource, Build Wall and Unload Transport in Rust (ee_units store.rs, group.rs; branch rust-r5b4-core8, 2026-11-11)
+
+- **The fixture's gather had no target** (the lead's two `--orders` runs: `ORDER gather: skipped (no-target)`). Not a
+  filter bug: the captures show an arctic start and a grass start with no tree or mine in the view, and the mini
+  map's explored area is the view itself (the human's citizens idle; the start's line of sight is short).
+  `CanGather` also wants the resource's tile visible now (`IsVisibleTo`), as the real right click does. The fixture
+  now scouts: with nothing in view it takes the world player's resource nearest the first citizen that the citizen
+  could gather were it seen (`CanGather(.., true, false)`) and can reach (`CanGetTo`), selects the group, posts an
+  `EEMPathTo` there, polls until the player sees the tile (60 s at most), centres the camera on it
+  (`EEACenterCamera`, the mini map's own action, posted outside the world's lock) and scans the new view. A failed
+  scout is "scout-unseen" / "scout-no-pick", which the driver fails (they are not skips). The driver waits 120 s for
+  gather. The self test's stand-in scouts (phase 1, note "scouting", 1.5 s) and refuses its second gather
+  "scout-unseen" (the driver must raise). Not run here: only the lead's harness run shows it in the game.
+- **The on-the-map flag.** The out-of-sync checksum walks `gWorld.mUnits`, one x-sorted chain through `mTileNode`
+  (not the tiles' lists). A unit is in it when `mTileNode->mPrev` is set (`Link` puts the head or a unit there,
+  `Unlink` clears it); `RTSUnit::Link` and `Unlink` report the flag (`EEUnitStoreLinked`), the insert seeds it.
+  USCK now also walks the chain at every check: each chain unit must have a record of that object with the flag, and
+  the records with the flag must be the chain (`Store::check_on_map`); and the checksum's flag 1 over the chain
+  (`GetChecksum(1)`) must equal the store's sum (`Store::checksum_flag1`). A difference counts as a mismatch, so the
+  USCK records (and their digests) are unchanged while there is none.
+- **Flag 1 over the store.** `EEPhysics::GetOutOfSynchChecksum` adds `ee_units_store_checksum_flag1()` for flag 1
+  and walks the chain only for the other unit flags (2, 0x20, 8), with flag 1 masked off; the sums wrap and commute,
+  so the total is the original's (the oracle's `oos=` is identical). The game's own lockstep check (flag 1 alone,
+  `EEPhysics.cpp` DrainInput) now walks no unit. The sum is a wrapping 64-bit sum of the C++ `long`s: its low 32
+  bits equal the Windows `unsigned long` sum, all 64 bits the LP64 one.
+- **Dropoff Resource** (`group::dropoff_resource`): the existing host calls (Fill, the pending list, the tile spread,
+  a Gather goal with no resource and the drop-off, the action, Plan, the draw). **Build Wall** (`group::build_wall`):
+  three new host calls (`wall_plan`: `EEPlanWall(.., true, false, pieces)` into a list the host owns; `wall_build`:
+  `EEBuildWall`; `wall_release`), and `EEActiveGroup::KeepCitizens`' test over the store (`keeps_citizen`; its
+  three callers: Build Unit, Build Wall, Smart Farmers). The dry plan places nothing: it logs and answers two pieces.
+  Build Wall is the one goal-giving body a capture game sends (the late profile's computer players' walls), so the
+  late captures run its live path; the others only through the USGC sweep (cases added: Dropoff at the player's own
+  first unit, the next player's, its path point and no unit; Build Wall eight tiles east of the first unit and a
+  one-tile wall at the map's centre).
+- **Unload Transport** (`group::unload_transport`): five new host calls (`group_spread_for_unload`; `unit_can_unload`,
+  the class's transport or paratrooper-bomber flag and the cargo, read on the object; the unload goal's
+  `SetTransport` and `CanUnloadAtDestination` before it is given; the "cannot unload there" event) and two goal
+  constructors (`new EEUGUnloadTransport(first's complex unit, x, y, false)`; the move `new EEUGLocation(x, y, 0,
+  false, true, false, 0, false, 0)`). The cargo walk keeps the original's shape: it stops at the first loaded
+  transport, and when none is found the walk's last unit is the one that acknowledges (and is tested again for the
+  event). The dry goal answers "can unload" yes. No capture game unloads: the sweep (the first unit's tile and the
+  map's centre) and mock-host tests are the coverage; only a played game runs the world calls.
+- **The patrol-point mode the UI lacks (round 7):** not a reconstruction bug. In the retail `EE-AOC.exe` the only
+  store of `EEMAddPatrolPoint`'s vtable (0x83df18) is its import constructor (0x4ba47b): the game never builds one to
+  send. The only `EEMPatrol` sender (its constructor COMDAT 0x66fa28) is called from 0x66f5c8, the status button's
+  command 0x12, with `push -1`. The main game form's mouse-mode table (its constructor) has no patrol mode: state
+  0x10 is `EEModeHeal` (the "StartPatrol" name at 0x66681d, buttons 0x1b/0x22, is the heal mode). So the Art of
+  Conquest UI patrols only the nearest town's route; `EEMAddPatrolPoint` and the path points' routes come from
+  elsewhere (the scenario side, saves, the AI's towns).
