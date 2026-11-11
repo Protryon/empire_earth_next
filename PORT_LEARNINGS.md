@@ -5424,7 +5424,7 @@ Graphics Engine owns no text logic in C++. There is no line breaking in the engi
   a bitmap and any clipped draw of a text whose font has one. The goldens use fake fonts; the real `PlatFont` is
   unchanged. The lead's tour must compare the menu captures pixel for pixel against the build before this branch.
 
-## R6: WONGUI's layout arithmetic, scrolling, input box text model, list lines, focus and button rules in Rust (ee_won guilayout.rs, guiscroll.rs, guiedit.rs, guilist.rs, guifocus.rs, guiwrap.rs uncommitted; branch rust-r6-won8, 2026-11-11)
+## R6: WONGUI's layout arithmetic, scrolling, input box text model, list lines, focus and button rules in Rust (ee_won guilayout.rs, guiscroll.rs, guiedit.rs, guilist.rs, guifocus.rs, guiwrap.rs; branch rust-r6-won8, 2026-11-11)
 
 Round 8 of R6: the WON GUI toolkit (WONGUI, 39.2k lines; its map by area, size, lobby use and dependency is in
 RUST_PLAN's "R6 WON, the rest" row). The C++ classes keep their objects, child lists, vtables, virtual calls,
@@ -5487,11 +5487,10 @@ edge and wrapping ints).
   count) and keeps the break list (`BreakInfo` still narrows to `unsigned short`), the height and the paint. A
   unit breaks at most twice (inside a word, then alone when it is wider than the line); the C++ hands room for
   `2 * len + 1` and asks again with more if the count says so. `won_guiwrap_test`: 3,559,089 checks, 0 failures.
-  **Not committed:** this move was built (link 0/0), Rust-gated and driver-checked, but its oracle run failed when
-  drive C: filled up (0 bytes free, other agents' builds); it is left uncommitted in the worktree
-  (`guiwrap.rs`, `WrappedText.cpp`, `won_guiwrap_test.cpp`) for a gated commit later.
+  Its first oracle run failed when drive C: filled up (EE-SIM's per-run stage slots under `build/sim/stage`, now
+  deleted by `tools/sim.py` when a game exits); it was committed after a clean rerun (seeds 2-7 identical).
 - **What exercises what.** Every lobby load lays out the 63 .cfg files' components (the layouts, `SetSize`,
-  the rectangles; with the uncommitted wrap, every label and button text). The LAN game (`lan_game.py`) adds: the clicks
+  the rectangles, the wrap of every label and button text). The LAN game (`lan_game.py`) adds: the clicks
   (`wonclick`: the hit verdict, `Button`'s press and release), typing (`wonkey`: `SetSelText`'s cut and limit, the
   caret's blink and scroll), the game and player lists and the chat (the list's lines, stacking, inserts,
   deletes and scrolls, the scrollbars' thumbs and the scroll areas' clamps), the button states at every paint.
@@ -5499,7 +5498,7 @@ edge and wrapping ints).
   Backspace and Delete, the list's keys, wrap and tool tips, Tab focus, the last-focus pick, the radio arrows,
   Space, Enter and the button repeat, the scrollbar drag and its arrows and track. Every move here changes layout
   or drawing: a lobby run checks them. Nothing here touches the simulation: the oracle was identical after each
-  gated build (five code commits, each built, oracle-checked and Rust-gated on its own).
+  gated build (six code commits, each built, oracle-checked and Rust-gated on its own).
 - **Still C++ of WONGUI:** the component objects and their event dispatch (Window, WindowManager, RootContainer,
   the popups and modality), TextArea and its segments (the chat's rich text wrap), ComboBox, TabCtrl, Splitter,
   MultiListArea and its header, TreeItem, the menus and dialogs' rules, the config readers' expression parser and
