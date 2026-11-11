@@ -483,6 +483,7 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
         }
         EECPAIEntry theAI;
         theAI.mRandom = false;
+        theAI.mSeesAll = false;
         std::string theProblem;
         for (const auto& f : e.mFields) {
             const JValue& v = f.second;
@@ -499,6 +500,12 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
                     break;
                 }
                 theAI.mRandom = v.mBool;
+            } else if (f.first == "sees_all") {
+                if (v.mKind != JValue::kBool) {
+                    theProblem = "sees_all must be true or false";
+                    break;
+                }
+                theAI.mSeesAll = v.mBool;
             } else {
                 EECPEngineLog("%s: unknown key \"%s\" ignored", theWhere.c_str(), f.first.c_str());
             }
@@ -673,6 +680,13 @@ std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
     if (EECPEngine(inPlayer) != kEECPEngineNext || inPlayer->mNextState == NULL)
         return std::string();
     return inPlayer->mNextState->mAI;
+}
+
+bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer)
+{
+    std::string theID = EECPEngineAI(inPlayer);
+    const EECPAIEntry* theAI = theID.empty() ? NULL : EECPAIByID(theID);
+    return theAI != NULL && theAI->mSeesAll;
 }
 
 std::string EECPEngineName(const EEComputerPlayer* inPlayer)

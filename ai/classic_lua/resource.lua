@@ -477,9 +477,14 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- the danger checks
 
--- EECPBuildManager::HasEnemyNear: armed enemy units in the box of a region (9 tiles) round a tile. DEVIATION (fog):
--- the original sums every player's influence there, seen or not; the port counts the armed enemies it sees
+-- EECPBuildManager::HasEnemyNear: armed enemy units in the box of a region (9 tiles) round a tile. With the
+-- manifest's "sees_all" (ai/ais.json: the classic's information cheat) ai.enemy_near is the original, seen or not;
+-- without it, DEVIATION (fog): the port counts the armed enemies it sees or remembers
+M.sees_all = false
 function M.enemy_near(x, y)
+    if M.sees_all then
+        return ai.enemy_near(x, y)
+    end
     -- HasEnemyNear: any enemy influence (an armed unit, a tower, an armed building) in the 9-tile influence regions
     -- the box x +- 9, y +- 9 touches (up to 27 tiles across). DEVIATION (fog): the classic sums the influence table
     -- over every player's units; the port takes the armed enemies it sees or remembers (ai.memory: buildings until

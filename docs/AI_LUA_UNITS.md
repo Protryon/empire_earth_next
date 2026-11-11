@@ -946,8 +946,27 @@ from data, so that a script can make its decisions with the same numbers:
 - `ai.class` and the `ai.techs` records have `data_cost`: the tech's listed cost as the cost cheat scales it, without
   the epoch and upgrade factors of `cost` (what the classic's needs ledger counts: EECPResourceManager::AddCosts).
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
-  repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
+  repaired, the unit attacked) and `gathers` (a gatherer's resource kind), and `waiting` (a gatherer waiting for
+  room at its resource, which the classic resource manager's AssignGatherers takes as idle).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
+- `ai.water_sites(x, y, {max = 64})` -> `{{x, y}, ...}`: the dock sites, nearest (x, y) first, at most `max` (512):
+  the largest water body's shore tiles next to the land mass at (x, y) and the water tiles round them, explored ones
+  only (EECPBuildManager::CollectSiteTiles(2), which reads the whole map); empty when that water does not touch the
+  land. The classic's FindShoreSite tries them in turn.
+- `ai.tuning()` has the map's `water_tiles`, `land_tiles` and `space_tiles` (the continent manager's counts) and
+  `largest_sea` (the largest water body's id, 0 for none): the classic's domain shares (GetDomainShare) weigh the
+  sea by them. `ai.area(id)` or `ai.area(x, y)` -> `{id, category, tiles}`: an area of the continent manager (the
+  classic's continents: a land mass, a water body), by its id or the one at a tile, with its kind (1 land, 2 water,
+  3 cliff, 4 space, 5 map edge) and size. These ids are not `ai.tile`'s `continent` and `sea` (the path sectors'
+  land masses and water bodies). `ai.area_point(id, seed)` -> x, y: a random tile of the area
+  (EEAIArea::GetRandomPoint) from a stream seeded with the script's number (AssignSeaTask's random point).
+- **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
+  only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
+  `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.
+  With `sees_all` it is the C++ classic's EECPBuildManager::HasEnemyNear, which reads every player's units through
+  the fog (the influence regions round the tile, one tile on small island maps; idle searchers left out). Without
+  it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
+  towers and armed buildings known. No other query reads through the fog.
 
 **The `type` filter as a list (2026-11-10, boom-econ):** `ai.units`, `ai.seen`, `ai.resources` and `ai.memory` take
 `type = {"b_town_center", "b_capitol", ...}` (class names or ids, at most 16) as §2.2 says: a unit of any of them

@@ -43,7 +43,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). The combat state is the script's (1 once
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
-                ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. NOT STARTED: the favourite sea,
+                ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteSeaType (main.lua: a random
+                warship class trainable now that passes IsFavoriteSea). NOT STARTED: the favourite
                 air and space types, Regroup's island fishing rule beyond mUsesFishing, ChooseUnitsToKill.
                 DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
                 and factories train (the favourite screener's AI lines are not exposed).
@@ -77,8 +78,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
                 one-tile margin: `margin = true`, added for this port) - CanBuildAt's other rules (choke points, hills,
                 runway ends, gates and town centres near, walkable ground round the site) are not applied; the
-                granary's room for farms is not tested; the shore site is the shore nearest the town (CollectSiteTiles'
-                water tiles are not readable). NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
+                granary's room for farms is not tested; the dock sites (CollectSiteTiles' water tiles: ai.water_sites)
+                are the explored ones, collected again every 60 s. NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
                 replacement (AssignBuilders covers them every 2 minutes), the airport, anti-air, space and wonder
                 sites, the island coasts', gates' and choke points' towers.
   EECPResearchManager.cpp
@@ -101,8 +102,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
-                other players' area hull test; HasEnemyNear counts the armed enemies seen or remembered (ai.memory) in the
-                influence regions round the tile (up to 27 tiles), not every player's influence. BuildSettlementFor (the gather goal's
+                other players' area hull test; HasEnemyNear is ai.enemy_near: the C++'s own test (every player's units, seen
+                or not) through the manifest's "sees_all" - the classic's information cheat, declared for classic_lua
+                only and shown in the trace's start line; without it the armed enemies seen or remembered (ai.memory) in
+                the influence regions round the tile. BuildSettlementFor (the gather goal's
                 storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
                 seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
                 gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
@@ -124,8 +127,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 player needs) is not ported (the enemies' gatherers per resource are not seen). NOT STARTED: the wonder
                 race, Attack's flares and covered landings, the ICBM, EpochReached's WW1 groups, AttackPlayer /
                 DefendPlayer (allies), the scenario's attack and defend tasks.
-  EECPCombatStrategy.cpp        PARTLY -> army.lua: the land share only (Small land maps); the sea, air and space
-                shares (ComputeDomainShares, GetDomainShare): NOT STARTED (the navy stage)
+  EECPCombatStrategy.cpp        PARTLY -> army.lua: ComputeDomainShares' sea share (GetDomainShare: the water tiles'
+                share, the own sea strength against the target's, the air unit weight's pull) and Calculate (the
+                sea's count, the rest land), RedistributeDomainCounts (no sea class: to land). NOT STARTED: the air
+                share (from WW1) and space
   EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp
                 PARTLY -> army.lua: CreateGroup / MakePlan / PlaceSubGroups (one land sub-group per group: its held
                 units taken, its slots requested), DropSpentGroups every 45 s, the sub-group's phases (WaitForUnits
@@ -137,15 +142,21 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the movement, the targets, the fighting (EECPAttackSubGroupUnit, EECPASG*, EECPASGU*,
                 EECPASTargetUnit, the formations). DEVIATIONS: a sub-group does not split or merge; no retreat (the
                 Hard classic does not retreat either); the targets are what lib.groups picks within 12 tiles.
-                NOT STARTED: sea, air, space and transport sub-groups; GiveImprovements.
+                MakeSubGroups: a land and a sea sub-group (the warships); AssignSeaTask (FindSeaTarget finds
+                nothing; 25% a known unit of the target on the sub-group's water, else a random point of that water,
+                else the water by the town; a sea task is looked at again after 10-120 s). DEVIATIONS: the known units
+                are those remembered; the defend tasks of ChooseTask (scenario) are not ported.
+                NOT STARTED: air, space and transport sub-groups, submarines' kind; GiveImprovements.
   EECPUnitSelector.cpp          PARTLY -> army.lua: Select: GatherCandidates (the free soldiers, an attack also the
                 defence groups' at rest: GatherDefendingUnits; the classes the player trains by AI kind,
                 KeepBestClasses, FilterByStrategy), ComputeGroupSize (the attack/defence share of the target file's
                 strength, the attack group modifier, the room: the count beyond the room taken from held units, no
                 room: only held units), AllocateHeldUnits (the most common classes), AllocateCounterUnits (the
                 counter families of the target's unit types weighted 3/2/1, 2-6 classes, the siege share, the RPS
-                factor, the specialised chance, TakeUnitClass), AllocateFavoriteUnits (the favourite land type, else
-                a random favourite candidate). DEVIATION: the target file's counts (see EECPIntelligence).
+                factor, the specialised chance, TakeUnitClass), AllocateFavoriteUnits (the favourite sea type, else
+                a random favourite candidate, none: the count to land; the favourite land type, else a random favourite
+                candidate); the sea's classes and counts as the land's (the counter classes 3-5 at sea, the held units
+                within each domain's count). DEVIATION: the target file's counts (see EECPIntelligence).
                 NOT STARTED: AllocateSpecialUnits (priests, prophets, heroes, carriers, paratroopers), the deathmatch
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
@@ -175,10 +186,13 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
                 the hills and choke points of the ladder (no query), AidAllies, CheckRaids / Retaliate, BuildUp
-                (deathmatch), CheckNaval, CheckSpace, CheckSpecials.
+                (deathmatch), CheckSpace, CheckSpecials. CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
+                50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
+                kind 5; its ChooseUnitsToKill and the carrier fighters: NOT STARTED).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
-                class drafted or requested, explore with the difficulty's stance, every 30 s). NOT STARTED: the sea,
-                space and air explorers.
+                class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
+                (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).
+                NOT STARTED: the space and air explorers.
   EECPDiplomacyManager.cpp      empty in the original: nothing to port
   EECPPlayerInteractionManager.cpp
                 NOT STARTED (chat taunts: no chat command in the interface)
@@ -199,11 +213,13 @@ what is explored (a town centre's few tiles at the start), so an idle citizen wi
 (econ.lua) until the finders know a resource.
 
 Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
-ai.find_site's `margin` and `far` options, ai.class's `tech` and military data (ai_kind, counters, roles,
-influence, epoch, pop, domain), the own units' `target` and `gathers`, the view's
+ai.find_site's `margin` and `far` options, ai.water_sites (the dock sites), ai.area / ai.area_point (the
+continent manager's areas: AssignSeaTask), ai.tuning's map tiles (water, land, space, the largest sea: GetDomainShare),
+ai.enemy_near with the manifest's sees_all (HasEnemyNear), ai.class's `tech` and military data (ai_kind, counters, roles,
+influence, epoch, pop, domain), the own units' `target`, `gathers` and `waiting`, the view's
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
 Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
-choke points and hills; the water site tiles; the epoch's
+choke points and hills; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.

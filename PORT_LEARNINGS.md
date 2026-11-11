@@ -2005,3 +2005,14 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   future research sentinel (an epoch-14 tech, 2000 wood, 1000 stone, 2000 iron) cost nothing in the Prehistoric. The
   classic personality splits its gatherers by the needs, so the C++ sent its first gatherers to stone and iron (and
   its towers went up at the iron) while the port's went to wood; `data_cost` (AI_LUA_UNITS §11) is the ledger's cost.
+- **A script's granary plants its farms later than the classic's, and its builder builds them.** EEMakeBuilding (the
+  C++ classic's placement) sends EEMReplantFarms at once, so the farm foundations stand unbuilt while the granary goes
+  up, and CheckBuildingCounts sees them unbuilt and queues farm requests (48 a bench). `ai.build` places through
+  EEMBuildUnit: the farms are planted when the granary is finished (EEComplexUnit::SetBuilt), and its builder builds
+  them in turn (EEUGBuildRepair::TendNextFarm), so the port's count check finds them built and queues the granary
+  only. Counting the farm build orders said "the port builds no farms"; the farmers say otherwise (3.3 against 4.3 at
+  90 minutes over 32 games). Compare a building's effect (its workers), not its orders.
+- **A site finder that asks for a builder at every candidate blows the step's budget.** FindShoreSite tries every water
+  site with FindBuilderForTile; in Lua each test is an `ai.reach` per available citizen, and with the reveal cheat the
+  sites run to hundreds: 300 budget errors a bench. The port asks at the first 8 placeable sites (asking at the
+  first only halved its docks: `ai.reach` to a water tile fails at some sites a builder reaches at the next).
