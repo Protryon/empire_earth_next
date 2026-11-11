@@ -10,7 +10,11 @@
 // caret moves, selection, scrolling, the caret from a mouse location and the IME composition's bookkeeping. Their
 // members below forward to it with the box's members from mCaretX on as the pinned record EeUiEditFields; the lines
 // stay here (mLines), read and written through the ee_uicpp_edit_* host calls. The drawing's ranges, rows and IME
-// underlines are Rust too (edit_draw.rs). What stays C++: construction, the draw calls, the clipboard, mouse capture, key dispatch and repeat, focus.
+// underlines are Rust too (edit_draw.rs), and so is the key dispatch (edit_keys.rs): UpdateKeyboard's repeat, which
+// keys move, select, delete, cut, copy, paste, scroll or fire Enter, the clipboard's Cut/Copy/Paste, an IME result's
+// typing and a drag's selection and auto-scroll. Rust asks every key through ee_uicpp_edit_key (UIControl's
+// predicates stay here) and every timer through ee_uicpp_edit_poll. What stays C++: construction, the draw calls,
+// the platform clipboard, mouse capture, focus.
 #include <windows.h>
 #include <mbstring.h>
 #include <stddef.h>
@@ -122,6 +126,56 @@ struct UIEditBoxRust {
     static void EraseLine(void* inBox, size_t inLine) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + inLine); }
     static void KeepFirstLine(void* inBox) { Box(inBox)->mLines.erase(Box(inBox)->mLines.begin() + 1, Box(inBox)->mLines.end()); }
     static UIScrollBar* ScrollBar(void* inBox) { return Box(inBox)->mScrollBar; }
+    static void ProcessEnterKey(void* inBox) { Box(inBox)->ProcessEnterKey(); }   // virtual
+    static void TranslatedKey(void* inBox, const char* inText) { Box(inBox)->mForm->GetManager()->UpdateTranslatedKey(inText, 1); }
+    // EditKey: UIControl's key predicates and the keyboard's A, L and Return entities, asked as the C++ asked them
+    static bool Key(int inKey)
+    {
+        ISEntity* theKey;
+        switch (inKey) {
+        case 0: return UIControl::ShiftKeyPressed();
+        case 1: return UIEditBox::sControlKey->GetValue() != 0;
+        case 2: return UIEditBox::sBackSpaceKey->GetValue() != 0;
+        case 3: return UIControl::DeleteKeyPressed();
+        case 4: return UIControl::RightKeyPressed();
+        case 5: return UIControl::LeftKeyPressed();
+        case 6: return UIControl::HomeKeyPressed();
+        case 7: return UIControl::EndKeyPressed();
+        case 8: return UIControl::UpKeyPressed();
+        case 9: return UIControl::DownKeyPressed();
+        case 10: return UIControl::EnterKeyPressed();
+        case 11: return UIControl::CutKeyPressed();
+        case 12: return UIControl::CopyKeyPressed();
+        case 13: return UIControl::PasteKeyPressed();
+        case 14: gISKeyboard->GetEntity(kKeyA, theKey); return theKey->JustPressed();
+        case 15: gISKeyboard->GetEntity(kKeyL, theKey); return theKey->JustPressed();
+        case 16: gISKeyboard->GetEntity(kKeyReturn, theKey); return theKey->JustPressed();
+        case 17: return UIEditBox::sEnterKey->JustPressed();
+        case 18: return UIEditBox::sNumEnterKey->JustPressed();
+        }
+        return false;
+    }
+    // EditPoll
+    static TMPoll* Poll(void* inBox, int inPoll)
+    {
+        UIEditBox* theBox = Box(inBox);
+        switch (inPoll) {
+        case 0: return theBox->mRepeatPoll;
+        case 1: return theBox->mRepeatDelayPoll;
+        case 2: return theBox->mCursorPoll;
+        default: return theBox->mScrollPoll;
+        }
+    }
+    // PollOp: GetIsRunning, Poll, Start, Stop
+    static unsigned long PollOp(TMPoll* inPoll, int inOp)
+    {
+        switch (inOp) {
+        case 0: return inPoll->GetIsRunning() ? 1 : 0;
+        case 1: return inPoll->Poll();
+        case 2: inPoll->Start(); return 0;
+        default: inPoll->Stop(); return 0;
+        }
+    }
     static void SetCopiedIME(UIEditBox* inBox, const EeUiEditIme& inIME)
     {
         inBox->mCopiedIMEActive = inIME.active;
@@ -231,6 +285,21 @@ extern "C" void ee_uicpp_edit_base_set_location(void* inBox, float inX, float in
 }
 extern "C" void ee_uicpp_edit_fire(void* inBox, unsigned long inEvent) { UIEditBoxRust::Box(inBox)->FireTriggerEvent(inEvent); }
 extern "C" void ee_uicpp_wide_assign(void* outString, const char* inText) { *static_cast<UWideString*>(outString) = inText; }
+
+// The key dispatch's host calls (ee_ui/src/edit_keys.rs EditKey, EditPoll, PollOp)
+extern "C" bool ee_uicpp_edit_key(void* inBox, int inKey) { return UIEditBoxRust::Key(inKey); }
+extern "C" unsigned long ee_uicpp_edit_poll(void* inBox, int inPoll, int inOp)
+{
+    return UIEditBoxRust::PollOp(UIEditBoxRust::Poll(inBox, inPoll), inOp);
+}
+extern "C" void ee_uicpp_edit_process_enter_key(void* inBox) { UIEditBoxRust::ProcessEnterKey(inBox); }
+extern "C" void ee_uicpp_edit_clipboard_set(const char* inText) { PlatClipboardSetText(inText); }
+extern "C" char* ee_uicpp_edit_clipboard_get() { return PlatClipboardGetText(); }
+extern "C" void ee_uicpp_edit_clipboard_free(char* inText) { free(inText); }
+extern "C" void ee_uicpp_edit_translated_key(void* inBox, const char* inText)
+{
+    UIEditBoxRust::TranslatedKey(inBox, inText);
+}
 
 // FUNCTION: LLE 0x10069e8b
 // Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
@@ -350,17 +419,7 @@ const char* UIEditBox::AddChar(const char* inString)
 // Types an IME result string into the box character by character, then restarts the composition at the caret
 void UIEditBox::AddIMEResultString(const UWideString& inString)
 {
-    bool theIMEActive = this->mIMEActive;
-    const char* theCursor = inString;
-    this->RemoveIMECompositionString();
-    this->mIMEActive = false;
-    while (*theCursor != 0) {
-        this->mForm->GetManager()->UpdateTranslatedKey(theCursor, 1);
-        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
-    }
-    this->mIMEStartIndex = this->mCaretIndex;
-    this->mIMEStartLine = this->mCaretLine;
-    this->mIMEActive = theIMEActive;
+    ee_ui_edit_add_ime_result(UIEditBoxRust::Refs(this), inString);
 }
 
 // FUNCTION: LLE 0x1006aa2f
@@ -439,11 +498,7 @@ void UIEditBox::ComputeDrawingIndex()
 // Copies the selected text to the clipboard (platform/PlatWindow.h; Win32's CF_TEXT before)
 void UIEditBox::Copy()
 {
-    if (!this->mIsTextSelected)
-        return;
-    UWideString theText("");
-    this->GetSelectedText(theText);
-    PlatClipboardSetText(theText);
+    ee_ui_edit_copy(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006b1a0
@@ -551,10 +606,7 @@ long UIEditBox::CopyData()
 // Copies the selected text to the clipboard, then deletes it
 void UIEditBox::Cut()
 {
-    if (this->mIsTextSelected) {
-        this->Copy();
-        this->DeleteSelectedText();
-    }
+    ee_ui_edit_cut(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006b816
@@ -739,11 +791,7 @@ void UIEditBox::IncrementCaretPos(long inCount)
 // Inserts the clipboard's text at the caret (platform/PlatWindow.h; Win32's CF_TEXT before)
 void UIEditBox::Paste()
 {
-    char* theText = PlatClipboardGetText();
-    if (theText == NULL)
-        return;
-    this->AddChar(theText);
-    free(theText);
+    ee_ui_edit_paste(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006ca57
@@ -805,47 +853,8 @@ long UIEditBox::MouseMove(const GE2DPoint& inLocation)
     long theResult = kErrorOK;
     if (this->mScrollBarCaptured)
         theResult = this->mScrollBar->MouseMove(inLocation);
-    else if (this->mSelecting) {
-        this->CalculateCaretFromMouseLocation(this->mCaretLine, this->mCaretIndex, inLocation);
-        this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-        if (!this->mTextRectangle.Contains(inLocation)) {
-            unsigned long theCount;
-            if (this->mScrollPoll->GetIsRunning())
-                theCount = this->mScrollPoll->Poll();
-            else {
-                this->mScrollPoll->Start();
-                theCount = 1;
-            }
-            if (this->mIsSingleLine) {
-                if (theCount > 0) {
-                    if (inLocation.GetX() < this->mTextRectangle.GetLeft()) {
-                        for (unsigned long i = theCount; i > 0; i--)
-                            this->DecrementCaretPos();
-                    } else if (inLocation.GetX() > this->mTextRectangle.GetRight())
-                        this->IncrementCaretPos(theCount);
-                    else
-                        this->mScrollPoll->Stop();
-                }
-            } else if (theCount > 0) {
-                if (inLocation.GetY() < this->mTextRectangle.GetTop() && this->mCaretLine > 0) {
-                    if ((long)(this->mCaretLine - theCount) < 0)
-                        this->mCaretLine = 0;
-                    else
-                        this->mCaretLine -= theCount;
-                    this->SetIndexFromUpDownOffset();
-                    this->ComputeCaretLocation(false);
-                } else if (inLocation.GetY() > this->mTextRectangle.GetBottom() && this->mCaretLine < this->mLines.size() - 1) {
-                    if (this->mCaretLine + theCount >= this->mLines.size())
-                        this->mCaretLine = this->mLines.size() - 1;
-                    else
-                        this->mCaretLine += theCount;
-                    this->SetIndexFromUpDownOffset();
-                    this->ComputeCaretLocation(false);
-                } else
-                    this->mScrollPoll->Stop();
-            }
-        }
-    }
+    else if (this->mSelecting)
+        ee_ui_edit_drag(UIEditBoxRust::Refs(this), UIEditBoxRust::Point(inLocation));
     return theResult;
 }
 
@@ -882,251 +891,6 @@ void UIEditBox::ProcessEnterKey()
 void UIEditBox::ProcessHomeKey()
 {
     ee_ui_edit_home_key(UIEditBoxRust::Refs(this));
-}
-
-// FUNCTION: LLE 0x1006d010
-// Handles Ctrl keys: cut, copy, paste, Home/End of text, Ctrl+A select all, Ctrl+L clear line, Ctrl+Up/Down scroll,
-// Ctrl+Enter trigger; returns whether a key was handled
-bool UIEditBox::ProcessControlInput(bool inRepeat)
-{
-    bool theHandled = false;
-    if (UIControl::CutKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Cut();
-    }
-    if (UIControl::CopyKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Copy();
-    }
-    if (UIControl::PasteKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Paste();
-    }
-    if (UIControl::HomeKeyPressed()) {
-        this->mIsTextSelected = false;
-        theHandled = true;
-        this->mCaretLine = 0;
-        this->ProcessHomeKey();
-    }
-    if (UIControl::EndKeyPressed()) {
-        this->mIsTextSelected = false;
-        theHandled = true;
-        this->mCaretLine = this->mLines.size() - 1;
-        this->ProcessEndKey();
-    }
-    ISEntity* theKey;
-    gISKeyboard->GetEntity(kKeyA, theKey);
-    if (theKey->JustPressed())
-        this->SelectText();
-    gISKeyboard->GetEntity(kKeyL, theKey);
-    if (theKey->JustPressed()) {
-        this->mIsTextSelected = false;
-        this->mCaretIndex = 0;
-        this->mDrawingIndex = 0;
-        if (this->mCaretLine == this->mLines.size() - 1) {
-            this->mLines[this->mCaretLine] = "";
-            this->ComputeCaretLocation(true);
-        } else
-            this->DeleteLine(this->mCaretLine);
-    }
-    if (this->mIsSingleLine)
-        return theHandled;
-    if (UIControl::DownKeyPressed()) {
-        this->mIsTextSelected = false;
-        theHandled = true;
-        if (inRepeat &&
-            this->mScrollBar->GetSlider()->GetCurrentRangeValue() < this->mScrollBar->GetSlider()->GetMaxRange())
-            this->mScrollBar->SetCurrentRangeValue(this->mScrollBar->GetSlider()->GetCurrentRangeValue() + 1);
-    }
-    if (UIControl::UpKeyPressed()) {
-        this->mIsTextSelected = false;
-        theHandled = true;
-        if (inRepeat && this->mScrollBar->GetSlider()->GetCurrentRangeValue() > 0)
-            this->mScrollBar->SetCurrentRangeValue(this->mScrollBar->GetSlider()->GetCurrentRangeValue() - 1);
-    }
-    gISKeyboard->GetEntity(kKeyReturn, theKey);
-    if (theKey->JustPressed())
-        this->FireTriggerEvent(kControlTriggerEnterPressed);
-    return theHandled;
-}
-
-// FUNCTION: LLE 0x1006d221
-// Handles the edit keys (backspace, delete, arrows, Home, End, Enter) and dispatches Shift and Ctrl combinations
-// Returns whether a key was handled
-bool UIEditBox::ProcessInput(bool inRepeat)
-{
-    bool theHandled = false;
-    if (UIControl::ShiftKeyPressed()) {
-        if (!this->mIMEActive)
-            theHandled = this->ProcessShiftInput(inRepeat);
-    } else if (UIControl::sControlKey->GetValue()) {
-        if (!this->mIMEActive)
-            theHandled = this->ProcessControlInput(inRepeat);
-    } else {
-        if (UIControl::sBackSpaceKey->GetValue()) {
-            theHandled = true;
-            if (!this->mIMEActive && inRepeat) {
-                if (this->mIsTextSelected)
-                    this->DeleteSelectedText();
-                else
-                    this->BackSpaceChar();
-            }
-        }
-        if (UIControl::DeleteKeyPressed()) {
-            theHandled = true;
-            if (!this->mIMEActive && inRepeat) {
-                if (this->mIsTextSelected)
-                    this->DeleteSelectedText();
-                else
-                    this->DeleteChar();
-            }
-        }
-        if (UIControl::RightKeyPressed()) {
-            theHandled = true;
-            if (!this->mIMEActive) {
-                this->mIsTextSelected = false;
-                if (inRepeat)
-                    this->IncrementCaretPos(1);
-            }
-        }
-        if (UIControl::LeftKeyPressed()) {
-            theHandled = true;
-            if (!this->mIMEActive) {
-                this->mIsTextSelected = false;
-                if (inRepeat)
-                    this->DecrementCaretPos();
-            }
-        }
-        if (UIControl::HomeKeyPressed()) {
-            theHandled = true;
-            if (!this->mIMEActive) {
-                this->mIsTextSelected = false;
-                this->ProcessHomeKey();
-            }
-        }
-        if (UIControl::EndKeyPressed()) {
-            theHandled = true;
-            if (!this->mIMEActive) {
-                this->mIsTextSelected = false;
-                this->ProcessEndKey();
-            }
-        }
-        if (!this->mIsSingleLine) {
-            if (UIControl::UpKeyPressed()) {
-                theHandled = true;
-                if (!this->mIMEActive) {
-                    this->mIsTextSelected = false;
-                    if (inRepeat)
-                        this->ProcessUpKey();
-                }
-            } else if (UIControl::DownKeyPressed()) {
-                theHandled = true;
-                if (!this->mIMEActive) {
-                    this->mIsTextSelected = false;
-                    if (inRepeat)
-                        this->ProcessDownKey();
-                }
-            }
-            if (UIControl::EnterKeyPressed()) {
-                theHandled = true;
-                if (!this->mIMEActive && inRepeat)
-                    this->ProcessEnterKey();
-            }
-        }
-    }
-    return theHandled;
-}
-
-// FUNCTION: LLE 0x1006d3fb
-// Handles Shift keys: cut, copy, paste and caret moves that extend the selection; returns whether a key was handled
-bool UIEditBox::ProcessShiftInput(bool inRepeat)
-{
-    bool theHandled = false;
-    if (!this->mIsTextSelected) {
-        this->mSelectionStartIndex = this->mCaretIndex;
-        this->mSelectionStartLine = this->mCaretLine;
-    }
-    if (UIControl::CutKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Cut();
-    }
-    if (UIControl::CopyKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Copy();
-    }
-    if (UIControl::PasteKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->Paste();
-    }
-    if (theHandled)
-        return theHandled;
-    if (UIControl::sBackSpaceKey->GetValue()) {
-        theHandled = true;
-        if (inRepeat) {
-            if (this->mIsTextSelected)
-                this->DeleteSelectedText();
-            else
-                this->BackSpaceChar();
-        }
-    }
-    if (UIControl::DeleteKeyPressed()) {
-        theHandled = true;
-        if (inRepeat) {
-            if (this->mIsTextSelected)
-                this->DeleteSelectedText();
-            else
-                this->BackSpaceChar();
-        }
-    }
-    if (UIControl::RightKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->IncrementCaretPos(this->mCharScroll);
-        this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-    }
-    if (UIControl::LeftKeyPressed()) {
-        theHandled = true;
-        if (inRepeat)
-            this->DecrementCaretPos();
-        this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-    }
-    if (UIControl::HomeKeyPressed()) {
-        theHandled = true;
-        this->ProcessHomeKey();
-        this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-    }
-    if (UIControl::EndKeyPressed()) {
-        theHandled = true;
-        this->ProcessEndKey();
-        this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-    }
-    if (!this->mIsSingleLine) {
-        if (UIControl::DownKeyPressed()) {
-            theHandled = true;
-            if (inRepeat && this->mCaretLine < this->mLines.size() - 1) {
-                this->mCaretLine++;
-                this->SetIndexFromUpDownOffset();
-                this->ComputeCaretLocation(false);
-            }
-            this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-        }
-        if (UIControl::UpKeyPressed()) {
-            theHandled = true;
-            if (inRepeat && this->mCaretLine > 0) {
-                this->mCaretLine--;
-                this->SetIndexFromUpDownOffset();
-                this->ComputeCaretLocation(false);
-            }
-            this->mIsTextSelected = this->mSelectionStartLine != this->mCaretLine || this->mSelectionStartIndex != this->mCaretIndex;
-        }
-    }
-    return theHandled;
 }
 
 // FUNCTION: LLE 0x1006d6c6
@@ -1258,38 +1022,7 @@ void UIEditBox::TabbedTo()
 // Processes held keys with a 500 ms repeat delay and 50 ms repeat; Enter in a single-line box fires its trigger
 long UIEditBox::UpdateKeyboard()
 {
-    bool theRepeat = false;
-    if (!this->mIMEActive && this->mIsSingleLine && (UIControl::sEnterKey->JustPressed() || UIControl::sNumEnterKey->JustPressed())) {
-        this->ProcessEnterKey();
-        this->mKeyRepeating = false;
-        this->mRepeatDelayPoll->Stop();
-        this->mRepeatPoll->Stop();
-        this->mCursorPoll->Start();
-    } else {
-        if (this->mRepeatDelayPoll->GetIsRunning()) {
-            if (this->mRepeatDelayPoll->Poll()) {
-                this->mRepeatDelayPoll->Stop();
-                this->mRepeatPoll->Start();
-                theRepeat = true;
-            }
-        } else if (!this->mRepeatPoll->GetIsRunning() || this->mRepeatPoll->Poll())
-            theRepeat = true;
-        if (this->ProcessInput(theRepeat)) {
-            if (!this->mKeyRepeating)
-                this->mRepeatDelayPoll->Start();
-            this->mKeyRepeating = true;
-            if (!this->mCursorOn)
-                this->SetDirty(true);
-            this->mCursorPoll->Stop();
-            this->mCursorOn = true;
-        } else {
-            this->mKeyRepeating = false;
-            this->mRepeatDelayPoll->Stop();
-            this->mRepeatPoll->Stop();
-            this->mCursorPoll->Start();
-        }
-    }
-    return kErrorOK;
+    return ee_ui_edit_update_keyboard(UIEditBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006ddff

@@ -670,11 +670,13 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && EESaveHasExperimentTimers(inMajorVersion, inMinorVersion)
             && EECPLoadExperimentTimers(inFile) == kErrorOK   // port (0.258): the computer players' experiment timers
             && EESaveHasTowns(inMajorVersion, inMinorVersion)
-            && EELoadTowns(inFile) == kErrorOK   // port (0.260): the towns' ids and order
+            && EELoadTowns(inFile, EESaveHasTownAreas(inMajorVersion, inMinorVersion)) == kErrorOK   // port (0.260): the towns' ids and order
             && EESaveHasGhosts(inMajorVersion, inMinorVersion)
             && LoadGhosts(inFile) == kErrorOK   // port (0.262): the dead attackers the units still hold
-            && EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
-            EELoadContinentRegions(inFile);   // port (0.263): the continent manager as it was
+            && EESaveHasContinentRegions(inMajorVersion, inMinorVersion)
+            && EELoadContinentRegions(inFile) == kErrorOK   // port (0.263): the continent manager as it was
+            && EESaveHasResourceState(inMajorVersion, inMinorVersion))
+            EECPLoadResourceState(inFile);   // port (0.265): the claim ranges and danger zones
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -739,6 +741,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 SaveGhosts(outFile);   // port (0.262): the dead attackers the units still hold
             if (EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
                 EESaveContinentRegions(outFile);   // port (0.263): the continent manager as it is
+            if (EESaveHasResourceState(inMajorVersion, inMinorVersion))
+                EECPSaveResourceState(outFile);   // port (0.265): the claim ranges and danger zones
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
