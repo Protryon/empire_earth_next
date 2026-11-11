@@ -3029,6 +3029,56 @@ Readings:
 Next: the farms (CheckBuildingCounts' farm entry never queues one in the port), the dock's water sites, then
 ChooseUnitsToKill, the special units, the guard posts and the navy; walls last (the C++ built none in 90 minutes).
 
+### 8.43 The classic computer player in Lua: farms, docks, fishing (2026-11-11, EE-SIM)
+
+The "Lua built no farms" of §8.42 counted farm build orders. The C++ classic places its granary with EEMakeBuilding,
+which plants the farm foundations at once, and CheckBuildingCounts queues a farm request per unbuilt foundation (48
+in 32 games). A script's granary (`ai.build`, EEMBuildUnit) plants its farms when finished, and the builder builds
+them itself (TendNextFarm), so the port never orders one. The farmers are level: 3.5 against 3.8 at 90 minutes, farms
+in 13 games each, the first at 74 and 78 minutes.
+
+Changes:
+- **FindShoreSite** tries the water site tiles in turn (`ai.water_sites`, new: CollectSiteTiles(2), the largest water
+  body's tiles by the town's land, nearest first), skipping those within sqrt(75) of a dock, unplaceable, threatened
+  or without a builder (asked at the first 8 placeable sites). The port took the one shore nearest the town:
+  docks built 16 -> 31 in 32 balanced games (the C++ 51).
+- **AssignGatherers** takes the gatherers waiting for room at their resource as idle, as the classic's list does
+  (the own units' new `waiting` field).
+
+Bench: as §8.42 (seeds 2-33, 90 minutes, open data); before = §8.42's b5, after = c3 (one balanced game failed at
+the lobby in each).
+
+| Matchup | AI | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Fishers at 90 min | Won-lost |
+|---|---|---|---|---|---|---|
+| balanced, before | classic | 26/31, 65.2 | 23.3/2.4 / 25.2/2.3 / 28.6/4.6 / 41.9/3.7 | 2.1 / 30.5 | 20.8 | 18-6, 7 close |
+| balanced, before | classic_lua | 20/31, 60.4 | 23.4/2.7 / 26.4/3.1 / 34.3/6.1 / 45.3/7.0 | 2.0 / 51.8 | 2.6 | 6-18, 7 close |
+| balanced, after | classic | 25/31, 64.5 | 23.2/2.3 / 25.2/2.2 / 28.5/4.5 / 40.4/3.7 | 2.0 / 30.9 | 21.9 | 16-8, 7 close |
+| balanced, after | classic_lua | 22/31, 58.3 | 23.2/2.7 / 27.0/3.3 / 35.6/6.5 / 48.1/6.8 | 1.5 / 52.3 | 2.4 | 8-16, 7 close |
+| classic+cheats, before | classic | - | 25.8/6.0 / 50.8/6.5 / 50.9/9.7 / 50.5/5.4 | 5.1 / 36.0 | - | 6-12, 14 close |
+| classic+cheats, before | classic_lua | - | 21.3/4.0 / 35.2/5.8 / 40.0/14.7 / 41.3/22.2 | 11.3 / 79.8 | - | 12-6, 14 close |
+| classic+cheats, after | classic | - | 25.8/6.0 / 50.8/5.4 / 50.8/9.4 / 50.5/5.1 | 4.8 / 30.8 | - | 8-10, 14 close |
+| classic+cheats, after | classic_lua | - | 21.4/4.2 / 35.4/4.7 / 39.9/14.1 / 42.2/26.4 | 11.3 / 91.6 | - | 10-8, 14 close |
+
+Readings:
+- Within noise of §8.42 on both personalities; the docks do not yet make fishers. **The fishing gap is the navy:**
+  the C++ trains war rafts at its docks (its sea share) and they sink the port's fishing boats, 18-27 a game where
+  the port fished (seeds 11, 12, 14, 18, 20 of the balanced bench); the port has no warships and its boats sit idle
+  after the naval flight. Its fishers peak at 10-16 and fall; the C++'s grow to 22.
+- **Classic with the cheats, the early economy:** with cost100=1 the citizens cost nothing and the town centre's
+  training time sets the pace; the port loses 11 citizens by 20 minutes against 5, two in five of them builders far
+  from home (killed by clubmen, rock throwers and the C++'s towers). Up to 20 minutes it starts 443 towers against
+  308 and orders 212 settlements against 142 (BuildSettlementFor). The C++'s HasEnemyNear reads every player's
+  influence, seen or not; the port's sees what it saw (the fog deviation of ORIGIN), so its builders walk into the
+  C++'s soldiers.
+- Hospitals 22 against 39 and temples 57 against 70 started (balanced, b5): CheckBuildingCounts runs less often in the
+  port (manager 4 in few rounds) - not yet looked into.
+- Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors (the first version of the shore
+  finder had 300 budget errors a bench under the reveal cheat).
+
+Next: the navy (warships from the docks: the sea share of ComputeDomainShares), the builders' and settlements' danger
+test, the building-count check's frequency, then ChooseUnitsToKill (only at the population limit: low effect at
+these caps), the special units, guard posts, walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
