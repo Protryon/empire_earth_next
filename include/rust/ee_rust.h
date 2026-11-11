@@ -9550,6 +9550,24 @@ void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
 /// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
 void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
 
+/// `UIEditBox::UpdateKeyboard`.
+long ee_ui_edit_update_keyboard(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Copy`.
+void ee_ui_edit_copy(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Cut`.
+void ee_ui_edit_cut(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Paste`.
+void ee_ui_edit_paste(const EeUiEditRefs *refs);
+
+/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
+void ee_ui_edit_add_ime_result(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
+void ee_ui_edit_drag(const EeUiEditRefs *refs, EeUiPoint at);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 

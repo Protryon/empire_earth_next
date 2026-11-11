@@ -13,6 +13,7 @@ pub mod controls_table;
 pub mod draw;
 pub mod edit;
 pub mod edit_draw;
+pub mod edit_keys;
 pub mod font;
 pub mod form;
 pub mod form_state;
