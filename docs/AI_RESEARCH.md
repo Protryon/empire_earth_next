@@ -3466,6 +3466,48 @@ errors.
 Next: which C++ groups walk into the port's land (a group id on the death line), the militia's fights under balanced
 (433 citizens), then ChooseUnitsToKill, the special units, guard posts, walls.
 
+### 8.48 The classic computer player in Lua: which groups die, the forests, the militia's odds, priests (2026-11-11, EE-SIM)
+
+**The death line names the group** (trace only; seed 3's samples identical): the classic's sub-group holding the unit
+(id, mission, its task's type, mode and distance) and its group's task. Over seeds 2-9 (classic with the cheats, 60
+minutes) the C++'s soldiers lost 35+ tiles from home were mostly in defence sub-groups (mission 1) on a location task
+in defence mode (180 of ~700), sub-groups whose attack found no territory (mission 0, 105) and counter-attacks
+(mission 3, 92); most died 12-30 or 30+ tiles short of their task: on the way. Their places come from
+AssignSubGroupTask's ladder - the forest is the continent manager's forest whose hull comes within 35 tiles, and the
+place a random point of the whole forest, which can lie far off; the port took a tree within 35 tiles.
+
+Changes:
+- **The ladder's forest** through a new generic query, `ai.forest_point(x, y, r, pick, seed)` (AI_LUA_UNITS §11):
+  the port's soldiers now walk as far as the C++'s (48% of the soldiers it lost died 35+ tiles from home under classic
+  with the cheats, from 36%; it lost 3920 against the C++'s 5386, from 3074 against 5143).
+- **The militia's odds** count every raider, seen or not (`ai.enemy_force`, only with `sees_all`), as EECPRMMilitia:
+  within noise (the citizens lost fighting under balanced 442 against 433).
+- **The priests and prophets** of AllocateSpecialUnits (15% of the groups, 1-3 priests, a prophet; 2% and 20% of the
+  population limit): within noise.
+
+Bench (32 seeds, 90 minutes; the port's line; the C++ about as before):
+
+| Matchup | stage | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced | §8.47 (t1) | 23.1/2.7 / 26.3/3.3 / 35.1/7.3 / 43.0/7.0 | 1.7 / 57.8 | 8-20, 4 close |
+| balanced | militia (m1) | 23.1/2.8 / 26.2/3.1 / 34.0/7.0 / 42.9/6.7 | 1.8 / 54.3 | 8-17, 7 close |
+| balanced | forests (f1) | 23.1/2.8 / 26.2/3.1 / 33.8/7.1 / 44.2/6.8 | 1.8 / 53.8 | 9-17, 6 close |
+| balanced | priests (sp) | 23.3/2.8 / 26.4/3.0 / 33.2/7.2 / 41.7/6.3 | 1.9 / 57.6 | 7-18, 7 close |
+| classic+cheats | §8.47 (t1) | 22.9/10.2 / 49.8/16.9 / 50.3/28.2 / 50.2/27.6 | 11.5 / 83.4 | 8-3, 21 close |
+| classic+cheats | militia (m1) | identical (the classic personality has no militia) | | 8-3 |
+| classic+cheats | forests (f1) | 22.9/9.2 / 50.2/13.6 / 49.8/29.4 / 49.8/28.7 | 10.7 / 89.1 | 11-1, 20 close |
+| classic+cheats | priests (sp) | 24.0/9.4 / 49.2/12.6 / 49.7/25.6 / 49.7/29.3 | 11.7 / 83.6 | 10-2, 20 close |
+
+Readings: under classic with the cheats the port's army is still 2-3 times the C++'s from 30 minutes; its soldiers now
+walk as far and die more, but the C++'s die more still (5386 against 3920): the fights themselves (lib.groups against
+the C++'s sub-group state machines) are the remaining suspect. Under balanced the C++'s land army against the port's
+citizens late in the game is the gap (§8.47). 3 budget errors at 85-89 minutes in 2 balanced games (late, large
+economies: the step's load, not one place). Determinism: seeds 2, 5 (balanced) and 3 (classic with the cheats), 60
+minutes, --repeat 2: identical.
+
+Next: a fight trace (who shoots whom, the targets' choice) to compare lib.groups with the C++'s sub-groups; the late
+step's budget; ChooseUnitsToKill (only at the population limit); guard posts on hills and choke points; walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
