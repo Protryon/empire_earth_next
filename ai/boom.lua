@@ -9,7 +9,8 @@
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
 local G = require("lib.groups")
-local D = require("lib.defence")
+local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.39)
+local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.39)
 
 local PLAN = {
     {   -- Prehistoric
@@ -143,27 +144,6 @@ end
 
 local function going_up(entry)
     return entry ~= nil and entry.unfinished + entry.queued > 0
-end
-
--- the soldier each trainer makes now: the first of PREFERRED it can make (the owner: "an army of spearmen waiting"),
--- else the cheapest (by the sum of its cost)
-local PREFERRED = {inf04_phalanx = 1, inf02_spearman = 2}
-local function soldier_classes(view)
-    local best = {}
-    for _, c in ipairs(view.costs) do
-        if not c.building and c.military and c.producer ~= nil then
-            for _, k in ipairs(TRAINERS) do
-                if c.producer == k then
-                    local s = V.sum(c.cost)
-                    local rank = PREFERRED[c.type] or 100
-                    if best[k] == nil or rank < best[k].rank or (rank == best[k].rank and s < best[k].sum) then
-                        best[k] = {type = c.type, sum = s, cost = c, rank = rank}
-                    end
-                end
-            end
-        end
-    end
-    return best
 end
 
 -- the sites holding a resource, the home ones (the start resources by the town) first, then nearest first (patch:
@@ -358,7 +338,7 @@ function M.init(view, memory)
     memory.backoff = {}
     memory.tags = {}
     memory.threat_until = 0
-    D.setup()
+    D.setup()   -- (the engine's militia and danger-zone reflexes off: lib.defence does both)
     local parts = {}
     for _, t in ipairs({"citizen", "b_barracks", "b_settlement", "b_guard_tower_paleo", "inf01_clubman",
                         "inf01_rock_thrower"}) do
@@ -450,6 +430,9 @@ function M.step(view, memory)
     end
     local age = view.epoch < 2 and view.epoch + 1 or 3
     local plan = PLAN[age]
+    if plan.army_per ~= nil then
+        plan = GD.scaled(plan, view.citizens)   -- (the light army by the workers, balanced's rule: lib.guard)
+    end
     local citizen = V.cost(view, "citizen")
     local in_epoch = (view.time - view.epoch_start) // 60000
     local towers, towers_built, towers_busy = tower_counts(view)
@@ -929,30 +912,21 @@ function M.step(view, memory)
     -- the soldiers, from each trainer in turn, while the army is short (the reserve keeps them off the advance's
     -- resources unless the town scrambles)
     if army_short then
-        local classes = soldier_classes(view)
-        local queued = 0
-        for _, k in ipairs(TRAINERS) do
-            local c = classes[k]
-            if c ~= nil then
-                queued = queued + c.cost.requested + c.cost.in_production
-            end
-        end
-        local need = soldiers_wanted - view.army_count - queued
-        for _, k in ipairs(TRAINERS) do
-            local c = classes[k]
-            if need > 0 and c ~= nil and c.cost.producers > 0 and c.cost.requested == 0 then
-                local n = math.min(need, scramble and 3 or 2)
-                order("soldier_" .. k, {verb = "train", type = c.type, n = n})
-                need = need - n
-            end
-        end
+        -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.39)
+        GD.train(view, memory, soldiers_wanted, order, scramble and 3 or 2)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
     -- the town together (a defence of the claim range: they fight what comes onto the claimed land and come back), and
     -- one of them scouts, the nearest claimed site not explored yet first (the gatherers go only to what the player
     -- has seen), then the land beyond
-    local home = G.role(memory, "home")
+    -- (lib.guard, AI_RESEARCH §8.39: the home guard waits at its post under a tower, fights the raids in the claim
+    -- range with focus fire and pulls its hurt back; an old save's defend group "home" is disbanded into it)
+    local old_home = G.role(memory, "home")
+    if old_home ~= nil then
+        G.disband(memory, old_home)
+    end
+    local home = GD.group(memory)
     local scout = G.role(memory, "scout")
     if scout ~= nil and scout.state == "done" then
         G.disband(memory, scout)
@@ -976,15 +950,9 @@ function M.step(view, memory)
             free = G.free_soldiers(view.town_x, view.town_y)
         end
     end
-    if #free > 0 and view.town_x >= 0 then
-        if home == nil then
-            home = G.create(memory, {task = "defend", role = "home", x = view.town_x, y = view.town_y, radius = view.claim_range})
-        end
-        G.add(memory, home, free)
-    end
-    if home ~= nil then
-        home.radius = view.claim_range
-    end
+    memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
+    GD.step(view, memory, {zone = view.claim_range})
+    home = GD.group(memory)
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
@@ -1002,7 +970,6 @@ function M.step(view, memory)
         G.disband(memory, escort)
     end
     G.step(view, memory)
-    memory.town_x, memory.town_y = view.town_x, view.town_y
     memory.def = memory.def or {}
     D.step(view, memory.def)
 
@@ -1035,6 +1002,7 @@ function M.step(view, memory)
     return orders
 end
 
+-- every 250 game ms (docs/AI_LUA_UNITS.md §5): the raid answer (lib.defence) on the events since the last call
 function M.micro(info, memory)
     memory.def = memory.def or {}
     D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y)
