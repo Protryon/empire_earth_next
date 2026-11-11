@@ -2769,6 +2769,79 @@ classic, 32 players).
   in every bench. **The other engines are unchanged** by the interface additions: boom and Age of AI against the
   classic, seed 2, 25 minutes, give the same traces on this build as on main's (1,887 and 2,541 lines).
 
+### 8.40 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
+
+The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `ai/boom.lua`, each
+behind a switch of its `ECON` table, the logic in new library modules: `lib.econ_units` (orders on single citizens),
+`lib.demand` (the split's stock correction, the saving ramp), `lib.econ_stats` (the bench metrics: the `econ` trace
+line each minute with the idle town-centre seconds, the patches with more than 6 gatherers sent, the town centres).
+
+Bench: EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 90 minutes, `--ai-scripts` (a copy of `ai/` with
+`rush` registered and the baseline as `boom0`), the worktree's open tree, 16 games a row (seeds 2-17 unless noted;
+a row with fewer seats lost runs to the lobby's "slot 0 human" start fault). Boom is seat p2. "Result" is the mixed
+score (§8.29) against the other seat.
+
+| Row (boom against classic `balanced`) | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C (defeated) |
+|---|---|---|---|---|---|---|
+| baseline (main + the metrics; identical after the merge of main) | 24.7 | 56.2 (12/16) | 2/16 | 33.7 / 36.6 / 45.6 | 63.7 | 5-9-2 (3) |
+| + second town centre (Stone, from 30 citizens) | 24.7 | 57.9 (13/16) | 5/16 | 33.4 / 36.2 / 49.5 | 63.2 | 4-6-6 (2) |
+| + stock correction v1, unreachable, ramp (Prehistoric too) | 22.7 | 53.2 (9/16) | 4/16 | 27.9 / 36.2 / 49.9 | 63.6 | 2-8-6 (2) |
+| the same without the ramp | 24.7 | 55.7 (10/16) | 5/16 | 33.4 / 36.5 / 49.9 | 64.1 | 3-8-5 (1) |
+| the same without the stock correction | 22.7 | 56.9 (8/16) | 4/16 | 27.9 / 35.4 / 48.8 | 59.2 | 2-9-5 (1) |
+| v1 + army slack, no ramp | 24.7 | 54.5 (10/16) | 1/16 | 33.4 / 36.4 / 47.8 | 65.1 | 3-11-2 (2) |
+| v1 + army slack + Stone ramp | 24.7 | 55.2 (10/16) | 2/16 | 33.4 / 36.4 / 47.4 | 55.9 | 4-10-2 (1) |
+| stock correction v2 (food gives to wood), no ramp | 23.7 | 61.5 (14/16) | 0/16 | 32.6 / 33.9 / 52.1 | 86.9 | 0-9-7 (0) |
+| v2 + Stone ramp | 23.6 | 60.1 (11/13) | 1/13 | 32.4 / 33.5 / 51.1 | 78.3 | 0-8-5 (0) |
+| **as committed** (second town centre + unreachable) | 24.5 | 56.5 (10/13) | 4/13 | 33.5 / 38.7 / 55.3 | 62.8 | 4-5-4 (0) |
+| baseline, seeds 18-33 | 27.8 | 52.4 (7/16) | 3/16 | 31.4 / 30.1 / 39.6 | 65.4 | 2-11-3 (2) |
+| as committed, seeds 18-33 | 27.8 | 58.9 (7/16) | 3/16 | 31.4 / 29.9 / 40.6 | 69.4 | 1-12-3 (5) |
+
+| Other matchups | Stone | Copper (reached) | Bronze | Citizens 20 / 30 / 40 min | Lost | Result W-L-C |
+|---|---|---|---|---|---|---|
+| baseline against `rush` | 21.5 | 47.8 (16/16) | 14/16 | 33.9 / 43.2 / 56.1 | 3.1 | 16-0-0 |
+| as committed against `rush` | 21.5 | 49.6 (16/16) | 13/16 | 32.8 / 43.1 / 60.8 | 7.9 | 16-0-0 |
+| baseline against `ageofai` | 22.3 | 49.5 (16/16) | 8/16 | 33.7 / 42.4 / 60.4 | 6.4 | 9-0-7 |
+| as committed against `ageofai` | 22.3 | 49.6 (14/16) | 8/16 | 33.2 / 41.8 / 62.6 | 10.6 | 6-2-8 |
+| mirror: as committed (boom) against the baseline (boom0), seeds 2-9 both seats | 22.0 / 21.5 | 52.9 (13/14) / 51.7 (14/14) | 6 / 7 | 33.4 / 43.7 / 64.4 against 34.6 / 45.4 / 64.4 | 11.6 / 20.5 | 4-2-8 |
+
+What the rows show:
+- **The second town centre** (`lib.econ_units.town_centers`: the finished settlement nearest the town with no enemy
+  soldier within 12 tiles is filled with 5 citizens, idle ones first, held until they are inside; only below 2 town
+  centres and before the Bronze Age) buys citizens, not pace: 4-9 more at 40 minutes in every matchup, the Copper Age
+  0-2 minutes later (5 citizens and the growth that follows come out of the saving). Against the classic AI it lost
+  fewer games on seeds 2-17 (6 and 5 against 9) and more on 18-33 (12 against 11, 5 defeated against 2): within the
+  noise of 16 games. Against `ageofai` 6-2 against the baseline's 9-0 (Copper reached 14 against 16). The idle town-centre seconds roughly double with two producers: food, not training, holds the
+  town back from the Stone Age's tenth minute (the one producer is the limit only in the first 6-8 minutes).
+- **The stock correction** (`lib.demand.correct`, balanced's surplus 1000 / cut 50% and low stock 150 / floor
+  shares): v1 took the low resource's gatherers from gold, stone and iron only, and never fired in the Stone Age's
+  wood famine (wood under 50 in half its minutes: food 18 and the army's iron were the whole town). v2 lets food give
+  down to 4 under its minimum: the famine minutes fell from 263 to 211 of about 650, the Copper Age is reached more
+  often (14/16) but later (61.5 against 56-58), the citizens at 30 minutes fall (33.9) and 87 citizens are lost
+  against 63. **Off by default.**
+- **The saving ramp** (`lib.demand.pressure`, balanced's epoch_pressure start/full: the reserve grows from 0 to the
+  whole cost): in the Prehistoric it started the reserve before the owner's 32 citizens and held them at 28 (the
+  Stone Age 2 minutes sooner, the Copper Age reached less often); from the Stone Age it changed little. **Off by
+  default**; the Stone and Copper plans keep `save_ramp` fields for the switch.
+- **No reserve for an unreachable advance** (balanced's claim_needed): the reserve is dropped while a resource of the
+  advance is short, no reachable site holds it (`memory.no_site`) and nobody gathers it. On; no trace line counts its
+  firings yet.
+- **The army slack** (past the soldiers-first window the reserve waits for 3/4 of the light army only): a trace
+  showed a town 2 soldiers short (iron-bound, 18 of 20) with a food reserve of 0 for 10 minutes while it saved for
+  the Copper Age (the missing army's cap `stock - missing x cost` follows the stock to 0), and its citizens took the
+  food. The slack lost more games (11 against 8). **Off.**
+- **Already in place** (no change needed): the gatherers sent to a patch never pass 6 in the C++ runner (`crowd` 0-0.4
+  samples a game, at most 7 sent for a moment); the busy gatherers moved per 10 s are balanced's moves_per_cycle 3 in
+  the C++ Rebalance, which a next seat runs; fishing from the Stone Age, boats on top of the food citizens; at most 2
+  barracks and 1-2 ranges before the Copper Age; the claim range grows when the patches cannot take the food wanted.
+- **The rush script is no test:** boom won 32 of 32 against it and lost 3-8 citizens a game.
+- **Determinism:** the `--repeat 2` run of the committed state was held back by the gates (not run); the baseline's 16 games after the merge of main (857f6aa, new C++ queries) equal the ones before
+  it in every number above.
+
+Open: the Stone Age's 15-minute stall (citizens 32-36 from minute 15 to 30: the Prehistoric reserve, then the army
+first) is where the Copper Age's 10 minutes against the owner's 46 go; the food places (18 on food, about 11 boats)
+bind from there. The per-unit gatherer placement, builders and rally points (items 6-8 of the economy plan) are not
+built: the runner already keeps the patches at 6.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
