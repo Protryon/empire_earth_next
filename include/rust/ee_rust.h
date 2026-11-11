@@ -778,6 +778,73 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
+constexpr static const int32_t MORE_REPLIES = 100059;
+
+constexpr static const uint32_t DIRS_ONLY_MASK = 2;
+
+constexpr static const uint32_t SERVICES_ONLY_MASK = 5;
+
+constexpr static const uint32_t ADD_TYPE = 16;
+
+constexpr static const uint32_t ADD_DISPLAY_NAME = 32;
+
+constexpr static const uint32_t ADD_CREATED = 64;
+
+constexpr static const uint32_t ADD_TOUCHED = 128;
+
+constexpr static const uint32_t ADD_LIFESPAN = 256;
+
+constexpr static const uint32_t ADD_DO_TYPE = 512;
+
+constexpr static const uint32_t ADD_DO_DATA = 1024;
+
+constexpr static const uint32_t ADD_DATA_OBJECTS = 2048;
+
+constexpr static const uint32_t ADD_ACLS = 4096;
+
+constexpr static const uint32_t ADD_CRC = 8192;
+
+constexpr static const uint32_t ADD_UIDS = 16384;
+
+constexpr static const uint32_t ADD_IPS = 32768;
+
+constexpr static const uint32_t DIR_ADD_PATH = 65536;
+
+constexpr static const uint32_t DIR_ADD_NAME = 131072;
+
+constexpr static const uint32_t DIR_ADD_REQ_UNIQUE = 262144;
+
+constexpr static const uint32_t SERV_ADD_PATH = 16777216;
+
+constexpr static const uint32_t SERV_ADD_NAME = 33554432;
+
+constexpr static const uint32_t SERV_ADD_NET_ADDR = 67108864;
+
+constexpr static const uint32_t TYPE = 1;
+
+constexpr static const uint32_t PATH = 2;
+
+constexpr static const uint32_t NAME = 4;
+
+constexpr static const uint32_t NET_ADDR = 8;
+
+constexpr static const uint32_t REQ_UNIQUE = 16;
+
+constexpr static const uint32_t DISPLAY_NAME = 32;
+
+constexpr static const uint32_t LIFESPAN = 64;
+
+constexpr static const uint32_t CREATED = 128;
+
+constexpr static const uint32_t TOUCHED = 256;
+
+constexpr static const uint32_t CRC = 512;
+
+constexpr static const uint32_t IPS = 1024;
+
+constexpr static const uint32_t IDS = 2048;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -789,6 +856,27 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
+
+/// No error.
+constexpr static const int32_t WON_FILE_OK = 0;
+
+/// "NULL File.": a read with nothing open, or a write with no file.
+constexpr static const int32_t WON_FILE_NULL = 1;
+
+/// "Attempt to read past end of mem buffer."
+constexpr static const int32_t WON_FILE_PAST_END_MEM = 2;
+
+/// "Attempt to read past end of file."
+constexpr static const int32_t WON_FILE_PAST_END_FILE = 3;
+
+/// "Attempt to setpos past end of mem buffer."
+constexpr static const int32_t WON_FILE_SETPOS_MEM = 4;
+
+/// "Attempt to setpos past end of file."
+constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
+
+/// "fwrite failed (disk full)"
+constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
 constexpr static const uint8_t JOIN_REQUEST = 1;
 
@@ -1053,6 +1141,12 @@ struct EeSoundManager;
 
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
+
+/// The secret list (opaque): `AuthContext::mSecrets`.
+struct EeWonAuthSecrets;
+
+/// The parser's Rust state (opaque): the pushback and the define scopes.
+struct EeWonConfigLexer;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
@@ -3530,14 +3624,119 @@ struct EeUiSliderFields {
   bool is_dragging;
 };
 
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
+/// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
+/// data).
+struct EeWonAuthEntry {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *value;
+  size_t value_len;
+  const uint8_t *bytes;
+  size_t bytes_len;
+  const uint8_t *extra;
+  size_t extra_len;
+  bool present;
+};
+
+/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
+/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
+struct EeWonFileReader {
+  void *file;
+  const uint8_t *buffer;
+  unsigned long length;
+  unsigned long position;
+  bool own_buffer;
+  bool memory_mode;
+};
+
+/// A parser's members the C++ keeps, for one call.
+struct EeWonConfigIo {
+  EeWonFileReader *reader;
+  int32_t *line;
+  bool unicode;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// A saved state across the C ABI: the file position, name and line, and the pushback's units.
+struct EeWonConfigState {
+  long pos;
+  const uint8_t *path;
+  size_t path_len;
+  int32_t line;
+  const uint16_t *back;
+  size_t back_len;
+};
+
+/// Receives a saved state; valid only during the call.
+using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
+/// negative `status`, 3 cut short; `sequence` when `has_sequence`.
+struct EeWonDirReply {
+  int32_t kind;
+  int32_t status;
+  bool has_sequence;
+  uint8_t sequence;
+};
+
+/// A data object across the C ABI.
+struct EeWonDirDataObject {
+  const uint8_t *data_type;
+  size_t data_type_len;
+  bool has_data;
+  const uint8_t *data;
+  size_t data_len;
+};
+
+/// An ACL permission across the C ABI (the raw values).
+struct EeWonDirAcl {
+  uint8_t kind;
+  int32_t user;
+  int32_t community;
+  int16_t trust;
+};
+
+/// An entity across the C ABI; valid only during the sink's call. `fields` is the `read` bits.
+struct EeWonDirEntity {
+  uint32_t fields;
+  uint8_t kind;
+  const uint16_t *path;
+  size_t path_len;
+  const uint16_t *name;
+  size_t name_len;
+  const uint16_t *display_name;
+  size_t display_name_len;
+  const uint8_t *net_addr;
+  size_t net_addr_len;
+  bool req_unique;
+  int32_t lifespan;
+  int32_t created;
+  int32_t touched;
+  int32_t crc;
+  int32_t create_ip;
+  int32_t touch_ip;
+  int32_t create_id;
+  int32_t touch_id;
+  const EeWonDirDataObject *objects;
+  size_t object_count;
+  const EeWonDirAcl *acls;
+  size_t acl_count;
+};
+
+/// Receives an entity; valid only during the call.
+using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
+
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
 /// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
 using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
 struct EeWonMd5 {
@@ -3651,8 +3850,10 @@ struct EeWonQueueDecision {
   bool clear_current;
 };
 
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+/// `FileWriter`'s state.
+struct EeWonFileWriter {
+  void *file;
+};
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
@@ -8276,6 +8477,243 @@ bool ee_units_unregister(uint32_t id, void *unit);
 /// The object registered under `id`, or null (`EEUnitHandle<T>::Get`).
 void *ee_units_resolve(uint32_t id);
 
+EeWonAuthSecrets *ee_won_auth_secrets_new();
+
+/// # Safety
+/// `s` is from `ee_won_auth_secrets_new` (or NULL), not used afterwards.
+void ee_won_auth_secrets_free(EeWonAuthSecrets *s);
+
+/// `LoadSecretList`: the list emptied, then read from the file; false when it cannot open.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_load(EeWonAuthSecrets *s, const char *path);
+
+/// `SaveSecretList`: false when the file cannot be created.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_save(EeWonAuthSecrets *s, const char *path);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+void ee_won_auth_secrets_add(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+bool ee_won_auth_secrets_remove(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list.
+bool ee_won_auth_secrets_commit(EeWonAuthSecrets *s, int64_t auth_time, int64_t duration);
+
+/// # Safety
+/// `s` is a list.
+size_t ee_won_auth_secrets_count(EeWonAuthSecrets *s);
+
+/// `AppendLoginSecrets`' bytes, to the sink.
+///
+/// # Safety
+/// `s` is a list.
+void ee_won_auth_secrets_login(EeWonAuthSecrets *s, EeWonByteSink sink, void *context);
+
+/// `AppendCommunityData`'s block, to the sink. `communities[i].bytes` is the community's valid CD key's bytes
+/// (`present` false without one).
+///
+/// # Safety
+/// Each array holds its count of entries, each entry's pointers their lengths; `s` is a list.
+void ee_won_auth_community_data(const EeWonAuthEntry *communities,
+                                size_t community_count,
+                                const EeWonAuthEntry *joins,
+                                size_t join_count,
+                                const EeWonAuthEntry *user_data,
+                                size_t user_data_count,
+                                const EeWonAuthEntry *nicknames,
+                                size_t nickname_count,
+                                EeWonAuthSecrets *s,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `AppendHashes`' block, to the sink: per community its name, its file hash in `bytes` and its section hashes in
+/// `extra`.
+///
+/// # Safety
+/// `communities` holds `count` entries; `challenge` its length.
+void ee_won_auth_hashes(const EeWonAuthEntry *communities,
+                        size_t count,
+                        const uint8_t *challenge,
+                        size_t challenge_len,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `StartAutoRefresh`'s decision: the wait in seconds, or -1 for no timer.
+int64_t ee_won_auth_auto_refresh_wait(bool enabled,
+                                      bool force,
+                                      bool peer_valid,
+                                      int64_t expire_delta);
+
+EeWonConfigLexer *ee_won_config_new();
+
+/// # Safety
+/// `l` is from `ee_won_config_new` (or NULL), not used afterwards.
+void ee_won_config_free(EeWonConfigLexer *l);
+
+int32_t ee_won_config_line_count();
+
+void ee_won_config_reset_line_count();
+
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_reset(EeWonConfigLexer *l);
+
+/// # Safety
+/// `l` is a lexer, `io` the parser's members.
+bool ee_won_config_end_of_file(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_get_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_peek_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_unget_char(EeWonConfigLexer *l, EeWonConfigIo *io, int32_t ch);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `text` holds `length` bytes.
+void ee_won_config_unget_narrow(EeWonConfigLexer *l,
+                                EeWonConfigIo *io,
+                                const uint8_t *text,
+                                size_t length);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `units` holds `count` `wchar_t` values widened to 32 bits.
+void ee_won_config_unget_wide(EeWonConfigLexer *l,
+                              EeWonConfigIo *io,
+                              const uint32_t *units,
+                              size_t count);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_whitespace(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_line(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_block_comment(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// `ReadToken` (narrow when `wchar_size` is 0, else wide with `wchar_t` of that size): 0 no token, 1 a token, 2
+/// "Expecting end quote", 3 "Expecting closing '$'", 4 "Define not found: " + the name (given to `name`). The
+/// token as read (the whole token, or the part before an error) goes to `narrow` or `wide` unless the data had
+/// ended before the read (then the C++ leaves its token alone). `root` is the root parser's lexer, or NULL when this
+/// parser is the root.
+///
+/// # Safety
+/// `l` and a non-NULL `root` are distinct lexers, `io` the parser's members; the sinks take the text.
+int32_t ee_won_config_read_token(EeWonConfigLexer *l,
+                                 EeWonConfigIo *io,
+                                 const EeWonConfigLexer *root,
+                                 uint32_t wchar_size,
+                                 bool to_end_line,
+                                 bool skip,
+                                 EeWonByteSink narrow,
+                                 EeWonWideUnitSink wide,
+                                 EeWonByteSink name,
+                                 void *context);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_push_scope(EeWonConfigLexer *root);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_pop_scope(EeWonConfigLexer *root);
+
+/// `AddDefine` on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; the texts hold their lengths.
+int32_t ee_won_config_add_define(EeWonConfigLexer *root,
+                                 const uint8_t *name,
+                                 size_t name_len,
+                                 const uint8_t *value,
+                                 size_t value_len,
+                                 bool redefine);
+
+/// `GetDefine` on the root's lexer: the value to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_define(const EeWonConfigLexer *root,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `AddGroupDefine`'s insertion on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes, `state` is a state.
+int32_t ee_won_config_add_group(EeWonConfigLexer *root,
+                                const uint8_t *name,
+                                size_t name_len,
+                                const EeWonConfigState *state);
+
+/// `GetGroupDefine` on the root's lexer: the state to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_group(const EeWonConfigLexer *root,
+                             const uint8_t *name,
+                             size_t name_len,
+                             EeWonConfigStateSink sink,
+                             void *context);
+
+/// The pushback's units, to the sink (zero-extended).
+///
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_get_back(const EeWonConfigLexer *l, EeWonWideUnitSink sink, void *context);
+
+/// Replaces the pushback (each `wchar_t` truncated to 16 bits).
+///
+/// # Safety
+/// `l` is a lexer; `units` holds `count` values.
+void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t count);
+
+/// `OpenFile`'s open and UTF-16 sniff (the C++ has reset the line, the flag and the pushback and split the path):
+/// whether the reader is open; `status` is the reader's.
+///
+/// # Safety
+/// `io` is the parser's members; `path` a C string.
+bool ee_won_config_open(EeWonConfigIo *io,
+                        const char *path,
+                        int32_t *status);
+
+/// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_multi(const uint8_t *data,
+                                     size_t length,
+                                     EeWonDirEntitySink sink,
+                                     void *context);
+
+/// `ParseSingleEntityReply`: the entity to the sink when read whole.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
+                                      size_t length,
+                                      EeWonDirEntitySink sink,
+                                      void *context);
+
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
 ///
@@ -9414,6 +9852,75 @@ extern int isalnum(int c);
 extern int toupper(int c);
 
 extern int tolower(int c);
+
+/// The exception text of a status.
+const char *ee_won_file_status_text(int32_t status);
+
+void ee_won_file_reader_init(EeWonFileReader *reader);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open(EeWonFileReader *reader, const char *path);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open_text(EeWonFileReader *reader, const char *path);
+
+/// The buffer is not owned and must outlive the reading.
+void ee_won_file_reader_open_memory(EeWonFileReader *reader,
+                                    const void *data,
+                                    unsigned long length);
+
+void ee_won_file_reader_close(EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_pos(const EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_length(EeWonFileReader *reader, int32_t *status);
+
+int32_t ee_won_file_reader_set_pos(EeWonFileReader *reader, unsigned long pos);
+
+/// # Safety
+/// `out` holds `max` bytes.
+int ee_won_file_reader_read_max(EeWonFileReader *reader, void *out, int max, int32_t *status);
+
+/// # Safety
+/// `out` holds `length` bytes.
+int32_t ee_won_file_reader_read_bytes(EeWonFileReader *reader, void *out, unsigned long length);
+
+int ee_won_file_reader_try_read_byte(EeWonFileReader *reader);
+
+int32_t ee_won_file_reader_skip(EeWonFileReader *reader, unsigned long length);
+
+int32_t ee_won_file_reader_read_into_memory(EeWonFileReader *reader);
+
+/// A 1, 2 or 4 byte length field (0 for another size), into `value`.
+int32_t ee_won_file_reader_read_length(EeWonFileReader *reader, int field_size, int *value);
+
+void ee_won_file_reader_rewind(EeWonFileReader *reader);
+
+bool ee_won_file_reader_end_of_file(const EeWonFileReader *reader);
+
+void ee_won_file_writer_init(EeWonFileWriter *writer);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_writer_open(EeWonFileWriter *writer, const char *path);
+
+void ee_won_file_writer_close(EeWonFileWriter *writer);
+
+unsigned long ee_won_file_writer_pos(const EeWonFileWriter *writer);
+
+int32_t ee_won_file_writer_set_pos(EeWonFileWriter *writer, unsigned long pos);
+
+/// # Safety
+/// `data` holds `length` bytes.
+int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
+                                       const void *data,
+                                       unsigned long length);
+
+int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
+                                        unsigned long length,
+                                        uint8_t field_size);
 
 }  // extern "C"
 

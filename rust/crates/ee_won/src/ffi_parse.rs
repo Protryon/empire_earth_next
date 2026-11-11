@@ -57,7 +57,7 @@ mod crt {
 }
 
 /// The C runtime's ctype functions, in the current locale.
-struct CrtCtype;
+pub(crate) struct CrtCtype;
 
 #[cfg(not(test))]
 impl Ctype for CrtCtype {

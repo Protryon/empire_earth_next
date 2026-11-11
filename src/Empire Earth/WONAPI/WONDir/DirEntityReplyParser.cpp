@@ -1,4 +1,6 @@
-// WONAPI parser for the directory server's entity replies
+// WONAPI parser for the directory server's entity replies. The reading is ee_won's (rust/crates/ee_won/src/dir.rs);
+// this makes the DirEntity objects from what it read and throws ReadBufferException for a reply cut short, as
+// ReadBuffer did (the entities read whole before the cut are kept).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,7 +13,82 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirExtended.h"
 namespace WONAPI {
+
+static void DirAssign(std::wstring& outText, const uint16_t* inUnits, size_t inCount)
+{
+    std::string aBytes;
+    aBytes.reserve(inCount * 2);
+    for (size_t i = 0; i < inCount; i++) {
+        aBytes += (char)(inUnits[i] & 0xff);
+        aBytes += (char)(inUnits[i] >> 8);
+    }
+    WideAssignUtf16LE(outText, aBytes.data(), (unsigned long)inCount);
+}
+
+// the read fields onto a new DirEntity (the others keep the constructor's values); the ACL values converted as the
+// originals' locals did (the multi-entity reader's long / short, the single-entity reader's unsigned ones)
+static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity, bool inSigned)
+{
+    DirEntityPtr anEntity = new DirEntity;
+    uint32_t f = inEntity->fields;
+    if (f & 0x1) anEntity->mType = (char)inEntity->kind;
+    if (f & 0x2) DirAssign(anEntity->mPath, inEntity->path, inEntity->path_len);
+    if (f & 0x4) DirAssign(anEntity->mName, inEntity->name, inEntity->name_len);
+    if (f & 0x8)
+        anEntity->mNetAddr = new ByteBuffer(inEntity->net_addr, (unsigned long)inEntity->net_addr_len, false);
+    if (f & 0x10) anEntity->mReqUnique = inEntity->req_unique;
+    if (f & 0x20) DirAssign(anEntity->mDisplayName, inEntity->display_name, inEntity->display_name_len);
+    if (f & 0x40) anEntity->mLifespan = inEntity->lifespan;
+    if (f & 0x80) anEntity->mCreated = inEntity->created;
+    if (f & 0x100) anEntity->mTouched = inEntity->touched;
+    if (f & 0x200) anEntity->mCRC = inEntity->crc;
+    if (f & 0x400) {
+        anEntity->mCreateIP = inEntity->create_ip;
+        anEntity->mTouchIP = inEntity->touch_ip;
+    }
+    if (f & 0x800) {
+        anEntity->mCreateId = inEntity->create_id;
+        anEntity->mTouchId = inEntity->touch_id;
+    }
+    for (size_t i = 0; i < inEntity->object_count; i++) {
+        const EeWonDirDataObject& anObject = inEntity->objects[i];
+        DirDataObject aData;
+        aData.mDataType.assign(reinterpret_cast<const char*>(anObject.data_type), anObject.data_type_len);
+        if (anObject.has_data)
+            aData.mData = new ByteBuffer(anObject.data, (unsigned long)anObject.data_len, false);
+        anEntity->mDataObjects.push_back(aData);
+    }
+    for (size_t i = 0; i < inEntity->acl_count; i++) {
+        const EeWonDirAcl& aRead = inEntity->acls[i];
+        DirACL acl;
+        acl.mType = (char)aRead.kind;
+        if (inSigned) {
+            long user = aRead.user;
+            long comm = aRead.community;
+            short trust = aRead.trust;
+            acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
+        } else {
+            unsigned long user = (unsigned long)(long)aRead.user;
+            unsigned long comm = (unsigned long)(long)aRead.community;
+            unsigned short trust = (unsigned short)aRead.trust;
+            acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
+        }
+        anEntity->mACLs.push_back(acl);
+    }
+    return anEntity;
+}
+
+static void DirTakeMulti(void* inContext, const EeWonDirEntity* inEntity)
+{
+    static_cast<DirEntityList*>(inContext)->push_back(DirMakeEntity(inEntity, true));
+}
+
+static void DirTakeSingle(void* inContext, const EeWonDirEntity* inEntity)
+{
+    *static_cast<DirEntityPtr*>(inContext) = DirMakeEntity(inEntity, false);
+}
 
 // FUNCTION: WON 0x006f04f0
 // Returns whether the get flags ask for directories only (no services)
@@ -30,170 +107,30 @@ bool DirEntityReplyParser::OnlyServices(DWORD inFlags)
 WONStatus DirEntityReplyParser::ParseMultiEntityReply(const void* inData,
     unsigned long inLength, DirEntityList& outEntities, unsigned char* outSequence)
 {
-    int i, j, k;
-    int count, dataCount, aclCount, userCount;
-    unsigned char length;
-    char type;
-    bool isService, isDir;
-    ReadBuffer message(inData, inLength);
-    unsigned char header = message.ReadByte();
-    unsigned short service = message.ReadShort();
-    unsigned short messageType = message.ReadShort();
-    if (header != 5 || service != 2 || messageType != 3)
-        return (WONStatus)WS_ServerReq_InvalidReplyHeader;
-    short status = message.ReadShort();
-    if (status < 0) return status;
-    unsigned char sequence = message.ReadByte();
-    if (outSequence != NULL) *outSequence = sequence;
-    bool moreReplies = (sequence & 0x80) == 0;
-    DWORD flags = message.ReadLong();
-    bool onlyDirs = DirEntityReplyParser::OnlyDirs(flags);
-    bool onlyServices = DirEntityReplyParser::OnlyServices(flags);
-    count = (unsigned short)message.ReadShort();
-    for (i = 0; i < count; ++i) {
-        DirEntityPtr entity = new DirEntity;
-        if (flags & 0x10) entity->mType = message.ReadByte();
-        isService = entity->mType == 'S' || onlyServices;
-        isDir = entity->mType == 'D' || onlyDirs;
-        if (isService) {
-            if (flags & 0x01000000) message.ReadWString(entity->mPath, 2);
-            if (flags & 0x02000000) message.ReadWString(entity->mName, 2);
-            if (flags & 0x04000000) {
-                length = message.ReadByte();
-                entity->mNetAddr = new ByteBuffer(message.ReadBytes(length), length, false);
-            }
-        } else if (isDir) {
-            if (flags & 0x00010000) message.ReadWString(entity->mPath, 2);
-            if (flags & 0x00020000) message.ReadWString(entity->mName, 2);
-            if (flags & 0x00040000) entity->mReqUnique = message.ReadBool();
-        }
-        if (flags & 0x20) message.ReadWString(entity->mDisplayName, 2);
-        if (flags & 0x100) entity->mLifespan = message.ReadLong();
-        if (flags & 0x40) entity->mCreated = message.ReadLong();
-        if (flags & 0x80) entity->mTouched = message.ReadLong();
-        if (flags & 0x2000) entity->mCRC = message.ReadLong();
-        if (flags & 0x8000) {
-            entity->mCreateIP = message.ReadLong();
-            entity->mTouchIP = message.ReadLong();
-        }
-        if (flags & 0x4000) {
-            entity->mCreateId = message.ReadLong();
-            entity->mTouchId = message.ReadLong();
-        }
-        if (flags & 0x800) {
-            dataCount = (unsigned short)message.ReadShort();
-            for (j = 0; j < dataCount; ++j) {
-                DirDataObject data;
-                if (flags & 0x200) message.ReadString(data.mDataType, 1);
-                if (flags & 0x400) data.mData = message.ReadBuf(2);
-                entity->mDataObjects.push_back(data);
-            }
-        }
-        if (flags & 0x1000) {
-            aclCount = (unsigned short)message.ReadShort();
-            for (j = 0; j < aclCount; ++j) {
-                type = message.ReadByte();
-                userCount = (unsigned short)message.ReadShort();
-                for (k = 0; k < userCount; ++k) {
-                    long user = message.ReadLong();
-                    long comm = message.ReadLong();
-                    short trust = message.ReadShort();
-                    DirACL acl;
-                    acl.mType=type; acl.mUser=user; acl.mCommunity=comm; acl.mTrust=trust;
-                    entity->mACLs.push_back(acl);
-                }
-            }
-        }
-        outEntities.push_back(entity);
+    EeWonDirReply aReply = ee_won_dir_parse_multi(static_cast<const uint8_t*>(inData), inLength, DirTakeMulti,
+                                                  &outEntities);
+    if (aReply.has_sequence && outSequence != NULL) *outSequence = aReply.sequence;
+    switch (aReply.kind) {
+    case 0: return (WONStatus)aReply.status;
+    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
+    case 2: return (WONStatus)aReply.status;
+    default: throw ReadBufferException("Attempt to read past end of buffer.");
     }
-    return moreReplies ? (WONStatus)100059 : (WONStatus)0;
 }
 }
 
 // No original address identified: WON SDK single-entity reply parser
-#include "ee/wonapi/WONDirExtended.h"
 namespace WONAPI {
 WONStatus DirEntityReplyParser::ParseSingleEntityReply(const void *theMsg, unsigned long theMsgLen, DirEntityPtr &theEntity)
 {
-	ReadBuffer aMsg(theMsg,theMsgLen);
-	unsigned char aHeaderType = aMsg.ReadByte();		// 5 = Small Header
-	unsigned short aServiceType = aMsg.ReadShort();		// 2 = DirServer
-	unsigned short aMessageType = aMsg.ReadShort();		// 2 = SingleEntity Reply
-
-	if(aHeaderType!=5 || aServiceType!=2 || aMessageType!=2)
-		return (WONStatus)WS_ServerReq_InvalidReplyHeader;
-
-	short aStatus = aMsg.ReadShort();
-	if(aStatus<0)
-		return (WONStatus)aStatus;
-
-	DWORD flags = aMsg.ReadLong();
-
-	DirEntityPtr anEntity = new DirEntity;
-
-	if(flags & DIR_GF_ADDTYPE) 
-		anEntity->mType = aMsg.ReadByte();
-
-	if(flags & DIR_GF_SERVADDPATH)
-		aMsg.ReadWString(anEntity->mPath,2);
-
-	if(flags & DIR_GF_SERVADDNAME)
-		aMsg.ReadWString(anEntity->mName,2);
-
-	if(flags & DIR_GF_SERVADDNETADDR)
-		anEntity->mNetAddr = aMsg.ReadBuf(1);
-
-	if(flags & DIR_GF_ADDDISPLAYNAME)
-		aMsg.ReadWString(anEntity->mDisplayName,2);
-
-	if(flags & DIR_GF_ADDLIFESPAN)
-		anEntity->mLifespan = aMsg.ReadLong();
-
-	if(flags & DIR_GF_ADDCREATED)
-		anEntity->mCreated = aMsg.ReadLong();
-
-	if(flags & DIR_GF_ADDTOUCHED)
-		anEntity->mTouched = aMsg.ReadLong();
-
-	if(flags & DIR_GF_ADDCRC)
-		anEntity->mCRC = aMsg.ReadLong();
-
-	if(flags & DIR_GF_ADDDATAOBJECTS) // read data objects
-	{
-		unsigned short numDataObjects = aMsg.ReadShort();
-		for(int j=0; j<numDataObjects; j++)
-		{
-			DirDataObject anObject;
-			if(flags & DIR_GF_ADDDOTYPE)
-				aMsg.ReadString(anObject.mDataType,1);
-
-			if(flags & DIR_GF_ADDDODATA)
-				anObject.mData = aMsg.ReadBuf(2);
-
-			anEntity->mDataObjects.push_back(anObject);
-		}
-	}
-
-	if(flags & DIR_GF_ADDACLS) // read ACLS
-	{
-		unsigned short aNumACLs = aMsg.ReadShort();
-		for(int i=0; i<aNumACLs; i++)
-		{
-			char aType = aMsg.ReadByte();
-			unsigned short aNumPermissions = aMsg.ReadShort();
-			for(int j=0; j<aNumPermissions; j++)
-			{
-				unsigned long aUserId = aMsg.ReadLong();
-				unsigned long aCommunity = aMsg.ReadLong();
-				unsigned short aTrust = aMsg.ReadShort();
-
-				DirACL anACL; anACL.mType=aType; anACL.mUser=aUserId; anACL.mCommunity=aCommunity; anACL.mTrust=aTrust; anEntity->mACLs.push_back(anACL);
-			}
-		}
-	}
-	
-	theEntity = anEntity;
-	return (WONStatus)WS_Success;
+    EeWonDirReply aReply = ee_won_dir_parse_single(static_cast<const uint8_t*>(theMsg), theMsgLen, DirTakeSingle,
+                                                   &theEntity);
+    switch (aReply.kind) {
+    case 0: return (WONStatus)WS_Success;
+    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
+    case 2: return (WONStatus)aReply.status;
+    default: throw ReadBufferException("Attempt to read past end of buffer.");
+    }
 }
 }
 

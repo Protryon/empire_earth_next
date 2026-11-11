@@ -49,9 +49,9 @@ const char* WONSoundData::GetData(int &theLen)
 	if(aBytesLeft<=0)
 		return NULL;
 
-	if(this->mReader.mBuffer!=NULL)
+	if(this->mReader.mCore.buffer!=NULL)
 	{
-		const char *aData = this->mReader.mBuffer + this->mReader.pos();
+		const char *aData = reinterpret_cast<const char*>(this->mReader.mCore.buffer) + this->mReader.pos();
 		theLen = aBytesLeft;
 		this->mReader.SkipBytes(theLen);
 		return aData;

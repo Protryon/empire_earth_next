@@ -9,58 +9,46 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "platform/PlatFile.h"
 namespace WONAPI {
 
-FileWriter::FileWriter() : mFile(NULL) {}
+// The state and the writes are ee_won's (rust/crates/ee_won/src/file.rs); the read-only retry (WONFile) and the
+// string writes stay here.
+static void FileWriterCheck(int inStatus)
+{
+    if (inStatus != 0)
+        throw FileWriterException(ee_won_file_status_text(inStatus));
+}
+
+FileWriter::FileWriter() { ee_won_file_writer_init(&this->mCore); }
 
 FileWriter::~FileWriter() { this->Close(); }
 // FUNCTION: WON 0x006a1e30
 // Opens the given file for binary writing, clearing its read-only flag and retrying when asked
 bool FileWriter::Open(const char* inPath, bool inOpenIfReadOnly)
 {
-    this->Close();
-    if (inPath[0] == 0)
+    if (ee_won_file_writer_open(&this->mCore, inPath))
+        return true;
+    if (inPath[0] == 0 || !inOpenIfReadOnly)
         return false;
-    this->mFile = PlatFOpen(inPath, "wb");
-    if (this->mFile == NULL && inOpenIfReadOnly) {
-        WONFile file(inPath);
-        file.SetReadOnly(false);
-        this->mFile = PlatFOpen(inPath, "wb");
-    }
-    return this->mFile != NULL;
+    WONFile file(inPath);
+    file.SetReadOnly(false);
+    return ee_won_file_writer_open(&this->mCore, inPath);
 }
 // FUNCTION: WON 0x006a2060
 // Closes the file
-void FileWriter::Close()
-{
-    if (this->mFile != NULL) {
-        fclose(this->mFile);
-        this->mFile = NULL;
-    }
-}
+void FileWriter::Close() { ee_won_file_writer_close(&this->mCore); }
 
 // FUNCTION: WON 0x006a2080
 // Returns the current write position, 0 with no file open
-unsigned long FileWriter::pos()
-{
-    return this->mFile != NULL ? ftell(this->mFile) : 0;
-}
+unsigned long FileWriter::pos() { return ee_won_file_writer_pos(&this->mCore); }
 // FUNCTION: WON 0x006a20a0
 // Moves the write position; throws FileWriterException when the seek fails
-void FileWriter::SetPos(unsigned long inPos)
-{
-    if (this->mFile != NULL && fseek(this->mFile, inPos, SEEK_SET) != 0)
-        throw FileWriterException("Attempt to setpos past end of file.");
-}
+void FileWriter::SetPos(unsigned long inPos) { FileWriterCheck(ee_won_file_writer_set_pos(&this->mCore, inPos)); }
 // FUNCTION: WON 0x006a2400
 // Writes the given bytes; throws FileWriterException with no file or on a short write
 void FileWriter::WriteBytes(const void* inData, unsigned long inLength)
 {
-    if (this->mFile == NULL)
-        throw FileWriterException("NULL File.");
-    if (fwrite(inData, 1, inLength, this->mFile) != inLength)
-        throw FileWriterException("fwrite failed (disk full)");
+    FileWriterCheck(ee_won_file_writer_write_bytes(&this->mCore, inData, inLength));
 }
 
 // FUNCTION: WON 0x006a25f0
@@ -78,11 +66,7 @@ void FileWriter::WriteLong(int32_t inValue) { this->WriteBytes(&inValue, 4); }
 // Writes a length as a 1, 2 or 4 byte field; writes nothing for any other size
 void FileWriter::WriteLength(unsigned long inLength, unsigned char inFieldSize)
 {
-    switch (inFieldSize) {
-    case 1: this->WriteByte((unsigned char)inLength); break;
-    case 2: this->WriteShort((unsigned short)inLength); break;
-    case 4: this->WriteLong((int32_t)inLength); break;
-    }
+    FileWriterCheck(ee_won_file_writer_write_length(&this->mCore, inLength, inFieldSize));
 }
 
 // FUNCTION: WON 0x006a2660

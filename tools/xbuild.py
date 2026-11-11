@@ -391,6 +391,20 @@ WON_TESTS = {
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],
+    # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
+    "won_file_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                         "FileWriter.cpp", "WONFile.cpp")],
+    # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won/src/golden_config.txt)
+    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
+                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "StringUtil.cpp")]],
+    # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
+    "won_auth_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                      WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
+    # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
+    "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                     *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+                     WON_SRC / "WONSocket" / "IPAddr.cpp"],
 }
 
 

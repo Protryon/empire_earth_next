@@ -48,7 +48,7 @@ SmartPtr<NativeImage> ImageDecoder::Decode(DisplayContext* context,const char* p
 }
 SmartPtr<NativeImage> ImageDecoder::Decode(DisplayContext* context,FileReader& reader)
 {
-    if(reader.mFile==NULL && reader.mBuffer==NULL) return NULL;
+    if(!reader.IsOpen()) return NULL;
     this->mFileReader=&reader;
     return this->DoDecode(context);
 }
@@ -59,7 +59,7 @@ SmartPtr<RawImage> ImageDecoder::DecodeRaw(const char* path)
 }
 SmartPtr<RawImage> ImageDecoder::DecodeRaw(FileReader& reader)
 {
-    if(reader.mFile==NULL && reader.mBuffer==NULL) return NULL;
+    if(!reader.IsOpen()) return NULL;
     this->mFileReader=&reader;
     return this->DoDecodeRaw(); // the original has no FileReaderException catch in this overload
 }
@@ -88,7 +88,7 @@ bool ImageDecoder::GetImageAttributes(const char* path,ImageAttributes& attribut
 // error is thrown
 bool ImageDecoder::GetImageAttributes(FileReader& reader,ImageAttributes& attributes)
 {
-    if(reader.mFile==NULL && reader.mBuffer==NULL) return false;
+    if(!reader.IsOpen()) return false;
     this->mFileReader=&reader;
     try { return this->DoGetAttrib(attributes); }
     catch(FileReaderException&) {}
