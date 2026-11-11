@@ -20,6 +20,9 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #else
+#include <execinfo.h>
+#include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 #endif
 #include <windows.h>
@@ -1040,6 +1043,38 @@ static LONG CALLBACK EESimFault(EXCEPTION_POINTERS* inInfo)
     fflush(stderr);
     return EXCEPTION_CONTINUE_SEARCH;
 }
+#else
+// a fault in the simulation (POSIX): the signal, the address and the return addresses on stderr, then the signal's
+// default action (the handler is reset). Linux prints the frames as ee-sim(+0xOFFSET): addr2line -f -C -e ee-sim
+// 0xOFFSET names them.
+static void EESimFault(int inSignal, siginfo_t* inInfo, void*)
+{
+    char theText[200];
+    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT signal %d at %p thread %lu; frames:\n", inSignal,
+                     inInfo ? inInfo->si_addr : NULL, (unsigned long)(uintptr_t)pthread_self());
+    if (n > 0 && write(2, theText, (size_t)n) < 0)
+        n = 0;
+    void* theFrames[48];
+    backtrace_symbols_fd(theFrames, backtrace(theFrames, 48), 2);
+}
+
+static void EESimInstallFaultHandler()
+{
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+    return;   // the sanitizer's own report is better
+#endif
+#endif
+    void* theFrame[1];
+    backtrace(theFrame, 1);   // loads the unwinder now, not inside the handler
+    struct sigaction theAction;
+    memset(&theAction, 0, sizeof(theAction));
+    theAction.sa_sigaction = EESimFault;
+    theAction.sa_flags = SA_SIGINFO | SA_RESETHAND;
+    sigemptyset(&theAction.sa_mask);
+    for (int theSignal : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT})
+        sigaction(theSignal, &theAction, NULL);
+}
 #endif
 
 void EESimGameEnded(int inResult);
@@ -1161,6 +1196,17 @@ int EESimMain(int argc, char** argv)
     PlatDebugSetHandler(DebugHandler);
 #ifdef _WIN32
     AddVectoredExceptionHandler(1, EESimFault);
+#else
+    EESimInstallFaultHandler();
+#if !defined(__APPLE__)
+    // Linux, where a bench machine has no display: SDL's dummy video driver (the hidden window needs none, and
+    // nothing is presented; macOS keeps Cocoa: its windows are Metal windows, which the dummy driver refuses). The
+    // GPU device the renderer still creates is any Vulkan adapter, on a machine without a GPU Mesa's lavapipe, kept
+    // to one rasterizer thread (it starts one per core, and a bench runs one simulation per core). The environment
+    // wins over both.
+    setenv("SDL_VIDEO_DRIVER", "dummy", 0);
+    setenv("LP_NUM_THREADS", "1", 0);
+#endif
 #endif
     Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
          sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);

@@ -180,6 +180,30 @@ list by seat. The report (JSON) holds the outcome, the game time and per player 
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
 
+**Benches on a Linux machine** (headless, many cores; Ubuntu 24.04 x86_64). `python3 -I tools/xbuild.py sim` builds
+the game and links `ee-sim` beside it (`build/xbuild/linux-x86_64/game/`): the same exe, started as the simulation by
+its name (`ee-aoc --sim` is the same). It needs no display (SDL's dummy video driver) and no GPU, but a Vulkan
+adapter: Mesa's lavapipe (`mesa-vulkan-drivers`). The sim tools find it by default. On a fresh machine:
+
+```
+sudo apt-get install -y git gh && gh auth login            # access to the private repository and its releases
+gh repo clone Protryon/empire_earth_next && cd empire_earth_next
+bash tools/setup_linux_bench.sh                            # packages, ports, build, data/ (release parts), smoke game
+python3 -I tools/sim_bench.py --name base --data open --ai-scripts ai --seeds 2-65 --jobs $(nproc)
+python3 -I tools/ai_scorecard.py build/sim/bench/base
+```
+
+`--data open` takes `build/open_data/tree` when there is one, else `data/` (tools/fetch_data.py, without the 4x
+textures). After a pull: `python3 -I tools/xbuild.py sim --incremental` (a header change: a full build), and
+`tools/fetch_data.py data --without textures-4x` when a db release changed. A crash prints `EE-SIM FAULT signal ...`
+frames as `ee-sim(+0xOFFSET)` in the run's err.txt: `addr2line -f -C -e build/xbuild/linux-x86_64/game/ee-sim
+0xOFFSET`. The cross-platform check (the same seeds on Windows and Linux, the same data release and scripts):
+
+```
+python -I tools/sim_bench.py --name xplat --data DATA --ai-scripts ai --seeds 2-9 --difficulty Medium   # each machine
+python -I tools/sim_compare.py WINDOWS_BENCH LINUX_BENCH     # build/sim/bench/xplat of each; exit 0: identical
+```
+
 ## Upstream
 
 The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` branch is merged in, never rebased (see

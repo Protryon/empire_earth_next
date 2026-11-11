@@ -1569,7 +1569,25 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   converter code (open_data.json `converters`) may not load: the main checkout's open tree had an aipersonalities key
   (`demand_split`) this branch does not know, and the game stops on an unknown key; tools/sim.py warns.
 - **POSIX**: `ee-aoc --sim <EE-SIM options>` runs the same driver from the game's main (EESimMain returns -1 and
-  main goes on with the game). It compiles for linux-x86_64 with the game's flags; it has not been run there.
+  main goes on with the game); the exe started as `ee-sim` (the link `xbuild.py sim`/`game` makes) does the same.
+  For a bench machine without display or GPU (2026-11-11, branch linux-sim; README "Benches on a Linux machine"):
+  - Linux: the sim sets `SDL_VIDEO_DRIVER=dummy` (the hidden window needs no display; the primary surface has no
+    native window, so GX presents nothing) and `LP_NUM_THREADS=1` unless the environment sets them. macOS keeps
+    Cocoa: its windows carry `SDL_WINDOW_METAL`, which the dummy driver refuses at window creation.
+  - The renderer still creates its wgpu device (GX has no device-less path; ~90 wgpu calls). On a machine without a
+    GPU that is Mesa's lavapipe (`mesa-vulkan-drivers`), the Linux counterpart of WARP. Lavapipe starts one
+    rasterizer thread per core per process by default: hence the one thread.
+  - Message boxes go to stderr in the sim (as on Windows), never to the window layer's box.
+  - A fault prints `EE-SIM FAULT signal N` and the frames (`backtrace_symbols_fd`: `ee-sim(+0xOFFSET)`, for
+    `addr2line`), then the default action; not in sanitizer builds, whose own report is better.
+  - TCP sockets get `SO_REUSEADDR` on POSIX: Linux refuses to bind a listening port while a connection of an
+    earlier process on it is in TIME_WAIT (about a minute), Windows does not; a bench slot binds the same pair game
+    after game. Linux's ephemeral ports start at 32768, below the benches' pairs (33334 + 2000 + 64 k): the setup
+    (tools/setup_linux_bench.sh) moves them to 45000 and up.
+  - Cross-platform identity is not known yet (tools/sim_compare.py checks it). The known risks: libm (`sin`, `cos`,
+    `atan2` in the simulation's files; UCRT and glibc may differ in the last bit), `std::sort` on ties (68 game
+    files use it; MSVC's STL and libstdc++ order equal elements differently), and any leftover LP64 width. Not
+    risks: the URandom generator (32-bit state, lrintf), SSE2 floats on both, `-ffp-contract=off` on both.
 - **Where a 120-minute game's time went (2026-11-11, `tools/sim_profile.py`).** Boom against Age of AI, seed 25: a
   third in `EECPLuaState::CheckMemory`, which after every Lua call converted the whole memory table into an
   `EECPLuaValue` tree (paths, copies, a sort) only to see that it could be saved; 12% in the UCRT's `lrintf` (it

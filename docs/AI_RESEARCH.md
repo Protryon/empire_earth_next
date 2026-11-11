@@ -3554,6 +3554,38 @@ Next: the port's citizen losses (who kills them and while doing what: the next.d
 economy, heroes, guard posts on hills and choke points (a query for the continent manager's hills and choke points),
 walls.
 
+### 8.52 The classic computer player in Lua: the balanced collapse, CancelStalledBuilds (2026-11-11, EE-SIM)
+
+Under balanced (§8.49's kl) the port reached Copper in 19 games of 32 against the C++'s 27, and 13 of its games ended
+under 40 citizens. Those games collapse early: from about 20 minutes the port's citizens stand still or fall while
+the C++'s grow (seed 3: 22-19 from minute 15 to 35; seed 24: 19 at 20 minutes, 15 at 40, against 26 and 53).
+
+**Seed 3: 13 of 22 citizens building one settlement for 15 minutes.** The `cp food` goals showed gather 6-9 and build
+12-14 from minute 18 to 36: the builders stood waiting for the foundation's site to clear while another unit held it,
+and AssignBuilders added more every 2 minutes. The C++'s CancelStalledBuilds (every build manager update:
+FindStalledBuilder - a builder in WaitForBuildSiteToClear whose site is taken) deletes the foundation, puts the
+request back at the front without a site and sends the builder home; the port had not ported it. Ported, with a
+`stalled` field on the own unit records (AI_LUA_UNITS §11). 8 builds cancelled in 32 games (the C++ 15).
+
+**Seed 24: the epoch reserve and the raids.** Both seats save the Stone Age's food from about minute 9 (the same
+pressure and reserve: §8.40's port). The C++ kept 23-28 citizens through it; the port lost 8 of 24 to a few C++
+clubmen (its explorers on harass, and the first counter groups) between minutes 10 and 22, trained none while it
+saved, and after the advance never recovered (13-16 citizens, 4-9 food gatherers). The losses to a handful of raiders
+are the port's defence (militia and lib.groups); not changed yet.
+
+Bench (balanced only, 32 seeds, 90 minutes, --jobs 2; before = §8.49's kl, after = cs):
+
+| AI | Copper | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| classic_lua, before | 19/32, 57.5 | 23.1/2.8 / 25.8/3.2 / 32.8/5.7 / 42.6/5.6 | 2.1 / 55.2 | 7-21, 4 close |
+| classic_lua, after | 22/32, 57.3 | 23.1/2.8 / 25.8/3.2 / 33.2/6.0 / 43.2/5.8 | 2.1 / 56.6 | 10-18, 4 close |
+| classic, after | 27/32, 67.2 | 24.0/1.8 / 26.1/2.2 / 30.1/3.9 / 45.3/3.6 | 1.2 / 36.6 | 18-10 |
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
+
+Next: the port's answer to a few raiders before the Stone Age (seed 24's clubmen: what the C++'s militia and defence
+groups do that the port's do not), then guard posts on hills and choke points, heroes, walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

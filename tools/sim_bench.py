@@ -380,7 +380,7 @@ def main():
     a = ap.parse_args()
     a.cache_dir = cache_dir(a.cache) if a.cache else None
     if not a.exe.exists():
-        sys.exit(f"{a.exe} is missing: python -I build.py --sim")
+        sys.exit(f"{a.exe} is missing: {sim.BUILD_HINT}")
     variants = [[]]
     for v in a.vary:
         key, _, values = v.partition("=")
