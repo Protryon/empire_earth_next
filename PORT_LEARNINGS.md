@@ -5107,3 +5107,84 @@ round moved the pieces that need neither the unit store nor the hulls, each its 
   rustfmt and the header; the intermediate commits were not linked one by one. Not run: `gates.sh` or any harness
   session, `eedata check`/`cppgate` (no data change), macOS or Linux builds. Nothing here is drawn: the sparse array
   is read by the renderer only through the AI's areas (no draw path), so no tour-only risk is known.
+
+## R6: the lobby model's lists, LanLogic's and the game room's flows, the start-up checks, the resource table, RoutingLogic's decisions and StringUtil's case in Rust (ee_won model.rs, lanlogic.rs, flow.rs, resource.rs, routing.rs, strcase.rs; branch rust-r6-won7, 2026-11-10)
+
+Round 7 of R6 (the map of what is left is in RUST_PLAN's "R6 WON, the rest" row). The lobby's logic classes keep
+their objects (clients, groups, games, servers and their `std::map`s of `SmartPtr`s, the sockets, timers, ops,
+dialogs and events) and ask Rust what to do with them. Each piece was captured first: a driver in `tests/won` (added
+to `xbuild.py` `WON_TESTS`) runs the original's statements, copied from the C++ before the port with the objects
+replaced by the state they answered, next to the Rust ABI over every combination of their inputs; the resource
+table's golden is the original's statements read out of the C++.
+
+- **The lobby model (`model.rs`).** `LobbyClientList::SyncClients` and `LobbyServer::SyncGroups` apply a merge plan
+  (`sync_plan`: the sorted walk over the lobby's and the routing server's maps, drop / create / refresh / drop the
+  rest, in the original's order, so a room read refreshes its members' flags in the same order); the populations
+  (`SyncGroups`' sums, `AddClientToGroup`, `RemoveClientFromGroup`'s clamp at 0, `GetNumClients`); what a client's,
+  a member's and a room's flags say; the friend's status and locate mark; the ping states; `RemoveStaleGames`' rule;
+  `IsSameGame`; which games a list keys by id; the join status texts; `AreAllReady`; the directory entry's `_C` and
+  `_L` objects (`ShortFromLittleEndian` deleted). `won_model_test`: 607,933 checks, 0 failures.
+  - **Found: undefined behaviour in the original merges.** Both hinted their inserts with an iterator that started
+    at `begin()`, and the first erase left it dangling. The first run of the driver's copy of the original hung
+    (this STL loops in the tree walk). The hint starts at `end()` now, in the port and in both walks of the driver
+    (a valid hint never changes a map's content). Only the routing maps (Internet) reach these merges.
+- **LanLogic's flow (`lanlogic.rs`).** A received message (the host stamps the socket; a socket with no player only
+  sends a join request; else `HandleMessage`, whose read skips the host's own length prefix), where a message goes
+  (`SendMessageToClient`, `SendMessageToCaptain`, `BroadcastMessage`: the local delivery first, then the sockets as
+  the loop met them after it), a closed socket (the host announces the departure and forgets the socket, a joiner
+  reports the lost host), a received game summary (kept and stamped, or dropped; the event: added 0, changed 2, and
+  a known game that sent an unreadable summary is reported changed, as the original's `aFlag ? 2 : 1` under
+  `if (aFlag)` did), `CanBroadcastGame`, which games are advertised, when peers authenticate, `JoinGame`'s status
+  loop (any status but 0-3 sends the request again), `ReadJoinReply`'s roles (the joiner's own id wins over the
+  captain's), the room's player actions, the typed chat commands, the refresh command, the LAN name and port dialogs
+  and a direct-connect entry's port, name and event. `won_lanlogic_test`: 10,881 checks, 0 failures.
+- **The game room's and the start-up's flows (`flow.rs`).** StagingLogic: the message routes, an announced player
+  (read it, announce it again as host, ignore it), the all-ready state a not-ready newcomer ends,
+  `SetGameInProgress`, `ToggleReady` (`CanReady` asked only for ready), `HostGame`'s firewall warnings,
+  `VerifyPingBeforeJoin`, which join statuses are shown (not 0 or 1), `LeaveGame`'s confirmation, `HandleKicked`'s
+  event and message, `HandleGameAction`, `NotifyPingChange`, `KickClient`, `HandleClientLeft`. InitLogic:
+  `SetError`'s kept and ignorable errors, the Internet check, the directory answer's target lists and the missing
+  ones, the version status, the firewall connect-back, which terms of use are saved and how many bytes, the retry
+  events, and `ParseCrossPromotion`'s lines: the original's `strtok` walk in Rust (words split at blanks, tabs,
+  newlines and '=', `link` / `image` in any case take the rest of the line, so "link = x" gives "= x"; the document
+  ends at its first NUL). The CRT and the dialogs are asked only where the original asked them (the C++ keeps the
+  short circuits). `won_flow_test`: 96,285 checks, 0 failures (20,000 generated adverts among them).
+- **The resource table (`resource.rs`).** The 469 lobby strings, images and sounds, each with its section, key and
+  kind, in the original's load order (30 sections, each looked up again where it changes, as the 499 statements of
+  `LobbyResource_SafeGlueResources` did); the unload ran the same order (strings emptied, images and sounds
+  released). The two functions are now loops over the rows; the globals stay C++ (the lobby uses them by name) and
+  are paired with the rows by name (`#theGlobal`, checked at each load: a mismatch stops the program). The golden
+  (`golden_resource.txt`, 968 statements) was read out of the original functions; the Rust test renders the table
+  back into the same statements. **Deleted:** the bodies of `LobbyResource_SafeGlueResources` and
+  `LobbyResource_UnloadResources` (968 statements). The table by id (`gResources`, `LobbyResource_Get*`) and
+  `LobbyResource_Init`'s control ids stay.
+- **RoutingLogic's decisions (`routing.rs`).** `GetRoomSpec`, `GetGroup`, Quick Play's ping ceiling and rank
+  (`SelectGame`; the rank goes into the original's `multimap<unsigned short>`, so a rank over 65535 still wraps),
+  `ShouldLocateFriend` (the `unsigned long` difference as a `long`), `GetDefaultServer` (the last used server at
+  once, else the busiest listing the language, else the busiest; the first of equals), the anonymous and dirty-word
+  flags, the friends list's 255. `won_routing_test`: 75,029 checks, 0 failures. Internet only: the LAN path meets
+  RoutingLogic only through shared events, which its guards drop without a server.
+- **StringUtil's case (`strcase.rs`, D6).** Game text is UTF-8 and the UI thread sets `LC_CTYPE` "C", so the CRT's
+  `toupper` / `tolower` / `towupper` / `towlower` changed only ASCII letters in the game; the port does exactly
+  that, without the CRT: a UTF-8 sequence's bytes and every non-ASCII unit pass unchanged in any locale. The
+  compares keep the original's order: a narrow text's upper-cased bytes compare as signed `char`s (a UTF-8 byte
+  sorts before ASCII, as `StringLessNoCase`'s maps always sorted), wide units as `wchar_t`s (unsigned 16-bit on
+  Windows, signed 32-bit elsewhere). `won_strcase_test` runs the original loops in the C locale against the port over
+  every byte, every 16-bit unit and every pair of 241 narrow and 307 wide short texts: 417,690 checks, 0 failures.
+  Not done: full Unicode case mapping (a behaviour change; nothing in the lobby needs it).
+- **What exercises what.** The LAN game (`lan_game.py`) runs, of this round: the client list (`AddClient`,
+  `FindClient`), the LAN game list (`GetOrCreateGame`, `RemoveStaleGames`, the key), `IsSameGame`, `AreAllReady`,
+  the status texts on a refused join, all of LanLogic's flow but the chat commands, player actions, the name and port
+  dialogs and direct connect, StagingLogic's routes, hosting, joining, ready and start, the resource table (every
+  lobby load) and the case functions (the .cfg keys, the layout's component and font names: every lobby load). A lobby tour runs InitLogic's `Init`, `Start` and
+  `SetError` (the directory lookup fails: the servers are gone), the resource table and the case functions. Nothing
+  in today's game reaches the routing merges, the populations, the friends, the directory objects, RoutingLogic's
+  decisions, InitLogic's directory, version, firewall, terms-of-use and advert paths, kicks, dissolves or ping
+  reports: the drivers cover those. Nothing here touches the simulation; the oracle was identical after each gated
+  build.
+- **Gating.** The model, LanLogic and flow commits were each built (link 0/0), oracle-identical, Rust-gated and
+  driver-checked on their own; the resource table, RoutingLogic and StringUtil commits were built and gated once
+  together (their trees differ only by modules nothing else calls; each commit's header was regenerated for it).
+- **Still C++ of WON:** WONGUI's components and layout (39.3k lines, next), RoutingLogic's flow over its ops and
+  servers, the lobby's dialogs, and everything only the gone internet servers reach (peer auth, AuthContext's
+  sessions and certificate flow, GetCertOp, the services' requests and replies).
