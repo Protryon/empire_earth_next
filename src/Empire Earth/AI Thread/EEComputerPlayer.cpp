@@ -5158,9 +5158,38 @@ void EEComputerPlayer::Clear()
 // FUNCTION: EXE 0x43cff8
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the
 // attack bounds and missing favourite types, and flags stranded units; returns the first error
+// port: the computer players repaired while gDeferComputerPlayerRestore was set, with EEPlayer::RepairPointers' result
+static std::vector<std::pair<EEComputerPlayer*, long> > sDeferredRestores;
+
 long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = EEPlayer::RepairPointers(inMajorVersion, inMinorVersion);
+    if (gDeferComputerPlayerRestore) {   // port: EEWorld::CreatePlayers restores the managers once every player is repaired
+        sDeferredRestores.push_back(std::make_pair(this, theResult));
+        return theResult;
+    }
+    return this->RestoreManagers(inMajorVersion, inMinorVersion, theResult);
+}
+
+// port: set by EEWorld::CreatePlayers while it repairs the players of a loaded game from save version 0.260 on; the
+// computer players' managers are then restored after every player's RepairPointers, not after their own. A manager's
+// restore re-finds its tasks' areas (EECPILocation::Update), and a task in another player's town found none when
+// that player's towns were not rebuilt yet (seed 3's 1350 s save: player 3's attack sub group lost its task's town,
+// player 2 having been repaired first, and drew a random number the saved game did not)
+bool gDeferComputerPlayerRestore = false;
+
+void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    std::vector<std::pair<EEComputerPlayer*, long> > theRestores;
+    theRestores.swap(sDeferredRestores);
+    for (size_t i = 0; i < theRestores.size(); i++)
+        theRestores[i].first->RestoreManagers(inMajorVersion, inMinorVersion, theRestores[i].second);
+}
+
+// the rest of RepairPointers (EXE 0x43cff8 after the EEPlayer call): the managers, the resource centres, the timers
+long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult)
+{
+    long theResult = inResult;
     if (theResult == kErrorOK)
         theResult = this->mCombatManager->Restore(inMajorVersion, inMinorVersion);
     if (theResult == kErrorOK)
