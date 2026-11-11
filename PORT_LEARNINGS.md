@@ -1936,6 +1936,11 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   settlement's garrison capacity (5) makes it a town centre. Releasing the citizens right after the order (as the
   Age of AI port does) hands them to the gatherer runner while they walk: hold them until they are inside (gone) and
   release only the ones still out after a minute.
+- **Stopping a background shell leaves its bench loop running.** A queue script started in the background and
+  stopped from the agent's task list kept its child `bash` loop alive; when the hold it waited on was lifted, it
+  started its benches beside the new queue's, both on the same port offsets, and 24 of the first 32 games died at
+  the main menu (`EE-SIM FAULT` in `NERecordPlayback::Process`, the known two-benches-on-one-port start fault, §8.29).
+  Kill the loop's own processes, and let a bench script take a lock directory before it starts.
 - **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
   scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
   subfolder.
