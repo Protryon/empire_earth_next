@@ -18,6 +18,7 @@
 
 #include "ee/EEUnitKind.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEGlobalCalamityClass.h"
@@ -129,15 +130,12 @@ void EECCCloaking::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x4afae1
-// Ages the calamity and updates its sound; returns 7 (done) once the cloak's lifetime is over
+// Ages the cloak and updates its sound; returns 7 at the end of its lifetime (Rust)
 long EECCCloaking::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 4.0f, true);
-    if (inCalamity->GetTimeAlive() >= this->mLifeTime)
-        theResult = 7;
-    return theResult;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, NULL);
 }
 
 // ICF-FOLDED: EXE 0x6135bc

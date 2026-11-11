@@ -13,6 +13,9 @@ class EELeprosyFunctor;
 class EESoundObject;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCLeprosy : public EELocationCalamityClass {
 public:
     EECCLeprosy();                          // 0xb18e2
@@ -26,6 +29,8 @@ public:
     virtual void PlaySound(EECalamity* inCalamity);              // +0x2c (empty: ICF-folded 0x157269)
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 0xb1c2f
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb1c4e
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);  // +0x4c 0xb1f32
 
 protected:

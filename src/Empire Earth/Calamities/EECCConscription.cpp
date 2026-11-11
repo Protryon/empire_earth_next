@@ -15,6 +15,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -80,10 +81,12 @@ void EECCConscription::Reset(EECalamity* inCalamity)
 }
 
 // FUNCTION: EXE 0x4afeaf
-// Returns 7: the calamity is done at once
+// Returns 7: done at once (Rust)
 long EECCConscription::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    return 7;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4afeb5

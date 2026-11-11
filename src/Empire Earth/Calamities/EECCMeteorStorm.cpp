@@ -19,6 +19,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -180,30 +181,30 @@ bool EECCMeteorStorm::LaunchMeteor(EECalamity* inCalamity)
 
 // FUNCTION: EXE 0x4b2abe
 // Ages the storm: launches meteors at random intervals, replays the sound every 500 to 2000, and returns 7 at the end
-// of its lifetime
+// of its lifetime (Rust)
 long EECCMeteorStorm::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = 0;
-    float theTimeAlive = inCalamity->GetTimeAlive() + inElapsedTime;
-    inCalamity->SetTimeAlive(theTimeAlive);
-    if (theTimeAlive < this->mLifeTime) {
-        if (theTimeAlive > inCalamity->GetFloatPlaceHolder1()) {
-            EECalamityCaptureEvent(kCalamityOpLaunchMeteor);   // CALW (TEST ONLY)
-            this->LaunchMeteor(inCalamity);
-            float theNextLaunch = inCalamity->GetFloatPlaceHolder1();
-            float theRandom = gPhysics->mRandom.Generate();
-            EECalamityCaptureEvent(kCalamityOpRandom, 0, 0, theRandom);   // CALW (TEST ONLY)
-            inCalamity->SetFloatPlaceHolder1(theNextLaunch + (this->mMinimumInterval + (this->mMaximumInterval - this->mMinimumInterval) * theRandom));
-            if (inCalamity->GetFloatPlaceHolder2() < theTimeAlive) {
-                this->PlaySound(inCalamity);
-                float theDelay = gPhysics->GetRandom(500.0f, 2000.0f);
-                EECalamityCaptureEvent(kCalamityOpRandom, 1, 0, theDelay);   // CALW (TEST ONLY)
-                inCalamity->SetFloatPlaceHolder2(theDelay + theTimeAlive);
-            }
-        }
-    } else
-        theResult = 7;
-    return theResult;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    theParams.meteor_minimum_interval = this->mMinimumInterval;
+    theParams.meteor_maximum_interval = this->mMaximumInterval;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCMeteorStorm::UpdateStep);
+}
+
+// New (port): EECCMeteorStorm's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCMeteorStorm::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCMeteorStorm* theClass = static_cast<EECCMeteorStorm*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::LaunchMeteor: {
+        EECalamityCaptureEvent(kCalamityOpLaunchMeteor);   // CALW (TEST ONLY)
+        theClass->LaunchMeteor(theCalamity);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b2b62

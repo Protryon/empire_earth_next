@@ -10,6 +10,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -69,17 +70,32 @@ void EECCSpecialAttack::Reset(EECalamity* inCalamity)
 // Orders the caster to make a special attack on the live target unit; always returns 7 (done)
 long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    EEUnit* theTargetUnit = NULL;
-    EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
-    if (!inCalamity->GetTargetUnit(theTargetUnit) || !(theTargetUnit->mHitPoints > 0))
-        return 7;
-    EECalamityCaptureEvent(kCalamityOpSpecialAttack, theTargetUnit->mUnitID);   // CALW (TEST ONLY)
-    theUnit->ClearGoals(0);
-    theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
-    theUnit->mIsSpecialAttack = true;
-    theUnit->StartAction(kActionAttackEnemyUnit);
-    theUnit->mUnitClass->ActionChanged(theUnit);
-    return 7;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCSpecialAttack::UpdateStep);
+}
+
+// New (port): EECCSpecialAttack's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCSpecialAttack::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCSpecialAttack* theClass = static_cast<EECCSpecialAttack*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::SpecialAttack: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
+        EECalamityCaptureEvent(kCalamityOpSpecialAttack, theTargetUnit->mUnitID);   // CALW (TEST ONLY)
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
+        theUnit->mIsSpecialAttack = true;
+        theUnit->StartAction(kActionAttackEnemyUnit);
+        theUnit->mUnitClass->ActionChanged(theUnit);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b32da

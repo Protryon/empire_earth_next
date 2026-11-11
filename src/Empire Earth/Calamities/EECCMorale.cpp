@@ -16,6 +16,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -133,37 +134,45 @@ void EECCMorale::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
 // negative morale count (once) and plays the secondary sound
 long EECCMorale::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    if (inCalamity->GetTimeAlive() >= this->mEffectDuration) {
-        if (this->mSecondarySound != NULL)
-            this->UpdateSound(inCalamity, this->mSecondarySound, -1.0f, 15.0f, true);
-        if (!inCalamity->mBoolPlaceHolder1) {
-            inCalamity->mBoolPlaceHolder1 = true;
-            EECalamityCaptureEvent(kCalamityOpMorale);   // CALW (TEST ONLY)
-            EEUnit* theTargetUnit;
-            inCalamity->GetTargetUnit(theTargetUnit);
-            EEGraphicEffect* theEffect = theTargetUnit->mUnitClass->mMoraleEffect;
-            if (theEffect != NULL) {
-                EEEffectHandle theEffectHandle;
-                gEffectManager->CreateUnitEffect(theTargetUnit, theEffect, &theEffectHandle, 0, 0, 0);
-                EEEffectHandle theOldHandle = inCalamity->mEffectHandle;
-                if (theOldHandle != kNoEffectHandle) {
-                    gEffectManager->DestroyEffect(theOldHandle);
-                    inCalamity->mEffectHandle = kNoEffectHandle;
-                }
-                inCalamity->mEffectHandle = theEffectHandle;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    theParams.morale_delay = (int32_t)this->mEffectDuration;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, this->mSecondarySound, &EECCMorale::UpdateStep);
+}
+
+// New (port): EECCMorale's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCMorale::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCMorale* theClass = static_cast<EECCMorale*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::Morale: {
+        EECalamityCaptureEvent(kCalamityOpMorale);   // CALW (TEST ONLY)
+        EEUnit* theTargetUnit;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEGraphicEffect* theEffect = theTargetUnit->mUnitClass->mMoraleEffect;
+        if (theEffect != NULL) {
+            EEEffectHandle theEffectHandle;
+            gEffectManager->CreateUnitEffect(theTargetUnit, theEffect, &theEffectHandle, 0, 0, 0);
+            EEEffectHandle theOldHandle = theCalamity->mEffectHandle;
+            if (theOldHandle != kNoEffectHandle) {
+                gEffectManager->DestroyEffect(theOldHandle);
+                theCalamity->mEffectHandle = kNoEffectHandle;
             }
-            if (this->mPositive)
-                theTargetUnit->mComplexUnit->mPositiveMorale++;
-            else
-                theTargetUnit->mComplexUnit->mNegativeMorale++;
-            if (this->mSecondarySound != NULL)
-                gSoundManager->Play(this->mSecondarySound->GetSampleID(), this->mSecondarySound->GetVolume(), 0.0f, 1.0f,
-                                    this->mSecondarySound->GetLooping(), NULL);
+            theCalamity->mEffectHandle = theEffectHandle;
         }
-    } else
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    return theResult;
+        if (theClass->mPositive)
+            theTargetUnit->mComplexUnit->mPositiveMorale++;
+        else
+            theTargetUnit->mComplexUnit->mNegativeMorale++;
+        if (theClass->mSecondarySound != NULL)
+            gSoundManager->Play(theClass->mSecondarySound->GetSampleID(), theClass->mSecondarySound->GetVolume(), 0.0f, 1.0f,
+                                theClass->mSecondarySound->GetLooping(), NULL);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b2ed2

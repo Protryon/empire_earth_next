@@ -10,6 +10,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -64,15 +65,31 @@ void EECCSpecialLocation::Reset(EECalamity* inCalamity)
 // Orders the caster to the target location for its special-location action; always returns 7 (done)
 long EECCSpecialLocation::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
-    GE3DPoint theLocation;
-    theLocation = inCalamity->mTargetLocation;
-    EECalamityCaptureEvent(kCalamityOpSpecialLocation);   // CALW (TEST ONLY)
-    theUnit->ClearGoals(0);
-    theUnit->SetGoal(new EEUGLocation(&theLocation, 1, 1, 0, 0.0f, 0, 0), 0, 0);
-    theUnit->StartAction(kActionSpecialLocation);
-    theUnit->mUnitClass->ActionChanged(theUnit);
-    return 7;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCSpecialLocation::UpdateStep);
+}
+
+// New (port): EECCSpecialLocation's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCSpecialLocation::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCSpecialLocation* theClass = static_cast<EECCSpecialLocation*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::SpecialLocation: {
+        EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
+        GE3DPoint theLocation;
+        theLocation = theCalamity->mTargetLocation;
+        EECalamityCaptureEvent(kCalamityOpSpecialLocation);   // CALW (TEST ONLY)
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(new EEUGLocation(&theLocation, 1, 1, 0, 0.0f, 0, 0), 0, 0);
+        theUnit->StartAction(kActionSpecialLocation);
+        theUnit->mUnitClass->ActionChanged(theUnit);
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b3443

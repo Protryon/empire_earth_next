@@ -38,6 +38,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 
 const float kTwoPi = 6.2831855f;
 const float kPi = 3.1415927f;
@@ -317,27 +318,34 @@ void EECCVolcano::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
 
 // FUNCTION: EXE 0x4b516c
 // Ages the volcano; after the eruption delay creates the volcano unit with its two effects (returning the last effect's
-// result); returns 7 at the end of its lifetime
+// result); returns 7 at the end of its lifetime (Rust)
 long EECCVolcano::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    float theTimeAlive = inCalamity->GetTimeAlive() + inElapsedTime;
-    long theResult = 0;
-    this->UpdateVolcano(inCalamity, inElapsedTime);
-    this->UpdateSound(inCalamity, this->mSound, -1.0f, 4.0f, true);
-    inCalamity->SetTimeAlive(theTimeAlive);
-    if (this->mGraphicEffect1->mTime1 < theTimeAlive) {
-        EEUnit* theVolcano;
-        if (!inCalamity->GetTargetUnit(theVolcano)) {
-            this->CreateVolcano(inCalamity);
-            inCalamity->GetTargetUnit(theVolcano);
-            gEffectManager->CreateUnitEffect(theVolcano, this->mGraphicEffect3, NULL, 0, 0, 0);
-            theResult = gEffectManager->CreateUnitEffect(theVolcano, this->mGraphicEffect2, NULL, 0, 0, 0);
-            EECalamityCaptureEvent(kCalamityOpCreateVolcano, theResult);   // CALW (TEST ONLY)
-        }
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.volcano_delay = (uint32_t)this->mGraphicEffect1->mTime1;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCVolcano::UpdateStep);
+}
+
+// New (port): EECCVolcano's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCVolcano::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCVolcano* theClass = static_cast<EECCVolcano*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::CreateVolcano: {
+        theClass->CreateVolcano(theCalamity);
+        EEUnit* theVolcano = NULL;
+        theCalamity->GetTargetUnit(theVolcano);
+        gEffectManager->CreateUnitEffect(theVolcano, theClass->mGraphicEffect3, NULL, 0, 0, 0);
+        long theResult = gEffectManager->CreateUnitEffect(theVolcano, theClass->mGraphicEffect2, NULL, 0, 0, 0);
+        EECalamityCaptureEvent(kCalamityOpCreateVolcano, theResult);   // CALW (TEST ONLY)
+        outReply.value = (int32_t)theResult;
+        return true;
     }
-    if (theTimeAlive > this->mLifeTime)
-        theResult = 7;
-    return theResult;
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b523e

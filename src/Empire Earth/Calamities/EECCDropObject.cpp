@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -173,13 +174,12 @@ void EECCDropObject::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x4b02c7
-// Ages the calamity and updates its sound; returns the time-alive result
+// Ages the calamity and updates its sound; returns the time-alive result (Rust)
 long EECCDropObject::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    return theResult;
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b0310

@@ -3,6 +3,7 @@
 //! and hold no reference into C++ memory across them (the costs are copied in and out).
 
 use crate::calamity::{self, EeCalamityAge};
+use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
 use crate::effects::{self, EeTechAttribute, EeTechEffectHandler, EeTechEffectValues};
 use crate::tree::{
     self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochUpdate, EeTechNode, EeTechPrerequisite,
@@ -385,6 +386,50 @@ pub unsafe extern "C" fn ee_tech_sum_costs(
 #[no_mangle]
 pub extern "C" fn ee_calamity_update_time_alive(time_alive: f32, elapsed: f32, lifetime: f32) -> EeCalamityAge {
     calamity::update_time_alive(time_alive, elapsed, lifetime)
+}
+
+/// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
+/// objects, reading and writing the calamity through `state` (the C++ copies it in and out around its step).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeCalamityHostFfi {
+    pub ctx: *mut c_void,
+    pub call: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        state: *mut EeCalamityState,
+        call: *const EeCalamityCall,
+        reply: *mut EeCalamityReply,
+    ),
+}
+
+struct FfiCalamityHost(EeCalamityHostFfi);
+
+impl CalamityHost for FfiCalamityHost {
+    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+        let mut reply = EeCalamityReply::default();
+        // SAFETY: the C++ host's contract (ee/EECalamityUpdate.h): valid pointers for the call's duration
+        unsafe { (self.0.call)(self.0.ctx, state, call, &mut reply) };
+        reply
+    }
+}
+
+/// A calamity class's `Update(calamity, elapsed)` (`calamity_update::update`); `state` in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op the class asks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_update(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    elapsed: f32,
+    host: *const EeCalamityHostFfi,
+) -> i32 {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    let result = calamity_update::update(&mut FfiCalamityHost(host), &mut s, &params, elapsed);
+    // SAFETY: as above
+    unsafe { *state = s };
+    result
 }
 
 #[cfg(test)]

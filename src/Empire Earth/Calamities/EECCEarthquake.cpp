@@ -19,6 +19,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
@@ -229,133 +230,72 @@ void EECCEarthquake::Reset(EECalamity* inCalamity)
     inCalamity->mFloatPlaceHolder1 = 0.0f;
 }
 
-// FUNCTION: EXE 0x4b085c
-// Sets how strongly the quake is felt at the camera: its volume (approach or quake) falling off
-// with the camera's distance to the target, but never below the minimum
-void EECCEarthquake::UpdateEpicenterFactor(EECalamity* inCalamity)
-{
-    GE3DPoint theViewLocation;
-    GE3DPoint theTarget;
-    inCalamity->GetTargetLocation(theTarget);
-    GE3DPoint theOrigin;
-    gViewport.GetCameraInverse().Apply(theTarget, theViewLocation);
-    theViewLocation.SetY(0.0f);
-    float theDistance = theViewLocation.DistanceTo(theOrigin);
-    float theFactor = inCalamity->mBoolPlaceHolder1 ? this->mQuakeVolume : this->mVolume;
-    float theMinimum = inCalamity->mBoolPlaceHolder1 ? this->mQuakeMinimumFactor : this->mMinimumFactor;
-    theFactor *= 1.0f / (theDistance * this->mFalloff + 1.0f);
-    inCalamity->mEpicenterFactor = max(theFactor, theMinimum);
-}
-
-// FUNCTION: EXE 0x4b090f
-// Updates the quake sound at the approach or quake volume, clamped to 0..1
-void EECCEarthquake::UpdateQuakeSound(EECalamity* inCalamity)
-{
-    float theVolume = inCalamity->mBoolPlaceHolder1 ? this->mQuakeVolume : this->mVolume;
-    theVolume = max(0.0f, theVolume);
-    theVolume = min(1.0f, theVolume);
-    this->UpdateSound(inCalamity, this->mSound, theVolume, 1.0f, true);
-}
-
-// FUNCTION: EXE 0x4b0956
-// Every shake interval, shakes the local player's camera in a random direction by an amount scaled by
-// the epicenter factor (once per player until the flag is cleared)
-void EECCEarthquake::ShakeCamera(EECalamity* inCalamity, float inElapsedTime)
-{
-    GE3DPoint theLocation;
-    float theTime = inCalamity->GetFloatPlaceHolder1() + inElapsedTime;
-    if (theTime > this->mShakeInterval) {
-        theTime -= this->mShakeInterval;
-        float theRandom = gPhysics->GetRandom();
-        EECalamityCaptureEvent(kCalamityOpRandom, 0, 0, theRandom);   // CALW (TEST ONLY)
-        float theAngle = theRandom * 6.2831855f - 3.1415927f;
-        if (inCalamity->GetEpicenterFactor() >= 0.11f) {
-            EEPlayer* thePlayer = ::gWorld.GetCurrentPlayer();
-            if (!thePlayer->mEarthquakeShaken) {
-                thePlayer->mEarthquakeShaken = true;
-                float theAmplitude = (this->mShake * inElapsedTime) * inCalamity->GetEpicenterFactor();
-                EECalamityCaptureEvent(kCalamityOpShake, 0, 0, theAngle, theAmplitude);   // CALW (TEST ONLY)
-                ::gWorld.mCameraControl.GetLocation(::gWorld.mCameraControl.mFraction, theLocation);
-                theLocation.mX += UMCos(theAngle) * theAmplitude;
-                theLocation.SetY(theLocation.GetY() + UMCos(1.5707964f - theAngle) * theAmplitude);
-                ::gWorld.mCameraControl.SetLocation(theLocation, true, true);
-                inCalamity->mShakeLocation = theLocation;
-            }
-        }
-    }
-    inCalamity->SetFloatPlaceHolder1(theTime);
-}
-
 // FUNCTION: EXE 0x4b0a60
-// Runs the quake: after the source delay draws the cracks, then each tick damages the living land
-// buildings on the caster's continent within the growing radius; returns 7 once the quake is over
+// Runs the quake in Rust: after the source delay draws the cracks, then each tick damages the living land
+// buildings on the caster's continent within the growing radius, shakes the camera, sets the epicenter factor and
+// the sound; returns 7 once the quake is over
 long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theDamagedCarriers;
-    GE3DPoint theLocation;
-    EEGraphicEffect* theEffect = NULL;
-    EEUnit* theCaster = inCalamity->mCasterUnit;
-    unsigned short theContinent = gContinentManager.GetContinent(theCaster, kAIPathNonSpace);
-    long theResult = 0;
-    float theTimeAlive = inCalamity->GetTimeAlive() + inElapsedTime;
-    float theElapsed = inElapsedTime * 0.001f;
-    float theDelay = inCalamity->mFloatPlaceHolder2;
-    float theTime = inCalamity->GetTimeAlive() * 0.001f;
-    float theNewTime = theTime + theElapsed;
-    float theRadius = max(0.0f, min((theTime - theDelay) * this->mSpeed, this->mRadius));
-    if (theNewTime >= theDelay && !inCalamity->mBoolPlaceHolder1) {
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.quake_damage = (int32_t)this->mDamage;
+    theParams.quake_tick_time = (int32_t)this->mTickTime;
+    theParams.quake_shake = (int32_t)this->mShake;
+    theParams.quake_duration = this->mDuration;
+    theParams.quake_radius = this->mRadius;
+    theParams.quake_shake_interval = this->mShakeInterval;
+    theParams.quake_volume = this->mVolume;
+    theParams.quake_quake_volume = this->mQuakeVolume;
+    theParams.quake_minimum_factor = this->mMinimumFactor;
+    theParams.quake_quake_minimum_factor = this->mQuakeMinimumFactor;
+    theParams.quake_speed = this->mSpeed;
+    theParams.quake_falloff = this->mFalloff;
+    theParams.quake_damage_factor = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->GetEarthquakeDamageFactor();
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCEarthquake::UpdateStep);
+}
+
+// New (port): EECCEarthquake's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCEarthquake::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCEarthquake* theClass = static_cast<EECCEarthquake*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::Cracks: {
         EECalamityCaptureEvent(kCalamityOpCracks);   // CALW (TEST ONLY)
-        this->CreateCracks(inCalamity);
-        inCalamity->mBoolPlaceHolder1 = true;
+        theClass->CreateCracks(theCalamity);
+        return true;
     }
-    if (inCalamity->mBoolPlaceHolder1) {
-        inCalamity->SetIntPlaceHolder1(inCalamity->mIntPlaceHolder1 + UMFloatToLong(inElapsedTime));
-        if (inCalamity->GetIntPlaceHolder1() > this->mTickTime) {
-            long theTicks = inCalamity->mIntPlaceHolder1 / this->mTickTime;
-            long theDamage = (long)(EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->GetEarthquakeDamageFactor() * this->mDamage
-                                    * theTicks);
-            inCalamity->mIntPlaceHolder1 -= this->mTickTime * theTicks;
-            theLocation = inCalamity->mTargetLocation;
-            long theNear = EEGetUnitsNear(theLocation, theRadius, theUnits);
-            EECalamityCaptureEvent(kCalamityOpUnitsNear, theNear);   // CALW (TEST ONLY)
-            if (theNear > 0) {
-                for (long i = theUnits.size() - 1; i >= 0; i--) {
-                    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
-                    if (!theUnit->mUnitClass->IsLandBuilding() || !(theUnit->mHitPoints > 0)
-                        || gContinentManager.GetContinent(theUnit, kAIPathNonSpace) != theContinent)
-                        continue;
-                    bool theProtected = false;
-                    if (this->mIsBlockedByImmunity && theUnit->GetEffect(3, theEffect)) {
-                        EECalamityCaptureEvent(kCalamityOpImmune, theUnit->mUnitID);   // CALW (TEST ONLY)
-                        if (theEffect != NULL)
-                            gWorld.GetEffectManager()->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
-                        theProtected = true;
-                    }
-                    bool theCarried = theUnit->IsCarried();
-                    if (theProtected && !theCarried)
-                        continue;
-                    if (theCarried) {
-                        std::vector<EEUnit*>::iterator theFound = std::find(theDamagedCarriers.begin(),
-                            theDamagedCarriers.end(), theUnit->GetOutermostCarrier());
-                        if (theFound != theDamagedCarriers.end())
-                            continue;
-                        theDamagedCarriers.push_back(theUnit->GetOutermostCarrier());
-                    }
-                    EECalamityCaptureEvent(kCalamityOpTakeHit, theUnit->mUnitID, theDamage,
-                                           (float)inCalamity->GetPlayerNumber(), this->mIsBlockedByImmunity ? 2.0f : 3.0f);   // CALW (TEST ONLY)
-                    theUnit->TakeHit(theCaster, theDamage, inCalamity->GetPlayerNumber(), this->mIsBlockedByImmunity ? 2 : 3);
-                }
-            }
+    case EeCalamityOp::CameraDistance: {
+        // UpdateEpicenterFactor's distance from the camera to the target, in the view plane
+        GE3DPoint theViewLocation;
+        GE3DPoint theTarget;
+        theCalamity->GetTargetLocation(theTarget);
+        GE3DPoint theOrigin;
+        gViewport.GetCameraInverse().Apply(theTarget, theViewLocation);
+        theViewLocation.SetY(0.0f);
+        outReply.x = theViewLocation.DistanceTo(theOrigin);
+        return true;
+    }
+    case EeCalamityOp::Shake: {
+        // ShakeCamera's shake of the local player's camera (once per player and manager update)
+        EEPlayer* thePlayer = ::gWorld.GetCurrentPlayer();
+        if (!thePlayer->mEarthquakeShaken) {
+            thePlayer->mEarthquakeShaken = true;
+            float theAngle = inCall.x;
+            float theAmplitude = inCall.y;
+            EECalamityCaptureEvent(kCalamityOpShake, 0, 0, theAngle, theAmplitude);   // CALW (TEST ONLY)
+            GE3DPoint theLocation;
+            ::gWorld.mCameraControl.GetLocation(::gWorld.mCameraControl.mFraction, theLocation);
+            theLocation.mX += UMCos(theAngle) * theAmplitude;
+            theLocation.SetY(theLocation.GetY() + UMCos(1.5707964f - theAngle) * theAmplitude);
+            ::gWorld.mCameraControl.SetLocation(theLocation, true, true);
+            theCalamity->mShakeLocation = theLocation;
         }
+        return true;
     }
-    this->UpdateEpicenterFactor(inCalamity);
-    this->ShakeCamera(inCalamity, theElapsed);
-    this->UpdateQuakeSound(inCalamity);
-    inCalamity->SetTimeAlive(theTimeAlive);
-    if (theDelay + this->mDuration < theNewTime)
-        theResult = 7;
-    return theResult;
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b0da5
