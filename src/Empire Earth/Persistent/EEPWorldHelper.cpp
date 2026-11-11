@@ -636,6 +636,97 @@ static long LoadUnitOrder(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.270): the order of each player's unit list (RTSPlayer::mFirstUnit, mNext). InsertUnit puts a
+// unit after the first of its id's hash bucket, or at the end when the bucket is empty, so the running list holds the
+// buckets in the order they last filled; SaveUnits writes them in bucket index order and the load inserts them in
+// that order. Every walk of a player's units (the militia's raiders, the AI's groupings) then saw another order.
+// Put back at the first tick.
+static void SavePlayerUnitOrder(FSFile& outFile)
+{
+    long theResult = outFile.Write((unsigned long)gWorld.mNumPlayers);
+    for (unsigned long p = 0; p < gWorld.mNumPlayers && theResult == kErrorOK; p++) {
+        std::vector<unsigned long> theIDs;
+        for (EEUnit* theUnit = gWorld.mPlayers[p] != NULL ? gWorld.mPlayers[p]->mFirstUnit : NULL; theUnit != NULL;
+             theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            theIDs.push_back(theUnit->mUnitID);
+        theResult = outFile.Write((unsigned long)theIDs.size());
+        for (size_t i = 0; i < theIDs.size() && theResult == kErrorOK; i++)
+            theResult = outFile.Write(theIDs[i]);
+    }
+}
+
+// The player's units in the saved order, then any unit the load has that the save did not (after the last unit of
+// its bucket, which keeps every bucket's units together as GetUnit walks them); each bucket's first unit follows
+static void RestorePlayerUnitOrder(unsigned long inPlayer, const std::vector<unsigned long>& inIDs)
+{
+    EEPlayer* thePlayer = inPlayer < gWorld.mNumPlayers ? gWorld.mPlayers[inPlayer] : NULL;
+    if (thePlayer == NULL)
+        return;
+    std::vector<RTSUnit*> theCurrent;
+    for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
+        theCurrent.push_back(theUnit);
+    std::vector<RTSUnit*> theOrder;
+    for (size_t i = 0; i < inIDs.size(); i++) {
+        RTSUnit* theUnit = thePlayer->GetUnit(inIDs[i]);
+        if (theUnit != NULL && std::find(theOrder.begin(), theOrder.end(), theUnit) == theOrder.end())
+            theOrder.push_back(theUnit);
+    }
+    for (size_t c = 0; c < theCurrent.size(); c++) {
+        RTSUnit* theUnit = theCurrent[c];
+        if (std::find(theOrder.begin(), theOrder.end(), theUnit) != theOrder.end())
+            continue;
+        size_t theAt = theOrder.size();
+        for (size_t k = theOrder.size(); k > 0; k--)
+            if ((theOrder[k - 1]->mUnitID & 0x7f) == (theUnit->mUnitID & 0x7f)) {
+                theAt = k;
+                break;
+            }
+        theOrder.insert(theOrder.begin() + theAt, theUnit);
+    }
+    if (theOrder.size() != theCurrent.size()) {   // a saved unit in another player's list: left as the load made it
+        ESDebugOut("EEPWorldHelper: player %lu's saved units are not its list's: their order is the load's\n", inPlayer);
+        return;
+    }
+    if (theOrder == theCurrent)
+        return;
+    for (size_t i = 0; i < theOrder.size(); i++) {
+        theOrder[i]->mPrevious = i > 0 ? theOrder[i - 1] : NULL;
+        theOrder[i]->mNext = i + 1 < theOrder.size() ? theOrder[i + 1] : NULL;
+    }
+    thePlayer->mFirstUnit = theOrder.empty() ? NULL : static_cast<EEUnit*>(theOrder.front());
+    thePlayer->mLastUnit = theOrder.empty() ? NULL : static_cast<EEUnit*>(theOrder.back());
+    bool theSeen[0x80] = {};
+    for (size_t i = 0; i < theOrder.size(); i++) {
+        unsigned long theBucket = theOrder[i]->mUnitID & 0x7f;
+        if (!theSeen[theBucket])
+            thePlayer->mUnitBuckets[theBucket].mFirst = static_cast<EEUnit*>(theOrder[i]);
+        theSeen[theBucket] = true;
+    }
+}
+
+static long LoadPlayerUnitOrder(FSFile& inFile)
+{
+    unsigned long thePlayers = 0;
+    std::vector<std::vector<unsigned long> > theOrders;
+    long theResult = inFile.Read(thePlayers);
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        unsigned long theCount = 0;
+        theOrders.push_back(std::vector<unsigned long>());
+        theResult = inFile.Read(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+            unsigned long theID = 0;
+            theResult = inFile.Read(theID);
+            theOrders.back().push_back(theID);
+        }
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theOrders]() {
+            for (size_t p = 0; p < theOrders.size(); p++)
+                RestorePlayerUnitOrder((unsigned long)p, theOrders[p]);
+        });
+    return theResult;
+}
+
 // FUNCTION: EXE 0x54c2bd
 // Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), then the chat log and
 // the main game form; returns only the main game form's error
@@ -675,8 +766,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && LoadGhosts(inFile) == kErrorOK   // port (0.262): the dead attackers the units still hold
             && EESaveHasContinentRegions(inMajorVersion, inMinorVersion)
             && EELoadContinentRegions(inFile) == kErrorOK   // port (0.263): the continent manager as it was
-            && EESaveHasResourceState(inMajorVersion, inMinorVersion))
-            EECPLoadResourceState(inFile);   // port (0.265): the claim ranges and danger zones
+            && EESaveHasResourceState(inMajorVersion, inMinorVersion)
+            && EECPLoadResourceState(inFile) == kErrorOK   // port (0.265): the claim ranges and danger zones
+            && EESaveHasPlayerUnitOrder(inMajorVersion, inMinorVersion))
+            LoadPlayerUnitOrder(inFile);   // port (0.270): the order of each player's unit list
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -743,6 +836,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 EESaveContinentRegions(outFile);   // port (0.263): the continent manager as it is
             if (EESaveHasResourceState(inMajorVersion, inMinorVersion))
                 EECPSaveResourceState(outFile);   // port (0.265): the claim ranges and danger zones
+            if (EESaveHasPlayerUnitOrder(inMajorVersion, inMinorVersion))
+                SavePlayerUnitOrder(outFile);   // port (0.270): the order of each player's unit list
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

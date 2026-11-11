@@ -127,6 +127,12 @@ inline bool EESaveHasManagerTimers(unsigned long inMajorVersion, unsigned long i
 {
     return inMajorVersion > 0 || inMinorVersion >= 269;
 }
+// port: from 0.270 a save holds the order of each player's unit list (EEPWorldHelper): the load inserted the units by
+// hash bucket index, where the running list holds the buckets in the order they last filled
+inline bool EESaveHasPlayerUnitOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 270;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;

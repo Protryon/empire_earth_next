@@ -610,6 +610,14 @@ void DumpState(const std::string& inPath)
             fprintf(f, "\n");
         }
     }
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {   // each player's unit list in its order (save 0.270)
+        if (gWorld.mPlayers[i] == NULL)
+            continue;
+        fprintf(f, "PLAYERUNITS %lu:", i);
+        for (EEUnit* u = gWorld.mPlayers[i]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+            fprintf(f, " %lu", (unsigned long)u->mUnitID);
+        fprintf(f, "\n");
+    }
     EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
     gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
     for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
