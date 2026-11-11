@@ -20,7 +20,8 @@
 //! manager's chain, adjacency and largest continent queries.
 //!
 //! The engine's sparse point set (`U2DSparseArrayPointContainer`: the areas' and sub sectors' tiles) is `sparse`,
-//! whole (the C++ class owns a handle).
+//! whole (the C++ class owns a handle). `manager` is the manager's last loops over its objects (`GetTilesNextTo`,
+//! `PruneChokePoints` with the geometry behind a host, `CreateScenarioAreas`' choice).
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): integer arithmetic only, `long` as `i32` (the Windows build's;
 //! wrapping where the C++ wraps), the lists' orders and the tie-breaking exactly the C++'s. The gate is
@@ -34,6 +35,7 @@ pub mod ffi;
 pub mod goals;
 pub mod graph;
 pub mod machine;
+pub mod manager;
 pub mod modifiers;
 pub mod path_area_kind;
 pub mod path_goals;

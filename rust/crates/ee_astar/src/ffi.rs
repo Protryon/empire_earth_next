@@ -1776,3 +1776,121 @@ pub unsafe extern "C" fn ee_sparse_random_point(
     let set = &unsafe { &*s }.set;
     set.random_point(&mut || generate(random))
 }
+
+// ---- the manager's last loops (manager.rs) ----
+
+use crate::manager::{self, EeScenarioArea, EeScenarioAreaPlan, PruneHost};
+
+/// `GetTilesNextTo(x, y, id)`: `continent(ctx, x, y)` is the manager's `GetContinentID`, `flags` its adjacency
+/// matrix (`flags_count` cells, NULL for none), `out` room for the 8 ring tiles; their count in `out_count`.
+///
+/// # Safety
+/// `flags` valid for `flags_count` cells (or NULL), `out` for 8 points, `out_count` valid; `continent` must not
+/// call back into `ee_astar`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_tiles_next_to(
+    x: i32,
+    y: i32,
+    id: u16,
+    width: u32,
+    height: u32,
+    flags: *const bool,
+    flags_count: usize,
+    flags_width: i32,
+    continent: extern "C" fn(*mut c_void, i32, i32) -> u16,
+    ctx: *mut c_void,
+    out: *mut EePoint,
+    out_count: *mut usize,
+) -> bool {
+    let flags = if flags.is_null() || flags_count == 0 {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(flags, flags_count) }
+    };
+    let mut tiles = Vec::new();
+    let mut lookup = |x, y| continent(ctx, x, y);
+    let result = manager::tiles_next_to(x, y, id, width, height, flags, flags_width, &mut lookup, &mut tiles);
+    let n = tiles.len().min(8);
+    // SAFETY: the caller's contract (room for 8)
+    unsafe {
+        std::ptr::copy_nonoverlapping(tiles.as_ptr(), out, n);
+        *out_count = n;
+    }
+    result
+}
+
+/// What `PruneChokePoints` asks the C++ manager (`manager::PruneHost`), as C function pointers over `ctx`.
+#[repr(C)]
+pub struct EePruneCallbacks {
+    pub ctx: *mut c_void,
+    pub choke_exists: extern "C" fn(*mut c_void, usize) -> bool,
+    pub area_count: extern "C" fn(*mut c_void, usize) -> usize,
+    pub area: extern "C" fn(*mut c_void, usize, usize) -> i32,
+    /// `k` -1 for the choke point itself
+    pub is_near: extern "C" fn(*mut c_void, usize, usize, isize) -> bool,
+    pub remove: extern "C" fn(*mut c_void, usize),
+}
+
+struct PruneCalls<'a>(&'a EePruneCallbacks);
+
+impl PruneHost for PruneCalls<'_> {
+    fn choke_exists(&mut self, choke: usize) -> bool {
+        (self.0.choke_exists)(self.0.ctx, choke)
+    }
+    fn area_count(&mut self, choke: usize) -> usize {
+        (self.0.area_count)(self.0.ctx, choke)
+    }
+    fn area(&mut self, choke: usize, k: usize) -> i32 {
+        (self.0.area)(self.0.ctx, choke, k)
+    }
+    fn near(&mut self, edge: usize, choke: usize, k: Option<usize>) -> bool {
+        (self.0.is_near)(self.0.ctx, edge, choke, k.map_or(-1, |k| k as isize))
+    }
+    fn remove(&mut self, choke: usize) {
+        (self.0.remove)(self.0.ctx, choke)
+    }
+}
+
+/// `PruneChokePoints` over the continents' `categories` (`count` of them, -1 for none) and `chokes` choke points.
+///
+/// # Safety
+/// `categories` valid for `count` (any pointer when 0), `cb` valid and its functions callable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_prune_choke_points(
+    categories: *const i32,
+    count: usize,
+    chokes: usize,
+    cb: *const EePruneCallbacks,
+) {
+    let categories = if count == 0 || categories.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(categories, count) }
+    };
+    // SAFETY: the caller's contract
+    let mut host = PruneCalls(unsafe { &*cb });
+    manager::prune_choke_points(categories, chokes, &mut host);
+}
+
+/// `CreateScenarioAreas`' choice over `count` scenario areas: the areas to create into `out` (room for `count`);
+/// returns their number.
+///
+/// # Safety
+/// `areas` and `out` valid for `count` records (any pointer when 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_scenario_area_plan(
+    areas: *const EeScenarioArea,
+    count: usize,
+    out: *mut EeScenarioAreaPlan,
+) -> usize {
+    if count == 0 || areas.is_null() {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let plan = manager::scenario_area_plan(unsafe { std::slice::from_raw_parts(areas, count) });
+    // SAFETY: the caller's contract; at most `count` records
+    unsafe { std::ptr::copy_nonoverlapping(plan.as_ptr(), out, plan.len()) };
+    plan.len()
+}

@@ -15,6 +15,9 @@ constexpr static const int32_t KIND_AREA = 54;
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
 
+/// `kContinentCategoryMapEdge`.
+constexpr static const int32_t CATEGORY_MAP_EDGE = 5;
+
 /// `kAIPathWaterBody`, `kAIPathLandMass`, `kAIPathSpaceRegion`, `kAIPathNonSpace` (ee/EEAIKindIDs.h).
 constexpr static const int32_t PATH_WATER_BODY = 1;
 
@@ -1691,6 +1694,38 @@ struct EeContinentSize {
   uint8_t category;
   /// `mTiles.Size()` (a `long`)
   int32_t size;
+};
+
+/// What `PruneChokePoints` asks the C++ manager (`manager::PruneHost`), as C function pointers over `ctx`.
+struct EePruneCallbacks {
+  void *ctx;
+  bool (*choke_exists)(void*, size_t);
+  size_t (*area_count)(void*, size_t);
+  int32_t (*area)(void*, size_t, size_t);
+  /// `k` -1 for the choke point itself
+  bool (*is_near)(void*, size_t, size_t, ptrdiff_t);
+  void (*remove)(void*, size_t);
+};
+
+/// A scenario area as `CreateScenarioAreas` reads it: whether it exists and is set, and its rectangle's sides.
+struct EeScenarioArea {
+  bool set;
+  float top;
+  float bottom;
+  float left;
+  float right;
+  float height;
+  float width;
+};
+
+/// One rectangle area to create: the scenario area's index, its id, its tile rectangle.
+struct EeScenarioAreaPlan {
+  int32_t index;
+  uint16_t id;
+  int32_t top;
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
 };
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
@@ -4782,6 +4817,43 @@ EePoint ee_sparse_closest_point(const EeSparseArray *s, int32_t x, int32_t y);
 EePoint ee_sparse_random_point(const EeSparseArray *s,
                                float (*generate)(void*),
                                void *random);
+
+/// `GetTilesNextTo(x, y, id)`: `continent(ctx, x, y)` is the manager's `GetContinentID`, `flags` its adjacency
+/// matrix (`flags_count` cells, NULL for none), `out` room for the 8 ring tiles; their count in `out_count`.
+///
+/// # Safety
+/// `flags` valid for `flags_count` cells (or NULL), `out` for 8 points, `out_count` valid; `continent` must not
+/// call back into `ee_astar`.
+bool ee_astar_tiles_next_to(int32_t x,
+                            int32_t y,
+                            uint16_t id,
+                            uint32_t width,
+                            uint32_t height,
+                            const bool *flags,
+                            size_t flags_count,
+                            int32_t flags_width,
+                            uint16_t (*continent)(void*, int32_t, int32_t),
+                            void *ctx,
+                            EePoint *out,
+                            size_t *out_count);
+
+/// `PruneChokePoints` over the continents' `categories` (`count` of them, -1 for none) and `chokes` choke points.
+///
+/// # Safety
+/// `categories` valid for `count` (any pointer when 0), `cb` valid and its functions callable.
+void ee_astar_prune_choke_points(const int32_t *categories,
+                                 size_t count,
+                                 size_t chokes,
+                                 const EePruneCallbacks *cb);
+
+/// `CreateScenarioAreas`' choice over `count` scenario areas: the areas to create into `out` (room for `count`);
+/// returns their number.
+///
+/// # Safety
+/// `areas` and `out` valid for `count` records (any pointer when 0).
+size_t ee_astar_scenario_area_plan(const EeScenarioArea *areas,
+                                   size_t count,
+                                   EeScenarioAreaPlan *out);
 
 /// `UDataCompression::Compress`.
 ///
