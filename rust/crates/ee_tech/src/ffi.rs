@@ -5,7 +5,10 @@
 use crate::calamity::{self, EeCalamityAge};
 use crate::calamity_cast::{self, EeCalamityCast};
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
-use crate::effects::{self, EeTechAttribute, EeTechEffectHandler, EeTechEffectValues};
+use crate::effects::{
+    self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
+    EeTechUnitWalk,
+};
 use crate::tree::{
     self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate, EeTechNode,
     EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode,
@@ -488,6 +491,58 @@ pub unsafe extern "C" fn ee_tech_research_to_epoch(
         unsafe { *out.add(i) = *step };
     }
     steps.len() as u32
+}
+
+/// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_unit_step(
+    walk: EeTechUnitWalk,
+    unit: *const EeTechUnitView,
+    class_type: i32,
+    old_maximum: u32,
+    new_maximum: i32,
+) -> EeTechUnitStep {
+    // SAFETY: the caller's contract
+    effects::unit_step(walk, unsafe { &*unit }, class_type, old_maximum, new_maximum)
+}
+
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_sight_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::sight_applies(unsafe { &*unit }, class_type)
+}
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_area_effect_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::area_effect_applies(unsafe { &*unit }, class_type)
+}
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+#[no_mangle]
+pub extern "C" fn ee_tech_conversion(has_unit: bool, in_set: bool, has_class: bool, id: i32) -> EeTechConversion {
+    effects::conversion(has_unit, in_set, has_class, id)
+}
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_conversion_unit(unit: *const EeTechUnitView) -> u32 {
+    // SAFETY: the caller's contract
+    effects::conversion_unit(unsafe { &*unit })
 }
 
 #[cfg(test)]

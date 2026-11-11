@@ -632,6 +632,18 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
 
+/// [`EeTechUnitView::flags`]: the unit has a complex unit.
+constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
+
+/// Its complex unit is built.
+constexpr static const uint32_t EE_TECH_UNIT_BUILT = 2;
+
+/// It is on a tile (`mTileNode`).
+constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
+
+/// It is carried (`mPreviousPart`).
+constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
+
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -1496,6 +1508,16 @@ enum class EeTechEpochStepKind : uint32_t {
   ResearchKind7,
   /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
   ShowName,
+};
+
+/// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
+enum class EeTechUnitWalk : uint32_t {
+  /// The player's units, for the hit point rescale (built ones only).
+  HitPoints = 0,
+  /// The pending units, for the hit point rescale (the built test at the write).
+  PendingHitPoints,
+  /// The player's or the pending units, for the flight time rescale.
+  FlightTime,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -4013,6 +4035,40 @@ struct EeCalamityCast {
 struct EeTechEpochStep {
   EeTechEpochStepKind step;
   int32_t epoch;
+};
+
+/// One unit of a rescale walk: whether it is rescaled (`EVHP`), whether the new value is written, and the value.
+struct EeTechUnitStep {
+  bool rescaled;
+  bool applies;
+  uint8_t pad[2];
+  /// `ee_tech_rescale`'s amount.
+  float amount;
+  /// The amount's C cast (the value written).
+  int32_t value;
+};
+
+/// What an effect reads of one unit it walks (`EEUnit` and its `EEComplexUnit`).
+struct EeTechUnitView {
+  int32_t unit_type;
+  int32_t hit_points;
+  /// The complex unit's flight time (0 without one).
+  int32_t flight_time;
+  /// `EE_TECH_UNIT_*` bits.
+  uint32_t flags;
+};
+
+/// `ConvertEventUnits`' decisions around its walk.
+struct EeTechConversion {
+  /// Only the given unit (in the effect's set, by a unit tech): else every unit of the class, after the upgrade
+  /// levels and the queued technology are carried over.
+  bool single;
+  /// The new class's tech node gets a research delay (one unit converted, the new class exists).
+  bool delay_new_class;
+  /// The queued improvements move to the new class.
+  bool move_queued;
+  /// The new units take their class's behaviour (tech 0x413 or 0x138d).
+  bool set_behavior;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -9609,6 +9665,37 @@ uint32_t ee_tech_research_to_epoch(int32_t epoch,
                                    bool local,
                                    EeTechEpochStep *out,
                                    uint32_t capacity);
+
+/// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+EeTechUnitStep ee_tech_unit_step(EeTechUnitWalk walk,
+                                 const EeTechUnitView *unit,
+                                 int32_t class_type,
+                                 uint32_t old_maximum,
+                                 int32_t new_maximum);
+
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_sight_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_area_effect_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, int32_t id);
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
