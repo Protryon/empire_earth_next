@@ -27,6 +27,10 @@ pub const EE_UNIT_FIELD_COMPLEX: u32 = 7;
 pub const EE_UNIT_FIELD_BUILT: u32 = 8;
 /// `EEComplexUnit::mGoalState`: the goal's `mKind`, -1 for none
 pub const EE_UNIT_FIELD_GOAL_KIND: u32 = 9;
+/// `EEUnit::mUnitClass` too: the class's `mDomains` (`kMovement*` bits) and whether it is a land building
+/// (`EEUnitClass::IsLandBuilding`), both fixed by the class's constructor (0: no class)
+pub const EE_UNIT_FIELD_DOMAINS: u32 = 10;
+pub const EE_UNIT_FIELD_LAND_BUILDING: u32 = 11;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -66,6 +70,9 @@ pub struct EeUnitRecord {
     /// `EEUnit::mUnitClass->mCategory`, `->mUnitType` (-1: no class)
     pub category: i64,
     pub unit_type: i64,
+    /// `EEUnit::mUnitClass->mDomains`, `->IsLandBuilding()` (0: no class)
+    pub domains: u8,
+    pub land_building: u8,
 }
 
 impl EeUnitRecord {
@@ -81,6 +88,8 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_COMPLEX => self.complex = value as u8,
             EE_UNIT_FIELD_BUILT => self.built = value as u8,
             EE_UNIT_FIELD_GOAL_KIND => self.goal_kind = value as i32,
+            EE_UNIT_FIELD_DOMAINS => self.domains = value as u8,
+            EE_UNIT_FIELD_LAND_BUILDING => self.land_building = value as u8,
             _ => return false,
         }
         true
@@ -106,6 +115,8 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_COMPLEX, self.complex == other.complex),
             (EE_UNIT_FIELD_BUILT, self.built == other.built),
             (EE_UNIT_FIELD_GOAL_KIND, self.goal_kind == other.goal_kind),
+            (EE_UNIT_FIELD_DOMAINS, self.domains == other.domains),
+            (EE_UNIT_FIELD_LAND_BUILDING, self.land_building == other.land_building),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -272,6 +283,8 @@ mod tests {
             tile_y: 6,
             category: 1,
             unit_type: 42,
+            domains: 2,
+            land_building: 0,
         }
     }
 
@@ -305,6 +318,8 @@ mod tests {
             (EE_UNIT_FIELD_COMPLEX, EE_UNIT_COMPLEX_NONE as i64),
             (EE_UNIT_FIELD_BUILT, 0),
             (EE_UNIT_FIELD_GOAL_KIND, 15),
+            (EE_UNIT_FIELD_DOMAINS, 5),
+            (EE_UNIT_FIELD_LAND_BUILDING, 1),
         ] {
             let before = r;
             assert!(r.set(f, v));
@@ -313,6 +328,7 @@ mod tests {
         assert_eq!(r.tile_x, -10000);
         assert_eq!(r.unit_type, 0xffff_ffff);
         assert_eq!(r.goal_kind, 15);
+        assert_eq!((r.domains, r.land_building), (5, 1));
         let mut k = r;
         k.owner = 3;
         assert_eq!(r.first_difference(&k), Some(0));

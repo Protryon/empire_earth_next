@@ -829,6 +829,7 @@ void AfterTick()
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
         EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
+        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
         static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
         if (!sMessageSweepDone) {
             sMessageSweepDone = true;

@@ -60,6 +60,8 @@ mod tests {
             tile_y: 2,
             category: 3,
             unit_type: 40,
+            domains: 2,
+            land_building: 0,
         }
     }
 

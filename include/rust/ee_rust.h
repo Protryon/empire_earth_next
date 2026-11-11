@@ -832,6 +832,12 @@ constexpr static const uint32_t EE_UNIT_FIELD_BUILT = 8;
 /// `EEComplexUnit::mGoalState`: the goal's `mKind`, -1 for none
 constexpr static const uint32_t EE_UNIT_FIELD_GOAL_KIND = 9;
 
+/// `EEUnit::mUnitClass` too: the class's `mDomains` (`kMovement*` bits) and whether it is a land building
+/// (`EEUnitClass::IsLandBuilding`), both fixed by the class's constructor (0: no class)
+constexpr static const uint32_t EE_UNIT_FIELD_DOMAINS = 10;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LAND_BUILDING = 11;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -3792,6 +3798,9 @@ struct EeUnitRecord {
   /// `EEUnit::mUnitClass->mCategory`, `->mUnitType` (-1: no class)
   int64_t category;
   int64_t unit_type;
+  /// `EEUnit::mUnitClass->mDomains`, `->IsLandBuilding()` (0: no class)
+  uint8_t domains;
+  uint8_t land_building;
 };
 
 /// The result of a consistency check (`Store::check`).
