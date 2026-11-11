@@ -503,6 +503,58 @@ struct Converter {
         }
         return true;
     }
+
+    // Convert's walk without the value (no copies, no path, no sort): false exactly where Convert fails, in the same
+    // Lua calls. EECPLuaState::CheckMemory runs it after every step (it was a third of a late game's time) and
+    // converts again only for a failure's message.
+    bool Check(int inIndex)
+    {
+        lua_State* L = this->mL;
+        switch (lua_type(L, inIndex)) {
+        case LUA_TNIL:
+        case LUA_TBOOLEAN:
+        case LUA_TSTRING:
+            return true;
+        case LUA_TNUMBER:
+            return lua_isinteger(L, inIndex) != 0;
+        case LUA_TTABLE:
+            return this->CheckTable(lua_absindex(L, inIndex));
+        default:
+            return false;
+        }
+    }
+
+    bool CheckTable(int inIndex)
+    {
+        lua_State* L = this->mL;
+        const void* theTable = lua_topointer(L, inIndex);
+        if (std::find(this->mOpen.begin(), this->mOpen.end(), theTable) != this->mOpen.end())
+            return false;
+        if ((int)this->mOpen.size() >= kEECPLuaMaxDepth)
+            return false;
+        if (lua_getmetatable(L, inIndex)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        if (!lua_checkstack(L, 4))
+            return false;
+        this->mOpen.push_back(theTable);
+        int theTop = lua_gettop(L);
+        bool theOK = true;
+        lua_pushnil(L);
+        while (theOK && lua_next(L, inIndex)) {
+            int theKeyType = lua_type(L, -2);
+            if (!(theKeyType == LUA_TNUMBER && lua_isinteger(L, -2)) && theKeyType != LUA_TSTRING) {
+                theOK = false;
+                break;
+            }
+            theOK = this->Check(lua_gettop(L));
+            lua_pop(L, 1);
+        }
+        lua_settop(L, theTop);
+        this->mOpen.pop_back();
+        return theOK;
+    }
 };
 
 }  // namespace
@@ -1352,6 +1404,21 @@ bool EECPLuaState::GetMemory(EECPLuaValue& outMemory)
 
 bool EECPLuaState::CheckMemory()
 {
+    // GetMemory's answer and state without building the value (Converter::Check); a failure converts for the message
+    if (this->mL) {
+        lua_State* L = this->mL;
+        int theBase = lua_gettop(L);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, this->mMemory);
+        Converter c;
+        c.mL = L;
+        bool theOK = c.Check(-1);
+        lua_settop(L, theBase);
+        if (theOK) {
+            this->mStatus = kEECPLuaOK;
+            this->mError.clear();
+            return true;
+        }
+    }
     EECPLuaValue theMemory;
     return this->GetMemory(theMemory);
 }
