@@ -4912,3 +4912,76 @@ driver relinked over the forwarders prints the same.
   LobbyPersistentData's file layout, the resource table, RoutingLogic), StringUtil's case functions, WONGUI's
   components and layout, and everything only the gone internet servers reach (peer auth, AuthContext's sessions and
   certificate flow, GetCertOp, the services' requests and replies).
+
+## R6: GUIString's narrow text as UTF-8, the lobby's game room and its saved settings in Rust (ee_won guistring.rs, staging.rs, persist.rs; branch rust-r6-won6, 2026-11-10)
+
+Round 6 of R6 (the map of what is left is in RUST_PLAN's "R6 WON, the rest" row). Each piece was captured over the
+C++ first: the golden driver pattern for GUIStringData; for the game room and the saved settings, drivers in
+`tests/won` (added to `xbuild.py` `WON_TESTS`) that run the original's statements, copied before the port, next to
+the Rust ABI over the same inputs.
+
+- **GUIString's narrow crossing is UTF-8 (D6).** Round 5 found that `GUIString(const char*)` widened each byte and
+  `GetString` narrowed a unit below 256 to its byte and any other to '?' (Latin-1). Now the narrow constructors
+  (`const char*`, `std::string`, the bounded one: `AssignStr`) decode UTF-8 (a stray byte is U+FFFD), `GetString`
+  and `operator std::string` encode UTF-8 (a lone surrogate is U+FFFD), and `compare` / `CompareNoCase` with narrow
+  text decode it first (`guistring.rs` `widen` / `narrow` on `text.rs`, so `ee_plat_core::utf8` is still the one
+  conversion). `LobbyPersistentData::ReadByteString` reads its bytes as UTF-8, as `WriteByteString` (GetString)
+  writes them, so a game filter's name round-trips.
+  - **Finding every caller:** the narrow APIs were marked `__attribute__((unavailable))` for one compile census
+    (`clang_build.py won exe`): 328 sites. They are ASCII literals (unchanged), the game's UTF-8 text going in
+    (`EELobbyResource_GetString`'s epoch names into the filters, file names and saved-game paths, numbers formatted
+    with `sprintf`, `IPAddr::GetHostString`, config parse errors) and narrow results the game reads as UTF-8
+    (paths for `WONFile` / `SetPath` / `ListFiles`, emails, config map keys, exception texts). Every one was wrong
+    for a non-ASCII character and is right now; `CompareNoCase(const char*)` has 151 callers, all ASCII literals.
+  - **The golden** (`won_guistring_test`) was re-recorded: 84 changed lines, in both locale passes: the narrow
+    tables' `\xe9t` and `\xc9T` are stray bytes now (they compare as U+FFFD: `-136/-168` became `-65436/-65468`
+    and so on for every text, n6 and n7), and `narrow=` of the four non-ASCII texts is UTF-8 (`e974e9` became
+    `c3a974c3a9`, U+263A's `3f` became `e298ba`, `ff` became `c3bf`). 188 lines are new: four UTF-8 narrow texts
+    (`\xc3\xa9t`, `\xc3\x89T`, U+263A, an astral character) against every text, and the narrow constructors (whole,
+    `std::string`, the first half of the bytes: a cut sequence is U+FFFD) and back. 1468 lines, the same over the
+    driver and the Rust model.
+- **The game room (`staging.rs`).** StagingLogic's room messages (types 1-10: join request, reply, player joined,
+  ready request and change, dissolved, start, ping report and change, kicked) are built in Rust (the heads of 1
+  and 3, whose rest is the game code's), read in Rust (the type and the fixed fields; while a join waits only the
+  reply counts; a short message does nothing, as before: no handler acted before its reads), and who acts on which
+  is `room_accepts` over the sender's and our roles; `HandleMessage` positions the `ReadBuffer` after the fixed
+  fields for the game's hooks. `UpdateReadyState`'s sounds and remembered state, `HandleStartGame`'s exit code,
+  LobbyGame's `IsFull`, `GetJoinStatus` (before the hook), `HandleJoinRequest`'s first checks and `MatchesRoomSpec`,
+  the listing summary (`WriteSummary` / `ReadSummary`: a short summary keeps the fields read before the cut, as the
+  original assigned them while reading) and `LobbyPlayer::WriteToBuffer`'s head are Rust. The handlers for types
+  3-10 take the read message (`const EeWonRoomMsg&`) instead of re-reading. `won_staging_test` compares the
+  original's statements with the Rust over every message and value set, all 256 type bytes with their fields cut
+  at every length in three join states and 16 role sets (with two bodies), the ready state over 32 x 8 inputs, the
+  join rules and every summary of each game type cut at every length: 175,517 checks, 0 failures.
+  - The new constants are `pub(crate)`: as global `constexpr`s in `ee_rust.h` (`START_GAME`, `GAME_LAN`,
+    `PING_REPORT`, ...) they could clash with the game's names, as the chat commands did with `IGNORE`.
+- **The saved settings (`persist.rs`).** Both files' layouts: written from the C++'s lists (`EeWonGlobalPrefsOut`,
+  `EeWonUserPrefsOut`), read as a stream of events (`EeWonPrefsEvent`) in the order the original assigned them, so a
+  cut file leaves exactly what the original left (a reconnect entry exists from its address on, a game filter from
+  its name on, a saved user from its name on, the recent LAN name is chosen only after the LAN names were read
+  whole). The C++ keeps the maps, the password key (Blowfish of the machine id: `EncryptString` / `DecryptString`)
+  and the defaults; it reads the whole file (`ReadMaxBytes`) and writes it in one `WriteBytes`. The user file name,
+  `FindUnusedUserId`, the pruning of users and LAN names (a multimap by time: equal times in map order), the recent
+  LAN name and the default name's number (CRC-16 of the address) are Rust too. **Deleted:** ReadFileHeader,
+  WriteFileHeader, ReadByteString, WriteByteString, ReadWideString, WriteWideString, ReadEncryptedString,
+  WriteEncryptedString (its encryption is `EncryptString`), ReadLanPrefs, WriteLanPrefs.
+  - **Kept quirks:** a game filter with no values is written without its count (the filters after it are misread
+    on the next load); a setting byte is on only when it is 1; another version (or tag) returns before the dirty
+    flags are touched.
+  - **Behaviour change (POSIX only):** a wide string is written as its UTF-16 units and read back joining
+    surrogate pairs; the original wrote each 32-bit `wchar_t` as a short (an astral character was cut). Windows is
+    unchanged.
+  - `won_persist_test` saves 32 variants of both files through the original's statements and the port (the same
+    bytes), then loads each file cut at every length, with a wrong version and with an odd byte, both ways into
+    stand-ins of the same containers (the same afterwards), plus the rules against the original's: 26,855 checks, 0 failures.
+- **What exercises what.** The LAN game (`lan_game.py`) runs the summary (the joiner finds the game by it), the
+  join request and reply, the player joined message, the ready state, the start message, the join rules and the
+  saved settings of the LAN user (`_wonuser0.dat`, its LAN names and port; `_wonlobbypersistent.dat`) at the lobby's
+  start and end; a lobby tour runs the settings and GUIString everywhere. Nothing in today's game sends a kick, a
+  dissolve while others are in the room, a ping report (the LAN games are not pinged), or saves an Internet user
+  (the login servers are gone): the drivers cover those. Nothing here touches the simulation; the oracle was
+  identical after each gated build.
+- **Still C++ of WON:** LobbyModel's client, group and server lists, LanLogic's objects, StagingLogic's flow (host,
+  join, leave: dialogs, ops and events), InitLogic, the resource table, RoutingLogic, StringUtil's case functions,
+  WONGUI's components and layout, and everything only the gone internet servers reach (peer auth, AuthContext's
+  sessions and certificate flow, GetCertOp, the services' requests and replies).
