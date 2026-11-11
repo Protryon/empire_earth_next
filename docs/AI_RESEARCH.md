@@ -3508,6 +3508,52 @@ minutes, --repeat 2: identical.
 Next: a fight trace (who shoots whom, the targets' choice) to compare lib.groups with the C++'s sub-groups; the late
 step's budget; ChooseUnitsToKill (only at the population limit); guard posts on hills and choke points; walls.
 
+### 8.49 The classic computer player in Lua: the fights, the intelligence files, the late budget, ChooseUnitsToKill (2026-11-11, EE-SIM)
+
+**The fight trace** (trace only, the samples identical): the `unit.death` line gives the killer's own goal and its
+target's kind, and a classic seat's citizens get the line too. Classic with the cheats, seeds 2-9, 60 minutes:
+
+| killer | soldiers killed | by soldiers | by towers | citizens killed |
+|---|---|---|---|---|
+| the port (p2) | the C++'s 765 | 488 | 257 | 103 |
+| the C++ (p3) | the port's 603 | 360 | 232 | 338 |
+
+Soldier against soldier the port won 488 to 360: its armies were picked against what it had seen of the C++, while the
+C++'s against everything the port had (its files read every unit). The port's soldiers that killed the C++'s were
+rock throwers (295) and clubmen (269); the C++'s mostly rock throwers (201) - the counter picks differed.
+
+**The intelligence files through sees_all.** `ai.player_file(player)` (only with `sees_all`, AI_LUA_UNITS §11) is the
+C++'s EECPIntelligencePlayerFile: every unit of a player - the gatherers, the classes, the military and strength per
+domain. The port's group sizes, sea shares and counters now come from it (the remembered counts and their mirror
+floor without `sees_all`). Classic with the cheats: **3-0, 29 close** (from 10-2, 20 close); the port's army at 30
+minutes 15.7 against the C++'s 10.4 (from 25.6). Balanced 7-21 (from 7-18).
+
+**The late budget.** `ai.used()` (new: the instructions a call has used, for a script's profiling) found
+BuildSettlementFor testing each of 120 late gatherers' resources one by one: 1.7M of the step's 2M instructions. It now
+tests each resource once a call; seed 15's game is the same to the minute where the old one ran out (85 minutes).
+
+**ChooseUnitsToKill** (KillUnitsForMilitary every 30 s): the citizens over the citizen share of the population limit
+deleted, the idle first; 44 in 32 games of each personality.
+
+Bench (32 seeds; before = §8.48's sp; after = kl, with all of the above):
+
+| Matchup | AI | Citizens/army 10/20/30/40 min | Lost by 20 / all | Won-lost |
+|---|---|---|---|---|
+| balanced, before | classic_lua | 23.3/2.8 / 26.4/3.0 / 33.2/7.2 / 41.7/6.3 | 1.9 / 57.6 | 7-18, 7 close |
+| balanced, after | classic_lua | 23.1/2.8 / 25.8/3.2 / 32.8/5.7 / 42.6/5.6 | 2.1 / 55.2 | 7-21, 4 close |
+| balanced, after | classic | 24.0/1.8 / 26.1/2.2 / 30.5/3.8 / 45.5/4.1 | 1.2 / 33.9 | 21-7 |
+| classic+cheats, before | classic_lua | 24.0/9.4 / 49.2/12.6 / 49.7/25.6 / 49.7/29.3 | 11.7 / 83.6 | 10-2, 20 close |
+| classic+cheats, after | classic_lua | 24.0/10.2 / 49.5/13.3 / 49.8/15.3 / 49.8/21.5 | 12.1 / 101.1 | 4-0, 28 close |
+| classic+cheats, after | classic | 25.5/6.3 / 50.5/6.8 / 51.1/11.2 / 50.8/5.6 | 4.4 / 24.5 | 0-4 |
+
+Readings: under classic with the cheats the port is now near level (28 of 32 close); its army is still larger at 40
+minutes (21.5 against 5.6), and it loses far more citizens (101 against 25). Under balanced the C++ wins 21-7: the
+port's late economy (Copper in 19 games of 32 against 27) and its citizens lost to the C++'s soldiers. 0 script errors.
+
+Next: the port's citizen losses (who kills them and while doing what: the next.death lines), the balanced late
+economy, heroes, guard posts on hills and choke points (a query for the continent manager's hills and choke points),
+walls.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
