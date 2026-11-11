@@ -62,6 +62,10 @@ over every player's units; its golden lines come from the C++ pick (EEPlayer::Se
 groups' Fill test (EEFillMembers: which of a selection's units an active group takes for a formation slot): every
 EEActiveGroup::Fill (the computer players' attack groups; the group commands) and, every five game minutes, every
 player's units in every slot; its golden lines come from the C++ test (EEActiveGroup::Fill's loop).
+USGC is the group commands' sweep (ee/EEUnitHost.h, EEGroupCommandSweep.cpp): every five game minutes, for every
+player and a set of selections and arguments, the Rust body of a group command run over the dry host (every world
+call logged, nothing changed); the original body's statements run over the same host must give the same log (else
+EE-SIM exits 3). The record holds the Rust body's log.
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
