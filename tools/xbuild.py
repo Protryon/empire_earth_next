@@ -409,6 +409,8 @@ WON_TESTS = {
     # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
     # statements against ee_won's routing module
     "won_routing_test": [],
+    # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
+    "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],

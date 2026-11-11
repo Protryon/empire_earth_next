@@ -11429,6 +11429,51 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               EeWonUnitSink name_sink,
                               void *context);
 
+/// Upper-cases (`upper`) or lower-cases `length` bytes in place.
+///
+/// # Safety
+/// `bytes` holds `length` writable bytes (or is NULL with 0).
+void ee_won_case_bytes(uint8_t *bytes, size_t length, bool upper);
+
+/// The same over 16-bit units (Windows' `wchar_t`).
+///
+/// # Safety
+/// `units` holds `count` writable units (or is NULL with 0).
+void ee_won_case_units16(uint16_t *units, size_t count, bool upper);
+
+/// The same over 32-bit units (POSIX's `wchar_t`).
+///
+/// # Safety
+/// `units` holds `count` writable units (or is NULL with 0).
+void ee_won_case_units32(uint32_t *units, size_t count, bool upper);
+
+/// `compare_no_case`.
+///
+/// # Safety
+/// Each holds its length (or is NULL with 0).
+int32_t ee_won_compare_no_case(const uint8_t *a,
+                               size_t a_length,
+                               const uint8_t *b,
+                               size_t b_length);
+
+/// `wide_compare_no_case` over 16-bit units (unsigned).
+///
+/// # Safety
+/// Each holds its count (or is NULL with 0).
+int32_t ee_won_compare_no_case16(const uint16_t *a,
+                                 size_t a_count,
+                                 const uint16_t *b,
+                                 size_t b_count);
+
+/// `wide_compare_no_case` over 32-bit units (signed, as POSIX's `wchar_t`).
+///
+/// # Safety
+/// Each holds its count (or is NULL with 0).
+int32_t ee_won_compare_no_case32(const int32_t *a,
+                                 size_t a_count,
+                                 const int32_t *b,
+                                 size_t b_count);
+
 }  // extern "C"
 
 #endif  // EE_RUST_H

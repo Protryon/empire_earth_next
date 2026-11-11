@@ -47,6 +47,7 @@ pub mod socket;
 pub mod staging;
 /// cbindgen:ignore
 pub mod status;
+pub mod strcase;
 pub mod text;
 pub mod wire;
 
