@@ -758,6 +758,12 @@ local function fill_requests(view, memory)
     for _, g in ipairs(G.all(mem)) do
         if g.slots ~= nil and #g.slots > 0 then
             if view.time >= (g.deadline or 0) then
+                -- Cancel: the open slots go, and one production order each with them
+                for _, sl in ipairs(g.slots) do
+                    if sl.asked then
+                        U.cancel_request(memory, sl.c, 1)
+                    end
+                end
                 g.slots = {}
             else
                 local ids, keep = {}, {}
@@ -776,6 +782,7 @@ local function fill_requests(view, memory)
                         if not s.asked then
                             U.request(view, memory, s.c, 1)
                             s.asked = true
+                            s.asked_t = view.time
                         end
                         keep[#keep + 1] = s
                     end
