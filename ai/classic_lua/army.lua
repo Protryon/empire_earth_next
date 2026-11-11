@@ -1426,7 +1426,7 @@ local function attack(view, memory)
     local b = memory.t.behavior
     local humans, computers = enemies()
     local list = computers
-    if #humans > 0 and #computers > 0 and T.random_k() < b.computer_aggression_k * 10 then
+    if #humans > 0 and #computers > 0 and T.random_k() < b.computer_aggression_k // 100 then   -- (mComputerAggression x 0.01: 10 -> 10%)
         list = computers
     elseif #humans > 0 then
         list = humans
