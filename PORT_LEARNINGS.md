@@ -5478,3 +5478,60 @@ Graphics Engine owns no text logic in C++. There is no line breaking in the engi
 - **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, `rust_build.py gate`
   PASS, `sim_capture.py` digests of the four profiles equal to the goldens but USGC, which the next commit recorded):
   see the final report for the merged numbers. Not run: any harness session, macOS or Linux builds.
+## R5b.4, seventh round: the fixture's orders, Add Patrol Point, Attack Unit, Heal Unit and Path To in Rust over host calls (ee_units group.rs; EETestFixtureOrders.cpp; branch rust-r5b4-core, 2026-11-11)
+
+- **The orders exercise** (TEST ONLY; EETestFixtureOrders.cpp, fixture_driver.orders, `fixture_game.py --exercise
+  random-game --play-seconds N --orders`, also posix_game.py). "<seq> order <form> <kind>" picks a group of the local
+  player's units, selects it with `EEMSelectTheseUnits` (as the unit icon bar sends it: a UI action), and gives the
+  order through the platform's events (ISHandleEvent: the pointer set under the mouse's input lock, the button press
+  and release, Shift as a key event): gather (citizens, a right click on a world-player resource in view that a
+  citizen can gather), repair and repair queued (citizens, a right click, with Shift for the queued form, on one of
+  the player's built land buildings in view whose hit points the fixture first halves under the world's write lock:
+  no game message damages a building), patrol (the Patrol status button, button object 18), attack ground (the
+  Attack Ground button, object 6, then a left click on a seen point beyond the first unit's minimum range) and move
+  (a right click on open ground). The click points come from the game's own picker (`PickUnitUnreferenced`, the hit
+  test the click itself uses) over a 12-pixel grid of the game view, under the world's read lock.
+  - **The verdict** comes from a hook in `EEPhysics::DrainInput` (`gEEMessageExecutedTestHook`, NULL unless the
+    fixture runs, so EE-SIM and the gates do not see it) called before and after each input executes, on the physics
+    thread under the world's write lock: before, the sender's active group and each unit's current goal; after, every
+    unit judged by the original's rule (EEMessage.cpp's body, Fill, the keeps, the spreads and Plan, read on the
+    objects, not through the store): a Gather goal on the target (or a Location goal at its tile when the continents
+    say it cannot reach it), the target first in the build queue (queued: in it), a Patrol goal on the nearest town's
+    route (or a Location goal for a class that cannot patrol; every goal unchanged when the town has no route), an
+    Attack Ground goal at the message's point, a Location goal after a move. Units the rule does not judge here (the
+    spread's own groups of non-citizens, transports in containers) are "skip".
+  - **What the reconstruction's UI really sends.** The Patrol button (`EEUIFMGStatusButton::Command` 0x12) sends
+    `EEMPatrol(-1)` at once: no point is clicked; the patrol of the nearest town's route. `EEMAddPatrolPoint` has no
+    sender in the reconstruction (only its import constructor): the original's patrol-point mode is not there.
+    `StartPatrol` (buttons 0x1b, 0x22: heal_mech, heal) enters UI state 0x10, whose mouse test is `EEModeHeal`: the
+    name is wrong (it starts the heal mode). Attack Unit needs a seen enemy, Heal Unit a healer: a random map's start
+    has neither, so the fixture does not reach them; Attack Ground needs a unit whose class attacks the ground (none
+    at the start: the step is "skipped (no-unit)").
+  - Not run here (no harness sessions). The self test's stand-in speaks the protocol; the lead's run is the only
+    evidence that the orders work in the game.
+- **Add Patrol Point** (`EEMAddPatrolPoint::Execute`) is `group::add_patrol_point` over host calls (six new ones:
+  KeepNonCitizens, the lone patrol group, the path point's insert, the first unit's patrol goal's route, a route's
+  AddPoint, a new patrol goal's point and registration). `EEActiveGroup::KeepNonCitizens`' test reads the store
+  (`ee_units_keeps_non_citizen`: commandable, hit points, category; its only caller is this body).
+- **Attack Unit and Heal Unit** (`EEMAttackUnit::Execute`, `EEMHealUnit::Execute`) are `group::attack_unit` and
+  `group::heal_unit` (two new host calls: SpreadAroundUnit, a unit's complex unit as an id). Attack Unit's goal takes
+  the selection's first unit as it is when the goal is made (read again there, after the slots' Fills), as the
+  original did. **Behaviour change:** a heal target with no complex unit is refused before any group; the original built the
+  goal over NULL and its Plan dereferenced it (a crash). The UI sends only complex targets.
+- **Path To** (`EEMPathTo::Execute`) is `group::path_to`. Its statements before the loop (a point off the map to the
+  closest tile's centre, a tile under a building the first unit cannot pass to the building's nearest footprint tile,
+  the final tile's height) moved unchanged into one host call (`ee_units_host_path_to_point`, a read); the message
+  keeps the adjusted point (the FFI writes it back, as the original wrote `mX`/`mY`). Its goal is a new host
+  constructor (`EE_GOAL_CTOR_LOCATION`: the spec gained `value`, the facing, and `flag_c`, the group movement flag;
+  the dry log adds those two words for this constructor only, so the other bodies' records keep their digests). The
+  acknowledgement comes before the move marker, which shows for every group that took units, as in the original.
+- **The sweep** (USGC) gained the three bodies' original statements and cases (Add Patrol Point at the two Attack
+  Ground points; Attack Unit at the next player's unit, the player's own, the resource and no unit, plain and queued,
+  the first as a conversion; Heal Unit at the player's own first unit, the next player's and no unit; Path To at the
+  two Attack Ground points with no option and with all four). The goldens'
+  USGC lines were recorded again with each body (the new records); every other digest stayed equal to its golden.
+- **A trap:** Git Bash's `sed -i` rewrote a CRLF file (EEGroupCommandSweep.cpp) with LF line ends, silently: edit
+  CRLF files through a script that reads and writes the bytes (`file` shows the line ends).
+- **Gates** (each body commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-7, the Rust gate PASS,
+  every capture digest of the four profiles equal to its golden but USGC, whose lines the next commit recorded; the
+  live Rust-against-original comparison inside the sweep never stopped a game): see the final report. Not run: any harness session, macOS or Linux builds.
