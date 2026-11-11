@@ -1934,6 +1934,10 @@ public:
     GetEntityRequest() { this->mFlags=0x06020837; }
     enum PACKFLAG { Pack_GetDirOp, Pack_GetMultiDirOp };
     void SetPath(const std::wstring& inPath) { this->mPath=inPath; }
+    // the query's fields, for the requests ee_won builds (rust/crates/ee_won/src/dirops.rs)
+    DWORD GetFlags() const { return this->mFlags; }
+    const std::wstring& GetPath() const { return this->mPath; }
+    const DirDataTypeSet& GetDataTypes() const { return this->mDataTypes; }
     void SetFlags(DWORD inFlags) { this->mFlags=inFlags; }
     void SetDataTypes(const DirDataTypeSet& inTypes) { this->mDataTypes=inTypes; }
     void AddDataType(const std::string& type) { this->mDataTypes.insert(type); }

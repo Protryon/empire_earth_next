@@ -483,6 +483,9 @@ WON_TESTS = {
     "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
                      *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
+    # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
+    "won_dirops_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

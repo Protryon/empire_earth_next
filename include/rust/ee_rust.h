@@ -1017,6 +1017,32 @@ constexpr static const uint32_t IPS = 1024;
 
 constexpr static const uint32_t IDS = 2048;
 
+constexpr static const int32_t GET_DIR = 0;
+
+constexpr static const int32_t GET_MULTI_DIR = 1;
+
+constexpr static const int32_t ALIAS_GET = 2;
+
+constexpr static const int32_t GET_SERVICE = 3;
+
+constexpr static const int32_t FIND = 4;
+
+constexpr static const int32_t ADD = 5;
+
+constexpr static const int32_t MODIFY = 6;
+
+constexpr static const int32_t REMOVE = 7;
+
+constexpr static const int32_t RENAME = 8;
+
+constexpr static const int32_t RENEW = 9;
+
+constexpr static const int32_t SET_DATA_OBJECTS = 10;
+
+constexpr static const int32_t MODIFY_DATA_OBJECTS = 11;
+
+constexpr static const int32_t CLEAR_DATA_OBJECTS = 12;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -4891,6 +4917,79 @@ struct EeWonDirEntity {
 
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A data object.
+struct EeWonDirObject {
+  EeWonDirBytes data_type;
+  EeWonDirBytes data;
+};
+
+/// A data object change.
+struct EeWonDirMod {
+  uint16_t offset;
+  bool insert;
+  EeWonDirObject object;
+};
+
+/// A query: the path as UTF-16 LE bytes.
+struct EeWonDirQuery {
+  uint32_t flags;
+  EeWonDirBytes path;
+  const EeWonDirBytes *types;
+  size_t type_count;
+};
+
+/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
+struct EeWonDirRequest {
+  int32_t op;
+  bool is_service;
+  uint32_t flags;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+  EeWonDirBytes display_name;
+  EeWonDirBytes net_addr;
+  EeWonDirBytes new_name;
+  EeWonDirBytes new_display_name;
+  EeWonDirBytes new_net_addr;
+  uint32_t lifespan;
+  bool is_unique;
+  uint8_t mode;
+  uint8_t find_flags;
+  const EeWonDirObject *objects;
+  size_t object_count;
+  const EeWonDirMod *mods;
+  size_t mod_count;
+  const EeWonDirBytes *types;
+  size_t type_count;
+  const EeWonDirQuery *queries;
+  size_t query_count;
+  EeWonDirBytes product;
+};
+
+/// A status reply for the C++.
+struct EeWonDirStatusReply {
+  /// 0 read whole, 1 not a status reply, 2 cut short
+  int32_t end;
+  int16_t status;
+  /// a returned address: its offset and length in the reply
+  bool has_addr;
+  uint32_t addr_at;
+  uint32_t addr_len;
+};
+
+/// An entity for [`ee_won_dir_group_keys`]: its type, path and name as UTF-16 LE bytes.
+struct EeWonDirListed {
+  uint8_t kind;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+};
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -11535,6 +11634,59 @@ EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
                                       size_t length,
                                       EeWonDirEntitySink sink,
                                       void *context);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and everything it points to are valid; `sink` accepts `context`.
+void ee_won_dir_request(const EeWonDirRequest *r,
+                        uint8_t field_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
+///
+/// # Safety
+/// `q` and what it points to are valid; `sink` accepts `context`.
+void ee_won_dir_pack_query(const EeWonDirQuery *q, bool multi, EeWonByteSink sink, void *context);
+
+/// `AddServiceOp::SetNetAddrPort`'s two bytes into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_dir_port_net_addr(uint16_t port, EeWonByteSink sink, void *context);
+
+/// An entity change's status reply.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_dir_status_reply(const uint8_t *reply,
+                             size_t length,
+                             bool read_addr,
+                             EeWonDirStatusReply *out);
+
+/// The multi-directory ops' step: true when the current query is done (`*failed` counts a failure).
+///
+/// # Safety
+/// `failed` is valid.
+bool ee_won_dir_multi_step(int32_t status, int32_t *failed);
+
+/// The multi-directory ops' final status.
+int32_t ee_won_dir_multi_end(int32_t failed, size_t count);
+
+/// `FindEntityOp::CheckResponse`'s parser choice (true: single-entity).
+bool ee_won_dir_find_single(bool is_service, uint8_t find_flags);
+
+/// `GetEntityRequest::GetDirEntityMap`'s keys: for each of `count` entities its directory into `sink` (UTF-16
+/// LE bytes, one call per entity, in order).
+///
+/// # Safety
+/// `query_path`, `entities` (`count` entries) are valid; `sink` accepts `context`.
+void ee_won_dir_group_keys(EeWonDirBytes query_path,
+                           const EeWonDirListed *entities,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

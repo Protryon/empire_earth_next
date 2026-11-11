@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONDirAlias.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 
 
 //#include "DirEntityReplyParser.h"
@@ -73,27 +74,15 @@ void GetAliasDirOp::AddService(const std::wstring& theService)
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus GetAliasDirOp::GetNextRequest()
 {
-	// Once per op
-	WriteBuffer aMsg(this->mLengthFieldSize,true);
-	aMsg.AppendByte(5);						// Small Header
-	aMsg.AppendShort(2);					// DirServer
-	aMsg.AppendShort(114);					// AliasGetEntity
-
-	aMsg.AppendShort(0);					// MaxEntitiesPerReply
-	aMsg.AppendString(this->mProductName);
-	aMsg.AppendByte(this->mRequestList.size());	// Number of entities requests
-
-	// Once per request
+	// the message's bytes are Rust's (ee_won dirops.rs)
+	DirRequestFields aFields(2, true);
+	aFields.mReq.product = DirRequestFields::Narrow(this->mProductName);
 	GetEntityRequestList::const_iterator anItr = this->mRequestList.begin();
 	for (;anItr != this->mRequestList.end(); ++anItr)
-	{	
-		(*anItr)->Pack(&aMsg, GetEntityRequest::Pack_GetMultiDirOp);
-	}
-	this->mRequest = aMsg.ToByteBuffer(true);
-
+		aFields.AddQuery((*anItr)->GetFlags(),(*anItr)->GetPath(),(*anItr)->GetDataTypes());
+	this->mRequest = aFields.Build(this->mLengthFieldSize);
 	// Prepare the iterator for Recv
 	this->mCurRequest = this->mRequestList.begin();
-
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -111,25 +100,14 @@ WONStatus GetAliasDirOp::CheckResponse()
 	}
 
 	(*this->mCurRequest)->ParseMultiEntityReply(this->mResponse->data(), this->mResponse->length());
-		
-	// Does this request have pending data?
-	if ((*this->mCurRequest)->GetStatus() != (WONStatus)100059)
-	{
-		if ((*this->mCurRequest)->GetStatus() != (WONStatus)0)
-			++this->mNumFailedRequests;
+	// the accounting is Rust's (ee_won dirops.rs)
+	int32_t aFailed = this->mNumFailedRequests;
+	if (ee_won_dir_multi_step((*this->mCurRequest)->GetStatus(), &aFailed))
 		++this->mCurRequest;
-	}
-
+	this->mNumFailedRequests = aFailed;
 	// Are all requests complete?
 	if (this->mCurRequest == this->mRequestList.end())
-	{
-		if (this->mNumFailedRequests == 0)
-			return (WONStatus)WS_Success;
-		else if (this->mNumFailedRequests != this->mRequestList.size())
-			return (WONStatus)-1223;
-		else
-			return (WONStatus)-1224;
-	}
+		return (WONStatus)ee_won_dir_multi_end(this->mNumFailedRequests, this->mRequestList.size());
 	else
 		return (WONStatus)WS_ServerReq_Recv;
 

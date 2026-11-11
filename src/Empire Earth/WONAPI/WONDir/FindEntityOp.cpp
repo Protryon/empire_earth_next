@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONDirExtended.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 using namespace std;
 using namespace WONAPI;
 
@@ -56,44 +57,18 @@ void FindEntityOp::Reset()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus FindEntityOp::GetNextRequest()
 {
-	WriteBuffer aMsg(this->mLengthFieldSize,true);
-	aMsg.AppendByte(5);						// Small message
-	aMsg.AppendShort(2);					// Directory Server
-	aMsg.AppendShort(this->mIsService?109:107);	// FindServiceEx : FindDirectoryEx
-	
-	aMsg.AppendLong(this->mGetFlags);				
-	aMsg.AppendByte(this->mMatchMode);
-	aMsg.AppendByte(this->mFindFlags);
-	aMsg.AppendShort(0);					// MaxEntitiesPerReply
-	aMsg.AppendWString(this->mPath,2);				// Directory path
-	aMsg.AppendWString(this->mName,2);				// Match name
-
-	if(this->mIsService)
-		aMsg.AppendBuffer(this->mNetAddr,1);		// Match NetAddress
-
-	aMsg.AppendWString(this->mDisplayName,2);		// Match DisplayName
-
-	aMsg.AppendShort(this->mFindDataObjects.size());	// num data objects
-	
-	DirDataObjectList::iterator aFindItr = this->mFindDataObjects.begin();
-	while(aFindItr!=this->mFindDataObjects.end())
-	{
-		DirDataObject &aDataObject = *aFindItr;
-		aMsg.AppendString(aDataObject.mDataType,1);
-		aMsg.AppendBuffer(aDataObject.mData,2);
-		
-		++aFindItr;
-	}
-
-	aMsg.AppendShort(this->mGetDataTypes.size()); // Num Get DataObjects
-	DirDataTypeSet::iterator aGetItr = this->mGetDataTypes.begin();
-	while(aGetItr!=this->mGetDataTypes.end())
-	{
-		aMsg.AppendString(*aGetItr,1);
-		++aGetItr;
-	}
-
-	this->mRequest = aMsg.ToByteBuffer(true);
+	// the message's bytes are Rust's (ee_won dirops.rs)
+	DirRequestFields aFields(4, this->mIsService);
+	aFields.mReq.flags = this->mGetFlags;
+	aFields.mReq.mode = (uint8_t)this->mMatchMode;
+	aFields.mReq.find_flags = this->mFindFlags;
+	aFields.mReq.path = aFields.Text(this->mPath);
+	aFields.mReq.name = aFields.Text(this->mName);
+	aFields.mReq.net_addr = DirRequestFields::Buffer(this->mNetAddr.get());
+	aFields.mReq.display_name = aFields.Text(this->mDisplayName);
+	aFields.Objects(this->mFindDataObjects);
+	aFields.Types(this->mGetDataTypes);
+	this->mRequest = aFields.Build(this->mLengthFieldSize);
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -102,7 +77,7 @@ WONStatus FindEntityOp::GetNextRequest()
 WONStatus FindEntityOp::CheckResponse()
 {
 	WONStatus aStatus;
-	if(this->mIsService && !(this->mFindFlags & DIR_FF_MATCHALL))
+	if(ee_won_dir_find_single(this->mIsService, this->mFindFlags))
 	{
 		aStatus = DirEntityReplyParser::ParseSingleEntityReply(this->mResponse->data(),this->mResponse->length(),this->mService);
 		if(aStatus==(WONStatus)0)
