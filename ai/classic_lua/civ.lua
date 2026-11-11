@@ -391,7 +391,9 @@ local function fill_garrison(view, memory, id)
             break
         end
         local c = R.unit(cid)
-        if c ~= nil and (c.action == "idle") and c.inside == nil and ai.reach(c.x, c.y, u.x, u.y) then
+        -- (idle, or a gatherer waiting for room at its resource: kActionWaitForOpenPosition)
+        if c ~= nil and (c.action == "idle" or (c.action == "gather" and c.waiting)) and c.inside == nil
+                and ai.reach(c.x, c.y, u.x, u.y) then
             ids[#ids + 1] = cid
         end
     end
@@ -401,6 +403,13 @@ local function fill_garrison(view, memory, id)
         for _, cid in ipairs(ids) do
             R.remove_gatherer(rm, cid)
         end
+    end
+    -- the room left: AddGarrison(count + room) with no citizens (the classic's garrison cheat: the manifest's
+    -- "fills_garrison"); a settlement filled becomes a town centre
+    -- (only with citizens on their way: their arrival fills the garrison and starts the upgrade; with none the
+    -- garrison would stand full with no one to finish it)
+    if #ids > 0 and room > #ids and memory.t.fills_garrison and ai.garrison_fill ~= nil then
+        ai.garrison_fill(id, room - #ids)
     end
 end
 
@@ -573,6 +582,25 @@ function M.update(view, memory)
             choose_garrison(view, memory)
         end
         civ.next_garrison = view.time + b.town_center_upgrade_timer * 60000
+    end
+    -- UnitAdded: a new citizen heads for the garrison or the fortress being filled (DEVIATION: every 2 s the idle
+    -- citizens go, as fill_garrison takes them)
+    if (civ.garrison ~= nil or civ.fortress ~= nil) and view.time >= (civ.next_route or 0) then
+        civ.next_route = view.time + 2000
+        -- (ReleaseGarrison / ReleaseFortress: the building upgraded or gone)
+        local g = civ.garrison ~= nil and R.unit(civ.garrison) or nil
+        if g == nil or g.type ~= C.settlement then
+            civ.garrison = nil
+        end
+        local f = civ.fortress ~= nil and R.unit(civ.fortress) or nil
+        if f == nil or f.type ~= C.town_center then
+            civ.fortress = nil
+        end
+        local held = civ.garrison ~= nil and civ.fortress ~= nil and (ai.random(0, 1) == 0 and civ.fortress or civ.garrison)
+            or civ.garrison or civ.fortress
+        if held ~= nil then
+            fill_garrison(view, memory, held)
+        end
     end
     if view.time >= civ.next_fortress then
         if civ.next_fortress > 0 then

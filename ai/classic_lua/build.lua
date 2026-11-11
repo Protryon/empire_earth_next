@@ -242,7 +242,9 @@ function M.tower_near(view, x, y, r2)
 end
 
 -- FindBuildSite(tower): by a worked centre's gold and iron (and its food while active: the port's rule of the C++
--- classic), in the rings 2 .. the tower's range, not within the tower spacing of another tower
+-- classic), ring by ring from 2 to below the tower's range, a site not within the tower spacing of another tower and
+-- with no enemy near (CanBuildAt's HasEnemyNear: ai.enemy_near). DEVIATION: the first placeable tile of each ring
+-- (the classic tries every tile of the ring, nearest the drop site first, skipping the nearest three)
 local function centre_tower_site(view, memory, c, class)
     local cls = ai.class(class)
     local range = cls ~= nil and (cls.range or 0) // 100 or 0
@@ -253,9 +255,11 @@ local function centre_tower_site(view, memory, c, class)
     for _, id in ipairs(c.u) do
         local u = R.unit(id)
         if u ~= nil and (u.kind == "gold" or u.kind == "iron" or (u.kind == "food" and c.active)) then
-            local x, y = ai.find_site(class, u.x, u.y, {min = 2, max = range, margin = true})
-            if x ~= nil and not M.tower_near(view, x, y, spacing * spacing) then
-                return x, y
+            for ring = 2, range - 1 do
+                local x, y = ai.find_site(class, u.x, u.y, {min = ring, max = ring, margin = true})
+                if x ~= nil and not M.tower_near(view, x, y, spacing * spacing) and not R.enemy_near(x, y) then
+                    return x, y
+                end
             end
         end
     end

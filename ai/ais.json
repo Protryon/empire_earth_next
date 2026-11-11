@@ -27,6 +27,7 @@
       "script": "classic_lua.main",
       "random": false,
       "sees_all": true,
+      "fills_garrison": true,
       "description": "A port of the classic computer player's managers to Lua (ai/classic_lua/ORIGIN): the resource centres and the gatherer split, the request queues of units, buildings and research, the epoch timer, the building counts, the garrisons; the personality and difficulty from the rules data as the C++ classic reads them."
     }
   ]
