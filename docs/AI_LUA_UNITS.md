@@ -973,7 +973,9 @@ from data, so that a script can make its decisions with the same numbers:
   it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
   towers and armed buildings known. `ai.enemy_force(player, x, y, r)` -> n, hp, attack: the player's land soldiers
   within r, seen or not (the classic militia's raider count, EECPRMMilitia); only with `sees_all` (nothing
-  otherwise: `ai.seen` is the fog-honest count). No other query reads through the fog.
+  otherwise: `ai.seen` is the fog-honest count). `ai.player_file(player)` -> `{gatherers, types = {[class] = n},
+  military = {land, sea, air, space}, strength = {...}}`: the classic's intelligence file of a player
+  (EECPIntelligencePlayerFile: every unit, seen or not); only with `sees_all`. No other query reads through the fog.
 - **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
   settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens
   (EEComplexUnit::AddGarrison): a settlement becomes a town centre for a few citizens, and the classic trains its

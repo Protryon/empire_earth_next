@@ -168,8 +168,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
   EECPIntelligence.cpp, EECPIArmy.cpp
                 PARTLY -> army.lua: the player files (every 30 s from ai.memory: military, gatherers, the military's
                 unit types, the land buildings), the armies (land units with attack joined within 12 tiles of an
-                army's bounds, strength the classes' influence). DEVIATION (fog): the C++ files read every unit of a
-                player; the port's enemy armies are those seen now, its counts the most remembered at once and at
+                army's bounds, strength the classes' influence). with the manifest's sees_all the C++'s own file (ai.player_file: every unit of
+                the player, seen or not); without it, DEVIATION (fog): the C++ files read every unit of a player; the port's enemy armies are those seen now, its counts the most remembered at once and at
                 least the own counts (a group is sized as against a mirror of the player when little is known).
   EECPDefenseCommander.cpp, EECPMilitaryAidPackage.cpp
                 PARTLY -> army.lua: Update every 8 s with defence enabled (from the player id + 5 s), UpdatePackages

@@ -197,9 +197,21 @@ local function file_of(memory, player)
     for _, d in ipairs({"land", "sea", "air", "space"}) do
         f.dom[d] = math.max(f.dom[d], dom[d])
     end
+    -- with the manifest's sees_all the classic's own file: every unit of the player, seen or not (ai.player_file)
+    local pf = memory.t.sees_all and ai.player_file ~= nil and ai.player_file(player) or nil
+    if pf ~= nil then
+        military = pf.military.land + pf.military.sea + pf.military.air + pf.military.space
+        gatherers = pf.gatherers
+        types = ai.keys(pf.types)
+        f.military, f.gatherers = military, gatherers
+        f.dom = {land = pf.strength.land, sea = pf.strength.sea, air = pf.strength.air, space = pf.strength.space}
+        f.exact = true
+    end
     table.sort(types)
-    f.military = math.max(f.military, military)
-    f.gatherers = math.max(f.gatherers, gatherers)
+    if not f.exact then
+        f.military = math.max(f.military, military)
+        f.gatherers = math.max(f.gatherers, gatherers)
+    end
     f.types = types
     f.buildings = buildings
     f.next = now + 30000
@@ -216,6 +228,9 @@ local function strength_of(view, memory, f)
     local mil, gat = f.military, f.gatherers
     -- (the mirror only for a player known to have a town or buildings: one never seen with anything, such as a
     -- seat with no units, has the strength the classic's file gives it, nothing)
+    if f.exact then
+        return (mil * b.military_count_weight_k + gat * b.worker_count_weight_k) // 1000
+    end
     local known = #(f.buildings or {}) > 0
     for _, e in ipairs(view.enemies or {}) do
         if e.player == f.player and (e.town_x or -1) >= 0 then
