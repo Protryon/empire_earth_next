@@ -217,6 +217,16 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// The free camera mode (`mMode == 3`).
+constexpr static const int32_t MODE_FREE = 3;
+
+/// What `Update` does after stepping: nothing more, the path's next key, or the view.
+constexpr static const int32_t CAMERA_STEP_DONE = 0;
+
+constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
+
+constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -3737,6 +3747,76 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
+/// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
+/// end (a move shorter than 0.001).
+struct EeGfxCameraGoTo {
+  float speed;
+  bool snap_offset;
+  bool snap_focus;
+};
+
+/// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxGround {
+  void *context;
+  /// `GetIsValidTile(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_tile)(void *context, float x, float y);
+  /// `GetIsValidPoint(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_point)(void *context, float x, float y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
+};
+
+/// The camera's pose at a step of the move (`BuildView`'s inputs).
+struct EeGfxCameraPose {
+  /// `mQ014`, `mQ04C`: the view turn's start and end.
+  EeGeQuaternion view_start;
+  EeGeQuaternion view_end;
+  /// `mQ024`, `mQ05C`: the offset turn's.
+  EeGeQuaternion offset_start;
+  EeGeQuaternion offset_end;
+  EeGe3DPoint start_offset;
+  EeGe3DPoint end_offset;
+  EeGe3DPoint start_focus;
+  EeGe3DPoint end_focus;
+};
+
+/// The front and rear clipping distances `SetClippingDistances` gives the viewport.
+struct EeGfxClipping {
+  float front;
+  float rear;
+};
+
+/// The view rays through the screen's top, centre and bottom (`SetClippingDistances`' three screen lines).
+struct EeGfxCameraRays {
+  EeGe3DLine top;
+  EeGe3DLine center;
+  EeGe3DLine bottom;
+};
+
+/// The terrain mesh's four edge planes (`GetFrontPlane` .. `GetRightPlane`).
+struct EeGfxEdgePlanes {
+  EeGe3DPlane front;
+  EeGe3DPlane back;
+  EeGe3DPlane left;
+  EeGe3DPlane right;
+};
+
+/// The move's state `Update` steps.
+struct EeGfxCameraStep {
+  float fraction;
+  float rate;
+  float wait;
+  float waited;
+  bool changed;
+  bool locked;
+};
+
+/// The orthographic view and its rectangle's half size (`Update`'s orthographic branch).
+struct EeGfxOrthoView {
+  EeGeTransformation view;
+  float size;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -3974,10 +4054,73 @@ struct EeUiTilePlan {
   float h;
 };
 
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
+/// One record of the backgrounds database file (`UIDbDataBackgrounds`, 308 bytes on every target).
+struct EeUiDbBackground {
+  uint8_t name[100];
+  uint8_t texture_file[100];
+  float top_offset;
+  float bottom_offset;
+  float left_offset;
+  float right_offset;
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  int32_t id;
+  uint32_t background_id;
+  uint32_t form_id;
+  int32_t texture_top;
+  int32_t texture_left;
+  int32_t texture_bottom;
+  int32_t texture_right;
+  uint32_t background_type;
+  uint32_t top_offset_type;
+  uint32_t bottom_offset_type;
+  uint32_t left_offset_type;
+  uint32_t right_offset_type;
+  int32_t num_cols;
+  int32_t num_rows;
+  int32_t draw_priority;
+  int32_t red;
+  int32_t green;
+  int32_t blue;
+  uint8_t visible;
+  uint8_t has_alpha;
+  uint8_t attribute1;
+  uint8_t attribute2;
+  uint8_t attribute3;
+  uint8_t pad[3];
+};
+
+/// `UIBackgroundTable`'s members from `mTileWidthPercent` (+0x50 in the original) to `mAttribute3`, in order
+/// (offsets `static_assert`ed in `UIBackgroundTable.cpp`).
+struct EeUiBackgroundTableFields {
+  float tile_width_percent;
+  float tile_height_percent;
+  float opacity;
+  long id;
+  unsigned long background_id;
+  unsigned long form_id;
+  unsigned long background_type;
+  long num_cols;
+  long num_rows;
+  unsigned long draw_priority;
+  bool visible;
+  bool has_alpha;
+  bool attribute1;
+  bool attribute2;
+  bool attribute3;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
 };
 
 /// `GEColor`: red, green, blue.
@@ -3985,6 +4128,20 @@ struct EeUiColor {
   float red;
   float green;
   float blue;
+};
+
+/// One table entry as Rust writes it: its record from `mTileWidthPercent` on, `mLayout`, `mTextureRect`, `mColor`.
+struct EeUiBackgroundTableRefs {
+  EeUiBackgroundTableFields *fields;
+  EeUiLayout *layout;
+  EeUiRect *texture_rect;
+  EeUiColor *color;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
 };
 
 /// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
@@ -4136,18 +4293,6 @@ struct EeUiControlsTableFields {
   bool fit_rect_to_text;
   bool scale_to_control;
   bool loop_movie;
-};
-
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
 };
 
 /// Where one `UIControlsTable` keeps what the Rust side writes.
@@ -8705,6 +8850,120 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
+/// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
+///
+/// # Safety
+/// `world` is valid.
+float ee_gfx_camera_pitch(float zoom,
+                          int32_t mode,
+                          const EeGeTransformation *world);
+
+/// `GetOffset`/`GetLocation`: `step` of the way from `start` to `end`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_lerp(const EeGe3DPoint *start,
+                        const EeGe3DPoint *end,
+                        float step,
+                        EeGe3DPoint *out);
+
+/// `GoTo`'s speed and snaps.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxCameraGoTo ee_gfx_camera_go_to(const EeGe3DPoint *start_offset,
+                                    const EeGe3DPoint *end_offset,
+                                    const EeGe3DPoint *start_focus,
+                                    const EeGe3DPoint *end_focus,
+                                    float key_rate,
+                                    bool following,
+                                    float follow_rate);
+
+/// `ClampHeight(ioTransformation)`.
+///
+/// # Safety
+/// `t` is valid; the callbacks are valid for the call.
+void ee_gfx_camera_clamp_height(EeGeTransformation *t,
+                                int32_t mode,
+                                float front_clipping,
+                                bool plain,
+                                EeGfxGround ground);
+
+/// `BuildView(out, step)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_build_view(const EeGfxCameraPose *pose,
+                              float step,
+                              int32_t mode,
+                              float front_clipping,
+                              bool plain,
+                              EeGfxGround ground,
+                              EeGeTransformation *out);
+
+/// `SetClippingDistances`' distances; `rays` is null in the orthographic view.
+///
+/// # Safety
+/// `rays` is null or valid; `camera` is valid.
+EeGfxClipping ee_gfx_camera_clipping(const EeGfxCameraRays *rays,
+                                     const EeGe3DPoint *camera,
+                                     int32_t mode,
+                                     float zoom,
+                                     bool free_camera,
+                                     bool far_rear_clipping);
+
+/// `ClipToEdges(line, ioPoint)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clip_to_edges(const EeGe3DLine *line,
+                                 const EeGfxEdgePlanes *planes,
+                                 EeGe3DPoint *point);
+
+/// `GetGroundPoint(line, out)`; `offset` is `GetOffset(mFraction)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_ground_point(const EeGe3DLine *line,
+                                const EeGfxEdgePlanes *planes,
+                                const EeGe3DPoint *offset,
+                                int32_t mode,
+                                EeGfxGround ground,
+                                EeGe3DPoint *out);
+
+/// `Scroll`'s ground direction (`scale`: the zoom + 0.5 as the scroll began).
+///
+/// # Safety
+/// `view` is valid.
+EeGeVector ee_gfx_camera_scroll_direction(const EeGeTransformation *view,
+                                          float dx,
+                                          float dy,
+                                          float scale);
+
+/// Whether `Scroll` looks for the ground under the screen (the offset within 10).
+///
+/// # Safety
+/// `offset` is valid.
+bool ee_gfx_camera_scroll_is_near(const EeGe3DPoint *offset);
+
+/// `Scroll`'s clamp of the target to the map's edge planes.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clamp_to_map(EeGe3DPoint *target, const EeGfxEdgePlanes *planes);
+
+/// `Update`'s step of the move (`CAMERA_STEP_*`).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
+
+/// `Update`'s orthographic view.
+///
+/// # Safety
+/// `focus` is valid.
+EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
+
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
 
@@ -9610,6 +9869,28 @@ void ee_ui_background_set_visibility(void *background, bool visible);
 /// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
 void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
 
+/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
+void ee_ui_background_full_tile_name(const char *name,
+                                     unsigned long row,
+                                     unsigned long column,
+                                     void *out);
+
+/// `UIBackgroundTable::Create`.
+long ee_ui_background_table_create(void *file);
+
+/// The new table entry's members from a record (`Create`'s copy; the C++ copies the texture file name).
+void ee_ui_background_table_from_record(const EeUiDbBackground *record,
+                                        EeUiBackgroundTableRefs out);
+
+/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
+long ee_ui_event_create(void *file, int kind, void *manager);
+
+/// `UIEvent::Initialize`.
+long ee_ui_event_initialize(unsigned long *count, void *event);
+
+/// `UIEvent::Uninitialize`.
+long ee_ui_event_uninitialize(unsigned long *count, void *event);
+
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
 
@@ -10027,6 +10308,24 @@ void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
 /// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
 void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
 
+/// `UIEditBox::UpdateKeyboard`.
+long ee_ui_edit_update_keyboard(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Copy`.
+void ee_ui_edit_copy(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Cut`.
+void ee_ui_edit_cut(const EeUiEditRefs *refs);
+
+/// `UIEditBox::Paste`.
+void ee_ui_edit_paste(const EeUiEditRefs *refs);
+
+/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
+void ee_ui_edit_add_ime_result(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
+void ee_ui_edit_drag(const EeUiEditRefs *refs, EeUiPoint at);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -10226,6 +10525,23 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
+long ee_ui_status_fill(long value,
+                       long min,
+                       long max,
+                       unsigned long width,
+                       EeUiRect fill,
+                       EeUiRect *out);
+
+/// `SetLocation`'s fill and text rectangles from the moved control rectangle.
+void ee_ui_status_location(EeUiRect rect, unsigned long border, EeUiRect *fill, EeUiRect *text);
+
+/// `CopyData`'s fill: whether the border insets it (`out` then the inset rectangle).
+bool ee_ui_status_copy_fill(EeUiRect fill, unsigned long border, EeUiRect *out);
+
+/// `CopyData`'s text rectangle for a text of `width` x `height`.
+EeUiRect ee_ui_status_copy_text(EeUiRect text, float width, float height);
 
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,

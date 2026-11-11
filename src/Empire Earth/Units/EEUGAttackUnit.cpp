@@ -373,9 +373,18 @@ long EEUGAttackUnit::RepairPointers(unsigned long inFirst, unsigned long inSecon
                 this->mAttacker = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mAttacker)));
                 if (this->mAttacker != NULL) {
                     EEPlayer* thePlayer = this->mAttacker->mPlayer;
-                    if (thePlayer->mNumAttacks == 0)
-                        thePlayer->mCombatState = 2;
-                    thePlayer->mNumAttacks++;
+                    // port (saves from 0.254 on, no format change): the attacks counted as the running game counts
+                    // them (the constructor and destructor leave out an animal target: the original's load counted
+                    // the hunts, which no destructor counts down again) and the combat state as saved (the
+                    // original's load set it to 2 for the first one). Seed 3's 1350 s save: two hunts made a
+                    // loaded player's state 2 with 2 attacks where the running game had 1 and 0, and EnableManagers
+                    // chose other managers at its first AI update
+                    bool theLive = EESaveHasLiveState(inFirst, inSecond);
+                    if (!theLive || this->mTarget->mUnitClass->mFamily != kUnitFamilyAnimal) {
+                        if (thePlayer->mNumAttacks == 0 && !theLive)
+                            thePlayer->mCombatState = 2;
+                        thePlayer->mNumAttacks++;
+                    }
                     theResult = 0;
                 }
             } else

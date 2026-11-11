@@ -190,6 +190,31 @@ pub fn full_draw(
     result
 }
 
+/// `UIFullBackground::LoadBackground`'s file name of the tile at `row`, `column` (from 0): the name with
+/// `_row_column` (from 1) before its extension, the text after its last `.` (kept: a `.` in a directory of a name
+/// without one takes the suffix before it), or after the whole name without a `.`. The C++ built the first form in a
+/// 256-byte buffer and the numbers of the second in 3 bytes; past those (names over 240 bytes, grids over 99) it
+/// wrote past them, here the name is whole. `NUL`-terminated, as `name` is.
+pub fn full_tile_name(name: &[u8], row: c_ulong, column: c_ulong) -> Vec<u8> {
+    let name = &name[..name.iter().position(|&b| b == 0).unwrap_or(name.len())];
+    // `%ld` of an unsigned long, as `sprintf` and `PlatIToA` printed it
+    let (row, column) = (row.wrapping_add(1) as c_long, column.wrapping_add(1) as c_long);
+    let mut out = Vec::with_capacity(name.len() + 16);
+    match name.iter().rposition(|&b| b == b'.') {
+        Some(dot) => {
+            out.extend_from_slice(&name[..dot]);
+            out.extend_from_slice(format!("_{row}_{column}").as_bytes());
+            out.extend_from_slice(&name[dot..]);
+        }
+        None => {
+            out.extend_from_slice(name);
+            out.extend_from_slice(format!("_{row}_{column}").as_bytes());
+        }
+    }
+    out.push(0);
+    out
+}
+
 /// The rectangle a background is laid out in: the window, inclusive coordinates unless `exclusive`
 /// (`UIBackground::Open`; `RelayoutBackground` always inclusive).
 pub fn screen_rect(width: c_ulong, height: c_ulong, exclusive: bool) -> UiRect {

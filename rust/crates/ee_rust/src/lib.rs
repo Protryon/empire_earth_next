@@ -7,6 +7,8 @@ use ee_codec as _;
 use ee_fs as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
+// the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp
+use ee_gfx as _;
 // the DX7 renderer plug-in behind the C++ trampolines (ee_dx7/src/ffi.rs); it imports them, absent from a test binary
 #[cfg(not(test))]
 use ee_dx7 as _;

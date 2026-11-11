@@ -4,7 +4,14 @@
 // 0x1006f278..0x1006f4ef: the U2D key init chains, then CreateControlEvents, CreateFormEvents, Initialize and
 // Uninitialize. The inline members are emitted by UIBackground.cpp. UIFileComboBox.cpp's key chains start at
 // 0x1006f4ef.
+//
+// The loops over the events files, the record test and the initialisation count are Rust
+// (rust/crates/ee_ui/src/event.rs, docs/RUST_PLAN.md R6); the owners, their event lists and the virtual
+// InitializeEvent/UninitializeEvent are reached here, and so are the UI database files' reads (ee_uicpp_file_*, also
+// UIBackgroundTable::Create's).
 #include <windows.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -34,86 +41,72 @@ struct UIDbDataEvents {
     uint32_t mOwnerID;                      // +0x6c control table index / form ID
     uint32_t mEventType;                    // +0x70
 };
-static_assert(sizeof(UIDbDataEvents) == 116, "on-disk record: 116 bytes on every target");
+static_assert(sizeof(UIDbDataEvents) == 116, "on-disk record: 116 bytes on every target (ee_ui/src/event.rs DbEvent)");
+
+// The Rust loops' view of the events' owners and an event's virtuals
+struct UIEventRust {
+    static long Initialize(void* inEvent) { return static_cast<UIEvent*>(inEvent)->InitializeEvent(); }
+    static long Uninitialize(void* inEvent) { return static_cast<UIEvent*>(inEvent)->UninitializeEvent(); }
+};
+
+// The host calls of ee_ui/src/background_table_ffi.rs: the UI database files (FSFileSpec&)
+extern "C" void ee_uicpp_file_open(void* inFile) { static_cast<FSFileSpec*>(inFile)->Open(kFileAccessRead); }
+extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount)
+{
+    return static_cast<FSFileSpec*>(inFile)->Read(*outCount);
+}
+extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength)
+{
+    unsigned long theRead = 0;
+    return static_cast<FSFileSpec*>(inFile)->Read(outData, inLength, theRead);
+}
+extern "C" void ee_uicpp_file_close(void* inFile) { static_cast<FSFileSpec*>(inFile)->Close(); }
+// kind 0: a control table by index (CreateControlEvents), 1: the manager's form by id (CreateFormEvents)
+extern "C" void* ee_uicpp_event_owner(int inKind, void* inManager, unsigned long inOwner)
+{
+    if (inKind == 0)
+        return UIControlsTable::GetUIControlsTable(inOwner);
+    return static_cast<UIManager*>(inManager)->GetFormByID(inOwner);
+}
+extern "C" void ee_uicpp_event_add(int inKind, void* inOwner, unsigned long inEventID, unsigned long inEventType)
+{
+    UIEventData theEvent;
+    theEvent.mEventID = inEventID;
+    theEvent.mEventType = inEventType;
+    if (inKind == 0)
+        static_cast<UIControlsTable*>(inOwner)->AddEvent(theEvent);
+    else
+        static_cast<UIForm*>(inOwner)->AddEvent(theEvent);
+}
+extern "C" long ee_uicpp_event_initialize(void* inEvent) { return UIEventRust::Initialize(inEvent); }
+extern "C" long ee_uicpp_event_uninitialize(void* inEvent) { return UIEventRust::Uninitialize(inEvent); }
 
 // FUNCTION: LLE 0x1006f398
 // Loads the control events from the UI database file and adds each to its control table; returns the read result
 long UIEvent::CreateControlEvents(FSFileSpec& inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult;
-    inFile.Open(kFileAccessRead);
-    theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            UIDbDataEvents theData;
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (!(theData.mEventID >= 0))
-                continue;
-            UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(theData.mOwnerID);
-            if (!theTable)
-                continue;
-            UIEventData theEvent;
-            theEvent.mEventID = theData.mEventID;
-            theEvent.mEventType = theData.mEventType;
-            theTable->AddEvent(theEvent);
-        }
-    }
-    inFile.Close();
-    return theResult;
+    return ee_ui_event_create(&inFile, 0, NULL);
 }
 
 // FUNCTION: LLE 0x1006f42a
 // Loads the form events from the UI database file and adds each to its form; returns the read result
 long UIEvent::CreateFormEvents(FSFileSpec& inFile, UIManager* inManager)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult;
-    inFile.Open(kFileAccessRead);
-    theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            UIDbDataEvents theData;
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (!(theData.mEventID >= 0))
-                continue;
-            UIForm* theForm = inManager->GetFormByID(theData.mOwnerID);
-            if (!theForm)
-                continue;
-            UIEventData theEvent;
-            theEvent.mEventID = theData.mEventID;
-            theEvent.mEventType = theData.mEventType;
-            theForm->AddEvent(theEvent);
-        }
-    }
-    inFile.Close();
-    return theResult;
+    return ee_ui_event_create(&inFile, 1, inManager);
 }
 
 // FUNCTION: LLE 0x1006f4be
 // Counts one more user of the event, initialising it on the first
 long UIEvent::Initialize()
 {
-    long theResult = kErrorOK;
-    if (this->mInitializeCount == 0)
-        theResult = this->InitializeEvent();
-    if (theResult == kErrorOK)
-        this->mInitializeCount++;
-    return theResult;
+    return ee_ui_event_initialize(&this->mInitializeCount, this);
 }
 
 // FUNCTION: LLE 0x1006f4d6
 // Counts one user less, uninitialising the event when the last one leaves (also decrements a count already at 0)
 long UIEvent::Uninitialize()
 {
-    long theResult = kErrorOK;
-    if (this->mInitializeCount == 1)
-        theResult = this->UninitializeEvent();
-    if (theResult == kErrorOK)
-        this->mInitializeCount--;
-    return theResult;
+    return ee_ui_event_uninitialize(&this->mInitializeCount, this);
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

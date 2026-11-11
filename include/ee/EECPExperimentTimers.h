@@ -21,6 +21,10 @@ struct EECPExperimentTimers {
     unsigned long mScheduleStart[kPlayers];    // EECPScheduleStart: when it was first seen (game ms)
     unsigned long mThreatChecked[kPlayers];    // military.prehistoric_army: the last threat check (game ms)
     unsigned long mThreatUntil[kPlayers];      // military.prehistoric_army: the cap is lifted until this game ms
+    // economy.forage_patches' claim range (EECPClaimRange, EECPClaimExpand in EECPTrace.cpp): saved from 0.265 in the
+    // resource state block (EECPSaveResourceState), not in the timers' block above
+    long mClaimSteps[kPlayers];                // the steps the range grew by
+    unsigned long mClaimLast[kPlayers];        // the last step (game ms)
 };
 
 extern EECPExperimentTimers gCPExperimentTimers;
@@ -29,5 +33,12 @@ extern EECPExperimentTimers gCPExperimentTimers;
 // timers when the file is short
 long EECPSaveExperimentTimers(FSFile& outFile);
 long EECPLoadExperimentTimers(FSFile& inFile);
+
+// port (save 0.265, ee/EESaveGameFiles.h EESaveHasResourceState): the state FindResourceTarget reads outside the saved
+// objects: the claim ranges above and each computer player's danger zones (EECPResourceManager::mDangerZones). A load
+// started them empty: a loaded player's claim range was the first one and its first pass took other mines (seed 4's
+// 2100 s save). Load puts them in place at the loaded game's first tick
+long EECPSaveResourceState(FSFile& outFile);
+long EECPLoadResourceState(FSFile& inFile);
 
 #endif
