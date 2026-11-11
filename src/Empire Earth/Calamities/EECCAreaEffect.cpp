@@ -279,7 +279,10 @@ void EECCAreaEffect::ApplyEffect(EECalamity* inCalamity)
 // Returns whether the calamity's area around the tile fits on the map
 bool EECCAreaEffect::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    return ::gWorld.mMap->IsAreaOnMap(inX, inY, (this->mRadius + 1) / 2);
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.radius = (uint32_t)this->mRadius;
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
 
 // ICF-FOLDED: EXE 0x4ac9f3

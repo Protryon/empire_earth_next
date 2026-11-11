@@ -598,6 +598,25 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// [`EeCalamityOp::TargetView`]'s flags.
+constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IS_CASTER = 2;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_SAME_PLAYER = 4;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_ENEMY = 8;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IN_SET = 16;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_FOUNDATION = 32;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_BUILT = 64;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
+
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
 constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
 
@@ -1405,6 +1424,64 @@ enum class EeCalamityOp : int32_t {
   SpecialAttack = 44,
   /// The special location's order to the caster.
   SpecialLocation = 45,
+  /// The caster's player index (`EEWorld::GetPlayerIndex`): value.
+  CasterPlayerIndex = 46,
+  /// The caster's power: value.
+  CasterPower = 47,
+  /// The tile exists: ok.
+  TileExists = 48,
+  /// The tile is visible to the caster's player: ok.
+  TileVisible = 49,
+  /// An area effect of kind 3 at the tile against player `value`: ok.
+  AreaEffect = 50,
+  /// The unit with the target's id (`gWorld.GetUnit`): ok when there is one.
+  TargetLookup = 51,
+  /// The class's `IsValidLocation(caster, tile)`: ok.
+  ValidLocation = 52,
+  /// The class's `IsValidTarget(caster, the looked-up unit)`: ok.
+  ValidTarget = 53,
+  /// The target's flags (`EE_CALAMITY_TARGET_*`).
+  TargetView = 54,
+  /// `EEMap::IsAreaOnMap(tile, value)`: ok.
+  AreaOnMap = 55,
+  /// The terrain mesh's `GetIsValidTile(tile)`: ok.
+  ValidTile = 56,
+  /// The terrain mesh is a space map: ok.
+  SpaceMap = 57,
+  /// The tile's continent (`kAIPathNonSpace`): value.
+  TileContinent = 58,
+  /// `EEWorld::IsTileBlocked(tile)`: ok.
+  TileBlocked = 59,
+  /// The tile's terrain type: ok when the tile exists, value the type.
+  TerrainType = 60,
+  /// The class's unit class's inner collision sphere: x.
+  InnerSphere = 61,
+  /// Unit `index` of the list is a living hurricane or anti-matter storm: ok.
+  NearStorm = 62,
+  /// The class's unit class's tile size: value.
+  TileSize = 63,
+  /// `EEMap::IsEdgeTile(tile)`: ok.
+  EdgeTile = 64,
+  /// `EEIsTileUnblocked` for the class's unit class at the tile (the caster's player, else nature's): ok.
+  TileUnblocked = 65,
+  /// The caster is a radio man: ok.
+  CasterIsRadioMan = 66,
+  /// `EEIsTileFree(tile)`: ok.
+  TileFree = 67,
+};
+
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -3896,6 +3973,26 @@ struct EeCalamityReply {
 struct EeCalamityHostFfi {
   void *ctx;
   void (*call)(void *ctx, EeCalamityState *state, const EeCalamityCall *call, EeCalamityReply *reply);
+};
+
+/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
+struct EeCalamityCast {
+  EeCalamityCastMode mode;
+  int32_t class_enum;
+  uint32_t x;
+  uint32_t y;
+  /// `GetCost()`.
+  int32_t cost;
+  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
+  uint32_t radius;
+  int32_t area;
+  /// `kTerrainSpace` (the meteor storm's tiles).
+  int32_t space_terrain;
+  bool check;
+  bool has_caster;
+  bool blocked_by_immunity;
+  /// The hurricane only over water (`mOverWater`).
+  bool over_water;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -9464,6 +9561,24 @@ int32_t ee_calamity_update(const EeCalamityParams *params,
                            EeCalamityState *state,
                            float elapsed,
                            const EeCalamityHostFfi *host);
+
+/// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
+///
+/// # Safety
+/// `cast` and `host` must be valid; the host's `call` must answer every op the cast asks.
+int32_t ee_calamity_can_cast_at(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A unit class's `IsValidTarget` (`calamity_cast::valid_target`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_target(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A location class's `IsValidLocation` (`calamity_cast::valid_location`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_location(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

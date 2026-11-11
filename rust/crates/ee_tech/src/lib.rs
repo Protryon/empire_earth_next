@@ -10,10 +10,12 @@
 //! - [`tree`]: a node's and an epoch's availability, prerequisites, research decisions, costs and research counters
 //!   toward the next epoch; the tree's checksum, `DependsOn` and `SumCosts` over a view of the tree.
 //! - [`calamity`]: a calamity's age against its class's lifetime.
+//! - [`calamity_cast`]: `CanCastAt` and the classes' target and location tests.
 //! - [`calamity_update`]: every calamity class's own update over a host of world calls.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
 pub mod calamity;
+pub mod calamity_cast;
 pub mod calamity_update;
 pub mod capture;
 pub mod effects;

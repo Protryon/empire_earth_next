@@ -211,8 +211,8 @@ bool EECCMeteorStorm::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityC
 // Accepts only space tiles
 bool EECCMeteorStorm::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    EEMapTile* theTile = gWorld.mMap->GetTile(inX, inY);
-    if (theTile != NULL && theTile->mTerrainType == kTerrainSpace)
-        return true;
-    return false;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.space_terrain = kTerrainSpace;
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

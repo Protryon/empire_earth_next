@@ -107,7 +107,7 @@ long EECCSpecialLocation::CanCastIgnoringAreaEffects(EEComplexUnit* inUnit, GE3D
 // Accepts any tile, except that a radio man needs a free tile
 bool EECCSpecialLocation::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeInf10RadioMan)
-        return EEIsTileFree(NULL, inX, inY);
-    return true;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

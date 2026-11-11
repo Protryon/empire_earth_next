@@ -251,28 +251,9 @@ bool EECCHurricane::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCal
 // hurricane or anti-matter storm nearby
 bool EECCHurricane::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    std::vector<EEUnit*> theUnits;
-    bool theResult;
-    if (this->mOverWater) {
-        theResult = ::gWorld.IsTileBlocked(inX, inY);
-        if (!theResult)
-            return theResult;
-    }
-    theResult = ::gWorld.mMap->GetTile(inX, inY)->mTerrainType != 12;
-    if (!theResult)
-        return theResult;
-    theResult = ::gWorld.mMap->IsAreaOnMap(inX, inY, this->mArea);
-    if (theResult) {
-        EEGetUnitsNear(GE3DPoint((long)inX + 0.5f, (long)inY + 0.5f, 0.0f),
-                       gUnitClassTable[this->mUnitClassIndex]->GetInnerCollisionSphere() * 1.5f, theUnits);
-        for (long i = theUnits.size() - 1; i >= 0; i--) {
-            EEUnit* theUnit = theUnits[i];
-            if (theUnit->mHitPoints > 0
-                && (theUnit->mUnitClass->GetUnitType() == kUnitTypeHurricane || theUnit->mUnitClass->GetUnitType() == kUnitTypeAntiMatterStorm)) {
-                theResult = false;
-                break;
-            }
-        }
-    }
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.over_water = this->mOverWater;
+    theCast.area = (int32_t)this->mArea;
+    return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }

@@ -191,8 +191,6 @@ void EECCMorale::UnloadMedia(EEPlayer* inPlayer)
 // Accepts a unit on the map that is in the class's unit set
 bool EECCMorale::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    bool theResult = false;
-    if (inTargetUnit->mTileNode != NULL && gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet()))
-        theResult = true;
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

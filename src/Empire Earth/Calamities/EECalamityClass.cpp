@@ -15,6 +15,7 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAEManager.h"
@@ -139,20 +140,10 @@ long EECalamityClass::CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned 
 long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
-    long thePlayerIndex = 0;
-    long theResult = 1;
-    if (inUnit != NULL)
-        thePlayerIndex = ::gWorld.GetPlayerIndex(inUnit->mPlayer);
-    if (inCheck) {
-        if (thePlayerIndex == 0 || (inUnit != NULL && inUnit->mHitPoints > 0 && inUnit->GetPower() >= this->GetCost())) {
-            EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-            if (theTile != NULL && (inUnit == NULL || theTile->IsVisibleTo(inUnit->mPlayer))) {
-                theResult = this->mIsBlockedByImmunity && gAEManager.HasAreaEffect2(3, inX, inY, thePlayerIndex) ? 2 : 0;
-            }
-        }
-    }
-    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, theResult);
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::Base, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
 // ICF-FOLDED: EXE 0x5ad67e

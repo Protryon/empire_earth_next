@@ -93,6 +93,6 @@ long EECCConscription::Update(EECalamity* inCalamity, float inElapsedTime)
 // Accepts another unit of the caster's own player that is on the map and in the calamity's unit set
 bool EECCConscription::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    return inTargetUnit->mTileNode != NULL && inTargetUnit != inUnit && inTargetUnit->mPlayer == inUnit->mPlayer
-        && gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet());
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

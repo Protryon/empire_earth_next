@@ -248,8 +248,7 @@ bool EECCTeleport::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall
 // Accepts a land tile whose surrounding area is on the map
 bool EECCTeleport::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    bool theResult = !::gWorld.IsTileBlocked(inX, inY);
-    if (theResult)
-        theResult = ::gWorld.mMap->IsAreaOnMap(inX, inY, 2);
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

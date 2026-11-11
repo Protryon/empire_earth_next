@@ -3,6 +3,7 @@
 //! and hold no reference into C++ memory across them (the costs are copied in and out).
 
 use crate::calamity::{self, EeCalamityAge};
+use crate::calamity_cast::{self, EeCalamityCast};
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
 use crate::effects::{self, EeTechAttribute, EeTechEffectHandler, EeTechEffectValues};
 use crate::tree::{
@@ -430,6 +431,42 @@ pub unsafe extern "C" fn ee_calamity_update(
     // SAFETY: as above
     unsafe { *state = s };
     result
+}
+
+/// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
+///
+/// # Safety
+/// `cast` and `host` must be valid; the host's `call` must answer every op the cast asks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_can_cast_at(cast: *const EeCalamityCast, host: *const EeCalamityHostFfi) -> i32 {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::can_cast_at(&mut FfiCalamityHost(host), &cast)
+}
+
+/// A unit class's `IsValidTarget` (`calamity_cast::valid_target`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_valid_target(cast: *const EeCalamityCast, host: *const EeCalamityHostFfi) -> bool {
+    // SAFETY: as above
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::valid_target(&mut FfiCalamityHost(host), &cast)
+}
+
+/// A location class's `IsValidLocation` (`calamity_cast::valid_location`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_valid_location(
+    cast: *const EeCalamityCast,
+    host: *const EeCalamityHostFfi,
+) -> bool {
+    // SAFETY: as above
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::valid_location(&mut FfiCalamityHost(host), &cast)
 }
 
 #[cfg(test)]

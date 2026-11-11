@@ -302,17 +302,9 @@ bool EECCEarthquake::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCa
 // Accepts a map tile, on a space map only one on the caster's continent
 bool EECCEarthquake::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    EEMap* theMap = ::gWorld.mMap;
-    if (!theMap->mTerrainMesh.GetIsValidTile(inX, inY))
-        return false;
-    if (theMap->mTerrainMesh.GetIsSpaceMap()) {
-        unsigned short theContinent = gContinentManager.GetContinent(inUnit, kAIPathNonSpace);
-        EETileCoordinate theTile;
-        theTile.mX = inX;
-        theTile.mY = inY;
-        return theContinent == gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-    }
-    return true;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
 
 // ICF-FOLDED: EXE 0x4b10c9

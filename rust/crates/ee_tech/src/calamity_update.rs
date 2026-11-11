@@ -139,6 +139,51 @@ pub enum EeCalamityOp {
     SpecialAttack = 44,
     /// The special location's order to the caster.
     SpecialLocation = 45,
+    // the casts' (calamity_cast.rs): a tile is (index, index2)
+    /// The caster's player index (`EEWorld::GetPlayerIndex`): value.
+    CasterPlayerIndex = 46,
+    /// The caster's power: value.
+    CasterPower = 47,
+    /// The tile exists: ok.
+    TileExists = 48,
+    /// The tile is visible to the caster's player: ok.
+    TileVisible = 49,
+    /// An area effect of kind 3 at the tile against player `value`: ok.
+    AreaEffect = 50,
+    /// The unit with the target's id (`gWorld.GetUnit`): ok when there is one.
+    TargetLookup = 51,
+    /// The class's `IsValidLocation(caster, tile)`: ok.
+    ValidLocation = 52,
+    /// The class's `IsValidTarget(caster, the looked-up unit)`: ok.
+    ValidTarget = 53,
+    /// The target's flags (`EE_CALAMITY_TARGET_*`).
+    TargetView = 54,
+    /// `EEMap::IsAreaOnMap(tile, value)`: ok.
+    AreaOnMap = 55,
+    /// The terrain mesh's `GetIsValidTile(tile)`: ok.
+    ValidTile = 56,
+    /// The terrain mesh is a space map: ok.
+    SpaceMap = 57,
+    /// The tile's continent (`kAIPathNonSpace`): value.
+    TileContinent = 58,
+    /// `EEWorld::IsTileBlocked(tile)`: ok.
+    TileBlocked = 59,
+    /// The tile's terrain type: ok when the tile exists, value the type.
+    TerrainType = 60,
+    /// The class's unit class's inner collision sphere: x.
+    InnerSphere = 61,
+    /// Unit `index` of the list is a living hurricane or anti-matter storm: ok.
+    NearStorm = 62,
+    /// The class's unit class's tile size: value.
+    TileSize = 63,
+    /// `EEMap::IsEdgeTile(tile)`: ok.
+    EdgeTile = 64,
+    /// `EEIsTileUnblocked` for the class's unit class at the tile (the caster's player, else nature's): ok.
+    TileUnblocked = 65,
+    /// The caster is a radio man: ok.
+    CasterIsRadioMan = 66,
+    /// `EEIsTileFree(tile)`: ok.
+    TileFree = 67,
 }
 
 /// The calamity's members an update reads and writes (`EECalamity`).

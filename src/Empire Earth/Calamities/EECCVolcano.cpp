@@ -352,24 +352,9 @@ bool EECCVolcano::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall&
 // Accepts a site whose whole footprint is on the map, off the map edge and unblocked for the volcano unit class
 bool EECCVolcano::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    std::vector<long> theUnused;
-    bool theResult = true;
-    long theSize = gUnitClassTable[this->mUnitClassIndex]->mTileSize;
-    long theStartX = inX - theSize / 2;
-    long theStartY = inY - theSize / 2;
-    EEPlayer* thePlayer = inUnit != NULL ? inUnit->mPlayer : ::gWorld.mPlayers[0];
-    for (long x = theStartX; x < theStartX + theSize && theResult; x++) {
-        for (long y = theStartY; y < theStartY + theSize && theResult; y++) {
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(x, y);
-            theResult = theTile != NULL;
-            if (!theResult)
-                continue;
-            theResult = !::gWorld.GetMap()->IsEdgeTile(x, y);
-            if (theResult)
-                theResult = EEIsTileUnblocked(thePlayer, this->mUnitClassIndex, theTile);
-        }
-    }
-    return theResult;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }
 
 // ICF-FOLDED: EXE 0x563d6f

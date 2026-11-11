@@ -12,6 +12,7 @@
 
 class EECalamity;
 class EECalamityClass;
+class EEComplexUnit;
 class EESoundObject;
 class EEUnit;
 
@@ -32,5 +33,17 @@ EeCalamityParams EECalamityBaseParams(EECalamityClass* inClass, EESoundObject* i
 // runs the class's update in Rust; the calamity's members in and out (EeCalamityState) around it and every host call
 long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
                          EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep);
+
+// the cast tests in Rust (ee_tech calamity_cast.rs; EECalamityCast.cpp): the class's enum, the tile, the caster and
+// the immunity flag of a question
+EeCalamityCast EECalamityCastOf(EECalamityClass* inClass, EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
+// CanCastAt as the override of inMode runs it: 0 allowed, 1 refused, 2 protected by an area effect
+long EECalamityCanCastAt(EECalamityClass* inClass, EeCalamityCastMode inMode, EEComplexUnit* inUnit, unsigned long inX,
+                         unsigned long inY, bool inCheck, EEUnit* inTargetUnit);
+// a unit class's IsValidTarget
+bool EECalamityValidTarget(EECalamityClass* inClass, EEComplexUnit* inUnit, EEUnit* inTargetUnit);
+// a location class's IsValidLocation (inUnitClassIndex: the hurricane's or the volcano's unit class)
+bool EECalamityValidLocation(EECalamityClass* inClass, const EeCalamityCast& inCast, EEComplexUnit* inUnit,
+                             long inUnitClassIndex);
 
 #endif

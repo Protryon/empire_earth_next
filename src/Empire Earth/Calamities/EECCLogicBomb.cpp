@@ -258,9 +258,6 @@ bool EECCLogicBomb::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCal
 // Accepts a built, enabled enemy unit on the map that is not a foundation or volcano and is in the class's unit set
 bool EECCLogicBomb::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    return inTargetUnit->mTileNode != NULL && inTargetUnit->mPlayer != inUnit->mPlayer
-        && inUnit->mPlayer->mEnemies[inTargetUnit->mPlayer->mPlayerID] != 0 && !inTargetUnit->IsFoundation()
-        && inTargetUnit->mComplexUnit->mIsBuilt && !inTargetUnit->mComplexUnit->mIsDisabled
-        && inTargetUnit->mUnitClass->GetUnitType() != kUnitTypeVolcano
-        && gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet());
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

@@ -103,27 +103,16 @@ bool EECCSpecialAttack::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamit
 long EECCSpecialAttack::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                   bool inCheck, EEUnit* inTargetUnit)
 {
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
-    unsigned long theTargetID = -1;
-    long theResult = EECalamityClass::CanCastAt(inUnit, inLocation, inX, inY, inCheck, inTargetUnit);
-    if (theResult == 2)
-        theResult = 0;
-    if (theResult == 0) {
-        if (inTargetUnit != NULL)
-            theTargetID = inTargetUnit->mUnitID;
-        theResult = 1;
-        EEUnit* theTarget = ::gWorld.GetUnit(theTargetID);
-        if (theTarget != NULL && this->IsValidTarget(inUnit, theTarget))
-            theResult = 0;
-    }
-    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, theResult);
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::SpecialAttack, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
 // FUNCTION: EXE 0x4b333f
 // Accepts an enemy unit in the class's unit set
 bool EECCSpecialAttack::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    return gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet())
-        && inTargetUnit->mPlayer != inUnit->mPlayer
-        && inUnit->mPlayer->mEnemies[inTargetUnit->mPlayer->mPlayerID] != 0;
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

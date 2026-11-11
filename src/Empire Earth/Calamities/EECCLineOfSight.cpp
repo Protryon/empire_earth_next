@@ -86,6 +86,8 @@ long EECCLineOfSight::Update(EECalamity* inCalamity, float inElapsedTime)
 long EECCLineOfSight::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
-    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, 0);
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::Global, inUnit, inX, inY, inCheck, inTargetUnit));
 }

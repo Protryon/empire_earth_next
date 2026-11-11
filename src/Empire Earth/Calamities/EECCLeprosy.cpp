@@ -258,5 +258,8 @@ void EECCLeprosy::ApplyEffect(EECalamity* inCalamity)
 // Accepts a tile whose surrounding area (half the radius, rounded up) is on the map
 bool EECCLeprosy::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    return ::gWorld.mMap->IsAreaOnMap(inX, inY, (this->mRadius + 1) / 2);
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    theCast.radius = (uint32_t)this->mRadius;
+    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
