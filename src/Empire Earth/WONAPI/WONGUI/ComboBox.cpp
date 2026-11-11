@@ -10,7 +10,17 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The list box's size, the input box's selection rule, the keys and the item searches are ee_won's guictl module
+// (rust/crates/ee_won/src/guictl.rs); this unit keeps the combo box, its children, the popup and the events.
 namespace WONAPI {
+struct ComboMatch { ListArea* mList; const GUIString* mText; };
+static bool ComboMatchOf(const void* inMatch, uintptr_t i)
+{
+    const ComboMatch* aMatch = static_cast<const ComboMatch*>(inMatch);
+    TextListItem* anItem = static_cast<TextListItem*>(aMatch->mList->GetItem((int)i));
+    return anItem != NULL && anItem->mText == *aMatch->mText;
+}
 // Creates a combo box that takes focus, with the list hidden and a 200 x 150 list box
 ComboBox::ComboBox()
 {
@@ -127,13 +137,11 @@ void ComboBox::AddControls()
 void ComboBox::CalcListBoxSize()
 {
     if(this->mListBoxVisible) return;
-    int width=this->mListBoxWidth;
-    int contentWidth=this->mListBox->Width()-this->mListArea->Width()+this->mListArea->GetRightPad()+
-        this->mListArea->GetLeftPad()+this->mListArea->GetTotalWidth();
-    if(width>contentWidth) width=contentWidth;
-    if(width<this->Width()) width=this->Width();
-    int height=this->mListArea->GetTotalHeight()+4;
-    if(height>this->mListBoxHeight) height=this->mListBoxHeight;
+    int width,height;
+    ee_won_gui_combo_list_size(this->mListBoxWidth,this->mListBoxHeight,this->mListBox->Width(),this->mListArea->Width(),
+                               this->mListArea->GetRightPad(),this->mListArea->GetLeftPad(),
+                               this->mListArea->GetTotalWidth(),this->Width(),this->mListArea->GetTotalHeight(),
+                               &width,&height);
     this->mListBox->SetSize(width,height);
 }
 // FUNCTION: WON 0x006f4010
@@ -166,7 +174,7 @@ void ComboBox::SetInputBoxToListSelection(bool inActive,bool inFireEvent)
     TextListItem* item=static_cast<TextListItem*>(this->mListArea->mSelItem);
     if(item==NULL) return;
     this->mEdit->SetText(item->mText,true);
-    if(item->mWidth>this->mEdit->Width()-10) this->mEdit->SelectRange(item->mText.length(),0);
+    if(ee_won_gui_combo_select_to_end(item->mWidth,this->mEdit->Width())) this->mEdit->SelectRange(item->mText.length(),0);
     else this->mEdit->SelectRange(0,-1);
     if(inFireEvent) this->DeliverEvent(new ComboSelChangedEvent(this,item,inActive),false);
 }
@@ -182,13 +190,11 @@ void ComboBox::SetText(const GUIString& inText,bool inNotify)
 void ComboBox::SetTextAndSel(const GUIString& inText,bool inNotify)
 {
     if(this->mListArea.get()!=NULL) {
-        int count=this->mListArea->GetNumItems();
-        for(int i=0;i<count;++i) {
-            TextListItem* item=static_cast<TextListItem*>(this->mListArea->GetItem(i));
-            if(item!=NULL && item->mText==inText) {
-                this->SetSelItem(i,inNotify);
-                return;
-            }
+        ComboMatch aMatch={this->mListArea.get(),&inText};
+        int64_t i=ee_won_gui_first_match((size_t)this->mListArea->GetNumItems(),ComboMatchOf,&aMatch);
+        if(i>=0) {
+            this->SetSelItem((int)i,inNotify);
+            return;
         }
     }
     this->SetText(inText,inNotify);
@@ -211,17 +217,13 @@ void ComboBox::ShowList()
     if(selected!=NULL) {
         TextListItem* textItem=static_cast<TextListItem*>(selected);
         if(textItem->mText!=this->mEdit->GetText()) {
-            int i=0;
-            while(i<this->mListArea->GetNumItems()) {
-                TextListItem* item=static_cast<TextListItem*>(this->mListArea->GetItem(i));
-                if(item->mText==this->mEdit->GetText()) {
-                    this->mListArea->SetSelItem(i,false);
-                    this->mListArea->EnsureVisible(item);
-                    break;
-                }
-                ++i;
-            }
-            if(i==this->mListArea->GetNumItems()) this->mListArea->SetSelItem(-1,false);
+            GUIString aText=this->mEdit->GetText();
+            ComboMatch aMatch={this->mListArea.get(),&aText};
+            int64_t i=ee_won_gui_first_match((size_t)this->mListArea->GetNumItems(),ComboMatchOf,&aMatch);
+            if(i>=0) {
+                this->mListArea->SetSelItem((int)i,false);
+                this->mListArea->EnsureVisible(this->mListArea->GetItem((int)i));
+            } else this->mListArea->SetSelItem(-1,false);
         } else this->mListArea->EnsureVisible(selected);
     }
     window->OpenPopup(params);
@@ -285,23 +287,21 @@ bool ComboBox::MouseWheel(int amount)
 // Escape restores the earlier text (both closing the list); other keys go to the container
 bool ComboBox::KeyDown(int key)
 {
-    if(key==40 && !this->mListBoxVisible) {
+    switch(ee_won_gui_combo_key(key,this->mListBoxVisible)) {
+    case 1:
         this->mUndoStr=this->mEdit->GetText();
         this->SetInputBoxToListSelection(false,true);
         this->ShowList();
         return true;
-    }
-    if(this->mListBoxVisible && (key==40 || key==38 || key==33 || key==34)) {
+    case 2:
         this->mListArea->KeyDown(key);
         this->SetInputBoxToListSelection(false,true);
         return true;
-    }
-    if(this->mListBoxVisible && key==13) {
+    case 3:
         this->SetInputBoxToListSelection(true,true);
         this->mButton->Fn2F3440();
         return true;
-    }
-    if(key==27 && this->mListBoxVisible) {
+    case 4:
         this->mEdit->SetText(this->mUndoStr,true);
         this->mButton->Fn2F3440();
         return true;

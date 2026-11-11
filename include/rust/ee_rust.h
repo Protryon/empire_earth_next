@@ -1017,6 +1017,18 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+constexpr static const int32_t POSITION_LEFT = 1;
+
+constexpr static const int32_t POSITION_TOP = 2;
+
+constexpr static const int32_t POSITION_RIGHT = 4;
+
+constexpr static const int32_t POSITION_BOTTOM = 8;
+
+constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+
+constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+
 /// The component flags these rules read.
 constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
 
@@ -4526,6 +4538,30 @@ struct EeWonKicked {
 struct EeWonInitErrors {
   int32_t errors;
   bool allow_ignore;
+};
+
+/// Whether item `i` (below the count) matches, read from the C++ list.
+using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
+
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
+using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
+
+/// The split's state (`SetSplitterPos`): the point and the bars' edges.
+struct EeWonSplit {
+  int32_t x;
+  int32_t y;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
 };
 
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
@@ -11820,6 +11856,213 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// `combo_list_size` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_combo_list_size(int32_t max_width,
+                                int32_t max_height,
+                                int32_t box_width,
+                                int32_t area_width,
+                                int32_t right_pad,
+                                int32_t left_pad,
+                                int32_t total_width,
+                                int32_t combo_width,
+                                int32_t total_height,
+                                int32_t *out_width,
+                                int32_t *out_height);
+
+bool ee_won_gui_combo_select_to_end(int32_t item_width, int32_t edit_width);
+
+int32_t ee_won_gui_combo_key(int32_t key, bool visible);
+
+/// `first_match`: the index, or -1.
+int64_t ee_won_gui_first_match(size_t count, EeWonMatchOf matches, const void *ctx);
+
+int32_t ee_won_gui_tab_x(int32_t id, size_t count, int32_t prev_right, int32_t overlap);
+
+int32_t ee_won_gui_tab_neighbour(int32_t old);
+
+/// `tab_keep_in_view`: false when in view, else true with the scroll in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_keep_in_view(int32_t left, int32_t width, int32_t limit, int32_t *out);
+
+/// `tab_scroll`: the new x; true with the arrows' states in the outs when the tabs overflow.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_tab_scroll(int32_t old_x,
+                           int32_t amount,
+                           int32_t width,
+                           int32_t container_width,
+                           int32_t *out_x,
+                           bool *out_left,
+                           bool *out_right);
+
+EeWonRect4 ee_won_gui_tab_page_rect(int32_t left_pad,
+                                    int32_t right_pad,
+                                    int32_t top_pad,
+                                    int32_t bottom_pad,
+                                    int32_t area_top,
+                                    int32_t area_height,
+                                    int32_t width);
+
+/// `tab_area`: the top, the height into `out_height`.
+///
+/// # Safety
+/// `out_height` is writable.
+int32_t ee_won_gui_tab_area(bool on_bottom,
+                            int32_t height,
+                            int32_t bar_top,
+                            int32_t bar_bottom,
+                            int32_t overlap,
+                            int32_t *out_height);
+
+/// `tab_arrows`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_tab_arrows(bool on_left,
+                              bool on_bottom,
+                              int32_t width,
+                              int32_t right_width,
+                              int32_t left_width,
+                              int32_t left_height,
+                              int32_t area_top,
+                              int32_t area_bottom,
+                              int32_t *out_y);
+
+int32_t ee_won_gui_tab_bottom_height(int32_t bar_height, int32_t overlap, int32_t top_offset);
+
+/// `tab_vert`: the top container's y, the bottom container's into `out_bottom_y`.
+///
+/// # Safety
+/// `out_bottom_y` is writable.
+int32_t ee_won_gui_tab_vert(bool on_bottom,
+                            int32_t height,
+                            int32_t bottom_height,
+                            int32_t top_offset,
+                            int32_t *out_bottom_y);
+
+/// `tab_horz` (an arrow's edge is read only when the arrow is there and visible): the left, the right into
+/// `out_right`.
+///
+/// # Safety
+/// `out_right` is writable.
+int32_t ee_won_gui_tab_horz(bool need_arrows,
+                            bool arrows_on_left,
+                            bool right_arrow_shown,
+                            int32_t right_arrow_right,
+                            bool left_arrow_shown,
+                            int32_t left_arrow_left,
+                            bool on_right,
+                            int32_t width,
+                            int32_t bar_width,
+                            int32_t left_offset,
+                            int32_t *out_right);
+
+int32_t ee_won_gui_tab_bar_height(int32_t current, int32_t tab_height);
+
+/// `tab_key_target`: false for another key, else true with the tab in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_tab_key_target(int32_t key,
+                               int32_t old,
+                               size_t count,
+                               EeWonDisabledOf disabled,
+                               const void *ctx,
+                               int32_t *out);
+
+int32_t ee_won_gui_tab_after_remove(int32_t removed, int32_t current);
+
+/// `split_max` into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_split_max(int32_t pos,
+                          int32_t width,
+                          int32_t height,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t *out_x,
+                          int32_t *out_y,
+                          bool *out_lr,
+                          bool *out_ud);
+
+int32_t ee_won_gui_split_button_quadrant(int32_t control_id);
+
+bool ee_won_gui_split_is_max_button(int32_t control_id);
+
+/// `split_set`: false when unchanged, else true with the split in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_set(int32_t x,
+                          int32_t y,
+                          bool lr_max,
+                          bool ud_max,
+                          int32_t min_left,
+                          int32_t min_right,
+                          int32_t min_top,
+                          int32_t min_bottom,
+                          int32_t width,
+                          int32_t height,
+                          bool valid,
+                          int32_t sx,
+                          int32_t sy,
+                          int32_t bar_w,
+                          int32_t bar_h,
+                          EeWonSplit *out);
+
+/// `split_percent`: false when the size is not positive, else true with the percentage in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_gui_split_percent(int32_t v, int32_t size, double *out);
+
+int32_t ee_won_gui_split_at(int32_t size, double percent, int32_t offset);
+
+/// `split_layout`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_layout(bool have_max,
+                                int32_t quadrant,
+                                double left_pct,
+                                double top_pct,
+                                int32_t bar_w,
+                                int32_t bar_h,
+                                int32_t width,
+                                int32_t height,
+                                int32_t *out_y);
+
+EeWonRect4 ee_won_gui_split_pane(int32_t pos, int32_t width, int32_t height, EeWonSplit s);
+
+EeWonRect4 ee_won_gui_split_bar(int32_t kind, int32_t width, int32_t height, EeWonSplit s);
+
+int32_t ee_won_gui_split_cursor(int32_t kind);
+
+/// `split_drag`: the x, the y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_split_drag(int32_t x,
+                              int32_t y,
+                              int32_t child_x,
+                              int32_t child_y,
+                              int32_t drag_x,
+                              int32_t drag_y,
+                              bool lr,
+                              bool ud,
+                              int32_t sx,
+                              int32_t sy,
+                              int32_t *out_y);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
