@@ -397,6 +397,20 @@ WON_TESTS = {
                                                             "FileReader.cpp", "FileReaderWideStrings.cpp",
                                                             "FileWriter.cpp", "WONFile.cpp", "CRC16.cpp",
                                                             "StringUtil.cpp")],
+    # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
+    # ee_won's model module
+    "won_model_test": [],
+    # LanLogic's flow (what a message, a closed socket, a summary, a join status or a command does), the original's
+    # statements against ee_won's lanlogic module
+    "won_lanlogic_test": [],
+    # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
+    # checks and the advert's lines), the original's statements against ee_won's flow module
+    "won_flow_test": [],
+    # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
+    # statements against ee_won's routing module
+    "won_routing_test": [],
+    # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
+    "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],

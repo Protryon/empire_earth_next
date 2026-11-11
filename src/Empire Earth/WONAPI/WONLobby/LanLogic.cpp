@@ -26,8 +26,10 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "rust/ee_rust.h"
 
-// The LAN protocol's messages and the host's decisions about them are ee_won's (rust/crates/ee_won/src/lan.rs);
-// this unit keeps the lobby's objects, sockets and events.
+// The LAN protocol's messages and the host's decisions about them are ee_won's (rust/crates/ee_won/src/lan.rs),
+// and so is the flow over the objects (lanlogic.rs: what a received message, a closed socket, a summary, a join
+// reply status, a player action or a chat command does, and where a message goes); this unit keeps the lobby's
+// objects, sockets, timers, dialogs and events, and runs what those answer.
 namespace WONAPI {
 AuthContext* GetLobbyAuthContext(); // the lobby's authentication context (cdecl)
 
@@ -53,8 +55,6 @@ static ByteBufferPtr LanMessage(const std::string& inBytes)
 {
     return new ByteBuffer(inBytes.data(), (unsigned long)inBytes.length(), false);
 }
-// the two-byte length prefix of a message the host delivers to itself (HandleMessage skips it)
-static const size_t kLanLocalPrefix = 2;
 // a game-channel message's strings: a name or a chat text first, a join request's password second
 struct LanTexts {
     std::wstring mFirst;
@@ -232,17 +232,18 @@ void LanLogic::HandleSocketClosed(AsyncOp* inOp)
 {
     LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(
         static_cast<SocketOp*>(inOp)->mSocket.get());
-    if (aSocket == NULL)
-        return;
-    if (this->IsCaptain()) {
-        if (aSocket->mClient.get() != NULL) {
-            std::string aMessage;
-            ee_won_lan_client_left(aSocket->mClient->GetClientId(), LanAppendBytes, &aMessage);
-            aSocket->SetClient(NULL);
-            this->BroadcastMessage(LanMessage(aMessage).get(), true);
-        }
+    EeWonLanClosed aClosed = ee_won_lanlogic_socket_closed(
+        aSocket != NULL, this->IsCaptain(), aSocket != NULL && aSocket->mClient.get() != NULL,
+        aSocket != NULL && aSocket == this->mServerSocket.get());
+    if (aClosed.announce_left) {
+        std::string aMessage;
+        ee_won_lan_client_left(aSocket->mClient->GetClientId(), LanAppendBytes, &aMessage);
+        aSocket->SetClient(NULL);
+        this->BroadcastMessage(LanMessage(aMessage).get(), true);
+    }
+    if (aClosed.forget_socket)
         this->mPendingSockets.erase(aSocket);
-    } else if (aSocket == this->mServerSocket.get()) {
+    if (aClosed.lost_host) {
         this->mServerSocket->Kill();
         this->mServerSocket = NULL;
         LobbyGameDisconnected(true);
@@ -362,11 +363,12 @@ int LanLogic::ReadJoinReply(const ByteBuffer* inBuffer, LobbyGame* inGame)
         aClient->mClientId = anId;
         aClient->mName = GUIString(new GUIStringData(aPlayers.mList[i].second));
         this->mClients->AddClient(aClient.get());
-        if (anId == aMyId)
-            this->mMyClient = aClient;
-        else if (anId == aCaptainId) {
+        switch (ee_won_lanlogic_reply_role(anId, aMyId, aCaptainId)) {
+        case 1: this->mMyClient = aClient; break;
+        case 2:
             this->mServerSocket->SetClient(aClient.get());
             aClient->SetCaptain(true, true);
+            break;
         }
     }
     return aStatus;
@@ -387,16 +389,17 @@ void LanLogic::HandleNewSocketMessage(const ByteBuffer* inBuffer, LobbyLanSocket
 // Handles a received LAN message: stamps the socket's activity (host) and dispatches it
 void LanLogic::HandleRecvMsg(AsyncOp* inOp)
 {
-    if (inOp->mStatus != WS_Success || inOp->mKilled)
-        return;
     RecvMsgOp* anOp = static_cast<RecvMsgOp*>(inOp);
     LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(anOp->mSocket.get());
-    if (this->IsCaptain()) {
+    bool anOk = inOp->mStatus == WS_Success && !inOp->mKilled;
+    EeWonLanRecv aRecv = ee_won_lanlogic_recv(anOk, this->IsCaptain(), anOk && aSocket->mClient.get() != NULL);
+    if (!aRecv.handle)
+        return;
+    if (aRecv.stamp)
         aSocket->mLastMessageTime = time(NULL);
-        if (aSocket->mClient.get() == NULL) {
-            this->HandleNewSocketMessage(anOp->GetMsg().get(), aSocket);
-            return;
-        }
+    if (aRecv.new_socket) {
+        this->HandleNewSocketMessage(anOp->GetMsg().get(), aSocket);
+        return;
     }
     this->HandleMessage(anOp->GetMsg().get(), aSocket->mClient.get());
 }
@@ -414,31 +417,28 @@ void LanLogic::AddPendingSocket(LobbyLanSocket* inSocket)
 // Host: sends a message to one player, handling it directly when that is the host itself
 void LanLogic::SendMessageToClient(LobbyClient* inClient, const ByteBuffer* inBuffer)
 {
-    if (!this->IsCaptain() || !this->IsConnected())
-        return;
-    if (inClient == this->mMyClient.get()) {
-        this->HandleMessage(inBuffer, this->mMyClient.get());
-        return;
-    }
+    bool aCaptain = this->IsCaptain() && this->IsConnected();
+    bool aToMe = aCaptain && inClient == this->mMyClient.get();
     LobbyLanClient* aClient = static_cast<LobbyLanClient*>(inClient);
-    if (aClient->mSocket == NULL)
-        return;
-    aClient->mSocket->QueueOp(new SendMsgOp(inBuffer), -1);
+    switch (ee_won_lanlogic_send_to_client(this->IsCaptain(), this->IsConnected(), aToMe,
+                                           aCaptain && !aToMe && aClient->mSocket != NULL)) {
+    case EeWonLanRoute::Local: this->HandleMessage(inBuffer, this->mMyClient.get()); break;
+    case EeWonLanRoute::Socket: aClient->mSocket->QueueOp(new SendMsgOp(inBuffer), -1); break;
+    default: break;
+    }
 }
 
 // FUNCTION: WON 0x007e1980
 // Sends a message to the host, or handles it directly when this player is the host
 void LanLogic::SendMessageToCaptain(const ByteBuffer* inBuffer)
 {
-    if (!this->IsConnected())
-        return;
-    if (this->IsCaptain()) {
-        this->HandleMessage(inBuffer, this->mMyClient.get());
-        return;
-    }
-    if (this->mServerSocket.get() != NULL) {
+    switch (ee_won_lanlogic_send_to_captain(this->IsConnected(), this->IsCaptain(), this->mServerSocket.get() != NULL)) {
+    case EeWonLanRoute::Local: this->HandleMessage(inBuffer, this->mMyClient.get()); break;
+    case EeWonLanRoute::Socket:
         this->mLastServerPing = time(NULL);
         this->mServerSocket->QueueOp(new SendMsgOp(inBuffer), -1);
+        break;
+    default: break;
     }
 }
 
@@ -446,16 +446,26 @@ void LanLogic::SendMessageToCaptain(const ByteBuffer* inBuffer)
 // Host: sends a message to every joined player, optionally handling it locally too
 void LanLogic::BroadcastMessage(const ByteBuffer* inBuffer, bool inDeliverLocal)
 {
-    if (!this->IsCaptain())
-        return;
-    if (inDeliverLocal)
+    bool aCaptain = this->IsCaptain();
+    if (ee_won_lanlogic_broadcast(aCaptain, inDeliverLocal, NULL, NULL, 0))
         this->HandleMessage(inBuffer, this->mMyClient.get());
+    if (!aCaptain)
+        return;
+    // the sockets as the original's loop met them, after the local delivery
+    std::vector<LobbyLanSocket*> aSockets;
     for (std::set<SmartPtr<LobbyLanSocket> >::iterator anItr = this->mPendingSockets.begin();
-         anItr != this->mPendingSockets.end(); ++anItr) {
-        LobbyLanSocket* aSocket = anItr->get();
-        if (aSocket->mClient.get() != NULL)
-            aSocket->QueueOp(new SendMsgOp(inBuffer), -1);
-    }
+         anItr != this->mPendingSockets.end(); ++anItr)
+        aSockets.push_back(anItr->get());
+    if (aSockets.empty())
+        return;
+    std::vector<char> aHasClient(aSockets.size()), aSend(aSockets.size());
+    for (size_t i = 0; i < aSockets.size(); ++i)
+        aHasClient[i] = aSockets[i]->mClient.get() != NULL;
+    ee_won_lanlogic_broadcast(aCaptain, false, reinterpret_cast<const bool*>(&aHasClient[0]),
+                              reinterpret_cast<bool*>(&aSend[0]), aSockets.size());
+    for (size_t i = 0; i < aSockets.size(); ++i)
+        if (aSend[i])
+            aSockets[i]->QueueOp(new SendMsgOp(inBuffer), -1);
 }
 
 // the staging message goes after the type byte without a length of its own (the original's AppendBuffer(buffer, 0))
@@ -570,7 +580,7 @@ void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSender
         aTarget = this->mClients->FindClient(inTargetId);
         if (aTarget == NULL)
             return;
-        if (aSender != this->mMyClient.get()) {
+        if (ee_won_lanlogic_whisper_received(true, aSender == this->mMyClient.get())) {
             if (LobbyGetChatSoundEffects())
                 LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
             ChatCommandParser* aParser = LobbyGetChatCommandParser();
@@ -594,9 +604,7 @@ void LanLogic::HandleMessage(const ByteBuffer* inBuffer, LobbyClient* inClient)
 {
     if (inBuffer == NULL || inClient == NULL)
         return;
-    size_t anOffset = 0;
-    if (this->IsCaptain() && inClient == this->mMyClient.get())
-        anOffset = kLanLocalPrefix;
+    size_t anOffset = ee_won_lanlogic_message_offset(this->IsCaptain(), inClient == this->mMyClient.get());
     LanTexts aTexts;
     EeWonLanMsg aMsg = LanRead(inBuffer, anOffset, aTexts);
     switch (aMsg.kind) {
@@ -644,7 +652,8 @@ void LanLogic::HandleComponentEvent(ComponentEvent* inEvent)
 void LanLogic::ChangeLanName()
 {
     this->mLanNameDialog->Reset();
-    if (LobbyDoDialog(this->mLanNameDialog.get()) == 0x186a1 && this->mLanNameDialog->GetName().length() != 0) {
+    int aResult = LobbyDoDialog(this->mLanNameDialog.get());
+    if (ee_won_lanlogic_name_accepted(aResult, aResult == 0x186a1 ? this->mLanNameDialog->GetName().length() : 0)) {
         LobbySetLanName(this->mLanNameDialog->GetName());
         LobbyBroadcastLobbyEvent(0x186d2, true);
     }
@@ -658,10 +667,9 @@ void LanLogic::ChangeLanPort()
     this->mLanPortDialog->SetGamePort(LobbyGetLobbyPort());
     this->mLanPortDialog->SetPort(aPort);
     this->mLanPortDialog->Reset();
-    if (LobbyDoDialog(this->mLanPortDialog.get()) != 0x186a1)
-        return;
-    int aNewPort = this->mLanPortDialog->GetPort();
-    if (aNewPort == aPort)
+    int aResult = LobbyDoDialog(this->mLanPortDialog.get());
+    int aNewPort = aResult == 0x186a1 ? this->mLanPortDialog->GetPort() : aPort;
+    if (!ee_won_lanlogic_port_accepted(aResult, aPort, aNewPort))
         return;
     LobbySetLanBroadcastPort(aNewPort);
     LobbyBroadcastLobbyEvent(0x186d2, true);
@@ -683,9 +691,8 @@ void LanLogic::HandleChangeDirectConnect(ChangeDirectConnectEvent* inEvent)
         if (LobbyDoDialog(this->mDirectConnectDialog.get()) == 0x186a1) {
         IPAddr anAddress;
         LobbyConfig* aConfig = GetLobbyConfig();
-        int aDefaultPort = LobbyGetLobbyPort();
-        if (aConfig != NULL)
-            aDefaultPort = aConfig->mLobbyPort;
+        int aDefaultPort = ee_won_lanlogic_direct_default_port(aConfig != NULL, aConfig != NULL ? aConfig->mLobbyPort : 0,
+                                                               LobbyGetLobbyPort());
         anAddress.SetWithDefaultPortNoDNS(this->mDirectConnectDialog->GetAddress(), aDefaultPort);
         if (!anAddress.IsValid()) {
             SmartPtr<DNSTestOp> anOp = new DNSTestOp(this->mDirectConnectDialog->GetAddress());
@@ -697,13 +704,13 @@ void LanLogic::HandleChangeDirectConnect(ChangeDirectConnectEvent* inEvent)
                 anAddress.SetPort(aDefaultPort);
         }
         GUIString aName = this->mDirectConnectDialog->GetName();
-        if (aName.length() == 0)
+        if (ee_won_lanlogic_direct_name_is_address(aName.length()))
             aName = this->mDirectConnectDialog->GetAddress();
         bool aFlag = false;
         LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(anAddress, &aFlag);
         aGame->mName = aName;
         LobbyAddDirectConnect(anAddress, aName);
-        LobbyBroadcastEvent(new GameChangedEvent(aGame, aFlag ? 2 : 0), true);
+        LobbyBroadcastEvent(new GameChangedEvent(aGame, ee_won_lanlogic_direct_event(aFlag)), true);
         }
     }
 }
@@ -722,12 +729,8 @@ void LanLogic::ShowClientOptions(LobbyClient* inClient, int inRoomSpec)
 // Handles a player action in the LAN room: options popup, ignore, unignore, whisper or kick
 void LanLogic::HandleClientAction(ClientActionEvent* inEvent)
 {
-    if (!this->IsConnected() || !((inEvent->mRoomSpec & 8) ? true : false))
-        return;
     LobbyClient* aClient = inEvent->mClient.get();
-    if (aClient == NULL)
-        return;
-    switch (inEvent->mAction) {
+    switch (ee_won_lanlogic_client_action(this->IsConnected(), inEvent->mRoomSpec, aClient != NULL, inEvent->mAction)) {
     case 18:
         this->ShowClientOptions(aClient, inEvent->mRoomSpec);
         return;
@@ -769,23 +772,16 @@ void LanLogic::HandleChatCommand(Component* inTarget)
     if (aParser == NULL || !(aParser->mRoomFlags & 8))
         return;
     LobbyClient* aClient = aParser->mTarget.get();
-    switch (aParser->mCommand) {
-    case LobbyChatCommand_Broadcast: case LobbyChatCommand_Emote: {
-        unsigned short aFlags = aParser->mCommand == LobbyChatCommand_Emote ? 2 : 0;
-        if (aParser->mRoomFlags & 0x10)
-            aFlags |= 0x100;
-        this->SendChat(aParser->mText, aFlags, 0);
+    EeWonLanChatCommand aCommand = ee_won_lanlogic_chat_command(true, aParser->mRoomFlags, aParser->mCommand,
+                                                                aClient != NULL);
+    switch (aCommand.action) {
+    case 1:
+        this->SendChat(aParser->mText, aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
         return;
-    }
-    case LobbyChatCommand_Whisper:
-        if (aClient != NULL)
-            this->SendChat(aParser->mText, 4, aClient->mClientId);
+    case 2:
+        LobbySetClientIgnored(aClient, !aClient->mIgnored, 4);
         return;
-    case LobbyChatCommand_Ignore:
-        if (aClient != NULL)
-            LobbySetClientIgnored(aClient, !aClient->mIgnored, 4);
-        return;
-    default:
+    case 3:
         LobbySendEventTo(new ChatCommandErrorEvent(::RoutingLogic_InvalidCommand_String), inTarget);
         break;
     }
@@ -794,7 +790,7 @@ void LanLogic::HandleChatCommand(Component* inTarget)
 // LAN screen: clears the games and broadcasts a discovery query; direct connect: pings the shown games
 void LanLogic::RefreshGames()
 {
-    int aKind = LobbyGetGameScreenType();
+    int aKind = ee_won_lanlogic_refresh(LobbyGetGameScreenType());
     if (aKind == 1) {
         this->mLanGames->Clear();
         LobbyBroadcastEvent(new SyncGameListEvent(this->mLanGames.get()), true);
@@ -835,7 +831,7 @@ void LanLogic::EnterLanScreen()
 bool LanLogic::HostGame(LobbyGame* inGame)
 {
     this->CloseConnections();
-    if (inGame->GetGameType() == 3 && LobbyDoCDKeyCheck()) {
+    if (inGame->GetGameType() == 3 && ee_won_lanlogic_needs_peer_auth(inGame->GetGameType(), LobbyDoCDKeyCheck())) {
         this->mRequirePeerAuth = true;
         if (!this->RefreshCertificate())
             return false;
@@ -883,7 +879,7 @@ void LanLogic::LeaveGame(LobbyGame*) { this->CloseConnections(); }
 // Broadcasts a LAN game's summary on the discovery port
 void LanLogic::AdvertiseGame(LobbyGame* inGame)
 {
-    if (inGame->GetGameType() == 1)
+    if (ee_won_lanlogic_advertises(inGame->GetGameType()))
         this->BroadcastGameSummary(inGame, this->mDiscoveryAddress);
 }
 
@@ -891,7 +887,7 @@ void LanLogic::AdvertiseGame(LobbyGame* inGame)
 // Broadcasts that a LAN game is gone
 void LanLogic::RemoveGameAdvertisement(LobbyGame* inGame)
 {
-    if (inGame->GetGameType() == 1)
+    if (ee_won_lanlogic_advertises(inGame->GetGameType()))
         this->BroadcastGameRemoved(inGame);
 }
 
@@ -903,9 +899,8 @@ void LanLogic::Suspend() {}
 // Returns true when this player hosts a LAN game and discovery is running
 bool LanLogic::CanBroadcastGame(LobbyGame* inGame)
 {
-    if (!this->IsCaptain() || this->mDiscoverySocket.get() == NULL || inGame == NULL)
-        return false;
-    return inGame->GetGameType() == 1 ? true : false;
+    return ee_won_lanlogic_can_broadcast(this->IsCaptain(), this->mDiscoverySocket.get() != NULL, inGame != NULL,
+                                         inGame != NULL ? inGame->GetGameType() : 0);
 }
 
 // FUNCTION: WON 0x007e4630
@@ -982,16 +977,14 @@ void LanLogic::HandleGameSummary(unsigned short inPort, ReadBuffer& inBuffer, co
     anAddress.SetPort(inPort);
     bool aFlag = false;
     LobbyGame* aGame = this->mLanGames->GetOrCreateGame(anAddress, &aFlag);
-    if (aGame->ReadSummary(inBuffer)) {
+    EeWonLanSummary anOutcome = ee_won_lanlogic_summary(aGame->ReadSummary(inBuffer), aFlag);
+    SmartPtr<LobbyGame> aHeldGame = aGame;
+    if (anOutcome.keep)
         aGame->mLastSeenTime = time(NULL);
-        LobbyBroadcastEvent(new GameChangedEvent(aGame, aFlag ? 2 : 0), true);
-    }
-    else {
-        SmartPtr<LobbyGame> aHeldGame = aGame;
+    else
         this->mLanGames->RemoveGame(anAddress);
-        if (aFlag)
-            LobbyBroadcastEvent(new GameChangedEvent(aGame, aFlag ? 2 : 1), true);
-    }
+    if (anOutcome.event >= 0)
+        LobbyBroadcastEvent(new GameChangedEvent(aGame, anOutcome.event), true);
 }
 
 // FUNCTION: WON 0x007e4ec0
@@ -1186,7 +1179,7 @@ bool LanLogic::JoinGame(LobbyGame* game)
 {
     this->CloseConnections();
     SmartPtr<AuthContext> auth;
-    if(game->GetGameType()==3 && LobbyDoCDKeyCheck()) {
+    if(game->GetGameType()==3 && ee_won_lanlogic_needs_peer_auth(game->GetGameType(),LobbyDoCDKeyCheck())) {
         this->mRequirePeerAuth=true;
         if(!this->RefreshCertificate()) return false;
         auth=GetLobbyAuthContext();
@@ -1221,16 +1214,17 @@ bool LanLogic::JoinGame(LobbyGame* game)
         LobbyRunOpWithStatus(reply.get(),::LANLogic_RegisterTitle_String,::LANLogic_RegisterDetails_String,1,0);
         if(reply->GetStatus()!=WS_Success) return false;
         int status=this->ReadJoinReply(reply->GetMsg().get(),game);
-        switch(status) {
-        case 0: joined=true;break;
-        case 1: return false;
-        case 2:
+        switch(ee_won_lanlogic_join_step(status)) {
+        case EeWonLanJoinStep::Joined: joined=true;break;
+        case EeWonLanJoinStep::Fail: return false;
+        case EeWonLanJoinStep::WrongPassword:
             LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String,::LobbyGameStatus_InvalidPassword_String);
             needPassword=true;
             break;
-        case 3:
+        case EeWonLanJoinStep::OtherSubnet:
             LobbyMessageBox(::LANLogic_RegisterTitle_String,::LANLogic_InvalidSubnet_String);
             return false;
+        case EeWonLanJoinStep::Again: break;
         }
     }
     this->mServerSocket->SetCloseCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleSocketClosed,this));

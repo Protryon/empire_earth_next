@@ -21,9 +21,31 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include "rust/ee_rust.h"
 // LobbyGame's join rules, its listing summary's fields and the join request's and a player's heads are ee_won's
-// staging module (rust/crates/ee_won/src/staging.rs); the classes keep their members, lists and the game code's hooks.
+// staging module (rust/crates/ee_won/src/staging.rs); the lists' decisions (the routing maps' merges, the
+// populations, what the flags say, the ping states, the stale rule, the status texts, the ready check, the
+// directory's data objects) are its model module (model.rs). The classes keep their members, maps and the game
+// code's hooks.
 namespace WONAPI {
 LobbyClientMap& GetEmptyClientMap();
+
+// the merge plan of a lobby map and a routing map (both keyed by id): ee_won_model_sync_plan
+template <class LobbyMap, class InfoMap>
+static std::vector<EeWonSyncStep> ModelSyncPlan(const LobbyMap& inLobby, const InfoMap& inInfos,
+                                                std::vector<typename InfoMap::const_iterator>& outInfos)
+{
+    std::vector<uint16_t> anExisting, anIncoming;
+    for (typename LobbyMap::const_iterator it = inLobby.begin(); it != inLobby.end(); ++it)
+        anExisting.push_back(it->first);
+    for (typename InfoMap::const_iterator it = inInfos.begin(); it != inInfos.end(); ++it) {
+        anIncoming.push_back(it->first);
+        outInfos.push_back(it);
+    }
+    std::vector<EeWonSyncStep> aPlan(anExisting.size() + anIncoming.size() + 1);
+    size_t aCount = ee_won_model_sync_plan(anExisting.empty() ? NULL : &anExisting[0], anExisting.size(),
+                                           anIncoming.empty() ? NULL : &anIncoming[0], anIncoming.size(), &aPlan[0]);
+    aPlan.resize(aCount);
+    return aPlan;
+}
 
 static void ModelAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
@@ -102,28 +124,32 @@ void LobbyClient::UpdateIgnoreStatus()
 
 // FUNCTION: WON 0x7a5470
 // Returns whether the client is flagged anonymous on the server
-bool LobbyClient::IsAnonymous() { return (this->mClientFlags & 0x40) ? true : false; }
+bool LobbyClient::IsAnonymous()
+{
+    return ee_won_model_client_status((uint32_t)this->mClientFlags, this->mChatMemberFlags, this->mGameMemberFlags)
+        .anonymous;
+}
 
 // FUNCTION: WON 0x7a5480
 // Returns whether the client is muted server-wide or in the given chat room or game
 bool LobbyClient::IsMuted(bool inGame)
 {
-    if (this->mClientFlags & 2) return true;
-    if (inGame) return (this->mGameMemberFlags & 2) ? true : false;
-    return (this->mChatMemberFlags & 2) ? true : false;
+    EeWonClientStatus aStatus =
+        ee_won_model_client_status((uint32_t)this->mClientFlags, this->mChatMemberFlags, this->mGameMemberFlags);
+    return inGame ? aStatus.muted_game : aStatus.muted_chat;
 }
 
 // FUNCTION: WON 0x7a54b0
 // Returns whether the client is flagged away
-bool LobbyClient::IsAway() { return (this->mClientFlags & 8) ? true : false; }
+bool LobbyClient::IsAway() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).away; }
 
 // FUNCTION: WON 0x7a54c0
 // Returns whether the client is a server administrator
-bool LobbyClient::IsAdmin() { return (this->mClientFlags & 0x20) ? true : false; }
+bool LobbyClient::IsAdmin() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).admin; }
 
 // FUNCTION: WON 0x7a54d0
 // Returns whether the client is a moderator
-bool LobbyClient::IsModerator() { return (this->mClientFlags & 1) ? true : false; }
+bool LobbyClient::IsModerator() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).moderator; }
 
 // FUNCTION: WON 0x7a54e0
 // Returns whether the client captains its game or its chat room
@@ -179,30 +205,31 @@ void LobbyClientList::Clear() { this->mClients.clear(); }
 
 // FUNCTION: WON 0x7a5820
 // Merges the routing server's client map into the list: drops gone clients, adds new ones, refreshes the rest
+// (the plan is ee_won_model_sync_plan; a new client goes in under the routing map's key, its own id)
 void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
 {
+    std::vector<RoutingClientMap::const_iterator> anInfos;
+    std::vector<EeWonSyncStep> aPlan = ModelSyncPlan(this->mClients, inMap, anInfos);
     LobbyClientMap::iterator aClient = this->mClients.begin();
-    LobbyClientMap::iterator anInsert = this->mClients.begin();
-    RoutingClientMap::const_iterator anInfo = inMap.begin();
-    while (aClient != this->mClients.end() && anInfo != inMap.end()) {
-        if (anInfo->first > aClient->first) this->mClients.erase(aClient++);
-        else if (anInfo->first < aClient->first) {
+    LobbyClientMap::iterator anInsert = this->mClients.end(); // the original hinted begin(), dangling after an erase
+    for (size_t k = 0; k < aPlan.size(); ++k) {
+        switch (aPlan[k].kind) {
+        case 0: this->mClients.erase(aClient++); break;
+        case 1: {
+            RoutingClientMap::const_iterator anInfo = anInfos[aPlan[k].incoming];
             SmartPtr<LobbyClient> aNewClient = new LobbyClient;
             aNewClient->ReadRoutingInfo(anInfo->second.get());
-            anInsert = this->mClients.insert(anInsert, LobbyClientMap::value_type(aNewClient->mClientId, aNewClient));
-            ++anInfo;
-        } else {
-            SmartPtr<LobbyClient> aCopy = aClient->second;
-            aCopy->ReadRoutingInfo(anInfo->second.get());
-            ++aClient; ++anInfo;
+            anInsert = this->mClients.insert(anInsert, LobbyClientMap::value_type(anInfo->first, aNewClient));
+            break;
         }
-    }
-    this->mClients.erase(aClient, this->mClients.end());
-    while (anInfo != inMap.end()) {
-        SmartPtr<LobbyClient> aNewClient = new LobbyClient;
-        aNewClient->ReadRoutingInfo(anInfo->second.get());
-        anInsert = this->mClients.insert(anInsert, LobbyClientMap::value_type(aNewClient->GetClientId(), aNewClient));
-        ++anInfo;
+        case 2: {
+            SmartPtr<LobbyClient> aCopy = aClient->second;
+            aCopy->ReadRoutingInfo(anInfos[aPlan[k].incoming]->second.get());
+            ++aClient;
+            break;
+        }
+        case 3: this->mClients.erase(aClient, this->mClients.end()); aClient = this->mClients.end(); break;
+        }
     }
 }
 
@@ -375,10 +402,7 @@ void LobbyFriend::ClearLocation()
 // Sets the friend's status (in a chat room, in a game) and anonymity from their lobby client
 void LobbyFriend::SetStatusFromClient(LobbyClient* inClient)
 {
-    int flags = 0;
-    if (inClient->IsInChatGroup()) flags = 1;
-    if (inClient->IsInGameGroup()) flags |= 2;
-    this->mFlags = flags;
+    this->mFlags = ee_won_model_friend_status(inClient->IsInChatGroup(), inClient->IsInGameGroup());
     this->mAnonymous = inClient->IsAnonymous();
 }
 
@@ -390,7 +414,7 @@ void LobbyFriend::SetAnonymous(bool inAnonymous) { this->mAnonymous = inAnonymou
 // Marks the friend as being located (replacing the other status flags) and records when the search started
 void LobbyFriend::StartLocate(unsigned long inTime)
 {
-    this->mFlags = 4;
+    this->mFlags = ee_won_model_friend_start_locate();
     this->mSearchStart = inTime;
 }
 
@@ -398,7 +422,7 @@ void LobbyFriend::StartLocate(unsigned long inTime)
 // Clears the locating mark and records the time of the last locate
 void LobbyFriend::EndLocate(unsigned long inTime)
 {
-    this->mFlags &= ~4;
+    this->mFlags = ee_won_model_friend_end_locate(this->mFlags);
     this->mLastLocate = inTime;
 }
 
@@ -473,11 +497,11 @@ bool LobbyGame::MatchesRoomSpec(long inFlags)
 
 // FUNCTION: WON 0x7a6d70
 // Returns whether a ping or a details query is outstanding for the game
-bool LobbyGame::IsPinging() { return this->mPing == 0xfffd || this->mPing == 0xfffc; }
+bool LobbyGame::IsPinging() { return ee_won_model_game_pinging(this->mPing); }
 
 // FUNCTION: WON 0x7a6d90
 // Returns whether a details query is outstanding for the game
-bool LobbyGame::IsQueryingDetails() { return this->mPing == 0xfffc; }
+bool LobbyGame::IsQueryingDetails() { return ee_won_model_game_querying(this->mPing); }
 
 // FUNCTION: WON 0x7a6da0
 // Lets the game code prepare before the lobby joins the game on the network
@@ -720,31 +744,27 @@ LobbyClient* LobbyGroup::FindClient(unsigned short inId) { return this->mClients
 
 // FUNCTION: WON 0x7a9020
 // Returns whether joining the group needs a password
-bool LobbyGroup::IsPasswordProtected() { return (this->mFlags >> 2) & 1; }
+bool LobbyGroup::IsPasswordProtected() { return ee_won_model_group_kind((uint32_t)this->mFlags).password; }
 
 // FUNCTION: WON 0x7a9030
 // Returns whether joining the group needs the captain's approval
-bool LobbyGroup::IsAskToJoin() { return (this->mFlags >> 8) & 1; }
+bool LobbyGroup::IsAskToJoin() { return ee_won_model_group_kind((uint32_t)this->mFlags).ask_to_join; }
 
 // FUNCTION: WON 0x7a9040
 // Returns whether the group can only be joined by invitation
-bool LobbyGroup::IsInviteOnly() { return (this->mFlags >> 7) & 1; }
+bool LobbyGroup::IsInviteOnly() { return ee_won_model_group_kind((uint32_t)this->mFlags).invite_only; }
 
 // FUNCTION: WON 0x7a9050
 // Returns whether the group is a chat room
-bool LobbyGroup::IsChatGroup() { return ((this->mFlags >> 11) & 1) ? true : false; }
+bool LobbyGroup::IsChatGroup() { return ee_won_model_group_kind((uint32_t)this->mFlags).chat; }
 
 // FUNCTION: WON 0x7a9060
 // Returns whether the group is a game
-bool LobbyGroup::IsGameGroup() { return ((this->mFlags >> 11) & 1) ? false : true; }
+bool LobbyGroup::IsGameGroup() { return !ee_won_model_group_kind((uint32_t)this->mFlags).chat; }
 
 // FUNCTION: WON 0x7a9070
 // Returns whether the group is a chat room anyone may enter (no password, invitation or approval)
-bool LobbyGroup::IsPublicChatGroup()
-{
-    return this->IsChatGroup() && !this->IsPasswordProtected() && !this->IsInviteOnly() && !this->IsAskToJoin();
-
-}
+bool LobbyGroup::IsPublicChatGroup() { return ee_won_model_group_kind((uint32_t)this->mFlags).public_chat; }
 
 // FUNCTION: WON 0x7a90b0
 // Creates a player who is not ready and has an unknown ping
@@ -851,41 +871,40 @@ void LobbyServer::ClearFriendLocations()
 
 // FUNCTION: WON 0x7a9be0
 // Merges the routing server's room map into the server's rooms and recounts the people in them
+// (the plan is ee_won_model_sync_plan, the counts EeWonPopulation; a new room goes in under the routing map's key,
+// its own id)
 void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClients)
 {
-    this->mNumChatClients = 0;
-    this->mNumClients = 0;
+    EeWonPopulation aPopulation;
+    memset(&aPopulation, 0, sizeof(aPopulation));
     LobbyClientList* clients = inUpdateClients ? this->mClients : SmartPtr<LobbyClientList>(NULL);
+    std::vector<RoutingGroupMap::const_iterator> anInfos;
+    std::vector<EeWonSyncStep> aPlan = ModelSyncPlan(this->mGroups, inGroups, anInfos);
     LobbyGroupMap::iterator groupIt = this->mGroups.begin();
-    LobbyGroupMap::iterator insertIt = this->mGroups.begin();
-    RoutingGroupMap::const_iterator infoIt = inGroups.begin();
-    while (groupIt != this->mGroups.end() && infoIt != inGroups.end()) {
-        if (infoIt->first > groupIt->first) this->mGroups.erase(groupIt++);
-        else if (infoIt->first < groupIt->first) {
+    LobbyGroupMap::iterator insertIt = this->mGroups.end(); // the original hinted begin(), dangling after an erase
+    for (size_t k = 0; k < aPlan.size(); ++k) {
+        switch (aPlan[k].kind) {
+        case 0: this->mGroups.erase(groupIt++); break;
+        case 1: {
+            RoutingGroupMap::const_iterator infoIt = anInfos[aPlan[k].incoming];
             SmartPtr<LobbyGroup> group = new LobbyGroup;
             group->ReadRoutingInfo(infoIt->second.get(), clients);
-            insertIt = this->mGroups.insert(insertIt, LobbyGroupMap::value_type(group->mId, group));
-            if (group->IsChatGroup()) this->mNumChatClients += group->mNumClients;
-            this->mNumClients += group->mNumClients;
-            ++infoIt;
-        } else {
+            insertIt = this->mGroups.insert(insertIt, LobbyGroupMap::value_type(infoIt->first, group));
+            ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
+            break;
+        }
+        case 2: {
             SmartPtr<LobbyGroup> group = groupIt->second;
-            group->ReadRoutingInfo(infoIt->second.get(), clients);
-            if (group->IsChatGroup()) this->mNumChatClients += group->mNumClients;
-            this->mNumClients += group->mNumClients;
+            group->ReadRoutingInfo(anInfos[aPlan[k].incoming]->second.get(), clients);
+            ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
             ++groupIt;
-            ++infoIt;
+            break;
+        }
+        case 3: this->mGroups.erase(groupIt, this->mGroups.end()); groupIt = this->mGroups.end(); break;
         }
     }
-    while (groupIt != this->mGroups.end()) this->mGroups.erase(groupIt++);
-    while (infoIt != inGroups.end()) {
-        SmartPtr<LobbyGroup> group = new LobbyGroup;
-        group->ReadRoutingInfo(infoIt->second.get(), clients);
-        insertIt = this->mGroups.insert(insertIt, LobbyGroupMap::value_type(group->GetId(), group));
-        if (group->IsChatGroup()) this->mNumChatClients += group->mNumClients;
-        this->mNumClients += group->mNumClients;
-        ++infoIt;
-    }
+    this->mNumChatClients = aPopulation.chat;
+    this->mNumClients = aPopulation.total;
 }
 
 // FUNCTION: WON 0x7a9f50
@@ -904,7 +923,9 @@ LobbyClient* LobbyServer::AddClient(RoutingClientInfo* inInfo)
 void LobbyServer::AddClientToGroup(LobbyClient* inClient, unsigned char inFlags, LobbyGroup* inGroup)
 {
     inGroup->AddClient(inClient, inFlags);
-    if (inGroup->IsChatGroup()) ++this->mNumChatClients;
+    EeWonPopulation aPopulation = { this->mNumChatClients, this->mNumClients };
+    ee_won_model_population(&aPopulation, 1, (uint32_t)inGroup->mFlags, 0);
+    this->mNumChatClients = aPopulation.chat;
 }
 
 // FUNCTION: WON 0x7aa030
@@ -940,9 +961,10 @@ SmartPtr<LobbyClient> LobbyServer::RemoveClient(unsigned short inId)
 SmartPtr<LobbyClient> LobbyServer::RemoveClientFromGroup(unsigned short inId, LobbyGroup* inGroup)
 {
     SmartPtr<LobbyClient> client = inGroup->RemoveClient(inId);
-    if (client.get() != NULL && inGroup->IsChatGroup()) {
-        --this->mNumChatClients;
-        if (this->mNumChatClients < 0) this->mNumChatClients = 0;
+    if (client.get() != NULL) {
+        EeWonPopulation aPopulation = { this->mNumChatClients, this->mNumClients };
+        ee_won_model_population(&aPopulation, 2, (uint32_t)inGroup->mFlags, 0);
+        this->mNumChatClients = aPopulation.chat;
     }
     return client;
 }
@@ -975,8 +997,8 @@ LobbyGroup* LobbyServer::GetGroup(int inId)
 // Returns the server's population: the live client count when connected, else the listed count
 int LobbyServer::GetNumClients()
 {
-    if (this->IsConnected()) return this->mClients->mClients.size();
-    return this->mNumClients;
+    return ee_won_model_server_num_clients(this->IsConnected(), (uint32_t)this->mClients->mClients.size(),
+                                           this->mNumClients);
 }
 
 // FUNCTION: WON 0x7aa430
@@ -1040,9 +1062,8 @@ void LobbyGame::ClearPlayers()
 // Returns whether two games are the same: same type and same room (Internet) or same address
 bool LobbyGame::IsSameGame(LobbyGame* inOther)
 {
-    if (inOther->mGameType != this->mGameType) return false;
-    if (this->mGameType == 2) return inOther->mGroupId == this->mGroupId;
-    return inOther->mAddress == this->mAddress;
+    return ee_won_model_same_game((int32_t)this->mGameType, (int32_t)inOther->mGameType, this->mGroupId,
+                                  inOther->mGroupId, inOther->mAddress == this->mAddress);
 }
 // FUNCTION: WON 0x7a6e00
 // Copies the game room's name, join restrictions, id, captain and members into the game
@@ -1093,11 +1114,16 @@ void LobbyGame::HandleHostGame(LobbyClient* inClient)
 bool LobbyGame::AreAllReady()
 {
     LobbyClientMap& clients = this->mClients->mClients;
+    std::vector<EeWonMemberReady> members;
     for (LobbyClientMap::iterator it=clients.begin(); it!=clients.end(); ++it) {
         LobbyClient* client=it->second.get();
-        if (client->HasPlayer() && !client->IsCaptain(1) && !client->IsReady()) return false;
+        EeWonMemberReady member;
+        member.has_player=client->HasPlayer();
+        member.game_captain=client->IsCaptain(1);
+        member.ready=client->IsReady();
+        members.push_back(member);
     }
-    return true;
+    return ee_won_model_all_ready(members.empty() ? NULL : &members[0], members.size());
 }
 // FUNCTION: WON 0x7a7490
 // Returns whether all players are ready and the game code allows the start
@@ -1187,7 +1213,7 @@ void LobbyGameList::Clear() { this->mIdGames.clear(); this->mAddrGames.clear(); 
 void LobbyGameList::AddGame(LobbyGame* inGame)
 {
     inGame->mGameType=this->mType;
-    if (this->mType==2) {
+    if (ee_won_model_game_list_by_id(this->mType)) {
         unsigned short id = inGame->mGroupId;
         this->mIdGames[id]=inGame;
     }
@@ -1259,40 +1285,40 @@ SmartPtr<LobbyGame> LobbyGameList::RemoveGame(const IPAddr& inAddress)
 // Restarts iteration over the games
 void LobbyGameList::Rewind()
 {
-    if (this->mType==2) this->mIdItr=this->mIdGames.begin();
+    if (ee_won_model_game_list_by_id(this->mType)) this->mIdItr=this->mIdGames.begin();
     else this->mAddrItr=this->mAddrGames.begin();
 }
 // FUNCTION: WON 0x7a8870
 // Returns whether games remain in the iteration
 bool LobbyGameList::HasMore()
 {
-    if (this->mType==2) return this->mIdItr!=this->mIdGames.end();
+    if (ee_won_model_game_list_by_id(this->mType)) return this->mIdItr!=this->mIdGames.end();
     return this->mAddrItr!=this->mAddrGames.end();
 }
 // FUNCTION: WON 0x7a88a0
 // Returns the next game and advances (no end check: callers test HasMore first)
 LobbyGame* LobbyGameList::Next()
 {
-    if (this->mType==2) return (this->mIdItr++)->second.get();
+    if (ee_won_model_game_list_by_id(this->mType)) return (this->mIdItr++)->second.get();
     return (this->mAddrItr++)->second.get();
 }
 // FUNCTION: WON 0x7a8960
 // Returns whether the list has no games
 bool LobbyGameList::IsEmpty()
 {
-    if (this->mType==2) return this->mIdGames.empty();
+    if (ee_won_model_game_list_by_id(this->mType)) return this->mIdGames.empty();
     return this->mAddrGames.empty();
 }
 // FUNCTION: WON 0x7a8980
 // Drops LAN/direct games not seen for longer than the given seconds; returns whether any went
 bool LobbyGameList::RemoveStaleGames(long inMaxAge)
 {
-    if (this->mType==2) return false;
+    if (ee_won_model_game_list_by_id(this->mType)) return false;
     time_t now=time(NULL);
     unsigned long oldSize=this->mAddrGames.size();
     LobbyAddrGameMap::iterator it=this->mAddrGames.begin();
     while (it!=this->mAddrGames.end()) {
-        if (now-it->second->mLastSeenTime>inMaxAge) {
+        if (ee_won_model_game_stale((int64_t)now,(int32_t)it->second->mLastSeenTime,(int32_t)inMaxAge)) {
             it->second->mPing=0xfffe;
             this->mAddrGames.erase(it++);
         } else ++it;
@@ -1311,8 +1337,6 @@ LobbyServer::~LobbyServer() {}
 }
 
 namespace WONAPI {
-// The stored count is little-endian, as is the host.
-static unsigned short ShortFromLittleEndian(unsigned short theShort);
 // FUNCTION: WON 0x007a9700
 // Reads the server's name, address, population (_C) and address names (_L) from its directory entry
 void LobbyServer::ReadDirEntity(DirEntity* inEntity)
@@ -1323,12 +1347,15 @@ void LobbyServer::ReadDirEntity(DirEntity* inEntity)
     if (!aList.empty())
     for (DirDataObjectList::const_iterator anItr = aList.begin(); anItr != aList.end(); ++anItr) {
         const DirDataObject& anObject = *anItr;
-        if (anObject.mDataType == "_C" && anObject.mData.get() != NULL &&
-            anObject.mData->length() == 2) {
-            unsigned short aCount;
-            memcpy(&aCount,anObject.mData->data(),2);
-            this->mNumClients = ShortFromLittleEndian(aCount);
-        } else if (anObject.mDataType == "_L") {
+        uint16_t aCount = 0;
+        const ByteBuffer* anData = anObject.mData.get();
+        int aKind = ee_won_model_dir_object(reinterpret_cast<const uint8_t*>(anObject.mDataType.data()),
+                                            anObject.mDataType.length(),
+                                            anData != NULL ? reinterpret_cast<const uint8_t*>(anData->data()) : NULL,
+                                            anData != NULL ? (size_t)anData->length() : 0, &aCount);
+        if (aKind == 1) {
+            this->mNumClients = aCount;
+        } else if (aKind == 2) {
             this->mAddresses.clear();
             const ByteBuffer* aData = anObject.mData.get();
             std::string aText(anObject.mData->data(),anObject.mData->length());
@@ -1342,12 +1369,7 @@ void LobbyServer::ReadDirEntity(DirEntity* inEntity)
     }
 }
 
-// FUNCTION: WON 0x7a9ac0
-// Returns a little-endian short in host order (unchanged on x86)
-static unsigned short ShortFromLittleEndian(unsigned short theShort)
-{
-    return theShort;
-}
+// (0x7a9ac0, ShortFromLittleEndian: the directory's count is decoded little-endian by ee_won_model_dir_object)
 }
 
 namespace WONAPI {
@@ -1371,15 +1393,15 @@ namespace WONAPI {
 // Returns the text for a join status: the lobby's strings, the game code's text, or the number
 GUIString LobbyGame::GetStatusString(short status)
 {
-    switch(status) {
+    switch(ee_won_model_status_text(status)) {
     case 0: return ::LobbyGameStatus_Success_String;
-    case 2: return ::LobbyGameStatus_GameFull_String;
-    case 3: return ::LobbyGameStatus_GameInProgress_String;
-    case 4: return ::LobbyGameStatus_UnpackFailure_String;
-    case 5: return ::LobbyGameStatus_NotInvited_String;
-    case 6: return ::LobbyGameStatus_CaptainRejectedYou_String;
-    case 7: return ::LobbyGameStatus_InvalidPassword_String;
-    case 8: return ::LobbyGameStatus_DuplicateName_String;
+    case 1: return ::LobbyGameStatus_GameFull_String;
+    case 2: return ::LobbyGameStatus_GameInProgress_String;
+    case 3: return ::LobbyGameStatus_UnpackFailure_String;
+    case 4: return ::LobbyGameStatus_NotInvited_String;
+    case 5: return ::LobbyGameStatus_CaptainRejectedYou_String;
+    case 6: return ::LobbyGameStatus_InvalidPassword_String;
+    case 7: return ::LobbyGameStatus_DuplicateName_String;
     }
     GUIString custom=this->GetStatusStringHook(status);
     if(custom.length()!=0) return custom;

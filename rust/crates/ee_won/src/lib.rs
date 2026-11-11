@@ -24,11 +24,14 @@ pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
 pub mod file;
+pub mod flow;
 pub mod guistring;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;
+pub mod lanlogic;
 pub mod md5;
+pub mod model;
 /// cbindgen:ignore
 pub mod netstats;
 pub mod ops;
@@ -38,10 +41,13 @@ pub mod persist;
 pub mod plaintext;
 pub mod random;
 pub mod regkey;
+pub mod resource;
+pub mod routing;
 pub mod socket;
 pub mod staging;
 /// cbindgen:ignore
 pub mod status;
+pub mod strcase;
 pub mod text;
 pub mod wire;
 

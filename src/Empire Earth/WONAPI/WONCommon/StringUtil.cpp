@@ -14,15 +14,31 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatString.h"
 #include "rust/ee_rust.h"
+#include <wchar.h>
 namespace WONAPI {
+// The case maps and compares are ee_won's strcase module (rust/crates/ee_won/src/strcase.rs): under D6 game text is
+// UTF-8 and the C runtime's character classes the "C" locale's, so only ASCII letters change case, as the original's
+// toupper / tolower / towupper / towlower did in the game.
+static void StringUtilCaseInPlace(std::string& ioText, bool inUpper)
+{
+    if (!ioText.empty())
+        ee_won_case_bytes(reinterpret_cast<uint8_t*>(&ioText[0]), ioText.length(), inUpper);
+}
+static void StringUtilCaseInPlace(std::wstring& ioText, bool inUpper)
+{
+    if (ioText.empty())
+        return;
+#if WCHAR_MAX > 0xffff
+    ee_won_case_units32(reinterpret_cast<uint32_t*>(&ioText[0]), ioText.length(), inUpper);
+#else
+    ee_won_case_units16(reinterpret_cast<uint16_t*>(&ioText[0]), ioText.length(), inUpper);
+#endif
+}
 std::string StringToUpperCase(const std::string& theStr)
 {
-	std::string aNewStr;
-	aNewStr.reserve(theStr.length());
-	for(int i=0; i<theStr.length(); i++)
-		aNewStr+=toupper(theStr[i]);
-
-	return aNewStr;
+    std::string aNewStr(theStr);
+    StringUtilCaseInPlace(aNewStr, true);
+    return aNewStr;
 }
 // The original converted with the ANSI code page (MultiByteToWideChar/WideCharToMultiByte), or with the code page
 // of the CRT locale's LC_CTYPE suffix (0x006a63e0/0x6a6570: none in the "C" locale, so the ANSI one again). The
@@ -89,20 +105,16 @@ namespace WONAPI {
 // Returns a lower-case copy of the string
 std::string StringToLowerCase(const std::string& text)
 {
-    std::string result;
-    result.reserve(text.length());
-    for(std::string::size_type i=0;i<text.length();++i)
-        result+=static_cast<char>(tolower(text[i]));
+    std::string result(text);
+    StringUtilCaseInPlace(result, false);
     return result;
 }
 // FUNCTION: WON 0x6a6850
 // Returns an upper-case copy of the wide string
 std::wstring WStringToUpperCase(const std::wstring& text)
 {
-    std::wstring result;
-    result.reserve(text.length());
-    for(std::wstring::size_type i=0;i<text.length();++i)
-        result+=static_cast<wchar_t>(towupper(text[i]));
+    std::wstring result(text);
+    StringUtilCaseInPlace(result, true);
     return result;
 }
 // Both indexed accesses are non-const (each unshares the copy-on-write string)
@@ -110,42 +122,28 @@ std::wstring WStringToUpperCase(const std::wstring& text)
 // Upper-cases the string in place
 void StringToUpperCaseInPlace(std::string& text)
 {
-    for(std::string::size_type i=0;i<text.length();++i)
-        text[i]=static_cast<char>(toupper(text[i]));
+    StringUtilCaseInPlace(text, true);
 }
 // The mismatch branch calls toupper again
 // FUNCTION: WON 0x6a6ab0
 // Compares two strings ignoring case; returns -1, 0 or 1, the shorter string first on a common prefix
 int StringCompareNoCase(const std::string& first,const std::string& second)
 {
-    std::string::const_iterator a=first.begin();
-    std::string::const_iterator b=second.begin();
-    while(a!=first.end() && b!=second.end()) {
-        if(toupper(*a)!=toupper(*b))
-            return toupper(*a)<toupper(*b)?-1:1;
-        ++a;
-        ++b;
-    }
-    if(first.length()==second.length())
-        return 0;
-    return first.length()<second.length()?-1:1;
+    return ee_won_compare_no_case(reinterpret_cast<const uint8_t*>(first.data()), first.length(),
+                                  reinterpret_cast<const uint8_t*>(second.data()), second.length());
 }
 // towupper results are compared as 16-bit values
 // FUNCTION: WON 0x6a6b60
 // Compares two wide strings ignoring case; returns -1, 0 or 1, the shorter string first on a common prefix
 int WStringCompareNoCase(const std::wstring& first,const std::wstring& second)
 {
-    std::wstring::const_iterator a=first.begin();
-    std::wstring::const_iterator b=second.begin();
-    while(a!=first.end() && b!=second.end()) {
-        if(static_cast<wchar_t>(towupper(*a))!=static_cast<wchar_t>(towupper(*b)))
-            return static_cast<wchar_t>(towupper(*a))<static_cast<wchar_t>(towupper(*b))?-1:1;
-        ++a;
-        ++b;
-    }
-    if(first.length()==second.length())
-        return 0;
-    return first.length()<second.length()?-1:1;
+#if WCHAR_MAX > 0xffff
+    return ee_won_compare_no_case32(reinterpret_cast<const int32_t*>(first.data()), first.length(),
+                                    reinterpret_cast<const int32_t*>(second.data()), second.length());
+#else
+    return ee_won_compare_no_case16(reinterpret_cast<const uint16_t*>(first.data()), first.length(),
+                                    reinterpret_cast<const uint16_t*>(second.data()), second.length());
+#endif
 }
 }
 
@@ -173,30 +171,24 @@ namespace WONAPI {
 
 std::wstring WStringToLowerCase(const std::wstring& theStr)
 {
-	std::wstring aNewStr;
-	aNewStr.reserve(theStr.length());
-	for(int i=0; i<theStr.length(); i++)
-		aNewStr+=towlower(theStr[i]);
-
-	return aNewStr;
+    std::wstring aNewStr(theStr);
+    StringUtilCaseInPlace(aNewStr, false);
+    return aNewStr;
 }
 
 void StringToLowerCaseInPlace(std::string &theStr)
 {
-	for(int i=0; i<theStr.length(); i++)
-		theStr[i] = tolower(theStr[i]);
+    StringUtilCaseInPlace(theStr, false);
 }
 
 void WStringToUpperCaseInPlace(std::wstring &theStr)
 {
-	for(int i=0; i<theStr.length(); i++)
-		theStr[i] = towupper(theStr[i]);
+    StringUtilCaseInPlace(theStr, true);
 }
 
 void WStringToLowerCaseInPlace(std::wstring &theStr)
 {
-	for(int i=0; i<theStr.length(); i++)
-		theStr[i] = towlower(theStr[i]);
+    StringUtilCaseInPlace(theStr, false);
 }
 }
 
