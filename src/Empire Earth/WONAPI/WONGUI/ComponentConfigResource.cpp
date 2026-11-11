@@ -18,6 +18,9 @@
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 // gShowParseTime and gLinesParsed (0x00966b30/0x00966b34) belonged to the original ComponentConfig.cpp, which is not
 // reconstructed as a unit: defined here
 bool gShowParseTime = false;
@@ -174,9 +177,10 @@ bool ComponentConfig::PostParse(ConfigParser*)
 // and registers it under its name
 bool ComponentConfig::HandleInstruction(ConfigParser* parser,const std::string& type)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEINSTRUCTION_TYPE,type.data(),type.size());
     if (ConfigObject::HandleInstruction(parser,type)) return true;
-    if (type=="MODIFY") return this->HandleModifyGroup(*parser);
-    if (type=="RESOURCE") return this->HandleResourceGroup(*parser);
+    if (aKeyIdx==0) return this->HandleModifyGroup(*parser);
+    if (aKeyIdx==1) return this->HandleResourceGroup(*parser);
     SmartPtr<ComponentConfig> config;
     SmartPtr<Component> component;
     if (!ComponentConfig::mResourceConfigTable->AllocateConfig(type,config,component)) return false;
@@ -200,8 +204,9 @@ ComponentConfig* ComponentConfig::GetComponentConfig(const GUIString& path,bool 
         rest=path.substr((unsigned short)(dot+1));
     } else name=path;
     ComponentConfig* config=NULL;
-    if (name.CompareNoCase("this")==0) config=this;
-    else if (name.CompareNoCase("parent")==0) config=static_cast<ComponentConfig*>(this->mParent);
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_GETCOMPONENTCONFIG_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if (aNameIdx_name==0) config=this;
+    else if (aNameIdx_name==1) config=static_cast<ComponentConfig*>(this->mParent);
     else {
         std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase>::iterator i=this->mConfigMap.find(name);
         if (i!=this->mConfigMap.end()) config=i->second.get();
@@ -324,8 +329,9 @@ bool ComponentConfig::HandleModify()
 // the component instructions
 bool ComponentConfig::HandleValueInstruction(ConfigParser* parser,const std::string& key,StringParser& value)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEVALUEINSTRUCTION_KEY,key.data(),key.size());
     if(ConfigObject::HandleValueInstruction(parser,key,value)) return true;
-    if(key=="SETRESOURCE") {
+    if(aKeyIdx==0) {
         std::string name;
         value.ReadString(name,false);
         this->mCurResourceConfig=ComponentConfig::mResourceConfigTable->SafeGetConfig(name);
@@ -346,109 +352,111 @@ bool ComponentConfig::BaseHandleInstruction(ConfigParser& parser,const std::stri
 // Applies a component instruction (position, size, color, flags, cursor, focus, parse timer ...); false if unknown
 bool ComponentConfig::Virtual24(const std::string& key)
 {
-    if (key=="MODIFY") return this->HandleModify();
-    if (key=="MAPCOMPONENT") return this->HandleMapComponent();
-    if (key=="CONTROLID") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if (aKeyIdx==0) return this->HandleModify();
+    if (aKeyIdx==1) return this->HandleMapComponent();
+    if (aKeyIdx==2) {
         Component* component=this->mComponent.get();
         component->mControlId=this->ReadInt();
-    } else if (key=="LEFT") {
+    } else if (aKeyIdx==3) {
         Component* component=this->mComponent.get();
         int value=this->ReadInt();
         component->SetPos(value,component->Top());
-    } else if (key=="TOP") {
+    } else if (aKeyIdx==4) {
         Component* component=this->mComponent.get();
         int value=this->ReadInt();
         component->SetPos(component->Left(),value);
-    } else if (key=="WIDTH") {
+    } else if (aKeyIdx==5) {
         Component* component=this->mComponent.get();
         this->mHasSetWidth=true;
         int value=this->ReadInt();
         component->SetSize(value,component->Height());
-    } else if (key=="HEIGHT") {
+    } else if (aKeyIdx==6) {
         Component* component=this->mComponent.get();
         this->mHasSetHeight=true;
         int value=this->ReadInt();
         component->SetSize(component->Width(),value);
-    } else if (key=="POS") {
+    } else if (aKeyIdx==7) {
         int x=this->ReadInt(); this->EnsureComma();
         int y=this->ReadInt();
         this->mComponent->SetPos(x,y);
-    } else if (key=="SIZE") {
+    } else if (aKeyIdx==8) {
         this->mHasSetWidth=this->mHasSetHeight=true;
         int width=this->ReadInt(); this->EnsureComma();
         int height=this->ReadInt();
         this->mComponent->SetSize(width,height);
-    } else if (key=="TRANSLUCENTCOLOR") {
+    } else if (aKeyIdx==9) {
         int color=this->ReadColor();
         if (this->EndOfString()) this->mComponent->SetTranslucentColor(color,4);
         else {
             this->EnsureComma();
             this->mComponent->SetTranslucentColor(color,this->ReadInt());
         }
-    } else if (key=="SIZEATLEAST") {
+    } else if (aKeyIdx==10) {
         this->SetDesiredSizeIfNecessary();
         int width=this->ReadInt(); this->EnsureComma();
         int height=this->ReadInt();
         this->mHasSetWidth=width>0;
         this->mHasSetHeight=height>0;
         this->mComponent->SetSizeAtLeast(width,height);
-    } else if (key=="SETDESIREDSIZE") {
+    } else if (aKeyIdx==11) {
         int width=this->ReadInt(); this->EnsureComma();
         int height=this->ReadInt();
         this->mComponent->SetDesiredSize(width,height);
-    } else if (key=="SETDESIREDWIDTH") {
+    } else if (aKeyIdx==12) {
         Component* component=this->mComponent.get();
         int width=this->ReadInt();
         component->SetDesiredWidth(width);
-    } else if (key=="SETDESIREDHEIGHT") {
+    } else if (aKeyIdx==13) {
         Component* component=this->mComponent.get();
         int height=this->ReadInt();
         component->SetDesiredHeight(height);
-    } else if (key=="POSSIZE") {
+    } else if (aKeyIdx==14) {
         this->mHasSetWidth=this->mHasSetHeight=true;
         int x=this->ReadInt(); this->EnsureComma();
         int y=this->ReadInt(); this->EnsureComma();
         int width=this->ReadInt(); this->EnsureComma();
         int height=this->ReadInt();
         this->mComponent->SetPosSize(x,y,width,height);
-    } else if (key=="ENABLE") {
+    } else if (aKeyIdx==15) {
         this->mComponent->SetEnabled(this->ReadBool());
-    } else if (key=="SETVISIBLE") {
+    } else if (aKeyIdx==16) {
         this->mComponent->SetVisible(this->ReadBool());
-    } else if (key=="REQUESTFOCUS") {
+    } else if (aKeyIdx==17) {
         if (this->ReadBool()) this->mComponent->RequestFocus();
-    } else if (key=="DEFAULTCURSOR") {
+    } else if (aKeyIdx==18) {
         this->mComponent->SetDefaultCursor(this->ReadCursor());
-    } else if (key=="COMPONENTFLAGS") {
+    } else if (aKeyIdx==19) {
         while (true) {
             bool add=true;
             GUIString name=this->ReadFlag(&add);
             if (name.length()==0) break;
             int flag;
-            if (name.CompareNoCase("Invisible")==0) flag=0x1;
-            else if (name.CompareNoCase("WantFocus")==0) flag=0x8;
-            else if (name.CompareNoCase("ParentDrag")==0) flag=0x20;
-            else if (name.CompareNoCase("NoParentCursor")==0) flag=0x40;
-            else if (name.CompareNoCase("Disabled")==0) flag=0x80;
-            else if (name.CompareNoCase("GrabBG")==0) flag=0x100;
-            else if (name.CompareNoCase("Translucent")==0) flag=0x200;
-            else if (name.CompareNoCase("NoInput")==0) flag=0x800;
-            else if (name.CompareNoCase("AlwaysOnTop")==0) flag=0x1000;
-            else if (name.CompareNoCase("WantTabFocus")==0) flag=0x4000;
-            else if (name.CompareNoCase("Clip")==0) flag=0x2000;
-            else if (name.CompareNoCase("DebugBG")==0) flag=0x20000;
+            const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+            if (aNameIdx_name==0) flag=0x1;
+            else if (aNameIdx_name==1) flag=0x8;
+            else if (aNameIdx_name==2) flag=0x20;
+            else if (aNameIdx_name==3) flag=0x40;
+            else if (aNameIdx_name==4) flag=0x80;
+            else if (aNameIdx_name==5) flag=0x100;
+            else if (aNameIdx_name==6) flag=0x200;
+            else if (aNameIdx_name==7) flag=0x800;
+            else if (aNameIdx_name==8) flag=0x1000;
+            else if (aNameIdx_name==9) flag=0x4000;
+            else if (aNameIdx_name==10) flag=0x2000;
+            else if (aNameIdx_name==11) flag=0x20000;
             else throw ConfigObjectException("Unknown component flag: "+(std::string)name);
             this->mComponent->SetComponentFlags(flag,add);
         }
-    } else if (key=="DECODEIMAGES") {
+    } else if (aKeyIdx==20) {
         Window* window=Window::GetDefaultWindow();
         window->SetSkipDecodeImages(!this->ReadBool());
-    } else if (key=="SHOWPARSETIME") {
+    } else if (aKeyIdx==21) {
         gShowParseTime=this->ReadBool();
-    } else if (key=="STARTPARSETIMER") {
+    } else if (aKeyIdx==22) {
         ConfigParser::ResetLineCount();
         PerfTimer::GlobalStart(NULL);
-    } else if (key=="STOPPARSETIMER") {
+    } else if (aKeyIdx==23) {
         PerfTimer::GlobalStop(NULL);
         gLinesParsed=ConfigParser::GetLineCount();
     } else return false;

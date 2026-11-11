@@ -14,6 +14,8 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include <exception>
 #include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs).
 // The integer expressions' parse and the operand names' scan and kinds are ee_won's guicfg module
 // (rust/crates/ee_won/src/guicfg.rs); this unit keeps the readers, the StringParser and the operands' lookups. The
 // Rust reads through these; an operand's exception is caught here and rethrown after the Rust returns.
@@ -138,10 +140,11 @@ GUIString ComponentConfig::ReadRawString(bool inStopAtWhitespace)
 Direction ComponentConfig::ReadDirection()
 {
     GUIString value=this->ReadString(false);
-    if(value.CompareNoCase("Left")==0) return Direction_Left;
-    if(value.CompareNoCase("Right")==0) return Direction_Right;
-    if(value.CompareNoCase("Up")==0) return Direction_Up;
-    if(value.CompareNoCase("Down")==0) return Direction_Down;
+    const int aNameIdx_value=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READDIRECTION_VALUE,value.mData->mText,value.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_value==0) return Direction_Left;
+    if(aNameIdx_value==1) return Direction_Right;
+    if(aNameIdx_value==2) return Direction_Up;
+    if(aNameIdx_value==3) return Direction_Down;
     throw ConfigObjectException("Bad Direction");
 }
 
@@ -150,9 +153,10 @@ Direction ComponentConfig::ReadDirection()
 HorzAlign ComponentConfig::ReadHorzAlign()
 {
     GUIString value=this->ReadString(false);
-    if(value.CompareNoCase("Left")==0) return HorzAlign_Left;
-    if(value.CompareNoCase("Center")==0) return HorzAlign_Center;
-    if(value.CompareNoCase("Right")==0) return HorzAlign_Right;
+    const int aNameIdx_value=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READHORZALIGN_VALUE,value.mData->mText,value.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_value==0) return HorzAlign_Left;
+    if(aNameIdx_value==1) return HorzAlign_Center;
+    if(aNameIdx_value==2) return HorzAlign_Right;
     throw ConfigObjectException("Bad HorzAlign");
 }
 
@@ -161,9 +165,10 @@ HorzAlign ComponentConfig::ReadHorzAlign()
 VertAlign ComponentConfig::ReadVertAlign()
 {
     GUIString value=this->ReadString(false);
-    if(value.CompareNoCase("Top")==0) return VertAlign_Top;
-    if(value.CompareNoCase("Center")==0) return VertAlign_Center;
-    if(value.CompareNoCase("Bottom")==0) return VertAlign_Bottom;
+    const int aNameIdx_value=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_READVERTALIGN_VALUE,value.mData->mText,value.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_value==0) return VertAlign_Top;
+    if(aNameIdx_value==1) return VertAlign_Center;
+    if(aNameIdx_value==2) return VertAlign_Bottom;
     throw ConfigObjectException("Bad VertAlign");
 }
 
@@ -248,12 +253,13 @@ int ComponentConfig::GetIntResource(const std::string& inKey)
 // Returns the component's LEFT, RIGHT, TOP, BOTTOM, WIDTH or HEIGHT; false for any other name
 bool ComponentConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
-    if(inName=="LEFT") outValue=this->mComponent->Left();
-    else if(inName=="RIGHT") outValue=this->mComponent->Right();
-    else if(inName=="TOP") outValue=this->mComponent->Top();
-    else if(inName=="BOTTOM") outValue=this->mComponent->Bottom();
-    else if(inName=="WIDTH") outValue=this->mComponent->Width();
-    else if(inName=="HEIGHT") outValue=this->mComponent->Height();
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
+    if(aKeyIdx==0) outValue=this->mComponent->Left();
+    else if(aKeyIdx==1) outValue=this->mComponent->Right();
+    else if(aKeyIdx==2) outValue=this->mComponent->Top();
+    else if(aKeyIdx==3) outValue=this->mComponent->Bottom();
+    else if(aKeyIdx==4) outValue=this->mComponent->Width();
+    else if(aKeyIdx==5) outValue=this->mComponent->Height();
     else return false;
     return true;
 }
@@ -263,7 +269,8 @@ bool ComponentConfig::GetNamedValue(const std::string& inName,int& outValue)
 // other name
 bool ComponentConfig::CallNamedFunction(const std::string& inName,const std::vector<int>& inParams,int& outValue)
 {
-    if(inName=="MAX")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_CALLNAMEDFUNCTION_INNAME,inName.data(),inName.size());
+    if(aKeyIdx==0)
     {
         int value=0;
         for(std::vector<int>::const_iterator i=inParams.begin();i!=inParams.end();++i)
@@ -271,7 +278,7 @@ bool ComponentConfig::CallNamedFunction(const std::string& inName,const std::vec
         outValue=value;
         return true;
     }
-    if(inName=="MIN")
+    if(aKeyIdx==1)
     {
         int value=0;
         for(std::vector<int>::const_iterator i=inParams.begin();i!=inParams.end();++i)

@@ -11,7 +11,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_rust.h"
-// FindChildAt's verdict on the child hit is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
+// FindChildAt's verdict on the child hit is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs); the
+// child under the mouse's exit and enter, the release's child, the desired size and the insert place under the
+// always-on-top children are its guievent module (guievent.rs).
 namespace WONAPI {
 // Container::SizeChanged in the SDK
 // FUNCTION: WON 0x006f62b0
@@ -25,17 +27,16 @@ void Container::Virtual08()
 // Returns the size that just encloses every child (largest right and bottom edges)
 void Container::GetDesiredSize(int& width, int& height)
 {
-    int right = 0, bottom = 0;
+    std::vector<int32_t> aRects;
     for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin(); i!=this->mChildList.end(); ++i)
     {
         Component* child = i->get();
-        if(child->Right() > right)
-            right = child->Left() + child->Width();
-        if(child->Bottom() > bottom)
-            bottom = child->Top() + child->Height();
+        aRects.push_back(child->Left());
+        aRects.push_back(child->Top());
+        aRects.push_back(child->Width());
+        aRects.push_back(child->Height());
     }
-    width = right;
-    height = bottom;
+    width = ee_won_gui_ct_desired_size(aRects.empty() ? NULL : &aRects[0], aRects.size() / 4, &height);
 }
 
 // FUNCTION: WON 0x006f6340
@@ -117,14 +118,15 @@ Component* Container::FindChildAt(int x,int y)
 void Container::UpdateMouseChild(int x,int y)
 {
     Component* aChild=this->FindChildAt(x,y);
+    uint8_t aSteps=ee_won_gui_ct_mouse_child(aChild==this->mMouseChild,this->mMouseChild!=NULL,aChild!=NULL);
     if(aChild==this->mMouseChild)
         return;
-    if(this->mMouseChild!=NULL) {
+    if(aSteps & 1) {
         this->mMouseChild->MouseExit();
         this->mMouseChild=aChild;
         this->SetCursor(this->GetDefaultCursor());
     } else this->mMouseChild=aChild;
-    if(aChild!=NULL) aChild->MouseEnter(x-aChild->Left(),y-aChild->Top());
+    if(aSteps & 2) aChild->MouseEnter(x-aChild->Left(),y-aChild->Top());
 }
 
 // FUNCTION: WON 0x006f6700
@@ -170,7 +172,7 @@ void Container::MouseUp(int x,int y,int button)
     Component* anOld=this->mMouseChild;
     this->UpdateMouseChild(x,y);
     Component* aChild=this->mMouseChild;
-    if(aChild!=NULL && aChild==anOld) aChild->MouseUp(x-aChild->Left(),y-aChild->Top(),button);
+    if(ee_won_gui_ct_release_to_child(aChild!=NULL,aChild==anOld)) aChild->MouseUp(x-aChild->Left(),y-aChild->Top(),button);
 }
 
 // FUNCTION: WON 0x006f6880
@@ -188,12 +190,14 @@ void Container::MouseDown(int x,int y,int button)
 // Returns the insert position at or below the given one that stays under the always-on-top children
 std::list<SmartPtr<Component> >::iterator Container::FindTop(std::list<SmartPtr<Component> >::iterator i)
 {
-    if(i==this->mChildList.begin()) return this->mChildList.begin();
-    do {
-        --i;
-        if(!(*i)->ComponentFlagSet(ComponentFlag_AlwaysOnTop)) return ++i;
-    } while(i!=this->mChildList.begin());
-    return i;
+    // the always-on-top flags of the children before i (front to back)
+    std::vector<uint8_t> anOnTop;
+    for(std::list<SmartPtr<Component> >::iterator j=this->mChildList.begin(); j!=i; ++j)
+        anOnTop.push_back((*j)->ComponentFlagSet(ComponentFlag_AlwaysOnTop) ? 1 : 0);
+    size_t aPlace = ee_won_gui_ct_find_top(anOnTop.empty() ? NULL : &anOnTop[0], anOnTop.size(), anOnTop.size());
+    std::list<SmartPtr<Component> >::iterator r = this->mChildList.begin();
+    std::advance(r, aPlace);
+    return r;
 }
 
 

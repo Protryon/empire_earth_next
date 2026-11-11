@@ -12,14 +12,18 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceConfig.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
 // FUNCTION: WON 0x0078b370
 // Returns the image's WIDTH or HEIGHT for a named-value lookup; false for any other name
 bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
-    if(inName=="WIDTH") outValue=this->mImage->mWidth;
-    else if(inName=="HEIGHT") outValue=this->mImage->mHeight;
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
+    if(aKeyIdx==0) outValue=this->mImage->mWidth;
+    else if(aKeyIdx==1) outValue=this->mImage->mHeight;
     else return false;
     return true;
 }
@@ -28,8 +32,9 @@ bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 // Handles the image configuration keys SRC (loads the image) and SIZE (resizes it); false for other keys
 bool ImageConfig::Virtual24(const std::string& inInstruction)
 {
-    if(inInstruction=="SRC") this->mImage=this->ReadImage(false);
-    else if(inInstruction=="SIZE")
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) this->mImage=this->ReadImage(false);
+    else if(aKeyIdx==1)
     {
         int width=this->ReadInt();
         this->EnsureComma();
@@ -48,7 +53,8 @@ SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
     SmartPtr<ImageFilter> filter;
     GUIString name=this->ReadString(false);
     this->EnsureComma();
-    if(name.CompareNoCase("SCALEPERCENT")==0)
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_name==0)
     {
         int width=this->ReadInt(),height=width;
         if(!this->EndOfString())
@@ -60,14 +66,14 @@ SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
         scale->SetPercentSize(width,height);
         filter=scale.get();
     }
-    else if(name.CompareNoCase("SCALEABS")==0)
+    else if(aNameIdx_name==1)
     {
         int width=this->ReadInt();
         this->EnsureComma();
         int height=this->ReadInt();
         filter=new ScaleImageFilter(width,height);
     }
-    else if(name.CompareNoCase("TINT")==0)
+    else if(aNameIdx_name==2)
     {
         int red=this->ReadInt();
         this->EnsureComma();
@@ -76,7 +82,7 @@ SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
         int blue=this->ReadInt();
         filter=new TintImageFilter(red,green,blue);
     }
-    else if(name.CompareNoCase("CROP")==0)
+    else if(aNameIdx_name==3)
     {
         int x=this->ReadInt();
         this->EnsureComma();
@@ -87,7 +93,7 @@ SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
         int height=this->ReadInt();
         filter=new CropImageFilter(x,y,width,height);
     }
-    else if(name.CompareNoCase("PIXELTRANS")==0)
+    else if(aNameIdx_name==4)
         filter=new TransparentImageFilter(this->ReadColor());
     if(filter.get()!=NULL) return filter->Filter(this->mRawImage.get());
     return SmartPtr<RawImage>();
@@ -107,12 +113,13 @@ void ImageFilterConfig::SetRawImage(RawImage* inImage)
 // horizontal crops added to the parent) and EXPORT; passes other keys to the image configuration
 bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
     SmartPtr<RawImage> anImage;
-    if(inInstruction=="SRC") this->SetRawImage(this->ReadRawImage().get());
-    else if(inInstruction=="FILTER") this->SetRawImage(this->HandleFilter().get());
-    else if(inInstruction=="DUPLICATE")
+    if(aKeyIdx==0) this->SetRawImage(this->ReadRawImage().get());
+    else if(aKeyIdx==1) this->SetRawImage(this->HandleFilter().get());
+    else if(aKeyIdx==2)
         this->SetRawImage(static_cast<RawImage*>(this->mRawImage->Duplicate().get()));
-    else if(inInstruction=="MULTIHORZCROP")
+    else if(aKeyIdx==3)
     {
         int count=this->ReadInt();
         this->EnsureComma();
@@ -132,7 +139,7 @@ bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
             parent->AddChildToConfigMap(GUIString(name),config.get());
         }
     }
-    else if(inInstruction=="EXPORT")
+    else if(aKeyIdx==4)
     {
         GUIString name=this->ReadString(false);
         this->EnsureComma();

@@ -13,6 +13,9 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The bar's keys, item choice, menu place and flags, presses, events and the items' places and sizes are ee_won's
+// guimenu module (rust/crates/ee_won/src/guimenu.rs); this unit keeps the bar, its items, the menus and the paint.
 namespace WONAPI {
 // The menu bar, its items and the menu-item-selected event (not identified in the original exe)
 MenuBarItem::MenuBarItem()
@@ -30,7 +33,9 @@ void MenuBarItem::SetMenuBarState(MenuBarState theState)
 void MenuBarItem::SetText(const GUIString &theText)
 {
 	this->mText = theText;
-	this->SetSize(this->mFont->GetStringWidth(this->mText)+10,this->mFont->GetHeight()+4);
+	int aHeight;
+	int aWidth = ee_won_gui_menubar_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),&aHeight);
+	this->SetSize(aWidth,aHeight);
 }
 
 void MenuBarItem::SetPopup(PopupMenu *thePopup)
@@ -101,13 +106,11 @@ void MenuBar::AddItem(const GUIString &theText, PopupMenu *thePopup)
 {
 	SmartPtr<MenuBarItem> anItem = new MenuBarItem;
 	int anId = this->mItemVector.size();
-	if(anId > 0)
-	{
-		MenuBarItem *aPrev = this->mItemVector.back();
-		anItem->SetPos((aPrev->Left()+aPrev->Width())+1,aPrev->Top());
-	}
-	else
-		anItem->SetPos(2,2);
+	MenuBarItem *aPrev = anId > 0 ? this->mItemVector.back() : NULL;
+	int aY;
+	int aX = ee_won_gui_menubar_item_place(aPrev!=NULL, aPrev!=NULL ? aPrev->Left() : 0, aPrev!=NULL ? aPrev->Top() : 0,
+	                                       aPrev!=NULL ? aPrev->Width() : 0, &aY);
+	anItem->SetPos(aX,aY);
 
 	anItem->mControlId=anId;
 	anItem->SetText(theText);
@@ -124,22 +127,24 @@ void MenuBar::AddItem(const GUIString &theText, PopupMenu *thePopup)
 
 void MenuBar::CheckItem(Component *theCheck)
 {
+	MenuBarItem *anItem = dynamic_cast<MenuBarItem*>(theCheck);
+	uint8_t aSteps = ee_won_gui_menubar_check(this->mState, this->mCurItem!=NULL, theCheck!=NULL,
+	                                          theCheck==this->mCurItem, anItem!=NULL);
 	if(this->mState==MenuBarState_None || this->mState==MenuBarState_Up)
 	{
-		if(this->mCurItem!=NULL && theCheck!=this->mCurItem)
+		if(aSteps & 1)
 			this->mCurItem->SetMenuBarState(MenuBarState_None);
 
-		if(theCheck==NULL)
+		if(!(aSteps & 2))
 			return;
 
-		this->mCurItem = dynamic_cast<MenuBarItem*>(theCheck);
+		this->mCurItem = anItem;
 		if(this->mCurItem!=NULL)
 			this->mCurItem->SetMenuBarState(MenuBarState_Up);
 	}
-	else if(this->mState==MenuBarState_Down)
+	else
 	{
-		MenuBarItem *anItem = dynamic_cast<MenuBarItem*>(theCheck);
-		if(anItem!=NULL && anItem!=this->mCurItem)
+		if(aSteps & 4)
 		{
 			MenuBarItem *anOldCurItem = this->mCurItem;
 			this->mCurItem = anItem;
@@ -154,19 +159,20 @@ void MenuBar::CheckItem(Component *theCheck)
 			PopupMenu *aPopup = this->mCurItem->GetPopup();
 			if(aPopup!=NULL)
 			{
-				int x = this->mCurItem->Left();
-				int y = (this->mCurItem->Top()+this->mCurItem->Height());
+				int y;
+				int x = ee_won_gui_menubar_popup_place(this->mCurItem->Left(), this->mCurItem->Top(),
+				                                       this->mCurItem->Height(), &y);
 				this->LocalToRoot(x,y);
 
 //				SetComponentFlags(0x8000,true);
-				int aFlags = PopupFlag_StandardPopup;
-				aFlags &= ~PopupFlag_WantInput;
-				aFlags &= ~PopupFlag_EndOnEscape;
+				int aFlags = ee_won_gui_menubar_popup_flags();
 
 				aPopup->Reset();
 				PopupParams aParams(aPopup,aFlags,this,x,y);
 				aParams.mInputComponent = this;
-				aParams.mAvoidRect = WONRectangle(0,y-this->mCurItem->Height(),0,this->mCurItem->Height());
+				int anAvoid[4];
+				ee_won_gui_menubar_popup_avoid(y, this->mCurItem->Height(), anAvoid);
+				aParams.mAvoidRect = WONRectangle(anAvoid[0],anAvoid[1],anAvoid[2],anAvoid[3]);
 //				GetRoot()->DoPopup(aParams);
 				this->GetRoot()->QueueEvent(new DoPopupEvent(aParams));
 			}
@@ -177,7 +183,8 @@ void MenuBar::CheckItem(Component *theCheck)
 
 void MenuBar::HandleComponentEvent(ComponentEvent *theEvent)
 {
-	if(theEvent->mType==ComponentEvent_EndPopup && this->mState==MenuBarState_Down)
+	uint8_t anEvent = ee_won_gui_menubar_event(theEvent->mType, this->mState);
+	if(anEvent==1)
 	{
 		if(this->mCurItem!=NULL && this->mCurItem->GetPopup()==theEvent->mComponent)
 		{
@@ -188,11 +195,12 @@ void MenuBar::HandleComponentEvent(ComponentEvent *theEvent)
 				this->MouseExit();
 		}		
 	}
-	else if(theEvent->mType==ComponentEvent_ListItemUpClicked)
+	else if(anEvent==2)
 	{
-		ListItemClickedEvent *anEvent = static_cast<ListItemClickedEvent*>(theEvent);
-		MenuItem *anItem = dynamic_cast<MenuItem*>(anEvent->mItem.get());
-		if(anItem!=NULL && anItem->mSubMenu.get()==NULL && !anItem->mDisabled)
+		ListItemClickedEvent *aClick = static_cast<ListItemClickedEvent*>(theEvent);
+		MenuItem *anItem = dynamic_cast<MenuItem*>(aClick->mItem.get());
+		if(ee_won_gui_menu_item_chosen(anItem!=NULL, anItem!=NULL && anItem->mSubMenu.get()!=NULL,
+		                               anItem!=NULL && anItem->mDisabled))
 		{
 			this->DeliverEvent(new MenuItemSelectedEvent(theEvent->mComponent,anItem),false);
 			this->GetRoot()->ClosePopup(NULL);
@@ -205,7 +213,7 @@ void MenuBar::HandleComponentEvent(ComponentEvent *theEvent)
 void MenuBar::MouseMove(int x, int y)
 {
 	Container::MouseMove(x,y);
-	if(x==this->mLastX && y==this->mLastY)
+	if(!ee_won_gui_menubar_moved(x, y, this->mLastX, this->mLastY))
 		return;
 	this->mLastX = x;
 	this->mLastY = y;
@@ -217,43 +225,29 @@ bool MenuBar::KeyDown(int theKey)
 	if(this->mCurItem==NULL)
 		return false;
 
-	if(this->mState==MenuBarState_Down)
+	if(ee_won_gui_menubar_key_asks_popup(this->mState))
 	{
 		PopupMenu *aPopup = this->mCurItem->GetPopup();
 		if(aPopup->TryKeyDown(theKey))
 			return true;
 	}
-	else 
+	else
 		this->mState = MenuBarState_Up;
 
-	int anId = this->mCurItem->mControlId;
-
-	if(theKey==VK_ESCAPE)
+	int aState, anId;
+	uint8_t aStep = ee_won_gui_menubar_key(this->mState, theKey, this->mCurItem->mControlId, this->mItemVector.size(),
+	                                       &aState, &anId);
+	this->mState = (MenuBarState)aState;
+	if(aStep==1)
 	{
-		this->mState = MenuBarState_Up;
 		if(this->mCurItem!=NULL)
 		{
 			this->GetRoot()->ClosePopup(this->mCurItem->GetPopup());
 			this->CheckItem(this->mCurItem);
 		}
 	}
-	else if(theKey==VK_RIGHT)
-	{
-		anId++;
-		if(anId>=this->mItemVector.size())
-			anId = 0;
-	}
-	else if(theKey==VK_LEFT)
-	{
-		anId--;
-		if(anId<0)
-			anId = this->mItemVector.size()-1;
-	}
-	else if(this->mState==MenuBarState_Up && (theKey==VK_RETURN || theKey==VK_DOWN))
-	{
+	else if(aStep==2)
 		this->mCurItem = NULL;
-		this->mState = MenuBarState_Down;
-	}
 
 	this->CheckItem(this->mItemVector[anId]);
 	if(this->mState!=MenuBarState_Down || this->mCurItem==NULL)
@@ -274,16 +268,17 @@ void MenuBar::MouseDown(int x, int y, int theButton)
 	this->RequestFocus();
 	if(dynamic_cast<MenuBarItem*>(this->mMouseChild)==NULL)
 		return;
-	if(this->mState==MenuBarState_Down)
+	int aState;
+	bool opens = ee_won_gui_menubar_press(this->mState, &aState);
+	this->mState = (MenuBarState)aState;
+	if(!opens)
 	{
-		this->mState = MenuBarState_Up;
 		if(this->mCurItem!=NULL)
 			this->GetRoot()->ClosePopup(this->mCurItem->GetPopup());
 	}
 	else
 	{
 		this->mCurItem = NULL;
-		this->mState = MenuBarState_Down;
 		Window *aWindow = this->GetRoot();
 		this->LocalToRoot(x,y);
 		aWindow->QueueEvent(new MouseEvent(InputEvent_MouseUp,x,y,aWindow->GetKeyMod(),theButton));

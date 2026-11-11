@@ -12,6 +12,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs).
 // The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module
 // (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
@@ -130,17 +132,18 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 // child-only input); other instructions go to the base config
 bool ContainerConfig::Virtual24(const std::string& theInstruction)
 {
-	if(theInstruction=="ADD")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 		return this->HandleAdd();
-	else if(theInstruction=="ADDLAYOUTPOINT")
+	else if(aKeyIdx==1)
 		return this->HandleAddLayoutPoint();
-	else if(theInstruction=="NEWLAYOUTPOINT")
+	else if(aKeyIdx==2)
 		return this->HandleNewLayoutPoint();
-	else if(theInstruction=="LAYOUT")
+	else if(aKeyIdx==3)
 		return this->HandleLayout();
-	else if(theInstruction=="SETLAYOUTID")
+	else if(aKeyIdx==4)
 		this->mCurLayoutId = this->ReadInt();
-	else if(theInstruction=="ENABLELAYOUT")
+	else if(aKeyIdx==5)
 	{
 		bool enable = this->ReadBool();
 		while(true)
@@ -152,37 +155,37 @@ bool ContainerConfig::Virtual24(const std::string& theInstruction)
 				break;
 		}
 	}
-	else if(theInstruction=="RECALCLAYOUT")
+	else if(aKeyIdx==6)
 		this->mContainer->Relayout();
-	else if(theInstruction=="CHAINLAYOUT")
+	else if(aKeyIdx==7)
 		return this->HandleLayout(true);
-	else if(theInstruction=="REPEATLAYOUT")
+	else if(aKeyIdx==8)
 		return this->HandleLayout(false,true);
-	else if(theInstruction=="SAMESIZELAYOUT")
+	else if(aKeyIdx==9)
 		return this->HandleSameSizeLayout(true,true);
-	else if(theInstruction=="SAMEWIDTHLAYOUT")
+	else if(aKeyIdx==10)
 		return this->HandleSameSizeLayout(true,false);
-	else if(theInstruction=="SAMEHEIGHTLAYOUT")
+	else if(aKeyIdx==11)
 		return this->HandleSameSizeLayout(false,true);
-	else if(theInstruction=="CENTERLAYOUT")
+	else if(aKeyIdx==12)
 		return this->HandleCenterLayout(true,true);
-	else if(theInstruction=="HORZCENTERLAYOUT")
+	else if(aKeyIdx==13)
 		return this->HandleCenterLayout(true,false);
-	else if(theInstruction=="VERTCENTERLAYOUT")
+	else if(aKeyIdx==14)
 		return this->HandleCenterLayout(false,true);
-	else if(theInstruction=="HORZSPACEEVENLYLAYOUT")
+	else if(aKeyIdx==15)
 		return this->HandleSpaceEvenlyLayout(true);
-	else if(theInstruction=="VERTSPACEEVENLYLAYOUT")
+	else if(aKeyIdx==16)
 		return this->HandleSpaceEvenlyLayout(false);
-	else if(theInstruction=="CLEARRIGHTLAYOUT")
+	else if(aKeyIdx==17)
 		return this->HandleClearRightLayout();
-	else if(theInstruction=="NOOVERLAPLAYOUT")
+	else if(aKeyIdx==18)
 		return this->HandleNoOverlapLayout();
-	else if(theInstruction=="SIZEATLEASTLAYOUT")
+	else if(aKeyIdx==19)
 		return this->HandleSizeAtLeastLayout();
-	else if(theInstruction=="ISOLATETABFOCUS")
+	else if(aKeyIdx==20)
 		this->mContainer->SetIsolateTabFocus(this->ReadBool());
-	else if(theInstruction=="ONLYCHILDINPUT")
+	else if(aKeyIdx==21)
 		this->mContainer->SetOnlyChildInput(this->ReadBool());
 	else
 		return ComponentConfig::Virtual24(theInstruction);

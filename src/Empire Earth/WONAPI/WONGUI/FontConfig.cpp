@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x0078a300
 // Returns the configured font, first fetching it from the default window when the descriptor
@@ -34,9 +37,10 @@ void FontConfig::SetFont(Font* font)
 // Returns the font's SIZE or HEIGHT as a named value; false without a font or for other names
 bool FontConfig::GetNamedValue(const std::string& name,int& value)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_FONTCONFIG_GETNAMEDVALUE_NAME,name.data(),name.size());
     if(this->mFont.get()==NULL) return false;
-    if(name=="SIZE") value=this->mDescriptor.mSize;
-    else if(name=="HEIGHT") value=this->mFont->GetHeight();
+    if(aKeyIdx==0) value=this->mDescriptor.mSize;
+    else if(aKeyIdx==1) value=this->mFont->GetHeight();
     else return false;
     return true;
 }
@@ -45,27 +49,29 @@ bool FontConfig::GetNamedValue(const std::string& name,int& value)
 // removed; throws on an unknown one), SETDEFAULTFONT and SETNAMEDFONT; false for others
 bool FontConfig::Virtual24(const std::string& instruction)
 {
-    if(instruction=="SRC") this->SetFont(this->ReadFont().get());
-    else if(instruction=="SIZE") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) this->SetFont(this->ReadFont().get());
+    else if(aKeyIdx==1) {
         this->mNeedRecalcFont=true;
         this->mDescriptor.mSize=this->ReadInt();
-    } else if(instruction=="STYLE") {
+    } else if(aKeyIdx==2) {
         while(true) {
             this->mNeedRecalcFont=true;
             bool add=true;
             GUIString flag=this->ReadFlag(&add);
             if(flag.length()==0) break;
             int style=0;
-            if(flag.CompareNoCase("Bold")==0) style=FontStyle_Bold;
-            else if(flag.CompareNoCase("Italic")==0) style=FontStyle_Italic;
-            else if(flag.CompareNoCase("Plain")==0) style=FontStyle_Plain;
-            else if(flag.CompareNoCase("Underline")==0) style=FontStyle_Underline;
+            const int aNameIdx_flag=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG,flag.mData->mText,flag.mData->mLength,sizeof(wchar_t));
+            if(aNameIdx_flag==0) style=FontStyle_Bold;
+            else if(aNameIdx_flag==1) style=FontStyle_Italic;
+            else if(aNameIdx_flag==2) style=FontStyle_Plain;
+            else if(aNameIdx_flag==3) style=FontStyle_Underline;
             else throw ConfigObjectException("Unknown font style: "+(std::string)flag);
             if(add) this->mDescriptor.mStyle|=style;
             else this->mDescriptor.mStyle&=~style;
         }
-    } else if(instruction=="SETDEFAULTFONT") WONAPI::WindowManager::GetDefaultWindowManager()->SetDefaultFont(this->ReadFont().get());
-    else if(instruction=="SETNAMEDFONT") {
+    } else if(aKeyIdx==3) WONAPI::WindowManager::GetDefaultWindowManager()->SetDefaultFont(this->ReadFont().get());
+    else if(aKeyIdx==4) {
         GUIString name=this->ReadString(false);
         this->EnsureComma();
         SmartPtr<Font> font=this->ReadFont();
