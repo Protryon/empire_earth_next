@@ -88,6 +88,15 @@ Support/Empire Earth AoC`).
 The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
 `EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
 
+Builds are incremental through an object cache shared by every worktree of the machine (`tools/objcache.py`):
+a unit whose source, flags and every file it includes (by content) match an earlier compile copies that object
+instead of compiling; the summary line says how many (`1364/1364 units (1363 cached, store 101 MB) in 39 s`).
+The store is `C:\EEX-objcache-store` (`EE_OBJ_CACHE=<dir>` moves it, `EE_OBJ_CACHE=off` compiles everything),
+pruned to `EE_OBJ_CACHE_MAX_GB` (default 4) at the end of each build; `python -I tools/objcache.py stats|prune|clear`.
+Objects do not depend on the staging root or the worktree: every compile maps those paths to fixed names
+(`__FILE__` reads `C:\EEX\...` whatever `EE_ORIG_SRC_ROOT` is) and is `/Brepro`. The Rust library is cargo's: set
+`RUSTC_WRAPPER=sccache` (optional, if sccache is installed) to share its compiles too.
+
 The movies need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an
 `.mpg` next to every `.bik` (`make_play_dir.py --movies` does it for a play directory).
 
