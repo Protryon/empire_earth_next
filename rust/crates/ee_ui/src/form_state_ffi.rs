@@ -370,3 +370,13 @@ pub unsafe extern "C" fn ee_ui_form_set_all_controls_dirty(form: *mut c_void) {
 pub extern "C" fn ee_ui_form_tool_tip_shadow(rect: UiRect) -> UiRect {
     form_state::tool_tip_shadow(&rect)
 }
+
+/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
+#[no_mangle]
+pub extern "C" fn ee_ui_form_help_location(
+    mouse: crate::rect::UiPoint,
+    label: UiRect,
+    form: UiRect,
+) -> crate::rect::UiPoint {
+    form_state::help_popup_location(mouse, label, form)
+}

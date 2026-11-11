@@ -669,6 +669,9 @@ constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
 /// `kFadeInRate`.
 constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
+/// `kHelpTextOffset`: the tool tip's gap below the mouse.
+constexpr static const float HELP_TEXT_OFFSET = 32.0;
+
 /// `kTextSpacing`: the gap around the title, the axis labels and the grid values.
 constexpr static const float TEXT_SPACING = 5.0;
 
@@ -9945,6 +9948,11 @@ void ee_ui_form_set_all_controls_dirty(void *form);
 
 /// `UIForm::GetToolTipShadowRectangle(rect, out)`.
 EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
+
+/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
+EeUiPoint ee_ui_form_help_location(EeUiPoint mouse,
+                                   EeUiRect label,
+                                   EeUiRect form);
 
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
