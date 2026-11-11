@@ -25,8 +25,9 @@ void StringToUpperCaseInPlace(std::string&); //2a69a0
 typedef long RoutingOpType;
 enum AuthType { AUTH_TYPE_NONE=0, AUTH_TYPE_SESSION=1, AUTH_TYPE_PERSISTENT=2, AUTH_TYPE_PERSISTENT_NOCRYPT=3 };
 
-// 0x29deb0 (WONStatus.cpp, the first WONAPI object): the status text
-const char* WONStatusToString(WONStatus inStatus);
+// the status text (ee_won's status table; WONStatus.cpp, 0x29deb0, is deleted): a WS_ name, or a number valid until
+// this thread's next unnamed status
+inline const char* WONStatusToString(WONStatus inStatus) { return ee_won_status_text(inStatus); }
 
 // WON's millisecond tick (was GetTickCount): real time, wraps every 2^32 ms like GetTickCount; compare by unsigned
 // 32-bit difference

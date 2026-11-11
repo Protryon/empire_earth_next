@@ -100,7 +100,7 @@ WONStatus DetectFirewallOp::CheckResponse()
     unsigned short message=reply.ReadShort();
     if (header!=5 || service!=3 || message!=2) return this->InvalidReplyHeader();
     short status=reply.ReadShort();
-    if (reply.mLength-reply.mPos>=4) {
+    if (reply.Available()>=4) {
         long host=reply.ReadLong();
         if (host!=0) this->mPublicAddr.Fn2B2C20(host,0);
     }

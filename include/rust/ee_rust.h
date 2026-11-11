@@ -1745,8 +1745,14 @@ struct EeSubSectorLinks;
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
+/// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
+struct EeWonByteBuffer;
+
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// `WriteBuffer`'s state.
+struct EeWonWriteBuffer;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
@@ -4673,6 +4679,14 @@ struct EeWonAuthEntry {
   const uint8_t *extra;
   size_t extra_len;
   bool present;
+};
+
+/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
+struct EeWonReadBuffer {
+  /// the read position
+  long pos;
+  const uint8_t *data;
+  long length;
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
@@ -11438,6 +11452,155 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool peer_valid,
                                       int64_t expire_delta);
 
+/// `ByteBuffer(data, length, false)`: a copy.
+///
+/// # Safety
+/// `data` holds `length` bytes (or `length` is 0).
+EeWonByteBuffer *ee_won_bytes_copy(const uint8_t *data, unsigned long length);
+
+/// `ByteBuffer(const char*)`: the text and its terminator; null gives no bytes.
+///
+/// # Safety
+/// `text` is null or a NUL-terminated string.
+EeWonByteBuffer *ee_won_bytes_text(const char *text);
+
+/// # Safety
+/// `b` came from an `ee_won_bytes_*` constructor or `ee_won_writer_to_bytes` and is not used again.
+void ee_won_bytes_free(EeWonByteBuffer *b);
+
+/// `data()`: null for a buffer of no bytes at all.
+///
+/// # Safety
+/// `b` is valid.
+const uint8_t *ee_won_bytes_data(const EeWonByteBuffer *b);
+
+/// `length()`.
+///
+/// # Safety
+/// `b` is valid.
+unsigned long ee_won_bytes_length(const EeWonByteBuffer *b);
+
+/// `WriteBuffer(lengthFieldSize, lengthIncludesField)`.
+EeWonWriteBuffer *ee_won_writer_new(uint8_t field_size, bool includes_field);
+
+/// # Safety
+/// `w` came from `ee_won_writer_new` and is not used again.
+void ee_won_writer_free(EeWonWriteBuffer *w);
+
+/// `data()`: the data's start (null before the first growth); `capacity()` bytes may be written there until the
+/// next call that grows, resets or releases.
+///
+/// # Safety
+/// `w` is valid.
+uint8_t *ee_won_writer_data(EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_length(const EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_capacity(const EeWonWriteBuffer *w);
+
+/// `Reset` (and `Release`, which forgot the allocation another owner had taken: no caller takes it any more).
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reset(EeWonWriteBuffer *w);
+
+/// `Reserve`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve(EeWonWriteBuffer *w, unsigned long capacity);
+
+/// `CheckWrite`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_check_write(EeWonWriteBuffer *w, unsigned long add);
+
+/// `ReserveChunk`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve_chunk(EeWonWriteBuffer *w, unsigned long total, unsigned long max);
+
+/// `SetSize`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_set_size(EeWonWriteBuffer *w, unsigned long size);
+
+/// `SkipBytes`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_skip(EeWonWriteBuffer *w, unsigned long n);
+
+/// `AppendBytes` (and the byte, bool, short and long appends of their little-endian bytes).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes and is not the writer's own.
+void ee_won_writer_append(EeWonWriteBuffer *w, const uint8_t *data, unsigned long length);
+
+/// `AppendLength`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_append_length(EeWonWriteBuffer *w, unsigned long length, uint8_t size);
+
+/// `AppendString` / `AppendBuffer`: a `size`-byte length field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_field(EeWonWriteBuffer *w,
+                                const uint8_t *data,
+                                unsigned long length,
+                                uint8_t size);
+
+/// `AppendWString` of `length` UTF-16 little-endian bytes: a unit count field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
+                                  const uint8_t *data,
+                                  unsigned long length,
+                                  uint8_t size);
+
+/// `SetBytes` (and `SetByte`, `SetShort`).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes.
+void ee_won_writer_set(EeWonWriteBuffer *w,
+                       unsigned long at,
+                       const uint8_t *data,
+                       unsigned long length);
+
+/// `ToByteBuffer`: a new byte buffer (the caller frees it with `ee_won_bytes_free`).
+///
+/// # Safety
+/// `w` is valid.
+EeWonByteBuffer *ee_won_writer_to_bytes(EeWonWriteBuffer *w, bool release);
+
+/// `ReadBuffer(data, length)` / `SetData`: points the reader at the bytes, rewound.
+///
+/// # Safety
+/// `r` is valid.
+void ee_won_reader_set(EeWonReadBuffer *r, const uint8_t *data, unsigned long length);
+
+/// `ReadBytes`: the next `amount` bytes into `*out`, skipped; false past the end (nothing moves).
+///
+/// # Safety
+/// `r` and `out` are valid; the reader's bytes are alive.
+bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out);
+
+/// `ReadLength`: into `*out`; false past the end.
+///
+/// # Safety
+/// As `ee_won_reader_take`.
+bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
 
@@ -11812,49 +11975,6 @@ void ee_won_utf8_from_wide(const void *wide,
                            size_t count,
                            EeWonByteSink sink,
                            void *context);
-
-/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
-uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
-
-/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
-uint64_t ee_won_write_chunk(uint64_t capacity,
-                            uint64_t total,
-                            uint64_t max);
-
-/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
-///
-/// # Safety
-/// `out` has 4 bytes.
-size_t ee_won_encode_length(uint32_t length,
-                            uint8_t size,
-                            uint8_t *out);
-
-/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
-///
-/// # Safety
-/// `out` has 6 bytes.
-size_t ee_won_length_prefix(uint8_t field_size,
-                            bool includes_field,
-                            uint32_t length,
-                            uint8_t *out);
-
-/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
-///
-/// # Safety
-/// `pos` is valid.
-bool ee_won_read_take(uint64_t length,
-                      int64_t *pos,
-                      uint64_t amount);
-
-/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
-///
-/// # Safety
-/// `data` holds `length` bytes; `pos` and `out` are valid.
-bool ee_won_read_length(const uint8_t *data,
-                        uint64_t length,
-                        int64_t *pos,
-                        uint8_t size,
-                        uint32_t *out);
 
 /// `CRC16::Put`: the register after the bytes.
 ///
@@ -12296,14 +12416,9 @@ bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
 /// `lan::summary_due`.
 bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
 
-/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
-/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
-///
-/// # Safety
-/// `buffer` has `size` bytes.
-const char *ee_won_status_name(long s,
-                               char *buffer,
-                               size_t size);
+/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
+/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
+const char *ee_won_status_text(long s);
 
 void ee_won_netstats_enable(bool on);
 
