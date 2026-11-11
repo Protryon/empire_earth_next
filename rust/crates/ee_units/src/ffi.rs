@@ -94,6 +94,25 @@ pub unsafe extern "C" fn ee_units_store_check(objects: *const EeUnitRecord, coun
     unsafe { *out = result };
 }
 
+/// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
+/// `ids` into `out` (room for `count`: a pick never has more), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_select_pick(player: u64, ids: *const u32, count: usize, out: *mut u32) -> usize {
+    if count == 0 {
+        return 0;
+    }
+    // SAFETY: the caller's contract
+    let ids = unsafe { std::slice::from_raw_parts(ids, count) };
+    let mut picked = Vec::with_capacity(count);
+    with_store(|s| crate::select::select_pick(s, player, ids, &mut picked));
+    // SAFETY: the caller's contract; a pick holds at most one id per input id
+    unsafe { std::ptr::copy_nonoverlapping(picked.as_ptr(), out, picked.len()) };
+    picked.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,5 +152,31 @@ mod tests {
         assert!(!unsafe { ee_units_store_get(rec.id, &mut out) });
         unsafe { ee_units_store_insert(&rec) };
         assert_eq!(ee_units_store_clear_player(0xfc00), 1);
+    }
+
+    #[test]
+    fn the_pick_reads_the_process_store() {
+        // ids and a player no other test of this crate uses
+        let rec = |id: u32| EeUnitRecord {
+            id,
+            owner: 0xfb,
+            object: 0x7000 + id as u64,
+            player: 0xfb00,
+            object_kind: crate::kinds::EE_OBJECT_COMPLEX_UNIT,
+            complex: crate::store::EE_UNIT_COMPLEX_SELF,
+            valid: 1,
+            built: 1,
+            goal_kind: -1,
+            ..Default::default()
+        };
+        for id in [0xfb00_0001, 0xfb00_0002] {
+            unsafe { ee_units_store_insert(&rec(id)) };
+        }
+        let ids = [0xfb00_0002u32, 0xfb00_0009, 0xfb00_0001, 0xfb00_0002];
+        let mut out = [0u32; 4];
+        let n = unsafe { ee_units_select_pick(0xfb00, ids.as_ptr(), ids.len(), out.as_mut_ptr()) };
+        assert_eq!(&out[..n], &[0xfb00_0002, 0xfb00_0001]);
+        assert_eq!(unsafe { ee_units_select_pick(0xfb00, std::ptr::null(), 0, std::ptr::null_mut()) }, 0);
+        assert_eq!(ee_units_store_clear_player(0xfb00), 2);
     }
 }

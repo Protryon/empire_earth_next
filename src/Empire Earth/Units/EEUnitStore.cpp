@@ -206,31 +206,11 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     return theListed;
 }
 
-// the original's pick (EEPlayer::SelectUnits 0x56a658) over the objects: the player's unit of each id
-// (RTSPlayer::GetUnit: its list), its complex unit, not in the group yet (the group was cleared: the valid ones taken so
-// far, EESelectedGroup::AddIfAbsent), built, not a path point
+// the box selection's pick over the unit store (ee_units select.rs: the loop of EEPlayer::SelectUnits 0x56a658 over the
+// records in place of the objects; the player is its list's object, as the store records it)
 size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs)
 {
-    std::vector<EEComplexUnit*> theAdded;
-    size_t theCount = 0;
-    for (size_t i = 0; i < inCount; i++) {
-        RTSUnit* theUnit = inPlayer->GetUnit(inIDs[i]);
-        if (theUnit == NULL)
-            continue;
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit.Get();
-        // declared (ee_units select.rs): a unit that is not its own complex unit is skipped; the original
-        // dereferenced it (NULL) or read past a simple unit; no unit of a player's list is one (the USCK check)
-        if (theComplexUnit == NULL || static_cast<EEUnit*>(theComplexUnit) != static_cast<EEUnit*>(theUnit)
-            || theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
-            continue;
-        if (std::find(theAdded.begin(), theAdded.end(), theComplexUnit) == theAdded.end() && theComplexUnit->mIsBuilt != false
-            && theComplexUnit->mUnitClass->mUnitType != kUnitTypePathPoint) {
-            outIDs[theCount++] = static_cast<uint32_t>(theComplexUnit->mUnitID);
-            if (theComplexUnit->mIsValid)
-                theAdded.push_back(theComplexUnit);
-        }
-    }
-    return theCount;
+    return ee_units_select_pick(reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(inPlayer)), inIDs, inCount, outIDs);
 }
 
 void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,

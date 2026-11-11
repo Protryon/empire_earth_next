@@ -807,6 +807,9 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
+constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
+
 /// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
 constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
 
@@ -8668,6 +8671,16 @@ uint32_t ee_units_store_count();
 void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
+
+/// The box selection's pick over the store (`EEPlayer::SelectUnits`; `select::select_pick`): the picked ids of
+/// `ids` into `out` (room for `count`: a pick never has more), their number.
+///
+/// # Safety
+/// `ids` points to `count` ids and `out` to room for `count` (either may be null when `count` is 0).
+size_t ee_units_select_pick(uint64_t player,
+                            const uint32_t *ids,
+                            size_t count,
+                            uint32_t *out);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 

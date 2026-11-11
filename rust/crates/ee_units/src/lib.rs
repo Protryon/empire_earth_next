@@ -8,12 +8,14 @@
 //!
 //! The unit store (`store`, RUST_PLAN R5b.4 leaf 5): each unit's plain state as a record by id while the unit is in
 //! a player's list, kept current by the C++ members' write-through holders (`include/ee/EEUnitStore.h`). The world
-//! calls a decision makes (a group's units as ids, goals as handles) are `host`'s.
+//! calls a decision makes (a group's units as ids, goals as handles) are `host`'s; the box selection's pick over the
+//! store is `select`.
 
 pub mod ffi;
 pub mod host;
 pub mod kinds;
 pub mod registry;
+pub mod select;
 pub mod store;
 
 pub use registry::Registry;
