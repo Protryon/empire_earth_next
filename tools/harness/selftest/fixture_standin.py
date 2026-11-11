@@ -8,7 +8,9 @@ clock runs at 1000 game ms per 100 ms; "click 11 5" opens the civilization build
 form, "boxselect 11 <mode> <x0> <y0> <x1> <y1>" selects among ten units at x = 100 + 60 k, y = 250 of the view
 0 0 800 500 (mode 1 adds, mode 2 deletes the selection's first unit before the box executes), with the fixture's
 "selection", "view" and "boxselect" lines; "order 11 <kind>" judges two units ok ("order" and "orderunit" lines), but
-attack ground (kind 4), which it refuses with "no-unit", as a start without a siege unit does.
+attack ground (kind 4), which it refuses with "no-unit", as a start without a siege unit does. Gather (kind 0) first
+scouts as the game does with no resource in view (phase 1, note "scouting", for 1.5 s, then the verdict); the second
+gather order is refused "scout-unseen" after its scouting.
 """
 import os
 import pathlib
@@ -24,6 +26,7 @@ if os.environ.get('EE_TEST_SEED'):
 stack, last, frames, game_ms, ticks, ct, civ = [12], 0, 0, 0, 0, 0, 0
 units = {100 + k: 100 + 60 * k for k in range(10)}   # id -> x (all at y 250)
 selection, box, order = [], None, None
+scout, gathers = None, 0   # scout: the pending gather (its verdict due at scout['due'])
 
 
 def ids(values):
@@ -108,11 +111,16 @@ while True:
         if a == form == 11 and 0 <= b <= 5:
             print(f'TEST UI order-started order control {b} value 0 on form {a} (seq {seq}, top form {form})',
                   file=sys.stderr, flush=True)
-            refused = b == 4
-            order = dict(seq=seq, kind=b, phase=9 if refused else 3, note='no-unit' if refused else '-',
-                         units=[] if refused else [101, 102])
-            print(f'TEST UI order-{"refused" if refused else "done"} order control {b} value 0 on form 0 (seq {seq}, '
-                  f'top form 0)', file=sys.stderr, flush=True)
+            if b == 0:   # gather: scouting first (EETestFixtureOrders.cpp Scout), the verdict later
+                gathers += 1
+                order = dict(seq=seq, kind=b, phase=1, note='scouting', units=[])
+                scout = dict(due=time.monotonic() + 1.5, refused=gathers > 1)
+            else:
+                refused = b == 4
+                order = dict(seq=seq, kind=b, phase=9 if refused else 3, note='no-unit' if refused else '-',
+                             units=[] if refused else [101, 102])
+                print(f'TEST UI order-{"refused" if refused else "done"} order control {b} value 0 on form 0 (seq '
+                      f'{seq}, top form 0)', file=sys.stderr, flush=True)
         else:
             print(f'TEST UI rejected order control {b} value 0 on form {a} (seq {seq}, top form {form})',
                   file=sys.stderr, flush=True)
@@ -130,6 +138,13 @@ while True:
         verdict = 'triggered' if target is not None else 'rejected'
         print(f'TEST UI {verdict} {op} control {b} value 0 on form {a} (seq {seq}, top form {form})', file=sys.stderr,
               flush=True)
+    if scout and time.monotonic() >= scout['due']:
+        refused = scout['refused']
+        order.update(phase=9 if refused else 3, note='scout-unseen' if refused else '-',
+                     units=[] if refused else [101, 102])
+        print(f'TEST UI order-{"refused" if refused else "done"} order control 0 value 0 on form 0 (seq '
+              f'{order["seq"]}, top form 0)', file=sys.stderr, flush=True)
+        scout = None
     if (ui / 'frame.request').exists():
         (ui / 'frame.request').unlink()
         width, height = 64, 48

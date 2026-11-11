@@ -632,11 +632,13 @@ def order_state(text):
     return out
 
 
-def order_step(g, form, name, timeout=40):
+def order_step(g, form, name, timeout=None):
     """One order through the fixture's order command (EETestFixtureOrders.cpp: the group selected, the order given
     through the real input path, every unit judged by the original's rule after the message executed) -> the step's
     evidence (skipped: the refusal when the start does not give the case); raises on a bad unit, no message or no
     verdict."""
+    if timeout is None:   # gather may first walk to a resource out of view (up to 60 s, "scouting")
+        timeout = 120 if name == 'gather' else 40
     seq = g.command(f'order {form} {ORDER_KINDS[name]}')
     end = time.monotonic() + timeout
     while g.verdict(seq) not in ('order-done', 'order-refused', 'order-busy', 'rejected') and time.monotonic() < end:
