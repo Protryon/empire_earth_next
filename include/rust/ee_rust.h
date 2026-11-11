@@ -671,6 +671,29 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
+/// `new EEUGExplore(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
+
+/// `new EEUGAttackGround(point, flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_GROUND = 2;
+
+/// `new EEUGAttackUnit(unit_a, unit_b, flag_a, flag_b)` (the attacker's complex unit, the target, the third
+/// argument, convert)
+constexpr static const uint32_t EE_GOAL_CTOR_ATTACK_UNIT = 3;
+
+/// `new EEUGGather(unit_a, unit_b, flag_a)` (the resource, the drop-off; either may be none)
+constexpr static const uint32_t EE_GOAL_CTOR_GATHER = 4;
+
+/// `new EEUGHealUnit(unit_a, flag_a)` (the healed complex unit)
+constexpr static const uint32_t EE_GOAL_CTOR_HEAL_UNIT = 5;
+
+/// `new EEUGPatrol(flag_a)`
+constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
+
+/// "no unit" in a spec (`EEUnitHandle::kNone`)
+constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
+
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
 
@@ -3712,6 +3735,17 @@ struct EeUnitStoreCheck {
   /// 0xff: no record)
   uint32_t first_id;
   uint32_t first_field;
+};
+
+/// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
+struct EeGoalSpec {
+  uint32_t ctor;
+  uint32_t unit_a;
+  uint32_t unit_b;
+  /// a location (`GE3DPoint`)
+  float point[3];
+  uint8_t flag_a;
+  uint8_t flag_b;
 };
 
 /// Receives bytes; valid only during the call.
@@ -8634,6 +8668,14 @@ uint32_t ee_units_store_count();
 void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
+
+extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
+
+extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
+
+extern uint8_t ee_units_host_goal_kind(void *goal);
+
+extern void ee_units_host_goal_release(void *goal);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
