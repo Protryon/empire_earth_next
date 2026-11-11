@@ -258,6 +258,73 @@ local function guard_sites(view, memory)
     end
 end
 
+-- BuildSettlementFor (EEUGGather::FindStorage asks it when a computer player's gatherer looks for a drop site: the
+-- engine hook skips a script's seat, so the port looks every 4 s at the gatherers at work): a gatherer whose
+-- resource has no drop site within the drop-off distance builds a settlement by it, with settlements enabled and
+-- producible, none ordered for that resource yet, not for game, a forest of 5 trees at least, the site within the
+-- drop-off distance of the resource and no town centre within 3/4 of it. DEVIATION: the gatherer's own storage is
+-- the nearest drop site (any drop within the distance counts); the site is the rings 2 .. the distance round the
+-- resource (the centre's FindBuildSite and FindWoodSite are not ported apart)
+local SETTLE_FOR_MS, SETTLE_FOR_STALE = 4000, 120000
+local function settlement_for(view, memory)
+    local rm = R.state(memory)
+    if not rm.settle_enabled or view.time < (rm.settle_for_next or 0) then
+        return
+    end
+    rm.settle_for_next = view.time + SETTLE_FOR_MS
+    rm.settle_for = rm.settle_for or {}
+    -- IsSettlementQueued: an order stands until a drop site stands there or it went stale
+    for _, k in ipairs(ai.keys(rm.settle_for)) do
+        local o = rm.settle_for[k]
+        if view.time - o.t > SETTLE_FOR_STALE or R.drop_near(o.x, o.y, 1, false) then
+            rm.settle_for[k] = nil
+        end
+    end
+    local t = U().class_tech(view, C.settlement)
+    if t == nil or not t.producible or not U().can_afford(view, memory, U().cost(C.settlement), 1, C.settlement) then
+        return
+    end
+    local r = T.b(memory, 'drop_off_distance')
+    local ids = ai.units{category = 'citizen', held = 'lua'}
+    if #ids == 0 then
+        return
+    end
+    local cols = ai.get(ids, {'gathers', 'target'})
+    for k = 1, #ids do
+        local kind, target = cols.gathers[k], cols.target[k]
+        if kind ~= nil and target ~= nil and rm.settle_for[kind] == nil then
+            local res = R.unit(target)
+            local c = res ~= nil and R.class_of(res.type) or nil
+            if res ~= nil and c.family ~= 0x11 and res.type ~= C.farm and res.type ~= C.robotic_farm
+                    and not R.drop_near(res.x, res.y, r, kind == 'food') then
+                local ok = true
+                if kind == 'wood' then
+                    ok = #ai.resources{kind = 'wood', near = {res.x, res.y, 3}, limit = 5} >= 5
+                end
+                if ok then
+                    local x, y = ai.find_site(C.settlement, res.x, res.y, {min = 2, max = r, margin = true})
+                    if x ~= nil and R.d2(x, y, res.x, res.y) <= r * r then
+                        local near = false
+                        for _, d in ipairs(R.drops(false)) do
+                            if R.d2(d.x, d.y, x, y) * 16 <= r * r * 9 then
+                                near = true
+                            end
+                        end
+                        if not near then
+                            local code = ai.build({ids[k]}, C.settlement, x, y)
+                            if code == 0 or code == true or code == 'ok' then
+                                rm.settle_for[kind] = {x = x, y = y, t = view.time}
+                                print(string.format('classic_lua settlement.order resource=%s x=%d y=%d', kind, x, y))
+                                return
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- EECPRMActivateNeeded: the forage patches kept claimed (3 in the Prehistoric, 5 later), the patch settlements and
 -- site towers, the claim range grown before the farms when no patch is left; economy.claim_needed: a centre with the
 -- next epoch's missing stone, gold or iron claimed
@@ -853,6 +920,7 @@ function M.update(view, memory)
         rm.init = true
     end
     R.spend_income(view, memory)
+    settlement_for(view, memory)
     if view.time >= rm.next_wanted then
         update_wanted(view, memory)
         rm.next_wanted = view.time + 5000
