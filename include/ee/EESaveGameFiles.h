@@ -99,6 +99,12 @@ inline bool EESaveHasResourceState(unsigned long inMajorVersion, unsigned long i
 {
     return inMajorVersion > 0 || inMinorVersion >= 265;
 }
+// port: from 0.266 a save holds the order of each class's units the computer players' unit managers track
+// (EECPUnitManager::mUnits): a load filed them again in its own order
+inline bool EESaveHasUnitManagerOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 266;
+}
 long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
 long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
 // whether the save being loaded has the block (EEWorld::StartGame of a loaded game)

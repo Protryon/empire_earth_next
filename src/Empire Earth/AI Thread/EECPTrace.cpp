@@ -735,6 +735,9 @@ void EECPOutOfSynchDump(FILE* inFile)
                     theCP->mIsStarted ? 1 : 0, theCP->mIsEnableTimeSet ? 1 : 0, theCP->mRegroupPending ? 1 : 0,
                     (unsigned long)theCP->mNextEnableTime, (long)theCP->mNextPopulationTime, (unsigned long)theCP->mNextExpansionTime,
                     (unsigned long)theCP->mNextAttackTime, (long)theCP->mLastDamagedTime);
+            // EnableManagers' other inputs
+            fprintf(inFile, " combat=%lu damaged=%d/%d attacks=%ld", (unsigned long)theCP->mCombatState,
+                    theCP->mBuildingDamaged ? 1 : 0, theCP->mCitizenDamaged ? 1 : 0, (long)theCP->mNumAttacks);
         }
         fprintf(inFile, "\n");
         // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request

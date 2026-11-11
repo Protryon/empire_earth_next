@@ -873,8 +873,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 263 the continent manager as it is, with the herds' and towns' serials (EESaveHasContinentRegions)
 // 264 the attack sub groups' positions (EESaveHasSubGroupPosition)
 // 265 the computer players' claim ranges and danger zones (EESaveHasResourceState)
+// 266 the order of the units their unit managers track (EESaveHasUnitManagerOrder)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 265;
+const unsigned long kSaveGameMinorVersion = 266;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
