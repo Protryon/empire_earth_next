@@ -4772,60 +4772,14 @@ void EEMPackUnpack::Execute()
 // group per formation slot, with facing, forced, queued and group-movement options; acknowledges by voice
 void EEMPathTo::Execute()
 {
-    GE3DLine theLine;
-    GE3DPoint theLocation;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    long theX = (long)this->mX;
-    long theY = (long)this->mY;
-    EEComplexUnit* theFirstUnit = theSelection->GetFirstUnit();
-    if (theFirstUnit == NULL)
-        return;
-    EETile* theTile = gWorld.GetMap()->GetTile(theX, theY);
-    if (theTile == NULL) {
-        GE3DPoint thePoint((float)theX + 0.5f, (float)theY + 0.5f, 0.0f);
-        theTile = gWorld.GetMap()->GetClosestTile(&thePoint, &theX, &theY);
-        this->mX = (float)theX + 0.5f;
-        this->mY = (float)theY + 0.5f;
-    }
-    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-        if (theNode->mUnit->mUnitClass->mTileSize > 1 && !theNode->mUnit->IsPassableBy(theFirstUnit->GetComplexUnit())) {
-            theFirstUnit->GetNearestFootprintTile(theNode->mUnit, &theX, &theY);
-            theTile = gWorld.GetMap()->GetTile(theX, theY);
-            if (theTile != NULL) {
-                this->mX = (float)theX + 0.5f;
-                this->mY = (float)theY + 0.5f;
-                break;
-            }
-            theX = (long)this->mX;
-            theY = (long)this->mY;
-            theTile = gWorld.GetMap()->GetTile(theX, theY);
-        }
-    }
-    theLocation.SetX(this->mX);
-    theLocation.SetY(this->mY);
-    theLocation.SetZ(theTile->mHeight >= 0.0f ? theTile->mHeight : 0.0f);
-    for (unsigned long i = 1; i < 6; i++) {
-        EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-        theGroup->Fill(theSelection, 0, i);
-        if (theGroup->GetNumUnits() > 0) {
-            thePlayer->mPendingGroups.push_back(theGroup);
-            theGroup->KeepMobileUnits();
-            EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, this->mIsForcedMove, this->mIsRotating, this->mFacing, false, 0);
-            theGoal->mUseGroupMovement = this->mUseGroupMovement;
-            theGroup->ResetUnitsPaths();
-            theGroup->ClearGoal();
-            theGroup->SetGoal(theGoal, this->mIsQueued);
-            theGroup->mAction = kActionPrepareToMove;
-            theGroup->Plan();
-            if (theGroup->GetNumUnits() > 0)
-                thePlayer->PlayAcknowledgement(theGroup->GetUnit(gPhysics->GetRandom(0L, (long)theGroup->GetNumUnits() - 1)));
-            EESendGroupCommand(theGroup, NULL, thePlayerID, 0xb8, 0);
-        } else
-            theGroup->Dereference();
-    }
-     }
+    // New (R5b.4): the body is Rust (ee_units group.rs path_to: with a selection, the point adjusted to the map and
+    // around a building the first unit cannot pass (the message keeps it), per formation slot 1..5 an active group of
+    // the mobile units gets a Location goal, its paths reset, planned, one unit drawn to acknowledge, the move marker)
+    // over the world calls of EEUnitHost.cpp
+    ee_units_path_to(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), &this->mX, &this->mY, this->mFacing,
+                     this->mIsForcedMove, this->mIsRotating, this->mIsQueued, this->mUseGroupMovement);
+}
 
 // EEMPathTo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
 static size_t Slots(EEMPathTo* inMessage, EeNetMsgSlot* outSlots)

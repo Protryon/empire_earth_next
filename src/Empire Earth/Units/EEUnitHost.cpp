@@ -32,6 +32,7 @@
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGPatrol.h"
+#include "ee/EEUGLocation.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
@@ -107,7 +108,9 @@ enum DryEvent {
     kDryAddPoint,         // the route (2 words), player id, x, y
     kDryGoalAddPoint,     // ctor, player id, x, y
     kDrySpreadUnit,       // tag, target, x, y
-    kDryComplexOf         // unit, its complex unit
+    kDryComplexOf,        // unit, its complex unit
+    kDryPathPoint,        // unit, x, y in, x, y out, the height (bits)
+    kDryResetPaths        // tag
 };
 
 struct DryGroup {
@@ -210,10 +213,13 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_HEAL_UNIT: theKind = kGoalHealUnit; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     case EE_GOAL_CTOR_PATROL:
     case EE_GOAL_CTOR_PATROL_ROUTE: theKind = kGoalPatrol; break;
+    case EE_GOAL_CTOR_LOCATION: theKind = kGoalLocation; break;
     default: theMade = false; break;
     }
     Log({kDryGoalNew, inSpec->ctor, inSpec->unit_a, inSpec->unit_b, Bits(inSpec->point[0]), Bits(inSpec->point[1]),
          Bits(inSpec->point[2]), inSpec->flag_a, inSpec->flag_b});
+    if (inSpec->ctor == EE_GOAL_CTOR_LOCATION)   // (the other constructors' records keep their words)
+        Log({Bits(inSpec->value), inSpec->flag_c});
     LogRoute(inSpec->object);
     Log({theMade ? 1u : 0u});
     if (!theMade)
@@ -366,6 +372,12 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         return static_cast<EEUnitGoal*>(new EEUGPatrol(theFlagA));
     case EE_GOAL_CTOR_PATROL_ROUTE:
         return static_cast<EEUnitGoal*>(new EEUGPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
+    case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: new EEUGLocation(&point, true, forced, rotating, facing, false, 0)
+        GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
+        EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
+        theGoal->mUseGroupMovement = inSpec->flag_c != 0;
+        return static_cast<EEUnitGoal*>(theGoal);
+    }
     default:
         return NULL;
     }
@@ -739,4 +751,50 @@ extern "C" uint32_t ee_units_host_unit_complex_id(uint32_t inUnit)
     if (sDry != NULL)
         Log({kDryComplexOf, inUnit, theID});
     return theID;
+}
+
+// EEMPathTo's point (its statements before the loop, as they were): a point off the map goes to the closest tile's
+// centre; a tile under a building the first selected unit cannot pass goes to the building's nearest footprint tile;
+// the height is the final tile's (at least 0). *ioX, *ioY: the message's point in, the point the body uses out (the
+// message keeps it). A read (the dry host's too)
+extern "C" float ee_units_host_path_to_point(uint32_t inFirst, float* ioX, float* ioY)
+{
+    EEComplexUnit* theFirstUnit = ComplexOf(inFirst);
+    float theInX = *ioX, theInY = *ioY;
+    long theX = (long)*ioX;
+    long theY = (long)*ioY;
+    EETile* theTile = gWorld.GetMap()->GetTile(theX, theY);
+    if (theTile == NULL) {
+        GE3DPoint thePoint((float)theX + 0.5f, (float)theY + 0.5f, 0.0f);
+        theTile = gWorld.GetMap()->GetClosestTile(&thePoint, &theX, &theY);
+        *ioX = (float)theX + 0.5f;
+        *ioY = (float)theY + 0.5f;
+    }
+    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
+        if (theNode->mUnit->mUnitClass->mTileSize > 1 && !theNode->mUnit->IsPassableBy(theFirstUnit->GetComplexUnit())) {
+            theFirstUnit->GetNearestFootprintTile(theNode->mUnit, &theX, &theY);
+            theTile = gWorld.GetMap()->GetTile(theX, theY);
+            if (theTile != NULL) {
+                *ioX = (float)theX + 0.5f;
+                *ioY = (float)theY + 0.5f;
+                break;
+            }
+            theX = (long)*ioX;
+            theY = (long)*ioY;
+            theTile = gWorld.GetMap()->GetTile(theX, theY);
+        }
+    }
+    float theZ = theTile->mHeight >= 0.0f ? theTile->mHeight : 0.0f;
+    if (sDry != NULL)
+        Log({kDryPathPoint, inFirst, Bits(theInX), Bits(theInY), Bits(*ioX), Bits(*ioY), Bits(theZ)});
+    return theZ;
+}
+
+extern "C" void ee_units_host_group_reset_paths(void* inGroup)
+{
+    if (sDry != NULL) {
+        Log({kDryResetPaths, Dry(inGroup)->mTag});
+        return;
+    }
+    ActiveOf(inGroup)->ResetUnitsPaths();
 }

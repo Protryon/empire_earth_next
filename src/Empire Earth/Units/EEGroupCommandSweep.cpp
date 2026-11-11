@@ -342,6 +342,51 @@ void OriginalHealUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID)
     }
 }
 
+// EEMPathTo::Execute (0x4c281c) as it was, each world call through the host (the point's adjustment before the loop
+// is one host call: the same statements moved, ee_units_host_path_to_point)
+void OriginalPathTo(EEPlayer* thePlayer, void* theSelection, float inX, float inY, float inFacing, unsigned long inFlags)
+{
+    GE3DPoint theLocation;
+    float theX = inX, theY = inY;   // this->mX, this->mY
+    uint32_t theFirstUnit = Count(theSelection) > 0 ? UnitAt(theSelection, 0) : kNone;   // GetFirstUnit()
+    if (theFirstUnit == kNone)
+        return;
+    float theZ = ee_units_host_path_to_point(theFirstUnit, &theX, &theY);
+    theLocation.SetX(theX);
+    theLocation.SetY(theY);
+    theLocation.SetZ(theZ);
+    for (unsigned long i = 1; i < 6; i++) {
+        void* theGroup = ee_units_host_active_group_new(thePlayer);
+        ee_units_host_group_fill(theGroup, theSelection, 0, (int32_t)i);
+        if (Count(theGroup) > 0) {
+            ee_units_host_pending_push(thePlayer, theGroup);
+            ee_units_host_group_keep_mobile(theGroup);
+            EeGoalSpec theSpec;   // new EEUGLocation(&theLocation, true, forced, rotating, facing, false, 0)
+            memset(&theSpec, 0, sizeof(theSpec));
+            theSpec.ctor = EE_GOAL_CTOR_LOCATION;
+            theSpec.unit_a = kNone;
+            theSpec.unit_b = kNone;
+            theSpec.point[0] = theLocation.GetX();
+            theSpec.point[1] = theLocation.GetY();
+            theSpec.point[2] = theLocation.GetZ();
+            theSpec.flag_a = (inFlags & 1) ? 1 : 0;
+            theSpec.flag_b = (inFlags & 2) ? 1 : 0;
+            theSpec.value = inFacing;
+            theSpec.flag_c = (inFlags & 8) ? 1 : 0;   // theGoal->mUseGroupMovement
+            void* theGoal = ee_units_host_goal_new(&theSpec);
+            ee_units_host_group_reset_paths(theGroup);
+            ee_units_host_group_clear_goal(theGroup);
+            ee_units_host_group_set_goal(theGroup, theGoal, (inFlags & 4) ? 1 : 0);
+            ee_units_host_group_set_action(theGroup, kActionPrepareToMove);
+            ee_units_host_group_plan(theGroup);
+            if (Count(theGroup) > 0)
+                ee_units_host_play_acknowledgement(thePlayer, theGroup, ee_units_host_random(0, (int32_t)Count(theGroup) - 1));
+            ee_units_host_send_group_command(theGroup, kNone, thePlayer, 0xb8, 0);
+        } else
+            ee_units_host_group_release(theGroup);
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -349,7 +394,8 @@ enum SweepBody {
     kSweepRepair = 4,
     kSweepAddPatrolPoint = 5,
     kSweepAttackUnit = 6,
-    kSweepHealUnit = 7
+    kSweepHealUnit = 7,
+    kSweepPathTo = 8
 };
 
 struct SweepCase {
@@ -359,6 +405,8 @@ struct SweepCase {
     int32_t mTarget;            // Patrol's, Gather's and Repair's target id
     bool mQueued;               // Gather's, Repair's and Attack Unit's
     bool mConvert;              // Attack Unit's
+    float mFacing;              // Path To's
+    unsigned long mFlags;       // Path To's: 1 forced, 2 rotating, 4 queued, 8 group movement
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -400,6 +448,15 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalHealUnit(inPlayer, inSelection, inCase.mTarget);
         break;
+    case kSweepPathTo: {
+        float theX = inCase.mX, theY = inCase.mY;
+        if (inRust)
+            ee_units_path_to(inPlayer, inSelection, &theX, &theY, inCase.mFacing, (inCase.mFlags & 1) != 0,
+                             (inCase.mFlags & 2) != 0, (inCase.mFlags & 4) != 0, (inCase.mFlags & 8) != 0);
+        else
+            OriginalPathTo(inPlayer, inSelection, inCase.mX, inCase.mY, inCase.mFacing, inCase.mFlags);
+        break;
+    }
     case kSweepRepair:
         if (inRust)
             ee_units_repair(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mQueued);
@@ -429,6 +486,10 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
         theRecord.U32(inCase.mQueued ? 1u : 0u);
     if (inCase.mBody == kSweepAttackUnit)
         theRecord.U32((inCase.mQueued ? 1u : 0u) | (inCase.mConvert ? 2u : 0u));
+    if (inCase.mBody == kSweepPathTo) {
+        theRecord.U32((unsigned int)inCase.mFlags);
+        theRecord.F32(inCase.mFacing);
+    }
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -523,6 +584,8 @@ void EEGroupCommandSweep()
             theCase.mTarget = 0;
             theCase.mQueued = false;
             theCase.mConvert = false;
+            theCase.mFacing = 0.0f;
+            theCase.mFlags = 0;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -543,6 +606,20 @@ void EEGroupCommandSweep()
             theCase.mX = theFirstX;
             theCase.mY = theFirstY;
             RunCase(theCase, p, thePlayer, theUnits);
+            // Path To at the same two points, with no flag and with all four (facing 0.75)
+            theCase.mBody = kSweepPathTo;
+            for (int f = 0; f < 2; f++) {
+                theCase.mFlags = f ? 0xfu : 0u;
+                theCase.mFacing = f ? 0.75f : 0.0f;
+                theCase.mX = theFirstX;
+                theCase.mY = theFirstY;
+                RunCase(theCase, p, thePlayer, theUnits);
+                theCase.mX = theCenter;
+                theCase.mY = theCenter;
+                RunCase(theCase, p, thePlayer, theUnits);
+            }
+            theCase.mFlags = 0;
+            theCase.mFacing = 0.0f;
             theCase.mBody = kSweepPatrol;
             theCase.mX = 0.0f;
             theCase.mY = 0.0f;

@@ -31,6 +31,9 @@ pub const EE_GOAL_CTOR_HEAL_UNIT: u32 = 5;
 pub const EE_GOAL_CTOR_PATROL: u32 = 6;
 /// `new EEUGPatrol(object, unit_a, flag_a)` (the route, a patrol group from `Host::unit_patrol_group`; the target)
 pub const EE_GOAL_CTOR_PATROL_ROUTE: u32 = 7;
+/// `new EEUGLocation(&point, true, flag_a, flag_b, value, false, 0)`, then `mUseGroupMovement = flag_c` (EEMPathTo's:
+/// forced, rotating, the facing, group movement)
+pub const EE_GOAL_CTOR_LOCATION: u32 = 8;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 pub const EE_UNIT_ID_NONE: u32 = 0xffff_ffff;
@@ -48,6 +51,9 @@ pub struct EeGoalSpec {
     pub flag_b: u8,
     /// an object the host handed out for the goal (a route)
     pub object: *mut c_void,
+    /// a value (the location's facing)
+    pub value: f32,
+    pub flag_c: u8,
 }
 
 impl EeGoalSpec {
@@ -60,6 +66,8 @@ impl EeGoalSpec {
             flag_a: 0,
             flag_b: 0,
             object: std::ptr::null_mut(),
+            value: 0.0,
+            flag_c: 0,
         }
     }
 
@@ -72,6 +80,7 @@ impl EeGoalSpec {
             EE_GOAL_CTOR_GATHER => 6,
             EE_GOAL_CTOR_HEAL_UNIT => 15,
             EE_GOAL_CTOR_PATROL | EE_GOAL_CTOR_PATROL_ROUTE => 9,
+            EE_GOAL_CTOR_LOCATION => 1,
             _ => return None,
         })
     }
@@ -179,6 +188,11 @@ pub trait Host {
     fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64);
     /// `unit->GetComplexUnit()` as an id (EE_UNIT_ID_NONE: none), read on the object
     fn unit_complex_id(&mut self, unit: u32) -> u32;
+    /// EEMPathTo's point before its loop (the map's closest tile, a building the unit cannot pass): (x, y) in, the
+    /// point the body uses and its height out
+    fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32);
+    /// `EEActiveGroup::ResetUnitsPaths`
+    fn group_reset_paths(&mut self, group: HostRef);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -230,6 +244,8 @@ pub mod game {
         fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
         fn ee_units_host_group_spread_around_unit(group: *mut c_void, target: u32, x: i64, y: i64);
         fn ee_units_host_unit_complex_id(unit: u32) -> u32;
+        fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
+        fn ee_units_host_group_reset_paths(group: *mut c_void);
     }
 
     pub struct GameHost;
@@ -367,6 +383,15 @@ pub mod game {
         fn unit_complex_id(&mut self, unit: u32) -> u32 {
             unsafe { ee_units_host_unit_complex_id(unit) }
         }
+        fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32) {
+            let (mut x, mut y) = (x, y);
+            // SAFETY: two floats the host reads and writes for the call
+            let z = unsafe { ee_units_host_path_to_point(first, &mut x, &mut y) };
+            (x, y, z)
+        }
+        fn group_reset_paths(&mut self, group: HostRef) {
+            unsafe { ee_units_host_group_reset_paths(group.0) }
+        }
     }
 }
 
@@ -412,6 +437,10 @@ pub(crate) mod tests {
         GoalAddPoint(u8, u32, u32, HostRef),
         SpreadUnit(HostRef, u32, i64, i64),
         ComplexOf(u32),
+        PathPoint(u32, u32, u32),
+        ResetPaths(HostRef),
+        /// a location goal's facing and group movement flag
+        Location(u32, u8, u8),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
         Spec(u32, u32, u32, [u32; 3], u8, usize),
     }
@@ -440,6 +469,8 @@ pub(crate) mod tests {
         pub goal_routes: BTreeMap<u32, usize>,
         /// the units' complex units (absent: the unit itself)
         pub complex_of: BTreeMap<u32, u32>,
+        /// Path To's point as the host adjusts it (x, y, z; None: unchanged, height 0)
+        pub path_point: Option<(f32, f32, f32)>,
         /// log the goals' arguments too (Call::Spec)
         pub specs: bool,
         pub made: usize,
@@ -465,6 +496,9 @@ pub(crate) mod tests {
                     spec.flag_a,
                     spec.object as usize,
                 ));
+            }
+            if self.specs && spec.ctor == EE_GOAL_CTOR_LOCATION {
+                self.calls.push(Call::Location(spec.value.to_bits(), spec.flag_b, spec.flag_c));
             }
             let kind = spec.kind()?;
             self.live += 1;
@@ -625,12 +659,19 @@ pub(crate) mod tests {
             self.calls.push(Call::ComplexOf(unit));
             self.complex_of.get(&unit).copied().unwrap_or(unit)
         }
+        fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32) {
+            self.calls.push(Call::PathPoint(first, x.to_bits(), y.to_bits()));
+            self.path_point.unwrap_or((x, y, 0.0))
+        }
+        fn group_reset_paths(&mut self, group: HostRef) {
+            self.calls.push(Call::ResetPaths(group));
+        }
     }
 
     #[test]
     fn the_constructors_kinds() {
-        let kinds: Vec<_> = (0..9).map(|c| EeGoalSpec::new(c).kind()).collect();
-        assert_eq!(kinds, vec![None, Some(10), Some(3), Some(2), Some(6), Some(15), Some(9), Some(9), None]);
+        let kinds: Vec<_> = (0..10).map(|c| EeGoalSpec::new(c).kind()).collect();
+        assert_eq!(kinds, vec![None, Some(10), Some(3), Some(2), Some(6), Some(15), Some(9), Some(9), Some(1), None]);
         let s = EeGoalSpec::new(EE_GOAL_CTOR_ATTACK_UNIT);
         assert_eq!((s.unit_a, s.unit_b, s.flag_a, s.flag_b), (EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, 0, 0));
         assert!(s.object.is_null());

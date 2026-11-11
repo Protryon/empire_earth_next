@@ -187,6 +187,38 @@ pub extern "C" fn ee_units_heal_unit(player: *mut c_void, selection: *mut c_void
     crate::group::heal_unit(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
 }
 
+/// `EEMPathTo::Execute`'s body (`group::path_to`) for the sender, its selection, the message's point (read, and
+/// written back as the body adjusted it) and its options.
+///
+/// # Safety
+/// `x` and `y` point to the message's floats for the call.
+#[cfg(not(test))]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_units_path_to(
+    player: *mut c_void,
+    selection: *mut c_void,
+    x: *mut f32,
+    y: *mut f32,
+    facing: f32,
+    forced: bool,
+    rotating: bool,
+    queued: bool,
+    group_movement: bool,
+) {
+    let mut host = crate::host::game::GameHost;
+    let (player, selection) = (crate::host::HostRef(player), crate::host::HostRef(selection));
+    let o = crate::group::PathToOptions { facing, forced, rotating, queued, group_movement };
+    // SAFETY: the caller's two floats
+    let (px, py) = unsafe { (*x, *y) };
+    if let Some((nx, ny)) = crate::group::path_to(&mut host, player, selection, px, py, o) {
+        unsafe {
+            *x = nx;
+            *y = ny;
+        }
+    }
+}
+
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
 /// (`EEGroup*`) and the message's point, through the game's host calls.
 #[cfg(not(test))]

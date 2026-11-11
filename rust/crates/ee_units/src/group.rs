@@ -14,7 +14,8 @@
 
 use crate::host::{
     EeGoalSpec, Host, HostRef, EE_GOAL_CTOR_ATTACK_GROUND, EE_GOAL_CTOR_ATTACK_UNIT, EE_GOAL_CTOR_EXPLORE,
-    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE, EE_UNIT_ID_NONE,
+    EE_GOAL_CTOR_GATHER, EE_GOAL_CTOR_HEAL_UNIT, EE_GOAL_CTOR_LOCATION, EE_GOAL_CTOR_PATROL, EE_GOAL_CTOR_PATROL_ROUTE,
+    EE_UNIT_ID_NONE,
 };
 use crate::kinds::EE_OBJECT_COMPLEX_UNIT;
 use crate::select::EE_UNIT_TYPE_PATH_POINT;
@@ -470,6 +471,74 @@ pub fn heal_unit(host: &mut impl Host, player: HostRef, selection: HostRef, targ
             host.play_acknowledgement(player, group, index);
         }
     }
+}
+
+/// `kActionPrepareToMove` (ee/EEUnitAction.h)
+pub const EE_ACTION_PREPARE_TO_MOVE: i32 = 8000;
+/// `EESendGroupCommand`'s move marker
+pub const EE_GROUP_COMMAND_MOVE: i32 = 0xb8;
+
+/// EEMPathTo's options
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PathToOptions {
+    pub facing: f32,
+    pub forced: bool,
+    pub rotating: bool,
+    pub queued: bool,
+    pub group_movement: bool,
+}
+
+/// `EEMPathTo::Execute`: with a selection, the point is adjusted by the host from the first selected unit (the map's
+/// closest tile, a building it cannot pass; the message keeps the adjusted point: returned) and takes the final tile's
+/// height; for each formation slot 1..5 a new active group filled from the selection goes to the player's pending
+/// groups, keeps its mobile units and gets a Location goal (`new EEUGLocation(&point, true, forced, rotating, facing,
+/// false, 0)` with its group movement flag; made before the paths are reset and the goal cleared), queued as the
+/// message says, with the action Prepare To Move; it plans, one unit, drawn, acknowledges, and the move marker (0xb8)
+/// shows; an empty group is released. Returns the point (None: no selection, the message unchanged).
+pub fn path_to(
+    host: &mut impl Host,
+    player: HostRef,
+    selection: HostRef,
+    x: f32,
+    y: f32,
+    o: PathToOptions,
+) -> Option<(f32, f32)> {
+    let mut ids = Vec::new();
+    host.group_ids(selection, &mut ids);
+    let &first = ids.first()?;
+    let (x, y, z) = host.path_to_point(first, x, y);
+    for slot in 1..6 {
+        let group = host.active_group_new(player);
+        host.group_fill(group, selection, 0, slot);
+        host.group_ids(group, &mut ids);
+        if ids.is_empty() {
+            host.group_release(group);
+            continue;
+        }
+        host.pending_push(player, group);
+        host.group_keep_mobile(group);
+        let mut spec = EeGoalSpec::new(EE_GOAL_CTOR_LOCATION);
+        spec.point = [x, y, z];
+        spec.flag_a = o.forced as u8;
+        spec.flag_b = o.rotating as u8;
+        spec.value = o.facing;
+        spec.flag_c = o.group_movement as u8;
+        let goal = host.goal_new(&spec);
+        host.group_reset_paths(group);
+        host.group_clear_goal(group);
+        if let Some(goal) = goal {
+            host.group_set_goal(group, goal, o.queued);
+        }
+        host.group_set_action(group, EE_ACTION_PREPARE_TO_MOVE);
+        host.group_plan(group);
+        host.group_ids(group, &mut ids);
+        if !ids.is_empty() {
+            let index = host.random(0, ids.len() as i32 - 1);
+            host.play_acknowledgement(player, group, index);
+        }
+        host.send_group_command(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0);
+    }
+    Some((x, y))
 }
 
 #[cfg(test)]
@@ -1070,5 +1139,54 @@ mod tests {
         host.complex_of.insert(target, EE_UNIT_ID_NONE);
         heal_unit(&mut host, player, selection, target);
         assert_eq!(host.calls, vec![Call::ComplexOf(target)]);
+    }
+    /// `EEMPathTo::Execute`'s calls: the point adjusted once, the goal before the paths' reset and the clear, the
+    /// draw after the plan, the marker after the acknowledgement (also for a group the keep emptied)
+    #[test]
+    fn path_to_makes_the_original_calls_in_order() {
+        let (player, selection) = (r(0x500), r(0x600));
+        let first = 0x0100_0001;
+        let o = PathToOptions { facing: 0.75, forced: true, rotating: false, queued: true, group_movement: true };
+        let mut host = MockHost { specs: true, path_point: Some((20.5, 21.5, 3.25)), ..Default::default() };
+        host.groups.insert(0x600, vec![first, 0x0100_0002]);
+        host.fills.insert(2, vec![first, 0x0100_0002]);
+        host.fills.insert(3, vec![0x0100_0009]);
+        host.mobile = vec![first, 0x0100_0002];
+        host.draws = vec![1];
+        assert_eq!(path_to(&mut host, player, selection, 20.2, 21.9, o), Some((20.5, 21.5)));
+        let bits = [20.5f32.to_bits(), 21.5f32.to_bits(), 3.25f32.to_bits()];
+        let g = |n: usize| r(0x1000 + n);
+        let mut expected = vec![Call::PathPoint(first, 20.2f32.to_bits(), 21.9f32.to_bits())];
+        for slot in 1..6 {
+            let group = g(slot as usize);
+            expected.push(Call::NewGroup(player, group));
+            expected.push(Call::Fill(group, selection, 0, slot));
+            if slot != 2 && slot != 3 {
+                expected.push(Call::Release(group));
+                continue;
+            }
+            expected.extend([
+                Call::Pending(player, group),
+                Call::KeepMobile(group),
+                Call::GoalNew(EE_GOAL_CTOR_LOCATION, 1),
+                Call::Spec(EE_GOAL_CTOR_LOCATION, EE_UNIT_ID_NONE, EE_UNIT_ID_NONE, bits, 1, 0),
+                Call::Location(0.75f32.to_bits(), 0, 1),
+                Call::ResetPaths(group),
+                Call::ClearGoal(group),
+                Call::SetGoal(group, 1, true),
+                Call::SetAction(group, EE_ACTION_PREPARE_TO_MOVE),
+                Call::Plan(group),
+            ]);
+            if slot == 2 {
+                expected.extend([Call::Random(0, 1), Call::Acknowledge(player, group, 1)]);
+            }
+            expected.push(Call::Send(group, EE_UNIT_ID_NONE, player, EE_GROUP_COMMAND_MOVE, 0));
+        }
+        assert_eq!(host.calls, expected);
+        assert_eq!(host.live, 0);
+        // no selection: nothing, the point unchanged
+        let mut host = MockHost::default();
+        assert_eq!(path_to(&mut host, player, selection, 1.0, 2.0, o), None);
+        assert!(host.calls.is_empty());
     }
 }
