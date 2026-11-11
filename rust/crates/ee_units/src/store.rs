@@ -31,6 +31,12 @@ pub const EE_UNIT_FIELD_GOAL_KIND: u32 = 9;
 /// (`EEUnitClass::IsLandBuilding`), both fixed by the class's constructor (0: no class)
 pub const EE_UNIT_FIELD_DOMAINS: u32 = 10;
 pub const EE_UNIT_FIELD_LAND_BUILDING: u32 = 11;
+/// `EEComplexUnit::mIsCommandable`
+pub const EE_UNIT_FIELD_COMMANDABLE: u32 = 12;
+/// `EEComplexUnit::mFormationSlot` (the unit's place in its group's formation)
+pub const EE_UNIT_FIELD_FORMATION_SLOT: u32 = 13;
+/// `EEUnit::mUnitClass` too: the class's `mCanAttackGround`, fixed by its constructor (0: no class)
+pub const EE_UNIT_FIELD_CAN_ATTACK_GROUND: u32 = 14;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -73,6 +79,12 @@ pub struct EeUnitRecord {
     /// `EEUnit::mUnitClass->mDomains`, `->IsLandBuilding()` (0: no class)
     pub domains: u8,
     pub land_building: u8,
+    /// `EEUnit::mUnitClass->mCanAttackGround` (0: no class)
+    pub can_attack_ground: u8,
+    /// `EEComplexUnit::mIsCommandable`
+    pub commandable: u8,
+    /// `EEComplexUnit::mFormationSlot` (an `unsigned long`)
+    pub formation_slot: i64,
 }
 
 impl EeUnitRecord {
@@ -90,6 +102,9 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_GOAL_KIND => self.goal_kind = value as i32,
             EE_UNIT_FIELD_DOMAINS => self.domains = value as u8,
             EE_UNIT_FIELD_LAND_BUILDING => self.land_building = value as u8,
+            EE_UNIT_FIELD_COMMANDABLE => self.commandable = value as u8,
+            EE_UNIT_FIELD_FORMATION_SLOT => self.formation_slot = value,
+            EE_UNIT_FIELD_CAN_ATTACK_GROUND => self.can_attack_ground = value as u8,
             _ => return false,
         }
         true
@@ -117,6 +132,9 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_GOAL_KIND, self.goal_kind == other.goal_kind),
             (EE_UNIT_FIELD_DOMAINS, self.domains == other.domains),
             (EE_UNIT_FIELD_LAND_BUILDING, self.land_building == other.land_building),
+            (EE_UNIT_FIELD_COMMANDABLE, self.commandable == other.commandable),
+            (EE_UNIT_FIELD_FORMATION_SLOT, self.formation_slot == other.formation_slot),
+            (EE_UNIT_FIELD_CAN_ATTACK_GROUND, self.can_attack_ground == other.can_attack_ground),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -285,6 +303,9 @@ mod tests {
             unit_type: 42,
             domains: 2,
             land_building: 0,
+            can_attack_ground: 1,
+            commandable: 1,
+            formation_slot: 3,
         }
     }
 
@@ -320,6 +341,9 @@ mod tests {
             (EE_UNIT_FIELD_GOAL_KIND, 15),
             (EE_UNIT_FIELD_DOMAINS, 5),
             (EE_UNIT_FIELD_LAND_BUILDING, 1),
+            (EE_UNIT_FIELD_COMMANDABLE, 0),
+            (EE_UNIT_FIELD_FORMATION_SLOT, 0xffff_ffff),
+            (EE_UNIT_FIELD_CAN_ATTACK_GROUND, 0),
         ] {
             let before = r;
             assert!(r.set(f, v));
@@ -329,6 +353,7 @@ mod tests {
         assert_eq!(r.unit_type, 0xffff_ffff);
         assert_eq!(r.goal_kind, 15);
         assert_eq!((r.domains, r.land_building), (5, 1));
+        assert_eq!((r.commandable, r.formation_slot, r.can_attack_ground), (0, 0xffff_ffff, 0));
         let mut k = r;
         k.owner = 3;
         assert_eq!(r.first_difference(&k), Some(0));

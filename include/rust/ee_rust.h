@@ -854,6 +854,15 @@ constexpr static const uint32_t EE_UNIT_FIELD_DOMAINS = 10;
 
 constexpr static const uint32_t EE_UNIT_FIELD_LAND_BUILDING = 11;
 
+/// `EEComplexUnit::mIsCommandable`
+constexpr static const uint32_t EE_UNIT_FIELD_COMMANDABLE = 12;
+
+/// `EEComplexUnit::mFormationSlot` (the unit's place in its group's formation)
+constexpr static const uint32_t EE_UNIT_FIELD_FORMATION_SLOT = 13;
+
+/// `EEUnit::mUnitClass` too: the class's `mCanAttackGround`, fixed by its constructor (0: no class)
+constexpr static const uint32_t EE_UNIT_FIELD_CAN_ATTACK_GROUND = 14;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -3983,6 +3992,12 @@ struct EeUnitRecord {
   /// `EEUnit::mUnitClass->mDomains`, `->IsLandBuilding()` (0: no class)
   uint8_t domains;
   uint8_t land_building;
+  /// `EEUnit::mUnitClass->mCanAttackGround` (0: no class)
+  uint8_t can_attack_ground;
+  /// `EEComplexUnit::mIsCommandable`
+  uint8_t commandable;
+  /// `EEComplexUnit::mFormationSlot` (an `unsigned long`)
+  int64_t formation_slot;
 };
 
 /// The result of a consistency check (`Store::check`).
