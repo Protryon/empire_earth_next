@@ -24,6 +24,7 @@ pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
 pub mod file;
+pub mod flow;
 pub mod guistring;
 /// cbindgen:ignore
 pub mod ipaddr;

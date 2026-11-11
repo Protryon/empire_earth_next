@@ -1227,6 +1227,15 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunityTrust = 2,
 };
 
+/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
+enum class EeWonStageRoute {
+  Drop = 0,
+  Local = 1,
+  Net = 2,
+  /// Handled locally and handed to the network logic too (the host's broadcast).
+  LocalAndNet = 3,
+};
+
 /// The search or compare `ee_won_guistring_op` runs.
 enum class EeWonGuiStringOp {
   Compare,
@@ -4186,6 +4195,30 @@ struct EeWonQueueDecision {
 /// `FileWriter`'s state.
 struct EeWonFileWriter {
   void *file;
+};
+
+/// `ToggleReady`: the host tries to start the game (1); another player asks for the other ready flag (2, ready
+/// in `want_ready`, when the game code allows readying: `CanReady` is asked only for ready); nothing without a
+/// client or game (0).
+struct EeWonToggleReady {
+  int32_t action;
+  bool want_ready;
+  bool ask_can_ready;
+};
+
+/// `HandleKicked`: the moderation event's kind (0 a ban, 1 a kick) and room flags (6 an Internet game, 10 the
+/// others), and the message when it is us (0 none, 1 banned, 2 kicked).
+struct EeWonKicked {
+  int32_t kind;
+  int32_t flags;
+  int32_t message;
+};
+
+/// `SetError`: the errors not ignored, and whether the player may ignore them (only no-Internet, 1, and
+/// account-server, 4, errors).
+struct EeWonInitErrors {
+  int32_t errors;
+  bool allow_ignore;
 };
 
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
@@ -10815,6 +10848,78 @@ int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
 int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
+
+EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_send_to_client(bool have_game, bool i_am_captain);
+
+int32_t ee_won_stage_player_joined(bool has_player, bool i_am_captain);
+
+bool ee_won_stage_joined_keeps_all_ready(bool last_all_ready, bool ready);
+
+bool ee_won_stage_sets_in_progress(bool have_game, bool in_progress, bool want, bool i_am_captain);
+
+EeWonToggleReady ee_won_stage_toggle_ready(bool have_client,
+                                           bool have_game,
+                                           bool i_am_captain,
+                                           bool i_am_ready);
+
+int32_t ee_won_stage_host_warning(int32_t game_type,
+                                  bool show_confirmations,
+                                  bool firewall_test_done,
+                                  bool behind_firewall);
+
+int32_t ee_won_stage_verify_ping(int32_t game_type,
+                                 bool ping_replied,
+                                 bool have_config,
+                                 bool allow_join_without_ping,
+                                 bool show_confirmations);
+
+bool ee_won_stage_join_status_shown(int16_t status);
+
+int32_t ee_won_stage_leave_confirm(bool confirm, bool show_confirmations, bool i_am_captain);
+
+EeWonKicked ee_won_stage_kicked(bool ban, int32_t game_type, bool is_me);
+
+int32_t ee_won_stage_game_action(int32_t action, int32_t game_type);
+
+bool ee_won_stage_reports_ping(bool have_game, bool i_am_captain, bool same_game);
+
+bool ee_won_stage_kicks(bool have_client, bool have_game, bool i_am_captain);
+
+bool ee_won_stage_client_left(bool has_player, bool have_game);
+
+EeWonInitErrors ee_won_init_errors(int32_t error, int32_t ignored);
+
+bool ee_won_init_no_internet(bool check_for_internet, bool has_connection);
+
+int32_t ee_won_init_dir_request_target(int32_t index, bool config_has_auth_servers);
+
+bool ee_won_init_dir_answered(int32_t status);
+
+int32_t ee_won_init_missing_servers(size_t auth, size_t account, size_t versions);
+
+int32_t ee_won_init_version_outcome(int32_t status);
+
+int32_t ee_won_init_accept_outcome(bool accepted, bool from_firewall_server);
+
+bool ee_won_init_tou_saved(int32_t doc_status, int32_t modified, int32_t saved);
+
+size_t ee_won_init_document_bytes(size_t length);
+
+int32_t ee_won_init_event(int32_t kind);
+
+/// `cross_promotion`: the link, then the image, each through the sink (each given once, maybe empty).
+///
+/// # Safety
+/// `doc` holds `length` bytes (or is NULL); the sink's contract.
+void ee_won_init_cross_promotion(const uint8_t *doc,
+                                 size_t length,
+                                 EeWonByteSink link,
+                                 EeWonByteSink image,
+                                 void *context);
 
 /// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
 ///

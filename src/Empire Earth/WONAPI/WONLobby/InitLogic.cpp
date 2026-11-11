@@ -15,6 +15,10 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyAccountLogic.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/ee_rust.h"
+// The start-up checks' decisions (which errors stay, which server list a directory answer fills, what a version
+// status or a firewall connect-back means, which terms of use are saved, the advert's lines) are ee_won's flow
+// module (rust/crates/ee_won/src/flow.rs); this unit keeps the ops, the server lists, the files and the events.
 using namespace WONAPI;
 // Timeout for the firewall detect and accept operations, in milliseconds.
 unsigned long WONAPI::gLobbyAcceptTimeout = 20000;
@@ -65,9 +69,10 @@ namespace WONAPI {
 // (the player may ignore them only when they are no-Internet or account-server errors)
 bool InitLogic::SetError(int inError, const GUIString& inDescription)
 {
-    this->mErrors = inError & ~mIgnoredErrors;
+    EeWonInitErrors anErrors = ee_won_init_errors(inError, mIgnoredErrors);
+    this->mErrors = anErrors.errors;
     if (this->mErrors != 0) {
-        bool allowIgnore = (this->mErrors & 5) == this->mErrors;
+        bool allowIgnore = anErrors.allow_ignore;
         LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_InitFailed_String, inDescription, allowIgnore, 3), true);
         return true;
     }
@@ -83,7 +88,8 @@ void InitLogic::Start(bool inRetry)
     LobbySetVersionStatus(WS_None);
     this->mErrors = 0;
     LobbyConfig* config = GetLobbyConfig();
-    if (config != NULL && config->mCheckForInternet && !AsyncSocket::HasInternetConnection()) {
+    if (config != NULL && config->mCheckForInternet &&
+        ee_won_init_no_internet(true, AsyncSocket::HasInternetConnection())) {
         if (this->SetError(1, ::LobbyContainer_NoConnection_String))
             return;
     }
@@ -205,31 +211,19 @@ namespace WONAPI {
 // Reads the 'link' and 'image' lines of the advert document and downloads the image
 void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
 {
-    WriteBuffer storage(0,true);
-    storage.AppendBytes(inDocument != NULL ? inDocument->data() : NULL,
-                        inDocument != NULL ? inDocument->length() : 0);
-    storage.AppendByte(0);
-    char* token = storage.mData;
-    char delimiters[] = " \t\n=";
-    std::string imageURL("");
-    this->mCrossPromotion = "";
-    token = strtok(token,delimiters);
-    while (token != NULL) {
-        if (PlatStrICmp(token,"link") == 0) {
-            token = strtok(NULL,"\n");
-            if (token == NULL)
-                break;
-            this->mCrossPromotion = token;
-        } else if (PlatStrICmp(token,"image") == 0) {
-            token = strtok(NULL,"\n");
-            if (token == NULL)
-                break;
-            imageURL = token;
-        }
-        if (token == NULL)
-            break;
-        token = strtok(NULL,delimiters);
-    }
+    // the link and image lines as the original's strtok read them (ee_won_init_cross_promotion)
+    struct Lines {
+        std::string mLink, mImage;
+        static void Link(void* inContext, const uint8_t* inBytes, size_t inLength)
+        { static_cast<Lines*>(inContext)->mLink.append(reinterpret_cast<const char*>(inBytes), inLength); }
+        static void Image(void* inContext, const uint8_t* inBytes, size_t inLength)
+        { static_cast<Lines*>(inContext)->mImage.append(reinterpret_cast<const char*>(inBytes), inLength); }
+    } aLines;
+    ee_won_init_cross_promotion(inDocument != NULL ? reinterpret_cast<const uint8_t*>(inDocument->data()) : NULL,
+                                inDocument != NULL ? (size_t)inDocument->length() : 0, Lines::Link, Lines::Image,
+                                &aLines);
+    std::string imageURL(aLines.mImage);
+    this->mCrossPromotion = aLines.mLink;
     if (!imageURL.empty()) {
         SmartPtr<HTTPGetOp> op = new HTTPGetOp(imageURL);
         op->SetHTTPCache(HTTPCache::GetGlobalCache());
@@ -264,25 +258,29 @@ void InitLogic::HandleTOU(GetHTTPDocumentOp* inOp)
     long gameTime;
     LobbyGetTOUTimes(systemTime, gameTime);
     bool changed = false;
-    if (inOp->GetDocumentStatus(HTTPDocOwner_Sys) == 0 && inOp->GetModifiedTime(HTTPDocOwner_Sys) > systemTime) {
+    if (ee_won_init_tou_saved(inOp->GetDocumentStatus(HTTPDocOwner_Sys),
+                              (int32_t)inOp->GetModifiedTime(HTTPDocOwner_Sys), (int32_t)systemTime)) {
         FileWriter writer;
         try {
             if (writer.Open(LobbyGetSysTOUPath().c_str(), true)) {
                 ByteBufferPtr document = inOp->GetDocument(HTTPDocOwner_Sys);
-                if (document.get() != NULL && document->length() > 1)
-                    writer.WriteBytes(document->data(), document->length() - 1);
+                size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
+                if (aBytes != 0)
+                    writer.WriteBytes(document->data(), aBytes);
             }
             // Original sets this even if Open returns false, but not on an exception.
             changed = true;
         } catch (FileWriterException&) {}
     }
-    if (inOp->GetDocumentStatus(HTTPDocOwner_Game) == 0 && inOp->GetModifiedTime(HTTPDocOwner_Game) > gameTime) {
+    if (ee_won_init_tou_saved(inOp->GetDocumentStatus(HTTPDocOwner_Game),
+                              (int32_t)inOp->GetModifiedTime(HTTPDocOwner_Game), (int32_t)gameTime)) {
         FileWriter writer;
         try {
             if (writer.Open(LobbyGetGameTOUPath().c_str(), true)) {
                 ByteBufferPtr document = inOp->GetDocument(HTTPDocOwner_Game);
-                if (document.get() != NULL && document->length() > 1)
-                    writer.WriteBytes(document->data(), document->length() - 1);
+                size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
+                if (aBytes != 0)
+                    writer.WriteBytes(document->data(), aBytes);
             }
             changed = true;
         } catch (FileWriterException&) {}
@@ -307,7 +305,7 @@ void InitLogic::HTTPDocumentCompletion(AsyncOp* inOp)
     case HTTPDocType_ADV:
         {
             ByteBufferPtr document = op->GetDocument(HTTPDocOwner_Game);
-            if (document.get() != NULL && document->length() > 1) {
+            if (document.get() != NULL && ee_won_init_document_bytes(document->length()) != 0) {
                 this->ParseCrossPromotion(document.get());
                 return;
             }
@@ -337,7 +335,7 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         firewall == NULL || directory == NULL)
         return;
     WONStatus status = inOp->GetStatus();
-    if (status == WS_Success || status == WS_DirServ_MultiGetPartialFailure) {
+    if (ee_won_init_dir_answered(status)) {
     GetMultiDirOp* op = static_cast<GetMultiDirOp*>(inOp);
     const GetEntityRequestList& requests = op->GetRequestList();
     GetEntityRequestList::const_iterator i = requests.begin();
@@ -347,14 +345,11 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         if (request->GetStatus() != 0)
             continue;
         ServerContext* selected = NULL;
-        switch (index) {
-        case 0:
-            if (config->mAuthServers.empty())
-                selected = auth;
-            break;
-        case 1: selected = account; break;
-        case 2: selected = firewall; break;
-        case 3: selected = versions; break;
+        switch (ee_won_init_dir_request_target(index, !config->mAuthServers.empty())) {
+        case 1: selected = auth; break;
+        case 2: selected = account; break;
+        case 3: selected = firewall; break;
+        case 4: selected = versions; break;
         }
         if (selected != NULL)
             selected->AddAddressesFromDir(request->GetDirEntityList(),NULL);
@@ -363,22 +358,19 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         versions->GetNumAddresses() == 0) {
         directory->NotifyFailed(op->GetCurAddr());
         GUIString names;
-        int errors = 0;
-        if (auth->GetNumAddresses() == 0) {
+        int errors = ee_won_init_missing_servers(auth->GetNumAddresses(), account->GetNumAddresses(),
+                                                 versions->GetNumAddresses());
+        if (errors & 8)
             names.append(::LobbyContainer_AuthServers_String);
-            errors = 8;
-        }
-        if (account->GetNumAddresses() == 0) {
+        if (errors & 4) {
             if (names.length() != 0)
                 names.append(GUIString(", "));
             names.append(::LobbyContainer_AccountServers_String);
-            errors |= 4;
         }
-        if (versions->GetNumAddresses() == 0) {
+        if (errors & 0x10) {
             if (names.length() != 0)
                 names.append(GUIString(", "));
             names.append(::LobbyContainer_VersionServers_String);
-            errors |= 0x10;
         }
         GUIString description(::LobbyContainer_NoServers_String);
         description.append(names);
@@ -407,8 +399,9 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
         return;
     WONStatus status = inOp->GetStatus();
     LobbySetVersionStatus(status);
-    if (status != WS_Success && status != WS_DBProxyServ_ValidNotLatest && status != WS_DBProxyServ_OutOfDate) {
-        if (status == WS_DBProxyServ_OutOfDateNoUpdate || status == WS_DBProxyServ_DBError) {
+    int anOutcome = ee_won_init_version_outcome(status);
+    if (anOutcome != 0) {
+        if (anOutcome == 1) {
             ServerContext* versions = LobbyGetPatchServers();
             if (versions != NULL)
                 versions->NotifyFailed(static_cast<CheckValidVersionOp*>(inOp)->GetCurAddr());
@@ -433,12 +426,15 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
     if (inOp != op)
         return;
     this->mAcceptOp = NULL;
-    if (op->GetStatus() != WS_Success) {
+    bool anAccepted = op->GetStatus() == WS_Success;
+    int anOutcome = ee_won_init_accept_outcome(anAccepted, anAccepted &&
+        op->mAcceptedSocket->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost());
+    if (anOutcome == 0) {
         LobbySetBehindFirewall(true);
         LobbyBroadcastLobbyEvent(100055,true);
         return;
     }
-    if (op->mAcceptedSocket->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost()) {
+    if (anOutcome == 1) {
         LobbySetBehindFirewall(false);
         LobbyBroadcastLobbyEvent(100055,true);
         return;
@@ -617,10 +613,10 @@ namespace WONAPI {
 // Retries start-up (event 100045), or ignores the current errors and retries (event 100025)
 void InitLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    if (inEvent->mType != 100045) {
-        if (inEvent->mType != 100025)
-            return;
-        this->mIgnoredErrors |= this->mErrors;
+    switch (ee_won_init_event(inEvent->mType)) {
+    case 2: this->mIgnoredErrors |= this->mErrors; break;
+    case 1: break;
+    default: return;
     }
     this->Start(true);
 }
