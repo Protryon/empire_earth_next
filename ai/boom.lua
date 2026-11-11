@@ -265,6 +265,9 @@ end
 -- a site the gatherers can be sent to now: no enemy or danger near, not by another player's land (a claimed site not
 -- seen yet is gathered from all the same: the first gatherer there explores it)
 local function open_site(s)
+    if D.site_blocked(s.x, s.y) then
+        return false   -- (lib.defence hurt_safety: hurt there lately, AI_RESEARCH §8.41)
+    end
     return s.blocked == nil or s.blocked == "unexplored"
 end
 
@@ -504,10 +507,28 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (plan.emergency, off; AI_RESEARCH §8.41 D6, balanced's prehistoric_army "unless a stronger enemy is near"): while
+    -- a wave of lib.defence's wave size is seen in the claim range, up to this many soldiers (and a barracks), the
+    -- reserve giving way; none once it has been gone 60 s
+    local emergency = false
+    if plan.emergency ~= nil then
+        for _, cl in ipairs(D.clusters()) do
+            local r = view.claim_range + 5
+            local dx, dy = cl.x - view.town_x, cl.y - view.town_y
+            if cl.n >= D.opts.wave_size and dx * dx + dy * dy <= r * r then
+                memory.emergency_until = view.time + 60000
+            end
+        end
+        emergency = view.time <= (memory.emergency_until or -1)
+        if emergency then
+            soldiers_wanted = math.max(soldiers_wanted, plan.emergency)
+        end
+    end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
     -- stand in for an empty army: they cover only the land round them)
-    local scramble = threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers)
+    local scramble = (threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers))
+        or (emergency and army_short)
 
     -- saving for the next epoch: once the town has its citizens (or the epoch has run long) the reserve holds the
     -- advance's cost, and the advance is asked for only when it is paid. From the Stone Age the gold and iron are kept
@@ -870,7 +891,10 @@ function M.step(view, memory)
         release_unkept(view, order, keep)
         memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
 
-        local tower_wanted = tower ~= nil and towers < plan.towers
+        -- (plan.towers_saving: the towers wanted once the next epoch is reserved - the reserve keeps them off its cost;
+        -- AI_RESEARCH §8.41 D3c)
+        local tower_target = saving and plan.towers_saving or plan.towers
+        local tower_wanted = tower ~= nil and towers < tower_target
         local boats_changed = (memory.boats_seen or -1) ~= view.boats
         memory.boats_seen = view.boats
         for _, r in ipairs(V.resources) do
@@ -966,7 +990,7 @@ function M.step(view, memory)
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
         -- threat one more at the town
-        if tower_wanted and not towers_busy and view.citizens >= 10 then
+        if tower_wanted and not towers_busy and view.citizens >= (plan.tower_at or 10) then
             if towers == 0 or (threatened and towers < 2) then
                 order("tower_town", {verb = "build", type = tower, near = "town"})
             else
@@ -1020,7 +1044,7 @@ function M.step(view, memory)
         -- the town grows or a threat comes
         local barracks = V.buildings(view, "b_barracks")
         local ranges = V.buildings(view, "b_archery_range")
-        if view.citizens >= (plan.barracks_at or 10) and V.total(barracks) < 1 then
+        if (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
         elseif age >= 2 and V.cost(view, "b_archery_range") ~= nil and not going_up(barracks)
                 and not going_up(ranges) then
@@ -1098,6 +1122,7 @@ function M.step(view, memory)
         end
     end
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
+    memory.epoch_now = view.epoch
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
     if plan.watch then
@@ -1158,7 +1183,7 @@ end
 -- every 250 game ms (docs/AI_LUA_UNITS.md §5): the raid answer (lib.defence) on the events since the last call
 function M.micro(info, memory)
     memory.def = memory.def or {}
-    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y)
+    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y, memory.epoch_now)
     return nil
 end
 

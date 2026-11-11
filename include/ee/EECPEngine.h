@@ -44,6 +44,10 @@ struct EECPAIEntry {
     std::string mScript;            // the Lua module (require's name: dots are folders under Data/ai)
     std::string mDescription;
     bool mRandom;                   // the lobby's Random may pick it
+    bool mSeesAll;                  // "sees_all": its queries may read through the fog (ai.enemy_near; the classic's
+                                    // information cheat, docs/AI_LUA_UNITS.md §11); false for every other AI
+    bool mFillsGarrison;            // "fills_garrison": ai.garrison_fill may top a building's garrison up with no
+                                    // citizens (the classic's FillGarrison cheat, docs/AI_LUA_UNITS.md §11)
 };
 
 const std::vector<EECPAIEntry>& EECPAIManifest();   // read at the first call
@@ -65,6 +69,10 @@ long EECPEngine(const EEComputerPlayer* inPlayer);
 std::string EECPEngineName(const EEComputerPlayer* inPlayer);
 // the next engine's AI id of a computer player ("" none)
 std::string EECPEngineAI(const EEComputerPlayer* inPlayer);
+// whether the seat's AI declares "sees_all" in the manifest (false for the classic and every other seat)
+bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer);
+// whether the seat's AI declares "fills_garrison" in the manifest (false for the classic and every other seat)
+bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer);
 // gives a computer player its engine from a resolved choice (classic or 2 + k)
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice);
 

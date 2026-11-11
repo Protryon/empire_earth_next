@@ -160,7 +160,7 @@ local function set_next_attack(view, memory)
 end
 M.set_next_attack = set_next_attack
 
--- ChooseFavoriteLandType (EnterEpoch): a random buildable soldier class of the epoch. DEVIATION: the classic's
+-- ChooseFavoriteLandType and ChooseFavoriteSeaType (EnterEpoch): a random buildable soldier class of the epoch. DEVIATION: the classic's
 -- favourite screener and AI lines are not exposed; the port draws among the soldier classes the player can train now
 local function choose_favorite_land(view, memory)
     local list = {}
@@ -184,6 +184,18 @@ local function choose_favorite_land(view, memory)
     table.sort(list)
     if #list > 0 then
         memory.cp.favorite_land = list[ai.random(1, #list)]
+    end
+    -- ChooseFavoriteSeaType: a random warship class the player can train now that passes IsFavoriteSea (DEVIATION as
+    -- the land's: the screener's AI lines are not exposed)
+    local sea = {}
+    for _, c in ipairs(view.costs or {}) do
+        if c.military and not c.building and R.class_of(c.type).domain == "sea" and ARMY.favorite_sea_ok(c.type) then
+            sea[#sea + 1] = c.type
+        end
+    end
+    table.sort(sea)
+    if #sea > 0 then
+        memory.cp.favorite_sea = sea[ai.random(1, #sea)]
     end
 end
 
@@ -265,6 +277,7 @@ function M.step(view, memory)
     R.begin_step(view)
     local cp = memory.cp
     local t = T.load(memory)
+    R.sees_all = t.sees_all == true and ai.enemy_near ~= nil
     if not cp.started then
         enable_managers(view, memory)
         set_next_attack(view, memory)

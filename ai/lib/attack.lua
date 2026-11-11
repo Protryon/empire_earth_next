@@ -33,6 +33,7 @@ M.opts = {
     tower_hp = 4,          -- a known tower counts its hit points / this ...
     tower_atk = 2,         -- ... and its attack / this in the estimate
     cooldown_ms = 180000,  -- after a retreat, no new force for this long
+    route = true,          -- the force's legs follow ai.route round the danger map's threat
 }
 
 local function d2(ax, ay, bx, by)
@@ -111,9 +112,18 @@ function M.step(view, mem, opts)
     local guard = opts.guard
     local open = windows(view, mem, guard)
     local force = G.role(mem, "force")
+    if force ~= nil and force.task == "defend" then
+        -- (lib.groups: a retreat that arrived defends) back into the guard. First: the judging below would send it
+        -- home again every step (150 retreat lines for 17 attacks in 31 games)
+        if guard ~= nil then
+            G.add(mem, guard, force.units)
+        end
+        G.disband(mem, force)
+        return
+    end
     if force ~= nil then
         -- judge the force: what it sees round it (soldiers and towers) against itself; retreat below retreat_odds
-        if force.task ~= "retreat" and force.cx ~= nil then
+        if (force.task == "attack" or force.task == "raid") and force.cx ~= nil then
             local foes = ai.seen{enemy = true, armed = true, near = {force.cx, force.cy, 12}}
             local ehp, eatk = 0, 0
             if #foes > 0 then
@@ -133,14 +143,6 @@ function M.step(view, mem, opts)
                 mem.att_cool = now + o.cooldown_ms
                 mem.att_window = nil
             end
-        elseif force.task == "retreat" then
-            -- home again: back into the guard
-        end
-        if force.task == "defend" then   -- (lib.groups: a retreat that arrived defends) back to the guard
-            if guard ~= nil then
-                G.add(mem, guard, force.units)
-            end
-            G.disband(mem, force)
         end
         return
     end
@@ -174,6 +176,7 @@ function M.step(view, mem, opts)
                              x = e.town_x, y = e.town_y, home_x = view.town_x, home_y = view.town_y})
     G.add(mem, g, ids)
     g.leash = true
+    g.route = M.opts.route   -- [research §4.4] round the known towers (lib.groups: ai.route's waypoints)
     mem.att_sent = (mem.att_sent or 0) + 1
     print(string.format("attack go task=%s units=%d own=%d enemy=%d soldiers=%d towers=%d", g.task, #ids, own,
         ehp * eatk, i.soldiers, towers))
