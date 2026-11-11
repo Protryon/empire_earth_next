@@ -556,6 +556,60 @@ from Rust without a call into C++ (category, hit points, built, type, tile, goal
 list, goal creation as a host call returning a handle. The box selection's pick (`EEPlayer::SelectUnits`) is the
 first once the store exists.
 
+**Leaf 5, the unit store, stage one: the design (2026-11-10, fourth round).** What the store is for first: the
+decisions of the selection pick and the 15 goal-giving bodies read units' plain state by id between world calls that
+change it, so the state must be current at every point of the tick, not only between ticks.
+
+- **Where the plain state lives.** A Rust-owned record per unit (`ee_units` store.rs, `UnitRecord`: the owner's
+  player id, the object kind, whether the unit is its own complex unit, valid, hit points, the tile, the class's
+  category and unit type, for a complex unit built and the current goal's kind), keyed by the unit id. Its lifetime
+  is the player list's: inserted by `RTSPlayer::InsertUnit` (seeded whole from the object: a new unit, a loaded one,
+  a kept id), removed by `RTSPlayer::RemoveKilledUnits` when the unit leaves the list, and a player's records dropped
+  by `RTSPlayer::Reset`. That is exactly the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit` (the ids the bodies
+  look up); the registry behind `EEUnitHandle<T>` keeps its own, longer lifetime (to `FreeNode`, where the UI
+  thread's last `Dereference` may run) and stays the way to the object. Every store write happens where the C++
+  member is written, under the world's write lock (the physics tick, the loads, the editor); the store has its own
+  mutex as well, so a read from another thread is never torn.
+- **How it stays current: the members become write-through holders.** Each mirrored C++ member becomes an
+  `EEUnitStoreField<T, F>` (ee/EEUnitStore.h): the same size and layout as `T` (offsets, `memcpy`, the save code's
+  bytes unchanged), read implicitly as `T`, and every assignment form (`=`, `+=`, `-=`, `++`, `--`, holder to
+  holder) stores the value and reports it to the store when the unit is in it (`RTSUnit::mInUnitStore`, set by the
+  insert, cleared by the removal). The compiler finds every writer (no reference or pointer to a holder converts to
+  `T&`/`T*`), so no write can bypass the store, as the object kind's holder proved there is no copy. Derived fields
+  are reported at the write that changes them: the class's category and type at `mUnitClass` (a class's own
+  category and type are written only by its constructor), the goal's kind at `mGoalState` (fixed by the goal's
+  constructor), the complex flag at `mComplexUnit`.
+- **The alternative, a per-call view** (C++ fills plain records of the units a decision reads, before each call):
+  nothing at the writes, but every decision needs its own filling code, a view goes stale at the first world call
+  that changes a unit (`Fill`, `ClearGoal`, `SetGoal`) so an interleaved body must refill, and the C++ members stay
+  the truth forever. The holders cost one store call per write and a second copy of each value until the members go;
+  they buy a store that is current everywhere and a path to deleting the members: once every reader of a field
+  reads the store (Rust, or C++ through `EEUnitStore` accessors), the holder drops its inline value and becomes an
+  accessor over the store, and the member goes when the save codec writes from the store (leaf 7).
+- **Determinism.** The game only looks records up by id (a `BTreeMap`: no hash order anywhere, and the only walk,
+  the check's and a player's reset, is in id order and observes nothing the game reads). The game's own orders (a
+  player's list, a group's vector) stay the C++ containers' until the tick moves; then the store gains the per-player
+  order as an id list kept at the list's insert and unlink, never the map's order. A write is a plain store: no
+  random draw, no float operation (the values are copied as they are, hit points and tiles as the C++ `long`).
+- **Saves.** The store is not saved: the format is the save work's (0.262) and does not change. A load rebuilds it,
+  since every loaded unit passes `InsertUnit` (seeded from the object as loaded) and the Restore pass writes the
+  pointers (`mGoalState`, ...) through the holders.
+- **Handles and the store.** A unit handle stays the id; the store is the second thing an id resolves to (the plain
+  state, for decisions), the registry the first (the object, for world calls). Rust decisions read the store and
+  hand ids back; C++ resolves them for the world calls. Goals have no ids: a Rust decision gets a goal as an opaque
+  handle from a host call (`new EEUG*` behind it, one reference owned by the handle), hands it to the host's group
+  calls and never dereferences it.
+- **The gate.** TEST ONLY, with the simulation capture on: after every physics tick and before every game message
+  the physics executes, C++ walks every player's list and hands every unit's fields to the store, which compares them
+  with its records and counts the records (a USCK record per check: the units compared, the mismatches; a mismatch
+  prints the unit and field and stops EE-SIM with exit code 3). So the store equals the objects on every unit at every
+  point where a decision reads it, over the oracle games and the four capture profiles.
+- **The path to the tick.** Stage one: the fields above, the active group as ids, goal creation as a host call, the
+  pick. Then the fields the bodies' helpers read (the formation slot, mobility, the resource amount), the 15 bodies;
+  then positions and the out-of-sync checksum over the store (leaf 5's end); then each unit step moves with the
+  fields it writes, the holders turning into accessors as their last C++ readers go, and the physics tick (leaf 6)
+  iterates the store's per-player orders.
+
 ### R6: UI, events, editor
 
 The UI toolkit (14.4k, forms from the UI db tables), the in-game UI (36.5k) and the scenario editor and manager
