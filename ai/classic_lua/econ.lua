@@ -290,9 +290,12 @@ local function settlement_for(view, memory)
         return
     end
     local cols = ai.get(ids, {'gathers', 'target'})
+    local tried = {}   -- (a resource tested once a call: its gatherers share the answer; the late game's 120 gatherers
+                       -- tested each blew the step's budget)
     for k = 1, #ids do
         local kind, target = cols.gathers[k], cols.target[k]
-        if kind ~= nil and target ~= nil and rm.settle_for[kind] == nil then
+        if kind ~= nil and target ~= nil and rm.settle_for[kind] == nil and not tried[target] then
+            tried[target] = true
             local res = R.unit(target)
             local c = res ~= nil and R.class_of(res.type) or nil
             if res ~= nil and c.family ~= 0x11 and res.type ~= C.farm and res.type ~= C.robotic_farm

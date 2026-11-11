@@ -45,6 +45,7 @@
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
@@ -431,6 +432,22 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
             : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : (theClass->mDomains & kMovementSea) ? 'n' : 's';
     }
+    // the killer's own goal and its target's kind (s soldier, c citizen, b building, n ship, - none): whom it was after
+    const char* theKillerGoal = "-";
+    char theKillerTarget = '-';
+    if (theKiller != NULL && theKiller->mActiveGoal != NULL) {
+        theKillerGoal = theKiller->mActiveGoal->mKind == kGoalAttackUnit ? "attack"
+            : theKiller->mActiveGoal->mKind == kGoalLocation ? "move" : "other";
+        if (theKiller->mActiveGoal->mKind == kGoalAttackUnit) {
+            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theKiller->mActiveGoal)->mTarget;
+            if (theTarget != NULL && theTarget->mUnitClass != NULL) {
+                EEUnitClass* theTargetClass = theTarget->mUnitClass;
+                theKillerTarget = theTargetClass->IsBuilding() ? 'b'
+                    : theTargetClass->mCategory == kUnitCategoryLandCitizen ? 'c'
+                    : (theTargetClass->mDomains & kMovementSea) ? 'n' : 's';
+            }
+        }
+    }
     // the classic's sub-group holding it (EECPAttackCommander::FindHolder, read only): its id and mission, its task
     // (type:mode) and that task's distance; the group's task (type:mode) - which of the classic's groups it served
     long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
@@ -453,10 +470,10 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         }
     }
     EECPTraceScope theScope("cp");
-    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
+    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld kgoal=%s:%c sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
         EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
         theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance,
-        theGroup, theMission, theTaskType, theTaskMode, theTaskDistance, theGroupType, theGroupMode);
+        theKillerGoal, theKillerTarget, theGroup, theMission, theTaskType, theTaskMode, theTaskDistance, theGroupType, theGroupMode);
 }
 
 // A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
@@ -479,6 +496,8 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             long theSquared = theDX * theDX + theDY * theDY;
             sLostNear[theID][theSquared < 225 ? 0 : theSquared < 900 ? 1 : 2]++;
         }
+        if (inPlayer->mNextState == NULL)
+            EECPTraceSoldierLost(inPlayer, inUnit);   // (a script's seat has its next.death line)
     } else if (EECPIsBuildingCategory(theCategory))
         sLost[theID][1]++;
     else if (theCategory != kUnitCategoryProjectile) {

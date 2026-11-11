@@ -2767,6 +2767,64 @@ static int LuaEnemyForce(lua_State* L)
     return 3;
 }
 
+// ai.player_file(player) -> {gatherers, types = {[class] = n}, military = {land, sea, air, space} (counts),
+// strength = {land, sea, air, space} (the classes' influence)}: the classic's intelligence file of a player
+// (EECPIntelligencePlayerFile::Update / AddUnitClass / AddUnitType: every unit of the player alive, seen or not - its
+// citizens as gatherers, its non-building units by class, the ones with an attack, calamity power, heal or conversion
+// in their domain's strength). Only for an AI whose manifest entry declares "sees_all" (the classic's information
+// cheat); nothing for every other AI
+static int LuaPlayerFile(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* st = EECPUnitsGet(me);
+    EECPUnitsCharge(L, kCostCall);
+    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1))
+        return 0;
+    lua_Integer thePlayer = lua_tointeger(L, 1);
+    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
+        return 0;
+    long theGatherers = 0, theScanned = 0;
+    long theCount[4] = {0, 0, 0, 0}, theStrength[4] = {0, 0, 0, 0};   // land, sea, air, space
+    std::map<long, long> theTypes;
+    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
+        theScanned++;
+        if (!(u->mHitPoints > 0) || u->mUnitClass == NULL)
+            continue;
+        EEUnitClass* c = u->mUnitClass;
+        if (c->mCategory == kUnitCategoryLandCitizen || c->mCategory == kUnitCategoryNavalCitizen) {
+            theGatherers++;
+            continue;
+        }
+        if (c->mFamily == kUnitFamilyBuilding || c->mFamily == kUnitFamilyAnimal)
+            continue;
+        theTypes[c->GetUnitType()]++;
+        if (!(c->GetAttack() > 0) && !c->mHasCalamityPowers && !c->GetIsMedic() && c->GetConversionRate() == 0.0f)
+            continue;
+        long d = (c->GetDomains() & kMovementAir) ? 2 : (c->GetDomains() & kMovementSea) ? 1 : (c->GetDomains() & kMovementSpace) ? 3 : 0;
+        theCount[d]++;
+        theStrength[d] += (long)c->mInfluence;
+    }
+    EECPUnitsCharge(L, theScanned * kCostScan + (int64_t)theTypes.size() * kCostField);
+    static const char* const kDomains[4] = {"land", "sea", "air", "space"};
+    lua_createtable(L, 0, 4);
+    EECPUnitsSetInt(L, "gatherers", theGatherers);
+    lua_createtable(L, 0, (int)theTypes.size());
+    for (std::map<long, long>::iterator it = theTypes.begin(); it != theTypes.end(); ++it) {
+        lua_pushinteger(L, (lua_Integer)it->second);
+        lua_setfield(L, -2, EECPUnitsName(st, it->first));
+    }
+    lua_setfield(L, -2, "types");
+    lua_createtable(L, 0, 4);
+    for (int d = 0; d < 4; d++)
+        EECPUnitsSetInt(L, kDomains[d], theCount[d]);
+    lua_setfield(L, -2, "military");
+    lua_createtable(L, 0, 4);
+    for (int d = 0; d < 4; d++)
+        EECPUnitsSetInt(L, kDomains[d], theStrength[d]);
+    lua_setfield(L, -2, "strength");
+    return 1;
+}
+
 // ai.garrison_fill(id, n) -> ok: an own finished building's garrison count raised by n with no citizen going in, as the
 // classic's FillGarrison does when it has too few idle citizens (EEComplexUnit::AddGarrison(count + n, population):
 // the original's call, which takes only into an empty garrison). Only for an AI whose manifest entry declares
@@ -2982,6 +3040,16 @@ static int LuaConfig(lua_State* L)
         s->mMemoryMs = v < 30000 ? 30000 : v > 1800000 ? 1800000 : v;
     lua_pushinteger(L, (lua_Integer)s->mMemoryMs);
     return 1;
+}
+
+// ai.used() -> the instructions and charges this call has used so far (a multiple of the hook step, plus the helpers'
+// charges), against the budget (ai.used's second value): a script's own profiling; it changes nothing
+static int LuaUsed(lua_State* L)
+{
+    EECPLuaState* s = EECPLuaState::From(L);
+    lua_pushinteger(L, (lua_Integer)s->LastInstructions());
+    lua_pushinteger(L, (lua_Integer)s->Budget());
+    return 2;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -3913,8 +3981,8 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
-        {"config", LuaConfig},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
