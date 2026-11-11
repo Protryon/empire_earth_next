@@ -59,7 +59,9 @@ use ee_plat_ui as _;
 // blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
 use ee_won as _;
 
-// the unit registry behind EEUnitHandle<T> (ee_units/src/ffi.rs), called by RTSUnit.cpp
+// the unit registry behind EEUnitHandle<T> and the unit store (ee_units/src/ffi.rs), called by RTSUnit.cpp and
+// EEUnitStore.cpp; its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
+#[cfg(not(test))]
 use ee_units as _;
 
 // the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage

@@ -300,7 +300,7 @@ void EEAIFOPAvailablePersonnelGatherer::AddUnit(const std::pair<long, EEUnit*>& 
     if (theIterator != this->mClasses.end())
         theIterator->second.first++;
     else
-        this->mClasses.insert(std::make_pair(inUnit.first, std::make_pair(1L, inUnit.second->mUnitClass)));
+        this->mClasses.insert(std::make_pair(inUnit.first, std::make_pair(1L, inUnit.second->mUnitClass.Get())));
 }
 
 // FUNCTION: EXE 0x42a4d9

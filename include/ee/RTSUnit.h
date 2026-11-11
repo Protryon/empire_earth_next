@@ -6,6 +6,8 @@
 #ifndef EE_RTSUNIT_H
 #define EE_RTSUNIT_H
 
+#include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
+
 class EEPlayer;
 class EEMap;
 class FSFile;
@@ -82,15 +84,16 @@ public:
     RTSUnit* mPrevious;                     // +0x10 the previous unit of that list (0x23dabb)
     RTSTile* mTile;                         // +0x14 its tile (0x23dcf3; 0: not selectable by the hot keys; provisional name)
     EEPlayer* mPlayer;                      // +0x18 (its owner)
-    long mTileX;                            // +0x1c provisional name (the cast-calamity goal's x; = -10000)
-    long mTileY;                            // +0x20 provisional name (= -10000)
+    EEUnitStoreField<long, kUnitFieldTileX> mTileX;   // +0x1c provisional name (the cast-calamity goal's x; = -10000) (the unit store's)
+    EEUnitStoreField<long, kUnitFieldTileY> mTileY;   // +0x20 provisional name (= -10000) (the unit store's)
     unsigned long mUnitID;                  // +0x24 (EECalamity keeps its target's and caster's; -1 for none)
     bool mIsQueuedForDelete;                // +0x28 (saved)
     bool mIsEditorSelected;                 // +0x29 (saved as false; Load clears it)
     bool mIsNodeFreed;                      // +0x2a (= true after the ctor)
     bool GetIsValid() const { return this->mIsValid; }
-    bool mIsValid;                          // +0x2b (named by the asserts "this->mIsValid == true")
+    EEUnitStoreField<bool, kUnitFieldValid> mIsValid;   // +0x2b (named by the asserts "this->mIsValid == true") (the unit store's)
     RTSUnitObjectKind mObjectKind;          // New (port): RTSUnit 0, EEUnit 1, EEComplexUnit 2 (EEUnitCast<T>)
+    bool mInUnitStore = false;              // New (port): its record is in the unit store (ee/EEUnitStore.h)
 };
 
 #endif

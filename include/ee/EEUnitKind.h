@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include "rust/ee_rust.h"   // the EE_GOAL_KIND_* and EE_CLASS_KIND_* bits
+#include "ee/EEUnitStore.h"   // the unit store's holders (EEUnitStoreField: mGoalState, mUnitClass)
 
 // the tables (kinds.rs; cbindgen exports no statics)
 extern "C" {
@@ -66,6 +67,11 @@ template <class T, class G> inline T* EEGoalCast(G* inGoal)
 template <class T, class G> inline const T* EEGoalCast(const G* inGoal)
 {
     return inGoal != NULL && EEGoalIs<T>(inGoal) ? static_cast<const T*>(inGoal) : NULL;
+}
+// a unit store holder's goal (EEComplexUnit::mGoalState)
+template <class T, class G, unsigned int F> inline T* EEGoalCast(const EEUnitStoreField<G*, F>& inGoal)
+{
+    return EEGoalCast<T>(inGoal.Get());
 }
 
 class EEUnitClass;
@@ -163,6 +169,11 @@ template <class T, class C> inline T* EEUnitClassCast(C* inClass)
 template <class T, class C> inline const T* EEUnitClassCast(const C* inClass)
 {
     return inClass != NULL && EEUnitClassIs<T>(inClass) ? static_cast<const T*>(inClass) : NULL;
+}
+// a unit store holder's class (EEUnit::mUnitClass)
+template <class T, class C, unsigned int F> inline T* EEUnitClassCast(const EEUnitStoreField<C*, F>& inClass)
+{
+    return EEUnitClassCast<T>(inClass.Get());
 }
 
 class EEUnit;

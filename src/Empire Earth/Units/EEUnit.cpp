@@ -351,7 +351,7 @@ void EEUnit::Describe(UWideString& ioString)
     ioString += theString;
     sprintf(theString, "obj %ld:", this->mUnitClass->mUnitType);
     ioString += theString;
-    sprintf(theString, "hp %ld:", this->mHitPoints);
+    sprintf(theString, "hp %ld:", this->mHitPoints.Get());
     ioString += theString;
 }
 
@@ -374,7 +374,7 @@ void EEUnit::DescribeLong(UWideString& ioString)
         sprintf(theString, "Resource Type/Amount:%ld / %ld\n", this->mResourceType, this->mResourceAmount);
         ioString += theString;
     }
-    sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", this->mHitPoints, this->mStats->mMaxHitPoints,
+    sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", this->mHitPoints.Get(), this->mStats->mMaxHitPoints,
             (float)this->mHitPoints / (float)this->mStats->mMaxHitPoints);
     ioString += theString;
 }

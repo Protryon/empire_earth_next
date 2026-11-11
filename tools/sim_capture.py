@@ -45,6 +45,10 @@ golden lines come from the C++ codec (EEMessage.cpp's original ExportMessage/Imp
 NMDC is the messages' Execute decisions (ee/EEMessageExecute.h: the selection id check, the resources): every call in
 game, their tables over edge values once, the real players' prices, exchanges and refunds every five game minutes.
 Its golden lines come from the C++ decisions (R5b.4 leaf 4).
+USCK is the unit store's check (ee/EEUnitStore.h, R5b.4 leaf 5): at every physics tick and before every executed game
+message, every unit of every player's list against its Rust record (the units compared; a difference stops EE-SIM with
+exit code 3). USPK is the box selection's pick (EESelectPick): every game call and, every five game minutes, a sweep
+over every player's units; its golden lines come from the C++ pick (EEPlayer::SelectUnits' loop).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """

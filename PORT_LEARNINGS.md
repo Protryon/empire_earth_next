@@ -4912,3 +4912,61 @@ driver relinked over the forwarders prints the same.
   LobbyPersistentData's file layout, the resource table, RoutingLogic), StringUtil's case functions, WONGUI's
   components and layout, and everything only the gone internet servers reach (peer auth, AuthContext's sessions and
   certificate flow, GetCertOp, the services' requests and replies).
+
+## R5b.4, fourth round: the unit store's first stage, the box selection's pick in Rust (ee_units store.rs, select.rs; branch rust-r5b4-core, 2026-11-10)
+
+The design is RUST_PLAN R5b.4 "Leaf 5, the unit store, stage one". What it took:
+
+- **The holders.** `EEUnitStoreField<T, F>` (ee/EEUnitStore.h) replaced eight members: `RTSUnit::mTileX`, `mTileY`,
+  `mIsValid`, `EEUnit::mUnitClass`, `mComplexUnit`, `mHitPoints`, `EEComplexUnit::mIsBuilt`, `mGoalState`. Same size
+  and layout; every assignment form reports the new value (`EEUnitStoreWrote`, the owner from the member's
+  `offsetof`, the record checked by the object's address). What the compiler then refused, and the fixes:
+  - `dynamic_cast` of a pointer holder (6 sites: two in the AI, the render object, three in the UI's target
+    finder): `.Get()`. `static_cast` and C-style downcasts (12) go through the holder's explicit conversion
+    template; `EEGoalCast`/`EEUnitClassCast` (10) have holder overloads (ee/EEUnitKind.h).
+  - `FSFile::Read(T&)` cannot bind a holder: `EEUnitStoreRead(file, holder)` reads the plain value and writes it
+    through the holder (`RTSUnit::Load`'s tile and valid flag, `EEComplexDoppelganger`'s built flag: one line each).
+    `Write(const T&)` takes the holder's conversion as it is.
+  - **Variadic calls.** A holder passed to `printf`/`sprintf` compiles on Windows (clang-cl only warns,
+    `-Wnon-pod-varargs`) but on the Itanium ABI a class with a user-written copy constructor goes by invisible
+    reference: the Linux and Mac builds refuse it, or print an address. A scratch compile of the exe's units with
+    `-Werror=non-pod-varargs` found 26 sites (the out-of-sync dumps, the goals' descriptions, `RTSUnit::Describe`);
+    each is `.Get()`.
+- **Where records come and go.** `RTSPlayer::InsertUnit` (after `mPlayer`: a new unit, a loaded one, a kept id),
+  `RemoveKilledUnits` (after the unlink), `~RTSPlayer` (by the player object: the editor's forms build temporary
+  players that can share a real player's id) and `RTSUnit::FreeNode` (a no-op unless a teardown dropped the list's
+  reference). `RTSPlayer::Reset` runs only from the constructors, before any unit, so it is not a removal point.
+- **The check** (TEST ONLY, with the capture on): at the start of every `EEPhysics::Tick` and before every game
+  message `DrainInput` executes, every unit of every player's list against the store; a USCK record per check.
+  Over the 24 capture games of the four profiles (oracle seed 2 alone: 43,204 tick checks and 3 message checks, up to
+  878 units per check), no check found a difference: the store equals the objects at every point a decision reads it.
+- **Cost.** One store call per write of a mirrored member (a mutex and a `BTreeMap` lookup). The check runs only
+  with the capture on (a capture game's walk of every unit at every tick).
+- **Not copyable.** A copy of a holder outside its unit would report its writes from a wrong owner (the
+  `offsetof`), so the copy constructor is deleted: one `std::make_pair` in the AI's function objects deduced a pair of
+  holders and takes `.Get()` now.
+
+**The active group as ids, goals as handles** (`ee_units` host.rs, `EEUnitHost.cpp`): the `Host` trait a Rust
+decision acts through (the game's `GameHost` imports the C++ calls; the tests use a mock): `group_ids` (an `EEGroup`'s
+vector as ids, in its order), `goal_new` from an `EeGoalSpec` (the constructor and its arguments, units by id,
+resolved through the registry; Explore, Attack Ground, Attack Unit, Gather, Heal Unit, Patrol: the constructors the
+first bodies use) returning a `GoalHandle` that owns the goal, `goal_kind`, `goal_release`. Nothing in the game calls
+them yet: creating a goal in a sweep would move the goals' global counter (`EEUnitGoal`'s ctor), so they are
+exercised only once a body moves.
+
+**The box selection's pick in Rust** (`ee_units` select.rs; `EESelectPick`, ee/EEUnitStore.h). Golden-driver
+pattern: the loop of `EEPlayer::SelectUnits` was first factored into a C++ `EESelectPick` (ids in, the picked ids
+out, in order) with a USPK capture record (every game call, and every five game minutes a sweep over every player:
+its list in order, reversed and repeated, foreign, unknown and neighbouring ids, the 63-id chunks the game sends),
+whose digests from that C++ became the goldens; then the body became `ee_units_select_pick` over the store, and the
+captures equal the goldens in the four profiles. `SelectUnits` keeps the clear, the group's `Add` for each picked
+id and the sound.
+
+- **What the original did that the pick keeps:** the group was cleared first, so "not in the group" means "not
+  picked yet"; but `EESelectedGroup::Add` adds only a valid unit, so an invalid unit is picked (and becomes the
+  sound's unit) at each of its ids. Declared difference: a unit that is not its own complex unit is skipped (the
+  original dereferenced a NULL `mComplexUnit` or read a simple unit's built flag past the object); USCK shows no
+  player's list holds one.
+- **Only a played game reaches the game call** (the local human's selection, `EEMSelectUnits`): EE-SIM's idle human
+  never selects, so USPK's game records are empty in every capture and the sweep is the coverage. A tour or a played
+  game must show box selection working (select, add, re-select a group with a dead unit).

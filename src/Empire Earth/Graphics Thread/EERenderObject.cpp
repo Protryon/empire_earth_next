@@ -1211,7 +1211,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             outUnit->mFogScale = 0.6f;
         }
         if (theComplex->mUnitClass->mCategory == kUnitCategoryGate) {
-            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theComplex->mUnitClass);
+            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theComplex->mUnitClass.Get());
             if (theComplex->GetHitPoints() > 0 && theGate->IsSidePart(theComplex)) {
                 outUnit->mSubModelOffsetScale = theComplex->GetOpenFraction();
                 outUnit->mHasSubModelOffset = true;
