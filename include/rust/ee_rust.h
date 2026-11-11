@@ -3963,6 +3963,41 @@ struct EeUiListRange {
   unsigned long count;
 };
 
+/// The copied selection (`mCopiedSelection*`, `mCopiedIsTextSelected`): lines relative to the first copied line.
+struct EeUiEditSelection {
+  unsigned long start_line;
+  unsigned long end_line;
+  long start_index;
+  long end_index;
+  bool selected;
+};
+
+/// The copied IME composition (`mCopiedIME*`): lines relative to the first copied line.
+struct EeUiEditIme {
+  unsigned long start_line;
+  unsigned long start_index;
+  unsigned long end_line;
+  unsigned long end_index;
+  bool active;
+};
+
+/// A highlighted span of a line: characters `from .. to`.
+struct EeUiEditSpan {
+  unsigned long from;
+  unsigned long to;
+};
+
+/// The C++'s measures and draw for the IME underlines (`ImeHost`), each given `ctx`.
+struct EeUiImeHost {
+  void *ctx;
+  unsigned long (*display_len)(void *ctx, unsigned long i);
+  float (*prefix_width)(void *ctx, unsigned long i, unsigned long j);
+  size_t (*char_bytes)(void *ctx, unsigned long i, unsigned long j);
+  float (*char_width)(void *ctx, unsigned long i, unsigned long j);
+  uint8_t (*attribute)(void *ctx, int32_t offset);
+  long (*draw_line)(void *ctx, EeUiPoint start, EeUiPoint end);
+};
+
 /// The host functions of one `UIListBox<T>` instantiation.
 struct EeUiListHost {
   unsigned long (*num_lines)(void *list);
@@ -9458,6 +9493,54 @@ void ee_ui_box_bitmap_scale(float x_scale,
                             bool has_border,
                             unsigned long border,
                             float *out);
+
+/// `UIEditBox::CopyData`'s copied selection (`display_lens`: the copied lines' characters, `count` of them).
+EeUiEditSelection ee_ui_edit_copied_selection(unsigned long caret_line,
+                                              long caret_index,
+                                              unsigned long anchor_line,
+                                              long anchor_index,
+                                              long drawing_index,
+                                              unsigned long first,
+                                              unsigned long last,
+                                              const unsigned long *display_lens,
+                                              size_t count);
+
+/// `UIEditBox::CopyData`'s copied composition of a single-line box.
+EeUiEditIme ee_ui_edit_copied_ime_single(unsigned long start_index,
+                                         unsigned long length,
+                                         long drawing_index);
+
+/// `UIEditBox::CopyData`'s copied composition of a multi-line box (`line_lens`: every line's characters).
+EeUiEditIme ee_ui_edit_copied_ime_lines(unsigned long start_line,
+                                        unsigned long start_index,
+                                        unsigned long length,
+                                        unsigned long first,
+                                        unsigned long last,
+                                        long after_start,
+                                        const unsigned long *line_lens,
+                                        size_t count);
+
+/// `UIEditBox::DrawPolygons`' selection on copied line `i` (`line_len` its characters).
+EeUiEditSpan ee_ui_edit_selection_span(const EeUiEditSelection *s,
+                                       unsigned long i,
+                                       unsigned long line_len);
+
+/// `UIEditBox::GetSelectedTextRectangle` from the two widths the C++ measured.
+EeUiRect ee_ui_edit_selection_rect(unsigned long line,
+                                   long height,
+                                   EeUiRect tr,
+                                   float before,
+                                   float span);
+
+/// `UIEditBox::DrawTextA`'s row y of copied line `i`.
+float ee_ui_edit_text_row_y(unsigned long i, long height, float top);
+
+/// `UIEditBox::DrawPolygons`' IME underlines -> the last draw's result (`result` when none is drawn).
+long ee_ui_edit_ime_underlines(const EeUiEditIme *m,
+                               EeUiRect tr,
+                               unsigned long font_height,
+                               long result,
+                               const EeUiImeHost *host);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);

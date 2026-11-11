@@ -12,6 +12,7 @@ pub mod combo;
 pub mod controls_table;
 pub mod draw;
 pub mod edit;
+pub mod edit_draw;
 pub mod font;
 pub mod form;
 pub mod form_state;
@@ -58,6 +59,8 @@ mod font_ffi;
 mod hotkey_ffi;
 // imports nothing: the clipped text draw takes the C++'s draw as a function
 mod draw_ffi;
+// imports nothing: the edit box's measures and draws come as a function table
+mod edit_draw_ffi;
 mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
