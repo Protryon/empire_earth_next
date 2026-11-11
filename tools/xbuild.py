@@ -367,6 +367,8 @@ WON_SRC = ROOT / "src" / "Empire Earth" / "WONAPI"
 # program -> the WON units it links besides its test source and the platform layer
 WON_TESTS = {
     "won_wire_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # the message buffers' script (golden: rust/crates/ee_won/src/golden_buffer.txt, recorded over the C++ classes)
+    "won_buffer_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
     # the forwarders to ee_won (rust/crates/ee_won)
     "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
                                                                 "CRC16.cpp", "MD5.cpp")],
