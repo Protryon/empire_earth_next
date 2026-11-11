@@ -11,6 +11,8 @@ local V = require("lib.view")
 local G = require("lib.groups")
 local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.41)
 local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
+local SC = require("lib.scout")    -- the watcher (plan.watch; off until benched)
+local AT = require("lib.attack")   -- attacks in windows from strength (plan.attack; off until benched)
 
 local PLAN = {
     {   -- Prehistoric
@@ -52,9 +54,9 @@ local PLAN = {
         patches = 5,
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
-        -- (balanced's standing army: a quarter of the citizens, at least 10; against a fixed 20 it lost fewer citizens
-        -- in every matchup, AI_RESEARCH §8.41)
-        army_per = 25, army_floor = 10,
+        -- (balanced's standing army: a quarter of the citizens, at least the owner's 20; on 32 seeds against the
+        -- floor of 10: 6 defeats against 13 by the improved classic, 13 against 14 by the cheating one, AI_RESEARCH §8.41)
+        army_per = 25, army_floor = 20,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
         settlements = 12,       -- (§8.36: every worked mine has its own)
@@ -73,7 +75,7 @@ local PLAN = {
         food = 18,
         patches = 5,
         hunt = 8,
-        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 10,
+        soldiers = 20, soldiers_max = 40, army_per = 25, army_floor = 20,
         barracks_at = 10,
         towers = 10,
         settlements = 14,
@@ -956,6 +958,12 @@ function M.step(view, memory)
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
+    if plan.watch then
+        SC.step(view, memory, {from = home})
+    end
+    if plan.attack then
+        AT.step(view, memory, {guard = home, keep = plan.attack_keep or 8})
+    end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
