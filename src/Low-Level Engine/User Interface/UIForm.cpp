@@ -258,6 +258,24 @@ struct UIFormRust {
             return theForm->mControls[theForm->mTabStop]->UpdateKeyboard();
         }
     }
+    // the mouse pass (ee_ui mouse.rs)
+    static void* MouseControl(void* inForm, int inWhich)
+    {
+        return inWhich == 0 ? Form(inForm)->mMouseCaptured : Form(inForm)->mMouseOverControl;
+    }
+    static const GE2DPoint& MouseLocation(void* inForm) { return Form(inForm)->mMouseLocation; }
+    static UIEvent* MouseEvent(void* inForm, int inEvent)
+    {
+        UIForm* theForm = Form(inForm);
+        UIEvent* const theEvents[] = {
+            theForm->mMouseMoveEvent, theForm->mMouseWheelMoveEvent, theForm->mMouseLeftButtonPressedEvent,
+            theForm->mMouseLeftButtonUnpressedEvent, theForm->mMouseLeftButtonDoublePressedEvent,
+            theForm->mMouseMiddleButtonPressedEvent, theForm->mMouseMiddleButtonUnpressedEvent,
+            theForm->mMouseMiddleButtonDoublePressedEvent, theForm->mMouseRightButtonPressedEvent,
+            theForm->mMouseRightButtonUnpressedEvent, theForm->mMouseRightButtonDoublePressedEvent,
+        };
+        return theEvents[inEvent];
+    }
 };
 
 // FUNCTION: LLE 0x1007072c
@@ -1683,69 +1701,56 @@ long UIForm::UpdateKeyboard()
     return ee_ui_form_update_keyboard(this);
 }
 
+// UIForm's mouse pass (ee_ui mouse.rs)
+extern "C" void* ee_uicpp_form_mouse_control(void* inForm, int inWhich) { return UIFormRust::MouseControl(inForm, inWhich); }
+extern "C" long ee_uicpp_form_mouse_call(void* inForm, int inCall, void* inControl, long inArg)
+{
+    UIControl* theControl = static_cast<UIControl*>(inControl);
+    switch (inCall) {
+    case 0:
+        return theControl->UpdateMouse(UIFormRust::MouseLocation(inForm));
+    case 1:
+        return UIManager::GetMouseWheel() != NULL;
+    case 2:
+        return UIManager::GetMouseWheelScrollAmount();
+    default:
+        return theControl->MouseWheelTurned(inArg);
+    }
+}
+extern "C" void* ee_uicpp_form_mouse_entity(int inWhich)
+{
+    ISEntity* theEntity = NULL;
+    gISMouse->GetEntity(inWhich, theEntity);
+    return theEntity;
+}
+extern "C" bool ee_uicpp_mouse_entity_ask(void* inEntity, int inQuery)
+{
+    ISEntity* theEntity = static_cast<ISEntity*>(inEntity);
+    switch (inQuery) {
+    case 0:
+        return theEntity->GetValue() != 0;
+    case 1:
+        return theEntity->JustPressed();
+    case 2:
+        return theEntity->JustUnpressed();
+    default:
+        return theEntity->JustDoublePressed();
+    }
+}
+extern "C" long ee_uicpp_form_mouse_event(void* inForm, int inEvent, bool inProcess)
+{
+    UIEvent* theEvent = UIFormRust::MouseEvent(inForm, inEvent);
+    if (!inProcess)
+        return theEvent != NULL;
+    return theEvent->ProcessEvent(UIFormRust::Form(inForm), NULL);
+}
+
 // FUNCTION: LLE 0x10073efa
 // Passes the mouse to the captured or mouse-over control (wheel included), then fires the form's own mouse events
+// (ee_ui mouse.rs)
 long UIForm::UpdateMouse()
 {
-    long theResult = kErrorOK;
-    UIControl* theControl = NULL;
-    ISEntity* theXAxis;
-    ISEntity* theYAxis;
-    ISEntity* theWheel;
-    ISEntity* theLeftButton;
-    ISEntity* theRightButton;
-    ISEntity* theMiddleButton;
-    if (this->mMouseCaptured)
-        theResult = this->mMouseCaptured->UpdateMouse(this->mMouseLocation);
-    else {
-        theControl = this->mMouseOverControl;
-        if (theControl) {
-            theResult = theControl->UpdateMouse(this->mMouseLocation);
-            if (theResult == kErrorOK && UIManager::GetMouseWheel()) {
-                long theAmount = UIManager::GetMouseWheelScrollAmount();
-                if (theAmount) {
-                    theResult = theControl->MouseWheelTurned(theAmount);
-                    if (theResult != kErrorOK) {
-                        theResult = kErrorOK;
-                        theControl = NULL;
-                    }
-                }
-            }
-        }
-    }
-    if (this->mMouseCaptured != NULL || theResult != kErrorOK)
-        return theResult;
-    gISMouse->GetEntity(kMouseXAxis, theXAxis);
-    gISMouse->GetEntity(kMouseYAxis, theYAxis);
-    gISMouse->GetEntity(kMouseZAxis, theWheel);
-    gISMouse->GetEntity(kMouseLeftButton, theLeftButton);
-    gISMouse->GetEntity(kMouseRightButton, theRightButton);
-    gISMouse->GetEntity(kMouseMiddleButton, theMiddleButton);
-    if (this->mMouseMoveEvent && (theXAxis->GetValue() || theYAxis->GetValue()))
-        theResult = this->mMouseMoveEvent->ProcessEvent(this, NULL);
-    if (this->mMouseWheelMoveEvent && theControl == NULL && theWheel && theWheel->GetValue())
-        theResult = this->mMouseWheelMoveEvent->ProcessEvent(this, NULL);
-    if (this->mMouseLeftButtonPressedEvent && theLeftButton->JustPressed())
-        theResult = this->mMouseLeftButtonPressedEvent->ProcessEvent(this, NULL);
-    if (this->mMouseLeftButtonUnpressedEvent && theLeftButton->JustUnpressed())
-        theResult = this->mMouseLeftButtonUnpressedEvent->ProcessEvent(this, NULL);
-    if (this->mMouseLeftButtonDoublePressedEvent && theLeftButton->JustDoublePressed())
-        theResult = this->mMouseLeftButtonDoublePressedEvent->ProcessEvent(this, NULL);
-    if (theMiddleButton) {
-        if (this->mMouseMiddleButtonPressedEvent && theMiddleButton->JustPressed())
-            theResult = this->mMouseMiddleButtonPressedEvent->ProcessEvent(this, NULL);
-        if (this->mMouseMiddleButtonUnpressedEvent && theMiddleButton->JustUnpressed())
-            theResult = this->mMouseMiddleButtonUnpressedEvent->ProcessEvent(this, NULL);
-        if (this->mMouseMiddleButtonDoublePressedEvent && theMiddleButton->JustDoublePressed())
-            theResult = this->mMouseMiddleButtonDoublePressedEvent->ProcessEvent(this, NULL);
-    }
-    if (this->mMouseRightButtonPressedEvent && theRightButton->JustPressed())
-        theResult = this->mMouseRightButtonPressedEvent->ProcessEvent(this, NULL);
-    if (this->mMouseRightButtonUnpressedEvent && theRightButton->JustUnpressed())
-        theResult = this->mMouseRightButtonUnpressedEvent->ProcessEvent(this, NULL);
-    if (this->mMouseRightButtonDoublePressedEvent && theRightButton->JustDoublePressed())
-        theResult = this->mMouseRightButtonDoublePressedEvent->ProcessEvent(this, NULL);
-    return theResult;
+    return ee_ui_form_update_mouse(this);
 }
 
 // FUNCTION: LLE 0x1007419d

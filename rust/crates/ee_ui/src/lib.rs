@@ -24,6 +24,7 @@ pub mod layout;
 pub mod list;
 pub mod manager;
 pub mod manager_media;
+pub mod mouse;
 pub mod rect;
 pub mod scrollbar;
 pub mod slider;
@@ -70,6 +71,9 @@ mod draw_ffi;
 // imports nothing: the edit box's measures and draws come as a function table
 mod edit_draw_ffi;
 mod layout_ffi;
+// imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
+#[cfg(not(test))]
+mod mouse_ffi;
 // imports nothing: the status bar's arithmetic takes and returns values
 mod status_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary

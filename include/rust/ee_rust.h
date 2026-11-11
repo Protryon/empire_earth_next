@@ -10001,6 +10001,13 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
 
+/// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
+long ee_ui_control_update_mouse(void *control,
+                                const void *location);
+
+/// `UIForm::UpdateMouse` -> its result.
+long ee_ui_form_update_mouse(void *form);
+
 /// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
 long ee_ui_status_fill(long value,
                        long min,
