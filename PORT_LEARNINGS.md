@@ -1923,3 +1923,23 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   of `copper_plan=next_epoch` filled only on income spikes - half of f6's games never left the Prehistoric for it.
   Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
   now do (econ.lua, navy.lua).
+
+## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.39)
+
+- **A unit killed arrives as a `converted` event, never as `died`.** `EECPUnitsOnTaken` calls a unit converted when
+  its hit points are above 0, but `EEComplexUnit::Kill` calls `UnitTaken` before it zeroes them; a priest's
+  conversion goes through `EEConvertUnit` -> `Kill(false, false, true)` with the swap flag, which the hook skips. So
+  every kill is `converted` and no script ever saw `died` (Age of AI's `diplo.lua` counts its losses from `died`).
+  `lib.defence` counts both; the C++ fix is left to the owner because it changes Age of AI's play.
+- **A released gatherer is on no runner list.** `ai.release` put only idle citizens back on the engine's idle list,
+  so a citizen sent back to its resource with `ai.gather` and then released worked unseen by the gatherer runner until
+  the resource ran out. `ai.release(ids, {gather = true})` puts it on its resource's list.
+- **A scout is no raid.** The first raid answer sent every citizen near any enemy soldier running: the rush's lone
+  scout walking through the town made 61 flights in 5 minutes. A group is a raid only once it is stronger than boom's
+  `THREAT_MIN` (2,500) or one of its units has hit an own unit in the last 15 s.
+- **Citizens do not fight ranged raiders, whatever the odds.** Against 2-3 rock throwers the square-law odds of 6-12
+  citizens came out at 3-4 x, and every such fight still lost a citizen (they kite, and their pierce armour takes 2
+  of a citizen's 5 attack). The militia now answers melee raids only; ranged ones are run from, to the towers.
+- **A militia counts per raid.** Re-deciding every second added one more citizen each time (the ones already fighting
+  were not counted), and a second raid nearby called the first raid's militia off at its own odds; the militia now
+  counts the citizens already fighting the raid nearest them.

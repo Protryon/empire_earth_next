@@ -9,6 +9,7 @@
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
 local G = require("lib.groups")
+local D = require("lib.defence")
 
 local PLAN = {
     {   -- Prehistoric
@@ -357,6 +358,7 @@ function M.init(view, memory)
     memory.backoff = {}
     memory.tags = {}
     memory.threat_until = 0
+    D.setup()
     local parts = {}
     for _, t in ipairs({"citizen", "b_barracks", "b_settlement", "b_guard_tower_paleo", "inf01_clubman",
                         "inf01_rock_thrower"}) do
@@ -1000,6 +1002,9 @@ function M.step(view, memory)
         G.disband(memory, escort)
     end
     G.step(view, memory)
+    memory.town_x, memory.town_y = view.town_x, view.town_y
+    memory.def = memory.def or {}
+    D.step(view, memory.def)
 
     -- the plan line, once a minute
     if view.time % 60000 < 1000 then
@@ -1028,6 +1033,12 @@ function M.step(view, memory)
     end
     memory.tags, memory.spots = tags, spots
     return orders
+end
+
+function M.micro(info, memory)
+    memory.def = memory.def or {}
+    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y)
+    return nil
 end
 
 return M
