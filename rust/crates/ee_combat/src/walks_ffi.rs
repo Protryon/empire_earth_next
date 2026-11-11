@@ -50,8 +50,14 @@ pub struct EeCombatLineHost {
     pub ctx: *mut c_void,
     pub start_height: unsafe extern "C" fn(ctx: *mut c_void, bare: i32) -> f32,
     /// The tile line as `count` (x, y) pairs, valid until the next call.
-    pub tile_line:
-        unsafe extern "C" fn(ctx: *mut c_void, from_x: i32, from_y: i32, to_x: i32, to_y: i32, count: *mut u32) -> *const i32,
+    pub tile_line: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        from_x: i32,
+        from_y: i32,
+        to_x: i32,
+        to_y: i32,
+        count: *mut u32,
+    ) -> *const i32,
     pub target_top: unsafe extern "C" fn(ctx: *mut c_void, out: *mut EeCombatTargetTop),
     pub tile_top_above: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32, height: f32, bare: i32) -> i32,
 }
@@ -69,7 +75,7 @@ impl LineHost for EeCombatLineHost {
             if pairs.is_null() || count == 0 {
                 return Vec::new();
             }
-            std::slice::from_raw_parts(pairs, count as usize * 2).chunks_exact(2).map(|p| (p[0], p[1])).collect()
+            std::slice::from_raw_parts(pairs.cast::<[i32; 2]>(), count as usize).iter().map(|p| (p[0], p[1])).collect()
         }
     }
     fn target_top(&mut self) -> EeCombatTargetTop {

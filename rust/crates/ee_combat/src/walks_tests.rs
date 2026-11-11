@@ -190,7 +190,8 @@ fn line_of_fire_rises_from_the_weapon_to_the_top() {
 #[test]
 fn line_of_fire_diagonal_corners_and_skips() {
     // a diagonal step blocked by both corner tiles at the corner height
-    let input = EeCombatLineIn { from_x: 0, from_y: 0, to_x: 2, to_y: 2, target_alive: 1, bare: 1, ..Default::default() };
+    let input =
+        EeCombatLineIn { from_x: 0, from_y: 0, to_x: 2, to_y: 2, target_alive: 1, bare: 1, ..Default::default() };
     let mut w = walls(&[(1, 1)], &[((1, 0), 5.0), ((0, 1), 5.0)]);
     assert_eq!(line_blocked(&input, &mut w), EeCombatLineOut { blocked: 1, x: 1, y: 0 });
     // the end: a diagonal last step into the target, both corners walled
@@ -311,9 +312,10 @@ impl TargetHost for Regions {
         // a test "fails" for the unit when listed: the negative tests (enemy, disabled...) answer true then
         let listed = self.fails.get(&unit).is_some_and(|v| v.contains(&test));
         match test {
-            TARGET_TEST_ATTACKED_BY | TARGET_TEST_CAN_TARGET_CLASS | TARGET_TEST_SEEN | TARGET_TEST_CAN_ATTACK_CLASS => {
-                !listed
-            }
+            TARGET_TEST_ATTACKED_BY
+            | TARGET_TEST_CAN_TARGET_CLASS
+            | TARGET_TEST_SEEN
+            | TARGET_TEST_CAN_ATTACK_CLASS => !listed,
             _ => listed,
         }
     }
@@ -352,7 +354,10 @@ fn choose_target_takes_the_first_that_passes_in_the_original_order() {
         .into_iter()
         .collect();
     assert_eq!(choose_target(&[1, 2, 3], true, &mut r), Some(2));
-    assert_eq!(r.log, ["2 1", "2 2", "3 2", "4 2", "5 2", "2 3", "3 3", "4 3", "6 3", "7 3", "8 3", "9 3", "10 3", "11 3"]);
+    assert_eq!(
+        r.log,
+        ["2 1", "2 2", "3 2", "4 2", "5 2", "2 3", "3 3", "4 3", "6 3", "7 3", "8 3", "9 3", "10 3", "11 3"]
+    );
     // the kind test: asked per candidate unless skipped; its last answer stays for the next candidates when skipped
     let mut r = regions();
     r.fails = [(1, vec![TARGET_TEST_TECH_KIND_6])].into_iter().collect();

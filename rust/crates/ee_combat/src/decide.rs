@@ -156,10 +156,7 @@ pub fn can_convert(i: &EeCombatCanConvertIn) -> EeCombatCanConvertOut {
         && i.power >= i.cost
         && (i.building_priest == 0 || i.target_land_priest == 0 || i.converts_priests != 0);
     if i.target_land_building != 0 && i.converts_buildings == 0 {
-        result = result
-            && power
-            && (i.target_town_center != 0 || i.target_settlement != 0)
-            && i.at_copper != 0;
+        result = result && power && (i.target_town_center != 0 || i.target_settlement != 0) && i.at_copper != 0;
     }
     if i.building_priest != 0 {
         let priest = Ge3DPoint::new(i.priest_x, i.priest_y, i.priest_z);

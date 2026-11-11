@@ -73,7 +73,8 @@ pub fn line_blocked(i: &EeCombatLineIn, host: &mut dyn LineHost) -> EeCombatLine
     let bare = i.bare != 0;
     let mut blocked = false;
     let (mut x, mut y) = (0i32, 0i32);
-    let distance = i.from_x.wrapping_sub(i.to_x).wrapping_abs().wrapping_add(i.from_y.wrapping_sub(i.to_y).wrapping_abs());
+    let distance =
+        i.from_x.wrapping_sub(i.to_x).wrapping_abs().wrapping_add(i.from_y.wrapping_sub(i.to_y).wrapping_abs());
     if i.skips_check == 0 && distance > 1 && i.target_alive != 0 {
         let height = host.start_height(bare);
         let tiles = host.tile_line(i.from_x, i.from_y, i.to_x, i.to_y);
