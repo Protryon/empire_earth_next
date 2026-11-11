@@ -687,6 +687,17 @@ constexpr static const int64_t EE_UNIT_CATEGORY_SUBMERGED_NAVAL = 10;
 /// `kActionFindUnexploredArea` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_FIND_UNEXPLORED_AREA = 11002;
 
+/// `kActionAttackLocation` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_ATTACK_LOCATION = 2002;
+
+/// `kActionMoveToNextPatrolPoint`
+constexpr static const int32_t EE_ACTION_MOVE_TO_NEXT_PATROL_POINT = 8013;
+
+/// `EESendGroupCommand`'s commands (EEClient.cpp: the local command markers)
+constexpr static const int32_t EE_GROUP_COMMAND_ATTACK = 185;
+
+constexpr static const int32_t EE_GROUP_COMMAND_TARGET = 186;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -706,6 +717,9 @@ constexpr static const uint32_t EE_GOAL_CTOR_HEAL_UNIT = 5;
 
 /// `new EEUGPatrol(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_PATROL = 6;
+
+/// `new EEUGPatrol(object, unit_a, flag_a)` (the route, a patrol group from `Host::unit_patrol_group`; the target)
+constexpr static const uint32_t EE_GOAL_CTOR_PATROL_ROUTE = 7;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -4023,6 +4037,8 @@ struct EeGoalSpec {
   float point[3];
   uint8_t flag_a;
   uint8_t flag_b;
+  /// an object the host handed out for the goal (a route)
+  void *object;
 };
 
 /// Receives bytes; valid only during the call.
@@ -9559,6 +9575,22 @@ size_t ee_units_fill_members(const uint32_t *ids,
 void ee_units_explore(void *player,
                       void *selection);
 
+/// `EEActiveGroup::KeepGroundAttackers`' test over the store (`group::keeps_ground_attacker`): whether the group keeps
+/// the unit.
+bool ee_units_keeps_ground_attacker(uint32_t id);
+
+/// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
+/// (`EEGroup*`) and the message's point, through the game's host calls.
+void ee_units_attack_ground(void *player,
+                            void *selection,
+                            float x,
+                            float y);
+
+/// `EEMPatrol::Execute`'s body (`group::patrol`) for the sender, its selection and the message's target id.
+void ee_units_patrol(void *player,
+                     void *selection,
+                     int32_t target);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -9588,6 +9620,26 @@ extern void ee_units_host_group_plan(void *group);
 extern int32_t ee_units_host_random(int32_t low, int32_t high);
 
 extern void ee_units_host_play_acknowledgement(void *player, void *group, int32_t index);
+
+extern float ee_units_host_map_height(float x, float y);
+
+extern void ee_units_host_group_keep_ground_attackers(void *group);
+
+extern void ee_units_host_send_group_command(void *group,
+                                             uint32_t target,
+                                             void *player,
+                                             int32_t command,
+                                             int32_t queue);
+
+extern void ee_units_host_acknowledge_unit(void *player, uint32_t unit);
+
+extern uint32_t ee_units_host_town_patrol_point(uint32_t unit, uint8_t *found);
+
+extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, void *player);
+
+extern void *ee_units_host_unit_patrol_group(uint32_t unit);
+
+extern int64_t ee_units_host_object_unit_type(uint32_t unit);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

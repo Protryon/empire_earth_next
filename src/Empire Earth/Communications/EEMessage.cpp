@@ -1015,39 +1015,11 @@ char* EEMAlwaysAddUnitToSelectedGroup::GetMessageLabel() const
 // command and plays an acknowledgement
 void EEMAttackGround::Execute()
 {
-    GE3DPoint theTarget;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    if (theUnit) {
-        theTarget.SetX(this->mX);
-        theTarget.SetY(this->mY);
-        theTarget.SetZ(gWorld.GetMap()->GetHeight(theTarget));
-        if (theTarget.GetZ() < 0.0f)
-            theTarget.SetZ(0.0f);
-        for (unsigned long i = 1; i < 6; i++) {
-            EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-            theActiveGroup->Fill(theGroup, 0, i);
-            if (theActiveGroup->GetNumUnits() > 0) {
-                thePlayer->mPendingGroups.push_back(theActiveGroup);
-                theActiveGroup->KeepGroundAttackers();
-                if (theActiveGroup->GetNumUnits() > 0)
-                    theUnit = theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1));
-                else
-                    theUnit = NULL;
-                if (theUnit) {
-                    theActiveGroup->ClearGoal();
-                    theActiveGroup->SetGoal(new EEUGAttackGround(theTarget, true), false);
-                    theActiveGroup->mAction = kActionAttackLocation;
-                    theActiveGroup->Plan();
-                    EESendGroupCommand(theActiveGroup, NULL, thePlayerID, 0xb9, 0);
-                    thePlayer->PlayAcknowledgement(theUnit);
-                }
-            } else
-                theActiveGroup->Dereference();
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs attack_ground: per formation slot 1..5 an active group filled
+    // from the selection keeps its ground attackers, one drawn to acknowledge, an Attack Ground goal at the point on
+    // the map's height, planned, the attack marker) over the world calls of EEUnitHost.cpp
+    ee_units_attack_ground(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mX, this->mY);
 }
 
 // EEMAttackGround's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -4990,45 +4962,12 @@ bool EEMPathTo::IsResponse(NEMessage* inMessage)
 // route (target id -1: the nearest town's patrol route); acknowledges by voice
 void EEMPatrol::Execute()
 {
-    GE2DPoint thePoint;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-    unsigned long theTargetID = this->mTargetID;
-    EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theTargetID));
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    if (theUnit && this->mTargetID == -1) {
-        EETown* theSite = theUnit->FindNearestTown();
-        if (theSite && theSite->mPatrolGroup)
-            theTarget = theSite->mPatrolGroup->GetNearest(theUnit->GetTileX(), theUnit->GetTileY());
-    }
-    if (theTarget && theUnit) {
-        if (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint) {
-            EEPPatrolGroup* theUnitPatrolGroup = theUnit->mPatrolGroup;
-            thePoint.SetX((float)theTarget->mTileX);
-            thePoint.SetY((float)theTarget->mTileY);
-            theUnitPatrolGroup->AddPoint(thePoint, thePlayer->mPlayerID);
-        } else {
-            EEPPatrolGroup* thePatrolGroup = theTarget->mPatrolGroup;
-            for (unsigned long i = 1; i < 6; i++) {
-                EEActiveGroup* theActiveGroup = new EEActiveGroup(thePlayer);
-                theActiveGroup->Fill(theGroup, 0, i);
-                if (theActiveGroup->GetNumUnits() > 0) {
-                    thePlayer->mPendingGroups.push_back(theActiveGroup);
-                    theActiveGroup->KeepMobileUnits();
-                    EEUGPatrol* theGoal = new EEUGPatrol(thePatrolGroup, theTarget, true);
-                    theActiveGroup->ClearGoal();
-                    theActiveGroup->SetGoal(theGoal, false);
-                    theActiveGroup->mAction = kActionMoveToNextPatrolPoint;
-                    theActiveGroup->Plan();
-                    EESendGroupCommand(theActiveGroup, NULL, thePlayerID, 0xba, 0);
-                    if (theActiveGroup->GetNumUnits() > 0)
-                        thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-                } else
-                    theActiveGroup->Dereference();
-            }
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units group.rs patrol: the target by id or the nearest town's route point; a
+    // selected path point takes the target's tile, else per formation slot 1..5 an active group of the mobile units
+    // patrols the target's route, planned, the target marker, one unit drawn to acknowledge) over the world calls of
+    // EEUnitHost.cpp
+    ee_units_patrol(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mTargetID);
 }
 
 // EEMPatrol's members as the codec's slots, in wire order (ee_netmsg classes.rs)

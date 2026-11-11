@@ -68,6 +68,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/ee_rust.h"   // ee_units_keeps_ground_attacker
 
 // The order Fill sorts a slot's units in (RTTI EEAGIncreasingVelocityUnitSorter; vtable 0x446d50: only its
 // user-declared empty virtual dtor, whose ??_G 0x1edaa8 follows Fill, its first user): slower first, the same
@@ -1283,11 +1284,12 @@ void EEActiveGroup::SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTile
 
 // FUNCTION: EXE 0x5eef30
 // Removes the units that cannot attack the ground
+// New (R5b.4): the test is the unit store's (ee_units group.rs keeps_ground_attacker: the class's mCanAttackGround)
 void EEActiveGroup::KeepGroundAttackers()
 {
     for (unsigned long theIndex = 0; theIndex < this->GetNumUnits();) {
         EEComplexUnit* theUnit = this->GetUnit(theIndex);
-        if (!theUnit->mUnitClass->mCanAttackGround)
+        if (!ee_units_keeps_ground_attacker(static_cast<uint32_t>(theUnit->mUnitID)))
             this->RemoveUnit(theUnit);
         else
             theIndex++;

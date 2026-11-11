@@ -141,6 +141,30 @@ pub extern "C" fn ee_units_explore(player: *mut c_void, selection: *mut c_void) 
     crate::group::explore(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection));
 }
 
+/// `EEActiveGroup::KeepGroundAttackers`' test over the store (`group::keeps_ground_attacker`): whether the group keeps
+/// the unit.
+#[no_mangle]
+pub extern "C" fn ee_units_keeps_ground_attacker(id: u32) -> bool {
+    with_store(|s| crate::group::keeps_ground_attacker(s.get(id)))
+}
+
+/// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
+/// (`EEGroup*`) and the message's point, through the game's host calls.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_attack_ground(player: *mut c_void, selection: *mut c_void, x: f32, y: f32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::attack_ground(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), x, y);
+}
+
+/// `EEMPatrol::Execute`'s body (`group::patrol`) for the sender, its selection and the message's target id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_patrol(player: *mut c_void, selection: *mut c_void, target: i32) {
+    let mut host = crate::host::game::GameHost;
+    crate::group::patrol(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,5 +253,16 @@ mod tests {
         assert_eq!(unsafe { ee_units_fill_members(ids.as_ptr(), ids.len(), 1, out.as_mut_ptr()) }, 0);
         assert_eq!(unsafe { ee_units_fill_members(std::ptr::null(), 0, 0, std::ptr::null_mut()) }, 0);
         assert_eq!(ee_units_store_clear_player(0xfa00), 2);
+    }
+
+    #[test]
+    fn the_ground_attackers_test_reads_the_process_store() {
+        // an id and a player no other test of this crate uses
+        let rec = EeUnitRecord { id: 0xf900_0001, player: 0xf900, can_attack_ground: 1, ..Default::default() };
+        unsafe { ee_units_store_insert(&rec) };
+        assert!(ee_units_keeps_ground_attacker(0xf900_0001));
+        assert!(!ee_units_keeps_ground_attacker(0xf900_0002));
+        assert_eq!(ee_units_store_clear_player(0xf900), 1);
+        assert!(!ee_units_keeps_ground_attacker(0xf900_0001));
     }
 }

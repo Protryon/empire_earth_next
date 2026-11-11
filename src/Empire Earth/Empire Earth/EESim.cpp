@@ -111,6 +111,7 @@
 #include "ee/EEMessage.h"
 #include "ee/EEMessageCapture.h"
 #include "ee/EEUnitStore.h"
+#include "ee/EEUnitHost.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
@@ -835,6 +836,7 @@ void AfterTick()
         EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
+        EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
         static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
         if (!sMessageSweepDone) {
             sMessageSweepDone = true;
