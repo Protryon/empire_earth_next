@@ -4376,6 +4376,24 @@ struct EeWonResource {
   bool new_section;
 };
 
+/// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
+/// band, 0 the wanted skill, 10000 no skill, 20000 one below, 30000 one above, plus the ping, when the ping is
+/// under the ceiling and the limit); or, with an unknown ping (0xfffe) at or over the ceiling, pinged.
+struct EeWonQuickPlay {
+  /// 0 nothing, 1 ranked (`rank`), 2 ping it.
+  int32_t action;
+  int32_t rank;
+};
+
+/// A server as `GetDefaultServer` sees it.
+struct EeWonServerPick {
+  /// Its name is the last server's.
+  bool last_used;
+  int32_t clients;
+  /// It lists the lobby's language.
+  bool language;
+};
+
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -11306,6 +11324,43 @@ size_t ee_won_resource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// `room_spec`; a negative group is none.
+int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);
+
+int32_t ee_won_routing_group_of_spec(int32_t spec);
+
+uint16_t ee_won_routing_ping_ceiling(bool have_config, uint16_t config_ceiling);
+
+EeWonQuickPlay ee_won_routing_quick_play_rank(bool password,
+                                              bool ask_to_join,
+                                              bool can_join,
+                                              uint16_t ping,
+                                              int32_t skill,
+                                              int32_t wanted,
+                                              uint16_t ping_limit,
+                                              uint16_t ceiling);
+
+bool ee_won_routing_should_locate_friend(bool locating,
+                                         bool on_current_server,
+                                         size_t server_count,
+                                         bool connected,
+                                         uint32_t now,
+                                         uint32_t last_locate);
+
+/// `default_server` over `count` servers: the index, or -1.
+///
+/// # Safety
+/// `servers` holds `count` entries (or is NULL with 0).
+int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t count);
+
+/// The (mask, flags) of `anonymous_flags` (`which` 0) or `dirty_word_flags` (1) into the outs.
+///
+/// # Safety
+/// Both outs are writable.
+void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
+
+bool ee_won_routing_can_add_friend(size_t count);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

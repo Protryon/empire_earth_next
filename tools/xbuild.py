@@ -406,6 +406,9 @@ WON_TESTS = {
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
+    # RoutingLogic's decisions (room flags, Quick Play's pick, the friend search, the default server), the original's
+    # statements against ee_won's routing module
+    "won_routing_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],

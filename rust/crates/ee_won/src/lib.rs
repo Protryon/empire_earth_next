@@ -42,6 +42,7 @@ pub mod plaintext;
 pub mod random;
 pub mod regkey;
 pub mod resource;
+pub mod routing;
 pub mod socket;
 pub mod staging;
 /// cbindgen:ignore
