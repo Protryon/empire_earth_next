@@ -784,6 +784,12 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// The sink's `which`: the target name.
+constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
+
+/// The sink's `which`: the text.
+constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
+
 /// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
 constexpr static const int32_t MORE_REPLIES = 100059;
 
@@ -929,6 +935,9 @@ constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
 constexpr static const int64_t JOINER_PING_IDLE = 120;
 
 constexpr static const int64_t SUMMARY_REPEAT = 30;
+
+/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
+constexpr static const uint8_t SEP = 92;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -1091,6 +1100,55 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -1108,6 +1166,16 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunity = 1,
   /// the first community's trust
   FirstCommunityTrust = 2,
+};
+
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
 };
 
 /// `FSArchive`'s tables.
@@ -3656,6 +3724,32 @@ struct EeWonAuthEntry {
   bool present;
 };
 
+/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
+struct EeWonChatText {
+  const void *text;
+  size_t length;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
+struct EeWonChatOutcome {
+  bool ok;
+  int32_t error;
+  int32_t command;
+  bool target_set;
+  /// The client's index in the names handed in, -1 for NULL.
+  int32_t target;
+  bool duration_set;
+  uint32_t duration;
+  bool invitation_set;
+  bool invitation;
+};
+
+/// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
+using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
+
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
 struct EeWonFileReader {
@@ -3673,9 +3767,6 @@ struct EeWonConfigIo {
   int32_t *line;
   bool unicode;
 };
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
 
 /// A saved state across the C ABI: the file position, name and line, and the pushback's units.
 struct EeWonConfigState {
@@ -8601,6 +8692,69 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool peer_valid,
                                       int64_t expire_delta);
 
+/// `GetCommandName`.
+const char *ee_won_chat_command_name(int32_t command);
+
+/// `ParseCommand`'s first step: the command word (upper-cased, from position 1) to the sink, and the position
+/// after it.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` receives the word during the call.
+int32_t ee_won_chat_command_word(EeWonChatText text,
+                                 uint32_t wchar_size,
+                                 EeWonWideUnitSink sink,
+                                 void *context);
+
+/// `ParseCommand`'s second step (`parse_command`): `command` -1 for an unknown word, `clients` the room's names.
+///
+/// # Safety
+/// The texts as `EeWonChatText`, `clients` `client_count` of them; `out` is valid; `sink` receives the texts set.
+void ee_won_chat_parse(EeWonChatText text,
+                       int32_t pos,
+                       int32_t command,
+                       EeWonChatText reply,
+                       const EeWonChatText *clients,
+                       size_t client_count,
+                       int32_t threshold,
+                       uint32_t wchar_size,
+                       EeWonChatOutcome *out,
+                       EeWonChatSink sink,
+                       void *context);
+
+/// `FindClient` (`find_client`): the match into `*matched`, the client's index or -1.
+///
+/// # Safety
+/// As `ee_won_chat_parse`; `matched` is valid.
+int32_t ee_won_chat_find_client(EeWonChatText name,
+                                const EeWonChatText *clients,
+                                size_t client_count,
+                                uint32_t wchar_size,
+                                int32_t *matched);
+
+/// `HandleInput`'s decision: 0 no client list, 1 a command, 2 an emote, 3 an emote with nothing in it, 4 a
+/// broadcast, 5 an empty broadcast. For an emote the sink gets its text.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` as `ee_won_chat_parse`.
+int32_t ee_won_chat_input(EeWonChatText text,
+                          uint32_t wchar_size,
+                          int32_t prefix,
+                          bool allow_colon,
+                          bool has_clients,
+                          EeWonChatSink sink,
+                          void *context);
+
+/// `GetHelp`'s commands (`help_commands`) into `out` (room for 32); their count.
+///
+/// # Safety
+/// `out` has room for 32 ids.
+size_t ee_won_chat_help(uint32_t room_flags,
+                        bool moderator,
+                        bool room_captain,
+                        bool game_captain,
+                        bool admin,
+                        int32_t *out);
+
 EeWonConfigLexer *ee_won_config_new();
 
 /// # Safety
@@ -8744,6 +8898,51 @@ void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t c
 bool ee_won_config_open(EeWonConfigIo *io,
                         const char *path,
                         int32_t *status);
+
+/// `token_kind`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgToken ee_won_cfg_token_kind(const uint8_t *token, size_t length);
+
+/// `group_start_step`.
+///
+/// # Safety
+/// `token` holds `length` bytes; `state` is valid.
+EeWonCfgStart ee_won_cfg_group_start(int32_t *state, const uint8_t *token, size_t length);
+
+/// `group_instruction` (`value` false) or `value_instruction`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgInstruction ee_won_cfg_instruction(const uint8_t *token, size_t length, bool value);
+
+/// `condition_parses_first`.
+bool ee_won_cfg_condition(EeWonCfgInstruction instruction,
+                          bool found,
+                          bool expected_empty,
+                          bool matches);
+
+/// `is_else`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+bool ee_won_cfg_is_else(const uint8_t *token, size_t length);
+
+/// `optional_suffix`.
+EeWonCfgOptional ee_won_cfg_optional(bool comma, bool read, bool word_is_optional);
+
+/// `include_path`.
+///
+/// # Safety
+/// `path` and `base` hold their lengths' bytes; `sink` receives the path during the call.
+void ee_won_cfg_include_path(const uint8_t *path,
+                             size_t path_length,
+                             bool ignore_path,
+                             const uint8_t *base,
+                             size_t base_length,
+                             EeWonByteSink sink,
+                             void *context);
 
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
@@ -9970,6 +10169,155 @@ int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
 int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
+
+/// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
+///
+/// # Safety
+/// `a` and `b` hold their lengths' units of `wchar_size` bytes.
+int32_t ee_won_guistring_op(EeWonGuiStringOp op,
+                            const void *a,
+                            uint16_t a_length,
+                            const void *b,
+                            uint16_t b_length,
+                            int32_t start,
+                            uint32_t wchar_size);
+
+/// `find(int, start)` (`reverse` false) or `rFind(int, start)`.
+///
+/// # Safety
+/// `a` holds `a_length` units of `wchar_size` bytes.
+int32_t ee_won_guistring_find_char(const void *a,
+                                   uint16_t a_length,
+                                   int32_t ch,
+                                   int32_t start,
+                                   bool reverse,
+                                   uint32_t wchar_size);
+
+/// `compare(const char*, offset)` (`no_case` false) or `CompareNoCase(const char*, offset)`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `narrow` is NUL-terminated.
+int32_t ee_won_guistring_compare_narrow(const void *a,
+                                        uint16_t a_length,
+                                        int32_t offset,
+                                        const uint8_t *narrow,
+                                        bool no_case,
+                                        uint32_t wchar_size);
+
+/// `ToInt`.
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`.
+int32_t ee_won_guistring_to_int(const void *a,
+                                uint16_t a_length,
+                                uint16_t offset,
+                                uint32_t wchar_size);
+
+/// `toUpper` / `toLowerCase` in place.
+///
+/// # Safety
+/// `a` holds `a_length` writable units of `wchar_size` bytes.
+void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
+
+/// `GetString` into `out` (room for `a_length` bytes).
+///
+/// # Safety
+/// `a` as `ee_won_guistring_find_char`; `out` has room for `a_length` bytes.
+void ee_won_guistring_narrow(const void *a, uint16_t a_length, uint8_t *out, uint32_t wchar_size);
+
+/// `SetFilePath`'s separators.
+///
+/// # Safety
+/// `path` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_path_given(const uint8_t *path, size_t length, EeWonByteSink sink, void *context);
+
+/// The last separator's index, or -1.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+ptrdiff_t ee_won_path_directory_split(const uint8_t *path, size_t length);
+
+/// The last dot's index, or -1.
+///
+/// # Safety
+/// `name` holds `length` bytes.
+ptrdiff_t ee_won_path_extension_split(const uint8_t *name, size_t length);
+
+/// `NormalizePath`: 0 for an empty path (nothing given), 1 with the path given, 2 where the original threw.
+///
+/// # Safety
+/// As `ee_won_path_given`.
+int32_t ee_won_path_normalize(const uint8_t *path,
+                              size_t length,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// Whether the absolute path needs the current directory.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+bool ee_won_path_needs_current(const uint8_t *path, size_t length);
+
+/// `CalcFullPath`'s join and normalisation; `current` NULL when none is needed. 1 with the path given, 2 where
+/// the original threw.
+///
+/// # Safety
+/// `path` holds `length` bytes, `current` (when not NULL) `current_length`; `sink` as `ee_won_path_given`.
+int32_t ee_won_path_absolute(const uint8_t *path,
+                             size_t length,
+                             const uint8_t *current,
+                             size_t current_length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `GetRelativePath`.
+///
+/// # Safety
+/// `directory` and `sub` hold their lengths' bytes; `sink` as `ee_won_path_given`.
+void ee_won_path_relative(const uint8_t *directory,
+                          size_t directory_length,
+                          const uint8_t *sub,
+                          size_t sub_length,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `config_name`.
+///
+/// # Safety
+/// `name` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_regkey_name(const uint8_t *name, size_t length, EeWonByteSink sink, void *context);
+
+/// `config_block`; `parent` NULL for the root block.
+///
+/// # Safety
+/// `parent` (when not NULL) and `path` hold their lengths' bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_block(const uint8_t *parent,
+                         size_t parent_length,
+                         const uint8_t *path,
+                         size_t path_length,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// `binary_text`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+void ee_won_regkey_binary_text(const uint8_t *data,
+                               size_t length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `binary_value`: its code; the sink gets the bytes only for 0.
+///
+/// # Safety
+/// `text` holds `length` bytes; `sink` as `ee_won_regkey_name`.
+int32_t ee_won_regkey_binary_value(const uint8_t *text,
+                                   size_t length,
+                                   EeWonByteSink sink,
+                                   void *context);
+
+/// `root_valid`.
+bool ee_won_regkey_root_valid(int32_t root);
 
 }  // extern "C"
 

@@ -1,0 +1,170 @@
+p00 path=- dir=- name=- ext=- noext=-
+p00 norm r=0 path=- dir=- name=-
+p00 cached name=- after=- dir=- name=-
+full p00 <T>\a\b\
+p01 path=a dir=- name=a ext=- noext=a
+p01 norm r=1 path=a dir=- name=a
+p01 cached name=a after=a dir=- name=a
+full p01 <T>\a\b\a
+p02 path=a.b dir=- name=a.b ext=b noext=a
+p02 norm r=1 path=a.b dir=- name=a.b
+p02 cached name=a.b after=a.b dir=- name=a.b
+full p02 <T>\a\b\a.b
+p03 path=dir\file.txt dir=dir name=file.txt ext=txt noext=file
+p03 norm r=1 path=dir\file.txt dir=dir name=file.txt
+p03 cached name=file.txt after=file.txt dir=dir name=file.txt
+full p03 <T>\a\b\dir\file.txt
+p04 path=C:\dir\file.tar.gz dir=C:\dir name=file.tar.gz ext=gz noext=file.tar
+p04 norm r=1 path=C:\dir\file.tar.gz dir=C:\dir name=file.tar.gz
+p04 cached name=file.tar.gz after=file.tar.gz dir=C:\dir name=file.tar.gz
+full p04 <V>\dir\file.tar.gz
+p05 path=\\server\share\x dir=\\server\share name=x ext=- noext=x
+p05 norm r=1 path=\\server\share\x dir=\\server\share name=x
+p05 cached name=x after=x dir=\\server\share name=x
+full p05 \\server\share\x
+p06 path=..\x dir=.. name=x ext=- noext=x
+p06 norm r=1 path=..\x dir=.. name=x
+p06 cached name=x after=x dir=.. name=x
+full p06 <T>\a\x
+p07 path=a\..\b dir=a\.. name=b ext=- noext=b
+p07 norm r=1 path=b dir=- name=b
+p07 cached name=b after=b dir=- name=b
+full p07 <T>\a\b\b
+p08 path=a\.\b dir=a\. name=b ext=- noext=b
+p08 norm r=1 path=a\b dir=a name=b
+p08 cached name=b after=b dir=a name=b
+full p08 <T>\a\b\a\b
+p09 path=a\b\..\..\..\c dir=a\b\..\..\.. name=c ext=- noext=c
+p09 norm r=1 path=..\c dir=.. name=c
+p09 cached name=c after=c dir=.. name=c
+full p09 <T>\a\c
+p10 path=\a\.. dir=\a name=.. ext=- noext=.
+p10 norm r=1 path=- dir=- name=-
+p10 cached name=.. after=.. dir=- name=-
+full p10 <V>
+p11 path=.\ dir=. name=- ext=- noext=-
+p11 norm r=1 path=- dir=- name=-
+p11 cached name=- after=- dir=- name=-
+full p11 <T>\a\b\
+p12 path=a\. dir=a name=. ext=- noext=-
+p12 norm r=1 path=a dir=- name=a
+p12 cached name=. after=. dir=- name=a
+full p12 <T>\a\b\a
+p13 path=a\..b\c dir=a\..b name=c ext=- noext=c
+p13 norm r=1 path=a\..b\c dir=a\..b name=c
+p13 cached name=c after=c dir=a\..b name=c
+full p13 <T>\a\b\a\..b\c
+p14 path=a\...\c dir=a\... name=c ext=- noext=c
+p14 norm r=1 path=a\...\c dir=a\... name=c
+p14 cached name=c after=c dir=a\... name=c
+full p14 <T>\a\b\a\...\c
+p15 path=a\.b dir=a name=.b ext=b noext=-
+p15 norm r=1 path=a\.b dir=a name=.b
+p15 cached name=.b after=.b dir=a name=.b
+full p15 <T>\a\b\a\.b
+p16 path=dir.d\file dir=dir.d name=file ext=- noext=file
+p16 norm r=1 path=dir.d\file dir=dir.d name=file
+p16 cached name=file after=file dir=dir.d name=file
+full p16 <T>\a\b\dir.d\file
+p17 path=trailing\ dir=trailing name=- ext=- noext=-
+p17 norm r=1 path=trailing\ dir=trailing name=-
+p17 cached name=- after=- dir=trailing name=-
+full p17 <T>\a\b\trailing\
+p18 path=C: dir=- name=C: ext=- noext=C:
+p18 norm r=1 path=C: dir=- name=C:
+p18 cached name=C: after=C: dir=- name=C:
+full p18 <T>\a\b\
+p19 path=c:rel\x dir=c:rel name=x ext=- noext=x
+p19 norm r=1 path=c:rel\x dir=c:rel name=x
+p19 cached name=x after=x dir=c:rel name=x
+full p19 <T>\a\b\rel\x
+p20 path=Q:rel dir=- name=Q:rel ext=- noext=Q:rel
+p20 norm r=1 path=Q:rel dir=- name=Q:rel
+p20 cached name=Q:rel after=Q:rel dir=- name=Q:rel
+full p20 Q:\rel
+p21 path=Q:\abs\..\y dir=Q:\abs\.. name=y ext=- noext=y
+p21 norm r=1 path=Q:\y dir=Q: name=y
+p21 cached name=y after=y dir=Q: name=y
+full p21 Q:\y
+p22 path=\rooted\p dir=\rooted name=p ext=- noext=p
+p22 norm r=1 path=\rooted\p dir=\rooted name=p
+p22 cached name=p after=p dir=\rooted name=p
+full p22 <V>\rooted\p
+p23 path=\fw\slash\.\x dir=\fw\slash\. name=x ext=- noext=x
+p23 norm r=1 path=\fw\slash\x dir=\fw\slash name=x
+p23 cached name=x after=x dir=\fw\slash name=x
+full p23 <V>\fw\slash\x
+p24 path=x\\y dir=x\ name=y ext=- noext=y
+p24 norm r=1 path=x\\y dir=x\ name=y
+p24 cached name=y after=y dir=x\ name=y
+full p24 <T>\a\b\x\\y
+p25 path=\..\..\a dir=\..\.. name=a ext=- noext=a
+p25 norm r=1 path=\..\..\a dir=\..\.. name=a
+p25 cached name=a after=a dir=\..\.. name=a
+full p25 ..\a
+p26 path=%c3%a9\%c3%bc.txt dir=%c3%a9 name=%c3%bc.txt ext=txt noext=%c3%bc
+p26 norm r=1 path=%c3%a9\%c3%bc.txt dir=%c3%a9 name=%c3%bc.txt
+p26 cached name=%c3%bc.txt after=%c3%bc.txt dir=%c3%a9 name=%c3%bc.txt
+full p26 <T>\a\b\%c3%a9\%c3%bc.txt
+p27 path=a.\b dir=a. name=b ext=- noext=b
+p27 norm r=1 path=a.\b dir=a. name=b
+p27 cached name=b after=b dir=a. name=b
+full p27 <T>\a\b\a.\b
+p28 path=.hidden dir=- name=.hidden ext=hidden noext=-
+p28 norm r=1 path=.hidden dir=- name=.hidden
+p28 cached name=.hidden after=.hidden dir=- name=.hidden
+full p28 <T>\a\b\.hidden
+p29 path=a\b. dir=a name=b. ext=- noext=b
+p29 norm r=1 path=a\b. dir=a name=b.
+p29 cached name=b. after=b. dir=a name=b.
+full p29 <T>\a\b\a\b.
+p30 path=.. dir=- name=.. ext=- noext=.
+p30 norm r=1 path=.. dir=- name=..
+p30 cached name=.. after=.. dir=- name=..
+full p30 <T>\a
+p31 path=. dir=- name=. ext=- noext=-
+p31 norm throw
+p31 cached throw
+full p31 <T>\a\b
+p32 path=\ dir=- name=- ext=- noext=-
+p32 norm r=1 path=\ dir=- name=-
+p32 cached name=- after=- dir=- name=-
+full p32 <V>\
+p33 path=\\ dir=\ name=- ext=- noext=-
+p33 norm r=1 path=\\ dir=\ name=-
+p33 cached name=- after=- dir=\ name=-
+full p33 \\
+p34 path=a\..\..\b dir=a\..\.. name=b ext=- noext=b
+p34 norm r=1 path=..\b dir=.. name=b
+p34 cached name=b after=b dir=.. name=b
+full p34 <T>\a\b
+p35 path=c: dir=- name=c: ext=- noext=c:
+p35 norm r=1 path=c: dir=- name=c:
+p35 cached name=c: after=c: dir=- name=c:
+full p35 <T>\a\b\
+p36 path=c:..\..\z dir=c:..\.. name=z ext=- noext=z
+p36 norm r=1 path=z dir=- name=z
+p36 cached name=z after=z dir=- name=z
+full p36 <T>\z
+p37 path=x\..\.. dir=x\.. name=.. ext=- noext=.
+p37 norm r=1 path=.. dir=- name=..
+p37 cached name=.. after=.. dir=- name=..
+full p37 <T>\a
+p38 path=a\b\.\.\c\..\d dir=a\b\.\.\c\.. name=d ext=- noext=d
+p38 norm r=1 path=a\b\d dir=a\b name=d
+p38 cached name=d after=d dir=a\b name=d
+full p38 <T>\a\b\a\b\d
+r00 rel=c\d
+r01 rel=x
+r02 rel=-
+r03 rel=a
+r04 rel=ab\x
+r05 rel=x
+r06 rel=x
+r07 rel=%c3%89\x
+r08 rel=x\y
+r09 rel=g
+r10 rel=g
+r11 rel=x
+r12 rel=-
+r13 rel=-

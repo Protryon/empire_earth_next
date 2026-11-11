@@ -12,52 +12,41 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "platform/PlatConfig.h"
+#include "rust/ee_rust.h"
 
 // The port has no registry (the harness stops on any registry write, and POSIX has none): a key is the config.yaml
 // block "won.<path>", the path's '\' (or '/') separators turned into the block separator '.'. HKEY_CURRENT_USER and
 // HKEY_LOCAL_MACHINE share it (the root is dropped). A value is a key of that block: a DWORD an integer, a string a
 // string, binary data a string of hex digits. Volatile keys persist like the others.
+// The names and the binary values are ee_won's regkey module (rust/crates/ee_won/src/regkey.rs); this class keeps
+// its block, path and open flag and calls PlatConfig with what it gives.
 namespace {
 
-// A name as one config.yaml key: no '.' (the block separator) or ':' and no blanks around it
+void RegKeySink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+
+const uint8_t* RegKeyBytes(const std::string& inText)
+{
+    return reinterpret_cast<const uint8_t*>(inText.data());
+}
+
+// A name as one config.yaml key
 std::string ConfigName(const std::string& inName)
 {
     std::string theName;
-    for (std::string::size_type i = 0; i < inName.length(); ++i) {
-        unsigned char c = static_cast<unsigned char>(inName[i]);
-        theName += (c == '.' || c == ':' || c < 0x20) ? '_' : static_cast<char>(c);
-    }
-    std::string::size_type a = theName.find_first_not_of(' ');
-    if (a == std::string::npos)
-        return "(default)";   // the key's unnamed value
-    return theName.substr(a, theName.find_last_not_of(' ') - a + 1);
+    ee_won_regkey_name(RegKeyBytes(inName), inName.length(), RegKeySink, &theName);
+    return theName;
 }
 
 // The block of inPath (a registry path) under inParent
 std::string ConfigBlock(const std::string& inParent, const std::string& inPath)
 {
-    std::string theBlock = inParent;
-    std::string::size_type theStart = 0;
-    while (theStart <= inPath.length()) {
-        std::string::size_type theEnd = inPath.find_first_of("\\/", theStart);
-        if (theEnd == std::string::npos)
-            theEnd = inPath.length();
-        if (theEnd > theStart)
-            theBlock += "." + ConfigName(inPath.substr(theStart, theEnd - theStart));
-        theStart = theEnd + 1;
-    }
+    std::string theBlock;
+    ee_won_regkey_block(RegKeyBytes(inParent), inParent.length(), RegKeyBytes(inPath), inPath.length(),
+                        RegKeySink, &theBlock);
     return theBlock;
-}
-
-int HexDigit(char c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-    return -1;
 }
 
 }
@@ -116,17 +105,10 @@ int RegKey::QueryBinary(const std::string& name,ConstSmartPtr<ByteBuffer>& value
     std::string text;
     if(!this->GetToBuf(name,text))
         return 1;
-    if(text.length()%2!=0)
-        return 2;
     std::string bytes;
-    for(std::string::size_type i=0;i<text.length();i+=2) {
-        int high=HexDigit(text[i]),low=HexDigit(text[i+1]);
-        if(high<0 || low<0)
-            return 2;
-        bytes+=static_cast<char>(high*16+low);
-    }
-    if(bytes.empty())
-        return 4;
+    int result=ee_won_regkey_binary_value(RegKeyBytes(text),text.length(),RegKeySink,&bytes);
+    if(result!=0)
+        return result;
     value=new ByteBuffer(bytes.data(),bytes.length(),false);
     return 0;
 }
@@ -158,7 +140,7 @@ namespace WONAPI {
 // Opens or creates the key under the root given by index
 bool RegKey::OpenNewKey(int root,const std::string& path,bool create,bool nonvolatile)
 {
-    if(root<0 || root>6) {
+    if(!ee_won_regkey_root_valid(root)) {
         this->CloseKey();
         return false;
     }
@@ -206,14 +188,8 @@ bool RegKey::SetValue(const std::string& theName, const void* theValueP, unsigne
 	if(!this->IsOpen())
 		return false;
 
-	static const char kHex[] = "0123456789abcdef";
-	const unsigned char* aByteP = static_cast<const unsigned char*>(theValueP);
 	string aText;
-	for(unsigned long i = 0; i < theLength; i++)
-	{
-		aText += kHex[aByteP[i] >> 4];
-		aText += kHex[aByteP[i] & 15];
-	}
+	ee_won_regkey_binary_text(static_cast<const uint8_t*>(theValueP), theLength, RegKeySink, &aText);
 	return PlatConfigSetString(this->mBlock.c_str(), ConfigName(theName).c_str(), aText.c_str()) != 0;
 }
 
