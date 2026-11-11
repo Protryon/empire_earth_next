@@ -960,13 +960,18 @@ from data, so that a script can make its decisions with the same numbers:
   3 cliff, 4 space, 5 map edge) and size. These ids are not `ai.tile`'s `continent` and `sea` (the path sectors'
   land masses and water bodies). `ai.area_point(id, seed)` -> x, y: a random tile of the area
   (EEAIArea::GetRandomPoint) from a stream seeded with the script's number (AssignSeaTask's random point).
+  `ai.forest_point(x, y, r, pick, seed)` -> x, y, n: a random point of one of the continent manager's forests on the
+  land mass at (x, y) whose hull holds the tile or comes within r tiles (the (pick mod n)-th of the n found; the
+  classic defence ladder's forest, AssignSubGroupTask).
 - **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
   only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
   `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.
   With `sees_all` it is the C++ classic's EECPBuildManager::HasEnemyNear, which reads every player's units through
   the fog (the influence regions round the tile, one tile on small island maps; idle searchers left out). Without
   it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
-  towers and armed buildings known. No other query reads through the fog.
+  towers and armed buildings known. `ai.enemy_force(player, x, y, r)` -> n, hp, attack: the player's land soldiers
+  within r, seen or not (the classic militia's raider count, EECPRMMilitia); only with `sees_all` (nothing
+  otherwise: `ai.seen` is the fog-honest count). No other query reads through the fog.
 - **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
   settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens
   (EEComplexUnit::AddGarrison): a settlement becomes a town centre for a few citizens, and the classic trains its

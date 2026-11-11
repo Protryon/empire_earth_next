@@ -1,6 +1,6 @@
 Classic (Lua): a port of the classic computer player (src/Empire Earth/AI Thread/, the C++ classic of this
 repository, the "classic" engine of the lobby) to the per-unit Lua interface (docs/AI_LUA_UNITS.md). Its manifest
-entry is `classic_lua` (ai/ais.json). docs/AI_RESEARCH.md §8.39 has the benches.
+entry is `classic_lua` (ai/ais.json). docs/AI_RESEARCH.md Â§8.39 has the benches.
 
 What is ported: the decisions (what to train, build and research and when; the gatherer split; the epoch timer; the
 building counts; the resource centres' claims; the attack timer, the targets and the groups' tasks), with the C++
@@ -9,7 +9,7 @@ combat, the units' own goals (the gather/return loop, auto-acquire), the product
 in the engine. The C++ classic is the reference, including this repository's changes to it (the `balanced`
 personality's rules behind aipersonalities.yaml switches); the `classic` personality switches them off.
 
-Personality and difficulty: ai.tuning() (a query added for this port, docs/AI_LUA_UNITS.md §11) returns what the C++
+Personality and difficulty: ai.tuning() (a query added for this port, docs/AI_LUA_UNITS.md Â§11) returns what the C++
 classic reads for the seat: the personality as EECPPersonality picks it (aipersonalities.yaml `assign`, the TEST ONLY
 EE_AI_PERSONALITY override, the EE_AI_EXP experiment switches folded in), the difficulty, the cheats on
 (gameoptions.yaml ai_cheats, EE_AI_CHEATS), the map's kind and every dbcpbehavior value EEComputerPlayer::Init copies.
@@ -159,7 +159,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 a random favourite candidate, none: the count to land; the favourite land type, else a random favourite
                 candidate); the sea's classes and counts as the land's (the counter classes 3-5 at sea, the held units
                 within each domain's count). DEVIATION: the target file's counts (see EECPIntelligence).
-                NOT STARTED: AllocateSpecialUnits (priests, prophets, heroes, carriers, paratroopers), the deathmatch
+                AllocateSpecialUnits: the priests and prophets (the chance, the most per group, the population share). NOT STARTED: its heroes, carriers and paratroopers, the deathmatch
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
                 one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
@@ -183,7 +183,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 threatened town, else one of the 3 largest; else CreateDefendGroup), GetUnitAllowance
                 (defensive_unit_cap), ComputeTownThreat (the Hard 55-tile range; the armies inside the hull twice,
                 outside by distance; the own armies' cover; over the own land strength), GetWorstThreats,
-                FindThreatenedTown, AssignSubGroupTask (a forest within 35 tiles 80% for foot soldiers, a threatened
+                FindThreatenedTown, AssignSubGroupTask (a forest whose hull comes within 35 tiles 80% for foot soldiers (a random point of it:
+                ai.forest_point), a threatened
                 town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
@@ -204,8 +205,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
   EEHerd.cpp, EEArtificialIntelligence.cpp, EEHumanPlayer.cpp, EEAIFunctionObjects.cpp
                 ENGINE
   EECPResourceManager.cpp's reflexes (EECPRMMilitia, EECPRMNoteDanger, EECPRMFleeRaids)
-                PORTED -> militia.lua (the micro step answers the hits; the zones' flight every step). DEVIATION (fog):
-                the raiders are the attacker's soldiers seen.
+                PORTED -> militia.lua (the micro step answers the hits; the zones' flight every step). The raiders'
+                strength: every one through the manifest's sees_all (ai.enemy_force), as the C++; the fighters go for
+                the raiders seen.
 
 The army's movement, fighting and retreat run on lib.groups (ai/lib/groups.lua: forming, legs, per-unit targets,
 the raid flight, the retreat), standing in for EECPAttackGroup / EECPAttackSubGroup / the ASG* state machines.
@@ -214,7 +216,7 @@ DEVIATION (fog) at the start: the C++ classic's forest finder and resource centr
 what is explored (a town centre's few tiles at the start), so an idle citizen with nothing known to gather explores
 (econ.lua) until the finders know a resource.
 
-Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
+Interface additions for this port (docs/AI_LUA_UNITS.md Â§11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
 ai.find_site's `margin` and `far` options, ai.water_sites (the dock sites), ai.area / ai.area_point (the
 continent manager's areas: AssignSeaTask), ai.tuning's map tiles (water, land, space, the largest sea: GetDomainShare),
 ai.enemy_near with the manifest's sees_all (HasEnemyNear), ai.garrison_fill with its fills_garrison (FillGarrison),
@@ -223,6 +225,6 @@ influence, epoch, pop, domain), the own units' `target`, `gathers` and `waiting`
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
-Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
+Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests beyond ai.forest_point,
 choke points and hills; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.

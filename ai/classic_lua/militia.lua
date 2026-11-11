@@ -39,7 +39,8 @@ end
 -- EECPRMMilitia: the citizens within 10 tiles and the soldiers within 30 not attacking (and the built towers within
 -- 12) fight when their hit points x attack is 1.5 x the raiders' within 10 (the soldiers first, then the nearest
 -- citizens as the odds need); else the citizens run to the nearest tower within 30, the town centre, or the drop site
--- farthest from the attack. Once every 4 s. DEVIATION (fog): the raiders are the attacker's soldiers seen
+-- farthest from the attack. Once every 4 s. The raiders' strength: every one with the manifest's sees_all
+-- (ai.enemy_force), else DEVIATION (fog) the attacker's soldiers seen
 local function militia(memory, victim, attacker_player, time)
     local mi = memory.militia or {}
     memory.militia = mi
@@ -49,6 +50,14 @@ local function militia(memory, victim, attacker_player, time)
     mi.last = time
     local x, y = victim.x, victim.y
     local raiders, rhp, rat = soldiers_of(ai.seen{player = attacker_player, near = {x, y, MILITIA_RANGE}})
+    -- (with the manifest's sees_all the odds count every raider, seen or not, as the classic's: ai.enemy_force; the
+    -- fighters still go for the raiders seen)
+    if memory.t.sees_all and ai.enemy_force ~= nil then
+        local n, ahp, aat = ai.enemy_force(attacker_player, x, y, MILITIA_RANGE)
+        if n ~= nil and n > 0 then
+            rhp, rat = ahp, aat
+        end
+    end
     if #raiders == 0 then
         return
     end

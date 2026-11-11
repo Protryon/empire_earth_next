@@ -712,6 +712,81 @@ local function favorite_of(view, fav, domain, byKind, ok_fn)
     return #list2 > 0 and list2[ai.random(1, #list2)] or nil
 end
 
+-- AllocateSpecialUnits' priests and prophets: by the personality's chance (priest_chance, prophet_chance) when the
+-- strategy's kind takes the class (an attack group an attack unit, a defence group a defence unit), 1 .. the most per
+-- group (and the land count - 1), under its share of the population limit (pop_percentage, the own and asked for
+-- counted): a free one of the class taken -> the wanted count asked for; else the held candidates of the class, else
+-- the class asked for when a candidate. As the original, the free-one path leaves the land count as it is.
+-- The paratroopers, heroes and carriers: NOT STARTED
+local function special_slots(view, memory, kind, numLand, numUnits, list, cands, held, byKind)
+    local b = memory.t.behavior
+    local slots = {}
+    local cap = view.population_cap
+    local specs = {{name = "priest", chance = b.priest_chance_k, max = b.priest_max_per_group,
+                    pop = b.priest_pop_percentage_k, need_units = false},
+                   {name = "prophet", chance = b.prophet_chance_k, max = b.prophet_max_per_group,
+                    pop = b.prophet_pop_percentage_k, need_units = true}}
+    for _, sp in ipairs(specs) do
+        local k = cls(sp.name)
+        local takes = kind == 4 or kind == 5 or (k.attack_unit and kind == 0) or (k.defense_unit and kind == 1)
+        if numLand > 0 and (not sp.need_units or numUnits > 1) and takes and T.random_k() <= (sp.chance or 0) then
+            local wanted = ai.random(1, math.max(math.min(sp.max or 0, numLand - 1), 1))
+            local have = #ai.units{type = sp.name}
+            for _, g in ipairs(G.all(army(memory))) do
+                for _, sl in ipairs(g.slots or {}) do
+                    if sl.c == sp.name then
+                        have = have + 1
+                    end
+                end
+            end
+            local limit = ((sp.pop or 0) * cap + 999) // 1000
+            if have < limit then
+                wanted = math.min(wanted, limit - have)
+                if wanted > 0 then
+                    local free = false
+                    for _, u in ipairs(list) do
+                        if u.type == sp.name then
+                            free = true
+                            break
+                        end
+                    end
+                    if not free then
+                        for _, c in ipairs(cands) do
+                            if wanted <= 0 then
+                                break
+                            end
+                            if c.type == sp.name and not c.taken then
+                                c.taken = true
+                                held[#held + 1] = c
+                                numLand = math.max(numLand - 1, 0)
+                                wanted = wanted - 1
+                            end
+                        end
+                        if wanted > 0 then
+                            for _, ak in ipairs(ai.keys(byKind)) do
+                                for _, name in ipairs(byKind[ak]) do
+                                    if name == sp.name then
+                                        free = true
+                                    end
+                                end
+                            end
+                            if free then
+                                numLand = math.max(numLand - wanted, 0)
+                            end
+                        end
+                    end
+                    if free then
+                        for _ = 1, wanted do
+                            slots[#slots + 1] = sp.name
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return slots, numLand
+end
+
 -- Select: the classes of a new group's slots and the held units it takes, land and sea. kind 0 attack, 1 defence.
 -- The candidates are the free soldiers and warships (and, for an attack, the defence groups' soldiers:
 -- GatherDefendingUnits). ComputeDomainShares: the sea share (GetDomainShare); the air share (from WW1) and space:
@@ -846,7 +921,14 @@ local function select_units(view, memory, kind, target, naval)
             counts[best] = nil
         end
     end
-    -- AllocateSpecialUnits (priests, prophets, heroes, carriers): NOT STARTED
+    -- AllocateSpecialUnits: the priests and prophets
+    do
+        local got
+        got, numLand = special_slots(view, memory, kind, numLand, count, list, cands, held, byKind)
+        for _, name in ipairs(got) do
+            slots[#slots + 1] = name
+        end
+    end
     -- AllocateCounterUnits: the families that counter the target's unit types, weighted 3/2/1 (WeighCounters: the
     -- families with a candidate class), the sea (3-5 classes) before the land (2-6, the siege share)
     if counters and (numLand > 0 or numSea > 0) then
@@ -1239,13 +1321,24 @@ local function defence_task(view, memory, g)
         end
     end
     if infantry and T.random_k() < 800 then
-        local trees = ai.resources{kind = "wood", near = {x, y, FOREST_RANGE}, limit = 40}
-        if #trees > 0 then
-            local r = R.unit(trees[ai.random(1, #trees)])
-            if r ~= nil then
+        -- the forests (the continent manager's) whose hull comes within 35 tiles, one at random, a random point of it
+        -- (ai.forest_point); without the query a tree within 35 tiles
+        if ai.forest_point ~= nil then
+            local fx, fy = ai.forest_point(x, y, FOREST_RANGE, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+            if fx ~= nil then
                 g.mission = 1
-                set_place(g, "defend", r.x, r.y, GUARD_RADIUS, 0)
+                set_place(g, "defend", fx, fy, GUARD_RADIUS, 0)
                 return "forest"
+            end
+        else
+            local trees = ai.resources{kind = "wood", near = {x, y, FOREST_RANGE}, limit = 40}
+            if #trees > 0 then
+                local r = R.unit(trees[ai.random(1, #trees)])
+                if r ~= nil then
+                    g.mission = 1
+                    set_place(g, "defend", r.x, r.y, GUARD_RADIUS, 0)
+                    return "forest"
+                end
             end
         end
     end
