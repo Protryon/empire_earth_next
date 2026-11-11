@@ -5761,6 +5761,68 @@ moved wholly, so no unit was deleted.
   every capture digest of the four profiles equal to its golden but USGC, whose lines the next commit recorded; the
   live Rust-against-original comparison inside the sweep never stopped a game): see the final report. Not run: any harness session, macOS or Linux builds.
 
+## R4.4: the Graphics Thread mapped, the camera's math in Rust (ee_gfx camera.rs; branch rust-gfx7, 2026-11-11)
+
+RUST_PLAN's new row R4.4 holds the map of the Graphics Thread (what each part decides, which GE/GX calls it makes,
+what it reads). The first leaf is the camera's math (`EECameraControl.cpp`), in a new crate `ee_gfx` over `ee_ge`'s
+math. The class keeps its members, the key list, the followed units (handles), `MoveTo`, `KeepPose`, `Revolve`,
+`Rotate`, the setters and every viewport and world call; Rust gets plain values (the GE classes as their
+`#[repr(C)]` mirrors) and gives back values the C++ stores.
+
+- **What moved.** `GetPitch`; `GetOffset`/`GetLocation`; `GoTo`'s speed and its two snaps (the followed unit's
+  speed times the game speed is read in C++ only when following, as before); `ClampHeight`; `BuildView`;
+  `SetClippingDistances` with `EECameraRayDistance`; `ClipToEdges`; `GetGroundPoint`; `Scroll`'s ground direction,
+  its near test and its clamp to the map's edge planes; `Update`'s step of the move (wait out a key, the path's next
+  key, a jump, an advance) and its orthographic view. The terrain is three C++ callbacks over the mesh
+  (`GetIsValidTile`/`GetIsValidPoint` after `UMFloorUnsigned`, `GetMeshZ`), so the platform's `unsigned long`
+  stays on the C++ side.
+- **The camera is simulation code too.** `EEPhysics.cpp:756` calls `Update` every tick (EE-SIM included), which sets
+  the world's camera transformation, its yaw and pitch, the viewport and the minimap's view. RUST_PLAN 2.1 applies:
+  the C++'s `f32` order, `(float)pow((double)x, e)` and `(float)sqrt` through `f64`, the table trigonometry.
+- **`pow` through `black_box`.** The golden caught Rust's `pow(x, 0.5)` giving `+NaN` where the C++ gave `-NaN`
+  (mode 3 past zoom 1): LLVM rewrites a constant exponent of 0.5 as `fabs(sqrt(x))` unless fast-math is off for
+  libcalls, which it is not for Rust. The exponent now goes through `std::hint::black_box`, so the C library's
+  `pow` runs as the C++'s does.
+- **`Scroll` reads the zoom before its mode switch.** The original computes the delta's scale (`mZoom + 0.5`), the
+  pitch and the minimum height before `SetMode(0)`/`ResetZoom` (free camera outside a cinematic) reset the zoom to
+  1; the first forwarder passed the zoom after it and the golden failed 28 scroll cases. The forwarder passes the
+  scale taken first.
+- **One change of shape, none of behaviour.** The original built each of `SetClippingDistances`' three view rays
+  twice (`EECameraRayDistance` per limit); `EEMap::GetScreenLine` reads only the viewport, which changes after all
+  six, so the forwarder builds each ray once and the Rust measures it twice.
+- **A hazard found, not fixed: the free camera past zoom 1 crashes.** In mode 3 `GetPitch` is
+  `pow(1 - |zoom|, 0.5)`: NaN past zoom 1, and the port's farther zoom-out (`gCameraMaxZoom` 2) allows that zoom.
+  `SetOrientationYPR(NaN)` reaches the table cosine, which faults on a NaN angle (the C++ indexed at `INT_MIN`;
+  `ee_ge::um::um_cos` panics). `EESMEffect.cpp:2096/2152` and `EEACenterCamera.cpp:79` switch to mode 3 with the
+  current zoom, so a scenario's cinematic after a zoom past 1 likely crashes the game. Modes 0 and 1 clamp the zoom
+  at 1 for the pitch; mode 3 should too (a one-line fix in `camera::pitch`, a behaviour change left to the lead).
+- **The golden driver** (`build/camera_golden`, scratch, `build.py orig|cur [seed [scale [full]]]`): the camera unit
+  of 9432f6e7 (`git archive`) or the worktree's, compiled with the exe module's flags, linked with the real GE math
+  units and `GEViewport` (the lle module's flags) and a scratch Rust staticlib (ee_ge, ee_gfx, ee_plat_core) under
+  `/FORCE:UNRESOLVED`. The fakes: `gWorld` is zeroed storage under its decorated name (`__asm__` label), the map a
+  calloc'ed `EEMap` whose mesh (`#define private public` around `GETerrainMesh.h` only) has rectangle or diamond
+  rows, the real edge planes (`ee_ge_terrain_planes`) and a hash height per half tile; `EEMap::GetScreenLine` a ray
+  from the viewport's camera; `RTSMap::GetLocationOnLine` the hit at height 1; `EEWorld::SetCameraTransformation`
+  records the camera and sets the viewport's; the unit handles resolve to none. 24 meshes of 600 cases: GetPitch,
+  the interpolation, GoTo, ClampHeight, BuildView, SetClippingDistances, ClipToEdges and GetGroundPoint, Scroll
+  (with the free camera's mode switch), Update (with and without a key path, orthographic or not) and 60 cases of
+  the movers that stay C++ (MoveTo with locations, SetZoom, SetMode, Revolve, Rotate, SetLocation, SetOffset, the
+  turns, KeepPose). Each line is the case's FNV-1a 64 over its whole log (inputs, every height query with its
+  answer, the recorded camera, the outputs), 410 KB; `full` prints the logs. `golden_camera.rs` draws the same LCG
+  stream, rebuilds the generator's camera, viewport (`ee_ge`'s `GeViewport`) and mesh, runs each case through
+  `camera.rs` with the C++ glue rewritten in the test (KeepPose, GoTo, `MoveTo` without units for the mode switch,
+  NextKey, ResetPath) and compares the digests: 12,984 cases; the 1,440 C++-only movers only advance the stream.
+  The relinked driver printed the same file, and the same on seeds 2 and 3 at four times the size (57,696 lines
+  each). A mutation (the height clamp's `height + minimum`) fails the replay at its first case.
+- **Driver traps.** One random draw per statement: the order in which a call's arguments are evaluated is the
+  compiler's, and `GE3DPoint(F(), F(), F())` is not a stream the Rust can follow. A `std::vector` of the mesh's rows
+  destroys the old rows through `DeallocateInternalData` (out of line, unresolved): define it. The empty unit
+  handles call `EEUnitHandleResolve`: define it. The camera's file statics (`gGameVersion`) need `UString` and
+  `UWideString`. And never clean a scratch folder with `rm orig/g*.txt`: it took `golden_camera.txt` with it.
+- **Only a tour exercises this** beyond the sim's ticks: EE-SIM runs `Update` every tick (no unit followed, no
+  scroll), so the oracle covers the update's step, `BuildView` and the clipping distances on the perspective path;
+  scrolling, zooming, rotating, following a unit, a cinematic's key path and the orthographic view run only in the
+  windowed game.
 ## R6: the edit box's key dispatch, the background table, UI events, the full background's tile names and the status bar (ee_ui edit_keys.rs, background_table.rs, event.rs, status.rs; branch rust-r6-ui7, 2026-11-11)
 
 Moved to `rust/crates/ee_ui` (the C++ classes keep every member, vtable and exported name; `UIBackgroundTable.h` and

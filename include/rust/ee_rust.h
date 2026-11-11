@@ -169,6 +169,16 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// The free camera mode (`mMode == 3`).
+constexpr static const int32_t MODE_FREE = 3;
+
+/// What `Update` does after stepping: nothing more, the path's next key, or the view.
+constexpr static const int32_t CAMERA_STEP_DONE = 0;
+
+constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
+
+constexpr static const int32_t CAMERA_STEP_VIEW = 2;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -3476,6 +3486,76 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t start,
                                int32_t end,
                                int32_t length);
+
+/// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
+/// end (a move shorter than 0.001).
+struct EeGfxCameraGoTo {
+  float speed;
+  bool snap_offset;
+  bool snap_focus;
+};
+
+/// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxGround {
+  void *context;
+  /// `GetIsValidTile(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_tile)(void *context, float x, float y);
+  /// `GetIsValidPoint(UMFloorUnsigned(x), UMFloorUnsigned(y))`
+  bool (*valid_point)(void *context, float x, float y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
+};
+
+/// The camera's pose at a step of the move (`BuildView`'s inputs).
+struct EeGfxCameraPose {
+  /// `mQ014`, `mQ04C`: the view turn's start and end.
+  EeGeQuaternion view_start;
+  EeGeQuaternion view_end;
+  /// `mQ024`, `mQ05C`: the offset turn's.
+  EeGeQuaternion offset_start;
+  EeGeQuaternion offset_end;
+  EeGe3DPoint start_offset;
+  EeGe3DPoint end_offset;
+  EeGe3DPoint start_focus;
+  EeGe3DPoint end_focus;
+};
+
+/// The front and rear clipping distances `SetClippingDistances` gives the viewport.
+struct EeGfxClipping {
+  float front;
+  float rear;
+};
+
+/// The view rays through the screen's top, centre and bottom (`SetClippingDistances`' three screen lines).
+struct EeGfxCameraRays {
+  EeGe3DLine top;
+  EeGe3DLine center;
+  EeGe3DLine bottom;
+};
+
+/// The terrain mesh's four edge planes (`GetFrontPlane` .. `GetRightPlane`).
+struct EeGfxEdgePlanes {
+  EeGe3DPlane front;
+  EeGe3DPlane back;
+  EeGe3DPlane left;
+  EeGe3DPlane right;
+};
+
+/// The move's state `Update` steps.
+struct EeGfxCameraStep {
+  float fraction;
+  float rate;
+  float wait;
+  float waited;
+  bool changed;
+  bool locked;
+};
+
+/// The orthographic view and its rectangle's half size (`Update`'s orthographic branch).
+struct EeGfxOrthoView {
+  EeGeTransformation view;
+  float size;
+};
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -8461,6 +8541,120 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t start,
                                   int32_t length,
                                   EeFsMemFile **out_file);
+
+/// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
+///
+/// # Safety
+/// `world` is valid.
+float ee_gfx_camera_pitch(float zoom,
+                          int32_t mode,
+                          const EeGeTransformation *world);
+
+/// `GetOffset`/`GetLocation`: `step` of the way from `start` to `end`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_lerp(const EeGe3DPoint *start,
+                        const EeGe3DPoint *end,
+                        float step,
+                        EeGe3DPoint *out);
+
+/// `GoTo`'s speed and snaps.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxCameraGoTo ee_gfx_camera_go_to(const EeGe3DPoint *start_offset,
+                                    const EeGe3DPoint *end_offset,
+                                    const EeGe3DPoint *start_focus,
+                                    const EeGe3DPoint *end_focus,
+                                    float key_rate,
+                                    bool following,
+                                    float follow_rate);
+
+/// `ClampHeight(ioTransformation)`.
+///
+/// # Safety
+/// `t` is valid; the callbacks are valid for the call.
+void ee_gfx_camera_clamp_height(EeGeTransformation *t,
+                                int32_t mode,
+                                float front_clipping,
+                                bool plain,
+                                EeGfxGround ground);
+
+/// `BuildView(out, step)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_build_view(const EeGfxCameraPose *pose,
+                              float step,
+                              int32_t mode,
+                              float front_clipping,
+                              bool plain,
+                              EeGfxGround ground,
+                              EeGeTransformation *out);
+
+/// `SetClippingDistances`' distances; `rays` is null in the orthographic view.
+///
+/// # Safety
+/// `rays` is null or valid; `camera` is valid.
+EeGfxClipping ee_gfx_camera_clipping(const EeGfxCameraRays *rays,
+                                     const EeGe3DPoint *camera,
+                                     int32_t mode,
+                                     float zoom,
+                                     bool free_camera,
+                                     bool far_rear_clipping);
+
+/// `ClipToEdges(line, ioPoint)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clip_to_edges(const EeGe3DLine *line,
+                                 const EeGfxEdgePlanes *planes,
+                                 EeGe3DPoint *point);
+
+/// `GetGroundPoint(line, out)`; `offset` is `GetOffset(mFraction)`.
+///
+/// # Safety
+/// The pointers are valid; the callbacks are valid for the call.
+void ee_gfx_camera_ground_point(const EeGe3DLine *line,
+                                const EeGfxEdgePlanes *planes,
+                                const EeGe3DPoint *offset,
+                                int32_t mode,
+                                EeGfxGround ground,
+                                EeGe3DPoint *out);
+
+/// `Scroll`'s ground direction (`scale`: the zoom + 0.5 as the scroll began).
+///
+/// # Safety
+/// `view` is valid.
+EeGeVector ee_gfx_camera_scroll_direction(const EeGeTransformation *view,
+                                          float dx,
+                                          float dy,
+                                          float scale);
+
+/// Whether `Scroll` looks for the ground under the screen (the offset within 10).
+///
+/// # Safety
+/// `offset` is valid.
+bool ee_gfx_camera_scroll_is_near(const EeGe3DPoint *offset);
+
+/// `Scroll`'s clamp of the target to the map's edge planes.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_camera_clamp_to_map(EeGe3DPoint *target, const EeGfxEdgePlanes *planes);
+
+/// `Update`'s step of the move (`CAMERA_STEP_*`).
+///
+/// # Safety
+/// `state` is valid.
+int32_t ee_gfx_camera_step(EeGfxCameraStep *state, float elapsed);
+
+/// `Update`'s orthographic view.
+///
+/// # Safety
+/// `focus` is valid.
+EeGfxOrthoView ee_gfx_camera_ortho_view(const EeGe3DPoint *focus, float offset_y);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
