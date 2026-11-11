@@ -1086,17 +1086,30 @@ local function fill_requests(view, memory)
     end
 end
 
--- the population a group takes (its units, its open slots)
-local function group_pop(g)
-    local n = 0
-    for _, id in ipairs(g.units) do
-        local u = R.unit(id)
-        n = n + (u ~= nil and (cls(u.type).pop or 1) or 1)
+-- the population the army groups take (their units, their open slots): one ai.get over every unit (a record per
+-- unit through ai.unit blew the step's budget with a large army)
+local function groups_pop(memory)
+    do
+        local ids, n = {}, 0
+        for _, g in ipairs(G.all(army(memory))) do
+            if g.role == "army" then
+                for _, id in ipairs(g.units) do
+                    ids[#ids + 1] = id
+                end
+                for _, sl in ipairs(g.slots or {}) do
+                    n = n + (cls(sl.c).pop or 1)
+                end
+            end
+        end
+        if #ids > 0 then
+            local cols = ai.get(ids, {"type"})
+            for k = 1, #ids do
+                local t = cols.type[k]
+                n = n + (t ~= nil and (cls(t).pop or 1) or 1)
+            end
+        end
+        return n
     end
-    for _, s in ipairs(g.slots or {}) do
-        n = n + (cls(s.c).pop or 1)
-    end
-    return n
 end
 
 -- GetUnitAllowance: (defensive_unit_cap - the groups' population / the unit limit) x the limit
@@ -1105,12 +1118,7 @@ local function unit_allowance(view, memory)
     if total <= 0 then
         return 0
     end
-    local used = 0
-    for _, g in ipairs(G.all(army(memory))) do
-        if g.role == "army" then
-            used = used + group_pop(g)
-        end
-    end
+    local used = groups_pop(memory)
     local cap = memory.t.behavior.defensive_unit_cap_k
     local frac = used * 1000 // total
     if frac >= cap then
