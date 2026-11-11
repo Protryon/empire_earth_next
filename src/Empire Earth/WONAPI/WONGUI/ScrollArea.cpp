@@ -8,6 +8,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_rust.h"
+// The offsets' clamp, the bottom test, the view inside the padding and the sizes are ee_won's guiscroll module
+// (rust/crates/ee_won/src/guiscroll.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x00704fd0
 // Positions the viewport at the scroll offset, sized to the total content size
@@ -18,14 +21,19 @@ void ScrollArea::SetDelegatePos()
 // FUNCTION: WON 0x00705030
 // Clamps the scroll offsets to the content, tells the scroller, moves the viewport and repaints
 // (a scrollbar-driven change marks the user as having scrolled)
+static EeWonScrollArea AreaOf(const ScrollArea* a)
+{
+    EeWonScrollArea r = { a->mVertOffset, a->mHorzOffset, a->mTotalWidth, a->mTotalHeight, a->mExtraHeight,
+                          a->mScrollArea.x, a->mScrollArea.y, a->mScrollArea.width, a->mScrollArea.height };
+    return r;
+}
 void ScrollArea::AdjustPosition(bool scrollbar)
 {
     if(scrollbar) this->mUserHasScrolled=true;
-    if(this->mVertOffset+this->mScrollArea.height>this->mTotalHeight+this->mExtraHeight)
-        this->mVertOffset=this->mTotalHeight+this->mExtraHeight-this->mScrollArea.height;
-    if(this->mVertOffset<0) this->mVertOffset=0;
-    if(this->mHorzOffset+this->mScrollArea.width>this->mTotalWidth) this->mHorzOffset=this->mTotalWidth-this->mScrollArea.width;
-    if(this->mHorzOffset<0) this->mHorzOffset=0;
+    EeWonScrollArea a = AreaOf(this);
+    ee_won_gui_scroll_clamp(&a);
+    this->mVertOffset=a.vert_offset;
+    this->mHorzOffset=a.horz_offset;
     if(this->mScroller!=NULL) this->mScroller->NotifyScrollChange(scrollbar);
     this->mAVertOffset=this->mVertOffset;
     this->mAHorzOffset=this->mHorzOffset;
@@ -51,21 +59,21 @@ void ScrollArea::SetOffsets(int horizontal,int vertical)
 // Returns true when scrolled down (offset > 0) to the end of the content
 bool ScrollArea::OnBottom()
 {
-    return this->mVertOffset>0 && this->mVertOffset+this->mScrollArea.height>=this->mTotalHeight;
+    return ee_won_gui_scroll_on_bottom(AreaOf(this));
 }
 // FUNCTION: WON 0x007051c0
 // Recomputes the visible area inside the padding, keeps the view pinned to the bottom if it was there, re-clamps
 void ScrollArea::Virtual08()
 {
     Container::Virtual08();
-    bool bottom=this->OnBottom();
-    this->mScrollArea.x=this->mLeftPad;
-    this->mScrollArea.y=this->mTopPad;
-    this->mScrollArea.width=this->Width()-this->mRightPad-this->mLeftPad;
-    this->mScrollArea.height=this->Height()-this->mBottomPad-this->mTopPad;
-    if(this->mScrollArea.Width()<0) this->mScrollArea.width=0;
-    if(this->mScrollArea.Height()<0) this->mScrollArea.height=0;
-    if(bottom) this->mVertOffset=this->mTotalHeight+this->mExtraHeight-this->mScrollArea.Height();
+    EeWonScrollArea a = AreaOf(this);
+    ee_won_gui_scroll_view(&a,this->Width(),this->Height(),this->mLeftPad,this->mTopPad,this->mRightPad,
+                           this->mBottomPad);
+    this->mScrollArea.x=a.view_x;
+    this->mScrollArea.y=a.view_y;
+    this->mScrollArea.width=a.view_width;
+    this->mScrollArea.height=a.view_height;
+    this->mVertOffset=a.vert_offset;
     this->ScrollSizeChanged();
     this->AdjustPosition(false);
 }
@@ -105,19 +113,16 @@ bool ScrollArea::MouseWheel(int amount)
 // Resizes the scroll area to fit the whole content (at least the given minimum) plus padding
 void ScrollArea::SetSizeEqualToTotal(int minWidth,int minHeight)
 {
-    int width=this->mTotalWidth,height=this->mTotalHeight;
-    if(minWidth>width) width=minWidth;
-    if(minHeight>height) height=minHeight;
-    this->SetSize(width+this->mLeftPad+this->mRightPad,height+this->mTopPad+this->mBottomPad);
+    int width=0,height=0;
+    ee_won_gui_scroll_size(1,AreaOf(this),minWidth,minHeight,this->mLeftPad,this->mTopPad,this->mRightPad,
+                           this->mBottomPad,&width,&height);
+    this->SetSize(width,height);
 }
 // FUNCTION: WON 0x007054a0
 // Returns the content size, capped at 300x300
 void ScrollArea::GetDesiredSize(int& width,int& height)
 {
-    if(this->mTotalWidth<300) width=this->mTotalWidth;
-    else width=300;
-    if(this->mTotalHeight<300) height=this->mTotalHeight;
-    else height=300;
+    ee_won_gui_scroll_size(0,AreaOf(this),0,0,0,0,0,0,&width,&height);
 }
 // WONRectangle::Intersects expands inline here (out-of-line copy at 0x00749450); its edge tests are asymmetric.
 // FUNCTION: WON 0x007054f0

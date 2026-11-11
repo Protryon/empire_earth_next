@@ -1255,6 +1255,14 @@ enum class EeWonStageRoute {
   LocalAndNet = 3,
 };
 
+/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
+enum class EeWonScrollPress {
+  LineUp = 0,
+  LineDown = 1,
+  /// The track, with the mouse along the axis.
+  Track = 2,
+};
+
 /// The search or compare `ee_won_guistring_op` runs.
 enum class EeWonGuiStringOp {
   Compare,
@@ -4324,6 +4332,45 @@ struct EeWonFlowItem {
   int32_t left_pad;
   int32_t left;
   int32_t height;
+};
+
+/// `LayoutThumb`'s answer: `hidden` (everything fits: the thumb is hidden and nothing else changes), else the
+/// thumb's size and, when `set_pos`, its new top.
+struct EeWonThumbOut {
+  bool hidden;
+  bool set_pos;
+  int32_t pos;
+  int32_t len;
+};
+
+/// A scrollbar's thumb along its track (`LayoutThumb`'s inputs, all along the bar's axis).
+struct EeWonThumbIn {
+  int32_t page;
+  int32_t total;
+  int32_t position;
+  /// The track's top and height.
+  int32_t track_top;
+  int32_t track_len;
+  /// The thumb's top and height now.
+  int32_t thumb_top;
+  int32_t thumb_len;
+  bool resize_thumb;
+  int32_t min_thumb;
+  bool change_pos;
+};
+
+/// A scroll area's numbers (`ScrollArea`): the offsets, the content, the view and the padding.
+struct EeWonScrollArea {
+  int32_t vert_offset;
+  int32_t horz_offset;
+  int32_t total_width;
+  int32_t total_height;
+  int32_t extra_height;
+  /// The view (`mScrollArea`).
+  int32_t view_x;
+  int32_t view_y;
+  int32_t view_width;
+  int32_t view_height;
 };
 
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
@@ -11363,6 +11410,94 @@ void ee_won_gui_vertical_flow(const EeWonFlowItem *items,
                               int32_t left,
                               int32_t top,
                               int32_t *out);
+
+EeWonThumbOut ee_won_gui_thumb_layout(EeWonThumbIn t);
+
+/// `thumb_drag`: the new top into `out_top`, the position returned.
+///
+/// # Safety
+/// `out_top` is writable.
+int32_t ee_won_gui_thumb_drag(int32_t new_top,
+                              int32_t track_top,
+                              int32_t track_len,
+                              int32_t thumb_len,
+                              int32_t total,
+                              int32_t page,
+                              int32_t *out_top);
+
+int32_t ee_won_gui_scroll_step(EeWonScrollPress press,
+                               int32_t mouse,
+                               int32_t thumb_top,
+                               int32_t thumb_len,
+                               int32_t position,
+                               int32_t line_up,
+                               int32_t line_down,
+                               int32_t page_step,
+                               int32_t total,
+                               int32_t page);
+
+/// `clamp_offsets`: the area's offsets clamped in place.
+///
+/// # Safety
+/// `a` is a valid area.
+void ee_won_gui_scroll_clamp(EeWonScrollArea *a);
+
+bool ee_won_gui_scroll_on_bottom(EeWonScrollArea a);
+
+/// `view_layout`: the view and the pinned offset in place.
+///
+/// # Safety
+/// `a` is a valid area.
+void ee_won_gui_scroll_view(EeWonScrollArea *a,
+                            int32_t width,
+                            int32_t height,
+                            int32_t left_pad,
+                            int32_t top_pad,
+                            int32_t right_pad,
+                            int32_t bottom_pad);
+
+/// `desired_size` (`which` 0) or `size_equal_to_total` (1, with the minimum and the left, top, right, bottom
+/// padding) into the outs.
+///
+/// # Safety
+/// The outs are writable.
+void ee_won_gui_scroll_size(int32_t which,
+                            EeWonScrollArea a,
+                            int32_t min_width,
+                            int32_t min_height,
+                            int32_t left_pad,
+                            int32_t top_pad,
+                            int32_t right_pad,
+                            int32_t bottom_pad,
+                            int32_t *out_w,
+                            int32_t *out_h);
+
+/// `scrollbar_condition`: -1 leave the bar alone (no change), 0 / 1 the visibility to set, 2 set nothing.
+int32_t ee_won_gui_scrollbar_condition(int32_t condition,
+                                       bool setting_conditions,
+                                       bool visible,
+                                       bool vertical,
+                                       EeWonScrollArea a);
+
+/// `scrollbar_sync`: the total and page into the outs, enabled returned.
+///
+/// # Safety
+/// The outs are writable.
+bool ee_won_gui_scrollbar_sync(EeWonScrollArea a,
+                               bool vertical,
+                               int32_t *out_total,
+                               int32_t *out_page);
+
+/// `scroll_buttons_enabled`: bit 0 left, 1 up, 2 right, 3 down.
+uint32_t ee_won_gui_scroll_buttons(EeWonScrollArea a);
+
+/// `scroll_button_condition`: -1 leave the pair alone, else bit 0 show the first, bit 1 show the second.
+int32_t ee_won_gui_scroll_button_condition(int32_t condition,
+                                           bool setting_conditions,
+                                           bool visible_first,
+                                           bool visible_second,
+                                           bool disabled_first,
+                                           bool disabled_second);
 
 /// A comparison or search of `a` (`a_length` units) with `b`; `start` for the searches.
 ///
