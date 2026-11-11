@@ -14,13 +14,17 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x00798f90
 // Reads an orientation word; true for "Vert" (any case), false for anything else
 bool WONSkinConfig::ReadVert()
 {
     GUIString text=this->ReadString(false);
-    return text.CompareNoCase("Vert")==0;
+    const int aNameIdx_text=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT,text.mData->mText,text.mData->mLength,sizeof(wchar_t));
+    return aNameIdx_text==0;
 }
 // FUNCTION: WON 0x00799010
 // Runs the base pre-parse and creates the global skin as the Windows-look skin when there is none
@@ -53,78 +57,79 @@ void WONSkinConfig::HandleButtonClickSound()
 // click sound and image cursors; false for other keys (WINSKIN is accepted and ignored)
 bool WONSkinConfig::Virtual24(const std::string &theInstruction)
 {
-	if(theInstruction=="WINSKIN")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 	{
 
 	}
-	else if(theInstruction=="ADDBUTTONTYPE")
+	else if(aKeyIdx==1)
 	{
 		GUIString aName = this->ReadString(false); this->EnsureComma();
 		WONButton* aButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
 		gSkin->mButtonTypeMap[aName] = aButton;
 	}
-	else if(theInstruction=="ADDSIMPLEBUTTONTYPE")
+	else if(aKeyIdx==2)
 	{
 		GUIString aName = this->ReadString(false); this->EnsureComma();
 		WONSimpleButton* aButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
 		gSkin->mSimpleButtonTypeMap[aName] = aButton;
 	}
-	else if(theInstruction=="SETPUSHBUTTON")
+	else if(aKeyIdx==3)
 		gSkin->mPushButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
-	else if(theInstruction=="SETCHECKBOX")
+	else if(aKeyIdx==4)
 		gSkin->mCheckbox = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
-	else if(theInstruction=="SETRADIOBUTTON")
+	else if(aKeyIdx==5)
 	{
 		gSkin->mRadioButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
 		gSkin->mRadioButton->SetButtonFlags(8,true);
 	}
-	else if(theInstruction=="SETHEADERBUTTON")
+	else if(aKeyIdx==6)
 		gSkin->mHeaderButton = SafeConfigGetComponent<WONHeaderButton*>(this->ReadComponent(),"WONHeaderButton");
-	else if(theInstruction=="SETTABBUTTON")
+	else if(aKeyIdx==7)
 		gSkin->mTabButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
-	else if(theInstruction=="SETARROWBUTTON")
+	else if(aKeyIdx==8)
 	{
 		Direction aDirection = this->ReadDirection(); this->EnsureComma();
 		gSkin->mArrowButton[aDirection] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
 
 	}
-	else if(theInstruction=="SETCOMBOBUTTON")
+	else if(aKeyIdx==9)
 		gSkin->mComboButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
-	else if(theInstruction=="SETCLOSEBUTTON")
+	else if(aKeyIdx==10)
 		gSkin->mCloseButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
-	else if(theInstruction=="SETSCROLLGUTTER")
+	else if(aKeyIdx==11)
 	{
 		bool isVert = this->ReadVert(); this->EnsureComma();
 		gSkin->mScrollGutter[isVert?1:0] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
 	}
-	else if(theInstruction=="SETSCROLLTHUMB")
+	else if(aKeyIdx==12)
 	{
 		bool isVert = this->ReadVert(); this->EnsureComma();
 		gSkin->mScrollThumb[isVert?1:0] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
 	}
-	else if(theInstruction=="SETSCROLLBAR")
+	else if(aKeyIdx==13)
 	{
 		bool isVert = this->ReadVert(); this->EnsureComma();
 		gSkin->mScrollbar[isVert?1:0] = SafeConfigGetComponent<WONScrollbar*>(this->ReadComponent(),"WONScrollbar");
 	}
-	else if(theInstruction=="SETSCROLLCONTAINER")
+	else if(aKeyIdx==14)
 		gSkin->mScrollContainer = SafeConfigGetComponent<WONScrollContainer*>(this->ReadComponent(),"WONScrollContainer");
-	else if(theInstruction=="SETLISTCTRL")
+	else if(aKeyIdx==15)
 		gSkin->mListCtrl = SafeConfigGetComponent<WONListCtrl*>(this->ReadComponent(),"WONListCtrl");
-	else if(theInstruction=="SETTABCTRL")
+	else if(aKeyIdx==16)
 	{
 		gSkin->mTabCtrl = SafeConfigGetComponent<WONTabCtrl*>(this->ReadComponent(),"WONTabCtrl");
 		gSkin->mTabCtrl->mSkin=NULL;
 	}
-	else if(theInstruction=="SETCOMBOBOX")
+	else if(aKeyIdx==17)
 		gSkin->mComboBox = SafeConfigGetComponent<WONComboBox*>(this->ReadComponent(),"WONComboBox");
-	else if(theInstruction=="SETPOPUPBACK")
+	else if(aKeyIdx==18)
 		gSkin->mPopupBack = SafeConfigGetComponent<WONFrameComponent*>(this->ReadComponent(),"WONPopupBack");
-	else if(theInstruction=="SETDIALOGBACK")
+	else if(aKeyIdx==19)
 		gSkin->mDialogBack = SafeConfigGetComponent<WONFrameComponent*>(this->ReadComponent(),"WONDialogBack");
-	else if(theInstruction=="BUTTONCLICKSOUND")
+	else if(aKeyIdx==20)
 		this->HandleButtonClickSound();
-	else if(theInstruction=="IMAGECURSOR")
+	else if(aKeyIdx==21)
 	{
 		StandardCursor aType = this->ReadStandardCursor(); this->EnsureComma();
 		SmartPtr<Image> anImage = this->ReadImage(false);

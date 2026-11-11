@@ -9,12 +9,16 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x007986d0
 // Handles TRANSPARENT (true gives the scrollbar a plain button as its scroll rectangle); passes other keys on
 bool WONScrollbarConfig::Virtual24(const std::string& key)
 {
-    if(key=="TRANSPARENT") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONSCROLLBARCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) {
         if(this->ReadBool()) {
             Button* rect=new Button;
             this->mScrollbar->mScrollRect=rect;
@@ -26,8 +30,9 @@ bool WONScrollbarConfig::Virtual24(const std::string& key)
 // Lets the list header config handle the key first, then handles SETSTANDARDCOLUMN (column, title)
 bool WONHeaderControlConfig::Virtual24(const std::string& key)
 {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONHEADERCONTROLCONFIG_VIRTUAL24_KEY,key.data(),key.size());
     if(MultiListHeaderConfig::Virtual24(key)) return true;
-    if(key=="SETSTANDARDCOLUMN") {
+    if(aKeyIdx==0) {
         int column=this->ReadInt(); this->EnsureComma();
         GUIString title=this->ReadString(false);
         this->mHeader->SetColumn(column,title,NULL);
@@ -39,21 +44,22 @@ bool WONHeaderControlConfig::Virtual24(const std::string& key)
 // and SETCOLUMN; passes other keys to the scroll container config
 bool WONListCtrlConfig::Virtual24(const std::string& key)
 {
-    if(key=="HEADERHEIGHT") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONLISTCTRLCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) {
         int height=this->ReadInt(); this->mListCtrl->mHeaderHeight=height;
-    } else if(key=="NUMCOLUMNS") {
+    } else if(aKeyIdx==1) {
         MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get());
         int count=this->ReadInt(); area->SetNumColumns(count);
-    } else if(key=="DYNAMICSIZECOLUMN") {
+    } else if(aKeyIdx==2) {
         MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get());
         int column=this->ReadInt(); area->mDynamicSizeColumn=column;
-    } else if(key=="LISTFLAGS") {
+    } else if(aKeyIdx==3) {
         ListAreaConfig::ReadListFlags(this,static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get()));
-    } else if(key=="SETSTANDARDCOLUMN") {
+    } else if(aKeyIdx==4) {
         int column=this->ReadInt(); this->EnsureComma();
         GUIString title=this->ReadString(false); this->EnsureComma();
         int width=this->ReadInt(); this->mListCtrl->SetStandarColumnHeader(column,title,width);
-    } else if(key=="SETCOLUMN") {
+    } else if(aKeyIdx==5) {
         int column=this->ReadInt(); this->EnsureComma();
         Component* component=this->ReadComponent(); this->EnsureComma();
         int width=this->ReadInt(); this->mListCtrl->SetColumnHeader(column,component,width);

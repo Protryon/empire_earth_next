@@ -10,12 +10,16 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // FUNCTION: WON 0x7f7780
 // Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
 bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
 {
-    if(inInstruction=="ADDLINE") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CREDITSDIALOGCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) {
     GUIString aLine=this->ReadString(false);
     DWORD aColor=-1;
     if(!this->EndOfString()) {

@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
 #include "ee/wonapi/WONLobbyWONFrameValueConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // FUNCTION: WON 0x007980a0
 // Reads a frame value: a stretch image alone (its own borders), or an image plus one border width or four
@@ -38,9 +41,10 @@ WONFrame::WONFrame(const WONFrame& from)
 // Handles the WON combo box skin keys DRAWFRAME, BUTTONINFRAME and FRAME; passes other keys to the combo box config
 bool WONComboBoxConfig::Virtual24(const std::string& key)
 {
-    if(key=="DRAWFRAME") { bool on=this->ReadBool(); this->mComboBox->mDrawFrame=on; }
-    else if(key=="BUTTONINFRAME") { bool on=this->ReadBool(); this->mComboBox->mButtonInFrame=on; }
-    else if(key=="FRAME") this->mComboBox->SetFrame(ReadFrame(this));
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONCOMBOBOXCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) { bool on=this->ReadBool(); this->mComboBox->mDrawFrame=on; }
+    else if(aKeyIdx==1) { bool on=this->ReadBool(); this->mComboBox->mButtonInFrame=on; }
+    else if(aKeyIdx==2) this->mComboBox->SetFrame(ReadFrame(this));
     else return ComboBoxConfig::Virtual24(key);
     return true;
 }
@@ -48,12 +52,13 @@ bool WONComboBoxConfig::Virtual24(const std::string& key)
 // Handles the WON tab control skin keys TRANSPARENT, ADDSTANDARDTAB (name, container) and FRAME; passes other keys on
 bool WONTabCtrlConfig::Virtual24(const std::string& key)
 {
-    if(key=="TRANSPARENT") this->mTabCtrl->SetTransparent(this->ReadBool());
-    else if(key=="ADDSTANDARDTAB") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONTABCTRLCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) this->mTabCtrl->SetTransparent(this->ReadBool());
+    else if(aKeyIdx==1) {
         GUIString name=this->ReadString(false); this->EnsureComma();
         Container* tab=SafeConfigGetComponent<Container*>(this->ReadComponent(),"Container");
         this->mTabCtrl->AddStandardTab(name,tab);
-    } else if(key=="FRAME") this->mTabCtrl->SetFrame(ReadFrame(this));
+    } else if(aKeyIdx==2) this->mTabCtrl->SetFrame(ReadFrame(this));
     else return TabCtrlConfig::Virtual24(key);
     return true;
 }
@@ -61,11 +66,12 @@ bool WONTabCtrlConfig::Virtual24(const std::string& key)
 // Handles DRAWFRAME (false clears the frame, true does nothing), TRANSPARENT, FRAME and CORNER; passes other keys on
 bool WONScrollContainerConfig::Virtual24(const std::string& key)
 {
-    if(key=="DRAWFRAME") {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONSCROLLCONTAINERCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) {
         if(!this->ReadBool()) this->mScrollContainer->SetFrame(WONFrame());
-    } else if(key=="TRANSPARENT") { bool on=this->ReadBool(); this->mScrollContainer->mTransparent=on; }
-    else if(key=="FRAME") this->mScrollContainer->SetFrame(ReadFrame(this));
-    else if(key=="CORNER") this->mScrollContainer->SetCorner(this->ReadImage(false));
+    } else if(aKeyIdx==1) { bool on=this->ReadBool(); this->mScrollContainer->mTransparent=on; }
+    else if(aKeyIdx==2) this->mScrollContainer->SetFrame(ReadFrame(this));
+    else if(aKeyIdx==3) this->mScrollContainer->SetCorner(this->ReadImage(false));
     else return ScrollbarScrollerConfig::Virtual24(key);
     return true;
 }

@@ -11,6 +11,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyWONButtonConfig.h"
+#include "rust/ee_rust.h"
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
 // FUNCTION: WON 0x007971c0
@@ -21,10 +24,11 @@ void WONSimpleButtonConfig::HandleButtonState()
 	this->EnsureComma();
 
 	int aState = 0;
-	if(aStateStr.CompareNoCase("Normal")==0) aState = 0;
-	else if(aStateStr.CompareNoCase("Pressed")==0) aState = 1;
-	else if(aStateStr.CompareNoCase("Disabled")==0) aState = 2;
-	else if(aStateStr.CompareNoCase("Over")==0) aState = 3;
+	const int aNameIdx_aStateStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_WONSIMPLEBUTTONCONFIG_HANDLEBUTTONSTATE_ASTATESTR,aStateStr.mData->mText,aStateStr.mData->mLength,sizeof(wchar_t));
+	if(aNameIdx_aStateStr==0) aState = 0;
+	else if(aNameIdx_aStateStr==1) aState = 1;
+	else if(aNameIdx_aStateStr==2) aState = 2;
+	else if(aNameIdx_aStateStr==3) aState = 3;
 	else
 		throw ConfigObjectException("Invalid button state: " + (std::string)aStateStr);
 
@@ -51,19 +55,20 @@ void WONSimpleButtonConfig::HandleButtonStates()
 // and CHECKMOUSEBUTTONDOWN; other keys go to the button config
 bool WONSimpleButtonConfig::Virtual24(const std::string &theInstruction)
 {
-	if(theInstruction=="SCALEIMAGE")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONSIMPLEBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 		this->mButton->SetScaleImage(this->ReadBool());
-	else if(theInstruction=="TYPE")
+	else if(aKeyIdx==1)
 	{
 		GUIString aType = this->ReadString(false);
 		if(!gSkin->CopySimpleButtonType(aType,this->mButton))
 			throw ConfigObjectException("Type not found: " + std::string(aType));
 	}
-	else if(theInstruction=="BUTTONSTATE")
+	else if(aKeyIdx==2)
 		this->HandleButtonState();
-	else if(theInstruction=="BUTTONSTATES")
+	else if(aKeyIdx==3)
 		this->HandleButtonStates();
-	else if(theInstruction=="CHECKMOUSEBUTTONDOWN")
+	else if(aKeyIdx==4)
 		this->mButton->SetCheckMouseButtonDown(this->ReadBool());
 	else
 		return ButtonConfig::Virtual24(theInstruction);
@@ -81,16 +86,17 @@ void WONButtonConfig::HandleSetButtonState()
 
 	int aState = 0;
 	bool checked = false;
-	if(aStateStr.CompareNoCase("Normal")==0) aState = 0;
-	else if(aStateStr.CompareNoCase("Pressed")==0) aState = 1;
-	else if(aStateStr.CompareNoCase("Disabled")==0) aState = 2;
-	else if(aStateStr.CompareNoCase("Over")==0) aState = 3;
-	else if(aStateStr.CompareNoCase("Default")==0) aState = 4;
-	else if(aStateStr.CompareNoCase("CheckedNormal")==0) { aState = 0; checked = true; }
-	else if(aStateStr.CompareNoCase("CheckedPressed")==0) { aState = 1; checked = true; }
-	else if(aStateStr.CompareNoCase("CheckedDisabled")==0) { aState = 2; checked = true; }
-	else if(aStateStr.CompareNoCase("CheckedOver")==0) { aState = 3; checked = true; }
-	else if(aStateStr.CompareNoCase("CheckedDefault")==0) { aState = 4; checked = true; }
+	const int aNameIdx_aStateStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_WONBUTTONCONFIG_HANDLESETBUTTONSTATE_ASTATESTR,aStateStr.mData->mText,aStateStr.mData->mLength,sizeof(wchar_t));
+	if(aNameIdx_aStateStr==0) aState = 0;
+	else if(aNameIdx_aStateStr==1) aState = 1;
+	else if(aNameIdx_aStateStr==2) aState = 2;
+	else if(aNameIdx_aStateStr==3) aState = 3;
+	else if(aNameIdx_aStateStr==4) aState = 4;
+	else if(aNameIdx_aStateStr==5) { aState = 0; checked = true; }
+	else if(aNameIdx_aStateStr==6) { aState = 1; checked = true; }
+	else if(aNameIdx_aStateStr==7) { aState = 2; checked = true; }
+	else if(aNameIdx_aStateStr==8) { aState = 3; checked = true; }
+	else if(aNameIdx_aStateStr==9) { aState = 4; checked = true; }
 	else
 		throw ConfigObjectException("Invalid button state: " + (std::string)aStateStr);
 
@@ -116,31 +122,32 @@ void WONButtonConfig::HandleSetButtonState()
 // states, focus rectangle); the INCREMENT...TEXTPAD keys are accepted and ignored
 bool WONButtonConfig::Virtual24(const std::string& theInstruction)
 {
-	if(theInstruction=="FONT")
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
 		this->mButton->SetFont(this->ReadFont().get());
-	else if(theInstruction=="TYPE")
+	else if(aKeyIdx==1)
 	{
 		GUIString aType = this->ReadString(false);
 		if(!gSkin->CopyButtonType(aType,this->mButton))
 			throw ConfigObjectException("Type not found: " + std::string(aType));
 	}
-	else if(theInstruction=="TEXTCOLOR")
+	else if(aKeyIdx==2)
 		this->mButton->SetTextColor(this->ReadColor());
-	else if(theInstruction=="DEFAULTTEXTCOLOR")
+	else if(aKeyIdx==3)
 		this->mButton->SetDefaultTextColor(this->ReadColor());
-	else if(theInstruction=="VERTALIGN")
+	else if(aKeyIdx==4)
 		this->mButton->SetVertAlign(this->ReadVertAlign());
-	else if(theInstruction=="HORZALIGN")
+	else if(aKeyIdx==5)
 		this->mButton->SetHorzAlign(this->ReadHorzAlign());
-	else if(theInstruction=="TRANSPARENT")
+	else if(aKeyIdx==6)
 		this->mButton->SetTransparent(this->ReadBool());
-	else if(theInstruction=="ADJUSTHEIGHTTOFITTEXT")
+	else if(aKeyIdx==7)
 		this->mButton->SetAdjustHeightToFitText(this->ReadBool());
-	else if(theInstruction=="WRAP")
+	else if(aKeyIdx==8)
 		this->mButton->SetWrapText(this->ReadBool());
-	else if(theInstruction=="DRAWGRAYTEXT")
+	else if(aKeyIdx==9)
 		this->mButton->SetDrawGrayText(this->ReadBool());
-	else if(theInstruction=="TEXTPADDING")
+	else if(aKeyIdx==10)
 	{
 		int left = this->ReadInt(); this->EnsureComma();
 		int top = this->ReadInt(); this->EnsureComma();
@@ -148,7 +155,7 @@ bool WONButtonConfig::Virtual24(const std::string& theInstruction)
 		int bottom = this->ReadInt();
 		this->mButton->SetTextPadding(left,top,right,bottom);
 	}
-	else if(theInstruction=="FOCUSPADDING")
+	else if(aKeyIdx==11)
 	{
 		int left = this->ReadInt(); this->EnsureComma();
 		int top = this->ReadInt(); this->EnsureComma();
@@ -156,7 +163,7 @@ bool WONButtonConfig::Virtual24(const std::string& theInstruction)
 		int bottom = this->ReadInt();
 		this->mButton->SetFocusPadding(left,top,right,bottom);
 	}
-	else if(theInstruction=="HORZTEXTPAD")
+	else if(aKeyIdx==12)
 	{
 		int left = this->ReadInt(); 
 		int right = this->mButton->GetRightTextPad();
@@ -167,23 +174,23 @@ bool WONButtonConfig::Virtual24(const std::string& theInstruction)
 		}
 		this->mButton->SetHorzTextPad(left,right);
 	}
-	else if(theInstruction=="INCREMENTHORZTEXTPAD")
+	else if(aKeyIdx==13)
 	{
 /*		int left = ReadInt(); EnsureComma();
 		int right = ReadInt();
 		mButton->IncrementHorzTextPad(left,right);
 */	}
-	else if(theInstruction=="INCREMENTVERTEXTPAD")
+	else if(aKeyIdx==14)
 	{
 /*		int top = ReadInt(); EnsureComma();
 		int bottom = ReadInt();
 		mButton->IncrementVertTextPad(top,bottom);
 */	}
-	else if(theInstruction=="BUTTONSTATE")
+	else if(aKeyIdx==15)
 		this->HandleSetButtonState();
-	else if(theInstruction=="SCALEIMAGE")
+	else if(aKeyIdx==16)
 		this->mButton->SetScaleImage(this->ReadBool());
-	else if(theInstruction=="DRAWFOCUSRECT")
+	else if(aKeyIdx==17)
 		this->mButton->SetFocusStyle(this->ReadBool()?1:0);
 	else
 		return ButtonConfig::Virtual24(theInstruction);

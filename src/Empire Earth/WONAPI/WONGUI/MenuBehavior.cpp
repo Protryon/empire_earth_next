@@ -12,7 +12,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/ee_rust.h"
 // The submenu delay, the swallowed first release, the keyboard mode's end, an item's size and the submenu's place
-// are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); this unit keeps the menus, submenus and the paint.
+// are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); the keys and the submenus' open, close and
+// selection rules are its guimenu module (guimenu.rs); this unit keeps the menus, submenus and the paint.
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 
 namespace WONAPI {
@@ -108,7 +109,7 @@ void PopupMenu::EndSubMenu()
 // the scroll area
 void PopupMenu::HandleComponentEvent(ComponentEvent* event)
 {
-    if(event->mComponent==this->mCurSubMenu.get() && event->mType==ComponentEvent_ListSelChanged)
+    if(ee_won_gui_menu_popup_event(event->mComponent==this->mCurSubMenu.get(), event->mType))
     {
         if(this->mCurSubMenu->mSelItem!=NULL)
             this->SetSelItem(this->GetItemPos(this->mCurSubMenuItem.get()));
@@ -134,7 +135,8 @@ void PopupMenu::ListSelChangedHook()
     this->mTimerAcc=0;
     if(!this->mKeyboardMode)
     {
-        if(this->mCurSubMenu.get()!=NULL && this->mSelItem!=this->mCurSubMenuItem.get())
+        if(ee_won_gui_menu_sel_clears_sub(this->mKeyboardMode, this->mCurSubMenu.get()!=NULL,
+                                          this->mSelItem==this->mCurSubMenuItem.get()))
             this->mCurSubMenu->SetSelItem(-1);
         this->RequestTimer(true);
     }
@@ -170,15 +172,13 @@ void PopupMenu::CheckSubMenu()
 {
     this->mTimerAcc=0;
     MenuItem* item=dynamic_cast<MenuItem*>(this->mSelItem);
-    if(item==NULL)
-    {
-        if(this->mCurSubMenu.get()!=NULL) this->EndSubMenu();
-        return;
-    }
-    PopupMenu* submenu=item->mSubMenu.get();
-    if(this->mCurSubMenu.get()==submenu) return;
+    PopupMenu* submenu=item!=NULL ? item->mSubMenu.get() : NULL;
+    uint8_t aStep=ee_won_gui_menu_check_sub(item!=NULL,this->mCurSubMenu.get()!=NULL,
+                                            item!=NULL && this->mCurSubMenu.get()==submenu,submenu!=NULL,
+                                            item!=NULL && item->mDisabled);
+    if(aStep==0) return;
     this->EndSubMenu();
-    if(item->mSubMenu.get()!=NULL && !item->mDisabled)
+    if(aStep==2)
     {
         this->SetListFlags(4,false);
         this->mCurSubMenu=submenu;
@@ -188,7 +188,7 @@ void PopupMenu::CheckSubMenu()
         this->ScrollUntranslate(x,y);
         this->LocalToRoot(x,y);
         submenu->Reset();
-        PopupParams params(submenu,0x33c7,this,x,y);
+        PopupParams params(submenu,ee_won_gui_menu_submenu_flags(),this,x,y);
         EeWonRect4 anAvoid=ee_won_gui_submenu_avoid(x,this->mScrollArea.width);
         params.mAvoidRect=WONRectangle(anAvoid.x,anAvoid.y,anAvoid.w,anAvoid.h);
         this->GetRoot()->QueueEvent(new DoPopupEvent(params));
@@ -219,40 +219,31 @@ namespace WONAPI {
 bool PopupMenu::TryKeyDown(int theKey)
 {
 	this->mKeyboardMode = true;
-	if(this->mCurSubMenu.get()!=NULL)
+	bool hasSub = this->mCurSubMenu.get()!=NULL;
+	if(hasSub && this->mCurSubMenu->TryKeyDown(theKey))
+		return true;
+	switch(ee_won_gui_menu_popup_key(hasSub, theKey, hasSub && this->mCurSubMenu->GetSelItem()!=NULL))
 	{
-		if(this->mCurSubMenu->TryKeyDown(theKey))
-			return true;
-		else if(theKey==VK_LEFT || theKey==VK_ESCAPE)
-		{
+		case 1:
 			this->EndSubMenu();
 			return true;
-		}
-		else if(theKey==VK_RIGHT && this->mCurSubMenu->GetSelItem()==NULL)
-		{
+		case 2:
 			this->mCurSubMenu->SetSelItem(0);
 			return true;
-		}
-		else
-			return false;
-	}
-	else if(theKey==VK_RIGHT)
-	{
-		this->CheckSubMenu();
-		if(this->mCurSubMenu.get()!=NULL)
-		{
-			this->mCurSubMenu->SetSelItem(0);
+		case 3:
+			this->CheckSubMenu();
+			if(this->mCurSubMenu.get()!=NULL)
+			{
+				this->mCurSubMenu->SetSelItem(0);
+				return true;
+			}
+			else
+				return false;
+		case 4:
+			ListArea::KeyDown(theKey);
 			return true;
-		}
-		else
+		default:
 			return false;
 	}
-	else if(theKey==VK_UP || theKey==VK_DOWN)
-	{
-		ListArea::KeyDown(theKey);
-		return true;
-	}
-	else
-		return false;
 }
 }

@@ -18,6 +18,13 @@ class SESample;
 
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp; (provisional names)
 void SEShutdown(bool inForced);
+// port: the start's state while SEInitializeMixers walks the plug-in table (the Rust decides, SEMixer.cpp's
+// trampolines create the mixers)
+struct SEMixerStart {
+    const FSFileSpec* mDirectory;
+    GEWindow* mWindow;
+    PIMModule* mModule;                     // the module being walked
+};
 
 class LLE_API SEMixer {                     // proven sizeof 0x100
     friend long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // creates the mixers
@@ -33,11 +40,7 @@ public:
     static SEMixer* GetActiveMixer();
 #endif
     SEConductor& GetConductor() { return this->mConductor; }
-#ifdef LOWLEVELENGINE_EXPORTS
-    static unsigned long GetCount() { return SEMixer::sMixers.size(); }
-#else
-    static unsigned long GetCount();
-#endif
+    static unsigned long GetCount();        // (the registry is Rust's: rust/crates/ee_sound mixers.rs)
     float GetCPUUsage() { return (*this->mGetCPUUsage)(); }
     IDirectSound* GetDirectSoundInterface() { return (*this->mGetDirectSoundInterface)(); }
     static long GetMixer(unsigned long inIndex, SEMixer*& outMixer);
@@ -53,6 +56,9 @@ public:
         { if (this->mSetMusicSource) (*this->mSetMusicSource)(inSource, inContext); }
     void SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
         { if (this->mSetMovieSource) (*this->mSetMovieSource)(inSource, inContext); }
+    // the C++ side the Rust decisions reach (extern "C" ee_mixerscpp_*, SEMixer.cpp): a nested class, so that it
+    // shares this class's access
+    struct Rust;
 private:
     long ActivateMixer() { return (*this->mActivateMixer)(); }
     long CreateChannels(unsigned long inCount, SEChannelDescription* outChannels)
@@ -126,11 +132,7 @@ private:
     void (*mSetMusicSource)(void (*)(void*, float*, unsigned long), void*);
     void (*mSetMovieSource)(void (*)(void*, float*, unsigned long), void*);
 
-    // Inferred engine-only visibility: the mixer plug-in sees SEMixer through SESample (a static data member
-    // consumes a VC6 `$E` number in every unit that sees the class; see TSScheduler.h)
-#ifdef LOWLEVELENGINE_EXPORTS
-    static std::vector<SEMixer*> sMixers;   // 0x1012de70
-#endif
+    // the original's registry, static std::vector<SEMixer*> sMixers (0x1012de70), is Rust's (ee_sound mixers.rs)
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     static SEMixer* sActiveMixer;           // 0x1012de80 (renderers: see GetActiveMixer)
 #endif

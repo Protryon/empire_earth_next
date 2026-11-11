@@ -17,8 +17,10 @@
 #include "rust/ee_rust.h"
 using namespace WONAPI;
 // The popups' places, the windows a mouse event belongs to, the press that ends the popups, the modality and the
-// dialog an EndDialog names are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); this unit keeps the
-// windows, the popup list, the dialogs, the events, focus and capture.
+// dialog an EndDialog names are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); which call an event
+// makes (the timer step, the popups' end on focus, mouse and key events, focus and capture, the merged moves and
+// sizes, the click that ends a popup) is its guievent module (guievent.rs); this unit keeps the windows, the popup
+// list, the dialogs, the events, focus and capture.
 static EeWonRect4 WinRect4(const WONRectangle& inRect)
 {
     EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
@@ -533,30 +535,31 @@ void WindowManager::ProcessEvents()
 {
 
 	DWORD aTick = WONTickCount();
-	DWORD anElapsed = aTick - this->mLastTimerTick;
-	if(anElapsed >= 50)
+	uint32_t anElapsed;
+	if(ee_won_gui_wm_timer_step(aTick, this->mLastTimerTick, &anElapsed))
 	{
-		if(anElapsed >= 1000)
-			anElapsed = 1000;
-
 		this->mLastTimerTick = aTick;
 
-		if(this->mPopupIsUp && this->mFocusWindow!=this->mPopupOwnerWindow && ((bool)(((unsigned)this->mPopupFlags>>6)&1)))
+		switch(ee_won_gui_wm_popup_focus_step(this->mPopupIsUp, this->mFocusWindow==this->mPopupOwnerWindow,
+		                                      this->mPopupFlags, this->mFocusWindow!=NULL,
+		                                      this->mFocusWindow!=NULL && this->mFocusWindow->mIsPopup, this->mEndPopup))
 		{
-			if(this->mFocusWindow!=NULL && this->mFocusWindow->mIsPopup)
-			{
+			case 1:
 				this->mEndPopup = false;
 				this->mPopupOwnerWindow->PlatformSetFocus();
-			}
-			else if(this->mEndPopup)
+				break;
+			case 2:
 				this->EndPopup(NULL);
-			else
+				break;
+			case 3:
 				this->mEndPopup = true;
+				break;
+			default:
+				this->mEndPopup = false;
+				break;
 		}
-		else
-			this->mEndPopup = false;
 
-		if(this->mLastLoseFocusTick!=0 && this->mFocusWindow==NULL && aTick-this->mLastLoseFocusTick>50)
+		if(ee_won_gui_wm_restore_due(this->mLastLoseFocusTick, this->mFocusWindow!=NULL, aTick))
 		{
 			this->mLastLoseFocusTick = 0;
 			if(this->mIsFullScreen)
@@ -1063,24 +1066,18 @@ bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
 			y-=aContainer->Top();
 
 			Component *aClickChild = aContainer->FindClickChildAt(x, y);
-			if(aClickChild!=NULL)
+			Container *aChildContainer = aClickChild!=NULL ? dynamic_cast<Container*>(aClickChild) : NULL;
+			uint8_t aStep = ee_won_gui_wm_popup_click_step(aClickChild!=NULL, aClickChild==this->mPopupInputComponent.get(),
+			                                               aClickChild!=NULL ? (uint32_t)aClickChild->mComponentBits : 0,
+			                                               this->mPopupInputComponent.get()!=NULL, aChildContainer!=NULL);
+			if(aStep==1)
 			{
-				if(aClickChild==this->mPopupInputComponent.get() || ((aClickChild->mComponentBits & 0x10000)?true:false))
-				{
-					endPopup = false;
-					break;
-				}
-				else if(this->mPopupInputComponent.get()==NULL)
-					break;
-				else
-				{
-					aContainer = dynamic_cast<Container*>(aClickChild);
-					if(aContainer==NULL)
-						break;
-				}
-			}
-			else
+				endPopup = false;
 				break;
+			}
+			else if(aStep==0)
+				break;
+			aContainer = aChildContainer;
 		}
 
 		if(endPopup)
@@ -1115,10 +1112,12 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				if(this->CheckPopupClick(anEvent))
 					break;
 			}
-			if(this->mFocusWindow!=anEvent->mWindow && !anEvent->mWindow->mIsPopup && !this->NotModalWindow(anEvent->mWindow))
+			if(ee_won_gui_wm_press_focuses(this->mFocusWindow==anEvent->mWindow, anEvent->mWindow->mIsPopup,
+			                               this->mFocusWindow!=anEvent->mWindow && !anEvent->mWindow->mIsPopup &&
+			                               this->NotModalWindow(anEvent->mWindow)))
 				anEvent->mWindow->PlatformSetFocus();
 
-			if(anEvent->mButtonOrAmount==0 && (!this->mPopupIsUp || !this->mDoMouseCapturePopupSupport))
+			if(ee_won_gui_wm_capture_changes(anEvent->mButtonOrAmount, this->mPopupIsUp, this->mDoMouseCapturePopupSupport))
 				anEvent->mWindow->PlatformSetMouseCapture(true);
 		}
 
@@ -1133,7 +1132,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				return;
 
 			this->FindMouseWindow(static_cast<MouseEvent*>(theEvent));
-			if(this->mPopupIsUp && theEvent->mEventType==InputEvent_MouseMove && ((this->mPopupFlags & (PopupFlag_EndOnMouseMove))?true:false))
+			if(ee_won_gui_wm_move_ends_popup(this->mPopupIsUp, this->mPopupFlags))
 				this->EndPopup(NULL);
 
 			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
@@ -1147,7 +1146,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 			if(anEvent->mButtonOrAmount==0)
 				this->mMouseDownWindow = NULL;
 
-			if(anEvent->mButtonOrAmount==0 && (!this->mPopupIsUp || !this->mDoMouseCapturePopupSupport))
+			if(ee_won_gui_wm_capture_changes(anEvent->mButtonOrAmount, this->mPopupIsUp, this->mDoMouseCapturePopupSupport))
 				theEvent->mWindow->PlatformSetMouseCapture(false);
 
 			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
@@ -1158,7 +1157,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 		{
 			MouseEvent *anEvent = static_cast<MouseEvent*>(theEvent);
 			this->FindMouseWindow(anEvent);
-			if(this->mPopupIsUp && !((this->mPopupFlags & (PopupFlag_DontWantMouse))?true:false))
+			if(ee_won_gui_wm_wheel_to_popup(this->mPopupIsUp, this->mPopupFlags))
 			{
 
 				Component *aPopupComponent = this->mPopupList.back();
@@ -1174,19 +1173,16 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 		case InputEvent_KeyDown:
 		case InputEvent_KeyUp:
 		case InputEvent_KeyChar:
-			if(this->mPopupIsUp)
 			{
-				int aKey = static_cast<KeyEvent*>(theEvent)->mKey;
-				if(theEvent->mEventType==InputEvent_KeyDown)
+				uint8_t aKeyStep = ee_won_gui_wm_popup_key(this->mPopupIsUp, theEvent->mEventType, this->mPopupFlags,
+				                                           static_cast<KeyEvent*>(theEvent)->mKey);
+				if(aKeyStep==1)
 				{
-					if(((this->mPopupFlags & (PopupFlag_EndOnKeyDown))?true:false) || ((this->mPopupFlags & (PopupFlag_EndOnEscape))?true:false) && aKey==VK_ESCAPE)
-					{
-						this->EndPopup(NULL);
-						break;
-					}
+					this->EndPopup(NULL);
+					break;
 				}
 
-				if(((this->mPopupFlags & (PopupFlag_WantInput))?true:false))
+				if(aKeyStep==2)
 				{
 					Window *aPopupWindow = this->mPopupList.back()->GetRoot();
 					if(aPopupWindow!=theEvent->mWindow)
@@ -1221,14 +1217,13 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				{
 					SizeEvent *s1 = static_cast<SizeEvent*>(theEvent);
 					SizeEvent *s2 = static_cast<SizeEvent*>(nextEvent);
-					if(s2->mx==-1)
-						s2->mx = s1->mx;
-					if(s2->my==-1)
-						s2->my = s1->my;
-					if(s2->mWidth==-1)
-						s2->mWidth = s1->mWidth;
-					if(s2->mHeight==-1)
-						s2->mHeight = s1->mHeight;
+					int32_t a1[4] = { s1->mx, s1->my, s1->mWidth, s1->mHeight };
+					int32_t a2[4] = { s2->mx, s2->my, s2->mWidth, s2->mHeight };
+					ee_won_gui_wm_size_merge(a1, a2);
+					s2->mx = a2[0];
+					s2->my = a2[1];
+					s2->mWidth = a2[2];
+					s2->mHeight = a2[3];
 					return;
 				}
 			}
@@ -1243,9 +1238,9 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 
 		case InputEvent_WindowClose:
 		{
-			if(this->mPopupIsUp)
-				if(theEvent->mWindow==this->mPopupOwnerWindow || theEvent->mWindow->mIsPopup)
-					this->EndPopup(NULL);
+			if(ee_won_gui_wm_close_ends_popup(this->mPopupIsUp, theEvent->mWindow==this->mPopupOwnerWindow,
+			                                  theEvent->mWindow->mIsPopup))
+				this->EndPopup(NULL);
 
 
 

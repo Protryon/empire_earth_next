@@ -10,6 +10,10 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONRouting.h" // WONTickCount
+#include "rust/ee_rust.h"
+// Which call an input event makes (enter, drag or move, the double click, the exit after a drag, the resize's delay,
+// the hover, the cursor's refresh, centring, closing) is ee_won's guievent module (rust/crates/ee_won/src/guievent.rs);
+// this unit keeps the window, its root container and the calls.
 using namespace WONAPI;
 // FUNCTION: WON 0x0072a020
 // Destroys the window (members only)
@@ -61,7 +65,7 @@ bool Window::CanClose()
 // Starts closing an open window by queueing a window-close event; false when something refuses to close
 bool Window::Close()
 {
-	if(this->mWindowState!=WindowState_Open)
+	if(ee_won_gui_win_close_step(this->mWindowState)==0)
 		return true;
 
 	if(!this->CanClose())
@@ -76,7 +80,8 @@ bool Window::Close()
 // Applies a pending resize once the delay passed and resizing is not suspended: new offscreen image and root size
 void Window::CheckResize(DWORD theTick)
 {
-	if(!this->mNeedResize || !(theTick-this->mLastResizeTick>this->mResizeDelay) || !(this->mSuspendRootResize<=0))
+	if(!ee_won_gui_win_resize_due(this->mNeedResize, theTick, this->mLastResizeTick, this->mResizeDelay,
+	                              this->mSuspendRootResize))
 		return;
 	SmartPtr<NativeImage> anImage = this->CreateImage(this->mNewWidth,this->mNewHeight);
 	Graphics &g = anImage->GetGraphics();
@@ -111,19 +116,17 @@ void Window::SetIcon(NativeIcon *theIcon)
 void Window::Center(bool inParent)
 {
 	WONRectangle aScreenRect, aWindowRect;
-	if(!inParent || this->mParent==NULL || !this->mParent->PlatformIsVisible())
+	if(!ee_won_gui_win_center_on_parent(inParent, this->mParent!=NULL,
+	                                    inParent && this->mParent!=NULL && this->mParent->PlatformIsVisible()))
 		this->mManager->GetScreenRect(aScreenRect);
 	else
 		this->mParent->GetRect(aScreenRect,false);
 
 	this->GetRect(aWindowRect,false);
 
-	int left = aScreenRect.Left() + (aScreenRect.Width() - aWindowRect.Width())/2;
-	int top = aScreenRect.Top() + (aScreenRect.Height() - aWindowRect.Height())/2;
-	if(left<0)
-		left = 0;
-	if(top<0)
-		top = 0;
+	int top;
+	int left = ee_won_gui_win_center(aScreenRect.Left(), aScreenRect.Top(), aScreenRect.Width(), aScreenRect.Height(),
+	                                 aWindowRect.Width(), aWindowRect.Height(), &top);
 
 	this->SetPosSize(left,top,aWindowRect.Width(), aWindowRect.Height());
 }
@@ -158,8 +161,8 @@ void Window::HandleMouseExit()
 	this->ShowNativeCursor(true); // show cursor when it leaves the window
 
 	this->mMouseIsInClientArea = false;
-	this->mMouseX = (this->mRoot->Left()+this->mRoot->Width())+1;
-	this->mMouseY = (this->mRoot->Top()+this->mRoot->Height())+1;
+	this->mMouseX = ee_won_gui_win_exit_point(this->mRoot->Left(), this->mRoot->Top(), this->mRoot->Width(),
+	                                          this->mRoot->Height(), &this->mMouseY);
 	this->mMouseIsDown[0] = this->mMouseIsDown[1] = this->mMouseIsDown[2] = false;
 	this->mRoot->MouseExit();
 	this->mCurrentCursor = NULL;
@@ -193,36 +196,24 @@ void Window::HandleMouseDown(MouseEvent *theEvent)
 	int aButton = theEvent->mButtonOrAmount;
 	this->mMouseIsDown[aButton] = true;
 
-	// Check for DoubleClick
-	bool isDoubleClick = false;
-	if(theEvent->mEventType==InputEvent_MouseDoubleClick)
-		isDoubleClick = true;
-	else if(theEvent->mEventType==InputEvent_MouseDownCheckDoubleClick)
+	// Check for DoubleClick (the tick is read only when the press asks for the check)
+	DWORD aTick = theEvent->mEventType==InputEvent_MouseDownCheckDoubleClick ? WONTickCount() : 0;
+	bool aStart, aSet;
+	uint32_t aNewTick; // DWORD is unsigned long on Windows: the ABI's uint32_t
+	bool isDoubleClick = ee_won_gui_win_double_click(theEvent->mEventType, this->mDetectDoubleClick,
+	                                                 this->mButtonDownTick[aButton], aTick, &aStart, &aSet, &aNewTick);
+	if(aStart)
 	{
-		if(!this->mDetectDoubleClick)
-		{
-			for(int i=0; i<3; i++)
-				this->mButtonDownTick[i] = 0;
+		for(int i=0; i<3; i++)
+			this->mButtonDownTick[i] = 0;
 
-			this->mDetectDoubleClick = true;
-			this->mDoubleClickX = theEvent->mx;
-			this->mDoubleClickY = theEvent->my;
-		}
-
-		DWORD &aPrevTick = this->mButtonDownTick[aButton];
-		DWORD aTick = WONTickCount();
-		if(aTick==0) // 0 has special meaning
-			aTick = 1;
-		
-		if(aPrevTick!=0 && aTick-aPrevTick<250)
-		{
-			isDoubleClick = true;
-			aPrevTick = 0;
-		}
-		else
-			aPrevTick = aTick;
+		this->mDetectDoubleClick = true;
+		this->mDoubleClickX = theEvent->mx;
+		this->mDoubleClickY = theEvent->my;
 	}
-	
+	if(aSet)
+		this->mButtonDownTick[aButton] = aNewTick;
+
 	this->mButtonDoubleClick[aButton] = isDoubleClick;
 	this->mRoot->MouseDown(this->mMouseX, this->mMouseY, aButton);
 }
@@ -236,7 +227,7 @@ void Window::HandleMouseEvent(MouseEvent *theEvent)
 	this->mMouseY = theEvent->my;
 	this->mKeyMod = theEvent->mKeyMod;
 
-	if(!this->mMouseIsInClientArea && !this->mMouseIsDown[0])
+	if(ee_won_gui_win_mouse_enters(this->mMouseIsInClientArea, this->mMouseIsDown[0]))
 	{
 		this->mMouseIsInClientArea = true;
 		this->mRoot->MouseEnter(this->mMouseX, this->mMouseY);
@@ -247,7 +238,8 @@ void Window::HandleMouseEvent(MouseEvent *theEvent)
 	{		
 		case InputEvent_MouseMove:
 			this->mLastMoveTick = WONTickCount();
-			if(this->mDetectDoubleClick && this->mMouseX!=this->mDoubleClickX || this->mMouseY!=this->mDoubleClickY)
+			if(ee_won_gui_win_move_ends_double(this->mDetectDoubleClick, this->mMouseX, this->mMouseY,
+			                                   this->mDoubleClickX, this->mDoubleClickY))
 				this->mDetectDoubleClick = false;
 
 			if(this->mMouseIsDown[0])
@@ -269,13 +261,10 @@ void Window::HandleMouseEvent(MouseEvent *theEvent)
 			int aButton = theEvent->mButtonOrAmount;
 			this->mMouseIsDown[aButton] = false;
 
-			if(aButton==0)
+			if(ee_won_gui_win_release_exits(aButton, this->mMouseIsInClientArea))
 			{
-				if(!this->mMouseIsInClientArea)
-				{
-					this->HandleMouseExit(); // Call MouseExit when dragging is done
-					break;
-				}
+				this->HandleMouseExit(); // Call MouseExit when dragging is done
+				break;
 			}
 			this->mRoot->MouseUp(this->mMouseX, this->mMouseY, aButton);			
 		}
@@ -297,15 +286,12 @@ void Window::HandleInputEvent(InputEvent *theEvent)
 		case InputEvent_SizeChange: 
 		{
 			SizeEvent *anEvent = static_cast<SizeEvent*>(theEvent);
-			if(anEvent->mWidth!=-1 && anEvent->mHeight!=-1)
+			if(ee_won_gui_win_size_resizes(anEvent->mWidth, anEvent->mHeight, this->mRoot->Width(), this->mRoot->Height()))
 			{
-				if(this->mRoot->Width()!=anEvent->mWidth || this->mRoot->Height()!=anEvent->mHeight)
-				{
-					this->mNeedResize = true;
-					this->mNewWidth = anEvent->mWidth;
-					this->mNewHeight = anEvent->mHeight;
-					this->CheckResize(WONTickCount());
-				}
+				this->mNeedResize = true;
+				this->mNewWidth = anEvent->mWidth;
+				this->mNewHeight = anEvent->mHeight;
+				this->CheckResize(WONTickCount());
 			}
 		}
 		break;
@@ -336,10 +322,10 @@ bool Window::IdleUpdate()
 		if(this->mMouseIsInClientArea)
 		{
 			DWORD aTick = WONTickCount();
-			if(aTick - this->mLastCheckCursorTick >= 1000)
+			if(ee_won_gui_win_cursor_forced(true, aTick, this->mLastCheckCursorTick))
 			{
 				force = true;
-				this->mLastCheckCursorTick = aTick; 
+				this->mLastCheckCursorTick = aTick;
 			}
 		}
 		
@@ -354,14 +340,12 @@ bool Window::IdleUpdate()
 // Sends mouse hover after 100 ms without motion, applies pending resizes and runs the root's timers
 void Window::TimerEvent(DWORD theElapsed)
 {
-	if(this->mMouseIsInClientArea && this->mLastMoveTick!=0)
+	if(this->mMouseIsInClientArea && this->mLastMoveTick!=0 && !this->mMouseIsDown[0] && !this->mMouseIsDown[1] &&
+	   !this->mMouseIsDown[2])
 	{
-		if(!this->mMouseIsDown[0] && !this->mMouseIsDown[1] && !this->mMouseIsDown[2])
-		{
-			DWORD anElapsed = WONTickCount() - this->mLastMoveTick;
-			if(anElapsed >= 100)
-				this->mRoot->MouseHover(anElapsed);
-		}
+		uint32_t anElapsed;
+		if(ee_won_gui_win_hover(true, this->mLastMoveTick, false, false, false, WONTickCount(), &anElapsed))
+			this->mRoot->MouseHover(anElapsed);
 	}
 
 	this->CheckResize(WONTickCount());
@@ -520,7 +504,7 @@ void Window::SetModal(bool modal) {
 // FUNCTION: WON 0x0072afd0
 // Applies the root's cursor (arrow when none) when it changed or when forced; hides the system cursor for custom ones
 void Window::CheckSetCursor(bool force) {
-    if(!force && this->mRoot->mCurrentCursor.get()==this->mCurrentCursor)
+    if(!ee_won_gui_win_cursor_refresh(force, this->mRoot->mCurrentCursor.get()==this->mCurrentCursor))
         return;
     this->mCurrentCursor=this->mRoot->mCurrentCursor.get();
     Cursor* cursor=this->mRoot->mCurrentCursor.get();
