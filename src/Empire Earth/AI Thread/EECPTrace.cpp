@@ -52,6 +52,7 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPExperimentTimers.h"
 #include "ee/EECPNext.h"
 #include "ee/EEGameLog.h"
 #include "lle/U2DPoint.h"
@@ -270,8 +271,9 @@ bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
     return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
 }
 
-static long sClaimSteps[64];
-static unsigned long sClaimLast[64];
+// port: saved from 0.265 (ee/EECPExperimentTimers.h EECPSaveResourceState)
+static long (&sClaimSteps)[64] = gCPExperimentTimers.mClaimSteps;
+static unsigned long (&sClaimLast)[64] = gCPExperimentTimers.mClaimLast;
 
 long EECPClaimRange(const EEComputerPlayer* inPlayer)
 {
@@ -723,6 +725,9 @@ void EECPOutOfSynchDump(FILE* inFile)
                 }
                 if (theCiv->mUnitManager != NULL)
                     fprintf(inFile, " waiting=%lu", (unsigned long)theCiv->mUnitManager->mNumWaiting);
+                if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
+                    fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
+                            theCiv->mResourceManager->mDangerZones.size());
             }
             if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
                 fprintf(inFile, " attackgroups=%lu", (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size());
@@ -730,6 +735,9 @@ void EECPOutOfSynchDump(FILE* inFile)
                     theCP->mIsStarted ? 1 : 0, theCP->mIsEnableTimeSet ? 1 : 0, theCP->mRegroupPending ? 1 : 0,
                     (unsigned long)theCP->mNextEnableTime, (long)theCP->mNextPopulationTime, (unsigned long)theCP->mNextExpansionTime,
                     (unsigned long)theCP->mNextAttackTime, (long)theCP->mLastDamagedTime);
+            // EnableManagers' other inputs
+            fprintf(inFile, " combat=%lu damaged=%d/%d attacks=%ld", (unsigned long)theCP->mCombatState,
+                    theCP->mBuildingDamaged ? 1 : 0, theCP->mCitizenDamaged ? 1 : 0, (long)theCP->mNumAttacks);
         }
         fprintf(inFile, "\n");
         // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request

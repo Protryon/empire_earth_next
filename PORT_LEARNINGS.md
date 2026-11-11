@@ -5848,3 +5848,61 @@ rectangles and `CopyData`'s inset fill and centred text (`status.rs`).
   events load once at start-up (every menu's backgrounds and every button's event come from them); the full
   background's names load the scenario editor's 4 x 3 picture (`textures\Scenfull_<row>_<column>`); the status bar
   draws the post-game summary's bars.
+
+## R5a.2, fifth round: claim ranges, behaviours, unit order, attack counts, repair timers, towns (save 0.265-0.268, branch rust-r5a-aisave4, 2026-11-11)
+
+Continues "R5a.2, fourth round". Same test (`sim_oracle.py saveload NAME --seeds 2-7 --at 600,1350,2100`, 18 saves).
+Each commit was built and gated on its own tree (build 0/0 for EE-AOC and EE-SIM, the plain oracle identical to ref
+on seeds 2-7, the Rust gate, sim_capture's four profiles PASS) and measured with the full saveload run. All of these
+are load and save code: they run in the real game's Load Game screen as in EE-SIM (no change to how a game plays).
+
+- **0.265, the claim ranges and danger zones** (`EECPSaveResourceState`, `EESaveHasResourceState`). Seed 4's 2100 s
+  iron gatherer: FindResourceTarget's first pass (economy.forage_patches) takes only the mines within the claim
+  range, which EECPClaimExpand grows in steps kept in EECPTrace.cpp's statics. A loaded player started at the first
+  range (25 where the saved game had 40) and took the near mine. The steps and their last time are now in
+  gCPExperimentTimers, and the resource managers' mDangerZones (also read there) are saved with them; a load puts
+  both in place at the first tick. The dumps' AI line shows `claim=` and `danger=`. Measured: seed 3 2100 s 57 -> 569,
+  seed 4 600/2100 s 80 -> 173, 0 -> 52, seed 5 1350/2100 s 91 -> 106, 23 -> 35.
+- **The harass and cautious behaviours** (no format change, saves from 0.254). EEComplexUnit::RepairPointers made a
+  saved behaviour 3 or 4 the class's own. The computer players give their explorers harass on Hard, which can flee
+  (dbunitbehavior mCanFlee): a loaded explorer stood and fought where the saved one ran (seed 7's 600 s save: the
+  unit AI's ShouldIRun trigger). Measured: seed 7 600/2100 s 10 -> 22, 1 -> 99, seed 2 2100 s 20 -> 27.
+- **0.266, the order of the units the unit managers track** (`EESaveHasUnitManagerOrder`). UnitAdded files a
+  building by its distance to the town centre of that moment, so EECPUnitManager::mUnits' order is the game's
+  history; the load's AddAllUnits filed them in the unit list's order. StartProduction's round robin walks it (seed
+  6's 600 s save trained at the other of two barracks 50 s after the load: found by the buildings' mBuildQueue and
+  mCurrentResearch swapped in the dumps' raw bytes, layout.json names the offsets). Saved as each class's ids;
+  reordered at the first tick. Measured: seed 4 600 s 173 -> 208, seed 6 600 s 59 -> 73, seed 7 2100 s 99 -> 284.
+- **The attack count and combat state** (no format change, saves from 0.254). EEUGAttackUnit::RepairPointers counted
+  every loaded attack goal in mNumAttacks and set the combat state to 2 for the first; the constructor and destructor
+  leave out an animal target, so a load counted the hunts for good and overwrote the saved state (seed 3's 1350 s
+  save: state 2 with 2 attacks against 1 and 0; EnableManagers built other priority lists, two shuffle draws
+  fewer, at the first AI update). Measured: seed 3 1350 s 0 -> 107.
+- **0.267, the repair and site timers** (`EESaveHasCivilizationTimers`). EECPCivilizationManager's mNextRepairTime
+  (and the airport and space dock site timers) were never saved: a loaded player repaired at its first update and
+  every 31 s from there, sending other citizens to repair at other times (seed 4 1350 s at once, seeds 2 and 5 600 s
+  later). The largest effect this round: seed 2 58/86/27 -> 308/683/27, seed 3 94 -> 207 and
+  107 -> 309, seed 4 1350 s 1 -> 205, seed 5 23/106/35 -> 312/479/71, seed 6 73/16 -> 205/202, seed 7 22/178/284 ->
+  171/559/420.
+- **0.268, the towns' areas** (`EESaveHasTownAreas`, `EEWriteAreaBytes`/`EEReadAreaBytes` over the continent block's
+  area format). The towns' block now also holds each town's continent and area (tiles as they are, hull, bounds);
+  RepairPointers makes the towns from it (EEMakeSavedTowns) instead of rebuilding them from the buildings in the
+  load's order, which made seed 6's 2100 s town 3 two towns and an extra patrol group. An older save, or a town that
+  cannot be read, rebuilds as before. Measured: seed 6 2100 s 0 -> 101.
+- **The numbers** (first divergent CT line after the load, 600/1350/2100 s, start -> end of this round): seed 2
+  58/86/20 -> 308/683/27, seed 3 94/0/57 -> 207/309/569, seed 4 80/1/0 -> 208/205/52, seed 5 23/91/23 -> 312/479/71,
+  seed 6 59/16/0 -> 205/202/101, seed 7 10/178/1 -> 171/559/420. Still **0 of 18** continue identically to the end
+  (2700 s), but no save now parts in its first 25 CTs.
+- **The unit store's checks on the load path**: all 18 loads of the 0.264 + behaviour build and of the final 0.268
+  build ran to the end with EE_SIM_CAPTURE on (USCK every tick, from the first tick after the load): no mismatch.
+- **Lesson: a stage slot per run fills the disk.** sim.py keeps build/sim/stage/<slot> per run name, seed and save
+  (the written folders copied) and nothing deletes it; C: ran out with 149 of this worktree's slots in place
+  (deleting them and the other agents' took it from 4 to 26 GB free). The scratch scripts now
+  delete their slots and saves as soon as a run's numbers are in.
+- **Tools** (scratch, under the worktree's build/hunt, not committed): `pair.py` (now removes its slots), `capload.py
+  NAME` (each save of a saveload run loaded with captures on, the capture deleted after), `rawdiff.py DIR UNIT K`
+  (the differing non-pointer words of a unit's raw bytes in two dumps), `sum.py` (a saveload log as the per-seed
+  numbers), `clean.sh`.
+- **Still different after a load** (not traced this round): seed 2 2100 s at CT 27, seed 4 2100 s at CT 52 (an `ai`
+  checksum only: the computer players' state, no unit), seed 5 2100 s at 71, seed 6 2100 s at 101, the 600 s and
+  1350 s saves after 200 to 680 CTs.
