@@ -69,6 +69,8 @@
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EECPExperimentTimers.h"
+#include "ee/EEPlayer.h"
+#include "ee/EEUnitHandle.h"
 #include <algorithm>
 #include <vector>
 
@@ -498,6 +500,117 @@ static long LoadRegionOrder(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.262): the dead attackers. A unit's mLastAttacker holds a reference, so the running game keeps
+// an attacker that died since as a unit out of the world, and reads it: the triggers (AttackerIsNotBuilding,
+// AttackerIsReachable, CanDamageAttacker read its class and tile), the AI (a raider's tile, a transport's alarm), a
+// predator's strike back. The save wrote its id and the load found no unit, so the loaded game read NULL (seed 4's
+// 2100 s save: a gatherer of player 3 kept its iron in the loaded game only). Saved: each such unit once, with what
+// those readers read (class, player, hit points, tile, built flag, placement); a load makes it again as a unit out of
+// the world (EEFindLoadedGhost, for EEComplexUnit::RepairPointers), whose references then keep it as before.
+struct EESavedGhost {
+    unsigned long mID;
+    unsigned long mType;
+    unsigned long mPlayer;
+    long mHitPoints;
+    long mTileX;
+    long mTileY;
+    bool mIsBuilt;
+    float mPlacement[4][4];
+};
+static std::vector<EESavedGhost> sGhosts;            // the loaded records, until the first tick
+static std::vector<EEComplexUnit*> sGhostUnits;      // made from them, one reference each until the first tick
+
+static void SaveGhosts(FSFile& outFile)
+{
+    std::vector<EEComplexUnit*> theDead;
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theAttacker = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mLastAttacker : NULL;
+            if (theAttacker == NULL || gWorld.GetUnit(theAttacker->mUnitID) == theAttacker
+                || std::find(theDead.begin(), theDead.end(), theAttacker) != theDead.end())
+                continue;
+            theDead.push_back(theAttacker);
+        }
+    }
+    outFile.Write((unsigned long)theDead.size());
+    for (size_t i = 0; i < theDead.size(); i++) {
+        EEComplexUnit* theUnit = theDead[i];
+        outFile.Write((unsigned long)theUnit->mUnitID);
+        outFile.Write(theUnit->mUnitClass != NULL ? (unsigned long)theUnit->mUnitClass->mUnitType : (unsigned long)-1);
+        outFile.Write(theUnit->mPlayer != NULL ? (unsigned long)theUnit->mPlayer->mPlayerID : (unsigned long)-1);
+        outFile.Write(theUnit->mHitPoints);
+        outFile.Write(theUnit->mTileX);
+        outFile.Write(theUnit->mTileY);
+        outFile.Write(theUnit->mIsBuilt);
+        const GETransformation& thePlacement = theUnit->mPhysicalModel.GetLocation();
+        for (int r = 0; r < 4; r++)
+            for (int c = 0; c < 4; c++)
+                outFile.Write(thePlacement.mMatrix[r][c]);
+    }
+}
+
+static long LoadGhosts(FSFile& inFile)
+{
+    std::vector<EESavedGhost> theGhosts;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+        EESavedGhost theGhost;
+        memset(&theGhost, 0, sizeof(theGhost));
+        if ((theResult = inFile.Read(theGhost.mID)) == kErrorOK && (theResult = inFile.Read(theGhost.mType)) == kErrorOK
+            && (theResult = inFile.Read(theGhost.mPlayer)) == kErrorOK && (theResult = inFile.Read(theGhost.mHitPoints)) == kErrorOK
+            && (theResult = inFile.Read(theGhost.mTileX)) == kErrorOK && (theResult = inFile.Read(theGhost.mTileY)) == kErrorOK)
+            theResult = inFile.Read(theGhost.mIsBuilt);
+        for (int r = 0; r < 4 && theResult == kErrorOK; r++)
+            for (int c = 0; c < 4 && theResult == kErrorOK; c++)
+                theResult = inFile.Read(theGhost.mPlacement[r][c]);
+        theGhosts.push_back(theGhost);
+    }
+    if (theResult == kErrorOK) {
+        sGhosts = theGhosts;
+        EEAfterLoad([]() {   // the references the loaded units took keep the ghosts from here on
+            std::vector<EEComplexUnit*> theUnits;
+            theUnits.swap(sGhostUnits);
+            for (size_t i = 0; i < theUnits.size(); i++)
+                theUnits[i]->Dereference();
+            sGhosts.clear();
+        });
+    }
+    return theResult;
+}
+
+EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
+{
+    for (size_t i = 0; i < sGhostUnits.size(); i++)
+        if (sGhostUnits[i]->mUnitID == inID)
+            return sGhostUnits[i];
+    for (size_t i = 0; i < sGhosts.size(); i++) {
+        const EESavedGhost& theGhost = sGhosts[i];
+        if (theGhost.mID != inID)
+            continue;
+        EEUnitClass* theClass = theGhost.mType < EEUnitClassCount() ? gUnitClassTable[theGhost.mType] : NULL;
+        EEPlayer* thePlayer = theGhost.mPlayer < gWorld.mNumPlayers ? gWorld.mPlayers[theGhost.mPlayer] : NULL;
+        if (theClass == NULL || thePlayer == NULL)
+            return NULL;
+        EEComplexUnit* theUnit = EEComplexUnit::Create();   // one reference, ours until the first tick
+        theUnit->EEUnit::Init(theClass, thePlayer);
+        theUnit->mUnitID = theGhost.mID;
+        theUnit->mHitPoints = theGhost.mHitPoints;
+        theUnit->mTileX = theGhost.mTileX;
+        theUnit->mTileY = theGhost.mTileY;
+        theUnit->mIsBuilt = theGhost.mIsBuilt;
+        GETransformation thePlacement = theUnit->mPhysicalModel.GetLocation();
+        memcpy(thePlacement.mMatrix, theGhost.mPlacement, sizeof(thePlacement.mMatrix));
+        theUnit->mPhysicalModel.SetLocation(thePlacement);
+        theUnit->mIsValid = false;     // out of the world, as the dead unit was (FreeNode asserts it)
+        RTSRegisterUnit(theUnit);      // the running game's handles still resolve a dead unit's id until its last reference
+        sGhostUnits.push_back(theUnit);
+        return theUnit;
+    }
+    return NULL;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -556,8 +669,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && LoadRegionOrder(inFile) == kErrorOK   // port (0.257): the order of the units in each map region
             && EESaveHasExperimentTimers(inMajorVersion, inMinorVersion)
             && EECPLoadExperimentTimers(inFile) == kErrorOK   // port (0.258): the computer players' experiment timers
-            && EESaveHasTowns(inMajorVersion, inMinorVersion))
-            EELoadTowns(inFile);   // port (0.260): the towns' ids and order
+            && EESaveHasTowns(inMajorVersion, inMinorVersion)
+            && EELoadTowns(inFile) == kErrorOK   // port (0.260): the towns' ids and order
+            && EESaveHasGhosts(inMajorVersion, inMinorVersion))
+            LoadGhosts(inFile);   // port (0.262): the dead attackers the units still hold
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -618,6 +733,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 EECPSaveExperimentTimers(outFile);   // port (0.258): the computer players' experiment timers
             if (EESaveHasTowns(inMajorVersion, inMinorVersion))
                 EESaveTowns(outFile);   // port (0.260): the towns' ids and order
+            if (EESaveHasGhosts(inMajorVersion, inMinorVersion))
+                SaveGhosts(outFile);   // port (0.262): the dead attackers the units still hold
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

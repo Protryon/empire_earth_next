@@ -73,6 +73,16 @@ inline bool EESaveHasGathererOrder(unsigned long inMajorVersion, unsigned long i
 {
     return inMajorVersion > 0 || inMinorVersion >= 261;
 }
+// port: from 0.262 a save holds the dead units the units' last attackers still reference (EEPWorldHelper): a load
+// read NULL where the running game kept the dead attacker
+inline bool EESaveHasGhosts(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 262;
+}
+// the dead attacker of that id, made from the save as a unit out of the world (EEComplexUnit::RepairPointers); NULL
+// when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
+class EEComplexUnit;
+EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);
