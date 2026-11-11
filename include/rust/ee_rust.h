@@ -10600,6 +10600,41 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
+
+bool ee_won_dlg_name_enabled(uint32_t name_len);
+
+int32_t ee_won_dlg_skill_level(int32_t sel);
+
+bool ee_won_dlg_internet_access(int32_t game_type);
+
+bool ee_won_dlg_lan_port_ok(int32_t port, uint16_t game_port);
+
+/// `adapter_order`: the order, or 2 when the columns decide.
+int32_t ee_won_dlg_adapter_order(int32_t host, int32_t other);
+
+uint32_t ee_won_dlg_selected_address(bool has_selection, uint32_t selected, uint32_t local_host);
+
+int32_t ee_won_dlg_status_body_width(int32_t text_width, int32_t m_width, int32_t root_width);
+
+/// `status_pad`: -1 for 5 lines or more.
+int32_t ee_won_dlg_status_pad(int32_t label_height, int32_t line_height);
+
+/// `status_extra_width`: false when the dialog keeps its shape, else true with the extra width in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_dlg_status_extra_width(int32_t new_width,
+                                   int32_t new_height,
+                                   int32_t root_height,
+                                   int32_t width_change,
+                                   int32_t old_width,
+                                   int32_t *out);
+
+bool ee_won_dlg_status_young(uint32_t now, uint32_t start);
+
+int32_t ee_won_dlg_growth(int32_t new_, int32_t old);
+
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
 ///
 /// # Safety

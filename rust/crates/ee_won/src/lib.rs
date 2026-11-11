@@ -16,6 +16,7 @@ pub mod config;
 pub mod configobj;
 pub mod crc16;
 pub mod der;
+pub mod dialogs;
 pub mod dir;
 pub mod elgamal;
 pub mod ffi;

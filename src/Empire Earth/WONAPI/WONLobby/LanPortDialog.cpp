@@ -10,6 +10,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 namespace WONAPI {
 // Empty constructor; its code is the compiler-generated one at 0x7f8580 (listed at the end of this file)
 LanPortDialog::LanPortDialog() {}
@@ -64,7 +67,7 @@ unsigned short LanPortDialog::GetPort()
 void LanPortDialog::CheckInput()
 {
     int aPort = this->mPortInput->GetText().mData->ToInt(0);
-    if (aPort != this->mGamePort && aPort > 4999 && aPort < 65536) {
+    if (ee_won_dlg_lan_port_ok(aPort, this->mGamePort)) {
         if (this->mOkButton->IsDisabled())
             this->mOkButton->SetEnabled(true);
     }

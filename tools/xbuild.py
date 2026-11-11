@@ -442,6 +442,9 @@ WON_TESTS = {
     # WONGUI's popups' places, mouse windows and ending presses, the modality and the popup menus' timing, the
     # original's statements against ee_won's guiwin module
     "won_guiwin_test": [],
+    # the lobby dialogs' decisions (the create and OK buttons, the skill, the LAN port, the adapters' order, the
+    # status dialog's sizes), the original's statements against ee_won's dialogs module
+    "won_dialogs_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

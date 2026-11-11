@@ -9,6 +9,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/ee_rust.h"
+// The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
+// dialog, its controls and events.
 using namespace WONAPI;
 // Adapter list row holding the adapter's host address (RTTI in the global namespace, not WONAPI)
 class NetworkAdapterListItem : public MultiListItem {
@@ -21,10 +24,8 @@ public:
 // Sorts the default adapter row (host 0) first, the others by their column text
 int NetworkAdapterListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
-    long aHost=static_cast<const NetworkAdapterListItem*>(inOther)->mHost;
-    if(this->mHost==aHost) return 0;
-    if(this->mHost==0) return -1;
-    if(aHost==0) return 1;
+    int anOrder=ee_won_dlg_adapter_order((int32_t)this->mHost,(int32_t)static_cast<const NetworkAdapterListItem*>(inOther)->mHost);
+    if(anOrder!=2) return anOrder;
     return MultiListItem::Compare(inOther,inList);
 }
 namespace WONAPI {
@@ -71,7 +72,8 @@ void ChooseNetworkAdapterDialog::Reset()
 unsigned long ChooseNetworkAdapterDialog::GetSelectedAddress()
 {
     NetworkAdapterListItem* anItem=static_cast<NetworkAdapterListItem*>(this->mAdapterList->mSelItem);
-    return anItem==NULL ? WONAPI::IPAddr::GetLocalHost() : anItem->mHost;
+    return ee_won_dlg_selected_address(anItem!=NULL,anItem==NULL ? 0 : (uint32_t)anItem->mHost,
+                                       (uint32_t)WONAPI::IPAddr::GetLocalHost());
 }
 // Passes every event to Dialog; no marker: the original's 13-byte body is shared
 void ChooseNetworkAdapterDialog::HandleComponentEvent(ComponentEvent* inEvent)
