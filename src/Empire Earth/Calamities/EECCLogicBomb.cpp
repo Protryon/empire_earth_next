@@ -16,6 +16,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/GEModel.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -190,33 +192,44 @@ void EECCLogicBomb::UnloadMedia(EEPlayer* inPlayer)
 // wonder stops counting, a gate opens, others halt); returns 7 once the target is dead
 long EECCLogicBomb::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    GE3DPoint theLocation;
-    EEEffectHandle theEffectHandle;
-    long theResult = EECalamityClass::UpdateTimeAlive(inCalamity, inElapsedTime, -1);
-    if (this->mSound != NULL)
-        this->UpdateSound(inCalamity, this->mSound, -1.0f, 15.0f, true);
-    if (inCalamity->GetTimeAlive() >= this->mEffectTime2 && !inCalamity->GetBoolPlaceHolder1()) {
-        inCalamity->SetBoolPlaceHolder1(true);
-        if (this->mGraphicEffect2 != NULL) {
-            inCalamity->GetTargetLocation(theLocation);
-            AdjustLocation(inCalamity, &theLocation);
-            theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + 0.05f);
-            gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect2, NULL);
-        }
+    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect2 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT2;
+    theParams.bomb_time2 = (uint32_t)this->mEffectTime2;
+    theParams.bomb_time3 = (uint32_t)this->mEffectTime3;
+    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCLogicBomb::UpdateStep);
+}
+
+// New (port): EECCLogicBomb's world steps for its Rust update (ee/EECalamityUpdate.h)
+bool EECCLogicBomb::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCLogicBomb* theClass = static_cast<EECCLogicBomb*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    switch (inCall.op) {
+    case EeCalamityOp::LogicBombMark: {
+        EECalamityCaptureEvent(kCalamityOpLogicBombMark);   // CALW (TEST ONLY)
+        GE3DPoint theLocation;
+        theCalamity->GetTargetLocation(theLocation);
+        AdjustLocation(theCalamity, &theLocation);
+        theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + 0.05f);
+        gEffectManager->CreatePlacedEffect(theLocation, theClass->mGraphicEffect2, NULL);
+        return true;
     }
-    if (inCalamity->GetTimeAlive() >= this->mEffectTime3 && !inCalamity->GetBoolPlaceHolder2()) {
-        inCalamity->SetBoolPlaceHolder2(true);
+    case EeCalamityOp::LogicBombDisable: {
+        EECalamityCaptureEvent(kCalamityOpLogicBombDisable);   // CALW (TEST ONLY)
+        EEEffectHandle theEffectHandle;
         EEUnit* theTargetUnit = NULL;
-        if (inCalamity->GetTargetUnit(theTargetUnit)) {
+        if (theCalamity->GetTargetUnit(theTargetUnit)) {
             EEComplexUnit* theUnit = theTargetUnit->GetComplexUnit();
             if (theUnit->GetHitPoints() > 0) {
-                if (this->mGraphicEffect3 != NULL) {
+                if (theClass->mGraphicEffect3 != NULL) {
                     float theHeight = theUnit->GetModel()->mModels[0]->GetBoundingRadius(0);
                     GE3DPoint thePosition;
                     theUnit->GetPosition(thePosition);
                     thePosition.SetZ(thePosition.GetZ() + theHeight * 1.5f);
-                    gEffectManager->CreatePlacedEffect(thePosition, this->mGraphicEffect3, &theEffectHandle);
-                    inCalamity->SetEffectHandle(theEffectHandle);
+                    gEffectManager->CreatePlacedEffect(thePosition, theClass->mGraphicEffect3, &theEffectHandle);
+                    theCalamity->SetEffectHandle(theEffectHandle);
                 }
                 theUnit->SetDisabled(1, 0x1c);
                 EETechTreeNode* theNode = theUnit->GetTechTreeNode();
@@ -234,21 +247,17 @@ long EECCLogicBomb::Update(EECalamity* inCalamity, float inElapsedTime)
                 }
             }
         }
+        return true;
     }
-    EEUnit* theTargetUnit;
-    if (inCalamity->GetTargetUnit(theTargetUnit) && theTargetUnit->GetComplexUnit() != NULL
-        && theTargetUnit->GetComplexUnit()->GetHitPoints() <= 0)
-        theResult = 7;
-    return theResult;
+    default:
+        return false;
+    }
 }
 
 // FUNCTION: EXE 0x4b25b4
 // Accepts a built, enabled enemy unit on the map that is not a foundation or volcano and is in the class's unit set
 bool EECCLogicBomb::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    return inTargetUnit->mTileNode != NULL && inTargetUnit->mPlayer != inUnit->mPlayer
-        && inUnit->mPlayer->mEnemies[inTargetUnit->mPlayer->mPlayerID] != 0 && !inTargetUnit->IsFoundation()
-        && inTargetUnit->mComplexUnit->mIsBuilt && !inTargetUnit->mComplexUnit->mIsDisabled
-        && inTargetUnit->mUnitClass->GetUnitType() != kUnitTypeVolcano
-        && gUnitSetManager.Contains(inTargetUnit->mUnitClass->GetUnitType(), this->GetUnitSet());
+    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }

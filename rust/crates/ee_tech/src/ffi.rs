@@ -3,10 +3,16 @@
 //! and hold no reference into C++ memory across them (the costs are copied in and out).
 
 use crate::calamity::{self, EeCalamityAge};
-use crate::effects::{self, EeTechAttribute, EeTechEffectHandler, EeTechEffectValues};
+use crate::calamity_cast::{self, EeCalamityCast};
+use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
+use crate::effects::{
+    self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
+    EeTechUnitWalk,
+};
 use crate::tree::{
-    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochUpdate, EeTechNode, EeTechPrerequisite,
-    EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode, SumCostsView,
+    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate, EeTechNode,
+    EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode,
+    SumCostsView,
 };
 use std::ffi::c_void;
 
@@ -385,6 +391,158 @@ pub unsafe extern "C" fn ee_tech_sum_costs(
 #[no_mangle]
 pub extern "C" fn ee_calamity_update_time_alive(time_alive: f32, elapsed: f32, lifetime: f32) -> EeCalamityAge {
     calamity::update_time_alive(time_alive, elapsed, lifetime)
+}
+
+/// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
+/// objects, reading and writing the calamity through `state` (the C++ copies it in and out around its step).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeCalamityHostFfi {
+    pub ctx: *mut c_void,
+    pub call: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        state: *mut EeCalamityState,
+        call: *const EeCalamityCall,
+        reply: *mut EeCalamityReply,
+    ),
+}
+
+struct FfiCalamityHost(EeCalamityHostFfi);
+
+impl CalamityHost for FfiCalamityHost {
+    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+        let mut reply = EeCalamityReply::default();
+        // SAFETY: the C++ host's contract (ee/EECalamityUpdate.h): valid pointers for the call's duration
+        unsafe { (self.0.call)(self.0.ctx, state, call, &mut reply) };
+        reply
+    }
+}
+
+/// A calamity class's `Update(calamity, elapsed)` (`calamity_update::update`); `state` in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op the class asks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_update(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    elapsed: f32,
+    host: *const EeCalamityHostFfi,
+) -> i32 {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    let result = calamity_update::update(&mut FfiCalamityHost(host), &mut s, &params, elapsed);
+    // SAFETY: as above
+    unsafe { *state = s };
+    result
+}
+
+/// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
+///
+/// # Safety
+/// `cast` and `host` must be valid; the host's `call` must answer every op the cast asks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_can_cast_at(cast: *const EeCalamityCast, host: *const EeCalamityHostFfi) -> i32 {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::can_cast_at(&mut FfiCalamityHost(host), &cast)
+}
+
+/// A unit class's `IsValidTarget` (`calamity_cast::valid_target`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_valid_target(cast: *const EeCalamityCast, host: *const EeCalamityHostFfi) -> bool {
+    // SAFETY: as above
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::valid_target(&mut FfiCalamityHost(host), &cast)
+}
+
+/// A location class's `IsValidLocation` (`calamity_cast::valid_location`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_valid_location(
+    cast: *const EeCalamityCast,
+    host: *const EeCalamityHostFfi,
+) -> bool {
+    // SAFETY: as above
+    let (cast, host) = unsafe { (*cast, *host) };
+    calamity_cast::valid_location(&mut FfiCalamityHost(host), &cast)
+}
+
+/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
+///
+/// # Safety
+/// `out` must be valid for `capacity` writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_research_to_epoch(
+    epoch: i32,
+    count: i32,
+    local: bool,
+    out: *mut EeTechEpochStep,
+    capacity: u32,
+) -> u32 {
+    let steps = tree::research_to_epoch_steps(epoch, count, local);
+    for (i, step) in steps.iter().take(capacity as usize).enumerate() {
+        // SAFETY: the caller's contract
+        unsafe { *out.add(i) = *step };
+    }
+    steps.len() as u32
+}
+
+/// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_unit_step(
+    walk: EeTechUnitWalk,
+    unit: *const EeTechUnitView,
+    class_type: i32,
+    old_maximum: u32,
+    new_maximum: i32,
+) -> EeTechUnitStep {
+    // SAFETY: the caller's contract
+    effects::unit_step(walk, unsafe { &*unit }, class_type, old_maximum, new_maximum)
+}
+
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_sight_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::sight_applies(unsafe { &*unit }, class_type)
+}
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_area_effect_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::area_effect_applies(unsafe { &*unit }, class_type)
+}
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+#[no_mangle]
+pub extern "C" fn ee_tech_conversion(has_unit: bool, in_set: bool, has_class: bool, id: i32) -> EeTechConversion {
+    effects::conversion(has_unit, in_set, has_class, id)
+}
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_conversion_unit(unit: *const EeTechUnitView) -> u32 {
+    // SAFETY: the caller's contract
+    effects::conversion_unit(unsafe { &*unit })
 }
 
 #[cfg(test)]

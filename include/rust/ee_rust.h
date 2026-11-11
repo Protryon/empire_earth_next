@@ -659,6 +659,52 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// [`EeCalamityOp::TargetView`]'s flags.
+constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IS_CASTER = 2;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_SAME_PLAYER = 4;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_ENEMY = 8;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_IN_SET = 16;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_FOUNDATION = 32;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_BUILT = 64;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
+
+constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
+
+/// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
+
+/// The class has a sound.
+constexpr static const uint32_t EE_CALAMITY_SOUND = 2;
+
+/// The class has a secondary sound.
+constexpr static const uint32_t EE_CALAMITY_SECONDARY_SOUND = 4;
+
+/// The class has its first graphic effect.
+constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
+
+/// The class has its second graphic effect.
+constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// [`EeTechUnitView::flags`]: the unit has a complex unit.
+constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
+
+/// Its complex unit is built.
+constexpr static const uint32_t EE_TECH_UNIT_BUILT = 2;
+
+/// It is on a tile (`mTileNode`).
+constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
+
+/// It is carried (`mPreviousPart`).
+constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
+
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
 
@@ -1580,6 +1626,186 @@ enum class EeTechTreeResearchAfter : uint32_t {
   Nothing = 0,
   EpochStatistics,
   CountTowardNextEpoch,
+};
+
+/// The host calls (`EeCalamityCall::op`). Each names what the C++ does and what it answers.
+enum class EeCalamityOp : int32_t {
+  /// The contagion helper `index`'s `Update(x)` (if it exists).
+  HelperUpdate = 1,
+  /// `UpdateSound(calamity, sound index (0 the class's sound, 1 its secondary), volume x, falloff y, primary
+  /// node when value is 1)`.
+  Sound = 2,
+  /// `EEGetUnitsNear((x, y, z), w)`: value its result, id the list's size; the host keeps the list for the unit calls.
+  UnitsNear = 3,
+  /// The caster's continent (`kAIPathNonSpace`): value.
+  CasterContinent = 4,
+  /// Unit `index` of the list for the earthquake: flags bit 0 a land building, bit 1 alive; value its continent.
+  QuakeUnit = 5,
+  /// Unit `index`'s immunity (effect kind 3): true when it has one (the host plays its effect).
+  Immune = 6,
+  /// Unit `index` is carried: ok, and key the outermost carrier.
+  Carried = 7,
+  /// Unit `index` takes `value` damage from the caster (x 0) or the storm (x 1), for the calamity's player,
+  /// mode 2 when blocked by immunity else 3.
+  TakeHit = 8,
+  /// The earthquake's cracks.
+  Cracks = 9,
+  /// The distance from the camera to the target in the view plane: x.
+  CameraDistance = 10,
+  /// `gPhysics->GetRandom()`: x.
+  Random = 11,
+  /// The local player's camera shake at angle x by amplitude y (once per player and update).
+  Shake = 12,
+  /// The calamity has a target unit: ok.
+  TargetExists = 13,
+  /// The hurricane's `CreateStorm`.
+  CreateStorm = 14,
+  /// The class's `PlaySound(calamity)`.
+  PlayClassSound = 15,
+  /// The storm unit made undeletable: its location x, y, z.
+  StormPrepare = 16,
+  /// Unit `index` of the list for the hurricane: flags bit 0 the storm itself, bit 1 the storm's player, bit 2
+  /// an enemy of it, bit 3 in the class's unit set, bit 4 alive, bit 5 nature's; x the distance squared to the
+  /// storm, y its radius against the storm.
+  StormUnit = 17,
+  /// The hurricane's strike effect on unit `index`.
+  Strike = 18,
+  /// The meteor storm's `LaunchMeteor`.
+  LaunchMeteor = 19,
+  /// `gPhysics->mRandom.Generate()`: x.
+  RandomGenerate = 20,
+  /// `gPhysics->GetRandom(x, y)`: x.
+  RandomRange = 21,
+  /// The volcano's `CreateVolcano` and its two effects: value the last effect's result.
+  CreateVolcano = 22,
+  /// The target unit's hit points: value.
+  TargetHitPoints = 23,
+  /// The time warp's departure: the unit tinted, its departure effect and sound.
+  WarpTint = 24,
+  /// The time warp's placed effect where the unit leaves.
+  WarpAwayEffect = 25,
+  /// `gEffectManager->DestroyEffect(value)`.
+  DestroyEffect = 26,
+  /// The time warp's `Depart`.
+  WarpDepart = 27,
+  /// The time warp's `Return`.
+  WarpReturn = 28,
+  /// The target unit is tinted: ok.
+  TargetTinted = 29,
+  /// The time warp's colour blink.
+  WarpBlink = 30,
+  /// The caster's hit points: value.
+  CasterHitPoints = 31,
+  /// The calamity has a caster: ok.
+  CasterExists = 32,
+  /// The teleport's `HoldCaster`.
+  Hold = 33,
+  /// The teleport's `Teleport`.
+  Teleport = 34,
+  /// The logic bomb's placed mark at the target.
+  LogicBombMark = 35,
+  /// The logic bomb's disabling of its target.
+  LogicBombDisable = 36,
+  /// The target unit exists, is complex and has no hit points: ok.
+  TargetDead = 37,
+  /// A contagion helper for the class's functor at the calamity: value its id.
+  CreateHelper = 38,
+  /// The class's `ApplyEffect(calamity)`.
+  ApplyEffect = 39,
+  /// The terrain mesh's height at (x, y): x.
+  MeshZ = 40,
+  /// The class's second graphic effect placed at (x, y, z): id its handle.
+  PlacedEffect = 41,
+  /// The morale's start on its target (effect, counter, sound).
+  Morale = 42,
+  /// The target unit exists and is alive: ok.
+  TargetAlive = 43,
+  /// The special attack's order to the caster.
+  SpecialAttack = 44,
+  /// The special location's order to the caster.
+  SpecialLocation = 45,
+  /// The caster's player index (`EEWorld::GetPlayerIndex`): value.
+  CasterPlayerIndex = 46,
+  /// The caster's power: value.
+  CasterPower = 47,
+  /// The tile exists: ok.
+  TileExists = 48,
+  /// The tile is visible to the caster's player: ok.
+  TileVisible = 49,
+  /// An area effect of kind 3 at the tile against player `value`: ok.
+  AreaEffect = 50,
+  /// The unit with the target's id (`gWorld.GetUnit`): ok when there is one.
+  TargetLookup = 51,
+  /// The class's `IsValidLocation(caster, tile)`: ok.
+  ValidLocation = 52,
+  /// The class's `IsValidTarget(caster, the looked-up unit)`: ok.
+  ValidTarget = 53,
+  /// The target's flags (`EE_CALAMITY_TARGET_*`).
+  TargetView = 54,
+  /// `EEMap::IsAreaOnMap(tile, value)`: ok.
+  AreaOnMap = 55,
+  /// The terrain mesh's `GetIsValidTile(tile)`: ok.
+  ValidTile = 56,
+  /// The terrain mesh is a space map: ok.
+  SpaceMap = 57,
+  /// The tile's continent (`kAIPathNonSpace`): value.
+  TileContinent = 58,
+  /// `EEWorld::IsTileBlocked(tile)`: ok.
+  TileBlocked = 59,
+  /// The tile's terrain type: ok when the tile exists, value the type.
+  TerrainType = 60,
+  /// The class's unit class's inner collision sphere: x.
+  InnerSphere = 61,
+  /// Unit `index` of the list is a living hurricane or anti-matter storm: ok.
+  NearStorm = 62,
+  /// The class's unit class's tile size: value.
+  TileSize = 63,
+  /// `EEMap::IsEdgeTile(tile)`: ok.
+  EdgeTile = 64,
+  /// `EEIsTileUnblocked` for the class's unit class at the tile (the caster's player, else nature's): ok.
+  TileUnblocked = 65,
+  /// The caster is a radio man: ok.
+  CasterIsRadioMan = 66,
+  /// `EEIsTileFree(tile)`: ok.
+  TileFree = 67,
+};
+
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
+
+/// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
+enum class EeTechEpochStepKind : uint32_t {
+  /// `mEpochs[epoch].Unlock()`.
+  Unlock = 0,
+  /// `mEpochs[epoch].ResearchAll(false)`.
+  ResearchAll,
+  /// `mEpochs[epoch].ResearchSelf()`.
+  ResearchSelf,
+  /// `mEpochs[epoch].ResearchKind(7, true)`.
+  ResearchKind7,
+  /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
+  ShowName,
+};
+
+/// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
+enum class EeTechUnitWalk : uint32_t {
+  /// The player's units, for the hit point rescale (built ones only).
+  HitPoints = 0,
+  /// The pending units, for the hit point rescale (the built test at the write).
+  PendingHitPoints,
+  /// The player's or the pending units, for the flight time rescale.
+  FlightTime,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -4313,6 +4539,158 @@ struct EeCalamityAge {
   float time_alive;
   bool done;
   uint8_t pad[3];
+};
+
+/// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
+struct EeCalamityParams {
+  int32_t class_enum;
+  float lifetime;
+  /// `EE_CALAMITY_*` bits.
+  uint32_t flags;
+  int32_t quake_damage;
+  int32_t quake_tick_time;
+  int32_t quake_shake;
+  float quake_duration;
+  float quake_radius;
+  float quake_shake_interval;
+  float quake_volume;
+  float quake_quake_volume;
+  float quake_minimum_factor;
+  float quake_quake_minimum_factor;
+  float quake_speed;
+  float quake_falloff;
+  /// The game variant's earthquake damage factor.
+  float quake_damage_factor;
+  int32_t storm_damage;
+  uint32_t storm_tick_time;
+  float storm_radius;
+  /// Its first effect's duration (the storm's delay).
+  uint32_t storm_delay;
+  float meteor_minimum_interval;
+  float meteor_maximum_interval;
+  /// The volcano's first effect's delay (`mTime1`).
+  uint32_t volcano_delay;
+  int32_t warp_depart_time;
+  int32_t warp_away_time;
+  /// The teleport's hold time.
+  int32_t teleport_hold_time;
+  uint32_t bomb_time2;
+  uint32_t bomb_time3;
+  /// The area effects' and the leprosy's first effect's duration.
+  uint32_t area_delay;
+  /// The extra damage's and the mind control's second time.
+  int32_t area_time2;
+  /// The morale's effect duration.
+  int32_t morale_delay;
+};
+
+/// The calamity's members an update reads and writes (`EECalamity`).
+struct EeCalamityState {
+  float time_alive;
+  float float1;
+  float float2;
+  int32_t int1;
+  int32_t int2;
+  float target[3];
+  float epicenter_factor;
+  uint32_t effect_handle;
+  bool bool1;
+  bool bool2;
+  uint8_t pad[2];
+};
+
+/// One host call.
+struct EeCalamityCall {
+  EeCalamityOp op;
+  int32_t index;
+  int32_t value;
+  /// A second index (the casts' tile y).
+  int32_t index2;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// The host's answer.
+struct EeCalamityReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  uint64_t key;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
+/// objects, reading and writing the calamity through `state` (the C++ copies it in and out around its step).
+struct EeCalamityHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, EeCalamityState *state, const EeCalamityCall *call, EeCalamityReply *reply);
+};
+
+/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
+struct EeCalamityCast {
+  EeCalamityCastMode mode;
+  int32_t class_enum;
+  uint32_t x;
+  uint32_t y;
+  /// `GetCost()`.
+  int32_t cost;
+  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
+  uint32_t radius;
+  int32_t area;
+  /// `kTerrainSpace` (the meteor storm's tiles).
+  int32_t space_terrain;
+  bool check;
+  bool has_caster;
+  bool blocked_by_immunity;
+  /// The hurricane only over water (`mOverWater`).
+  bool over_water;
+};
+
+/// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
+struct EeTechEpochStep {
+  EeTechEpochStepKind step;
+  int32_t epoch;
+};
+
+/// One unit of a rescale walk: whether it is rescaled (`EVHP`), whether the new value is written, and the value.
+struct EeTechUnitStep {
+  bool rescaled;
+  bool applies;
+  uint8_t pad[2];
+  /// `ee_tech_rescale`'s amount.
+  float amount;
+  /// The amount's C cast (the value written).
+  int32_t value;
+};
+
+/// What an effect reads of one unit it walks (`EEUnit` and its `EEComplexUnit`).
+struct EeTechUnitView {
+  int32_t unit_type;
+  int32_t hit_points;
+  /// The complex unit's flight time (0 without one).
+  int32_t flight_time;
+  /// `EE_TECH_UNIT_*` bits.
+  uint32_t flags;
+};
+
+/// `ConvertEventUnits`' decisions around its walk.
+struct EeTechConversion {
+  /// Only the given unit (in the effect's set, by a unit tech): else every unit of the class, after the upgrade
+  /// levels and the queued technology are carried over.
+  bool single;
+  /// The new class's tech node gets a research delay (one unit converted, the new class exists).
+  bool delay_new_class;
+  /// The queued improvements move to the new class.
+  bool move_queued;
+  /// The new units take their class's behaviour (tech 0x413 or 0x138d).
+  bool set_behavior;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -10629,6 +11007,74 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
 
 /// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
 EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
+
+/// A calamity class's `Update(calamity, elapsed)` (`calamity_update::update`); `state` in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op the class asks.
+int32_t ee_calamity_update(const EeCalamityParams *params,
+                           EeCalamityState *state,
+                           float elapsed,
+                           const EeCalamityHostFfi *host);
+
+/// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
+///
+/// # Safety
+/// `cast` and `host` must be valid; the host's `call` must answer every op the cast asks.
+int32_t ee_calamity_can_cast_at(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A unit class's `IsValidTarget` (`calamity_cast::valid_target`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_target(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// A location class's `IsValidLocation` (`calamity_cast::valid_location`).
+///
+/// # Safety
+/// As [`ee_calamity_can_cast_at`].
+bool ee_calamity_valid_location(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
+
+/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
+///
+/// # Safety
+/// `out` must be valid for `capacity` writes.
+uint32_t ee_tech_research_to_epoch(int32_t epoch,
+                                   int32_t count,
+                                   bool local,
+                                   EeTechEpochStep *out,
+                                   uint32_t capacity);
+
+/// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+EeTechUnitStep ee_tech_unit_step(EeTechUnitWalk walk,
+                                 const EeTechUnitView *unit,
+                                 int32_t class_type,
+                                 uint32_t old_maximum,
+                                 int32_t new_maximum);
+
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_sight_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_area_effect_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, int32_t id);
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

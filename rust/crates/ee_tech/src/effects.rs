@@ -276,6 +276,129 @@ pub fn effect_handler(
     }
 }
 
+/// What an effect reads of one unit it walks (`EEUnit` and its `EEComplexUnit`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeTechUnitView {
+    pub unit_type: i32,
+    pub hit_points: i32,
+    /// The complex unit's flight time (0 without one).
+    pub flight_time: i32,
+    /// `EE_TECH_UNIT_*` bits.
+    pub flags: u32,
+}
+
+/// [`EeTechUnitView::flags`]: the unit has a complex unit.
+pub const EE_TECH_UNIT_COMPLEX: u32 = 1;
+/// Its complex unit is built.
+pub const EE_TECH_UNIT_BUILT: u32 = 2;
+/// It is on a tile (`mTileNode`).
+pub const EE_TECH_UNIT_ON_TILE: u32 = 4;
+/// It is carried (`mPreviousPart`).
+pub const EE_TECH_UNIT_CARRIED: u32 = 8;
+
+/// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeTechUnitWalk {
+    /// The player's units, for the hit point rescale (built ones only).
+    HitPoints = 0,
+    /// The pending units, for the hit point rescale (the built test at the write).
+    PendingHitPoints,
+    /// The player's or the pending units, for the flight time rescale.
+    FlightTime,
+}
+
+/// One unit of a rescale walk: whether it is rescaled (`EVHP`), whether the new value is written, and the value.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeTechUnitStep {
+    pub rescaled: bool,
+    pub applies: bool,
+    pub pad: [u8; 2],
+    /// `ee_tech_rescale`'s amount.
+    pub amount: f32,
+    /// The amount's C cast (the value written).
+    pub value: i32,
+}
+
+/// One unit of the maximum hit point or flight time rescale (`ApplyEventAttribute`, attributes 6 and 9): the unit
+/// of `class_type` qualifies as the C++'s loop tests it, its value in proportion to the new maximum.
+pub fn unit_step(
+    walk: EeTechUnitWalk,
+    unit: &EeTechUnitView,
+    class_type: i32,
+    old_maximum: u32,
+    new_maximum: i32,
+) -> EeTechUnitStep {
+    let complex = unit.flags & EE_TECH_UNIT_COMPLEX != 0;
+    let built = unit.flags & EE_TECH_UNIT_BUILT != 0;
+    let skip = match walk {
+        EeTechUnitWalk::HitPoints => unit.unit_type != class_type || !(unit.hit_points > 0) || (complex && !built),
+        EeTechUnitWalk::PendingHitPoints => unit.unit_type != class_type || !(unit.hit_points > 0),
+        EeTechUnitWalk::FlightTime => unit.unit_type != class_type || !(unit.hit_points > 0) || !complex,
+    };
+    if skip {
+        return EeTechUnitStep::default();
+    }
+    let current = if walk == EeTechUnitWalk::FlightTime { unit.flight_time } else { unit.hit_points };
+    let amount = rescale(current, old_maximum, new_maximum);
+    let applies = match walk {
+        EeTechUnitWalk::HitPoints => unit.hit_points > 0,
+        EeTechUnitWalk::PendingHitPoints => unit.hit_points > 0 && (!complex || built),
+        EeTechUnitWalk::FlightTime => unit.flight_time > 0,
+    };
+    EeTechUnitStep { rescaled: true, applies, pad: [0; 2], amount, value: crate::ftol(amount) }
+}
+
+/// The line of sight walk (attribute 3): the units of the class's type turn their sight off and on.
+pub fn sight_applies(unit: &EeTechUnitView, class_type: i32) -> bool {
+    unit.unit_type == class_type
+}
+
+/// `SetEventAreaEffect`'s walk: the living complex units of the class's type rebuild their area effects.
+pub fn area_effect_applies(unit: &EeTechUnitView, class_type: i32) -> bool {
+    unit.unit_type == class_type && unit.flags & EE_TECH_UNIT_COMPLEX != 0 && unit.hit_points > 0
+}
+
+/// `ConvertEventUnits`' decisions around its walk.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeTechConversion {
+    /// Only the given unit (in the effect's set, by a unit tech): else every unit of the class, after the upgrade
+    /// levels and the queued technology are carried over.
+    pub single: bool,
+    /// The new class's tech node gets a research delay (one unit converted, the new class exists).
+    pub delay_new_class: bool,
+    /// The queued improvements move to the new class.
+    pub move_queued: bool,
+    /// The new units take their class's behaviour (tech 0x413 or 0x138d).
+    pub set_behavior: bool,
+}
+
+/// `ConvertEventUnits`: `has_unit` a unit was given, `in_set` it is in the effect's set (asked only for a unit
+/// tech), `has_class` the new class exists, `id` the tech.
+pub fn conversion(has_unit: bool, in_set: bool, has_class: bool, id: i32) -> EeTechConversion {
+    let single = has_unit && in_set;
+    EeTechConversion {
+        single,
+        delay_new_class: has_class && single,
+        move_queued: !single,
+        set_behavior: id == 0x413 || id == 0x138d,
+    }
+}
+
+/// A unit of `ConvertEventUnits`' walk: 0 dead (skipped), 1 kept (a carried unit on a tile), 2 replaced.
+pub fn conversion_unit(unit: &EeTechUnitView) -> u32 {
+    if !(unit.hit_points > 0) {
+        0
+    } else if unit.flags & EE_TECH_UNIT_ON_TILE == 0 || unit.flags & EE_TECH_UNIT_CARRIED == 0 {
+        2
+    } else {
+        1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,5 +511,53 @@ mod tests {
         assert_eq!(effect_handler(true, 19 + 4, false, 0, true), H::UnknownKind);
         assert_eq!(effect_handler(true, 0, false, 0, true), H::UnknownKind);
         assert_eq!(effect_handler(true, 3, false, 0, true), H::UnknownKind);
+    }
+    #[test]
+    fn rescale_walks_take_the_units_the_cpp_loops_take() {
+        let unit =
+            |unit_type, hit_points, flight_time, flags| EeTechUnitView { unit_type, hit_points, flight_time, flags };
+        let built = EE_TECH_UNIT_COMPLEX | EE_TECH_UNIT_BUILT;
+        // a built unit of the class: rescaled 50 of 100 -> 150, written
+        let s = unit_step(EeTechUnitWalk::HitPoints, &unit(7, 50, 0, built), 7, 100, 150);
+        assert!(s.rescaled && s.applies);
+        assert_eq!((s.amount, s.value), (rescale(50, 100, 150), crate::ftol(rescale(50, 100, 150))));
+        // another class, a dead unit, an unbuilt complex unit: not visited
+        assert!(!unit_step(EeTechUnitWalk::HitPoints, &unit(8, 50, 0, built), 7, 100, 150).rescaled);
+        assert!(!unit_step(EeTechUnitWalk::HitPoints, &unit(7, 0, 0, built), 7, 100, 150).rescaled);
+        assert!(!unit_step(EeTechUnitWalk::HitPoints, &unit(7, 50, 0, EE_TECH_UNIT_COMPLEX), 7, 100, 150).rescaled);
+        // a pending unbuilt unit is rescaled but not written
+        let s = unit_step(EeTechUnitWalk::PendingHitPoints, &unit(7, 50, 0, EE_TECH_UNIT_COMPLEX), 7, 100, 150);
+        assert!(s.rescaled && !s.applies);
+        // a plain (not complex) pending unit is written
+        assert!(unit_step(EeTechUnitWalk::PendingHitPoints, &unit(7, 50, 0, 0), 7, 100, 150).applies);
+        // flight time: complex units only, written while it flies
+        let s = unit_step(EeTechUnitWalk::FlightTime, &unit(7, 10, 300, EE_TECH_UNIT_COMPLEX), 7, 600, 900);
+        assert!(s.rescaled && s.applies);
+        assert_eq!(s.value, crate::ftol(rescale(300, 600, 900)));
+        assert!(!unit_step(EeTechUnitWalk::FlightTime, &unit(7, 10, 0, EE_TECH_UNIT_COMPLEX), 7, 600, 900).applies);
+        assert!(!unit_step(EeTechUnitWalk::FlightTime, &unit(7, 10, 300, 0), 7, 600, 900).rescaled);
+    }
+
+    #[test]
+    fn sight_area_and_conversion_walks() {
+        let unit = |unit_type, hit_points, flags| EeTechUnitView { unit_type, hit_points, flight_time: 0, flags };
+        assert!(sight_applies(&unit(3, 0, 0), 3));
+        assert!(!sight_applies(&unit(4, 10, 0), 3));
+        assert!(area_effect_applies(&unit(3, 1, EE_TECH_UNIT_COMPLEX), 3));
+        assert!(!area_effect_applies(&unit(3, 1, 0), 3));
+        assert!(!area_effect_applies(&unit(3, 0, EE_TECH_UNIT_COMPLEX), 3));
+        let c = conversion(true, true, true, 0x413);
+        assert_eq!(c, EeTechConversion { single: true, delay_new_class: true, move_queued: false, set_behavior: true });
+        let c = conversion(true, false, true, 5);
+        assert_eq!(
+            c,
+            EeTechConversion { single: false, delay_new_class: false, move_queued: true, set_behavior: false }
+        );
+        assert!(conversion(false, true, true, 0x138d).set_behavior);
+        assert!(!conversion(true, true, false, 1).delay_new_class);
+        assert_eq!(conversion_unit(&unit(1, 0, 0)), 0);
+        assert_eq!(conversion_unit(&unit(1, 5, EE_TECH_UNIT_ON_TILE)), 2);
+        assert_eq!(conversion_unit(&unit(1, 5, EE_TECH_UNIT_CARRIED)), 2);
+        assert_eq!(conversion_unit(&unit(1, 5, EE_TECH_UNIT_ON_TILE | EE_TECH_UNIT_CARRIED)), 1);
     }
 }

@@ -14,6 +14,8 @@
 #include "lle/SESoundManager.h"
 
 #include "ee/EEEffectManager.h"
+#include "ee/EECalamityUpdate.h"
+#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -54,17 +56,10 @@ long EEUnitCalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned l
 long EEUnitCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX,
                                     unsigned long inY, bool inCheck, EEUnit* inTargetUnit)
 {
-    unsigned long theTargetID = -1;
-    long theResult = EECalamityClass::CanCastAt(inUnit, inLocation, inX, inY, inCheck, inTargetUnit);
-    if (theResult == 0) {
-        if (inTargetUnit != NULL)
-            theTargetID = inTargetUnit->mUnitID;
-        theResult = 1;
-        EEUnit* theTarget = ::gWorld.GetUnit(theTargetID);
-        if (theTarget != NULL && this->IsValidTarget(inUnit, theTarget))
-            theResult = 0;
-    }
-    return theResult;
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
+    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                             EECalamityCanCastAt(this, EeCalamityCastMode::Unit, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
 // ICF-FOLDED: EXE 0x63c6cd

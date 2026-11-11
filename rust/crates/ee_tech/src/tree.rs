@@ -451,6 +451,59 @@ pub fn sum_costs(view: &mut dyn SumCostsView, mut id: i32, unit_class: i32, cost
     }
 }
 
+/// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeTechEpochStepKind {
+    /// `mEpochs[epoch].Unlock()`.
+    Unlock = 0,
+    /// `mEpochs[epoch].ResearchAll(false)`.
+    ResearchAll,
+    /// `mEpochs[epoch].ResearchSelf()`.
+    ResearchSelf,
+    /// `mEpochs[epoch].ResearchKind(7, true)`.
+    ResearchKind7,
+    /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
+    ShowName,
+}
+
+/// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeTechEpochStep {
+    pub step: EeTechEpochStepKind,
+    pub epoch: i32,
+}
+
+/// `EETechTree::ResearchToEpoch(epoch)` over a tree of `count` epochs: the steps in the C++'s order (none for an
+/// epoch out of range); `local`: the tree is the local player's.
+pub fn research_to_epoch_steps(epoch: i32, count: i32, local: bool) -> Vec<EeTechEpochStep> {
+    use EeTechEpochStepKind::*;
+    let mut steps = Vec::new();
+    let mut push = |step, epoch| steps.push(EeTechEpochStep { step, epoch });
+    // `inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()` (the size unsigned)
+    if epoch >= 0 && (epoch as u32) < count as u32 {
+        if epoch != 0 {
+            for i in 0..epoch {
+                push(Unlock, i);
+                push(ResearchAll, i);
+                if i + 1 == epoch && i + 1 < count {
+                    push(Unlock, i + 1);
+                    push(ResearchSelf, i + 1);
+                }
+            }
+        } else {
+            push(Unlock, 0);
+            push(ResearchSelf, 0);
+        }
+        push(ResearchKind7, epoch);
+        if local {
+            push(ShowName, epoch);
+        }
+    }
+    steps
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -708,5 +761,31 @@ mod tests {
         sum_costs(&mut v, TECH_NONE, 7, &mut costs);
         sum_costs(&mut v, -1, 7, &mut costs);
         assert_eq!(costs, [0; 7]);
+    }
+    #[test]
+    fn research_to_epoch_walks_every_epoch_below_then_the_kind_7_nodes() {
+        use EeTechEpochStepKind::*;
+        let s = |step, epoch| EeTechEpochStep { step, epoch };
+        assert_eq!(research_to_epoch_steps(0, 5, false), vec![s(Unlock, 0), s(ResearchSelf, 0), s(ResearchKind7, 0)]);
+        assert_eq!(
+            research_to_epoch_steps(2, 5, true),
+            vec![
+                s(Unlock, 0),
+                s(ResearchAll, 0),
+                s(Unlock, 1),
+                s(ResearchAll, 1),
+                s(Unlock, 2),
+                s(ResearchSelf, 2),
+                s(ResearchKind7, 2),
+                s(ShowName, 2)
+            ]
+        );
+        // out of range: nothing
+        assert!(research_to_epoch_steps(5, 5, true).is_empty());
+        assert!(research_to_epoch_steps(-1, 5, true).is_empty());
+        // the last epoch
+        let last = research_to_epoch_steps(4, 5, false);
+        assert_eq!(last.len(), 2 * 4 + 2 + 1);
+        assert_eq!(last[last.len() - 1], s(ResearchKind7, 4));
     }
 }

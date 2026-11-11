@@ -11,6 +11,9 @@
 class EEGraphicEffect;
 class EESoundObject;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCLogicBomb : public EEUnitCalamityClass {
 public:
     EECCLogicBomb();                        // 0xb2034
@@ -23,6 +26,8 @@ public:
     virtual void PlaySound(EECalamity* inCalamity);              // +0x2c (empty: ICF-folded 0x157269)
     virtual void UnloadMedia(EEPlayer* inPlayer);                // +0x34 (ICF-folded 0xaf632)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb2337
+    // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
+    static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);  // +0x4c 0xb25b4
 
 protected:
