@@ -57,6 +57,7 @@
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
+#include "ee/EEAIContinent.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -2578,6 +2579,65 @@ static int LuaShore(lua_State* L)
     return 0;
 }
 
+// ai.water_sites(x, y, {max = 64}) -> {{x, y}, ...}: the water tiles by the shore for docks, nearest (x, y) first, at
+// most max (up to 512): the largest water body's shore tiles next to the land mass at (x, y) and the water tiles
+// round them (EECPBuildManager::CollectSiteTiles(2)), explored ones only; an empty table when that water body does
+// not touch the land mass
+static int LuaWaterSites(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    lua_newtable(L);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
+        return 1;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
+    long theMax = 64;
+    EECPUnitsOptInt(L, 3, "max", theMax);
+    theMax = theMax < 1 ? 1 : theMax > 512 ? 512 : theMax;
+    EECPUnitsCharge(L, kCostCall);
+    unsigned short theWaterID = (unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater);
+    EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theWater == NULL || theLand == NULL
+        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->mID])
+        return 1;
+    std::vector<U2DPoint<long> > theShore;
+    theWater->GetShoreNextTo(theLand->mID, theShore);
+    EECPUnitsCharge(L, (int64_t)theShore.size() * 9 * kCostScan);
+    std::vector<U2DPoint<long> > theTiles;
+    theTiles.reserve(theShore.size() * 9);
+    for (size_t i = 0; i < theShore.size(); i++)
+        for (long dy = -1; dy <= 1; dy++)
+            for (long dx = -1; dx <= 1; dx++)
+                theTiles.push_back(U2DPoint<long>(theShore[i].mX + dx, theShore[i].mY + dy));
+    std::sort(theTiles.begin(), theTiles.end());
+    theTiles.erase(std::unique(theTiles.begin(), theTiles.end()), theTiles.end());
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    std::vector<std::pair<long, std::pair<long, long> > > theSites;
+    for (size_t i = 0; i < theTiles.size(); i++) {
+        long tx = theTiles[i].mX, ty = theTiles[i].mY;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h)
+            continue;
+        EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty));
+        if (theTile == NULL || !theTile->IsVisibleTo(me)
+            || (theTile->GetTerrainType() != kTerrainDeepWater && theTile->GetTerrainType() != kTerrainShallowWater))
+            continue;
+        theSites.push_back(std::make_pair(EECPUnitsD2(tx, ty, x, y), std::make_pair(ty, tx)));
+    }
+    std::sort(theSites.begin(), theSites.end());   // the distance, then the tile: the same order on every machine
+    long n = 0;
+    for (size_t i = 0; i < theSites.size() && n < theMax; i++) {
+        lua_createtable(L, 2, 0);
+        lua_pushinteger(L, (lua_Integer)theSites[i].second.second);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, (lua_Integer)theSites[i].second.first);
+        lua_rawseti(L, -2, 2);
+        lua_rawseti(L, -2, (lua_Integer)++n);
+    }
+    EECPUnitsCharge(L, n * kCostField * 3);
+    return 1;
+}
+
 // ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}}) -> x, y: the unexplored grid
 // point (every `grid` tiles) on the land mass nearest (x, y) (EECPNextArmy's scout), scored by its distance less
 // half its distance from `away` (further from the town first); points within grid of a skip entry are left out.
@@ -3601,7 +3661,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

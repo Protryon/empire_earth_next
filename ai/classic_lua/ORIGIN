@@ -77,8 +77,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
                 one-tile margin: `margin = true`, added for this port) - CanBuildAt's other rules (choke points, hills,
                 runway ends, gates and town centres near, walkable ground round the site) are not applied; the
-                granary's room for farms is not tested; the shore site is the shore nearest the town (CollectSiteTiles'
-                water tiles are not readable). NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
+                granary's room for farms is not tested; the dock sites (CollectSiteTiles' water tiles: ai.water_sites)
+                are the explored ones, collected again every 60 s. NOT STARTED: CancelStalledBuilds, BuildingAbandoned, BuilderLost's
                 replacement (AssignBuilders covers them every 2 minutes), the airport, anti-air, space and wonder
                 sites, the island coasts', gates' and choke points' towers.
   EECPResearchManager.cpp
@@ -199,11 +199,11 @@ what is explored (a town centre's few tiles at the start), so an idle citizen wi
 (econ.lua) until the finders know a resource.
 
 Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
-ai.find_site's `margin` and `far` options, ai.class's `tech` and military data (ai_kind, counters, roles,
+ai.find_site's `margin` and `far` options, ai.water_sites (the dock sites), ai.class's `tech` and military data (ai_kind, counters, roles,
 influence, epoch, pop, domain), the own units' `target` and `gathers`, the view's
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
 Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
-choke points and hills; the water site tiles; the epoch's
+choke points and hills; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.

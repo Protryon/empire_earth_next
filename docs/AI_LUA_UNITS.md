@@ -948,6 +948,10 @@ from data, so that a script can make its decisions with the same numbers:
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
+- `ai.water_sites(x, y, {max = 64})` -> `{{x, y}, ...}`: the dock sites, nearest (x, y) first, at most `max` (512):
+  the largest water body's shore tiles next to the land mass at (x, y) and the water tiles round them, explored ones
+  only (EECPBuildManager::CollectSiteTiles(2), which reads the whole map); empty when that water does not touch the
+  land. The classic's FindShoreSite tries them in turn.
 
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
