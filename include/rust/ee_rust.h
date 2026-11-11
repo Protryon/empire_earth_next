@@ -924,6 +924,9 @@ constexpr static const int64_t JOINER_PING_IDLE = 120;
 
 constexpr static const int64_t SUMMARY_REPEAT = 30;
 
+/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
+constexpr static const uint8_t SEP = 92;
+
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
   Hashed = 0,
@@ -9921,6 +9924,62 @@ int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
 int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
+
+/// `SetFilePath`'s separators.
+///
+/// # Safety
+/// `path` holds `length` bytes; `sink` receives the result during the call.
+void ee_won_path_given(const uint8_t *path, size_t length, EeWonByteSink sink, void *context);
+
+/// The last separator's index, or -1.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+ptrdiff_t ee_won_path_directory_split(const uint8_t *path, size_t length);
+
+/// The last dot's index, or -1.
+///
+/// # Safety
+/// `name` holds `length` bytes.
+ptrdiff_t ee_won_path_extension_split(const uint8_t *name, size_t length);
+
+/// `NormalizePath`: 0 for an empty path (nothing given), 1 with the path given, 2 where the original threw.
+///
+/// # Safety
+/// As `ee_won_path_given`.
+int32_t ee_won_path_normalize(const uint8_t *path,
+                              size_t length,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// Whether the absolute path needs the current directory.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+bool ee_won_path_needs_current(const uint8_t *path, size_t length);
+
+/// `CalcFullPath`'s join and normalisation; `current` NULL when none is needed. 1 with the path given, 2 where
+/// the original threw.
+///
+/// # Safety
+/// `path` holds `length` bytes, `current` (when not NULL) `current_length`; `sink` as `ee_won_path_given`.
+int32_t ee_won_path_absolute(const uint8_t *path,
+                             size_t length,
+                             const uint8_t *current,
+                             size_t current_length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `GetRelativePath`.
+///
+/// # Safety
+/// `directory` and `sub` hold their lengths' bytes; `sink` as `ee_won_path_given`.
+void ee_won_path_relative(const uint8_t *directory,
+                          size_t directory_length,
+                          const uint8_t *sub,
+                          size_t sub_length,
+                          EeWonByteSink sink,
+                          void *context);
 
 }  // extern "C"
 

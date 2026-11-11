@@ -405,6 +405,8 @@ WON_TESTS = {
     "won_dir_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
                      *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
+    "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
 }
 
 

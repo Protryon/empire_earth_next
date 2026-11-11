@@ -30,6 +30,7 @@ pub mod md5;
 pub mod netstats;
 pub mod ops;
 pub mod parser;
+pub mod path;
 pub mod plaintext;
 pub mod random;
 pub mod socket;
