@@ -19,6 +19,8 @@ public:
     virtual ~EECCTeleport();                // 0xb34d6
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb34fa
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb3592
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb35b8
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (ICF-folded 0xaee30: clears both bools)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xb3636

@@ -20,6 +20,8 @@ public:
     virtual ~EECCAreaEffect();              // 0xaf216
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xaf260
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xaf3a8
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual EEContagionFunctor* GetContagionFunctor();           // +0x0c (ICF-folded 0x12c734: mFunctor)
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xaf521
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)

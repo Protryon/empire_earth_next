@@ -76,29 +76,11 @@ EECCTimeWarp::~EECCTimeWarp()
 // a dead target marks the calamity finished
 bool EECCTimeWarp::Start(EECalamity* inCalamity)
 {
-    EEUnit* theTargetUnit = NULL;
-    bool theResult = false;
-    GE3DPoint theLocation;
-    EEEffectHandle theEffectHandle;
-
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
-        if (theUnit->mHitPoints > 0) {
-            theUnit->SetDisabled(1, 0xf);
-            theUnit->Halt();
-            if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
-                theUnit->GetPosition(theLocation);
-                theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
-                EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
-                gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, &theEffectHandle,
-                                             0);
-                inCalamity->mEffectHandle = theEffectHandle;
-            }
-            theResult = true;
-        } else
-            inCalamity->mIntPlaceHolder2 = -1;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::StartStep);
 }
 
 // FUNCTION: EXE 0x4b3c89
@@ -106,33 +88,11 @@ bool EECCTimeWarp::Start(EECalamity* inCalamity)
 // sounds; otherwise marks the calamity finished
 void EECCTimeWarp::Stop(EECalamity* inCalamity)
 {
-    EEUnit* theTargetUnit = NULL;
-    EEComplexUnit* theUnit;
-    if (inCalamity->GetTargetUnit(theTargetUnit) && (theUnit = theTargetUnit->mComplexUnit) != 0
-        && theUnit->mHitPoints > 0) {
-        theUnit->SetIsTinted(false);
-        theUnit->ClearBuildTargets();
-        for (unsigned long i = 0; i < theUnit->GetNumGoalQueues(); i++)
-            theUnit->ClearGoalQueue(i);
-        theUnit->ClearGoals(0);
-        theUnit->SetDisabled(0, 0);
-        long theCategory = theUnit->mUnitClass->mCategory;
-        if (theCategory == kUnitCategoryAirplane)
-            theUnit->StartAction(kActionCircle);
-        else if (theCategory == kUnitCategoryPlanetSpaceship)  // (two tests with one tail-merged body: the true body is laid out first)
-            theUnit->StartAction(kActionCircle);
-        else
-            theUnit->StartAction(kActionIdle);
-        theUnit->mUnitClass->ActionChanged(theUnit);
-        EEEffectHandle theHandle = inCalamity->mEffectHandle;
-        if (theHandle != kNoEffectHandle) {
-            gEffectManager->DestroyEffect(theHandle);
-            inCalamity->mEffectHandle = kNoEffectHandle;
-        }
-    } else
-        inCalamity->mIntPlaceHolder2 = -1;
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::StartStep);
 }
 
 // FUNCTION: EXE 0x4b3d7c
@@ -419,3 +379,60 @@ bool EECCTimeWarp::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 // SYNTHETIC: EXE 0x4b3b1c
 // SYNTHETIC: EXE 0x4b3b35
 // SYNTHETIC: EXE 0x4b3b41
+
+// New (port): EECCTimeWarp's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCTimeWarp::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCTimeWarp* theClass = static_cast<EECCTimeWarp*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        theTargetUnit->mComplexUnit->SetDisabled(1, 0xf);
+        theTargetUnit->mComplexUnit->Halt();
+        return true;
+    }
+    case 2: {
+        // the warp's effect above the unit
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        GE3DPoint theLocation;
+        EEEffectHandle theEffectHandle;
+        theUnit->GetPosition(theLocation);
+        theLocation.SetZ(theUnit->GetEffectHeight(true) + theLocation.GetZ() + 0.2f);
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
+        gEffectManager->CreateEffect(theCalamity->mCasterUnit, theLocation, theClass->mGraphicEffect1, &theEffectHandle, 0);
+        outReply.id = theEffectHandle.mValue;
+        return true;
+    }
+    case 3: {
+        // untinted, its orders cleared, enabled; its category
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        theUnit->SetIsTinted(false);
+        theUnit->ClearBuildTargets();
+        for (unsigned long i = 0; i < theUnit->GetNumGoalQueues(); i++)
+            theUnit->ClearGoalQueue(i);
+        theUnit->ClearGoals(0);
+        theUnit->SetDisabled(0, 0);
+        outReply.value = (int32_t)theUnit->mUnitClass->mCategory;
+        return true;
+    }
+    case 4: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
+        theUnit->StartAction(inCall.value);
+        theUnit->mUnitClass->ActionChanged(theUnit);
+        return true;
+    }
+    default:
+        return false;
+    }
+}

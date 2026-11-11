@@ -627,6 +627,15 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
+constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
+
+/// `kActionCircle`.
+constexpr static const int32_t ACTION_CIRCLE = 1008;
+
+/// `kActionIdle`.
+constexpr static const int32_t ACTION_IDLE = 5000;
+
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
 constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
 
@@ -1802,6 +1811,33 @@ enum class EeCalamityOp : int32_t {
   CasterIsRadioMan = 66,
   /// `EEIsTileFree(tile)`: ok.
   TileFree = 67,
+  /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
+  StopSound = 68,
+  /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
+  DestroyHelper = 69,
+  /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
+  StartHelper = 70,
+  /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
+  /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
+  StartSound = 71,
+  /// The calamity's height (`mHeight`) set to x.
+  SetHeight = 72,
+  /// The target unit killed, deselected and cleared.
+  KillTarget = 73,
+  /// The caster's `SightOffHere`.
+  CasterSightOff = 74,
+  /// The caster's sight: x.
+  CasterSight = 75,
+  /// The caster's sight set to x, then `SightOnHere`.
+  CasterSightOn = 76,
+  /// The target unit is protected (`IsProtected`): ok.
+  TargetProtected = 77,
+  /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
+  TileTerrain = 78,
+  /// The target unit exists, is complex and alive: ok.
+  TargetComplexAlive = 79,
+  /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
+  ClassStep = 80,
 };
 
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
@@ -4367,6 +4403,12 @@ struct EeCalamityParams {
   int32_t area_time2;
   /// The morale's effect duration.
   int32_t morale_delay;
+  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+  float start_size;
+  /// The line of sight's bonus.
+  float sight_bonus;
+  /// The earthquake's source effect speed.
+  float quake_source_speed;
 };
 
 /// The calamity's members an update reads and writes (`EECalamity`).
@@ -10432,6 +10474,22 @@ int32_t ee_calamity_update(const EeCalamityParams *params,
                            EeCalamityState *state,
                            float elapsed,
                            const EeCalamityHostFfi *host);
+
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+bool ee_calamity_start(const EeCalamityParams *params,
+                       EeCalamityState *state,
+                       const EeCalamityHostFfi *host);
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+void ee_calamity_stop(const EeCalamityParams *params,
+                      EeCalamityState *state,
+                      const EeCalamityHostFfi *host);
 
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
 ///

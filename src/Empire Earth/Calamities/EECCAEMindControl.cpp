@@ -57,46 +57,22 @@ EECCAEMindControl::~EECCAEMindControl()
 // and the calamity sound; returns false when no helper could be made
 bool EECCAEMindControl::Start(EECalamity* inCalamity)
 {
-    bool theResult = false;
-    GE3DPoint theLocation;
-    EEEffectHandle theEffectHandle;
-    float theVolume;
-    float thePan;
-    float thePitch;
-
-    long theCalamityHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(this->mFunctor, inCalamity, NULL);
-    if (::gWorld.GetContagionManager()->GetContagionHelper(theCalamityHelperID) != NULL) {
-        inCalamity->mIntPlaceHolder1 = theCalamityHelperID;
-        if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
-            theLocation = inCalamity->mTargetLocation;
-        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
-            gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1,
-                                         &theEffectHandle, 0);
-        }
-        EEComputeSoundParameters(this->mSound->GetVolume(), theLocation, theVolume, thePan, thePitch,
-                                 kCalamitySoundFalloff);
-        EECalamityCaptureStartEvent(kCalamityStartSound, 0, 0, theVolume, thePan);   // CALT (TEST ONLY)
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), theVolume, thePan,
-                                                                        thePitch, this->mSound->GetLooping(), NULL));
-        if (inCalamity->mSound != NULL)
-            inCalamity->mSound->Dereference();
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
 }
 
 // FUNCTION: EXE 0x4af0b1
 // Stops the calamity: destroys its placed effect, stops both sounds and removes its contagion helper
 void EECCAEMindControl::Stop(EECalamity* inCalamity)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    if (inCalamity->mEffectHandle != kNoEffectHandle) {
-        gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
-        inCalamity->mEffectHandle = kNoEffectHandle;
-    }
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID), 122);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
 }
 
 // FUNCTION: EXE 0x4af117

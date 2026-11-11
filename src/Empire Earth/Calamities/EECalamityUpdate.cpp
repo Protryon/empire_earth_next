@@ -230,6 +230,77 @@ bool CommonCall(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCa
         outReply.ok = theCalamity->GetTargetUnit(theTarget) && theTarget->mHitPoints > 0;
         return true;
     }
+    // the starts' and stops' (calamity_start.rs)
+    case EeCalamityOp::StopSound:
+        if (inCall.index == 0)
+            theCalamity->StopSound();
+        else
+            theCalamity->StopSecondarySound();
+        return true;
+    case EeCalamityOp::DestroyHelper:
+        ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(inCall.index), inCall.value);
+        return true;
+    case EeCalamityOp::StartHelper: {
+        long theHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(theClass->GetContagionFunctor(), theCalamity, NULL);
+        outReply.ok = ::gWorld.GetContagionManager()->GetContagionHelper(theHelperID) != NULL;
+        outReply.value = (int32_t)theHelperID;
+        return true;
+    }
+    case EeCalamityOp::StartSound: {
+        EESoundObject* theSound = ioHost.mSounds[0];
+        float theVolume = theSound->GetVolume();
+        float thePan = 0.0f;
+        float thePitch = 1.0f;
+        if (inCall.value != 0) {
+            GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+            EEComputeSoundParameters(theSound->GetVolume(), theLocation, theVolume, thePan, thePitch, kCalamitySoundFalloff);
+            EECalamityCaptureStartEvent(kCalamityStartSound, 0, 0, theVolume, thePan);   // CALT (TEST ONLY)
+        }
+        theCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), theVolume, thePan, thePitch,
+                                                                         theSound->GetLooping(), NULL));
+        if (theCalamity->mSound != NULL)
+            theCalamity->mSound->Dereference();
+        return true;
+    }
+    case EeCalamityOp::SetHeight:
+        theCalamity->mHeight = inCall.x;
+        return true;
+    case EeCalamityOp::KillTarget: {
+        EEUnit* theUnit = TargetUnit(theCalamity);
+        theUnit->Kill(0, 0, 0);
+        theUnit->mPlayer->DeselectUnit(theUnit);
+        theCalamity->SetTargetUnit(NULL);
+        return true;
+    }
+    case EeCalamityOp::CasterSightOff:
+        theCalamity->mCasterUnit->mComplexUnit->SightOffHere();
+        return true;
+    case EeCalamityOp::CasterSight:
+        outReply.x = theCalamity->mCasterUnit->mComplexUnit->GetSight();
+        return true;
+    case EeCalamityOp::CasterSightOn: {
+        EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
+        theUnit->SetSight(inCall.x);
+        theUnit->SightOnHere();
+        return true;
+    }
+    case EeCalamityOp::TargetProtected:
+        outReply.ok = TargetUnit(theCalamity)->mComplexUnit->IsProtected();
+        return true;
+    case EeCalamityOp::TileTerrain: {
+        EEMapTile* theTile = ::gWorld.mMap->GetTile(inCall.index, inCall.index2);
+        if (theTile != NULL) {
+            outReply.ok = true;
+            outReply.value = (int32_t)theTile->mTerrainType;
+        }
+        return true;
+    }
+    case EeCalamityOp::TargetComplexAlive: {
+        EEUnit* theTarget = NULL;
+        EEComplexUnit* theUnit;
+        outReply.ok = theCalamity->GetTargetUnit(theTarget) && (theUnit = theTarget->mComplexUnit) != 0 && theUnit->mHitPoints > 0;
+        return true;
+    }
     default:
         return false;
     }
@@ -260,6 +331,48 @@ EeCalamityParams EECalamityBaseParams(EECalamityClass* inClass, EESoundObject* i
     return theParams;
 }
 
+namespace {
+
+void RunHost(EECalamityUpdateHost& outHost, EeCalamityHostFfi& outFfi, EECalamityClass* inClass, EECalamity* inCalamity,
+             EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep)
+{
+    outHost.mClass = inClass;
+    outHost.mCalamity = inCalamity;
+    outHost.mSounds[0] = inSound;
+    outHost.mSounds[1] = inSecondarySound;
+    outHost.mStep = inStep;
+    outHost.mPending = NULL;
+    outFfi.ctx = &outHost;
+    outFfi.call = &HostCall;
+}
+
+}   // namespace
+
+bool EECalamityRunStart(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
+                        EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep)
+{
+    EECalamityUpdateHost theHost;
+    EeCalamityHostFfi theFfi;
+    RunHost(theHost, theFfi, inClass, inCalamity, inSound, inSecondarySound, inStep);
+    EeCalamityState theState;
+    StateFrom(inCalamity, theState);
+    bool theResult = ee_calamity_start(&inParams, &theState, &theFfi);
+    StateTo(theState, inCalamity);
+    return theResult;
+}
+
+void EECalamityRunStop(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
+                       EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep)
+{
+    EECalamityUpdateHost theHost;
+    EeCalamityHostFfi theFfi;
+    RunHost(theHost, theFfi, inClass, inCalamity, inSound, inSecondarySound, inStep);
+    EeCalamityState theState;
+    StateFrom(inCalamity, theState);
+    ee_calamity_stop(&inParams, &theState, &theFfi);
+    StateTo(theState, inCalamity);
+}
+
 long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
                          EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep)
 {
@@ -269,6 +382,7 @@ long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float
     theHost.mSounds[0] = inSound;
     theHost.mSounds[1] = inSecondarySound;
     theHost.mStep = inStep;
+    theHost.mPending = NULL;
     EeCalamityHostFfi theFfi;
     theFfi.ctx = &theHost;
     theFfi.call = &HostCall;

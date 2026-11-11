@@ -4,6 +4,7 @@
 
 use crate::calamity::{self, EeCalamityAge};
 use crate::calamity_cast::{self, EeCalamityCast};
+use crate::calamity_start;
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
 use crate::effects::{
     self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
@@ -435,6 +436,41 @@ pub unsafe extern "C" fn ee_calamity_update(
     // SAFETY: as above
     unsafe { *state = s };
     result
+}
+
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_start(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    host: *const EeCalamityHostFfi,
+) -> bool {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    let result = calamity_start::start(&mut FfiCalamityHost(host), &mut s, &params);
+    // SAFETY: as above
+    unsafe { *state = s };
+    result
+}
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_stop(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    host: *const EeCalamityHostFfi,
+) {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    calamity_start::stop(&mut FfiCalamityHost(host), &mut s, &params);
+    // SAFETY: as above
+    unsafe { *state = s };
 }
 
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
