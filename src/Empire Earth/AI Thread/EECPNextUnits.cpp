@@ -60,6 +60,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIContinent.h"
+#include "ee/EEAIForest.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUCBuilding.h"
@@ -2818,6 +2819,50 @@ static int LuaArea(lua_State* L)
     return 1;
 }
 
+// ai.forest_point(x, y, r, pick, seed) -> x, y, n: a random point of one of the forests of the continent manager
+// (EEAIForest, the classic's forests) on the land mass at (x, y) whose hull holds the tile or comes within r tiles of
+// it - the (pick mod n)-th of the n found, its point drawn from a stream seeded with the script's number
+// (EECPDefenseCommander::AssignSubGroupTask's forest); nil when none
+static int LuaForestPoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    for (int i = 1; i <= 5; i++)
+        if (!lua_isinteger(L, i))
+            return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2), r = (long)lua_tointeger(L, 3);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    if (x < 0 || y < 0 || x >= w || y >= h)
+        return 0;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theLand == NULL)
+        return 0;
+    U2DPoint<long> theFrom(x, y);
+    std::vector<EEAIForest*> theForests;
+    for (size_t i = 0; i < theLand->mForestIDs.size(); i++) {
+        unsigned short theID = theLand->mForestIDs[i];
+        EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
+        if (theForest != NULL && (theForest->mHull.BoundedContains(theFrom)
+                || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
+            theForests.push_back(theForest);
+    }
+    EECPUnitsCharge(L, (int64_t)theLand->mForestIDs.size() * kCostScan * 4);
+    if (theForests.empty())
+        return 0;
+    long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theForests.size());
+    if (thePick < 0)
+        thePick += (long)theForests.size();
+    URandom theRandom((unsigned long)lua_tointeger(L, 5));
+    EEAIForest* theForest = theForests[thePick];
+    if (!(theForest->mTiles.Size() > 0))
+        return 0;
+    U2DPoint<long> thePoint = theForest->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    lua_pushinteger(L, (lua_Integer)theForests.size());
+    return 3;
+}
+
 // ai.area_point(id, seed) -> x, y: a random tile of the area (EEAIArea::GetRandomPoint), drawn from a stream seeded
 // with the script's number (the game's random stream is left alone); nil for no such area or an empty one
 static int LuaAreaPoint(lua_State* L)
@@ -3868,7 +3913,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

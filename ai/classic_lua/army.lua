@@ -1239,13 +1239,24 @@ local function defence_task(view, memory, g)
         end
     end
     if infantry and T.random_k() < 800 then
-        local trees = ai.resources{kind = "wood", near = {x, y, FOREST_RANGE}, limit = 40}
-        if #trees > 0 then
-            local r = R.unit(trees[ai.random(1, #trees)])
-            if r ~= nil then
+        -- the forests (the continent manager's) whose hull comes within 35 tiles, one at random, a random point of it
+        -- (ai.forest_point); without the query a tree within 35 tiles
+        if ai.forest_point ~= nil then
+            local fx, fy = ai.forest_point(x, y, FOREST_RANGE, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+            if fx ~= nil then
                 g.mission = 1
-                set_place(g, "defend", r.x, r.y, GUARD_RADIUS, 0)
+                set_place(g, "defend", fx, fy, GUARD_RADIUS, 0)
                 return "forest"
+            end
+        else
+            local trees = ai.resources{kind = "wood", near = {x, y, FOREST_RANGE}, limit = 40}
+            if #trees > 0 then
+                local r = R.unit(trees[ai.random(1, #trees)])
+                if r ~= nil then
+                    g.mission = 1
+                    set_place(g, "defend", r.x, r.y, GUARD_RADIUS, 0)
+                    return "forest"
+                end
             end
         end
     end

@@ -183,7 +183,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 threatened town, else one of the 3 largest; else CreateDefendGroup), GetUnitAllowance
                 (defensive_unit_cap), ComputeTownThreat (the Hard 55-tile range; the armies inside the hull twice,
                 outside by distance; the own armies' cover; over the own land strength), GetWorstThreats,
-                FindThreatenedTown, AssignSubGroupTask (a forest within 35 tiles 80% for foot soldiers, a threatened
+                FindThreatenedTown, AssignSubGroupTask (a forest whose hull comes within 35 tiles 80% for foot soldiers (a random point of it:
+                ai.forest_point), a threatened
                 town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
@@ -224,6 +225,6 @@ influence, epoch, pop, domain), the own units' `target`, `gathers` and `waiting`
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).
 
-Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests,
+Interface gaps met (not added): the engine's combat state; the morale effect's fill; the continent manager's forests beyond ai.forest_point,
 choke points and hills; the epoch's
 SOL count (AddSOL); a resource's users at work (GetResourceUsers) as distinct from the gatherers sent.
