@@ -2728,6 +2728,31 @@ static int LuaEnemyNear(lua_State* L)
     return 1;
 }
 
+// ai.garrison_fill(id, n) -> ok: an own finished building's garrison count raised by n with no citizen going in, as the
+// classic's FillGarrison does when it has too few idle citizens (EEComplexUnit::AddGarrison(count + n, population):
+// the original's call, which takes only into an empty garrison). Only for an AI whose manifest entry declares
+// "fills_garrison" (the classic's garrison cheat); false for every other AI
+static int LuaGarrisonFill(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCommand);
+    if (!EECPEngineFillsGarrison(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    EEComplexUnit* c = EECPUnitsOwn(me, (long)lua_tointeger(L, 1));
+    long n = (long)lua_tointeger(L, 2);
+    bool theDone = false;
+    if (c != NULL && n > 0 && c->mIsBuilt && c->mHitPoints > 0 && c->mUnitClass->mGarrisonCapacity > 0)
+        theDone = c->AddGarrison(c->mGarrisonCount + n, c->mGarrisonPopulation);
+    if (gCPTraceOn) {
+        EECPTraceScope theScope("next");
+        EECPTraceOut(me, "next.garrison_fill", "id=%ld n=%ld done=%d", (long)lua_tointeger(L, 1), n, theDone ? 1 : 0);
+    }
+    lua_pushboolean(L, theDone ? 1 : 0);
+    return 1;
+}
+
 // ai.area(id) or ai.area(x, y) -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles = n}: an
 // area of the continent manager (a land mass, a water body: the classic's continents, as ai.tuning's largest_sea) by
 // its id or the one at a tile, its kind and size; nil for none
@@ -3379,6 +3404,7 @@ static int LuaTuning(lua_State* L)
     EECPUnitsSetInt(L, "land_tiles", gContinentManager.GetNumLandTiles());
     EECPUnitsSetInt(L, "space_tiles", gContinentManager.GetNumSpaceTiles());
     EECPUnitsSetInt(L, "largest_sea", gContinentManager.GetLargestContinent(kContinentCategoryWater));
+    EECPUnitsSetBool(L, "fills_garrison", EECPEngineFillsGarrison(me));   // the manifest's "fills_garrison" (ai.garrison_fill)
     EECPUnitsSetBool(L, "sees_all", EECPEngineSeesAll(me));   // the manifest's "sees_all" (ai.enemy_near reads through the fog)
     EECPUnitsSetInt(L, "population_limit", me->EEPlayer::GetPopulationLimit(0));   // the game's (the AI's cap: the view)
     // the cheats
@@ -3804,7 +3830,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

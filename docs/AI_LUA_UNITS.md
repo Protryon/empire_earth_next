@@ -967,6 +967,13 @@ from data, so that a script can make its decisions with the same numbers:
   the fog (the influence regions round the tile, one tile on small island maps; idle searchers left out). Without
   it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
   towers and armed buildings known. No other query reads through the fog.
+- **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
+  settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens
+  (EEComplexUnit::AddGarrison): a settlement becomes a town centre for a few citizens, and the classic trains its
+  citizens at two or three town centres from minute 5. A manifest entry may declare `"fills_garrison": true` (only
+  classic_lua does; the trace's start line ends in `fills_garrison=1`, `ai.tuning()` has `fills_garrison`).
+  `ai.garrison_fill(id, n)` -> ok: the own finished building's garrison count raised by n, the original's call
+  (`AddGarrison(count + n)`, which takes only into an empty garrison); false for every other AI.
 
 **The `type` filter as a list (2026-11-10, boom-econ):** `ai.units`, `ai.seen`, `ai.resources` and `ai.memory` take
 `type = {"b_town_center", "b_capitol", ...}` (class names or ids, at most 16) as §2.2 says: a unit of any of them
