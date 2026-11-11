@@ -34,6 +34,7 @@ local ECON = {
     places = false,         -- from the Copper Age the plan's `places` overrides: more mines, farms and metal gatherers
     paid_go = false,        -- from the Copper Age the next epoch is saved for (and its buildings built) once the stock
                             -- holds its cost, whatever the citizens or the minutes (§8.51)
+    useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
 }
 
 local PLAN = {
@@ -711,7 +712,9 @@ function M.step(view, memory)
     -- (§8.35, the owner: "if there is only 12 spots for a resource available, use only that 12"): in the Prehistoric no
     -- more citizens than the patches, the game near the town, the planned wood and the mines' places can take (from
     -- the Stone Age the claims grow with the town: a cap there kept iron at one site and the Copper Age 7 min later)
-    if age == 1 and memory.useful ~= nil and cap > memory.useful then
+    -- (ECON.useful_cap, §8.51: from the Copper Age the citizens past the places stood on wood, 26-35 on it against 3-20
+    -- wanted, in every matchup)
+    if (age == 1 or (ECON.useful_cap and age >= 3)) and memory.useful ~= nil and cap > memory.useful then
         cap = memory.useful
     end
     -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
