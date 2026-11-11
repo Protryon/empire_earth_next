@@ -36,6 +36,8 @@ M.opts = {
     home_r = 6,           -- units further than this from the post walk back while nothing is fought
     building_r = 10,      -- a raid this near an own building is in the zone
     focus_hits = 3,       -- a target takes units until their attack x this reaches its hit points
+    deny = true,          -- the enemy citizens in the zone are hunted while no raid is on ...
+    deny_n = 4,           -- ... at most this many at once
 }
 
 -- the roles' classes, the newest first (the first the player can train now is taken)
@@ -332,6 +334,83 @@ local function ships(view, g, recs)
     return left
 end
 
+-- the guard hunts the enemy citizens in its zone that no known enemy tower covers: 2 units a citizen, 4 citizens and
+-- half the guard at most, the nearest first -> whether it hunts
+local function deny(view, g, recs, zone)
+    local ids = ai.seen{enemy = true, category = "citizen", near = {view.town_x, view.town_y, zone}, limit = 12}
+    if #ids == 0 then
+        g.hunt = nil
+        return false
+    end
+    local c = ai.get(ids, {"x", "y"})
+    local prey = {}
+    for k = 1, #ids do
+        if c.x[k] ~= nil and #prey < M.opts.deny_n then
+            local safe = true
+            for _, m in ipairs(ai.memory{buildings = true, enemy = true, near = {c.x[k], c.y[k], 9}, limit = 6}) do
+                local cl = ai.class(m.type)
+                local r = (cl ~= nil and cl.range or 0) // 100 + 2
+                if cl ~= nil and (cl.attack or 0) > 0 and d2(m.x, m.y, c.x[k], c.y[k]) <= r * r then
+                    safe = false
+                end
+            end
+            if safe then
+                prey[#prey + 1] = {id = ids[k], x = c.x[k], y = c.y[k]}
+            end
+        end
+    end
+    if #prey == 0 then
+        g.hunt = nil
+        return false
+    end
+    local healthy = {}
+    for _, u in ipairs(recs) do
+        if not g.hurt[u.id] then
+            healthy[#healthy + 1] = u
+        end
+    end
+    local most = math.min(#healthy // 2, #prey * 2)
+    if most == 0 then
+        return false
+    end
+    local by, used = {}, {}
+    local n = 0
+    for _, p in ipairs(prey) do
+        for _ = 1, 2 do
+            if n < most then
+                local best, bd = nil, nil
+                for _, u in ipairs(healthy) do
+                    if not used[u.id] then
+                        local d = d2(u.x, u.y, p.x, p.y)
+                        if bd == nil or d < bd then
+                            best, bd = u, d
+                        end
+                    end
+                end
+                if best ~= nil then
+                    used[best.id] = true
+                    n = n + 1
+                    if g.aims[best.id] ~= p.id or (best.action ~= "attack" and best.action ~= "move") then
+                        by[p.id] = by[p.id] or {}
+                        local l = by[p.id]
+                        l[#l + 1] = best.id
+                    end
+                    g.aims[best.id] = p.id
+                end
+            end
+        end
+    end
+    for _, tid in ipairs(ai.keys(by)) do
+        ai.attack(by[tid], tid)
+    end
+    if g.hunt == nil then
+        print(string.format("guard deny prey=%d units=%d", #prey, n))
+    end
+    g.hunt = view.time
+    g.state = "hunting"
+    return true
+end
+
 function M.step(view, mem, opts)
     opts = opts or {}
     if view.town_x < 0 then
@@ -404,6 +483,14 @@ function M.step(view, mem, opts)
     end
     if #raids > 0 and (g.noted == nil or now - g.noted >= 20000) then
         g.noted = now
+    end
+    if #fight == 0 and #raids == 0 and M.opts.deny then
+        -- [research §4.3 step 4; boom's old defend group] no raid: the enemy citizens gathering or building in the
+        -- zone, out of their towers' reach, are hunted by part of the guard (the overlap of two claims on a Small
+        -- map: the old group's chase of them kept a neighbour's economy down)
+        if deny(view, g, recs, zone) then
+            return
+        end
     end
     if #fight == 0 then
         -- nothing to fight: everyone home, the hurt forgiven (they stand under the tower anyway)
