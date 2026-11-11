@@ -1559,6 +1559,18 @@ function M.step(view, memory)
             end
         end
     end
+    -- (the soldiers the militia sent to fight are left to it)
+    G.committed = {}
+    local mi = memory.militia
+    if mi ~= nil and mi.fight ~= nil then
+        for _, id in ipairs(ai.keys(mi.fight)) do
+            if view.time < mi.fight[id] then
+                G.committed[id] = true
+            else
+                mi.fight[id] = nil
+            end
+        end
+    end
     G.step(view, a)
     -- (a waiting group whose last units died in the step keeps its slots)
     for _, g in ipairs(waiting) do
