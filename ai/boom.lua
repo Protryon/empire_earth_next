@@ -20,15 +20,15 @@ local DM = require("lib.demand")       -- the split's stock correction and the s
 -- the economy rules (docs/AI_RESEARCH.md §8.43): each one switchable for the bench
 local ECON = {
     demand = false,         -- the stock correction of the gatherer split (lib.demand.correct)
-    unreachable = true,     -- no reserve for an advance with a short resource nobody can gather
+    unreachable = false,    -- no reserve for an advance with a short resource nobody can gather
     ramp = false,           -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
     tc = true,              -- a second town centre (the plan's town_centers, tc_at; lib.econ_units)
     army_slack = false,     -- past the soldiers-first window the reserve waits for 3/4 of the light army only
-    ratchet = true,         -- the epoch reserve never shrinks while kept (the army's margin cannot eat it)
+    ratchet = false,        -- the epoch reserve never shrinks while kept (the army's margin cannot eat it)
     parallel = false,       -- the Stone Age's citizens and soldiers in parallel (the owner: no citizen stop for the army)
-    full_target = true,     -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
-    food_dry = true,        -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
-    wood_floor = true,      -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
+    full_target = false,    -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
+    food_dry = false,       -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
+    wood_floor = false,     -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
     account = false,        -- from the Copper Age the reserve is an epoch account of a share of the income (Age of AI)
 }
 
