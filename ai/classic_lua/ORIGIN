@@ -102,8 +102,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
-                other players' area hull test; HasEnemyNear counts the armed enemies seen or remembered (ai.memory) in the
-                influence regions round the tile (up to 27 tiles), not every player's influence. BuildSettlementFor (the gather goal's
+                other players' area hull test; HasEnemyNear is ai.enemy_near: the C++'s own test (every player's units, seen
+                or not) through the manifest's "sees_all" - the classic's information cheat, declared for classic_lua
+                only and shown in the trace's start line; without it the armed enemies seen or remembered (ai.memory) in
+                the influence regions round the tile. BuildSettlementFor (the gather goal's
                 storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
                 seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
                 gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
@@ -212,7 +214,8 @@ what is explored (a town centre's few tiles at the start), so an idle citizen wi
 
 Interface additions for this port (docs/AI_LUA_UNITS.md §11): ai.tuning(), ai.techs{epoch, id}, ai.epoch(n),
 ai.find_site's `margin` and `far` options, ai.water_sites (the dock sites), ai.area / ai.area_point (the
-continent manager's areas: AssignSeaTask), ai.tuning's map tiles (water, land, space, the largest sea: GetDomainShare), ai.class's `tech` and military data (ai_kind, counters, roles,
+continent manager's areas: AssignSeaTask), ai.tuning's map tiles (water, land, space, the largest sea: GetDomainShare),
+ai.enemy_near with the manifest's sees_all (HasEnemyNear), ai.class's `tech` and military data (ai_kind, counters, roles,
 influence, epoch, pop, domain), the own units' `target`, `gathers` and `waiting`, the view's
 `income_total`, ai.gatherers() (the own gatherers per resource: ai.resource's `workers` counts the classic runners'
 lists only, which never hold a script's units).

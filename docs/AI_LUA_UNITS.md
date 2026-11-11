@@ -960,6 +960,13 @@ from data, so that a script can make its decisions with the same numbers:
   3 cliff, 4 space, 5 map edge) and size. These ids are not `ai.tile`'s `continent` and `sea` (the path sectors'
   land masses and water bodies). `ai.area_point(id, seed)` -> x, y: a random tile of the area
   (EEAIArea::GetRandomPoint) from a stream seeded with the script's number (AssignSeaTask's random point).
+- **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
+  only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
+  `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.
+  With `sees_all` it is the C++ classic's EECPBuildManager::HasEnemyNear, which reads every player's units through
+  the fog (the influence regions round the tile, one tile on small island maps; idle searchers left out). Without
+  it (every other AI, the default) it is the fog-honest EECPNextSiteThreat: the enemy soldiers seen lately and the
+  towers and armed buildings known. No other query reads through the fog.
 
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);

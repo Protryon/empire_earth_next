@@ -277,6 +277,7 @@ function M.step(view, memory)
     R.begin_step(view)
     local cp = memory.cp
     local t = T.load(memory)
+    R.sees_all = t.sees_all == true and ai.enemy_near ~= nil
     if not cp.started then
         enable_managers(view, memory)
         set_next_attack(view, memory)

@@ -48,6 +48,8 @@
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/EEMapDimensions.h"
+#include "ee/RTSRegionTable.h"
+#include "ee/EEInfluenceTable.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
@@ -58,6 +60,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIContinent.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -2641,6 +2644,60 @@ static int LuaWaterSites(lua_State* L)
     return 1;
 }
 
+// ai.enemy_near(x, y) -> whether armed enemy units stand near the tile: the classic build manager's HasEnemyNear.
+// The fog-honest default (every AI): the enemies the seat sees or remembers (EECPNextSiteThreat: soldiers seen
+// lately within its range, an enemy tower or armed building in range). An AI whose manifest entry declares
+// "sees_all" (the classic's information cheat) gets the original: every armed unit not its own in the influence
+// regions round the tile (one tile on small island and planet maps), seen or not, idle searchers (target search
+// timer above 60 s) left out
+static int LuaEnemyNear(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall + 20 * kCostScan);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    long inX = (long)lua_tointeger(L, 1), inY = (long)lua_tointeger(L, 2);
+    if (!EECPEngineSeesAll(me)) {
+        lua_pushboolean(L, EECPNextSiteThreat(me, inX, inY, false, NULL) != 0 ? 1 : 0);
+        return 1;
+    }
+    std::vector<EEComplexUnit*> theUnits;
+    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
+    EEMap* theMap = gWorld.mMap;
+    U2DRectangle<long> theRect;
+    long theCount = 0;
+    if (theTable != NULL) {
+        if (((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap
+                || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)
+            && theMap->mL195610 <= 0x2a) {
+            theRect.mLeft = inX - 1;
+            theRect.mRight = inX + 1;
+            theRect.mTop = inY - 1;
+            theRect.mBottom = inY + 1;
+        } else {
+            long theSize = theTable->mRegionSize;
+            theRect.mLeft = inX - theSize;
+            theRect.mRight = inX + theSize;
+            theRect.mTop = inY - theSize;
+            theRect.mBottom = theSize + inY;
+        }
+        theCount = theTable->SumEnemyValue(me->mPlayerID, theTable->GetRegions(theRect), true);
+        if (theCount > 0) {
+            theMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+            theCount = 0;
+            for (size_t i = 0; i < theUnits.size(); i++) {
+                EEComplexUnit* u = theUnits[i];
+                if (u->mPlayer != me && u->mStats->mAttack != 0.0f && !(u->mTargetSearchTimer > 60000))
+                    theCount++;
+            }
+        }
+    }
+    lua_pushboolean(L, theCount > 0 ? 1 : 0);
+    return 1;
+}
+
 // ai.area(id) or ai.area(x, y) -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles = n}: an
 // area of the continent manager (a land mass, a water body: the classic's continents, as ai.tuning's largest_sea) by
 // its id or the one at a tile, its kind and size; nil for none
@@ -3292,6 +3349,7 @@ static int LuaTuning(lua_State* L)
     EECPUnitsSetInt(L, "land_tiles", gContinentManager.GetNumLandTiles());
     EECPUnitsSetInt(L, "space_tiles", gContinentManager.GetNumSpaceTiles());
     EECPUnitsSetInt(L, "largest_sea", gContinentManager.GetLargestContinent(kContinentCategoryWater));
+    EECPUnitsSetBool(L, "sees_all", EECPEngineSeesAll(me));   // the manifest's "sees_all" (ai.enemy_near reads through the fog)
     EECPUnitsSetInt(L, "population_limit", me->EEPlayer::GetPopulationLimit(0));   // the game's (the AI's cap: the view)
     // the cheats
     lua_createtable(L, 0, 7);
@@ -3716,7 +3774,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"area_point", LuaAreaPoint}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"area_point", LuaAreaPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
