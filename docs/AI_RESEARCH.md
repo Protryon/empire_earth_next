@@ -2952,8 +2952,35 @@ dropped 1-2 games a row):
   citizens lost 127 -> 133, end citizens 57 -> 61. Its play changes (diplo lines 396 -> 362 in 16 games). The traces
   first differ at the losses trace line, which the braces fix corrected.
 
+**The waves (round three and four, 32 seeds each).**
+- **What killed the towns.** The defeats where a5e2bea died and the baseline lived were mostly Prehistoric
+  harassment. 1-3 rock throwers camped by a food patch for 10-20 minutes. The no-militia-against-ranged rule left them
+  there, the citizens kept fleeing, and the food income fell to 0. The same pattern explains seeds 18 and 25, which
+  never reached the Stone Age against the improved classic. The baseline's militia had cleared such camps, at the cost
+  of a few citizens. One defeat (seed 30) was a 23-unit Prehistoric wave, which no Prehistoric defence survives.
+- **The fix:** the militia also fights a ranged raid that has camped 40 s within 10 tiles of one spot.
+- **The guard's size:** a quarter of the citizens with the owner's 20 as the floor (v2) against a floor of 10 (v1).
+- **No garrison:** a town centre's or settlement's garrison is a counter (`EEComplexUnit::AddGarrison`). Its citizens
+  are absorbed and never come out, so "the citizens garrison" is not available before the fortress.
+
+| Variant | Improved classic: defeats, Stone reached | Cheating classic: defeats, Stone reached | Mirror: defeats, lost | Rush: W/L/C, defeats, lost | Age of AI: W/L/C, defeats, lost |
+|---|---|---|---|---|---|
+| baseline | 16/32, 32/32 | 14/31, 21/31 | 0/32, 39.4 | 20/2/8, 1/30, 7.4 | 7/11/14, 0/32, 18.3 |
+| a5e2bea | 11/30, 28/30 | 20/31, 21/31 | | | |
+| v1 (camp militia, floor 10) | 13/31, 30/31 | 14/32, 22/32 | | | |
+| v2 (camp militia, floor 20) = b1b1312 | 6/32, 31/32 | 13/32, 22/32 | 0/32, 15.9 | 23/1/8, 0/32, 4.4 | 0/11/20, 0/31, 17.3 |
+| v2 + the guard's fallback to the town centre | | 16/32, 22/32 | | | |
+| v2 + the counter-attack after a failed wave (from the Stone Age) | | 15/31, 22/31 | | | |
+
+- The one game of b1b1312 without the Stone Age (seed 7, against the improved classic) is a forage stall: 24-29
+  citizens for 25 minutes on 5-55 food a minute, the reserve stuck at 1,020 of 1,122. It is boom-econ's.
+- Every game reaches the Stone Age in the mirror, against rush and against Age of AI.
+- The fallback and the counter-attack lose more games against the cheating classic. Both stay off (plan.attack,
+  guard.opts.fallback). The counter-attack also wavers: 17 attacks, 150 retreat lines, 108 windows in 31 games.
+- `--repeat 2` on b1b1312 (seeds 4 and 9, against the improved classic and rush, 90 minutes): all four pairs
+  identical.
+
 **Open.**
-- The cheating classic's later waves: the regression above.
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
 - Raids routed around towers.
