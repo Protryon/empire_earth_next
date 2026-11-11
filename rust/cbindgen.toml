@@ -125,6 +125,8 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 # ee_ui
 "UiRect" = "EeUiRect"
 "UiPoint" = "EeUiPoint"
+"BorderLine" = "EeUiBorderLine"
+"LineRange" = "EeUiLineRange"
 "Layout" = "EeUiLayout"
 "Edge" = "EeUiEdge"
 "SliderFields" = "EeUiSliderFields"

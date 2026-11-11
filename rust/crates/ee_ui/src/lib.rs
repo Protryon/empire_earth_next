@@ -10,6 +10,7 @@ pub mod button;
 pub mod button_variants;
 pub mod combo;
 pub mod controls_table;
+pub mod draw;
 pub mod edit;
 pub mod font;
 pub mod form;
@@ -55,6 +56,8 @@ mod font_ffi;
 // imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod hotkey_ffi;
+// imports nothing: the clipped text draw takes the C++'s draw as a function
+mod draw_ffi;
 mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]

@@ -7,6 +7,8 @@
 #include <windows.h>
 #include <mbstring.h>
 
+#include "rust/ee_rust.h"
+
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -42,11 +44,12 @@ long UILBString::DrawTextA()
     unsigned long i = 0;
     this->DrawScrollBarText();
     this->mDrawCount--;
-    theRectangle = this->mCopyTextRectangle;
-    theRectangle.mRight += 1.0f;
+    EeUiRect theCopy = {this->mCopyTextRectangle.mBottom, this->mCopyTextRectangle.mLeft, this->mCopyTextRectangle.mRight,
+                        this->mCopyTextRectangle.mTop};
     for (; i < this->mDrawLineCount; i++) {
-        theRectangle.mTop = (float)(i * theLineHeight) + this->mCopyTextRectangle.GetTop();
-        theRectangle.mBottom = theLineHeight + theRectangle.mTop;
+        // the row, one pixel wider than the text rectangle (ee_ui draw.rs)
+        EeUiRect theRow = ee_ui_string_list_row(theCopy, i, theLineHeight);
+        theRectangle = GERectangle(theRow.left, theRow.top, theRow.right, theRow.bottom);
         this->mCopiedText->SetLocation(GE2DPoint(theRectangle.mLeft, theRectangle.mTop));
         this->mCopiedText->SetText(this->mCopyLineArray[i]);
         theResult = this->mForm->DrawClippedText(theRectangle, this->mCopiedText, this);

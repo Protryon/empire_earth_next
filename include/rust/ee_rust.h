@@ -621,6 +621,9 @@ constexpr static const unsigned long CHECK_ON = 1;
 
 constexpr static const unsigned long CHECK_NOT = 2;
 
+/// `UITextLabel`'s margin (`kTextLabelMargin`), half of it kept from an edge of a label fitted to its text.
+constexpr static const float TEXT_LABEL_MARGIN = 6.0;
+
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
 
@@ -3913,6 +3916,51 @@ struct EeUiDbFont {
   uint8_t style10;
   uint8_t style08;
   char pad[3];
+};
+
+/// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
+/// dark one (`sDarkBorder`).
+struct EeUiBorderLine {
+  EeUiPoint start;
+  EeUiPoint end;
+  bool light;
+};
+
+/// What `UIForm::DrawClippedText` clips against (`clips`: the form's `mClipRectangles`, `clip_count` of them, read
+/// before the first draw).
+struct EeUiClipInfo {
+  const EeUiRect *clips;
+  size_t clip_count;
+  bool has_popup;
+  bool popup_is_control;
+  EeUiRect popup_rect;
+  EeUiRect popup_draw_rect;
+  bool has_candidate;
+  EeUiRect candidate_rect;
+};
+
+/// The C++'s text draw: `Draw(text, *r, drawing surface)` -> its result.
+using EeUiTextDrawFn = long(*)(void *ctx, const EeUiRect *r);
+
+/// `UITextLabel::CopyData`, a multi-line label: the lines copied for drawing, `first .. end`, and the last line
+/// `DrawTextA` draws (`mLastDisplayLine`): the scroll bar's window of `shown` lines from its value, or every line.
+struct EeUiLineRange {
+  unsigned long first;
+  unsigned long end;
+  long last;
+};
+
+/// A line of `UITextLabel::DrawTextA`: the text's location and clip rectangle.
+struct EeUiLabelLine {
+  EeUiPoint at;
+  EeUiRect rect;
+};
+
+/// `UIListBox::CopyData`'s copied lines `first .. end` and the count drawn.
+struct EeUiListRange {
+  unsigned long first;
+  unsigned long end;
+  unsigned long count;
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -9345,6 +9393,71 @@ bool ee_ui_hotkey_fire_events(void *key);
 
 /// `UIForm::UpdateKeyboard` -> its result.
 long ee_ui_form_update_keyboard(void *form);
+
+/// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
+EeUiBorderLine ee_ui_border_line(EeUiRect r,
+                                 uint32_t side,
+                                 unsigned long i,
+                                 unsigned long border_type);
+
+/// `UIForm::DrawClippedText(r, text, control)` -> the last draw's result.
+long ee_ui_form_draw_clipped_text(const EeUiClipInfo *info,
+                                  EeUiRect r,
+                                  EeUiTextDrawFn draw_text,
+                                  void *ctx);
+
+/// `UITextLabel::CopyData`'s one-line text location.
+EeUiPoint ee_ui_label_one_line_location(unsigned long alignment,
+                                        bool fit,
+                                        EeUiRect tr,
+                                        float w,
+                                        float h);
+
+/// `UITextLabel::CopyData`'s copied lines of a multi-line label (`has_scroll`: it has a scroll bar at `value`).
+EeUiLineRange ee_ui_label_line_range(bool has_scroll,
+                                     long value,
+                                     unsigned long shown,
+                                     unsigned long lines);
+
+EeUiLabelLine ee_ui_label_line(unsigned long alignment,
+                               bool fit,
+                               EeUiRect rect,
+                               EeUiRect ctr,
+                               float w,
+                               bool has_scroll,
+                               float scroll_width,
+                               unsigned long offset,
+                               unsigned long line_height);
+
+EeUiListRange ee_ui_list_line_range(bool has_scroll,
+                                    long value,
+                                    unsigned long shown,
+                                    unsigned long lines);
+
+/// `UIListBox::CopyData`'s selection rectangle -> whether the selection is drawn (`out` set then).
+bool ee_ui_list_selection(unsigned long lines,
+                          bool has_selection,
+                          unsigned long selection,
+                          unsigned long first,
+                          unsigned long end,
+                          EeUiRect tr,
+                          unsigned long line_height,
+                          EeUiRect *out);
+
+/// `UIListBox::DrawPolygons`'s focus rectangle: `out[2k]` and `out[2k + 1]` are line k's start and end.
+void ee_ui_list_focus_lines(EeUiRect r,
+                            EeUiPoint *out);
+
+/// `UILBString::DrawTextA`'s row `i`.
+EeUiRect ee_ui_string_list_row(EeUiRect ctr, unsigned long i, unsigned long line_height);
+
+/// The check box's (`has_border`) and radio button's (not) scaled bitmap: `out[0]`, `out[1]` the x and y scale.
+void ee_ui_box_bitmap_scale(float x_scale,
+                            float y_scale,
+                            float height,
+                            bool has_border,
+                            unsigned long border,
+                            float *out);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);
