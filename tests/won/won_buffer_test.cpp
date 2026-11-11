@@ -927,7 +927,7 @@ static std::string Step(const std::string& inOp, const std::string& inArg, const
         else if (inOp == "w.setbyte") sWriter->SetByte((unsigned long)Number(inArg), (unsigned char)Number(inArg2));
         else if (inOp == "w.setshort") sWriter->SetShort((unsigned long)Number(inArg), (short)Number(inArg2));
         else if (inOp == "w.setbytes") {
-            std::string aBytes = Bytes(inArg);
+            std::string aBytes = Bytes(inArg2);
             sWriter->SetBytes((unsigned long)Number(inArg), aBytes.data(), (unsigned long)aBytes.size());
         }
         else if (inOp == "w.reset") sWriter->Reset();
