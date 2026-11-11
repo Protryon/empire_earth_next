@@ -9855,6 +9855,23 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
 
+/// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
+long ee_ui_status_fill(long value,
+                       long min,
+                       long max,
+                       unsigned long width,
+                       EeUiRect fill,
+                       EeUiRect *out);
+
+/// `SetLocation`'s fill and text rectangles from the moved control rectangle.
+void ee_ui_status_location(EeUiRect rect, unsigned long border, EeUiRect *fill, EeUiRect *text);
+
+/// `CopyData`'s fill: whether the border insets it (`out` then the inset rectangle).
+bool ee_ui_status_copy_fill(EeUiRect fill, unsigned long border, EeUiRect *out);
+
+/// `CopyData`'s text rectangle for a text of `width` x `height`.
+EeUiRect ee_ui_status_copy_text(EeUiRect text, float width, float height);
+
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
                                        unsigned long index,
