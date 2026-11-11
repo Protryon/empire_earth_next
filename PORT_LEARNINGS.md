@@ -6195,3 +6195,48 @@ Only a played game with sound exercises these (EE-SIM has no conductor; the gold
 the music's start at the first game frame (`EEWorld.cpp` 1053), every song change (5 to 7 minutes) and its fades,
 the battle intensity's transitions, pause and resume (the scenario editor's pause), the settings' music on/off and
 volume, loading a save (the music muted and restored), the start's choice of the mixer plug-in and the shutdown.
+
+## R5b.2, second round: the conversion and heal tests, the drop point, the line of fire, splash victims and the new target search in Rust (ee_combat decide.rs, walks.rs; branch rust-combat2, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| can a priest convert a target | `EECanConvert` (`EEUCBasicPriest.cpp`) | `decide::can_convert` | CBCN |
+| can a unit heal a target | `EECanHeal` | `decide::can_heal` | CBCH |
+| the drop point on a target (model point, tile) | `EEFindDropLocation` | `decide::drop_point` | CBDP |
+| the line of fire | `EEIsLineToUnitBlocked` | `walks::line_blocked` over `EeCombatLineHost` | CBLB |
+| splash damage's victims | `EEUnitClass::ApplyAreaDamage` | `walks::area_victims` over `EeCombatAreaHost` | CBAD |
+| the new target search | `EEFindNewTarget` (+ the deleted `EEUUGetUnitsInArea`) | `walks::units_in_area`, `walks::choose_target` over `EeCombatTargetHost` | CBFT |
+
+- **Golden first, then the move.** Commit b96a53c2 wrapped the unmodified C++ (renamed `...Original`) with capture
+  probes: the decisions' inputs gathered exactly as the Rust records later take them, the walks' observable results
+  (units by `mUnitID`: the victims in hit order, the candidates in order and the chosen one, the line's result, last
+  tile and blocker). Its digests are the new lines of the four golden files; the moved build gives the same records.
+  The walks' records are not replayable without a world: `check` gates them, the unit tests pin the order.
+- **Out flags that are not always written.** `EECanConvert` writes `outFlag` only on its last branch, and several
+  callers declare `bool theFlag;` uninitialized and read it after a true result (a cyber priest's): the Rust result
+  says `flag_written`, and the C++ writes the flag only then. Likewise `EEIsTileTopAbove` writes the blocker on every
+  call but `EEIsLineToUnitBlocked` may make none: the golden wrapper detected that with a sentinel pointer, the host
+  writes the caller's pointer directly.
+- **Eager reads where the original was lazy**, all pure: the adaptation power, the shield, the damage table cell, a
+  building priest's distance, the unit set. Two guards: the damage table is read only for an ammo column >= 0, the unit
+  set only for a set below the manager's size (`EEUnitSetManager::Contains` indexes `mSets` unchecked; the original
+  only reached it after every other test passed).
+- **Walks with C++ mutations inside.** `ApplyAreaDamage` hits each victim (TakeHit, kills, food) before reading the
+  tile node's `mNext`, as the original did: the host's `hit` runs inside the walk and `node_next` is asked after it.
+  `IsTargetIgnored` erases expired entries, so `choose_target` asks each test lazily, in the original's order
+  (`TARGET_TEST_*`); the technology kind keeps its last answer across candidates (asked only without `inArg6`).
+- **Handles, not references.** Units and tile nodes cross as `uint64_t` (the pointers); Rust compares them (the
+  victims' "hit once" list) and hands them back. The sort of `EESortUnique` is by `mUnitID` through `unit_id`;
+  equal ids are one unit, so the stable Rust sort gives the C++'s order. The tile line crosses as a C++-owned pair
+  array copied before the next host call.
+- **Coverage.** The AI games never heal: EE-SIM's capture sweep (`EECombatCaptureSweep`) calls `EECanHeal` over its
+  pairs both ways, a unit and itself, and the previous player's newest unit; CBCH's golden came from that sweep over
+  the C++ test (oracle profile). CBCN comes from priests in the oracle's seed 6 and the late and space games, CBFT
+  from a few dozen calls a game.
+- **A generic type name in a crate breaks another crate's header type.** `rust/cbindgen.toml` renames `Handle` to
+  `EeDx7Handle` (ee_dx7's `*mut c_void`); a `pub type Handle = u64` in ee_combat was renamed to the same C name and
+  replaced it (`using EeDx7Handle = uint64_t`), and only the DX7 rasterizer units failed to compile. The Rust gate's
+  header check passed (the header was current). Name exported aliases uniquely (`EeCombatHandle`).
+- **What stays C++:** the weapon tag point and the target model's top (model data), `EEGetTileLine`, the walls'
+  `EEIsTileTopAbove`, the region table, the screens' `Virtual08`, every target test, `EERetargetAttack`, the goal's
+  location in `EEFindDropLocation`, the hits themselves.
