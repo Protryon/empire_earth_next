@@ -235,12 +235,12 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None):
+def run_program(target, exe, args=(), env=None, cwd=None):
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env)
+    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -561,7 +561,12 @@ def cmd_wontest(a):
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:
-            result |= run_program(t, exe)
+            # each program in its own directory: their scratch files (won_regkey.yaml as $EE_CONFIG, the config,
+            # file and persist tests' files) are relative to the current directory, and two runs, or two programs,
+            # sharing one would see each other's
+            scratch = exe.parent / "run"
+            scratch.mkdir(exist_ok=True)
+            result |= run_program(t, exe, cwd=scratch)
     return result
 
 
