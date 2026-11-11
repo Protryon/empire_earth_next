@@ -1237,6 +1237,23 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
+enum class EeWonLanRoute {
+  Drop = 0,
+  Local = 1,
+  Socket = 2,
+};
+
+/// What `JoinGame`'s loop does with a join reply's status: joined; give up; tell the wrong password and ask again;
+/// tell the other subnet and give up; send the request again as it was (any other status).
+enum class EeWonLanJoinStep {
+  Joined = 0,
+  Fail = 1,
+  WrongPassword = 2,
+  OtherSubnet = 3,
+  Again = 4,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -4169,6 +4186,39 @@ struct EeWonQueueDecision {
 /// `FileWriter`'s state.
 struct EeWonFileWriter {
   void *file;
+};
+
+/// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
+/// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
+struct EeWonLanRecv {
+  bool handle;
+  bool stamp;
+  bool new_socket;
+};
+
+/// `HandleSocketClosed`: the host announces a player's departure (and unlinks it) and forgets the socket; a joiner
+/// whose host socket closed kills it and reports the lost game.
+struct EeWonLanClosed {
+  bool announce_left;
+  bool forget_socket;
+  bool lost_host;
+};
+
+/// `HandleGameSummary`: a summary read keeps the game (stamped) and reports it added (0) or changed (2); an
+/// unreadable one drops the game and reports a known game as changed (2: the original's `aFlag ? 2 : 1` under
+/// `if (aFlag)`), a new one not at all (-1).
+struct EeWonLanSummary {
+  bool keep;
+  int32_t event;
+};
+
+/// `HandleChatCommand`: what a typed command does in the LAN room.
+struct EeWonLanChatCommand {
+  /// 0 nothing, 1 send a chat line (`flags`, to the target when `whisper`), 2 toggle the target's ignore,
+  /// 3 the invalid command error.
+  int32_t action;
+  uint16_t flags;
+  bool whisper;
 };
 
 /// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
@@ -10835,6 +10885,75 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
+
+size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
+
+EeWonLanRoute ee_won_lanlogic_send_to_client(bool is_captain,
+                                             bool connected,
+                                             bool to_me,
+                                             bool has_socket);
+
+EeWonLanRoute ee_won_lanlogic_send_to_captain(bool connected,
+                                              bool is_captain,
+                                              bool has_server_socket);
+
+/// `broadcast` over `count` sockets: `send[i]` set for each socket sent to; returns whether it is handled locally.
+///
+/// # Safety
+/// Both arrays hold `count` entries (or are NULL with 0).
+bool ee_won_lanlogic_broadcast(bool is_captain,
+                               bool deliver_local,
+                               const bool *socket_has_client,
+                               bool *send,
+                               size_t count);
+
+EeWonLanClosed ee_won_lanlogic_socket_closed(bool have_socket,
+                                             bool is_captain,
+                                             bool has_client,
+                                             bool is_server_socket);
+
+EeWonLanSummary ee_won_lanlogic_summary(bool read_ok, bool existed);
+
+bool ee_won_lanlogic_can_broadcast(bool is_captain,
+                                   bool discovery,
+                                   bool have_game,
+                                   int32_t game_type);
+
+bool ee_won_lanlogic_advertises(int32_t game_type);
+
+bool ee_won_lanlogic_needs_peer_auth(int32_t game_type, bool cd_key_check);
+
+EeWonLanJoinStep ee_won_lanlogic_join_step(int32_t status);
+
+int32_t ee_won_lanlogic_reply_role(uint16_t id, uint16_t my_id, uint16_t captain_id);
+
+int32_t ee_won_lanlogic_client_action(bool connected,
+                                      int32_t room_spec,
+                                      bool has_client,
+                                      int32_t action);
+
+EeWonLanChatCommand ee_won_lanlogic_chat_command(bool connected,
+                                                 int32_t room_flags,
+                                                 int32_t command,
+                                                 bool has_target);
+
+bool ee_won_lanlogic_whisper_received(bool whisper, bool from_me);
+
+int32_t ee_won_lanlogic_refresh(int32_t screen);
+
+bool ee_won_lanlogic_name_accepted(int32_t result, size_t name_length);
+
+bool ee_won_lanlogic_port_accepted(int32_t result, int32_t old_port, int32_t new_port);
+
+int32_t ee_won_lanlogic_direct_default_port(bool have_config,
+                                            int32_t config_port,
+                                            int32_t lobby_port);
+
+bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
+
+int32_t ee_won_lanlogic_direct_event(bool existed);
 
 /// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
 ///

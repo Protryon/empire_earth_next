@@ -400,6 +400,9 @@ WON_TESTS = {
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
+    # LanLogic's flow (what a message, a closed socket, a summary, a join status or a command does), the original's
+    # statements against ee_won's lanlogic module
+    "won_lanlogic_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                           "StringParserLists.cpp", "StringUtil.cpp")],
