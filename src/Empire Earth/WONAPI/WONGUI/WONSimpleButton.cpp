@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinFrame.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x00717A90
@@ -35,20 +36,27 @@ void WONSimpleButton::GetDesiredSize(int &width, int &height)
 void WONSimpleButton::Paint(Graphics &g)
 {
 	Button::Paint(g);
-	Image *anImage = NULL;
-	if(this->IsDisabled())
-		anImage = this->mImages[2].get();
-	else if((this->mCheckMouseButtonDown && (this->mMouseDownState!=0)) || (!this->mCheckMouseButtonDown && this->IsPressed()))
-		anImage = this->mImages[1].get();
-	else if(this->IsMouseOver())
-		anImage = this->mImages[3].get();
-	
-	if(anImage==NULL)
-		anImage = this->mImages[0].get();
-
-	if(this->mScaleImage && (anImage->mWidth!=this->Width() || anImage->mHeight!=this->Height()))
-		anImage->SetSize(this->Width(),this->Height());
-
-	g.DrawImage(anImage,0,0);
+	// the state's image (disabled, pressed, mouse-over, else the normal one), scaled when set (guidraw.rs
+	// simple_button)
+	EeWonSimpleButtonPaint p;
+	p.disabled = this->IsDisabled();
+	p.check_mouse_down = this->mCheckMouseButtonDown;
+	p.pressed = this->IsPressed();
+	p.mouse_over = this->IsMouseOver();
+	p.scale_image = this->mScaleImage;
+	p.mouse_down_state = this->mMouseDownState;
+	p.width = this->Width();
+	p.height = this->Height();
+	WONDrawSlots aSlots;
+	for(int i=0; i<4; i++)
+	{
+		Image* anImage = this->mImages[i].get();
+		aSlots.mImages[i] = anImage;
+		p.has_image[i] = anImage!=NULL;
+		p.image_width[i] = anImage ? anImage->mWidth : 0;
+		p.image_height[i] = anImage ? anImage->mHeight : 0;
+	}
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_simple_button(&p,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 }

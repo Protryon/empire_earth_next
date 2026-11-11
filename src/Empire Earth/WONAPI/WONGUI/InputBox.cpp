@@ -12,6 +12,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006f7f70
 // The selection model, the cursor moves, the deletes' parts, the paste's cut and limit, the blink, the character
@@ -571,74 +572,40 @@ void InputBox::Paint(Graphics &g)
 {
 	Component::Paint(g);
 
-	int aTextColor;
-	if(this->IsDisabled() && this->mUseDisabledColors)
-	{
-		this->mDisabledBackground.Paint(g,0,0,this->Width(),this->Height(),this->mHorzOffset,0);
-		aTextColor = this->mDisabledTextColor;
-	}
-	else
-	{
-		this->mBackground.Paint(g,0,0,this->Width(),this->Height(),this->mHorzOffset,0);
-		aTextColor = this->mTextColor;
-	}
-
-	if(this->mIcon.get()!=NULL)
-		g.DrawImage(this->mIcon.get(),4,(this->Height()-this->mIcon->mHeight)/2);
-
-	g.Translate(this->mTextRect.x , this->mTextRect.y);
-	g.PushClipRect(0,0,this->mTextRect.width, this->mTextRect.height);
-	g.Translate(-this->mHorzOffset,0);
-	
-	g.SetFont(this->mFont.get());
-	g.SetColor(aTextColor);
-	g.DrawString(this->mText, 0, 0);
-	int aCursorHeight = this->mFont->GetHeight();//mTextRect.height;
-
-	if(this->HasFocus())
-	{
-		if(this->mSelStartChar!=this->mSelEndChar)
-		{
-			Font *aFM = this->mFont.get();
-			int x = aFM->GetStringWidth(this->mText, 0, this->mSelStartChar);
-			int aWidth = aFM->GetStringWidth(this->mText, this->mSelStartChar, this->mSelEndChar - this->mSelStartChar);
-			g.SetColor(this->mSelColor.GetBackgroundColor(g));
-			g.FillRect(x, 0, aWidth, aCursorHeight);
-			g.SetColor(this->mSelColor.GetForegroundColor(g,aTextColor));
-			g.PushClipRect(x, 0, aWidth, aCursorHeight);
-			g.DrawString(this->mText, 0, 0);
-			g.PopClipRect();
-			if(this->mCursorOn && !this->mUnderlineCursor)
-			{
-				if(this->mBackwardsSel)
-					g.DrawLine(x,0,x,aCursorHeight);
-				else
-					g.DrawLine(x+aWidth-1,0,x+aWidth-1,aCursorHeight);
-			}
-		}
-		else if(this->mCursorOn)
-		{
-			int aCursorPos = this->mSelStartChar;
-			Font *aFM = this->mFont.get();
-			int anXPos = aFM->GetStringWidth(this->mText, 0, aCursorPos);
-			if(this->mUnderlineCursor)
-			{
-				int aWidth;
-				if(aCursorPos < this->mText.length())
-					aWidth = this->mFont->GetCharacterWidth(this->mText[aCursorPos]);
-				else
-					aWidth = this->mFont->GetCharacterWidth('M');
-				g.DrawLine(anXPos, aCursorHeight-1, anXPos+aWidth-1, aCursorHeight-1);
-			}
-			else
-				g.DrawLine(anXPos, 0, anXPos, aCursorHeight);
-		}
-	}
-	
-	g.Translate(this->mHorzOffset,0);
-	g.PopClipRect();
-	g.Translate(-this->mTextRect.x, -this->mTextRect.y);
-
+	// the background, icon, scrolled text, selection and caret (guidraw.rs input_box)
+	EeWonInputPaint b;
+	b.disabled_look = this->IsDisabled() && this->mUseDisabledColors;
+	b.has_icon = this->mIcon.get()!=NULL;
+	b.has_focus = this->HasFocus();
+	b.cursor_on = this->mCursorOn;
+	b.underline_cursor = this->mUnderlineCursor;
+	b.backwards_sel = this->mBackwardsSel;
+	b.width = this->Width();
+	b.height = this->Height();
+	b.horz_offset = this->mHorzOffset;
+	b.text_color = (int)this->mTextColor;
+	b.disabled_text_color = this->mDisabledTextColor;
+	b.icon_height = b.has_icon ? this->mIcon->mHeight : 0;
+	b.text_x = this->mTextRect.x;
+	b.text_y = this->mTextRect.y;
+	b.text_width = this->mTextRect.width;
+	b.text_height = this->mTextRect.height;
+	b.sel_start = this->mSelStartChar;
+	b.sel_end = this->mSelEndChar;
+	b.length = this->mText.length();
+	b.font_height = this->mFont->GetHeight();
+	b.sel = WONDrawSelOf(this->mSelColor);
+	WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
+	EeWonTextMeasure m = aMeasure.Get();
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mIcon.get();
+	aSlots.mFont = this->mFont.get();
+	aSlots.mString = &this->mText;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_input_box(&b,&m,o,n); });
+	WONDrawRun(g,anOps,aSlots,[&](const EeWonDrawOp& o) {
+		Background& aBackground = o.b ? this->mDisabledBackground : this->mBackground;
+		aBackground.Paint(g,0,0,o.c,o.d,o.e,0);
+	});
 }
 
 }

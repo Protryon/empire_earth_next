@@ -1032,73 +1032,6 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
-/// `WS_DirServ_MultiGetReply`'s "more replies follow" status.
-constexpr static const int32_t MORE_REPLIES = 100059;
-
-constexpr static const uint32_t DIRS_ONLY_MASK = 2;
-
-constexpr static const uint32_t SERVICES_ONLY_MASK = 5;
-
-constexpr static const uint32_t ADD_TYPE = 16;
-
-constexpr static const uint32_t ADD_DISPLAY_NAME = 32;
-
-constexpr static const uint32_t ADD_CREATED = 64;
-
-constexpr static const uint32_t ADD_TOUCHED = 128;
-
-constexpr static const uint32_t ADD_LIFESPAN = 256;
-
-constexpr static const uint32_t ADD_DO_TYPE = 512;
-
-constexpr static const uint32_t ADD_DO_DATA = 1024;
-
-constexpr static const uint32_t ADD_DATA_OBJECTS = 2048;
-
-constexpr static const uint32_t ADD_ACLS = 4096;
-
-constexpr static const uint32_t ADD_CRC = 8192;
-
-constexpr static const uint32_t ADD_UIDS = 16384;
-
-constexpr static const uint32_t ADD_IPS = 32768;
-
-constexpr static const uint32_t DIR_ADD_PATH = 65536;
-
-constexpr static const uint32_t DIR_ADD_NAME = 131072;
-
-constexpr static const uint32_t DIR_ADD_REQ_UNIQUE = 262144;
-
-constexpr static const uint32_t SERV_ADD_PATH = 16777216;
-
-constexpr static const uint32_t SERV_ADD_NAME = 33554432;
-
-constexpr static const uint32_t SERV_ADD_NET_ADDR = 67108864;
-
-constexpr static const uint32_t TYPE = 1;
-
-constexpr static const uint32_t PATH = 2;
-
-constexpr static const uint32_t NAME = 4;
-
-constexpr static const uint32_t NET_ADDR = 8;
-
-constexpr static const uint32_t REQ_UNIQUE = 16;
-
-constexpr static const uint32_t DISPLAY_NAME = 32;
-
-constexpr static const uint32_t LIFESPAN = 64;
-
-constexpr static const uint32_t CREATED = 128;
-
-constexpr static const uint32_t TOUCHED = 256;
-
-constexpr static const uint32_t CRC = 512;
-
-constexpr static const uint32_t IPS = 1024;
-
-constexpr static const uint32_t IDS = 2048;
-
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -1441,109 +1374,60 @@ constexpr static const int32_t EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_A
 /// UserListCtrlConfig::Virtual24(instruction) in UserListCtrl.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION = 102;
 
-constexpr static const int32_t POSITION_LEFT = 1;
+/// `Graphics::SetColor(a)` (the colour's bits).
+constexpr static const int32_t EE_WON_DRAW_SET_COLOR = 1;
 
-constexpr static const int32_t POSITION_TOP = 2;
+/// `Graphics::SetSysColor(a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_SYS_COLOR = 2;
 
-constexpr static const int32_t POSITION_RIGHT = 4;
+/// `Graphics::FillRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_RECT = 3;
 
-constexpr static const int32_t POSITION_BOTTOM = 8;
+/// `Graphics::DrawRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_RECT = 4;
 
-constexpr static const int32_t SPLITTER_LEFT_RIGHT = 5;
+/// `Graphics::DrawDottedRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_DOTTED_RECT = 5;
 
-constexpr static const int32_t SPLITTER_UP_DOWN = 10;
+/// `Graphics::DrawLine(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_LINE = 6;
 
-/// The component flags these rules read.
-constexpr static const uint32_t FLAG_WANT_FOCUS = 8;
+/// `Graphics::DrawImage(image a, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE = 7;
 
-constexpr static const uint32_t FLAG_WANT_TAB_FOCUS = 16384;
+/// `image a->SetSize(b, c)`.
+constexpr static const int32_t EE_WON_DRAW_IMAGE_SIZE = 8;
 
-/// A child a modal state does not block.
-constexpr static const uint32_t FLAG_MODAL_OK = 32768;
+/// `Graphics::PushClipRect(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_PUSH_CLIP = 9;
 
-/// The text flags (TextFlags in the C++).
-constexpr static const int32_t WORD_WRAP = 1;
+/// `Graphics::PopClipRect()`.
+constexpr static const int32_t EE_WON_DRAW_POP_CLIP = 10;
 
-constexpr static const int32_t SCROLL_ON_BOTTOM = 4;
+/// `Graphics::Translate(a, b)`.
+constexpr static const int32_t EE_WON_DRAW_TRANSLATE = 11;
 
-constexpr static const int32_t SHOW_PARTIAL_LINES = 8;
+/// `Graphics::SetFont(font a)`.
+constexpr static const int32_t EE_WON_DRAW_SET_FONT = 12;
 
-constexpr static const int32_t SCROLL_FULL_LINE = 16;
+/// `Graphics::DrawString(string a, b, c, d, e)` (offset, length, x, y; the offset and length as `unsigned short`).
+constexpr static const int32_t EE_WON_DRAW_STRING = 13;
 
-constexpr static const int32_t DELAY_WORD_WRAP = 32;
+/// `Graphics::DrawString(string a, b, c)` (the whole string at x, y).
+constexpr static const int32_t EE_WON_DRAW_STRING_ALL = 14;
 
-/// A line's part in `RemoveSegmentsUpTo`'s search (bits): it is the trimmed segment's line, it has segments,
-/// its last segment stands for the trimmed one.
-constexpr static const uint32_t LINE_IS_SEG_LINE = 1;
+/// `wrapped text a->Paint(g, b, c)`.
+constexpr static const int32_t EE_WON_DRAW_TEXT = 15;
 
-constexpr static const uint32_t LINE_HAS_SEGS = 2;
+/// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
+constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 
-constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
+/// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
+constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
-constexpr static const int32_t POPUP_WANT_INPUT = 128;
-
-constexpr static const int32_t POPUP_IS_MODAL = 256;
-
-constexpr static const int32_t POPUP_ADJUST_POSITION = 512;
-
-constexpr static const int32_t POPUP_EAT_MOUSE_DOWN = 2048;
-
-constexpr static const int32_t POPUP_ADDITIONAL = 4096;
-
-constexpr static const int32_t POPUP_DONT_WANT_MOUSE = 16384;
-
-constexpr static const int32_t POPUP_NOT_IN_OWN_WINDOW = 32768;
-
-constexpr static const int32_t POPUP_IN_OWN_WINDOW = 65536;
-
-constexpr static const uint8_t JOIN_REQUEST = 1;
-
-constexpr static const uint8_t JOIN_REPLY = 2;
-
-constexpr static const uint8_t CLIENT_JOINED = 3;
-
-constexpr static const uint8_t CLIENT_LEFT = 4;
-
-constexpr static const uint8_t CHAT_REQUEST = 5;
-
-constexpr static const uint8_t CHAT_LINE = 6;
-
-constexpr static const uint8_t PING = 7;
-
-constexpr static const uint8_t STAGING = 8;
-
-constexpr static const uint8_t DISCOVERY_SUMMARY = 1;
-
-constexpr static const uint8_t DISCOVERY_KEEP_ALIVE = 2;
-
-constexpr static const uint8_t DISCOVERY_REMOVED = 3;
-
-constexpr static const uint8_t DISCOVERY_QUERY = 4;
-
-/// Join reply statuses: joined, bad data (the joiner's own), wrong password, another subnet.
-constexpr static const int16_t JOIN_OK = 0;
-
-constexpr static const int32_t JOIN_BAD_REPLY = 1;
-
-constexpr static const int16_t JOIN_WRONG_PASSWORD = 2;
-
-constexpr static const int16_t JOIN_OTHER_SUBNET = 3;
-
-/// Chat flags: a whisper to the target, a line to the sender's team.
-constexpr static const uint16_t CHAT_WHISPER = 4;
-
-constexpr static const uint16_t CHAT_TEAM = 256;
-
-/// The host drops a socket silent for longer than this (seconds); a joiner pings after this many idle seconds; the
-/// host re-sends its full summary instead of a keep-alive after this many.
-constexpr static const int64_t HOST_SOCKET_SILENCE = 300;
-
-constexpr static const int64_t JOINER_PING_IDLE = 120;
-
-constexpr static const int64_t SUMMARY_REPEAT = 30;
-
-/// The Windows separator every path is turned to (`WONFile::PATH_SEP`).
-constexpr static const uint8_t SEP = 92;
+/// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
+/// height).
+constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -5471,6 +5355,217 @@ struct EeWonSplit {
   int32_t right;
   int32_t top;
   int32_t bottom;
+};
+
+/// The filter's inputs (`StretchImageFilter`'s members and the source image's size).
+struct EeWonStretchFilter {
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+  int32_t bottom;
+  int32_t src_width;
+  int32_t src_height;
+  bool tile_horz;
+  bool tile_vert;
+  bool skip_center;
+};
+
+/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
+struct EeWonDrawOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+  int32_t f;
+  int32_t g;
+  int32_t h;
+};
+
+/// A frame to paint (`WONFrame::Paint`'s inputs): its image's size (slot `slot`), the component's size and the
+/// paddings left out of the frame.
+struct EeWonFrame {
+  bool has_image;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t width;
+  int32_t height;
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+};
+
+/// A background to paint (`Background`'s members, its image's size and the rectangle and offsets).
+struct EeWonBackground {
+  bool has_image;
+  bool stretch_image;
+  bool use_offsets;
+  bool has_component;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t color;
+  int32_t border_color;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t x_offset;
+  int32_t y_offset;
+};
+
+/// A WONButton to paint: its size, flags and members, and its state's image (slot 0) and text (slot 0).
+struct EeWonButtonPaint {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  bool scale_image;
+  bool has_image;
+  bool has_text;
+  bool pressed;
+  bool disabled;
+  bool draw_gray_text;
+  /// the focus style is set, the button has the focus and its parent has used the dialog keys
+  bool focus_shown;
+  int32_t h_align;
+  int32_t v_align;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t color;
+  int32_t left_text_pad;
+  int32_t top_text_pad;
+  int32_t right_text_pad;
+  int32_t bottom_text_pad;
+  int32_t left_focus_pad;
+  int32_t top_focus_pad;
+  int32_t right_focus_pad;
+  int32_t bottom_focus_pad;
+  int32_t push_dx;
+  int32_t push_dy;
+};
+
+/// A WONSimpleButton to paint (its four images' presence and sizes, slots 0..3).
+struct EeWonSimpleButtonPaint {
+  bool disabled;
+  bool check_mouse_down;
+  bool pressed;
+  bool mouse_over;
+  bool scale_image;
+  uint8_t mouse_down_state;
+  bool has_image[4];
+  int32_t image_width[4];
+  int32_t image_height[4];
+  int32_t width;
+  int32_t height;
+};
+
+/// One line break of a wrapped text (`WrappedText::BreakInfo`).
+struct EeWonLineBreak {
+  uint16_t break_pos;
+  uint16_t next_start;
+  uint16_t width;
+};
+
+/// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
+/// `string_width(ctx, offset, length)` is `Font::GetStringWidth(text, offset, length)`, `char_width(ctx, index)`
+/// is `Font::GetCharacterWidth(text[index])`, or of 'M' for a negative index.
+struct EeWonTextMeasure {
+  void *ctx;
+  int32_t (*string_width)(void*, int32_t, int32_t);
+  int32_t (*char_width)(void*, int32_t);
+};
+
+/// A row's or line's place, as the list callback answers it (`top`, `height`; a text line's `x` too).
+struct EeWonRowPlace {
+  int32_t x;
+  int32_t top;
+  int32_t height;
+};
+
+/// Answers the place of row `index` (`ctx` is the C++ caller's).
+using EeWonRowOf = EeWonRowPlace(*)(const void *ctx, size_t index);
+
+/// A multi-column row to paint (`MultiListItem::Paint`'s inputs; `has_cell` and `cell_width` are the column's
+/// cell when the column is one of the row's).
+struct EeWonMultiRowPaint {
+  int32_t column;
+  bool selected;
+  bool full_row_select;
+  bool has_cell;
+  uint32_t cell_count;
+  uint32_t selection_color;
+  int32_t total_width;
+  int32_t height;
+  uint8_t align;
+  int32_t paint_width;
+  int32_t cell_width;
+};
+
+/// A selection's colours (`SelectionColor`: background, foreground and the foreground's mode).
+struct EeWonSelColor {
+  uint32_t background;
+  uint32_t foreground;
+  int32_t mode;
+};
+
+/// A text row to paint (`TextListItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+struct EeWonTextRowPaint {
+  bool selected;
+  bool full_row_select;
+  bool no_image_select;
+  bool has_image;
+  EeWonSelColor sel;
+  uint32_t color;
+  int32_t paint_width;
+  int32_t width;
+  int32_t height;
+  int32_t image_width;
+  int32_t image_height;
+  int32_t font_height;
+};
+
+/// An input box to paint (its members; icon slot 0, font slot 0, string slot 0 the shown text).
+struct EeWonInputPaint {
+  bool disabled_look;
+  bool has_icon;
+  bool has_focus;
+  bool cursor_on;
+  bool underline_cursor;
+  bool backwards_sel;
+  int32_t width;
+  int32_t height;
+  int32_t horz_offset;
+  int32_t text_color;
+  int32_t disabled_text_color;
+  int32_t icon_height;
+  int32_t text_x;
+  int32_t text_y;
+  int32_t text_width;
+  int32_t text_height;
+  int32_t sel_start;
+  int32_t sel_end;
+  int32_t length;
+  int32_t font_height;
+  EeWonSelColor sel;
+};
+
+/// A text segment's range to paint (`TextSegment::Paint`'s inputs; font slot 0, string slot 0 the segment's text).
+struct EeWonSegmentPaint {
+  int32_t area_sel_start;
+  int32_t area_sel_end;
+  int32_t abs_start;
+  int32_t start;
+  int32_t end;
+  int32_t x;
+  int32_t y;
+  int32_t line_height;
+  uint32_t color;
+  EeWonSelColor sel;
 };
 
 /// A selection: its start and end (start <= end once normalised) and whether the cursor is at the start.
@@ -13827,6 +13922,202 @@ int32_t ee_won_gui_split_drag(int32_t x,
                               int32_t sx,
                               int32_t sy,
                               int32_t *out_y);
+
+/// `StretchImageFilter::Filter`'s placement: the new image's size, then the pixel operations.
+///
+/// # Safety
+/// `f`, `out_width` and `out_height` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_filter(const EeWonStretchFilter *f,
+                                      int32_t *out_width,
+                                      int32_t *out_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_paint(bool skip_center,
+                                     int32_t left,
+                                     int32_t right,
+                                     int32_t top,
+                                     int32_t bottom,
+                                     int32_t width,
+                                     int32_t height,
+                                     EeWonDrawOp *out,
+                                     size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_stretch_center(int32_t width,
+                                      int32_t height,
+                                      int32_t center_width,
+                                      int32_t center_height,
+                                      EeWonDrawOp *out,
+                                      size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_frame(const EeWonFrame *f, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_combo_frame(bool draw_frame,
+                                   bool button_in_frame,
+                                   bool button_visible,
+                                   int32_t button_width,
+                                   const EeWonFrame *f,
+                                   EeWonDrawOp *out,
+                                   size_t cap);
+
+/// # Safety
+/// `f` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_scroll_container(bool vert_visible,
+                                        bool horz_visible,
+                                        bool transparent,
+                                        bool has_corner,
+                                        int32_t vert_left,
+                                        int32_t vert_bottom,
+                                        const EeWonFrame *f,
+                                        EeWonDrawOp *out,
+                                        size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_background(const EeWonBackground *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button_text(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_button(const EeWonButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_simple_button(const EeWonSimpleButtonPaint *b, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_header_arrow(int32_t sort,
+                                    int32_t color,
+                                    bool has_text,
+                                    int32_t text_width,
+                                    int32_t left_text_pad,
+                                    int32_t width,
+                                    int32_t height,
+                                    bool pressed,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `pads` holds four ints (left, top, right, bottom); `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_label(int32_t width,
+                             int32_t height,
+                             const int32_t *pads,
+                             int32_t h_align,
+                             int32_t v_align,
+                             int32_t text_width,
+                             int32_t text_height,
+                             int32_t color,
+                             EeWonDrawOp *out,
+                             size_t cap);
+
+/// # Safety
+/// `breaks` holds `count` breaks; `m` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_wrapped_text(bool has_font,
+                                    int32_t length,
+                                    bool centered,
+                                    int32_t width,
+                                    int32_t font_height,
+                                    const EeWonLineBreak *breaks,
+                                    size_t count,
+                                    int32_t x,
+                                    int32_t y,
+                                    const EeWonTextMeasure *m,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
+/// # Safety
+/// `row_of` answers every index below `count` for `ctx`; `paint_width_out` is valid; `out` has room for `cap`
+/// operations (or is NULL).
+size_t ee_won_gui_draw_list(int32_t total_width,
+                            int32_t view_width,
+                            int32_t paint_width,
+                            size_t first,
+                            size_t count,
+                            int32_t offset,
+                            int32_t view_height,
+                            bool partial,
+                            EeWonRowOf row_of,
+                            const void *ctx,
+                            int32_t *paint_width_out,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
+/// # Safety
+/// As `ee_won_gui_draw_list`.
+size_t ee_won_gui_draw_text_lines(size_t first,
+                                  size_t count,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  bool partial,
+                                  EeWonRowOf row_of,
+                                  const void *ctx,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `columns` holds `count` widths; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_list(const int32_t *columns,
+                                  size_t count,
+                                  int32_t border,
+                                  int32_t total_width,
+                                  int32_t offset,
+                                  int32_t view_height,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_multi_row(const EeWonMultiRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_row(const EeWonTextRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// # Safety
+/// `b` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_input_box(const EeWonInputPaint *b,
+                                 const EeWonTextMeasure *m,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `s` and `m` are valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_segment(const EeWonSegmentPaint *s,
+                               const EeWonTextMeasure *m,
+                               EeWonDrawOp *out,
+                               size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_text_image(int32_t area_sel_start,
+                                  int32_t area_sel_end,
+                                  int32_t abs_start,
+                                  int32_t abs_end,
+                                  int32_t x,
+                                  int32_t y,
+                                  int32_t width,
+                                  int32_t line_height,
+                                  uint32_t sel_background,
+                                  EeWonDrawOp *out,
+                                  size_t cap);
+
+/// `SelectionColor::GetForegroundColor`.
+uint32_t ee_won_gui_sel_foreground(uint32_t background,
+                                   uint32_t foreground,
+                                   int32_t mode,
+                                   uint32_t original);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///

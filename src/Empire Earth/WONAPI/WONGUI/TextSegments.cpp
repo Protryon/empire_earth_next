@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "rust/ee_rust.h"
+#include "ee/wonapi/WONGUIDraw.h"
 // The wrap's breaks, the selected part and the character under a point are ee_won's guitext module
 // (rust/crates/ee_won/src/guitext.rs); this unit keeps the segments, the font (it measures every unit and the
 // rest of a wrapped text) and the paint.
@@ -124,32 +125,25 @@ void TextSegment::Wrap(TextArea *theTextArea, TextLine *theLine)
 // Paints a character range of the text, drawing its selected part in the area's selection colours
 void TextSegment::Paint(Graphics &g, TextArea *theTextArea, int theStartChar, int theEndChar, int xpos, int ypos, int lineHeight)
 {
-	int aSelStartChar = theTextArea->mSelStartChar - this->mAbsStartChar;
-	int aSelEndChar = theTextArea->mSelEndChar - this->mAbsStartChar;
-
-	if(theStartChar > aSelStartChar)
-		aSelStartChar = theStartChar;
-
-	if(theEndChar < aSelEndChar)
-		aSelEndChar = theEndChar;
-
-	g.SetColor(this->mColor);
-	g.SetFont(this->mFont.get());
-
-	bool fullSelection = aSelStartChar==theStartChar && aSelEndChar==theEndChar;
-	if(!fullSelection)
-		g.DrawString(this->mText, theStartChar, theEndChar - theStartChar, xpos, ypos);
-
-	if(!(aSelEndChar > aSelStartChar))
-		return;
-	int x = xpos + this->mFont->GetStringWidth(this->mText,theStartChar,aSelStartChar-theStartChar);
-	int aWidth = this->mFont->GetStringWidth(this->mText,aSelStartChar,aSelEndChar-aSelStartChar);
-
-	g.SetColor(theTextArea->mSelColor.GetBackgroundColor(g));
-	g.FillRect(x,0,aWidth,lineHeight);
-
-	g.SetColor(theTextArea->mSelColor.GetForegroundColor(g,this->mColor));
-	g.DrawString(this->mText,aSelStartChar,aSelEndChar-aSelStartChar,x,ypos);
+	// the text, then its selected part over the selection background (guidraw.rs segment)
+	EeWonSegmentPaint s;
+	s.area_sel_start = theTextArea->mSelStartChar;
+	s.area_sel_end = theTextArea->mSelEndChar;
+	s.abs_start = this->mAbsStartChar;
+	s.start = theStartChar;
+	s.end = theEndChar;
+	s.x = xpos;
+	s.y = ypos;
+	s.line_height = lineHeight;
+	s.color = (uint32_t)this->mColor;
+	s.sel = WONDrawSelOf(theTextArea->mSelColor);
+	WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
+	EeWonTextMeasure m = aMeasure.Get();
+	WONDrawSlots aSlots;
+	aSlots.mFont = this->mFont.get();
+	aSlots.mString = &this->mText;
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_segment(&s,&m,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 // FUNCTION: WON 0x00711330

@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x00719A70
@@ -79,12 +80,16 @@ void WONComboBox::Paint(Graphics& g)
 {
 	ComboBox::Paint(g);
 
-	if(!this->mDrawFrame)
-		return;
-	if(this->mButtonInFrame || !this->mButton->IsVisible())
-		this->mFrame.Paint(g,this);
-	else
-		this->mFrame.Paint(g,this,0,0,this->mButton->Width(),0);
+	// guidraw.rs combo_frame
+	EeWonFrame aFrame = WONDrawFrameOf(this->mFrame,this,0,0,0,0);
+	bool aDrawFrame = this->mDrawFrame, anInFrame = this->mButtonInFrame;
+	bool aVisible = aDrawFrame && !anInFrame ? this->mButton->IsVisible() : true;
+	int aButtonWidth = aDrawFrame && !anInFrame && aVisible ? this->mButton->Width() : 0;
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mFrame.mImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_combo_frame(aDrawFrame,anInFrame,aVisible,aButtonWidth,&aFrame,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 
 // FUNCTION: WON 0x00719DF0
@@ -126,14 +131,16 @@ void WONScrollContainer::Paint(Graphics &g)
 {
 	Container::Paint(g);
 
-	if(this->mVertScrollbar->IsVisible() && this->mHorzScrollbar->IsVisible() && !this->mTransparent && this->mCorner.get()!=NULL) // grey square in corner
-	{
-		g.DrawImage(this->mCorner.get(),this->mVertScrollbar->Left(),(this->mVertScrollbar->Top()+this->mVertScrollbar->Height()));
-
-//		g.ApplyColorSchemeColor(StandardColor_Scrollbar);
-//		g.FillRect(mVertScrollbar->mX,(mVertScrollbar->mY+mVertScrollbar->mHeight),mVertScrollbar->mWidth,mHorzScrollbar->mHeight);
-	}
-
-	this->mFrame.Paint(g,this);
+	// the corner image between two visible scrollbars, then the frame (guidraw.rs scroll_container)
+	EeWonFrame aFrame = WONDrawFrameOf(this->mFrame,this,0,0,0,0);
+	bool aVert = this->mVertScrollbar->IsVisible();
+	bool aHorz = aVert && this->mHorzScrollbar->IsVisible();
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mFrame.mImage.get();
+	aSlots.mImages[1] = this->mCorner.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_scroll_container(aVert,aHorz,this->mTransparent,this->mCorner.get()!=NULL,
+			this->mVertScrollbar->Left(),this->mVertScrollbar->Top()+this->mVertScrollbar->Height(),&aFrame,o,n); });
+	WONDrawRun(g,anOps,aSlots);
 }
 }

@@ -6449,3 +6449,82 @@ more leaves.
   the merged result, `rust_build.py gate`, the sim oracle (see the report); the test-profile build at the end. The
   per-commit oracle was not run for each commit (the lighter gates of the overloaded machine: one build for the
   first four commits). No tour, screenshot, LAN game or POSIX build was run.
+
+## R6: WONGUI's drawing as plans the C++ executes (ee_won guidraw.rs; branch rust-r6-won11, 2026-11-11)
+
+Round 11 of R6 (RUST_PLAN "R6 WON, the rest"). The paints' decisions and arithmetic moved to `rust/crates/ee_won`
+as plans, the pattern of `ee_ui` draw.rs and `ee_ge` terrain_visible.rs: the C++ reads the object's members, Rust
+returns the ordered draw operations (`EeWonDrawOp`: a kind and eight ints), and `WONDrawRun`
+(`include/ee/wonapi/WONGUIDraw.h`, new) executes them on the `Graphics`; an image, font, string or wrapped text is
+named by a slot, and the calls into other objects (a child's paint, a background, a cell) come back to the caller as
+`EE_WON_DRAW_CALL`. A plan longer than the 48-operation stack buffer is asked again at its length (the plans are
+pure). The Surface, PlatGraphics, image, font and object calls stay C++; no class lost a member, no header gained
+one.
+
+- **What moved.** `StretchImageFilter::Filter`'s nine-piece placement (`stretch_filter`: the new size, the centre's
+  stretch or tiles, the four sides, the four corners; the tile loops are expanded into the copies they made, the
+  centre's one-way tiles copying from the new image itself as before; `RawTileHorz`, `RawTileVert` and
+  `RawTileHorzVert` deleted, `CopyRawImage` and `RawStretch`, the pixel loops, stay C++), `StretchImage::Paint`'s
+  skip-centre strips, `StretchCenterImage::Paint`, both `WONFrame::Paint`s (the full one is the padded one with no
+  paddings now), `WONComboBox::Paint`'s and `WONScrollContainer::Paint`'s frames and corner, `Background::Paint`,
+  `WONButton::Paint` and `DrawButtonText`, `WONSimpleButton::Paint`'s image, `WONHeaderButton::Paint`'s sort arrow,
+  `Label::Paint`'s text place, `WrappedText::Paint`, `ListArea::ScrollPaint` (the paint width and the visible items,
+  through a place callback; the visibility is round 8's `guilist`), `MultiListArea::ScrollPaint`'s passes,
+  `MultiListItem::Paint`, `TextListItem::Paint`, `InputBox::Paint` (text, selection, caret), `TextArea::ScrollPaint`,
+  `TextSegment::Paint`, `TextImage::Paint` and `SelectionColor::GetForegroundColor`.
+- **Measures.** Where a paint measured text (the input box's selection and caret, a segment's selection, a centred
+  wrapped text's last line) the plan asks the C++ through `EeWonTextMeasure` (`Font::GetStringWidth`,
+  `GetCharacterWidth` of a unit or of 'M') at the same point of its statements, so the font sees the same calls in the
+  same order. They now happen while the plan is made, before its draws run; between a paint's draws they did not.
+  `GetHeight` and `WrappedText::GetWidth/GetHeight` are read before the plan (pure getters).
+- **What stays C++, on purpose.** The pure call sequences: `ScrollArea::Paint` (background, clip, children, translate,
+  `ScrollPaint`), `Container::Paint`'s child walk, `WONInputBox::Paint` and `WONFrameComponent::Paint` (base, then
+  frame), `Component::Paint`; TabCtrl, ComboBox, Splitter, Scrollbar and Dialog have no paint of their own (their
+  children's are the ones above). Not ported: `ImageComponent`, `RectangleComponent(3D)`, `ColHeaderButton`,
+  `ImageCheckButton`, `BorderImageButton`, the menus' and tree items' paints (MS-skin and unused controls).
+- **The golden driver** (`build/won_draw_golden`, scratch: `build.py orig|cur [seeds]`, `digest.py`): the WONGUI units
+  of 7f0e83de (`git archive`) or the worktree's, compiled with the won module's flags (`clang_build.compile_to`, -O1),
+  with the worktree's `ee_rust.lib`, under `/FORCE:UNRESOLVED`. `fakes.cpp` replaces `Graphics` (every call one log
+  line), `Font` (a width per unit, `(unit % 7) + 2 + size / 4`, its height its size; every measure logged to a second
+  list written after the case's draws), names images and strings, and defines `MultiListHeader::GetSortTypeForButton`
+  (a chosen sort), `Component::SetComponentFlags`, `GetOwnColorScheme` and `gEmptyWideString`. The objects are real
+  where their constructor's unit is cheap (WONButton, WONHeaderButton, WONSimpleButton, StretchImage, TextSegment,
+  TextLine, TextListItem, MultiListItem, WrappedText through its real wrap) and calloc'ed with their containers
+  placement-constructed otherwise; their Paint is called qualified, so no vtable is needed. 4500 cases in 19 kinds:
+  300 filters (source 1..24 square, borders, target 0..60, both tiles, skip-centre; the result's size and pixel hash,
+  each pixel its source coordinate, fresh buffers 0xEE), 200 stretch paints, 100 stretch-centre, 200 frames, 100
+  combo frames, 100 scroll containers, 300 backgrounds (stretch, tiles from negative offsets, border, component), 400
+  buttons and 200 header buttons (every alignment, scale, push, disabled grey, focus, state cells), 200 simple
+  buttons, 200 labels, 300 wrapped texts (wrapping, centred, line breaks, no font), 200 lists, 200 multi-column lists
+  (real rows and text cells, null cells, full-row selection, a column whose width less the border is -1), 300 text
+  rows, 400 input boxes (both backgrounds, icon, selection both ways, caret bar and underline past the end), 200 text
+  areas' line passes, 400 segments and pieces, 200 text images. `golden_draw.txt` keeps each case's inputs, its log's
+  line count and FNV-1a 64 (530 KB; the full log is 45k lines); `guidraw/tests.rs` rebuilds every case's whole log
+  over the plans and a model of the executor and fakes. The driver relinked over the forwarders printed the same log
+  byte for byte, and on seeds 2 and 3 at ten times the cases (435k and 407k lines); the Rust replay also passed seed
+  2's 45,000 cases. Mutations checked: the text row's x, the segment's empty-selection test, the caret's end each fail
+  the replay; a tile loop's `<` against `<=` does not (the last full tile is the same pixels either way).
+- **Driver traps, new.** `Graphics`'s constructor needs `WONRectangle()` (Rectangle.cpp); `GetEmptyGUIStringData`
+  reads `gEmptyWideString` (EEWonNet.cpp) at the first string; `Button::mDefaultButton`'s static destructor releases a
+  half-built button at exit (the driver `_exit`s); a button's or label's text needs a font (the original's `GetHeight`
+  dereferences it). Python's `write_text` on Windows turns an LF file into CR LF: edit sources as bytes.
+- **Name clash caught by the header.** guidraw's first line-break struct was `EeWonBreak`, guiwrap's name: cbindgen
+  kept one silently (the header lost guiwrap's). Renamed `EeWonLineBreak`; check `git diff include/rust/ee_rust.h`
+  for removed lines after adding a type.
+- **Kept quirks.** An alignment outside the enum left `DrawButtonText`'s x unset (here 0); `focus_shown` is evaluated
+  with the other inputs (the parent is read for a focused button with a focus style even when the text is grey or
+  absent; such a button always has one); a background tiled with an image of width or height 0 loops without end, an
+  offset modulo 0 faults, as before; `MultiListItem` reads a cell only for a column that is one of the row's, as the
+  original's unsigned compare did.
+- **What draws what.** Every lobby load (and so the LAN game's lobby captures): the skins' StretchImage filters and
+  paints (buttons, frames, scroll bars, the tab control's skip-centre frame in `_LobbySkin.cfg`), the WON buttons and
+  simple buttons (scroll arrows and thumbs), the frames of the input boxes, combo boxes and scroll containers and the
+  scroll containers' corner, the backgrounds (the tiled `@TiledBackground`), every label and wrapped button text, the
+  game and player lists (multi-column rows, text cells), the input boxes (the name and chat lines: text, caret),
+  the MOTD and chat text areas' lines and segments. The LAN game adds: pressed, hover and focus states of the buttons
+  it clicks, the list rows' selection, the chat input's caret and typed text, the chat lines. Only a person reaches:
+  the input boxes' and text areas' mouse selection (the selection rectangles, `sel_foreground`), the header buttons'
+  sort arrow (after a header click), disabled grey text on a focused button with the dialog keys used (Tab), the
+  underline caret. Nothing reaches `TextImage` (`TextArea::AddImage` has no caller). EE-SIM draws no lobby: the gates
+  below cannot see a drawing fault; the lead's LAN game and a lobby tour must compare captures against the build
+  before this branch.
