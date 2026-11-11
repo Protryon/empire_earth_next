@@ -1056,12 +1056,6 @@ constexpr static const uint32_t LINE_HAS_SEGS = 2;
 
 constexpr static const uint32_t LINE_LAST_IS_SEG = 4;
 
-/// `ComponentEvent_ButtonPressed` (WONLobbyGUI.h's event numbers).
-constexpr static const int32_t EVENT_BUTTON_PRESSED = 15;
-
-/// The control id of a tree row's expand button.
-constexpr static const int32_t EXPAND_BUTTON_ID = 100003;
-
 constexpr static const int32_t POPUP_WANT_INPUT = 128;
 
 constexpr static const int32_t POPUP_IS_MODAL = 256;
@@ -12572,6 +12566,81 @@ bool ee_won_gui_list_item_tip(int32_t width,
                               int32_t view_width,
                               int32_t offset,
                               int32_t view_height);
+
+uint8_t ee_won_gui_menu_popup_key(bool has_sub, int32_t key, bool sub_has_sel);
+
+uint8_t ee_won_gui_menu_check_sub(bool is_item,
+                                  bool has_cur_sub,
+                                  bool same_sub,
+                                  bool item_has_sub,
+                                  bool disabled);
+
+int32_t ee_won_gui_menu_submenu_flags();
+
+uint8_t ee_won_gui_menu_popup_event(bool from_sub, int32_t event_type);
+
+bool ee_won_gui_menu_sel_clears_sub(bool keyboard, bool has_sub, bool sel_is_sub_item);
+
+bool ee_won_gui_menubar_key_asks_popup(int32_t state);
+
+/// `bar_key`: the step; the state and the item into the outs.
+///
+/// # Safety
+/// The outs are writable.
+uint8_t ee_won_gui_menubar_key(int32_t state,
+                               int32_t key,
+                               int32_t id,
+                               size_t count,
+                               int32_t *out_state,
+                               int32_t *out_id);
+
+uint8_t ee_won_gui_menubar_check(int32_t state,
+                                 bool has_cur,
+                                 bool has_check,
+                                 bool check_is_cur,
+                                 bool check_is_item);
+
+int32_t ee_won_gui_menubar_popup_flags();
+
+/// `bar_popup_place`: x, y into `out_y`.
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_menubar_popup_place(int32_t left, int32_t top, int32_t height, int32_t *out_y);
+
+/// `bar_popup_avoid` into `out` (x, y, width, height).
+///
+/// # Safety
+/// `out` has room for 4.
+void ee_won_gui_menubar_popup_avoid(int32_t root_y, int32_t height, int32_t *out);
+
+uint8_t ee_won_gui_menubar_event(int32_t event_type, int32_t state);
+
+bool ee_won_gui_menu_item_chosen(bool is_item, bool has_sub, bool disabled);
+
+/// `bar_press`: whether the bar opens; the state into `out_state`.
+///
+/// # Safety
+/// `out_state` is writable.
+bool ee_won_gui_menubar_press(int32_t state, int32_t *out_state);
+
+bool ee_won_gui_menubar_moved(int32_t x, int32_t y, int32_t last_x, int32_t last_y);
+
+/// `bar_item_place`: x, y into `out_y` (`has_prev` false: the first item).
+///
+/// # Safety
+/// `out_y` is writable.
+int32_t ee_won_gui_menubar_item_place(bool has_prev,
+                                      int32_t left,
+                                      int32_t top,
+                                      int32_t width,
+                                      int32_t *out_y);
+
+/// `bar_item_size`: width, height into `out_h`.
+///
+/// # Safety
+/// `out_h` is writable.
+int32_t ee_won_gui_menubar_item_size(int32_t text_width, int32_t font_height, int32_t *out_h);
 
 /// `column_at` over `count` columns.
 ///

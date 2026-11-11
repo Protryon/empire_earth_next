@@ -439,6 +439,9 @@ WON_TESTS = {
     # WONGUI's tree list (the walks over the items, the range, last-child, open, scroll, insert, remove, sort and
     # mouse rules), the original's statements against ee_won's guitree module
     "won_guitree_test": [],
+    # WONGUI's menus' keys and choices (a popup menu's keys and submenus, the menu bar's keys, items, menus,
+    # presses and events), the original's statements against ee_won's guimenu module
+    "won_guimenu_test": [],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],

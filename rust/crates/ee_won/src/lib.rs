@@ -32,6 +32,7 @@ pub mod guiedit;
 pub mod guifocus;
 pub mod guilayout;
 pub mod guilist;
+pub mod guimenu;
 pub mod guimulti;
 pub mod guiscroll;
 pub mod guistring;

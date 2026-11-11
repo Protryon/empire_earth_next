@@ -18,9 +18,9 @@
 use std::ffi::c_void;
 
 /// `ComponentEvent_ButtonPressed` (WONLobbyGUI.h's event numbers).
-pub const EVENT_BUTTON_PRESSED: i32 = 15;
+const EVENT_BUTTON_PRESSED: i32 = 15;
 /// The control id of a tree row's expand button.
-pub const EXPAND_BUTTON_ID: i32 = 100003;
+const EXPAND_BUTTON_ID: i32 = 100003;
 
 /// The questions the walks ask about the items.
 pub trait TreeNodes {
