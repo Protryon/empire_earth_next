@@ -21,6 +21,7 @@ pub mod find_key;
 pub mod font;
 pub mod form;
 pub mod form_state;
+pub mod graph;
 pub mod hotkey;
 pub mod label_fit;
 pub mod layout;
@@ -71,6 +72,9 @@ mod font_ffi;
 // from a test binary
 #[cfg(not(test))]
 mod group_ffi;
+// imports the C++ graphs' texts, lines and draws (UIGraph.cpp, UILineGraph.cpp), absent from a test binary
+#[cfg(not(test))]
+mod graph_ffi;
 // imports the C++ text label's members, text and scroll bar (UITextLabel.cpp), absent from a test binary
 #[cfg(not(test))]
 mod label_fit_ffi;

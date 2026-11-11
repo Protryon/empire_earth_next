@@ -669,6 +669,12 @@ constexpr static const float TOOL_TIP_SHADOW_OFFSET = 3.0;
 /// `kFadeInRate`.
 constexpr static const float FADE_IN_RATE = (1.0 / 700.0);
 
+/// `kTextSpacing`: the gap around the title, the axis labels and the grid values.
+constexpr static const float TEXT_SPACING = 5.0;
+
+/// `kMaximumZoomScale`.
+constexpr static const float MAXIMUM_ZOOM = 4.0;
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -4122,6 +4128,35 @@ struct EeUiDbFont {
   uint8_t style10;
   uint8_t style08;
   char pad[3];
+};
+
+/// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
+struct EeUiGraphLayout {
+  EeUiRect title;
+  EeUiRect y_axis;
+  EeUiRect x_axis;
+  EeUiRect graph;
+};
+
+/// Which texts `CopyData` lays out: each label's flag (`mLabelGraph` ..) and whether its text exists (`SetFont`
+/// made them).
+struct EeUiGraphTexts {
+  bool label_graph;
+  bool has_title;
+  bool label_grid;
+  bool has_grid;
+  bool label_y;
+  bool has_y;
+  bool label_x;
+  bool has_x;
+};
+
+/// A graph's value range (`UGraph`'s or the displayed one, `UIGraph::mMinX` ..).
+struct EeUiGraphRange {
+  long min_x;
+  long max_x;
+  long min_y;
+  long max_y;
 };
 
 /// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
@@ -9888,6 +9923,60 @@ void ee_ui_group_enable(void *group);
 long ee_ui_string_list_find(void *list,
                             const char *key,
                             unsigned long selection);
+
+/// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
+EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
+                                        EeUiRect rect,
+                                        EeUiGraphTexts texts,
+                                        long max_x,
+                                        long max_y);
+
+/// `UIGraph::CopyData`'s displayed range.
+EeUiGraphRange ee_ui_graph_copy_range(float zoom, EeUiGraphRange displayed, EeUiGraphRange graph);
+
+/// `ZoomIn` (`zoom_in`) or `ZoomOut`: the new zoom; `out` the displayed range.
+float ee_ui_graph_zoom(bool zoom_in,
+                       float zoom,
+                       float increment,
+                       EeUiGraphRange graph,
+                       EeUiGraphRange *out);
+
+/// `UIGraph::DrawPolygons` after `UIControl::DrawPolygons` (`result`), the grid lines drawn with `line`.
+long ee_ui_graph_draw_grid(void *graph,
+                           void *line,
+                           long result,
+                           unsigned long thickness,
+                           EeUiRect rect,
+                           bool grid,
+                           unsigned long divisions_x,
+                           unsigned long divisions_y,
+                           float zoom);
+
+/// `UIGraph::DrawGridText`.
+long ee_ui_graph_draw_grid_text(void *graph,
+                                EeUiRect rect,
+                                unsigned long divisions_x,
+                                unsigned long divisions_y,
+                                float zoom,
+                                EeUiGraphRange range);
+
+/// `UIGraph::DrawTextA` after the draw count's decrement.
+long ee_ui_graph_draw_texts(void *graph, bool title, bool x, bool y, bool grid);
+
+/// `UILineGraph::DrawPolygons` after `UIGraph::DrawPolygons` (`result`), over the copied graph's `count` series.
+long ee_ui_linegraph_draw_list(void *graph,
+                               long result,
+                               unsigned long count);
+
+/// `UILineGraph::DrawSeries` of `series` (`count` points), drawn with `line`.
+long ee_ui_linegraph_draw_series(void *graph,
+                                 void *line,
+                                 const void *series,
+                                 unsigned long count,
+                                 long series_min_x,
+                                 EeUiGraphRange copied,
+                                 EeUiGraphRange displayed,
+                                 EeUiRect rect);
 
 /// `UITextLabel::ComputeTextLabelRect`.
 void ee_ui_label_compute_rect(void *label);
