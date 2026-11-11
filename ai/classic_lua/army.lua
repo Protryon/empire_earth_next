@@ -138,6 +138,7 @@ local function file_of(memory, player)
     f.types = types
     f.buildings = buildings
     f.next = now + 30000
+    f.player = player
     a.files[player] = f
     return f
 end
@@ -147,8 +148,19 @@ end
 -- own military and citizens), so a group is sized as against a mirror of the player when little is known
 local function strength_of(view, memory, f)
     local b = memory.t.behavior
-    local mil = math.max(f.military, #own_military())
-    local gat = math.max(f.gatherers, view.citizens or 0)
+    local mil, gat = f.military, f.gatherers
+    -- (the mirror only for a player known to have a town or buildings: one never seen with anything, such as a
+    -- seat with no units, has the strength the classic's file gives it, nothing)
+    local known = #(f.buildings or {}) > 0
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == f.player and (e.town_x or -1) >= 0 then
+            known = true
+        end
+    end
+    if known then
+        mil = math.max(mil, #own_military())
+        gat = math.max(gat, view.citizens or 0)
+    end
     return (mil * b.military_count_weight_k + gat * b.worker_count_weight_k) // 1000
 end
 
@@ -156,7 +168,7 @@ end
 local function enemies()
     local humans, computers = {}, {}
     for _, p in ipairs(ai.players()) do
-        if p.enemy and not p.me and p.alive then
+        if p.enemy and not p.me then   -- (the classic skips only observers: a player with no units left counts)
             if p.human then
                 humans[#humans + 1] = p.id
             else
