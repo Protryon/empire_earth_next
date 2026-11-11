@@ -2980,6 +2980,46 @@ dropped 1-2 games a row):
 - `--repeat 2` on b1b1312 (seeds 4 and 9, against the improved classic and rush, 90 minutes): all four pairs
   identical.
 
+**The overnight experiments D1-D5 (2026-11-11).**
+- The protocol:
+  - one switch over main 1e422bd's boom, against main 1e422bd's scripts as the baseline;
+  - 32 seeds (2-33), Small, Hard, 120 minutes, the same exe;
+  - kept only if the defeats do not rise in any matchup and something gains;
+  - the kept one is also checked against the mirror and Age of AI.
+- Stone / Copper: the games that reached the epoch and its median minute. Lost: citizens and boats in all.
+
+| Experiment | Matchup | Defeats | W/L/C | Stone | Copper | Lost |
+|---|---|---|---|---|---|---|
+| baseline (1e422bd) | improved classic | 6/32 | 0/27/5 | 31, 24.9 | 20, 61.6 | 111.8 |
+| | cheating classic | 13/32 | 8/18/6 | 22, 28.0 | 8, 74.7 | 85.0 |
+| | mirror | 0/32 | 1/1/30 | 32, 21.5 | 32, 51.9 | 15.9 |
+| | Age of AI | 0/32 | 0/11/21 | 32, 22.4 | 32, 50.9 | 17.1 |
+| D1 watcher + attack from Copper (`watch`, `attack`) | improved classic | 8/32 | 1/24/7 | 31, 24.9 | 22, 65.9 | 114.6 |
+| | cheating classic | 16/32 | 8/19/5 | 22, 28.0 | 6, 90.5 | 86.6 |
+| D2 wave flight (`wave_n = 8`): **kept** | improved classic | 4/32 | 0/30/2 | 31, 24.9 | 19, 62.8 | 119.7 |
+| | cheating classic | 12/32 | 7/18/7 | 23, 29.4 | 7, 75.8 | 87.1 |
+| | mirror | 0/32 | 1/0/31 | 31, 21.5 | 31, 51.6 | 15.4 |
+| | Age of AI | 0/31 | 0/14/17 | 31, 22.3 | 31, 51.2 | 17.8 |
+| D3 four Prehistoric towers from 6 citizens (`towers = 4`, `tower_at = 6`) | improved classic | 10/32 | 0/29/3 | 32, 24.6 | 21, 64.8 | 120.5 |
+| | cheating classic | 17/32 | 12/18/2 | 26, 29.1 | 9, 81.7 | 74.4 |
+| D4 tower bait (`bait`, Age of AI's early.c) | improved classic | 8/32 | 0/27/5 | 32, 24.3 | 15, 62.4 | 123.0 |
+| | cheating classic | 15/30 | 8/17/5 | 21, 25.9 | 10, 78.2 | 87.4 |
+| D5 the hurt spots (`hurt_safety`, Age of AI's attack.c citizens_safety) | improved classic | 9/32 | 0/27/5 | 32, 25.2 | 17, 57.3 | 109.2 |
+| | cheating classic | 20/32 | 4/24/4 | 21, 29.8 | 3, 54.3 | 66.4 |
+
+- **Kept:** D2 alone. It has the fewest defeats against both classics and no defeats against the mirror or Age of
+  AI. The gain is small, though: 2 and 1 games, within a 32-seed bench's noise. Against Age of AI and the improved
+  classic it has fewer close games (17 against 21, 2 against 5), and it loses a few more citizens against the
+  classics. It is kept by the protocol's rule; a 64-seed check would settle it.
+- **Off:**
+  - D1 adds defeats against both classics and comes to the Copper Age later. The attacks pull soldiers out of a town
+    the classics are about to hit.
+  - D3 reaches the Stone Age in every game against the improved classic and in 26 of 32 against the cheating one
+    (22 for the baseline). It wins 12 against 8 there and loses the fewest citizens. But it has 4 more defeats against
+    each classic: the fourth tower's stone and the earlier towers come out of the Stone Age reserve.
+  - D4 and D5 both move citizens more often and add defeats. D5 halves the Copper Age games against the cheating
+    classic (3 against 8).
+
 **Open.**
 - The attack from the Copper Age and the permanent scout: `lib/attack.lua` and `lib/scout.lua` are written but not
   wired or benched.
