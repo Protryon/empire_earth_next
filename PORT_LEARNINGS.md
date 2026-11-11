@@ -5702,3 +5702,66 @@ moved wholly, so no unit was deleted.
   RootContainer, the popups' windows), TreeArea, the menus' key handling (`TryKeyDown` recurses through the
   submenus), the per-class config readers, and the drawing (Surface, StretchImage's nine slices, the decoders, the
   platform backend, the text area's and menus' paint).
+
+## R6: WONGUI's tree list, the menus' keys, the config readers' key tables and the event dispatch decisions in Rust (ee_won guitree.rs, guimenu.rs, guiconf.rs, guievent.rs; branch rust-r6-won10, 2026-11-11)
+
+Round 10 of R6 (RUST_PLAN "R6 WON, the rest"). Same pattern as rounds 8 and 9: a `tests/won` driver (in `xbuild.py`
+`WON_TESTS`) runs the original's statements, copied from the C++ before the port with the objects replaced by the
+flags and numbers they read, against the Rust ABI over generated inputs. The C++ classes keep their objects, lists,
+vtables, events and every call; Rust decides which call happens. No class moved wholly, so no unit was deleted.
+
+- **The tree list (`guitree.rs`).** TreeItem's walks go through `EeWonTreeOps` (callbacks answering parent, index,
+  child count, child and open, and doing a row insert or a close): `GetNextNonChild`, `InsertChildren` (children last
+  to first, an open child's own rows right after it), `CloseAll`. Rust holds only the item pointers between the
+  callbacks. The rest are decisions: the range and last-child tests (an index compared as `size_t`: a negative one is
+  past the last child), `SetOpen`'s work (no children: only the flag, no event) and its scroll, `InsertChild`'s row,
+  `RemoveChild`'s steps, `TreeArea::Sort`'s plan, `GetMouseItem`'s exit and enter (a callback asks `Contains` exactly
+  where the original did), `CanSelect`, `ContainsPoint`'s x, the row width, the expand button's event, the flags.
+  The tree has no keys of its own: its keyboard movement is ListArea's (round 8's `guilist`). `won_guitree_test`:
+  6,233,856 checks, 0 failures.
+- **The menus (`guimenu.rs`).** `PopupMenu::TryKeyDown`'s step once the open submenu declined the key (the C++ keeps
+  the recursion into the submenu), `CheckSubMenu`'s open, keep or close, the submenu's selection rules; MenuBar's
+  keys, `CheckItem`'s choice, its menu's place, flags (`StandardPopup` less `WantInput` and `EndOnEscape`: 0x2347)
+  and avoided rectangle, presses, events, moves, the items' places and sizes. The original has no mnemonics: a letter
+  does nothing in a menu. `won_guimenu_test`: 22,000,002 checks, 0 failures.
+- **cbindgen exports every `pub const` into the global namespace** without a prefix: `guimenu`'s `VK_RETURN` became
+  `constexpr static const int32_t VK_RETURN = 13;` in `ee_rust.h`, which windows.h's macro turns into
+  `int32_t 0x0D = 13` in every unit that includes both. The modules' constants are private now (round 9's
+  `POSITION_LEFT` and others are still exported; harmless while nothing defines those names).
+- **The config readers' key tables (`guiconf.rs`).** Each reader compared its instruction with its keys
+  (`key=="TEXT"`, exact) and the flag and value names it read with its names (`name.CompareNoCase("Bold")==0`); those
+  lists are 103 tables of 509 names in the original's order (`EE_WON_CFG_KEYS_<class>_<function>_<variable>`,
+  `EE_WON_CFG_NAMES_...`). A reader asks once (`ee_won_gui_cfg_key` over the `std::string`'s bytes,
+  `ee_won_gui_cfg_name` over the GUIString's units through `ee_won_guistring_compare_narrow`, the same compare as
+  before) and tests the index where it compared a text; a name listed twice answers its first place, the branch the
+  original took (`WantDefault` in the button flags). The 42 units' edit was made by a script that checked that undoing
+  it gives the original text back, and that no compared GUIString changes between the lookup and its last test (the
+  one variable declared twice in one function, ServerListCtrlConfig's `aType`, has a lookup in each scope). The C++
+  keeps the reads, the objects and what each entry does (the values stay in its branches). `won_guiconf_test`:
+  839,246 checks, every name of every table in four cases and with a character more or less, through the real
+  GUIStringData, in the C and the English locale, 0 failures.
+- **The event dispatch (`guievent.rs`).** Window: the enter, a move's end of double-click detection (the original's
+  `detect && x != dx || y != dy` kept: any change of y ends it), drag or move, a left release outside ending the drag
+  with an exit, the double click (tick 0 kept for "none", the tick read only when the press asks for the check), the
+  size change, the resize's delay, the forced cursor refresh, the hover, the place after an exit, centring, the
+  cursor's refresh, closing. WindowManager: the 50 ms timer step and its 1 s cap, the popups' end or keep on a focus
+  change, the resolution's restore, a press's focus and capture, a release's capture, a move's or key's end of the
+  popups, the wheel and keys sent to the popup, the merged size changes, a closing window's popup, and
+  `CheckPopupClick`'s walk down the clicked children. RootContainer: the window drag and the cursor component's
+  place. Container: the mouse child's exit and enter, the release only to the child that had the press,
+  `GetDesiredSize`, `FindTop` (now a walk over the flags of the children before the place: O(n) per `AddChild`
+  instead of O(on-top children)). `won_guievent_test`: 40,578,784 checks, 0 failures.
+- **`DWORD` is `unsigned long` in the Windows build** (windows.h) and `uint32_t` on POSIX (`platform/wintypes.h`): a
+  `DWORD*` passed for the ABI's `uint32_t*` does not compile on Windows (and would on POSIX). The out-parameters are
+  `uint32_t` locals; values cross by copy.
+- **What exercises what.** Every lobby load: the config tables (every instruction and flag of the 63 .cfg files goes
+  through them), Container's `FindTop` and `GetDesiredSize` (every child added, every fitted container), the window
+  manager's timer step, cursor and resize rules, Window's enter and moves, the mouse child's routing as soon as the
+  mouse moves. The LAN game (`lan_game.py`'s `wonclick` / `wonselect` / `wonkey`) adds the presses, releases, double
+  clicks, focus and capture, the keys' routing, and the popups' rules when its dialogs open. Only a person reaches the
+  window drag (a ParentDrag child), the hover, the wheel and the popup menus (right-click: `CheckSubMenu`, the
+  selection rules). Nothing reaches the tree list (the Internet room dialog's room list, RoomCtrl) or the menu bar
+  (unused) and `TryKeyDown` (only MenuBar calls it). The simulation is untouched: the oracle was identical after each
+  of the four gated builds.
+- **Still C++ of WONGUI:** the objects and the calls above, the config readers' branch bodies, and the drawing (Surface,
+  StretchImage's nine slices, the decoders, the platform backend, the paint).
