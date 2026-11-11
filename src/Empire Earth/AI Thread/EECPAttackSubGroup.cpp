@@ -1876,6 +1876,13 @@ long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMino
     }
     if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.256)
         theResult = this->LoadRunningState(inFile);
+    // port (0.264): the position FindPosition keeps between its refreshes (every 5 s); a loaded sub group had (0, 0),
+    // so it took its rally point for its position and scanned for targets there until the next refresh
+    if (theResult == kErrorOK && EESaveHasSubGroupPosition(inMajorVersion, inMinorVersion)) {
+        theResult = inFile.Read(this->mPosition.mX);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mPosition.mY);
+    }
     return theResult;
 }
 // FUNCTION: EXE 0x45ef56
@@ -2244,6 +2251,11 @@ long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMino
         theResult = outFile.Write(this->mSplitKind);
     if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.256)
         theResult = this->SaveRunningState(outFile);
+    if (theResult == 0 && EESaveHasSubGroupPosition(inMajorVersion, inMinorVersion)) {   // port (0.264)
+        theResult = outFile.Write(this->mPosition.mX);
+        if (theResult == 0)
+            theResult = outFile.Write(this->mPosition.mY);
+    }
     return theResult;
 }
 

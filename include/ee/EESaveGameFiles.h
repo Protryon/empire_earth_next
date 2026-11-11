@@ -87,6 +87,12 @@ inline bool EESaveHasContinentRegions(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 263;
 }
+// port: from 0.264 a save holds each attack sub group's position (EECPAttackSubGroup::mPosition: FindPosition keeps it
+// between its refreshes and scans for targets around it)
+inline bool EESaveHasSubGroupPosition(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 264;
+}
 long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
 long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
 // whether the save being loaded has the block (EEWorld::StartGame of a loaded game)
