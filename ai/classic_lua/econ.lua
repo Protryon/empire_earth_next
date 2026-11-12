@@ -755,6 +755,12 @@ local function assign_gatherers(view, memory)
             if kind ~= nil and kind ~= key then
                 table.remove(list, k)
                 R.add_gatherer(rm, u.id, kind)
+            elseif u ~= nil and u.category == "boat" and key ~= "idle" and u.action ~= "gather" then
+                -- a boat off its fish (the engine's naval flight: EECPRMNavalFlee gives the classic's own lists
+                -- AddIdleGatherer, the script's lists are the port's): back to the idle list, where AssignIdleBoats
+                -- sends it to fish again
+                table.remove(list, k)
+                R.add_gatherer(rm, u.id, "idle")
             end
         end
     end
@@ -763,7 +769,7 @@ local function assign_gatherers(view, memory)
             local u = records[id]
             if u ~= nil and u.inside == nil then
                 if u.category == "boat" then
-                    if key == "idle" and u.action == "idle" then
+                    if key == "idle" then   -- (the classic: every boat of the idle list, whatever it does)
                         boats[#boats + 1] = u
                     end
                 elseif u.action == "idle" or u.action == "explore" or (u.action == "gather" and u.waiting) then
