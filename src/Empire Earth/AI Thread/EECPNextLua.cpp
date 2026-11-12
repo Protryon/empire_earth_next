@@ -64,56 +64,49 @@ static const unsigned long kNextMaxOrders = 200;     // orders past this many in
 // ---------------------------------------------------------------------------------------------------------------
 // Names: classes and techs by their data ids (dbobjects / dbtechtree "id": "citizen", "b_barracks", "inf01_clubman")
 
-struct EECPNextNames {
-    std::map<long, std::string> mNames;
-    std::map<std::string, long> mKeys;
-    std::string mPrefix;        // "dbobjects_": the name of a key without an id (a binary tree), as tools/eedata ids.py
-};
-
-static EECPNextNames& EECPNextNamesOf(const char* inTable)
+// the table of a db table's row ids (EEDbRowIds; none when it has none) with the prefix of a key without an id
+// ("dbobjects_": the name of such a key, as tools/eedata ids.py): ee_ai names.rs
+static EeAiNames* EECPNextNamesTable(const char* inTable, const char* inPrefix)
 {
-    static EECPNextNames sClasses, sTechs;
+    std::map<long, std::string> theIds;
+    EEDbRowIds(inTable, theIds);
+    std::vector<int64_t> theKeys;
+    std::vector<EeAiBytes> theNames;
+    for (std::map<long, std::string>::iterator it = theIds.begin(); it != theIds.end(); ++it) {
+        EeAiBytes theName = {(const uint8_t*)it->second.data(), it->second.size()};
+        theKeys.push_back((int64_t)it->first);
+        theNames.push_back(theName);
+    }
+    EeAiBytes thePrefix = {(const uint8_t*)inPrefix, strlen(inPrefix)};
+    return ee_ai_names_new(theKeys.data(), theNames.data(), theKeys.size(), thePrefix);
+}
+
+static EeAiNames* EECPNextNamesOf(const char* inTable)
+{
+    static EeAiNames* sClasses = NULL;
+    static EeAiNames* sTechs = NULL;
     static bool sRead = false;
     if (!sRead) {
         sRead = true;
-        EEDbRowIds("dbobjects", sClasses.mNames);
-        EEDbRowIds("dbtechtree", sTechs.mNames);
-        sClasses.mPrefix = "dbobjects_";
-        sTechs.mPrefix = "dbtechtree_";
-        for (std::map<long, std::string>::iterator it = sClasses.mNames.begin(); it != sClasses.mNames.end(); ++it)
-            sClasses.mKeys[it->second] = it->first;
-        for (std::map<long, std::string>::iterator it = sTechs.mNames.begin(); it != sTechs.mNames.end(); ++it)
-            sTechs.mKeys[it->second] = it->first;
+        sClasses = EECPNextNamesTable("dbobjects", "dbobjects_");
+        sTechs = EECPNextNamesTable("dbtechtree", "dbtechtree_");
     }
     return strcmp(inTable, "dbobjects") == 0 ? sClasses : sTechs;
 }
 
-static std::string EECPNextNameOf(EECPNextNames& inNames, long inKey)
+static std::string EECPNextNameOf(EeAiNames* inNames, long inKey)
 {
-    std::map<long, std::string>::iterator it = inNames.mNames.find(inKey);
-    if (it != inNames.mNames.end())
-        return it->second;
-    char theText[32];
-    snprintf(theText, sizeof(theText), "%ld", inKey);
-    return inNames.mPrefix + theText;
+    uint8_t theBuffer[48];
+    size_t theLength = 0;
+    const uint8_t* theName = ee_ai_names_name_of(inNames, (int64_t)inKey, theBuffer, sizeof(theBuffer), &theLength);
+    return std::string((const char*)theName, theLength);
 }
 
-static long EECPNextKeyOf(EECPNextNames& inNames, const std::string& inName)
+// "<table>_<key>" names a row without an id in the data (or the binary tree's names)
+static long EECPNextKeyOf(EeAiNames* inNames, const std::string& inName)
 {
-    std::map<std::string, long>::iterator it = inNames.mKeys.find(inName);
-    if (it != inNames.mKeys.end())
-        return it->second;
-    // "<table>_<key>": a row without an id in the data (or the binary tree's names)
-    if (inName.size() > inNames.mPrefix.size() && inName.compare(0, inNames.mPrefix.size(), inNames.mPrefix) == 0) {
-        long theKey = 0;
-        for (size_t i = inNames.mPrefix.size(); i < inName.size(); i++) {
-            if (inName[i] < '0' || inName[i] > '9' || theKey > 100000000)
-                return -1;
-            theKey = theKey * 10 + (inName[i] - '0');
-        }
-        return inNames.mNames.count(theKey) ? -1 : theKey;   // a key with an id goes by its id only
-    }
-    return -1;
+    EeAiBytes theName = {(const uint8_t*)inName.data(), inName.size()};
+    return (long)ee_ai_names_key_of(inNames, theName);
 }
 
 long EECPNextClassByName(const std::string& inName)
@@ -139,14 +132,7 @@ std::string EECPNextTechName(long inTech)
 
 static const char* EECPNextEventKindName(long inKind)
 {
-    switch (inKind) {
-    case kNextEventUnitLost: return "unit_lost";
-    case kNextEventProductionLost: return "production_lost";
-    case kNextEventAdvanceLost: return "advance_lost";
-    case kNextEventNoSite: return "no_site";
-    case kNextEventGroupWants: return "group_wants";
-    default: return "unknown";
-    }
+    return ee_ai_event_name((int64_t)inKind, false);   // "unknown" for a kind it does not know
 }
 
 // ---------------------------------------------------------------------------------------------------------------
