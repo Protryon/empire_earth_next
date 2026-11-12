@@ -490,6 +490,10 @@ WON_TESTS = {
     # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
     # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
     "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    # GetCertOp's requests and replies (the reply's entries read in Rust, the certificate, key block and key checks
+    # applied in order), the original's statements against include/ee/wonapi/WONCertMsg.h over ee_won's cert
+    # module (golden: rust/crates/ee_won/src/golden_cert.txt)
+    "won_cert_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

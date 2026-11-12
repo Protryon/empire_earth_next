@@ -12,6 +12,7 @@ pub mod blowfish;
 mod blowfish_tables;
 pub mod buffer;
 pub mod cdkey;
+pub mod cert;
 pub mod chat;
 pub mod config;
 pub mod configobj;

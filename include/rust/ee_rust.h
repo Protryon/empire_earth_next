@@ -1072,6 +1072,49 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
+/// `SendPubKeyRequest`'s message.
+constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
+
+/// `SendLoginRequest`'s message (`key_id`, `a` the encrypted session key, `b` the encrypted login data).
+constexpr static const int32_t EE_WON_CERT_REQ_LOGIN = 2;
+
+/// `SendLoginConfirm`'s message (`a` the encrypted hashes).
+constexpr static const int32_t EE_WON_CERT_REQ_CONFIRM = 3;
+
+/// The read failed here: the original threw `ReadBufferException`.
+constexpr static const uint8_t EE_WON_CERT_CUT = 0;
+
+/// `return InvalidReplyHeader()`.
+constexpr static const uint8_t EE_WON_CERT_INVALID_HEADER = 1;
+
+/// A key block reply's failure status `num`: `SetLastServerError(num)`, try the next server.
+constexpr static const uint8_t EE_WON_CERT_SERVER_ERROR = 2;
+
+/// A key block reply's block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_KEY_BLOCK = 3;
+
+/// A login challenge outside the challenge state.
+constexpr static const uint8_t EE_WON_CERT_UNEXPECTED_CHALLENGE = 4;
+
+/// A login challenge's encrypted block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_CHALLENGE = 5;
+
+/// The login reply's status `num` (the read stops after -1).
+constexpr static const uint8_t EE_WON_CERT_LOGIN_STATUS = 6;
+
+/// An error string (`at`, `len`): `mErrorList.push_back`.
+constexpr static const uint8_t EE_WON_CERT_ERROR = 7;
+
+/// A clear (or decrypted) entry of type `kind` (`at`, `len`); type 7 comes as `EE_WON_CERT_COMMUNITY` instead.
+constexpr static const uint8_t EE_WON_CERT_ENTRY = 8;
+
+/// A community status entry: `kind` = the fields read of its sub message (0 none, 1 the status `num`, 2 and the
+/// id `id`, 3 and the name: `at`, `len` UTF-16 units). Fewer than 3: a `EE_WON_CERT_CUT` follows.
+constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
+
+/// The clear part's end: the rest (`at`, `len`) is the encrypted part.
+constexpr static const uint8_t EE_WON_CERT_REST = 10;
+
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
@@ -5844,6 +5887,26 @@ struct EeWonReadBuffer {
   long length;
 };
 
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// One step of a reply's read.
+struct EeWonCertEvent {
+  uint8_t tag;
+  uint8_t kind;
+  int32_t num;
+  uint32_t id;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The events of a reply's read, handed over once.
+using EeWonCertSink = void(*)(void *context, const EeWonCertEvent *events, size_t count);
+
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
   const void *text;
@@ -5900,13 +5963,6 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
 
 /// A request's fields from the C++ (texts as UTF-16 LE bytes).
 struct EeWonDbRequest {
@@ -13425,6 +13481,46 @@ bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out
 /// # Safety
 /// As `ee_won_reader_take`.
 bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `a` and `b` describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_request(int32_t kind,
+                         int16_t key_id,
+                         EeWonDirBytes a,
+                         EeWonDirBytes b,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
+///
+/// # Safety
+/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_login_data(const uint8_t *key,
+                            int16_t key_id,
+                            bool create_account,
+                            EeWonDirBytes user,
+                            EeWonDirBytes password,
+                            EeWonDirBytes new_password,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `CheckResponse`'s read in `state` into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_reply(const uint8_t *data,
+                       size_t length,
+                       int32_t state,
+                       EeWonCertSink sink,
+                       void *context);
+
+/// The login reply's decrypted part into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_decrypted(const uint8_t *data, size_t length, EeWonCertSink sink, void *context);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
