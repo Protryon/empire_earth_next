@@ -6960,6 +6960,21 @@ struct EeUnitsCamoEvent {
   uint32_t value;
 };
 
+/// The C++ calls of the unit loop (EEPhysics.cpp). `ctx` is the host's.
+struct EeUnitsTickHost {
+  void *ctx;
+  /// `gWorld.mNumPlayers`
+  uint32_t num_players;
+  /// `gCollisionDetectionUnit`
+  uint32_t detection_unit;
+  /// `gCollisionPeriod = value`
+  void (*set_collision_period)(void *ctx, uint32_t value);
+  /// `gWorld.mPlayers[index]->UpdatePlayer()` when the slot has a player
+  void (*update_player)(void *ctx, uint32_t index);
+  /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
+  void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
 /// A member handed over.
 struct EeWonAdminValue {
   int64_t num;
@@ -15127,6 +15142,12 @@ float ee_units_step_cloak_fade(float opacity,
                                float tick_time,
                                uint8_t pulse,
                                int64_t game_time);
+
+/// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
+///
+/// # Safety
+/// `host` points to a valid table whose calls are valid for its `ctx`.
+uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
 ///
