@@ -3714,6 +3714,20 @@ reserved only while saving, food unlimited, the exact gathering).** Order on in 
 - 5 budget errors in one game (seed 19 against Age of AI, minute 113, 100+ raiders) are fixed: a large raid's distance
   test now takes every n/16-th raider. The seed is clean after the fix.
 
+**The owner's decisions (2026-11-11): the raid off by default, the reserve after the Copper advance.** With the raid off
+(`plan.raid` unset, the code and switch kept), the Copper plan's floor of 20 (35% of the citizens, up to 60) already
+trains the 20-soldier reserve from the Copper advance. The literal reading, the Stone Age's 8 plus 20 as a Copper floor
+of 28, was benched against it (order on in both, 32 seeds):
+
+| Variant | Opponent | Defeats | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|
+| o4b, Copper floor 20 (kept) | Age of AI | 0/32 | 5/12/15 | 31, 47.4 | 28, 72.5 |
+| | improved classic | 14/32 | 0/26/6 | 20, 55.0 | 7, 83.1 |
+| o6, Copper floor 28 | Age of AI | 0/32 | 3/10/19 | 31, 47.4 | 28, 73.3 |
+| | improved classic | 15/32 | 0/28/4 | 20, 55.0 | 10, 89.5 |
+
+The floor of 28 is no better, so the Copper plan stays as it is.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
