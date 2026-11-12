@@ -173,7 +173,16 @@ class Game:
         self.seq += 1
         tmp = self.ui / 'test.command.tmp'
         tmp.write_text(f'{self.seq} {text}\n', encoding='ascii')
-        os.replace(tmp, self.ui / 'test.command')
+        # Windows: the replace is refused (access denied, sharing violation) while the game has test.command open
+        # for its read; retry for up to 2 s, as raw() does for ui-state.txt
+        for attempt in range(40):
+            try:
+                os.replace(tmp, self.ui / 'test.command')
+                break
+            except PermissionError:
+                if attempt == 39:
+                    raise
+                time.sleep(0.05)
         return self.seq
 
     def verdict(self, seq):
