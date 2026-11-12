@@ -65,6 +65,66 @@ constexpr static const uint8_t EE_WON_ADMIN_END = 1;
 /// the read failed here
 constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
 
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMINOP_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMINOP_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_KEY_SUBSCRIBE = 13;
+
+/// `GetAccountFromCDKeyOp`: the key, the community (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY = 14;
+
+/// `GetAccountFromCDKeyExOp`: the same and the action flag
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// `AddVersionOp`: the product, then the version record's config, version, type count, types, description, state
+constexpr static const int32_t EE_WON_ADMINOP_ADD_VERSION = 30;
+
+/// `UpdateVersionOp`: as `AddVersionOp` (the state is sent)
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_VERSION = 31;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_VERSION = 32;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMINOP_GET_VERSION_LIST = 33;
+
+/// `AddPatchOp`: the product, the patch record's config, from, to, display name, net address, checksum, size,
+/// host name, host URL, host text, host image URL, must-visit and active flags, then the update flag
+constexpr static const int32_t EE_WON_ADMINOP_ADD_PATCH = 34;
+
+/// `RemovePatchOp`: product, config, from, to, net address
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_PATCH = 35;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMINOP_ACTIVATE_PATCH = 36;
+
+/// `PatchCleanupOp`: no members
+constexpr static const int32_t EE_WON_ADMINOP_PATCH_CLEANUP = 37;
+
+/// `GetPatchServerModuleListOp`: no members
+constexpr static const int32_t EE_WON_ADMINOP_MODULE_LIST = 38;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -671,6 +731,15 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
 constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
+
+/// [`Checked`] for the C++: the status is the call's result
+constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
+
+/// return `InvalidReplyHeader()`
+constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
+
+/// throw `ReadBufferException`
+constexpr static const int32_t EE_WON_REQOP_CUT = 2;
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
@@ -1339,6 +1408,9 @@ struct EeWonProfile;
 
 /// `QueueSocket`'s state and steps.
 struct EeWonQueueSocket;
+
+/// A Rust op held by a C++ `ServerRequestOp`.
+struct EeWonReqOp;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -3250,6 +3322,12 @@ void ee_won_admin_reply(int32_t op,
                         size_t len,
                         EeWonAdminSink sink,
                         void *context);
+
+/// An admin op of `kind` (`EE_WON_ADMINOP_*`) with its members, for a C++ `ServerRequestOp` to run.
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid.
+EeWonReqOp *ee_won_adminop_new(int32_t kind, const EeWonAdminValue *values, size_t count);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
@@ -8355,6 +8433,54 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+/// Frees an op.
+///
+/// # Safety
+/// `op` came from a Rust op constructor (or is NULL) and is not used after.
+void ee_won_reqop_free(EeWonReqOp *op);
+
+/// The `mLengthFieldSize` the op asks for.
+///
+/// # Safety
+/// `op` is a live op.
+uint8_t ee_won_reqop_length_field_size(const EeWonReqOp *op);
+
+/// The op's `RunHook` statements before the base's.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_reqop_run_hook(EeWonReqOp *op);
+
+/// `GetNextRequest`: the request into `sink` (when there is one), the status returned.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+int32_t ee_won_reqop_next_request(EeWonReqOp *op,
+                                  uint8_t field_size,
+                                  EeWonByteSink sink,
+                                  void *context);
+
+/// `CheckResponse` over the reply: the status returned, `*verdict` an `EE_WON_REQOP_*`.
+///
+/// # Safety
+/// `op` is a live op; `data` holds `len` bytes; `verdict` is writable.
+int32_t ee_won_reqop_check_response(EeWonReqOp *op,
+                                    const uint8_t *data,
+                                    size_t len,
+                                    int32_t *verdict);
+
+/// `Reset`.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_reqop_reset(EeWonReqOp *op);
+
+/// The op's members as the drivers print them, into `sink`.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+void ee_won_reqop_describe(const EeWonReqOp *op, EeWonByteSink sink, void *context);
 
 size_t ee_won_resource_count();
 

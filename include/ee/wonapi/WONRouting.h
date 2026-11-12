@@ -1778,6 +1778,9 @@ public:
     WONStatus Recv(); //2ae2d0
     bool CheckExpiredSession(); //2ae200
     ServerRequestOp(ServerContext*); //2acf60
+    // an op derived in Rust (ee_won reqop.rs, e.g. ee_won_adminop_new): its RunHook statements, request, reply and
+    // Reset are Rust's (the virtuals below when not overridden); the request owns it
+    ServerRequestOp(ServerContext*, EeWonReqOp* inRustOp);
     const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
     virtual void RunHook();   //2ae390
     virtual void CleanupHook(); //2ae4c0
@@ -1805,6 +1808,7 @@ public:
     SmartPtr<ServerContext> mServerContext; //e8
     ByteBufferPtr mRequest; //ec
     ByteBufferPtr mResponse; //f0..f4
+    EeWonReqOp* mRustOp; // NULL: a C++ derived op (or none)
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.

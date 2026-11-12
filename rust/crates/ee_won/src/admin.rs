@@ -2,8 +2,9 @@
 //! key check, banned key, key subscription, CD key account, version, patch and module list ops, and their replies'
 //! records, each op's message format a table here.
 //!
-//! The ops stay C++ objects (`DBProxyOp`s); they hand their members over in their table's order and build their
-//! records from the values read. Reached by nothing in the game (the WON admin servers are gone).
+//! The ops are Rust ops (adminop.rs) over these tables; `tests/won/won_admin_test.cpp` checks the tables against the
+//! original's statements through `tests/won/won_admin_msg.h`. Reached by nothing in the game (the WON admin servers
+//! are gone).
 
 use std::ffi::c_void;
 

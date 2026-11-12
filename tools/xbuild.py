@@ -511,8 +511,11 @@ WON_TESTS = {
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
     "won_fwop_test": [],
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
-    # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
+    # statements against tests/won/won_admin_msg.h over ee_won's admin module
     "won_admin_test": [],
+    # WONInternal's admin ops as whole ops (every op's request and replies), the original's statements against the
+    # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_adminop.txt)
+    "won_adminop_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
