@@ -3041,6 +3041,22 @@ enum class EeWonReadySound {
   NotReady = 2,
 };
 
+/// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
+enum class EeWonTitleInstr {
+  /// Not a title instruction: `false`.
+  NotMine,
+  /// Parse a child `TitleConfig(true)`.
+  ChildTitle,
+  /// Parse a child `CommunityConfig` (`alreadyInCommunity` as the field says).
+  ChildCommunity,
+  /// `"You can't nest Title definitions!"`.
+  ErrorNestTitle,
+  /// `"You can't have a title definition within a community!"`.
+  ErrorTitleInCommunity,
+  /// `"You can't nest communities!"`.
+  ErrorNestCommunity,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -3093,6 +3109,9 @@ struct EeWonAsyncSocket;
 
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
+
+/// `AuthSession` (0x10cc bytes in the original): the session's type, id, key, sequence numbers and last use.
+struct EeWonAuthSession;
 
 /// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
 struct EeWonByteBuffer;
@@ -7058,6 +7077,16 @@ struct EeWonReadBuffer {
   long length;
 };
 
+/// An entry across the C ABI: the fields, then the four strings (remote location, file name, type, entity tag).
+struct EeWonCacheEntry {
+  int32_t id;
+  bool valid;
+  int64_t expiration;
+  int64_t last_access;
+  const uint8_t *strings[4];
+  size_t lengths[4];
+};
+
 /// Bytes handed over by the C++ (`present` false: a NULL buffer).
 struct EeWonDirBytes {
   const uint8_t *data;
@@ -7990,6 +8019,22 @@ struct EeWonLanChatCommand {
   bool whisper;
 };
 
+/// One patch as the C++ hands it over.
+struct EeWonPatchRef {
+  const uint8_t *from;
+  size_t from_len;
+  const uint8_t *to;
+  size_t to_len;
+};
+
+/// The op's version compare and set lookups, called back with byte strings.
+struct EeWonPatchHooks {
+  void *context;
+  int32_t (*compare)(void*, const uint8_t*, size_t, const uint8_t*, size_t);
+  /// in the valid set (`GetValidPatchList`) or the filtered set (`GetHighestPatchList`)
+  bool (*in_set)(void*, const uint8_t*, size_t);
+};
+
 /// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
 struct EeWonSyncStep {
   uint8_t kind;
@@ -8088,6 +8133,34 @@ using EeWonPatchSink = void(*)(void *context, const EeWonPatchField *fields, siz
 struct EeWonPatchBytes {
   const uint8_t *data;
   size_t len;
+};
+
+/// The members of a `PeerAuthClient` or `PeerAuthServer` the handshake reads and writes (the server has no
+/// `use_client_secret` and `client_key_size`).
+struct EeWonPeerState {
+  int32_t state;
+  int32_t auth_type;
+  uint8_t length_field_size;
+  bool use_auth2;
+  bool use_client_secret;
+  uint8_t client_key_size;
+};
+
+/// The C++ objects behind [`PeerEnv`]: each hook gets `context`; a sink hook hands its bytes to the sink and
+/// returns false where the original's pointer was NULL.
+struct EeWonPeerHooks {
+  void *context;
+  bool (*private_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*make_cert)(void*, bool, const uint8_t*, size_t);
+  bool (*verify_cert)(void*);
+  bool (*cert_expired)(void*);
+  bool (*cert_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*has_own_cert2)(void*);
+  void (*own_cert_raw)(void*, bool, EeWonByteSink, void*);
+  void (*secret_create)(void*, uint8_t, int32_t);
+  bool (*secret_set_key)(void*, uint8_t, const uint8_t*, size_t);
+  void (*secret_key)(void*, uint8_t, EeWonByteSink, void*);
+  void (*new_session)(void*, int32_t, uint16_t, uint8_t, uint8_t);
 };
 
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
@@ -8543,6 +8616,39 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// The strings `ToString` prints (each a pointer and a length).
+struct EeWonTitleText {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *network;
+  size_t network_len;
+  const uint8_t *image_path;
+  size_t image_path_len;
+  const uint8_t *hash_string;
+  size_t hash_string_len;
+  const uint8_t *key_prefix;
+  size_t key_prefix_len;
+  uint16_t net_port;
+};
+
+/// The title fields `ToString` prints, in its order after `NetPort`.
+struct EeWonTitleFlags {
+  bool force_cd_key;
+  bool require_crc;
+  bool allow_beta_key;
+  bool require_cd_key;
+  bool fail_to_guest;
+  bool allow_guest;
+  bool concurrent_user_login;
+  bool concurrent_cd_key_login;
+  bool get_user_data;
+  bool get_forgeable_user_data;
+  bool cd_key_for_invite;
+  bool save_session_key;
+  bool get_key_id;
+  bool ascii_account_names;
 };
 
 /// A C++ call on one object.
@@ -15300,6 +15406,30 @@ bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out
 /// As `ee_won_reader_take`.
 bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
 
+/// `ReadCacheMap`'s file: opened (nothing when it cannot be), read with [`read_map`], each entry handed to `put`
+/// (valid during the call), closed.
+///
+/// # Safety
+/// `path` is a C string; `put` is callable with `context`.
+void ee_won_cachemap_read(const char *path,
+                          int32_t version,
+                          void (*put)(void*, const EeWonCacheEntry*),
+                          void *context);
+
+/// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
+/// in the id map's order, `delete` called with an index for each one not kept), closed.
+///
+/// # Safety
+/// `path` is a C string; `entries` holds `count` entries whose strings hold their lengths; `delete` is callable
+/// with `context`.
+void ee_won_cachemap_write(const char *path,
+                           int32_t version,
+                           int64_t now,
+                           const EeWonCacheEntry *entries,
+                           size_t count,
+                           void (*delete_)(void*, size_t),
+                           void *context);
+
 /// A request's message into `sink`.
 ///
 /// # Safety
@@ -18719,6 +18849,73 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
+/// Which list: 0 `GetPatchList`, 1 `GetValidPatchList`, 2 `GetHighestPatchList(from, to)`. The chosen patches'
+/// indices go to `put` in the list's order.
+///
+/// # Safety
+/// The pointers hold their lengths; the hooks and `put` are callable with their contexts.
+void ee_won_findpatch_list(int32_t which,
+                           const uint8_t *from,
+                           size_t from_len,
+                           const uint8_t *to,
+                           size_t to_len,
+                           const EeWonPatchRef *patches,
+                           size_t count,
+                           const EeWonPatchHooks *hooks,
+                           void (*put)(void*, size_t),
+                           void *put_context);
+
+/// [`patch_id_split`]: the `~`'s position, -1 for none.
+///
+/// # Safety
+/// `id` holds `len` bytes.
+ptrdiff_t ee_won_findpatch_id_split(const uint8_t *id, size_t len);
+
+/// [`le32_field`]: false unless the data is 4 bytes long.
+///
+/// # Safety
+/// `data` holds `len` bytes; `out` is valid.
+bool ee_won_findpatch_le32(const uint8_t *data, size_t len, uint32_t *out);
+
+/// [`firewall_request`] handed to `sink`.
+///
+/// # Safety
+/// `sink` is valid with `context`.
+void ee_won_firewall_request(uint8_t lfs,
+                             bool udp,
+                             uint16_t port,
+                             bool wait_for_connect,
+                             uint32_t max_wait,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// [`firewall_reply`]: -1 cut short, 0 a bad header, 1 a status (`*status`; `*host` and true in `*has_host` for a
+/// public address).
+///
+/// # Safety
+/// `reply` holds `len` bytes; the outputs are valid.
+int32_t ee_won_firewall_reply(const uint8_t *reply,
+                              size_t len,
+                              int16_t *status,
+                              int32_t *host,
+                              bool *has_host);
+
+/// [`firewall_wait`].
+uint32_t ee_won_firewall_wait(uint32_t time_left, uint32_t max_wait, bool asynchronous);
+
+/// [`password`] handed to `sink`; false where the cipher gave nothing (the original's NULL).
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` is valid with `context`.
+bool ee_won_regauth_password(bool decrypt,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// [`auth_port`].
+uint16_t ee_won_regauth_port(int32_t query_result, uint32_t value);
+
 /// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
 ///
 /// # Safety
@@ -19095,6 +19292,95 @@ void ee_won_path_relative(const uint8_t *directory,
                           size_t sub_length,
                           EeWonByteSink sink,
                           void *context);
+
+/// [`client_start`]: the request handed to `sink`.
+///
+/// # Safety
+/// The pointers are valid; the hooks are callable with their context.
+void ee_won_peer_client_start(EeWonPeerState *s,
+                              const EeWonPeerHooks *hooks,
+                              int32_t auth_type,
+                              uint8_t lfs,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// [`client_recv`]: the status; the out message handed to `sink` when there is one (`*has_out`).
+///
+/// # Safety
+/// The pointers are valid (`data` holds `len` bytes); the hooks are callable with their context.
+int32_t ee_won_peer_client_recv(EeWonPeerState *s,
+                                const EeWonPeerHooks *hooks,
+                                const uint8_t *data,
+                                size_t len,
+                                EeWonByteSink sink,
+                                void *context,
+                                bool *has_out);
+
+/// [`server_start`].
+///
+/// # Safety
+/// `s` is valid.
+void ee_won_peer_server_start(EeWonPeerState *s, uint8_t lfs);
+
+/// [`server_recv`], as [`ee_won_peer_client_recv`].
+///
+/// # Safety
+/// As [`ee_won_peer_client_recv`].
+int32_t ee_won_peer_server_recv(EeWonPeerState *s,
+                                const EeWonPeerHooks *hooks,
+                                const uint8_t *data,
+                                size_t len,
+                                EeWonByteSink sink,
+                                void *context,
+                                bool *has_out);
+
+/// A new session (the C++ `AuthSession` owns it; free with [`ee_won_auth_session_free`]).
+///
+/// # Safety
+/// `key` is a valid Blowfish.
+EeWonAuthSession *ee_won_auth_session_new(int32_t auth_type,
+                                          uint16_t id,
+                                          const EeWonBlowfish *key,
+                                          uint8_t lfs,
+                                          int64_t now);
+
+/// Frees a session.
+///
+/// # Safety
+/// `s` came from [`ee_won_auth_session_new`] and is not used after.
+void ee_won_auth_session_free(EeWonAuthSession *s);
+
+/// A session's field: 0 type, 1 id, 2 last use, 3 length field size, 4 in sequence, 5 out sequence.
+///
+/// # Safety
+/// `s` is a live session.
+int64_t ee_won_auth_session_get(const EeWonAuthSession *s, int32_t field);
+
+/// `SetLengthFieldSize`.
+///
+/// # Safety
+/// `s` is a live session.
+void ee_won_auth_session_set_lfs(EeWonAuthSession *s, uint8_t lfs);
+
+/// The session's key (`GetKey`), valid while the session lives.
+///
+/// # Safety
+/// `s` is a live session.
+const EeWonBlowfish *ee_won_auth_session_key(const EeWonAuthSession *s);
+
+/// `Encrypt` (`decrypt` false) or `Decrypt`: the status; the replacing message handed to `sink` when there is one
+/// (`*replaced`).
+///
+/// # Safety
+/// `s` is a live session; `data` holds `len` bytes; `sink` is valid with `context`.
+int32_t ee_won_auth_session_crypt(EeWonAuthSession *s,
+                                  bool decrypt,
+                                  const uint8_t *data,
+                                  size_t len,
+                                  int64_t now,
+                                  EeWonByteSink sink,
+                                  void *context,
+                                  bool *replaced);
 
 /// `write_global` into the sink.
 ///
@@ -20374,6 +20660,62 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// [`instruction`] over an instruction type's bytes.
+///
+/// # Safety
+/// `ty` holds `len` bytes.
+EeWonTitleInstr ee_won_titlecfg_instruction(bool community,
+                                            bool already,
+                                            const uint8_t *ty,
+                                            size_t len);
+
+/// [`instr_error`] handed to `sink` (nothing for a verdict without one).
+///
+/// # Safety
+/// `sink` and `context` form a valid sink.
+void ee_won_titlecfg_instr_error(EeWonTitleInstr i, EeWonByteSink sink, void *context);
+
+/// [`name_login`].
+///
+/// # Safety
+/// `s` holds `len` bytes.
+int32_t ee_won_titlecfg_name_login(const uint8_t *s, size_t len);
+
+/// [`lifespans`]: the map's pairs (key, value) handed to `put` in key order.
+///
+/// # Safety
+/// `flat` holds `len` values; `put` is valid with `context`.
+void ee_won_titlecfg_lifespans(const int32_t *flat,
+                               size_t len,
+                               void (*put)(void *context, int32_t key, int32_t value),
+                               void *context);
+
+/// [`title_text`] handed to `sink`.
+///
+/// # Safety
+/// The text's pointers hold their lengths; `sink` is valid with `context`.
+void ee_won_titlecfg_title_text(const EeWonTitleText *t,
+                                const EeWonTitleFlags *flags,
+                                bool with_name,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// [`community_text`] handed to `sink`; the map comes flattened as key, value pairs.
+///
+/// # Safety
+/// The pointers hold their lengths; `sink` is valid with `context`.
+void ee_won_titlecfg_community_text(const uint8_t *header,
+                                    size_t header_len,
+                                    int32_t id,
+                                    const EeWonTitleText *t,
+                                    const EeWonTitleFlags *flags,
+                                    const uint8_t *name_login,
+                                    size_t name_login_len,
+                                    const int32_t *pairs,
+                                    size_t pair_count,
+                                    EeWonByteSink sink,
+                                    void *context);
 
 /// A new manager object for the C++ `manager`.
 ///
