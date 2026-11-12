@@ -74,6 +74,7 @@ static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizen
 static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from the town center: <15, 15-30, more tiles
 static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
 static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
+static long sSpend[kMaxTracedPlayers][8][5];                 // TEST ONLY: paid since the last spend line, by kind
 
 void EECPTraceInit()
 {
@@ -384,6 +385,15 @@ static bool EECPIsBuildingCategory(long inCategory)
 }
 
 // A resource amount the player got (EEComputerPlayer::AddResource), for the next income line
+void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5])
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (!gCPTraceOn || theID >= kMaxTracedPlayers || inKind < 0 || inKind > 7 || !EECPExperiment(inPlayer, "spending"))
+        return;
+    for (long r = 0; r < 5; r++)
+        sSpend[theID][inKind][r] += inCost[r];
+}
+
 void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
 {
     unsigned long theID = inPlayer->mPlayerID;
@@ -697,6 +707,18 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             sIncome[theID][kResourceFood], sIncome[theID][kResourceWood], sIncome[theID][kResourceStone],
             sIncome[theID][kResourceGold], sIncome[theID][kResourceIron], theTrips[kResourceFood], theTrips[kResourceWood],
             theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron]);
+        if (EECPExperiment(inPlayer, "spending")) {   // TEST ONLY: what was bought since the last line
+            static const char* const kKinds[8] = {"citizens", "soldiers", "buildings", "techs", "epochs", "boats", "improve", "other"};
+            char theLine[1024];
+            long theAt = 0;
+            for (long k = 0; k < 8 && theAt < 900; k++) {
+                theAt += snprintf(theLine + theAt, sizeof(theLine) - theAt, "%s%s=%ld/%ld/%ld/%ld/%ld", k ? " " : "", kKinds[k],
+                    sSpend[theID][k][0], sSpend[theID][k][1], sSpend[theID][k][2], sSpend[theID][k][3], sSpend[theID][k][4]);
+                for (long r = 0; r < 5; r++)
+                    sSpend[theID][k][r] = 0;
+            }
+            EECPTraceOut(inPlayer, "spend", "%s", theLine);
+        }
         for (long r = 0; r <= kResourceIron; r++)
             sIncome[theID][r] = 0;
         EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
