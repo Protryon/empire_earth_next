@@ -145,7 +145,7 @@ enum DryEvent {
     kDryUnitSetGoal,      // unit, ctor
     kDryFinish,           // tag
     kDryCalamityOf,       // player id, technology, found, class enum, cast by all
-    kDryCanCast,          // unit, x, y, target, the real answer (the dry answer: 0, it can)
+    kDryCanCast,          // unit, x, y, target (the dry answer: 0, it can; not asked)
     kDryContains,         // player id, technology, unit type, the answer
     kDryPower,            // unit, its power
     kDryCost,             // the cost
@@ -1241,18 +1241,18 @@ extern "C" void* ee_units_host_calamity_of(void* inPlayer, int32_t inTechnology,
     return theClass;
 }
 
-// CanCastAt with the check (the location is its out-value, unused); the dry host reads the answer and answers 0
+// CanCastAt with the check (the location is its out-value, unused). The dry host answers 0 ("can") without asking:
+// CanCastAt is the tech capture's CCAS record, which the sweep must not add
 extern "C" int64_t ee_units_host_calamity_can_cast_at(void* inClass, uint32_t inUnit, int32_t inX, int32_t inY, uint32_t inTarget)
 {
-    GE3DPoint theLocation;
-    EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
-    long theResult = static_cast<EECalamityClass*>(inClass)->CanCastAt(ComplexOf(inUnit), theLocation, (unsigned long)inX,
-                                                                      (unsigned long)inY, true, theTarget);
     if (sDry != NULL) {
-        Log({kDryCanCast, inUnit, (uint32_t)inX, (uint32_t)inY, inTarget, (uint32_t)theResult});
+        Log({kDryCanCast, inUnit, (uint32_t)inX, (uint32_t)inY, inTarget});
         return 0;
     }
-    return (int64_t)theResult;
+    GE3DPoint theLocation;
+    EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
+    return (int64_t)static_cast<EECalamityClass*>(inClass)->CanCastAt(ComplexOf(inUnit), theLocation, (unsigned long)inX,
+                                                                      (unsigned long)inY, true, theTarget);
 }
 
 // a read (the dry host's too)
