@@ -7,6 +7,89 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
+constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
+
+constexpr static const uint32_t EE_SCREENS_CH_CLOSE = 4610;
+
+constexpr static const uint32_t EE_SCREENS_CH_CANCEL = 4611;
+
+/// Enter (the hot key and the edit box's Enter): the line sent.
+constexpr static const uint32_t EE_SCREENS_CH_SEND = 4612;
+
+/// The form's keyboard event: the edit box takes the keyboard.
+constexpr static const uint32_t EE_SCREENS_CH_KEYBOARD_FOCUS = 4613;
+
+/// The recipients' radio buttons (`EEUIECEChangeSendMessageType(0..3)`).
+constexpr static const uint32_t EE_SCREENS_CH_SEND_TYPE_ALL = 4614;
+
+constexpr static const uint32_t EE_SCREENS_CH_SEND_TYPE_ALLIES = 4615;
+
+constexpr static const uint32_t EE_SCREENS_CH_SEND_TYPE_ENEMIES = 4616;
+
+constexpr static const uint32_t EE_SCREENS_CH_SEND_TYPE_CUSTOM = 4617;
+
+constexpr static const uint32_t EE_SCREENS_CH_ESCAPE = 4618;
+
+/// Tab and Shift+Tab (`EEUIECEChangeUserChatType(false / true)`).
+constexpr static const uint32_t EE_SCREENS_CH_NEXT_TYPE = 4619;
+
+constexpr static const uint32_t EE_SCREENS_CH_PREVIOUS_TYPE = 4620;
+
+/// The chat log form's open event, its posted close and its mouse press outside.
+constexpr static const uint32_t EE_SCREENS_CL_OPEN = 7425;
+
+constexpr static const uint32_t EE_SCREENS_CL_CLOSE = 7426;
+
+constexpr static const uint32_t EE_SCREENS_CL_MOUSE_PRESSED = 7427;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CH_CHAT_TYPE = 576;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_SEND_KEYS = 577;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_HOT_KEY = 578;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CH_OBSERVER = 579;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CH_PLAYER_TYPE = 580;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_TABBED_TO = 581;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_KEYBOARD_EVENT = 582;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_KEYBOARD_CAPTURED = 583;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_TAB_STOP = 584;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CH_CLOSE = 585;
+
+constexpr static const uint32_t EE_SCREENS_OP_CH_MOUSE_INSIDE = 586;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CH_CHEATS = 587;
+
+constexpr static const uint32_t EE_SCREENS_OP_CL_BEGIN = 588;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CL_COUNT = 589;
+
+constexpr static const uint32_t EE_SCREENS_OP_CL_CENTER = 590;
+
+constexpr static const uint32_t EE_SCREENS_OP_CL_END = 591;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CL_UNPAUSE = 592;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_CH_CHEAT = 117;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CH_CHAT = 118;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CL_NAME = 119;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CL_TEXT = 120;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CL_PLAYER = 121;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CL_APPEND = 122;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 

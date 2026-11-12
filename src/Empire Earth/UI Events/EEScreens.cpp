@@ -2,11 +2,11 @@
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
-// the main game form's events): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
+// the main game form's events; chat.rs: the chat forms' events): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
 // and the toolkit's and the game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces
 // EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp,
 // EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp,
-// EEUIEMainGameOptionsEvents.cpp and EEUIEMainGameEvents.cpp.
+// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp and EEUIEChatEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -127,6 +127,9 @@
 #include "lle/NESynchronousClient.h"
 #include "lle/TSThread.h"
 #include "ee/EEUIFMGMainGroup.h"
+#include "ee/EEUIEChatLogEvents.h"
+#include "ee/EECheatCodes.h"
+#include "lle/GETextAlignment.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EERenderObject.h"
@@ -404,9 +407,77 @@ static UWideString Text(const uint8_t* inText, size_t inLength)
     return UWideString(std::string((const char*)inText, inLength).c_str());
 }
 
+// ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
+static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_CH_CHAT_TYPE:
+        gCommunications->ProcessLocalUserInput(new EEMSelectPlayerChatType((long)inA), kSlotNone);
+        break;
+    case EE_SCREENS_OP_CH_SEND_KEYS: {
+        // Enter: one event for the hot key and the edit box's Enter
+        UIHotKey theHotKey;
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        theHotKey.SetKey(DIK_RETURN);
+        theHotKey.SetJustPressedEvent(theEvent);
+        inForm->GetControl(kChatTextEditBox)->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
+        theEvent->Dereference();
+        inForm->AddHotKey(theHotKey, 0);
+        break;
+    }
+    case EE_SCREENS_OP_CH_HOT_KEY:
+        inForm->AddHotKey(inA, inB, kKeyNone, kKeyNone, EECreateScreenEvent(inC), NULL, NULL, NULL, 0, false);
+        break;
+    case EE_SCREENS_GAME_CH_OBSERVER:
+        return gWorld.GetCurrentPlayer()->mObserverMode != false;
+    case EE_SCREENS_GAME_CH_PLAYER_TYPE:
+        return gWorld.GetCurrentPlayer()->mChatType;
+    case EE_SCREENS_OP_CH_TABBED_TO:
+        inForm->GetControl(inA)->TabbedTo();
+        break;
+    case EE_SCREENS_OP_CH_KEYBOARD_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        inForm->SetFormKeyboardCapturedEvent(theEvent);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_CH_KEYBOARD_CAPTURED:
+        return inForm->GetIsKeyboardCaptured();
+    case EE_SCREENS_OP_CH_TAB_STOP:
+        inForm->SetTabStop(inA);
+        break;
+    case EE_SCREENS_GAME_CH_CLOSE:
+        return (uint32_t)gUserInterface->CloseForm(gUIManager->mMainGameForm);
+    case EE_SCREENS_OP_CH_MOUSE_INSIDE:
+        return inForm->GetRectangle().Contains(inForm->GetMouseLocation());
+    case EE_SCREENS_GAME_CH_CHEATS:
+        return gWorld.GetCheatsEnabled();
+    case EE_SCREENS_OP_CL_BEGIN: {
+        UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox));
+        theLabel->DeleteArray();
+        theLabel->SetAlignment(kTextAlignLeft);
+        break;
+    }
+    case EE_SCREENS_GAME_CL_COUNT:
+        return EEUIECLEFormManager::Get()->mEntries.size();
+    case EE_SCREENS_OP_CL_CENTER:
+        static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->SetAlignment(kTextAlignCenter);
+        break;
+    case EE_SCREENS_OP_CL_END: {
+        UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox));
+        theLabel->SetStartingDisplayLine(theLabel->GetLineCount() - 1);
+        break;
+    }
+    case EE_SCREENS_GAME_CL_UNPAUSE:
+        gWorld.UnpauseGame();
+        break;
+    }
+    return 0;
+}
+
 // ---- the main game form's events' (main_game.rs): inForm is the main game form (or the editor's, for the media
 // dump); the behaviour menu's calls are on the manager's main game form, as the original's
-static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint32_t inA, uint32_t inB)
+static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
     switch (inOp) {
     case EE_SCREENS_GAME_MG_UI_STATE:
@@ -588,6 +659,8 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         theButton->SetPressedBitmap(theSource->GetPressedBitmap());
         break;
     }
+    default:
+        return EEScreensChatCall(inForm, inOp, inA, inB, inC);
     }
     return 0;
 }
@@ -1442,7 +1515,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB);
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB, inC);
     }
     return 0;
 }
@@ -1462,6 +1535,15 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     switch (inWhich) {
     case EE_SCREENS_TEXT_MUSIC_FILE:
         theText = theForm->GetMusicFileName();
+        break;
+    case EE_SCREENS_TEXT_CL_NAME:
+        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mName;
+        break;
+    case EE_SCREENS_TEXT_CL_TEXT:
+        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mText;
+        break;
+    case EE_SCREENS_TEXT_CL_PLAYER:
+        theText = gWorld.GetCurrentPlayer()->mName;
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -1766,6 +1848,20 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         break;
     case EE_SCREENS_TEXT_MG_CHAT_LOG:
         gUserInterface->AddChatLogEntry(theText, 0);
+        break;
+    case EE_SCREENS_TEXT_CH_CHEAT: {
+        long theCode = 0;
+        long theParameter = 0;
+        gCheatCodes->ParseCheatCode(theText, theCode, theParameter);
+        if (theCode != 0)
+            gCommunications->ProcessLocalUserInput(new EEMCheatCode(theCode, theParameter), kSlotNone);
+        break;
+    }
+    case EE_SCREENS_TEXT_CH_CHAT:
+        gCommunications->ProcessLocalUserInput(new EEMInGameChat(theText), kSlotNone);
+        break;
+    case EE_SCREENS_TEXT_CL_APPEND:
+        static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
         break;
     case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
         // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found

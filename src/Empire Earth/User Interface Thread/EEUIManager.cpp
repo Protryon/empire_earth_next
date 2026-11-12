@@ -126,7 +126,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIEChatEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"
@@ -336,14 +335,14 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_OPEN);
         break;
     case kFormEventChatFormOpen:
-        theEvent = new EEUIECEOpenChat;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_OPEN);
         break;
     case kFormEventChatFormClose:
-        theEvent = new EEUIECECloseChat;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CLOSE);
         break;
     case kFormEventChatMLBPressed:
     case kFormEventChatMRBPressed:
-        theEvent = new EEUIECECancel;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CANCEL);
         break;
     case kFormEventWNSFormOpen:
         theEvent = new EEUIEWNSOpen;
@@ -379,11 +378,11 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIECEClose;
         break;
     case kFormEventChatLogOpen:
-        theEvent = new EEUIECLEOpenChatLog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_OPEN);
         break;
     case kFormEventChatLogMLBPressed:
     case kFormEventChatLogMRBPressed:
-        theEvent = new EEUIECLEMousePressed;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_MOUSE_PRESSED);
         break;
     }
     return theEvent;
@@ -391,15 +390,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671cd8
 // (EEUIESSEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d2e
-// (EEUIECECloseChat's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d59
-// (EEUIECEOpenChat's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d84
-// (EEUIECECancel's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
@@ -418,12 +408,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671edc
 // (EEUIECEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671f07
-// (EEUIECLEOpenChatLog's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671f32
-// (EEUIECLEMousePressed's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x671f5d
 // Creates the save/load game form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
@@ -567,7 +551,7 @@ UIEvent* EECreateChatLogEvent(UIForm* inForm, unsigned long inID)
     UIEvent* theEvent = NULL;
     switch (inID) {
     case kControlEventChatLogClose:
-        theEvent = new EEUIECLECloseChatLog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_CLOSE);
         break;
     }
     return theEvent;
