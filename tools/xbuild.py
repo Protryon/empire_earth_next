@@ -513,6 +513,10 @@ WON_TESTS = {
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
     "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
+    # statements against include/ee/wonapi/WONPeerAuthMsg.h over ee_won's peerauth module and its session object
+    # (golden: rust/crates/ee_won/src/golden_peerauth.txt)
+    "won_peerauth_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

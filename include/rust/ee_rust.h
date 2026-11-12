@@ -2764,6 +2764,9 @@ struct EeWonAsyncSocket;
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
+/// `AuthSession` (0x10cc bytes in the original): the session's type, id, key, sequence numbers and last use.
+struct EeWonAuthSession;
+
 /// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
 struct EeWonByteBuffer;
 
@@ -7344,6 +7347,34 @@ using EeWonPatchSink = void(*)(void *context, const EeWonPatchField *fields, siz
 struct EeWonPatchBytes {
   const uint8_t *data;
   size_t len;
+};
+
+/// The members of a `PeerAuthClient` or `PeerAuthServer` the handshake reads and writes (the server has no
+/// `use_client_secret` and `client_key_size`).
+struct EeWonPeerState {
+  int32_t state;
+  int32_t auth_type;
+  uint8_t length_field_size;
+  bool use_auth2;
+  bool use_client_secret;
+  uint8_t client_key_size;
+};
+
+/// The C++ objects behind [`PeerEnv`]: each hook gets `context`; a sink hook hands its bytes to the sink and
+/// returns false where the original's pointer was NULL.
+struct EeWonPeerHooks {
+  void *context;
+  bool (*private_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*make_cert)(void*, bool, const uint8_t*, size_t);
+  bool (*verify_cert)(void*);
+  bool (*cert_expired)(void*);
+  bool (*cert_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*has_own_cert2)(void*);
+  void (*own_cert_raw)(void*, bool, EeWonByteSink, void*);
+  void (*secret_create)(void*, uint8_t, int32_t);
+  bool (*secret_set_key)(void*, uint8_t, const uint8_t*, size_t);
+  void (*secret_key)(void*, uint8_t, EeWonByteSink, void*);
+  void (*new_session)(void*, int32_t, uint16_t, uint8_t, uint8_t);
 };
 
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
@@ -18024,6 +18055,95 @@ void ee_won_path_relative(const uint8_t *directory,
                           size_t sub_length,
                           EeWonByteSink sink,
                           void *context);
+
+/// [`client_start`]: the request handed to `sink`.
+///
+/// # Safety
+/// The pointers are valid; the hooks are callable with their context.
+void ee_won_peer_client_start(EeWonPeerState *s,
+                              const EeWonPeerHooks *hooks,
+                              int32_t auth_type,
+                              uint8_t lfs,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// [`client_recv`]: the status; the out message handed to `sink` when there is one (`*has_out`).
+///
+/// # Safety
+/// The pointers are valid (`data` holds `len` bytes); the hooks are callable with their context.
+int32_t ee_won_peer_client_recv(EeWonPeerState *s,
+                                const EeWonPeerHooks *hooks,
+                                const uint8_t *data,
+                                size_t len,
+                                EeWonByteSink sink,
+                                void *context,
+                                bool *has_out);
+
+/// [`server_start`].
+///
+/// # Safety
+/// `s` is valid.
+void ee_won_peer_server_start(EeWonPeerState *s, uint8_t lfs);
+
+/// [`server_recv`], as [`ee_won_peer_client_recv`].
+///
+/// # Safety
+/// As [`ee_won_peer_client_recv`].
+int32_t ee_won_peer_server_recv(EeWonPeerState *s,
+                                const EeWonPeerHooks *hooks,
+                                const uint8_t *data,
+                                size_t len,
+                                EeWonByteSink sink,
+                                void *context,
+                                bool *has_out);
+
+/// A new session (the C++ `AuthSession` owns it; free with [`ee_won_auth_session_free`]).
+///
+/// # Safety
+/// `key` is a valid Blowfish.
+EeWonAuthSession *ee_won_auth_session_new(int32_t auth_type,
+                                          uint16_t id,
+                                          const EeWonBlowfish *key,
+                                          uint8_t lfs,
+                                          int64_t now);
+
+/// Frees a session.
+///
+/// # Safety
+/// `s` came from [`ee_won_auth_session_new`] and is not used after.
+void ee_won_auth_session_free(EeWonAuthSession *s);
+
+/// A session's field: 0 type, 1 id, 2 last use, 3 length field size, 4 in sequence, 5 out sequence.
+///
+/// # Safety
+/// `s` is a live session.
+int64_t ee_won_auth_session_get(const EeWonAuthSession *s, int32_t field);
+
+/// `SetLengthFieldSize`.
+///
+/// # Safety
+/// `s` is a live session.
+void ee_won_auth_session_set_lfs(EeWonAuthSession *s, uint8_t lfs);
+
+/// The session's key (`GetKey`), valid while the session lives.
+///
+/// # Safety
+/// `s` is a live session.
+const EeWonBlowfish *ee_won_auth_session_key(const EeWonAuthSession *s);
+
+/// `Encrypt` (`decrypt` false) or `Decrypt`: the status; the replacing message handed to `sink` when there is one
+/// (`*replaced`).
+///
+/// # Safety
+/// `s` is a live session; `data` holds `len` bytes; `sink` is valid with `context`.
+int32_t ee_won_auth_session_crypt(EeWonAuthSession *s,
+                                  bool decrypt,
+                                  const uint8_t *data,
+                                  size_t len,
+                                  int64_t now,
+                                  EeWonByteSink sink,
+                                  void *context,
+                                  bool *replaced);
 
 /// `write_global` into the sink.
 ///

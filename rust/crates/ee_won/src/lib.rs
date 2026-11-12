@@ -64,6 +64,7 @@ pub mod ops;
 pub mod parser;
 pub mod patch;
 pub mod path;
+pub mod peerauth;
 pub mod persist;
 pub mod plaintext;
 pub mod qsock;
