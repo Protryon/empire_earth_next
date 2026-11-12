@@ -171,7 +171,6 @@ dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 de331 df57c Empire Earth/Graphics Thread/EEE2DBattlefieldAmbient.cpp
-df57c df68d Empire Earth/Graphics Thread/EEE2DCircularMarchingIcons.cpp
 df68d dfd03 Empire Earth/Graphics Thread/EEE2DExhaustTrail.cpp
 dfd03 e0389 Empire Earth/Graphics Thread/EEE2DExplosion.cpp
 e0389 e0cf5 Empire Earth/Graphics Thread/EEE2DFire.cpp
@@ -189,7 +188,6 @@ e5c63 e614f Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
 e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
-e72fa e753d Empire Earth/Graphics Thread/EEE2DSquareMarchingIcons.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp

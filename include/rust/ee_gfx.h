@@ -36,6 +36,12 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_PLUME = 11;
 /// The velocity particle: a puff thrown along a line's direction, slowing down over the effect's int param 1.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE = 12;
 
+/// The icons on a circle (the original's `EEE2DCircularMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_CIRCULAR_ICONS = 16;
+
+/// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SQUARE_ICONS = 15;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -1283,6 +1289,22 @@ int32_t ee_gfx_effect_load_plume(EeGfxEffectRecord *r, const EeGfxEffectFile *fi
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_plume(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
+/// points into `out`; their count.
+///
+/// # Safety
+/// `out` has room for `capacity` points.
+size_t ee_gfx_effect_marching_offsets(int32_t kind,
+                                      int32_t count,
+                                      float angle,
+                                      float radius,
+                                      float half_side,
+                                      EeGe3DPoint *out,
+                                      size_t capacity);
+
+/// The square icons' bounding radius (`sqrt(2 r r)`).
+float ee_gfx_effect_square_icons_radius(float half_side);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

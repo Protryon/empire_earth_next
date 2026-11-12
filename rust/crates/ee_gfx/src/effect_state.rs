@@ -763,6 +763,88 @@ pub fn plume_step(r: &mut EeGfxEffectRecord, t: &EeGfxPlumeTick, moved: &mut boo
     }
 }
 
+// ---- the marching icons' layouts (EEE2DMarchingIcons; kinds 0x10 circle, 0xf square)
+
+/// The icons on a circle (the original's `EEE2DCircularMarchingIcons`).
+pub const EE_GFX_EFFECT_KIND_CIRCULAR_ICONS: i32 = 0x10;
+/// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
+pub const EE_GFX_EFFECT_KIND_SQUARE_ICONS: i32 = 0xf;
+
+/// `ComputeOffsets`' candidates in order (the C++ keeps those `IsIconShown` takes): `count` icons spaced evenly from
+/// `angle`, on the circle of `radius` (the effect's bounding radius) or the square of half side `half_side` (the
+/// graphic effect's param 1).
+pub fn marching_offsets(kind: i32, count: i32, angle: f32, radius: f32, half_side: f32) -> Vec<Ge3DPoint> {
+    let mut out = vec![Ge3DPoint::default(); count.max(0) as usize];
+    let n = marching_offsets_into(kind, count, angle, radius, half_side, &mut out);
+    out.truncate(n);
+    out
+}
+
+/// `marching_offsets` into `out` (no allocation: the tick makes none the original did not); the count written.
+pub fn marching_offsets_into(
+    kind: i32,
+    count: i32,
+    angle: f32,
+    radius: f32,
+    half_side: f32,
+    out: &mut [Ge3DPoint],
+) -> usize {
+    if count <= 0 {
+        return 0;
+    }
+    let step = 6.2831855 / count as f32;
+    let mut n = 0;
+    for i in 0..count {
+        if n == out.len() {
+            break;
+        }
+        let a = angle + i as f32 * step;
+        out[n] =
+            if kind == EE_GFX_EFFECT_KIND_SQUARE_ICONS { square_icon(a, half_side) } else { circle_icon(a, radius) };
+        n += 1;
+    }
+    n
+}
+
+/// `EEE2DCircularMarchingIcons::AddIcon`'s point (the exe's pi/2, not `UMSin`'s).
+fn circle_icon(angle: f32, radius: f32) -> Ge3DPoint {
+    Ge3DPoint { x: um::um_cos(angle) * radius, y: um::um_cos(1.5707964 - angle) * radius, z: 0.0 }
+}
+
+/// `EEE2DSquareMarchingIcons::AddIcon`'s point: the angle mapped onto the square's perimeter, one side per quarter.
+fn square_icon(angle: f32, radius: f32) -> Ge3DPoint {
+    let mut angle = angle;
+    let sign: i32 = if angle >= 0.0 { 1 } else { -1 };
+    while sign as f32 * angle > 6.2831855 {
+        angle -= sign as f32 * 6.2831855;
+    }
+    let mut fraction = angle.abs() * 0.15915494;
+    let mut p = Ge3DPoint::default();
+    if fraction > 0.875 || fraction <= 0.125 {
+        p.x = radius;
+        fraction += 0.125;
+        if fraction > 1.0 {
+            fraction -= 1.0;
+        }
+        p.y = (fraction * 4.0 - 0.5) * radius * 2.0;
+    } else if fraction <= 0.375 {
+        p.y = radius;
+        p.x = -(((fraction - 0.125) * 4.0 - 0.5) * radius * 2.0);
+    } else if fraction <= 0.625 {
+        p.x = -radius;
+        p.y = -(((fraction - 0.375) * 4.0 - 0.5) * radius * 2.0);
+    } else {
+        p.y = -radius;
+        p.x = ((fraction - 0.625) * 4.0 - 0.5) * radius * 2.0;
+    }
+    p
+}
+
+/// The square's bounding radius: its half diagonal (`sqrt` through `double`).
+pub fn square_radius(half_side: f32) -> f32 {
+    um::sqrt(half_side * half_side + half_side * half_side)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1026,6 +1108,30 @@ mod tests {
         let mut q = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_SMOKE_PLUME);
         assert_eq!(plume_step(&mut q, &EeGfxPlumeTick { flag1: true, ..t }, &mut moved), 0);
         assert_eq!((q.plume.age, q.plume.start), (0.1, Ge3DPoint::default()));
+    }
+
+    #[test]
+    fn the_marching_icons_lie_on_their_circle_and_square() {
+        assert!(marching_offsets(EE_GFX_EFFECT_KIND_SQUARE_ICONS, 0, 0.0, 1.0, 1.0).is_empty());
+        let c = marching_offsets(EE_GFX_EFFECT_KIND_CIRCULAR_ICONS, 4, 0.0, 2.0, 9.0);
+        assert_eq!(c.len(), 4);
+        assert_eq!(c[0], Ge3DPoint { x: um::um_cos(0.0) * 2.0, y: um::um_cos(1.5707964) * 2.0, z: 0.0 });
+        for p in &c {
+            assert!(((p.x * p.x + p.y * p.y).sqrt() - 2.0).abs() < 0.01);
+        }
+        // the square: the right side first (from -1/8 to 1/8 turn), then the top, left and bottom
+        let s = marching_offsets(EE_GFX_EFFECT_KIND_SQUARE_ICONS, 4, 0.0, 9.0, 1.0);
+        assert_eq!(s[0], Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 });
+        assert_eq!((s[1].y, s[2].x, s[3].y), (1.0, -1.0, -1.0));
+        for p in &s {
+            assert!(p.x.abs() <= 1.0 && p.y.abs() <= 1.0);
+        }
+        // angles past a turn wrap; negative ones by their size
+        // (the C++'s subtractions, one turn at a time)
+        assert_eq!(square_icon(6.2831855 * 2.0 + 0.1, 1.0), square_icon(6.2831855 * 2.0 + 0.1 - 6.2831855, 1.0));
+        assert!((square_icon(6.2831855 + 0.1, 1.0).y - square_icon(0.1, 1.0).y).abs() < 1e-5);
+        assert_eq!(square_icon(-0.3, 1.0), square_icon(0.3, 1.0));
+        assert_eq!(square_radius(1.0), (2.0f64).sqrt() as f32);
     }
 
     #[test]
