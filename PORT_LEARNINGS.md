@@ -7914,3 +7914,48 @@ state (UDPManager's two ops) and the first piece of the lobby's model.
 - **Left.** LobbyPersistentData's containers and LobbyModel's lists (LobbyClient, LobbyFriend, LobbyGroup,
   LobbyServer, LobbyServerList, LobbyGameList; the decisions are model.rs since round 7), then StagingLogic /
   InitLogic / ChatCommandParser objects.
+
+## R4.4, fifth round: the mini map's press, the ring models, the sky and clouds and the earthquake's crack in Rust (ee_gfx minimap.rs, models.rs, terrain.rs, quake.rs; branch rust-gfx11, 2026-11-12)
+
+Four leaves, pinned as before: a scratch driver (`build/gx11_golden`, not in the repository) #includes the unit of
+the commit before the work (929fa637, `git show`) over the real GE math units, an LCG seeded 1 draws the cases and
+each prints an FNV-1a 64 of its log; the Rust tests replay the C++ glue; each driver relinked over the forwarders
+printed the same bytes, and the random ones on seeds 2 and 3 at four times the size.
+
+- **`EEUIMiniMap::MouseRButtonDown` (`minimap.rs` `press_point`).** The press's clamp makes two separate tests per
+  axis where `CenterCamera`'s uses `else if`; they part only with inverted bounds (left past right), which the
+  driver draws in 8 % of the cases (the test asserts the stream reaches it). 2,000 presses with the modifiers.
+- **The ring models (`models.rs`, `EEROUnits::LoadMedia`).** The area-effect ring's 26 vertices (six turns of
+  -2 pi / 14 through `revolve`), texture coordinates and 10 triangles; the selection rings' segments (6, 8, 10 by
+  model detail), points (the turns accumulate in one transformation, as the original's), coordinates, triangles
+  and colour pattern. `LoadMedia` has no input but `gModelDetail`: the driver loads it at details 0, 1, 2, 3, -1
+  and 7 and dumps every model's final state. The C++ now stores the values in index order where the original
+  stored them in its own order; nothing reads between the stores except the ring's coordinate loop, which read
+  the points it had just stored, so the final state is the contract. The driver prints the calls (textures,
+  lines, creations) on a line of their own: the relink compares those, the Rust test only the models.
+- **The sky and clouds (`terrain.rs`, `EEROTerrain.cpp`).** `UpdateSkyColors`' blend of the four bands, the sky
+  dome's and the star models' points, `UpdateCloudLayer`'s points, scrolled coordinates and wrapped offset (the
+  original read the points back from the vertex array for its distances: Rust takes them from its own array),
+  and `StepGridMode`. A time of day past 1 read past a band, and past `gSkyColors` from 17/16 on, in the original;
+  the index is held at the table's last entry (the golden stays within 0..1). 1,240 cases.
+- **The earthquake's crack (`quake.rs`, `EEE3DEarthquake.cpp`).** The strip's triangles, `BuildModel`'s texture
+  rows, `Queue`'s rows (each row's front and v) and the hold time of a crack stopped over space. The C++ keeps the
+  ground: the five vertices across each row on `GetGroundPoint` and the middle one's space test, in the original's
+  order (the first row's z carries into the next vertex's transform, as before). 300 cracks, 1,230 calls.
+- **Fake models that store.** `fakemodel.h` subclasses `GEVertexArray` and `GEPolygonArray` for real (their
+  constructors and destructors defined in the driver), stores every set, logs a read of an unset slot or an index
+  past the array, and dumps the final state: a better contract than call order for builders that write arrays.
+  `GEMaterial`'s private ranges are read through its `friend struct GEStoreDigest`, defined by the driver.
+- **Virtual members on a zeroed object.** A pointer to a virtual member dispatches through the vtable even when
+  taken with `&Class::Member`: on a calloc'd control it jumped through a null vptr (the press is virtual). Call
+  the body by its decorated name (`__asm__("?MouseRButtonDown@EEUIMiniMap@@MEAAJXZ")`; `M` for protected, `U`
+  public) or with a qualified call (`q->EEE3DEarthquake::Queue(...)`).
+- **cbindgen and computed array lengths.** `[T; 2 * CONST]` in a `#[repr(C)]` struct made cbindgen emit the struct
+  as opaque (a forward declaration only); use a named constant for each length.
+- **A build without the environment.** One build was started from a shell that had not sourced the round's
+  environment, so `EE_ORIG_SRC_ROOT` was unset and it began staging into the default `C:\EEX` (stopped within
+  seconds). Source the environment in the same command as every build.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: the mini map's right click
+  (orders to a point; drag past the map's edges), the area-effect and selection rings at each model detail, the
+  sky at each time of day and the clouds' scroll (and the stars on a space map), the editor's grid mode keys and
+  an earthquake (a calamity power) growing over land and stopping at space run only in the windowed game.
