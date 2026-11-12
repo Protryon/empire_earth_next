@@ -21,6 +21,8 @@
 //! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
 //!   C++ host).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
+//! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
+//!   open and close events, over the C++ builder helpers).
 //! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
 //!   as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
@@ -45,6 +47,9 @@ mod camera_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
+pub mod civ_builder;
+#[cfg(not(test))]
+mod civ_builder_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod custom_campaign;

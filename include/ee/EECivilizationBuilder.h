@@ -86,27 +86,8 @@ void CivBuilderDeleteSelected(UIForm* inForm);
 long CivBuilderAskAccept(UIForm* inForm);
 void CivBuilderAcceptChanges(UIForm* inForm);
 
-// the builder form's open event: which buttons show (RTTI EEUIECBShowOrHideButtons; vtable 0x44bfbc; sizeof 0x14;
-// CivBuilderOpenForm news it with the five flags); member names are provisional
-class EEUIECBShowOrHideButtons : public UIEvent {
-public:
-    EEUIECBShowOrHideButtons(bool inB0C, bool inB0D, bool inB0E, bool inB0F, bool inB10)
-        : mB0C(inB0C), mB0D(inB0D), mB0E(inB0E), mB0F(inB0F), mB10(inB10) {}
-    virtual ~EEUIECBShowOrHideButtons() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x280eab
-
-    bool mB0C;                              // +0x0c control 0x11
-    bool mB0D;                              // +0x0d control 0x10
-    bool mB0E;                              // +0x0e control 2
-    bool mB0F;                              // +0x0f control 0xf
-    bool mB10;                              // +0x10 hide the edit controls (CivBuilderHidePoints)
-};
-
-// the builder form's close event (RTTI EEUIECBCleanUp; vtable 0x44bfa8; sizeof 0xc): deletes the edited civilization
-class EEUIECBCleanUp : public UIEvent {
-public:
-    virtual ~EEUIECBCleanUp() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x280e8e
-};
+// the builder form's open event (the original's EEUIECBShowOrHideButtons, which buttons show) and close event
+// (EEUIECBCleanUp, the edited civilization deleted) are Rust's with the builder's control events: ee_screens
+// civ_builder.rs (EE_SCREENS_CB_BUTTONS + flags, EE_SCREENS_CB_CLEAN_UP)
 
 #endif

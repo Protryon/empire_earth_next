@@ -125,7 +125,6 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
@@ -135,7 +134,6 @@
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetStatsEvents.h"
-#include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEDSUIEvents.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBitmapBackground.h"
@@ -553,68 +551,68 @@ UIEvent* EECreateCivilizationBuilderEvent(UIForm* inForm, unsigned long inID)
     UIEvent* theEvent = NULL;
     switch (inID) {
     case kControlEventCBSaveGameNameSelected:
-        theEvent = new EEUIECBSaveNameSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SAVE_NAME_SELECTED);
         break;
     case kControlEventCBCancelNewCivDialog:
-        theEvent = new EEUIECBCancelChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_NAME);
         break;
     case kControlEventCBShowLoadCivDialog:
-        theEvent = new EEUIECBShowLoadCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_LOAD);
         break;
     case kControlEventCBCancelLoadCivDialog:
-        theEvent = new EEUIECBCancelLoadCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_LOAD);
         break;
     case kControlEventCBShowSaveCivDialog:
-        theEvent = new EEUIECBShowSaveCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_SAVE);
         break;
     case kControlEventCBCancelSaveCivDialog:
-        theEvent = new EEUIECBCancelSaveCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_SAVE);
         break;
     case kControlEventCBPurchasedUpgradeSelected:
-        theEvent = new EEUIECBPurchasedUpgradeSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASED_SELECTED);
         break;
     case kControlEventCBPotentialUpgradeSelected:
-        theEvent = new EEUIECBPotentialUpgradeSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_POTENTIAL_SELECTED);
         break;
     case kControlEventCBUpgradePurchased:
-        theEvent = new EEUIECBUpgradePurchaseAttempt;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASE);
         break;
     case kControlEventCBUpgradeReturned:
-        theEvent = new EEUIECBUpgradeReturned;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_RETURNED);
         break;
     case kControlEventCBUpdateControls:
-        theEvent = new EEUIECBUpdateControls;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_UPDATE_CONTROLS);
         break;
     case kControlEventCBCancelChanges:
-        theEvent = new EEUIECBCancelChanges;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_CHANGES);
         break;
     case kControlEventCBAcceptChanges:
-        theEvent = new EEUIECBAcceptChanges;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGES);
         break;
     case kControlEventCBShowChangeNameDialog:
-        theEvent = new EEUIECBShowChangeNameDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_CHANGE_NAME);
         break;
     case kControlEventCBSaveCivEnterPressed:
-        theEvent = new EEUIECBAcceptSaveCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
         break;
     case kControlEventCBAcceptLoadCivilization:
-        theEvent = new EEUIECBAcceptLoadCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
         break;
     case kControlEventCBAcceptChangeName:
-        theEvent = new EEUIECBAcceptChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
         break;
     case kControlEventCBDisplayDeleteCivDialogInLoad:
     case kControlEventCBDisplayDeleteCivDialogInSave:
-        theEvent = new EEUIECBDisplayDeleteCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_DELETE);
         break;
     case kControlEventCBAcceptChangeNameEnterPressed:
-        theEvent = new EEUIECBAcceptChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
         break;
     case kControlEventCBAcceptLoadCivilizationDoubleClicked:
-        theEvent = new EEUIECBAcceptLoadCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
         break;
     case kControlEventCBAcceptSaveCivilization:
-        theEvent = new EEUIECBAcceptSaveCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
         break;
     }
     return theEvent;

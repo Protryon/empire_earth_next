@@ -159,6 +159,117 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CL_PLAYER = 121;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CL_APPEND = 122;
 
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_CHANGE_NAME = 1793;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_CHANGE_NAME = 1794;
+
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_LOAD = 1795;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_LOAD = 1796;
+
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_SAVE = 1797;
+
+/// The save, load and name dialogs' cancel buttons (one body in the original, three classes).
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_SAVE = 1798;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_LOAD = 1799;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_NAME = 1800;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_SAVE = 1801;
+
+constexpr static const uint32_t EE_SCREENS_CB_SAVE_NAME_SELECTED = 1802;
+
+constexpr static const uint32_t EE_SCREENS_CB_PURCHASED_SELECTED = 1803;
+
+constexpr static const uint32_t EE_SCREENS_CB_POTENTIAL_SELECTED = 1804;
+
+constexpr static const uint32_t EE_SCREENS_CB_PURCHASE = 1805;
+
+constexpr static const uint32_t EE_SCREENS_CB_RETURNED = 1806;
+
+constexpr static const uint32_t EE_SCREENS_CB_UPDATE_CONTROLS = 1807;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_CHANGES = 1808;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_CHANGES = 1809;
+
+/// The load and save dialogs' delete buttons.
+constexpr static const uint32_t EE_SCREENS_CB_DELETE = 1810;
+
+/// The builder form's close event: the edited civilization deleted.
+constexpr static const uint32_t EE_SCREENS_CB_CLEAN_UP = 1811;
+
+/// The builder form's open event: this code plus its five flags (bit 0 the accept button shown, 1 exit, 2 load,
+/// 3 save, 4 the points hidden).
+constexpr static const uint32_t EE_SCREENS_CB_BUTTONS = 1824;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_NAME_DIALOG = 672;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_TYPED = 673;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ACCEPT_NAME = 674;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLOSE = 675;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SAVE_AS = 676;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_LOAD = 677;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_SAVE = 678;
+
+/// (list: 0 CivBuilderGetLoadFileList, 1 the event form's save list) -> its GetCurrentSelection, or
+/// [`EE_SCREENS_CB_NO_LIST`]; the load list's selected file name kept
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SELECTION = 679;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SET_NAME_FROM_CIVILIZATION = 680;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLOSE_FORM = 681;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_UNCHANGED = 682;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SAVE_NAME_SELECTED = 683;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CAN_CHANGE = 684;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RESET_AVAILABLE = 685;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RESET_BOUGHT = 686;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_LOCKED = 687;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_BUY = 688;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RETURN = 689;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_POINTS_LEFT = 690;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ASK_ACCEPT = 691;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ACCEPT_CHANGES = 692;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_FORM_ID = 693;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ASK_DELETE = 694;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLEAN_UP = 695;
+
+constexpr static const uint32_t EE_SCREENS_OP_CB_SHOW = 696;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_HIDE_POINTS = 697;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_NAME = 126;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_CIVILIZATION_NAME = 127;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_SET_NAME = 128;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_LOAD = 129;
+
+/// `EE_SCREENS_GAME_CB_SELECTION`'s answer for no list.
+constexpr static const uint32_t EE_SCREENS_CB_NO_LIST = 4294967295;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 
