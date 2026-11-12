@@ -94,7 +94,7 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
-#include "rust/ee_rust.h"   // ee_screens_lobby_*: the player rows' decisions (ee_screens lobby.rs)
+#include "rust/ee_screens.h"   // ee_screens_lobby_*: the player rows' decisions (ee_screens lobby.rs)
 static unsigned long sStartTime;           // 0x562fd0: the lobby's Start time (provisional name)
 static long sPlayerTypeMenus[16];        // 0x562f90: the menu each slot's type box holds (provisional name)
 // .data 0x4c6474..0x4c64b0: the string ids of the lobby's difficulty, (unused) 0x4c6480, speed and game type lists
