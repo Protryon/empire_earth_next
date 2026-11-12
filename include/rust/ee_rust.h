@@ -6124,6 +6124,32 @@ struct EeGfxSelectionModel {
   uint32_t colors[EE_GFX_SELECTION_MAX_VERTICES];
 };
 
+/// `GEColor`'s storage: red, green, blue.
+struct EeGfxColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// One frame's sky: the fog colour (the lowest band's), the sky dome's vertex colours and points, and the outer and
+/// inner star models' points (the inner a quarter of the outer).
+struct EeGfxSkyFrame {
+  EeGfxColor fog;
+  EeGfxColor sky_colors[20];
+  EeGe3DPoint sky_points[20];
+  EeGe3DPoint outer_stars[24];
+  EeGe3DPoint inner_stars[24];
+};
+
+/// One frame's cloud layer: its eight points (the outer square's four, then the inner's), their texture
+/// coordinates, and the cloud offset (`wrapped`: it was 1 or more and is now its fraction, to be stored back).
+struct EeGfxCloudLayer {
+  EeGe3DPoint points[8];
+  EeGfxTexCoord coords[8];
+  float offset;
+  bool wrapped;
+};
+
 /// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
 /// edges between usable and unusable cells `gBarBackColor` (`back` 1).
 struct EeGfxPlacementLine {
@@ -6147,13 +6173,6 @@ struct EeGfxEffectFog {
   float start;
   float end;
   float scale;
-};
-
-/// `GEColor`'s storage: red, green, blue.
-struct EeGfxColor {
-  float red;
-  float green;
-  float blue;
 };
 
 /// One quad of an effect batch: its colour and normal (the same at every corner) and its four corners in the order
@@ -13222,6 +13241,24 @@ uint32_t ee_gfx_units_selection_segments(int32_t detail);
 
 /// `LoadMedia`'s selection ring of size `size` (0..2; larger is held at 2) at a model detail.
 EeGfxSelectionModel ee_gfx_units_selection_model(int32_t detail, uint32_t size);
+
+/// `UpdateSkyColors`: the four bands' blend at `time_of_day` from `colors` (`gSkyColors`, 68 entries) and the sky
+/// and star models' points over a map of `size` tiles a side and width `width`.
+///
+/// # Safety
+/// `colors` points at 68 colours.
+EeGfxSkyFrame ee_gfx_terrain_sky_frame(float time_of_day,
+                                       const EeGfxColor *colors,
+                                       int32_t size,
+                                       int32_t width);
+
+/// `UpdateCloudLayer`: the layer's points and scrolled texture coordinates and the wrapped cloud offset.
+EeGfxCloudLayer ee_gfx_terrain_cloud_layer(int32_t size,
+                                           int32_t width,
+                                           float offset);
+
+/// `StepGridMode`: the editor's grid mode stepped forwards or backwards through 0..17.
+int32_t ee_gfx_terrain_grid_mode_step(int32_t mode, bool backwards);
 
 /// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
 /// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.

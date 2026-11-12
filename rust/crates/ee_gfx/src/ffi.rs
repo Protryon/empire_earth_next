@@ -18,6 +18,7 @@ use crate::models::{self, EeGfxRingModel, EeGfxSelectionModel};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::select::{self, EeGfxSelectLines};
+use crate::terrain::{self, EeGfxCloudLayer, EeGfxSkyFrame};
 use crate::units::{
     self, EeGfxBarRects, EeGfxBarSizes, EeGfxLabelClip, EeGfxPlacementLine, EeGfxRingSegments, EeGfxSelectionRing,
 };
@@ -642,6 +643,37 @@ pub extern "C" fn ee_gfx_units_selection_segments(detail: i32) -> u32 {
 #[no_mangle]
 pub extern "C" fn ee_gfx_units_selection_model(detail: i32, size: u32) -> EeGfxSelectionModel {
     models::selection_model(detail, (size as usize).min(2))
+}
+
+// ---- the sky, the clouds and the grid mode (terrain.rs, EEROTerrain.cpp)
+
+/// `UpdateSkyColors`: the four bands' blend at `time_of_day` from `colors` (`gSkyColors`, 68 entries) and the sky
+/// and star models' points over a map of `size` tiles a side and width `width`.
+///
+/// # Safety
+/// `colors` points at 68 colours.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_terrain_sky_frame(
+    time_of_day: f32,
+    colors: *const EeGfxColor,
+    size: i32,
+    width: i32,
+) -> EeGfxSkyFrame {
+    // SAFETY: the function's contract (the table copied before use)
+    let table = unsafe { *(colors as *const [EeGfxColor; 68]) };
+    terrain::sky_frame(time_of_day, &table, size, width)
+}
+
+/// `UpdateCloudLayer`: the layer's points and scrolled texture coordinates and the wrapped cloud offset.
+#[no_mangle]
+pub extern "C" fn ee_gfx_terrain_cloud_layer(size: i32, width: i32, offset: f32) -> EeGfxCloudLayer {
+    terrain::cloud_layer(size, width, offset)
+}
+
+/// `StepGridMode`: the editor's grid mode stepped forwards or backwards through 0..17.
+#[no_mangle]
+pub extern "C" fn ee_gfx_terrain_grid_mode_step(mode: i32, backwards: bool) -> i32 {
+    terrain::grid_mode_step(mode, backwards)
 }
 
 // ---- the placement footprint and the labels (units.rs, EEROUnits.cpp)
