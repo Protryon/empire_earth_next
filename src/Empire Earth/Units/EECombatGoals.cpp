@@ -44,6 +44,25 @@
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/RTSDummyHeader.h"
+#include "lle/U2DRectangle.h"
+#include "lle/U2DSparseArray.h"
+#include "lle/U2DPolygon.h"
+#include "ee/AStarGraphableObjectBase.h"
+#include "ee/EEAIAStarStorage.h"
+#include "ee/EEEffectManager.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EEAIContinent.h"
+#include "ee/EECPILocation.h"
+#include "ee/EECPAttackSubGroup.h"
+#include "ee/EERules.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEUnitBehavior.h"
+#include "ee/EEUnitAction.h"
+#include "ee/EEPathManager.h"
+#include "ee/EEAIPathGoalModifierBase.h"
+#include "ee/EEAIBoundedPathGoalModifierBase.h"
+#include "ee/EEAIPathGoalModifiers.h"
 
 void EECombatFillCondition(EeCombatConditionIn& in, int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent,
                            EEUnit* inTarget)
@@ -230,6 +249,8 @@ struct EECombatFolder {
 
 EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQR_FULL");
 EECombatFolder sShots(EE_COMBAT_TAG('C', 'B', 'S', 'O'), "EE_SIM_CAPTURE_CBSO_FULL");
+EECombatFolder sXReads(EE_COMBAT_TAG('C', 'B', 'X', 'R'), "EE_SIM_CAPTURE_CBXR_FULL");
+EECombatFolder sXActions(EE_COMBAT_TAG('C', 'B', 'X', 'A'), "EE_SIM_CAPTURE_CBXA_FULL");
 thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
 
 uint32_t EEShotBits(float inValue)
@@ -308,6 +329,66 @@ void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const
     sHostReads.Add(theRecord, sizeof(theRecord));
 }
 
+void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                          uint32_t inExtra0, uint32_t inExtra1)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[6] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
+                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, inExtra0, inExtra1};
+    sXReads.Add(theRecord, sizeof(theRecord));
+}
+
+void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
+                            uint32_t inCheckLocation)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theHash = 0x811c9dc5u;
+    for (size_t i = 0; i < inUnit->mIgnoredTargets.size(); i++) {
+        const EEComplexUnitAttacker& theEntry = inUnit->mIgnoredTargets[i];
+        uint32_t theFields[6] = {(uint32_t)theEntry.mTileX, (uint32_t)theEntry.mTileY, (uint32_t)theEntry.mFromX,
+                                 (uint32_t)theEntry.mFromY, (uint32_t)theEntry.mUnitID, (uint32_t)theEntry.mTime};
+        const unsigned char* theBytes = (const unsigned char*)theFields;
+        for (size_t k = 0; k < sizeof(theFields); k++)
+            theHash = (theHash ^ theBytes[k]) * 0x01000193u;
+    }
+    uint32_t theRecord[7] = {inFunc, (uint32_t)inUnit->mUnitID, inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
+                             (uint32_t)inResult, inCheckLocation, (uint32_t)inUnit->mIgnoredTargets.size(), theHash};
+    sXReads.Add(theRecord, sizeof(theRecord));
+}
+
+void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[20];
+    memset(theRecord, 0, sizeof(theRecord));
+    theRecord[0] = inFunc;
+    theRecord[1] = (uint32_t)inUnit->mUnitID;
+    theRecord[2] = inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0;
+    theRecord[3] = inBefore;
+    theRecord[4] = EECombatCommandOf(inUnit);
+    theRecord[5] = (uint32_t)inUnit->mAnimation;
+    theRecord[6] = (uint32_t)inUnit->GetHitPoints();
+    theRecord[7] = (uint32_t)inUnit->mReloadTimer.Get();
+    theRecord[8] = (uint32_t)inUnit->mWeaponTagPoint;
+    theRecord[9] = (uint32_t)inUnit->mAmmunition;
+    theRecord[10] = (uint32_t)inUnit->mFlightTime;
+    theRecord[11] = inUnit->mIsSpecialAttack;
+    theRecord[12] = inUnit->mIsFiringHigh;
+    theRecord[13] = inUnit->mExperience;
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    theRecord[14] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
+    EEUnit* theGoalTarget = EECombatShotTarget(inUnit);
+    theRecord[15] = theGoalTarget != NULL ? (uint32_t)theGoalTarget->mUnitID : 0;
+    theRecord[16] = inTarget != NULL ? (uint32_t)inTarget->GetHitPoints() : 0;
+    theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
+    theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
+    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer.Get();
+    sXActions.Add(theRecord, sizeof(theRecord));
+}
+
 void EECombatCaptureFlush()
 {
     if (!EESimCaptureRecord::Active())
@@ -319,6 +400,8 @@ void EECombatCaptureFlush()
     }
     sHostReads.Flush();
     sShots.Flush();
+    sXReads.Flush();
+    sXActions.Flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
@@ -530,6 +613,11 @@ struct EEQueryContext {
     EEComplexUnit* mUnit;                   // the call's unit
     EEUGAttackUnit* mGoal;                  // IsStillReachable's, IsGateClosed's attack goal
     std::vector<EEComplexUnit*>* mRegion;   // FindImpactUnit's region, found by its count read
+    EEUnitClass* mClass = NULL;             // world.rs: the class of Attacked or FireShot
+    EEUnitGoal* mAttackedGoal = NULL;       // Attacked's goal (the helpers' clones)
+    std::vector<EEUnit*> mNear;             // Attacked's units near the attacked unit
+    U2DPoint<long> mTile;                   // Attacked's EEIsAttackReachable tile (one for all helpers, as the original)
+    GE3DPoint mPoint;                       // FireShot's drop point
 };
 
 EEUnit* EEQueryUnit(uint64_t inHandle)
@@ -672,6 +760,38 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetZ());
     case EE_COMBAT_Q_ID:
         return (uint32_t)theObject->mUnitID;
+    case EE_COMBAT_Q_GAME_TIME: return (uint32_t)gPhysics->mGameTime;
+    case EE_COMBAT_Q_TILE_SIZE: return (uint32_t)theObject->mUnitClass->mTileSize;
+    case EE_COMBAT_Q_IGNORED_COUNT: return (uint32_t)EEQueryComplex(inObject)->mIgnoredTargets.size();
+    case EE_COMBAT_Q_CLASS_MAX_VELOCITY: return EEConditionBits(theObject->mUnitClass->mMaxVelocity);
+    case EE_COMBAT_Q_DOMAINS: return (uint32_t)theObject->mUnitClass->mDomains;
+    case EE_COMBAT_Q_CONTAINER: return EEQueryComplex(inObject)->mContainer != NULL;
+    case EE_COMBAT_Q_MAP_SIZE: return (uint32_t)::gWorld.mMap->mSize;
+    case EE_COMBAT_Q_DISTANCE_SQUARED: return EEConditionBits(theUnit->DistanceSquaredTo(EEQueryComplex(inObject)));
+    case EE_COMBAT_Q_STATS_MAX_VELOCITY: return EEConditionBits(theObject->GetStats()->mMaxVelocity);
+    case EE_COMBAT_Q_TARGETS_ENEMIES: return EEQueryComplex(inObject)->mBehavior->mCanTargetEnemies;
+    case EE_COMBAT_Q_MOVES_FREELY: return EEQueryComplex(inObject)->mBehavior->CanMoveFreely(EEQueryComplex(inObject));
+    case EE_COMBAT_Q_GOAL_KIND: {
+        EEUnitGoal* theGoal = EEQueryComplex(inObject)->mGoalState;
+        return theGoal != NULL ? (uint32_t)theGoal->mKind : EE_COMBAT_Q_NONE;
+    }
+    case EE_COMBAT_Q_GOAL_B1C: return EEQueryComplex(inObject)->mGoalState->GetB1C();
+    case EE_COMBAT_Q_LAND_BUILDING: return theObject->GetUnitClass()->IsLandBuilding();
+    case EE_COMBAT_Q_ATTACK: return EEConditionBits(theObject->GetStats()->mAttack);
+    case EE_COMBAT_Q_RELOAD_TIMER: return (uint32_t)EEQueryComplex(inObject)->mReloadTimer.Get();
+    case EE_COMBAT_Q_RELOAD_TIME: return (uint32_t)EEQueryComplex(inObject)->mStats->mReloadTime;
+    case EE_COMBAT_Q_AMMUNITION: return (uint32_t)EEQueryComplex(inObject)->mAmmunition;
+    case EE_COMBAT_Q_SHOT_CLASS: {
+        EEUnitClass* theClass = theContext->mClass;
+        return (theClass->mProjectileClass != NULL ? EE_COMBAT_SHOT_CLASS_PROJECTILE : 0)
+            | (theClass->mUsesAmmunition ? EE_COMBAT_SHOT_CLASS_AMMUNITION : 0)
+            | (theClass->mMuzzleFlashEffect != NULL ? EE_COMBAT_SHOT_CLASS_MUZZLE_FLASH : 0)
+            | (theClass->mShotEffect != NULL ? EE_COMBAT_SHOT_CLASS_SHOT_EFFECT : 0);
+    }
+    case EE_COMBAT_Q_TURRET_PARTS: return (uint32_t)EEQueryComplex(inObject)->GetModel()->mTurretParts.size();
+    case EE_COMBAT_Q_HIGH_TECH_TOOLS:
+        return EEGetRules().Epoch(theObject->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;   // epochs.yaml
+    case EE_COMBAT_Q_SPARKS_EFFECT: return theObject->mUnitClass->mImpactSparksEffect != NULL;
     }
     return 0;
 }
@@ -755,6 +875,169 @@ EeCombatQueryHost EEQueryHostOf(EEQueryContext* inContext)
     return theHost;
 }
 
+const float kCallForHelpRadius = 5.0f;  // 0x447aec (Attacked's)
+
+// ---- the operations of ee_combat world.rs (R5b.2, eighth round): each the original's statement on the handles
+uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t inOther, EeCombatWorldArgs* ioArgs)
+{
+    EEQueryContext* theContext = (EEQueryContext*)inContext;
+    EEComplexUnit* theObject = EEQueryComplex(inObject);
+    EEComplexUnit* theOther = EEQueryComplex(inOther);
+    int64_t* a = *ioArgs;
+    EEUnitClass* theClass = theContext->mClass;
+    switch (inCode) {
+    case EE_COMBAT_W_IGNORED_ENTRY: {
+        const EEComplexUnitAttacker& theEntry = theObject->mIgnoredTargets[(size_t)a[0]];
+        a[0] = theEntry.mTileX;
+        a[1] = theEntry.mTileY;
+        a[2] = theEntry.mFromX;
+        a[3] = theEntry.mFromY;
+        a[4] = (int64_t)theEntry.mUnitID;
+        a[5] = (int64_t)theEntry.mTime;
+        return 0;
+    }
+    case EE_COMBAT_W_IGNORED_ERASE: {
+        std::deque<EEComplexUnitAttacker>& theList = theObject->mIgnoredTargets;
+        theList.erase(theList.begin() + (size_t)a[0], a[1] < 0 ? theList.end() : theList.begin() + (size_t)a[1]);
+        return 0;
+    }
+    case EE_COMBAT_W_IGNORED_PUSH: {
+        EEComplexUnitAttacker theEntry;
+        theEntry.mTileX = (long)a[0];
+        theEntry.mTileY = (long)a[1];
+        theEntry.mFromX = (long)a[2];
+        theEntry.mFromY = (long)a[3];
+        theEntry.mUnitID = (unsigned long)a[4];
+        theEntry.mTime = (unsigned long)a[5];
+        theObject->mIgnoredTargets.push_front(theEntry);
+        return 0;
+    }
+    case EE_COMBAT_W_IGNORED_TIME: theObject->mIgnoredTargets[(size_t)a[0]].mTime = (unsigned long)a[1]; return 0;
+    case EE_COMBAT_W_CORNER_BLOCKED:
+        return EEIsCornerBlocked((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+    case EE_COMBAT_W_CAN_GET_TO_UNIT:
+        return gContinentManager.CanGetToUnit(EEQueryUnit(inObject), EEQueryUnit(inOther));
+    case EE_COMBAT_W_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(EEQueryUnit(inObject));
+    case EE_COMBAT_W_CONTINENT_LINK: {
+        EEAIContinent* theFrom = (EEAIContinent*)(uintptr_t)inObject;
+        EEAIContinent* theTo = (EEAIContinent*)(uintptr_t)inOther;
+        return gContinentManager.mTileFlags[theFrom->mID * gContinentManager.mFlagsWidth + theTo->mID] != 0;
+    }
+    case EE_COMBAT_W_CONNECTED_FOR_UNIT:
+        return gContinentManager.AreConnectedForUnit(EEQueryUnit((uint64_t)a[0]), (EEAIContinent*)(uintptr_t)inObject,
+                                                     (EEAIContinent*)(uintptr_t)inOther);
+    case EE_COMBAT_W_OTHER_CONTINENT: return theObject->IsOnOtherContinentThan(theOther);
+    case EE_COMBAT_W_FIND_PATH: {
+        std::vector<U2DPoint<long> > thePath;
+        U2DPoint<long> theFrom((long)a[0], (long)a[1]);
+        U2DPoint<long> theTo((long)a[2], (long)a[3]);
+        EEAIAStarBounds theBounds;
+        theBounds.mTop = (long)a[4];
+        theBounds.mLeft = (long)a[5];
+        theBounds.mBottom = (long)a[6];
+        theBounds.mRight = (long)a[7];
+        EEAIBPGModifierEnemyIsAttackableByUnit* theModifier = new EEAIBPGModifierEnemyIsAttackableByUnit(theObject, theOther);
+        gPathManager.FindPath(theObject, ::gWorld.mMap, theFrom, theTo, theBounds, thePath, 0xb, (long)a[8], theModifier,
+                              NULL);
+        if (thePath.size() != 0) {
+            a[0] = thePath[0].mX;
+            a[1] = thePath[0].mY;
+        }
+        theModifier->Dereference();
+        return thePath.size();
+    }
+    case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenByOwnerOf(theObject, EEQueryUnit(inOther));
+    case EE_COMBAT_W_ATTACKED_GOAL: {
+        if (a[0])
+            theContext->mAttackedGoal = new EEUGLocation(theOther->mPhysicalModel.GetLocation().GetX(),
+                theOther->mPhysicalModel.GetLocation().GetY(), 0.0f, false, false, false, 0.0f, false, 0);
+        else
+            theContext->mAttackedGoal = new EEUGAttackUnit(theObject, theOther, false, false);
+        theObject->SetGoal(theContext->mAttackedGoal, 1, 0);
+        return 0;
+    }
+    case EE_COMBAT_W_UNITS_NEAR: {
+        const GETransformation& theLocation = theObject->mPhysicalModel.GetLocation();
+        GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+        EEGetUnitsNear(thePosition, kCallForHelpRadius, theContext->mNear);
+        return theContext->mNear.size();
+    }
+    case EE_COMBAT_W_NEAR_UNIT: return EEQueryHandleOf(theContext->mNear[(size_t)a[0]]);
+    case EE_COMBAT_W_CAN_ATTACK_CLASS: return theObject->CanAttackClass(EEQueryUnit(inOther)->GetUnitClass());
+    case EE_COMBAT_W_IS_IGNORED: return theObject->IsTargetIgnored(theOther, true);
+    case EE_COMBAT_W_ATTACK_REACHABLE: return EEIsAttackReachable(theObject, theOther, &theContext->mTile);
+    case EE_COMBAT_W_HELP: {
+        EEUnitGoal* theCopy = theContext->mAttackedGoal->Clone();
+        if (theObject->GetClass()->FindAction(theCopy->GetStartAction()) != NULL) {
+            theObject->SetGoal(theCopy, 1, 0);
+            theObject->StartAction(theCopy->GetStartAction());
+            theObject->GetUnitClass()->ActionChanged(theObject);
+        }
+        return 0;
+    }
+    case EE_COMBAT_W_IGNORE: theObject->IgnoreTarget(theOther); return 0;
+    case EE_COMBAT_W_RELEASE_ATTACKER:
+        if (theObject->mLastAttacker != NULL)
+            theObject->mLastAttacker->Dereference();
+        theObject->mLastAttacker = NULL;
+        return 0;
+    case EE_COMBAT_W_LAST_ATTACKER: return EEQueryHandleOf(theObject->mLastAttacker);
+    case EE_COMBAT_W_LAUNCH_STORED_MISSILE: theClass->LaunchStoredMissile(theObject); return 0;
+    case EE_COMBAT_W_RELOAD: theObject->SetRandomReloadTimer((long)a[0]); return 0;
+    case EE_COMBAT_W_FIND_DROP: {
+        EEUnit* theTarget;
+        EEFindDropLocation(theObject, &theTarget, &theContext->mPoint, NULL);
+        return EEQueryHandleOf(theTarget);
+    }
+    case EE_COMBAT_W_LINE_BLOCKED: {
+        EEUnit* theBlocker = NULL;
+        long theX = 0;
+        long theY = 0;
+        bool theResult = EEIsLineToUnitBlocked(theObject, EEQueryUnit(inOther), &theBlocker, &theX, &theY);
+        a[0] = (int64_t)EEQueryHandleOf(theBlocker);
+        a[1] = theX;
+        a[2] = theY;
+        return theResult;
+    }
+    case EE_COMBAT_W_SPARKS_ON: {
+        EEUnit* theBlocker = EEQueryUnit(inObject);
+        gWorld.GetEffectManager()->CreateUnitEffect(theBlocker, theBlocker->mUnitClass->mImpactSparksEffect, NULL, 0, 0, 0);
+        return 0;
+    }
+    case EE_COMBAT_W_SPARKS_AT: {
+        long theX = (long)a[0];
+        long theY = (long)a[1];
+        GE3DPoint theSpot((float)theX + 0.5f, (float)theY + 0.5f, gWorld.mMap->GetTile(theX, theY)->mHeight);
+        gWorld.GetEffectManager()->CreatePlacedEffect(theSpot, EEGraphicEffect::Get(kGraphicEffectImpactSparks), NULL);
+        return 0;
+    }
+    case EE_COMBAT_W_APPLY_HIT: theClass->ApplyHit(theObject, EEQueryUnit(inOther)); return 0;
+    case EE_COMBAT_W_LAUNCH_SHOT:
+        theClass->LaunchShot(theObject, EEQueryUnit(inOther), theContext->mPoint, NULL);
+        return 0;
+    case EE_COMBAT_W_LAUNCH_FROM_TURRET:
+        theClass->LaunchFromTurret(theObject, EEQueryUnit(inOther), theContext->mPoint);
+        return 0;
+    case EE_COMBAT_W_SPECIAL_EFFECT:
+        gWorld.GetEffectManager()->CreateEffectBetweenUnits(theObject, EEQueryUnit(inOther), theClass->mSpecialAttackEffect, NULL);
+        return 0;
+    case EE_COMBAT_W_START_ACTION: theObject->StartAction((unsigned long)a[0]); return 0;
+    case EE_COMBAT_W_MUZZLE_FLASH:
+        gWorld.GetEffectManager()->CreateUnitEffect(theObject, theClass->mMuzzleFlashEffect, NULL, 0, 0, 0);
+        return 0;
+    case EE_COMBAT_W_SHOT_EFFECT_BETWEEN:
+        gWorld.GetEffectManager()->CreateEffectBetweenUnits(theObject, EEQueryUnit(inOther), theClass->mShotEffect, NULL);
+        return 0;
+    case EE_COMBAT_W_SHOT_EFFECT_AT:
+        gWorld.GetEffectManager()->CreateEffect(theObject, theContext->mPoint, theClass->mShotEffect, NULL, 0);
+        return 0;
+    case EE_COMBAT_W_SET_AMMUNITION: theObject->SetAmmunition((unsigned long)a[0]); return 0;
+    case EE_COMBAT_W_SET_FLIGHT_TIME: theObject->SetFlightTime((long)a[0]); return 0;
+    case EE_COMBAT_W_SPECIAL_OFF: theObject->mIsSpecialAttack = false; return 0;
+    }
+    return 0;
+}
+
 struct EEFacingContext {
     EEComplexUnit* mUnit;
     EEGraphicObject* mModel;
@@ -779,6 +1062,21 @@ EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit)
     EEQueryContext theContext = {inUnit, NULL, NULL};
     EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
     return EEQueryUnit(ee_combat_impact_unit(EEQueryHandleOf(inUnit), &theHost));
+}
+
+int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass, long* ioX,
+                      long* ioY)
+{
+    EEQueryContext theContext = {inUnit, NULL, NULL};
+    theContext.mClass = inClass;
+    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp};
+    int32_t theTile[2] = {ioX != NULL ? (int32_t)*ioX : 0, ioY != NULL ? (int32_t)*ioY : 0};
+    int32_t theResult = ee_combat_world(inFunction, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost, &theTile);
+    if (ioX != NULL) {
+        *ioX = theTile[0];
+        *ioY = theTile[1];
+    }
+    return theResult;
 }
 
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)

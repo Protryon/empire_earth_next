@@ -54,7 +54,6 @@ public:
     // the rest of the camera unit (provisional names)
     EECameraControl();                      // 0x127654
     long AddKey(const EECameraKey& inKey);      // 0x1277e5: appends a key unless locked (5)
-    void ClampHeight(GETransformation& ioTransformation);  // 0x127804: keeps the camera above the terrain
     void SetClippingDistances();            // 0x1279f0: the viewport's clipping distances
     void CopyKey(const EECameraKey& inKey, EECameraKey& outKey);    // 0x127db3
     void NextKey();                         // 0x127e5b: the next key, or the end of the key list
@@ -62,7 +61,6 @@ public:
     void SlerpViewTurn(float inStep, GEQuaternion& outQuaternion);  // 0x12806d
     void SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion);  // 0x1280cb
     void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint);  // 0x12816e
-    void ClipToEdges(const GE3DLine& inLine, GE3DPoint& ioPoint);  // 0x1282c3: clips to the map's edge planes
     void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint);  // 0x12844f: the point to look at on a unit
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);  // 0x12851e
     static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom

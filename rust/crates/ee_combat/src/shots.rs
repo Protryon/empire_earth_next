@@ -79,6 +79,8 @@ pub const EE_COMBAT_SHOT_R_POSITION_Z: i32 = 31;
 pub const EE_COMBAT_SHOT_SET_ANIMATION: i32 = 40;
 /// `SetRottingAwayTime(arg)`.
 pub const EE_COMBAT_SHOT_SET_ROTTING: i32 = 41;
+/// `UpdateRottingAwayTime()`: the rotting time's count down by the tick, at 0.
+pub const EE_COMBAT_SHOT_UPDATE_ROTTING: i32 = 74;
 /// the splash effect placed at the location's x, y and z 0.
 pub const EE_COMBAT_SHOT_SPLASH: i32 = 42;
 /// the location set to the ground point under it (`GetGroundPoint`, `SetLocationXYZ`).
@@ -137,9 +139,6 @@ pub const EE_COMBAT_SHOT_SET_FLIGHT_TIME: i32 = 71;
 pub const EE_COMBAT_SHOT_SET_CLOAKED: i32 = 72;
 /// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
 pub const EE_COMBAT_SHOT_WATER_PLANE: i32 = 73;
-/// the rotting time's count down by the tick, not below 0 (`UpdateRottingAwayTime()`: the core lane's ee_units step.rs
-/// over the unit store, noted in its USTM capture as the other classes' countdowns).
-pub const EE_COMBAT_SHOT_COUNT_ROTTING: i32 = 74;
 
 // the original's constants (ee/EEUnitAction.h, ee/EEUnitGoal.h, ee/EEUnitClassIDs.h)
 const A_SWITCH_TO_ATTACK_GROUND: u32 = 2033;
@@ -155,7 +154,7 @@ const GOAL_ATTACK_UNIT: i32 = 2;
 const GOAL_ATTACK_GROUND: i32 = 3;
 const TYPE_PARACHUTE_BOMB: i32 = 0xd5;
 const TYPE_FLAMING_ARROW: i32 = 0x2d5;
-const TYPE_CP_ICBM: i32 = 0x2ee;
+const TYPE_ICBM: i32 = 0x2ee;
 const TYPE_BOMB_FOR_SAS: i32 = 0x305;
 const OFF_MAP: i32 = -10000;
 
@@ -234,10 +233,11 @@ impl<H: ShotHost> Plan<'_, H> {
         self.act(EE_COMBAT_SHOT_SET_ROTTING, time);
     }
 
-    /// The rotting time's count down by the tick (at 0).
+    /// The rotting time's count down by the tick (at 0): the unit's own `UpdateRottingAwayTime` (the core lane's
+    /// shared count down, which its USTM capture records).
     fn rotting(&mut self) {
         if self.read(EE_COMBAT_SHOT_R_COMMAND) as u32 == A_UNIT_ROTTING {
-            self.act(EE_COMBAT_SHOT_COUNT_ROTTING, 0);
+            self.act(EE_COMBAT_SHOT_UPDATE_ROTTING, 0);
         }
     }
 
@@ -332,7 +332,7 @@ fn missile_action<H: ShotHost>(p: &mut Plan<'_, H>) {
             }
             let goal = p.read(EE_COMBAT_SHOT_R_GOAL_KIND);
             if goal == GOAL_ATTACK_UNIT
-                || (p.read(EE_COMBAT_SHOT_R_UNIT_TYPE) == TYPE_CP_ICBM
+                || (p.read(EE_COMBAT_SHOT_R_UNIT_TYPE) == TYPE_ICBM
                     && p.read(EE_COMBAT_SHOT_R_GOAL_KIND) == GOAL_ATTACK_GROUND)
             {
                 p.act(EE_COMBAT_SHOT_START_ACTION, A_DEAD);
@@ -396,7 +396,7 @@ pub fn update(kind: i32, host: &mut impl ShotHost) {
             p.act(EE_COMBAT_SHOT_EFFECTS, 0);
             p.act(EE_COMBAT_SHOT_REFRESH_SOUND, 0);
             match p.read(EE_COMBAT_SHOT_R_COMMAND) as u32 {
-                A_UNIT_ROTTING => p.act(EE_COMBAT_SHOT_COUNT_ROTTING, 0),
+                A_UNIT_ROTTING => p.act(EE_COMBAT_SHOT_UPDATE_ROTTING, 0),
                 A_FADING_OUT_IN_SPACE => {
                     let z = p.real(EE_COMBAT_SHOT_R_POSITION_Z);
                     if z < 0.0 {

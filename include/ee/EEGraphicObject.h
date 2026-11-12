@@ -80,9 +80,6 @@ public:
     void GetOffset(unsigned long inFrame, GE3DPoint& outPoint);   // 0xdab97 (the point at inFrame in the model's space; EEUCLandable::IsBombOnTarget) (provisional name)
     // 0xdac22: GetOffset with the part's own transformation inPart first (provisional name)
     void GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint);
-    // 0xdadfb: inPart through the model's part transformations, then inTransformation (provisional name)
-    void GetTransformation(unsigned long inFrame, const GETransformation& inTransformation,
-                           const GETransformation& inPart, GETransformation& outTransformation);
 
     GEModel* mModel;                        // +0x00
     unsigned long mIndex;                   // +0x04

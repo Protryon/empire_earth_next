@@ -20,14 +20,9 @@ public:
 
     static unsigned long MusicManagerMain(void* inThis);    // 0x131e0a (the thread function)
     void Pause();                           // 0x131f67: mPause->Set()
-    void DoPause();                         // 0x131f70
     void SetIntensity(unsigned long inIntensity);   // 0x131f87 (then mSetIntensity->Set())
-    void DoSetIntensity();                  // 0x131fb7
     void Start();                           // 0x132000: mStart->Set() (the settings turn the music on)
-    void DoStart();                         // 0x132009
     void Stop();                            // 0x1321b1: mStop->Set() (the settings turn the music off)
-    void DoStop();                          // 0x1321ba
-    void NextSong();                        // 0x1321ef (the wait timed out while playing)
     void Update(unsigned long inElapsedTime);   // 0x132410
 
     URandom mRandom;                        // +0x04 (seeded with TMGetTime())

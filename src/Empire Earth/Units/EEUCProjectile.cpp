@@ -322,7 +322,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_SET_ROTTING:
         theUnit->SetRottingAwayTime(inArg);
         break;
-    case EE_COMBAT_SHOT_COUNT_ROTTING:   // the rotting count down (ee_units step.rs over the store; USTM)
+    case EE_COMBAT_SHOT_UPDATE_ROTTING:
         theUnit->UpdateRottingAwayTime();
         break;
     case EE_COMBAT_SHOT_SPLASH: {
