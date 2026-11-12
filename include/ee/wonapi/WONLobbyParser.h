@@ -105,6 +105,15 @@ public:
     unsigned long GetDuration() const { return this->mDuration; }
     unsigned long GetRoomFlags() const { return this->mRoomFlags; }
     LobbyClientList* GetClients() const { return this->mClients.get(); }
+    int GetError() const { return this->mError; }
+    bool GetInvitation() const { return this->mInvitation; }
+    void SetCommand(int inCommand) { this->mCommand = inCommand; }
+    void SetInput(const GUIString& inInput) { this->mInput = inInput; } // the reply target's name
+    void SetPrefix(int inPrefix) { this->mPrefix = inPrefix; }
+    void SetMatchThreshold(int inThreshold) { this->mMatchThreshold = inThreshold; }
+    void SetAllowColonEmote(bool inAllow) { this->mAllowColonEmote = inAllow; }
+    void SetText(const GUIString& inText) { this->mText = inText; }
+    void SetInvitation(bool inInvitation) { this->mInvitation = inInvitation; }
     SmartPtr<LobbyClientList> mClients;    // +0x08
     GUIString mInput;                     // +0x0c
     CommandMap mCommands;                 // +0x10
