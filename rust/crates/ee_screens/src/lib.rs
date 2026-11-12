@@ -10,8 +10,12 @@
 //!   interface tabs' conversions.
 //! - [`lobby`]: the game lobby (form 0x1a: the random map setup and the multiplayer staging screen): the player
 //!   rows' controls, type menus, names and colours.
+//! - [`lobby_options`]: the lobby's game options (what is shown and editable), the option events' messages and
+//!   the start check.
 
 pub mod lobby;
 mod lobby_ffi;
+pub mod lobby_options;
+mod lobby_options_ffi;
 pub mod settings;
 mod settings_ffi;

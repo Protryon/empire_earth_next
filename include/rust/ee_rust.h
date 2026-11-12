@@ -837,6 +837,77 @@ constexpr static const uint32_t EE_SCREENS_LOBBY_WHITE = 2;
 
 constexpr static const uint32_t EE_SCREENS_LOBBY_GREEN = 3;
 
+/// A row of the game options with an editable box (the map size, the map type): hidden on a loaded game.
+constexpr static const uint32_t EE_SCREENS_LOBBY_ROW_HIDDEN = 0;
+
+/// The box shown, its label hidden (the host before ready, a random map).
+constexpr static const uint32_t EE_SCREENS_LOBBY_ROW_EDIT = 1;
+
+/// The label shown, the box hidden.
+constexpr static const uint32_t EE_SCREENS_LOBBY_ROW_LABEL = 2;
+
+/// The cheat codes row of a multiplayer game: left as it is.
+constexpr static const uint32_t EE_SCREENS_LOBBY_ROW_KEEP = 3;
+
+/// The game type box's string index (`sGameTypeStrings`: 0 random map, 1 saved game, 2 scenario); none past them.
+constexpr static const long EE_SCREENS_LOBBY_NO_STRING = -1;
+
+/// The option check boxes in `LobbyShowGameOptions`' order: record games (214), custom civilizations (216), reveal
+/// map (215), lock teams (217), lock speed (218), cheat codes (219).
+constexpr static const size_t EE_SCREENS_LOBBY_FLAGS = 6;
+
+/// The `EEMGameOptions` options (the message's first argument; the option events by it).
+constexpr static const long EE_SCREENS_OPTION_MAP_SIZE = 1;
+
+constexpr static const long EE_SCREENS_OPTION_RESOURCES = 3;
+
+constexpr static const long EE_SCREENS_OPTION_EPOCH_START = 4;
+
+constexpr static const long EE_SCREENS_OPTION_EPOCH_END = 5;
+
+constexpr static const long EE_SCREENS_OPTION_UNIT_LIMIT = 6;
+
+constexpr static const long EE_SCREENS_OPTION_WONDERS = 7;
+
+constexpr static const long EE_SCREENS_OPTION_VARIANT = 8;
+
+constexpr static const long EE_SCREENS_OPTION_DIFFICULTY = 9;
+
+constexpr static const long EE_SCREENS_OPTION_SPEED = 10;
+
+constexpr static const long EE_SCREENS_OPTION_RECORD_GAMES = 11;
+
+constexpr static const long EE_SCREENS_OPTION_CUSTOM_CIVS = 12;
+
+constexpr static const long EE_SCREENS_OPTION_REVEAL_MAP = 13;
+
+constexpr static const long EE_SCREENS_OPTION_LOCK_TEAMS = 14;
+
+constexpr static const long EE_SCREENS_OPTION_LOCK_SPEED = 15;
+
+constexpr static const long EE_SCREENS_OPTION_CHEAT_CODES = 16;
+
+/// One past the options the table holds.
+constexpr static const size_t EE_SCREENS_OPTION_COUNT = 17;
+
+/// The start check's messages (the C++ shows each one's string: IDS_YOU_NEED_AT_LEAST_1_HUMAN ...).
+constexpr static const uint32_t EE_SCREENS_START_NEED_HUMAN = 0;
+
+constexpr static const uint32_t EE_SCREENS_START_ONE_PLAYER_MULTIPLAYER = 1;
+
+constexpr static const uint32_t EE_SCREENS_START_ONE_PLAYER = 2;
+
+constexpr static const uint32_t EE_SCREENS_START_SAME_COLOUR = 3;
+
+constexpr static const uint32_t EE_SCREENS_START_SAME_TEAM = 4;
+
+constexpr static const uint32_t EE_SCREENS_START_NOT_READY = 5;
+
+constexpr static const uint32_t EE_SCREENS_START_TRANSFER = 6;
+
+/// The most messages one check shows (one per player count, colour clash, team, ready and transfer).
+constexpr static const size_t EE_SCREENS_START_MESSAGES = 24;
+
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
 
@@ -5737,6 +5808,107 @@ struct EeScreensLobbyPlayer {
   unsigned long citizens[2];
   unsigned long engine[2];
   unsigned long ping;
+};
+
+/// What `LobbyShowGameOptions` reads.
+struct EeScreensLobbyOptionsView {
+  /// The shown options' load type, and the lobby's own (`gGameOptions`: the map type box follows it).
+  long load_type;
+  long lobby_load_type;
+  bool server;
+  bool host_ready;
+  /// The lobby's multiplayer flag (the game type box) and the shown options' (the cheat codes row).
+  bool lobby_multiplayer;
+  bool options_multiplayer;
+  /// The game type box's selection, when it has one.
+  bool type_selected;
+  unsigned long type_selection;
+  /// The map generator's line (`EERMFindGenerator` found it), else the first.
+  bool map_found;
+  unsigned long map_line;
+  /// Whether the start epoch box has a selection.
+  bool epoch_selected;
+  /// The unit limit and the rules' minimum and step (gameoptions.yaml unit_limit).
+  long unit_limit;
+  unsigned long unit_minimum;
+  long unit_step;
+  unsigned long wonders;
+  /// The option flags and their check boxes' states, in [`EE_SCREENS_LOBBY_FLAGS`]' order.
+  bool flags[EE_SCREENS_LOBBY_FLAGS];
+  bool checked[EE_SCREENS_LOBBY_FLAGS];
+};
+
+/// `LobbyShowGameOptions`' plan.
+struct EeScreensLobbyOptionsPlan {
+  /// Whether the server sets the game type box, and to which line (0 random map, 1 saved game, 2 scenario).
+  bool set_type_line;
+  unsigned long type_line;
+  /// The game type label's string ([`EE_SCREENS_LOBBY_NO_STRING`]: the label shows nothing).
+  long type_string;
+  /// The game type box shown (else its label).
+  bool type_editable;
+  /// The map size's and the map type's rows (`EE_SCREENS_LOBBY_ROW_*`).
+  uint32_t map_rows;
+  /// Whether the map type box is set, and to which line.
+  bool set_map_line;
+  unsigned long map_line;
+  /// The scenario's information shown (a loaded game).
+  bool scenario_info;
+  /// The other options' boxes shown (else their labels): the host before ready, a random map.
+  bool editable;
+  /// Whether the start epoch box is set (it has no selection yet).
+  bool set_epoch_start;
+  /// The unit limit box's line.
+  unsigned long unit_line;
+  /// The wonders label shows the number (else "Off").
+  bool wonders_number;
+  /// The check boxes to set to their flag (they differ), in [`EE_SCREENS_LOBBY_FLAGS`]' order.
+  bool set_checked[EE_SCREENS_LOBBY_FLAGS];
+  /// The cheat codes row (`EE_SCREENS_LOBBY_ROW_EDIT`, `_LABEL` or `_KEEP`).
+  uint32_t cheats_row;
+};
+
+/// The lobby's options as the option events compare them: each option's current value by its number (a flag 0 or
+/// 1, an `unsigned long` option its bits), and what the unit limit and epoch events need.
+struct EeScreensLobbyOptionState {
+  long current[EE_SCREENS_OPTION_COUNT];
+  long epoch_count;
+  unsigned long unit_minimum;
+  long unit_step;
+};
+
+/// A game options message: the option and its value (the value the lobby then stores).
+struct EeScreensLobbyMessage {
+  long option;
+  long value;
+};
+
+/// What an option event does: the messages to send in order (each one then stored), whether the end epoch box is
+/// trimmed first (`LobbyUpdateEpochEnd`: the start epoch's) and whether the global difficulty levels take the
+/// first message's value before it is sent (the difficulty's).
+struct EeScreensLobbyOptionChange {
+  uint32_t count;
+  EeScreensLobbyMessage messages[2];
+  bool update_epoch_end;
+  bool set_difficulty;
+};
+
+/// A slot as the start check reads it.
+struct EeScreensLobbyStartSlot {
+  unsigned long kind;
+  unsigned long color;
+  unsigned long team;
+  bool ready;
+  unsigned long transfer;
+};
+
+/// The start check's outcome: whether the game may start, its messages in order, and whether a loaded game's
+/// failed check hides the rows' controls 257..271.
+struct EeScreensLobbyStart {
+  bool result;
+  bool hide_rows;
+  uint32_t count;
+  uint32_t messages[EE_SCREENS_START_MESSAGES];
 };
 
 /// The graphics controls' states as `GetGraphicsQuality` reads them.
@@ -12899,6 +13071,31 @@ void ee_screens_lobby_player(const EeScreensLobbySlot *slot,
 
 /// `LobbyShowEngine`: the engine a row shows.
 unsigned long ee_screens_lobby_engine(unsigned long engine, unsigned long count);
+
+/// `LobbyShowGameOptions`' plan for the view.
+void ee_screens_lobby_show_options(const EeScreensLobbyOptionsView *view,
+                                   EeScreensLobbyOptionsPlan *out);
+
+/// The variant box's line of `variant` over the variants' selectable flags (`count` of them).
+unsigned long ee_screens_lobby_variant_line(const bool *selectable,
+                                            size_t count,
+                                            unsigned long variant);
+
+/// An option event's change (`option` the `EEMGameOptions` option, `selection` the box's line or a check box's 0/1;
+/// `selectable`/`count` the variants' flags, the variant event's).
+void ee_screens_lobby_option_change(long option,
+                                    unsigned long selection,
+                                    const EeScreensLobbyOptionState *state,
+                                    const bool *selectable,
+                                    size_t count,
+                                    EeScreensLobbyOptionChange *out);
+
+/// `LobbyCheckStart` after the load (`load_ok`: a loaded game's file loaded and matched); `slots` 16 of them.
+void ee_screens_lobby_start_check(unsigned long load_type,
+                                  bool load_ok,
+                                  bool multiplayer,
+                                  const EeScreensLobbyStartSlot *slots,
+                                  EeScreensLobbyStart *out);
 
 /// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
 unsigned long ee_screens_graphics_quality(const EeScreensGraphics *controls);
