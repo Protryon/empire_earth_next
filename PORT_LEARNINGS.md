@@ -9748,3 +9748,54 @@ is in RUST_PLAN's row "R5b.5"; what follows is what was learned getting it exerc
   that read little (the objects' Evaluate, the effects' decisions) and when the classes move whole.
 - **What only a tour or a person reaches:** the dialogs' text and portrait (the x64 fix), cinematics' camera, the
   editor. EE-SIM never draws.
+
+## R5b.4, fourteenth round: the other classes' ActionChanged as Rust decisions, the stats table, units of no id by object (ee_units actions.rs, stats.rs, store.rs, header_consts.rs; branch rust-r5b4-core14, 2026-11-12)
+
+- **Golden first, the same notes.** The thirteenth round's notes header (ee/EEUnitUpdateGolden.h, TEST ONLY) came back
+  for one commit: every operation of the twelve remaining `ActionChanged` bodies (the basic citizen, the building and
+  its temple, the gate, the mine, the three helicopters, the air animal, the landable, the airplane, the planet
+  spaceship) was noted in its place with the codes the Rust host notes (USST kind 13), the goldens of the four profiles
+  recorded from that tree (only USST changed), then each body became one call (`EEUnitClassActionChanged(kind, ...)`).
+  The merge of rust before it left five USST rows stale (oracle seeds 2-3, late 4, 6, 7: both sides had changed them);
+  the golden recording replaced every USST row anyway.
+- **Forwarders deleted, not moved.** `EEUCNavalCitizen::ActionChanged` (two equal arms), `EEUCNavalBuilding`'s and
+  `EEUCSpaceBuilding`'s (one base call each) are gone with their declarations; the vtables resolve to the bases'.
+  `EEUCBuildingPriest::PriestVirtual74` was the basic priest's body (plus a cast with no effect): the temple's
+  default is the Rust `basic_priest` decision, the host's conversion-effects operation picks the temple's own
+  `HideConversionEffects` (the temple is no `EEUCBasicPriest`).
+- **What stays C++, and where.** A branch that is more than one call (the landable's takeoff, landing approach,
+  secondary target and path; the helicopters' paths to the goal; the airplane's space-map circling side and holding
+  pattern; the planet spaceship's holding pattern; the air animal's path and dying spin) is one host operation whose
+  body is the original's statements, kept in the class's own file (`EE<Class>...` functions declared in
+  ee/EEUnitUpdate.h) next to the file's local declarations and constants, not moved into the host. Rust decides
+  which run and in which order; the random draws of circling (the air animal's, the planet spaceship's) are reads at
+  their place.
+- **Every copied constant checked by script, now a test.** header_consts.rs reads every `const` of ee_units' sources
+  whose name copies the original's (ACTION_, GOAL_, CATEGORY_, MOVEMENT_, UNIT_TYPE_, FAMILY_, RESOURCE_, TRIGGER_ and
+  the EE_ forms), maps it to the header's name, evaluates both and fails on a difference or a name the headers lack.
+  This round's 49 new action constants were generated from EEUnitAction.h by script and pass it.
+- **The stats as a table keyed by object, versioned.** A unit's `mStats` is its player's `EEUnitClassUpgrade` of its
+  class, changed in place by upgrades: no holder fits. The table (stats.rs) has one record per stats object; the C++
+  reports an object at every function that writes one (found by a script over every `EEUnitClassUpgrade*`/`mStats`
+  base: `Init`, `SetMaxVelocity`, `SetRange`, `SetDeathSound`, `LoadMedia`, the improvements' `ChangeLevel`, the
+  civilization builder's `EECBApplyStat`/`EECBUpgradeArmor`, the scenario events' `ApplyEventAttribute`/
+  `ApplyEventGatherRate`, `EEModifyUnitAttribute`, `EEUpgradeHitPoints`) through a scope object that reports on every
+  return, and drops it in the destructor. The version counts the reports that changed the record. The unit record's
+  `stats` names the object (field 48). USCK fills every unit's stats object and compares it with the table (a stale
+  record is a mismatch: a writer the script missed shows there, in the profiles that run it). The death sound is in
+  the record but stays a host read: the media loader sets it.
+- **Units of no id: a scenario's path points, the shots.** The triggers lane's scenario profile found the store wrong
+  in every played scenario: a scenario's path points (type 0xdf, complex, on the map's chain) are in their players'
+  lists, every one of id 0xffffffff, and records by id collapsed them into one. The out-of-sync checksum's flags 1 and
+  2 (from the store since the eighth and ninth rounds) and combat's store reads were wrong there; random maps have no
+  such unit, so no gate saw it. The store now keeps every unit of id 0xffffffff in a second table by object (`insert`
+  of that id; the holders write through by object; `by_object`, the checksum flags and the on-map check read both;
+  USCK compares both). The shots (made by `EEUnitClass::CreateUnit` with no list, all of that id) join it at their
+  creation (`EEUnitStoreInsertUnlisted`) until a list takes one or its destructor. A first try that inserted every
+  unit at its first link (id not yet 0xffffffff for the path points: the complex constructor sets 0, `Reset` the
+  0xffffffff later) failed differently (owner and id unknown at link time, a crash in a later check): key the table
+  by what the unit is when the store must follow it, not by when it first appears. USCK is hard again for the
+  scenario profile (`EE_SIM_STORE_CHECK_SOFT` removed).
+- **Seed the investigation with the failing record, not the hypothesis.** "64 on-map records differ from the chain"
+  read as a link or load path bypassing the holders; one diagnostic print of the chain's units without a record
+  (id, listed, in store, type) showed listed units of one id in one run.
