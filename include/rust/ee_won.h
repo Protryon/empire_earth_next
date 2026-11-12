@@ -1899,6 +1899,18 @@ enum class EeWonGuiOp : uint32_t {
   /// the C++ members of the paint into `*a` (an `EeWonInputPaint`: the disabled look, the icon and its height,
   /// the focus, the text colours, the font's height, the selection colours).
   PaintInputs,
+  /// `mWrappedText->SetMaxWidth(a)`.
+  WrapSetMaxWidth = 130,
+  /// `mWrappedText->SetCentered(a != 0)`.
+  WrapSetCentered,
+  /// `mWrappedText->SetWrap(a != 0)`.
+  WrapSetWrap,
+  /// `mWrappedText->GetWidth()`.
+  WrapWidth,
+  /// `mWrappedText->GetHeight()`.
+  WrapHeight,
+  /// `mBackground.Paint(*a, 0, 0, b, c)`.
+  PaintBackground,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -1958,6 +1970,32 @@ enum class EeWonInputCall : uint32_t {
   SetLeftPad,
   /// `mSelStartChar` (the numeric filter reads it).
   SelStart,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonLabelCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText`'s steps after the C++ set the wrapped text: refit, and repaint when `a != 0`.
+  TextSet,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetVertAlign(a)`.
+  SetVertAlign,
+  /// `SetWrap(a != 0)`.
+  SetWrap,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetVertPad(a, b)`.
+  SetVertPad,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `mColor`.
+  TextColor,
 };
 
 /// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
@@ -2658,6 +2696,9 @@ struct EeWonInput;
 
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
+
+/// The Rust Label.
+struct EeWonLabel;
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
 struct EeWonLan;
@@ -8817,6 +8858,23 @@ EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
 /// # Safety
 /// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
 void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
+
+/// A new Rust Label for the C++ `component`, its calls out through `host`.
+EeWonLabel *ee_won_label_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `label` came from `ee_won_label_new` (or is NULL) and is not used again.
+void ee_won_label_free(EeWonLabel *label);
+
+/// One of Label's methods (`EeWonLabelCall`).
+///
+/// # Safety
+/// `label` is live; the call's arguments as documented.
+ptrdiff_t ee_won_label_call(const EeWonLabel *label,
+                            EeWonLabelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 

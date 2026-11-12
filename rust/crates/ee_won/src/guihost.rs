@@ -185,6 +185,19 @@ pub enum EeWonGuiOp {
     /// the C++ members of the paint into `*a` (an `EeWonInputPaint`: the disabled look, the icon and its height,
     /// the focus, the text colours, the font's height, the selection colours).
     PaintInputs,
+    // ---- the label (its wrapped text and background)
+    /// `mWrappedText->SetMaxWidth(a)`.
+    WrapSetMaxWidth = 130,
+    /// `mWrappedText->SetCentered(a != 0)`.
+    WrapSetCentered,
+    /// `mWrappedText->SetWrap(a != 0)`.
+    WrapSetWrap,
+    /// `mWrappedText->GetWidth()`.
+    WrapWidth,
+    /// `mWrappedText->GetHeight()`.
+    WrapHeight,
+    /// `mBackground.Paint(*a, 0, 0, b, c)`.
+    PaintBackground,
 }
 
 /// The events a component object fires (`FireEvent`).

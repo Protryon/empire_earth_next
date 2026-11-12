@@ -780,34 +780,31 @@ public:
     int mType; //34
 };
 
+// Label (R6 WON round 22): its colour, alignments, padding, fit to text and paint are the Rust Label
+// (rust/crates/ee_won/src/labelobj.rs); the C++ keeps the wrapped text (the fixture and the lobby read it) and the
+// background.
 class Label : public Component {
 public:
-    Label(); // 0x2f9d80; the class is 0x68 bytes (allocated at 0x300908)
-    virtual ~Label(); // 0x2f9f50: releases the background and the wrapped text
-    virtual void Virtual08(); //2fa020 SizeChanged
-    virtual void GetDesiredSize(int&,int&); //2fa140 GetDesiredSize
-    virtual void Paint(Graphics&); //2fa1a0
-    void SetMaxWidth(); //2f9f20
-    void AdjustHeightToFitText(); //2fa090
-    void SetText(const GUIString& inText, bool inFlag = true); // 0x2fa060
-    void SetHorzAlign(HorzAlign); // 0x2fa040
-    void SetWrap(bool); // 0x2fa120
-    void SetAdjustHeightToFitText(bool); // 0x2fa100
-    void SetVertPad(int inTop, int inBottom) { this->mTopPad=inTop; this->mBottomPad=inBottom; }
+    Label(); // at 0x006f9d80 in the original
+    virtual ~Label();
+    virtual void Virtual08() { this->Call(EeWonLabelCall::SizeChanged); } // SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->Call(EeWonLabelCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
+    virtual void Paint(Graphics& g) { this->Call(EeWonLabelCall::Paint,(intptr_t)&g); }
+    void SetText(const GUIString& t,bool invalidate=true) { this->mWrappedText->SetText(t); this->Call(EeWonLabelCall::TextSet,invalidate); }
+    void SetHorzAlign(HorzAlign a) { this->Call(EeWonLabelCall::SetHorzAlign,(intptr_t)a); }
+    void SetWrap(bool w) { this->Call(EeWonLabelCall::SetWrap,w); }
+    void SetAdjustHeightToFitText(bool a) { this->Call(EeWonLabelCall::SetAdjustHeightToFitText,a); }
+    void SetVertPad(int inTop,int inBottom) { this->Call(EeWonLabelCall::SetVertPad,inTop,inBottom); }
     void SetFont(Font* theFont) { this->mWrappedText->SetFont(theFont); }
-    void SetTextColor(int theColor) { this->mColor=theColor; }
+    void SetTextColor(int theColor) { this->Call(EeWonLabelCall::SetTextColor,theColor); }
+    int GetTextColor() { return (int)this->Call(EeWonLabelCall::TextColor); }
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    void SetVertAlign(VertAlign theAlign) { this->mAlign3C=theAlign; }
-    SmartPtr<WrappedText> mWrappedText;      // +30
-    int mColor;                            // +34
-    int mAlign38;
-    int mAlign3C;
-    int mLeftPad;                          // +40
-    int mRightPad;                         // +44
-    int mTopPad;                           // +48
-    int mBottomPad;                        // +4c
-    bool mAdjustHeightToFitText; // at +0x50; +0x51..0x53 padding
-    Background mBackground; // at +0x54..0x67
+    void SetVertAlign(VertAlign theAlign) { this->Call(EeWonLabelCall::SetVertAlign,(intptr_t)theAlign); }
+    SmartPtr<WrappedText> mWrappedText;
+    Background mBackground;
+    EeWonLabel* mRust;
+private:
+    intptr_t Call(EeWonLabelCall c,intptr_t a=0,intptr_t b=0) { return ee_won_label_call(this->mRust,c,a,b,0); }
 };
 
 

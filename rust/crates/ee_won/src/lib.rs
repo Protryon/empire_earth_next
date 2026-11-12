@@ -68,6 +68,7 @@ pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
+pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;

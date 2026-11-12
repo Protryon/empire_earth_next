@@ -1,7 +1,8 @@
 // WONGUI's component objects in Rust (R6 WON rounds 21-22): the one outward call table, ee_won_guicpp_call
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
-// constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs). Each op is a run of the
+// constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
+// destructor (the Rust Label is labelobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
 #include <ctype.h>
@@ -314,4 +315,52 @@ InputBox::InputBox()
 // FUNCTION: WON 0x006f8270
 // Destroys the input box: the Rust box goes
 InputBox::~InputBox() { ee_won_input_free(this->mRust); }
+}
+
+// ---- the label
+
+extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Label* t = (Label*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
+    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
+    case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
+    case Op::WrapSetCentered: t->mWrappedText->SetCentered(a != 0); return 0;
+    case Op::WrapSetWrap: t->mWrappedText->SetWrap(a != 0); return 0;
+    case Op::WrapWidth: return t->mWrappedText->GetWidth();
+    case Op::WrapHeight: return t->mWrappedText->GetHeight();
+    case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mText = t->mWrappedText.get();
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x006f9d80
+// Creates an empty, clipped label with the Label font, no wrapping and no background colour (the Rust label holds
+// the colour, the top-left alignment and the zero padding)
+Label::Label()
+{
+    this->mRust=ee_won_label_new(this,ee_won_guicpp_label_call);
+    this->mWrappedText=new WrappedText;
+    this->mWrappedText->SetFont(this->GetNamedFont("Label"));
+    this->mWrappedText->SetWrap(false);
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+    this->mBackground.SetColor(-1);
+}
+// FUNCTION: WON 0x006f9f50
+// Destroys the label: the Rust label goes
+Label::~Label() { ee_won_label_free(this->mRust); }
 }

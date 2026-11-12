@@ -95,7 +95,6 @@
 2f7d70 2f7f66 WONGUI/ImageButton.cpp
 2f84b0 306b01 WONGUI/ScreenSelectionState.cpp
 2f8b90 339d15 WONGUI/GUIStringSliceAdapters.cpp
-2f9d80 2fa27d WONGUI/Label.cpp
 2fa280 2fd96c WONGUI/ListArea.cpp
 2fa2c0 2fa478 WONGUI/TextListItem.cpp
 2fa480 2fda7a WONGUI/ComponentListItemAdapters.cpp
