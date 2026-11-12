@@ -26,7 +26,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 
