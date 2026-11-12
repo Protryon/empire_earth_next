@@ -28,7 +28,7 @@ WONStatus RecvCRMsgOp::Continue()
 {
     int32_t aLast=this->mBuffer.length()>0
         ? static_cast<unsigned char>(this->mBuffer.data()[this->mBuffer.length()-1]) : -1;
-    WONStatus aStatus=ee_won_op_recv_line(&this->mSocket->mCore,this->mSocket->mDataCrit.mCrit,aLast,
+    WONStatus aStatus=ee_won_op_recv_line(&this->GetSocket()->GetCore(),this->GetSocket()->GetDataCrit().mCrit,aLast,
                                           this->GetTiming(),AppendLineBytes,&this->mBuffer);
     if (aStatus==WS_Success) {
         this->mBuffer.data()[this->mBuffer.length()-2]=0;

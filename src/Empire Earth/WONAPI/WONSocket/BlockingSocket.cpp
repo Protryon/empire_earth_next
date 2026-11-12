@@ -64,7 +64,7 @@ BlockingSocket::BlockingSocket(int type) : QueueSocket(type) {}
 // Returns a new, unopened blocking socket of the same type
 AsyncSocket* BlockingSocket::Duplicate()
 {
-    return new BlockingSocket(this->mCore.kind);
+    return new BlockingSocket(this->GetCore().kind);
 }
 }
 

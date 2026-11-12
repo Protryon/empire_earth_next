@@ -18,7 +18,7 @@ DWORD RecvSomeBytesOp::mInitDelay = 0;
 ///////////////////////////////////////////////////////////////////////////////
 RecvSomeBytesOp::RecvSomeBytesOp(unsigned short theMaxBytes, AsyncSocket *theSocket, bool doDelay) : SocketOp(theSocket)
 {
-	this->mWaitForEvent[0] = true;
+	this->SetWaitForEvent(0,true);
 	this->mMaxBytes = theMaxBytes;
 	this->mCurRecv = NULL;
 
@@ -49,7 +49,7 @@ WONStatus RecvSomeBytesOp::Start()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RecvSomeBytesOp::Continue()
 {
-	this->mSocket->WaitForRead(this->TimeLeft());
+	this->GetSocket()->WaitForRead(this->TimeLeft());
 
 	int aRecvLen = 0;
 	WONStatus aStatus;
@@ -57,7 +57,7 @@ WONStatus RecvSomeBytesOp::Continue()
 	if (this->mDoDelay && RecvSomeBytesOp::mInitDelay>0 && WONTickCount()-this->mStartTime<RecvSomeBytesOp::mInitDelay)
 		return WS_TimedOut /* SDK WS_TimedOut */;
 	
-	aStatus = this->mSocket->Recv(this->mCurRecv,this->mMaxBytes,&aRecvLen);	
+	aStatus = this->GetSocket()->Recv(this->mCurRecv,this->mMaxBytes,&aRecvLen);	
 	if(aRecvLen<=0)
 		return aStatus;
 	this->mRecvBytes = new ByteBuffer(this->mCurRecv,aRecvLen,true);

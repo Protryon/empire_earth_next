@@ -30,7 +30,7 @@ WONStatus SendBytesOp::Start()
 WONStatus SendBytesOp::Continue()
 {
     uint32_t aPos = static_cast<uint32_t>(this->mReadBuffer.pos());
-    WONStatus aStatus = ee_won_op_send_all(&this->mSocket->mCore, this->mSocket->mDataCrit.mCrit,
+    WONStatus aStatus = ee_won_op_send_all(&this->GetSocket()->GetCore(), this->GetSocket()->GetDataCrit().mCrit,
         reinterpret_cast<const uint8_t*>(this->mReadBuffer.data()), this->mReadBuffer.length(), &aPos,
         this->GetTiming());
     this->mReadBuffer.SetPos(static_cast<int>(aPos));
@@ -41,10 +41,10 @@ WONStatus SendBytesOp::Continue()
 // Sends the op's datagram to its address, or on the connection if the socket is connected
 WONStatus SendBytesToOp::Continue()
 {
-    this->mSocket->WaitForWrite(this->TimeLeft());
-    if (this->mSocket->IsConnected())
-        return this->mSocket->Send(this->mBuffer->data(), this->mBuffer->length(), NULL);
-    return this->mSocket->SendTo(this->mBuffer->data(), this->mBuffer->length(), this->mAddress);
+    this->GetSocket()->WaitForWrite(this->TimeLeft());
+    if (this->GetSocket()->IsConnected())
+        return this->GetSocket()->Send(this->mBuffer->data(), this->mBuffer->length(), NULL);
+    return this->GetSocket()->SendTo(this->mBuffer->data(), this->mBuffer->length(), this->mAddress);
 }
 
 // FUNCTION: WON 0x006b5fa0
@@ -52,7 +52,7 @@ WONStatus SendBytesToOp::Continue()
 WONStatus SendMsgOp::Start()
 {
     this->mBuffer = this->mMessage;
-    WONStatus aStatus = this->mSocket->TransformSendMsg(this->mBuffer);
+    WONStatus aStatus = this->GetSocket()->TransformSendMsg(this->mBuffer);
     if (aStatus != 0)
         return aStatus;
     this->mReadBuffer.SetData(this->mBuffer->data(), this->mBuffer->length());
@@ -74,7 +74,7 @@ WONStatus SendMsgOp::Continue()
 RecvBytesOp::RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket)
     : SocketOp(inSocket), mWriteBuffer(0, true)
 {
-    this->mWaitForEvent[0] = true;
+    this->SetWaitForEvent(0,true);
     this->mLength = inLength;
     this->mFile = NULL;
     this->mAppend = false;
@@ -110,11 +110,11 @@ WONStatus RecvBytesOp::StartRecv()
 WONStatus RecvBytesOp::ContinueRecv()
 {
     for (;;) {
-        this->mSocket->WaitForRead(this->TimeLeft());
+        this->GetSocket()->WaitForRead(this->TimeLeft());
         int aRead = 0;
         WONStatus aStatus;
         if (this->mLength > 0 && this->mFile == NULL && !this->mSkipBytes) {
-            aStatus = this->mSocket->Recv(this->mWriteBuffer.data() + this->mWriteBuffer.length(),
+            aStatus = this->GetSocket()->Recv(this->mWriteBuffer.data() + this->mWriteBuffer.length(),
                 this->mWriteBuffer.capacity() - this->mWriteBuffer.length(), &aRead);
             if (aRead > 0)
                 this->mWriteBuffer.SkipBytes(aRead);
@@ -123,7 +123,7 @@ WONStatus RecvBytesOp::ContinueRecv()
             char aBuffer[1024];
             int aLength = ee_won_op_chunk_length(static_cast<uint32_t>(this->mLength),
                                                  static_cast<uint32_t>(this->mBytesRead));
-            aStatus = this->mSocket->Recv(aBuffer, aLength, &aRead);
+            aStatus = this->GetSocket()->Recv(aBuffer, aLength, &aRead);
             if (aRead > 0 && !this->mSkipBytes) {
                 if (this->mFile != NULL) {
                     if (fwrite(aBuffer, 1, aRead, this->mFile) != aRead)
@@ -175,7 +175,7 @@ WONStatus RecvBytesOp::FinishRecv(WONStatus inStatus)
 WONStatus RecvMsgOp::Start()
 {
     this->mState = 1;
-    this->mLength = this->mSocket->GetLengthFieldSize();
+    this->mLength = this->GetSocket()->GetLengthFieldSize();
     if (!ee_won_op_valid_length_field(static_cast<uint32_t>(this->mLength)))
         return WS_RecvMsg_InvalidLengthFieldSize;
     WONStatus aStatus = this->StartRecv();
@@ -218,7 +218,7 @@ WONStatus RecvMsgOp::FinishRecvMsg()
 {
     NetStats::IncrementMessagesReceived(1);
     this->mMessage = this->GetBytes();
-    return this->mSocket->TransformRecvMsg(this->mMessage);
+    return this->GetSocket()->TransformRecvMsg(this->mMessage);
 }
 
 // FUNCTION: WON 0x006b5e20
@@ -270,7 +270,7 @@ void RecvBytesOp::CleanupHook()
 RecvBytesFromOp::RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket)
     : SocketOp(inSocket)
 {
-    this->mWaitForEvent[0] = true;
+    this->SetWaitForEvent(0,true);
     this->mMaxLength = inMaxLength;
     this->mRawBuffer = NULL;
 }
@@ -293,15 +293,15 @@ void RecvBytesFromOp::RunHook()
 // Receives one datagram and its sender (the peer address if connected) into a new byte buffer
 WONStatus RecvBytesFromOp::Continue()
 {
-    this->mSocket->WaitForRead(this->TimeLeft());
+    this->GetSocket()->WaitForRead(this->TimeLeft());
     int aReceived = 0;
     WONStatus aStatus;
-    if (this->mSocket->IsConnected()) {
-        this->mFromAddress = this->mSocket->GetDestAddr();
-        aStatus = this->mSocket->Recv(this->mRawBuffer, this->mMaxLength, &aReceived);
+    if (this->GetSocket()->IsConnected()) {
+        this->mFromAddress = this->GetSocket()->GetDestAddr();
+        aStatus = this->GetSocket()->Recv(this->mRawBuffer, this->mMaxLength, &aReceived);
     }
     else
-        aStatus = this->mSocket->RecvFrom(this->mRawBuffer, this->mMaxLength, &this->mFromAddress, &aReceived);
+        aStatus = this->GetSocket()->RecvFrom(this->mRawBuffer, this->mMaxLength, &this->mFromAddress, &aReceived);
     if (aStatus == 0) {
         this->mReceivedData = new ByteBuffer(this->mRawBuffer, aReceived, true);
         this->mRawBuffer = NULL;
@@ -314,19 +314,19 @@ namespace WONAPI {
 // Returns a new receive-bytes op with the same length and socket
 AsyncOp* RecvBytesOp::Duplicate()
 {
-    return new RecvBytesOp(this->mLength,this->mSocket.get());
+    return new RecvBytesOp(this->mLength,this->GetSocket());
 }
 // FUNCTION: WON 0x006ab3d0
 // Returns a new receive-message op on the same socket
 AsyncOp* RecvMsgOp::Duplicate()
 {
-    return new RecvMsgOp(this->mSocket.get());
+    return new RecvMsgOp(this->GetSocket());
 }
 // FUNCTION: WON 0x006b5660
 // Returns a new receive-datagram op with the same size and socket
 AsyncOp* RecvBytesFromOp::Duplicate()
 {
-    return new RecvBytesFromOp(this->mMaxLength,this->mSocket.get());
+    return new RecvBytesFromOp(this->mMaxLength,this->GetSocket());
 }
 // FUNCTION: WON 0x006b4f90
 // Sets the completion called after every interval bytes received

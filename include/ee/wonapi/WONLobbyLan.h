@@ -32,6 +32,10 @@ public:
     // Implicit destructor 0x7e3ba0: destroys the queue members inline, then calls the AsyncSocket destructor.
     virtual AsyncSocket* Duplicate() { return new LobbyLanSocket; } // 0x7e3af0; returns a new LobbyLanSocket
     void SetClient(LobbyLanClient* inClient); // 0x7dfb90; also points the client back at this socket
+    LobbyLanClient* GetClient() const { return this->mClient.get(); }
+    long GetLastMessageTime() const { return this->mLastMessageTime; }
+    void SetLastMessageTime(long inTime) { this->mLastMessageTime=inTime; }
+private:
     SmartPtr<LobbyLanClient> mClient; // 0xa0, owned
     long mLastMessageTime; // 0xa4: time(NULL), written at 0x7e12e9 and 0x7e14da
 };

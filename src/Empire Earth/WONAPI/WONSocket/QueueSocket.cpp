@@ -42,14 +42,14 @@ QueueSocket::QueueSocket(int inType) : AsyncSocket(inType)
 // Returns a new, unopened queue socket of the same type
 AsyncSocket* QueueSocket::Duplicate()
 {
-    return new QueueSocket(this->mCore.kind);
+    return new QueueSocket(this->GetCore().kind);
 }
 
 // FUNCTION: WON 0x006b3bf0
 // Sets the completion called each time the repeating op finishes
 void QueueSocket::SetRepeatCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     this->mRepeatCompletion = inCompletion;
 }
 
@@ -57,7 +57,7 @@ void QueueSocket::SetRepeatCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
 // Sets the completion called when the socket closes
 void QueueSocket::SetCloseCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     this->mCloseCompletion = inCompletion;
 }
 
@@ -65,7 +65,7 @@ void QueueSocket::SetCloseCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
 // Restarts the close timer: after the timeout the socket is force-closed (0 just cancels it)
 void QueueSocket::StartCloseTimer(long inTimeout)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     this->CancelCloseTimer();
     if (inTimeout != 0) {
         this->mCloseTimer = new AsyncOp;
@@ -96,7 +96,7 @@ void QueueSocket::StaticCloseTimerCallback(AsyncOpPtr inOp, SmartPtr<RefCount> i
 // On expiry of the current close timer, closes the socket and reports a killed close to the close completion
 void QueueSocket::CloseTimerCallback(AsyncOp* inTimer)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     if (inTimer != this->mCloseTimer.get() || inTimer->GetStatus() != WS_TimedOut)
         return;
     this->mCloseTimer = NULL;
@@ -124,7 +124,7 @@ void QueueSocket::StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)
 // the socket stay here
 void QueueSocket::OpCallback(SocketOp* inOp)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     int aKind = inOp == this->mQueueOp.get() ? 0 : inOp == this->mRepeatOp.get() ? 1 : 2;
     EeWonQueueDecision aDecision = ee_won_queue_socket_callback(aKind, inOp->GetStatus(), inOp->IsKilled(),
         this->mCloseQueued, this->mOpQueue.empty(), this->IsValid(), this->GetType() == 1);
@@ -174,7 +174,7 @@ void QueueSocket::OpCallback(SocketOp* inOp)
 // Sets the op the socket reruns after each completion (e.g. a receive) and starts it
 void QueueSocket::SetRepeatOp(SocketOp* inOp)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     this->mRepeatOp = inOp;
     this->RunRepeatOp();
 }
@@ -183,11 +183,11 @@ void QueueSocket::SetRepeatOp(SocketOp* inOp)
 // Starts the repeating op asynchronously with no timeout unless it is missing or already pending
 void QueueSocket::RunRepeatOp()
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     if (this->mRepeatOp.get() == NULL || this->mRepeatOp->GetStatus() == WS_Pending)
         return;
     this->mRepeatOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(QueueSocket::StaticOpCallback, this));
-    this->mRepeatOp->mSocket = this;
+    this->mRepeatOp->SetSocket(this);
     this->mRepeatOp->RunAsync(-1);
 }
 
@@ -195,8 +195,8 @@ void QueueSocket::RunRepeatOp()
 // Appends an op with its timeout to the queue (default completion if none) and starts it if the queue is idle
 void QueueSocket::QueueOp(SocketOp* inOp, long inTimeout)
 {
-    AutoCrit aCrit(this->mDataCrit);
-    inOp->mSocket = this;
+    AutoCrit aCrit(this->GetDataCrit());
+    inOp->SetSocket(this);
     inOp->SetTimeout(inTimeout);
     if (inOp->GetCompletion() == NULL)
         inOp->SetCompletion(this->mDefaultQueueCompletion);
@@ -208,7 +208,7 @@ void QueueSocket::QueueOp(SocketOp* inOp, long inTimeout)
 // Starts the next queued op asynchronously when no queued op is running, routing its completion through the socket
 void QueueSocket::RunQueueOp()
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     if (this->mQueueOp.get() != NULL)
         return;
     if (this->mOpQueue.empty())
@@ -225,7 +225,7 @@ void QueueSocket::RunQueueOp()
 // Queues a close after the pending ops: kills the repeating op and optionally starts a forced-close timer
 void QueueSocket::QueueClose(long inTimeout)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataCrit());
     this->mCloseQueued = true;
     if (this->mRepeatOp.get() != NULL)
         this->mRepeatOp->Kill(true);
@@ -285,13 +285,13 @@ void QueueSocket::KillHook()
 namespace WONAPI {
 void QueueSocket::SetQueueCompletion(CompletionBase<AsyncOpPtr> *theCompletion)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 	this->mDefaultQueueCompletion = theCompletion;
 }
 
 void QueueSocket::QueueOpFast(SocketOp *theOp, DWORD theTimeout)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 	if(this->mQueueOp.get()!=NULL)
 	{
 		this->QueueOp(theOp,theTimeout);

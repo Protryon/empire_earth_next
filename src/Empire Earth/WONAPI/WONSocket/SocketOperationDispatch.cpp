@@ -10,12 +10,12 @@
 namespace WONAPI {
 // FUNCTION: WON 0x006b2320
 // Starts connecting the op's socket to the op's address
-WONStatus ConnectOp::Start() { return this->mSocket->Fn2B0E60(this->mAddr); }
+WONStatus ConnectOp::Start() { return this->GetSocket()->Fn2B0E60(this->mAddr); }
 // FUNCTION: WON 0x006b2330
 // Waits for the connect to finish for the time the op has left
 WONStatus ConnectOp::Continue()
 {
-    AsyncSocket* socket=this->mSocket.get();
+    AsyncSocket* socket=this->GetSocket();
     return socket->WaitForConnect(this->TimeLeft());
 }
 // FUNCTION: WON 0x006b4ee0
@@ -32,8 +32,8 @@ namespace WONAPI {
 // Waits for an incoming connection for the time the op has left, then accepts it into the op
 WONStatus AcceptOp::Continue()
 {
-    this->mSocket->WaitForAccept(this->TimeLeft());
-    return this->mSocket->Accept(this->mAcceptedSocket);
+    this->GetSocket()->WaitForAccept(this->TimeLeft());
+    return this->GetSocket()->Accept(this->mAcceptedSocket);
 }
 // FUNCTION: WON 0x006b60c0
 // Removes the op from the socket thread if it was handed there

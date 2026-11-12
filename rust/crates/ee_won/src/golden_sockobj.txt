@@ -1,0 +1,289 @@
+== AsyncSocket
+a new valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+a OpenHook
+a open WS_Success
+a opened valid 1 open 1 connected 0 type 0 lengthfield 4 port 0
+a CloseHook
+a OpenHook
+a open again WS_Success
+a nagling WS_Success
+a bind WS_Success
+a bound valid 1 open 1 connected 0 type 0 lengthfield 4 port set
+a listen WS_Success
+b connect invalid WS_InvalidAddress
+b still valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+b OpenHook
+b connect start 1
+b wait connect WS_Success
+b connected valid 1 open 1 connected 1 type 0 lengthfield 4 port set
+b dest 2130706433 valid same port 1
+a Duplicate
+a accept WS_Success
+c valid 1 open 1 connected 1 type 0 lengthfield 4 port set
+c class LogSocket dest 2130706433 valid same port 1
+a accept none WS_TimedOut 1
+b send WS_Success 5
+c recv WS_Success 3 hel
+c recv WS_TimedOut 2 lo
+c recv empty WS_TimedOut 2
+c sendto stream WS_AsyncSocket_StreamNotAllowed
+c recvfrom stream WS_AsyncSocket_StreamNotAllowed
+transform x send 1:6d
+transform y send 2:6d78
+b transform send WS_Success 3:6d7879
+transform y recv 3:6d7879
+transform x recv 2:6d78
+b transform recv WS_Success 1:6d
+transform x send 1:6e
+b transform send refused WS_Killed 1:6e
+transform y recv 3:6e7978
+b transform recv refused WS_RecvMsg_InvalidMessageLength 3:6e7978
+transform x destroyed
+transform y destroyed
+b transform none WS_Success 1:70
+b field 2 valid 1 open 1 connected 1 type 0 lengthfield 2 port set
+b same type valid 1 open 1 connected 1 type 0 lengthfield 2 port set
+b CloseHook
+b udp valid 0 open 0 connected 0 type 1 lengthfield 2 port 0
+b CloseHook
+accepted CloseHook
+c closed valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+b recv after close WS_AsyncSocket_InvalidSocket 2
+accepted CloseHook
+b CloseHook
+b disconnected valid 0 open 0 connected 0 type 0 lengthfield 2 port 0
+b send closed WS_AsyncSocket_InvalidSocket
+a CloseHook
+a KillHook
+a killed valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+u OpenHook
+u sendto opens WS_Success
+u valid 1 open 1 connected 0 type 1 lengthfield 4 port set
+v OpenHook
+v bind WS_Success
+u sendto WS_Success
+v recvfrom WS_Success 4 ping from 2130706433 valid 1
+v recvfrom empty WS_TimedOut
+u listen WS_AsyncSocket_DatagramNotAllowed
+u broadcast WS_Success
+u connect WS_Success
+u connected valid 1 open 1 connected 1 type 1 lengthfield 4 port set
+u send WS_Success 4
+v recvfrom WS_Success 4
+u disconnected valid 1 open 1 connected 1 type 1 lengthfield 4 port set
+u CloseHook
+v CloseHook
+sockets released
+v destroyed
+u destroyed
+accepted destroyed
+b destroyed
+a destroyed
+== blocking ops
+plistener OpenHook
+p bind WS_Success
+p listen WS_Success
+pclient OpenHook
+p connect WS_Success
+plistener Duplicate
+p accept WS_Success
+sendmsg run 1 WS_Success
+recvmsg run 1 WS_Success 5:68656c6c6f 5:68656c6c6f
+sendbytes WS_Success
+recvmsg esc WS_Success 3:78797a
+sendbytes WS_Success
+recvmsg 1 WS_Success 2:7172
+sendbytes WS_Success
+recvmsg bad WS_RecvMsg_InvalidMessageLength
+recvmsg field 3 WS_RecvMsg_InvalidLengthFieldSize
+recvmsg none WS_TimedOut (null)
+recvmsg short WS_TimedOut (null)
+transform t send 6:060000006869
+sendmsg transformed WS_Success
+transform t recv 2:6869
+recvmsg transformed WS_RecvMsg_InvalidMessageLength (null)
+transform t destroyed
+transform t destroyed
+sendbytes WS_Success
+recvcr run 1 WS_Success 5:74610a6200
+recvcr WS_Success 5:6e65787400
+recvcr none WS_TimedOut
+sendbytes WS_Success
+recvcr partial WS_TimedOut (null)
+sendbytes WS_Success
+recvcr rest WS_Success 2:7400
+sendbytes WS_Success
+progress RecvChunkOp WS_Success chunk 1
+recvbytes run 1 WS_Success 10:6162636465666768696a
+recvbytes skip 1 WS_Success 0:
+recvbytes WS_Success 5:7071727374
+sendbytes WS_Success
+recvbytes file 1 WS_Success (null)
+file 8 filedata
+recvbytes no file 0 WS_FailedToOpenFile
+dup sendmsg NULL same socket 0
+dup recvmsg RecvMsgOp same socket 1
+dup recvcr RecvCRMsgOp same socket 1
+dup recvbytes RecvBytesOp same socket 1
+dup close NULL same socket 0
+dup accept AcceptOp same socket 1
+dup connect NULL same socket 0
+connect addr 2130706433 valid
+d OpenHook
+connectop run 1 WS_Success
+plistener Duplicate
+acceptop run 1 WS_Success accepted 1
+acceptop socket valid 1 open 1 connected 1 type 0 lengthfield 4 port set
+acceptop none 0 WS_TimedOut
+d CloseHook
+closeop run 1 WS_Success
+d valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+u bind WS_Success v bind WS_Success
+sendbytesto run 1 WS_Success
+recvbytesfrom run 1 WS_Success 5:646772616d from 2130706433 valid 1
+dup recvbytesfrom RecvBytesFromOp same socket 1
+dup sendbytesto NULL same socket 0
+recvbytesfrom again 0 WS_TimedOut (null)
+sendbytesto WS_Success
+recvbytesfrom WS_Success 3:74776f 2130706433 valid
+sendbytes WS_Success
+pclient CloseHook
+recvbytes to close WS_Success 4:7461696c
+recvmsg after close WS_AsyncSocket_Shutdown
+sendmsg closed WS_AsyncSocket_InvalidSocket
+accepted CloseHook
+plistener CloseHook
+connect refused WS_WSAECONNREFUSED
+connect invalid WS_InvalidAddress
+blocking ops done
+d destroyed
+accepted destroyed
+accepted destroyed
+pclient destroyed
+plistener destroyed
+== async ops
+qlistener OpenHook
+q bind WS_Success
+q listen WS_Success
+qclient OpenHook
+q connect WS_Success
+qlistener Duplicate
+q accept WS_Success
+recv pending WS_Pending in thread 0
+send completed SendMsgOp WS_Success killed 0
+recv completed RecvMsgOp WS_Success killed 0
+recv message 4:6173796e
+recv in thread 0
+sendbytes WS_Success
+line count 0
+sendbytes WS_Success
+line completed RecvCRMsgOp WS_Success killed 0
+line 5:6c696e6500
+killed completed RecvBytesOp WS_Killed killed 1
+killed in thread 0
+zero completed RecvBytesOp WS_TimedOut killed 0
+qclient CloseHook
+accepted CloseHook
+qlistener CloseHook
+async ops done
+accepted destroyed
+qclient destroyed
+qlistener destroyed
+== QueueSocket
+rlistener OpenHook
+r bind WS_Success
+r listen WS_Success
+rclient OpenHook
+r connect WS_Success
+rlistener Duplicate
+r accept WS_Success
+queued 0 status WS_Pending socket 1
+queued 1 status WS_None socket 1
+queued 2 status WS_None socket 1
+sendbytes WS_Success
+default completed RecvMsgOp WS_Success killed 0
+default message 1:30
+sendbytes WS_Success
+own completed RecvMsgOp WS_Success killed 0
+own message 1:31
+sendbytes WS_Success
+default completed RecvMsgOp WS_Success killed 0
+default message 1:32
+sendbytes WS_Success
+repeat completed RecvMsgOp WS_Success killed 0
+repeat message 2:7230
+sendbytes WS_Success
+repeat completed RecvMsgOp WS_Success killed 0
+repeat message 2:7231
+sendbytes WS_Success
+repeat completed RecvMsgOp WS_Success killed 0
+repeat message 2:7232
+fast completed SendMsgOp WS_Success killed 0
+repeat completed RecvMsgOp WS_Success killed 0
+repeat message 1:66
+bad completed RecvMsgOp WS_RecvMsg_InvalidLengthFieldSize killed 0
+accepted CloseHook
+repeat completed RecvMsgOp WS_Killed killed 1
+close completed CloseOp WS_RecvMsg_InvalidLengthFieldSize killed 0
+s after failure valid 0 open 0 connected 0 type 0 lengthfield 3 port 0
+tlistener OpenHook
+t bind WS_Success
+t listen WS_Success
+tclient OpenHook
+t connect WS_Success
+tlistener Duplicate
+t accept WS_Success
+queued2 completed SendBytesOp WS_Success killed 0
+accepted CloseHook
+close2 completed CloseOp WS_Success killed 0
+repeat2 TIMED OUT waiting for 1
+s2 queued close valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+c2 got WS_Success 3:686579
+wlistener OpenHook
+w bind WS_Success
+w listen WS_Success
+wclient OpenHook
+w connect WS_Success
+wlistener Duplicate
+w accept WS_Success
+accepted CloseHook
+close3 completed CloseOp WS_Killed killed 0
+s3 timer valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+wait4 completed RecvMsgOp WS_AsyncSocket_Shutdown killed 0
+wclient CloseHook
+close4 completed CloseOp WS_AsyncSocket_Shutdown killed 0
+c3 timer valid 0 open 0 connected 0 type 0 lengthfield 4 port 0
+klistener OpenHook
+k bind WS_Success
+k listen WS_Success
+kclient OpenHook
+k connect WS_Success
+klistener Duplicate
+k accept WS_Success
+accepted CloseHook
+rep completed RecvBytesOp WS_Killed killed 1
+run completed RecvMsgOp WS_Killed killed 1
+queued TIMED OUT waiting for 1
+close5 count 0
+accepted CloseHook
+accepted KillHook
+accepted CloseHook
+after kill WS_AsyncSocket_InvalidSocket run6 count 0
+accepted Duplicate
+queue dup LogSocket type 0
+queue dup QueueSocket type 1
+queues done
+accepted destroyed
+accepted destroyed
+kclient destroyed
+klistener destroyed
+accepted destroyed
+wclient destroyed
+wlistener destroyed
+accepted destroyed
+tclient destroyed
+tlistener destroyed
+accepted destroyed
+rclient destroyed
+rlistener destroyed
+core shut down
