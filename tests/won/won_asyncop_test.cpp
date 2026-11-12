@@ -2,7 +2,7 @@
 // purge, the op being pumped queued again, the pump's op limit), the TimerThread (timeouts due and replaced, removed,
 // purged; its own thread), and Thread (start, InThisThread, stop, auto-delete), one line per event with every op's
 // reference count, then (round 13) the op's remaining transitions, its time left and AsyncOpTracker /
-// AsyncOpWithTracker, compared with rust/crates/ee_won/src/golden_asyncop.txt. The golden was recorded over the C++
+// AsyncOpWithTracker, then SocketThreadSimple's adds, pumps, removes and purges, compared with rust/crates/ee_won/src/golden_asyncop.txt. The golden was recorded over the C++
 // classes before their move to Rust (rust/crates/ee_won/src/thread.rs). Deadlines are 0 ms or an hour, so the
 // lines do not depend on the clock. `--print` prints the lines instead. The exit code is the number of failures.
 #include <windows.h>
@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
@@ -555,6 +556,144 @@ static void Trackers()
     Log("trackers done");
 }
 
+// ---- round 13: SocketThreadSimple (recorded over the C++ class before its move to Rust, ee_won sockthread.rs). Its
+// op set is in address order, so the ops continued by one pump are logged sorted by name.
+
+static std::vector<std::string> sPumped;
+
+// a socket op whose Continue returns the next scripted status (WS_TimedOut: still waiting) and, when asked, finishes
+// itself inside Continue
+class ScriptOp : public SocketOp {
+public:
+    ScriptOp(const char* inName) : SocketOp(NULL), mName(inName), mNext(0), mFinishInContinue(false) {}
+    virtual ~ScriptOp() { Log(this->mName + " destroyed"); }
+    virtual WONStatus Continue()
+    {
+        WONStatus aStatus = this->mNext < this->mScript.size() ? this->mScript[this->mNext++] : WS_Success;
+        sPumped.push_back(this->mName + " Continue -> " + std::to_string(aStatus) + " in thread " +
+                          std::to_string(this->mInSocketThread ? 1 : 0));
+        if (this->mFinishInContinue)
+            this->Finish(WS_Killed);
+        return aStatus;
+    }
+    virtual void CleanupHook() { Log(this->mName + " CleanupHook in thread " + std::to_string(this->mInSocketThread ? 1 : 0)); }
+    std::string mName;
+    std::vector<WONStatus> mScript;
+    size_t mNext;
+    bool mFinishInContinue;
+};
+
+static void FlushPumped(const char* inStep)
+{
+    std::sort(sPumped.begin(), sPumped.end());
+    for (size_t i = 0; i < sPumped.size(); i++)
+        Log(std::string(inStep) + ": " + sPumped[i]);
+    sPumped.clear();
+}
+
+static std::string SockState(ScriptOp* inOp)
+{
+    return inOp->mName + " status " + std::to_string(inOp->GetStatus()) + " refs " +
+           std::to_string(inOp->GetRefCount() - 1) + " in thread " + std::to_string(inOp->mInSocketThread ? 1 : 0) +
+           " pending " + std::to_string(inOp->IsCompletionPending() ? 1 : 0) + " killed " +
+           std::to_string(inOp->IsKilled() ? 1 : 0);
+}
+
+static void SockShow(const char* inStep, ScriptOp* a, ScriptOp* b = NULL, ScriptOp* c = NULL)
+{
+    std::string s = std::string(inStep) + ": " + SockState(a);
+    if (b) s += " | " + SockState(b);
+    if (c) s += " | " + SockState(c);
+    Log(s);
+}
+
+static SmartPtr<ScriptOp> NewScriptOp(const char* inName, AsyncOpContainer* inContainer, bool inRun)
+{
+    SmartPtr<ScriptOp> anOp = new ScriptOp(inName);
+    anOp->SetContainer(inContainer);
+    if (inRun)
+        anOp->RunAsync(-1);   // pending, queued in the container (never pumped before the thread's steps)
+    return anOp;
+}
+
+static void SocketThreads()
+{
+    AsyncOpContainer* c = new AsyncOpContainer;
+    {
+        SocketThreadSimple* t = new SocketThreadSimple;
+        Log("socket thread need thread " + std::to_string(t->NeedThread() ? 1 : 0));
+        SmartPtr<ScriptOp> a = NewScriptOp("sa", c, true), b = NewScriptOp("sb", c, true),
+                           d = NewScriptOp("sd", c, false);
+        a->mScript.push_back(WS_TimedOut);
+        a->mScript.push_back(WS_Success);
+        b->mScript.push_back(WS_TimedOut);
+        b->mScript.push_back(WS_TimedOut);
+        b->mScript.push_back(WS_TimedOut);
+        t->AddSocketOp(a);
+        t->AddSocketOp(a);
+        t->AddSocketOp(b);
+        t->AddSocketOp(d);
+        SockShow("added", a, b, d);
+        t->Pump(0);
+        FlushPumped("pump 1");
+        SockShow("pumped once", a, b, d);
+        t->Pump(0);
+        FlushPumped("pump 2");
+        SockShow("pumped twice", a, b, d);
+        t->RemoveSocketOp(b);
+        SockShow("sb removed", b);
+        t->RemoveSocketOp(b);
+        SockShow("sb removed again", b);
+        t->Pump(0);
+        FlushPumped("pump 3");
+        c->Pump(0);
+        SockShow("container pumped", a, b, d);
+        // an op that finishes itself inside Continue, with a status that would keep it waiting
+        SmartPtr<ScriptOp> e = NewScriptOp("se", c, true);
+        e->mScript.push_back(WS_TimedOut);
+        e->mFinishInContinue = true;
+        t->AddSocketOp(e);
+        t->Pump(0);
+        FlushPumped("pump 4");
+        SockShow("se finished in Continue", e);
+        // purge: every op held killed and dropped
+        SmartPtr<ScriptOp> f = NewScriptOp("sf", c, true), g = NewScriptOp("sg", c, true);
+        f->mScript.push_back(WS_TimedOut);
+        t->AddSocketOp(f);
+        t->AddSocketOp(g);
+        t->Pump(0);
+        FlushPumped("pump 5");
+        t->PurgeOps();
+        SockShow("purged", f, g);
+        t->Pump(0);
+        FlushPumped("pump after purge");
+        c->Pump(0);
+        SockShow("purged delivered", f, g);
+        // on its own thread: an op finishing there
+        SmartPtr<ScriptOp> h = NewScriptOp("sh", c, true);
+        h->mScript.push_back(WS_TimedOut);
+        h->mScript.push_back(WS_Success);
+        t->Start();
+        t->AddSocketOp(h);
+        uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+        while (h->GetStatus() == WS_Pending && PlatTimeMilliseconds64() < anEnd)
+            PlatSleep(1);
+        t->Stop(true);
+        sPumped.clear();
+        SockShow("sh finished on the thread", h);
+        // ops held at the thread's deletion
+        SmartPtr<ScriptOp> k = NewScriptOp("sk", c, true);
+        k->mScript.push_back(WS_TimedOut);
+        t->AddSocketOp(k);
+        delete t;
+        SockShow("socket thread deleted", k);
+        c->Pump(0);
+        SockShow("sk delivered", k);
+    }
+    delete c;
+    Log("socket threads done");
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -570,6 +709,7 @@ int main(int argc, char** argv)
     Threads();
     OpCases();
     Trackers();
+    SocketThreads();
     if (argc > 1 && strcmp(argv[1], "--print") == 0) {
         for (size_t i = 0; i < sLines.size(); i++)
             printf("%s\n", sLines[i].c_str());

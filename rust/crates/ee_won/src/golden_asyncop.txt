@@ -246,3 +246,40 @@ s2 destroyed
 s1 destroyed
 p destroyed
 trackers done
+socket thread need thread 1
+added: sa status 100000 refs 2 in thread 1 pending 0 killed 0 | sb status 100000 refs 2 in thread 1 pending 0 killed 0 | sd status 100004 refs 1 in thread 1 pending 0 killed 0
+pump 1: sa Continue -> 100001 in thread 1
+pump 1: sb Continue -> 100001 in thread 1
+pumped once: sa status 100000 refs 2 in thread 1 pending 0 killed 0 | sb status 100000 refs 2 in thread 1 pending 0 killed 0 | sd status 100004 refs 0 in thread 0 pending 0 killed 0
+pump 2: sa Continue -> 0 in thread 1
+pump 2: sb Continue -> 100001 in thread 1
+pumped twice: sa status 0 refs 2 in thread 0 pending 1 killed 0 | sb status 100000 refs 2 in thread 1 pending 0 killed 0 | sd status 100004 refs 0 in thread 0 pending 0 killed 0
+sb removed: sb status 100000 refs 1 in thread 0 pending 0 killed 0
+sb removed again: sb status 100000 refs 1 in thread 0 pending 0 killed 0
+sa CleanupHook in thread 0
+sb CleanupHook in thread 0
+container pumped: sa status 0 refs 0 in thread 0 pending 0 killed 0 | sb status 100022 refs 0 in thread 0 pending 0 killed 1 | sd status 100004 refs 0 in thread 0 pending 0 killed 0
+pump 4: sb Continue -> 100001 in thread 0
+pump 4: se Continue -> 100001 in thread 1
+se finished in Continue: se status 100002 refs 2 in thread 0 pending 1 killed 0
+pump 5: sf Continue -> 100001 in thread 1
+pump 5: sg Continue -> 0 in thread 1
+purged: sf status 100002 refs 2 in thread 1 pending 1 killed 1 | sg status 0 refs 2 in thread 0 pending 1 killed 0
+se CleanupHook in thread 0
+sf CleanupHook in thread 1
+sg CleanupHook in thread 0
+purged delivered: sf status 100002 refs 0 in thread 1 pending 0 killed 1 | sg status 0 refs 0 in thread 0 pending 0 killed 0
+sh finished on the thread: sh status 0 refs 2 in thread 0 pending 1 killed 0
+socket thread deleted: sk status 100002 refs 2 in thread 1 pending 1 killed 1
+sh CleanupHook in thread 0
+sk CleanupHook in thread 1
+sk delivered: sk status 100002 refs 0 in thread 1 pending 0 killed 1
+sk destroyed
+sh destroyed
+sg destroyed
+sf destroyed
+se destroyed
+sd destroyed
+sb destroyed
+sa destroyed
+socket threads done
