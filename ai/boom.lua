@@ -13,6 +13,7 @@ local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_
 local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
 local SC = require("lib.scout")    -- the watcher (plan.watch; off until benched)
 local AT = require("lib.attack")   -- attacks in windows from strength (plan.attack; off until benched)
+local RD = require("lib.raid")     -- the owner's Stone raid of ~20 and the reserve (plan.raid; AI_RESEARCH §8.50)
 local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
 local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
 local DM = require("lib.demand")       -- the split's stock correction and the saving ramp (balanced's rules)
@@ -523,6 +524,11 @@ function M.step(view, memory)
         if emergency then
             soldiers_wanted = math.max(soldiers_wanted, plan.emergency)
         end
+    end
+    -- (plan.raid, the owner's build order: the raid force on top while it builds, the home reserve beside it while
+    -- it is out; lib.raid)
+    if plan.raid or memory.raid ~= nil then
+        soldiers_wanted = math.min(RD.wanted(memory, soldiers_wanted), math.max(plan.soldiers_max, soldiers_wanted))
     end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
@@ -1130,6 +1136,12 @@ function M.step(view, memory)
     end
     if plan.attack then
         AT.step(view, memory, {guard = home, keep = plan.attack_keep or 8})
+    end
+    if plan.raid or memory.raid ~= nil then
+        -- (ready: boom-econ's phase signal; before it lands, 8 minutes into the Stone Age)
+        local ready = memory.phase == "stone_developed"
+            or (memory.phase == nil and view.epoch == 1 and view.time - view.epoch_start >= 480000)
+        RD.step(view, memory, {guard = home, ready = ready})
     end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
