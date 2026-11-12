@@ -54,6 +54,13 @@ CALW (every calamity update with its state before and after and its world calls)
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
 the C++ before the calamity updates, CanCastAt, ResearchToEpoch and the effects' unit walks moved (R5b.2, round 2).
+CALT (every calamity class's Start and Stop with the calamity's, its units' and the contagion manager's state and the
+start's placed effects and sounds), CONT (every contagion helper update: the spread's candidates with their draws and
+distances, the new, applied and removed units, the functors' damage) and TNWK (the tech tree's walks and tests:
+Unlock, ResearchAll, ResearchKind, ObsoleteOutdatedNodes, MakeObsolete, SetObsolete, NeedsUnitMedia, GetBuildTime,
+SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before those moved (R5b.2, round 3).
+GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
+depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
 bytes it came from, the bytes it exports again, its members as the import left them), NMSW the same for a sweep of
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE

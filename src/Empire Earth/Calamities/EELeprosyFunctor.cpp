@@ -19,6 +19,8 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 // FUNCTION: EXE 0x4b6e58
 // Creates the leprosy functor with its damage, spread time, unit set and hit mode
@@ -42,6 +44,7 @@ unsigned long EELeprosyFunctor::GetUnitSet()
 // Shows the unit class's leprosy effect on the unit
 void EELeprosyFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEGraphicEffect* theEffect = inUnit->mUnitClass->mLeprosyEffect;
     if (theEffect != NULL)
         gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, 0, 0, 0);
@@ -63,10 +66,12 @@ void EELeprosyFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* in
     EEUnit* theCasterUnit = inCalamity->mCasterUnit;
     if (!(this->mUpdates > 0))
         return;
-    long theDamage = this->mDamage * this->mUpdates;
-    theDamage = min(theDamage, inUnit->mHitPoints - 1);
-    if (theDamage > 1)
+    // the tick's damage, never below 1 hit point left; 0: none (ee_tech contagion.rs)
+    long theDamage = ee_contagion_leprosy_damage((int32_t)this->mDamage, (uint32_t)this->mUpdates, (int32_t)inUnit->mHitPoints);
+    if (theDamage != 0) {
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
         inUnit->TakeHit(theCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
+    }
 }
 
 // The folded virtuals' bodies (identical to other units' copies: no address of their own)

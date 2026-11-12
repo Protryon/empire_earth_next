@@ -6747,6 +6747,70 @@ below them keeps its C++ API as shims over the Rust objects.
   the broadcast and join timeouts through the timer thread. EE-SIM never loads the lobby: the oracle cannot see a
   fault here; the lead's LAN game is the end-to-end check.
 
+## R5b.2, third round: the calamity classes' Start and Stop, the contagion helpers and functors, Unlock, ResearchAll and the tech tree's walks in Rust (ee_tech calamity_start.rs, contagion.rs, tree.rs; branch rust-tech3, 2026-11-11)
+
+Every calamity class's `Start` and `Stop`, the contagion helper's `Update` with its spread, the functors' damage
+arithmetic and the calamity's discrete updates, the epoch's `Unlock` and `ResearchAll` and the tech tree's remaining
+walks and tests are Rust. The C++ keeps the classes, the helper and its unit list, the functors' world calls, the
+nodes and every world step.
+
+- **Capture first, from the unmodified C++** (commits 965c6833, 6630937e; `ee/EETechCapture.h`):
+  CALT (every `Start` and `Stop`: the calamity's numeric state with its rectangle and sounds, its target's and
+  caster's unit state (hit points, disabled flag and reason, sight, morale counts, cloak, calamity flags, fire effect,
+  area effects), the contagion manager's helper count and next id and the effect manager's sizes, before and after;
+  the effects a start places with their locations and the sounds it places with their volume and pan; the result),
+  CONT (every contagion helper update: its timers, the calamity's discrete timer and the held units before and after,
+  and in order the spread with its chance, every near unit with what passed and the draw and distance it took, the
+  new units (added, immune, skipped), the functor's update, the applies, the removals, the functors' infects, cures
+  and damage), TNWK (Unlock, ResearchAll, ResearchKind, an epoch's ObsoleteOutdatedNodes and MakeObsolete, a node's
+  SetObsolete and NeedsUnitMedia, an epoch's GetBuildTime, SetEpoch, AdvanceEpoch, SetNodeAvailable: the arguments,
+  the per-node steps, the node and the tree after, the result; walks nest through the events their steps fire, so
+  each opens its own step list). In the same runs every existing digest of the four profiles equalled its golden.
+- **Start and Stop over the update's host.** `calamity_start::start`/`stop` dispatch on the class enum and run the
+  class's decisions; the shared world steps are new `EeCalamityOp`s answered in `EECalamityUpdate.cpp` (the sounds,
+  the helper's creation and `ESVERIFY`ed destruction, the height, the killed storm or volcano, the caster's sight,
+  the target's protection and liveness, a tile's terrain), a class's own are `EeCalamityOp::ClassStep` calls its new
+  static `StartStep` answers (its effects, units, payments, orders). The calamity's state travels as for the
+  updates; the cloak's area effect waits in the host (`mPending`) between the steps that create it and cloak the
+  group. `CreateSourceEffect` is gone (its decisions are the earthquake's start, its world part a step).
+  `EECCAreaEffect::Start` called `GetSourceLocation` and ignored the point (a pure read): the call is dropped. The
+  `DestroyContagionHelper` checks keep their line numbers but now name `EECalamityUpdate.cpp` as their file.
+- **The contagion.** `contagion::update` is the helper's `Update` and `Spread` over `EEContagionHelperHost`: the
+  functor's getters (spread time, chance, radius, skips the spread, allies only) and the class's immunity flag are
+  read once up front (plain getters; the C++ asked some of them per candidate); the near test keeps the
+  short-circuit order (the type test, the allies test, then a draw only when both passed, then the distance only
+  when the draw passed), so the physics draws are the C++'s in count and order. The held units are asked for by
+  index each turn of the loop (the C++'s iterator test), the dead removed in place. The unsigned spread time is
+  compared and subtracted as a float, as the C++ converted it. The functors' arithmetic: the fire's burn
+  `lrintf((burn * 0.01f) * max hit points)`, the tick `damage * updates` (a long times an unsigned long: the
+  32-bit product), the leprosy's Windows `min` with hit points - 1, the area effect's unsigned product converted to
+  a float times the attack stat; `GetDiscreteUpdates` (`lrintf`, stored unsigned, the time left less the count as
+  a float times the period).
+- **The tree.** Per node, as each walk reaches it (an event a step fires can change the tree): Unlock's action
+  (nothing for an obsolete node, available with the epoch, else the epoch prerequisite), ResearchAll's and
+  ResearchKind's choice, ObsoleteOutdatedNodes' test; MakeObsolete's choice, SetObsolete's decision (the flag, the
+  event, whether the media is checked), NeedsUnitMedia, the epoch's build time (half for a computer player, the C
+  division), SetEpoch's test, AdvanceEpoch, SetNodeAvailable's test.
+- **Only the calamity profile exercises the starts and the contagion** (no oracle game casts); the walks run in
+  every profile. Nothing here draws: no change is tour-only, but the start's sounds and effects are world calls the
+  headless EE-SIM makes without a renderer (the effect manager's sizes are in CALT).
+- **A capture record that was not deterministic.** The full run after the port gave TNWK digests unequal to the
+  golden in five oracle seeds and one late seed, and two runs of one build differed: `NeedsUnitMedia` is also asked
+  on the media loader's thread, so its records fell between the game thread's at timing's whim, and its walk used
+  the game thread's step stack. Its records and `GetBuildTime`'s are TNMT now, the step stacks are per thread,
+  and TNWK and TNMT were recorded again from the unmodified C++ (6630937e with the capture change, in a worktree of
+  its own) and compared with the port's. TNMT's order, like TCST's, can move under load.
+- **Found on the way.** A script that cut the classes' bodies by regex took an empty `Stop` (`{` `}`) through the next
+  function (`Initialize`): the link's four unresolved symbols showed it. The four classes whose Start is trivial
+  (meteor storm, conscription, special attack and location) keep their empty C++ `Stop`; their `Start` is Rust.
+- **What is left of the tech tree and the events (C++):** the saved games (`EETechTree::Load` 49 lines and `Save` 65,
+  the epoch's `Load` 71, the node's `Load` 64, `ApplySavedResearch` 17, `ApplySavedScenEditorObsoleted` 25,
+  `ApplySavedState` 16), the media (`BuildUnitClassInfo` 59, `GetUnitClassMediaMask` 34, `IsLatestEffect` 37, the
+  node's `LoadMedia`/`UnloadMedia` 37 each, the epoch's `LoadMedia` 14), the editor's `SetScenEditorObsoleted` 36,
+  the interface (`GetCostString` 48, `UpdateInterface` 10), `EEEvent::LoadEvents` 29 and the effects that touch
+  media, sounds and buttons; the orchestration bodies (`ResearchToEpoch` 49, `RunEffectUncaptured` 52) call Rust
+  for every decision.
+
 ## R5b.2, third round: the target searches' scoring, EEGetPursuerOf, the tile line, the weapon tag point and the damage table storage in Rust (ee_combat search.rs, pursuer.rs, geometry.rs, damage_table.rs; branch rust-combat3, 2026-11-11)
 
 | Piece | C++ caller | Rust | Tag |

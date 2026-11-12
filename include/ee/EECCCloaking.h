@@ -8,12 +8,17 @@
 class EEAreaEffect;
 class EEGraphicEffect;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCCloaking : public EEGlobalCalamityClass {
 public:
     EECCCloaking();                         // 0xaf8c0
     virtual ~EECCCloaking();                // 0xaf8f6
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xaf915
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xafa26
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xafa68
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xafabe

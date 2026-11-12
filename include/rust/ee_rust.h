@@ -824,6 +824,15 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
+constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
+
+/// `kActionCircle`.
+constexpr static const int32_t ACTION_CIRCLE = 1008;
+
+/// `kActionIdle`.
+constexpr static const int32_t ACTION_IDLE = 5000;
+
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
 constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
 
@@ -838,6 +847,33 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
+constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
+
+/// The functor infects allies only (`InfectsAlliesOnly()`).
+constexpr static const uint32_t EE_CONTAGION_ALLIES_ONLY = 2;
+
+/// The calamity's class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CONTAGION_BLOCKED_BY_IMMUNITY = 4;
+
+/// [`EeContagionOp::NearView`]: the list's entry is a unit.
+constexpr static const uint32_t EE_CONTAGION_NEAR_UNIT = 1;
+
+/// The functor's `CanInfectType` accepts its category and type.
+constexpr static const uint32_t EE_CONTAGION_NEAR_TYPE = 2;
+
+/// It is the held unit's player's.
+constexpr static const uint32_t EE_CONTAGION_NEAR_SAME_PLAYER = 4;
+
+/// Its player is no enemy of the held unit's player (`mEnemies[...] == 0`).
+constexpr static const uint32_t EE_CONTAGION_NEAR_NOT_ENEMY = 8;
+
+/// [`EeContagionOp::NewView`]: the new unit is a complex unit.
+constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
+
+/// The helper holds it already.
+constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
 
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
@@ -2551,6 +2587,33 @@ enum class EeCalamityOp : int32_t {
   CasterIsRadioMan = 66,
   /// `EEIsTileFree(tile)`: ok.
   TileFree = 67,
+  /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
+  StopSound = 68,
+  /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
+  DestroyHelper = 69,
+  /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
+  StartHelper = 70,
+  /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
+  /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
+  StartSound = 71,
+  /// The calamity's height (`mHeight`) set to x.
+  SetHeight = 72,
+  /// The target unit killed, deselected and cleared.
+  KillTarget = 73,
+  /// The caster's `SightOffHere`.
+  CasterSightOff = 74,
+  /// The caster's sight: x.
+  CasterSight = 75,
+  /// The caster's sight set to x, then `SightOnHere`.
+  CasterSightOn = 76,
+  /// The target unit is protected (`IsProtected`): ok.
+  TargetProtected = 77,
+  /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
+  TileTerrain = 78,
+  /// The target unit exists, is complex and alive: ok.
+  TargetComplexAlive = 79,
+  /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
+  ClassStep = 80,
 };
 
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
@@ -2589,6 +2652,62 @@ enum class EeTechUnitWalk : uint32_t {
   PendingHitPoints,
   /// The player's or the pending units, for the flight time rescale.
   FlightTime,
+};
+
+/// The host calls (`EeContagionCall::op`).
+enum class EeContagionOp : int32_t {
+  /// The functor's `UpdateUnits(&mUnits)` (a functor that skips the spread).
+  UpdateUnits = 1,
+  /// The functor's `Update(x, calamity)`.
+  FunctorUpdate = 2,
+  /// The helper's unit count: value.
+  UnitCount = 3,
+  /// Held unit `index` is alive: ok.
+  UnitAlive = 4,
+  /// The functor's `Apply(held unit index, x, calamity)`.
+  Apply = 5,
+  /// Held unit `index` removed and cured (`RemoveUnit(iterator, true)`).
+  Remove = 6,
+  /// Held unit `index` is a complex unit: ok.
+  HeldComplex = 7,
+  /// `GetUnitsInArea(x, held unit index)` into the near list (replacing the last): value its size.
+  NearUnits = 8,
+  /// Near unit `index` against held unit `index2`: flags `EE_CONTAGION_NEAR_*`, id its unit id.
+  NearView = 9,
+  /// `gPhysics->mRandom.Generate()`: x.
+  Random = 10,
+  /// The distance squared from held unit `index2` to near unit `index`: x.
+  DistanceSquared = 11,
+  /// Near unit `index` added to the new units.
+  AddNew = 12,
+  /// New unit `index`: flags `EE_CONTAGION_NEW_*`, id its unit id.
+  NewView = 13,
+  /// New unit `index`'s immunity (effect kind 3): ok when it has one (the host plays its effect).
+  Immune = 14,
+  /// New unit `index` added and infected (`AddUnit(unit, true)`).
+  AddUnit = 15,
+  /// The capture's record of a step (TEST ONLY, `EECalamityCaptureContagionEvent(value, index, index2, x, y)`).
+  Capture = 16,
+};
+
+/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
+enum class EeTechUnlockAction : int32_t {
+  /// An obsolete node is left alone.
+  Nothing = 0,
+  /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
+  MakeAvailable = 1,
+  /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+  SetPrerequisite = 2,
+};
+
+/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
+enum class EeTechMakeObsolete : int32_t {
+  /// Another id: the epoch's node with it (if any) is made obsolete.
+  Node = 1,
+  /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
+  Epoch = 2,
+  /// The epoch itself, obsolete already or reached: nothing.
+  Nothing = 3,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -5708,6 +5827,12 @@ struct EeCalamityParams {
   int32_t area_time2;
   /// The morale's effect duration.
   int32_t morale_delay;
+  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+  float start_size;
+  /// The line of sight's bonus.
+  float sight_bonus;
+  /// The earthquake's source effect speed.
+  float quake_source_speed;
 };
 
 /// The calamity's members an update reads and writes (`EECalamity`).
@@ -5817,6 +5942,76 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
+struct EeContagionState {
+  float since_spread;
+  float since_update;
+};
+
+/// One host call.
+struct EeContagionCall {
+  EeContagionOp op;
+  int32_t index;
+  int32_t index2;
+  int32_t value;
+  float x;
+  float y;
+};
+
+/// The host's answer.
+struct EeContagionReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  float x;
+};
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+struct EeContagionHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, const EeContagionCall *call, EeContagionReply *reply);
+};
+
+/// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
+/// unsigned), and the time left (`elapsed -= updates * discrete`, the count converted to a float).
+struct EeCalamityDiscrete {
+  uint32_t updates;
+  float elapsed;
+};
+
+/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
+struct EeTechSetObsolete {
+  /// The node's flag after.
+  bool obsolete;
+  /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
+  bool fires;
+  /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
+  bool check_media;
+  uint8_t pad;
+};
+
+/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
+struct EeTechAdvance {
+  bool advances;
+  uint8_t pad[3];
+  int32_t epoch;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -12945,6 +13140,22 @@ int32_t ee_calamity_update(const EeCalamityParams *params,
                            float elapsed,
                            const EeCalamityHostFfi *host);
 
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+bool ee_calamity_start(const EeCalamityParams *params,
+                       EeCalamityState *state,
+                       const EeCalamityHostFfi *host);
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+void ee_calamity_stop(const EeCalamityParams *params,
+                      EeCalamityState *state,
+                      const EeCalamityHostFfi *host);
+
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
 ///
 /// # Safety
@@ -13003,6 +13214,79 @@ EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, 
 /// # Safety
 /// `unit` must be valid for reads.
 uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+void ee_contagion_update(const EeContagionParams *params,
+                         EeContagionState *state,
+                         float elapsed,
+                         const EeContagionHostFfi *host);
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);
+
+/// A functor's damage per update (`contagion::tick_damage`).
+int32_t ee_contagion_tick_damage(int32_t damage, uint32_t updates);
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+int32_t ee_contagion_fire_burn(int32_t burn, int32_t max_hit_points);
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hit_points);
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
+                                         const EeTechTreeState *tree,
+                                         bool available_with_epoch);
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
+
+/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
+bool ee_tech_research_kind_takes(int32_t node_kind,
+                                 int32_t kind,
+                                 bool epoch_only,
+                                 bool researched_with_epoch);
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
+bool ee_tech_node_is_outdated(bool obsolete,
+                              int32_t obsolete_epoch,
+                              int32_t current_epoch);
+
+/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
+EeTechMakeObsolete ee_tech_epoch_make_obsolete(int32_t epoch_id,
+                                               int32_t id,
+                                               bool epoch_obsolete,
+                                               int32_t current_epoch);
+
+/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
+EeTechSetObsolete ee_tech_set_obsolete(bool value, bool keep_media, bool obsolete);
+
+/// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
+bool ee_tech_needs_unit_media(bool has_class,
+                              int32_t family,
+                              bool editor_obsoleted,
+                              int32_t obsolete_epoch,
+                              int32_t start_epoch);
+
+/// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
+int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
+
+/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
+bool ee_tech_set_epoch_allowed(int32_t epoch, int32_t epoch_count, int32_t current_epoch);
+
+EeTechAdvance ee_tech_advance_epoch(int32_t current_epoch, int32_t end_epoch);
+
+/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
+bool ee_tech_node_availability_settable(int32_t research_delay);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

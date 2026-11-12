@@ -45,20 +45,9 @@ EECCConscription::~EECCConscription()
 // and runs unit effect 0x138d on the target. Always returns true
 bool EECCConscription::Start(EECalamity* inCalamity)
 {
-    EEUnit* theTargetUnit = NULL;
-    if (!inCalamity->GetTargetUnit(theTargetUnit))
-        return true;
-    EEComplexUnit* theTarget = theTargetUnit->mComplexUnit;
-    if (!(theTarget->mHitPoints > 0))
-        return true;
-    EEUnit* theCaster = inCalamity->mCasterUnit;
-    EETechnology* theTechnology = theCaster->mPlayer->mTechnologies->Get(kTechConscriptionSpell);
-    if (!theCaster->mPlayer->CanAfford(theTechnology, theCaster->mUnitClass->GetUnitType(), true))
-        return true;
-    theCaster->mPlayer->Pay(theTechnology, theCaster->mUnitClass->GetUnitType(), 1.0f);
-    theTarget->PlayEffect(0x138d);
-    EEPlayUnitEffect(theTarget, 0x138d);
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, &EECCConscription::StartStep);
 }
 
 // ICF-FOLDED: EXE 0x557269
@@ -95,4 +84,35 @@ bool EECCConscription::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit
 {
     // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     return EECalamityValidTarget(this, inUnit, inTargetUnit);
+}
+
+// New (port): EECCConscription's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCConscription::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCConscription* theClass = static_cast<EECCConscription*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        EEUnit* theCaster = theCalamity->mCasterUnit;
+        EETechnology* theTechnology = theCaster->mPlayer->mTechnologies->Get(kTechConscriptionSpell);
+        outReply.ok = theCaster->mPlayer->CanAfford(theTechnology, theCaster->mUnitClass->GetUnitType(), true);
+        return true;
+    }
+    case 2: {
+        EEUnit* theCaster = theCalamity->mCasterUnit;
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEComplexUnit* theTarget = theTargetUnit->mComplexUnit;
+        EETechnology* theTechnology = theCaster->mPlayer->mTechnologies->Get(kTechConscriptionSpell);
+        theCaster->mPlayer->Pay(theTechnology, theCaster->mUnitClass->GetUnitType(), 1.0f);
+        theTarget->PlayEffect(0x138d);
+        EEPlayUnitEffect(theTarget, 0x138d);
+        return true;
+    }
+    default:
+        return false;
+    }
 }

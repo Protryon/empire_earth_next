@@ -70,7 +70,7 @@ void EECalamityManager::DestroyCalamities()
     unsigned long theNumActiveCalamities = this->mCalamities.size();
     for (std::vector<EECalamity*>::iterator theIterator = this->mCalamities.begin(); theIterator != this->mCalamities.end();
          ++theIterator)
-        (*theIterator)->mClass->Stop(*theIterator);
+        EECalamityCaptureStop((*theIterator)->mClass, *theIterator);   // CALT (TEST ONLY): Stop
     unsigned long theNumCalamitiesDeleted = DeleteVectorContents(this->mCalamities);
     ESVERIFY_AT(theNumCalamitiesDeleted == theNumActiveCalamities, 77);
 }
@@ -430,7 +430,7 @@ void EECalamityManager::Restore(unsigned long inMajorVersion, unsigned long inMi
 // Starts the calamity and keeps it active if it started; one that fails to start is deleted
 void EECalamityManager::AddCalamity(EECalamity* inCalamity)
 {
-    bool theStarted = inCalamity->mClass->Start(inCalamity);
+    bool theStarted = EECalamityCaptureStart(inCalamity->mClass, inCalamity);   // CALT (TEST ONLY): Start
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
         EESimCaptureRecord theRecord(EECaptureTag("CALS"));
         theRecord.I32(inCalamity->mClass->mClassEnum);
@@ -449,7 +449,7 @@ void EECalamityManager::AddCalamity(EECalamity* inCalamity)
 // Stops and deletes the active calamity; returns the iterator to the next one
 std::vector<EECalamity*>::iterator EECalamityManager::DestroyCalamity(std::vector<EECalamity*>::iterator inCalamity)
 {
-    (*inCalamity)->mClass->Stop(*inCalamity);
+    EECalamityCaptureStop((*inCalamity)->mClass, *inCalamity);   // CALT (TEST ONLY): Stop
     delete *inCalamity;
     return this->mCalamities.erase(inCalamity);
 }
