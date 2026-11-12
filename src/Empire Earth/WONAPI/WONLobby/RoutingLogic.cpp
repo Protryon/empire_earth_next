@@ -1737,7 +1737,7 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
 void RoutingLogic::GetUserStatusComplete(AsyncOp* inBaseOp)
 {
     RoutingGetUserStatusOp* op=static_cast<RoutingGetUserStatusOp*>(inBaseOp);
-    LobbyServer* server=this->mServerList->FindServer(op->mAddress);
+    LobbyServer* server=this->mServerList->FindServer(op->GetDestAddr());
     unsigned long now=(unsigned long)time(NULL);
     SmartPtr<LobbyFriend> lastChanged;
     int changed=0;

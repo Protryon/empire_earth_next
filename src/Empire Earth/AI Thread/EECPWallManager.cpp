@@ -808,6 +808,13 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                 this->mRuns.push_back(theRun);
         }
     }
+    // port (0.277): the path request as it was (Restore drops it with the wall being planned)
+    if (theResult == kErrorOK && EESaveHasWallRequest(inMajorVersion, inMinorVersion)) {
+        bool theHasRequest = false;
+        theResult = inFile.Read(theHasRequest);
+        if (theResult == kErrorOK && theHasRequest)
+            theResult = EELoadAutoPathRequest(inFile, this->mRequest);
+    }
     return theResult;
 }
 
@@ -987,6 +994,10 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
             this->mPathing = true;
         }
     }
+    if (!this->mPathing && this->mRequest != NULL && this->mFrom == NULL) {   // port (0.277): its wall is gone
+        this->mRequest->Dereference();
+        this->mRequest = NULL;
+    }
     return 0;
 }
 
@@ -1073,6 +1084,14 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
         theResult = this->mRuns[i].mStart.Save(outFile);
         if (theResult == 0)
             theResult = this->mRuns[i].mEnd.Save(outFile);
+    }
+    // port (0.277): the path request (always finished: StartNextWall's search has no step limit), which Update reads
+    // at once in the continued game; without it the loaded game asked again and waited a step
+    if (theResult == 0 && EESaveHasWallRequest(inMajorVersion, inMinorVersion)) {
+        bool theHasRequest = this->mRequest != NULL;
+        theResult = outFile.Write(theHasRequest);
+        if (theResult == 0 && theHasRequest)
+            EESaveAutoPathRequest(outFile, *this->mRequest);
     }
     return theResult;
 }

@@ -21,6 +21,9 @@ public:
 	virtual bool PreParse(ConfigParser* theParser);
 	virtual bool PostParse(ConfigParser* theParser);
 	std::string ToString(bool includeName) const;
+	// the children HandleInstruction parses (include/ee/wonapi/WONTitleConfigMsg.h)
+	bool ParseTitleChild(ConfigParser& theParser);
+	bool ParseCommunityChild(ConfigParser& theParser, bool inNested);
 
 	bool mAlreadyInTitle;
 

@@ -1,0 +1,13 @@
+[package]
+name = "ee_screens"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The game's screens on the UI toolkit (docs/RUST_PLAN.md "R6 game screens"): the decisions of the forms' events
+# (src/Empire Earth/UI Events, User Interface Thread), behind the C++ event classes, which keep the controls, the
+# calls into the toolkit and every simulation call. Plain values in and out; no FFI imports.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]

@@ -62,6 +62,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEUnitStore.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EERules.h"
@@ -457,6 +458,7 @@ void EEWorld::Clear()
     this->mActivateQueue.clear();
     this->mDeactivateQueue.clear();
     this->mUpdateUnits.clear();
+    EEUnitOrderClear();   // New (R5b.4): the Rust list of the stepped units follows (ee/EEUnitStore.h)
     this->mActiveUnits.clear();
     EEPPatrolGroup::ResetIDs();
     EECPWallManager::ResetSizes();
@@ -1581,6 +1583,7 @@ void EEWorld::UpdateActiveUnits()
             mt = this->mActiveUnits.find(theID);
             if (mt == this->mActiveUnits.end()) {
                 this->mUpdateUnits.push_back(*it);
+                EEUnitOrderPush(it->GetSavedID());   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
                 (*it)->Reference();
                 (*it)->Reference();
                 long theKey = (*it)->GetUnitID();
@@ -1600,6 +1603,7 @@ void EEWorld::UpdateActiveUnits()
             if (theFound != this->mUpdateUnits.end()) {
                 (*it)->Dereference();
                 (*it)->Dereference();
+                EEUnitOrderErase(theFound->GetSavedID());   // New (R5b.4): the Rust list follows
                 this->mUpdateUnits.erase(theFound);
                 this->mActiveUnits.erase(mt);
             }
@@ -1655,6 +1659,7 @@ void EEWorld::RebuildActiveUnits()
     this->mActivateQueue.clear();
     this->mDeactivateQueue.clear();
     this->mUpdateUnits.clear();
+    EEUnitOrderClear();   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
     this->mActiveUnits.clear();
     for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
@@ -1663,6 +1668,7 @@ void EEWorld::RebuildActiveUnits()
             || (theUnit->mUnitClass->mIsInactive && !(theComplex->mHitPoints <= 0)))
             continue;
         this->mUpdateUnits.push_back(theComplex);
+        EEUnitOrderPush(theComplex->mUnitID);   // New (R5b.4): the Rust list follows
         long theKey = theComplex->mUnitID;
         this->mActiveUnits[theKey] = theComplex;
         theComplex->Reference();

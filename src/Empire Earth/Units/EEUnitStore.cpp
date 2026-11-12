@@ -27,6 +27,7 @@
 #include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEPhysics.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
 #include "rust/ee_units.h"
@@ -177,6 +178,54 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_COMMAND, CommandOf(theUnit));
         break;
     }
+    case kUnitFieldReloadTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mReloadTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_RELOAD_TIMER, (int64_t)theUnit->mReloadTimer.Get());
+        break;
+    }
+    case kUnitFieldTargetSearchTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mTargetSearchTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_TARGET_SEARCH_TIMER, (int64_t)theUnit->mTargetSearchTimer.Get());
+        break;
+    }
+    case kUnitFieldHealSearchTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHealSearchTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_HEAL_SEARCH_TIMER, (int64_t)FloatBits(theUnit->mHealSearchTimer.Get()));
+        break;
+    }
+    case kUnitFieldNextTriggerTime: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mNextTriggerTime));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_NEXT_TRIGGER_TIME, (int64_t)theUnit->mNextTriggerTime.Get());
+        break;
+    }
+    case kUnitFieldRottingAwayTime: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRottingAwayTime));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_ROTTING_AWAY_TIME, (int64_t)theUnit->mRottingAwayTime.Get());
+        break;
+    }
+    case kUnitFieldPower: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPower));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_POWER, (int64_t)theUnit->mPower.Get());
+        break;
+    }
+    case kUnitFieldPowerRegenTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPowerRegenTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_POWER_REGEN_TIMER, (int64_t)theUnit->mPowerRegenTimer.Get());
+        break;
+    }
+    case kUnitFieldCamouflageTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCamouflageTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CAMOUFLAGE_TIMER, (int64_t)theUnit->mCamouflageTimer.Get());
+        break;
+    }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
         if (theUnit->mInUnitStore)
@@ -245,6 +294,14 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.times_updated = (int64_t)theUnit->mTimesUpdated.Get();
         outRecord.active_group = theUnit->mActiveGroup.Get() != NULL ? 1 : 0;
         outRecord.command = CommandOf(theUnit);
+        outRecord.reload_timer = (int64_t)theUnit->mReloadTimer.Get();
+        outRecord.target_search_timer = (int64_t)theUnit->mTargetSearchTimer.Get();
+        outRecord.heal_search_timer = FloatBits(theUnit->mHealSearchTimer.Get());
+        outRecord.next_trigger_time = (int64_t)theUnit->mNextTriggerTime.Get();
+        outRecord.rotting_away_time = (int64_t)theUnit->mRottingAwayTime.Get();
+        outRecord.power = (int64_t)theUnit->mPower.Get();
+        outRecord.power_regen_timer = (int64_t)theUnit->mPowerRegenTimer.Get();
+        outRecord.camouflage_timer = (int64_t)theUnit->mCamouflageTimer.Get();
     }
 }
 
@@ -267,6 +324,84 @@ void EEUnitStoreRemove(RTSUnit* inUnit)
 void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer)
 {
     ee_units_store_clear_player(reinterpret_cast<uintptr_t>(inPlayer));
+}
+
+void EEUnitOrderPush(unsigned long inID)
+{
+    ee_units_order_push(static_cast<uint32_t>(inID));
+}
+
+void EEUnitOrderErase(unsigned long inID)
+{
+    ee_units_order_erase(static_cast<uint32_t>(inID));
+}
+
+void EEUnitOrderClear()
+{
+    ee_units_order_clear();
+}
+
+// the deque's ids (the handles' own: a freed unit's handle resolves to NULL but keeps its id)
+static void OrderIDs(std::vector<uint32_t>& outIDs)
+{
+    outIDs.clear();
+    for (size_t i = 0; i < gWorld.mUpdateUnits.size(); i++)
+        outIDs.push_back(gWorld.mUpdateUnits[i].GetSavedID());
+}
+
+void EEUnitOrderReset()
+{
+    std::vector<uint32_t> theIDs;
+    OrderIDs(theIDs);
+    ee_units_order_reset(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
+}
+
+static uint64_t sStepDigest = 0xcbf29ce484222325ull;
+static uint32_t sStepCalls = 0;
+
+static void StepFNV(uint32_t inWord)
+{
+    for (int i = 0; i < 4; i++) {
+        sStepDigest ^= (inWord >> (8 * i)) & 0xff;
+        sStepDigest *= 0x100000001b3ull;
+    }
+}
+
+void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    StepFNV(inKind);
+    StepFNV(static_cast<uint32_t>(inID));
+    for (unsigned int i = 0; i < inCount; i++)
+        StepFNV(inWords[i]);
+    sStepCalls++;
+}
+
+void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal)
+{
+    fprintf(stderr, "EE-UNIT-STEP: %s of unit 0x%08lx: Rust %ld, the original %ld\n", inLeaf, inID, inRust, inOriginal);
+    EESimCaptureRecord::Flush();
+    exit(3);
+}
+
+void EEUnitStepCommit()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    // the leaves' store reads that differed from the members (the holders keep them equal): a USCK mismatch
+    uint32_t theMismatches = 0, theUnrecorded = 0;
+    ee_units_step_reads(&theMismatches, &theUnrecorded);
+    if (theMismatches != 0)
+        EEUnitStepDiffers("a store read (records differing from the members)", 0, (long)theMismatches, 0);
+    EESimCaptureRecord theRecord(0x4d545355u);   // "USTM"
+    theRecord.U32((unsigned int)gPhysics->mNumTicksDone);
+    theRecord.U32(sStepCalls);
+    theRecord.U32((unsigned int)(sStepDigest & 0xffffffffu));
+    theRecord.U32((unsigned int)(sStepDigest >> 32));
+    theRecord.Commit();
+    sStepDigest = 0xcbf29ce484222325ull;
+    sStepCalls = 0;
 }
 
 unsigned long EEUnitStoreCheck(unsigned long inWhere)
@@ -314,6 +449,22 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                 (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
                 (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
+    }
+    // the stepped units' deque against the Rust list (ee_units order.rs), in order; a difference counts like a field's
+    static std::vector<uint32_t> sOrderIDs;
+    OrderIDs(sOrderIDs);
+    uint32_t theUnrecorded = 0;
+    uint32_t theOrderAt = ee_units_order_check(sOrderIDs.empty() ? NULL : &sOrderIDs[0], sOrderIDs.size(), &theUnrecorded);
+    if (theOrderAt != 0) {
+        fprintf(stderr, "EE-UNIT-STORE: the stepped units (%zu) and the Rust list (%u) differ at index %u\n",
+                sOrderIDs.size(), ee_units_order_count(), theOrderAt - 1);
+        theCheck.mismatches += 1;
+    }
+    static uint32_t sMostUnrecorded = 0;
+    if (theUnrecorded > sMostUnrecorded) {   // TEST ONLY: stepped units with no store record (the step's leaves read it)
+        sMostUnrecorded = theUnrecorded;
+        fprintf(stderr, "EE-UNIT-ORDER: %u stepped units without a store record at %lu (tick %lu)\n", theUnrecorded,
+                inWhere, gPhysics != NULL ? (unsigned long)gPhysics->mNumTicksDone : 0ul);
     }
     EESimCaptureRecord theRecord(0x4b435355u);   // "USCK"
     theRecord.U32((unsigned int)inWhere);

@@ -21,6 +21,7 @@ class UIControl;
 class UITextLabel;
 
 struct EeWonAuthSecrets; // rust/ee_rust.h
+struct EeWonAuthFlow; // rust/ee_rust.h (authflow.rs)
 struct EeWonIpAddr; // rust/ee_rust.h (ipobj.rs)
 struct EeWonAddr; // rust/ee_rust.h (servctx.rs)
 namespace WONAPI {
@@ -400,17 +401,11 @@ public:
     void GetCertCallback(GetCertOp*); //2de5f0
     static void StaticGetCertCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de560 support0
     // All actualc0 owner fields follow constructor/dtor graph; no unmodeled tail.
-    typedef std::list<SmartPtr<AuthSession> > SessionList;
-    struct SessionStruct { time_t mLastUseTime; SessionList mSessionList; }; //actual16-byte value
-    typedef std::map<IPAddr,SessionStruct> SessionMap;
+    friend struct AuthContextFlow;
     CriticalSection mDataCrit; //08..20
-    std::set<SmartPtr<LightGetCertOp>, SmartPtr<LightGetCertOp>::Comp> mRefreshSet; //20..2c
-    SmartPtr<GetCertOp> mGetCertOp; //2c
-    SmartPtr<AsyncOp> mAutoRefreshOp; //30
-    long mRefreshStatus; //34
-    bool mDoAutoRefresh; //38, natural padding39..3b
-    SessionMap mSessionMap; //3c..48, nodekey0c/value34
-    SessionMap::iterator mSessionCleanItr; //48
+    // the peer sessions and the certificate flow (0x20..0x4c: the refresh set, the GetCertOp, the auto-refresh
+    // timer, the refresh status and flag, the session map and its clean-up cursor): ee_won's (authflow.rs), owned
+    EeWonAuthFlow* mFlow;
     ConstSmartPtr<AuthPeerData> mPeerData; //4c
     std::wstring mName;                     // +0x50 (the lobby screens show it)
     std::wstring mPassword; //60..70, genuine owned string

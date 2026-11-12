@@ -208,7 +208,7 @@ public:
     // flags and the path request, which the original did not save (a loaded sub group had no targets until its next
     // scan, moved its formation at once and had lost its path search)
     long SaveRunningState(FSFile& outFile);
-    long LoadRunningState(FSFile& inFile);
+    long LoadRunningState(FSFile& inFile, bool inGraphSearches);   // (0.278: a running request waits for its search)
     virtual void Virtual118(long inArg1);   // +0x118 0x157269 (`ret 4`)
     virtual void ReturnToRallyPoint();      // +0x11c 0x5fbcf
     virtual bool Virtual120();              // +0x120 0x6025e

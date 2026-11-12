@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <string.h>
 #include <memory>
+#include <functional>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -60,6 +61,8 @@
 #include "ee/EEAIAStarBoundedPathGoal.h"
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
+#include "ee/EEAIPathGoalModifiers.h"
+#include "ee/EEStormModifiers.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIAStarMachine.h"
@@ -1951,6 +1954,66 @@ long EEPathManager::LoadRunningState(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.277): a path request's every field (ee/EEAutoPathRequest.h)
+void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest)
+{
+    outFile.Write(inRequest.mFrom.mX);
+    outFile.Write(inRequest.mFrom.mY);
+    outFile.Write(inRequest.mTo.mX);
+    outFile.Write(inRequest.mTo.mY);
+    outFile.Write(inRequest.mPlayerID);
+    outFile.Write(inRequest.mRequestID);
+    outFile.Write(inRequest.mPathLength);
+    outFile.Write(inRequest.mIsDone);
+    outFile.Write(inRequest.mFlags.mPlayerID);
+    for (int f = 0; f < 17; f++)
+        outFile.Write(inRequest.mFlags.mFlags[f]);
+    outFile.Write((unsigned long)inRequest.mPath.size());
+    for (size_t i = 0; i < inRequest.mPath.size(); i++) {
+        outFile.Write(inRequest.mPath[i].mX);
+        outFile.Write(inRequest.mPath[i].mY);
+    }
+}
+
+long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
+{
+    EETileCoordinate theFrom, theTo;
+    long thePlayerID = 0, theRequestID = 0, theLength = 0;
+    bool theDone = false;
+    EECPASGFlags theFlags;
+    unsigned long theCount = 0;
+    outRequest = NULL;
+    long theResult = inFile.Read(theFrom.mX);
+    long* const theLongs[] = {&theFrom.mY, &theTo.mX, &theTo.mY, &thePlayerID, &theRequestID, &theLength};
+    for (long* f : theLongs)
+        if (theResult == 0)
+            theResult = inFile.Read(*f);
+    if (theResult == 0)
+        theResult = inFile.Read(theDone);
+    if (theResult == 0)
+        theResult = inFile.Read(theFlags.mPlayerID);
+    for (int f = 0; f < 17 && theResult == 0; f++)
+        theResult = inFile.Read(theFlags.mFlags[f]);
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    std::vector<EETileCoordinate> thePath;
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        EETileCoordinate theTile;
+        theResult = inFile.Read(theTile.mX);
+        if (theResult == 0)
+            theResult = inFile.Read(theTile.mY);
+        thePath.push_back(theTile);
+    }
+    if (theResult != 0)
+        return theResult;
+    outRequest = new EEAutoPathRequest(theRequestID, thePlayerID, theFrom, theTo, theFlags);
+    outRequest->mFlags.mPlayerID = theFlags.mPlayerID;   // (the copy ctor zeroes it)
+    outRequest->mPath = thePath;
+    outRequest->mPathLength = theLength;
+    outRequest->mIsDone = theDone;
+    return 0;
+}
+
 // port (save version 0.276): a unit's tile search in progress as saved (SaveSearches); its storage as ee_astar's
 // bytes (rust/crates/ee_astar storage_save.rs)
 namespace {
@@ -2204,6 +2267,499 @@ long EEPathManager::LoadSearches(FSFile& inFile)
         // before the searches the load itself queued (RequestPendingPaths: units whose search was not saved)
         theManager.mPaths.insert(theManager.mPaths.begin(), theRestored.begin(), theRestored.end());
     });
+    return theResult;
+}
+
+// port (save version 0.278): the graph searches in progress (SaveGraphSearches); their storage as ee_astar's bytes
+// (rust/crates/ee_astar graph_save.rs), the objects by the nodes' index (the path sub sector ids)
+namespace {
+enum EEGraphModifierKind {
+    kGraphModifierNone = 0,
+    kGraphModifierEnemyAvoidance,
+    kGraphModifierWallPlanner,
+    kGraphModifierLand,
+    kGraphModifierLandWallAvoider,
+    kGraphModifierSea,
+    kGraphModifierHelicopter,
+    kGraphModifierAirplane,
+    kGraphModifierSpace,
+    kGraphModifierStormRain,
+    kGraphModifierStormSnow,
+};
+
+struct EESavedGraphSearch {
+    long mUnitID = -1;                      // the node's unit (-1: none)
+    EEAutoPathRequest* mRequest = NULL;     // the node's request (one reference, the load's) or none
+    long mL04 = 0, mL20 = 0, mL24 = 0, mL28 = 0, mL2C = 0, mPasses = 0, mL34 = 0;
+    EETileCoordinate mTile;
+    EETileCoordinate mMachineTile;
+    long mType = 0, mRevs = 0, mNumRuns = 0, mSteps = 0, mSector = 0, mNodeCount = 0, mCount = 0;
+    bool mFound = false;
+    U2DPoint<long> mStartTile, mGoalTile, mPoint38, mPoint40;
+    long mPlayerID = 0, mRevLimit = -1, mMaxRevs = -1, mGoalSector = 0, mStartSector = 0, mL70 = 0;
+    bool mFlags[6] = {false, false, false, false, false, false};
+    long mGoalUnitID = -1;
+    long mFromID = -1, mToID = -1;          // the sub sectors (-1: none)
+    EECPASGFlags mPathFlags;
+    long mModifierKind = kGraphModifierNone;
+    EECPASGWeights mWeights;
+    unsigned long mModifierPlayerID = 0, mModifierEnemyID = 0;
+    unsigned short mContinent1 = 0, mContinent2 = 0;
+    bool mAnyContinent = false, mAvoidFriendlyBlockers = false;
+    bool mModifierSubGroup = false;         // the modifier's sub group is the request's owner
+    std::vector<unsigned char> mStorage;
+};
+
+struct EEAwaitedRequest {
+    EECPAttackSubGroup* mSubGroup;          // referenced until the resolve
+    std::function<void(EEAutoPathRequest*)> mAttach;
+};
+
+std::map<long, EEAwaitedRequest> sAwaitedRequests;   // by request id, until the loaded game's first tick
+std::vector<EESavedGraphSearch> sLoadedGraphSearches;
+bool sGraphResolveQueued = false;
+
+void* EEGraphObjectOf(void* inContext, int32_t inIndex)
+{
+    (void)inContext;
+    const std::vector<EEAIPathSubSector*>& theSectors = gContinentManager.mPathSubSectors;
+    if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
+        return NULL;
+    return static_cast<AStarGraphableObjectBase*>(theSectors[inIndex]);
+}
+
+long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
+{
+    if (inModifier == NULL)
+        return kGraphModifierNone;
+    const std::type_info& theType = typeid(*inModifier);
+    if (theType == typeid(EEAIGPModifierEnemyAvoidance))
+        return kGraphModifierEnemyAvoidance;
+    if (theType == typeid(EEAIGPGModifierComputerPlayerWallPlanner))
+        return kGraphModifierWallPlanner;
+    if (theType == typeid(EEAIGPGModifierLandAttackSubGroupRoutePlanner))
+        return kGraphModifierLand;
+    if (theType == typeid(EEAIGPGModifierLandWallAvoider))
+        return kGraphModifierLandWallAvoider;
+    if (theType == typeid(EEAIGPGModifierSeaRoutePlanner))
+        return kGraphModifierSea;
+    if (theType == typeid(EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner))
+        return kGraphModifierHelicopter;
+    if (theType == typeid(EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner))
+        return kGraphModifierAirplane;
+    if (theType == typeid(EEAIGPGModifierSpaceRoutePlanner))
+        return kGraphModifierSpace;
+    if (theType == typeid(EEAIGPGModifierStormRoutePlannerRain))
+        return kGraphModifierStormRain;
+    if (theType == typeid(EEAIGPGModifierStormRoutePlannerSnow))
+        return kGraphModifierStormSnow;
+    return -1;
+}
+
+// the modifier's sub group (NULL for the kinds without one)
+EECPAttackSubGroup* EEGraphModifierSubGroup(EEAIGraphPathGoalModifierBase* inModifier, long inKind)
+{
+    switch (inKind) {
+    case kGraphModifierLand:
+    case kGraphModifierLandWallAvoider:
+        return static_cast<EEAIGPGModifierLandAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
+    case kGraphModifierSea:
+        return static_cast<EEAIGPGModifierSeaRoutePlanner*>(inModifier)->mSubGroup;
+    case kGraphModifierHelicopter:
+        return static_cast<EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
+    case kGraphModifierAirplane:
+        return static_cast<EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
+    case kGraphModifierSpace:
+        return static_cast<EEAIGPGModifierSpaceRoutePlanner*>(inModifier)->mSubGroup;
+    default:
+        return NULL;
+    }
+}
+
+// whether SaveGraphSearches can write the node's search (the load can rebuild every part of it)
+bool EEGraphSearchSavable(EEPathManagerNode* inNode)
+{
+    if (inNode == NULL || inNode->mGraphMachine == NULL)
+        return false;
+    EEGraphPathMachine* theMachine = inNode->mGraphMachine;
+    EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
+    long theKind = EEGraphModifierKindOf(theGoal.mModifier);
+    if (theKind < 0)
+        return false;
+    EECPAttackSubGroup* theSubGroup = EEGraphModifierSubGroup(theGoal.mModifier, theKind);
+    if (theSubGroup != NULL && (inNode->mRequest == NULL || theSubGroup->mPathRequest != inNode->mRequest))
+        return false;   // a sub group other than the request's owner: the load could not find it
+    if (theKind >= kGraphModifierLand && theKind <= kGraphModifierSpace && theSubGroup == NULL)
+        return false;
+    if (theMachine->mNodeCount != (long)gContinentManager.mPathSubSectors.size() + 1)
+        return false;
+    return ee_astar_graph_objects_match(theMachine->mCore, EEGraphObjectOf, NULL);
+}
+
+long EESubSectorID(EEAIPathSubSector* inSector)
+{
+    return inSector == NULL ? -1 : (long)inSector->mID;
+}
+
+EEAIPathSubSector* EESubSectorOf(long inID)
+{
+    if (inID < 0 || (size_t)inID >= gContinentManager.mPathSubSectors.size())
+        return NULL;
+    return gContinentManager.mPathSubSectors[inID];
+}
+
+// the saved modifier, NULL when it needs a sub group and has none (the caller's reference)
+EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EESavedGraphSearch& s, EECPAttackSubGroup* inSubGroup)
+{
+    EEAIGPGModiferUseInfluenceCostsBase* theInfluence = NULL;
+    EEAIGraphPathGoalModifierBase* theResult = NULL;
+    switch (s.mModifierKind) {
+    case kGraphModifierEnemyAvoidance:
+        theResult = theInfluence = new EEAIGPModifierEnemyAvoidance(s.mModifierPlayerID);
+        break;
+    case kGraphModifierWallPlanner:
+        theResult = theInfluence = new EEAIGPGModifierComputerPlayerWallPlanner(s.mModifierPlayerID, s.mModifierEnemyID);
+        break;
+    case kGraphModifierStormRain:
+        return new EEAIGPGModifierStormRoutePlannerRain;
+    case kGraphModifierStormSnow:
+        return new EEAIGPGModifierStormRoutePlannerSnow;
+    default:
+        if (inSubGroup == NULL || !s.mModifierSubGroup)
+            return NULL;
+        switch (s.mModifierKind) {
+        case kGraphModifierLand:
+        case kGraphModifierLandWallAvoider: {
+            EEAIGPGModifierLandAttackSubGroupRoutePlanner* theLand =
+                s.mModifierKind == kGraphModifierLand
+                    ? new EEAIGPGModifierLandAttackSubGroupRoutePlanner(inSubGroup, s.mContinent1, s.mContinent2, s.mAnyContinent, s.mWeights)
+                    : new EEAIGPGModifierLandWallAvoider(inSubGroup, s.mWeights);
+            theLand->mContinent1 = s.mContinent1;
+            theLand->mContinent2 = s.mContinent2;
+            theLand->mAnyContinent = s.mAnyContinent;
+            theLand->mAvoidFriendlyBlockers = s.mAvoidFriendlyBlockers;
+            theResult = theInfluence = theLand;
+            break;
+        }
+        case kGraphModifierSea:
+            theResult = theInfluence = new EEAIGPGModifierSeaRoutePlanner(s.mModifierPlayerID, inSubGroup, s.mWeights);
+            break;
+        case kGraphModifierHelicopter:
+            theResult = theInfluence = new EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner(inSubGroup, s.mWeights);
+            break;
+        case kGraphModifierAirplane:
+            theResult = theInfluence = new EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner(inSubGroup, s.mWeights);
+            break;
+        case kGraphModifierSpace:
+            theResult = theInfluence = new EEAIGPGModifierSpaceRoutePlanner(s.mModifierPlayerID, inSubGroup, s.mWeights);
+            break;
+        default:
+            return NULL;
+        }
+    }
+    if (theInfluence != NULL) {   // the members as saved (the ctors take some of them from the sub group's now)
+        theInfluence->mWeights = s.mWeights;
+        theInfluence->mPlayerID = s.mModifierPlayerID;
+        theInfluence->mEnemyID = s.mModifierEnemyID;
+    }
+    return theResult;
+}
+
+// The loaded game's first tick: each saved graph search back in the queue, before those the load asked, its request
+// given to the owner that waited for it (EEAwaitAutoPathRequest); the owners whose search could not be rebuilt ask
+// again (their fallback)
+void EEResolveGraphSearches()
+{
+    sGraphResolveQueued = false;
+    std::vector<EESavedGraphSearch> theSearches;
+    theSearches.swap(sLoadedGraphSearches);
+    std::map<long, EEAwaitedRequest> theAwaited;
+    theAwaited.swap(sAwaitedRequests);
+    EEPathManager& theManager = gPathManager;
+    std::deque<EEPathManagerNode*> theRestored;
+    for (size_t i = 0; i < theSearches.size(); i++) {
+        EESavedGraphSearch& s = theSearches[i];
+        EEAutoPathRequest* theRequest = s.mRequest;
+        s.mRequest = NULL;
+        std::map<long, EEAwaitedRequest>::iterator theOwner =
+            theRequest != NULL ? theAwaited.find(theRequest->mRequestID) : theAwaited.end();
+        EECPAttackSubGroup* theSubGroup = theOwner != theAwaited.end() ? theOwner->second.mSubGroup : NULL;
+        EEComplexUnit* theUnit = s.mUnitID == -1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mUnitID)));
+        EEComplexUnit* theGoalUnit = s.mGoalUnitID == -1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mGoalUnitID)));
+        bool theOK = (s.mUnitID == -1 || theUnit != NULL) && (s.mGoalUnitID == -1 || theGoalUnit != NULL)
+            && s.mNodeCount == (long)gContinentManager.mPathSubSectors.size() + 1
+            && (s.mFromID == -1 || EESubSectorOf(s.mFromID) != NULL) && (s.mToID == -1 || EESubSectorOf(s.mToID) != NULL);
+        EEAIGraphPathGoalModifierBase* theModifier = NULL;
+        if (theOK && s.mModifierKind != kGraphModifierNone) {
+            theModifier = EENewGraphModifier(s, theSubGroup);
+            theOK = theModifier != NULL;
+        }
+        EEGraphPathMachine* theMachine = NULL;
+        if (theOK) {
+            theMachine = theManager.NewGraphMachine(s.mType);
+            theMachine->Reset();
+            theOK = ee_astar_graph_load(theMachine->mCore, s.mStorage.data(), (uint32_t)s.mStorage.size(), EEGraphObjectOf, NULL);
+        }
+        if (theOK) {
+            theMachine->mCount = s.mCount;
+            theMachine->mTile = s.mMachineTile;
+            theMachine->mRevs = s.mRevs;
+            theMachine->mNumRuns = s.mNumRuns;
+            theMachine->mSteps = s.mSteps;
+            theMachine->mSector = s.mSector;
+            theMachine->mFound = s.mFound;
+            EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
+            theGoal.Attach(theMachine, theMachine);   // as Run does at a search's start
+            theGoal.mStartTile = s.mStartTile;
+            theGoal.mGoalTile = s.mGoalTile;
+            theGoal.mPlayerID = s.mPlayerID;
+            theGoal.mRevLimit = s.mRevLimit;
+            theGoal.mMaxRevs = s.mMaxRevs;
+            theGoal.mGoalSector = s.mGoalSector;
+            theGoal.mStartSector = s.mStartSector;
+            theGoal.mSearchFailed = s.mFlags[0];
+            theGoal.mB31 = s.mFlags[1];
+            theGoal.mAcceptNearest = s.mFlags[2];
+            theGoal.mB33 = s.mFlags[3];
+            theGoal.mB34 = s.mFlags[4];
+            theGoal.mTookNearest = s.mFlags[5];
+            theGoal.mPoint38 = s.mPoint38;
+            theGoal.mPoint40 = s.mPoint40;
+            theGoal.SetUnit(theGoalUnit);
+            if (theModifier != NULL)
+                theGoal.SetModifier(theModifier);
+            theGoal.mFrom = EESubSectorOf(s.mFromID);
+            theGoal.mTo = EESubSectorOf(s.mToID);
+            theGoal.mPathFlags = s.mPathFlags;
+            theGoal.mL70 = s.mL70;
+            EEPathManagerNode* theNode = theManager.NewNode();
+            theNode->SetRequest(theRequest);
+            theNode->SetUnit(theUnit);
+            theNode->mGraphMachine = theMachine;
+            theNode->mL04 = s.mL04;
+            theNode->mTile = s.mTile;
+            theNode->mL20 = s.mL20;
+            theNode->mL24 = s.mL24;
+            theNode->mL28 = s.mL28;
+            theNode->mL2C = s.mL2C;
+            theNode->mPasses = s.mPasses;
+            theNode->mL34 = s.mL34;
+            theRestored.push_back(theNode);
+        } else if (theMachine != NULL) {
+            theManager.ReleaseGraphMachine(theMachine);
+        }
+        if (theModifier != NULL)
+            theModifier->Dereference();
+        if (theUnit != NULL && !theOK)
+            theManager.RequestPendingPath(theUnit, s.mTile);   // as the load did before 0.278
+        if (theRequest != NULL) {
+            if (theOK && theOwner != theAwaited.end()) {
+                theOwner->second.mAttach(theRequest);   // the owner takes the load's reference
+                if (theOwner->second.mSubGroup != NULL)
+                    theOwner->second.mSubGroup->Dereference();
+                theAwaited.erase(theOwner);
+            } else
+                theRequest->Dereference();   // the node's own reference keeps it (none: freed)
+        }
+    }
+    theManager.mAutoPaths.insert(theManager.mAutoPaths.begin(), theRestored.begin(), theRestored.end());
+    for (std::map<long, EEAwaitedRequest>::iterator it = theAwaited.begin(); it != theAwaited.end(); it++) {
+        it->second.mAttach(NULL);   // the owner's fallback: it asks again
+        if (it->second.mSubGroup != NULL)
+            it->second.mSubGroup->Dereference();
+    }
+}
+
+void EEQueueGraphResolve()
+{
+    if (!sGraphResolveQueued) {
+        sGraphResolveQueued = true;
+        EEAfterLoadLast(EEResolveGraphSearches);   // after every owner's own fix-up (the active groups')
+    }
+}
+}   // namespace
+
+void EEAwaitAutoPathRequest(long inRequestID, EECPAttackSubGroup* inSubGroup, std::function<void(EEAutoPathRequest*)> inAttach)
+{
+    if (inSubGroup != NULL)
+        inSubGroup->Reference();
+    std::map<long, EEAwaitedRequest>::iterator it = sAwaitedRequests.find(inRequestID);
+    if (it != sAwaitedRequests.end()) {   // (ids are unique: a second owner of one asks again)
+        it->second.mAttach(NULL);
+        if (it->second.mSubGroup != NULL)
+            it->second.mSubGroup->Dereference();
+        sAwaitedRequests.erase(it);
+    }
+    EEAwaitedRequest theOwner = {inSubGroup, inAttach};
+    sAwaitedRequests[inRequestID] = theOwner;
+    EEQueueGraphResolve();
+}
+
+// RequestPendingPaths for one unit
+void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
+{
+    inUnit->DropPath();
+    EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+    bool theGraph = inUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->mIsAutoWaypoint);
+    EETileCoordinate theFrom;
+    theFrom.mX = inUnit->mTileX;
+    theFrom.mY = inUnit->mTileY;
+    this->RequestUnitPath(inUnit, theFrom, inTile, false, -1, theGraph, NULL, false);
+}
+
+void EEPathManager::SaveGraphSearches(FSFile& outFile)
+{
+    std::vector<EEPathManagerNode*> theNodes;
+    for (size_t i = 0; i < this->mAutoPaths.size(); i++)
+        if (EEGraphSearchSavable(this->mAutoPaths[i]))
+            theNodes.push_back(this->mAutoPaths[i]);
+    outFile.Write((unsigned long)theNodes.size());
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        EEPathManagerNode* theNode = theNodes[i];
+        EEGraphPathMachine* theMachine = theNode->mGraphMachine;
+        EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
+        EEComplexUnit* theUnit = theNode->mUnit;
+        outFile.Write(theUnit != NULL ? (long)theUnit->mUnitID : -1L);
+        outFile.Write(theNode->mRequest != NULL);
+        if (theNode->mRequest != NULL)
+            EESaveAutoPathRequest(outFile, *theNode->mRequest);
+        const long theNodeFields[] = {theNode->mL04, theNode->mTile.mX, theNode->mTile.mY, theNode->mL20, theNode->mL24,
+                                      theNode->mL28, theNode->mL2C, theNode->mPasses, theNode->mL34};
+        for (long f : theNodeFields)
+            outFile.Write(f);
+        const long theMachineFields[] = {theMachine->mTile.mX, theMachine->mTile.mY, theMachine->mType, theMachine->mRevs,
+                                         theMachine->mNumRuns, theMachine->mSteps, theMachine->mSector,
+                                         theMachine->mNodeCount, theMachine->mCount};
+        for (long f : theMachineFields)
+            outFile.Write(f);
+        outFile.Write(theMachine->mFound);
+        const long theGoalFields[] = {theGoal.mStartTile.mX, theGoal.mStartTile.mY, theGoal.mGoalTile.mX,
+                                      theGoal.mGoalTile.mY, theGoal.mPoint38.mX, theGoal.mPoint38.mY,
+                                      theGoal.mPoint40.mX, theGoal.mPoint40.mY, theGoal.mPlayerID, theGoal.mRevLimit,
+                                      theGoal.mMaxRevs, theGoal.mGoalSector, theGoal.mStartSector, theGoal.mL70,
+                                      theGoal.mUnit != NULL ? (long)theGoal.mUnit->mUnitID : -1L,
+                                      EESubSectorID(theGoal.mFrom), EESubSectorID(theGoal.mTo)};
+        for (long f : theGoalFields)
+            outFile.Write(f);
+        const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB31, theGoal.mAcceptNearest, theGoal.mB33, theGoal.mB34,
+                                  theGoal.mTookNearest};
+        for (bool f : theFlags)
+            outFile.Write(f);
+        outFile.Write(theGoal.mPathFlags.mPlayerID);
+        for (int f = 0; f < 17; f++)
+            outFile.Write(theGoal.mPathFlags.mFlags[f]);
+        long theKind = EEGraphModifierKindOf(theGoal.mModifier);
+        outFile.Write(theKind);
+        if (theKind != kGraphModifierNone && theKind != kGraphModifierStormRain && theKind != kGraphModifierStormSnow) {
+            EEAIGPGModiferUseInfluenceCostsBase* theInfluence =
+                static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theGoal.mModifier);
+            for (int w = 0; w < 15; w++)
+                outFile.Write(theInfluence->mWeights.mValues[w]);
+            outFile.Write(theInfluence->mPlayerID);
+            outFile.Write(theInfluence->mEnemyID);
+            bool theLand = theKind == kGraphModifierLand || theKind == kGraphModifierLandWallAvoider;
+            EEAIGPGModifierLandAttackSubGroupRoutePlanner* theLandModifier =
+                theLand ? static_cast<EEAIGPGModifierLandAttackSubGroupRoutePlanner*>(theGoal.mModifier) : NULL;
+            outFile.Write(theLand ? theLandModifier->mContinent1 : (unsigned short)0);
+            outFile.Write(theLand ? theLandModifier->mContinent2 : (unsigned short)0);
+            outFile.Write(theLand && theLandModifier->mAnyContinent);
+            outFile.Write(theLand && theLandModifier->mAvoidFriendlyBlockers);
+            outFile.Write(EEGraphModifierSubGroup(theGoal.mModifier, theKind) != NULL);
+        }
+        std::vector<unsigned char> theBytes(ee_astar_graph_save(theMachine->mCore, NULL, 0));
+        ee_astar_graph_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+        outFile.Write((unsigned long)theBytes.size());
+        unsigned long theWritten = 0;
+        if (!theBytes.empty())
+            outFile.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
+    }
+}
+
+long EEPathManager::LoadGraphSearches(FSFile& inFile)
+{
+    std::vector<EESavedGraphSearch> theSearches;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        theSearches.push_back(EESavedGraphSearch());
+        EESavedGraphSearch& s = theSearches.back();
+        theResult = inFile.Read(s.mUnitID);
+        bool theHasRequest = false;
+        if (theResult == 0)
+            theResult = inFile.Read(theHasRequest);
+        if (theResult == 0 && theHasRequest)
+            theResult = EELoadAutoPathRequest(inFile, s.mRequest);
+        long* const theLongs[] = {&s.mL04, &s.mTile.mX, &s.mTile.mY, &s.mL20, &s.mL24, &s.mL28, &s.mL2C, &s.mPasses,
+                                  &s.mL34, &s.mMachineTile.mX, &s.mMachineTile.mY, &s.mType, &s.mRevs, &s.mNumRuns,
+                                  &s.mSteps, &s.mSector, &s.mNodeCount, &s.mCount};
+        for (long* f : theLongs)
+            if (theResult == 0)
+                theResult = inFile.Read(*f);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mFound);
+        long* const theGoalLongs[] = {&s.mStartTile.mX, &s.mStartTile.mY, &s.mGoalTile.mX, &s.mGoalTile.mY,
+                                      &s.mPoint38.mX, &s.mPoint38.mY, &s.mPoint40.mX, &s.mPoint40.mY, &s.mPlayerID,
+                                      &s.mRevLimit, &s.mMaxRevs, &s.mGoalSector, &s.mStartSector, &s.mL70,
+                                      &s.mGoalUnitID, &s.mFromID, &s.mToID};
+        for (long* f : theGoalLongs)
+            if (theResult == 0)
+                theResult = inFile.Read(*f);
+        for (int f = 0; f < 6 && theResult == 0; f++)
+            theResult = inFile.Read(s.mFlags[f]);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mPathFlags.mPlayerID);
+        for (int f = 0; f < 17 && theResult == 0; f++)
+            theResult = inFile.Read(s.mPathFlags.mFlags[f]);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mModifierKind);
+        if (theResult == 0 && s.mModifierKind != kGraphModifierNone && s.mModifierKind != kGraphModifierStormRain
+            && s.mModifierKind != kGraphModifierStormSnow) {
+            for (int w = 0; w < 15 && theResult == 0; w++)
+                theResult = inFile.Read(s.mWeights.mValues[w]);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mModifierPlayerID);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mModifierEnemyID);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mContinent1);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mContinent2);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mAnyContinent);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mAvoidFriendlyBlockers);
+            if (theResult == 0)
+                theResult = inFile.Read(s.mModifierSubGroup);
+        }
+        unsigned long theLength = 0;
+        if (theResult == 0)
+            theResult = inFile.Read(theLength);
+        if (theResult == 0 && theLength > 0) {
+            s.mStorage.resize(theLength);
+            unsigned long theRead = 0;
+            theResult = inFile.Read(s.mStorage.data(), theLength, theRead);
+            if (theResult == 0 && theRead != theLength)
+                theResult = 1;
+        }
+    }
+    if (theResult != 0) {
+        for (size_t i = 0; i < theSearches.size(); i++)
+            if (theSearches[i].mRequest != NULL)
+                theSearches[i].mRequest->Dereference();
+        return theResult;
+    }
+    // the units the saved searches hold ask no path again (their unit's Load put them in mPending)
+    for (size_t i = 0; i < theSearches.size(); i++)
+        for (size_t p = this->mPending.size(); p-- > 0;)
+            if (theSearches[i].mUnitID != -1 && this->mPending[p].mUnitID == (unsigned long)theSearches[i].mUnitID)
+                this->mPending.erase(this->mPending.begin() + p);
+    for (size_t i = 0; i < sLoadedGraphSearches.size(); i++)   // (a load that never reached its first tick)
+        if (sLoadedGraphSearches[i].mRequest != NULL)
+            sLoadedGraphSearches[i].mRequest->Dereference();
+    sLoadedGraphSearches.swap(theSearches);
+    EEQueueGraphResolve();
     return theResult;
 }
 

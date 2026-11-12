@@ -77,6 +77,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
+                       # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
+                       # (ee/EECombatGoals.h; ee_combat goals.rs)
+                       "Empire Earth/Units/EECombatGoals.cpp",
                        # TEST ONLY: the group command sweep over the dry host (ee/EEUnitHost.h; USGC records)
                        "Empire Earth/Units/EEGroupCommandSweep.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)

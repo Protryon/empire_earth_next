@@ -67,6 +67,139 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 /// model's default point (in `top`) under the unscaled location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
 
+/// `EEUGAttackUnit`.
+constexpr static const int32_t EE_COMBAT_GOAL_ATTACK_UNIT = 0;
+
+/// `EEUGAttackGround`.
+constexpr static const int32_t EE_COMBAT_GOAL_ATTACK_GROUND = 1;
+
+/// `EEUGHealUnit`.
+constexpr static const int32_t EE_COMBAT_GOAL_HEAL = 2;
+
+/// `EEUCProjectile` (and `EEUCBomb`, which shares its test).
+constexpr static const int32_t EE_COMBAT_GOAL_PROJECTILE = 3;
+
+/// `EEUCMissile`.
+constexpr static const int32_t EE_COMBAT_GOAL_MISSILE = 4;
+
+/// `EEUCTorpedo` (its other triggers go to `EEUCMissile`'s test, a separate call: [`EE_COMBAT_READ_BASE`]).
+constexpr static const int32_t EE_COMBAT_GOAL_TORPEDO = 5;
+
+/// `inUnit->GetLineOfSight()` (f32).
+constexpr static const int32_t EE_COMBAT_READ_LINE_OF_SIGHT = 1;
+
+/// `EEIsInRangeToHit(inUnit, mTarget)`.
+constexpr static const int32_t EE_COMBAT_READ_IN_RANGE_TO_HIT = 2;
+
+/// `inUnit->IsInReach(mTarget)`.
+constexpr static const int32_t EE_COMBAT_READ_IN_REACH = 3;
+
+/// `EEIsSeenBy(mTarget, inUnit->mPlayer, false)` (attack); `true` as the last argument (heal).
+constexpr static const int32_t EE_COMBAT_READ_SEEN = 4;
+
+/// `FacesTarget(inUnit, mTarget, true)`.
+constexpr static const int32_t EE_COMBAT_READ_FACES_ARCH = 5;
+
+/// `FacesTarget(inUnit, mTarget, false)`.
+constexpr static const int32_t EE_COMBAT_READ_FACES = 6;
+
+/// `FacesTarget(inUnit, mTarget->mComplexUnit, true)` (the moving test).
+constexpr static const int32_t EE_COMBAT_READ_FACES_MOVING = 7;
+
+/// `inUnit->DistanceSquaredToUnit(mTarget)` (f32).
+constexpr static const int32_t EE_COMBAT_READ_DISTANCE_SQUARED = 8;
+
+/// `inUnit->IsOnTileBorderingTarget(mTarget)`.
+constexpr static const int32_t EE_COMBAT_READ_BORDERING = 9;
+
+/// `EEIsLineToUnitBlocked(inUnit, mTarget, ...)`.
+constexpr static const int32_t EE_COMBAT_READ_LINE_BLOCKED = 10;
+
+/// `EEUGAttackUnit::IsGateClosed`.
+constexpr static const int32_t EE_COMBAT_READ_GATE_CLOSED = 11;
+
+/// `EEUGAttackUnit::IsStillReachable` (it may make the unit ignore the target).
+constexpr static const int32_t EE_COMBAT_READ_STILL_REACHABLE = 12;
+
+/// `EEIsEnemyWithinRange(inUnit)`.
+constexpr static const int32_t EE_COMBAT_READ_ENEMY_IN_RANGE = 13;
+
+/// The base class's test of the event (the value is its `long` result): `EEUGLocation::EvaluateCondition` (heal),
+/// `EEUnitClass::EvaluateCondition` (projectile, missile), `EEUCMissile::EvaluateCondition` (torpedo).
+constexpr static const int32_t EE_COMBAT_READ_BASE = 14;
+
+/// `inUnit->CanReachTile(UMFloor(x), UMFloor(y))` of the attack-ground location.
+constexpr static const int32_t EE_COMBAT_READ_CAN_REACH_TILE = 15;
+
+/// `FacesPoint(inUnit, location, true)` of the attack-ground location.
+constexpr static const int32_t EE_COMBAT_READ_FACES_POINT = 16;
+
+/// `EEUGHealUnit::IsInRange(inUnit, mTarget)`.
+constexpr static const int32_t EE_COMBAT_READ_HEAL_IN_RANGE = 17;
+
+/// `mTarget->IsRepairable()`.
+constexpr static const int32_t EE_COMBAT_READ_REPAIRABLE = 18;
+
+/// `FindImpactUnit(inUnit)` found a unit (the C++ keeps it).
+constexpr static const int32_t EE_COMBAT_READ_IMPACT_UNIT = 19;
+
+/// `EEUUGetIsUnitClassTargetable(inUnit, <the impact unit>->GetUnitClass())`.
+constexpr static const int32_t EE_COMBAT_READ_TARGETABLE = 20;
+
+/// `CheckGroundImpact(inUnit)` (it may set an attack-ground goal).
+constexpr static const int32_t EE_COMBAT_READ_GROUND_IMPACT = 21;
+
+/// `CheckWaterImpact(inUnit)` (it may set an attack-ground goal).
+constexpr static const int32_t EE_COMBAT_READ_WATER_IMPACT = 22;
+
+/// No action.
+constexpr static const int32_t EE_COMBAT_CONDITION_NONE = 0;
+
+/// `inUnit->SetGoal(new EEUGAttackUnit(inUnit, <the impact unit>, false, false), 0, 0)`.
+constexpr static const int32_t EE_COMBAT_CONDITION_ATTACK_IMPACT_UNIT = 1;
+
+/// `inUnit->SetCurrentPhysicsAction(arg)`.
+constexpr static const int32_t EE_COMBAT_STEP_PHYSICS_ACTION = 1;
+
+/// read: `FacesTarget(inUnit, mTarget, false)`.
+constexpr static const int32_t EE_COMBAT_STEP_FACES = 2;
+
+/// read: `inUnit->mAnimation`.
+constexpr static const int32_t EE_COMBAT_STEP_ANIMATION = 3;
+
+/// `inUnit->SetAnimation(arg, -1, 0)`.
+constexpr static const int32_t EE_COMBAT_STEP_SET_ANIMATION = 4;
+
+/// `inUnit->DropPath()`.
+constexpr static const int32_t EE_COMBAT_STEP_DROP_PATH = 5;
+
+/// `EEUGAttackUnit::RetargetGatePart(inUnit)`.
+constexpr static const int32_t EE_COMBAT_STEP_RETARGET_GATE = 6;
+
+/// read: `EEGetAttackFrameSet(inUnit)`.
+constexpr static const int32_t EE_COMBAT_STEP_ATTACK_FRAME_SET = 7;
+
+/// read: `inUnit->GetModel()->mSound1Frames[arg]`.
+constexpr static const int32_t EE_COMBAT_STEP_SOUND_FRAME = 8;
+
+/// read: `inUnit->mPhysicalModel.GetFrame()`.
+constexpr static const int32_t EE_COMBAT_STEP_FRAME = 9;
+
+/// `inUnit->mUnitClass->FireShot(inUnit)`.
+constexpr static const int32_t EE_COMBAT_STEP_FIRE_SHOT = 10;
+
+/// `inUnit->SetRandomReloadTimer(arg)` (a physics random draw).
+constexpr static const int32_t EE_COMBAT_STEP_RELOAD_TIMER = 11;
+
+/// `inUnit->SetTargetSearchTimer(arg)`.
+constexpr static const int32_t EE_COMBAT_STEP_SEARCH_TIMER = 12;
+
+/// the goal's `SetPathAttempts(arg)`.
+constexpr static const int32_t EE_COMBAT_STEP_PATH_ATTEMPTS = 13;
+
+/// read: `inUnit->mIsFiringHigh`.
+constexpr static const int32_t EE_COMBAT_STEP_FIRING_HIGH = 14;
+
 /// `EEUCProjectile::CheckGroundImpact`.
 constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_GROUND = 0;
 
@@ -560,6 +693,129 @@ struct EeCombatWeaponIn {
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// A trigger test's outcome.
+struct EeCombatConditionOut {
+  /// the test's value (`bool` 0/1; the shots' `long`)
+  int32_t result;
+  /// `EE_COMBAT_CONDITION_*`
+  int32_t action;
+};
+
+/// One lazy read and its answer.
+struct EeCombatRead {
+  /// `EE_COMBAT_READ_*`
+  int32_t code;
+  /// 0/1, the `long` result, or an f32's bits
+  uint32_t value;
+};
+
+/// A trigger test's reads (the capture's CBTC layout). The C++ fills everything above `reads`; the test logs its
+/// lazy reads.
+struct EeCombatConditionIn {
+  /// `EE_COMBAT_GOAL_*`
+  int32_t kind;
+  uint32_t event;
+  uint32_t unit_id;
+  /// the target's id (0 without one)
+  uint32_t target_id;
+  /// the unit's goal's `mKind` (-1 without one)
+  int32_t goal_kind;
+  /// the unit's player `IsHuman`
+  int32_t human;
+  /// the unit's `mStats->mRange`
+  float range;
+  int32_t reload_timer;
+  /// `mStats->mReloadTime`
+  int32_t reload_time;
+  /// `mStats->mCanFireOverWalls`
+  int32_t fire_over_walls;
+  /// `mHerd != NULL`
+  int32_t herd;
+  /// the unit's class `IsCrusader`
+  int32_t crusader;
+  /// the attack goal's `mIsConvert`
+  int32_t convert;
+  /// the class's `mIsParatrooperBomber`
+  int32_t paratrooper_bomber;
+  /// the unit's `mCloaked` (a missile's lifetime flag)
+  uint32_t cloaked;
+  /// `mFlightTime` and `mStats->mFlightTime`
+  int32_t flight_time;
+  int32_t flight_time_max;
+  /// the class's `GetHealThreshold()`
+  float heal_threshold;
+  /// the target: the attack goal's, the heal goal's, or (shots) the attack-unit goal's
+  int32_t has_target;
+  int32_t target_hp;
+  int32_t target_tile[2];
+  /// the attack goal's last known target tile
+  int32_t goal_tile[2];
+  /// the target's complex unit is there, its velocity, cloak and container
+  int32_t target_complex;
+  float target_velocity;
+  int32_t target_cloakable;
+  /// `GetIsCloaked()`
+  int32_t target_cloaked;
+  /// the target class's `mCloakRadius`
+  int32_t target_cloak_radius;
+  int32_t target_container;
+  /// the target's player is the unit's
+  int32_t target_same_player;
+  /// the unit's player is at war with the target's (`mEnemies[target player] != 0`)
+  int32_t target_enemy;
+  /// the target's player is at war with the unit's
+  int32_t target_enemy_of;
+  /// the target class's `mFamily`, `mCategory`, `IsLandBuilding()`
+  uint32_t target_family;
+  uint32_t target_category;
+  int32_t target_land_building;
+  /// the target's `mStats->mAttack`, `mStats->mMaxHitPoints`
+  float target_attack;
+  int32_t target_max_hp;
+  /// the lazy reads made (may exceed the log's 4)
+  int32_t reads;
+  EeCombatRead log[4];
+};
+
+/// The C++ host of a trigger test: `read` answers a lazy read over `context` (the unit, its goal or class, the
+/// impact unit the C++ keeps between the impact read and the outcome).
+struct EeCombatConditionHost {
+  void *context;
+  uint32_t (*read)(void *context, int32_t code);
+};
+
+/// One operation of a step, its argument and (a read) its answer.
+struct EeCombatStepOp {
+  /// `EE_COMBAT_STEP_*`
+  int32_t op;
+  int32_t arg;
+  int32_t value;
+};
+
+/// A goal step's reads and its plan (the capture's CBGS layout). The C++ fills everything above `count`; the step
+/// logs its operations.
+struct EeCombatStepIn {
+  /// `EE_COMBAT_GOAL_ATTACK_UNIT`, `_ATTACK_GROUND` or `_HEAL`
+  int32_t kind;
+  /// the unit's command's `mType` (0 without one)
+  uint32_t command;
+  uint32_t unit_id;
+  /// the target's id (0 without one; attack ground: 0)
+  uint32_t target_id;
+  /// `mStats->mReloadTime`, `mStats->mCanFireOverWalls`
+  int32_t reload_time;
+  int32_t fire_over_walls;
+  /// the operations issued (may exceed the log's 12)
+  int32_t count;
+  EeCombatStepOp log[12];
+};
+
+/// The C++ host of a step: `op` executes an operation on the unit and its goal over `context`.
+struct EeCombatStepHost {
+  void *context;
+  int32_t (*op)(void *context, int32_t op, int32_t arg);
 };
 
 /// An impact test's outcome.
@@ -1218,6 +1474,20 @@ float ee_combat_weapon_height(const EeCombatWeaponIn *input,
 void ee_combat_weapon_point(const EeCombatWeaponIn *input,
                             const float (*chain)[16],
                             float *out);
+
+/// The trigger test of `input.kind`; the lazy reads go to `host` and are logged into `*input`.
+///
+/// # Safety
+/// `input` must point to a valid record and `host` to a valid table whose function may be called with its context.
+EeCombatConditionOut ee_combat_condition(EeCombatConditionIn *input,
+                                         const EeCombatConditionHost *host);
+
+/// The step of `input.kind` on `input.command`: its operations go to `host` and are logged into `*input`.
+///
+/// # Safety
+/// As [`ee_combat_condition`].
+void ee_combat_goal_step(EeCombatStepIn *input,
+                         const EeCombatStepHost *host);
 
 /// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
 ///

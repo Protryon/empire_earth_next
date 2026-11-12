@@ -10,7 +10,8 @@ form, "boxselect 11 <mode> <x0> <y0> <x1> <y1>" selects among ten units at x = 1
 "selection", "view" and "boxselect" lines; "order 11 <kind>" judges two units ok ("order" and "orderunit" lines), but
 attack ground (kind 4), which it refuses with "no-unit", as a start without a siege unit does. Gather (kind 0) first
 scouts as the game does with no resource in view (phase 1, note "scouting", for 1.5 s, then the verdict); the second
-gather order is refused "scout-unseen" after its scouting. The camera
+gather order is refused "scout-unseen" after its scouting. The first repair (kind 1) gives no message for its first
+click (phase 2, note "retry", for 1 s), then is judged with note "retried", as the game's retry does. The camera
 ("camera" telemetry line) starts at the map's right edge (63.8, 30 of 64 tiles), so the right arrow cannot move it:
 "key 11 <dik> <ms>" moves it 1 tile a 100 ms held (arrows; ']' and '[' zoom by 0.1, from 0 to 2), clamped to the
 map; "pointer 11 0 <y>" scrolls it 0.5 tile a 100 ms left until the pointer leaves the edge; "wheel 11 <0|1> <n>"
@@ -33,6 +34,7 @@ selection, box, order = [], None, None
 cam = dict(x=63.8, y=30.0, zoom=1.0, held=None, until=0.0, edge=False)
 KEYS = {0xC8: (0, 1), 0xD0: (0, -1), 0xCB: (-1, 0), 0xCD: (1, 0)}
 scout, gathers = None, 0   # scout: the pending gather (its verdict due at scout['due'])
+retry, retried = None, False   # retry: the first repair's second click (its verdict due at retry['due'])
 
 
 def ids(values):
@@ -145,6 +147,10 @@ while True:
                 gathers += 1
                 order = dict(seq=seq, kind=b, phase=1, note='scouting', units=[])
                 scout = dict(due=time.monotonic() + 1.5, refused=gathers > 1)
+            elif b == 1 and not retried:   # the first repair: no message for its first click, then the retry's
+                retried = True
+                order = dict(seq=seq, kind=b, phase=2, note='retry', units=[])
+                retry = dict(due=time.monotonic() + 1.0)
             else:
                 refused = b == 4
                 order = dict(seq=seq, kind=b, phase=9 if refused else 3, note='no-unit' if refused else '-',
@@ -175,6 +181,11 @@ while True:
         print(f'TEST UI order-{"refused" if refused else "done"} order control 0 value 0 on form 0 (seq '
               f'{order["seq"]}, top form 0)', file=sys.stderr, flush=True)
         scout = None
+    if retry and time.monotonic() >= retry['due']:
+        order.update(phase=3, note='retried', units=[101, 102])
+        print(f'TEST UI order-done order control 1 value 0 on form 0 (seq {order["seq"]}, top form 0)', file=sys.stderr,
+              flush=True)
+        retry = None
     if (ui / 'frame.request').exists():
         (ui / 'frame.request').unlink()
         width, height = 64, 48

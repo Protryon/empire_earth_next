@@ -1,9 +1,11 @@
-//! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`.
+//! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`, `capture-digest SEED=PATH ...`
+//! (tools/sim_capture.py's digests, [`capture_digest`]).
 //!
 //! The headers in `include/rust` are generated from the `extern "C"` items of `ee_rust` and checked in: one per crate
 //! (`ee_won.h`, ...; [`split`]), `ee_rust_common.h`, and `ee_rust.h`, which includes them all. `--check` fails if one
 //! is stale or a generated header is left over, as `eedata.py cppgen --check` does for the generated C++.
 
+mod capture_digest;
 mod split;
 
 use std::collections::{BTreeMap, HashMap};
@@ -115,7 +117,8 @@ fn main() -> ExitCode {
     let result = match refs.as_slice() {
         ["cbindgen"] => cbindgen_task(false),
         ["cbindgen", "--check"] => cbindgen_task(true),
-        _ => Err("usage: xtask cbindgen [--check]".to_string()),
+        ["capture-digest", files @ ..] => capture_digest::run(files),
+        _ => Err("usage: xtask cbindgen [--check] | capture-digest SEED=PATH ...".to_string()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

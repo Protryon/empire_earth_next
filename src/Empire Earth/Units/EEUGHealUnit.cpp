@@ -22,6 +22,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"
 
 const UString EEUGHealUnit::sData("EEUGHealUnit-StringID");
@@ -142,12 +143,8 @@ bool EEUGHealUnit::IsInRange(EEComplexUnit* inHealer, EEComplexUnit* inTarget)
 // On the turn-to-face action, plays the turning animation (0xd) until the healer faces the target and drops its path
 void EEUGHealUnit::Step(EEComplexUnit* inUnit)
 {
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionTurnToFaceHealee)
-        return;
-    inUnit->SetCurrentPhysicsAction(1);
-    if (!inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, false) && inUnit->mAnimation != 0xd)
-        inUnit->SetAnimation(0xd, -1, 0);
-    inUnit->DropPath();
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_HEAL, inUnit, this, this->mTarget);
 }
 
 // FUNCTION: EXE 0x625595
@@ -221,29 +218,10 @@ void EEUGHealUnit::SetTarget(EEComplexUnit* inTarget)
 // heal threshold for a non-enemy healer); others go to the location goal
 bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    switch (inEvent) {
-    case kTriggerHealeeNoLongerVisible:
-        if (!inUnit->mPlayer->IsHuman() || EEIsSeenBy(this->mTarget, inUnit->GetPlayer(), true))
-            return false;
-        return true;
-    case kTriggerHealeeDestroyed:
-        return this->mTarget->mHitPoints <= 0 ? true : false;
-    case kTriggerFacingHealee:
-        return inUnit->mUnitClass->FacesTarget(inUnit, this->mTarget, false);
-    case kTriggerGoalIsHeal:
-        return true;
-    case kTriggerHealeeInHealingRange:
-        return this->IsInRange(inUnit, this->mTarget);
-    case kTriggerTargetNeedsHealing: {
-            long theHitPoints = this->mTarget->mHitPoints;
-            long theMaxHitPoints = this->mTarget->mStats->mMaxHitPoints;
-            if (this->mTarget->IsRepairable() && (float)theHitPoints / theMaxHitPoints <= inUnit->mUnitClass->GetHealThreshold()
-                && (inUnit->mPlayer == this->mTarget->mPlayer || this->mTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] == 0))
-                return true;
-            return false;
-        }
-    }
-    return EEUGLocation::EvaluateCondition(inUnit, inEvent);
+    // ee_combat goals.rs condition (CBTC); the location goal's test is the host's base read
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_HEAL, inUnit, inEvent, this->mTarget);
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x625789
