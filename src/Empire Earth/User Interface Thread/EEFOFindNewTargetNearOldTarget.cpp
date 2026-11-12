@@ -1603,31 +1603,36 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 }
 
 // FUNCTION: EXE 0x641e21
-// Accepts a living unit within the screen's distance of the old target
-// TEST ONLY (the CBFS capture): the screens' test, its inputs as ee_combat takes them (kind 0 the melee screen, 1 this)
-static bool EECombatScreenCapture(int32_t inKind, int32_t inHitPoints, float inRange, bool inRead, float inDistance,
-                                  bool inResult)
+// Accepts a living unit within the screen's distance of the old target (new: ee_combat's screen)
+// the old target's screen's candidate distance (asked by ee_combat's screen for a living candidate only)
+struct EENearOldScreenContext {
+    EEComplexUnit* mCandidate;
+    EEComplexUnit* mTarget;
+};
+
+static float EENearOldScreenDistance(void* inContext)
 {
-    EECombatScreenRecordIn in = {inKind, inHitPoints, inRange, inRead, inRead ? inDistance : 0.0f};
-    int32_t theOut = inResult;
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theOut);
-    return inResult;
+    EENearOldScreenContext* theContext = (EENearOldScreenContext*)inContext;
+    return theContext->mCandidate->DistanceSquaredTo(theContext->mTarget);
+}
+
+static bool EENearOldScreen(EEFOFindNewTargetNearOldTarget* inScreen, EEComplexUnit* inUnit)
+{
+    EENearOldScreenContext theContext = {inUnit, inScreen->mTarget};
+    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_NEAR_OLD, (int32_t)inUnit->mHitPoints, inScreen->mDistanceSquared, 0, 0.0f};
+    int32_t theResult = ee_combat_screen(&in, &theContext, EENearOldScreenDistance);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
+    return theResult != 0;
 }
 
 bool EEFOFindNewTargetNearOldTarget::Virtual04(EEComplexUnit* inUnit)
 {
-    float theDistance = 0.0f;
-    bool theRead = false;
-    bool theResult = inUnit->mHitPoints > 0 && (theRead = true, theDistance = inUnit->DistanceSquaredTo(this->mTarget)) < this->mDistanceSquared;
-    return EECombatScreenCapture(1, (int32_t)inUnit->mHitPoints, this->mDistanceSquared, theRead, theDistance, theResult);
+    return EENearOldScreen(this, inUnit);
 }
 
 bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
 {
-    float theDistance = 0.0f;
-    bool theRead = false;
-    bool theResult = inUnit->mHitPoints > 0 && (theRead = true, theDistance = inUnit->DistanceSquaredTo(this->mTarget)) < this->mDistanceSquared;
-    return EECombatScreenCapture(1, (int32_t)inUnit->mHitPoints, this->mDistanceSquared, theRead, theDistance, theResult);
+    return EENearOldScreen(this, inUnit);
 }
 
 // FUNCTION: EXE 0x641e49
@@ -4747,17 +4752,12 @@ float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX
         EEFindDropLocation(inUnit, &theDropTarget, &theTarget, inTarget);
     else
         inTarget->GetPosition(theTarget);
-    EECombatHitDistanceRecordIn theCaptureIn = {{thePosition.GetX(), thePosition.GetY(), thePosition.GetZ()},
-                                                {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()}, inX, inY};   // TEST ONLY (CBHD)
-    if (inX != -10000.0f) {
-        thePosition.SetX(inX);
-        thePosition.SetY(inY);
-    }
-    thePosition.SetZ(0.0f);
-    theTarget.SetZ(0.0f);
-    float theCaptureOut = thePosition.DistanceToSquared(theTarget);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'D'), theCaptureIn, theCaptureOut);
-    return theCaptureOut;
+    // the arithmetic is ee_combat's hit_distance (screen.rs)
+    EeCombatHitDistanceIn in = {{thePosition.GetX(), thePosition.GetY(), thePosition.GetZ()},
+                                {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()}, inX, inY};
+    float theDistance = ee_combat_hit_distance(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'D'), in, theDistance);
+    return theDistance;
 }
 
 // FUNCTION: EXE 0x649560

@@ -149,6 +149,12 @@ constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_TURRET = 1;
 /// `EEApproachAttachPoint`: the world point of the current tag point (or half a tile up).
 constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_ATTACH = 2;
 
+/// `EEFOFindNewTargetInMeleeRange`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
+
+/// `EEFOFindNewTargetNearOldTarget`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_NEAR_OLD = 1;
+
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
 /// complex unit may be missing).
@@ -3707,6 +3713,33 @@ struct EeCombatSearchHost {
   void (*ignore)(void *ctx, uint64_t unit);
   void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
+/// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
+/// and the answer.
+struct EeCombatScreenIn {
+  /// `EE_COMBAT_SCREEN_KIND_*`
+  int32_t kind;
+  /// the candidate's hit points
+  int32_t hit_points;
+  /// the screen's squared range
+  float range;
+  int32_t read;
+  float distance;
+};
+
+/// The host's distance of a screen's candidate (asked only for a living one).
+using EeCombatScreenDistance = float(*)(void *context);
+
+/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
+struct EeCombatHitDistanceIn {
+  /// the unit's position
+  float from[3];
+  /// the target's point (its drop point, a melee unit's: its position)
+  float to[3];
+  /// the point to measure from instead of the unit's (x -10000: none)
+  float x;
+  float y;
 };
 
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
@@ -9473,6 +9506,20 @@ EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
 /// # Safety
 /// `host` must point to a valid record whose callbacks are callable with its `ctx`.
 uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
+///
+/// # Safety
+/// `input` must point to a valid record; `distance` is called with `context` (it must not touch the record).
+int32_t ee_combat_screen(EeCombatScreenIn *input,
+                         void *context,
+                         EeCombatScreenDistance distance);
+
+/// `EEGetHitDistanceSquared`'s arithmetic.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///

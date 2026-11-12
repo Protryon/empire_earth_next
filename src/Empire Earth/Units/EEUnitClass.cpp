@@ -3754,32 +3754,36 @@ EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUn
 }
 
 // FUNCTION: EXE 0x63799d
-// Returns whether a candidate is alive and closer to the attacker than its current target
-// TEST ONLY (the CBFS capture): the screens' test, its inputs as ee_combat takes them (kind 0 this, 1 the old target's)
-static bool EECombatMeleeScreenCapture(int32_t inHitPoints, float inRange, bool inRead, float inDistance, bool inResult)
+// Returns whether a candidate is alive and closer to the attacker than its current target (new: ee_combat's screen)
+// the melee screen's candidate distance (asked by ee_combat's screen for a living candidate only)
+struct EEMeleeScreenContext {
+    EEComplexUnit* mUnit;
+    EEComplexUnit* mCandidate;
+};
+
+static float EEMeleeScreenDistance(void* inContext)
 {
-    EECombatScreenRecordIn in = {0, inHitPoints, inRange, inRead, inRead ? inDistance : 0.0f};
-    int32_t theOut = inResult;
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theOut);
-    return inResult;
+    EEMeleeScreenContext* theContext = (EEMeleeScreenContext*)inContext;
+    return EEGetHitDistanceSquared(theContext->mUnit, theContext->mCandidate, -10000.0f, -10000.0f);
+}
+
+static bool EEMeleeScreen(EEFOFindNewTargetInMeleeRange* inScreen, EEComplexUnit* inUnit)
+{
+    EEMeleeScreenContext theContext = {inScreen->mUnit, inUnit};
+    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_MELEE, (int32_t)inUnit->mHitPoints, inScreen->mRange, 0, 0.0f};
+    int32_t theResult = ee_combat_screen(&in, &theContext, EEMeleeScreenDistance);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
+    return theResult != 0;
 }
 
 bool EEFOFindNewTargetInMeleeRange::Virtual04(EEComplexUnit* inUnit)
 {
-    float theDistance = 0.0f;
-    bool theRead = false;
-    bool theResult = inUnit->mHitPoints > 0
-        && (theRead = true, theDistance = EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f)) < this->mRange;
-    return EECombatMeleeScreenCapture((int32_t)inUnit->mHitPoints, this->mRange, theRead, theDistance, theResult);
+    return EEMeleeScreen(this, inUnit);
 }
 
 bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 {
-    float theDistance = 0.0f;
-    bool theRead = false;
-    bool theResult = inUnit->mHitPoints > 0
-        && (theRead = true, theDistance = EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f)) < this->mRange;
-    return EECombatMeleeScreenCapture((int32_t)inUnit->mHitPoints, this->mRange, theRead, theDistance, theResult);
+    return EEMeleeScreen(this, inUnit);
 }
 
 // FUNCTION: EXE 0x6379dd

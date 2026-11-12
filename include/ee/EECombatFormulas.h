@@ -155,22 +155,11 @@ inline void EECombatDamageRow(const EeCombatDamageRowIn& in, EeCombatDamageRowOu
 
 // ---- the weapon point's other users, the flight steps, the screens (round 4)
 
-// TEST ONLY (the golden of round 4, recorded from the unmodified C++ before the move): the records' layouts as
-// ee_combat takes them. CBLS (LaunchShot), CBLT (LaunchFromTurret), CBAP (EEApproachAttachPoint): the launch record,
-// the tag point's model chain (16 floats a link), the launch output. CBPJ, CBPS (EEPMProjectile::Step0, Step2), CBMA,
-// CBMH (EEPMMissile::Accelerate, Home): the flight record and its output. CBFS: a screen's test; CBHD:
-// EEGetHitDistanceSquared's arithmetic.
-struct EECombatScreenRecordIn {
-    int32_t kind, hit_points;
-    float range;
-    int32_t read;
-    float distance;
-};
-struct EECombatHitDistanceRecordIn {
-    float from[3];
-    float to[3];
-    float x, y;
-};
+// The round 4 records (ee_combat launch.rs, flight.rs, screen.rs; recorded from the unmodified C++ first): CBLS
+// (LaunchShot), CBLT (LaunchFromTurret), CBAP (EEApproachAttachPoint): EeCombatLaunchIn, the tag point's model chain
+// (16 floats a link), EeCombatLaunchOut. CBPJ, CBPS (EEPMProjectile::Step0, Step2), CBMA, CBMH (EEPMMissile::Accelerate,
+// Home): EeCombatFlightIn, EeCombatFlightOut. CBFS: a screen's EeCombatScreenIn and its result; CBHD:
+// EEGetHitDistanceSquared's EeCombatHitDistanceIn and the distance.
 
 // A tag point's local point at a frame and its model chain's internal transforms (the point's model first), as
 // EETagPoint's walks take them (TagPoint is EETagPoint: ee/EEGraphicObject.h)

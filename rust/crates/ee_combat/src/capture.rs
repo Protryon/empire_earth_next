@@ -7,7 +7,7 @@ use crate::*;
 use std::collections::BTreeMap;
 
 /// The tags (the little-endian u32 of the four letters) and their formulas' names.
-pub const TAGS: [(&[u8; 4], &str); 32] = [
+pub const TAGS: [(&[u8; 4], &str); 34] = [
     (b"CBAF", "attack factor"),
     (b"CBDM", "damage"),
     (b"CBEL", "elevation"),
@@ -40,6 +40,8 @@ pub const TAGS: [(&[u8; 4], &str); 32] = [
     (b"CBPS", "projectile step"),
     (b"CBMA", "missile acceleration"),
     (b"CBMH", "missile homing"),
+    (b"CBFS", "new target screen"),
+    (b"CBHD", "hit distance"),
 ];
 
 pub fn tag(name: &[u8; 4]) -> u32 {
@@ -119,6 +121,8 @@ unsafe impl Plain for crate::launch::EeCombatLaunchIn {}
 unsafe impl Plain for crate::launch::EeCombatLaunchOut {}
 unsafe impl Plain for crate::flight::EeCombatFlightIn {}
 unsafe impl Plain for crate::flight::EeCombatFlightOut {}
+unsafe impl Plain for crate::screen::EeCombatScreenIn {}
+unsafe impl Plain for crate::screen::EeCombatHitDistanceIn {}
 
 fn bytes_of<T: Plain>(value: &T) -> &[u8] {
     // SAFETY: a Plain value is size_of::<T>() initialized bytes (4-byte fields, no padding)
@@ -224,6 +228,10 @@ pub fn replay(record: &Record) -> Option<Result<bool, String>> {
         let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[size + 64 * n..size + 64 * n + 64])).collect();
         let height = crate::geometry::weapon_height(&input, &links);
         Ok(height.to_bits().to_le_bytes() == p[p.len() - 4..])
+    } else if t == tag(b"CBFS") {
+        check(p, crate::screen::screen)
+    } else if t == tag(b"CBHD") {
+        check(p, crate::screen::hit_distance)
     } else if t == tag(b"CBPJ") {
         check(p, crate::flight::projectile_launch)
     } else if t == tag(b"CBPS") {
