@@ -1823,6 +1823,21 @@ void EEPathManager::DumpSim(FILE* inFile)
     fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
             this->mHistory.size(), this->mRegions.size(), this->mNextHistoryPruneTime, this->mNextRegionPruneTime,
             this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
+    // the bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search), as a digest
+    // of its bytes (ee_astar storage_save.rs), and the C++ members around it
+    unsigned long theHash = 2166136261u, theSize = 0;
+    if (this->mBoundedMachine != NULL) {
+        std::vector<unsigned char> theBytes(ee_astar_save(this->mBoundedMachine->mCore, NULL, 0));
+        ee_astar_save(this->mBoundedMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+        for (size_t i = 0; i < theBytes.size(); i++)
+            theHash = (uint32_t)((theHash ^ theBytes[i]) * 16777619u);
+        theSize = (unsigned long)theBytes.size();
+    }
+    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", this->mBoundedMachine != NULL ? 1 : 0, theSize, theHash);
+    if (this->mBoundedMachine != NULL)
+        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", this->mBoundedMachine->mWidth, this->mBoundedMachine->mHeight,
+                this->mBoundedMachine->mMapWidth, this->mBoundedMachine->mMapHeight, this->mBoundedMachine->mFound ? 1 : 0);
+    fprintf(inFile, "\n");
 }
 
 // port (save version 0.256): the history (newest first), the region maps (by unit id, then tile) and the timers.
