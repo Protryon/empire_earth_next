@@ -581,7 +581,7 @@ LoadLegacy:
         if (theResult == 0)
             theResult = inFile.Read(this->mOpacity);
         if (theResult == 0)
-            theResult = inFile.Read(this->mIsCloaked);
+            theResult = EEUnitStoreRead(inFile, this->mIsCloaked);
     }
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
@@ -672,7 +672,7 @@ LoadLegacy:
     if (theResult != 0)
         goto LoadLateVersions;
     if ((theResult = EEUnitStoreRead(inFile, this->mPowerRegenTimer)) != 0
-        || (theResult = inFile.Read(this->mIsCloakable)) != 0
+        || (theResult = EEUnitStoreRead(inFile, this->mIsCloakable)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mX)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mY)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mZ)) != 0
@@ -699,7 +699,7 @@ LoadLateVersions:
     if (inMinorVersion >= 0xd5 && theResult == 0)
         theResult = this->mLastMapPosition.Load(inFile);
     if (inMinorVersion >= 0xe2 && theResult == 0)
-        theResult = inFile.Read(this->mCloaked);
+        theResult = EEUnitStoreRead(inFile, this->mCloaked);
     if (inMinorVersion >= 0xe8 && theResult == 0)
         theResult = EEUnitStoreRead(inFile, this->mCamouflageTimer);
 LoadFinalVersions:
@@ -965,7 +965,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     this->mHomeBase = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHomeBase)));
     if (this->mHomeBase != NULL)
         this->mHomeBase->Reference();
-    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer)));
+    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer.Get())));
     if (this->mContainer != NULL) {
         // A not-yet-repaired cargo vector still holds IDs; a repaired one holds actual unit pointers.
         if (this->mContainer->mUnitClass->mTransportCapacity < 1

@@ -3,131 +3,50 @@
 #include <time.h>
 #include "ee/wonapi/WONRouting.h"
 namespace WONAPI {
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+// PingOp is a Rust op (rust/crates/ee_won/src/reqops.rs, EE_WON_REQOPS_PING).
+//
+// MultiPingOp is a Rust op on the Rust op base (rust/crates/ee_won/src/multiping.rs): new
+// RustServerOp(ee_won_multiping_new()); the limits with ee_won_hostop_set (EE_WON_MULTIPING_BATCH_SIZE,
+// _MAX_FAILURES, _MAX_PING_TIME), a server with EE_WON_MULTIPING_ADD (the address's six bytes, an entity or NULL),
+// EE_WON_MULTIPING_CLEAR; once finished, the list by number (EE_WON_MULTIPING_COUNT, _ADDR, _TIME, _FAILURES,
+// _ENTITY). The two helpers below are the original's AddServers and GetServerContext over it.
 
-class PingOp : public ServerRequestOp
+// AddServers: each service entity (not a directory) whose name passes the filter and whose address is valid
+inline void MultiPingAddServers(RustServerOp* inOp, const DirEntityList& inDir, const wchar_t* inNameFilter = NULL)
 {
-private:
-	bool mExtended;
+    std::wstring aFilter = inNameFilter != NULL ? inNameFilter : L"";
+    for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
+        const DirEntity* anEntity = *i;
+        if (anEntity->mType == 'D' || (!aFilter.empty() && aFilter != anEntity->mName)) continue;
+        IPAddr anAddr = anEntity->GetNetAddrAsIP();
+        if (anAddr.IsValid())
+            ee_won_hostop_set(inOp->GetRustOp(), EE_WON_MULTIPING_ADD, 0, NULL, 0,
+                              reinterpret_cast<const uint8_t*>(anAddr.GetSixByte()),
+                              static_cast<RefCount*>(const_cast<DirEntity*>(anEntity)));
+    }
+}
 
-public:
-	DWORD mLag;
-	std::string mAppName;
-	std::string mLogicalName;
-	std::string mImage;
-	std::string mPorts;
-	std::string mRegData;
-	std::string mServData;
-	time_t mVersion;
-	long mPID;
-	bool mIsAuth;
-
-protected:
-	virtual WONStatus GetNextRequest();
-	virtual WONStatus CheckResponse();
-	virtual void Reset();
-
-public:
-	PingOp(const IPAddr &theAddr, unsigned char theLengthFieldSize, bool extended = false);
-
-	void SetExtended(bool isExtended) { this->mExtended = isExtended; }
-	bool GetExtended() { return this->mExtended; }
-
-};
-
-typedef SmartPtr<PingOp> PingOpPtr;
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-struct MultiPingStruct : public RefCount
+inline void MultiPingSixSink(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
-	IPAddr mAddr;
-	int mPingTime;
-	int mNumFailures;
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
 
-	DWORD mStartPingTick;
-	int mPingId;
-
-	DirEntityPtr mDirEntity;
-
-	MultiPingStruct(IPAddr theAddr, const DirEntity *theEntity = NULL) : mAddr(theAddr), mDirEntity(const_cast<DirEntity*>(theEntity)), mPingTime(-1), mNumFailures(0) {} 
-};
-typedef SmartPtr<MultiPingStruct> MultiPingStructPtr;
-typedef std::list<MultiPingStructPtr> MultiPingList;
-typedef std::map<IPAddr,MultiPingStructPtr> MultiPingMap;
-
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class MultiPingOp : public AsyncOp
+// GetServerContext: the finished servers in order (the unanswered too unless discarded), not shuffled
+inline SmartPtr<ServerContext> MultiPingServerContext(RustServerOp* inOp, bool discardNonResponsiveServers = true)
 {
-private:
-
-	MultiPingList mPingList;
-	MultiPingMap mPingMap;
-
-	MultiPingList mFinishedList;
-
-	unsigned short mBatchSize;
-	unsigned char mMaxFailures;
-	DWORD mMaxPingTime;
-	unsigned short mMaxPingReplySize;
-	bool mOrderListByPingTime;
-
-	SmartPtr<BlockingSocket> mSocket;
-	AsyncOpPtr mRecvTimeoutOp;
-
-	void PrepareBatch();
-	void PingBatchAsync();
-	WONStatus PingBatchBlock();
-
-	void FinishBatch();
-	DWORD ResponseTimeLeft(DWORD theStartTick);
-
-	static void StaticRecvCallback(AsyncOpPtr theOp, SmartPtr<RefCount> theParam);
-	static void StaticTimeoutCallback(AsyncOpPtr theOp, SmartPtr<RefCount> theParam);
-	void RecvCallback(RecvBytesFromOp *theOp);
-	void TimeoutCallback(AsyncOp *theOp);
-
-	bool HandleResponsePrv(WONStatus theStatus, const ByteBuffer *theResponse, const IPAddr &theAddr);
-
-protected:
-	enum PingAction
-	{
-		PingAction_InvalidReply,	// --> keep waiting for valid reply
-		PingAction_Done,			// --> done pinging this guy
-		PingAction_More				// --> ping this guy some more
-	};
-
-	virtual ByteBufferPtr GetRequest(MultiPingStruct *theStruct);
-	virtual PingAction HandleResponse(MultiPingStruct *theStruct, const ByteBuffer *theResponse);
-
-	virtual void RunHook();
-	virtual void CleanupHook();
-
-public:
-	MultiPingOp();
-	
-	void AddServer(const IPAddr &theAddr);
-	void AddServers(const DirEntityList &theDir, const wchar_t *theNameFilter = NULL);
-	void ClearServers();
-
-	const MultiPingList& GetPingList() const { return this->mFinishedList; }
-	SmartPtr<ServerContext> GetServerContext(bool discardNonResponsiveServers = true);
-
-	void SetBatchSize(unsigned short theSize) { this->mBatchSize = theSize; }
-	void SetMaxFailures(unsigned char theMaxFailures) { this->mMaxFailures = theMaxFailures; }
-	void SetMaxPingTime(DWORD theMilliseconds) { this->mMaxPingTime = theMilliseconds; }
-};
-
-
-typedef SmartPtr<MultiPingOp> MultiPingOpPtr;
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+    SmartPtr<ServerContext> aContext = new ServerContext;
+    EeWonHostOp* r = inOp->GetRustOp();
+    int aKeep = discardNonResponsiveServers ? EE_WON_MULTIPING_KEEPS : EE_WON_MULTIPING_KEEPS_ALL;
+    for (int64_t i = 0; i < ee_won_hostop_num(r, EE_WON_MULTIPING_COUNT, 0); i++) {
+        std::string aSix;
+        ee_won_hostop_bytes(r, EE_WON_MULTIPING_ADDR, i, MultiPingSixSink, &aSix);
+        if (ee_won_hostop_num(r, aKeep, i) == 0 || aSix.size() != 6) continue;
+        IPAddr anAddr;
+        anAddr.SetSixByte(aSix.data());
+        aContext->AddAddress(anAddr);
+    }
+    aContext->SetShuffleAddresses(false);
+    return aContext;
+}
 }
 #endif

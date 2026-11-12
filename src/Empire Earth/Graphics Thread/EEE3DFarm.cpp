@@ -50,15 +50,13 @@
 #include "ee/EEE3DFarm.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EEEffectMesh.h"   // ee_gfx farm.rs (RUST_PLAN R4.4)
 
 // 0x4bd920 (.data): the crop variant of a tile by (x / 2 % 4, y / 2 % 4) (provisional name)
 static long sFarmTileVariant[4][4] = {{0, 1, 2, 4}, {4, 3, 0, 2}, {1, 2, 4, 0}, {2, 0, 3, 1}};
 // 0x4bd960 / 0x4bd974 (.data): by the unit's mCloaked (0..4) (provisional names)
 static long sFarmCropKind[5] = {0, 10, 6, 3, 1};
 static long sFarmCropFrame[5] = {13, 7, 8, 11, 9};
-
-// 0x4407a0 / 0x440800 (.rdata, the unit's named constants)
-const float kFarmEpsilon = 0.001f;
 
 // SYNTHETIC: EXE 0x4ee5c0
 // SYNTHETIC: EXE 0x4ee5ca
@@ -155,37 +153,61 @@ long EEE3DFarm::BuildModels()
 
 static long FarmTileVariant(long inX, long inY);
 
+// the terrain's questions and the field for ee_gfx farm.rs
+static float EEFarmZ(void* inMesh, uint32_t inX, uint32_t inY)
+{
+    return static_cast<GETerrainMesh*>(inMesh)->GetZ(inX, inY);
+}
+static EeGeVector EEFarmNormal(void* inMesh, uint32_t inX, uint32_t inY)
+{
+    const GEVector* theNormal = static_cast<GETerrainMesh*>(inMesh)->GetVertexNormal(inX, inY);
+    EeGeVector theResult = {theNormal->GetX(), theNormal->GetY(), theNormal->GetZ()};
+    return theResult;
+}
+static float EEFarmMeshZ(void* inMesh, float inX, float inY)
+{
+    return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
+}
+static EeGfxFarmTerrain EEFarmTerrain()
+{
+    EeGfxFarmTerrain theTerrain;
+    theTerrain.context = &gWorld.mMap->mTerrainMesh;
+    theTerrain.z = EEFarmZ;
+    theTerrain.normal = EEFarmNormal;
+    theTerrain.mesh_z = EEFarmMeshZ;
+    return theTerrain;
+}
+static EeGfxFarmField EEFarmField(EEE3DFarm* inFarm)
+{
+    EeGfxFarmField theField;
+    theField.left = inFarm->mArea.GetLeft();
+    theField.top = inFarm->mArea.GetTop();
+    theField.right = inFarm->mArea.GetRight();
+    theField.bottom = inFarm->mArea.GetBottom();
+    theField.row_length = inFarm->mRowLength;
+    theField.tile_size = (float)inFarm->mUnit->GetClass()->GetTileSize();
+    return theField;
+}
+// a model's whole range in its first material
+static void EEFarmSetRanges(GEModel* inModel, long inPolygons, long inVertices)
+{
+    inModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
+    inModel->GetMaterial(0)->SetPolygonRangeLength(inPolygons, 0);
+    inModel->GetMaterial(0)->SetVertexStartingIndex(0);
+    inModel->GetMaterial(0)->SetVertexRangeLength(inVertices);
+}
+
 // FUNCTION: EXE 0x4ee7cd
 // Rebuilds the field's ground mesh over its tiles from the terrain heights and normals (also into the draw copy),
-// places it and picks the ground texture from the variant of the farm's first drop site tile
+// places it and picks the ground texture from the variant of the farm's first drop site tile. The mesh is ee_gfx
+// farm.rs's (RUST_PLAN R4.4)
 long EEE3DFarm::BuildGroundModel()
 {
     GETransformation theTransformation;
-    GETerrainMesh& theMesh = gWorld.mMap->mTerrainMesh;
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    GEVector theNormal0;
-    GEVector theNormal1;
-    GEVector theNormal2;
-    GEVector theNormal3;
-    GETextureCoordinate theCoordinate0;
-    GETextureCoordinate theCoordinate1;
-    GETextureCoordinate theCoordinate2;
-    GETextureCoordinate theCoordinate3;
     float theSize = (float)this->mUnit->GetClass()->GetTileSize();
-    float theScale = 1.0f / theSize;
-    float theMaxHeight = 1.1754944e-38f;
-    float theXOffset = (this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * -0.5f;
-    float theYOffset = (this->mArea.GetBottom() - this->mArea.GetTop() + 1.0f) * -0.5f;
-    long theLeft = UMFloor(this->mArea.GetLeft());
-    long theRight = UMFloor(this->mArea.GetRight());
-    long theTop = UMFloor(this->mArea.GetTop());
     long thePolygonCount = UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) *
                            UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * 2;
     long theVertexCount = this->mRowLength * this->mRowLength;
-    float theCoordinateStep = 1.0f / (this->mRowLength - 1);
     if (this->mGroundModel)
         this->mGroundModel->Dereference();
     this->mGroundModel = gModelManager->CreateModel(thePolygonCount, theVertexCount, 1, 0, 1, 1,
@@ -196,117 +218,25 @@ long EEE3DFarm::BuildGroundModel()
     theDummy->GetPolygonArray(0)->SetVertexIndex1(0, 0);
     theDummy->GetPolygonArray(0)->SetVertexIndex2(0, 1);
     theDummy->GetPolygonArray(0)->SetVertexIndex3(0, 2);
-    {
-        GE3DPoint theDummyPoint(0.0f, 0.0f, 0.0f);
-        theDummy->GetVertexArray(0)->SetPoint(theDummyPoint, 0);
-    }
-    {
-        GE3DPoint theDummyPoint(0.0001f, 0.0f, 0.0f);
-        theDummy->GetVertexArray(0)->SetPoint(theDummyPoint, 1);
-    }
-    {
-        GE3DPoint theDummyPoint(0.0f, 0.0001f, 0.0f);
-        theDummy->GetVertexArray(0)->SetPoint(theDummyPoint, 2);
-    }
+    theDummy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0);
+    theDummy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0001f, 0.0f, 0.0f), 1);
+    theDummy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0001f, 0.0f), 2);
     theDummy->GetVertexArray(0)->SetOpacity(0.0f, 0);
     theDummy->GetVertexArray(0)->SetOpacity(0.0f, 1);
     theDummy->GetVertexArray(0)->SetOpacity(0.0f, 2);
-    theDummy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    theDummy->GetMaterial(0)->SetPolygonRangeLength(1, 0);
-    theDummy->GetMaterial(0)->SetVertexStartingIndex(0);
-    theDummy->GetMaterial(0)->SetVertexRangeLength(3);
-    float theBaseZ = theMesh.GetZ(UMFloorUnsigned(this->mArea.GetLeft()), UMFloorUnsigned(this->mArea.GetBottom()));
-    this->mGroundModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    this->mGroundModel->GetMaterial(0)->SetPolygonRangeLength(thePolygonCount, 0);
-    this->mGroundModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    this->mGroundModel->GetMaterial(0)->SetVertexRangeLength(theVertexCount);
-    this->mGroundCopy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    this->mGroundCopy->GetMaterial(0)->SetPolygonRangeLength(thePolygonCount, 0);
-    this->mGroundCopy->GetMaterial(0)->SetVertexStartingIndex(0);
-    this->mGroundCopy->GetMaterial(0)->SetVertexRangeLength(theVertexCount);
-    long theVertex = 0;
-    long thePolygon = 0;
-    float theV = 0.0f;
-    for (long y = UMFloor(this->mArea.GetBottom()); y >= theTop; y--) {
-        float theU = 0.0f;
-        float theY1 = (y - theTop + 1 + theYOffset) * theScale;
-        float theY0 = (y - theTop + theYOffset) * theScale;
-        for (long x = theLeft; x <= theRight; x++) {
-            float theZ0 = theMesh.GetZ(x, y) - theBaseZ + kFarmEpsilon;
-            float theZ1 = theMesh.GetZ(x, y + 1) - theBaseZ + kFarmEpsilon;
-            float theZ2 = theMesh.GetZ(x + 1, y + 1) - theBaseZ + kFarmEpsilon;
-            float theZ3 = theMesh.GetZ(x + 1, y) - theBaseZ + kFarmEpsilon;
-            theNormal0 = *theMesh.GetVertexNormal(x, y);
-            theNormal1 = *theMesh.GetVertexNormal(x, y + 1);
-            theNormal2 = *theMesh.GetVertexNormal(x + 1, y + 1);
-            theNormal3 = *theMesh.GetVertexNormal(x + 1, y);
-            theMaxHeight = max(theMaxHeight, theZ0);
-            theMaxHeight = max(theMaxHeight, theZ1);
-            theMaxHeight = max(theMaxHeight, theZ2);
-            theMaxHeight = max(theMaxHeight, theZ3);
-            thePoint0.SetX((x - theLeft + theXOffset) * theScale);
-            thePoint0.SetY(theY0);
-            thePoint0.SetZ(theZ0 * theScale);
-            thePoint1.SetX((x - theLeft + theXOffset) * theScale);
-            thePoint1.SetY(theY1);
-            thePoint1.SetZ(theZ1 * theScale);
-            thePoint2.SetX((x - theLeft + 1 + theXOffset) * theScale);
-            thePoint2.SetY(theY1);
-            thePoint2.SetZ(theZ2 * theScale);
-            thePoint3.SetX((x - theLeft + 1 + theXOffset) * theScale);
-            thePoint3.SetY(theY0);
-            thePoint3.SetZ(theZ3 * theScale);
-            this->mGroundModel->GetVertexArray(0)->SetPoint(thePoint0, theVertex + this->mRowLength);
-            this->mGroundModel->GetVertexArray(0)->SetPoint(thePoint1, theVertex);
-            this->mGroundModel->GetVertexArray(0)->SetPoint(thePoint2, theVertex + 1);
-            this->mGroundModel->GetVertexArray(0)->SetPoint(thePoint3, theVertex + this->mRowLength + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetPoint(thePoint0, theVertex + this->mRowLength);
-            this->mGroundCopy->GetVertexArray(0)->SetPoint(thePoint1, theVertex);
-            this->mGroundCopy->GetVertexArray(0)->SetPoint(thePoint2, theVertex + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetPoint(thePoint3, theVertex + this->mRowLength + 1);
-            this->mGroundModel->GetVertexArray(0)->SetNormal(theNormal0, theVertex + this->mRowLength);
-            this->mGroundModel->GetVertexArray(0)->SetNormal(theNormal1, theVertex);
-            this->mGroundModel->GetVertexArray(0)->SetNormal(theNormal2, theVertex + 1);
-            this->mGroundModel->GetVertexArray(0)->SetNormal(theNormal3, theVertex + this->mRowLength + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetNormal(theNormal0, theVertex + this->mRowLength);
-            this->mGroundCopy->GetVertexArray(0)->SetNormal(theNormal1, theVertex);
-            this->mGroundCopy->GetVertexArray(0)->SetNormal(theNormal2, theVertex + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetNormal(theNormal3, theVertex + this->mRowLength + 1);
-            theCoordinate0 = GETextureCoordinate(theU, theV + theCoordinateStep);
-            theCoordinate1 = GETextureCoordinate(theU + theCoordinateStep, theV + theCoordinateStep);
-            theCoordinate2 = GETextureCoordinate(theU, theV);
-            theCoordinate3 = GETextureCoordinate(theU + theCoordinateStep, theV);
-            this->mGroundModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, theVertex);
-            this->mGroundModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, theVertex + 1);
-            this->mGroundModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, theVertex + this->mRowLength);
-            this->mGroundModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, theVertex + this->mRowLength + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, theVertex);
-            this->mGroundCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, theVertex + 1);
-            this->mGroundCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, theVertex + this->mRowLength);
-            this->mGroundCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, theVertex + this->mRowLength + 1);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + this->mRowLength);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 1);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + this->mRowLength + 1);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 1, theVertex + this->mRowLength);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 1, theVertex);
-            this->mGroundModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 1, theVertex + 1);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + this->mRowLength);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 1);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + this->mRowLength + 1);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 1, theVertex + this->mRowLength);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 1, theVertex);
-            this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 1, theVertex + 1);
-            thePolygon += 2;
-            theU += theCoordinateStep;
-            theVertex++;
-        }
-        theVertex++;
-        theV += theCoordinateStep;
-    }
+    EEFarmSetRanges(theDummy, 1, 3);
+    EEFarmSetRanges(this->mGroundModel, thePolygonCount, theVertexCount);
+    EEFarmSetRanges(this->mGroundCopy, thePolygonCount, theVertexCount);
+    EEEffectMesh theMesh(theVertexCount, thePolygonCount);
+    EeGfxFarmField theField = EEFarmField(this);
+    EeGe3DPoint thePlace = ee_gfx_farm_ground(&theField, EEFarmTerrain(), theMesh.Vertices(), theMesh.mVertices.size(),
+                                              theMesh.Triangles(), theMesh.mTriangles.size());
+    theMesh.Store(this->mGroundModel);
+    theMesh.Store(this->mGroundCopy);
     theDummy->Dereference();
     this->mGroundModel->ComputeBoundingVolumes();
     this->mGroundCopy->ComputeBoundingVolumes();
-    theTransformation.SetPosition(this->mArea.GetLeft() - theXOffset, this->mArea.GetTop() - theYOffset, theBaseZ);
+    theTransformation.SetPosition(thePlace.x, thePlace.y, thePlace.z);
     this->mGroundCopy->SetGraphicsPostModelTransform(theTransformation);
     this->mGroundCopy->SetGraphicsScale(theSize);
     this->mGroundCopy->PrepareTransforms();
@@ -335,132 +265,30 @@ static long FarmTileVariant(long inX, long inY)
 
 // FUNCTION: EXE 0x4ef5fa
 // Builds the crop rows as a sub-model of the ground: per tile row, upright quads following the terrain, as many
-// rows as the effect's first int parameter; textures them with the variant's crop frame
+// rows as the effect's first int parameter; textures them with the variant's crop frame. The mesh is ee_gfx
+// farm.rs's (RUST_PLAN R4.4)
 long EEE3DFarm::BuildCrops()
 {
     GETransformation theTransformation;
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    GETextureCoordinate theCoordinate0;
-    GETextureCoordinate theCoordinate1;
-    GETextureCoordinate theCoordinate2;
-    GETextureCoordinate theCoordinate3;
-    GEVector theNormal(1.0f, -1.0f, 1.0f);
-    float theMaxHeight = 1.1754944e-38f;
     float theSize = (float)this->mUnit->GetClass()->GetTileSize();
-    float theScale = 1.0f / theSize;
-    float theStalkStep = 1.0f / (unsigned long)this->mGraphicEffect->mIntParam1;
-    float theXOffset = (this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * -0.5f;
-    float theYOffset = (this->mArea.GetBottom() - this->mArea.GetTop() + 1.0f) * -0.5f;
-    GETerrainMesh& theMesh = gWorld.mMap->mTerrainMesh;
-    long theLeft = UMFloor(this->mArea.GetLeft());
-    long theRight = UMFloor(this->mArea.GetRight());
-    long theTop = UMFloor(this->mArea.GetTop());
-    long thePolygonCount = UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * (unsigned long)this->mGraphicEffect->mIntParam1 * 2;
-    long theVertexCount = UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f) * this->mRowLength * (unsigned long)this->mGraphicEffect->mIntParam1 * 2;
-    theNormal.Normalize();
+    unsigned long theRows = (unsigned long)this->mGraphicEffect->mIntParam1;
+    long theWidth = UMFloor(this->mArea.GetRight() - this->mArea.GetLeft() + 1.0f);
+    long thePolygonCount = theWidth * theWidth * theRows * 2;
+    long theVertexCount = theWidth * this->mRowLength * theRows * 2;
     GEModel* theModel = gModelManager->CreateSubModel(thePolygonCount, theVertexCount, 1, 0, 1, 0, 0, 0,
                                                    this->mGroundModel);
-    float theBaseZ = theMesh.GetZ(UMFloorUnsigned(this->mArea.GetLeft()), UMFloorUnsigned(this->mArea.GetBottom()));
-    theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    theModel->GetMaterial(0)->SetPolygonRangeLength(thePolygonCount, 0);
-    theModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    theModel->GetMaterial(0)->SetVertexRangeLength(theVertexCount);
-    this->mCropsCopy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    this->mCropsCopy->GetMaterial(0)->SetPolygonRangeLength(thePolygonCount, 0);
-    this->mCropsCopy->GetMaterial(0)->SetVertexStartingIndex(0);
-    this->mCropsCopy->GetMaterial(0)->SetVertexRangeLength(theVertexCount);
-    long theVertex = 0;
-    long thePolygon = 0;
-    for (long y = UMFloor(this->mArea.GetBottom()); y >= theTop; y--) {
-        float theStalkY = y - theStalkStep + 1.0f;
-        for (unsigned long theStalk = 0; theStalk < (unsigned long)this->mGraphicEffect->mIntParam1; theStalk++) {
-            float theU = 0.0f;
-            float theY = (theYOffset + theStalkY - theTop) * theScale;
-            for (long x = theLeft; x <= theRight; x++) {
-                float theTileZ0 = theMesh.GetZ(x, y) - theBaseZ + kFarmEpsilon;
-                float theTileZ1 = theMesh.GetZ(x, y + 1) - theBaseZ + kFarmEpsilon;
-                float theTileZ2 = theMesh.GetZ(x + 1, y + 1) - theBaseZ + kFarmEpsilon;
-                float theTileZ3 = theMesh.GetZ(x + 1, y) - theBaseZ + kFarmEpsilon;
-                theMaxHeight = max(theMaxHeight, theTileZ0);
-                theMaxHeight = max(theMaxHeight, theTileZ1);
-                theMaxHeight = max(theMaxHeight, theTileZ2);
-                theMaxHeight = max(theMaxHeight, theTileZ3);
-                float theZ0 = theMesh.GetMeshZ((float)x, theStalkY) - theBaseZ + kFarmEpsilon;
-                float theZ1 = theMesh.GetMeshZ((float)(x + 1), theStalkY) - theBaseZ + kFarmEpsilon;
-                thePoint0.SetX((x - theLeft + theXOffset) * theScale);
-                thePoint0.SetY(theY);
-                thePoint0.SetZ(theZ0 * theScale);
-                thePoint1.SetX((x - theLeft + theXOffset) * theScale);
-                thePoint1.SetY(theY);
-                thePoint1.SetZ((theZ0 + this->mGraphicEffect->GetSize()) * theScale);
-                thePoint2.SetX((x - theLeft + 1 + theXOffset) * theScale);
-                thePoint2.SetY(theY);
-                thePoint2.SetZ((theZ1 + this->mGraphicEffect->GetSize()) * theScale);
-                thePoint3.SetX((x - theLeft + 1 + theXOffset) * theScale);
-                thePoint3.SetY(theY);
-                thePoint3.SetZ(theZ1 * theScale);
-                theModel->GetVertexArray(0)->SetOpacity(1.0f, theVertex);
-                theModel->GetVertexArray(0)->SetOpacity(1.0f, theVertex + 1);
-                theModel->GetVertexArray(0)->SetOpacity(1.0f, theVertex + this->mRowLength);
-                theModel->GetVertexArray(0)->SetOpacity(1.0f, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetOpacity(1.0f, theVertex);
-                this->mCropsCopy->GetVertexArray(0)->SetOpacity(1.0f, theVertex + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetOpacity(1.0f, theVertex + this->mRowLength);
-                this->mCropsCopy->GetVertexArray(0)->SetOpacity(1.0f, theVertex + this->mRowLength + 1);
-                theModel->GetVertexArray(0)->SetPoint(thePoint0, theVertex + this->mRowLength);
-                theModel->GetVertexArray(0)->SetPoint(thePoint1, theVertex);
-                theModel->GetVertexArray(0)->SetPoint(thePoint2, theVertex + 1);
-                theModel->GetVertexArray(0)->SetPoint(thePoint3, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetPoint(thePoint0, theVertex + this->mRowLength);
-                this->mCropsCopy->GetVertexArray(0)->SetPoint(thePoint1, theVertex);
-                this->mCropsCopy->GetVertexArray(0)->SetPoint(thePoint2, theVertex + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetPoint(thePoint3, theVertex + this->mRowLength + 1);
-                theModel->GetVertexArray(0)->SetNormal(theNormal, theVertex + this->mRowLength);
-                theModel->GetVertexArray(0)->SetNormal(theNormal, theVertex);
-                theModel->GetVertexArray(0)->SetNormal(theNormal, theVertex + 1);
-                theModel->GetVertexArray(0)->SetNormal(theNormal, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetNormal(theNormal, theVertex + this->mRowLength);
-                this->mCropsCopy->GetVertexArray(0)->SetNormal(theNormal, theVertex);
-                this->mCropsCopy->GetVertexArray(0)->SetNormal(theNormal, theVertex + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetNormal(theNormal, theVertex + this->mRowLength + 1);
-                theCoordinate0 = GETextureCoordinate(theU, 0.0f);
-                theCoordinate1 = GETextureCoordinate(theU + 2.0f, 0.0f);
-                theCoordinate2 = GETextureCoordinate(theU, 1.0f);
-                theCoordinate3 = GETextureCoordinate(theU + 2.0f, 1.0f);
-                theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, theVertex);
-                theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, theVertex + 1);
-                theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, theVertex + this->mRowLength);
-                theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, theVertex);
-                this->mCropsCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, theVertex + 1);
-                this->mCropsCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, theVertex + this->mRowLength);
-                this->mCropsCopy->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, theVertex + this->mRowLength + 1);
-                theModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + this->mRowLength);
-                theModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex);
-                theModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + this->mRowLength + 1);
-                theModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 1, theVertex);
-                theModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 1, theVertex + 1);
-                theModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 1, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + this->mRowLength);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + this->mRowLength + 1);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 1, theVertex);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 1, theVertex + 1);
-                this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 1, theVertex + this->mRowLength + 1);
-                thePolygon += 2;
-                theU += 2.0f;
-                theVertex++;
-            }
-            theStalkY -= theStalkStep;
-            theVertex += this->mRowLength + 1;
-        }
-    }
+    EEFarmSetRanges(theModel, thePolygonCount, theVertexCount);
+    EEFarmSetRanges(this->mCropsCopy, thePolygonCount, theVertexCount);
+    EEEffectMesh theMesh(theVertexCount, thePolygonCount);
+    EeGfxFarmField theField = EEFarmField(this);
+    EeGe3DPoint thePlace = ee_gfx_farm_crops(&theField, theRows, this->mGraphicEffect->GetSize(), EEFarmTerrain(),
+                                             theMesh.Vertices(), theMesh.mVertices.size(), theMesh.Triangles(),
+                                             theMesh.mTriangles.size());
+    theMesh.Store(theModel);
+    theMesh.Store(this->mCropsCopy);
     theModel->ComputeBoundingVolumes();
     this->mCropsCopy->ComputeBoundingVolumes();
-    theTransformation.SetPosition(this->mArea.GetLeft() - theXOffset, this->mArea.GetTop() - theYOffset, theBaseZ);
+    theTransformation.SetPosition(thePlace.x, thePlace.y, thePlace.z);
     this->mCropsCopy->SetGraphicsPostModelTransform(theTransformation);
     this->mCropsCopy->SetGraphicsScale(theSize);
     this->mCropsCopy->PrepareTransforms();

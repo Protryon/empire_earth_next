@@ -51,7 +51,7 @@ const GUIString& EELobbyPlayerSlot::GetName()
             return this->mName;
         return gEmptyGUIString;
     }
-    return this->mClient->mName;
+    return this->mClient->GetName();
 }
 
 // FUNCTION: EXE 0x6998e3

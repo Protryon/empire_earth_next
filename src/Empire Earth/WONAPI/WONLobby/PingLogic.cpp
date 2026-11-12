@@ -42,7 +42,7 @@ PingGameOp::PingGameOp(LobbyGame* inGame, unsigned short inRequestId,
     this->mRetries = 0;
     this->mRequestId = inRequestId;
     this->mReplyFlags = inFlags;
-    this->SetDestAddr(this->mGame->mAddress);
+    this->SetDestAddr(this->mGame->GetAddress());
 }
 
 // FUNCTION: WON 0x007e6240
@@ -118,13 +118,13 @@ void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 void PingLogic::HandlePingRequest(ReadBuffer& inBuffer, const IPAddr& inAddress)
 {
     LobbyGame* aGame = GetMyLobbyGame();
-    if (aGame == NULL || !aGame->mIsHost)
+    if (aGame == NULL || !aGame->GetIsHost())
         return;
     unsigned short anId = inBuffer.ReadShort();
     unsigned char aKind = inBuffer.ReadByte();
     if (aGame->GetGameType() != aKind)
         return;
-    if (aGame->mInProgress) {
+    if (aGame->IsInProgress()) {
         LobbyConfig* aConfig = GetLobbyConfig();
         if (aConfig != NULL && aConfig->mNoPingInProgress)
             return;
@@ -173,7 +173,7 @@ void PingLogic::PingGameDone(AsyncOp* inOp)
     unsigned short aPing = anOp->mPing;
     LobbyGame* aGame = anOp->mGame.get();
     if (aPing != 0xffff)
-        aGame->mPingReplied = true;
+        aGame->SetPingReplied(true);
     else if (anOp->mRetries < 3) {
         ++anOp->mRetries;
         LobbyConfig* aConfig = GetLobbyConfig();
@@ -221,7 +221,7 @@ void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
 {
     if (inGame == NULL)
         return;
-    if (inGame->mInProgress) {
+    if (inGame->IsInProgress()) {
         LobbyConfig* aConfig = GetLobbyConfig();
         if (aConfig != NULL && aConfig->mNoPingInProgress)
             return;
@@ -235,7 +235,7 @@ void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
     if (!inForce && !inDetails) {
         unsigned short aMaximum = LobbyGetConnectionSpeed();
         if (static_cast<long>(this->mTracker.GetNumTrack()) >= aMaximum && aMaximum > 0) {
-            inGame->mPing = 0xfffd;
+            inGame->SetPing(0xfffd);
             LobbyNotifyPingChange(inGame);
             this->mPending.push_back(inGame);
             return;

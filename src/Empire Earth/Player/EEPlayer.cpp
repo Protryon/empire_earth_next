@@ -1781,6 +1781,7 @@ void EEPlayer::Reset()
     this->mSavedGroups.SetName(this->GetName());
     for (unsigned long thePlayer = 0; thePlayer <= 16; thePlayer++)
         this->mEnemies[thePlayer] = this->mPlayerID != thePlayer;
+    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
     this->mUnitClassUpgrades.resize(EEUnitClassCount());
     for (long theClass = 0; theClass < EEUnitClassCount(); theClass++) {
         if (gUnitClassTable[theClass] != NULL)
@@ -1978,6 +1979,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             if (theResult == kErrorOK)
                 theResult = inFile.Read(this->mSendChatMessage[i]);
         }
+        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
         if (theResult == kErrorOK)
             theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
@@ -2133,6 +2135,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             if (theResult == kErrorOK)
                 theResult = inFile.Read(this->mSendChatMessage[i]);
         }
+        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
         if (theResult == kErrorOK)
             theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
@@ -2299,6 +2302,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             if (theResult == kErrorOK)
                 theResult = inFile.Read(this->mSendChatMessage[i]);
         }
+        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
         if (theResult == kErrorOK)
             theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
@@ -2481,6 +2485,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             if (theResult == kErrorOK)
                 theResult = inFile.Read(this->mSendChatMessage[i]);
         }
+        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
         if (theResult == kErrorOK)
             theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
@@ -4080,6 +4085,7 @@ void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMa
                     thePlayer = this;
                     inOther->mAllies.push_back(thePlayer);
                     theStance = 0;
+                    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
                     for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
                         theUnit->SightOnHere();
                     this->mEvents.ShowEvents(this);
@@ -4103,6 +4109,7 @@ void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMa
                 this->RemoveAlly(inOther);
                 inOther->RemoveAlly(this);
                 theStance = inStance;
+                EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
                 for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
                     theUnit->SightOnHere();
                 for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
@@ -4115,6 +4122,7 @@ void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMa
     if (inOther == theCurrentPlayer || this == theCurrentPlayer)
         theCurrentPlayer->RefreshTerrainVisibility();
     theStance = inStance;
+    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
     gWorld.RemoveShareBonus();
     gWorld.ApplyShareBonus();
     if (gMiniMap != NULL)

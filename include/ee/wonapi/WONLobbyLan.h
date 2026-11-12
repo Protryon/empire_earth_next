@@ -41,7 +41,11 @@ private:
     EeWonLanSocket* mLan;
 };
 
-// LanLogic: 0xb8 bytes (allocated at 0x762f7f); members start at 0x40.
+// LanLogic: 0xb8 bytes in the original (allocated at 0x762f7f); vtable slots as NetLogic's.
+// A Rust object since round 20 (rust/crates/ee_won/src/lanobj.rs): its methods and scalar state (the next client
+// id, the captain and peer-auth flags, the last host ping and broadcast times) are Rust's, its calls out the host's
+// ops (WONLobby/LanLogicHost.cpp); this shell keeps the SmartPtrs, the socket set, the discovery address, the
+// virtual slots and completions, and the steps that are C++ alone.
 class LanLogic : public NetLogic {
 public:
     LanLogic(); // 0x7dfc00
@@ -50,91 +54,65 @@ public:
     virtual void InitComponent(ComponentConfig* inConfig); // 0x7e00a0
     virtual void HandleControlEvent(int inControlId); // 0x7e2760
     virtual void HandleComponentEvent(ComponentEvent* inEvent); // 0x7e27c0
-    virtual bool HostGame(LobbyGame* inGame);  // 0x7e37a0
-    virtual bool JoinGame(LobbyGame* inGame);  // 0x7e3d20
-    virtual LobbyClient* GetMyClient(); // 0x7e0180
-    virtual void SendToCaptain(const ByteBuffer* inBuffer); // 0x7e1c30
-    virtual void BroadcastToGame(const ByteBuffer* inBuffer); // 0x7e1cf0
-    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer); // 0x7e1db0
-    virtual void AdvertiseGame(LobbyGame* inGame); // 0x7e45c0
-    virtual void RemoveGameAdvertisement(LobbyGame* inGame); // 0x7e45e0
-    virtual void KickClient(LobbyClient* inClient, bool inFlag); // 0x7e4590
-    virtual void SetGameInProgress(bool inFlag); // empty: the shared one-argument stub at 0x6fa500
-    virtual void LeaveGame(LobbyGame* inGame); // 0x7e45b0
-    virtual void Suspend();   // empty: the shared no-argument stub at 0x8142a0
-    virtual void Resume();    // 0x7e5900
-    virtual void Logout();    // 0x7e5910
-    unsigned short GetNextClientId();
-    bool IsConnected();
-    bool IsCaptain();
-    LobbyClientList* GetClientList();
-    void CloseConnections();
-    void HandleSocketClosed(AsyncOp* inOp);
-    void HandleNetworkTimer(AsyncOp* inOp);
+    virtual bool HostGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::HostGame, inGame) != 0; } // 0x7e37a0
+    virtual bool JoinGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::JoinGame, inGame) != 0; } // 0x7e3d20
+    virtual LobbyClient* GetMyClient() { return this->mMyClient.get(); } // 0x7e0180
+    virtual void SendToCaptain(const ByteBuffer* inBuffer) // 0x7e1c30
+    { this->CallMessage(EeWonLanCall::SendToCaptain, inBuffer, NULL); }
+    virtual void BroadcastToGame(const ByteBuffer* inBuffer) // 0x7e1cf0
+    { this->CallMessage(EeWonLanCall::BroadcastToGame, inBuffer, NULL); }
+    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer) // 0x7e1db0
+    { this->CallMessage(EeWonLanCall::SendToClient, inBuffer, inClient); }
+    virtual void AdvertiseGame(LobbyGame* inGame) { this->Call(EeWonLanCall::AdvertiseGame, inGame); } // 0x7e45c0
+    virtual void RemoveGameAdvertisement(LobbyGame* inGame) // 0x7e45e0
+    { this->Call(EeWonLanCall::RemoveGameAdvertisement, inGame); }
+    virtual void KickClient(LobbyClient* inClient, bool) { this->Call(EeWonLanCall::KickClient, NULL, inClient); } // 0x7e4590
+    virtual void SetGameInProgress(bool) {} // empty: the shared one-argument stub at 0x6fa500
+    virtual void LeaveGame(LobbyGame*) { this->Call(EeWonLanCall::LeaveGame); } // 0x7e45b0
+    virtual void Suspend() {} // empty: the shared no-argument stub at 0x8142a0
+    virtual void Resume(); // 0x7e5900
+    virtual void Logout() { this->Call(EeWonLanCall::Logout); } // 0x7e5910
+    LobbyClientList* GetClientList() { return this->mClients.get(); }
+    intptr_t Call(EeWonLanCall inCall, void* inA = NULL, void* inB = NULL, intptr_t inC = 0)
+    { return ee_won_lan_call(this->mRust, inCall, inA, inB, inC, 0); }
+    void CallMessage(EeWonLanCall inCall, const ByteBuffer* inMessage, LobbyClient* inClient);
+    // the completions (Rust's)
+    void HandleSocketClosed(AsyncOp* inOp) { this->Call(EeWonLanCall::SocketClosed, inOp); }
+    void HandleNetworkTimer(AsyncOp* inOp) { this->Call(EeWonLanCall::NetworkTimer, inOp); }
+    void HandleRecvMsg(AsyncOp* inOp) { this->Call(EeWonLanCall::RecvMsg, inOp); }
+    void HandleDiscoveryTimer(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryTimer, inOp); }
+    void HandleDiscoveryRecv(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryRecv, inOp); }
+    void HandleAccept(AsyncOp* inOp) { this->Call(EeWonLanCall::Accept, inOp); }
+    // the steps that are C++ alone (the host's ops)
+    void HandlePeerAuthDone(AsyncOp* inOp); // 0x7e1600
+    void AddPendingSocket(LobbyLanSocket* inSocket);
     void StartNetworkTimer();
-    void SendMessageToClient(LobbyClient* inClient, const ByteBuffer* inBuffer);
-    void SendMessageToCaptain(const ByteBuffer* inBuffer);
-    void BroadcastMessage(const ByteBuffer* inBuffer, bool inFlag);
-    void HandleClientJoined(unsigned short inId, const std::wstring& inName);
-    void HandleClientLeft(unsigned short inClientId);
-    void HandleChatRequest(unsigned short inFlags, const std::wstring& inText, unsigned short inTargetId,
-                           LobbyClient* inSender);
-    void HandleChatMessage(unsigned short inFlags, unsigned short inSenderId, const std::wstring& inText,
-                           unsigned short inTargetId);
-    void HandleStagingMessage(ReadBuffer& inBuffer, LobbyClient* inSender);
-    void HandleMessage(const ByteBuffer* inBuffer, LobbyClient* inClient);
-    void ChangeLanName();
-    void ChangeLanPort();
-    void StartDiscovery();
-    void HandleChangeDirectConnect(ChangeDirectConnectEvent* inEvent);
-    bool CanBroadcastGame(LobbyGame* inGame);
-    void BroadcastGameSummary(LobbyGame* inGame, const IPAddr& inAddress);
-    void BroadcastGameKeepAlive(LobbyGame* inGame);
-    void BroadcastGameRemoved(LobbyGame* inGame);
-    void HandleDiscoveryQuery(const IPAddr&);
-    void HandleGameSummary(unsigned short inPort, ReadBuffer& inSummary, const IPAddr&);
-    void HandleGameKeepAlive(unsigned short inPort, const IPAddr&);
-    void HandleGameRemoved(unsigned short inPort, const IPAddr&);
-    void HandleDiscoveryTimer(AsyncOp* inOp);
     void StartDiscoveryTimer();
     void StopDiscovery();
-
-    void HandleClientAction(ClientActionEvent*);
-    void SendChat(const GUIString&,unsigned short,unsigned short);
-    void HandleChatCommand(Component*);
-    void RefreshGames();
-    void EnterLanScreen();
-    void HandleRecvMsg(AsyncOp*); // receive completion
-    void HandleNewSocketMessage(const ByteBuffer*,LobbyLanSocket*);
-    void HandleJoinRequest(const std::wstring& inName,const std::wstring& inPassword,LobbyLanSocket*);
-    int ReadJoinReply(const ByteBuffer*,LobbyGame*);
-    void ShowClientOptions(LobbyClient*,int);
-    void AddPendingSocket(LobbyLanSocket*);
     bool RefreshCertificate();
-    void HandlePeerAuthDone(AsyncOp*); // 0x7e1600; peer authentication completion
-    void HandleAccept(AsyncOp*); // accept completion
-    void HandleDiscoveryRecv(AsyncOp*); // discovery receive completion
+    void HandleGameSummary(unsigned short inPort, ReadBuffer& inSummary, const IPAddr& inAddress);
+    void HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddress);
+    void HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress);
+    void AddDirectConnect();
 
     SmartPtr<DirectConnectDialog> mDirectConnectDialog; // 0x40
     SmartPtr<LanNameDialog> mLanNameDialog; // 0x44
     SmartPtr<LanPortDialog> mLanPortDialog; // 0x48
     SmartPtr<PasswordDialog> mPasswordDialog; // 0x4c
-    SmartPtr<LobbyGameList> mLanGames; // 0x50, LobbyGameList(1) (0x2c bytes, constructor 0x7a7c50)
+    SmartPtr<LobbyGameList> mLanGames; // 0x50, LobbyGameList(1)
     SmartPtr<LobbyGameList> mDirectGames; // 0x54, LobbyGameList(3)
     std::set<SmartPtr<LobbyLanSocket> > mPendingSockets; // 0x58
-    SmartPtr<LobbyLanSocket> mListenSocket; // 0x64, 0xa8 bytes, vtable 0x8559ec
-    SmartPtr<LobbyLanSocket> mServerSocket; // 0x68, 0xa8 bytes, vtable 0x8559ec
-    long mLastServerPing; // 0x6c, time(NULL); compared in the network timer 0x7e04e0
-    AsyncOpPtr mNetworkTimer; // 0x70, timer operation (constructor 0x69ef80), callback 0x7e04e0
-    bool mRequirePeerAuth; // 0x74, set for direct-connect games (game kind 3) (inferred)
-    SmartPtr<QueueSocket> mDiscoverySocket; // 0x78, QueueSocket (0xa0 bytes, constructor 0x6b3930, type 1)
-    AsyncOpPtr mDiscoveryTimer; // 0x7c, timer operation, callback 0x7e4be0
+    SmartPtr<LobbyLanSocket> mListenSocket; // 0x64
+    SmartPtr<LobbyLanSocket> mServerSocket; // 0x68
+    AsyncOpPtr mNetworkTimer; // 0x70, callback HandleNetworkTimer
+    SmartPtr<QueueSocket> mDiscoverySocket; // 0x78, QueueSocket type 1
+    AsyncOpPtr mDiscoveryTimer; // 0x7c, callback HandleDiscoveryTimer
     IPAddr mDiscoveryAddress; // 0x80
-    long mLastBroadcastTime; // 0xa8, time(NULL), compared signed; not initialized by the constructor
     SmartPtr<LobbyClientList> mClients; // 0xac
-    SmartPtr<LobbyLanClient> mMyClient; // 0xb0, LobbyLanClient (vtable 0x8559d8)
-    unsigned short mNextClientId; // 0xb4, wraps at 16 bits
-    bool mIsCaptain; // 0xb6
+    SmartPtr<LobbyLanClient> mMyClient; // 0xb0
+    GUIString mJoinPassword; // JoinGame's password (the original's loop local)
+private:
+    EeWonLan* mRust;
 };
 }
 #endif

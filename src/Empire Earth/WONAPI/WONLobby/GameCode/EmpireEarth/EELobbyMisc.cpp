@@ -173,9 +173,9 @@ void EELobbySetSlot(EELobbyPlayerSlot* inSlot, const EEGameOptionsPlayer& inPlay
         break;
     case 1:
     case 2:
-        if (inSlot->mClient.mPtr != NULL && inSlot->mClient->mPlayer.mPtr != NULL) {
+        if (inSlot->mClient.mPtr != NULL && inSlot->mClient->GetPlayer().mPtr != NULL) {
             inSlot->mOptions[4] = inPlayer.mType == 2;
-            inSlot->SetPlayer(inSlot->mClient.mPtr, (EELobbyPlayer*)inSlot->mClient->mPlayer.mPtr);
+            inSlot->SetPlayer(inSlot->mClient.mPtr, (EELobbyPlayer*)inSlot->mClient->GetPlayer().mPtr);
         } else if (inPlayer.mName == "") {
             inSlot->SetClosed();
         } else {

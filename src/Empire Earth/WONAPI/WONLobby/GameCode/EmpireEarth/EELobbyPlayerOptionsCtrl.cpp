@@ -91,7 +91,7 @@ void EELobbyPlayerOptionsCtrl::UpdatePlayer(int inSlot, EELobbyGame* inGame)
     bool theShowTeam = false;
     bool theNotRandomMap = inGame->GetOption(0) != 0;
     bool theIsMe = false;
-    if (inSlot == this->mMySlot && !GetMyLobbyPlayer()->mIsReady)
+    if (inSlot == this->mMySlot && !GetMyLobbyPlayer()->GetReady())
         theIsMe = true;
     if (theSlot->mOptions[0] == 1)
         theShowTeam = true;
@@ -211,8 +211,8 @@ void EELobbyPlayerOptionsCtrl::PlayerOptionChanged(int inSlot, int inWhat)
 void EELobbyPlayerOptionsCtrl::HandlePlayerChanged(ComponentEvent* inEvent)
 {
     PlayerChangedEvent* theEvent = static_cast<PlayerChangedEvent*>(inEvent);
-    if (theEvent->IsModify() && theEvent->mClient.mPtr->mPlayer.mPtr != NULL
-        && ((EELobbyPlayer*)theEvent->mClient.mPtr->mPlayer.mPtr)->GetSlot() == this->mMySlot)
+    if (theEvent->IsModify() && theEvent->mClient.mPtr->GetPlayer().mPtr != NULL
+        && ((EELobbyPlayer*)theEvent->mClient.mPtr->GetPlayer().mPtr)->GetSlot() == this->mMySlot)
         this->UpdatePlayer(this->mMySlot);
 }
 

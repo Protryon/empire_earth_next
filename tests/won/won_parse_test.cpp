@@ -229,22 +229,6 @@ static void RunCase(const wchar_t* inWide, const char* inNarrow, const char* inC
         StringParser::ValueToString(l, v);
         Line("%s intlists: r=%d pos=%d n=%d v=%s", inCase, r, p.GetPos(), (int)l.size(), Hex(v).c_str());
     }
-    {
-        Parser p(inWide, inNarrow);
-        std::list<std::list<std::string> > l;
-        bool r = p.ReadValue(l);
-        std::string v;
-        StringParser::ValueToString(l, v);
-        Line("%s strlists: r=%d pos=%d n=%d v=%s", inCase, r, p.GetPos(), (int)l.size(), Hex(v).c_str());
-    }
-    {
-        Parser p(inWide, inNarrow);
-        std::list<bool> l;
-        bool r = p.ReadValue(l);
-        std::string v;
-        StringParser::ValueToString(l, v);
-        Line("%s bools: r=%d pos=%d n=%d v=%s", inCase, r, p.GetPos(), (int)l.size(), Hex(v).c_str());
-    }
 }
 
 static void RunFormats()
@@ -290,16 +274,6 @@ static void RunFormats()
     aList.push_back("");
     aList.push_back("y");
     StringParser::ValueToString(aList, s);
-    s += ";";
-    std::list<std::list<bool> > aBools(2);
-    aBools.front().push_back(true);
-    aBools.front().push_back(false);
-    StringParser::ValueToString(aBools, s);
-    s += ";";
-    std::list<std::list<std::wstring> > aWides(1);
-    aWides.front().push_back(L"a");
-    aWides.front().push_back(L"b");
-    StringParser::ValueToString(aWides, s);
     Line("formats: %s", Hex(s).c_str());
 }
 

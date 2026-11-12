@@ -301,7 +301,7 @@ static long EECPNextReadyPlaces(EEComputerPlayer* inPlayer, long inResource)
     return thePlaces;
 }
 
-EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer)
+EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer, long inExact)
 {
     if (inResource < 0 || inResource >= kNextResources || inCount < 0 || inCount > 1000
         || (inPrefer != kNextPreferPatch && inPrefer != kNextPreferHunt))
@@ -309,6 +309,8 @@ EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long 
             inResource, inCount, inPrefer);
     EECPNextState* theState = EECPNextGetState(inPlayer);
     EECPResourceManager* theResources = inPlayer->mCivilizationManager->mResourceManager;
+    if (inExact >= 0)
+        theState->mExact = inExact != 0 ? 1 : 0;
     unsigned long theWanted = (unsigned long)inCount;
     if (inResource == 0) {
         // the boats fishing count as food gatherers in the assignment: they come on top
@@ -374,7 +376,9 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
 {
     long theReason;
     EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
-    if (theNode != NULL && (!gUnitClassTable[inType]->IsBuilding() || (gUnitClassTable[inType]->mIsWall && !gUnitClassTable[inType]->mIsTower)))
+    // (a fortress is a transport class by its category, a land building by its placement: IsLandBuilding)
+    if (theNode != NULL && ((!gUnitClassTable[inType]->IsBuilding() && !gUnitClassTable[inType]->IsLandBuilding())
+                            || (gUnitClassTable[inType]->mIsWall && !gUnitClassTable[inType]->mIsTower)))
         theReason = kNextReasonBadArgument;   // a unit (train it) or a wall (wall plans come later)
     if (theReason == kNextReasonNone && inNear != kNextNearTown && inNear != kNextNearSite && inNear != kNextNearTile)
         theReason = kNextReasonBadArgument;
@@ -818,6 +822,28 @@ EECPNextResult EECPNextImprove(EEComputerPlayer* inPlayer, long inType, long inI
     inPlayer->ApplyImprovement(inType, inImprovement, false);
     return EECPNextReport(inPlayer, "improve", kNextDone, kNextReasonNone, 1, "cls=%ld what=%ld level=%ld", inType, inImprovement,
         inPlayer->GetImprovementLevel(inType, inImprovement));
+}
+
+// The next level's cost of a class's improvement as EECPNextImprove would pay it (PayImprovement: the class's cost x
+// its cost scale x the improvement's cost factor x the level), its level and maximum -> false when the class has no
+// node now or no such improvement (ai.improve_cost, docs/AI_LUA_UNITS.md §11)
+bool EECPNextImproveCost(EEComputerPlayer* inPlayer, long inType, long inImprovement, long outCost[5], long& outLevel,
+                         long& outMax)
+{
+    long theReason;
+    EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
+    if (theNode == NULL)
+        return false;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    if (inImprovement < 0 || inImprovement >= 16 || theClass->mImprovements == NULL)
+        return false;
+    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[inType];
+    outLevel = inPlayer->GetImprovementLevel(inType, inImprovement);
+    outMax = theClass->mImprovements->GetMaxLevel();
+    float theFactor = theClass->mImprovements->mEntries[inImprovement].mCostFactor * (float)outLevel;
+    for (long i = 0; i < kNextResources; i++)
+        outCost[i] = inPlayer->ScaleCost(UMFloatToLong((float)theNode->mData->mCosts[kResourceFood + i] * theUpgrade->mCostScale * theFactor));
+    return true;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
