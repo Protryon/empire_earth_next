@@ -9,7 +9,7 @@
 #include <exception>
 #include <stdexcept>
 #include <string>
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 static int sFailures;
 static int sChecks;

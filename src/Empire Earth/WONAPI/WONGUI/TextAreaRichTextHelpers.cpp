@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 void TextArea::AddAnchor(const GUIString &theName, int theLineNum)
 {

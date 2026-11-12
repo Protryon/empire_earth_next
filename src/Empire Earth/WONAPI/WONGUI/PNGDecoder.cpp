@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_openformats.h"
 namespace WONAPI {
 // FUNCTION: WON 0x007d24e0
 // Registers a PNG decoder for the "png" extension with a multi-format decoder

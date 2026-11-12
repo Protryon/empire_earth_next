@@ -54,7 +54,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_formations.h"
 #include "ee/EEFormationRust.h"
 
 // .rdata 0x43f818.. (unit-local named constants, then the vtable 0x43f828)

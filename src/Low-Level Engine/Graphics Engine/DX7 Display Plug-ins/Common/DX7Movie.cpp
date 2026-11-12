@@ -19,7 +19,7 @@
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Movie.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 #include "platform/PlatTime.h"
 
 TSCriticalSection* DX7Movie::sMovieCriticalSection;

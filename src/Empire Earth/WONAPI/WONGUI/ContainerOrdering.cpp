@@ -10,7 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The last focused child's pick and the focus ids are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x006f6030

@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
 
 GUIString LobbyGlobal_Cancel_String; // 0x566944

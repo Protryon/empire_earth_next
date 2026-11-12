@@ -6,7 +6,7 @@
 #pragma once
 #include <stdint.h>
 #include <string>
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 

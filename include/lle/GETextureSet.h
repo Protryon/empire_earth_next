@@ -5,7 +5,7 @@
 #define LLE_GETEXTURESET_H
 
 #include <vector>
-#include "rust/ee_rust.h"       // the grid arithmetic (ee_ge texture.rs)
+#include "rust/ee_ge.h"       // the grid arithmetic (ee_ge texture.rs)
 
 class GETexture;
 class GETextureCoordinate;

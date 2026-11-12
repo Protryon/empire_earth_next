@@ -12,7 +12,7 @@
 #ifndef EE_EEAIASTARMACHINE_H
 #define EE_EEAIASTARMACHINE_H
 
-#include "rust/ee_rust.h"   // EeAStarCallbacks, EeAStarGraphCallbacks (the Rust search steps)
+#include "rust/ee_astar.h"   // EeAStarCallbacks, EeAStarGraphCallbacks (the Rust search steps)
 #include "ee/EEAIAStarCapture.h"   // TEST ONLY: the graph machine's capture notes
 #include "ee/EEAIAStarGraphStorage.h"   // EEAIAStarGraphNode (the graph hooks' node views)
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h

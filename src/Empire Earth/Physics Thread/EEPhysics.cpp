@@ -89,7 +89,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
-#include "rust/ee_rust.h"   // ee_units_store_checksum_flag1
+#include "rust/ee_units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ

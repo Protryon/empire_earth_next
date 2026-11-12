@@ -26,6 +26,8 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect3D.h"
+#include "rust/ee_ge.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 // SYNTHETIC: EXE 0x5050fb
 // SYNTHETIC: EXE 0x505105
@@ -43,9 +45,6 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
         return theResult;
     GE3DPoint theLocation(this->mTransformation.GetX(), this->mTransformation.GetY(), this->mTransformation.GetZ());
     float theRadius = this->mBoundingRadius;
-    GE3DPoint theCameraPoint;
-    GE3DPoint thePoint;
-    GE3DPoint theScreenPoint;
     long theX = UMFloor(theLocation.GetX());
     long theY = UMFloor(theLocation.GetY());
     bool theOrthographic = gOrthographicView;
@@ -54,59 +53,8 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
         return 10;
     if (this->IsTileVisible(theTile) != true && gFreeCamera == false)
         return 10;
-    gViewport.GetCameraInverse().Apply(theLocation, theCameraPoint);
-    float theW;
-
-    thePoint.SetX(theCameraPoint.GetX() + theRadius);
-    thePoint.SetY(theCameraPoint.GetY());
-    thePoint.SetZ(theCameraPoint.GetZ());
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetX() / theW < -1.0f)
-        return 10;
-
-    thePoint.SetX(theCameraPoint.GetX() - theRadius);
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetX() / theW > 1.0f)
-        return 10;
-
-    thePoint.SetX(theCameraPoint.GetX());
-    thePoint.SetZ(theCameraPoint.GetZ() + theRadius);
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW < -gViewport.GetYClippingPlane())
-        return 10;
-
-    thePoint.SetZ(theCameraPoint.GetZ() - theRadius);
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW > (double)gViewport.GetYClippingPlane())  // owner-approved stand-in (2026-10-26): the original compares against the global loaded onto the x87 stack (fld; fcompp)
-        return 10;
-
-    thePoint.SetZ(theCameraPoint.GetZ());
-    thePoint.SetY(theCameraPoint.GetY() + theRadius);
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW <= 0.0f || theScreenPoint.GetZ() / theW < 0.0f)
-        return 10;
-
-    thePoint.SetY(theCameraPoint.GetY() - theRadius);
-    if (!theOrthographic)
-        gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
-    else
-        gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW >= 0.0f && (theW <= 0.0f || theScreenPoint.GetZ() / theW > 1.0f))
+    if (!ee_gfx_effect_in_view(reinterpret_cast<const EeGeViewport*>(&gViewport), theOrthographic,
+                               reinterpret_cast<const EeGe3DPoint*>(&theLocation), theRadius))
         return 10;
     return 0;
 }

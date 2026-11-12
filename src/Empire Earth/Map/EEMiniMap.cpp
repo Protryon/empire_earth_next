@@ -46,6 +46,8 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 #include "lle/GERenderState.h"
+#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
@@ -70,12 +72,14 @@ GEColor gMiniMapAmbient(0.102745101f, 0.132549018f, 0.188235298f);
 
 // the mini map's texture is 0x80 pixels square (0x441d50 .. 0x441d60: unit-local constants)
 const float kMiniMapSize = 128.0f;          // 0x441d50 (provisional name)
-const float kMiniMapLast = 127.0f;          // 0x441d54
-const float kSqrt2 = 1.41421354f;           // 0x441d58
-const float kMinusQuarterPi = -0.785398185f;   // 0x441d5c
-const float kMinusSixthPi = -0.523598790f;  // 0x441d60
-const float kMinimumHeight = 5.0f;          // 0x441d38 (Refresh: the camera's lowest height)
-const float kMinimumWidth = 32.0f;          // 0x441d3c (Refresh: the view trapezoid's narrowest edge)
+// SetMap's transformations, Refresh's view trapezoid and ProjectToGround are ee_gfx minimap.rs (RUST_PLAN R4.4; its
+// constants, .rdata 0x441d38..0x441d60, are there); the GE value classes pass as their #[repr(C)] mirrors
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
+              sizeof(GEViewport) == sizeof(EeGeViewport), "GE mirrors");
+static const GETransformation& EEMiniMapT(const EeGeTransformation& inTransformation)
+{
+    return *reinterpret_cast<const GETransformation*>(&inTransformation);
+}
 
 // the tile's terrain at a vertex: the tile above and right of it, else the one to its left, below, below left
 static unsigned long EEMiniMapTerrainAt(GETerrainMesh& inMesh, unsigned long inX, unsigned long inY)
@@ -286,109 +290,18 @@ void EEMiniMap::RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, lon
 // FUNCTION: EXE 0x51eb87
 // Attaches a map: builds the map/pixel and map/cell transformations (rotated 45 degrees, centred) and the
 // map size of one pixel, then redraws the mini map
-// NEAR: the translation adds are written `-x + m03` / `m13 - y`, not GETransformation::Translate (no z add)
+// (the transformations: ee_gfx minimap.rs; its translation adds are written `-x + m03` / `m13 - y`, as here)
 void EEMiniMap::SetMap(EEMap* inMap)
 {
-    GETransformation theIdentity;
-    GE2DPoint thePoint;
     this->mL12174 = inMap;
-    long theWidth = inMap->mL195614;
-    long theHeight = inMap->mL195610;
-    GE2DPoint theCorner0;
-    GE2DPoint theCorner1;
-    GE2DPoint theOffset;
-    GE2DPoint theEdge;
-    float theLarger;
-    float theSmaller;
-    if (theHeight > theWidth) {
-        theLarger = (float)theHeight;
-        theSmaller = (float)theWidth;
-    } else {
-        theLarger = (float)theWidth;
-        theSmaller = (float)theHeight;
-    }
-    theSmaller = theSmaller < 64.0f ? theSmaller : 64.0f;
-
-    // map -> mini map (the whole map)
-    this->mMapToPixel = theIdentity;
-    this->mMapToPixel.Rotate(kMinusQuarterPi, 0.0f, 0.0f);
-    float theDiagonal = theLarger * kSqrt2;
-    float theScale = kMiniMapLast / theDiagonal;
-    float theFlip = -theScale;
-    this->mMapToPixel.Scale(1.0f, theFlip, 1.0f);
-    thePoint = GE2DPoint(0.0f, (float)inMap->mL195610);
-    this->mMapToPixel.Apply(thePoint, theOffset);
-    this->mMapToPixel.SetX(-theOffset.GetX() + this->mMapToPixel.GetX());
-    this->mMapToPixel.SetY(this->mMapToPixel.GetY() - theOffset.GetY());
-    this->mMapToPixel.Scale(theScale, 1.0f, 1.0f);
-    thePoint = GE2DPoint(inMap->mSize + 0.5f, inMap->mL195614 + 0.5f);
-    this->mMapToPixel.Apply(thePoint, theEdge);
-    theEdge.SetX(kMiniMapSize - theEdge.GetX() - 1.0f);
-    theEdge.SetX(theEdge.GetX() < 4.0f ? 0.0f : theEdge.GetX() * 0.5f);
-    theEdge.SetY(kMiniMapSize - theEdge.GetY() - 1.0f);
-    theEdge.SetY(theEdge.GetY() < 4.0f ? 0.0f : theEdge.GetY() * 0.5f);
-    this->mMapToPixel.SetX(theEdge.GetX() + this->mMapToPixel.GetX());
-    this->mMapToPixel.SetY(theEdge.GetY() + this->mMapToPixel.GetY());
-
-    // mini map -> map
-    this->mPixelToMap = theIdentity;
-    this->mPixelToMap.SetX(-theEdge.GetX() + this->mPixelToMap.GetX());
-    this->mPixelToMap.SetY(this->mPixelToMap.GetY() - theEdge.GetY());
-    this->mPixelToMap.Scale(1.0f / theScale, 1.0f, 1.0f);
-    this->mPixelToMap.SetX(theOffset.GetX() + this->mPixelToMap.GetX());
-    this->mPixelToMap.SetY(theOffset.GetY() + this->mPixelToMap.GetY());
-    this->mPixelToMap.Scale(1.0f, 1.0f / theFlip, 1.0f);
-    this->mPixelToMap.Rotate(0.785398185f, 0.0f, 0.0f);
-
-    // the size of one mini-map pixel on the map: through the inverse transformation mRowID (orig 0x51ee0e..0x51ee96,
-    // ecx = this + 0x64; setrilo SetMap agrees)
-    thePoint = GE2DPoint(0.0f, 0.0f);
-    this->mPixelToMap.Apply(thePoint, theCorner0);
-    thePoint = GE2DPoint(1.0f, 1.0f);
-    this->mPixelToMap.Apply(thePoint, theCorner1);
-    float theDistance = theCorner1.GetX() - theCorner0.GetX();
-    if (theDistance < 0.0f)
-        theDistance = -theDistance;
-    this->mL12178 = UMCeilUnsigned(theDistance);
-    thePoint = GE2DPoint(0.0f, 1.0f);
-    this->mPixelToMap.Apply(thePoint, theCorner0);
-    thePoint = GE2DPoint(1.0f, 0.0f);
-    this->mPixelToMap.Apply(thePoint, theCorner1);
-    theDistance = theCorner1.GetY() - theCorner0.GetY();
-    if (theDistance < 0.0f)
-        theDistance = -theDistance;
-    this->mL1217C = UMCeilUnsigned(theDistance);
-
-    // map -> battle grid (the smaller side, at most 0x40)
-    this->mMapToCell = theIdentity;
-    this->mMapToCell.Rotate(kMinusQuarterPi, 0.0f, 0.0f);
-    theScale = (theSmaller - 1.0f) / theDiagonal;
-    theFlip = -theScale;
-    this->mMapToCell.Scale(1.0f, theFlip, 1.0f);
-    thePoint = GE2DPoint(0.0f, (float)inMap->mL195610);
-    this->mMapToCell.Apply(thePoint, theOffset);
-    this->mMapToCell.SetX(-theOffset.GetX() + this->mMapToCell.GetX());
-    this->mMapToCell.SetY(this->mMapToCell.GetY() - theOffset.GetY());
-    this->mMapToCell.Scale(theScale, 1.0f, 1.0f);
-    thePoint = GE2DPoint(inMap->mSize + 0.5f, inMap->mL195614 + 0.5f);
-    this->mMapToCell.Apply(thePoint, theEdge);
-    theEdge.SetX(theSmaller - theEdge.GetX() - 1.0f);
-    theEdge.SetX(theEdge.GetX() < 4.0f ? 0.0f : theEdge.GetX() * 0.5f);
-    theEdge.SetY(theSmaller - theEdge.GetY() - 1.0f);
-    theEdge.SetY(theEdge.GetY() < 4.0f ? 0.0f : theEdge.GetY() * 0.5f);
-    this->mMapToCell.SetX(theEdge.GetX() + this->mMapToCell.GetX());
-    this->mMapToCell.SetY(theEdge.GetY() + this->mMapToCell.GetY());
-
-    // battle grid -> map
-    this->mCellToMap = theIdentity;
-    this->mCellToMap.SetX(-theEdge.GetX() + this->mCellToMap.GetX());
-    this->mCellToMap.SetY(this->mCellToMap.GetY() - theEdge.GetY());
-    this->mCellToMap.Scale(1.0f / theScale, 1.0f, 1.0f);
-    this->mCellToMap.SetX(theOffset.GetX() + this->mCellToMap.GetX());
-    this->mCellToMap.SetY(theOffset.GetY() + this->mCellToMap.GetY());
-    this->mCellToMap.Scale(1.0f, 1.0f / theFlip, 1.0f);
-    this->mCellToMap.Rotate(0.785398185f, 0.0f, 0.0f);
-
+    EeGfxMiniMapTransforms theTransforms = ee_gfx_minimap_transforms((int32_t)inMap->mL195610, (int32_t)inMap->mL195614,
+                                                                     (int32_t)inMap->mSize);
+    this->mMapToPixel = EEMiniMapT(theTransforms.map_to_pixel);
+    this->mPixelToMap = EEMiniMapT(theTransforms.pixel_to_map);
+    this->mMapToCell = EEMiniMapT(theTransforms.map_to_cell);
+    this->mCellToMap = EEMiniMapT(theTransforms.cell_to_map);
+    this->mL12178 = (long)theTransforms.pixel_width;
+    this->mL1217C = (long)theTransforms.pixel_height;
     EEUIMiniMap::Update(this);
     this->mUnitSurface->Lock();
     this->mPixels = reinterpret_cast<unsigned short*>(this->mUnitSurface->GetMemoryAddress());
@@ -622,93 +535,23 @@ void EEMiniMap::RedrawCell(long inX, long inY)
 // FUNCTION: EXE 0x51fc62
 // Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
 // shortening its sides to the width of its near edge (at least 32)
-// NEAR: the height clamp (the original compares against the constant in memory and reloads it) and the corner
-// pointer registers
+// (the trapezoid: ee_gfx minimap.rs)
 void EEMiniMap::Refresh()
 {
-    GEViewport theViewport(gViewport);
-    GETransformation theCamera(theViewport.GetCamera());
-    GE2DPoint theScreenPoint;
-    GE2DPoint theGroundPoint;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    theCamera.Apply(theForward, theDirection);
-    theCamera.SetOrientationYPR(UMArcTan2(-theDirection.mX, theDirection.mY), kMinusSixthPi, 0.0f);
-    if (theCamera.mMatrix[2][3] < kMinimumHeight)
-        theCamera.mMatrix[2][3] = kMinimumHeight;
-    theViewport.SetCamera(theCamera);
-    GE2DPoint thePoint;
-
-    thePoint = theViewport.GetViewRectangle().GetTopLeft();
-    theScreenPoint = thePoint;
-    EEMiniMap::ProjectToGround(theViewport, theScreenPoint, 0.0f, theGroundPoint);
-    this->mMapToPixel.Apply(theGroundPoint, this->mCorner2);
-
-    thePoint = theViewport.GetViewRectangle().GetBottomLeft();
-    theScreenPoint = thePoint;
-    EEMiniMap::ProjectToGround(theViewport, theScreenPoint, 0.0f, theGroundPoint);
-    this->mMapToPixel.Apply(theGroundPoint, this->mCorner0);
-
-    thePoint = theViewport.GetViewRectangle().GetTopRight();
-    theScreenPoint = thePoint;
-    EEMiniMap::ProjectToGround(theViewport, theScreenPoint, 0.0f, theGroundPoint);
-    this->mMapToPixel.Apply(theGroundPoint, this->mCorner3);
-
-    thePoint = theViewport.GetViewRectangle().GetBottomRight();
-    theScreenPoint = thePoint;
-    EEMiniMap::ProjectToGround(theViewport, theScreenPoint, 0.0f, theGroundPoint);
-    this->mMapToPixel.Apply(theGroundPoint, this->mCorner1);
-
-    float theWidth = this->mCorner1.DistanceTo(this->mCorner0);
-    if (theWidth < kMinimumWidth)
-        theWidth = kMinimumWidth;
-    float theDistance = this->mCorner0.DistanceTo(this->mCorner2);
-    if (theDistance > theWidth) {
-        float theScale = theWidth / theDistance;
-        this->mCorner2.SetXY((this->mCorner2.GetX() - this->mCorner0.GetX()) * theScale + this->mCorner0.GetX(),
-                             this->mCorner0.GetY() + (this->mCorner2.GetY() - this->mCorner0.GetY()) * theScale);
-    }
-    theDistance = this->mCorner1.DistanceTo(this->mCorner3);
-    if (!(theDistance > theWidth))
-        return;
-    float theScale = theWidth / theDistance;
-    this->mCorner3.SetXY((this->mCorner3.GetX() - this->mCorner1.GetX()) * theScale + this->mCorner1.GetX(),
-                         this->mCorner1.GetY() + (this->mCorner3.GetY() - this->mCorner1.GetY()) * theScale);
+    EeGfxMiniMapView theView = ee_gfx_minimap_view(reinterpret_cast<const EeGeViewport*>(&gViewport), gOrthographicView,
+                                                   reinterpret_cast<const EeGeTransformation*>(&this->mMapToPixel));
+    this->mCorner0 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[0]);
+    this->mCorner1 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[1]);
+    this->mCorner2 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[2]);
+    this->mCorner3 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[3]);
 }
 
 // FUNCTION: EXE 0x51ff72
 // Projects a screen point onto the ground at height inZ, or the far point when the ray misses
 void EEMiniMap::ProjectToGround(const GEViewport& inViewport, const GE2DPoint& inPoint, float inZ, GE2DPoint& outPoint)
 {
-    GE3DPoint thePoint;
-    GE3DPoint theFarPoint;
-    GE3DPoint theNear;
-    GE3DPoint theFar;
-    GE3DPoint theGround;
-    GE3DLine theLine;
-    float theScale = 1.0f / inViewport.GetHalfWidth();
-    thePoint.SetX((inPoint.GetX() - inViewport.GetXCenter()) * theScale);
-    thePoint.SetY(-((inPoint.GetY() - inViewport.GetYCenter()) * theScale));
-    thePoint.SetZ(0.0f);
-    theFarPoint.SetX(thePoint.GetX());
-    theFarPoint.SetY(thePoint.GetY());
-    theFarPoint.SetZ(1.0f);
-    if (!gOrthographicView) {
-        inViewport.DenormalizePerspectivePoint(thePoint, inViewport.GetFrontClippingDistance(), theNear);
-        inViewport.DenormalizePerspectivePoint(theFarPoint, inViewport.GetRearClippingDistance(), theFar);
-    } else {
-        inViewport.DenormalizeOrthographicPoint(thePoint, theNear);
-        inViewport.DenormalizeOrthographicPoint(theFarPoint, theFar);
-    }
-    theLine.Define(theNear, theFar);
-    float theDistance;
-    if (theLine.SolveForZ(inZ, theDistance, theGround) && theDistance >= 0.0f) {
-        outPoint.SetX(theGround.GetX());
-        outPoint.SetY(theGround.GetY());
-    } else {
-        outPoint.SetX(theFar.GetX());
-        outPoint.SetY(theFar.GetY());
-    }
+    ee_gfx_minimap_project(reinterpret_cast<const EeGeViewport*>(&inViewport), gOrthographicView,
+                           reinterpret_cast<const EeGe2DPoint*>(&inPoint), inZ, reinterpret_cast<EeGe2DPoint*>(&outPoint));
 }
 
 // FUNCTION: EXE 0x5200df

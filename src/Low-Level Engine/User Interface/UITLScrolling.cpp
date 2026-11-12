@@ -10,7 +10,7 @@
 // lines, the trigger and the draws stay here (UITLScrollingRust answers the Rust's questions).
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"

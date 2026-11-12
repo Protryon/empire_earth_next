@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // The wrap's breaks, the selected part and the character under a point are ee_won's guitext module
 // (rust/crates/ee_won/src/guitext.rs); this unit keeps the segments, the font (it measures every unit and the

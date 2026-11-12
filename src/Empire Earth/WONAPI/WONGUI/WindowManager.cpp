@@ -14,7 +14,7 @@
 #include "platform/PlatKeys.h"
 #include "ee/wonapi/WONLobbyDelayLoadImage.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
 // The popups' places, the windows a mouse event belongs to, the press that ends the popups, the modality and the
 // dialog an EndDialog names are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); which call an event

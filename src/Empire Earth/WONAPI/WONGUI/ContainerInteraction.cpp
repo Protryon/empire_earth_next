@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // TabFocus's start and its loop's bound are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x006f63b0

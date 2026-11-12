@@ -16,7 +16,7 @@
 #endif
 
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_ge.h"
 
 // FUNCTION: LLE 0x10080c07
 // Does nothing (the square root table is not built in the retail engine)

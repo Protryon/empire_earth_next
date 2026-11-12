@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <stdint.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 #include "dx7/DX7DrawSeam.h"
 
 extern "C" {

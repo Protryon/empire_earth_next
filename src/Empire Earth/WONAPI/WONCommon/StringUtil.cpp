@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatString.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include <wchar.h>
 namespace WONAPI {
 // The case maps and compares are ee_won's strcase module (rust/crates/ee_won/src/strcase.rs): under D6 game text is

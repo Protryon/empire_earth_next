@@ -58,7 +58,8 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/Graphics Engine.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_ge.h"
+#include "rust/ee_openformats.h"
 
 // The original's texture file header (.sst: 14 bytes in front of the frames; Load read it, Save wrote it). Since D9
 // a texture is its PNG frames (GEFindTextureFile), and Load fills this from them: not compressed, one MIP level, the

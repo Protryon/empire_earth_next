@@ -5,7 +5,7 @@
 #ifndef EE_EETECHRUST_H
 #define EE_EETECHRUST_H
 
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 inline EeTechTreeState EETechTreeView(const EETechTree* inTree)
 {

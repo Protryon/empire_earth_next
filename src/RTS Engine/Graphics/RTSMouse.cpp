@@ -22,7 +22,8 @@
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_rust.h"   // ee_gfx mouse.rs: ClampPosition and Update's move (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx mouse.rs: ClampPosition and Update's move (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 // 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer. PNG files
 // (the original's were Targa files, .tga; RUST_PLAN D9)
 static const char* sPointerFiles[10] = {

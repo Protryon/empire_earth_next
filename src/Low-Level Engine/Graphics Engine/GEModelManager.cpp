@@ -22,7 +22,7 @@
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf
-#include "rust/ee_rust.h"       // ee_ge_cem_free; the manager's logic (ee_ge managers.rs)
+#include "rust/ee_ge.h"       // ee_ge_cem_free; the manager's logic (ee_ge managers.rs)
 
 // (sModelNumber 0x100d953c, appended to created models' names, counts in Rust: ee_ge_modman_created_name)
 //

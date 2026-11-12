@@ -24,7 +24,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 // The LAN protocol's messages and the host's decisions about them are ee_won's (rust/crates/ee_won/src/lan.rs),
 // and so is the flow over the objects (lanlogic.rs: what a received message, a closed socket, a summary, a join

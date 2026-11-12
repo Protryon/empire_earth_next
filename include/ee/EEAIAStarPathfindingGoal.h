@@ -7,6 +7,7 @@
 // ee/EEAIAStarPathfindingGoalBase.h, ee/EEMap.h, <vector>, lle/U2DPoint.h, lle/GE3DPoint.h.
 #ifndef EE_EEAIASTARPATHFINDINGGOAL_H
 #define EE_EEAIASTARPATHFINDINGGOAL_H
+#include "rust/ee_astar.h"
 
 class EEMap;
 

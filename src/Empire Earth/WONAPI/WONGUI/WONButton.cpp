@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyWONButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // GetButtonState's state and fallback order are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {

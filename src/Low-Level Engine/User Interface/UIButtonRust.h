@@ -1,11 +1,12 @@
 // The Rust button logic's view of a UIButton and its subclasses (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md
 // R6): the object, its members from mTextRectangle on (EeUiButtonFields), the UIControl members the logic uses and the
 // subclass's own record. A friend of UIButton, UICheckBox, UIRadioButton, UIScrollButton and UIDualButton; the
-// subclass members are defined in the subclass's unit. Requires rust/ee_rust.h, lle/UIButton.h, lle/UITextLabel.h.
+// subclass members are defined in the subclass's unit. Requires lle/UIButton.h, lle/UITextLabel.h.
 #ifndef LLE_UIBUTTONRUST_H
 #define LLE_UIBUTTONRUST_H
 
 #include <stddef.h>
+#include "rust/ee_ui.h"
 
 class UICheckBox;
 class UIRadioButton;

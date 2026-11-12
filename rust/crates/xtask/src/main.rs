@@ -1,11 +1,14 @@
 //! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`, `capture-digest SEED=PATH ...`
 //! (tools/sim_capture.py's digests, [`capture_digest`]).
 //!
-//! `include/rust/ee_rust.h` is generated from the `extern "C"` items of `ee_rust` and checked in; `--check` fails if it
-//! is stale, as `eedata.py cppgen --check` does for the generated C++.
+//! The headers in `include/rust` are generated from the `extern "C"` items of `ee_rust` and checked in: one per crate
+//! (`ee_won.h`, ...; [`split`]), `ee_rust_common.h`, and `ee_rust.h`, which includes them all. `--check` fails if one
+//! is stale or a generated header is left over, as `eedata.py cppgen --check` does for the generated C++.
 
 mod capture_digest;
+mod split;
 
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -22,9 +25,9 @@ fn find_root(start: &Path) -> Option<PathBuf> {
     start.ancestors().find(|dir| dir.join("rust/Cargo.toml").is_file()).map(Path::to_path_buf)
 }
 
-fn generate(root: &Path) -> Result<String, String> {
+/// cbindgen's one header over `ee_rust`, as the renames and the crate list of `rust/cbindgen.toml` make it.
+fn generate_single(root: &Path, config: cbindgen::Config) -> Result<String, String> {
     let crate_dir = root.join("rust/crates/ee_rust");
-    let config = cbindgen::Config::from_file(root.join("rust/cbindgen.toml")).map_err(|e| e.to_string())?;
     let bindings = cbindgen::Builder::new()
         .with_crate(crate_dir)
         // a dependency's `extern "C"` functions: cbindgen emits functions only from the binding crate or from
@@ -39,24 +42,71 @@ fn generate(root: &Path) -> Result<String, String> {
     String::from_utf8(bytes).map_err(|e| e.to_string())
 }
 
+/// The single header and the split headers, by file stem.
+fn generate(root: &Path) -> Result<(String, BTreeMap<String, String>), String> {
+    let config = cbindgen::Config::from_file(root.join("rust/cbindgen.toml")).map_err(|e| e.to_string())?;
+    let mut crates = config.parse.include.clone().unwrap_or_default();
+    if !crates.iter().any(|c| c == "ee_data") {
+        crates.push("ee_data".to_string());
+    }
+    let renames: HashMap<String, String> = config.export.rename.clone().into_iter().collect();
+    let single = normalized(&generate_single(root, config)?);
+    let defs = split::scan(&root.join("rust/crates"), &crates);
+    let headers = split::split(&single, &defs, &renames, HEADER_NOTE)?;
+    Ok((single, headers))
+}
+
 fn normalized(text: &str) -> String {
     text.replace("\r\n", "\n")
 }
 
+/// The headers in `include/rust` this task wrote (they start with its note).
+fn generated_headers(dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
+    let mut out: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "h"))
+        .filter(|p| std::fs::read_to_string(p).is_ok_and(|t| t.starts_with(HEADER_NOTE)))
+        .collect();
+    out.sort();
+    out
+}
+
 fn cbindgen_task(check: bool) -> Result<(), String> {
     let root = repo_root();
-    let path = root.join("include/rust/ee_rust.h");
-    let wanted = normalized(&generate(&root)?);
+    let dir = root.join("include/rust");
+    let (_, headers) = generate(&root)?;
+    let wanted: BTreeMap<PathBuf, &String> =
+        headers.iter().map(|(stem, text)| (dir.join(format!("{stem}.h")), text)).collect();
+    let extra: Vec<PathBuf> = generated_headers(&dir).into_iter().filter(|p| !wanted.contains_key(p)).collect();
     if check {
-        let have = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        if normalized(&have) != wanted {
-            return Err(format!("{} is stale: cargo run -p xtask -- cbindgen", path.display()));
+        let mut stale = Vec::new();
+        for (path, text) in &wanted {
+            let have = std::fs::read_to_string(path).map(|t| normalized(&t)).unwrap_or_default();
+            if have != **text {
+                stale.push(path.display().to_string());
+            }
         }
-        println!("{} is current", path.display());
+        stale.extend(extra.iter().map(|p| format!("{} (no longer generated)", p.display())));
+        if !stale.is_empty() {
+            return Err(format!("stale: {}: cargo run -p xtask -- cbindgen", stale.join(", ")));
+        }
+        println!("{} headers in {} are current", wanted.len(), dir.display());
     } else {
-        std::fs::create_dir_all(path.parent().expect("a file has a parent")).map_err(|e| e.to_string())?;
-        std::fs::write(&path, wanted).map_err(|e| e.to_string())?;
-        println!("wrote {}", path.display());
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        for (path, text) in &wanted {
+            let have = std::fs::read_to_string(path).map(|t| normalized(&t)).unwrap_or_default();
+            if have != **text {
+                std::fs::write(path, text.as_bytes()).map_err(|e| format!("{}: {e}", path.display()))?;
+                println!("wrote {}", path.display());
+            }
+        }
+        for path in &extra {
+            std::fs::remove_file(path).map_err(|e| format!("{}: {e}", path.display()))?;
+            println!("removed {}", path.display());
+        }
+        println!("{} headers in {} are current", wanted.len(), dir.display());
     }
     Ok(())
 }
@@ -103,5 +153,17 @@ mod tests {
     #[test]
     fn the_checked_in_header_is_current() {
         cbindgen_task(true).unwrap();
+    }
+
+    /// The per-crate headers together declare exactly what cbindgen's one header declares: every item, its text
+    /// unchanged, none in two headers.
+    #[test]
+    fn the_split_headers_declare_what_the_single_header_declares() {
+        let (single, headers) = generate(&repo_root()).unwrap();
+        let union = split::union_of(&headers).unwrap();
+        let wanted = split::sorted_items(&single);
+        assert_eq!(union.len(), wanted.len());
+        assert_eq!(union, wanted);
+        assert!(headers.len() > 2, "more than the common header and the umbrella");
     }
 }

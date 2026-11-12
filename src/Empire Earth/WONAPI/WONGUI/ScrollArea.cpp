@@ -8,7 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The offsets' clamp, the bottom test, the view inside the padding and the sizes are ee_won's guiscroll module
 // (rust/crates/ee_won/src/guiscroll.rs).
 namespace WONAPI {

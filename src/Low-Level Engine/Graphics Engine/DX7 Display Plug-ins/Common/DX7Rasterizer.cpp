@@ -16,7 +16,7 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 
 // The algorithms are in Rust (rust/crates/ee_dx7/src/raster.rs); this class keeps the members, the virtuals and the
 // engine objects, each method forwards or is an ee_dx7cpp_rast_* trampoline.

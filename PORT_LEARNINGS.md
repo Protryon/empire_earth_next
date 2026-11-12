@@ -7817,6 +7817,170 @@ state (UDPManager's two ops) and the first piece of the lobby's model.
   LobbyServer, LobbyServerList, LobbyGameList; the decisions are model.rs since round 7), then StagingLogic /
   InitLogic / ChatCommandParser objects.
 
+## Build speed: the Rust C interface split into a header per crate
+
+- **Why.** `include/rust/ee_rust.h` was one cbindgen header over every crate, included by 223 sources and 29 headers.
+  The object cache (`tools/objcache.py`) keys a unit on the content of every file it read, so any FFI change in any
+  crate (nine lanes add some every day) changed that one file and missed the cache for nearly every unit: 11-13
+  minute rebuilds for everyone.
+- **How it is generated.** `xtask cbindgen` (`python -I tools/rust_build.py header`) still runs cbindgen once over
+  `ee_rust`, so the global renames, the declaration order and the dropped duplicates stay exactly those of one
+  shared header. `rust/crates/xtask/src/split.rs` then cuts that output into its top-level items (blank lines outside
+  braces; braces inside `///` comments do not count) and gives each to the crate that defines it, found by scanning
+  the crates' sources (`pub struct/enum/type/const/fn NAME`, renamed names mapped back, test sources skipped). It
+  writes `include/rust/<crate>.h` for every crate with items, `ee_rust_common.h`, and `ee_rust.h` as an umbrella that
+  includes them all. A crate header includes the headers of the crates its items name (today only `ee_gfx` and
+  `ee_openformats` include `ee_ge.h`). A cycle between the crates' headers is an error, and so is a name in two
+  headers. The item text is cbindgen's, byte for byte. The xtask test
+  `the_split_headers_declare_what_the_single_header_declares` checks it: the union of the split headers equals the
+  single output, item for item. Each header also compiled alone (`clang++ -fsyntax-only`, once, by hand).
+- **Names more than one crate defines.** The 20 such names in today's header (`OK`, `FAILED`, `IDENTITY`, `Handle`
+  renamed `EeDx7Handle`, `Rect` renamed `EeRmapRect`, ...) go to the crate whose definition matches cbindgen's item:
+  the `///` doc comment first, then the field and variant names, then the numbers. 14 are resolved that way. The
+  other six are identical bare constants (`OK`, `NOT_FOUND`, `FAILED`, `END_OF_FILE`, `ALIGN_CENTER`,
+  `ALIGN_RIGHT`). They go to `ee_rust_common.h` with `ee_rust`'s own items, and no crate header needs it. The
+  matching also shows which crate cbindgen kept: `EeFormationRotation` is `ee_formations`' and `EeDx7Handle`
+  `ee_dx7`'s, though `ee_rmap` and `ee_ui` define the same Rust names. Imports a crate declares (`extern int
+  tolower(int c);` in `ee_won.h`) are not its names.
+- **Includes.** `tools/rust_includes.py` replaced each `#include "rust/ee_rust.h"` with the headers of the crates
+  whose names the file uses (comments and strings not read). It then added a crate header to every file that names a
+  crate but got it only from its includer. Names a file declares itself (`struct EeWonIpAddr;`, an `extern "C"`
+  prototype) do not count, so headers that forward-declare on purpose stay light. The new include goes after the
+  last include outside any `#if`, else after the include guard. It is byte-preserving, so CRLF files stay CRLF.
+  `EEMessageExecute.h` names nothing itself and only exists to declare `ee_netmsg`; it now includes
+  `rust/ee_netmsg.h` (edited by hand).
+- **For new FFI:** include `rust/<your crate>.h`, not `rust/ee_rust.h`. After merging, rerun
+  `python -I tools/rust_includes.py` to narrow any umbrella include a branch added meanwhile. A new crate needs
+  nothing more than today (cbindgen.toml's include and extra_bindings): its header appears by itself.
+- **Measured** (EE-AOC, -j 3, a private object store so that no other lane's build evicts anything; one parameter
+  of `ee_won_md5_update` renamed): before, 853 of 1358 units recompiled (660 s); after, 476 (419 s). `ee_won` is
+  the worst case, because `WONBuffer.h` and the message headers bring it into the whole WON library. The other
+  crates' units, from the same builds' dependency sets: ee_ui 122, ee_astar 113, ee_units 49, ee_tech 36, ee_ge 34
+  (with ee_gfx's and ee_openformats'), ee_combat 19, ee_dx7 10, every other crate 7 or fewer. The shared store's
+  miss count is no measure while other lanes build: at its 4 GB cap it prunes during a build (649 misses for
+  the same change).
+
+## R4.4, third round: the picker's ray and ranking, the mini map's transforms and trapezoid, the effects' frustum test, the near fade and the selection rings in Rust (ee_gfx pick.rs, minimap.rs, view.rs, units.rs; branch rust-gfx9, 2026-11-12)
+
+Four leaves of the renderer, each pinned the same way as the first two rounds: a scratch driver (`build/gx9_golden`,
+not in the repository) #includes the unit of the commit before the work (`git show` of it and its sibling headers)
+over the real GE math units and `GEViewport`, with zeroed game objects and fake vtables whose slots log; an LCG seeded
+1 draws the cases and each prints an FNV-1a 64 of its log. The Rust tests draw the same stream and replay the C++
+glue around the moved code; the driver relinked over the forwarders printed the same bytes, and so did seeds 2 and
+3 at four times the size.
+
+- **The picker (`pick.rs`, `EEUnitPicker.cpp`).** `FindUnit`'s ray (the screen point normalised and denormalised on
+  the near and far planes; `ProjectToGround` shares it), its tolerances (3 over the clipping range; one pixel of the
+  window, 1024 for the free camera), the entries' pick scales (1.2, a tree's 0.9), the "large" test and the hits'
+  ranking and choice (the selection's question asked only with both an exact and a bounding hit);
+  `GetUnitPickPriority` (its `IsLandBuilding` and `IsAlly` asked through a callback where the original asked them:
+  the golden logs every virtual call); `AddUnit`'s admission; `GetIsEntryInView`'s sphere test and
+  `GetIsModelInView`'s vertex test. 2,184 cases. The C++ keeps the entries, the scale juggling around
+  `GEPhysicalModel::Intersects`, `GetPixelSize`, the model walk, the carrier walk, the lock and the world.
+  `EeGfxPickRay`'s points are `front`/`rear`: `near` and `far` are `<windows.h>` macros.
+- **The mini map (`minimap.rs`, `EEMiniMap.cpp`).** `SetMap`'s four transformations (rotate a quarter turn, flip,
+  re-centre: the translation adds written `-x + m03` / `m13 - y` as the original, not `Translate`), the pixel's
+  extent through `UMCeilUnsigned`, `Refresh`'s trapezoid and `ProjectToGround`. 2,040 cases (40 maps, sides from 1 to
+  400 and a size unrelated to them; a tenth of the trapezoids with no map attached, which keeps the old corners).
+  The camera's `Update` refreshes the trapezoid every tick, EE-SIM included, so it is written to RUST_PLAN 2.1, but
+  nothing it computes reaches the simulation: the corners are the UI's (`EEUIMiniMap`), the battle grid
+  (`mMapToCell`) only `RTSMiniMap::Ping`'s flags. No sim_capture was needed; the oracle stayed identical.
+- **The view tests (`view.rs`).** `EEEffect2D::Queue` and `EEEffect3D::Queue` had the same 50-line frustum test of
+  the sphere's six extreme points; both now call `ee_gfx_effect_in_view` after their own tile and visibility tests.
+  The fourth test's `(double)` compare (an owner-approved stand-in for the x87 compare) is an `f32` compare in
+  Rust: widening both sides to double is exact, so the result is the same. 2,400 effect cases over 24 viewports,
+  most on a screen point's ray so they straddle the planes. `GetUnitOpacity`'s near fade of a land building
+  (`ee_gfx_unit_near_fade`): 1,440 cases, most near the front clipping plane; the C++ keeps the see-through modes,
+  `Fn23CEE2` and the model's centre.
+- **The selection rings (`units.rs`, `EEROUnits.cpp`).** `DrawSelection`'s size choice and growth
+  (`ee_gfx_units_selection_ring`) and `DrawRings`' colour split (`ee_gfx_units_ring_segments`: one ring-coloured
+  segment per strength point, then highlight ones up to seven; a strength past 7 colours past the ring's segments,
+  as the original's first loop did). 400 frames of up to six units.
+- **cbindgen exports every `pub const`.** The drafts' `MINIMUM_HEIGHT`, `MINIMUM_WIDTH`, `MINI_MAP_SIZE`,
+  `SELECTION_SIZES`, `SELECTION_GROW` and `NEAR_FADE_DEPTH` landed in `ee_rust.h` as bare names any unit could
+  clash with; they are `pub(crate)` now. Keep a crate's constants `pub(crate)` unless the C++ needs them, and then
+  prefix them.
+- **Two writers in one worktree.** A resumed agent and its replacement edited the same files at once: blocks were
+  appended twice, `#[cfg(test)]` lost, and `ffi.rs`/`lib.rs`/`units.rs` came out CRLF (a text-mode write on
+  Windows) though the repository holds them LF. Check `git diff --stat` for whole-file rewrites before staging.
+- **Only the game reaches these.** Goldens and EE-SIM never draw: the effects' culling, the near fade, the rings and
+  the mini map's trapezoid as drawn are exercised only by a tour (zoom close to a building, select units of each
+  size, an area-effect unit, scroll and watch the mini map's trapezoid, an effect at the screen's edge).
+
+## R6: the game screens, second round: the settings' Apply and tabs, the lobby's game options, start check and option events, the single player screen and name check, the status box's attribute texts (ee_screens; branch rust-screens2, 2026-11-12)
+
+Round 1 (the section above) left in the settings and lobby units `ApplySettings`, the audio and interface tabs'
+conversions, the lobby's game options, the start check and the option events; this round moves them, then the
+single player screen's choices and the first leaf of the in-game HUD. Same rules: the C++ functions keep their
+names, signatures, objects and call order; the decisions are Rust; each move is pinned by a golden trace of the
+unmodified unit (scratch drivers in `build/sc2`, `drv.py` as round 1's), replayed whole in Rust, the driver relinked
+over the forwarders printing the same, and the same on seeds 2-4 at ten times the size.
+
+- **Moved** (`rust/crates/ee_screens`):
+  - `settings.rs`: `ApplySettings`' values from the controls (the check boxes, the texture resolution line, the
+    detail radios' else-if chains that keep the setting when none is checked, the voices factor and the channels
+    with their floor of 8, music, reverb that stays when neither radio is checked, the mouse sensitivity with its
+    0.01 floor, the scroll speeds, the hand, the autosave minutes x 60000 wrapping); `ShowAudio`'s plan (a volume is
+    put into effect only when it equals the default's, the sliders' percents, the reverb and music-off radios);
+    `ShowInterface`'s (the three sliders, the adapter line: an adapter past the list is Default, the hand, the
+    autosave values). `kMinimumMouseSensitivity` is deleted from the C++.
+  - `lobby_options.rs`: `LobbyShowGameOptions`' plan (the game type box's line and string, which rows are boxes and
+    which labels, the map rows hidden on a loaded game, the map line, the start epoch box set only without a
+    selection, the unit limit line `(limit - minimum) / step` in `unsigned long`, the wonders' number or Off, the
+    variant line counting the selectable variants before it, which check boxes differ from their flags, the cheat
+    codes row left alone in a multiplayer game); every option event's messages (`option_change` over the options
+    by their `EEMGameOptions` number: the unsigned compares, the unit limit's line and value, the end epoch counted
+    from the start, the start epoch moving the end up and trimming the end box first, the variant of a line, the
+    difficulty setting the global levels before its message); `LobbyCheckStart` after the file load (two players
+    and a human, one colour per human, not everyone on the host's team, everyone ready, no transfer left; a loaded
+    game's failure hides the rows). The C++ keeps `gGameOptions`, its lock, the strings, the rules' lists and the
+    load (`EEOpenSaveGameFile` .. `EECheckSavedGameOptions`) with its messages, and stores each message's value
+    (`LobbySetOption`). The map type event (a string compare) and the game type event (forms) stay C++.
+  - `single_player.rs`: `EEIsValidName` (`Actions/EEAJoinOrHostAGame.cpp`, shared with WON's screens) over each
+    character's first byte as `UWideString::operator[]` hands it (the C++ builds the array; `PlatIsMbcSpace` of a
+    sign-extended lead byte is never a space); the random map's slot table (the human, the computer, the closed
+    slots with the original's `mSlot` 4).
+  - `hud.rs`: the status box's `GetAttributeText` ("base+bonus", rounded half up, a negative bonus taken off the
+    base) and `UpdateArmorTexts`' six armor attributes (the kind each shows, the base through a `double`, the bonus
+    over the stats' own class nudged by 0.0001).
+- **Float conversions:** the C++'s `(long)(x * 100.0f)` and `(long)(x + 0.5f)` are the Windows build's `cvttss2si`
+  (`LONG_MIN` for NaN and past the type); `(unsigned long)(f)` is clang's 64-bit convert keeping the low bits (a
+  negative channel count wraps). `settings::float_to_long`/`float_to_ulong` give those answers on every target
+  (arm64 saturated before: a behaviour change there for NaN and huge values only).
+- **Driver lessons** (scratch, `build/sc2`):
+  - A global object whose class has an out-of-line constructor (`gWorld`, `gGamePreferences`,
+    `gAmbientSoundManager`) is faked with `#define gWorld (*gFakeWorld)` before the unit: the header's `extern
+    EEWorld gWorld;` becomes a pointer declaration, defined over raw storage. `gGameOptions` (a reference) then
+    binds to the fake world's `mLobbyOptions`.
+  - An unresolved constructor whose class cannot be faked in C++ (`EEServer`: its base has no default constructor)
+    is caught with `#pragma comment(linker, "/alternatename:<mangled>=SC2FakeServer")` and an `extern "C"` function
+    taking `this` and the arguments and returning `this`; it points the vtable at the fake table. The mangled name
+    comes from `llvm-nm` on the driver's object.
+  - Unresolved data reads as address 0 under `/FORCE`: `kSaveGameMajorVersion` and `EERuleNumber::Constant` (a
+    default member initializer of the rules' lists) crashed before the first trace; an exception filter printing
+    the return address, then `llvm-objdump` at it, finds the caller.
+  - The unit store's holders (`EEUnitStoreField`) report every write through `EEUnitStoreWrote`: a driver that sets
+    `mUnitClass` defines it empty.
+  - The Bash tool's heredocs turn `\\n` into a newline inside a quoted heredoc; driver and edit scripts go through
+    files written whole.
+- **What the harness reaches:** the tour's settings captures (`settings-video`, `-audio`, `-interface`) show the
+  controls `ShowAudio` and `ShowInterface` set on open (the volume sliders, the voices slider, the reverb radios,
+  the mouse sliders, the adapter box is hidden by the port, the autosave sliders and labels); the
+  `random-map-setup` capture shows `LobbyShowGameOptions` (the host's boxes before Start: map size and type,
+  resources, epochs, unit limit, wonders, variant, difficulty, speed, the reveal, lock and cheat check boxes; the
+  record games row hidden) and the single player screen's random map (its slot table, the name check on the
+  default name); Start runs `LobbyCheckStart` (a random map: the players, colours and teams; no message on the tour's
+  table). The ai-game gate changes the option combo boxes and check boxes (the option events' messages, the
+  stored values) and starts through the same check. The in-game tour selects units (the box selection), so the
+  status box's armor and attribute texts are drawn for the selected unit. The LAN game shows the client's labels
+  (`LobbyShowGameOptions` with `server` false) and the ready check. **Only a person reaches:** the settings' OK
+  (`ApplySettings`), Restore Default (`ShowAudio` with the defaults' volumes), the multiplayer game type box, a
+  loaded game's start check, the variant box, the end epoch box, and the main menu's buttons other than Single
+  Player. The main menu's events have no decision to move (they push forms and set two flags). None of this is
+  simulation: EE-SIM never runs it, so the oracle only shows it does not disturb the game.
+- **Behaviour:** none on Windows. The variant event no longer walks past the variants' list when a line holds no
+  selectable variant (the original read past it); a start check colour past 16 no longer indexes past its table.
+
 ## R6: the lobby's containers as Rust objects: LobbyModel's lists, LobbyPersistentData's maps and the chat command parser (ee_won lobbymap.rs, chatobj.rs, WONLobbyMap.h; branch rust-r6-won17, 2026-11-12)
 
 Round 17 of R6 (RUST_PLAN "R6 WON, the rest"), the sixth round of whole-class moves: every ordered container the

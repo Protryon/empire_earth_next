@@ -2,7 +2,7 @@
 
   python -I tools/rust_build.py build [--target T]     ee_rust for a target (default: the host) -> build/rust/<triple>/release
   python -I tools/rust_build.py gate                   cargo test, clippy -D warnings, rustfmt --check, the header check
-  python -I tools/rust_build.py header                 regenerate include/rust/ee_rust.h (cbindgen)
+  python -I tools/rust_build.py header                 regenerate include/rust/*.h (cbindgen: a header per crate, ee_rust.h all)
 
 Targets are tools/xbuild.py's names. Needs rustup (rust/rust-toolchain.toml pins the version). Outputs stay under
 this checkout's build/, so worktrees do not share them.

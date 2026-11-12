@@ -22,7 +22,7 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONRoutingTypes.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The room flags, Quick Play's pick, the friend search rule, the default server, the settings' client flags and
 // the friends list's limit are ee_won's routing module (rust/crates/ee_won/src/routing.rs); this unit keeps the
 // servers, rooms, connection, ops, dialogs and events (Internet only: the routing servers are gone).
