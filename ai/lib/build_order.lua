@@ -51,8 +51,10 @@ M.PHASE = {
            barracks_at = 24, settlements = 7},
     -- (from the Stone Age a second town centre: one trains about 2 citizens a minute, the owner's town grew by 3.4 a
     -- minute, 35 to 86 in 15 minutes)
+    -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
+    -- at its weakest, boom-defence's seeds 4 and 24)
     stone_start = {citizens = 34, citizens_max = 34, boats = 10, docks = 1, barracks = 2, ranges = 1,
-                   army_first = false, towers = 4, town_centers = 2, tc_at = 30, claim_dry = 45,
+                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
     stone_grow = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
                   army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
@@ -67,6 +69,7 @@ M.PHASE = {
 M.START_MAX_MIN = 6        -- minutes: stone_start ends by then even without the boats (no water, no dock site)
 M.GROW_MAX_MIN = 12        -- minutes into the Stone Age: developed by then whatever the gatherers (the raid by ~40)
 M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for even if the raid never went out
+M.FOOD_BANK = 240          -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
 

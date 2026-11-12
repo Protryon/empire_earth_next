@@ -713,6 +713,11 @@ function M.step(view, memory)
     for _, r in ipairs(V.resources) do
         paid = paid and view.stock[r] >= cost[r]
     end
+    -- (ECON.order: the Prehistoric advance waits for the food the Stone Age's first soldiers need on top of its cost;
+    -- spent to 3-48 food, the town stood 5-10 minutes with 0-4 of 8 soldiers under raids, boom-defence's seeds 4, 24)
+    if ECON.order and phase == "pre" and view.stock.food < cost.food + BO.FOOD_BANK then
+        paid = false
+    end
     if saving and view.sol_missing == 0 and paid then
         order("advance", {verb = "advance"})
     end
