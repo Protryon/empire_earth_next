@@ -482,37 +482,42 @@ public:
 
 // AoC UDP records: four slots each; the archived UDP header's extra
 // RetransmitHook is a version difference and MUST NOT be inserted here.
+// A Rust object since round 16 (rust/crates/ee_won/src/udpops.rs EeWonUdpRecvOp: the socket +0x44, the manager
+// +0x48, the own-socket flag +0x4c, the address +0x50, the datagram +0x78, the check +0x7c and its context +0x80, and
+// RunHook, CleanupHook, QueueRecv and RecvCallback); the class is a shim the lobby subclasses
 class UDPManager;
 class UDPManagerRecvOp : public AsyncOp {
 public:
     UDPManagerRecvOp(); //2b68b0, default, 91 bytes
     UDPManagerRecvOp(const IPAddr&); //2b6a10
+    virtual ~UDPManagerRecvOp(); // the original's was implicit (2b6930)
     bool HasVerifier();
     void SetUDPManager(UDPManager* theManager);
     void SetSocket(QueueSocket* theSocket);
-    const IPAddr& GetFromAddr();
+    IPAddr GetFromAddr() const; // a copy (the original returned a reference to the member)
     void SetFromAddr(const IPAddr& theAddr);
-    const ByteBuffer* GetMsg() { return this->mReceivedData.get(); }
-    void SetMsg(const ByteBuffer* theMsg) { this->mReceivedData=theMsg; }
-    // Implicit destructor2b6930, no own-vptr store; natural owned-member cleanup.
+    const ByteBuffer* GetMsg() const;
+    void SetMsg(const ByteBuffer* theMsg);
+    QueueSocket* GetSocket() const;
+    UDPManager* GetUDPManager() const;
+    EeWonUdpRecvOp* GetUdpObject() const { return this->mUdp; }
     virtual void RunHook();   //2b6fb0
     virtual void CleanupHook(); //2b6f60
     virtual WONStatus CheckMessage(ReadBuffer&); //2b6c10, new slot 0c
-    SmartPtr<QueueSocket> mSocket; //44
-    SmartPtr<UDPManager> mManager; //48
-    bool mOwnSocket; //4c; the ctor leaves it unset until Run/setup
-    IPAddr mAddress; //50..77, naturalalignment4d..4f
-    ByteBufferPtr mReceivedData; //78
     typedef WONStatus (*MessageVerifier)(ReadBuffer&, void*);
-    MessageVerifier mVerifier; //7c, initializedNULL
-    void* mVerifierContext; //80; originalctor leaves until setter
     void SetMessageVerifier(MessageVerifier,void*); //2b6bf0
     void QueueRecv(); //2b6c30
     static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b6d70, owning values
     void RecvCallback(RecvBytesFromOp*); //2b6e60
-
+private:
+    UDPManagerRecvOp(const UDPManagerRecvOp&);
+    UDPManagerRecvOp& operator=(const UDPManagerRecvOp&);
+    EeWonUdpRecvOp* mUdp;
 };
 
+// A Rust object since round 16 (udpops.rs EeWonUdpSendRecvOp: the manager +0x44, the own socket +0x48, the request
+// +0x4c, the address +0x50, the reply wait +0x78, the retry limit +0x7c, the attempts +0x80, the reply time-out +0x84,
+// and RunHook, CleanupHook, SendRequest and RecvCallback); the class is a shim the lobby subclasses
 class UDPManagerSendRecvOp : public AsyncOp {
 public:
     static WONStatus StaticCheckResponse(ReadBuffer&,void*); //2b7250
@@ -521,23 +526,26 @@ public:
     void RecvCallback(AsyncOp*); //2b75e0
 
     UDPManagerSendRecvOp(); //2b70b0
+    virtual ~UDPManagerSendRecvOp(); // the original's was implicit (2b7140)
     void SetUDPManager(UDPManager* theManager);
     void SetMsgTimeout(DWORD theTimeout);
     void SetNumRetransmits(int theNum);
     void SetDestAddr(const IPAddr& theAddr);
-    const IPAddr& GetDestAddr() { return this->mAddress; }
-    // Implicit destructor2b7140, no own-vptr; naturally inlined into globalPingGameOp.
+    IPAddr GetDestAddr() const; // a copy (the original returned a reference)
+    void SetOutgoing(const ByteBuffer* theMsg); // the request datagram
+    const ByteBuffer* GetOutgoing() const;
+    QueueSocket* GetSocket() const; // the op's own socket (none with a manager)
+    UDPManagerRecvOp* GetRecvOp() const; // the reply wait
+    int GetAttemptCount() const;
+    int GetNumRetransmits() const;
+    unsigned long GetMsgTimeout() const;
     virtual void RunHook();   //2b7470
     virtual void CleanupHook(); //2b7630
     virtual WONStatus CheckResponse(ReadBuffer&); //2ad870, returns status 0 by default (ret4)
-    SmartPtr<UDPManager> mManager; //44
-    SmartPtr<QueueSocket> mSocket; //48
-    ByteBufferPtr mOutgoing; //4c
-    IPAddr mAddress; //50..77
-    SmartPtr<UDPManagerRecvOp> mRecvOp; //78, NOT a ByteBuffer
-    int mRetryLimit; //7c, signed compare; int as in the SDK
-    int mAttemptCount; //80, RunHook clears it; the ctor leaves it unset
-    unsigned long mReceiveTimeout; //84, initialized to 10000; DWORD in the SDK
+private:
+    UDPManagerSendRecvOp(const UDPManagerSendRecvOp&);
+    UDPManagerSendRecvOp& operator=(const UDPManagerSendRecvOp&);
+    EeWonUdpSendRecvOp* mUdp;
 };
 
 // A Rust object since round 15 (rust/crates/ee_won/src/udpmgr.rs EeWonUdpManager: the socket +0x08, the default
@@ -565,16 +573,6 @@ private:
     EeWonUdpManager* mManager;
 };
 
-// WON SDK inline UDP functions; defined after UDPManager is complete (typed SmartPtr)
-inline bool UDPManagerRecvOp::HasVerifier() { return this->mVerifier!=NULL; }
-inline void UDPManagerRecvOp::SetUDPManager(UDPManager* theManager) { this->mManager=theManager; }
-inline void UDPManagerRecvOp::SetSocket(QueueSocket* theSocket) { this->mSocket=theSocket; this->mOwnSocket=false; }
-inline const IPAddr& UDPManagerRecvOp::GetFromAddr() { return this->mAddress; }
-inline void UDPManagerRecvOp::SetFromAddr(const IPAddr& theAddr) { this->mAddress=theAddr; }
-inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager) { this->mManager=theManager; }
-inline void UDPManagerSendRecvOp::SetMsgTimeout(DWORD theTimeout) { this->mReceiveTimeout=theTimeout; }
-inline void UDPManagerSendRecvOp::SetNumRetransmits(int theNum) { this->mRetryLimit=theNum; }
-inline void UDPManagerSendRecvOp::SetDestAddr(const IPAddr& theAddr) { this->mAddress=theAddr; }
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
 // vtables 0x84c49c / 0x84c4ac; provisional member names)

@@ -18,12 +18,12 @@ namespace WONAPI {
 LobbyUserInfo* LobbyGetCurrentUser()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data==NULL || data->mCurrentUserId==0)
+    if(data==NULL || data->GetCurrentUserId()==0)
         return NULL;
-    for(LobbyUserInfoMap::iterator it=data->mUsers.begin();it!=data->mUsers.end();++it)
+    for(LobbyUserInfoMap::iterator it=data->Users().begin();it!=data->Users().end();++it)
     {
         LobbyUserInfo& user=it->second;
-        if(user.mUserId==data->mCurrentUserId)
+        if(user.mUserId==data->GetCurrentUserId())
             return &user;
     }
     return NULL;
@@ -34,7 +34,7 @@ const LobbyUserInfoMap& LobbyFn35CE60()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL)
-        return data->mUsers;
+        return data->Users();
     static LobbyUserInfoMap empty;
     return empty;
 }
@@ -53,8 +53,8 @@ LobbyUserInfo* LobbyFindUser(const GUIString& name)
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL)
         return NULL;
-    LobbyUserInfoMap::iterator it=data->mUsers.find(name);
-    if(it==data->mUsers.end()) return NULL;
+    LobbyUserInfoMap::iterator it=data->Users().find(name);
+    if(it==data->Users().end()) return NULL;
     return &it->second;
 }
 // FUNCTION: WON 0x0075d660
@@ -63,7 +63,7 @@ const LobbyLanNameInfoMap& LobbyFn35D660()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL)
-        return data->mLanNameInfoMap;
+        return data->LanNameInfoMap();
     static LobbyLanNameInfoMap empty;
     return empty;
 }
@@ -73,7 +73,7 @@ const LobbyDirectConnectMap& LobbyFn35D8E0()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL)
-        return data->mDirectConnectMap;
+        return data->DirectConnectMap();
     static LobbyDirectConnectMap empty;
     return empty;
 }
@@ -83,8 +83,8 @@ const LobbyOptionSet& LobbyFn35DC80(const GUIString& column)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL) {
-        std::map<GUIString,LobbyOptionSet,GUIStringLessNoCase>::iterator it=data->mGameOptions.find(column);
-        if(it!=data->mGameOptions.end())
+        std::map<GUIString,LobbyOptionSet,GUIStringLessNoCase>::iterator it=data->GameOptions().find(column);
+        if(it!=data->GameOptions().end())
             return it->second;
     }
     static LobbyOptionSet empty;
@@ -95,10 +95,8 @@ const LobbyOptionSet& LobbyFn35DC80(const GUIString& column)
 void LobbySetTabSelect(const GUIString& name)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && name!=data->mTabSelect) {
-        data->mTabSelect=name;
-        data->mUserDirty=true;
-    }
+    if(data!=NULL)
+        data->ChangeTabSelect(name);
 }
 }
 
