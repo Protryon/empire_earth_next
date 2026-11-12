@@ -1726,6 +1726,138 @@ enum class EeWonStagingCall : uint32_t {
   NotifyPingChange,
 };
 
+/// The op codes. `a`..`d` are integers or pointers as each says.
+enum class EeWonGuiOp : uint32_t {
+  /// the field `a` (`EeWonGuiField`).
+  Get = 1,
+  /// the field `a` = `b`.
+  Set,
+  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
+  BaseSizeChanged,
+  /// `ScrollArea::AdjustPosition(a != 0)`.
+  BaseAdjustPosition,
+  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
+  BaseNotifyRootVisibility,
+  /// `ScrollArea::MouseDown(a, b, c)`.
+  BaseMouseDown,
+  /// `ScrollArea::MouseUp(a, b, c)`.
+  BaseMouseUp,
+  /// `ScrollArea::MouseExit()`.
+  BaseMouseExit,
+  /// `ScrollArea::MouseMove(a, b)`.
+  BaseMouseMove,
+  /// `ScrollArea::MouseEnter(a, b)`.
+  BaseMouseEnter,
+  /// `ScrollArea::MouseDrag(a, b)`.
+  BaseMouseDrag,
+  /// `ScrollArea::KeyDown(a)` (0 or 1).
+  BaseKeyDown,
+  /// `ScrollArea::KeyChar(a)` (0 or 1).
+  BaseKeyChar,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `Invalidate()`.
+  Invalidate = 30,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
+  GetMousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
+  SetParentCursor,
+  /// the selection colours into `*a` (an `EeWonSelColor`).
+  SelColor,
+  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
+  LinkActivated,
+  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
+  SelTextAppend,
+  /// the copied text `.append("\r\n")`.
+  SelTextBreak,
+  /// `Clipboard::Set(copied text)`, then the copied text emptied.
+  SelTextCopy,
+  /// `a->AddRef()`.
+  SegHold = 60,
+  /// `a->Release()`.
+  SegRelease,
+  /// `a->mLineBreak` (0 or 1).
+  SegLineBreak,
+  /// `a->GetLength()`.
+  SegLength,
+  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
+  SegMeasure,
+  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
+  SegStringWidth,
+  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
+  SegCharWidth,
+  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
+  SegTextTake,
+  /// `a->IsLink()` (0 or 1).
+  SegIsLink,
+  /// `a->Pressed()`.
+  SegPressed,
+  /// `a->Released()` (0 or 1).
+  SegReleased,
+  /// `a->mColor`.
+  SegColor,
+  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
+  /// segment `c`'s font and text (none when `c` is 0).
+  Draw = 90,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
+enum class EeWonTextCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent()` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `NotifyRootVisibility(a != 0)`.
+  NotifyRootVisibility,
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `CheckSel(a, b, c != 0)`.
+  CheckSel,
+  /// `Reset(a != 0)`.
+  Reset,
+  /// `AddSegment(a)` (a C++ `TextSegment` or one derived from it).
+  AddSegment,
+  /// `LineBreak(a)`.
+  LineBreak,
+  /// `SetLineAlignment(a)` (`HorzAlign`).
+  SetLineAlignment,
+  /// `SetTextFlags(a, b != 0)`.
+  SetTextFlags,
+  /// `SetMaxChars(a)`.
+  SetMaxChars,
+  /// `SetMaxLines(a)`.
+  SetMaxLines,
+  /// `SetWrapIndentSize(a)`.
+  SetWrapIndentSize,
+  /// `GetNumLines()`.
+  GetNumLines,
+  /// `mTextFlags`.
+  TextFlags,
+};
+
 /// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
 enum class EeWonTitleInstr {
   /// Not a title instruction: `false`.
@@ -1772,6 +1904,44 @@ enum class EeWonLobbySound : uint32_t {
   PlayerJoined = 0,
   AllReady = 1,
   AllNotReady = 2,
+};
+
+/// A base class field the Rust object reads or writes (`Get` / `Set`).
+enum class EeWonGuiField : uint32_t {
+  /// `mScrollArea.width`.
+  ScrollWidth = 0,
+  /// `mScrollArea.height`.
+  ScrollHeight,
+  /// `mVertOffset`.
+  VertOffset,
+  /// `mHorzOffset`.
+  HorzOffset,
+  /// `mTotalWidth`.
+  TotalWidth,
+  /// `mTotalHeight`.
+  TotalHeight,
+  /// `mExtraHeight`.
+  ExtraHeight,
+  /// `mUserHasScrolled` (0 or 1).
+  UserHasScrolled,
+  /// `mUpScrollAmount`.
+  UpScrollAmount,
+  /// `mDownScrollAmount`.
+  DownScrollAmount,
+  /// `Width()` (read only).
+  Width,
+  /// `Height()` (read only).
+  Height,
+};
+
+/// The cursor `SetParentCursor` sets on the parent.
+enum class EeWonGuiCursor : uint32_t {
+  /// NULL (the parent's own).
+  None = 0,
+  /// `Cursor::GetStandardCursor(StandardCursor_Hand)`.
+  Hand = 1,
+  /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
+  IBeam = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -1855,6 +2025,9 @@ struct EeWonSocketThread;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
+
+/// The Rust TextArea.
+struct EeWonText;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -3608,6 +3781,14 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
+
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -6543,6 +6724,15 @@ bool ee_won_gui_button_state_cell(int32_t state,
                                   int32_t index,
                                   int32_t *out_state,
                                   int32_t *out_checked);
+
+/// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `units` holds `count` units of `unit_size` bytes.
+void ee_won_gui_sink_units(void *sink,
+                           const void *units,
+                           size_t count,
+                           size_t unit_size);
 
 /// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
 ///
@@ -9899,6 +10089,23 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// A new Rust TextArea for the C++ `component`, its calls out through `host`.
+EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `text` came from `ee_won_text_new` (or is NULL) and is not used again.
+void ee_won_text_free(EeWonText *text);
+
+/// One of TextArea's methods (`EeWonTextCall`).
+///
+/// # Safety
+/// `text` is live; the call's arguments as documented.
+ptrdiff_t ee_won_text_call(const EeWonText *text,
+                           EeWonTextCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 
