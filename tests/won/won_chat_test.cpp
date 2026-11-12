@@ -40,7 +40,8 @@ CHAT_STRINGS(DEFINE_STRING)
 
 wchar_t gEmptyWideString[2];
 
-// LobbyModel.cpp's client and client list, the parts the parser uses (copied: that unit links the whole lobby)
+// LobbyModel.cpp's client and client list, the parts the parser uses (copied: that unit links the whole lobby; the
+// list's clients are the Rust container since round 17)
 namespace WONAPI {
 LobbyClient::LobbyClient() : mName(GetEmptyGUIStringData())
 {
@@ -53,14 +54,10 @@ LobbyClient::~LobbyClient() {}
 bool LobbyClient::IsAdmin() { return (this->mClientFlags & 0x20) ? true : false; }
 bool LobbyClient::IsModerator() { return (this->mClientFlags & 1) ? true : false; }
 bool LobbyClient::IsCaptain(bool inGame) { return inGame ? this->mIsGameCaptain : this->mIsChatCaptain; }
-LobbyClientList::LobbyClientList() {}
+LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
 LobbyClientList::~LobbyClientList() {}
-void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients[inClient->mClientId] = inClient; }
-LobbyClient* LobbyClientList::FindClient(unsigned short inId)
-{
-    LobbyClientMap::iterator anItr = this->mClients.find(inId);
-    return anItr != this->mClients.end() ? anItr->second.get() : NULL;
-}
+void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients.Set(inClient->mClientId, inClient); }
+LobbyClient* LobbyClientList::FindClient(unsigned short inId) { return this->mClients.Get(inId); }
 }
 
 static std::vector<std::string> sLines;
