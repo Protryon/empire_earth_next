@@ -7474,3 +7474,48 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## R5b.2, sixth round: the attack, attack-ground and heal goals' trigger tests and steps and the shots' trigger tests in Rust, the digests in Rust (ee_combat goals.rs, xtask capture-digest; branch rust-combat6, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the attack goal's 21 triggers | `EEUGAttackUnit::EvaluateCondition` | `goals::condition` (`attack_unit`) | CBTC |
+| the attack-ground and heal goals' triggers | `EEUGAttackGround`, `EEUGHealUnit::EvaluateCondition` | `goals::condition` | CBTC |
+| the shots' triggers | `EEUCProjectile`, `EEUCMissile`, `EEUCTorpedo::EvaluateCondition` | `goals::condition` (`shot`, `torpedo`) | CBTC |
+| the goals' per-tick steps | `EEUGAttackUnit`, `EEUGAttackGround`, `EEUGHealUnit::Step` | `goals::step` (a plan of host operations) | CBGS |
+| the capture digests | `tools/sim_capture.py digest`, `check` | `xtask capture-digest` | all |
+
+- **Plain reads eager, the rest lazy.** `EECombatFillCondition` (EECombatGoals.cpp) reads the fields a test may use
+  (the unit's stats, timers, herd, class flags; the target's hit points, tiles, cloak, container, players' war flags,
+  class family, category, `IsLandBuilding`, stats) up front: each is a field or a trivial accessor, null-safe. Every
+  other read (`GetLineOfSight` is a function, `IsStillReachable` may make the unit ignore the target, `FindImpactUnit`,
+  the impact tests may set a goal, a base class's test may run another captured test) is a host read Rust makes only
+  where the original does; its answer is logged into the record in order (`EeCombatRead`, four kept, all counted).
+  A record therefore shows which reads a test made. Where the original would have crashed on a null target (the
+  hidden test reads `mTarget->mComplexUnit` unchecked) the Rust reads the zero fields instead.
+- **Nesting.** The torpedo's other triggers call `EEUCMissile::EvaluateCondition`, the heal goal's the location goal's,
+  the shots' the unit class's: each is the host's base read, and a captured test inside it records its own CBTC first.
+  The shot's new attack goal on the unit it hit is an action the C++ applies before the record, as the original set
+  it inside its switch.
+- **A step is a plan, not a decision table.** The attack step compares the attack set's sound frame with the frame
+  read after `SetAnimation` (which may change it), so the outcome cannot be precomputed: Rust issues each operation
+  to the host (`EeCombatStepHost::op`, the original's statement) and logs it with its argument and a read's answer.
+  `SetRandomReloadTimer`'s physics draw stays where the original made it.
+- **Golden first, then folded.** 23b7bd41 instrumented the unmodified C++ bodies in place (each lazy read wrapped,
+  each operation logged); a full CBTC record per test made 1.1 to 1.4 million records an oracle game but some ten
+  million a calamity game (2.4 to 3 GB a capture), and the first golden run filled the disk mid-write (seeds 6 and 7
+  truncated at a 4 KB boundary, every tag after it wrong). CBTC now folds 4096 tests into one record (count and
+  FNV-1a 64; the last batch at EE-SIM's game end before `Close`; each test folded only where the new
+  `EESimCaptureRecord::Keeps` says a record of it would be written, so the sweeps' `Only` filters hold);
+  `EE_SIM_CAPTURE_CBTC_FULL=1` writes every record for diffing two builds. CBGS (5,000 to 13,500 steps a game) stays
+  whole.
+- **The digests in Rust.** `xtask capture-digest SEED=PATH ...` prints sim_capture.py's lines (per seed and tag:
+  records and FNV-1a 64 over tag, size and payload, sorted by tag), the seeds in parallel; `digest` and `check` use
+  it when cargo is there (`EE_SIM_CAPTURE_PYTHON_DIGEST=1` or no cargo: the Python loop). On the six oracle-profile
+  captures (446 lines) both gave identical files; a seed pair took 3 to 5 s against 220 to 280 s.
+- **What only a tour shows:** nothing new is drawn, but the goals' steps start the attack, turning and healing
+  animations (`SetAnimation`) and the shots' tests decide when a projectile's hit effects play: a tour with combat
+  should still show units turning, firing and healing as before.
+- **What stays C++:** the hosts' reads (`FindImpactUnit`, `IsStillReachable`, `IsGateClosed`, `EEIsEnemyWithinRange`,
+  `IsInReach`, the facing tests), the goals' objects, saves and `GetDestination`, the shots' `ActionChanged` and
+  `Update`, the heal goal's `Work` (its formulas already Rust).
