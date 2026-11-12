@@ -2827,6 +2827,9 @@ struct EeWonAsyncOp;
 /// `AsyncSocket`'s state and steps.
 struct EeWonAsyncSocket;
 
+/// `AuthContext`'s sessions and certificate flow.
+struct EeWonAuthFlow;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -6503,6 +6506,41 @@ struct EeWonAuthEntry {
   const uint8_t *extra;
   size_t extra_len;
   bool present;
+};
+
+/// The C++ side: `context` is the `AuthContext`; every object is a `RefCount*`.
+struct EeWonAuthFlowHooks {
+  void *context;
+  /// `RefCount::AddRef`
+  void (*add_ref)(void*);
+  /// `RefCount::Release`
+  void (*release)(void*);
+  /// `AuthSession::GetLastUseTime`
+  int64_t (*session_last_use)(void*);
+  /// `AsyncOp::Kill(true)`
+  void (*op_kill)(void*);
+  /// `AsyncOp::IsKilled`
+  bool (*op_killed)(void*);
+  /// `AsyncOp::GetStatus`
+  long (*op_status)(void*);
+  /// `AsyncOp::RunAsync`
+  void (*op_run_async)(void*, long);
+  /// `AsyncOp::Run(mode, timeout)`
+  long (*op_run)(void*, long, unsigned long);
+  /// `AsyncOp::Finish`
+  void (*op_finish)(void*, long);
+  /// a new `AsyncOp` (one reference) whose completion is `StaticAutoRefreshCallback` on the context
+  void *(*new_timer)(void*);
+  /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
+  void *(*new_cert_op)(void*, bool);
+  /// `GetCertOp::GetPeerData`: a reference, or NULL
+  void *(*cert_peer_data)(void*);
+  /// `LightGetCertOp::SetPeerData` (the peer data may be NULL)
+  void (*light_set_peer_data)(void*, void*);
+  /// the context's `mPeerData->IsValid()`
+  bool (*peer_valid)(void*);
+  /// the context's `mPeerData->GetExpireDelta()`
+  int64_t (*peer_expire_delta)(void*);
 };
 
 /// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
@@ -14556,6 +14594,65 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool force,
                                       bool peer_valid,
                                       int64_t expire_delta);
+
+/// # Safety
+/// `hooks` points to a hook table; its context outlives the flow.
+EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks);
+
+/// The members' references dropped.
+///
+/// # Safety
+/// `f` is from `ee_won_auth_flow_new` (or NULL), not used afterwards.
+void ee_won_auth_flow_free(EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow, `a` a live IPAddr value, `session` an `AuthSession`'s `RefCount*` or NULL.
+void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
+                                  const EeWonIpAddr *a,
+                                  void *session,
+                                  int64_t now);
+
+/// A reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `f` a flow, `a` a live IPAddr value.
+void *ee_won_auth_flow_get_session(const EeWonAuthFlow *f, const EeWonIpAddr *a, int64_t now);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_clear_sessions(const EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow, `op` the completing timer's `RefCount*`.
+void ee_won_auth_flow_auto_refresh_callback(const EeWonAuthFlow *f, void *op);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_stop_auto_refresh(const EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_set_do_auto_refresh(const EeWonAuthFlow *f, bool enabled);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_kill(const EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_start_auto_refresh(const EeWonAuthFlow *f, bool force);
+
+/// # Safety
+/// `f` a flow, `op` the completing request's `RefCount*`.
+void ee_won_auth_flow_get_cert_callback(const EeWonAuthFlow *f, void *op);
+
+/// # Safety
+/// `f` a flow, `light` a `LightGetCertOp`'s `RefCount*` or NULL.
+void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f, void *light, uint32_t timeout);
+
+/// # Safety
+/// `f` a flow.
+long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///

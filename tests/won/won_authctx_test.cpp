@@ -28,7 +28,6 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#define EE_AUTHFLOW_ORIG_ONLY
 #include "rust/ee_rust.h"
 
 using namespace WONAPI;
@@ -439,11 +438,13 @@ struct Step {
 static Step MakeStep()
 {
     Step s = {0, 0, 0, 0, 0};
-    static const char kCmds[] = "TTPPPPNGGGGDAASSXKRRRRQBFFCCLL";
+    static const char kCmds[] = "TTUUPPPPOONGGGGDAASSXKRRRRQBFFCCLL";
     s.mCmd = kCmds[Pick((int)sizeof(kCmds) - 1)];
     switch (s.mCmd) {
     case 'T': s.mA = 1000 + Pick(2000); break;                       // the clock
     case 'P': s.mA = Pick(6); s.mB = Pick(2000) + 500; break;        // put: address, the session's last use
+    case 'U': s.mA = 298 + Pick(5); break;                           // the clock moved on by about 300 s
+    case 'O': s.mA = Pick(6); s.mB = 298 + Pick(5); break;           // put a session last used about 300 s ago
     case 'N': s.mA = Pick(6); break;                                 // put no session
     case 'G': s.mA = Pick(7); break;                                 // get
     case 'D': s.mA = Pick(3) != 0; s.mB = Pick(600) - 100; break;    // peer data: valid, expire delta
@@ -496,6 +497,12 @@ template <class Ctx> struct Runner {
     {
         switch (s.mCmd) {
         case 'T': now = (time_t)s.mA; break;
+        case 'U': now += (time_t)s.mA; break;
+        case 'O': {
+            SmartPtr<FSession> ses(new FSession(now - (time_t)s.mB));
+            ctx.PutSession(Addr(s.mA), ses, now);
+            break;
+        }
         case 'P': {
             SmartPtr<FSession> ses(new FSession((time_t)s.mB));
             ctx.PutSession(Addr(s.mA), ses, now);
