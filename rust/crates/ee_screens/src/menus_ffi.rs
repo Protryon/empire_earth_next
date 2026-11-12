@@ -207,6 +207,9 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
     if let Some(result) = crate::civ_choice_ffi::dispatch(&mut host, event) {
         return result;
     }
+    if let Some(result) = crate::splash_ffi::dispatch(&mut host, event) {
+        return result;
+    }
     if let Some(result) = crate::post_game_ffi::dispatch(&mut host, event) {
         return result;
     }

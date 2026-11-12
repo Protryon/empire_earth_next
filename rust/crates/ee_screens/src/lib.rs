@@ -14,6 +14,7 @@
 //!   call, over the C++ host.
 //! - [`lobby_options`]: the lobby's game options (what is shown and editable), the option events' messages and
 //!   the start check.
+//! - [`splash`]: the loading screen whole (form 23: its open event over the C++ host).
 //! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
 //! - [`command_panel`]: the in-game command panel: its layout (which buttons show where), each button's
@@ -102,3 +103,6 @@ pub mod settings_form;
 mod settings_form_ffi;
 pub mod single_player;
 mod single_player_ffi;
+pub mod splash;
+#[cfg(not(test))]
+mod splash_ffi;

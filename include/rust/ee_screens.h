@@ -1969,6 +1969,40 @@ constexpr static const uint32_t EE_SCREENS_SP_COMPUTER = 1;
 
 constexpr static const uint32_t EE_SCREENS_SP_CLOSED = 2;
 
+/// The loading screen's open event (`kFormEventSSFormOpen`).
+constexpr static const uint32_t EE_SCREENS_SS_OPEN = 5889;
+
+/// (1 lock, 0 unlock) the lobby options' read lock.
+constexpr static const uint32_t EE_SCREENS_GAME_SS_LOCK = 768;
+
+/// -> `gCommunications->GetNumHumanPlayers()`.
+constexpr static const uint32_t EE_SCREENS_GAME_SS_HUMANS = 769;
+
+/// (slot) -> the lobby slot's type in bits 0..7, 1 << 8 when it is the local player's.
+constexpr static const uint32_t EE_SCREENS_GAME_SS_PLAYER = 770;
+
+/// (index) `gUserInterface->mLocalPlayer = index`.
+constexpr static const uint32_t EE_SCREENS_GAME_SS_LOCAL = 771;
+
+/// (bar, slot) `SetStatusBarColor(EEGetPlayerColor(the slot's colour))`.
+constexpr static const uint32_t EE_SCREENS_OP_SS_BAR_PLAYER_COLOUR = 772;
+
+/// (bar, value) `SetCurrentRangeValue`.
+constexpr static const uint32_t EE_SCREENS_OP_SS_BAR_VALUE = 773;
+
+/// (bottom bits) background 0x84's rectangle with that bottom, shown.
+constexpr static const uint32_t EE_SCREENS_OP_SS_BACKGROUND = 774;
+
+/// Texts in: the decrypted registered-to line, the decrypted copyright line, the registered name (`gU530BC8`), a lobby
+/// slot's name.
+constexpr static const uint32_t EE_SCREENS_TEXT_SS_TITLE = 146;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SS_COPYRIGHT = 147;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
+
 /// What a button's test reads besides the units.
 struct EeScreensButtonFacts {
   /// The player has a selected group (else no unit test passes).

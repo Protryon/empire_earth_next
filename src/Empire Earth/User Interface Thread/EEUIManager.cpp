@@ -124,7 +124,6 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEProcessTimerExpired.h"
@@ -347,7 +346,7 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_SPL_OPEN);
         break;
     case kFormEventSSFormOpen:
-        theEvent = new EEUIESSEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SS_OPEN);   // (ee_screens splash.rs)
         break;
     case kFormEventPGSOpen:
         theEvent = EECreateScreenEvent(EE_SCREENS_PGS_OPEN);
@@ -374,9 +373,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     }
     return theEvent;
 }
-
-// SYNTHETIC: EXE 0x671cd8
-// (EEUIESSEOpen's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
