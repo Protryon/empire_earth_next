@@ -467,6 +467,17 @@ WON_TESTS = {
     # the lobby dialogs' decisions (the create and OK buttons, the skill, the LAN port, the adapters' order, the
     # status dialog's sizes), the original's statements against ee_won's dialogs module
     "won_dialogs_test": [],
+    # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
+    # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder)
+    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
+                                                          "ImageDecoder.cpp")],
+                       *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                            "WONFile.cpp", "StringUtil.cpp")],
+                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
+                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()],
+                       *[ROOT / "src" / "ThirdParty" / l.split()[2]
+                         for l in (ROOT / "link" / "exeimg" / "units.txt").read_text().splitlines()
+                         if l.strip() and not l.split()[2].startswith("libjpeg/")]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
