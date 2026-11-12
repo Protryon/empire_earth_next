@@ -15,7 +15,7 @@ use crate::camera::{
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
-use crate::units::{self, EeGfxBarRects, EeGfxBarSizes};
+use crate::units::{self, EeGfxBarRects, EeGfxBarSizes, EeGfxRingSegments, EeGfxSelectionRing};
 use crate::view;
 use ee_ge::viewport::GeViewport;
 
@@ -603,4 +603,18 @@ pub unsafe extern "C" fn ee_gfx_unit_near_fade(
         *translucent = t;
         *opacity = o;
     }
+}
+
+// ---- the selection rings (units.rs, EEROUnits.cpp)
+
+/// `DrawSelection`'s ring model and scale for a selection size.
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_selection_ring(size: f32) -> EeGfxSelectionRing {
+    units::selection_ring(size)
+}
+
+/// `DrawRings`' segment colours for an area-effect strength.
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_ring_segments(strength: u32) -> EeGfxRingSegments {
+    units::ring_segments(strength)
 }

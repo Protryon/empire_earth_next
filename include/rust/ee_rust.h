@@ -5672,6 +5672,19 @@ struct EeGfxMiniMapView {
   EeGe2DPoint corners[4];
 };
 
+/// A ground unit's selection ring: which of the three models (`sSelectionModels`) and its scale.
+struct EeGfxSelectionRing {
+  uint32_t model;
+  float scale;
+};
+
+/// The area-effect ring's segments: `ring` in the ring colour (one per strength point), then `highlight` in the
+/// highlight colour up to seven in all; three vertices each.
+struct EeGfxRingSegments {
+  uint32_t ring;
+  uint32_t highlight;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -12318,6 +12331,12 @@ void ee_gfx_unit_near_fade(const EeGeViewport *viewport,
                            float scale,
                            bool *translucent,
                            float *opacity);
+
+/// `DrawSelection`'s ring model and scale for a selection size.
+EeGfxSelectionRing ee_gfx_units_selection_ring(float size);
+
+/// `DrawRings`' segment colours for an area-effect strength.
+EeGfxRingSegments ee_gfx_units_ring_segments(uint32_t strength);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

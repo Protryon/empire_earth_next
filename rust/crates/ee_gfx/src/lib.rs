@@ -1,7 +1,7 @@
 //! The game's Graphics Thread and camera (docs/RUST_PLAN.md R4.4), moving to Rust leaf by leaf behind their C++
 //! classes as plans and values the C++ executes: it keeps every GE/GX call, the render objects, the locks and the
 //! world. So far: the camera's math (`camera.rs`, `EECameraControl.cpp`), the pointer's (`mouse.rs`,
-//! `RTSMouse.cpp`), the units' screen point and bars (`units.rs`, `EEROUnits.cpp`), the picker's
+//! `RTSMouse.cpp`), the units' screen point, bars and selection rings (`units.rs`, `EEROUnits.cpp`), the picker's
 //! ray and ranking (`pick.rs`, `EEUnitPicker.cpp`), the mini map's transforms and view trapezoid (`minimap.rs`,
 //! `EEMiniMap.cpp`) and the effects' frustum test and the buildings' near fade (`view.rs`).
 //!
@@ -27,6 +27,8 @@ mod golden_minimap;
 mod golden_mouse;
 #[cfg(test)]
 mod golden_picker;
+#[cfg(test)]
+mod golden_rings;
 #[cfg(test)]
 mod golden_rounits;
 #[cfg(test)]
