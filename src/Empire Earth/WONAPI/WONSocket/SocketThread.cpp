@@ -28,7 +28,7 @@ void SocketThread::ThreadFunc()
 static long HookStatus(void* inOp) { return static_cast<SocketOp*>(inOp)->GetStatus(); }
 static long HookContinue(void* inOp) { return static_cast<SocketOp*>(inOp)->Continue(); }
 static void HookFinish(void* inOp,long inStatus) { static_cast<SocketOp*>(inOp)->Finish(inStatus); }
-static void HookInThread(void* inOp,bool inOn) { static_cast<SocketOp*>(inOp)->mInSocketThread=inOn; }
+static void HookInThread(void* inOp,bool inOn) { static_cast<SocketOp*>(inOp)->SetInSocketThread(inOn); }
 static void HookAddRef(void* inOp) { static_cast<SocketOp*>(inOp)->AddRef(); }
 static void HookRelease(void* inOp) { static_cast<SocketOp*>(inOp)->Release(); }
 static void HookKill(void* inOp) { static_cast<SocketOp*>(inOp)->Kill(true); }

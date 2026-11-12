@@ -7164,3 +7164,57 @@ Branch `rust-won-net3`. As before, nothing in the game reaches this code except 
   lines, which have no golden on rust; USCK found no difference; the test-profile build 0/0). The Rust gate's
   timer test `timers_under_a_factor_fire_at_the_scaled_rate_until_stopped` failed once under load and passed
   alone. Not run: any harness session, macOS or Linux builds.
+
+## R6: WON's socket classes and IPAddr as Rust objects (ee_won sockobj.rs, sockop.rs, qsock.rs, ipobj.rs; branch rust-r6-won14, 2026-11-11)
+
+Round 14 of R6 (RUST_PLAN "R6 WON, the rest"), the third round of whole-class moves: the socket layer under the
+lobby's LAN game now keeps its state in Rust objects; the C++ classes are shims while C++ callers remain.
+
+- **Accessors first, again.** AsyncSocket, SocketOp and its ops, QueueSocket and LobbyLanSocket made their members
+  private and the compiler listed the sites; `build/w14/fix.py` rewrote them by (class, member) from the error's
+  class name, so the many other classes with an `mSocket`, `mDataCrit` or `mLengthFieldSize` of their own were left
+  alone. Header-inline code reports its errors with the header's path (the script's pattern took only `src/` paths:
+  those few were edited by hand), and a derived op of the same family (RecvMsgOp, SendMsgOp) is the base's
+  `friend` rather than growing accessors for every buffer. Files touched outside the lane (mechanical, accessor
+  calls only): EEWonNet.cpp; WONMisc DetectFirewallOp, HTTPGetOp; WONRouting RoutingConnection,
+  SmartRoutingConnection(+Commands, +Snapshots); WONServer ServerConnection, ServerContext (IPAddr's conversions);
+  the lobby's InitLogic, LanLogic, RoutingLogic, EELobbyFileTransfer; WONSocket's own units.
+- **What moved.** `EeWonAsyncSocket` (sockobj.rs): the socket's core, length field size, message transforms (the
+  C++ `MsgTransform` objects, owned) and the socket thread's close callback, and every step of AsyncSocket.cpp,
+  under the C++ `mDataCrit`'s mutex (the subclasses lock it around their own state too, so the C++ keeps the
+  `CriticalSection` and the object borrows its mutex). `EeWonSocketOp` (sockop.rs): every socket op's base (its
+  socket and the reference, the thread flag, the wait flags and event indices) and `RunHook`; RecvCRMsgOp's line.
+  `EeWonQueueSocket` (qsock.rs): the queue, the queued and repeat ops, the four completions and the close timer
+  (a reference each, dropped under the lock where a C++ `SmartPtr` assignment dropped it), the queued-close flag and
+  every step of QueueSocket.cpp; the ops and completions it makes (`ParamCompletion`, `QueueOpFastCompletion`,
+  `QueueCloseOp`, `CloseOp`, the timer) come from C++ hooks. `EeWonLanSocket`: LobbyLanSocket's client (a
+  reference) and time, and `SetClient`'s two-way link. `EeWonIpAddr` (ipobj.rs): IPAddr's value; the C++ class is a
+  handle whose copy constructor clones, assignment copies and destructor frees the value (every copy site copies the
+  whole value, as the original's implicit copy did); `mLocalHost` is Rust's. BlockingSocket has no state (each call
+  makes one op and runs it blocking): nothing to move. Deleted C ABI: `ee_won_socket_init` .. `_set_nagling` (all
+  but start / stop), `ee_won_op_send_all`, `ee_won_op_recv_line`, and the IPAddr helpers the C++ called.
+- **Goldens, recorded first.** `won_sockobj_test` (new, `xbuild wontest`): 319 lines over 127.0.0.1, recorded over
+  the C++ classes before each move (the IPAddr part before IPAddr's): AsyncSocket's steps and hooks, the
+  transforms' order and refusals, the ops blocking and async, each op's Duplicate, QueueSocket's queue, repeat op,
+  QueueOpFast, queued close, close timer and hooks, and IPAddr's parses, texts, wire form, order, copies and local
+  host. The same over the Rust objects, run after run. Driver traps: MSVC's ABI evaluates `"x" + St(op->Run()) +
+  St(op->GetStatus())` right to left (the status was read before the run: `LOG2` evaluates the call first); a
+  socket op's repeat copy is queued in the op container, not started, until the next pump (pump before changing
+  the socket under it, or two ops race to fail); a datagram longer than the buffer is the system's (WSAEMSGSIZE on
+  Windows, cut on POSIX) and the setsockopt error of a closed socket too (`WSAENOTSOCK` / `EBADF`): left out so the
+  golden holds on every system; an op with no socket is not run (RunHook finishes it and starts it anyway: every
+  start reads the socket). LobbyLanSocket needs the lobby's headers and units, so only the LAN game runs it.
+- **Found: an unset sockaddr.** `IPAddr(const std::string&)` on a text without a colon set only the remember flag
+  and the validity: the sockaddr was whatever the stack held (the C++ golden line showed the previous temporary's
+  10.1.2.3:8080, the same run after run). The Rust value starts at zero; that one golden line was re-recorded.
+- **Behaviour changes.** That address is 0.0.0.0:0; RecvCRMsgOp on a socket-less op returns
+  `WS_AsyncSocket_InvalidSocket` instead of reading a null socket; LobbyLanSocket's last message time starts at 0
+  (the original left it unset); every IPAddr is a small heap value (a copy allocates). Nothing else: the same
+  locks, threads and order.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game
+  (`lan_game.py`) is the end-to-end check, and it runs every moved class: the lobby start-up (IPAddr's local
+  address, the adapters), LanLogic's discovery socket (a datagram QueueSocket: RecvBytesFromOp as the repeat op,
+  SendBytesToOp broadcasts, IPAddr from the sender), the host's listening LobbyLanSocket (AcceptOp as the repeat op,
+  the accepted socket's Duplicate, SetClient), the joiner's ConnectOp, the game room's messages (RecvMsgOp repeat
+  ops and SendMsgOp queued ops with the 2-byte length field, through the socket thread and the op container), the
+  close timers and queued closes at the start, and the sockets' destruction.

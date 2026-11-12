@@ -162,7 +162,7 @@ void UDPManagerRecvOp::RecvCallback(RecvBytesFromOp* inOp)
 {
     if (this->GetStatus() != WS_Pending)
         return;
-    if (this->mAddress.IsValid() && inOp->mFromAddress != this->mAddress) {
+    if (this->mAddress.IsValid() && inOp->GetAddr() != this->mAddress) {
         this->QueueRecv();
         return;
     }
@@ -344,8 +344,8 @@ void UDPManager::RecvCallback(RecvBytesFromOp* inOp)
     const ByteBuffer* aBuffer = inOp->GetBytes().get();
     ReadBuffer aMessage(aBuffer->data(), aBuffer->length());
     if (!this->mOpMap.empty()) {
-        OpMap::iterator aMapItr = this->mOpMap.lower_bound(inOp->mFromAddress);
-        while (aMapItr != this->mOpMap.end() && !(aMapItr->first != inOp->mFromAddress)) {
+        OpMap::iterator aMapItr = this->mOpMap.lower_bound(inOp->GetAddr());
+        while (aMapItr != this->mOpMap.end() && !(aMapItr->first != inOp->GetAddr())) {
             UDPManagerRecvOp* anOp = aMapItr->second.get();
             if (anOp->GetStatus() != WS_Pending) {
                 this->Erase(aMapItr++);
@@ -380,7 +380,7 @@ void UDPManager::RecvCallback(RecvBytesFromOp* inOp)
                 aMessage.Rewind();
                 WONStatus aStatus = anOp->CheckMessage(aMessage);
                 if (aStatus != WS_None) {
-                    anOp->mAddress = inOp->mFromAddress;
+                    anOp->mAddress = inOp->GetAddr();
                     anOp->SetMsg(aBuffer);
                     anOp->Finish(aStatus);
                     this->Erase(aListItr);

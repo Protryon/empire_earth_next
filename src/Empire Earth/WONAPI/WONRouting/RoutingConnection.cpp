@@ -14,7 +14,7 @@ namespace WONAPI {
 // Creates a routing connection with 2-byte length fields that treats every derived-server message as unsolicited
 RoutingConnection::RoutingConnection()
 {
-    this->mLengthFieldSize = 2;
+    this->SetLengthFieldSize(2);
     this->mAllDerivedOpsAreUnsolicited = true;
 }
 
@@ -60,7 +60,7 @@ void RoutingConnection::CalcCompletion(RoutingOp* inOp)
 // Adds an op (with its completion resolved) to the list waiting for replies
 void RoutingConnection::AddOp(RoutingOp* inOp)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataCrit());
     this->CalcCompletion(inOp);
     this->mOpList.push_back(inOp);
 }
@@ -352,7 +352,7 @@ namespace WONAPI {
 // Dispatches an incoming routing message to the first pending or unsolicited op that accepts it and completes that op
 void RoutingConnection::MsgCallback(const ByteBuffer* inData)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataCrit());
     SmartPtr<RoutingOp> op;
     RoutingOpList::iterator itr;
     bool unsolicited = false;

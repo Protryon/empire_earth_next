@@ -571,12 +571,12 @@ public:
     {
         WONStatus aStatus = this->mNext < this->mScript.size() ? this->mScript[this->mNext++] : WS_Success;
         sPumped.push_back(this->mName + " Continue -> " + std::to_string(aStatus) + " in thread " +
-                          std::to_string(this->mInSocketThread ? 1 : 0));
+                          std::to_string(this->IsInSocketThread() ? 1 : 0));
         if (this->mFinishInContinue)
             this->Finish(WS_Killed);
         return aStatus;
     }
-    virtual void CleanupHook() { Log(this->mName + " CleanupHook in thread " + std::to_string(this->mInSocketThread ? 1 : 0)); }
+    virtual void CleanupHook() { Log(this->mName + " CleanupHook in thread " + std::to_string(this->IsInSocketThread() ? 1 : 0)); }
     std::string mName;
     std::vector<WONStatus> mScript;
     size_t mNext;
@@ -594,7 +594,7 @@ static void FlushPumped(const char* inStep)
 static std::string SockState(ScriptOp* inOp)
 {
     return inOp->mName + " status " + std::to_string(inOp->GetStatus()) + " refs " +
-           std::to_string(inOp->GetRefCount() - 1) + " in thread " + std::to_string(inOp->mInSocketThread ? 1 : 0) +
+           std::to_string(inOp->GetRefCount() - 1) + " in thread " + std::to_string(inOp->IsInSocketThread() ? 1 : 0) +
            " pending " + std::to_string(inOp->IsCompletionPending() ? 1 : 0) + " killed " +
            std::to_string(inOp->IsKilled() ? 1 : 0);
 }
