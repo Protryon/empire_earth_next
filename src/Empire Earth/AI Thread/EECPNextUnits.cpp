@@ -3102,10 +3102,7 @@ static int LuaConfig(lua_State* L)
 // charges), against the budget (ai.used's second value): a script's own profiling; it changes nothing
 static int LuaUsed(lua_State* L)
 {
-    EECPLuaState* s = EECPLuaState::From(L);
-    lua_pushinteger(L, (lua_Integer)s->LastInstructions());
-    lua_pushinteger(L, (lua_Integer)s->Budget());
-    return 2;
+    return ee_ai_lua_used_binding(L);   // ee_ai lua_host.rs
 }
 
 // ---------------------------------------------------------------------------------------------------------------

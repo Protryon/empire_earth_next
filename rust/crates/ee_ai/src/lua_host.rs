@@ -769,6 +769,14 @@ unsafe fn over_budget(h: *mut Host, l: *mut lua_State) {
     }
 }
 
+/// `ai.used()`: pushes the call's count so far and its budget -> 2. Safety: `l` is a state of this module, in a call.
+pub unsafe fn used_binding(l: *mut lua_State) -> c_int {
+    let h = host(l);
+    lua_pushinteger(l, (*h).used);
+    lua_pushinteger(l, (*h).config.budget);
+    2
+}
+
 /// A C function's cost in instruction equivalents (`EECPLuaState::Charge`): added to the call's count, which the
 /// budget bounds; over the budget it raises as the hook does. Safety: `l` is a state of this module, in a call.
 pub unsafe fn charge(l: *mut lua_State, amount: i64) {
@@ -1305,11 +1313,9 @@ mod tests {
         1
     }
 
+    // ai.used as the bindings register it (EECPNextUnits.cpp LuaUsed)
     unsafe extern "C-unwind" fn lua_used_now(l: *mut lua_State) -> c_int {
-        let h = host(l);
-        lua_pushinteger(l, used(h));
-        lua_pushinteger(l, budget(h));
-        2
+        used_binding(l)
     }
 
     unsafe extern "C" fn open_test(l: *mut c_void, _: *mut c_void) {

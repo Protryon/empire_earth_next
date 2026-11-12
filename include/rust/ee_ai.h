@@ -516,6 +516,10 @@ void *ee_ai_lua_owner(void *state);
 void ee_ai_lua_charge(void *state,
                       int64_t amount);
 
+/// The binding `ai.used()` -> this call's instructions and charges so far, and the call's budget (a script's own
+/// profiling; it changes nothing). Safety: `state` is a host's, inside one of its calls.
+int ee_ai_lua_used_binding(void *state);
+
 /// `LoadPersonality` (`reload` false: `module`) / `Reload` (true).
 bool ee_ai_lua_load(void *host, const char *module, bool reload);
 

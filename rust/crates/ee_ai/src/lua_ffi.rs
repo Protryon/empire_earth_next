@@ -195,6 +195,13 @@ pub unsafe extern "C-unwind" fn ee_ai_lua_charge(state: *mut c_void, amount: i64
     lua_host::charge(state as *mut lua_State, amount)
 }
 
+/// The binding `ai.used()` -> this call's instructions and charges so far, and the call's budget (a script's own
+/// profiling; it changes nothing). Safety: `state` is a host's, inside one of its calls.
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_lua_used_binding(state: *mut c_void) -> std::ffi::c_int {
+    lua_host::used_binding(state as *mut lua_State)
+}
+
 /// `LoadPersonality` (`reload` false: `module`) / `Reload` (true).
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_lua_load(host: *mut c_void, module: *const c_char, reload: bool) -> bool {
