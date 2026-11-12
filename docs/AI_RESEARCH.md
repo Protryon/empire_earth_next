@@ -3881,6 +3881,32 @@ On seeds 34-65, B1 had 8 defeats against A0's 5 (14 against 11 of 64).
   `guard_refuge`).
 - The waves are an army-size problem: the guard engages them when it has the soldiers.
 
+**The Bronze save (2026-11-12).** On boom_order (base, the m14 exe, 32 seeds against the improved classic), a
+per-minute trace of the save found 914 minutes of saving for Bronze in 22 games:
+- **Iron** (1320 for Bronze) was short in 849 minutes, and the only resource short in 450. Food was short in 389 and
+  gold in 320. Stone is not in the cost.
+- **Iron income:** about 12 gatherers against the want of 18, bringing in about 65 iron a minute. The soldier orders
+  asked for about 41 of it. The slow saves had 6-10 iron gatherers and 33-52 iron a minute; the fast ones had 16-20
+  and 95-107.
+
+Two fixes:
+- boom-econ's walker to claimed sites nobody has seen (1fe7a900, always on in the order) brought the unexplored iron
+  mines into use, and its ECON.iron_push found nothing more to do (off).
+- Here, `plan.iron_lean`: from the Copper Age while saving, this percent of the iron infantry's share is trained as
+  ranged soldiers.
+
+| Variant (with the walker) | Seeds | Defeats | Copper | Bronze | Dark | Wave dead | Army under 10 |
+|---|---|---|---|---|---|---|---|
+| P0 base | 2-33 | 5 | 23, 52.9 | 15, 75.1 | 8 | 374 | 9% |
+| P2 `iron_lean` 50 | 2-33 | 5 | 23 | 17, 76.7 | 12 | 220 | 4% |
+| P12 + `iron_push` | 2-33 | 5 | 23 | 17, 76.7 | 12 | 218 | 4% |
+| P0 base | 34-65 | 3 | 26, 53.4 | 16, 79.9 | 11 | 573 | 5% |
+| P2 `iron_lean` 50 | 34-65 | 3 | 26 | 18, 81.4 | 11 | 720 | 7% |
+
+- **`iron_lean` 50 on 64 seeds:** Bronze in 35 games against 31 and Dark in 23 against 19, at the same 8 defeats. The
+  wave dead are equal (940 against 947).
+- **The save is no shorter** (about 60 minutes unpaid in both). What it waits on after the walker is not measured yet.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds

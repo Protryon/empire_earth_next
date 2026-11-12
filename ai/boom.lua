@@ -1443,6 +1443,8 @@ function M.step(view, memory)
         local iron_free = plan.iron_free and saving and (view.stock.iron < (view.next_epoch_cost.iron or 0)
             or view.stock.iron - (view.reserve.iron or 0) < 180)
         -- (plan.train_spare, AI_RESEARCH §8.50: no order the reserve leaves unaffordable; a scramble spends the reserve)
+        -- (plan.iron_lean, AI_RESEARCH §8.50: from the Copper Age while saving, this percent of the iron infantry's share
+        -- trained as ranged soldiers)
         local spare = nil
         if plan.train_spare and not scramble then
             spare = {}
@@ -1451,7 +1453,8 @@ function M.step(view, memory)
             end
         end
         GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2, iron_free,
-            spare)
+            spare,
+            plan.iron_lean ~= nil and saving and view.epoch >= 2 and plan.iron_lean or 0)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
