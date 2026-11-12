@@ -185,6 +185,15 @@ pub(crate) fn with_reads<R>(f: impl FnOnce(&mut Reads) -> R) -> R {
     f(&mut guard)
 }
 
+/// Counts one read: `Some(differs)` for a unit with a record (whether it differed from the members), `None` for one
+/// without.
+pub(crate) fn count_read(differs: Option<bool>) {
+    with_reads(|r| match differs {
+        Some(d) => r.mismatches += u32::from(d),
+        None => r.unrecorded += 1,
+    })
+}
+
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.
 ///

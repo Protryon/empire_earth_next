@@ -24,6 +24,8 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitTrigger.h"
 #include "ee/EEUnitAction.h"
+#include "ee/EEUnitGoal.h"
+#include "rust/ee_rust.h"
 
 extern FSPath* gDataPath;                   // 0x531908
 
@@ -453,70 +455,134 @@ EEUnitAction::EEUnitAction(long inAction)
 // SYNTHETIC: EXE 0x62b984
 // (the scalar deleting destructor, emitted with the vtable)
 
+// New (R5b.4 leaf 6): a trigger as the Rust decision's plain view (the conditions copied as 64-bit ids)
+static void TriggerView(EEUnitTrigger* inTrigger, const std::vector<int64_t>& inIDs, EeUnitsTrigger& outView)
+{
+    outView.conditions = inIDs.empty() ? NULL : &inIDs[0];
+    outView.count = (uint32_t)inIDs.size();
+    outView.all_of = inTrigger->mAllOf ? 1 : 0;
+    outView.any_of = inTrigger->mAnyOf ? 1 : 0;
+    outView.true_id = inTrigger->mTrueActionID;
+    outView.false_id = inTrigger->mFalseActionID;
+    outView.true_action = reinterpret_cast<uintptr_t>(inTrigger->mTrueAction);
+    outView.false_action = reinterpret_cast<uintptr_t>(inTrigger->mFalseAction);
+}
+
+// the host calls (ee_units ai.rs EeUnitsAIHost); the context is the unit
+static EEComplexUnit* AIUnit(void* inContext)
+{
+    return static_cast<EEComplexUnit*>(inContext);
+}
+
+static void AIMembers(void* inContext, EeUnitsAIState* outState)
+{
+    EEComplexUnit* theUnit = AIUnit(inContext);
+    outState->command = theUnit->mCommand != NULL ? (int64_t)theUnit->mCommand->mType : 0;
+    outState->next_trigger_time = (int64_t)theUnit->mNextTriggerTime.Get();
+    outState->goal_kind = theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
+}
+
+static uint64_t AICommand(void* inContext)
+{
+    return reinterpret_cast<uintptr_t>(AIUnit(inContext)->mCommand.Get());
+}
+
+static bool AIGatherInactive(void* inContext, uint32_t* outAction)
+{
+    EEComplexUnit* theUnit = AIUnit(inContext);
+    unsigned long theAction = 0;
+    if (theUnit->mGoalState == NULL || theUnit->mGoalState->IsActive(&theAction))
+        return false;
+    *outAction = (uint32_t)theAction;
+    return true;
+}
+
+// the trigger's conditions as 64-bit ids, valid until the next call (the Rust copies them at once; the physics
+// thread's only)
+static std::vector<int64_t> sTriggerIDs;
+
+static bool AITrigger(void* inContext, uint64_t inAction, uint32_t inIndex, EeUnitsTrigger* outTrigger)
+{
+    EEUnitAction* theAction = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inAction));
+    if (inIndex >= theAction->mTriggers.size())
+        return false;
+    EEUnitTrigger* theTrigger = theAction->mTriggers[inIndex];
+    sTriggerIDs.assign(theTrigger->mTriggers.begin(), theTrigger->mTriggers.end());
+    TriggerView(theTrigger, sTriggerIDs, *outTrigger);
+    return true;
+}
+
+static int64_t AICondition(void* inContext, int64_t inTrigger)
+{
+    EEComplexUnit* theUnit = AIUnit(inContext);
+    long theEvent = theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inTrigger);
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[2] = {(uint32_t)inTrigger, (uint32_t)theEvent};
+        EEUnitStateNote(kUnitStateCondition, theUnit->mUnitID, theWords, 2);
+    }
+    return theEvent;
+}
+
+static uint32_t AIActionType(void* inContext, uint64_t inAction)
+{
+    return (uint32_t)reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inAction))->mType;
+}
+
+static void AIStartAction(void* inContext, uint32_t inAction)
+{
+    EEComplexUnit* theUnit = AIUnit(inContext);
+    theUnit->StartAction(inAction);
+    theUnit->GetUnitClass()->ActionChanged(theUnit);
+}
+
+static void AIDropFinishedGoals(void* inContext)
+{
+    AIUnit(inContext)->DropFinishedGoals(false);
+}
+
+static void AISetCommand(void* inContext, uint64_t inAction, uint32_t inType)
+{
+    EEComplexUnit* theUnit = AIUnit(inContext);
+    theUnit->UpdateCamouflage(inType);
+    theUnit->mCommand = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inAction));
+    theUnit->GetUnitClass()->ActionChanged(theUnit);
+}
+
+static void AISetNextTriggerTime(void* inContext, uint32_t inValue)
+{
+    AIUnit(inContext)->mNextTriggerTime = (unsigned long)inValue;
+}
+
+void EEUnitAIHostFor(EEComplexUnit* inUnit, EeUnitsAIHost& outHost)
+{
+    outHost.ctx = inUnit;
+    outHost.members = AIMembers;
+    outHost.command = AICommand;
+    outHost.gather_inactive = AIGatherInactive;
+    outHost.trigger = AITrigger;
+    outHost.condition = AICondition;
+    outHost.action_type = AIActionType;
+    outHost.start_action = AIStartAction;
+    outHost.drop_finished_goals = AIDropFinishedGoals;
+    outHost.set_command = AISetCommand;
+    outHost.set_next_trigger_time = AISetNextTriggerTime;
+}
+
 // FUNCTION: EXE 0x62b9a0
 // Tests the trigger's events (all of or any of them) and picks its true or false action; returns 0 for no action,
 // else 1, or 2 if a goal answered an event
+// New (R5b.4 leaf 6): Rust (ee_units ai.rs evaluate_trigger), the class's EvaluateCondition a host call
 long EEUnitTrigger::Evaluate(EEComplexUnit* inUnit, EEUnitAction*& outAction)
 {
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    unsigned long theCount = this->mTriggers.size();
-    long theResult = 0;
-    long theStatus = 0;
-    unsigned long i;
-    if (this->mAllOf) {
-        for (i = 0; i < theCount; i++) {
-            long theTrigger = this->mTriggers[i];
-            long theEvent = theClass->EvaluateCondition(inUnit, theTrigger);
-            if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-                uint32_t theWords[2] = {(uint32_t)theTrigger, (uint32_t)theEvent};
-                EEUnitStateNote(kUnitStateCondition, inUnit->mUnitID, theWords, 2);
-            }
-            if (theEvent == 0)
-                break;
-            if (theEvent == 2)
-                theStatus = 2;
-        }
-        if (i == theCount) {
-            if (this->mTrueActionID != 0) {
-                outAction = this->mTrueAction;
-                theResult = theStatus == 0 ? 1 : theStatus;
-
-
-            }
-        } else if (this->mFalseActionID != 0) {
-            outAction = this->mFalseAction;
-            theResult = theStatus == 0 ? 1 : theStatus;
-
-
-        }
-    } else if (this->mAnyOf) {
-        for (i = 0; i < theCount; i++) {
-            long theTrigger = this->mTriggers[i];
-            long theEvent = theClass->EvaluateCondition(inUnit, theTrigger);
-            if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-                uint32_t theWords[2] = {(uint32_t)theTrigger, (uint32_t)theEvent};
-                EEUnitStateNote(kUnitStateCondition, inUnit->mUnitID, theWords, 2);
-            }
-            if (theEvent == 0)
-                continue;
-            if (theEvent == 2)
-                theStatus = 2;
-            break;
-        }
-        if (i < theCount) {
-            if (this->mTrueActionID != 0) {
-                outAction = this->mTrueAction;
-                theResult = theStatus == 0 ? 1 : theStatus;
-
-
-            }
-        } else if (this->mFalseActionID != 0) {
-            outAction = this->mFalseAction;
-            theResult = theStatus == 0 ? 1 : theStatus;
-
-
-        }
-    }
+    EeUnitsAIHost theHost;
+    EEUnitAIHostFor(inUnit, theHost);
+    std::vector<int64_t> theIDs(this->mTriggers.begin(), this->mTriggers.end());
+    EeUnitsTrigger theView;
+    TriggerView(this, theIDs, theView);
+    uint64_t theAction = 0;
+    long theResult = (long)ee_units_trigger_evaluate(&theHost, &theView, &theAction);
+    if (theResult != 0)
+        outAction = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(theAction));
     return theResult;
 }
 
@@ -947,11 +1013,15 @@ void EEUnitTrigger::AddTrigger(long inTrigger)
 
 // FUNCTION: EXE 0x62cd8b
 // Evaluates the action's triggers in order; returns the first non-zero result and its next action
+// New (R5b.4 leaf 6): Rust (ee_units ai.rs evaluate_action), the triggers read through the host
 long EEUnitAction::Evaluate(EEComplexUnit* inUnit, EEUnitAction*& outAction)
 {
-    long theResult = 0;
-    for (std::vector<EEUnitTrigger*>::iterator it = this->mTriggers.begin(); it != this->mTriggers.end() && theResult == 0; ++it)
-        theResult = (*it)->Evaluate(inUnit, outAction);
+    EeUnitsAIHost theHost;
+    EEUnitAIHostFor(inUnit, theHost);
+    uint64_t theAction = 0;
+    long theResult = (long)ee_units_action_evaluate(&theHost, reinterpret_cast<uintptr_t>(this), &theAction);
+    if (theResult != 0)
+        outAction = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(theAction));
     return theResult;
 }
 

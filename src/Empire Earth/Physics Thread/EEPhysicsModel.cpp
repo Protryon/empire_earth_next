@@ -36,6 +36,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUnitBehavior.h"
+#include "rust/ee_rust.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -845,27 +846,15 @@ static uint32_t PMBits(float inValue)
     return theBits;
 }
 
-// FUNCTION: EXE 0x556213
-// Applies the collision push to the unit (times the collision period, capped at its speed) onto a tile it
-// can stand on, puts it on the ground, and starts or stops an idle unit's shuffle animation
-// NEAR: x87 scheduling of the sign/abs/limit block (as Helicopter V0C), the frame layout and the flag threading
-void EEPhysicsModel::Move(EEComplexUnit* inUnit)
+// TEST ONLY (USST): the original's push statements (0x556213, the scale to the new point) over the same values
+static void CheckPush(EEComplexUnit* inUnit, const EeUnitsPushIn& inIn, const EeUnitsPush& inPush, float inLimit)
 {
-    EETileCoordinate theTile(0, 0);
-    float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
-    bool theStopped = false;
-    float theMaxVelocity = inUnit->GetMaxVelocity();
-    float theSpeed = max(theMaxVelocity, theLimit);
-    float theTicks = (float) gCollisionPeriod;
-    float theDX = inUnit->mPushVelocityX;
+    float theSpeed = max(inIn.max_velocity, inLimit);
+    float theTicks = (float)inIn.period;
+    float theDX = inIn.push_x;
     theDX *= theTicks;
-    float theDY = inUnit->mPushVelocityY;
+    float theDY = inIn.push_y;
     theDY *= theTicks;
-    // TEST ONLY (USST): the push arithmetic's inputs and outputs
-    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX.Get()), PMBits(inUnit->mPushVelocityY.Get()),
-                             (uint32_t)gCollisionPeriod, PMBits(theMaxVelocity), PMBits(gPhysics->GetTickSeconds()),
-                             PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
-                             PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
     float theSignX;
     if (theDX > 0.0f)
         theSignX = 1.0f;
@@ -884,7 +873,9 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
         theDY = 0.0f;
         theDX = 0.0f;
     }
-    if (theDX != 0.0f || theDY != 0.0f) {
+    bool theMoving = theDX != 0.0f || theDY != 0.0f;
+    float theX = 0.0f, theY = 0.0f;
+    if (theMoving) {
         if (theDX > theSpeed || theDY > theSpeed) {
             if (theDX > theDY) {
                 theDY = theSpeed / theDX * theDY;
@@ -894,13 +885,53 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
                 theDY = theSpeed;
             }
         }
-        float theX = gPhysics->GetTickSeconds() * theSignX * theDX;
-        theX += inUnit->mPhysicalModel.GetLocation().GetX();
-        float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
-        theY += inUnit->mPhysicalModel.GetLocation().GetY();
+        theX = inIn.tick_seconds * theSignX * theDX;
+        theX += inIn.loc_x;
+        theY = inIn.tick_seconds * theSignY * theDY;
+        theY += inIn.loc_y;
+    }
+    bool theFar = theMoving && theDY + theDX > kPMMoveDistance;
+    if (theMoving != (inPush.moving != 0) || theFar != (inPush.past_move != 0) || PMBits(theDX) != PMBits(inPush.dx)
+        || PMBits(theDY) != PMBits(inPush.dy) || PMBits(theX) != PMBits(inPush.x) || PMBits(theY) != PMBits(inPush.y))
+        EEUnitStepDiffers("EEPhysicsModel::Move (the push's bits)", inUnit->mUnitID, (long)PMBits(inPush.x), (long)PMBits(theX));
+}
+
+// FUNCTION: EXE 0x556213
+// Applies the collision push to the unit (times the collision period, capped at its speed) onto a tile it
+// can stand on, puts it on the ground, and starts or stops an idle unit's shuffle animation
+// NEAR: x87 scheduling of the sign/abs/limit block (as Helicopter V0C), the frame layout and the flag threading
+void EEPhysicsModel::Move(EEComplexUnit* inUnit)
+{
+    EETileCoordinate theTile(0, 0);
+    float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
+    bool theStopped = false;
+    float theMaxVelocity = inUnit->GetMaxVelocity();
+    // New (R5b.4 leaf 6): the push's arithmetic up to the new point is Rust over the unit store (ee_units motion.rs push;
+    // the same f32 operations in order). TEST ONLY: while the capture runs, the original's statements check it (USST)
+    EeUnitsPushIn theIn;
+    theIn.push_x = inUnit->mPushVelocityX;
+    theIn.push_y = inUnit->mPushVelocityY;
+    theIn.loc_x = inUnit->mPhysicalModel.GetLocation().GetX();
+    theIn.loc_y = inUnit->mPhysicalModel.GetLocation().GetY();
+    theIn.period = (uint32_t)gCollisionPeriod;
+    theIn.max_velocity = theMaxVelocity;
+    theIn.tick_seconds = gPhysics->GetTickSeconds();
+    EeUnitsPush thePush = ee_units_step_push(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), &theIn);
+    if (EEUnitStepNoting())   // TEST ONLY (USST): the original's statements over the same values
+        CheckPush(inUnit, theIn, thePush, theLimit);
+    float theDX = thePush.dx;
+    float theDY = thePush.dy;
+    // TEST ONLY (USST): the push arithmetic's inputs and outputs
+    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX.Get()), PMBits(inUnit->mPushVelocityY.Get()),
+                             (uint32_t)gCollisionPeriod, PMBits(theMaxVelocity), PMBits(gPhysics->GetTickSeconds()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
+    if (thePush.moving != 0) {
+        float theX = thePush.x;
+        float theY = thePush.y;
         if (EEUnitStepNoting()) {   // TEST ONLY (USST)
             theWords[7] = 1;
-            theWords[8] = theDY + theDX > kPMMoveDistance ? 1u : 0u;
+            theWords[8] = thePush.past_move;
             theWords[9] = PMBits(theDX);
             theWords[10] = PMBits(theDY);
             theWords[11] = PMBits(theX);
@@ -946,7 +977,7 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
                 EEPhysicsTrace("Collision: Turning Unit %08x angular velocity set to %f\n", inUnit->GetUnitID(), GEOrientation(0.0f, 0.0f, 0.0f));
             }
             if (inUnit->mCurrentPhysicsAction != 5 && inUnit->mCurrentPhysicsAction != 0) {
-                if (theDY + theDX > kPMMoveDistance) {
+                if (thePush.past_move != 0) {
                     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle
                         && (inUnit->mAnimation == 0 || inUnit->mAnimation == 7 || inUnit->mAnimation == 8)) {
                         inUnit->SetAnimation(0xd, -1, 1);
@@ -1009,20 +1040,27 @@ bool EEComplexUnit::HasSwimAnimation()
 void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
 {
     if (inUnit->GetRoll() != 0.0f) {
-        float theRollBefore = inUnit->GetRoll();   // TEST ONLY (USST)
-        float theRoll;
-        if (inUnit->GetRoll() > 0.0f) {
-            theRoll = inUnit->GetRoll();
-            theRoll -= gPhysics->mTickSeconds * 0.5f;
-            if (theRoll <= 0.0f)
-                theRoll = 0.0f;
-        } else {
-            theRoll = gPhysics->mTickSeconds * 0.5f + inUnit->GetRoll();
-            if (theRoll >= 0.0f)
-                theRoll = 0.0f;
-        }
+        // New (R5b.4 leaf 6): the decay is Rust over the unit store (ee_units motion.rs roll_decay). TEST ONLY: while the
+        // capture runs, the original's statements check it (USST)
+        float theRollBefore = inUnit->GetRoll();
+        float theRoll = ee_units_step_roll(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
+                                           theRollBefore, gPhysics->mTickSeconds);
         inUnit->mRoll = theRoll;
         if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+            float theOriginal;
+            if (theRollBefore > 0.0f) {
+                theOriginal = theRollBefore;
+                theOriginal -= gPhysics->mTickSeconds * 0.5f;
+                if (theOriginal <= 0.0f)
+                    theOriginal = 0.0f;
+            } else {
+                theOriginal = gPhysics->mTickSeconds * 0.5f + theRollBefore;
+                if (theOriginal >= 0.0f)
+                    theOriginal = 0.0f;
+            }
+            if (PMBits(theOriginal) != PMBits(theRoll))
+                EEUnitStepDiffers("EEPhysicsModel::AfterStep (the roll's bits)", inUnit->mUnitID, (long)PMBits(theRoll),
+                                  (long)PMBits(theOriginal));
             uint32_t theWords[3] = {PMBits(theRollBefore), PMBits(gPhysics->mTickSeconds), PMBits(inUnit->mRoll.Get())};
             EEUnitStateNote(kUnitStateRoll, inUnit->mUnitID, theWords, 3);
         }

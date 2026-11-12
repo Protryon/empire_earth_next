@@ -4178,63 +4178,24 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 // FUNCTION: EXE 0x5ff2e8
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
 // evaluating 350 ticks after it went idle until its trigger time is reset
+// New (R5b.4 leaf 6): Rust over the unit store (ee_units ai.rs ai_step), the goal's activity, the actions' starts and
+// changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    unsigned long theAction;
-    EEUnitAction* theCommand;
     bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
     uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime.Get(),
                             (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
-    if (this->mIsCitizen && this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather && !this->mGoalState->IsActive(&theAction)) {
-        this->StartAction(theAction);
-        this->GetUnitClass()->ActionChanged(this);
-        if (theNoting) {
-            theWords[3] = 1;
-            theWords[4] = (uint32_t)theAction;
-            NoteAIStep(this, theWords);
-        }
-        return;
-    }
-    if (this->mCommand == NULL) {
-        if (theNoting) {
-            theWords[3] = 2;
-            NoteAIStep(this, theWords);
-        }
-        return;
-    }
-    if (this->mCommand->mType == kActionIdle && this->mNextTriggerTime < gPhysics->mGameTime) {
-        if (theNoting) {
-            theWords[3] = 3;
-            NoteAIStep(this, theWords);
-        }
-        return;
-    }
-    theWords[3] = 4;
-    long theResult = this->mCommand->Evaluate(this, theCommand);
-    theWords[5] = (uint32_t)theResult;
-    if (theResult != 0) {
-        if (theResult == 2) {
-            this->DropFinishedGoals(false);
-            if (this->mGoalState != NULL) {
-                theCommand = NULL;
-                theResult = this->mCommand->Evaluate(this, theCommand);
-                theWords[6] = (uint32_t)theResult;
-            } else {
-                this->StartAction(kActionIdle);
-                this->GetUnitClass()->ActionChanged(this);
-                theResult = 0;
-            }
-        }
-        if (theResult == 1) {
-            this->UpdateCamouflage(theCommand->mType);
-            this->mCommand = theCommand;
-            this->GetUnitClass()->ActionChanged(this);
-        }
-    }
-    if ((this->mCommand ? this->mCommand->mType : 0) == kActionIdle)
-        this->mNextTriggerTime = gPhysics->mGameTime + 350;
-    if (theNoting)
+    EeUnitsAIHost theHost;
+    EEUnitAIHostFor(this, theHost);
+    EeUnitsAIStepOut theOut = ee_units_ai_step(&theHost, static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                               this->mIsCitizen ? 1 : 0, gPhysics->mGameTime);
+    if (theNoting) {
+        theWords[3] = theOut.path;
+        theWords[4] = theOut.action;
+        theWords[5] = theOut.first;
+        theWords[6] = theOut.second;
         NoteAIStep(this, theWords);
+    }
 }
 
 // FUNCTION: EXE 0x5ff400
