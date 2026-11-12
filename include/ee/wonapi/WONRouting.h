@@ -2012,6 +2012,9 @@ public:
     PeerAuthServerOp(AuthContext*,BlockingSocket*); //2e8950, 230 bytes, RET8
     // Typed field view for the game's use; access and names inferred.
     IPAddr mConnectAddr; //94..bc, default IPAddr (0x28) constructed at 2b2350
+    // the client's certificate after the handshake (LanLogic's read); mPeerAuthServer goes private once
+    // LanLogic calls this (the lobby lane)
+    const AuthCertificateBase* GetClientCertificate() { return this->mPeerAuthServer.GetClientCertificate(); }
     PeerAuthServer mPeerAuthServer; //bc..2240; clientCertificate2230/session2234/state223c
 };
 
