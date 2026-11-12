@@ -47,7 +47,12 @@ enum EEUnitStoreFieldID {
     kUnitFieldRottingAwayTime = 28,     // EEComplexUnit::mRottingAwayTime
     kUnitFieldPower = 29,               // EEComplexUnit::mPower
     kUnitFieldPowerRegenTimer = 30,     // EEComplexUnit::mPowerRegenTimer
-    kUnitFieldCamouflageTimer = 31      // EEComplexUnit::mCamouflageTimer
+    kUnitFieldCamouflageTimer = 31,     // EEComplexUnit::mCamouflageTimer
+    // the velocities the physics models' arithmetic reads (R5b.4 leaf 6; float bits; ee_units step.rs)
+    kUnitFieldVelocity = 32,            // EEComplexUnit::mVelocity
+    kUnitFieldPushVelocityX = 33,       // EEComplexUnit::mPushVelocityX
+    kUnitFieldPushVelocityY = 34,       // EEComplexUnit::mPushVelocityY
+    kUnitFieldRoll = 35                 // EEComplexUnit::mRoll
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
@@ -148,10 +153,36 @@ enum EEUnitStepKind {
     kUnitStepReload = 1,        // EEComplexUnit::UpdateReloadTimer
     kUnitStepTargetSearch = 2,  // EEComplexUnit::UpdateTargetSearchTimer
     kUnitStepHealSearch = 3,    // EEComplexUnit::UpdateHealSearchTimer
-    kUnitStepPower = 4          // EEUnitClass::RegeneratePower
+    kUnitStepPower = 4,         // EEUnitClass::RegeneratePower
+    // the eleventh round's: rotting [time, tick ms, time after]; resources rotting [time, amount, tick ms, time after,
+    // amount after]; camouflage timers [timer, second timer (mU32C), no vital building, tick ms, then each event of
+    // the decision in order (ee_units step.rs EE_UNITS_CAMO_*: a mini map move with 0x100 when it was made, a value
+    // write followed by the value), timer after, second timer after] (noted only when a timer runs); cloak fade
+    // [opacity, cloaked, tick time, capitol pulse, game time, opacity after] (float bits)
+    kUnitStepRotting = 5,       // EEComplexUnit::UpdateRottingAwayTime (the classes' kActionUnitRotting countdowns)
+    kUnitStepResourcesRotting = 6,   // EEComplexUnit::UpdateResourcesRotting (kActionResourcesRotting)
+    kUnitStepCamouflage = 7,    // EEUnitClass::UpdateCamouflageTimer's timers
+    kUnitStepCloakFade = 8      // EEUnitClass::UpdateCamouflageTimer's cloak opacity
 };
 void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
 void EEUnitStepCommit();
+// TEST ONLY: whether the step's records are noted (the capture runs)
+bool EEUnitStepNoting();
+// TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): EEUnitStateNote adds one call
+// (its kind, the unit's id, its words) to the tick's second digest, written by EEUnitStepCommit as a USST record (the
+// tick, the calls, their FNV-1a). Words: AIStep [command type, next trigger time, game time, path (1 the gather goal
+// restarted its action, 2 no command, 3 an idle unit waiting, 4 evaluated), the gather's action, the first and the
+// second evaluation's results (0xffffffff: none), command type after, next trigger time after]; a trigger's
+// condition [trigger id, the class's answer]; the roll's decay [roll, tick seconds, roll after]; the collision push
+// [push x, push y, collision period, maximum velocity, tick seconds, location x, y, moving, past the move distance, dx,
+// dy, x, y] (floats as bits)
+enum EEUnitStateKind {
+    kUnitStateAIStep = 1,       // EEComplexUnit::AIStep
+    kUnitStateCondition = 2,    // EEUnitTrigger::Evaluate's EvaluateCondition calls
+    kUnitStateRoll = 3,         // EEPhysicsModel::AfterStep's roll decay
+    kUnitStatePush = 4          // EEPhysicsModel::Move's push arithmetic
+};
+void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
 // TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
 // the unit and exits 3 (the capture's USTM gate; the leaves compare only while the capture runs)
 void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal);

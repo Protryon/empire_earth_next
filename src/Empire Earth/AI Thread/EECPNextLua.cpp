@@ -129,11 +129,6 @@ std::string EECPNextClassName(long inClass)
     return EECPNextNameOf(EECPNextNamesOf("dbobjects"), inClass);
 }
 
-std::string EECPNextTechName(long inTech)
-{
-    return EECPNextNameOf(EECPNextNamesOf("dbtechtree"), inTech);
-}
-
 static const char* EECPNextEventKindName(long inKind)
 {
     switch (inKind) {

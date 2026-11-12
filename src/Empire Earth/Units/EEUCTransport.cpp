@@ -613,10 +613,7 @@ void EEUCTransport::Update(EEComplexUnit* inUnit)
     this->Animate(inUnit);
     this->RefreshSound(inUnit);
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
     }
     if (inUnit->mStats != NULL && inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);

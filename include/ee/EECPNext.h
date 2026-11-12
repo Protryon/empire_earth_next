@@ -527,7 +527,6 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 long EECPNextClassByName(const std::string& inName);
 long EECPNextTechByName(const std::string& inName);
 std::string EECPNextClassName(long inClass);
-std::string EECPNextTechName(long inTech);
 // the save (EEPPlayerHelper, from version 0.252): the state that must survive as bytes, and back. Load creates the
 // state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);

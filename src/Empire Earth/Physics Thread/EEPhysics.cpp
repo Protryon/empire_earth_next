@@ -1287,21 +1287,45 @@ EEMExitShiftMode::EEMExitShiftMode(long inGameTime)
 // FUNCTION: EXE 0x55401e
 // Sets the collision period (the active units spread over gCollisionDetectionUnit ticks, at least 1), updates
 // every player, then steps each active unit (last first); returns the unit count
+// New (R5b.4 leaf 6): the loop is Rust over the stepped units' list (ee_units tick.rs update_units: the period, the
+// players' updates and each unit's Step from the last to the first, host calls); the list equals the deque in order
+// (USCK checks it), and while the capture runs each step checks the list's id against the deque's
+static void TickSetCollisionPeriod(void* inContext, uint32_t inValue)
+{
+    gCollisionPeriod = inValue;
+}
+
+static void TickUpdatePlayer(void* inContext, uint32_t inIndex)
+{
+    if (gWorld.mPlayers[inIndex] != NULL)
+        gWorld.mPlayers[inIndex]->UpdatePlayer();
+}
+
+static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
+{
+    if (EEUnitStepNoting() && (inIndex >= gWorld.mUpdateUnits.size() || gWorld.mUpdateUnits[inIndex].GetSavedID() != inID))
+        EEUnitStepDiffers("UpdateUnits (the stepped unit's id)", inID, (long)inIndex,
+                          inIndex < gWorld.mUpdateUnits.size() ? (long)gWorld.mUpdateUnits[inIndex].GetSavedID() : -1);
+    gPhysicsSteppingUnit = gWorld.mUpdateUnits[inIndex];   // TEST ONLY: named by EE-SIM's random-draw trace
+    gWorld.mUpdateUnits[inIndex]->Step();
+}
+
 unsigned long EEPhysics::UpdateUnits()
 {
-    unsigned long theCount = gWorld.mUpdateUnits.size();
-    unsigned long theNumPlayers = gWorld.mNumPlayers;
-    gCollisionPeriod = UMCeilUnsigned((float)theCount / gCollisionDetectionUnit);
-    if (gCollisionPeriod == 0)
-        gCollisionPeriod = 1;
-    for (unsigned long i = 0; i < theNumPlayers; i++) {
-        if (gWorld.mPlayers[i] != NULL)
-            gWorld.mPlayers[i]->UpdatePlayer();
+    if ((size_t)ee_units_order_count() != gWorld.mUpdateUnits.size()) {
+        if (EEUnitStepNoting())   // TEST ONLY: never seen (USCK compares the two at every check)
+            EEUnitStepDiffers("UpdateUnits (the stepped units' count)", 0, (long)ee_units_order_count(),
+                              (long)gWorld.mUpdateUnits.size());
+        EEUnitOrderReset();   // a played game's safety net: the steps index the deque by the list's count
     }
-    for (long j = gWorld.mUpdateUnits.size() - 1; j >= 0; j--) {
-        gPhysicsSteppingUnit = gWorld.mUpdateUnits[j];   // TEST ONLY: named by EE-SIM's random-draw trace
-        gWorld.mUpdateUnits[j]->Step();
-    }
+    EeUnitsTickHost theHost;
+    theHost.ctx = NULL;
+    theHost.num_players = (uint32_t)gWorld.mNumPlayers;
+    theHost.detection_unit = (uint32_t)gCollisionDetectionUnit;
+    theHost.set_collision_period = TickSetCollisionPeriod;
+    theHost.update_player = TickUpdatePlayer;
+    theHost.step = TickStep;
+    unsigned long theCount = ee_units_update_units(&theHost);
     gPhysicsSteppingUnit = NULL;
     EEUnitStepCommit();   // TEST ONLY: the step leaves' record (USTM, ee/EEUnitStore.h)
     return theCount;

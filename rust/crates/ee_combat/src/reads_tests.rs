@@ -267,7 +267,7 @@ fn some_shots_hit_only_their_target() {
     let mut w = shot_world();
     w.intersecting = vec![OTHER];
     w.region = Some(vec![OTHER]);
-    for ty in [TYPE_FLAMING_ARROW, TYPE_PILUM, TYPE_CP_ICBM] {
+    for ty in [TYPE_FLAMING_ARROW, TYPE_PILUM, TYPE_ICBM] {
         w.units.get_mut(&SHOT).unwrap().unit_type = ty;
         assert_eq!(impact_unit(&mut w, SHOT), 0);
     }

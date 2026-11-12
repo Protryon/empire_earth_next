@@ -501,6 +501,9 @@ WON_TESTS = {
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
+    # WONDir's entity changes as whole ops (every op's request and status replies), the original's statements
+    # against the Rust ops (ee_won dirchange.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_dirop.txt)
+    "won_dirop_test": [],
     # the routing server's protocol (every routing op's request and reply, the notifications, the user status
     # datagram, the group list request, the connection's header, dispatch rule and table), the original's
     # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module
@@ -525,8 +528,11 @@ WON_TESTS = {
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
     "won_fwop_test": [],
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
-    # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
+    # statements against tests/won/won_admin_msg.h over ee_won's admin module
     "won_admin_test": [],
+    # WONInternal's admin ops as whole ops (every op's request and replies), the original's statements against the
+    # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_adminop.txt)
+    "won_adminop_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)

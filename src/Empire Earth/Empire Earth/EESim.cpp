@@ -137,7 +137,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUIESinglePlayerEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "ee/EEUIESinglePlayerLoadEvents.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
@@ -1491,8 +1492,10 @@ void Fail(const std::string& inError)
 
 // ------------------------------------------------------------------------------------------------ the load
 
-// the control of the form on top whose trigger event is a T (-1: none)
-template <class T> long ControlWithEvent(unsigned long inForm)
+static bool IsScreenEvent(UIEvent*, unsigned long) { return true; }
+static bool IsScreenEvent(EEScreenEvent* inEvent, unsigned long inCode) { return inEvent->mEvent == inCode; }
+// the control of the form on top whose trigger event is a T (an EEScreenEvent: of the code inScreen); -1: none
+template <class T> long ControlWithEvent(unsigned long inForm, unsigned long inScreen = 0)
 {
     UILock theLock;
     UIForm* theForm = gUIManager->GetCurrentForm();
@@ -1500,7 +1503,8 @@ template <class T> long ControlWithEvent(unsigned long inForm)
         return -1;
     for (unsigned long k = 0; k < theForm->GetControlCount(); k++) {
         UIControl* theControl = theForm->GetControl(k);
-        if (theControl && dynamic_cast<T*>(theControl->GetTriggerEvent(kTriggerEvent)) != NULL)
+        T* theEvent = theControl ? dynamic_cast<T*>(theControl->GetTriggerEvent(kTriggerEvent)) : NULL;
+        if (theEvent != NULL && IsScreenEvent(theEvent, inScreen))
             return (long)k;
     }
     return -1;
@@ -1544,7 +1548,7 @@ void LoadFromMenu()
     remove(theStaged.c_str());
     if (!CopyAFile(sOptions.mLoadSave, theStaged))
         Fail("--load-save: cannot copy " + sOptions.mLoadSave + " to " + theStaged);
-    long theButton = ControlWithEvent<EEUIESPELoadGame>(kFormSingle);
+    long theButton = ControlWithEvent<EEScreenEvent>(kFormSingle, EE_SCREENS_SP_LOAD_GAME);
     if (theButton < 0)
         Fail("--load-save: no Load Game button on the single-player form");
     Click(kFormSingle, (unsigned long)theButton);

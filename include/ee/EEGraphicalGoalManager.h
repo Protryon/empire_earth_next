@@ -24,7 +24,6 @@ public:
     void Rebuild(long inPlayer);            // 0x1078c9: the current player's selected units' goal markers
     void AddGoal(long inPlayer, unsigned long inCount, long inType);      // 0x10786c: one more when inCount >= the count
     void TrimGoals(long inPlayer, unsigned long inCount, long inType);  // 0x108185: drops goals from the front to inCount
-    std::vector<EEGraphicalGoal>& GetGoals(unsigned long inPlayer, unsigned long inType);   // 0x108af0
     unsigned long GetGoalCount(long inPlayer, long inType);           // 0x108b0c
 
     // +0x04 the goals by player, then by type (the dtor/Update walk: outer node +0x10 is the inner map, inner node

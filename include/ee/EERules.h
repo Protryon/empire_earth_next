@@ -28,7 +28,6 @@ struct EERuleNumber {
     int mWorldValue = 0;                    // 0 F, 1 F2, 2 L, 3 L2
 
     static EERuleNumber Constant(float inValue);
-    static EERuleNumber Integer(long inValue);
     static EERuleNumber World(long inRow, int inValue);
 };
 

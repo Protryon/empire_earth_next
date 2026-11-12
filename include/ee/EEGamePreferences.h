@@ -126,7 +126,7 @@ public:
     // Data/Textures-4x pack, drawn at half size for 2); EESetTextureResolution applies it
     long mTextureResolution;
     // port: the modern display and audio settings (config.yaml; EEApplyPortSettings applies them)
-    long mUIScale;                          // "UI Scale" percent; 0 Auto (GXAutoUIScale): the game size is the display's
+    long mUIScale;                          // "UI Scale" percent; 0 Auto (ee_gx gx_auto_ui_scale): the game size is the display's
     long mRenderResolution;                 // "Render Resolution" percent of the display's pixels (50..100)
     long mWindowMode;                       // "Window Mode" 0 full screen (borderless), 1 windowed
     long mFrameRateLimit;                   // "Frame Rate Limit" 0 v-sync, -1 unlimited, else frames a second
