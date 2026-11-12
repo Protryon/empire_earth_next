@@ -190,41 +190,6 @@ bool ScrollbarScrollerConfig::Virtual24(const std::string& instruction)
 }
 
 
-// Button-scroller condition parsing and SCROLLBARCONDITIONS (not identified in the original exe)
-ScrollButtonCondition ButtonScrollerConfig::GetScrollButtonCondition()
-{
-	GUIString aStr = this->ReadString(false);
-	const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_BUTTONSCROLLERCONFIG_GETSCROLLBUTTONCONDITION_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
-	if(aNameIdx_aStr==0)
-		return ScrollButtonCondition_Disable;
-	else if(aNameIdx_aStr==1)
-		return ScrollButtonCondition_Enable;
-	else if(aNameIdx_aStr==2)
-		return ScrollButtonCondition_Conditional;
-	else if(aNameIdx_aStr==3)
-		return ScrollButtonCondition_PartialConditional;
-	else
-		throw ConfigObjectException("Invalid scrollbar condition: " + (std::string)aStr);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-bool ButtonScrollerConfig::Virtual24(const std::string &theInstruction)
-{
-	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BUTTONSCROLLERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
-	if(aKeyIdx==0)
-	{
-		ScrollButtonCondition horz, vert;
-		horz = this->GetScrollButtonCondition(); this->EnsureComma();
-		vert = this->GetScrollButtonCondition();
-		this->mButtonScroller->SetScrollButtonConditions(horz,vert);
-	}
-	else
-		return ScrollerConfig::Virtual24(theInstruction);
-	
-	return true;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // TEMPLATE: WON 0x00790520
 // TEMPLATE: WON 0x00790530

@@ -1,11 +1,9 @@
-// PNG image decoder on libpng 1.0.12 (file name inferred)
+// PNG image decoder (file name inferred). The original decoded on libpng 1.0.12; the port decodes with the game's
+// own PNG reader (rust/crates/ee_openformats png.rs, ee_of_png_to_picture: GESurface::LoadPNG's), the same pixels
+// on every picture the lobby reads (tests/won/won_image_test.cpp's golden over the libpng decoder).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#define PNG_SKIP_SETJMP_CHECK   // <setjmp.h> comes first here; libpng 1.0 rejects that on Linux
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <setjmp.h>
+#include <string.h>
 #include <string>
 #include <list>
 #include <map>
@@ -15,19 +13,8 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONLobbyAnimation.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
-#include "ee/wonapi/codec/png.h"
-using namespace WONAPI;
-
-// FUNCTION: WON 0x007d2630
-// libpng read callback: reads from the decoder's file reader and raises a libpng error on a short read
-static void png_filereader_read_data(png_structp png,png_bytep data,png_size_t length)
-{
-    int count=((FileReader*)png->io_ptr)->ReadMaxBytes(data,length);
-    if(count!=length)
-        png_error(png,"Read Error");
-}
+#include "rust/ee_openformats.h"
 namespace WONAPI {
 // FUNCTION: WON 0x007d24e0
 // Registers a PNG decoder for the "png" extension with a multi-format decoder
@@ -41,88 +28,52 @@ void PNGDecoder::Add(MultiImageDecoder* decoder)
 ImageDecoder* PNGDecoder::Duplicate() { return new PNGDecoder; }
 
 // FUNCTION: WON 0x007d2550
-// Reads the PNG header for the image size; returns false on any libpng error
+// Reads the PNG header for the image size: the signature and IHDR, then the chunks up to the first IDAT, as libpng's
+// png_read_info read them (their CRCs not checked); false when one is missing or cut short
 bool PNGDecoder::DoGetAttrib(ImageAttributes& attributes)
 {
-    png_structp png=png_create_read_struct(PNG_LIBPNG_VER_STRING,NULL,NULL,NULL);
-    if(png==NULL) return false;
-    png_infop info=png_create_info_struct(png);
-    if(info==NULL) {
-        png_destroy_read_struct(&png,NULL,NULL);
-        return false;
+    static const unsigned char kHead[16]={0x89,'P','N','G',0x0d,0x0a,0x1a,0x0a,0,0,0,13,'I','H','D','R'};
+    unsigned char head[33];
+    if(this->mFileReader->ReadMaxBytes(head,33)!=33 || memcmp(head,kHead,16)!=0) return false;
+    for(;;) {
+        unsigned char chunk[8];
+        if(this->mFileReader->ReadMaxBytes(chunk,8)!=8) return false;
+        if(memcmp(chunk+4,"IDAT",4)==0) break;
+        unsigned long length=((unsigned long)chunk[0]<<24)|(chunk[1]<<16)|(chunk[2]<<8)|chunk[3];
+        if(this->mFileReader->Available()<length+4) return false;
+        this->mFileReader->SkipBytes(length+4);
     }
-    if(setjmp(png->jmpbuf)) {
-        png_destroy_read_struct(&png,&info,NULL);
-        return false;
-    }
-    png_set_read_fn(png,this->mFileReader,png_filereader_read_data);
-    png_read_info(png,info);
-    png_uint_32 width,height;
-    int bitDepth,colorType,interlaceType;
-    png_get_IHDR(png,info,&width,&height,&bitDepth,&colorType,&interlaceType,NULL,NULL);
-    attributes.mWidth=width;
-    attributes.mHeight=height;
-    png_destroy_read_struct(&png,&info,NULL);
+    attributes.mWidth=(head[16]<<24)|(head[17]<<16)|(head[18]<<8)|head[19];
+    attributes.mHeight=(head[20]<<24)|(head[21]<<16)|(head[22]<<8)|head[23];
     return true;
 }
 
 // FUNCTION: WON 0x007d2660
-// Decodes the PNG into a 32-bit ARGB raw image (transparent when it has alpha or tRNS); NULL on a libpng error,
-// which leaks the row buffers already allocated
+// Decodes the PNG into a 32-bit ARGB raw image, transparent when it has alpha or a tRNS chunk; NULL when it is
+// not a PNG or does not decode
 SmartPtr<RawImage> PNGDecoder::DoDecodeRaw()
 {
-    png_structp png=png_create_read_struct(PNG_LIBPNG_VER_STRING,NULL,NULL,NULL);
-    if(png==NULL) return NULL;
-    png_infop info=png_create_info_struct(png);
-    if(info==NULL) {
-        png_destroy_read_struct(&png,NULL,NULL);
-        return NULL;
-    }
-    if(setjmp(png->jmpbuf)) {
-        png_destroy_read_struct(&png,&info,NULL);
-        return NULL;
-    }
-    png_set_read_fn(png,this->mFileReader,png_filereader_read_data);
-    png_read_info(png,info);
-    png_uint_32 width,height;
-    int bitDepth,colorType,interlaceType;
-    png_get_IHDR(png,info,&width,&height,&bitDepth,&colorType,&interlaceType,NULL,NULL);
-    png_set_strip_16(png);
-    png_set_packing(png);
-    if(colorType==PNG_COLOR_TYPE_PALETTE)
-        png_set_expand(png);
-    if(colorType==PNG_COLOR_TYPE_GRAY && bitDepth<8)
-        png_set_expand(png);
-    if(png_get_valid(png,info,PNG_INFO_tRNS))
-        png_set_expand(png);
-    // Gray and gray-alpha become RGB; rows are always read as RGBA
-    if(colorType==PNG_COLOR_TYPE_GRAY || colorType==PNG_COLOR_TYPE_GRAY_ALPHA)
-        png_set_gray_to_rgb(png);
-    png_set_filler(png,0xff,PNG_FILLER_AFTER);
-    png_bytepp rows=new png_bytep[height];
-    // The original queries the row size but allocates width*4 bytes per row
-    (void)png_get_rowbytes(png,info);
-    int y;
-    for(y=0;y<height;++y)
-        rows[y]=new png_byte[width*4];
-    png_read_image(png,rows);
-    SmartPtr<RawImage32> image=new RawImage32(width,height);
-    if((colorType&PNG_COLOR_MASK_ALPHA) || png_get_valid(png,info,PNG_INFO_tRNS))
-        image->SetDoTransparency(true);
+    std::vector<unsigned char> bytes(this->mFileReader->Available());
+    if(!bytes.empty())
+        bytes.resize(this->mFileReader->ReadMaxBytes(bytes.data(),(int)bytes.size()));
+    EeOfPicture picture;
+    EeOfBytes error;
+    bool ok=ee_of_png_to_picture(bytes.data(),bytes.size(),&picture,&error);
+    ee_of_bytes_free(error);
+    if(!ok) return NULL;
+    SmartPtr<RawImage32> image=new RawImage32(picture.width,picture.height);
+    image->SetDoTransparency(picture.depth==32);
+    // B, G, R, A per pixel, top row first: the DWORD (A<<24)|(R<<16)|(G<<8)|B the original stored
+    const unsigned char* pixel=picture.bgra.ptr;
     image->StartRowTraversal(0);
-    for(y=0;y<height;++y) {
-        png_bytep pixel=rows[y];
-        for(int x=0;x<width;++x,pixel+=4) {
-            DWORD color=(pixel[0]<<16)|(pixel[1]<<8)|pixel[2]|(pixel[3]<<24);
-            image->SetRowPixel(color);
+    for(unsigned int y=0;y<picture.height;++y) {
+        for(unsigned int x=0;x<picture.width;++x,pixel+=4) {
+            image->SetRowPixel(pixel[0]|(pixel[1]<<8)|(pixel[2]<<16)|((DWORD)pixel[3]<<24));
             image->NextRowPixel();
         }
         image->NextRow();
     }
-    for(y=0;y<height;++y)
-        delete [] rows[y];
-    delete [] rows;
-    png_destroy_read_struct(&png,&info,NULL);
+    ee_of_bytes_free(picture.bgra);
     return image.get();
 }
 }
