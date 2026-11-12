@@ -90,6 +90,13 @@ reload, target and heal search countdowns and RegeneratePower and the FNV-1a of 
 outputs. Its golden lines come from the C++ bodies (oracle, late 3-5, space 2-3); late 2, 6, 7 (the fishing-boat
 rebaseline's games), space 4-7 and calamity from the Rust bodies, whose every call the original's statements recheck
 while the capture runs (EE-SIM exits 3 on a difference).
+SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
+every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
+object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
+scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
+build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
+scenario manager before its logic moved), and its USCK reports without stopping the game (EE_SIM_STORE_CHECK_SOFT:
+the unit store does not follow a loaded scenario's units yet).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
@@ -119,7 +126,37 @@ PROFILES = {
     # the oracle's game, then every missile class fired at its end (EE-SIM --missile-sweep: no game of the other
     # profiles flies a missile); its golden lists only the sweep's tags (CBMA, CBMH, CBGI, CBWI)
     "missile": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--missile-sweep"],
+    # a retail campaign scenario per seed (SCENARIOS; EE-SIM --scenario: the lobby's Play Scenario screen), the
+    # scenario manager's triggers, conditions, objects, areas and effects (SM** records; no random map runs one)
+    "scenario": ["--game-seconds", "1800", "--scenario", "{scenario}"],
 }
+
+# the scenario profile's games by seed (seed 2 the first): (campaign archive, scenario) of the data tree's
+# Data/Campaigns, extracted once into build/sim_capture/scenarios (retail data: never committed)
+SCENARIOS = [
+    ("AOCRoman", "een1ve1s_a conqueror learns his trade"),
+    ("AOCAsian", "een1ve1s_a new dynasty"),
+    ("AOCPacific", "een1ve1s_carrier strike"),
+    ("AOCRoman", "een1ve1s_the gallic wars"),
+    ("AOCAsian", "een1ve1s_the breaking point"),
+    ("AOCPacific", "een1ve1s_the meat grinder"),
+]
+
+
+def scenario_file(seed, data):
+    """The scenario of a seed, extracted from its campaign archive in the data tree (once)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    sys.path.insert(0, str(ROOT / "tools" / "eedata"))
+    import sim  # noqa: E402
+    import ssa  # noqa: E402
+    campaign, name = SCENARIOS[(seed - 2) % len(SCENARIOS)]
+    out = OUT / "scenarios" / f"{name}.scn"
+    if not out.exists():
+        entries, _tags, d = ssa.read_ssa(sim.data_tree(data) / "Data" / "Campaigns" / f"{campaign}.ssa")
+        key = next(k for k in entries if k.lower() == f"scenarios\\{name}.scn")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(ssa.entry_bytes(d, *entries[key]))
+    return out
 
 
 def golden(profile):
@@ -140,8 +177,11 @@ def one(name, exe, seed, data, profile="oracle"):
     capture, trace, report = d / f"capture-{seed}.bin", d / f"trace-{seed}.txt", d / f"report-{seed}.json"
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
+    if profile == "scenario":   # the unit store does not follow a loaded scenario's units yet: USCK reports, goes on
+        env["EE_SIM_STORE_CHECK_SOFT"] = "1"
+    args =[str(scenario_file(seed, data)) if v == "{scenario}" else v for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
-                        f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *PROFILES[profile],
+                        f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
                         "--report", str(report), "--ai-trace", "--trace", str(trace)], cwd=ROOT, capture_output=True,
                        text=True, env=env)
     (d / f"log-{seed}.txt").write_text(r.stdout + r.stderr)

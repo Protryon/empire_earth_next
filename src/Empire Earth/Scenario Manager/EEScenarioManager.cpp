@@ -65,6 +65,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEPersistentTag.h"
+#include "ee/EEScenarioCapture.h"
 // the vector Load/Save helpers (cdecl template COMDATs 0x1b5faf / 0x1b5fff: the count, then each element's slot)
 template<class T> long EESMLoadVector(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                                       std::vector<T>& outVector)
@@ -87,6 +88,8 @@ template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned lon
         theResult = theIterator->Save(inMajorVersion, inMinorVersion, outFile);
     return theResult;
 }
+
+bool gScenarioSimDialogs = false;
 
 static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms: Update, ApplyPendingEffects; unit .rdata; provisional name)
 static const float kSMZero = 0.0f;           // 0x445fd0 (Update's mTriggerTimer test while mIsMovingCamera; unit .rdata; provisional name)
@@ -924,6 +927,8 @@ void EEScenarioManager::Update()
             }
             this->mTriggerTimer = 0.0f;
             this->mLastChatText.Clear();
+            if (EESimCaptureRecord::Active())
+                EESMCaptureUpdate(this, theHumanPlaying);
         }
     }
     if (this->mIsEndingCinematic && gF4BE374 == 1.0f) {
@@ -995,6 +1000,17 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
 // Resolves a scenario player choice (0 nature, 1/3 a random/every human, 2/4 a random/every computer, 5/6 a random
 // player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
 long EEScenarioManager::ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle)
+{
+    if (!EESimCaptureRecord::Active())
+        return this->ChoosePlayerUncaptured(inType, outPlayers, inSingle);
+    unsigned int theSeed = EESMCaptureSeed();
+    long theResult = this->ChoosePlayerUncaptured(inType, outPlayers, inSingle);
+    EESMCapturePlayers(inType, inSingle, theResult, outPlayers, theSeed);
+    return theResult;
+}
+
+// ChoosePlayer's body (ChoosePlayer adds the simulation capture's SMCP record: ee/EEScenarioCapture.h)
+long EEScenarioManager::ChoosePlayerUncaptured(long inType, std::vector<long>* outPlayers, bool inSingle)
 {
     unsigned long theNumPlayers = gWorld.mNumPlayers;
     int theResult = -1;

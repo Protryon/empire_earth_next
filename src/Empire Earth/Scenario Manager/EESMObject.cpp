@@ -28,6 +28,7 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 #include "ee/EEPlayer.h"
 #include "ee/EESMArea.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScenarioCapture.h"
 // 0x246ea2 again, as IsNearTile uses it (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
@@ -225,6 +226,17 @@ void EESMObject::Copy(const EESMObject& inObject)
 // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
 // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
 bool EESMObject::Evaluate(bool inIncludeDead)
+{
+    if (!EESimCaptureRecord::Active())
+        return this->EvaluateUncaptured(inIncludeDead);
+    EESMCaptureObjectState theBefore = EESMCaptureObjectBegin(this);
+    bool theResult = this->EvaluateUncaptured(inIncludeDead);
+    EESMCaptureObjectEnd(this, inIncludeDead, theResult, theBefore);
+    return theResult;
+}
+
+// Evaluate's body (Evaluate adds the simulation capture's SMOB record: ee/EEScenarioCapture.h)
+bool EESMObject::EvaluateUncaptured(bool inIncludeDead)
 {
     std::vector<long> thePlayers;
     EESMObject* theParent = gWorld.mScenarioManager->GetScenarioObject(this->mParent);
@@ -1846,6 +1858,19 @@ void EESMTrigger::DeleteEffect(unsigned long inIndex)
 // OR-separated group, at their delays, and turns a non-looping trigger off
 // (EEScenarioManager::Update 0x1b20e6)
 void EESMTrigger::Evaluate(float inTime)
+{
+    if (!EESimCaptureRecord::Active()) {
+        this->EvaluateUncaptured(inTime);
+        return;
+    }
+    EESMCaptureTriggerState theBefore = EESMCaptureTriggerBefore(this);
+    unsigned int theSeed = EESMCaptureSeed();
+    this->EvaluateUncaptured(inTime);
+    EESMCaptureTrigger(this, theBefore, inTime, theSeed);
+}
+
+// Evaluate's body (Evaluate adds the simulation capture's SMTE record: ee/EEScenarioCapture.h)
+void EESMTrigger::EvaluateUncaptured(float inTime)
 {
     long theChosen = 0;
     long theRandomCount = 0;

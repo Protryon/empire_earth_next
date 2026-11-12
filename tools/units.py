@@ -67,6 +67,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
+                       # TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; RUST_PLAN R5b.5)
+                       "Empire Earth/Scenario Manager/EEScenarioCapture.cpp",
                        # the host of the calamity classes' Rust updates (ee/EECalamityUpdate.h; ee_tech calamity_update.rs)
                        "Empire Earth/Calamities/EECalamityUpdate.cpp",
                        # the host of the calamity classes' Rust cast tests (ee_tech calamity_cast.rs)

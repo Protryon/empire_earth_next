@@ -32,6 +32,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
+#include "ee/EEScenarioCapture.h"
 
 static const long kNoArea = -10000;
 
@@ -60,6 +61,15 @@ EESMArea::~EESMArea()
 // unit or that stands on the unit's tile; else by tile); false for no unit
 bool EESMArea::ContainsUnit(EEUnit* inUnit)
 {
+    bool theResult = this->ContainsUnitUncaptured(inUnit);
+    if (EESimCaptureRecord::Active())
+        EESMCaptureArea(this, 0, inUnit ? (long)inUnit->GetUnitID() : -1, 0, theResult, 0, 0);
+    return theResult;
+}
+
+// ContainsUnit's body (ContainsUnit adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
+bool EESMArea::ContainsUnitUncaptured(EEUnit* inUnit)
+{
     bool theResult = false;
     if (inUnit != NULL) {
         // The tile is read only after the NULL test (it was read first).
@@ -85,6 +95,15 @@ bool EESMArea::ContainsUnit(EEUnit* inUnit)
 // Returns whether a tile is in the area: inside the rectangle, on the anchor's continent, or inside the hull of a
 // non-Gaia town that contains the anchor
 bool EESMArea::ContainsTile(const U2DPoint<long>& inTile)
+{
+    bool theResult = this->ContainsTileUncaptured(inTile);
+    if (EESimCaptureRecord::Active())
+        EESMCaptureArea(this, 1, inTile.mX, inTile.mY, theResult, 0, 0);
+    return theResult;
+}
+
+// ContainsTile's body (ContainsTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
+bool EESMArea::ContainsTileUncaptured(const U2DPoint<long>& inTile)
 {
     std::vector<EETown*> theTowns;
     GE2DPoint thePoint;
@@ -145,6 +164,15 @@ void EESMArea::Copy(const EESMArea& inArea)
 // centre of the town holding the anchor (else the anchor)
 U2DPoint<long> EESMArea::GetCenterTile()
 {
+    U2DPoint<long> theResult = this->GetCenterTileUncaptured();
+    if (EESimCaptureRecord::Active())
+        EESMCaptureArea(this, 2, 0, 0, theResult.mX, theResult.mY, 0);
+    return theResult;
+}
+
+// GetCenterTile's body (GetCenterTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
+U2DPoint<long> EESMArea::GetCenterTileUncaptured()
+{
     U2DPoint<long> theTile;
     GE2DPoint thePoint;
     bool theFound = false;
@@ -198,6 +226,21 @@ bool EESMArea::IsOffMap() const
 // Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
 // restarts the timer
 void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
+{
+    this->GetTilesUncaptured(outTiles);
+    if (EESimCaptureRecord::Active()) {
+        unsigned long long theHash = 0xcbf29ce484222325ULL;
+        for (const U2DPoint<long>& t : outTiles) {
+            int theXY[2] = {(int)t.mX, (int)t.mY};
+            for (int b = 0; b < 8; b++)
+                theHash = (theHash ^ ((const unsigned char*)theXY)[b]) * 0x100000001b3ULL;
+        }
+        EESMCaptureArea(this, 3, (long)this->mTilesTime, 0, (long)outTiles.size(), 0, theHash);
+    }
+}
+
+// GetTiles' body (GetTiles adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
+void EESMArea::GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles)
 {
     std::vector<EETown*> theTowns;
     if (this->mTiles.size() <= 0 || (unsigned long)(gPhysics->mCurrentTick - this->mTilesTime) >= 3000) {

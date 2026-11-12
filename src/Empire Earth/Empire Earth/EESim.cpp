@@ -118,6 +118,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEWonNet.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EEScenarioManager.h"
 #include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -465,6 +466,7 @@ struct Options {
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
+    std::string mScenario;                               // --scenario FILE ("" a random map from the lobby)
     bool mQuiet = false;
 };
 
@@ -997,6 +999,9 @@ bool CopyAFile(const std::string& inFrom, const std::string& inTo)
 
 void AfterTick()
 {
+    // --scenario: a shown dialog message ends now (gScenarioSimDialogs, ee/EEScenarioManager.h)
+    if (gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog)
+        gWorld.mScenarioManager->ShowDialogMessage();
     ChecksumLine();
     long theTime = gPhysics->mGameTime;
     RequestSaves(theTime);
@@ -1573,6 +1578,81 @@ void LoadFromMenu()
     Click(kFormLoad, (unsigned long)theLoad);
 }
 
+const unsigned long kFormLoadScenario = 4;               // 'In Game Scenario & Load Game Screen' (kFormLoadGame)
+const char* kScenarioName = "EE-SIM scenario";
+
+// the line of kScenarioName in the play scenario screen's file list (-1: not listed) and the list's selection
+long ScenarioLine(unsigned long& outSelection)
+{
+    UILock theLock;
+    outSelection = 0xffffffffUL;
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    if (!theForm || theForm->GetFormID() != kFormLoadScenario ||
+        (unsigned long)kLoadGameLoadFileListBox >= theForm->GetControlCount())
+        return -1;
+    UILBString* theList = dynamic_cast<UILBString*>(theForm->GetControl(kLoadGameLoadFileListBox));
+    if (!theList)
+        return -1;
+    theList->GetCurrentSelection(outSelection);
+    for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
+        const char* theText = (const char*)theList->GetData(k);
+        if (theText && !strcmp(theText, kScenarioName))
+            return (long)k;
+    }
+    return -1;
+}
+
+// --scenario: the file staged as data\Scenarios\EE-SIM scenario.scn, then the random map lobby's game type box set to
+// Scenario (the lobby pushes the Play Scenario screen), the file selected there, Load (the lobby takes the scenario's
+// options and players), Start (tools/harness/scenario_game.py's standalone scenario). The controls are found by form
+// and index (the forms are data), not by event class.
+void ScenarioFromLobby()
+{
+    std::string theStaged = std::string("data\\Scenarios\\") + kScenarioName + (const char*)gScenarioExtension;
+    remove(theStaged.c_str());
+    if (!CopyAFile(sOptions.mScenario, theStaged))
+        Fail("--scenario: cannot copy " + sOptions.mScenario + " to " + theStaged);
+    Click(kFormSingle, 1);
+    WaitForm(kFormLobbyID);
+    Note("UI lobby (scenario)");
+    WaitFor("the lobby's game type box", 60, [&] {
+        std::vector<std::string> l;
+        long s;
+        return ComboState(175, l, s) && ComboState(207, l, s);
+    });
+    SimSleep(1500);   // the local server's readiness (SetUpLobby's wait)
+    {
+        UILock theLock;
+        UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), 175);
+        if (!theCombo)
+            Fail("--scenario: no game type box on the lobby");
+        theCombo->SetCurrentSelection(2);   // Scenario: EEUIELEGameType pushes the Play Scenario screen
+    }
+    WaitForm(kFormLoadScenario);
+    unsigned long theSelection = 0;
+    WaitFor("the play scenario screen to list the file", 60, [&] { return ScenarioLine(theSelection) >= 0; });
+    long theLine = ScenarioLine(theSelection);
+    {
+        UILock theLock;
+        UIForm* theForm = gUIManager->GetCurrentForm();
+        UILBString* theList = theForm && theForm->GetFormID() == kFormLoadScenario
+                                  ? dynamic_cast<UILBString*>(theForm->GetControl(kLoadGameLoadFileListBox))
+                                  : NULL;
+        if (!theList)
+            Fail("--scenario: the play scenario screen went away");
+        theList->ChangeSelectionIndex((unsigned long)theLine, true, false);
+    }
+    WaitFor("the scenario selection to stick", 20,
+            [&] { return ScenarioLine(theSelection) == theLine && theSelection == (unsigned long)theLine; });
+    SimSleep(200);
+    Note("UI load scenario %s", sOptions.mScenario.c_str());
+    Click(kFormLoadScenario, kLoadGameLoadButton);
+    WaitForm(kFormLobbyID);
+    SimSleep(3000);   // the scenario's options and players through the local server (the harness waits 3 s)
+    Click(kFormLobbyID, 10);
+    Note("UI start (scenario)");
+}
+
 // ------------------------------------------------------------------------------------------------ the driver
 
 void Drive()
@@ -1594,8 +1674,11 @@ void Drive()
         Note("UI main menu");
         Click(kFormMain, 0);
         WaitForm(kFormSingle);
-        bool theLoaded = !sOptions.mLoadSave.empty();
-        if (theLoaded)
+        bool theScenario = !sOptions.mScenario.empty();
+        bool theLoaded = !sOptions.mLoadSave.empty() || theScenario;
+        if (theScenario)
+            ScenarioFromLobby();
+        else if (theLoaded)
             LoadFromMenu();
         else {
             Click(kFormSingle, 1);
@@ -1619,8 +1702,8 @@ void Drive()
             for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++)
                 if (gWorld.GetPlayer(i) != NULL)
                     sResults[i] = gWorld.GetPlayer(i)->mGameResult;
-            Note("LOADED %s: game ms %ld PT %lu", sOptions.mLoadSave.c_str(), gPhysics->mGameTime,
-                 gPhysics->mNumTicksDone);
+            Note("LOADED %s: game ms %ld PT %lu", theScenario ? sOptions.mScenario.c_str() : sOptions.mLoadSave.c_str(),
+                 gPhysics->mGameTime, gPhysics->mNumTicksDone);
             if (sChecksumFile) {   // the loaded state (not a "CT" line: the comparisons skip it)
                 fprintf(sChecksumFile, "LOADED ");
                 ChecksumFields(sChecksumFile);
@@ -1720,6 +1803,8 @@ const char* kUsage =
     "  --save-at MS=FILE      save the game at the first communications tick at or after game ms MS (repeatable); the\n"
     "                         file is copied to FILE at the end of the run\n"
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
+    "  --scenario FILE        play this scenario (.scn) instead of a random map: the lobby's game type Scenario, the\n"
+    "                         Play Scenario screen, Load, Start (the scenario's own players and options)\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --dump-tick MS=FILE    the same after the first physics tick at or after game ms MS (repeatable; --dump-at\n"
@@ -1906,6 +1991,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mSaves.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
         } else if (a == "--load-save")
             sOptions.mLoadSave = Absolute(value());
+        else if (a == "--scenario")
+            sOptions.mScenario = Absolute(value());
         else if (a == "--dump-at") {
             std::string v = value();
             size_t eq = v.find('=');
@@ -1980,6 +2067,7 @@ int EESimMain(int argc, char** argv)
     gPlatSimSeedSet = sOptions.mLoadSave.empty() ? 1 : 0;   // a loaded game: the file's seed, as the game loads it
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
+    gScenarioSimDialogs = !sOptions.mScenario.empty();
     // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
     // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
     // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)

@@ -16,6 +16,7 @@
 #include "ee/EESMTrigger.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EEScenarioCapture.h"
 
 static const float kSMCHoursPerDay = -24.0f;    // 0x44605c (Evaluate's time of day; unit .rdata; provisional name)
 
@@ -115,6 +116,17 @@ void EESMCondition::Copy(const EESMCondition& inCondition)
 // Returns whether the condition holds: object exists, player attribute/technology/diplomacy for any or all chosen
 // players, trigger on/fired, elapsed time/hour/difficulty, or the last chat text containing a phrase
 bool EESMCondition::Evaluate()
+{
+    if (!EESimCaptureRecord::Active())
+        return this->EvaluateUncaptured();
+    unsigned int theSeed = EESMCaptureSeed();
+    bool theResult = this->EvaluateUncaptured();
+    EESMCaptureCondition(this, theResult, theSeed);
+    return theResult;
+}
+
+// Evaluate's body (Evaluate adds the simulation capture's SMCE record: ee/EEScenarioCapture.h)
+bool EESMCondition::EvaluateUncaptured()
 {
     std::vector<long> thePlayers;
     std::vector<long> theOthers;

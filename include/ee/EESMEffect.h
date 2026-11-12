@@ -24,6 +24,7 @@ public:
     void SetClassName();                   // 0x1bc942: renames selected unit/class upgrades (provisional name)
     void KillUnits(bool inFlag);            // 0x1bf9b7: applies Virtual60 to the scenario object units (provisional name)
     void Execute(bool inIsCinematic);       // 0x1bd5eb (6.4 KB: the effect's execution; provisional name)
+    void ExecuteUncaptured(bool inIsCinematic);  // Execute's body (Execute adds the capture's SMEX record)
     void BuildObject();                    // 0x1bb82f: effect execution helper, original this/no args
     void CreateAIMilitaryGroup();          // 0x1bbba1: effect execution helper, original this/no args
     void ModifyAIMilitaryTarget();         // 0x1bc333: effect execution helper, original this/no args
