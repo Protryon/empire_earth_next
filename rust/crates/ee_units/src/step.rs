@@ -1,6 +1,9 @@
 //! The smallest leaves of a unit's per-tick step (RUST_PLAN R5b.4 leaf 6, "the next three rounds" 1): the
 //! countdowns a class's `Update` runs every tick (`EEComplexUnit::UpdateReloadTimer`, `UpdateTargetSearchTimer`,
-//! `UpdateHealSearchTimer`, the rotting countdown) and `EEUnitClass::RegeneratePower`, over the unit store's record.
+//! `UpdateHealSearchTimer`, the rotting countdowns `UpdateRottingAwayTime` and `UpdateResourcesRotting`),
+//! `EEUnitClass::RegeneratePower` and `UpdateCamouflageTimer`'s arithmetic (the timers as a decision whose events the
+//! C++ applies: the mini map moves, the cloak chain's setters, the writes; the cloak fade), over the unit store's
+//! record.
 //!
 //! Each leaf reads the unit's record and returns what the C++ writes back through the member's holder (which reports
 //! it to the store again): no leaf writes the store itself, so the holder stays the one writer.
@@ -93,7 +96,7 @@ pub struct Reads {
 }
 
 /// The record of `object` under `id`, if any.
-fn record_of(store: &crate::store::Store, id: u32, object: u64) -> Option<&EeUnitRecord> {
+pub(crate) fn record_of(store: &crate::store::Store, id: u32, object: u64) -> Option<&EeUnitRecord> {
     store.get(id).filter(|r| r.object == object)
 }
 
@@ -177,7 +180,7 @@ pub fn step_power(
 /// The leaves' read counts since the process started (TEST ONLY: USCK reads them).
 pub static READS: std::sync::Mutex<Reads> = std::sync::Mutex::new(Reads { mismatches: 0, unrecorded: 0 });
 
-fn with_reads<R>(f: impl FnOnce(&mut Reads) -> R) -> R {
+pub(crate) fn with_reads<R>(f: impl FnOnce(&mut Reads) -> R) -> R {
     let mut guard = READS.lock().unwrap_or_else(|e| e.into_inner());
     f(&mut guard)
 }
@@ -266,6 +269,395 @@ pub unsafe extern "C" fn ee_units_step_reads(out_mismatches: *mut u32, out_unrec
     unsafe {
         *out_mismatches = m;
         *out_unrecorded = u;
+    }
+}
+
+// ---- the eleventh round: the rotting countdowns, the camouflage timers, the cloak fade
+
+/// The resources' rotting (`kActionResourcesRotting`): the time plus the tick; past 4 s the resource amount loses one
+/// per whole 4 s (not below 0) and the time keeps the rest. Returns the time and, past 4 s, the amount.
+pub fn resources_rot(time: i64, amount: i64, tick_ms: i64) -> (i64, Option<i64>) {
+    let mut t = time.wrapping_add(tick_ms);
+    let mut a = None;
+    if t > 4000 {
+        let mut v = amount.wrapping_sub(t / 4000);
+        if v < 0 {
+            v = 0;
+        }
+        a = Some(v);
+        t %= 4000;
+    }
+    (t, a)
+}
+
+/// `UpdateRottingAwayTime` over the store (`member`: the C++ member's time): the new time.
+pub fn step_rotting(
+    store: &crate::store::Store,
+    reads: &mut Reads,
+    id: u32,
+    object: u64,
+    member: i64,
+    tick_ms: i64,
+) -> i64 {
+    let time = match record_of(store, id, object) {
+        Some(r) => {
+            reads.mismatches += u32::from(r.rotting_away_time != member);
+            r.rotting_away_time
+        }
+        None => {
+            reads.unrecorded += 1;
+            member
+        }
+    };
+    rot_countdown(time, tick_ms)
+}
+
+/// `UpdateResourcesRotting` over the store (`member_*`: the C++ members' time and resource amount).
+pub fn step_resources_rotting(
+    store: &crate::store::Store,
+    reads: &mut Reads,
+    id: u32,
+    object: u64,
+    member_time: i64,
+    member_amount: i64,
+    tick_ms: i64,
+) -> (i64, Option<i64>) {
+    let (time, amount) = match record_of(store, id, object) {
+        Some(r) => {
+            reads.mismatches += u32::from(r.rotting_away_time != member_time || r.resource_amount != member_amount);
+            (r.rotting_away_time, r.resource_amount)
+        }
+        None => {
+            reads.unrecorded += 1;
+            (member_time, member_amount)
+        }
+    };
+    resources_rot(time, amount, tick_ms)
+}
+
+/// The camouflage decision's events (`EeUnitsCamoEvent::code`), in the order the C++ applies them: a mini map move,
+/// made only when the unit is then a cloaked enemy of the local player (`EEIsCloakedEnemyOf`, the C++'s test at the
+/// event), from nowhere to its tile (`SHOW`) or back (`HIDE`); the chain setters; the camouflaged bit; the two timers'
+/// writes (`value`).
+pub const EE_UNITS_CAMO_SHOW: u32 = 1;
+pub const EE_UNITS_CAMO_HIDE: u32 = 2;
+pub const EE_UNITS_CAMO_CLOAKABLE_OFF: u32 = 3;
+pub const EE_UNITS_CAMO_CLOAKABLE_ON: u32 = 4;
+pub const EE_UNITS_CAMO_CLOAKED_OFF: u32 = 5;
+pub const EE_UNITS_CAMO_CLOAKED_ON: u32 = 6;
+pub const EE_UNITS_CAMO_CAMOUFLAGED_OFF: u32 = 7;
+pub const EE_UNITS_CAMO_CAMOUFLAGED_ON: u32 = 8;
+pub const EE_UNITS_CAMO_SET_TIMER: u32 = 9;
+pub const EE_UNITS_CAMO_SET_SECOND: u32 = 10;
+/// The most events one call makes (two blocks of five).
+pub const EE_UNITS_CAMO_MAX_EVENTS: usize = 16;
+
+/// One event of the camouflage decision.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeUnitsCamoEvent {
+    pub code: u32,
+    pub value: u32,
+}
+
+fn ev(code: u32, value: u32) -> EeUnitsCamoEvent {
+    EeUnitsCamoEvent { code, value }
+}
+
+/// The original's `long theTime = <unsigned long> - gPhysics->mTickTimeMs` in the Windows build's 32-bit `long`s
+/// (the unsigned difference, read signed).
+fn left(timer: u32, tick_ms: i64) -> i32 {
+    timer.wrapping_sub(tick_ms as u32) as i32
+}
+
+/// The losing of the camouflage without vital buildings (both blocks' first branch).
+fn drop_camouflage(out: &mut Vec<EeUnitsCamoEvent>) {
+    out.push(ev(EE_UNITS_CAMO_SHOW, 0));
+    out.push(ev(EE_UNITS_CAMO_CLOAKABLE_OFF, 0));
+    out.push(ev(EE_UNITS_CAMO_CLOAKED_OFF, 0));
+    out.push(ev(EE_UNITS_CAMO_SET_TIMER, 0));
+    out.push(ev(EE_UNITS_CAMO_SET_SECOND, 0));
+}
+
+/// `EEUnitClass::UpdateCamouflageTimer`'s timers (0x63978b's first part): the camouflage timer (its top bit the
+/// camouflaged flag) counts down to the unit's camouflage, the second timer (`mU32C`) to its end; a player without
+/// vital buildings loses both. `no_vital`: `mNumVitalBuildings < 1` (no event changes it). Returns the events in the
+/// C++'s statement order.
+pub fn camouflage(timer: u32, second: u32, no_vital: bool, tick_ms: i64) -> Vec<EeUnitsCamoEvent> {
+    let mut out = Vec::new();
+    let mut second = second;
+    let remaining = timer & 0x7fff_ffff;
+    if remaining > 0 {
+        if no_vital {
+            drop_camouflage(&mut out);
+            second = 0;
+        } else {
+            let t = left(remaining, tick_ms);
+            if t > 0 {
+                out.push(ev(EE_UNITS_CAMO_SET_TIMER, t as u32));
+                out.push(ev(EE_UNITS_CAMO_CAMOUFLAGED_OFF, 0));
+            } else {
+                out.push(ev(EE_UNITS_CAMO_SET_TIMER, 0));
+                out.push(ev(EE_UNITS_CAMO_CAMOUFLAGED_ON, 0));
+                out.push(ev(EE_UNITS_CAMO_CLOAKABLE_ON, 0));
+                out.push(ev(EE_UNITS_CAMO_CLOAKED_ON, 0));
+                out.push(ev(EE_UNITS_CAMO_SET_SECOND, 0));
+                out.push(ev(EE_UNITS_CAMO_HIDE, 0));
+                second = 0;
+            }
+        }
+    }
+    if second > 0 {
+        if no_vital {
+            drop_camouflage(&mut out);
+        } else {
+            let t = left(second, tick_ms);
+            if t > 0 {
+                out.push(ev(EE_UNITS_CAMO_SET_SECOND, t as u32));
+            } else {
+                out.push(ev(EE_UNITS_CAMO_SHOW, 0));
+                out.push(ev(EE_UNITS_CAMO_SET_SECOND, 0));
+                out.push(ev(EE_UNITS_CAMO_CLOAKABLE_OFF, 0));
+                out.push(ev(EE_UNITS_CAMO_CLOAKED_OFF, 0));
+            }
+        }
+    }
+    out
+}
+
+/// `kCloakFadeMaxOpacity`, `kCloakFadeMinOpacity`, `kCloakFadeTime` (EEUnitClass.cpp 0x447ad4, 0x447ad8, 0x447ad0).
+const CLOAK_FADE_MAX: f32 = 1.0;
+const CLOAK_FADE_MIN: f32 = 0.6;
+const CLOAK_FADE_TIME: f32 = 750.0;
+
+/// `EEUnitClass::UpdateCamouflageTimer`'s cloak opacity (after `UpdateCloakDetection`): toward the maximum when not
+/// cloaked, toward the minimum when cloaked, by `tick * range * rate` in the C++'s order; a powered capitol of the
+/// local player's side with the cloaking calamity (`pulse`, the C++'s test) pulses with the game time instead.
+#[allow(clippy::assign_op_pattern)] // the C++'s statements as written (`o = x + o`)
+pub fn cloak_fade(opacity: f32, cloaked: bool, tick_time: f32, pulse: bool, game_time: i64) -> f32 {
+    // the statics sCloakFadeRate (1 / kCloakFadeTime) and sCloakFadeOpacityRange (max - min), f32 as in the C++
+    let rate = 1.0f32 / CLOAK_FADE_TIME;
+    let range = CLOAK_FADE_MAX - CLOAK_FADE_MIN;
+    let mut o = opacity;
+    if !cloaked {
+        if o < CLOAK_FADE_MAX {
+            o = tick_time * range * rate + o;
+        }
+        if o > CLOAK_FADE_MAX {
+            o = CLOAK_FADE_MAX;
+        }
+    } else {
+        if o > CLOAK_FADE_MIN {
+            o = o - tick_time * range * rate;
+        }
+        if o < CLOAK_FADE_MIN {
+            o = CLOAK_FADE_MIN;
+        }
+    }
+    if pulse {
+        let mut t = game_time % 2000;
+        if t >= 1000 {
+            t = 1999 - t;
+        }
+        o = t as f32 * 0.000_333_333_33f32 + 0.2f32;
+    }
+    o
+}
+
+/// `UpdateCamouflageTimer`'s timers over the store (`member_timer`: the C++ member's camouflage timer; the second
+/// timer is not in the store).
+#[allow(clippy::too_many_arguments)]
+pub fn step_camouflage(
+    store: &crate::store::Store,
+    reads: &mut Reads,
+    id: u32,
+    object: u64,
+    member_timer: u32,
+    second: u32,
+    no_vital: bool,
+    tick_ms: i64,
+) -> Vec<EeUnitsCamoEvent> {
+    let timer = match record_of(store, id, object) {
+        Some(r) => {
+            reads.mismatches += u32::from(r.camouflage_timer != i64::from(member_timer));
+            r.camouflage_timer as u32
+        }
+        None => {
+            reads.unrecorded += 1;
+            member_timer
+        }
+    };
+    camouflage(timer, second, no_vital, tick_ms)
+}
+
+/// `UpdateRottingAwayTime` over the store: the new time (the C++ writes it through the holder).
+#[no_mangle]
+pub extern "C" fn ee_units_step_rotting(id: u32, object: u64, member: i64, tick_ms: i64) -> i64 {
+    crate::store::with_store(|s| with_reads(|reads| step_rotting(s, reads, id, object, member, tick_ms)))
+}
+
+/// `UpdateResourcesRotting` over the store: the new time, and true with the new amount in `out_amount` past 4 s.
+///
+/// # Safety
+/// Both outputs point to writable i64s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_step_resources_rotting(
+    id: u32,
+    object: u64,
+    member_time: i64,
+    member_amount: i64,
+    tick_ms: i64,
+    out_time: *mut i64,
+    out_amount: *mut i64,
+) -> bool {
+    let (t, a) = crate::store::with_store(|s| {
+        with_reads(|reads| step_resources_rotting(s, reads, id, object, member_time, member_amount, tick_ms))
+    });
+    // SAFETY: the caller's contract
+    unsafe {
+        *out_time = t;
+        if let Some(a) = a {
+            *out_amount = a;
+        }
+    }
+    a.is_some()
+}
+
+/// `UpdateCamouflageTimer`'s timers over the store: the events in `out` (room for `EE_UNITS_CAMO_MAX_EVENTS`), their
+/// count returned.
+///
+/// # Safety
+/// `out` points to `EE_UNITS_CAMO_MAX_EVENTS` writable events.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_units_step_camouflage(
+    id: u32,
+    object: u64,
+    member_timer: u32,
+    second: u32,
+    no_vital: u8,
+    tick_ms: i64,
+    out: *mut EeUnitsCamoEvent,
+) -> u32 {
+    let events = crate::store::with_store(|s| {
+        with_reads(|reads| step_camouflage(s, reads, id, object, member_timer, second, no_vital != 0, tick_ms))
+    });
+    let n = events.len().min(EE_UNITS_CAMO_MAX_EVENTS);
+    for (i, e) in events.iter().take(n).enumerate() {
+        // SAFETY: the caller's contract (n <= EE_UNITS_CAMO_MAX_EVENTS)
+        unsafe { *out.add(i) = *e };
+    }
+    n as u32
+}
+
+/// `UpdateCamouflageTimer`'s cloak opacity (the pulse test and the game time handed in).
+#[no_mangle]
+pub extern "C" fn ee_units_step_cloak_fade(
+    opacity: f32,
+    cloaked: u8,
+    tick_time: f32,
+    pulse: u8,
+    game_time: i64,
+) -> f32 {
+    cloak_fade(opacity, cloaked != 0, tick_time, pulse != 0, game_time)
+}
+
+#[cfg(test)]
+mod round11_tests {
+    use super::*;
+    use crate::store::Store;
+
+    #[test]
+    fn resources_rot_by_whole_four_seconds() {
+        assert_eq!(resources_rot(0, 50, 125), (125, None));
+        assert_eq!(resources_rot(3875, 50, 125), (4000, None));
+        assert_eq!(resources_rot(3900, 50, 125), (25, Some(49)));
+        assert_eq!(resources_rot(8000, 50, 125), (125, Some(48)));
+        assert_eq!(resources_rot(3900, 0, 125), (25, Some(0)));
+    }
+
+    #[test]
+    fn the_rotting_leaves_read_the_record() {
+        let mut s = Store::new();
+        s.insert(EeUnitRecord {
+            id: 3,
+            object: 0x30,
+            rotting_away_time: 1000,
+            resource_amount: 7,
+            ..Default::default()
+        });
+        let mut reads = Reads::default();
+        assert_eq!(step_rotting(&s, &mut reads, 3, 0x30, 1000, 125), 875);
+        assert_eq!(step_rotting(&s, &mut reads, 3, 0x30, 50, 125), 875);
+        assert_eq!(reads.mismatches, 1);
+        assert_eq!(step_rotting(&s, &mut reads, 4, 0x40, 50, 125), 0);
+        assert_eq!(reads.unrecorded, 1);
+        assert_eq!(step_resources_rotting(&s, &mut reads, 3, 0x30, 1000, 7, 3125), (125, Some(6)));
+    }
+
+    fn codes(v: &[EeUnitsCamoEvent]) -> Vec<(u32, u32)> {
+        v.iter().map(|e| (e.code, e.value)).collect()
+    }
+
+    #[test]
+    fn camouflage_counts_down_then_cloaks() {
+        assert!(camouflage(0, 0, false, 125).is_empty());
+        // the camouflaged bit alone is no time
+        assert!(camouflage(0x8000_0000, 0, true, 125).is_empty());
+        assert_eq!(codes(&camouflage(1000, 0, false, 125)), vec![(9, 875), (7, 0)]);
+        assert_eq!(codes(&camouflage(0x8000_0000 | 1000, 0, false, 125)), vec![(9, 875), (7, 0)]);
+        // ran out: camouflaged, cloaked, the second timer cleared, hidden from the mini map
+        assert_eq!(codes(&camouflage(125, 500, false, 125)), vec![(9, 0), (8, 0), (4, 0), (6, 0), (10, 0), (2, 0)]);
+    }
+
+    #[test]
+    fn camouflage_is_lost_without_vital_buildings() {
+        assert_eq!(codes(&camouflage(1000, 0, true, 125)), vec![(1, 0), (3, 0), (5, 0), (9, 0), (10, 0)]);
+        // both timers: the first block clears the second, so the second block does nothing
+        assert_eq!(codes(&camouflage(1000, 700, true, 125)), vec![(1, 0), (3, 0), (5, 0), (9, 0), (10, 0)]);
+        assert_eq!(codes(&camouflage(0, 700, true, 125)), vec![(1, 0), (3, 0), (5, 0), (9, 0), (10, 0)]);
+    }
+
+    #[test]
+    fn the_second_timer_ends_the_cloak() {
+        assert_eq!(codes(&camouflage(0, 700, false, 125)), vec![(10, 575)]);
+        assert_eq!(codes(&camouflage(0, 100, false, 125)), vec![(1, 0), (10, 0), (3, 0), (5, 0)]);
+        // a second timer past 2^31 reads negative in the 32-bit long: it ends
+        assert_eq!(codes(&camouflage(0, 0x9000_0000, false, 125)), vec![(1, 0), (10, 0), (3, 0), (5, 0)]);
+    }
+
+    #[test]
+    fn the_cloak_fades_in_the_cs_float_order() {
+        let rate = 1.0f32 / 750.0f32;
+        let range = 1.0f32 - 0.6f32;
+        let want = 125.0f32 * range * rate + 0.7f32;
+        assert_eq!(cloak_fade(0.7, false, 125.0, false, 0).to_bits(), want.to_bits());
+        assert_eq!(cloak_fade(0.99, false, 125.0, false, 0), 1.0);
+        let want = 0.9f32 - 125.0f32 * range * rate;
+        assert_eq!(cloak_fade(0.9, true, 125.0, false, 0).to_bits(), want.to_bits());
+        assert_eq!(cloak_fade(0.61, true, 125.0, false, 0), 0.6);
+        // the capitol's pulse: a triangle over 2 s
+        assert_eq!(
+            cloak_fade(0.7, true, 125.0, true, 4500).to_bits(),
+            (500.0f32 * 0.000_333_333_33f32 + 0.2).to_bits()
+        );
+        assert_eq!(
+            cloak_fade(0.7, true, 125.0, true, 5500).to_bits(),
+            (499.0f32 * 0.000_333_333_33f32 + 0.2).to_bits()
+        );
+    }
+
+    #[test]
+    fn the_camouflage_leaf_reads_the_record() {
+        let mut s = Store::new();
+        s.insert(EeUnitRecord { id: 5, object: 0x50, camouflage_timer: 1000, ..Default::default() });
+        let mut reads = Reads::default();
+        assert_eq!(codes(&step_camouflage(&s, &mut reads, 5, 0x50, 1000, 0, false, 125)), vec![(9, 875), (7, 0)]);
+        assert_eq!((reads.mismatches, reads.unrecorded), (0, 0));
+        let mut out = [EeUnitsCamoEvent::default(); EE_UNITS_CAMO_MAX_EVENTS];
+        // SAFETY: room for the most events
+        let n = unsafe { ee_units_step_camouflage(9, 0x90, 1000, 0, 1, 125, out.as_mut_ptr()) };
+        assert_eq!(n, 5);
     }
 }
 

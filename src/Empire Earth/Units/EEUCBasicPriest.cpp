@@ -463,16 +463,21 @@ void EEComplexUnit::UpdateHealSearchTimer()
 }
 
 // New (R5b.4 leaf 6): the rotting countdown of the classes' Updates (kActionUnitRotting; 19 inline copies of it were
-// in the classes' Update bodies): the time left minus the tick, not below 0, written through the holder; returns the
-// time (the callers that rot linked parts give them the same). TEST ONLY: USTM notes each call
+// in the classes' Update bodies): the time left minus the tick, not below 0 (Rust over the unit store: ee_units step.rs
+// step_rotting), written through the holder; returns the time (the callers that rot linked parts give them the same).
+// TEST ONLY: while the capture runs, the original's statements check it (USTM)
 long EEComplexUnit::UpdateRottingAwayTime()
 {
     long theBefore = this->mRottingAwayTime;
-    long theTime = theBefore - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
+    long theTime = (long)ee_units_step_rotting(static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                               theBefore, gPhysics->mTickTimeMs);
     this->SetRottingAwayTime(theTime);
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        long theOriginal = theBefore - gPhysics->mTickTimeMs;
+        if (theOriginal < 0)
+            theOriginal = 0;
+        if (theOriginal != theTime)
+            EEUnitStepDiffers("UpdateRottingAwayTime", this->mUnitID, theTime, theOriginal);
         uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime.Get()};
         EEUnitStepNote(kUnitStepRotting, this->mUnitID, theWords, 3);
     }
@@ -481,21 +486,30 @@ long EEComplexUnit::UpdateRottingAwayTime()
 
 // New (R5b.4 leaf 6): the resources' rotting of the classes' Updates (kActionResourcesRotting; 3 inline copies: the
 // animals, the fish, the default): the time plus the tick; past 4 s the resource amount loses one per whole 4 s (not
-// below 0) and the time keeps the rest. TEST ONLY: USTM notes each call
+// below 0) and the time keeps the rest (Rust over the unit store: ee_units step.rs step_resources_rotting). TEST ONLY:
+// while the capture runs, the original's statements check it (USTM)
 void EEComplexUnit::UpdateResourcesRotting()
 {
     long theBefore = this->mRottingAwayTime;
     long theAmountBefore = this->mResourceAmount;
-    long theTime = theBefore + gPhysics->mTickTimeMs;
-    if (theTime > 4000) {
-        long theAmount = this->mResourceAmount - theTime / 4000;
-        if (theAmount < 0)
-            theAmount = 0;
-        this->SetResourceAmount(theAmount);
-        theTime %= 4000;
-    }
-    this->SetRottingAwayTime(theTime);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+    int64_t theTime = 0, theAmount = 0;
+    bool theLost = ee_units_step_resources_rotting(static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                                   theBefore, theAmountBefore, gPhysics->mTickTimeMs, &theTime, &theAmount);
+    if (theLost)
+        this->SetResourceAmount((long)theAmount);
+    this->SetRottingAwayTime((long)theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
+        long theOriginal = theBefore + gPhysics->mTickTimeMs;
+        long theOriginalAmount = -1;
+        if (theOriginal > 4000) {
+            theOriginalAmount = theAmountBefore - theOriginal / 4000;
+            if (theOriginalAmount < 0)
+                theOriginalAmount = 0;
+            theOriginal %= 4000;
+        }
+        if (theOriginal != (long)theTime || (theOriginalAmount >= 0) != theLost
+            || (theLost && theOriginalAmount != (long)theAmount))
+            EEUnitStepDiffers("UpdateResourcesRotting", this->mUnitID, (long)theTime, theOriginal);
         uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
                                 (uint32_t)this->mRottingAwayTime.Get(), (uint32_t)this->mResourceAmount.Get()};
         EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);

@@ -1239,6 +1239,33 @@ constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
 
 constexpr static const uint32_t EE_UNITS_STEP_TARGET_SEARCH = 2;
 
+/// The camouflage decision's events (`EeUnitsCamoEvent::code`), in the order the C++ applies them: a mini map move,
+/// made only when the unit is then a cloaked enemy of the local player (`EEIsCloakedEnemyOf`, the C++'s test at the
+/// event), from nowhere to its tile (`SHOW`) or back (`HIDE`); the chain setters; the camouflaged bit; the two timers'
+/// writes (`value`).
+constexpr static const uint32_t EE_UNITS_CAMO_SHOW = 1;
+
+constexpr static const uint32_t EE_UNITS_CAMO_HIDE = 2;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKABLE_OFF = 3;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKABLE_ON = 4;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKED_OFF = 5;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKED_ON = 6;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CAMOUFLAGED_OFF = 7;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CAMOUFLAGED_ON = 8;
+
+constexpr static const uint32_t EE_UNITS_CAMO_SET_TIMER = 9;
+
+constexpr static const uint32_t EE_UNITS_CAMO_SET_SECOND = 10;
+
+/// The most events one call makes (two blocks of five).
+constexpr static const size_t EE_UNITS_CAMO_MAX_EVENTS = 16;
+
 /// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
 constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
 
@@ -6837,6 +6864,12 @@ struct EeUnitsPowerOut {
   uint8_t set_power;
   int64_t power;
   int64_t regen_timer;
+};
+
+/// One event of the camouflage decision.
+struct EeUnitsCamoEvent {
+  uint32_t code;
+  uint32_t value;
 };
 
 /// A member handed over.
@@ -14934,6 +14967,41 @@ void ee_units_step_power(uint32_t id,
 /// Both point to writable u32s.
 void ee_units_step_reads(uint32_t *out_mismatches,
                          uint32_t *out_unrecorded);
+
+/// `UpdateRottingAwayTime` over the store: the new time (the C++ writes it through the holder).
+int64_t ee_units_step_rotting(uint32_t id, uint64_t object, int64_t member, int64_t tick_ms);
+
+/// `UpdateResourcesRotting` over the store: the new time, and true with the new amount in `out_amount` past 4 s.
+///
+/// # Safety
+/// Both outputs point to writable i64s.
+bool ee_units_step_resources_rotting(uint32_t id,
+                                     uint64_t object,
+                                     int64_t member_time,
+                                     int64_t member_amount,
+                                     int64_t tick_ms,
+                                     int64_t *out_time,
+                                     int64_t *out_amount);
+
+/// `UpdateCamouflageTimer`'s timers over the store: the events in `out` (room for `EE_UNITS_CAMO_MAX_EVENTS`), their
+/// count returned.
+///
+/// # Safety
+/// `out` points to `EE_UNITS_CAMO_MAX_EVENTS` writable events.
+uint32_t ee_units_step_camouflage(uint32_t id,
+                                  uint64_t object,
+                                  uint32_t member_timer,
+                                  uint32_t second,
+                                  uint8_t no_vital,
+                                  int64_t tick_ms,
+                                  EeUnitsCamoEvent *out);
+
+/// `UpdateCamouflageTimer`'s cloak opacity (the pulse test and the game time handed in).
+float ee_units_step_cloak_fade(float opacity,
+                               uint8_t cloaked,
+                               float tick_time,
+                               uint8_t pulse,
+                               int64_t game_time);
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
 ///
