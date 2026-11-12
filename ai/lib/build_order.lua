@@ -16,6 +16,15 @@ local M = {}
 
 local RESOURCES = {"food", "wood", "stone", "gold", "iron"}
 
+-- the parts added after O3 (AI_RESEARCH §8.51), each switchable for the bisect of O8's slower Copper Age
+M.OPT = {
+    place = true,           -- settlements touching their resource (lib.place), home sites included
+    techs = true,           -- the town centre's gathering techs
+    stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
+    claim_target = true,    -- the mines claimed for the phase's whole target
+    food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+}
+
 -- the gatherers, filled in this order as the citizens come (each step: a resource up to a count); food counts the
 -- land gatherers only (the boats come on top)
 M.FILL = {
@@ -42,14 +51,16 @@ M.PHASE = {
            barracks_at = 24, settlements = 7},
     -- (from the Stone Age a second town centre: one trains about 2 citizens a minute, the owner's town grew by 3.4 a
     -- minute, 35 to 86 in 15 minutes)
+    -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
+    -- at its weakest, boom-defence's seeds 4 and 24)
     stone_start = {citizens = 34, citizens_max = 34, boats = 10, docks = 1, barracks = 2, ranges = 1,
-                   army_first = false, towers = 4, town_centers = 2, tc_at = 30,
+                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
     stone_grow = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
-                  army_first = false, towers = 7, town_centers = 2, tc_at = 30,
+                  army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     stone_developed = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
-                       army_first = false, towers = 7, town_centers = 2, tc_at = 30,
+                       army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     copper = {citizens = 90, citizens_max = 100, boats = 10, docks = 1, granaries = 3, save_at = 75,
               save_after = 12},
@@ -58,6 +69,7 @@ M.PHASE = {
 M.START_MAX_MIN = 6        -- minutes: stone_start ends by then even without the boats (no water, no dock site)
 M.GROW_MAX_MIN = 12        -- minutes into the Stone Age: developed by then whatever the gatherers (the raid by ~40)
 M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for even if the raid never went out
+M.FOOD_BANK = 240          -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
 
@@ -198,15 +210,64 @@ function M.holds_wood(view, phase)
     return phase == "stone_start" and view.boats < 10
 end
 
+-- the start patches' food left (the owner: "a failure if the initial patches run out before Copper"): the home forage
+-- patches seen at the first step, their amounts now (0 once gone)
+function M.start_patches(view, memory)
+    if memory.start_patches == nil then
+        memory.start_patches = {}
+        for _, s in ipairs(view.sites) do
+            if s.home and s.patch then
+                memory.start_patches[#memory.start_patches + 1] = s.index
+            end
+        end
+    end
+    local left, alive = 0, 0
+    for _, idx in ipairs(memory.start_patches) do
+        for _, s in ipairs(view.sites) do
+            if s.index == idx and s.patch and (s.amount or 0) > 0 then
+                left = left + s.amount
+                alive = alive + 1
+            end
+        end
+    end
+    return left, alive, #memory.start_patches
+end
+
 -- the trace line (once a minute): what the acceptance check reads
 function M.trace(view, memory, phase, army)
     local g = view.gatherers
+    local pleft, palive, pn = M.start_patches(view, memory)
     print(string.format("order line phase=%s gat=%d/%d/%d/%d/%d hunters=%d boats=%d cit=%d army=%d docks=%d barracks=%d "
-        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s", phase, g.food or 0, g.wood or 0, g.stone or 0,
+        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s tplaces=%d/%d/%d startfood=%d/%d/%d", phase, g.food or 0, g.wood or 0, g.stone or 0,
         g.gold or 0, g.iron or 0, view.hunters or 0, view.boats, view.citizens, army, count(view, "b_dock", "finished"),
         count(view, "b_barracks", "finished"), count(view, "b_archery_range", "finished"), M.towers(view),
         count(view, "b_settlement", "finished"), count(view, "b_granary", "finished"), count(view, "b_farm", "finished"),
-        memory.raid ~= nil and tostring(memory.raid.state) or "-"))
+        memory.raid ~= nil and tostring(memory.raid.state) or "-", (memory.touched_room or {}).stone or 0,
+        (memory.touched_room or {}).gold or 0, (memory.touched_room or {}).iron or 0, pleft, palive, pn))
+end
+
+-- the town centre's gathering techs (dbtechtree: kind 0, researched at b_town_center or b_capitol; the owner takes them at
+-- once, epoch by epoch): {tech, its epoch}. Their events name what they raise (hafts: stone, hand axe and saw: wood,
+-- metal working and amalgamation: gold, shaft mining: iron, windlass: stone, land conservation: farms ...)
+M.TECHS = {
+    {"hafts_tech", 1}, {"hand_axe_tech_from_town_center", 2}, {"fine_flaked_tools", 2}, {"metal_working_tech", 3},
+    {"hardened_chisel_tech", 3}, {"falconry_tech", 4}, {"saw_tech", 4}, {"amalgamation_tech", 5},
+    {"shaft_mining_tech", 5}, {"windlass_tech", 6}, {"land_conservation_tech", 7}, {"forestry_tech", 7},
+    {"steam_engine_tech", 8}, {"mining_explosives_tech", 8}, {"hammer_drilling_rigs_tech", 10},
+    {"enviromental_law_tech", 10}, {"mechanized_logging_tech", 10}, {"oxygen_furnace_tech", 11},
+    {"hydraulic_mining_tech", 11}, {"self_sufficiency_tech", 12}, {"atom_manipulation_tech", 13},
+    {"core_mining_tech", 13},
+}
+
+-- the next gathering tech to research now (nil: none due); memory.techs: the ones ordered
+function M.next_tech(view, memory)
+    memory.techs = memory.techs or {}
+    for _, t in ipairs(M.TECHS) do
+        if t[2] <= view.epoch and not memory.techs[t[1]] then
+            return t[1]
+        end
+    end
+    return nil
 end
 
 local TOWERS = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle"}

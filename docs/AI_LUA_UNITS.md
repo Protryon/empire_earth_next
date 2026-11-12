@@ -991,6 +991,16 @@ passes; unknown names are left out, and a list of none known matches nothing (as
 table read as an unknown class and matched nothing (boom counted 0 town centres; `ai/ageofai/econ.lua`'s town list
 found no town). `tests/ai_units/types.lua` checks that a list's ids are the union of its names' ids.
 
+**The released citizen at work, and exact gatherer counts (2026-11-11, boom-econ, AI_RESEARCH §8.51):**
+- **`ai.release` of a citizen that is not idle yet** (stopped this tick, hunting, or released without
+  `{gather = true}`) now goes onto its resource's gatherer list, a hunter (an attack goal on an animal) onto food's,
+  else onto the idle list. Before, it went onto none, and the engine's runners never counted or moved it again (18 of
+  a boom town's 33 citizens in one game). Land citizens of the next engine only; `{gather = true}` is unchanged.
+- **The coarse `gather` order takes `exact = 1`** (`{verb = "gather", resource = "gold", n = 2, exact = 1}`; 0 turns
+  it off, absent leaves it as it was): the gatherer runner's rebalance then moves a gatherer off a resource as soon as
+  it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
+  it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between
