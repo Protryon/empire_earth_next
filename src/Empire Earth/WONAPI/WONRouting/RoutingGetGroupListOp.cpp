@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 // FUNCTION: WON 0x6c5980
@@ -15,9 +16,8 @@ namespace WONAPI {
 void RoutingGetGroupListOp::SendRequest()
 {
     this->mGroupMap.clear();
-    this->InitSendMsg(26);
-    this->mSendMsg.AppendShort(this->mFlags);
-    this->mSendMsg.AppendShort(this->mParentGroupId);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendGroupList(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -26,43 +26,10 @@ void RoutingGetGroupListOp::SendRequest()
 // Accepts the group list reply, parses it into the group map on success and returns its status
 WONStatus RoutingGetGroupListOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 25) return (WONStatus)WS_RoutingOp_DontWantReply;
-    WONStatus status = inMsg.ReadShort();
-    if (status == 0) this->ParseReplyExceptForStatus(inMsg);
-    return status;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteGroupList(this, inMsgType, inMsg);
 }
 
-// FUNCTION: WON 0x6c5c10
-// Rebuilds the group map from a group list body, reading only the fields the reply's flags include
-void RoutingGetGroupListOp::ParseReplyExceptForStatus(ReadBuffer& inMsg)
-{
-    this->mGroupMap.clear();
-    this->mFlags = inMsg.ReadShort();
-    int count = (unsigned short)inMsg.ReadShort();
-    for (int i = 0; i < count; ++i) {
-        unsigned short length = inMsg.ReadShort();
-        long start = inMsg.pos();
-        RoutingGroupInfoPtr group = this->GetNewGroupInfo();
-        group->mId = inMsg.ReadShort();
-        if (this->IncludeName()) inMsg.ReadWString(group->mName, 2);
-        if (this->IncludeCaptain()) group->mCaptainId = inMsg.ReadShort();
-        if (this->IncludeMaxPlayers()) group->mMaxClients = inMsg.ReadShort();
-        if (this->IncludeFlags()) group->mFlags = inMsg.ReadLong();
-        if (this->IncludeAsyncFlags()) group->mAsyncFlags = inMsg.ReadLong();
-        if (this->IncludeObserverCount()) group->mObserverCount = inMsg.ReadShort();
-        if (this->IncludeMemberCount()) group->mMaxPlayers = inMsg.ReadShort(); // holds the member count
-        if (this->IncludeMembers()) {
-            for (int j = 0; j < group->mMaxPlayers; ++j) {
-                RoutingMemberInfoPtr member = this->GetNewMemberInfo();
-                member->mClientId = inMsg.ReadShort();
-                member->mFlags = inMsg.ReadByte(); // read as a byte
-                group->mMembers[member->mClientId] = member;
-            }
-        }
-        this->mGroupMap[group->mId] = group;
-        inMsg.ReadBytes(length - inMsg.pos() + start);
-    }
-}
 }
 
 namespace WONAPI {
@@ -81,15 +48,13 @@ RoutingGroupInfoPtr RoutingGetGroupListOp::GetNewGroupInfo()
     return new RoutingGroupInfo;
 }
 // FUNCTION: WON 0x006c5f70
-// Parses a group list from a raw buffer into the group map; returns false when the buffer runs short
+// Parses a group list from a raw buffer into the group map (ParseReplyExceptForStatus, 0x6c5c10, inlined);
+// returns false when the buffer runs short
 bool RoutingGetGroupListOp::ParseGroupListObj(const void* data,unsigned long size)
 {
-    try {
-        ReadBuffer msg(data,size);
-        this->ParseReplyExceptForStatus(msg);
-        return true;
-    } catch(ReadBufferException&) {}
-    return false;
+    // the read is Rust's (ee_won routemsg.rs): the group map rebuilt from the body, what was read kept when it
+    // runs short
+    return RouteParseGroupListObj(this, data, size);
 }
 }
 

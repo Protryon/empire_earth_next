@@ -9,6 +9,7 @@
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006cbe70
 // Sets 4-byte length fields, creates an empty profile and a new 8-byte session key
@@ -35,41 +36,29 @@ void CreateAccountOp::Reset()
 // Builds the next message: public key request, encrypted session key, or the encrypted account data
 WONStatus CreateAccountOp::GetNextRequest()
 {
-    WriteBuffer request(this->mLengthFieldSize,true);
+    // the messages are Rust's (ee_won db.rs); the keys stay C++
     if (this->mState==State_GettingPubKey) {
-        request.AppendByte(5);
-        request.AppendShort(14);
-        request.AppendShort(2);
-        request.AppendShort(1);
-        this->mRequest=request.ToByteBuffer(true);
+        DbRequest q(EE_WON_DB_REQ_CREATE_KEY,this->mLengthFieldSize);
+        this->mRequest=q.Build();
         return WS_ServerReq_Recv;
     } else if (this->mState==State_SettingSessionKey) {
-        request.AppendByte(5);
-        request.AppendShort(14);
-        request.AppendShort(4);
-        request.AppendShort(1);
         ByteBufferPtr encryptedKey=this->mPubKey.Encrypt(this->mSymKey.GetKey(),this->mSymKey.GetKeyLen());
-        request.AppendBuffer(encryptedKey.get(),2);
-        this->mRequest=request.ToByteBuffer(true);
+        DbRequest q(EE_WON_DB_REQ_CREATE_SESSION,this->mLengthFieldSize);
+        q.mReq.data=DbRequest::Buffer(encryptedKey.get());
+        this->mRequest=q.Build();
         this->mState=State_CreatingAccount;
         return WS_ServerReq_Send;
     } else {
-        request.AppendByte(5);
-        request.AppendShort(14);
-        request.AppendShort(5);
-        request.AppendShort(1);
-        WriteBuffer account(0,true);
-        account.AppendByte(5);
-        account.AppendShort(14);
-        account.AppendShort(1002);
-        account.AppendShort(2);
-        account.AppendWString(this->mUserName,2);
-        account.AppendWString(this->mPassword,2);
-        account.AppendString(this->mEmail,2);
-        this->mProfileData->PackRequestData(account,true);
-        ByteBufferPtr encrypted=this->mSymKey.Encrypt(account.data(),account.length());
-        request.AppendBuffer(encrypted.get(),0);
-        this->mRequest=request.ToByteBuffer(true);
+        DbRequest account(EE_WON_DB_REQ_CREATE_DATA,0);
+        account.mReq.name=account.Text(this->mUserName);
+        account.mReq.password=account.Text(this->mPassword);
+        account.mReq.email=DbRequest::Narrow(this->mEmail);
+        account.mReq.profile=this->mProfileData->GetProfile();
+        ByteBufferPtr aPlain=account.Build();
+        ByteBufferPtr encrypted=this->mSymKey.Encrypt(aPlain->data(),aPlain->length());
+        DbRequest q(EE_WON_DB_REQ_CREATE_ACCOUNT,this->mLengthFieldSize);
+        q.mReq.data=DbRequest::Buffer(encrypted.get());
+        this->mRequest=q.Build();
         return WS_ServerReq_Recv;
     }
 }
@@ -77,29 +66,19 @@ WONStatus CreateAccountOp::GetNextRequest()
 // Checks a reply: stores the server's public key and moves on, or returns the account creation status
 WONStatus CreateAccountOp::CheckResponse()
 {
-    ReadBuffer reply(this->mResponse->data(),this->mResponse->length());
-    unsigned char header=reply.ReadByte();
-    unsigned short service=reply.ReadShort();
-    unsigned short message=reply.ReadShort();
-    unsigned short subMessage=reply.ReadShort();
-    WONStatus status=reply.ReadShort();
-    reply.ReadString(this->mErrorString,2);
-    reply.ReadByte();
-    if (header!=5 || service!=14) return this->InvalidReplyHeader();
-    if (status!=0) return status;
-    if (this->mState==State_GettingPubKey) {
-        if (message!=3) return this->InvalidReplyHeader();
-        unsigned short keyLength=reply.ReadShort();
-        if (!this->mPubKey.SetPublicKey(reply.ReadBytes(keyLength),keyLength)) {
+    // the reply's read is Rust's (ee_won db.rs)
+    EeWonDbReply r=DbAccountReply(this->mState==State_GettingPubKey ? EE_WON_DB_CREATE_KEY : EE_WON_DB_CREATE,
+                                  this->mResponse.get(),this->mErrorString);
+    if (r.verdict==EE_WON_DB_INVALID_HEADER) return this->InvalidReplyHeader();
+    if (r.verdict==EE_WON_DB_PUBLIC_KEY) {
+        if (!this->mPubKey.SetPublicKey(this->mResponse->data()+r.key_at,r.key_len)) {
             this->SetLastServerError(WS_InvalidPublicKey);
             return WS_ServerReq_TryNextServer;
         }
         this->mState=State_SettingSessionKey;
         return WS_ServerReq_Send;
-    } else {
-        if (message!=1002 || subMessage!=3) return this->InvalidReplyHeader();
-        return status;
     }
+    return (WONStatus)r.result;
 }
 }
 

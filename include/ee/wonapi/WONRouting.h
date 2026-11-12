@@ -930,7 +930,6 @@ public:
 
 class RoutingGetGroupListOp : public RoutingOp {
 public:
-    void ParseReplyExceptForStatus(ReadBuffer&); //2c5c10
     RoutingMemberInfoPtr GetNewMemberInfo(); //ownhelper2c5a60, nullconnection fallback
     RoutingGroupInfoPtr GetNewGroupInfo(); //ownhelper2c5ad0, nullconnection fallback
     // Only the inline constructor its callers need; everything else is out of line:
@@ -1053,7 +1052,6 @@ public:
     RoutingClientJoinedServerOp(RoutingConnection* connection) : RoutingOp(connection) {}
     virtual RoutingOpType GetType() const { return 8; } //slot14
     virtual WONStatus HandleReply(unsigned char, ReadBuffer&); // 0x2c4700
-    static void ParseExClientData(ReadBuffer&, RoutingClientInfo*); // 2c4680, cdecl
     SmartPtr<RoutingClientInfo> mClientInfo; //64
     const std::wstring& GetClientName() const { if(this->mClientInfo.get()!=NULL) return this->mClientInfo->mName; else return GetEmptyWStr(); }
 };
@@ -1340,7 +1338,6 @@ public:
     virtual void SendRequest();
     virtual WONStatus HandleReply(unsigned char, ReadBuffer&);
     virtual RoutingOpType GetType() const;
-    void ParseReplyExceptForStatus(ReadBuffer&); //2c8170, 500 bytes
     unsigned short mLinkId; //64, 2bf231
     std::string mDataType; //68, ctor zeroes 6c/70/74, assigned at 2bf24d
     void SetDataType(const std::string& v) { this->mDataType=v; }
@@ -2439,15 +2436,16 @@ public:
     void PackRequestData(WriteBuffer&,bool); //2cdcc0
     void UnpackGetData(ReadBuffer&); //2cde20
     void SetBirthDate(unsigned char inMonth,unsigned char inDay,unsigned short inYear); //2ce070
+    // the Rust profile (ee_won db.rs), for the requests that pack it
+    const EeWonProfile* GetProfile() const { return this->mProfile; }
 protected:
     virtual ~ProfileData(); //2cd830, explicit own-vtable store at 2cd852
-public:
-    unsigned char mBirthMonth; //08
-    unsigned char mBirthDay; //09
-    unsigned short mBirthYear; //0a
-    std::map<unsigned short,bool> mNewsletterSubs; //0c..18
-    unsigned short mCustomActionId; //18, natural padding1a..1b
-    ByteBufferPtr mCustomActionData; //1c..20
+private:
+    ProfileData(const ProfileData&);
+    ProfileData& operator=(const ProfileData&);
+    static void Append(void*,const uint8_t*,size_t);
+    // the birth date, the newsletter subscriptions and the custom action: a Rust object (ee_won db.rs)
+    EeWonProfile* mProfile;
 };
 class DBProxyOp : public ServerRequestOp {
 public:

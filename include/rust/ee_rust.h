@@ -1181,31 +1181,63 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
-constexpr static const int32_t GET_DIR = 0;
+/// The reply kinds (`ee_won_db_reply`).
+constexpr static const int32_t EE_WON_DB_PROXY = 0;
 
-constexpr static const int32_t GET_MULTI_DIR = 1;
+/// `CreateAccountOp` waiting for the server's public key
+constexpr static const int32_t EE_WON_DB_CREATE_KEY = 1;
 
-constexpr static const int32_t ALIAS_GET = 2;
+/// `CreateAccountOp` past the key
+constexpr static const int32_t EE_WON_DB_CREATE = 2;
 
-constexpr static const int32_t GET_SERVICE = 3;
+constexpr static const int32_t EE_WON_DB_GET_ACCOUNT = 3;
 
-constexpr static const int32_t FIND = 4;
+constexpr static const int32_t EE_WON_DB_UPDATE_ACCOUNT = 4;
 
-constexpr static const int32_t ADD = 5;
+constexpr static const int32_t EE_WON_DB_CONTEST = 5;
 
-constexpr static const int32_t MODIFY = 6;
+constexpr static const int32_t EE_WON_DB_EVENT = 6;
 
-constexpr static const int32_t REMOVE = 7;
+/// What the op does after the read.
+/// Return `status`.
+constexpr static const int32_t EE_WON_DB_RETURN = 0;
 
-constexpr static const int32_t RENAME = 8;
+/// Return `InvalidReplyHeader()`.
+constexpr static const int32_t EE_WON_DB_INVALID_HEADER = 1;
 
-constexpr static const int32_t RENEW = 9;
+/// DBProxy: keep the rest (`rest_*`) and receive the next reply.
+constexpr static const int32_t EE_WON_DB_RECEIVE = 2;
 
-constexpr static const int32_t SET_DATA_OBJECTS = 10;
+/// DBProxy: keep the rest, then take the collected data as the reply and return `status`.
+constexpr static const int32_t EE_WON_DB_DONE = 3;
 
-constexpr static const int32_t MODIFY_DATA_OBJECTS = 11;
+/// CreateAccount: set the public key at `key_*` (its failure: an invalid key, the next server; else the
+/// session key goes next)
+constexpr static const int32_t EE_WON_DB_PUBLIC_KEY = 4;
 
-constexpr static const int32_t CLEAR_DATA_OBJECTS = 12;
+/// The DBProxy family's requests (`EeWonDbRequest::kind`).
+constexpr static const int32_t EE_WON_DB_REQ_PROXY = 0;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_KEY = 1;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_SESSION = 2;
+
+/// the account data to encrypt
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_DATA = 3;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_ACCOUNT = 4;
+
+constexpr static const int32_t EE_WON_DB_REQ_GET_ACCOUNT = 5;
+
+constexpr static const int32_t EE_WON_DB_REQ_UPDATE_ACCOUNT = 6;
+
+constexpr static const int32_t EE_WON_DB_REQ_USER_ID = 7;
+
+constexpr static const int32_t EE_WON_DB_REQ_PASSWORD_EMAIL = 8;
+
+constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
+
+constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -1603,6 +1635,327 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
+
+constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
+
+/// `WS_None`
+constexpr static const int32_t EE_WON_RT_NONE = 100004;
+
+/// `WS_InvalidMessage`
+constexpr static const int32_t EE_WON_RT_INVALID_MESSAGE = 100006;
+
+/// `WS_MessageUnpackFailure`
+constexpr static const int32_t EE_WON_RT_UNPACK_FAILURE = 100012;
+
+/// `WS_RoutingOp_DontWantReply`
+constexpr static const int32_t EE_WON_RT_DONT_WANT = 100104;
+
+/// `WS_RoutingOp_NeedMoreReplies`
+constexpr static const int32_t EE_WON_RT_NEED_MORE = 100105;
+
+constexpr static const int32_t EE_WON_RT_REQ_HEADER = 0;
+
+constexpr static const int32_t EE_WON_RT_REQ_BAN = 1;
+
+constexpr static const int32_t EE_WON_RT_REQ_MUTE = 2;
+
+constexpr static const int32_t EE_WON_RT_REQ_CANCEL_JOIN = 3;
+
+constexpr static const int32_t EE_WON_RT_REQ_LEAVE = 4;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_FLAGS = 5;
+
+constexpr static const int32_t EE_WON_RT_REQ_SERVER_ALERT = 6;
+
+constexpr static const int32_t EE_WON_RT_REQ_START_SHUTDOWN = 7;
+
+constexpr static const int32_t EE_WON_RT_REQ_ABORT_SHUTDOWN = 8;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_CLIENT_FLAGS = 9;
+
+constexpr static const int32_t EE_WON_RT_REQ_SEND_CHAT = 10;
+
+constexpr static const int32_t EE_WON_RT_REQ_SEND_DATA = 11;
+
+constexpr static const int32_t EE_WON_RT_REQ_BECOME_MODERATOR = 12;
+
+constexpr static const int32_t EE_WON_RT_REQ_ACCEPT_CLIENT = 13;
+
+constexpr static const int32_t EE_WON_RT_REQ_CREATE_DATA = 14;
+
+constexpr static const int32_t EE_WON_RT_REQ_DELETE_DATA = 15;
+
+constexpr static const int32_t EE_WON_RT_REQ_INVITE = 16;
+
+constexpr static const int32_t EE_WON_RT_REQ_MODIFY_DATA = 17;
+
+constexpr static const int32_t EE_WON_RT_REQ_READ_DATA = 18;
+
+constexpr static const int32_t EE_WON_RT_REQ_UNSUBSCRIBE = 19;
+
+constexpr static const int32_t EE_WON_RT_REQ_CREATE_GROUP = 20;
+
+constexpr static const int32_t EE_WON_RT_REQ_JOIN_GROUP = 21;
+
+constexpr static const int32_t EE_WON_RT_REQ_REGISTER = 22;
+
+constexpr static const int32_t EE_WON_RT_REQ_CLIENT_LIST = 23;
+
+constexpr static const int32_t EE_WON_RT_REQ_GROUP_LIST = 24;
+
+constexpr static const int32_t EE_WON_RT_REQ_MEMBERS = 25;
+
+constexpr static const int32_t EE_WON_RT_REQ_BAD_USERS = 26;
+
+constexpr static const int32_t EE_WON_RT_REQ_FIREWALL = 27;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_NAME = 28;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_PASSWORD = 29;
+
+constexpr static const int32_t EE_WON_RT_REQ_SET_GROUP_MAX_PLAYERS = 30;
+
+constexpr static const int32_t EE_WON_RT_REQ_RELINQUISH_CAPTAIN = 31;
+
+constexpr static const int32_t EE_WON_RT_REQ_DISCONNECT = 32;
+
+constexpr static const int32_t EE_WON_RT_REQ_USER_STATUS = 33;
+
+constexpr static const int32_t EE_WON_RT_REQ_GROUP_LIST_REQ = 34;
+
+/// A status reply (message 66): every op that only waits for the server's status
+constexpr static const int32_t EE_WON_RT_STATUS = 0;
+
+constexpr static const int32_t EE_WON_RT_GROUP_LIST = 1;
+
+/// `RoutingGetGroupListOp::ParseGroupListObj`: a group list body without type or status
+constexpr static const int32_t EE_WON_RT_GROUP_LIST_BODY = 2;
+
+constexpr static const int32_t EE_WON_RT_READ_DATA = 3;
+
+constexpr static const int32_t EE_WON_RT_CREATE_GROUP = 4;
+
+constexpr static const int32_t EE_WON_RT_JOIN_GROUP = 5;
+
+constexpr static const int32_t EE_WON_RT_REGISTER = 6;
+
+constexpr static const int32_t EE_WON_RT_CLIENT_LIST = 7;
+
+constexpr static const int32_t EE_WON_RT_MEMBERS = 8;
+
+constexpr static const int32_t EE_WON_RT_BAD_USERS = 9;
+
+constexpr static const int32_t EE_WON_RT_FIREWALL = 10;
+
+constexpr static const int32_t EE_WON_RT_DERIVED = 11;
+
+/// `RoutingGetUserStatusOp::CheckResponse`: the whole datagram
+constexpr static const int32_t EE_WON_RT_USER_STATUS = 12;
+
+/// `RoutingGetGroupListReqOp::CheckResponse`: the whole reply
+constexpr static const int32_t EE_WON_RT_GROUP_LIST_REQ = 13;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_FLAGS = 20;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_JOINED_GROUP = 21;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_JOINED_SERVER = 22;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_LEFT_GROUP = 23;
+
+constexpr static const int32_t EE_WON_RT_N_CLIENT_LEFT_SERVER = 24;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_CREATED = 25;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_DELETED = 26;
+
+constexpr static const int32_t EE_WON_RT_N_DATA_MODIFIED = 27;
+
+constexpr static const int32_t EE_WON_RT_N_CAPTAIN_CHANGED = 28;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_CREATED = 29;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_DELETED = 30;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_FLAGS = 31;
+
+constexpr static const int32_t EE_WON_RT_N_INVITATION = 32;
+
+constexpr static const int32_t EE_WON_RT_N_JOIN_ATTEMPT = 33;
+
+constexpr static const int32_t EE_WON_RT_N_MAX_PLAYERS = 34;
+
+constexpr static const int32_t EE_WON_RT_N_MEMBER_COUNT = 35;
+
+constexpr static const int32_t EE_WON_RT_N_GROUP_NAME = 36;
+
+constexpr static const int32_t EE_WON_RT_N_OBSERVER_COUNT = 37;
+
+constexpr static const int32_t EE_WON_RT_N_MEMBER_FLAGS = 38;
+
+constexpr static const int32_t EE_WON_RT_N_PEER_CHAT = 39;
+
+constexpr static const int32_t EE_WON_RT_N_PEER_DATA = 40;
+
+constexpr static const int32_t EE_WON_RT_N_SERVER_ALERT = 41;
+
+constexpr static const int32_t EE_WON_RT_N_SHUTDOWN_ABORTED = 42;
+
+constexpr static const int32_t EE_WON_RT_N_SHUTDOWN_STARTED = 43;
+
+constexpr static const int32_t EE_WON_RT_N_BANNED = 44;
+
+constexpr static const int32_t EE_WON_RT_N_MUTED = 45;
+
+/// the op's numeric member `slot` = `num`
+constexpr static const uint8_t EE_WON_RT_FIELD = 1;
+
+/// the op's wide string member `slot` = the UTF-16 units at `at` (`len` units)
+constexpr static const uint8_t EE_WON_RT_TEXT = 2;
+
+/// the op's narrow string member `slot` = the bytes at `at`
+constexpr static const uint8_t EE_WON_RT_NARROW = 3;
+
+/// the op's buffer member `slot` = a new buffer of the bytes at `at`
+constexpr static const uint8_t EE_WON_RT_BUF = 4;
+
+/// a new record of kind `slot` (from the op's factory) becomes the current one of its kind
+constexpr static const uint8_t EE_WON_RT_NEW = 5;
+
+/// the current record's numeric field `slot` = `num`
+constexpr static const uint8_t EE_WON_RT_REC = 6;
+
+/// the current record's wide string field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_TEXT = 7;
+
+/// the current record's narrow string field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_NARROW = 8;
+
+/// the current record's buffer field `slot`
+constexpr static const uint8_t EE_WON_RT_REC_BUF = 9;
+
+/// the current record goes into the container `slot`
+constexpr static const uint8_t EE_WON_RT_INSERT = 10;
+
+/// an action `slot` (with `num`)
+constexpr static const uint8_t EE_WON_RT_ACT = 11;
+
+/// a client (`GetNewClientInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_CLIENT = 0;
+
+/// a member (`GetNewMemberInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_MEMBER = 1;
+
+/// a group (`GetNewGroupInfo`)
+constexpr static const uint8_t EE_WON_RT_KIND_GROUP = 2;
+
+/// a data object (`new RoutingDataObject`)
+constexpr static const uint8_t EE_WON_RT_KIND_OBJECT = 3;
+
+/// a bad user (a default `RoutingBadUser`)
+constexpr static const uint8_t EE_WON_RT_KIND_BAD_USER = 4;
+
+/// the current member's client: `member->mClientInfo = GetNewClientInfo()`, now the current client
+constexpr static const uint8_t EE_WON_RT_KIND_MEMBER_CLIENT = 5;
+
+/// the op's own client: `mClientInfo = GetNewClientInfo()`, now the current client
+constexpr static const uint8_t EE_WON_RT_KIND_OP_CLIENT = 6;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_ID = 0;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_NAME = 1;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_FLAGS = 2;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_USER_ID = 3;
+
+constexpr static const uint8_t EE_WON_RT_CLIENT_ADDRESS = 4;
+
+constexpr static const uint8_t EE_WON_RT_MEMBER_ID = 5;
+
+constexpr static const uint8_t EE_WON_RT_MEMBER_FLAGS = 6;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_ID = 7;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_NAME = 8;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_CAPTAIN = 9;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_MAX_CLIENTS = 10;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_FLAGS = 11;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_ASYNC_FLAGS = 12;
+
+constexpr static const uint8_t EE_WON_RT_GROUP_OBSERVERS = 13;
+
+/// `mMaxPlayers`, which holds the member count
+constexpr static const uint8_t EE_WON_RT_GROUP_MAX_PLAYERS = 14;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_LINK = 15;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_TYPE = 16;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_NAME = 17;
+
+constexpr static const uint8_t EE_WON_RT_OBJECT_DATA = 18;
+
+constexpr static const uint8_t EE_WON_RT_BAD_WON_ID = 19;
+
+constexpr static const uint8_t EE_WON_RT_BAD_NAME = 20;
+
+constexpr static const uint8_t EE_WON_RT_BAD_EXPIRATION = 21;
+
+constexpr static const uint8_t EE_WON_RT_BAD_MODERATOR_ID = 22;
+
+constexpr static const uint8_t EE_WON_RT_BAD_MODERATOR_NAME = 23;
+
+constexpr static const uint8_t EE_WON_RT_BAD_COMMENT = 24;
+
+/// the client map, by the client's id (`map[id] = client`)
+constexpr static const uint8_t EE_WON_RT_INTO_CLIENTS = 0;
+
+/// the member map, by the member's id
+constexpr static const uint8_t EE_WON_RT_INTO_MEMBERS = 1;
+
+/// the current group's member map
+constexpr static const uint8_t EE_WON_RT_INTO_GROUP_MEMBERS = 2;
+
+/// the group map, by the group's id
+constexpr static const uint8_t EE_WON_RT_INTO_GROUPS = 3;
+
+/// the end of the data object list
+constexpr static const uint8_t EE_WON_RT_INTO_OBJECTS = 4;
+
+/// the end of the bad user list
+constexpr static const uint8_t EE_WON_RT_INTO_BAD_USERS = 5;
+
+/// `CheckLeaveGroup(num)`
+constexpr static const uint8_t EE_WON_RT_ACT_CHECK_LEAVE = 0;
+
+/// the group map is cleared
+constexpr static const uint8_t EE_WON_RT_ACT_CLEAR_GROUPS = 1;
+
+/// the bad user list is cleared
+constexpr static const uint8_t EE_WON_RT_ACT_CLEAR_BAD_USERS = 2;
+
+/// the op's client map = the client map built so far (an inner client list op's)
+constexpr static const uint8_t EE_WON_RT_ACT_COMMIT_CLIENTS = 3;
+
+/// the op's member map = the member map built so far (an inner members op's)
+constexpr static const uint8_t EE_WON_RT_ACT_COMMIT_MEMBERS = 4;
+
+/// `++mReplyCount`
+constexpr static const uint8_t EE_WON_RT_ACT_INC_REPLIES = 5;
+
+/// `mRecipients.push_back(num)`
+constexpr static const uint8_t EE_WON_RT_ACT_RECIPIENT = 6;
+
+/// the next queried user's status = `num` (in the status map's order)
+constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
+
+/// `InvalidReplyHeader()` (a group list request's reply of another kind)
+constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
@@ -2193,6 +2546,9 @@ struct EeWonConfigLexer;
 
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
+
+/// An account's profile: newsletter subscriptions, a custom action and a birth date.
+struct EeWonProfile;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -5750,6 +6106,95 @@ struct EeWonConfigState {
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
 
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A request's fields from the C++ (texts as UTF-16 LE bytes).
+struct EeWonDbRequest {
+  int32_t kind;
+  uint8_t field_size;
+  int16_t message;
+  int16_t sub;
+  uint32_t user_id;
+  /// the request data, the encrypted key or account data
+  EeWonDirBytes data;
+  EeWonDirBytes name;
+  EeWonDirBytes password;
+  EeWonDirBytes email;
+  const EeWonProfile *profile;
+};
+
+/// An event detail from the C++.
+struct EeWonDbDetail {
+  uint16_t detail_type;
+  int32_t data_type;
+  uint32_t number;
+  EeWonDirBytes text;
+};
+
+/// An event attachment from the C++.
+struct EeWonDbAttachment {
+  EeWonDirBytes description;
+  uint8_t content_type;
+  EeWonDirBytes data;
+};
+
+/// An event report from the C++ (`present` false on a part: not related).
+struct EeWonDbEvent {
+  uint8_t field_size;
+  uint16_t activity_type;
+  bool has_server;
+  uint16_t server_type;
+  EeWonDirBytes server_name;
+  EeWonDirBytes server_addr;
+  bool has_client;
+  EeWonDirBytes client_name;
+  EeWonDirBytes client_addr;
+  bool has_user;
+  uint32_t user_id;
+  EeWonDirBytes user_name;
+  const EeWonDbDetail *details;
+  size_t detail_count;
+  const EeWonDbAttachment *attachments;
+  size_t attachment_count;
+};
+
+/// A DBProxy-style reply read for the C++.
+struct EeWonDbReply {
+  /// how many of the header's fields were read whole (header, service, message, sub-message, status, error
+  /// string, flags): the members the original assigned on the way are the message (3), the sub-message (4)
+  /// and the error string (6)
+  uint8_t read;
+  /// the error string's length was read but not its bytes: the original erased the string
+  bool error_erased;
+  int16_t message;
+  int16_t sub;
+  int32_t status;
+  uint32_t error_at;
+  uint32_t error_len;
+  /// the original threw `ReadBufferException` after the assignments
+  bool cut;
+  int32_t verdict;
+  /// what the op returns with `EE_WON_DB_RETURN` / `EE_WON_DB_DONE`
+  int32_t result;
+  /// the rest of the reply (DBProxy's data, the contest's reply data)
+  uint32_t rest_at;
+  uint32_t rest_len;
+  /// the server's public key (create account)
+  uint32_t key_at;
+  uint32_t key_len;
+  /// the email (get account): 0 not read, 1 erased, 2 read whole at `email_*`
+  uint8_t email;
+  uint32_t email_at;
+  uint32_t email_len;
+  /// where the profile starts (get account)
+  uint32_t profile_at;
+};
+
 /// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
 /// negative `status`, 3 cut short; `sequence` when `has_sequence`.
 struct EeWonDirReply {
@@ -5805,13 +6250,6 @@ struct EeWonDirEntity {
 
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
 
 /// A data object.
 struct EeWonDirObject {
@@ -6605,6 +7043,75 @@ struct EeWonResource {
   const char *name;
   EeWonResKind kind;
   bool new_section;
+};
+
+/// A request's fields from the C++ (strings as UTF-16 LE bytes).
+struct EeWonRouteRequest {
+  int32_t kind;
+  bool derived;
+  uint16_t group_id;
+  uint16_t client_id;
+  uint16_t link_id;
+  uint16_t parent_id;
+  uint16_t max_players;
+  uint16_t offset;
+  uint16_t port;
+  uint16_t flags16;
+  uint8_t byte1;
+  uint8_t byte2;
+  bool on;
+  bool by_won_id;
+  bool is_cdkey;
+  bool is_ex;
+  uint32_t longs[4];
+  EeWonDirBytes text1;
+  EeWonDirBytes text2;
+  EeWonDirBytes narrow;
+  EeWonDirBytes data;
+  const uint16_t *ids;
+  size_t id_count;
+  const uint32_t *user_ids;
+  size_t user_id_count;
+};
+
+/// The op state a reply's read depends on.
+struct EeWonRouteState {
+  /// `mGroupId` (join, members)
+  uint16_t group_id;
+  /// `mJoinFlags` (create, join)
+  uint8_t join_flags;
+  /// `mRegisterFlags`
+  uint32_t register_flags;
+  int32_t reply_count;
+  int32_t replies_needed;
+  /// `mWaitingForStatusReply` (firewall)
+  bool waiting;
+  /// the user status query's map size
+  uint32_t user_count;
+};
+
+/// One assignment a reply makes.
+struct EeWonRouteEvent {
+  uint8_t tag;
+  uint8_t slot;
+  int32_t num;
+  /// a string's or buffer's offset in the message
+  uint32_t at;
+  /// its length: UTF-16 units for a wide string, else bytes
+  uint32_t len;
+};
+
+/// Receives a reply's assignments; valid only during the call.
+using EeWonRouteSink = void(*)(void *context, const EeWonRouteEvent *events, size_t count);
+
+/// How a reply's read ended, for the C++.
+struct EeWonRouteResult {
+  /// the status the op returns (when not cut)
+  int32_t status;
+  /// the original threw `ReadBufferException` after the assignments
+  bool cut;
+  /// the reader's position at the end
+  uint32_t pos;
 };
 
 /// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
@@ -13443,6 +13950,95 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+/// `new ProfileData`.
+EeWonProfile *ee_won_profile_new();
+
+/// # Safety
+/// `p` came from `ee_won_profile_new` and is not used again.
+void ee_won_profile_free(EeWonProfile *p);
+
+/// `AddNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_newsletter(EeWonProfile *p, uint16_t id, bool on);
+
+/// `GetNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+bool ee_won_profile_newsletter(const EeWonProfile *p, uint16_t id);
+
+/// `ClearNewsletterSub` (`all`: `ClearNewsletterSubs`).
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_clear_newsletter(EeWonProfile *p, uint16_t id, bool all);
+
+/// `SetCustomAction` (`data` NULL: no data) and `ClearCustomAction` (id 0, NULL).
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes when not NULL.
+void ee_won_profile_set_custom_action(EeWonProfile *p,
+                                      uint16_t id,
+                                      const uint8_t *data,
+                                      size_t length,
+                                      bool present);
+
+/// `SetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_birth_date(EeWonProfile *p, uint8_t month, uint8_t day, uint16_t year);
+
+/// `GetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+int32_t ee_won_profile_birth_date(const EeWonProfile *p);
+
+/// `PackRequestData`'s bytes (to append) into `sink`.
+///
+/// # Safety
+/// `p` is a live profile; `sink` accepts `context`.
+void ee_won_profile_pack(const EeWonProfile *p, bool is_set, EeWonByteSink sink, void *context);
+
+/// `UnpackGetData` from `pos`; returns the reader's position after it.
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes.
+size_t ee_won_profile_unpack(EeWonProfile *p, const uint8_t *data, size_t length, size_t pos);
+
+/// A request's message (or data) into `sink`.
+///
+/// # Safety
+/// `r` and what it points to are valid (`profile` a live profile where the kind reads one); `sink` accepts
+/// `context`.
+void ee_won_db_request(const EeWonDbRequest *r,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `EventReportOp::GetNextRequest` into `sink`.
+///
+/// # Safety
+/// `e` and what it points to are valid; `sink` accepts `context`.
+void ee_won_db_event_request(const EeWonDbEvent *e, EeWonByteSink sink, void *context);
+
+/// A reply's read into `out`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+void ee_won_db_reply(int32_t kind, const uint8_t *data, size_t length, EeWonDbReply *out);
+
+/// `GetUserIdFromNameOp`'s id from the reply data; false when it is cut short.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
+
+/// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
+bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
+
 bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
 
 bool ee_won_dlg_name_enabled(uint32_t name_len);
@@ -16695,6 +17291,42 @@ size_t ee_won_resource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and what it points to are valid; `sink` accepts `context`.
+void ee_won_route_request(const EeWonRouteRequest *r, EeWonByteSink sink, void *context);
+
+/// A reply's read: its assignments into `sink` (once, all of them), how it ended into `out`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `state` and `out` are valid; `sink` accepts `context`.
+void ee_won_route_reply(int32_t kind,
+                        uint8_t message,
+                        const uint8_t *data,
+                        size_t length,
+                        size_t pos,
+                        const EeWonRouteState *state,
+                        EeWonRouteSink sink,
+                        void *context,
+                        EeWonRouteResult *out);
+
+/// `MsgCallback`'s header; false when the message is cut short.
+///
+/// # Safety
+/// `data` holds `length` bytes; the outputs are valid.
+bool ee_won_route_header(const uint8_t *data,
+                         size_t length,
+                         uint8_t *message,
+                         bool *derived,
+                         uint32_t *pos);
+
+/// `MsgCallback`'s rule for a `HandleReply` status (see [`dispatch`]).
+int32_t ee_won_route_dispatch(int32_t status);
+
+/// `GetUnsolicitedOp`'s notification for a routing message type, or -1.
+int32_t ee_won_route_unsolicited(uint8_t message);
 
 /// `room_spec`; a negative group is none.
 int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);

@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -15,9 +16,8 @@ namespace WONAPI {
 // Asks the routing server to cancel a pending join of a group (optionally leaving it if already in)
 void RoutingCancelJoinGroupOp::SendRequest()
 {
-    this->InitSendMsg(5);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendBool(this->mLeaveIfAlreadyInGroup);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendCancelJoin(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -25,8 +25,8 @@ void RoutingCancelJoinGroupOp::SendRequest()
 
 WONStatus RoutingCancelJoinGroupOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bd7a0
 // Returns the op type (cancel join group)
@@ -36,8 +36,8 @@ RoutingOpType RoutingCancelJoinGroupOp::GetType() const { return RoutingOp_Cance
 // Asks the routing server to remove this client from a group
 void RoutingLeaveGroupOp::SendRequest()
 {
-    this->InitSendMsg(43);
-    this->mSendMsg.AppendShort(this->mGroupId);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendGroupId(this, EE_WON_RT_REQ_LEAVE);
     this->SendMsg();
     this->AddOp();
 }
@@ -45,8 +45,8 @@ void RoutingLeaveGroupOp::SendRequest()
 
 WONStatus RoutingLeaveGroupOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bd940
 // Returns the op type (leave group)
@@ -56,12 +56,8 @@ RoutingOpType RoutingLeaveGroupOp::GetType() const { return RoutingOp_LeaveGroup
 // Asks the routing server to change a group's flags and async flags under the given masks
 void RoutingSetGroupFlagsOp::SendRequest()
 {
-    this->InitSendMsg(61);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendLong(this->mGroupFlagMask);
-    this->mSendMsg.AppendLong(this->mGroupFlags);
-    this->mSendMsg.AppendLong(this->mAsyncFlagMask);
-    this->mSendMsg.AppendLong(this->mAsyncFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendSetGroupFlags(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -69,8 +65,8 @@ void RoutingSetGroupFlagsOp::SendRequest()
 
 WONStatus RoutingSetGroupFlagsOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bdd20
 // Returns the op type (set group flags)
@@ -80,16 +76,8 @@ RoutingOpType RoutingSetGroupFlagsOp::GetType() const { return RoutingOp_SetGrou
 // Sends the routing server an alert text for the listed recipient clients
 void RoutingSendServerAlertOp::SendRequest()
 {
-    this->InitSendMsg(56);
-    this->mSendMsg.AppendWString(this->mAlertText, 2);
-    this->mSendMsg.AppendShort((short)this->mRecipientList.size());
-    std::list<unsigned short>::const_iterator i;
-    i=this->mRecipientList.begin();
-    while(true) {
-        if(!(i != this->mRecipientList.end())) break;
-        this->mSendMsg.AppendShort(*i);
-        ++i;
-    }
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendServerAlert(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -97,8 +85,8 @@ void RoutingSendServerAlertOp::SendRequest()
 
 WONStatus RoutingSendServerAlertOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bdef0
 // Returns the op type (send server alert)
@@ -108,9 +96,8 @@ RoutingOpType RoutingSendServerAlertOp::GetType() const { return RoutingOp_SendS
 // Asks the routing server to start a shutdown countdown with an alert text
 void RoutingStartServerShutdownOp::SendRequest()
 {
-    this->InitSendMsg(65);
-    this->mSendMsg.AppendWString(this->mAlertText, 2);
-    this->mSendMsg.AppendLong(this->mSecondsUntilShutdown);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendStartShutdown(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -118,8 +105,8 @@ void RoutingStartServerShutdownOp::SendRequest()
 
 WONStatus RoutingStartServerShutdownOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006be120
 // Returns the op type (start server shutdown)
@@ -130,7 +117,8 @@ RoutingOpType RoutingStartServerShutdownOp::GetType() const { return RoutingOp_S
 // Asks the routing server to abort a pending shutdown
 void RoutingAbortServerShutdownOp::SendRequest()
 {
-    this->InitSendMsg(1);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendBare(this, EE_WON_RT_REQ_ABORT_SHUTDOWN);
     this->SendMsg();
     this->AddOp();
 }
@@ -138,8 +126,8 @@ void RoutingAbortServerShutdownOp::SendRequest()
 
 WONStatus RoutingAbortServerShutdownOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006be2e0
 // Returns the op type (abort server shutdown)
@@ -149,11 +137,8 @@ RoutingOpType RoutingAbortServerShutdownOp::GetType() const { return RoutingOp_A
 // Asks the routing server to change this client's async message and client flags under the given masks
 void RoutingSetClientFlagsOp::SendRequest()
 {
-    this->InitSendMsg(60);
-    this->mSendMsg.AppendLong(this->mAsyncMessageFlagMask);
-    this->mSendMsg.AppendLong(this->mAsyncMessageFlags);
-    this->mSendMsg.AppendLong(this->mClientFlagMask);
-    this->mSendMsg.AppendLong(this->mClientFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendSetClientFlags(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -161,8 +146,8 @@ void RoutingSetClientFlagsOp::SendRequest()
 
 WONStatus RoutingSetClientFlagsOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006be490
 // Returns the op type (set client flags)
@@ -172,12 +157,8 @@ RoutingOpType RoutingSetClientFlagsOp::GetType() const { return RoutingOp_SetCli
 // Sends a chat message to the listed recipients; waits for a reply only when flag 1 asks for one
 void RoutingSendChatOp::SendRequest()
 {
-    this->InitSendMsg(54);
-    this->mSendMsg.AppendShort(this->mFlags);
-    this->mSendMsg.AppendWString(this->mText, 2);
-    this->mSendMsg.AppendShort((short)this->mRecipients.size());
-    for (std::list<unsigned short>::iterator i = this->mRecipients.begin(); i != this->mRecipients.end(); ++i)
-        this->mSendMsg.AppendShort(*i);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendChat(this);
     this->SendMsg();
     if (this->mFlags & 1) this->AddOp();
 }
@@ -185,8 +166,8 @@ void RoutingSendChatOp::SendRequest()
 
 WONStatus RoutingSendChatOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006be7f0
 // Returns the op type (send chat)
@@ -196,12 +177,8 @@ RoutingOpType RoutingSendChatOp::GetType() const { return RoutingOp_SendChat; }
 // Sends a data block to the listed recipients; waits for a reply only when flag 1 asks for one
 void RoutingSendDataOp::SendRequest()
 {
-    this->InitSendMsg(55);
-    this->mSendMsg.AppendByte(this->mFlags);
-    this->mSendMsg.AppendBuffer(this->mData.get(), 2);
-    this->mSendMsg.AppendShort((short)this->mRecipients.size());
-    for (std::list<unsigned short>::iterator i = this->mRecipients.begin(); i != this->mRecipients.end(); ++i)
-        this->mSendMsg.AppendShort(*i);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendData(this);
     this->SendMsg();
     if (this->mFlags & 1) this->AddOp();
 }
@@ -209,8 +186,8 @@ void RoutingSendDataOp::SendRequest()
 
 WONStatus RoutingSendDataOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bebb0
 // Returns the op type (send data)
@@ -220,8 +197,8 @@ RoutingOpType RoutingSendDataOp::GetType() const { return RoutingOp_SendData; }
 // Asks the routing server to turn moderator mode on or off for this client
 void RoutingBecomeModeratorOp::SendRequest()
 {
-    this->InitSendMsg(4);
-    this->mSendMsg.AppendBool(this->mModeratorOn);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendBecomeModerator(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -229,8 +206,8 @@ void RoutingBecomeModeratorOp::SendRequest()
 
 WONStatus RoutingBecomeModeratorOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006bf4e0
 // Returns the op type (become moderator)
@@ -240,11 +217,8 @@ RoutingOpType RoutingBecomeModeratorOp::GetType() const { return RoutingOp_Becom
 // Answers a client's join attempt for a group: accepted or rejected, with a comment
 void RoutingAcceptClientOp::SendRequest()
 {
-    this->InitSendMsg(2);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendShort(this->mClientId);
-    this->mSendMsg.AppendBool(this->mAccepted);
-    this->mSendMsg.AppendWString(this->mAcceptComment, 2);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendAcceptClient(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -252,8 +226,8 @@ void RoutingAcceptClientOp::SendRequest()
 
 WONStatus RoutingAcceptClientOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c41f0
 // Returns the op type (accept client)
@@ -263,12 +237,8 @@ RoutingOpType RoutingAcceptClientOp::GetType() const { return RoutingOp_AcceptCl
 // Asks the routing server to create a data object (link id, type, name, data)
 void RoutingCreateDataObjectOp::SendRequest()
 {
-    this->InitSendMsg(11);
-    this->mSendMsg.AppendByte(this->mFlags);
-    this->mSendMsg.AppendShort(this->mLinkId);
-    this->mSendMsg.AppendString(this->mDataType, 1);
-    this->mSendMsg.AppendWString(this->mDataName, 1);
-    this->mSendMsg.AppendBuffer(this->mData.get(), 2);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendCreateData(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -276,8 +246,8 @@ void RoutingCreateDataObjectOp::SendRequest()
 
 WONStatus RoutingCreateDataObjectOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c48e0
 // Returns the op type (create data object)
@@ -287,10 +257,8 @@ RoutingOpType RoutingCreateDataObjectOp::GetType() const { return RoutingOp_Crea
 // Asks the routing server to delete a data object by link id, type and name
 void RoutingDeleteDataObjectOp::SendRequest()
 {
-    this->InitSendMsg(17);
-    this->mSendMsg.AppendShort(this->mLinkId);
-    this->mSendMsg.AppendString(this->mDataType, 1);
-    this->mSendMsg.AppendWString(this->mDataName, 1);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendDeleteData(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -298,8 +266,8 @@ void RoutingDeleteDataObjectOp::SendRequest()
 
 WONStatus RoutingDeleteDataObjectOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c5100
 // Returns the op type (delete data object)
@@ -309,11 +277,8 @@ RoutingOpType RoutingDeleteDataObjectOp::GetType() const { return RoutingOp_Dele
 // Invites a client to (or uninvites it from) a group, with a comment
 void RoutingInviteClientOp::SendRequest()
 {
-    this->InitSendMsg(40);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendShort(this->mClientId);
-    this->mSendMsg.AppendBool(this->mInvited);
-    this->mSendMsg.AppendWString(this->mInviteComment, 2);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendInvite(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -321,8 +286,8 @@ void RoutingInviteClientOp::SendRequest()
 
 WONStatus RoutingInviteClientOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c7010
 // Returns the op type (invite client)
@@ -332,13 +297,8 @@ RoutingOpType RoutingInviteClientOp::GetType() const { return RoutingOp_InviteCl
 // Asks the routing server to insert or replace data at an offset in a data object
 void RoutingModifyDataObjectOp::SendRequest()
 {
-    this->InitSendMsg(45);
-    this->mSendMsg.AppendShort(this->mLinkId);
-    this->mSendMsg.AppendString(this->mDataType, 1);
-    this->mSendMsg.AppendWString(this->mDataName, 1);
-    this->mSendMsg.AppendShort(this->mOffset);
-    this->mSendMsg.AppendBool(this->mIsInsert);
-    this->mSendMsg.AppendBuffer(this->mData.get(), 2);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendModifyData(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -346,8 +306,8 @@ void RoutingModifyDataObjectOp::SendRequest()
 
 WONStatus RoutingModifyDataObjectOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c7700
 // Returns the op type (modify data object)
@@ -358,10 +318,8 @@ RoutingOpType RoutingModifyDataObjectOp::GetType() const { return RoutingOp_Modi
 void RoutingReadDataObjectOp::SendRequest()
 {
     this->mDataObjects.clear();
-    this->InitSendMsg(this->mSubscribe ? 67 : 50);
-    this->mSendMsg.AppendShort(this->mLinkId);
-    this->mSendMsg.AppendString(this->mDataType, 1);
-    this->mSendMsg.AppendByte(this->mFlag);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendReadData(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -374,10 +332,8 @@ RoutingOpType RoutingReadDataObjectOp::GetType() const { return RoutingOp_ReadDa
 // Asks the routing server to stop sending updates for data objects of a type
 void RoutingUnsubscribeDataObjectOp::SendRequest()
 {
-    this->InitSendMsg(68);
-    this->mSendMsg.AppendShort(this->mLinkId);
-    this->mSendMsg.AppendString(this->mDataType, 1);
-    this->mSendMsg.AppendByte(this->mFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendUnsubscribe(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -385,8 +341,8 @@ void RoutingUnsubscribeDataObjectOp::SendRequest()
 
 WONStatus RoutingUnsubscribeDataObjectOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c8d60
 // Returns the op type (unsubscribe data object)
@@ -396,24 +352,8 @@ RoutingOpType RoutingUnsubscribeDataObjectOp::GetType() const { return RoutingOp
 // Accepts the read-data-object reply, parses the objects into the result list on success; returns the status
 WONStatus RoutingReadDataObjectOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 49) return (WONStatus)WS_RoutingOp_DontWantReply;
-    WONStatus status = inMsg.ReadShort();
-    if (status == 0) this->ParseReplyExceptForStatus(inMsg);
-    return status;
-}
-// FUNCTION: WON 0x006c8170
-// Appends each data object of the reply (link id, type, name, data) to the result list
-void RoutingReadDataObjectOp::ParseReplyExceptForStatus(ReadBuffer& inMsg)
-{
-    int count = (unsigned short)inMsg.ReadShort();
-    for (int i = 0; i < count; ++i) {
-        RoutingDataObjectPtr data = new RoutingDataObject;
-        data->mLinkId = inMsg.ReadShort();
-        inMsg.ReadString(data->mDataType, 1);
-        inMsg.ReadWString(data->mName, 1);
-        data->mData = inMsg.ReadBuf(2);
-        this->mDataObjects.push_back(data);
-    }
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteReadData(this, inMsgType, inMsg);
 }
 }
 
