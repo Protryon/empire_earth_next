@@ -1875,7 +1875,7 @@ long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMino
         }
     }
     if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion))   // port (0.256)
-        theResult = this->LoadRunningState(inFile);
+        theResult = this->LoadRunningState(inFile, EESaveHasGraphSearches(inMajorVersion, inMinorVersion));
     // port (0.264): the position FindPosition keeps between its refreshes (every 5 s); a loaded sub group had (0, 0),
     // so it took its rally point for its position and scanned for targets there until the next refresh
     if (theResult == kErrorOK && EESaveHasSubGroupPosition(inMajorVersion, inMinorVersion)) {
@@ -2312,7 +2312,7 @@ long EECPAttackSubGroup::SaveRunningState(FSFile& outFile)
     return theResult;
 }
 
-long EECPAttackSubGroup::LoadRunningState(FSFile& inFile)
+long EECPAttackSubGroup::LoadRunningState(FSFile& inFile, bool inGraphSearches)
 {
     long theResult = 0;
     for (int l = 0; l < 2 && theResult == 0; l++) {
@@ -2373,6 +2373,22 @@ long EECPAttackSubGroup::LoadRunningState(FSFile& inFile)
             if (this->mPathRequest != NULL)
                 this->mPathRequest->Dereference();
             this->mPathRequest = theRequest;
+        } else if (theResult == 0 && theKind == 2 && inGraphSearches) {
+            // port (0.278): a running one waits for its search, which the path manager's block holds (its fallback,
+            // when the search could not be rebuilt: asked again as before)
+            EECPAttackSubGroup* theSubGroup = this;
+            EEAwaitAutoPathRequest(theRequestID, this, [theSubGroup, theFrom, theTo](EEAutoPathRequest* inRequest) {
+                if (inRequest != NULL) {
+                    if (theSubGroup->mPathRequest != NULL)
+                        theSubGroup->mPathRequest->Dereference();
+                    theSubGroup->mPathRequest = inRequest;
+                    return;
+                }
+                EETileCoordinate theStart = theFrom;
+                EETileCoordinate theEnd = theTo;
+                if (theSubGroup->mPlayer != NULL)
+                    theSubGroup->RequestPath(&theStart, &theEnd);
+            });
         } else if (theResult == 0 && theKind == 2) {
             // a running one: asked again at the first tick by the sub group's own request (its flags and modifier)
             this->Reference();

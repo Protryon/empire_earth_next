@@ -175,6 +175,14 @@ inline bool EESaveHasWallRequest(unsigned long inMajorVersion, unsigned long inM
 {
     return inMajorVersion > 0 || inMinorVersion >= 277;
 }
+// port: from 0.278 a save holds the graph searches in progress (EEPathManager::SaveGraphSearches: node, machine,
+// goal, modifier, request and the storage as ee_astar's bytes), and an attack sub group's running request waits for
+// its own (EEAwaitAutoPathRequest): a load asked each again at the first tick (the sub groups) or from the load (the
+// units, RequestPendingPaths), so the path came later or another one
+inline bool EESaveHasGraphSearches(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 278;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
@@ -206,6 +214,8 @@ void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);
+// the same, run after every EEAfterLoad fix-up of that tick (port, 0.278: the graph searches' owners first)
+void EEAfterLoadLast(std::function<void()> inFixup);
 
 // 0x14ce98: opens inName in data\inDirectory (the lobby's load checks); keseOK and outFile on success
 // (gDataPath->FindFile(inDirectory + inName, outFile), hence FSFileSpec*&)
