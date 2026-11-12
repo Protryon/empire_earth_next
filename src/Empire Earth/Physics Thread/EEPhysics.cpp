@@ -509,6 +509,13 @@ void EEAfterLoad(std::function<void()> inFixup)
     sAfterLoad.push_back(inFixup);
 }
 
+static std::vector<std::function<void()> > sAfterLoadLast;   // EEAfterLoadLast's
+
+void EEAfterLoadLast(std::function<void()> inFixup)
+{
+    sAfterLoadLast.push_back(inFixup);
+}
+
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
@@ -757,6 +764,12 @@ void EEPhysics::Tick()
     if (!sAfterLoad.empty()) {   // port: the loaded values the load's rebuilding set again (EEAfterLoad)
         std::vector<std::function<void()> > theFixups;
         theFixups.swap(sAfterLoad);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
+    }
+    if (!sAfterLoadLast.empty()) {   // port: then those that wait for the others (EEAfterLoadLast)
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoadLast);
         for (size_t i = 0; i < theFixups.size(); i++)
             theFixups[i]();
     }

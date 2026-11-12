@@ -3498,6 +3498,10 @@ struct EeAStarPathSectorFill {
   bool stale;
 };
 
+/// A graph object by its index, as the C++ loader finds it (`ee_astar_graph_load`, `ee_astar_graph_objects_match`):
+/// the handle, null for none.
+using EeAStarGraphObjectOf = void*(*)(void *ctx, int32_t index);
+
 /// A graph object as the storage keeps it: the C++ pointer's bits (`AStarGraphableObjectBase*`), opaque here.
 using EeAStarGraphObject = size_t;
 
@@ -9413,6 +9417,35 @@ uint32_t ee_astar_graph_list_objects(EeAStarGraphStorage *s,
                                      EeAStarGraphList which,
                                      void **out,
                                      uint32_t capacity);
+
+/// The graph storage as bytes (`graph_save.rs`): writes them into `out` when they fit in `capacity`, returns their
+/// length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null).
+uint32_t ee_astar_graph_save(EeAStarGraphStorage *s,
+                             uint8_t *out,
+                             uint32_t capacity);
+
+/// Whether each live node's object is the one `object_of` gives for its index (a save checks it before it writes
+/// the storage: the load finds the objects so).
+///
+/// # Safety
+/// As `gst`; `object_of` callable with `ctx`.
+bool ee_astar_graph_objects_match(EeAStarGraphStorage *s,
+                                  EeAStarGraphObjectOf object_of,
+                                  void *ctx);
+
+/// The storage replaced by the one `ee_astar_graph_save` wrote (its own kind), each live node's object from
+/// `object_of`; false, the storage unchanged, for other bytes or an object not found.
+///
+/// # Safety
+/// As `gst`; `data` must hold `length` readable bytes (or `length` be 0); `object_of` callable with `ctx`.
+bool ee_astar_graph_load(EeAStarGraphStorage *s,
+                         const uint8_t *data,
+                         uint32_t length,
+                         EeAStarGraphObjectOf object_of,
+                         void *ctx);
 
 /// The graph machine's `Start`.
 ///
