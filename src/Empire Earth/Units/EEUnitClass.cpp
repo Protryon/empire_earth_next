@@ -17,6 +17,7 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
+#include "lle/GEModel.h"   // the tag points' model chain (EECombatTagPointChain)
 #include "lle/USingleton.h"
 #include "lle/SESoundManager.h"
 #include "lle/FSFileSpec.h"
@@ -2207,11 +2208,13 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     EETagPointList* thePoints = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
     EEUnitClass* theClass = this->mProjectileClass;
     EEUnit* theCreated = NULL;
+    long theCapturedIndex = -1;   // TEST ONLY (the CBLS capture)
     if (thePoints != NULL && thePoints->GetNumTagPoints() != 0) {
         unsigned long theIndex = inUnit->mWeaponTagPoint;
         if ((inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato) && inUnit->mIsSpecialAttack)
             theIndex = inUnit->GetModel()->mTagPoints[inUnit->GetAnimation()]->GetNumTagPoints() - 1;
         thePoints->GetTagPoint(theIndex)->GetOffset(inUnit->mPhysicalModel.GetFrame(), theOffset);
+        theCapturedIndex = (long)theIndex;
     } else {
         theOffset.SetX(0.0f);
         theOffset.SetY(0.0f);
@@ -2243,6 +2246,34 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     }
     long theX = UMFloor(theTransform.GetX());
     long theY = UMFloor(theTransform.GetY());
+    // TEST ONLY (the CBLS capture): the inputs as ee_combat takes them, the launch, the floor tile, the choices
+    EECombatLaunchRecordIn theCaptureIn = {};
+    EECombatLaunchRecordOut theCaptureOut = {};
+    std::vector<float> theCaptureChain;
+    if (EESimCaptureRecord::Active()) {
+        long theType = inUnit->mUnitClass->GetUnitType();
+        theCaptureIn.kind = 0;
+        theCaptureIn.special = inUnit->mIsSpecialAttack;
+        theCaptureIn.has_special = this->mHasSpecialAttack;
+        theCaptureIn.capital = theType == kUnitTypeSp15CapitalShip || theType == kUnitTypeCapitalShipYamato;
+        theCaptureIn.legionnaire = theType == kUnitTypeX04RomanLegionnaire;
+        theCaptureIn.point_count = thePoints != NULL ? (int32_t)thePoints->GetNumTagPoints() : 0;
+        theCaptureIn.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
+        theCaptureIn.building = this->mCategory == kUnitCategoryBuilding;
+        theCaptureIn.turn = this->mProjectileClass == NULL || this->mProjectileClass->mCategory != kUnitCategoryBomb;
+        memcpy(theCaptureIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theCaptureIn.location));
+        theCaptureIn.scale = theStats->GetScale();
+        theCaptureIn.target[0] = inLocation.GetX();
+        theCaptureIn.target[1] = inLocation.GetY();
+        theCaptureIn.target[2] = inLocation.GetZ();
+        if (theCapturedIndex >= 0)
+            EECombatTagPointChain(thePoints->GetTagPoint((unsigned long)theCapturedIndex), inUnit->mPhysicalModel.GetFrame(),
+                                  theCaptureIn.point, theCaptureChain, theCaptureIn.chain);
+        theCaptureOut.index = (int32_t)theCapturedIndex;
+        memcpy(theCaptureOut.launch, theTransform.mMatrix, sizeof(theCaptureOut.launch));
+        theCaptureOut.tile[0] = (int32_t)theX;
+        theCaptureOut.tile[1] = (int32_t)theY;
+    }
     if (::gWorld.mMap->GetTile(theX, theY) == NULL) {
         thePosition.SetX(theTransform.GetX());
         thePosition.SetY(theTransform.GetY());
@@ -2252,6 +2283,7 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     if (inUnit->mIsSpecialAttack) {
         if (this->mHasSpecialAttack && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeX04RomanLegionnaire && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeSp15CapitalShip &&
             inUnit->GetUnitClass()->GetUnitType() != kUnitTypeCapitalShipYamato) {
+            theCaptureOut.flaming = 1;   // TEST ONLY (the CBLS capture)
             theClass = gUnitClassTable[gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mUnitType];
             theCreated = theClass->CreateUnit(theX, theY, inUnit->GetPlayer()->GetPlayerID(), false, inUnit);
         }
@@ -2259,6 +2291,7 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
             inUnit->StartAction(kActionIdle);
         inUnit->mIsSpecialAttack = false;
     }
+    EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'L', 'S'), theCaptureIn, theCaptureChain, theCaptureOut);
     if (inCargo != NULL) {
         theCreated = inCargo;
         theClass = inCargo->GetUnitClass();
@@ -3767,14 +3800,31 @@ EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUn
 
 // FUNCTION: EXE 0x63799d
 // Returns whether a candidate is alive and closer to the attacker than its current target
+// TEST ONLY (the CBFS capture): the screens' test, its inputs as ee_combat takes them (kind 0 this, 1 the old target's)
+static bool EECombatMeleeScreenCapture(int32_t inHitPoints, float inRange, bool inRead, float inDistance, bool inResult)
+{
+    EECombatScreenRecordIn in = {0, inHitPoints, inRange, inRead, inRead ? inDistance : 0.0f};
+    int32_t theOut = inResult;
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theOut);
+    return inResult;
+}
+
 bool EEFOFindNewTargetInMeleeRange::Virtual04(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f) < this->mRange;
+    float theDistance = 0.0f;
+    bool theRead = false;
+    bool theResult = inUnit->mHitPoints > 0
+        && (theRead = true, theDistance = EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f)) < this->mRange;
+    return EECombatMeleeScreenCapture((int32_t)inUnit->mHitPoints, this->mRange, theRead, theDistance, theResult);
 }
 
 bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f) < this->mRange;
+    float theDistance = 0.0f;
+    bool theRead = false;
+    bool theResult = inUnit->mHitPoints > 0
+        && (theRead = true, theDistance = EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f)) < this->mRange;
+    return EECombatMeleeScreenCapture((int32_t)inUnit->mHitPoints, this->mRange, theRead, theDistance, theResult);
 }
 
 // FUNCTION: EXE 0x6379dd
@@ -3970,6 +4020,19 @@ void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3D
         theLaunch.mMatrix[0][3] = theWorld.mX;
         theLaunch.mMatrix[1][3] = theWorld.GetY();
         theLaunch.mMatrix[2][3] = theWorld.mZ;
+        if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBLT capture)
+            EECombatLaunchRecordIn theCaptureIn = {};
+            EECombatLaunchRecordOut theCaptureOut = {};
+            std::vector<float> theCaptureChain;
+            theCaptureIn.kind = 1;
+            memcpy(theCaptureIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theCaptureIn.location));
+            theCaptureIn.scale = theStats->mScale;
+            theCaptureIn.yaw = inUnit->mTurretAngles[thePart];
+            EECombatTagPointChain(theList->GetTagPoint(theIndex), inUnit->mPhysicalModel.GetFrame(), theCaptureIn.point,
+                                  theCaptureChain, theCaptureIn.chain);
+            memcpy(theCaptureOut.launch, theLaunch.mMatrix, sizeof(theCaptureOut.launch));
+            EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'L', 'T'), theCaptureIn, theCaptureChain, theCaptureOut);
+        }
         EEUnit* theShot = this->mProjectileClass->CreateUnitAt(theLaunch, inUnit->mPlayer->GetPlayerID(), false, inUnit);
         if (this->mCreationEffect != NULL)
             gEffectManager->CreateUnitEffect(theShot, this->mCreationEffect, NULL, false, 0, 0);

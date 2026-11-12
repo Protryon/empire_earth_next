@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <vector>
 #include <math.h>
+#include <string.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -25,6 +26,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEPhysicsModel.h"
+#include "ee/EECombatFormulas.h"
 
 // 1/pi is the shared literal __real@4@3ffda2f9830000000000 (0x4428f4; EEPMNaval/EEPMSubmergedNaval Virtual34 use it too)
 static const float kMissileMinimumFactor = 0.25f;    // 0x4428f0 (unit-local const; provisional name)
@@ -51,6 +53,12 @@ void EEPMMissile::Accelerate(EEComplexUnit* inUnit)
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     GEVector theMove;
     float theStep = gPhysics->mTickSeconds;
+    EECombatFlightRecordIn theCaptureIn = {};   // TEST ONLY (the CBMA capture)
+    memcpy(theCaptureIn.location, theTransformation.mMatrix, sizeof(theCaptureIn.location));
+    theCaptureIn.step = theStep;
+    theCaptureIn.speed = inUnit->GetVelocity();
+    theCaptureIn.max_speed = theStats->GetMaxVelocity();
+    theCaptureIn.accel = theStats->GetAcceleration();
     float theSpeed = theStats->GetAcceleration() * theStep + inUnit->GetVelocity();
     if (theStats->GetMaxVelocity() < theSpeed)
         theSpeed = theStats->GetMaxVelocity();
@@ -58,6 +66,13 @@ void EEPMMissile::Accelerate(EEComplexUnit* inUnit)
     theForward.mY = theSpeed * theStep;
     theTransformation.Apply(theForward, theMove);
     theTransformation.Translate(theMove);
+    if (EESimCaptureRecord::Active()) {
+        EECombatFlightRecordOut theCaptureOut = {};
+        theCaptureOut.moved = 1;
+        theCaptureOut.speed = theSpeed;
+        memcpy(theCaptureOut.matrix, theTransformation.mMatrix, sizeof(theCaptureOut.matrix));
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'M', 'A'), theCaptureIn, theCaptureOut);
+    }
     long theTileX;
     long theTileY;
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
@@ -82,6 +97,16 @@ void EEPMMissile::Home(EEComplexUnit* inUnit)
     float theTurn = theStats->GetMaxAngularVelocity() * theStep;
     EEUnit* theDropTarget;
     EEFindDropLocation(inUnit, &theDropTarget, &theTarget, NULL);
+    EECombatFlightRecordIn theCaptureIn = {};   // TEST ONLY (the CBMH capture)
+    memcpy(theCaptureIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theCaptureIn.location));
+    theCaptureIn.target[0] = theTarget.GetX();
+    theCaptureIn.target[1] = theTarget.GetY();
+    theCaptureIn.target[2] = theTarget.GetZ();
+    theCaptureIn.step = theStep;
+    theCaptureIn.speed = theSpeed;
+    theCaptureIn.max_speed = theMaxSpeed;
+    theCaptureIn.accel = theStats->GetAcceleration();
+    theCaptureIn.max_angular = theStats->GetMaxAngularVelocity();
     theDirection.mX = theTarget.GetX() - inUnit->mPhysicalModel.GetLocation().GetX();
     theDirection.mY = theTarget.GetY() - inUnit->mPhysicalModel.GetLocation().GetY();
     theDirection.mZ = theTarget.GetZ() - inUnit->mPhysicalModel.GetLocation().GetZ();
@@ -140,6 +165,13 @@ void EEPMMissile::Home(EEComplexUnit* inUnit)
     theForward.mY = theSpeed * theStep;
     theNew.Apply(theForward, theMove);
     theNew.Translate(theMove);
+    if (EESimCaptureRecord::Active()) {
+        EECombatFlightRecordOut theCaptureOut = {};
+        theCaptureOut.moved = 1;
+        theCaptureOut.speed = theSpeed;
+        memcpy(theCaptureOut.matrix, theNew.mMatrix, sizeof(theCaptureOut.matrix));
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'M', 'H'), theCaptureIn, theCaptureOut);
+    }
     long theTileX;
     long theTileY;
     EEUpdateUnitTile(&theNew, inUnit, &theTileX, &theTileY);

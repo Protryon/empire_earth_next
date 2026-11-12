@@ -182,6 +182,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EEAreaUtilities.h"     // EECanHeal (the sweep)
+#include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
@@ -292,6 +293,40 @@ static void EECombatCaptureSweep()
     }
 }
 
+// TEST ONLY: the unit-list target search's sweep (CBSL). No game of the capture profiles reaches
+// EESearchTargetAlongList (only anti-air ammunition 0x3c does, through EEFindNearbyTarget), so with EE_SIM_CAPTURE on
+// it runs once, when the game ends, over each player's newest 64 armed units on the map (priests left out: a list
+// unit without a complex unit reaches CanAttackClass through NULL there, as in the original): at the unit's tile, and
+// two tiles off with half the range again. Only its CBSL records are written (not the CBAF, CBLB, CBDP, CBHD records
+// of the tests it calls), and each unit's ignored targets are put back after it (IgnoreTarget, the expired entries'
+// erase): the game is over and no other record follows it.
+static void EECombatListSearchSweep()
+{
+    EESimCaptureRecord::Only(EE_COMBAT_TAG('C', 'B', 'S', 'L'));
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<EEComplexUnit*> theAll;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL && theComplex->mTileNode != NULL
+                && theComplex->GetTileX() != -10000 && theComplex->mStats->GetAttack() > 0.0f
+                && !theComplex->GetUnitClass()->IsPriest())
+                theAll.push_back(theComplex);
+        }
+        size_t theFirst = theAll.size() > 64 ? theAll.size() - 64 : 0;
+        for (size_t i = theFirst; i < theAll.size(); i++) {
+            EEComplexUnit* a = theAll[i];
+            std::deque<EEComplexUnitAttacker> theIgnored = a->mIgnoredTargets;
+            EESearchTargetAlongList(a, a->GetTileX(), a->GetTileY(), 1.0f);
+            a->mIgnoredTargets = theIgnored;
+            EESearchTargetAlongList(a, a->GetTileX() + 2, a->GetTileY() - 2, 1.5f);
+            a->mIgnoredTargets = theIgnored;
+        }
+    }
+    EESimCaptureRecord::Only(0);
+}
 
 namespace {
 
@@ -517,6 +552,17 @@ void Finish(const char* inOutcome)
     sOutcome = inOutcome;
     sFinished = true;
     sDone.notify_all();
+}
+
+// the end of a game in the tick hook (the physics thread): the end sweep first, in a captured game
+void FinishGame(const char* inOutcome)
+{
+    static bool sSwept = false;
+    if (EESimCaptureRecord::Active() && !sSwept) {
+        sSwept = true;
+        EECombatListSearchSweep();
+    }
+    Finish(inOutcome);
 }
 
 // The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
@@ -890,7 +936,7 @@ void AfterTick()
     }
     // the end of the run (tools/harness/ai_game.py's rules)
     if (gPhysics->mGameOver) {
-        Finish("game-end");
+        FinishGame("game-end");
         return;
     }
     if (sOptions.mNoHumanDefeat) {
@@ -909,7 +955,7 @@ void AfterTick()
             if (sStandingSince < 0)
                 sStandingSince = theTime;
             else if (theTime - sStandingSince >= 1000) {   // two harness samples apart
-                Finish("last-computer-standing");
+                FinishGame("last-computer-standing");
                 return;
             }
         } else
@@ -922,12 +968,12 @@ void AfterTick()
                 theAll = false;
         }
         if (theAll) {
-            Finish("game-end");
+            FinishGame("game-end");
             return;
         }
     }
     if (theTime >= (long)(sOptions.mGameSeconds * 1000))
-        Finish("time-cap");
+        FinishGame("time-cap");
 }
 
 // ------------------------------------------------------------------------------------------------ the menus

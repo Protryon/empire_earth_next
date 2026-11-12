@@ -1604,14 +1604,30 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 
 // FUNCTION: EXE 0x641e21
 // Accepts a living unit within the screen's distance of the old target
+// TEST ONLY (the CBFS capture): the screens' test, its inputs as ee_combat takes them (kind 0 the melee screen, 1 this)
+static bool EECombatScreenCapture(int32_t inKind, int32_t inHitPoints, float inRange, bool inRead, float inDistance,
+                                  bool inResult)
+{
+    EECombatScreenRecordIn in = {inKind, inHitPoints, inRange, inRead, inRead ? inDistance : 0.0f};
+    int32_t theOut = inResult;
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theOut);
+    return inResult;
+}
+
 bool EEFOFindNewTargetNearOldTarget::Virtual04(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && inUnit->DistanceSquaredTo(this->mTarget) < this->mDistanceSquared;
+    float theDistance = 0.0f;
+    bool theRead = false;
+    bool theResult = inUnit->mHitPoints > 0 && (theRead = true, theDistance = inUnit->DistanceSquaredTo(this->mTarget)) < this->mDistanceSquared;
+    return EECombatScreenCapture(1, (int32_t)inUnit->mHitPoints, this->mDistanceSquared, theRead, theDistance, theResult);
 }
 
 bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && inUnit->DistanceSquaredTo(this->mTarget) < this->mDistanceSquared;
+    float theDistance = 0.0f;
+    bool theRead = false;
+    bool theResult = inUnit->mHitPoints > 0 && (theRead = true, theDistance = inUnit->DistanceSquaredTo(this->mTarget)) < this->mDistanceSquared;
+    return EECombatScreenCapture(1, (int32_t)inUnit->mHitPoints, this->mDistanceSquared, theRead, theDistance, theResult);
 }
 
 // FUNCTION: EXE 0x641e49
@@ -3565,6 +3581,24 @@ bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
     theOffset.SetY(theOffset.GetY() * theStats->GetScale());
     theOffset.SetZ(theOffset.GetZ() * theStats->GetScale());
     theTransformation.Apply(theOffset, outPoint);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBAP capture)
+        EECombatLaunchRecordIn theCaptureIn = {};
+        EECombatLaunchRecordOut theCaptureOut = {};
+        std::vector<float> theCaptureChain;
+        theCaptureIn.kind = 2;
+        theCaptureIn.point_count = theList != NULL ? (int32_t)theList->GetNumTagPoints() : 0;
+        theCaptureIn.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
+        memcpy(theCaptureIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theCaptureIn.location));
+        theCaptureIn.scale = theStats->GetScale();
+        if (theResult)
+            EECombatTagPointChain(theList->GetTagPoint(inUnit->mWeaponTagPoint), inUnit->GetModel()->mSound1Frames[0],
+                                  theCaptureIn.point, theCaptureChain, theCaptureIn.chain);
+        theCaptureOut.result = theResult;
+        theCaptureOut.point[0] = outPoint.GetX();
+        theCaptureOut.point[1] = outPoint.GetY();
+        theCaptureOut.point[2] = outPoint.GetZ();
+        EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'A', 'P'), theCaptureIn, theCaptureChain, theCaptureOut);
+    }
     return theResult;
 }
 
@@ -4733,13 +4767,17 @@ float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX
         EEFindDropLocation(inUnit, &theDropTarget, &theTarget, inTarget);
     else
         inTarget->GetPosition(theTarget);
+    EECombatHitDistanceRecordIn theCaptureIn = {{thePosition.GetX(), thePosition.GetY(), thePosition.GetZ()},
+                                                {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()}, inX, inY};   // TEST ONLY (CBHD)
     if (inX != -10000.0f) {
         thePosition.SetX(inX);
         thePosition.SetY(inY);
     }
     thePosition.SetZ(0.0f);
     theTarget.SetZ(0.0f);
-    return thePosition.DistanceToSquared(theTarget);
+    float theCaptureOut = thePosition.DistanceToSquared(theTarget);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'D'), theCaptureIn, theCaptureOut);
+    return theCaptureOut;
 }
 
 // FUNCTION: EXE 0x649560

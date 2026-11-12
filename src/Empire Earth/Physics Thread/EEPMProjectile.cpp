@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <vector>
 #include <math.h>
+#include <string.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -68,6 +69,20 @@ void EEPMProjectile::Step0(EEComplexUnit* inUnit)
     theStart += theMove;
     theTransformation.SetPosition(theStart.GetX(), theStart.GetY(), theStart.GetZ());
     theTransformation.SetOrientationYPR(theYaw, theArc.pitch, 0.0f);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBPJ capture)
+        EECombatFlightRecordIn theCaptureIn = {};
+        EECombatFlightRecordOut theCaptureOut = {};
+        theCaptureIn.start[0] = inUnit->mProjectileStart.GetX();
+        theCaptureIn.start[1] = inUnit->mProjectileStart.GetY();
+        theCaptureIn.start[2] = inUnit->mProjectileStart.GetZ();
+        theCaptureIn.yaw = theYaw;
+        theCaptureIn.move_y = theArc.move_y;
+        theCaptureIn.move_z = theArc.move_z;
+        theCaptureIn.pitch = theArc.pitch;
+        theCaptureOut.moved = 1;
+        memcpy(theCaptureOut.matrix, theTransformation.mMatrix, sizeof(theCaptureOut.matrix));
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'J'), theCaptureIn, theCaptureOut);
+    }
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 
@@ -89,11 +104,25 @@ void EEPMProjectile::Step2(EEComplexUnit* inUnit)
     float theGravity = inUnit->mUnitClass->mAcceleration;
     float theStep = gPhysics->mTickSeconds;
     float theSpeed = inUnit->mVelocity;
-    if (thePosition.GetZ() > 0.0f)
+    // TEST ONLY (the CBPS capture): the inputs as ee_combat takes them, the new location (the old one when unmoved)
+    EECombatFlightRecordIn theCaptureIn = {};
+    EECombatFlightRecordOut theCaptureOut = {};
+    memcpy(theCaptureIn.location, theTransformation.mMatrix, sizeof(theCaptureIn.location));
+    memcpy(theCaptureOut.matrix, theTransformation.mMatrix, sizeof(theCaptureOut.matrix));
+    theCaptureIn.gravity = theGravity;
+    theCaptureIn.step = theStep;
+    theCaptureIn.speed = theSpeed;
+    if (thePosition.GetZ() > 0.0f) {
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'S'), theCaptureIn, theCaptureOut);
         return;
+    }
     ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-    if (thePosition.GetZ() <= theGround.GetZ())
+    theCaptureIn.ground_read = 1;
+    theCaptureIn.ground_z = theGround.GetZ();
+    if (thePosition.GetZ() <= theGround.GetZ()) {
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'S'), theCaptureIn, theCaptureOut);
         return;
+    }
     theTransformation.Apply(theForward, theDirection);
     float thePitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f;
     float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
@@ -106,6 +135,9 @@ void EEPMProjectile::Step2(EEComplexUnit* inUnit)
     theDirection.Normalize();
     float theDelta = UMArcCos(-theDirection.GetZ()) - 1.5707964f - thePitch;
     theTransformation.SetOrientationYPR(theYaw, thePitch + theDelta, 0.0f);
+    theCaptureOut.moved = 1;
+    memcpy(theCaptureOut.matrix, theTransformation.mMatrix, sizeof(theCaptureOut.matrix));
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'S'), theCaptureIn, theCaptureOut);
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 
