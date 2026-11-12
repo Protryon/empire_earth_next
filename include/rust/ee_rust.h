@@ -8901,6 +8901,10 @@ constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.
 
 
 
+/// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
+/// missile as the original's blocks read `mArmor`.
+constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
+
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
 constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
@@ -13056,6 +13060,20 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// # Safety
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
+
+/// `GetAttributeText`: the base and the bonus "base+bonus" shows.
+void ee_screens_hud_attribute_text(float base, float bonus, long *out_base, long *out_bonus);
+
+/// The armor kind armor attribute `slot` (0..5: `mAttributes[4 + slot]`) shows; 0 past them.
+uint32_t ee_screens_hud_armor_kind(uint32_t slot);
+
+/// One armor attribute's `GetAttributeText` arguments from the stats' armor, the unit class's base and the stats'
+/// own class's base.
+void ee_screens_hud_armor_attribute(float stat,
+                                    long class_base,
+                                    long stats_class_base,
+                                    float *out_base,
+                                    float *out_bonus);
 
 /// `PlayerTypeFromMenu`.
 long ee_screens_lobby_type_from_menu(unsigned long selection, long menu);

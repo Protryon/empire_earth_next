@@ -91,6 +91,7 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_rust.h"   // ee_screens_hud_*: the attribute texts (ee_screens hud.rs)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
@@ -819,65 +820,30 @@ void EEUIFMGStatusBox::UnloadIcons()
 // Updates the armor buttons' "base+bonus" texts from the unit's armor
 void EEUIFMGStatusBox::UpdateArmorTexts(EEUnit* inUnit)
 {
+    // the values are Rust's (ee_screens hud.rs armor_attribute): attributes 4..9 show the armor kinds
+    // ee_screens_hud_armor_kind names
     UWideString theText;
     EEUnitClass* theClass = inUnit->GetUnitClass();
     EEUnitClassUpgrade* theStats = inUnit->mStats;
-    long theIndex;
-    if ((theIndex = this->mAttributes[4]) != -1) {
-        double theBase = theClass->mArmor[0];
-        float theValue = theStats->mArmor[0] - (float)theStats->mUnitClass->mArmor[0] +
-                     (theStats->mArmor[0] < theBase ? -0.0001f : 0.0001f);
-        this->GetAttributeText(theBase, theValue, theText);
+    for (unsigned long i = 0; i < 6; i++) {
+        long theIndex = this->mAttributes[4 + i];
+        if (theIndex == -1)
+            continue;
+        unsigned long theKind = ee_screens_hud_armor_kind(i);
+        float theBase, theBonus;
+        ee_screens_hud_armor_attribute(theStats->mArmor[theKind], theClass->mArmor[theKind],
+                                       theStats->mUnitClass->mArmor[theKind], &theBase, &theBonus);
+        this->GetAttributeText(theBase, theBonus, theText);
         static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
     }
-    if ((theIndex = this->mAttributes[5]) != -1) {
-        double theBase = theClass->mArmor[2];
-        float theValue = theStats->mArmor[2] - (float)theStats->mUnitClass->mArmor[2] +
-                     (theStats->mArmor[2] < theBase ? -0.0001f : 0.0001f);
-        this->GetAttributeText(theBase, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[6]) != -1) {
-        double theBase = theClass->mArmor[1];
-        float theValue = theStats->mArmor[1] - (float)theStats->mUnitClass->mArmor[1] +
-                     (theStats->mArmor[1] < theBase ? -0.0001f : 0.0001f);
-        this->GetAttributeText(theBase, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[7]) != -1) {
-        double theBase = theClass->mArmor[3];
-        float theValue = theStats->mArmor[3] - (float)theStats->mUnitClass->mArmor[3] +
-                     (theStats->mArmor[3] < theBase ? -0.0001f : 0.0001f);
-        this->GetAttributeText(theBase, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[8]) != -1) {
-        double theBase = theClass->mArmor[5];
-        float theValue = theStats->mArmor[5] - (float)theStats->mUnitClass->mArmor[5] +
-                     (theStats->mArmor[5] < theBase ? -0.0001f : 0.0001f);
-        this->GetAttributeText(theBase, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[9]) == -1)
-        return;
-    double theBase = theClass->mArmor[4];
-    float theValue = theStats->mArmor[4] - (float)theStats->mUnitClass->mArmor[4] +
-                 (theStats->mArmor[4] < theBase ? -0.0001f : 0.0001f);
-    this->GetAttributeText(theBase, theValue, theText);
-    static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
 }
 
 // FUNCTION: EXE 0x66cb84
 // Formats an attribute as "base+bonus" (a negative bonus is taken off the base)
 void EEUIFMGStatusBox::GetAttributeText(float inBase, float inBonus, UWideString& outText)
 {
-    long theBonus;
-    theBonus = inBonus >= 0.0f ? (long)(inBonus + 0.5f) : 0;
-    long theBase;
-    if (inBonus < 0.0f)
-        theBase = (long)(inBase + inBonus + 0.5f);
-    else
-        theBase = (long)(inBase + 0.5f);
+    long theBase, theBonus;
+    ee_screens_hud_attribute_text(inBase, inBonus, &theBase, &theBonus);   // ee_screens hud.rs attribute_text
     sprintf(outText, "%ld+%ld", theBase, theBonus);
 }
 
