@@ -1448,6 +1448,20 @@ function M.step(view, memory)
         if best ~= nil and have + best.requested + best.in_production < plan.boat_guard and best.requested == 0 then
             order("warship", {verb = "train", type = best.type, n = 1})
         end
+        -- (AI_RESEARCH §8.50: the answer came 1-12 minutes after the first warship, its orders unaffordable under the
+        -- epoch reserve) what the answer still needs, for boom-econ's reserve to give way to: the warships missing and,
+        -- while the towers' attack upgrade is due, an estimate of a level (the verb does not tell its cost)
+        local need = {food = 0, wood = 0, stone = 0, gold = 0, iron = 0}
+        local missing = best ~= nil and math.max(plan.boat_guard - have, 0) or 0
+        for _, r in ipairs(V.resources) do
+            need[r] = missing * (best ~= nil and best.cost[r] or 0)
+        end
+        if plan.tower_up_ships and tower ~= nil and memory.improved_atk ~= tower then
+            for _, r in ipairs({"wood", "stone", "gold"}) do
+                need[r] = need[r] + 150
+            end
+        end
+        memory.priority_spend = V.sum(need) > 0 and need or nil
         if have > 0 then
             local fx, fy = D.fish_centre()
             N.fleet_step(memory, {x = fx, y = fy})
