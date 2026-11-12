@@ -3747,6 +3747,29 @@ builds link 0/0 (EE-SIM and the test profile), and the eedata check passes.
 Next: the port's centres' activity and sites against the C++'s (GetGatherCapacity), so its wanted citizens stay at
 the C++'s and it stops training citizens it then deletes.
 
+### 8.57 The classic computer player in Lua: the untapped sites, the citizens it no longer deletes (2026-11-11, EE-SIM)
+
+§8.56 found the port deleting about 400 citizens a bench, mostly woodcutters (KillUnitsForMilitary's surplus over
+ceil(pop limit x 0.45) = 180). Its wanted citizens rose to 199-278, while the C++'s stayed at 180. The cause is not
+the centres' activity: both mark every centre within the claim range active. It is the sites. A trace of the C++'s
+centre units (seed 2, the gold) shows that a resource's hit points stand at 1 until anyone first gathers from it,
+then fall to 0. The gold mines hold 300000, so they never run out. GetGatherCapacity, and the `sites` trace, count a
+centre's units with mHitPoints > 0. So the C++ counts only the untapped sites, which is why its counts fall over the
+game (gold 6 -> 2). Its capacity then stays under the 0.45 floor, and its wanted citizens stay at 180. The port
+counted every mine, so its counts never fell (3/6/4 stone, gold and iron for 60 minutes). Resource records now have
+`untapped` (AI_LUA_UNITS §11), and the port counts as the C++ does.
+
+Bench (balanced, 32 seeds; c32 = §8.56's last stage):
+
+| stage | Lua won-lost | Lua citizens lost (all) | the C++'s | citizens deleted | Lua Copper / the C++'s |
+|---|---|---|---|---|---|
+| c32 | 13-14, 5 close | 72.2 | 36.9 | about 400 | 26 / 21 |
+| untapped (ut) | 12-13, 7 close | 47.0 | 32.0 | 43 | 22 / 25 |
+
+After 60 minutes the port's wanted citizens are 180 in every line, as the C++'s. The port's citizens lost after 60
+minutes: 786, of which 66 have no killer, against the C++'s 597. Citizens at 89 minutes: 97 against 109.
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
