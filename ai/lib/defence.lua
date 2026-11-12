@@ -53,7 +53,8 @@ M.opts = {
                           -- refuge further from it (the settlements too), not to the nearest tower in its path
     guard_refuge = false, -- (off; AI_RESEARCH §8.50, the waves after Copper: 60% of their dead were caught running, 1.6
                           -- tiles from their killer, 15 tiles out) the guard's post is a refuge as a tower is, while the
-                          -- script sets mem.guard_post = {x, y} (a guard of 4 or more)
+                          -- script sets mem.guard_post = {x, y} (a guard of 4 or more) ...
+    guard_refuge_epoch = 0, -- ... from this epoch (2: the Copper Age)
     bait = false,         -- [ageofai tactics.lua tower_bait, upstream early.c] a citizen with an enemy soldier within
                           -- 5 tiles, out of its towers' reach, runs to the spot 1.5 tiles behind the nearest
                           -- shooting building within 25 (to the Copper Age): the raider follows under its fire
@@ -1017,7 +1018,7 @@ function M.micro(mem, events, now, tx, ty, epoch)
         return
     end
     mem.scan_t = now
-    GUARD_POST = M.opts.guard_refuge and mem.guard_post or nil
+    GUARD_POST = M.opts.guard_refuge and (mem.epoch or 0) >= M.opts.guard_refuge_epoch and mem.guard_post or nil
     for _, id in ipairs(ai.keys(mem.attackers)) do
         if now - mem.attackers[id] > M.opts.hostile_ms then
             mem.attackers[id] = nil
