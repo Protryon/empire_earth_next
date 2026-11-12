@@ -3586,6 +3586,35 @@ Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
 Next: the port's answer to a few raiders before the Stone Age (seed 24's clubmen: what the C++'s militia and defence
 groups do that the port's do not), then guard posts on hills and choke points, heroes, walls.
 
+### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
+
+**Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
+C++'s with an attack goal: its militia's). Seed 24's collapse (§8.52) is not the common case; the port's citizen
+losses come late (54% after 60 minutes, §8.47).
+
+**The defence ladder's hills and choke points**, through two generic queries (AI_LUA_UNITS §11):
+`ai.hill_point(x, y, r, pick, seed)` (a hill whose hull comes within r tiles, 35% of the time after the forest) and
+`ai.choke_point(x, y, nearest, pick, seed)` (a choke point of the land, by guard_chokepoint_percentage: 68% in the
+data). The port's defence tasks over 32 games: forest 203, town 158, choke 20, hill 9 (the sea's 81 apart).
+
+**The heroes of AllocateSpecialUnits** (hero_chance 2%, one per group, a share of the limit; the game's hero limit is
+not read): none was trained in the 32 games (no hero class in the balanced games' epochs and chances).
+
+**Walls:** not ported; the C++ built none in 90-minute games (§8.42).
+
+Bench (balanced, 32 seeds, 90 minutes, --jobs 2; before = §8.52's cs):
+
+| stage | Lua won-lost | Lua Copper | Lua citizens lost by 20 / all | C++ citizens lost |
+|---|---|---|---|---|
+| §8.52 (cs) | 10-18, 4 close | 22/32 | 2.1 / 56.6 | 36.6 |
+| hills, choke points (hc) | 9-19, 4 close | 22/32 | 2.0 / 57.5 | 37.9 |
+| heroes (he, 2 lobby faults re-run) | 7-20, 5 close | 22/32 | 2.1 / 58.5 | 33.0 |
+
+Within noise. Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
+
+Next: the balanced late game - the port's citizens lost to the C++'s soldiers after 60 minutes and its Copper Age
+in 22 games against 27.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

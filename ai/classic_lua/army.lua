@@ -733,7 +733,7 @@ end
 -- group (and the land count - 1), under its share of the population limit (pop_percentage, the own and asked for
 -- counted): a free one of the class taken -> the wanted count asked for; else the held candidates of the class, else
 -- the class asked for when a candidate. As the original, the free-one path leaves the land count as it is.
--- The paratroopers, heroes and carriers: NOT STARTED
+-- The paratroopers and carriers: NOT STARTED
 local function special_slots(view, memory, kind, numLand, numUnits, list, cands, held, byKind)
     local b = memory.t.behavior
     local slots = {}
@@ -796,6 +796,59 @@ local function special_slots(view, memory, kind, numLand, numUnits, list, cands,
                             slots[#slots + 1] = sp.name
                         end
                     end
+                end
+            end
+        end
+    end
+    -- the heroes (AI kind 0x1b): by hero_chance with more than one unit in the group, 1 .. hero_max_per_group, under
+    -- hero_pop_percentage of the limit: a free one taken, else the held heroes, else a random hero class of the
+    -- candidates. DEVIATION: the game's hero limit (GetHeroLimit) is not read
+    local heroes = byKind[KIND_HERO]
+    if numLand > 0 and numUnits > 1 and T.random_k() <= (b.hero_chance_k or 0) and heroes ~= nil and #heroes > 0 then
+        local wanted = ai.random(1, math.max(math.min(b.hero_max_per_group or 0, numLand - 1), 1))
+        local have = 0
+        for _, u in ipairs(own_military()) do
+            if (cls(u.type).ai_kind or 0) == KIND_HERO then
+                have = have + 1
+            end
+        end
+        for _, g in ipairs(G.all(army(memory))) do
+            for _, sl in ipairs(g.slots or {}) do
+                if (cls(sl.c).ai_kind or 0) == KIND_HERO then
+                    have = have + 1
+                end
+            end
+        end
+        local limit = ((b.hero_pop_percentage_k or 0) * cap + 999) // 1000
+        if have < limit then
+            wanted = math.min(wanted, limit - have)
+            local taken = nil
+            for _, u in ipairs(list) do
+                if (cls(u.type).ai_kind or 0) == KIND_HERO then
+                    taken = u.type
+                    break
+                end
+            end
+            if taken ~= nil then
+                slots[#slots + 1] = taken
+                wanted = wanted - 1
+            end
+            for _, c in ipairs(cands) do
+                if wanted <= 0 then
+                    break
+                end
+                if (cls(c.type).ai_kind or 0) == KIND_HERO and not c.taken then
+                    c.taken = true
+                    held[#held + 1] = c
+                    numLand = math.max(numLand - 1, 0)
+                    wanted = wanted - 1
+                end
+            end
+            if wanted > 0 then
+                local name = heroes[ai.random(1, #heroes)]
+                for _ = 1, wanted do
+                    numLand = math.max(numLand - 1, 0)
+                    slots[#slots + 1] = name
                 end
             end
         end
@@ -1319,9 +1372,9 @@ local function add_to_package(memory, town_id, g)
 end
 
 -- AssignSubGroupTask (the defence ladder): the chosen defend tasks (scenario only: none); a forest within 35 tiles
--- (80%, infantry); a hill (35%: NOT STARTED, no hills query), a choke point (guard_chokepoint_percentage: NOT
--- STARTED, no choke points query); a threatened town (guard_town_percentage: mission 3, into its package); a random
--- point on the group's land
+-- (80%, infantry); a hill within 35 tiles (35%: ai.hill_point), a choke point of the land (guard_chokepoint_percentage:
+-- ai.choke_point; the group has no continent of its own, so any of them); a threatened town (guard_town_percentage:
+-- mission 3, into its package); a random point on the group's land. NOT STARTED: the adjacent continents' step
 local function defence_task(view, memory, g)
     local b = memory.t.behavior
     local x, y = g.cx or g.x, g.cy or g.y
@@ -1356,6 +1409,23 @@ local function defence_task(view, memory, g)
                     return "forest"
                 end
             end
+        end
+    end
+    -- a hill whose hull comes within 35 tiles (35%), else a choke point of the land (guard_chokepoint_percentage)
+    if ai.hill_point ~= nil and T.random_k() < 350 then
+        local hx, hy = ai.hill_point(x, y, FOREST_RANGE, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+        if hx ~= nil then
+            g.mission = 1
+            set_place(g, "defend", hx, hy, GUARD_RADIUS, 0)
+            return "hill"
+        end
+    end
+    if ai.choke_point ~= nil and T.random_k() < (b.guard_chokepoint_percentage_k or 0) then
+        local cx, cy = ai.choke_point(x, y, 0, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+        if cx ~= nil then
+            g.mission = 1
+            set_place(g, "defend", cx, cy, GUARD_RADIUS, 0)
+            return "choke"
         end
     end
     if T.random_k() < b.guard_town_percentage_k then
