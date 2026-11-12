@@ -584,6 +584,71 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     return 0;
 }
 
+// ---- the chat log (chat_log.rs): its C++ entry points, and a saved game's reads and writes
+void EEUIECLEFormManager::AddEntry(const EEChatLogEntry& inEntry)
+{
+    EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
+                                    (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
+    ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
+                            (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
+}
+void EEUIECLEFormManager::Clear() { ee_screens_chat_log_clear(); }
+unsigned long EEUIECLEFormManager::GetEntryCount() { return ee_screens_chat_log_count(); }
+long EEUIECLEFormManager::Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_load(&inFile);
+}
+long EEUIECLEFormManager::Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_save(&inFile);
+}
+
+static UWideString sChatLogString;   // the last read's string and colour (ee_screenscpp_cl_last)
+static GEColor sChatLogColour;
+
+extern "C" long ee_screenscpp_cl_read(void* inFile, uint32_t inKind, uint32_t* outValue)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = 0;
+        long theResult = theFile.Read(theValue);
+        *outValue = (uint32_t)theValue;
+        return theResult;
+    }
+    if (inKind == 1)
+        return sChatLogString.Load(theFile);
+    return sChatLogColour.Load(theFile);
+}
+
+extern "C" size_t ee_screenscpp_cl_last(uint32_t inKind, uint8_t* outText, size_t inCapacity)
+{
+    if (inKind == 2) {
+        const float theColour[3] = {sChatLogColour.mRed, sChatLogColour.mGreen, sChatLogColour.mBlue};
+        memcpy(outText, theColour, inCapacity < 12 ? inCapacity : 12);
+        return 12;
+    }
+    size_t theLength = sChatLogString.GetTCHARLength();
+    memcpy(outText, (const char*)sChatLogString, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t inValue, const uint8_t* inBytes,
+                                       size_t inLength)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = inValue;
+        return theFile.Write(theValue);
+    }
+    if (inKind == 1)
+        return Text(inBytes, inLength).Save(theFile);
+    GEColor theColour;
+    memcpy(&theColour.mRed, inBytes, 4);
+    memcpy(&theColour.mGreen, inBytes + 4, 4);
+    memcpy(&theColour.mBlue, inBytes + 8, 4);
+    return theColour.Save(theFile);
+}
+
 // ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
 static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
@@ -636,7 +701,7 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         break;
     }
     case EE_SCREENS_GAME_CL_COUNT:
-        return EEUIECLEFormManager::Get()->mEntries.size();
+        return ee_screens_chat_log_count();
     case EE_SCREENS_OP_CL_CENTER:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->SetAlignment(kTextAlignCenter);
         break;
@@ -2515,11 +2580,18 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         theText = theForm->GetMusicFileName();
         break;
     case EE_SCREENS_TEXT_CL_NAME:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mName;
+    case EE_SCREENS_TEXT_CL_TEXT: {
+        // (ee_screens chat_log.rs)
+        uint32_t theWhich = inWhich == EE_SCREENS_TEXT_CL_TEXT;
+        theList.resize(1024);
+        size_t theLength = ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        if (theLength > theList.size()) {
+            theList.resize(theLength);
+            ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        }
+        theList.resize(theLength);
         break;
-    case EE_SCREENS_TEXT_CL_TEXT:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mText;
-        break;
+    }
     case EE_SCREENS_TEXT_CL_PLAYER:
         theText = gWorld.GetCurrentPlayer()->mName;
         break;

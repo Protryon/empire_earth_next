@@ -34,6 +34,7 @@
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
+//! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
@@ -53,6 +54,9 @@ mod camera_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
+pub mod chat_log;
+#[cfg(not(test))]
+mod chat_log_ffi;
 pub mod civ_builder;
 #[cfg(not(test))]
 mod civ_builder_ffi;

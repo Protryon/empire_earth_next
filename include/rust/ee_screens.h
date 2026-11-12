@@ -2003,6 +2003,13 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// A chat log entry's fixed fields (its name and text go as bytes beside it).
+struct EeScreensChatLogHead {
+  float colour[3];
+  uint32_t kind;
+  uint32_t time;
+};
+
 /// What a button's test reads besides the units.
 struct EeScreensButtonFacts {
   /// The player has a selected group (else no unit test passes).
@@ -2405,6 +2412,34 @@ extern "C" {
 /// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
 /// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 void ee_screens_camera_grab_reset(uint32_t form);
+
+/// `EEUIECLEFormManager::AddEntry`.
+void ee_screens_chat_log_add(const EeScreensChatLogHead *head,
+                             const uint8_t *name,
+                             size_t name_length,
+                             const uint8_t *text,
+                             size_t text_length);
+
+/// `EEUIECLEFormManager::Clear`.
+void ee_screens_chat_log_clear();
+
+/// `EEUIECLEFormManager::GetEntryCount`.
+uint32_t ee_screens_chat_log_count();
+
+/// Entry `index`'s fixed fields into `out`; false (nothing written) past the last.
+bool ee_screens_chat_log_entry(uint32_t index, EeScreensChatLogHead *out);
+
+/// Entry `index`'s name (`which` 0) or text (1) into `out` (up to `capacity` bytes); its length in bytes.
+size_t ee_screens_chat_log_text(uint32_t index,
+                                uint32_t which,
+                                uint8_t *out,
+                                size_t capacity);
+
+/// `EEUIECLEFormManager::Load` from the saved game `file` (an `FSFile*`).
+long ee_screens_chat_log_load(void *file);
+
+/// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
+long ee_screens_chat_log_save(void *file);
 
 /// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
 uint32_t ee_screens_button_command_test(unsigned long button);
