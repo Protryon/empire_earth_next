@@ -9720,3 +9720,57 @@ block's two functions changed here, nothing else.
   as before except `next` 2/4: seeds 2 and 3 at 1000 s part 647 and 1217 ticks after the load, and the unmodified
   exe parts at the same ticks on this tree, so `tools/saveload_expect.txt`'s `next` lines (END) need the tree's new
   boom looked at (not this lane's: the codecs give the same bytes); the Rust gate PASS; the test profile links 0/0.
+
+## R5a.8, second round: the Lua runtime in Rust over the same Lua (ee_ai lua_value, lua_host; branch rust-ai2, 2026-11-12)
+
+Steps 1 and 2 of the plan in RUST_PLAN R5a.8. `EECPLua.cpp` went from 1,484 lines to 429 (the value tree's C++
+methods, the ops table Rust reads and builds the tree through, the forwarders, `EECPLuaReadFromFolder`); `EECPLua.h`
+224 -> 209 (the state's private members are a handle, its counters out-of-line calls).
+
+- **What moved** (`rust/crates/ee_ai`):
+  - `lua_value.rs`: the key order and equality, the tree's equality and text, the "EELM" value encoding and its
+    decoder (the offset and the error where it stops, the value untouched on a failure), the seed, SplitMix64. The
+    algorithms read any tree through a `Tree` trait: a C++ `EECPLuaValue` through `kEECPLuaTreeOps` (one call per
+    value: its scalars and its vectors' storage with the element sizes) or a Rust `Value`. A decode or a conversion
+    builds a Rust `Value` first and copies it into the C++ tree (set, push, field);
+  - `lua_host.rs`: `EECPLuaState`'s body: the state (the allocator's user data is the Rust host; `From` answers the
+    C++ owner), the libraries and the sandbox, print/tostring/string.format/setmetatable/require/each/ai.keys/
+    ai.random, the count hook and `Charge`, `Run`/`Init`/`Step`/`CallOptional`/`LoadPersonality`/`Reload`, the
+    converter both ways (and `CheckMemory`'s walk), `SaveMemory`/`RestoreMemory` (encoded from the Rust value, no C++
+    tree between). `require`'s reader is the ops' `read` on the owner: the text stays in the C++ state's buffer until
+    it has compiled (`luaL_loadbufferx` does not raise), then is released, as the C++ local was;
+  - `lua_api.rs`: the API the host calls, declared `extern "C"` over `mlua-sys`'s types and constants (below);
+  - `lua_ffi.rs`: the C ABI. `EECPLuaStatusName` is Rust's too.
+- **Every Lua API call is the C++'s, in its order**, so the state allocates the same blocks: the golden driver
+  (`build/ai2_golden`, the unmodified `EECPLua.cpp` of 419b4b81 with `ee_lua.c` and `ee_rust.lib`) prints memory used
+  and peak after each of 141 chunks and commands (sandbox names, 17 formats and the refused ones, metatables, each over
+  2,000 keys, the random ranges, require's bad names, error objects, results that cannot convert, budgets, charges,
+  memory caps down to a state that cannot open, the personality's entries, saves, restores of cut and flipped blocks,
+  reload, check memory): identical over the Rust state. The `PushSortedKeys` userdata keeps the C++ entry's size (40
+  bytes), `print` keeps its `luaL_Buffer`, `string.format`'s scan keeps `strchr`'s NUL (a NUL in a format counts as a
+  flag and as a float conversion).
+- **longjmp through Rust on Windows** (the finding of this round): `mlua-sys` declares Lua's functions `extern
+  "C-unwind"`. The MSVC CRT's `longjmp` is an SEH unwind, and with the release profile's `panic = "abort"` rustc puts
+  an abort pad around every call of a function that may unwind: luatest aborted at its first script error with
+  "panic in a function that cannot unwind". The tests (`panic = "unwind"`) passed, so only the release library shows
+  it. Declared `extern "C"` (`lua_api.rs`), the calls get no pad in either profile; the functions Lua calls stay
+  `extern "C-unwind"` (no pad under `panic = "unwind"` either), and nothing between a protected call and a raise owns a
+  destructor. Step 3 (mlua's high-level API) meets the same: mlua raises through its own `C-unwind` frames, so it
+  needs `panic = "unwind"` for the library or the same non-unwinding declarations; check a script error under the
+  release build first.
+- **Tests with the real Lua**: `build.rs` compiles `src/ThirdParty/lua/ee_lua.c` (cc) for the crate's own tests only
+  (not for a release or cross build); `lua_host.rs` links it under `cfg(test)`, and ee_rust's test binary leaves ee_ai
+  out. The test replays the driver's part B on the Rust host, memory counts included: Lua compiled by cl allocates as
+  the game's clang-cl build does. A chunk with a NUL byte: `Run` takes a C string, so the test passes `strlen`'s length.
+- **cbindgen**: `Option<alias of an extern fn>` in a public Rust struct and the imported Lua declarations both came out
+  as `template<typename T = void> struct Option;` and stopped the header splitter: the module of imports carries
+  `/// cbindgen:ignore` (the bare annotation: with more text on the line it is not recognised) and the config's
+  function pointers are spelt inline. The splitter now reads `extern "C-unwind"` definitions (`ee_ai_lua_charge`);
+  cbindgen cannot spell a `C-unwind` function pointer, so `EeAiLuaConfig::open` is a `void*`.
+- **Line endings**: Python's `write_text` on Windows wrote CR LF into LF files (a whole-file diff); every edit since
+  goes through bytes.
+- **Gates of both steps**: luatest 136/136; the driver identical; boom, classic_lua and ageofai seeds 2-3 (2700 s,
+  saves at 1000/1900 s, `EE_AI_SAVE_CHECK=1`) identical to the unmodified exe (decisions, checksum lines, the saved
+  EENS/EENU blocks, every savecheck same, no next.error); oracle seeds 2-3 identical to `ref`; `saveload --settings
+  next` as `tools/saveload_expect.txt` (647, 1217, END, END); the Rust gate PASS. Only the EE-SIM and the tests ran:
+  the Lua AI's lobby/tour path has no new code here (the state is the same object behind the same handle).
