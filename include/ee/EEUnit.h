@@ -338,6 +338,36 @@ struct EEProductionEntry {
     long mFlag;
 };
 
+// New (R5b.4): EEComplexUnit::mPhysicalModel. GEPhysicalModel's layout (no member of its own); its location setters
+// report the new location to the unit store (ee/EEUnitStore.h: the record's x, y, z). Not copied: it lives only in
+// its unit. A write through a GEPhysicalModel reference would bypass it (none does: USCK compares the location)
+class EEUnitStoreModel : public GEPhysicalModel {
+public:
+    EEUnitStoreModel() {}
+    EEUnitStoreModel(const EEUnitStoreModel& inOther) = delete;
+    EEUnitStoreModel& operator=(const EEUnitStoreModel& inOther) = delete;
+    void SetLocation(const GETransformation& inLocation)
+    {
+        GEPhysicalModel::SetLocation(inLocation);
+        EEUnitStoreWrote(kUnitFieldLocation, this);
+    }
+    void SetLocationAndScale(const GETransformation& inLocation, float inScale)
+    {
+        GEPhysicalModel::SetLocationAndScale(inLocation, inScale);
+        EEUnitStoreWrote(kUnitFieldLocation, this);
+    }
+    void SetLocationXY(float inX, float inY)
+    {
+        GEPhysicalModel::SetLocationXY(inX, inY);
+        EEUnitStoreWrote(kUnitFieldLocation, this);
+    }
+    void SetLocationXYZ(const GE3DPoint& inPoint)
+    {
+        GEPhysicalModel::SetLocationXYZ(inPoint);
+        EEUnitStoreWrote(kUnitFieldLocation, this);
+    }
+};
+
 class EEComplexUnit : public EEUnit {
 public:
     // the save keys and the pool (EEComplexUnit.cpp's `$E` chains 0x1f5805..0x1f5954, one guard byte 0x963210;
@@ -779,8 +809,9 @@ public:
     // +0x130..+0x17c: the ctor runs GEPhysicalModel's inline ctor (GETransformation(), mModel = 0, mScale = 1,
     // mFrame = 0), the dtor calls ~GEPhysicalModel. Its position is mPhysicalModel.GetLocation() (the area effects'
     // source location; switching every reader to the accessor changed no row)
-    GEPhysicalModel& GetPhysicalModel() { return this->mPhysicalModel; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    GEPhysicalModel mPhysicalModel;         // +0x130
+    // New (R5b.4): an EEUnitStoreModel (GEPhysicalModel's layout; its location setters report to the unit store)
+    EEUnitStoreModel& GetPhysicalModel() { return this->mPhysicalModel; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
+    EEUnitStoreModel mPhysicalModel;        // +0x130
     void SetAngularVelocity(const GEOrientation& inV) { this->mAngularVelocity = inV; }
     GEOrientation mAngularVelocity;         // +0x17c (saved)
     GEOrientation mOrientation;             // +0x188 (saved)
@@ -793,7 +824,7 @@ public:
     EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEActiveGroup* mActiveGroup;            // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it)
+    EEUnitStoreField<EEActiveGroup*, kUnitFieldActiveGroup> mActiveGroup;   // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store's)
     // +0x1cc (non-zero: not selectable by the aircraft hot key; the unit carrying this one: the fire/plague functors
     // walk the chain to the outermost carrier; provisional name)
     EEComplexUnit* GetPreviousPart() const { return this->mPreviousPart; }
@@ -809,7 +840,7 @@ public:
     EEComplexUnit* GetHolder() const { return this->mHolder; }
     EEComplexUnit* mHolder;                 // +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
     EEUnitAction* GetCommand() const { return this->mCommand; }
-    EEUnitAction* mCommand;                 // +0x1e8 the unit's current script action (ee/EEUnitAction.h)
+    EEUnitStoreField<EEUnitAction*, kUnitFieldCommand> mCommand;   // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store's)
     // +0x1ec a goal (EECPASGUHero::CheckCondition 0x64fd tests its mKind == 0xb; EECPASGUProphet::CanStillCast
     // dynamic_casts it to EEUnitGoal) (provisional name)
     EEUnitGoal* mActiveGoal;
@@ -825,7 +856,7 @@ public:
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
     RTSUnit* mBlockingUnit;                 // +0x20c
-    float mHeight;                          // +0x210 provisional name (SetHeight; saved)
+    EEUnitStoreField<float, kUnitFieldHeight> mHeight;   // +0x210 provisional name (SetHeight; saved; the unit store's)
     float mInitialContactHeading;           // +0x214 (saved)
     float mOpacity;                         // +0x218 (saved)
     float mF21C;                            // +0x21c (SetVelocity; saved)
@@ -895,7 +926,7 @@ public:
     unsigned long mU2FC;                    // +0x2fc (saved)
     unsigned long mAnimationTime;           // +0x300 (saved)
     unsigned long mConversionStartTime;     // +0x304 (saved)
-    unsigned long mTimesUpdated;            // +0x308 (saved)
+    EEUnitStoreField<unsigned long, kUnitFieldTimesUpdated> mTimesUpdated;   // +0x308 (saved; the unit store's)
     long mNextFrame;                        // +0x30c
     EEEffectHandle mFireEffect;             // +0x310 provisional name (the fire functor's effect on the unit; saved)
     unsigned long GetGrazeTime() const { return this->mGrazeTime; }

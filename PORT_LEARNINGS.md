@@ -7097,3 +7097,70 @@ Branch `rust-won-net3`. As before, nothing in the game reaches this code except 
 - **Tool trap: the Bash tool's heredocs.** A `\\` in a heredoc reached Python as `\`, so `"\\r\\n"` matched a real CR LF, and an `index()` of C++ text with `"\r\n"` literals failed. Write such scripts with the editor and run them as files.
 - **Stashing staged new files.** `git stash push -- . ':!build'` stashed only part and left the new files staged; the pop restored them staged, and the next commit took them all. Check `git show --stat` after a commit that follows a pop.
 - **Network-layer APIs these call** (for the lobby lane): `AsyncOp::IsAsync()`, `ReadBuffer::SetPos`/`Available`, `ByteBuffer(data, length, false)`, `IPAddr::Fn2B2C20`, `WriteBuffer::AppendBytes`, `WonByteBufferSink`, `WideAppendUtf16LE`, `WideAssignUtf16LE`.
+
+## R5b.4, ninth round: Build Unit, Smart Farmers and Cast Calamity in Rust, the store's positions and the checksum's flag 2, the tick's step mapped (ee_units commands.rs, store.rs; branch rust-r5b4-core9, 2026-11-11)
+
+- **The last three goal-giving bodies** (`ee_units` commands.rs over host calls in EEUnitHost.cpp, the original's
+  order and draw count; all 15 are now Rust):
+  - `EEMBuildUnit::Execute` (`build_unit`): the technology's class (a node the player lacks is refused: the original
+    read through NULL), the capitol count, `CanProduce(.., 0x20, 1, true, 3, NULL)`, `EECanPlaceOnTile(.., false, 1)`,
+    `EEMakeBuilding`, for a granary the free farms (`EEFindFreeFarm` from ring 1 until none) sorted around the first
+    unit's tile; each unit builds (queued: a build target, shift-queued, a unit with a goal other than a build goes
+    idle; else `OrderRepair`) and takes the farm at its place (past the farms one drawn); a unit the order took out
+    of the group is added back after the loop. The goal kind it tests is the store's.
+  - `EEMSmartFarmers::Execute` (`smart_farmers`): the load goal's farm, its drop sites (`EEGetFarmDropSites`),
+    `CanTake`, the drop, the nearest free farm (`EEFarmDistanceGreater`, the last taken), `EEWorkFarm`, the gather or
+    the 2D move goal (a new constructor, `EE_GOAL_CTOR_LOCATION_2D`), the acknowledgement, the pending push, `Finish`.
+    The carried amount and the tiles are the store's.
+  - `EEMCastCalamity::Execute` (`cast_calamity`): the calamity classes stay C++ (the tech lane's): the class and its
+    flags, `CanCastAt`, `Contains`, the power and the cost, the casters' split, the goal's `Clone` are host calls.
+    The cast goal is a new constructor (`EE_GOAL_CTOR_CAST_CALAMITY`; `EeGoalSpec` gained `ints`: the tile and the
+    technology). A node with no class is refused (the original read through NULL). A selected unit out of its list
+    has its hit points read on the object (`object_hit_points`), as its type already was.
+- **The sorts stay C++.** Both farm sorts are `std::sort` (unstable: equal keys keep the order the algorithm leaves).
+  The comparators are inline in EEMessage.cpp, so the sorts are there too (`EESortFarms`, called by the host's
+  `sort_farms` over the ids the body holds); the sort COMDAT annotations still name them.
+- **The sweep** (USGC) gained the three bodies' original statements and cases: Build Unit with the technologies of
+  the player's tree that make a granary, a house and a capitol and one it has no node of, at the first unit's tile
+  and the centre, plain and queued; Smart Farmers at the usual targets and the player's first granary; Cast Calamity
+  with its first unit and its first unit with power as casters, no target and the next player's unit, one calamity
+  technology of each class kind (0x12, cast by all, other) and Teleport. The dry host answers `CanProduce`,
+  `EECanPlaceOnTile` and `CanCastAt` "yes" (only the placement asked first, its real answer logged), makes a dry building
+  (0x7e000002) whose farms are two dry ids, and runs the split's keep test on the objects.
+- **A trap:** the dry `CanProduce` first asked the real one: its cost reads are the tech capture's TCST records, so
+  the sweep added 3,000 TCST records a game. The dry host now answers without asking (like the hull reads, a sweep
+  must not reach a captured function).
+  The same after the merge with the tech lane's round 2: `CanCastAt` is now its CCAS record (20,000 more a game);
+  the dry `CanCastAt` answers 0 without asking too. Every dry read of another lane's code can become a captured
+  call when that lane adds a record: run the capture after each merge.
+- **A trap of the environment:** a build moved to the background kept running after its first compile error while a
+  second build of the same worktree started; both wrote the same log. Wait for a background build's own exit before
+  the next.
+- **The store's positions and flag 2's fields.** `EEComplexUnit::mPhysicalModel` is an `EEUnitStoreModel`
+  (GEPhysicalModel's layout, no member of its own: its four location setters call the base and report x, y, z in
+  one store call), and `mHeight`, `mTimesUpdated`, `mActiveGroup` (the record keeps whether it is set) and `mCommand`
+  (the record keeps its `mType`: an action's type is fixed by its constructor) are holders. USCK compares the new
+  fields and checks the checksum's flag 2 over the unit chain against the store's sum (`checksum_flag2`: each word
+  sign-extended into a wrapping 64-bit sum, so the low 32 bits are the Windows `long` sum, all 64 the LP64 one).
+  Facing (the transform's rotation) is not in the store: nothing reads it yet.
+- **The writers the holders did not catch.** The first USCK run stopped at tick 0 of a later minute: the location z of
+  one unit differed. `EEUCProjectile` and `EEUCMissile` wrote a dying shot's location through
+  `const_cast<GETransformation&>(GetLocation())`; they now call `SetLocationXYZ` (the same three stores in the same
+  order). `EEPMBuilding::Step2` set the location through a `GEPhysicalModel&`, which a derived class's setters do not
+  intercept: the reference is now the reporting type. A base reference or a const_cast is the hole in a
+  "shadowing" holder: grep for both. `mTimesUpdated` is never incremented in the game (reset, loaded, saved).
+- **Flag 2 from the store.** `GetOutOfSynchChecksum` adds `ee_units_store_checksum_flag2()` for flag 2 and walks the
+  chain only for 0x20 and 8; the oracle's `oos=` (flags 0x153) is identical.
+- **What only a played game runs:** the three bodies' world calls (no capture game sends Build Unit, Smart Farmers or
+  Cast Calamity; the computer players build through their own code): the building's placement, the orders, the farm
+  assignments, the casts and the split. The UI sends Build Unit on every building placement (EEABuild), Smart Farmers on
+  a right click on an own granary, or on a farm with several citizens selected (EEAMouseClick), Cast Calamity from
+  EEACalamity: a played game (the lead's) is the first to run them; the fixture's orders do not send them yet.
+- **The tick's step, mapped**: RUST_PLAN "Leaf 4 (c) and leaf 5, ninth round" (the call tree, the fields each piece
+  touches, what the store lacks, the next three rounds).
+- **Gates** (each code commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-3, the Rust gate PASS;
+  on the merge with rust: the oracle identical on seeds 2-7, the four capture profiles (24 games, run two seeds at a
+  time for the disk) equal to the goldens but USGC, which the last commit recorded, and the combat lane's CBCH
+  lines, which have no golden on rust; USCK found no difference; the test-profile build 0/0). The Rust gate's
+  timer test `timers_under_a_factor_fire_at_the_scaled_rate_until_stopped` failed once under load and passed
+  alone. Not run: any harness session, macOS or Linux builds.
