@@ -125,6 +125,15 @@ constexpr static const int32_t EE_WON_ADMINOP_PATCH_CLEANUP = 37;
 /// `GetPatchServerModuleListOp`: no members
 constexpr static const int32_t EE_WON_ADMINOP_MODULE_LIST = 38;
 
+/// WONDB's `RequestAccountInfoEmailOp`: the email (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL = 40;
+
+/// WONDB's `RequestPasswordEmailOp`: the user name (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
+
+/// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
+constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -3334,6 +3343,18 @@ void ee_won_admin_reply(int32_t op,
 /// # Safety
 /// `values` holds `count` values whose byte ranges are valid.
 EeWonReqOp *ee_won_adminop_new(int32_t kind, const EeWonAdminValue *values, size_t count);
+
+/// The lobby's lost password request (`RequestPasswordEmailOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_password_email(const uint8_t *name, size_t len);
+
+/// The lobby's lost user name request (`RequestAccountInfoEmailOp` with its email).
+///
+/// # Safety
+/// `email` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_info_email(const uint8_t *email, size_t len);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

@@ -91,9 +91,11 @@ enum {
     K_QUERY_BANNED, K_QUERY_LIST_BANNED, K_REMOVE_BANNED, K_INSERT_SUB, K_UPDATE_SUB, K_REMOVE_SUB, K_QUERY_SUB,
     K_ACCOUNT, K_ACCOUNT_EX,
     K_ADD_VERSION = 30, K_UPDATE_VERSION, K_REMOVE_VERSION, K_GET_VERSION_LIST, K_ADD_PATCH, K_REMOVE_PATCH,
-    K_ACTIVATE_PATCH, K_PATCH_CLEANUP, K_MODULE_LIST
+    K_ACTIVATE_PATCH, K_PATCH_CLEANUP, K_MODULE_LIST,
+    K_INFO_EMAIL = 40, K_PASSWORD_EMAIL, K_GET_PATCH_LIST
 };
-static const int kKinds[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 30, 31, 32, 33, 34, 35, 36, 37, 38 };
+static const int kKinds[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+                              40, 41, 42 };
 
 // the verdicts beside a status
 static const char* const kInv = "inv";   // InvalidReplyHeader()
@@ -289,6 +291,41 @@ struct SPatch : public RefCount {
     bool GetMustVisitHost() const { return this->mMustVisitHost; }
     bool GetIsActive() const { return this->mIsActive; }
     void WriteToBuffer(WriteBuffer& b, bool u) { PatchWritePatch(*this, b, u); }
+    void SetConfigName(const string& s) { this->mConfigName = s; }
+    void SetFromVersion(const string& s) { this->mFromVersion = s; }
+    void SetToVersion(const string& s) { this->mToVersion = s; }
+    void SetDisplayName(const string& s) { this->mDisplayName = s; }
+    void SetNetAddress(const string& s) { this->mNetAddress = s; }
+    void SetCheckSum(unsigned long v) { this->mCheckSum = v; }
+    void SetPatchSize(unsigned long v) { this->mPatchSize = v; }
+    void SetHostName(const string& s) { this->mHostName = s; }
+    void SetHostURL(const string& s) { this->mHostURL = s; }
+    void SetHostText(const string& s) { this->mHostText = s; }
+    void SetHostImageURL(const string& s) { this->mHostImageURL = s; }
+    void SetMustVisitHost(bool b) { this->mMustVisitHost = b; }
+    void SetIsActive(bool b) { this->mIsActive = b; }
+    void ReadFromBuffer(ReadBuffer& b, bool inList) { PatchReadPatch(*this, b, inList); }
+    string Dump() const
+    {
+        return Hex(this->mConfigName) + "," + Hex(this->mFromVersion) + "," + Hex(this->mToVersion) + "," +
+               Hex(this->mDisplayName) + "," + Hex(this->mNetAddress) + "," + Num((uint32_t)this->mCheckSum) + "," +
+               Num((uint32_t)this->mPatchSize) + "," + Hex(this->mHostName) + "," + Hex(this->mHostURL) + "," +
+               Hex(this->mHostText) + "," + Hex(this->mHostImageURL) + "," + Num(this->mMustVisitHost) + "," +
+               Num(this->mIsActive);
+    }
+};
+// WONDB's email requests and WONMisc's patch list
+struct SEmail : SBase {
+    unsigned short mMsgType;
+    string mEmail;
+    wstring mUserName;
+    SmartPtr<ProfileData> mProfileData;
+};
+struct SPatchList : SBase {
+    unsigned short mMsgType;
+    string mProductName, mConfigName, mFromVersion, mToVersion;
+    char mStateFilter;
+    std::list<SmartPtr<SPatch> > mPatchDataList;
 };
 struct SVer : SBase {
     unsigned short mMsgType;
@@ -313,6 +350,8 @@ struct Op {
     SSub mSub;
     SAccount mAcct;
     SVer mVer;
+    SEmail mEmail;
+    SPatchList mPL;
 
     SBase& Base()
     {
@@ -321,6 +360,8 @@ struct Op {
         case K_QUERY_LIST_BANNED: return this->mQLB;
         case K_INSERT_SUB: case K_UPDATE_SUB: case K_REMOVE_SUB: case K_QUERY_SUB: return this->mSub;
         case K_ACCOUNT: case K_ACCOUNT_EX: return this->mAcct;
+        case K_INFO_EMAIL: case K_PASSWORD_EMAIL: return this->mEmail;
+        case K_GET_PATCH_LIST: return this->mPL;
         default: return this->mKind >= K_ADD_VERSION ? static_cast<SBase&>(this->mVer) : this->mKey;
         }
     }
@@ -392,6 +433,22 @@ struct Op {
                 v.N(o.mUpdateFields); v.N(o.mAllocateDate); v.N(o.mAllocateDuration); v.N(o.mActivateTime);
                 v.N(o.mActivateDuration); v.N(o.mActivateUserSeq);
             }
+            return;
+        }
+        if (inKind == K_INFO_EMAIL || inKind == K_PASSWORD_EMAIL) {
+            SEmail& o = this->mEmail;
+            o.mMsgType = inKind == K_INFO_EMAIL ? 14 : 8;
+            o.mProfileData = new ProfileData;
+            if (gen) { o.mEmail = AStr(); o.mUserName = AWStr(); }
+            if (inKind == K_INFO_EMAIL) v.S(o.mEmail); else v.W(o.mUserName);
+            return;
+        }
+        if (inKind == K_GET_PATCH_LIST) {
+            SPatchList& o = this->mPL;
+            o.mMsgType = 17;
+            o.mProductName = ""; o.mConfigName = ""; o.mFromVersion = ""; o.mToVersion = ""; o.mStateFilter = 2;
+            if (gen) { o.mProductName = AStr(); o.mConfigName = AStr(); o.mFromVersion = AStr(); o.mToVersion = AStr(); o.mStateFilter = (char)Pick(256); }
+            v.S(o.mProductName); v.S(o.mConfigName); v.S(o.mFromVersion); v.S(o.mToVersion); v.N((unsigned char)o.mStateFilter);
             return;
         }
         if (inKind <= K_ACCOUNT_EX) {
@@ -496,6 +553,35 @@ struct Op {
             o.mRequestData = requestData.ToByteBuffer(true);
             break;
         }
+        case K_INFO_EMAIL: case K_PASSWORD_EMAIL: {
+            SEmail& o = this->mEmail;
+            o.mMessageType = 1002;
+            o.mSubMessageType = o.mMsgType;
+            if (this->mKind == K_INFO_EMAIL) {
+                DbRequest q(EE_WON_DB_REQ_INFO_EMAIL, 0);
+                q.mReq.email = DbRequest::Narrow(o.mEmail);
+                q.mReq.profile = o.mProfileData->GetProfile();
+                o.mRequestData = q.Build();
+            } else {
+                DbRequest q(EE_WON_DB_REQ_PASSWORD_EMAIL, 0);
+                q.mReq.name = q.Text(o.mUserName);
+                q.mReq.profile = o.mProfileData->GetProfile();
+                o.mRequestData = q.Build();
+            }
+            break;
+        }
+        case K_GET_PATCH_LIST: {
+            SPatchList& o = this->mPL;
+            o.mMessageType = 1004;
+            o.mSubMessageType = o.mMsgType;
+            std::vector<std::string> aStrings;
+            aStrings.push_back(o.mProductName);
+            aStrings.push_back(o.mConfigName);
+            aStrings.push_back(o.mFromVersion);
+            aStrings.push_back(o.mToVersion);
+            o.mRequestData = PatchRequest(1, aStrings, o.mStateFilter);
+            break;
+        }
         default: {
             SVer& o = this->mVer;
             o.mMessageType = this->mKind == K_MODULE_LIST ? 6 : 1004;
@@ -548,6 +634,8 @@ struct Op {
             if (result != WS_Success) return Num(result);
             if (this->mKind == K_MODULE_LIST) {
                 if (b.mMessageReplyType != 7) return kInv;
+            } else if (this->mKind == K_INFO_EMAIL || this->mKind == K_PASSWORD_EMAIL) {
+                if (!ee_won_db_answers(b.mSubMessageReplyType, this->mEmail.mMsgType)) return kInv;
             } else if (b.mSubMessageReplyType != b.mSubMessageType + 1) {
                 return kInv;
             }
@@ -596,6 +684,9 @@ struct Op {
                 break;
             case K_MODULE_LIST:
                 AdminModuleListReply(b.mReplyData.get(), this->mVer.mModuleList);
+                break;
+            case K_GET_PATCH_LIST:
+                PatchReplyData<SPatch, std::list<SmartPtr<SPatch> >, SVersion>(b.mReplyData.get(), NULL, NULL, NULL, this->mPL.mPatchDataList);
                 break;
             default: break;   // no extended unpack
             }
@@ -652,6 +743,16 @@ struct Op {
             for (std::list<unsigned long>::const_iterator i = this->mVer.mModuleList.begin(); i != this->mVer.mModuleList.end(); ++i)
                 s += " " + Num((uint32_t)*i);
             break;
+        case K_GET_PATCH_LIST:
+            for (std::list<SmartPtr<SPatch> >::const_iterator i = this->mPL.mPatchDataList.begin(); i != this->mPL.mPatchDataList.end(); ++i)
+                s += " " + (*i)->Dump();
+            break;
+        case K_INFO_EMAIL: case K_PASSWORD_EMAIL: {
+            WriteBuffer w(0, true);
+            this->mEmail.mProfileData->PackRequestData(w, true);
+            s += " p" + Hex(Bytes(w));
+            break;
+        }
         default: break;
         }
         return s;
@@ -672,6 +773,18 @@ static void AppendRecords(int inKind, WriteBuffer& w)
         case K_QUERY_LIST_BANNED: w.AppendLong(ANum()); w.AppendShort((short)Next()); break;
         case K_QUERY_SUB: w.AppendShort((short)(Pick(5) - 2)); for (int k = 0; k < 5; k++) w.AppendLong(ANum()); break;
         case K_MODULE_LIST: w.AppendLong(ANum()); break;
+        case K_GET_PATCH_LIST: {
+            WriteBuffer r(0, true);
+            r.AppendString(AStr()); r.AppendString(AStr()); r.AppendString(AStr()); r.AppendBool(Pick(2) != 0);
+            r.AppendString(AStr()); r.AppendString(AStr()); r.AppendLong(ANum()); r.AppendLong(ANum());
+            for (int k = 0; k < 4; k++) r.AppendString(AStr());
+            r.AppendBool(Pick(2) != 0);
+            string rb = Bytes(r);
+            if (Pick(6) == 0) rb.resize(Pick((int)rb.size() + 1));
+            w.AppendShort((short)rb.size());
+            w.AppendBytes(rb.data(), (unsigned long)rb.size());
+            break;
+        }
         case K_GET_VERSION_LIST: {
             WriteBuffer r(0, true);
             r.AppendString(AStr()); r.AppendString(AStr());

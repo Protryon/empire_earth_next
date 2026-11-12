@@ -10,7 +10,7 @@
 //! original's statements before the port. Reached by nothing in the game (the WON admin servers are gone).
 
 use crate::admin::{self, Value, EE_WON_ADMIN_CUT};
-use crate::db::EeWonProfile;
+use crate::db::{self, EeWonProfile};
 use crate::patch;
 use crate::reqop::{hex, Checked, DbProxy, EeWonReqOp, RequestOp, ST_INVALID_MESSAGE, ST_SUCCESS};
 use crate::wire::Writer;
@@ -52,6 +52,12 @@ pub const EE_WON_ADMINOP_ACTIVATE_PATCH: i32 = 36;
 pub const EE_WON_ADMINOP_PATCH_CLEANUP: i32 = 37;
 /// `GetPatchServerModuleListOp`: no members
 pub const EE_WON_ADMINOP_MODULE_LIST: i32 = 38;
+/// WONDB's `RequestAccountInfoEmailOp`: the email (and the profile)
+pub const EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL: i32 = 40;
+/// WONDB's `RequestPasswordEmailOp`: the user name (and the profile)
+pub const EE_WON_ADMINOP_PASSWORD_EMAIL: i32 = 41;
+/// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
+pub const EE_WON_ADMINOP_GET_PATCH_LIST: i32 = 42;
 
 /// A member: a number, or bytes (a wide string's as UTF-16 LE).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -123,6 +129,70 @@ impl Version {
     }
 }
 
+/// `PatchData`
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PatchRecord {
+    pub config: Vec<u8>,
+    pub from: Vec<u8>,
+    pub to: Vec<u8>,
+    pub display_name: Vec<u8>,
+    pub net_address: Vec<u8>,
+    pub checksum: u32,
+    pub size: u32,
+    pub host_name: Vec<u8>,
+    pub host_url: Vec<u8>,
+    pub host_text: Vec<u8>,
+    pub host_image_url: Vec<u8>,
+    pub must_visit_host: bool,
+    pub active: bool,
+}
+
+impl PatchRecord {
+    /// `ReadFromBuffer(record, true)` over a new record (a patch list's: with the config and versions)
+    fn read(data: &[u8]) -> PatchRecord {
+        let mut p = PatchRecord::default();
+        for f in patch::read_patch(data, 0, true) {
+            let s = || if f.whole { data[f.at as usize..(f.at + f.len) as usize].to_vec() } else { Vec::new() };
+            match f.slot {
+                patch::EE_WON_PATCH_CONFIG => p.config = s(),
+                patch::EE_WON_PATCH_FROM => p.from = s(),
+                patch::EE_WON_PATCH_TO => p.to = s(),
+                patch::EE_WON_PATCH_ACTIVE => p.active = f.num != 0,
+                patch::EE_WON_PATCH_DISPLAY => p.display_name = s(),
+                patch::EE_WON_PATCH_NET_ADDRESS => p.net_address = s(),
+                patch::EE_WON_PATCH_CHECKSUM => p.checksum = f.num as u32,
+                patch::EE_WON_PATCH_SIZE => p.size = f.num as u32,
+                patch::EE_WON_PATCH_HOST_NAME => p.host_name = s(),
+                patch::EE_WON_PATCH_HOST_URL => p.host_url = s(),
+                patch::EE_WON_PATCH_HOST_TEXT => p.host_text = s(),
+                patch::EE_WON_PATCH_HOST_IMAGE => p.host_image_url = s(),
+                patch::EE_WON_PATCH_MUST_VISIT => p.must_visit_host = f.num != 0,
+                _ => {}
+            }
+        }
+        p
+    }
+
+    fn describe(&self) -> String {
+        format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            hex(&self.config),
+            hex(&self.from),
+            hex(&self.to),
+            hex(&self.display_name),
+            hex(&self.net_address),
+            self.checksum,
+            self.size,
+            hex(&self.host_name),
+            hex(&self.host_url),
+            hex(&self.host_text),
+            hex(&self.host_image_url),
+            u8::from(self.must_visit_host),
+            u8::from(self.active)
+        )
+    }
+}
+
 /// What the replies fill.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AdminOut {
@@ -139,6 +209,7 @@ pub struct AdminOut {
     pub profile: EeWonProfile,
     pub versions: Vec<Version>,
     pub modules: Vec<u32>,
+    pub patches: Vec<PatchRecord>,
 }
 
 /// The members the constructors set (the key flags 1, the subscriptions' dates -1, the version list's config `%`
@@ -163,6 +234,8 @@ fn defaults(kind: i32) -> Vec<Member> {
         EE_WON_ADMINOP_REMOVE_PATCH => vec![s(); 5],
         EE_WON_ADMINOP_ACTIVATE_PATCH => vec![s(), s(), s(), s(), s(), n(0)],
         EE_WON_ADMINOP_PATCH_CLEANUP | EE_WON_ADMINOP_MODULE_LIST => Vec::new(),
+        EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL | EE_WON_ADMINOP_PASSWORD_EMAIL => vec![s()],
+        EE_WON_ADMINOP_GET_PATCH_LIST => vec![s(), s(), s(), s(), n(2)],
         // the community and product (or key and community), then the numbers and key counts 0
         _ => vec![s(), s(), n(0), n(0)],
     }
@@ -218,10 +291,14 @@ impl AdminOp {
             EE_WON_ADMINOP_REMOVE_PATCH => 13,
             EE_WON_ADMINOP_ACTIVATE_PATCH => 15,
             EE_WON_ADMINOP_PATCH_CLEANUP => 21,
+            EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL => 14,
+            EE_WON_ADMINOP_PASSWORD_EMAIL => 8,
+            EE_WON_ADMINOP_GET_PATCH_LIST => 17,
             _ => 1,
         };
         let message = match self.kind {
             EE_WON_ADMINOP_MODULE_LIST => 6,
+            EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL | EE_WON_ADMINOP_PASSWORD_EMAIL => 1002,
             k if k >= EE_WON_ADMINOP_ADD_VERSION => 1004,
             k if (EE_WON_ADMINOP_INSERT_KEY_SUBSCRIBE..=EE_WON_ADMINOP_QUERY_KEY_SUBSCRIBE).contains(&k) => 1006,
             _ => 1002,
@@ -247,6 +324,18 @@ impl AdminOp {
         match self.kind {
             EE_WON_ADMINOP_MODULE_LIST => return None,
             EE_WON_ADMINOP_PATCH_CLEANUP => {}
+            EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL => {
+                return Some(db::email_data(None, &self.m(0).bytes, &self.out.profile))
+            }
+            EE_WON_ADMINOP_PASSWORD_EMAIL => {
+                let name = crate::text::utf16_from_le_bytes(&self.m(0).bytes);
+                return Some(db::email_data(Some(&name), &[], &self.out.profile));
+            }
+            EE_WON_ADMINOP_GET_PATCH_LIST => {
+                let s: Vec<Vec<u8>> = (0..4).map(|i| self.m(i).bytes).collect();
+                let s: Vec<&[u8]> = s.iter().map(|x| x.as_slice()).collect();
+                return Some(patch::strings_and_byte(&s, self.m(4).num as u8));
+            }
             EE_WON_ADMINOP_ADD_VERSION | EE_WON_ADMINOP_UPDATE_VERSION => {
                 w.append_string(&self.m(0).bytes, 2);
                 let flags = if self.kind == EE_WON_ADMINOP_ADD_VERSION { 2 } else { 3 };
@@ -285,6 +374,20 @@ impl AdminOp {
     fn unpack(&mut self) -> Checked {
         let data = self.proxy.reply_data().to_vec();
         let k = self.kind;
+        if k == EE_WON_ADMINOP_GET_PATCH_LIST {
+            // each patch record pushed as read; a cut throws (the records before it stay)
+            for f in patch::read_patch_reply(&data, false) {
+                match f.slot {
+                    patch::EE_WON_PATCH_RECORD => {
+                        let at = f.at as usize;
+                        self.out.patches.push(PatchRecord::read(&data[at..at + f.len as usize]));
+                    }
+                    patch::EE_WON_PATCH_END => {}
+                    _ => return Checked::Cut,
+                }
+            }
+            return Checked::Status(ST_SUCCESS);
+        }
         let table = match k {
             EE_WON_ADMINOP_REMOVE_KEY_SUBSCRIBE | EE_WON_ADMINOP_UPDATE_KEY_SUBSCRIBE => {
                 admin::EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE
@@ -475,6 +578,12 @@ impl RequestOp for AdminOp {
             }
             EE_WON_ADMINOP_GET_VERSION_LIST => o.versions.iter().for_each(|v| s += &format!(" v{}", v.describe())),
             EE_WON_ADMINOP_MODULE_LIST => o.modules.iter().for_each(|m| s += &format!(" {m}")),
+            EE_WON_ADMINOP_GET_PATCH_LIST => o.patches.iter().for_each(|p| s += &format!(" {}", p.describe())),
+            EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL | EE_WON_ADMINOP_PASSWORD_EMAIL => {
+                let mut w = Writer::new(0, true);
+                o.profile.pack(&mut w, true);
+                s += &format!(" p{}", hex(w.data()));
+            }
             _ => {}
         }
         s
@@ -517,6 +626,26 @@ pub unsafe extern "C" fn ee_won_adminop_new(
             .collect()
     };
     EeWonReqOp::new(Box::new(AdminOp::new(kind, members)))
+}
+
+/// The lobby's lost password request (`RequestPasswordEmailOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_password_email(name: *const u8, len: usize) -> *mut EeWonReqOp {
+    let m = Member { num: 0, bytes: unsafe { crate::ffi::bytes(name, len) }.to_vec() };
+    EeWonReqOp::new(Box::new(AdminOp::new(EE_WON_ADMINOP_PASSWORD_EMAIL, vec![m])))
+}
+
+/// The lobby's lost user name request (`RequestAccountInfoEmailOp` with its email).
+///
+/// # Safety
+/// `email` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_info_email(email: *const u8, len: usize) -> *mut EeWonReqOp {
+    let m = Member { num: 0, bytes: unsafe { crate::ffi::bytes(email, len) }.to_vec() };
+    EeWonReqOp::new(Box::new(AdminOp::new(EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL, vec![m])))
 }
 
 #[cfg(test)]

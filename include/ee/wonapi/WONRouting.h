@@ -2524,34 +2524,7 @@ public:
     IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
 };
 
-class RequestPasswordEmailOp : public DBProxyOp {
-public:
-    RequestPasswordEmailOp(ServerContext* inContext); //2ce480,126B
-    virtual void RunHook();   //2ce670, RunHook
-    virtual WONStatus CheckResponse(); //2ce280,shared CheckResponse
-protected:
-    void Init(); //163 bytes, length84=4, then a new Profile (0x20)
-    virtual ~RequestPasswordEmailOp(); //2ce520,329B, explicit ownVT2ce540
-public:
-    void SetUserName(const std::wstring& inUser) { this->mUserName=inUser; }
-    std::wstring mUserName; //12c..13c
-    SmartPtr<ProfileData> mProfileData; //13c
-    const unsigned short mMsgType; //140=8,naturalpadding142..143
-};
-class RequestAccountInfoEmailOp : public DBProxyOp {
-public:
-    RequestAccountInfoEmailOp(ServerContext* inContext); //2ce090,126B
-    virtual void RunHook();   //2ce2b0
-    virtual WONStatus CheckResponse(); //2ce280
-protected:
-    void Init(); //163 bytes, length84=4, then a new Profile (0x20)
-    virtual ~RequestAccountInfoEmailOp(); //2ce130,328B,explicit ownVT2ce150
-public:
-    void SetEmail(const std::string& inEmail) { this->mEmail=inEmail; }
-    std::string mEmail; //12c..13c
-    SmartPtr<ProfileData> mProfileData; //13c
-    const unsigned short mMsgType; //140=14,naturalpadding142..143
-};
+// RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won/src/adminop.rs)
 
 // GetUserIdFromNameOp, 0x140 bytes; ctor 2cd3a0 / destructor 2cd4d0,
 // RTTI44d2b8 six inherited operation slots plus Reset18; no additional slots.

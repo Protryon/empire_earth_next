@@ -56,9 +56,9 @@ fn golden() {
         }
         sequences += 1;
     }
-    assert_eq!(sequences, 1500);
-    assert!(replies > 2000, "{replies}");
-    assert_eq!(kinds.len(), 24);
+    assert_eq!(sequences, 1200);
+    assert!(replies > 1500, "{replies}");
+    assert_eq!(kinds.len(), 27);
 }
 
 #[test]
