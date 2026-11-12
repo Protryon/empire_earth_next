@@ -4,6 +4,7 @@
 //! layer's sockets: the status names, NetStats, IPAddr, AsyncSocket's core and the socket ops' algorithms. The C++
 //! classes of `src/Empire Earth/WONAPI` that remain call these through `ffi` and `ffi_net`.
 
+pub mod admin;
 pub mod asyncop;
 pub mod auth;
 pub mod authctx;
@@ -12,6 +13,7 @@ pub mod blowfish;
 mod blowfish_tables;
 pub mod buffer;
 pub mod cdkey;
+pub mod cert;
 pub mod chat;
 pub mod config;
 pub mod configobj;
@@ -29,6 +31,7 @@ pub mod ffi_ops;
 pub mod ffi_parse;
 pub mod file;
 pub mod flow;
+pub mod ftp;
 pub mod guicfg;
 pub mod guiconf;
 pub mod guictl;
@@ -46,6 +49,7 @@ pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
+pub mod http;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;
@@ -57,6 +61,7 @@ pub mod netstats;
 pub mod opobj;
 pub mod ops;
 pub mod parser;
+pub mod patch;
 pub mod path;
 pub mod persist;
 pub mod plaintext;

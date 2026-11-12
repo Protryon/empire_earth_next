@@ -491,6 +491,22 @@ WON_TESTS = {
     # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
     # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
     "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    # GetCertOp's requests and replies (the reply's entries read in Rust, the certificate, key block and key checks
+    # applied in order), the original's statements against include/ee/wonapi/WONCertMsg.h over ee_won's cert
+    # module (golden: rust/crates/ee_won/src/golden_cert.txt)
+    "won_cert_test": [],
+    # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
+    # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
+    # (golden: rust/crates/ee_won/src/golden_http.txt)
+    "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp", WON_SRC / "WONCommon" / "WONFile.cpp",
+                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
+    # version filter; the patch ops' requests and replies), the original's statements against
+    # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
+    "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
+    # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
+    "won_admin_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

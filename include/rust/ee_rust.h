@@ -1190,6 +1190,107 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
+constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMIN_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMIN_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE = 13;
+
+/// the CD key account's request before the profile (the key, the community)
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY = 14;
+
+/// the same with the action flag
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// the version ops' requests: the product (before the version record)
+constexpr static const int32_t EE_WON_ADMIN_PRODUCT = 16;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_VERSION = 17;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMIN_GET_VERSION_LIST = 18;
+
+/// `RemovePatchOp`: product, config, from, to, patch URL
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_PATCH = 19;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMIN_ACTIVATE_PATCH = 20;
+
+/// `GetPatchServerModuleListOp`'s reply (its request has no data)
+constexpr static const int32_t EE_WON_ADMIN_MODULE_LIST = 21;
+
+constexpr static const uint8_t EE_WON_ADMIN_VALUE = 0;
+
+/// the read ended whole (`at`: where the account reply's profile starts)
+constexpr static const uint8_t EE_WON_ADMIN_END = 1;
+
+/// the read failed here
+constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
+
+/// `SendPubKeyRequest`'s message.
+constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
+
+/// `SendLoginRequest`'s message (`key_id`, `a` the encrypted session key, `b` the encrypted login data).
+constexpr static const int32_t EE_WON_CERT_REQ_LOGIN = 2;
+
+/// `SendLoginConfirm`'s message (`a` the encrypted hashes).
+constexpr static const int32_t EE_WON_CERT_REQ_CONFIRM = 3;
+
+/// The read failed here: the original threw `ReadBufferException`.
+constexpr static const uint8_t EE_WON_CERT_CUT = 0;
+
+/// `return InvalidReplyHeader()`.
+constexpr static const uint8_t EE_WON_CERT_INVALID_HEADER = 1;
+
+/// A key block reply's failure status `num`: `SetLastServerError(num)`, try the next server.
+constexpr static const uint8_t EE_WON_CERT_SERVER_ERROR = 2;
+
+/// A key block reply's block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_KEY_BLOCK = 3;
+
+/// A login challenge outside the challenge state.
+constexpr static const uint8_t EE_WON_CERT_UNEXPECTED_CHALLENGE = 4;
+
+/// A login challenge's encrypted block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_CHALLENGE = 5;
+
+/// The login reply's status `num` (the read stops after -1).
+constexpr static const uint8_t EE_WON_CERT_LOGIN_STATUS = 6;
+
+/// An error string (`at`, `len`): `mErrorList.push_back`.
+constexpr static const uint8_t EE_WON_CERT_ERROR = 7;
+
+/// A clear (or decrypted) entry of type `kind` (`at`, `len`); type 7 comes as `EE_WON_CERT_COMMUNITY` instead.
+constexpr static const uint8_t EE_WON_CERT_ENTRY = 8;
+
+/// A community status entry: `kind` = the fields read of its sub message (0 none, 1 the status `num`, 2 and the
+/// id `id`, 3 and the name: `at`, `len` UTF-16 units). Fewer than 3: a `EE_WON_CERT_CUT` follows.
+constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
+
+/// The clear part's end: the rest (`at`, `len`) is the encrypted part.
+constexpr static const uint8_t EE_WON_CERT_REST = 10;
+
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
@@ -1286,6 +1387,48 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
+
+/// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
+constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
+
+constexpr static const int32_t EE_WON_FTP_STATUS_ERROR = 100090;
+
+constexpr static const int32_t EE_WON_FTP_INVALID_PASV = 100091;
+
+/// The request states (`RequestState`).
+constexpr static const int32_t EE_WON_FTP_START = 0;
+
+constexpr static const int32_t EE_WON_FTP_USER = 1;
+
+constexpr static const int32_t EE_WON_FTP_PASSWORD = 2;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_DIR = 3;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_TYPE = 4;
+
+constexpr static const int32_t EE_WON_FTP_PASSIVE = 5;
+
+constexpr static const int32_t EE_WON_FTP_RESTART = 6;
+
+constexpr static const int32_t EE_WON_FTP_RETRIEVE = 7;
+
+/// What `HandleReply` does with a line.
+constexpr static const int32_t EE_WON_FTP_MORE = 0;
+
+/// finish with `status`
+constexpr static const int32_t EE_WON_FTP_FINISH = 1;
+
+/// send the command of `state`
+constexpr static const int32_t EE_WON_FTP_SEND = 2;
+
+/// the passive reply: the data address (`host`, `port`), then the data connection, then the command of `state`
+constexpr static const int32_t EE_WON_FTP_DATA = 3;
+
+/// receive the content
+constexpr static const int32_t EE_WON_FTP_RECV = 4;
+
+/// return false (an unknown state)
+constexpr static const int32_t EE_WON_FTP_NONE = 5;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -1650,6 +1793,67 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
+
+/// `URL`'s types (`URLType`).
+constexpr static const int32_t EE_WON_URL_NONE = 0;
+
+constexpr static const int32_t EE_WON_URL_FILE = 1;
+
+constexpr static const int32_t EE_WON_URL_HTTP = 2;
+
+constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// The read failed here: the original threw `ReadBufferException` (`at`: the reader's position).
+constexpr static const uint8_t EE_WON_PATCH_CUT = 255;
+
+/// The read ended whole (`at`: the reader's position).
+constexpr static const uint8_t EE_WON_PATCH_END = 254;
+
+constexpr static const uint8_t EE_WON_VERSION_CONFIG = 0;
+
+constexpr static const uint8_t EE_WON_VERSION_VERSION = 1;
+
+/// one version type pushed (a piece of a comma-separated type string)
+constexpr static const uint8_t EE_WON_VERSION_TYPE = 2;
+
+constexpr static const uint8_t EE_WON_VERSION_DESCRIPTION = 3;
+
+constexpr static const uint8_t EE_WON_VERSION_STATE = 4;
+
+constexpr static const uint8_t EE_WON_PATCH_CONFIG = 0;
+
+constexpr static const uint8_t EE_WON_PATCH_FROM = 1;
+
+constexpr static const uint8_t EE_WON_PATCH_TO = 2;
+
+constexpr static const uint8_t EE_WON_PATCH_ACTIVE = 3;
+
+constexpr static const uint8_t EE_WON_PATCH_DISPLAY = 4;
+
+constexpr static const uint8_t EE_WON_PATCH_NET_ADDRESS = 5;
+
+constexpr static const uint8_t EE_WON_PATCH_CHECKSUM = 6;
+
+constexpr static const uint8_t EE_WON_PATCH_SIZE = 7;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_NAME = 8;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_URL = 9;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_TEXT = 10;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_IMAGE = 11;
+
+constexpr static const uint8_t EE_WON_PATCH_MUST_VISIT = 12;
+
+/// `CheckValidVersionOp::CheckResponse`'s and `GetPatchListOp::CheckResponse`'s reply data: the target version and
+/// its description URL (the version check only), then each patch's record (`EE_WON_PATCH_RECORD`: its range,
+/// read whole by `PatchData::ReadFromBuffer`).
+constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
+
+constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
+
+constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
@@ -6162,8 +6366,29 @@ struct EeGoalSpec {
   uint8_t flag_c;
 };
 
+/// A member handed over.
+struct EeWonAdminValue {
+  int64_t num;
+  const uint8_t *data;
+  size_t len;
+};
+
 /// Receives bytes; valid only during the call.
 using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
+/// bytes, so the original erased the member).
+struct EeWonAdminField {
+  /// `EE_WON_ADMIN_VALUE`, `EE_WON_ADMIN_END`, `EE_WON_ADMIN_CUT`
+  uint8_t tag;
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The values of a reply, handed over once.
+using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
 
 /// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
 /// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
@@ -6187,6 +6412,26 @@ struct EeWonReadBuffer {
   const uint8_t *data;
   long length;
 };
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// One step of a reply's read.
+struct EeWonCertEvent {
+  uint8_t tag;
+  uint8_t kind;
+  int32_t num;
+  uint32_t id;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The events of a reply's read, handed over once.
+using EeWonCertSink = void(*)(void *context, const EeWonCertEvent *events, size_t count);
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
@@ -6244,13 +6489,6 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
 
 /// A request's fields from the C++ (texts as UTF-16 LE bytes).
 struct EeWonDbRequest {
@@ -6577,6 +6815,21 @@ struct EeWonKicked {
 struct EeWonInitErrors {
   int32_t errors;
   bool allow_ignore;
+};
+
+/// A reply's step.
+struct EeWonFtpStep {
+  int32_t action;
+  /// the status scanned (assigned to `mFTPStatus` when `scanned`)
+  bool scanned;
+  int32_t ftp_status;
+  int32_t status;
+  /// the new request state (`SEND`, `DATA`)
+  int32_t state;
+  /// `mDoResume` turned off (a 504 to the restart)
+  bool no_resume;
+  uint32_t host;
+  uint16_t port;
 };
 
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
@@ -7020,6 +7273,61 @@ struct EeWonBreak {
   int32_t width;
 };
 
+/// One header line's reading.
+struct EeWonHttpHeader {
+  /// false: no colon (the line is ignored)
+  bool colon;
+  /// the key's index in `HEADER_KEYS`, 9 for none
+  uint8_t key;
+  /// the value's offset in the line (after the colon and its spaces)
+  uint32_t value;
+  /// Content-Length's `atoi`
+  int32_t number;
+  /// a date's `ParseInternetDateTime`
+  int64_t time;
+  /// Transfer-Encoding starts with CHUNKED, Connection with CLOSE (case-blind)
+  bool flag;
+  /// ETag: the value's length kept (through the second quote), -1 to erase it
+  int32_t tag_len;
+};
+
+/// `SendRequest`'s inputs.
+struct EeWonHttpRequest {
+  bool proxy;
+  const uint8_t *host;
+  size_t host_len;
+  const uint8_t *path;
+  size_t path_len;
+  bool close;
+  /// a local path that exists: `size` and `time` are its
+  bool file;
+  uint64_t size;
+  int64_t time;
+  bool range_resume;
+  const uint8_t *tag;
+  size_t tag_len;
+  bool cache_ok;
+};
+
+/// A URL's results: the type, the absolute flag, the address and the path into `sink` (in that order).
+using EeWonUrlSink = void(*)(void *context,
+                             int32_t kind,
+                             bool absolute,
+                             const uint8_t *address,
+                             size_t address_len,
+                             const uint8_t *path,
+                             size_t path_len);
+
+/// A URL handed over: its type, absolute flag, address and path.
+struct EeWonUrl {
+  int32_t kind;
+  bool absolute;
+  const uint8_t *address;
+  size_t address_len;
+  const uint8_t *path;
+  size_t path_len;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -7124,6 +7432,26 @@ struct EeWonAsyncOpHooks {
   EeWonAsyncOpFn op_add_ref;
   EeWonAsyncOpFn op_release;
   EeWonAsyncOpFn op_kill;
+};
+
+/// A string field's or a number's assignment.
+struct EeWonPatchField {
+  /// the field (the record's order), or `EE_WON_PATCH_CUT`
+  uint8_t slot;
+  /// false: a string whose length was read but not its bytes (`ReadRawString` erased it)
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The fields of a read, handed over once.
+using EeWonPatchSink = void(*)(void *context, const EeWonPatchField *fields, size_t count);
+
+/// Byte strings handed over.
+struct EeWonPatchBytes {
+  const uint8_t *data;
+  size_t len;
 };
 
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
@@ -13696,6 +14024,26 @@ extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
+/// An op's request data into `sink` (`values`: its members in its table's order).
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid; `sink` accepts `context`.
+void ee_won_admin_request(int32_t op,
+                          const EeWonAdminValue *values,
+                          size_t count,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// A reply's values into `sink`.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_admin_reply(int32_t op,
+                        const uint8_t *data,
+                        size_t len,
+                        EeWonAdminSink sink,
+                        void *context);
+
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
 /// # Safety
@@ -13919,6 +14267,46 @@ bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out
 /// # Safety
 /// As `ee_won_reader_take`.
 bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `a` and `b` describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_request(int32_t kind,
+                         int16_t key_id,
+                         EeWonDirBytes a,
+                         EeWonDirBytes b,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
+///
+/// # Safety
+/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_login_data(const uint8_t *key,
+                            int16_t key_id,
+                            bool create_account,
+                            EeWonDirBytes user,
+                            EeWonDirBytes password,
+                            EeWonDirBytes new_password,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `CheckResponse`'s read in `state` into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_reply(const uint8_t *data,
+                       size_t length,
+                       int32_t state,
+                       EeWonCertSink sink,
+                       void *context);
+
+/// The login reply's decrypted part into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_decrypted(const uint8_t *data, size_t length, EeWonCertSink sink, void *context);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
@@ -15412,6 +15800,70 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 8 values.
+void ee_won_ftp_url(const uint8_t *text, size_t len, bool extract, ptrdiff_t *out);
+
+/// `ExtractUserNameAndPasswordFromURL`'s ranges: [user, password] as (start, end), -1 for one not set, then
+/// the rest's start.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 5 values.
+void ee_won_ftp_credentials(const uint8_t *text,
+                            size_t len,
+                            ptrdiff_t *out);
+
+/// `ExtractStatus` of a C string: 0 when no number was scanned, 1 for a status the transfer goes on with, 2 for
+/// another (`*out` the status for 1 and 2).
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+int32_t ee_won_ftp_status(const uint8_t *line,
+                          int32_t *out);
+
+/// `ParsePasv` of a C string: false when malformed, else the host and port.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; the outputs are valid.
+bool ee_won_ftp_pasv(const uint8_t *line, uint32_t *host, uint16_t *port);
+
+/// `SetRemotePath`'s split: the directory's end (-1: none, the file is the whole path).
+///
+/// # Safety
+/// `path` holds `len` bytes.
+ptrdiff_t ee_won_ftp_remote_split(const uint8_t *path, size_t len);
+
+/// `SendRequest`'s line of `state` into `sink`.
+///
+/// # Safety
+/// The byte ranges are valid; `sink` accepts `context`.
+void ee_won_ftp_command(int32_t state,
+                        const uint8_t *user,
+                        size_t user_len,
+                        const uint8_t *password,
+                        size_t password_len,
+                        const uint8_t *directory,
+                        size_t directory_len,
+                        const uint8_t *file,
+                        size_t file_len,
+                        bool binary,
+                        uint32_t local_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `HandleReply`'s step for a line of `len` bytes (its C string read up to a NUL).
+///
+/// # Safety
+/// `line` holds `len` bytes; `out` is valid.
+void ee_won_ftp_reply(const uint8_t *line,
+                      size_t len,
+                      int32_t state,
+                      bool has_directory,
+                      bool resume,
+                      EeWonFtpStep *out);
 
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
@@ -17112,6 +17564,113 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// `MakeInternetDateTime` into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_http_format_date(int64_t t, EeWonByteSink sink, void *context);
+
+/// `ParseInternetDateTime` of a C string.
+///
+/// # Safety
+/// `text` is a NUL-terminated string.
+int64_t ee_won_http_parse_date(const uint8_t *text);
+
+/// `ExtractStatus`'s scan of a C string: false when it fails, else the status in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_status_line(const uint8_t *line, int32_t *out);
+
+/// `ExtractHeaderLine`'s reading of a C string.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+void ee_won_http_header_line(const uint8_t *line, EeWonHttpHeader *out);
+
+/// `ExtractRedirect` of a C string: false without a "://", else the host's range and the path's start
+/// (`*path_at` -1: the path is "/").
+///
+/// # Safety
+/// `location` is a NUL-terminated string; the outputs are valid.
+bool ee_won_http_redirect(const uint8_t *location,
+                          size_t *host_at,
+                          size_t *host_end,
+                          ptrdiff_t *path_at);
+
+/// `ExtractChunkLength`'s scan of a C string: false when it fails, else the length in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_chunk_length(const uint8_t *line, uint32_t *out);
+
+/// `SendRequest`'s text into `sink`.
+///
+/// # Safety
+/// `q` and its byte ranges are valid; `sink` accepts `context`.
+void ee_won_http_request(const EeWonHttpRequest *q, EeWonByteSink sink, void *context);
+
+/// `HTTPGetOp(url)`'s split: the host's range and the path's (`*path_at` -1: none, the path is "/").
+///
+/// # Safety
+/// `url` holds `len` bytes; the outputs are valid.
+void ee_won_http_split_url(const uint8_t *url,
+                           size_t len,
+                           size_t *host_at,
+                           size_t *host_end,
+                           ptrdiff_t *path_at);
+
+/// `RecvContent`'s up-to-date test.
+bool ee_won_http_up_to_date(bool append,
+                            uint64_t local_size,
+                            uint32_t content_length,
+                            int64_t local_time,
+                            int64_t last_modified,
+                            bool close);
+
+/// `URL::URL` into `sink`; an unknown scheme gives the type `EE_WON_URL_NONE` (and the C++ assigns nothing else).
+///
+/// # Safety
+/// `text` holds `len` bytes; `sink` accepts `context`.
+void ee_won_url_parse(const uint8_t *text,
+                      size_t len,
+                      EeWonUrlSink sink,
+                      void *context);
+
+/// `URL::CalcRelativeTo` into `sink`.
+///
+/// # Safety
+/// `url` and `base` are valid; `sink` accepts `context`.
+void ee_won_url_relative(const EeWonUrl *url,
+                         const EeWonUrl *base,
+                         EeWonUrlSink sink,
+                         void *context);
+
+/// `URL::GetEntire` into `sink`.
+///
+/// # Safety
+/// `url` is valid; `sink` accepts `context`.
+void ee_won_url_entire(const EeWonUrl *url, EeWonByteSink sink, void *context);
+
+/// `HTTPCache::GetFreeId` over the sorted ids.
+///
+/// # Safety
+/// `ids` holds `count` ids.
+int32_t ee_won_http_cache_free_id(const int32_t *ids, size_t count, int32_t next);
+
+/// `HTTPCache::GetEntry`'s file name into `sink`.
+///
+/// # Safety
+/// `location` holds `len` bytes; `sink` accepts `context`.
+void ee_won_http_cache_file_name(int32_t id,
+                                 const uint8_t *location,
+                                 size_t len,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// `HTTPCache::WriteCacheMap`'s keep rule.
+bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
+
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 
 size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
@@ -17431,6 +17990,76 @@ size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
 /// # Safety
 /// `t` is valid.
 void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
+
+/// A record's or reply's read into `sink`: `kind` 0 a `VersionData`, 1 a `PatchData`, 2 a `PatchData` of a patch
+/// list, 3 the version check's reply data, 4 the patch list's.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_patch_read(int32_t kind,
+                       const uint8_t *data,
+                       size_t len,
+                       EeWonPatchSink sink,
+                       void *context);
+
+/// `VersionData::WriteToBuffer`'s bytes (`types`: `count` strings) into `sink`.
+///
+/// # Safety
+/// The strings are valid; `sink` accepts `context`.
+void ee_won_version_write(EeWonPatchBytes config,
+                          EeWonPatchBytes version,
+                          const EeWonPatchBytes *types,
+                          size_t count,
+                          EeWonPatchBytes description,
+                          uint8_t state,
+                          uint32_t flags,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `PatchData::WriteToBuffer`'s bytes (`strings`: the nine strings in `Patch`'s order) into `sink`.
+///
+/// # Safety
+/// `strings` holds nine strings; `sink` accepts `context`.
+void ee_won_patch_write(const EeWonPatchBytes *strings,
+                        int32_t checksum,
+                        int32_t size,
+                        bool must_visit,
+                        bool active,
+                        bool update_only,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// A patch op's request data into `sink`: `kind` 0 the version check (`strings`: product, config, version, then
+/// the types; `byte` the patch list flag), else `count` strings and the byte.
+///
+/// # Safety
+/// `strings` holds `count` strings; `sink` accepts `context`.
+void ee_won_patch_request(int32_t kind,
+                          const EeWonPatchBytes *strings,
+                          size_t count,
+                          uint8_t byte,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `BuildVersionFilterSet`'s and `AddVersionType`'s pieces between commas (`EE_WON_VERSION_TYPE` fields; none
+/// for an empty string when `filter`) into `sink`.
+///
+/// # Safety
+/// `text` holds `len` bytes; `sink` accepts `context`.
+void ee_won_patch_split(const uint8_t *text,
+                        size_t len,
+                        bool filter,
+                        EeWonPatchSink sink,
+                        void *context);
+
+/// `IsFiltered` of a version's data (its C string) against the filter set (`count` strings).
+///
+/// # Safety
+/// `data` holds `len` bytes; `filters` holds `count` strings.
+bool ee_won_version_is_filtered(const uint8_t *data,
+                                size_t len,
+                                const EeWonPatchBytes *filters,
+                                size_t count);
 
 /// `SetFilePath`'s separators.
 ///

@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONStatus.h"
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,9 +65,8 @@ void RemoveVersionOp::RunHook()
 
 	// Pack the message data
 	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendString(this->mConfigName);
-	requestData.AppendString(this->mVersion);
+	AdminValues().Str(this->mProductName).Str(this->mConfigName).Str(this->mVersion)
+		.AppendTo(EE_WON_ADMIN_REMOVE_VERSION, requestData);
 
 	// Pack and call base class implementation
 	this->mRequestData=requestData.ToByteBuffer(true);
