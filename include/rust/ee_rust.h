@@ -1946,6 +1946,16 @@ enum class EeTechUnlockAction : int32_t {
   SetPrerequisite = 2,
 };
 
+/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
+enum class EeTechMakeObsolete : int32_t {
+  /// Another id: the epoch's node with it (if any) is made obsolete.
+  Node = 1,
+  /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
+  Epoch = 2,
+  /// The epoch itself, obsolete already or reached: nothing.
+  Nothing = 3,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -4897,6 +4907,24 @@ struct EeContagionHostFfi {
 struct EeCalamityDiscrete {
   uint32_t updates;
   float elapsed;
+};
+
+/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
+struct EeTechSetObsolete {
+  /// The node's flag after.
+  bool obsolete;
+  /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
+  bool fires;
+  /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
+  bool check_media;
+  uint8_t pad;
+};
+
+/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
+struct EeTechAdvance {
+  bool advances;
+  uint8_t pad[3];
+  int32_t epoch;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -11530,6 +11558,44 @@ EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
 
 /// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
 bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
+
+/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
+bool ee_tech_research_kind_takes(int32_t node_kind,
+                                 int32_t kind,
+                                 bool epoch_only,
+                                 bool researched_with_epoch);
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
+bool ee_tech_node_is_outdated(bool obsolete,
+                              int32_t obsolete_epoch,
+                              int32_t current_epoch);
+
+/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
+EeTechMakeObsolete ee_tech_epoch_make_obsolete(int32_t epoch_id,
+                                               int32_t id,
+                                               bool epoch_obsolete,
+                                               int32_t current_epoch);
+
+/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
+EeTechSetObsolete ee_tech_set_obsolete(bool value, bool keep_media, bool obsolete);
+
+/// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
+bool ee_tech_needs_unit_media(bool has_class,
+                              int32_t family,
+                              bool editor_obsoleted,
+                              int32_t obsolete_epoch,
+                              int32_t start_epoch);
+
+/// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
+int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
+
+/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
+bool ee_tech_set_epoch_allowed(int32_t epoch, int32_t epoch_count, int32_t current_epoch);
+
+EeTechAdvance ee_tech_advance_epoch(int32_t current_epoch, int32_t end_epoch);
+
+/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
+bool ee_tech_node_availability_settable(int32_t research_delay);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

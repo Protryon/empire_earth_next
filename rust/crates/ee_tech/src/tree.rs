@@ -840,3 +840,152 @@ mod unlock_tests {
         assert!(!research_all_takes(false, false));
     }
 }
+/// `EETechTreeEpoch::ResearchKind`: whether a node of `node_kind` is researched for `kind` (only those researched
+/// with the epoch when asked).
+pub fn research_kind_takes(node_kind: i32, kind: i32, epoch_only: bool, researched_with_epoch: bool) -> bool {
+    node_kind == kind && (!epoch_only || researched_with_epoch)
+}
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node not yet obsolete is past its obsolete epoch.
+pub fn node_is_outdated(obsolete: bool, obsolete_epoch: i32, current_epoch: i32) -> bool {
+    !obsolete && obsolete_epoch < current_epoch
+}
+
+/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
+#[repr(i32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeTechMakeObsolete {
+    /// Another id: the epoch's node with it (if any) is made obsolete.
+    Node = 1,
+    /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
+    Epoch = 2,
+    /// The epoch itself, obsolete already or reached: nothing.
+    Nothing = 3,
+}
+
+pub fn epoch_make_obsolete(epoch_id: i32, id: i32, epoch_obsolete: bool, current_epoch: i32) -> EeTechMakeObsolete {
+    if id != epoch_id {
+        EeTechMakeObsolete::Node
+    } else if !epoch_obsolete && current_epoch < id {
+        EeTechMakeObsolete::Epoch
+    } else {
+        EeTechMakeObsolete::Nothing
+    }
+}
+
+/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeTechSetObsolete {
+    /// The node's flag after.
+    pub obsolete: bool,
+    /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
+    pub fires: bool,
+    /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
+    pub check_media: bool,
+    pub pad: u8,
+}
+
+pub fn set_obsolete(value: bool, keep_media: bool, obsolete: bool) -> EeTechSetObsolete {
+    if !value {
+        return EeTechSetObsolete { obsolete: false, ..Default::default() };
+    }
+    if obsolete {
+        return EeTechSetObsolete { obsolete: true, ..Default::default() };
+    }
+    EeTechSetObsolete { obsolete: true, fires: true, check_media: !keep_media, pad: 0 }
+}
+
+/// `kUnitFamilyBuilding`, `kUnitFamilyMines` (`ee/EEUnitClassIDs.h`).
+const FAMILY_BUILDING: i32 = 3;
+const FAMILY_MINES: i32 = 0x16;
+
+/// `EETechTreeNode::NeedsUnitMedia`: a node that makes a building or a mine (its unit class's family; `has_class`
+/// false for no class or an empty table entry) needs its media unless obsoleted in the editor or before the tree's
+/// start epoch.
+pub fn needs_unit_media(
+    has_class: bool,
+    family: i32,
+    editor_obsoleted: bool,
+    obsolete_epoch: i32,
+    start_epoch: i32,
+) -> bool {
+    has_class
+        && (family == FAMILY_BUILDING || family == FAMILY_MINES)
+        && !editor_obsoleted
+        && obsolete_epoch >= start_epoch
+}
+
+/// `EETechTreeEpoch::GetBuildTime`: the epoch's research time, half of it (the C division) for a computer player
+/// (`IsHuman()` other than 1).
+pub fn epoch_build_time(is_human: i32, build_time: i32) -> i32 {
+    if is_human == 1 {
+        build_time
+    } else {
+        build_time / 2
+    }
+}
+
+/// `EETechTree::SetEpoch`'s test: an epoch of the tree, never back.
+pub fn set_epoch_allowed(epoch: i32, epoch_count: i32, current_epoch: i32) -> bool {
+    epoch >= 0 && epoch < epoch_count && epoch >= current_epoch
+}
+
+/// `EETechTree::AdvanceEpoch`: the next epoch unless past the end epoch.
+pub fn advance_epoch(current_epoch: i32, end_epoch: i32) -> Option<i32> {
+    let next = current_epoch.wrapping_add(1);
+    if next <= end_epoch {
+        Some(next)
+    } else {
+        None
+    }
+}
+
+/// `EETechTree::SetNodeAvailable`: a node's availability is set only while it has no research delay.
+pub fn node_availability_settable(research_delay: i32) -> bool {
+    research_delay == 0
+}
+
+#[cfg(test)]
+mod walk_tests {
+    use super::*;
+
+    #[test]
+    fn the_walks_and_the_epoch_steps() {
+        assert!(research_kind_takes(7, 7, true, true));
+        assert!(!research_kind_takes(7, 7, true, false));
+        assert!(research_kind_takes(7, 7, false, false));
+        assert!(!research_kind_takes(6, 7, false, true));
+        assert!(node_is_outdated(false, 3, 4));
+        assert!(!node_is_outdated(false, 4, 4));
+        assert!(!node_is_outdated(true, 3, 4));
+        assert_eq!(epoch_make_obsolete(5, 120, false, 2), EeTechMakeObsolete::Node);
+        assert_eq!(epoch_make_obsolete(5, 5, false, 2), EeTechMakeObsolete::Epoch);
+        assert_eq!(epoch_make_obsolete(5, 5, true, 2), EeTechMakeObsolete::Nothing);
+        assert_eq!(epoch_make_obsolete(5, 5, false, 5), EeTechMakeObsolete::Nothing);
+        assert_eq!(set_obsolete(false, false, true), EeTechSetObsolete::default());
+        assert_eq!(set_obsolete(true, false, true), EeTechSetObsolete { obsolete: true, ..Default::default() });
+        assert_eq!(
+            set_obsolete(true, false, false),
+            EeTechSetObsolete { obsolete: true, fires: true, check_media: true, pad: 0 }
+        );
+        assert!(!set_obsolete(true, true, false).check_media);
+        assert!(needs_unit_media(true, FAMILY_BUILDING, false, 5, 5));
+        assert!(needs_unit_media(true, FAMILY_MINES, false, 6, 5));
+        assert!(!needs_unit_media(true, FAMILY_MINES, false, 4, 5));
+        assert!(!needs_unit_media(true, FAMILY_BUILDING, true, 9, 5));
+        assert!(!needs_unit_media(true, 1, false, 9, 5));
+        assert!(!needs_unit_media(false, FAMILY_BUILDING, false, 9, 5));
+        assert_eq!(epoch_build_time(1, 61), 61);
+        assert_eq!(epoch_build_time(0, 61), 30);
+        assert_eq!(epoch_build_time(2, -61), -30);
+        assert!(set_epoch_allowed(3, 15, 3));
+        assert!(!set_epoch_allowed(2, 15, 3));
+        assert!(!set_epoch_allowed(15, 15, 3));
+        assert!(!set_epoch_allowed(-1, 15, -2));
+        assert_eq!(advance_epoch(3, 4), Some(4));
+        assert_eq!(advance_epoch(4, 4), None);
+        assert!(node_availability_settable(0));
+        assert!(!node_availability_settable(2));
+    }
+}
