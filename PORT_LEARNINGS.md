@@ -7474,3 +7474,50 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## R4.4, third round: the picker's ray and ranking, the mini map's transforms and trapezoid, the effects' frustum test, the near fade and the selection rings in Rust (ee_gfx pick.rs, minimap.rs, view.rs, units.rs; branch rust-gfx9, 2026-11-12)
+
+Four leaves of the renderer, each pinned the same way as the first two rounds: a scratch driver (`build/gx9_golden`,
+not in the repository) #includes the unit of the commit before the work (`git show` of it and its sibling headers)
+over the real GE math units and `GEViewport`, with zeroed game objects and fake vtables whose slots log; an LCG seeded
+1 draws the cases and each prints an FNV-1a 64 of its log. The Rust tests draw the same stream and replay the C++
+glue around the moved code; the driver relinked over the forwarders printed the same bytes, and so did seeds 2 and
+3 at four times the size.
+
+- **The picker (`pick.rs`, `EEUnitPicker.cpp`).** `FindUnit`'s ray (the screen point normalised and denormalised on
+  the near and far planes; `ProjectToGround` shares it), its tolerances (3 over the clipping range; one pixel of the
+  window, 1024 for the free camera), the entries' pick scales (1.2, a tree's 0.9), the "large" test and the hits'
+  ranking and choice (the selection's question asked only with both an exact and a bounding hit);
+  `GetUnitPickPriority` (its `IsLandBuilding` and `IsAlly` asked through a callback where the original asked them:
+  the golden logs every virtual call); `AddUnit`'s admission; `GetIsEntryInView`'s sphere test and
+  `GetIsModelInView`'s vertex test. 2,184 cases. The C++ keeps the entries, the scale juggling around
+  `GEPhysicalModel::Intersects`, `GetPixelSize`, the model walk, the carrier walk, the lock and the world.
+  `EeGfxPickRay`'s points are `front`/`rear`: `near` and `far` are `<windows.h>` macros.
+- **The mini map (`minimap.rs`, `EEMiniMap.cpp`).** `SetMap`'s four transformations (rotate a quarter turn, flip,
+  re-centre: the translation adds written `-x + m03` / `m13 - y` as the original, not `Translate`), the pixel's
+  extent through `UMCeilUnsigned`, `Refresh`'s trapezoid and `ProjectToGround`. 2,040 cases (40 maps, sides from 1 to
+  400 and a size unrelated to them; a tenth of the trapezoids with no map attached, which keeps the old corners).
+  The camera's `Update` refreshes the trapezoid every tick, EE-SIM included, so it is written to RUST_PLAN 2.1, but
+  nothing it computes reaches the simulation: the corners are the UI's (`EEUIMiniMap`), the battle grid
+  (`mMapToCell`) only `RTSMiniMap::Ping`'s flags. No sim_capture was needed; the oracle stayed identical.
+- **The view tests (`view.rs`).** `EEEffect2D::Queue` and `EEEffect3D::Queue` had the same 50-line frustum test of
+  the sphere's six extreme points; both now call `ee_gfx_effect_in_view` after their own tile and visibility tests.
+  The fourth test's `(double)` compare (an owner-approved stand-in for the x87 compare) is an `f32` compare in
+  Rust: widening both sides to double is exact, so the result is the same. 2,400 effect cases over 24 viewports,
+  most on a screen point's ray so they straddle the planes. `GetUnitOpacity`'s near fade of a land building
+  (`ee_gfx_unit_near_fade`): 1,440 cases, most near the front clipping plane; the C++ keeps the see-through modes,
+  `Fn23CEE2` and the model's centre.
+- **The selection rings (`units.rs`, `EEROUnits.cpp`).** `DrawSelection`'s size choice and growth
+  (`ee_gfx_units_selection_ring`) and `DrawRings`' colour split (`ee_gfx_units_ring_segments`: one ring-coloured
+  segment per strength point, then highlight ones up to seven; a strength past 7 colours past the ring's segments,
+  as the original's first loop did). 400 frames of up to six units.
+- **cbindgen exports every `pub const`.** The drafts' `MINIMUM_HEIGHT`, `MINIMUM_WIDTH`, `MINI_MAP_SIZE`,
+  `SELECTION_SIZES`, `SELECTION_GROW` and `NEAR_FADE_DEPTH` landed in `ee_rust.h` as bare names any unit could
+  clash with; they are `pub(crate)` now. Keep a crate's constants `pub(crate)` unless the C++ needs them, and then
+  prefix them.
+- **Two writers in one worktree.** A resumed agent and its replacement edited the same files at once: blocks were
+  appended twice, `#[cfg(test)]` lost, and `ffi.rs`/`lib.rs`/`units.rs` came out CRLF (a text-mode write on
+  Windows) though the repository holds them LF. Check `git diff --stat` for whole-file rewrites before staging.
+- **Only the game reaches these.** Goldens and EE-SIM never draw: the effects' culling, the near fade, the rings and
+  the mini map's trapezoid as drawn are exercised only by a tour (zoom close to a building, select units of each
+  size, an area-effect unit, scroll and watch the mini map's trapezoid, an effect at the screen's edge).
