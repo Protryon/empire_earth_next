@@ -119,6 +119,7 @@ pub mod thread;
 pub mod titlecfg;
 pub mod udpmgr;
 pub mod udpops;
+pub mod verop;
 pub mod wire;
 
 #[cfg(test)]

@@ -527,7 +527,11 @@ pub fn new_op(kind: i32, members: &[Member]) -> Option<Box<dyn RequestOp>> {
             Box::new(VersionCheckOp { product, config, version, get_patch_list: true, ..Default::default() })
         }
         // the directory and account ops (round 11), the create account and group list ops (round 12)
-        _ => return crate::reqdir::new_op(kind, members).or_else(|| crate::reqlast::new_op(kind, members)),
+        _ => {
+            return crate::reqdir::new_op(kind, members)
+                .or_else(|| crate::reqlast::new_op(kind, members))
+                .or_else(|| crate::verop::new_op(kind, members))
+        }
     })
 }
 

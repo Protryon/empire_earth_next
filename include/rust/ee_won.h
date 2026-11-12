@@ -1857,6 +1857,49 @@ constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
+/// `GetVersionOp`: the product, the extra config, the filter string
+constexpr static const int32_t EE_WON_REQOPS_GET_VERSION = 16;
+
+/// `FindPatchOp`: as `GetVersionOp`'s, then (`FindPatchOp(GetVersionOp*)`) the valid version count and each
+/// version and its description, the filtered version count and each version
+constexpr static const int32_t EE_WON_REQOPS_FIND_PATCH = 17;
+
+/// `GetHighestValidVersion()` (bytes)
+constexpr static const int32_t EE_WON_REQOP_VERSION_HIGHEST = 60;
+
+/// the valid versions (number: the count; bytes: the element), the filtered ones
+constexpr static const int32_t EE_WON_REQOP_VERSION_VALID = 61;
+
+constexpr static const int32_t EE_WON_REQOP_VERSION_FILTERED = 62;
+
+/// the valid version's description (bytes; the element: the valid version's index)
+constexpr static const int32_t EE_WON_REQOP_VERSION_DESCRIPTION = 63;
+
+/// a setter: `CheckVersion(bytes)`, its result (`Version_Invalid` 0, `_Valid_NotLatest` 1, `_Valid_Latest` 2)
+/// read as this number
+constexpr static const int32_t EE_WON_REQOP_VERSION_CHECK = 64;
+
+/// the patches: the count (number); each one's from and to versions, name (UTF-16 LE) and location (bytes, none:
+/// NULL), checksum and size (number); the element: the patch's index
+constexpr static const int32_t EE_WON_REQOP_PATCH_COUNT = 65;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_FROM = 66;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_TO = 67;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_NAME = 68;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_LOCATION = 69;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_CHECKSUM = 70;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
+
+/// a setter: `GetPatchList` (num 0), `GetValidPatchList` (1), `GetHighestPatchList(from, to)` (2) and
+/// `GetHighestPatchList(from)` (3), the bytes "from\0to"; the chosen patches' indexes read as this number (the
+/// element: the position; -1 past the end)
+constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
+
 /// A number of the parser.
 enum class EeWonChatParserNumber {
   Error = 0,
@@ -10206,6 +10249,28 @@ bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
                            int64_t index,
                            EeWonByteSink sink,
                            void *context);
+
+/// A result's number by number and element.
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_reqop_num_at(const EeWonReqOp *op, int32_t which, int64_t index);
+
+/// A setter by number (a number and bytes).
+///
+/// # Safety
+/// `op` is a live op; `data` holds `len` bytes.
+void ee_won_reqop_set(EeWonReqOp *op, int32_t which, int64_t num, const uint8_t *data, size_t len);
+
+/// A result list of directory entities, each to `sink`; the count.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+size_t ee_won_reqop_entities(const EeWonReqOp *op,
+                             int32_t which,
+                             int64_t index,
+                             EeWonDirEntitySink sink,
+                             void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///

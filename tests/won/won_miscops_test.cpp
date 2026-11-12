@@ -21,6 +21,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLittleEndian.h"
 #include "ee/wonapi/WONMiscOpsMsg.h"
+#include "won_version_msg.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

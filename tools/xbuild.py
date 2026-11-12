@@ -555,6 +555,11 @@ WON_TESTS = {
     # their C ABI (golden: rust/crates/ee_won/src/golden_reqlast.txt)
     "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp",
                          *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]],
+    # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
+    # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
+    # verop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_verop.txt)
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
+                       WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won/src/golden_hostop.txt)
