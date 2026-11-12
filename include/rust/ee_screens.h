@@ -1333,6 +1333,179 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// A tab: `EE_SCREENS_PGS_TAB + page - 1`, pages 1..7 (summary, time line, military, economy, epoch, society, misc).
+constexpr static const uint32_t EE_SCREENS_PGS_TAB = 6401;
+
+constexpr static const uint32_t EE_SCREENS_PGS_EXIT = 6408;
+
+/// A player's check box checked / unchecked: `+ series` (0..15).
+constexpr static const uint32_t EE_SCREENS_PGS_CHECKED = 6416;
+
+constexpr static const uint32_t EE_SCREENS_PGS_UNCHECKED = 6432;
+
+constexpr static const uint32_t EE_SCREENS_PGS_OPEN = 6448;
+
+constexpr static const uint32_t EE_SCREENS_PGS_CLOSE = 6449;
+
+constexpr static const uint32_t EE_SCREENS_PGS_NEXT_GRAPH = 6450;
+
+/// (page) `gGamePreferences.mSettings.mLastOpenPostGameStatsPage = page`; -> the page with `EE_SCREENS_GAME_PGS_PAGE`.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_SET_PAGE = 720;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_PAGE = 721;
+
+/// (control, coordinate 0 left, 1 top, 2 right, 3 bottom) -> its rectangle's coordinate (float bits).
+constexpr static const uint32_t EE_SCREENS_OP_PGS_RECT = 722;
+
+/// (coordinate, float bits) the host's rectangle register.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SET_R = 723;
+
+/// (control) `SetRectangle(the register)`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_APPLY_R = 724;
+
+/// (control, float bits) `SetBgOpacity` (virtual).
+constexpr static const uint32_t EE_SCREENS_OP_PGS_BG_OPACITY = 725;
+
+/// (control) `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_DIRTY = 726;
+
+/// (graph, series, enabled) the graph's `SetIsSeriesEnabled`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_ENABLED = 727;
+
+/// (graph) the line graph's `ShowGraph`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SHOW_GRAPH = 728;
+
+/// (graph) `ClearAllSeries`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_CLEAR_GRAPH = 729;
+
+/// (record, series) the line graph's `AddGraphSeries` of the record's statistics series in its colour.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_ADD_SERIES = 730;
+
+/// (graph) `PruneGraph`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_PRUNE = 731;
+
+/// The host's series register: `ClearAllDataPoints`; (x, y) `AddDataPoint`; (graph) the graph's `AddSeries` of it.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_CLEAR = 732;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_POINT = 733;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_ADD = 734;
+
+/// Graph 0x17 rebuilt as `CombineGraph` of 0x0e and 0x0d, each series in its record's colour.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_COMBINE = 735;
+
+/// The line graph's axis labels: no y, x.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_AXES = 736;
+
+/// (graph) -> its `GetMaxY` / `GetMinY`; (graph, series) -> the series' `GetMaxY`; (graph) -> `GetSeriesCount`;
+/// (graph, series) -> its point count; (graph, series, point, axis 0 x 1 y) -> the point's coordinate.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_MAX_Y = 737;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_MIN_Y = 738;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_MAX_Y = 739;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_SERIES_COUNT = 740;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_POINT_COUNT = 741;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_POINT = 742;
+
+/// `SetFormManager(new EEPGSFormManager)` (its graphs empty).
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_NEW_MANAGER = 743;
+
+/// (control, red, green, blue bits) `SetBgColor` (virtual).
+constexpr static const uint32_t EE_SCREENS_OP_PGS_BG_COLOUR = 744;
+
+/// (0 height, 1 width) -> the manager's screen's window size; the form's designed size.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_WINDOW = 745;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_DESIGNED = 746;
+
+/// (control) -> 1 when it is a status bar / a bitmap (`dynamic_cast`) / not NULL; -> its `GetIndex`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_IS_BAR = 747;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_IS_BITMAP = 748;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_EXISTS = 749;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_INDEX = 750;
+
+/// (template, player, group) a new status bar like the template's (id and index + player - 1, its border) at the
+/// register, no text in Tahoma 8, added to the group -> its index.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_NEW_BAR = 751;
+
+/// (template, bar) the bar's string id and text style the template's.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_TEXT_STYLE = 752;
+
+/// (id, index, group) a new gold star bitmap (the template's rectangle, `textures\gold star`) added to the group.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_NEW_STAR = 753;
+
+/// (bar, float bits) `SetStatusBarOpacity`; (bar, max, value) `SetRange(0, max)` and `SetCurrentRangeValue`;
+/// (control) -> `GetBgOpacity` bits; (bar, red, green, blue bits) `SetStatusBarColor`.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_BAR_OPACITY = 754;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_BAR_RANGE = 755;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_GET_BG_OPACITY = 756;
+
+constexpr static const uint32_t EE_SCREENS_OP_PGS_BAR_COLOUR = 757;
+
+/// `NEProtocol::GetProtocol(0)` for the reports.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_PROTOCOL = 758;
+
+/// -> `mTakeEndGameScreenshots`; the end-game screenshot's backdrop (the last `EEPostGame-M-D-Y-???.jpg` of today,
+/// when there is one).
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_SCREENSHOTS = 759;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_SCREENSHOT = 760;
+
+/// `EEUISCIFormManager::Get()->DeleteObjects()`.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_SCI_DELETE = 761;
+
+/// (control, group) `RemoveControl` and delete it.
+constexpr static const uint32_t EE_SCREENS_OP_PGS_REMOVE = 762;
+
+/// `gGamePreferences.Save()`; WON's `RejoinRoom(false)` when there is WON.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_SAVE = 763;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_REJOIN = 764;
+
+/// The campaign manager's first scenario and description from its loaded campaign, and all its scenarios open for
+/// the demo and learning campaigns; (none) its name, first scenario and description cleared.
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_CAMPAIGN_SETUP = 765;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PGS_CAMPAIGN_CLEAR = 766;
+
+/// Texts in: record `i`'s name; the history's campaign name; the stats server's file ("host\0port"), missing when it
+/// does not open or there are no communications.
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_NAME = 136;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_CAMPAIGN = 137;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_SERVER = 138;
+
+/// Put (graph): its title, y label, x label.
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_TITLE = 139;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_Y_LABEL = 140;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_X_LABEL = 141;
+
+/// Put (bar): `SetText(text, NULL)`.
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_BAR = 142;
+
+/// Put (port): "host\0payload" sent with the protocol's `SendSingle`.
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_SEND = 143;
+
+/// Put: the campaign `Campaigns\NAME.ext` loaded -> 1 when it loads; its name set on the campaign manager.
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_CAMPAIGN_LOAD = 144;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PGS_CAMPAIGN_NAME = 145;
+
+/// The graphs: the line graph's stored 0..=30, its shown one, the form manager's.
+constexpr static const uint32_t PGS_GRAPH_SHOWN = 31;
+
 /// The save form's activate event (clears the saved flag).
 constexpr static const uint32_t EE_SCREENS_SL_ACTIVATE = 769;
 
@@ -2148,6 +2321,47 @@ struct EeScreensDiplomacyPlayer {
   float tribute_fee;
 };
 
+/// The statistics' history as the summary reads it (`gWorld.mStatistics`, `ee_screenscpp_pgs_history`).
+struct EeScreensPgsHistory {
+  /// The number of records (the first is no player's).
+  uint32_t records;
+  int32_t start_time;
+  int32_t end_time;
+  int32_t current_record;
+  int32_t tile_count;
+  bool victory_enabled;
+  bool is_scenario;
+  bool is_campaign;
+  /// The current record's slot (`GetCurrentRecord().mSlot`).
+  uint8_t current_slot;
+  /// The starting resources' level amounts (`EEGetResourceLevel(gGameResources)->mAmounts[0..5]`).
+  uint32_t levels[5];
+};
+
+/// A player's statistics record (`ee_screenscpp_pgs_record`).
+struct EeScreensPgsRecord {
+  float colour[3];
+  int32_t result;
+  uint32_t team;
+  uint32_t end_time;
+  uint32_t resources[7];
+  uint32_t score;
+  uint32_t economy_score;
+  uint32_t epoch_score;
+  uint32_t military_score;
+  uint32_t tech_score;
+  uint8_t slot;
+  bool human;
+  /// `mStatistics.GetValue(j)` for the series 0..30.
+  uint32_t values[31];
+  /// `GetLastValue(0x18)`, `CountIncreases(0x0f)`.
+  uint32_t territory;
+  uint32_t increases;
+  /// Series 12's point count and its second point's value (0 without one).
+  uint32_t epoch_points;
+  uint32_t epoch_second;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -2293,6 +2507,9 @@ long ee_screens_event(uint32_t event,
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
+
+/// The post-game summary's event code for a control event id, 0 for another form's.
+uint32_t ee_screens_post_game_event_for(unsigned long id);
 
 /// The save/load form's event code for a control event id (the screen active and the editor on when the form is
 /// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).

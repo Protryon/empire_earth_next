@@ -127,7 +127,6 @@
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
-#include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
@@ -351,10 +350,10 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIESSEOpen;
         break;
     case kFormEventPGSOpen:
-        theEvent = new EEUIEPGSEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_OPEN);
         break;
     case kFormEventPGSClose:
-        theEvent = new EEUIEPGSEClose;
+        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_CLOSE);
         break;
     case kFormEventDSOpen:
         theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
@@ -382,11 +381,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
 
-// SYNTHETIC: EXE 0x671e30
-// (EEUIEPGSEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671e5b
-// (EEUIEPGSEClose's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671eb1
 // (EEUIECEOpen's scalar deleting destructor, after its first user)
@@ -694,112 +688,11 @@ UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID)
 }
 
 // FUNCTION: EXE 0x673a89
-// Creates the post-game summary's event for a control id; NULL for other ids
+// Creates the post-game summary's event for a control id; NULL for other ids (ee_screens post_game.rs)
 UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventPGSTabSummary && inID <= kControlEventPGSNextGraph) {
-        switch (inID) {
-        case kControlEventPGSTabSummary:
-            theEvent = new EEUIEPGSETabSummary;
-            break;
-        case kControlEventPGSTabTimeline:
-            theEvent = new EEUIEPGSETabTimeLine;
-            break;
-        case kControlEventPGSTabMilitary:
-            theEvent = new EEUIEPGSETabMilitary;
-            break;
-        case kControlEventPGSTabEconomy:
-            theEvent = new EEUIEPGSETabEconomy;
-            break;
-        case kControlEventPGSTabEpoch:
-            theEvent = new EEUIEPGSETabEpoch;
-            break;
-        case kControlEventPGSTabSociety:
-            theEvent = new EEUIEPGSETabSociety;
-            break;
-        case kControlEventPGSTabMisc:
-            theEvent = new EEUIEPGSETabMisc;
-            break;
-        case kControlEventPGSExitToMainMenu:
-            theEvent = new EEUIEPGSEExit;
-            break;
-        case kControlEventPGSPlayer1CheckBox:
-        case kControlEventPGSPlayer2CheckBox:
-        case kControlEventPGSPlayer3CheckBox:
-        case kControlEventPGSPlayer4CheckBox:
-        case kControlEventPGSPlayer5CheckBox:
-        case kControlEventPGSPlayer6CheckBox:
-        case kControlEventPGSPlayer7CheckBox:
-        case kControlEventPGSPlayer8CheckBox:
-        case kControlEventPGSPlayer9CheckBox:
-        case kControlEventPGSPlayer10CheckBox:
-        case kControlEventPGSPlayer11CheckBox:
-        case kControlEventPGSPlayer12CheckBox:
-        case kControlEventPGSPlayer13CheckBox:
-        case kControlEventPGSPlayer14CheckBox:
-        case kControlEventPGSPlayer15CheckBox:
-        case kControlEventPGSPlayer16CheckBox:
-            theEvent = new EEUIEPGSEPlayerChecked(inID);
-            break;
-        case kControlEventPGSPlayer1UnCheckBox:
-        case kControlEventPGSPlayer2UnCheckBox:
-        case kControlEventPGSPlayer3UnCheckBox:
-        case kControlEventPGSPlayer4UnCheckBox:
-        case kControlEventPGSPlayer5UnCheckBox:
-        case kControlEventPGSPlayer6UnCheckBox:
-        case kControlEventPGSPlayer7UnCheckBox:
-        case kControlEventPGSPlayer8UnCheckBox:
-        case kControlEventPGSPlayer9UnCheckBox:
-        case kControlEventPGSPlayer10UnCheckBox:
-        case kControlEventPGSPlayer11UnCheckBox:
-        case kControlEventPGSPlayer12UnCheckBox:
-        case kControlEventPGSPlayer13UnCheckBox:
-        case kControlEventPGSPlayer14UnCheckBox:
-        case kControlEventPGSPlayer15UnCheckBox:
-        case kControlEventPGSPlayer16UnCheckBox:
-            theEvent = new EEUIEPGSEPlayerUnChecked(inID);
-            break;
-        case kControlEventPGSNextGraph:
-            theEvent = new EEUIEPGSENextGraph;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_post_game_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x673ca4
-// (EEUIEPGSETabSummary's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673ccf
-// (EEUIEPGSETabTimeLine's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673cfa
-// (EEUIEPGSETabMilitary's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d25
-// (EEUIEPGSETabEconomy's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d50
-// (EEUIEPGSETabEpoch's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d7b
-// (EEUIEPGSETabSociety's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673da6
-// (EEUIEPGSETabMisc's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673dd1
-// (EEUIEPGSEExit's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673dfc
-// (EEUIEPGSEPlayerChecked's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673e27
-// (EEUIEPGSEPlayerUnChecked's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673e52
-// (EEUIEPGSENextGraph's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x673e7d
 // Creates the scenario editor form on first use

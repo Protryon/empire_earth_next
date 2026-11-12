@@ -28,6 +28,8 @@
 //! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
 //! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
 //!   as records).
+//! - [`post_game`]: the post-game summary whole (form 25: its graphs, bars and stars, the stats server's reports,
+//!   over the C++ host; the statistics as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
@@ -85,6 +87,9 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+pub mod post_game;
+#[cfg(not(test))]
+mod post_game_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;

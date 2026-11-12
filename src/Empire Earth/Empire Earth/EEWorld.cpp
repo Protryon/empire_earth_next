@@ -118,7 +118,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEStartingResources.h"
-#include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIManager.h"

@@ -142,6 +142,16 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
+#include "lle/U2DPoint.h"
+#include "lle/UGraph.h"
+#include "lle/UIGraph.h"
+#include "lle/UILineGraph.h"
+#include "lle/UIStatusBar.h"
+#include "lle/UEncryption.h"
+#include "ee/EEUIPGSLineGraph.h"
+#include "ee/EEPGSFormManager.h"
+#include "ee/EEStatisticsHistory.h"
+#include "ee/EEStatisticsRecord.h"
 #include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
 #include "lle/GETextAlignment.h"
@@ -1110,6 +1120,322 @@ static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint
     return 0;
 }
 
+// ---- the post-game summary's (post_game.rs): inForm is the summary's form (25)
+static UString sPgsReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2086D");   // 0x563108 (encrypted)
+static float sPgsRectangle[4];          // the rectangle register (left, top, right, bottom)
+static UGraphSeries sPgsSeries;         // the series register (BuildGraphs' series)
+static NEProtocol* sPgsProtocol;        // the reports' protocol
+static EECampaignFormManager* sPgsCampaign;   // Exit's campaign manager
+
+static EEUIPGSLineGraph* EEScreensPgsLineGraph(UIForm* inForm)
+{
+    return static_cast<EEUIPGSLineGraph*>(inForm->GetControl(kPostGameLineGraph));
+}
+
+// the graphs: the line graph's stored 0..30, its shown one (31), the form manager's 32..39
+static UGraph* EEScreensPgsGraph(UIForm* inForm, uint32_t inGraph)
+{
+    EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
+    if (inGraph < 31)
+        return &theLineGraph->GetGraphAt(inGraph);
+    if (inGraph == 31)
+        return const_cast<UGraph*>(&theLineGraph->GetShownGraph());
+    EEPGSFormManager* m = static_cast<EEPGSFormManager*>(inForm->GetFormManager());
+    UGraph* const theGraphs[8] = {&m->mEconomyScoreGraph, &m->mTotalCollectedGraph, &m->mTotalSpentGraph,
+                                  &m->mEpochScoreGraph, &m->mMilitaryScoreGraph, &m->mSpeedRatingGraph,
+                                  &m->mSocietyScoreGraph, &m->mScoreGraph};
+    return theGraphs[inGraph - 32];
+}
+
+extern "C" void ee_screenscpp_pgs_history(EeScreensPgsHistory* outHistory)
+{
+    const EEStatisticsHistory& s = gWorld.mStatistics;
+    *outHistory = EeScreensPgsHistory();
+    outHistory->records = (uint32_t)s.GetRecords().size();
+    outHistory->start_time = s.mStartTime;
+    outHistory->end_time = s.mEndTime;
+    outHistory->current_record = s.mCurrentRecordIndex;
+    outHistory->tile_count = s.mTileCount;
+    outHistory->victory_enabled = s.mVictoryEnabled;
+    outHistory->is_scenario = s.mIsScenario;
+    outHistory->is_campaign = s.mIsCampaign;
+    if ((unsigned long)s.mCurrentRecordIndex < s.GetRecords().size())
+        outHistory->current_slot = s.GetCurrentRecord().mSlot;
+    for (int i = 0; i < 5; i++)
+        outHistory->levels[i] = (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[i];
+}
+
+extern "C" void ee_screenscpp_pgs_record(uint32_t inIndex, EeScreensPgsRecord* outRecord)
+{
+    EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inIndex];
+    *outRecord = EeScreensPgsRecord();
+    outRecord->colour[0] = r.mColor.mRed;
+    outRecord->colour[1] = r.mColor.mGreen;
+    outRecord->colour[2] = r.mColor.mBlue;
+    outRecord->result = r.mResult;
+    outRecord->team = r.mTeam;
+    outRecord->end_time = r.mEndTime;
+    for (int i = 0; i < 7; i++)
+        outRecord->resources[i] = r.mResources[i];
+    outRecord->score = r.mScore;
+    outRecord->economy_score = r.mEconomyScore;
+    outRecord->epoch_score = r.mEpochScore;
+    outRecord->military_score = r.mMilitaryScore;
+    outRecord->tech_score = r.mTechScore;
+    outRecord->slot = r.mSlot;
+    outRecord->human = r.mIsHuman;
+    for (unsigned long j = 0; j < 31; j++)
+        outRecord->values[j] = r.mStatistics.GetValue(j);
+    outRecord->territory = r.mStatistics.GetLastValue(0x18);
+    outRecord->increases = r.mStatistics.CountIncreases(0x0f);
+    EEStatisticsSeries theEpochs = r.mStatistics.GetSeries(12);
+    outRecord->epoch_points = (uint32_t)theEpochs.mPoints.size();
+    outRecord->epoch_second = theEpochs.mPoints.size() > 1 ? theEpochs.mPoints[1].mValue : 0;
+}
+
+static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                      uint32_t inC, uint32_t inD)
+{
+    auto Ctl = [&](uint32_t inIndex) { return inForm->GetControl(inIndex); };
+    auto Bar = [&](uint32_t inIndex) { return static_cast<UIStatusBar*>(inForm->GetControl(inIndex)); };
+    switch (inOp) {
+    case EE_SCREENS_GAME_PGS_SET_PAGE:
+        gGamePreferences.mSettings.mLastOpenPostGameStatsPage = (long)(int32_t)inA;
+        break;
+    case EE_SCREENS_GAME_PGS_PAGE:
+        return (uint32_t)gGamePreferences.GetSettings().mLastOpenPostGameStatsPage;
+    case EE_SCREENS_OP_PGS_RECT: {
+        const GERectangle& r = Ctl(inA)->GetRectangle();
+        const float theValues[4] = {r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
+        return Bits(theValues[inB & 3]);
+    }
+    case EE_SCREENS_OP_PGS_SET_R:
+        sPgsRectangle[inA & 3] = Float(inB);
+        break;
+    case EE_SCREENS_OP_PGS_APPLY_R:
+        Ctl(inA)->SetRectangle(GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]));
+        break;
+    case EE_SCREENS_OP_PGS_BG_OPACITY:
+        Ctl(inA)->SetBgOpacity(Float(inB));
+        break;
+    case EE_SCREENS_OP_PGS_DIRTY:
+        Ctl(inA)->SetDirty(true);
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_ENABLED:
+        EEScreensPgsGraph(inForm, inA)->SetIsSeriesEnabled(inB, inC != 0);
+        break;
+    case EE_SCREENS_OP_PGS_SHOW_GRAPH:
+        EEScreensPgsLineGraph(inForm)->ShowGraph(inA);
+        break;
+    case EE_SCREENS_OP_PGS_CLEAR_GRAPH:
+        EEScreensPgsGraph(inForm, inA)->ClearAllSeries();
+        break;
+    case EE_SCREENS_GAME_PGS_ADD_SERIES: {
+        EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inA];
+        EEScreensPgsLineGraph(inForm)->AddGraphSeries(r.mStatistics.GetSeries(inB).mPoints, inB, r.mColor);
+        break;
+    }
+    case EE_SCREENS_OP_PGS_PRUNE:
+        EEScreensPgsGraph(inForm, inA)->PruneGraph();
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_CLEAR:
+        sPgsSeries.ClearAllDataPoints();
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_POINT:
+        sPgsSeries.AddDataPoint(U2DPoint<long>((long)(int32_t)inA, (long)(int32_t)inB));
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_ADD:
+        EEScreensPgsGraph(inForm, inA)->AddSeries(sPgsSeries);
+        break;
+    case EE_SCREENS_GAME_PGS_COMBINE: {
+        // graph 0x17: 0x0e combined with 0x0d, each series in its record's colour
+        UGraph theGraph;
+        UGraph theFirst;
+        UGraph theSecond;
+        UGraph theCombined;
+        UGraphSeries theSeries;
+        EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
+        theGraph = theLineGraph->GetGraphAt(0x17);
+        theGraph.ClearAllSeries();
+        theFirst = theLineGraph->GetGraphAt(0x0d);
+        theSecond = theLineGraph->GetGraphAt(0x0e);
+        theSecond.CombineGraph(theFirst, theGraph);
+        theCombined = theGraph;
+        theCombined.ClearAllSeries();
+        for (unsigned long i = 1; i < gWorld.mStatistics.GetRecords().size(); i++) {
+            theSeries.ClearAllDataPoints();
+            theSeries = theGraph.GetSeries(i - 1);
+            theSeries.SetColor(gWorld.mStatistics.GetRecords()[i].mColor);
+            theCombined.AddSeries(theSeries);
+        }
+        theLineGraph->SetGraphAt(theCombined, 0x17);
+        break;
+    }
+    case EE_SCREENS_OP_PGS_AXES:
+        EEScreensPgsLineGraph(inForm)->SetLabelYAxis(false);
+        EEScreensPgsLineGraph(inForm)->SetLabelXAxis(true);
+        break;
+    case EE_SCREENS_OP_PGS_MAX_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMaxY();
+    case EE_SCREENS_OP_PGS_MIN_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMinY();
+    case EE_SCREENS_OP_PGS_SERIES_MAX_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetMaxY();
+    case EE_SCREENS_OP_PGS_SERIES_COUNT:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeriesCount();
+    case EE_SCREENS_OP_PGS_POINT_COUNT:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPointCount();
+    case EE_SCREENS_OP_PGS_POINT: {
+        const U2DPoint<long>& p = EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPoint(inC);
+        return (uint32_t)(inD ? p.GetY() : p.GetX());
+    }
+    case EE_SCREENS_GAME_PGS_NEW_MANAGER:
+        inForm->SetFormManager(new EEPGSFormManager);
+        sPgsSeries = UGraphSeries();
+        break;
+    case EE_SCREENS_OP_PGS_BG_COLOUR:
+        Ctl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_GAME_PGS_WINDOW: {
+        GEWindow* theWindow = inForm->GetManager()->GetRasterizer()->GetWindow(inForm->GetManager()->GetScreen());
+        return inA ? theWindow->GetWidth() : theWindow->GetHeight();
+    }
+    case EE_SCREENS_OP_PGS_DESIGNED:
+        return inA ? inForm->GetDesignedWidth() : inForm->GetDesignedHeight();
+    case EE_SCREENS_OP_PGS_IS_BAR:
+        return dynamic_cast<UIStatusBar*>(Ctl(inA)) != NULL;
+    case EE_SCREENS_OP_PGS_IS_BITMAP:
+        return dynamic_cast<UIBitmap*>(Ctl(inA)) != NULL;
+    case EE_SCREENS_OP_PGS_EXISTS:
+        return Ctl(inA) != NULL;
+    case EE_SCREENS_OP_PGS_INDEX:
+        return Ctl(inA)->GetIndex();
+    case EE_SCREENS_OP_PGS_NEW_BAR: {
+        UIControl* theTemplate = Ctl(inA);
+        UIStatusBar* theBar = new UIStatusBar(theTemplate->GetId() + inB - 1,
+                                              GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]),
+                                              inForm, theTemplate->GetIndex() + inB - 1, theTemplate->GetBorderThickness());
+        theBar->SetText(UWideString(), gFontTahoma8);
+        inForm->AddControl(theBar, inC);
+        return theBar->GetIndex();
+    }
+    case EE_SCREENS_OP_PGS_TEXT_STYLE:
+        Bar(inB)->SetStringTableID(Ctl(inA)->GetStringTableID());
+        *Bar(inB)->GetGEText() = *Bar(inA)->GetGEText();
+        break;
+    case EE_SCREENS_OP_PGS_NEW_STAR: {
+        // the gold star: the template's rectangle, the texture "textures\gold star"
+        GETextureDescription theDescription;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mPixelDepth = inForm->GetManager()->GetUITextureBitDepth();
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mFrameFormat = 0;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        GERectangle theBitmapRectangle = Ctl(kPostGameGoldStar)->GetRectangle();
+        GETexture* theTexture = gTextureManager->LoadTexture("textures\\gold star", theDescription);
+        theTexture->SetStageAlphaMode(kStageOpModulate, -1);
+        theTexture->SetStageColorMode(kStageOpModulate, -1);
+        theTexture->SetStageMinFilterMode(1, -1);
+        theTexture->SetStageMagFilterMode(1, -1);
+        theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
+        theTexture->SetStageMipMapBias(0.0f, -1);
+        theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
+        GEBitmap* theBitmap = new GEBitmap;
+        theBitmap->SetTexture(theTexture, inForm->GetManager()->GetScreen());
+        theBitmap->ComputeStretchedCoordsAndScale(theBitmapRectangle, theBitmapRectangle, GERectangle(0.0f, 0.0f, 32.0f, 32.0f),
+                                                  inForm->GetManager()->GetScreen());
+        UIBitmap* theStar = new UIBitmap(inA, theBitmap, theBitmapRectangle, inForm, inB);
+        inForm->AddControl(theStar, inC);
+        theBitmap->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_PGS_BAR_OPACITY:
+        Bar(inA)->SetStatusBarOpacity(Float(inB));
+        break;
+    case EE_SCREENS_OP_PGS_BAR_RANGE:
+        Bar(inA)->SetRange(0, inB);
+        Bar(inA)->SetCurrentRangeValue((long)(int32_t)inC);
+        break;
+    case EE_SCREENS_OP_PGS_GET_BG_OPACITY:
+        return Bits(Ctl(inA)->GetBgOpacity());
+    case EE_SCREENS_OP_PGS_BAR_COLOUR:
+        Bar(inA)->SetStatusBarColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_GAME_PGS_PROTOCOL:
+        NEProtocol::GetProtocol(0, sPgsProtocol);
+        break;
+    case EE_SCREENS_GAME_PGS_SCREENSHOTS:
+        return gGamePreferences.GetSettings().mTakeEndGameScreenshots;
+    case EE_SCREENS_GAME_PGS_SCREENSHOT: {
+        // the last end-game screenshot of today as the backdrop
+        UString theFileName;
+        FSFileSpec theSearch;
+        FSFileSpec theFound;
+        GERectangle theRectangle;
+        GETextureDescription theDescription;
+        UILayoutUtility theLayout;
+        TMTime theTime;
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mPixelDepth = 16;
+        theDescription.mFrameFormat = 0;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        TMGetTimeOfDay(theTime);
+        sprintf(theFileName, "EEPostGame-%lu-%lu-%lu-???.jpg", theTime.mMonth + 1, theTime.mDay, theTime.mYear);
+        theSearch.SetVolume(gStartupVolume);
+        theSearch.SetDirectory(gStartupDirectory);
+        if (theSearch.GetFirstFile(theFileName, theFound) == kErrorOK) {
+            while (theSearch.GetNextFile(theFound) == kErrorOK)
+                ;
+            inForm->LockDrawBackground();
+            UIBackground* theMap = new EEUIBMapBackground(-2, theFound.GetFile(), theDescription, theRectangle, theLayout,
+                                                          inForm, 3, 0, 0, true);
+            theMap->Open();
+            theMap->LoadBackground();
+            inForm->UnlockDrawBackground();
+        }
+        break;
+    }
+    case EE_SCREENS_GAME_PGS_SCI_DELETE:
+        EEUISCIFormManager::Get()->DeleteObjects();
+        break;
+    case EE_SCREENS_OP_PGS_REMOVE: {
+        UIControl* theControl = Ctl(inA);
+        inForm->RemoveControl(theControl, inB);
+        if (theControl)
+            delete theControl;
+        break;
+    }
+    case EE_SCREENS_GAME_PGS_SAVE:
+        gGamePreferences.Save();
+        break;
+    case EE_SCREENS_GAME_PGS_REJOIN:
+        if (gWonNet)
+            gWonNet->RejoinRoom(false);
+        break;
+    case EE_SCREENS_GAME_PGS_CAMPAIGN_SETUP:
+        sPgsCampaign->SetFirstScenario(sPgsCampaign->mCampaign.GetRequiredCiv());
+        sPgsCampaign->SetDescription(sPgsCampaign->mCampaign.GetDescription());
+        sPgsCampaign->mAllScenariosOpen = sPgsCampaign->mCampaignName.EqualsIgnoreCase(gCampaignEEDemo) ||
+                                          sPgsCampaign->mCampaignName.EqualsIgnoreCase(gCampaignEELearning);
+        break;
+    case EE_SCREENS_GAME_PGS_CAMPAIGN_CLEAR:
+        sPgsCampaign->SetCampaignName("");
+        sPgsCampaign->SetFirstScenario("");
+        sPgsCampaign->SetDescription("");
+        break;
+    default:
+        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
 // ---- the civilization choice form's (civ_choice.rs): the form 35 by the manager, or the event's form
 static std::vector<EECivilizationEntry> sPdcsCivs;   // EE_SCREENS_GAME_PDCS_CIVS's, for the names and files
 static UWideString sPdcsName;                        // the last EE_SCREENS_TEXT_PDCS_LOAD's civilization
@@ -1176,7 +1502,7 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
         break;
     }
     default:
-        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+        return EEScreensPostGameCall(inForm, inEntity, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2088,6 +2414,31 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     UIForm* theForm = static_cast<UIForm*>(inForm);
     std::string theList;   // the lists' texts, each ended by a 0 byte
     switch (inWhich) {
+    // the post-game summary's (post_game.rs)
+    case EE_SCREENS_TEXT_PGS_NAME:
+        theText = gWorld.mStatistics.GetRecords()[inArg].GetName();
+        break;
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN:
+        theText = gWorld.mStatistics.mCampaignName;
+        break;
+    case EE_SCREENS_TEXT_PGS_SERVER: {
+        // the stats server's host and port from the report file in the install directory: "host\0port"
+        UString theReportFile;
+        FSFileSpec theFile;
+        char theHost[32];
+        char thePort[20];
+        UEDecryptUString(sPgsReportFile, theReportFile);
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gGamePreferences.GetSettings().mInstalledFromDirectory);
+        theFile.SetFile(theReportFile);
+        if (theFile.FOpen("r") != kErrorOK || gCommunications == NULL)
+            return (size_t)-1;
+        fscanf(theFile, "%s%s", theHost, thePort);
+        theFile.Close();
+        theList.append(theHost).push_back('\0');
+        theList.append(thePort);
+        break;
+    }
     // the civilization choice form's (civ_choice.rs)
     case EE_SCREENS_TEXT_PDCS_LINE: {
         unsigned long theSelection;
@@ -2675,6 +3026,38 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_DSU_LABEL:
         if (UITextLabel* theLabel = dynamic_cast<UITextLabel*>(gUIManager->GetFormByID(kFormDebugSound)->GetControlById(inArg)))
             theLabel->SetText(theText);
+        break;
+    // the post-game summary's (post_game.rs)
+    case EE_SCREENS_TEXT_PGS_TITLE:
+        EEScreensPgsGraph(theForm, inArg)->SetTitle(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_Y_LABEL:
+        EEScreensPgsGraph(theForm, inArg)->SetYLabel(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_X_LABEL:
+        EEScreensPgsGraph(theForm, inArg)->SetXLabel(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_BAR:
+        static_cast<UIStatusBar*>(theForm->GetControl(inArg))->SetText(theText, NULL);
+        break;
+    case EE_SCREENS_TEXT_PGS_SEND: {
+        // "host\0payload" to the stats server
+        size_t theHost = strnlen((const char*)inText, inLength);
+        size_t thePayload = theHost < inLength ? theHost + 1 : inLength;
+        sPgsProtocol->SendSingle(UString(std::string((const char*)inText, theHost).c_str()), (unsigned short)inArg,
+                                 inText + thePayload, (unsigned long)(inLength - thePayload));
+        break;
+    }
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN_LOAD: {
+        UWideString theFileName;
+        UWideString theError;
+        gUIManager->GetFormByID(kFormCampaignScenarioSelect);
+        sPgsCampaign = EECampaignFormManager::Get();
+        theFileName = "Campaigns\\" + theText + gCampaignExtension;
+        return sPgsCampaign->mCampaign.Load(theFileName, theError, false);
+    }
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN_NAME:
+        sPgsCampaign->SetCampaignName(theText);
         break;
     // the civilization choice form's (civ_choice.rs)
     case EE_SCREENS_TEXT_PDCS_LOAD:
