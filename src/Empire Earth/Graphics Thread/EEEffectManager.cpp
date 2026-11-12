@@ -71,7 +71,6 @@
 #include "ee/EEE2DWaterRipple.h"
 #include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
-#include "ee/EEE2DVelocityParticle.h"
 #include "ee/EEE3DIcon.h"
 #include "ee/EEE3DBlastWave.h"
 #include "ee/EEE3DNuclearExplosion.h"
@@ -79,9 +78,7 @@
 #include "ee/EEE3DHurricane.h"
 #include "ee/EEE3DDisease.h"
 #include "ee/EEE3DSmokeGenerator.h"
-#include "ee/EEE3DDestructionSmoke.h"
 #include "ee/EEE3DFarm.h"
-#include "ee/EEE3DDamageSmoke.h"
 #include "ee/EEE3DEnergyWall.h"
 #include "ee/EEE3DDamageVent.h"
 #include "ee/EEE3DParticleEmitter.h"
@@ -109,6 +106,8 @@
 #include "ee/EEE3DPulseCannonBall.h"
 #include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
+#include "ee/EESaveGameFiles.h"
+#include "lle/FSMemoryFile.h"
 
 // SYNTHETIC: EXE 0x5054ec
 // SYNTHETIC: EXE 0x5054f6
@@ -249,7 +248,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
             break;
         case 0x1e:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE3DDestructionSmoke(inUnit, inEffect);
+                theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect);
             else
                 theResult = 10;
             break;
@@ -276,7 +275,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
             break;
         case 0x2c:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE3DDamageSmoke(inUnit, inEffect);
+                theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2c);
             else
                 theResult = 10;
             break;
@@ -584,7 +583,7 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     if (inEffect->mDetailLevel <= gEffectDetail) {
         switch (inEffect->mKind) {
         case kEffect2DVelocityParticle:
-            theEffect = new EEE2DVelocityParticle(inLine, inEffect);
+            theEffect = new EEE2DSmokePlume(inLine, inEffect);
             break;
         case kEffect2DParticle:
             theEffect = EEE2DParticle::Create(inLine, inEffect);
@@ -788,16 +787,16 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                     theEffect = EEE2DParticle::Create();
                     break;
                 case kEffect3DDestructionSmoke:
-                    theEffect = new EEE3DDestructionSmoke();
+                    theEffect = new EEE3DSmokeGenerator(0x1e);
                     break;
                 case kEffect2DVelocityParticle:
-                    theEffect = new EEE2DVelocityParticle();
+                    theEffect = new EEE2DSmokePlume(EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE);
                     break;
                 case kEffect3DWaterSplash:
                     theEffect = new EEE3DWaterSplash();
                     break;
                 case kEffect3DDamageSmoke:
-                    theEffect = new EEE3DDamageSmoke();
+                    theEffect = new EEE3DSmokeGenerator(0x2c);
                     break;
                 case kEffect3DSmokeGenerator:
                     theEffect = new EEE3DSmokeGenerator(0x2b);
@@ -973,9 +972,6 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x5072a8
-// Creates an empty velocity particle for loading (EEE2DVelocityParticle's inline default ctor, emitted out of line)
-
 // FUNCTION: EXE 0x5072d0
 // Unlinks an effect from the effect list and releases it
 void EEEffectManager::RemoveEffect(EEEffect* inEffect)
@@ -1077,6 +1073,48 @@ static void EECaptureEffectManager(EEEffectManager* inManager)
     theRecord.Commit();
 }
 
+// TEST ONLY (tools/sim_capture.py EFST): every effect's state after every Update (R4.4, seventh round): the effects'
+// random seed, then per effect of the index in handle order its handle, kind, player and the local-only and saved
+// flags, and a saved effect's own Save bytes (the base classes' and the leaf's state as a save writes it), folded
+// into the record's count, length and an FNV-1a 64
+static void EECaptureEffectStates(EEEffectManager* inManager)
+{
+    static const unsigned int kTag = (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) |
+                                     ((unsigned int)'T' << 24);
+    if (!EESimCaptureRecord::Active() || !EESimCaptureRecord::Keeps(kTag))
+        return;
+    FSMemoryFile theFile;
+    unsigned int theCount = 0;
+    uint32_t theHandle;
+    EEEffect* theEffect;
+    for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(inManager->mStore, c, &theHandle)));
+         c = (uint64_t)theHandle + 1) {
+        theFile.Write((uint32_t)theHandle);
+        theFile.Write((int32_t)theEffect->mKind);
+        theFile.Write((int32_t)theEffect->mPlayer);
+        theFile.Write(theEffect->mIsLocalOnly);
+        theFile.Write(theEffect->mIsSaved);
+        if (theEffect->mIsSaved)
+            theEffect->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
+        theCount++;
+    }
+    unsigned long theLength = 0;
+    theFile.GetLength(theLength);
+    const unsigned char* theData = theFile.GetData();
+    unsigned long long theHash = 0xcbf29ce484222325ull;
+    for (unsigned long i = 0; i < theLength; i++) {
+        theHash ^= theData[i];
+        theHash *= 0x100000001b3ull;
+    }
+    EESimCaptureRecord theRecord(kTag);
+    theRecord.U32((unsigned int)EEEffectRandomSeed());
+    theRecord.U32(theCount);
+    theRecord.U32((unsigned int)theLength);
+    theRecord.U32((unsigned int)theHash);
+    theRecord.U32((unsigned int)(theHash >> 32));
+    theRecord.Commit();
+}
+
 // FUNCTION: EXE 0x507450
 // Updates the goal markers, destroys the queued effects, then steps every effect, removing those that finish
 // (Step returns 7)
@@ -1095,6 +1133,7 @@ void EEEffectManager::Update()
         theEffect = theNext;
     }
     EECaptureEffectManager(this);
+    EECaptureEffectStates(this);
 }
 
 // FUNCTION: EXE 0x5074c9

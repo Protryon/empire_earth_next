@@ -10266,3 +10266,66 @@ the Civilization Builder folder and its headers (`EECB*.h`, `EECivilizationBuild
   from the server's slot.
 - **Behaviour:** none intended where the original was defined. The civilization choice's Ok and its hot keys and
   double click now hold separate event objects (the original shared one, referenced four times).
+
+## R4.4, seventh round: the effects' records, their base classes' Load and Save, the effects' random generator, the smoke generators and smoke puffs whole in Rust (ee_gfx effect_state.rs, ffi_effect.rs; branch rust-gfx13, 2026-11-12)
+
+Effects are simulation state, so the round's golden is a capture record of the C++ first. Graphics Thread C++
+(`src/Empire Earth/Graphics Thread/*.cpp`): 25,692 lines before the round; 25,752 with the EFST capture (45 lines,
+TEST ONLY) and the emitter's zeroed times; 25,403 after the move (5 units fewer).
+
+- **EFST, the effects' state after every Update** (`EEEffectManager.cpp` `EECaptureEffectStates`): the effects' random
+  seed, then per effect of the index in handle order its handle, kind, player, local-only and saved flags and a saved
+  effect's own `Save` bytes written into an `FSMemoryFile`: every base class's and leaf's saved state at every tick,
+  folded to a count, a length and an FNV-1a 64. Golden lines in all five profiles.
+- **Garbage in the saved bytes.** The first golden did not repeat: two runs of one build gave two EFST digests. The
+  original's constructors leave members to `SetUp`, to the first step or to a tag point that may not exist
+  (`EEE3DParticleEmitter`'s times and the tag point follower's `GETransformation(false)`, `EEE2DImpact`'s tag index
+  and start, `EEE2DLightGlow`'s, ...), and a save wrote whatever the heap held; the move changed the heap's reuse and
+  with it the garbage, not the game (every other digest equal). Found with a temporary per-effect dump (tick, handle,
+  kind, a hash of its bytes; two runs, `diff`, then the bytes of the first differing tick). Fixed at the source for
+  every effect: `EEEffect` has class `operator new`/`new[]` that zero the storage (the pools' `new T[]` too), and the
+  emitter's constructors zero its times (its tag point follower starts at the identity). The golden lines were
+  recorded again from the C++ effects with only those fixes, built in a temporary worktree (`git worktree add
+  build/gx13/before`, its own staging root `C:/EEX-gfx9-drv`), and runs now repeat bit for bit. A capture record over
+  saved bytes finds such members: run it twice on one build before trusting its golden.
+- **The records (`effect_state.rs` `EeGfxEffectRecord`).** One `#[repr(C)]` record per effect: `EEEffect`'s kind,
+  handle, player, region and three flags, `EEEffect3D`'s transformation, `EEEffect2D`'s position, one bounding radius
+  for both (an effect is one or the other) and the moved leaves' state (`smoke`, `plume`). The effect's constructor
+  makes it (`EEEffect::mRecord`, a default member initializer, so every constructor, the inline load-time ones too,
+  makes one; `ee_gfx_effect_record_new`) and `~EEEffect` frees it; the C++ members are references into it (`int32_t&
+  mKind = mRecord->kind`, `GETransformation& mTransformation = *reinterpret_cast<...>(&mRecord->transformation)`), so
+  the 60 effect classes' readers and writers kept their spelling. The effect store indexes the effects; the records
+  are reached through them. Effects are not copyable (they never were copied). `EEEffectHandle::mValue` is a
+  `uint32_t` (the record's; `unsigned long` was 8 bytes on LP64).
+- **Load and Save** of `EEEffect`, `EEEffect3D`, `EEEffect2D` and the moved leaves are Rust over a typed file
+  (`EeGfxEffectFile`: `is_open`, `read`/`write` of `u32`, `i32`, `f32`, `bool`, each the `FSFile` call of that type,
+  so a debug file's text is unchanged too): the same reads and writes in the same order, the same first error, the
+  base results the original ignores ignored, the 2D parts through callbacks (the C++ keeps the vector, the graphic
+  objects and their media loads). `EEEffect::Load` resolves the graphic effect after the reads (its media load reads
+  no file). Each FFI call works on a copy of the record and writes it back: no Rust reference to it lives across a
+  callback.
+- **The region** (`MoveToPoint`/`MoveToTransformation`, one `MoveToRegion`): the region under a point in Rust, the
+  map's region lists in C++.
+- **The effects' random generator** (the original's file-static `URandom` of `EEEffect.cpp`): a Rust `Mutex<URandom>`
+  (seed 1, never reseeded, not saved); `GetRandom`, `GetEffectRandomFloat`, `GetEffectRandomLong` forward. A Rust step
+  takes the lock per draw, never across a callback: the effects a step creates draw too, in between.
+- **The smoke generators whole** (`EEE3DSmokeGenerator`, which is now also the original's `EEE3DDamageSmoke`, kind
+  0x2c, and `EEE3DDestructionSmoke`, kind 0x1e; both classes deleted): the tick (the timers, the end tests, the
+  spread draws, the damage smoke's health interval with the original's unsigned `mTime2 - mTime1`, the destruction
+  smoke's empty puff that still draws and counts down), the destruction smoke's set-up lines (`ee_ge`'s yaw-pitch-roll
+  turn), load and save by kind; the C++ reads the unit, its tag points and the graphic effect into a plain tick record
+  and creates the puffs and lines through callbacks, in the original's order.
+- **The smoke puffs whole** (`EEE2DSmokePlume`, now also the original's `EEE2DVelocityParticle`, kind 0xc, deleted):
+  the constructor's rotation and brightness draws (the `max`/`min` macros' comparisons), both ticks (the puff's by the
+  tick's seconds, the velocity particle's by its tick time, damped by int param 1), load and save; the C++ keeps the
+  drawn copies and the draw.
+- **Left out: the marching icons.** `EEE2DCircularMarchingIcons`/`EEE2DSquareMarchingIcons` as kinds of
+  `EEE2DMarchingIcons` with the layouts in Rust built and linked, but the oracle parted at seed 2's tick 30062 (a
+  loss classified as a citizen instead of a building) and stayed parted with every allocation of the move removed
+  (a stack buffer, a non-allocating Rust fill); the cause was not found in the time, so the move was reverted.
+- **Gates of the round** (on the result merged with rust twice, the second time with rust's `scenario` profile): EFST and every other digest equal to the golden in the six capture profiles (oracle 498 digests, late 501, space 507, calamity 532, missile 66, scenario 42; EFST's lines on the games the first merge changed were recorded again from the C++ effects, rust's tip with the capture and the zeroing built in a temporary worktree); the sim oracle identical on seeds 2-7; `saveload --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --expect tools/saveload_expect.txt` PASS; the Rust gate PASS; `build.py --sim` and the test profile link 0/0. No tour run.
+- **Only a tour or a person reaches:** the draws of every moved effect, which read the records through the same
+  references: the smoke puffs' and velocity particles' billboards (chimney, damage and destruction smoke), every 2D
+  and 3D effect's `Queue` frustum and fog-of-war test (the record's position and transformation), the volcano's,
+  farm's and beam's draws (their transformations are the record's now); and the windowed game's load of a saved game
+  (the saveload gate loads every effect in EE-SIM, which does not draw).

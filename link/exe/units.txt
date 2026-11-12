@@ -190,7 +190,6 @@ e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
 e72fa e753d Empire Earth/Graphics Thread/EEE2DSquareMarchingIcons.cpp
-e753d e773c Empire Earth/Graphics Thread/EEE2DVelocityParticle.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
@@ -198,9 +197,7 @@ e89c6 e8ed8 Empire Earth/Graphics Thread/EEE3DAdditivePass.cpp
 e8ed8 e9474 Empire Earth/Graphics Thread/EEE3DBlastWave.cpp
 e9474 e9bee Empire Earth/Graphics Thread/EEE3DCitizenBeam.cpp
 e9bee ea703 Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
-ea703 ea9e2 Empire Earth/Graphics Thread/EEE3DDamageSmoke.cpp
 ea9e2 ebbba Empire Earth/Graphics Thread/EEE3DDamageVent.cpp
-ebbba ebde9 Empire Earth/Graphics Thread/EEE3DDestructionSmoke.cpp
 ebde9 ec6e4 Empire Earth/Graphics Thread/EEE3DDisease.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ed606 ee1b4 Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp

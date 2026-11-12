@@ -17,6 +17,10 @@ gates the Rust leaves alone over the C++ capture, even after the game has change
 EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
 FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
 round; the missile profile's golden does not list it).
+EFST is every effect's state after every Update (EEEffectManager.cpp: the effects' random seed, then per effect in
+handle order its handle, kind, player, local-only and saved flags and a saved effect's own Save bytes, folded to a
+count, a length and an FNV-1a 64); its golden lines come from the C++ effects before their state moved (R4.4,
+seventh round), in all five profiles.
 ASRN is the tile A* searches' record (ee/EEAIAStarCapture.h): one per EEAIAStarMachine::Run, with the run's inputs,
 the count and FNV-1a digest of everything the machine asked its goal and the goal asked its view (in order, with the
 answers), and the run's outputs (the machine's members, the goal's flags, a digest of every storage node in list

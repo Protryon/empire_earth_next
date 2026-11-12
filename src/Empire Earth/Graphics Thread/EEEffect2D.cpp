@@ -188,89 +188,67 @@ void EEEffect2D::Reinit(GEModel* inModel, bool inKeepsUnit)
 }
 
 // FUNCTION: EXE 0x504960
-// Drops the parts and the model pointer (without releasing it) and zeroes the position and bounding radius
+// Drops the parts and the model pointer (without releasing it) and zeroes the position and bounding radius (the
+// record's)
 void EEEffect2D::Clear()
 {
     this->mParts.clear();
-    this->mPosition.SetX(0.0f);
-    this->mPosition.SetY(0.0f);
-    this->mPosition.SetZ(0.0f);
+    ee_gfx_effect_clear_2d(this->mRecord);
     this->mModel = NULL;
-    this->mBoundingRadius = 0.0f;
 }
+
+// The parts as ee_gfx effect_state.rs's Load and Save use them (the context: the effect)
+struct EEEffect2DPartOps {
+    static EEEffect2D& Effect(void* inContext) { return *static_cast<EEEffect2D*>(inContext); }
+    // a loaded part takes the effect's graphic object and is kept when its media loads
+    static int32_t Push(void* inContext, const EeGfxEffectPart* inPart)
+    {
+        EEEffect2DPart thePart;
+        thePart.mPosition = *reinterpret_cast<const GE3DPoint*>(&inPart->position);
+        thePart.mTag = inPart->tag;
+        thePart.mFrame = inPart->frame;
+        thePart.mTime = inPart->time;
+        thePart.mIsDone = inPart->done;
+        thePart.mGraphicObject = Effect(inContext).GetGraphicObject();
+        long theResult = thePart.mGraphicObject->LoadMedia();
+        if (theResult == 0)
+            Effect(inContext).mParts.push_back(thePart);
+        return (int32_t)theResult;
+    }
+    static uint32_t Count(void* inContext) { return (uint32_t)Effect(inContext).mParts.size(); }
+    static void Get(void* inContext, uint32_t inIndex, EeGfxEffectPart* outPart)
+    {
+        const EEEffect2DPart& thePart = Effect(inContext).mParts[inIndex];
+        outPart->position = *reinterpret_cast<const EeGe3DPoint*>(&thePart.mPosition);
+        outPart->tag = (uint32_t)thePart.mTag;
+        outPart->frame = (uint32_t)thePart.mFrame;
+        outPart->time = thePart.mTime;
+        outPart->done = thePart.mIsDone;
+    }
+};
 
 // FUNCTION: EXE 0x504985
 // Reads the position, bounding radius and parts (position, tag, frame, time, done), reloading each part's media;
 // returns the first error, stopping at a part whose media fails (the base class result is ignored)
+// (ee_gfx effect_state.rs)
 long EEEffect2D::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEEffect2DPart thePart;
-    long theCount;
     EEEffect::Load(inMajorVersion, inMinorVersion, inFile);
-    long theResult = this->mPosition.Load(inFile);
-    if (theResult == 0) {
-        theResult = inFile.Read(this->mBoundingRadius);
-        if (theResult == 0) {
-            theResult = inFile.Read(theCount);
-            if (theResult == 0) {
-                for (long i = 0; i < theCount && theResult == 0; i++) {
-                    theResult = thePart.mPosition.Load(inFile);
-                    if (theResult != 0)
-                        continue;
-                    theResult = inFile.Read(thePart.mTag);
-                    if (theResult != 0)
-                        continue;
-                    theResult = inFile.Read(thePart.mFrame);
-                    if (theResult != 0)
-                        continue;
-                    theResult = inFile.Read(thePart.mTime);
-                    if (theResult != 0)
-                        continue;
-                    theResult = inFile.Read(thePart.mIsDone);
-                    if (theResult != 0)
-                        continue;
-                    thePart.mGraphicObject = this->GetGraphicObject();
-                    theResult = thePart.mGraphicObject->LoadMedia();
-                    if (theResult == 0)
-                        this->mParts.push_back(thePart);
-                }
-            }
-        }
-    }
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    EeGfxEffectParts theParts = {this, EEEffect2DPartOps::Push, EEEffect2DPartOps::Count, EEEffect2DPartOps::Get};
+    return ee_gfx_effect_load_2d(this->mRecord, &theFile, &theParts);
 }
 
 // FUNCTION: EXE 0x504a8a
 // Writes the position, bounding radius and parts (position, tag, frame, time, done); returns the first write error
 // (the base class result is ignored)
+// (ee_gfx effect_state.rs)
 long EEEffect2D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mPosition.Save(outFile);
-    if (theResult == 0) {
-        theResult = outFile.Write(this->mBoundingRadius);
-        if (theResult == 0) {
-            theResult = this->mParts.size();
-            theResult = outFile.Write(theResult);
-            if (theResult == 0) {
-                for (unsigned long i = 0; i < this->mParts.size() && theResult == 0; i++) {
-                    theResult = this->mParts[i].mPosition.Save(outFile);
-                    if (theResult != 0)
-                        continue;
-                    theResult = outFile.Write(this->mParts[i].mTag);
-                    if (theResult != 0)
-                        continue;
-                    theResult = outFile.Write(this->mParts[i].mFrame);
-                    if (theResult != 0)
-                        continue;
-                    theResult = outFile.Write(this->mParts[i].mTime);
-                    if (theResult == 0)
-                        theResult = outFile.Write(this->mParts[i].mIsDone);
-                }
-            }
-        }
-    }
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    EeGfxEffectParts theParts = {this, EEEffect2DPartOps::Push, EEEffect2DPartOps::Count, EEEffect2DPartOps::Get};
+    return ee_gfx_effect_save_2d(this->mRecord, &theFile, &theParts);
 }
 
 // FUNCTION: EXE 0x504ba8

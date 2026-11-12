@@ -12,3 +12,4 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_ge = { path = "../ee_ge" }
+ee_random = { path = "../ee_random" }
