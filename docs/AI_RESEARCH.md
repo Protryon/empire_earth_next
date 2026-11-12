@@ -3690,6 +3690,30 @@ and a 15-minute gate of three quarters of the force. Same exe (with boom-econ's 
 - The order's 15 defeats against the classic did not move with the wood-bank fix on this exe: 26 of 32 games reach
   the Stone Age, against 30 for rs0 on the earlier exe.
 
+**The raid with two barracks and a range (boom-econ's c8289c62: the producers at the Stone start, gold and iron
+reserved only while saving, food unlimited, the exact gathering).** Order on in both, 32 seeds, the same exe.
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|---|
+| o4, the order | Age of AI | 0/32 | 0 | 4/11/17 | 32, 21.7 | 31, 47.4 | 28, 72.5 |
+| | improved classic | 13/32 | 15 | 0/28/4 | 31, 23.5 | 19, 53.6 | 8, 69.4 |
+| o5, the order + the raid | Age of AI | 0/32 | 0 | 4/11/17 | 32, 21.7 | 31, 52.3 | 29, 79.0 |
+| | improved classic | 14/32 | 15 | 0/25/7 | 31, 23.5 | 18, 57.0 | 11, 81.8 |
+
+| The raids (o5) | Built from (min) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|---|
+| improved classic | 38.0 (30 games) | 22 | 20.0 | 42.9 | 320 | 2.5 | 2.1 / 1.1 |
+| Age of AI | 34.7 (32 games) | 28 | 19.6 | 43.6 | 358 | 1.2 | 2.8 / 1.4 |
+
+- **The raid now goes out as the owner describes:** 20 soldiers, 5 minutes after the economy is developed, at minute
+  43, in most games.
+- **It does little:** 2-3 citizens and about 1 soldier killed, 1-2.5 of its own lost. Against the classic it gives
+  three fewer losses (7 close games for 4) and one defeat more.
+- **It costs the Copper Age:** 5 minutes against Age of AI and 3.4 against the classic. The Bronze Age comes 6-12
+  minutes later. The raid and the reserve of 20 trained after it spend the stock that the Copper save would have had.
+- 5 budget errors in one game (seed 19 against Age of AI, minute 113, 100+ raiders) are fixed: a large raid's distance
+  test now takes every n/16-th raider. The seed is clean after the fix.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
