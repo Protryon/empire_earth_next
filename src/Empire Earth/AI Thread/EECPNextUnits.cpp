@@ -72,6 +72,7 @@
 #include "ee/EETeam.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPAttackSubGroup.h"
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
@@ -1107,6 +1108,17 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
     }
     if (c->mContainer != NULL)
         EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
+    if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
+        // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
+        EECPASGFlags theFlags;
+        memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
+        theFlags.mPlayerID = 0;
+        c->mUnitClass->GetTerrainFlags(c, theFlags);
+        if (theFlags.mFlags[kAITileForest])
+            EECPUnitsSetBool(L, "crosses_forest", true);
+        if (theFlags.mFlags[kAITileCliff])
+            EECPUnitsSetBool(L, "crosses_cliff", true);
+    }
     EECPUnitsSetInt(L, "cargo", (long)c->GetNumCargoUnits());
     EECPUnitsSetInt(L, "garrisoned", c->mGarrisonCount);   // citizens inside a town centre, capitol or settlement
     if (c->mUnitClass->IsBuilding()) {
