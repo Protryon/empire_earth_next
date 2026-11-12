@@ -102,7 +102,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 moves_per_cycle), AssignGatherers (food: the bushes near with a drop site, the idle farms, the game
                 near, the bushes near and far, the game far, the unfinished farms, the boats; wood: the forest; the
                 minerals from the last active centre), AssignIdleGatherers, the boats (EECPRMRequestBoats with
-                coast_fishing; as the C++, the boats it has are not counted, only those requested or being made), the finders FindMines / FindFarm / FindResourceTarget / FindFish, RefreshResources.
+                coast_fishing; the boats it has, requested or being made counted, as the fixed C++), the finders FindMines / FindFarm / FindResourceTarget / FindFish, RefreshResources.
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the

@@ -1877,7 +1877,7 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 // worked from the player's built dock (one is queued while there is none); farms stay as they are.
 static const long kCoastFishRange = 30;
 static const unsigned long kCoastBoats = 8;
-static const unsigned long kCoastBoatsLater = 16;   // the experiment "foodeco": "then lots of fishing boats" (the owner)
+static const unsigned long kCoastBoatsLater = 32;   // the experiment "foodeco": "then lots of fishing boats" (the owner); 32 (AI_RESEARCH 8.56: the boats the uncounted cap made)
 static const unsigned long kCoastBoatsPerFish = 2;
 
 static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)
@@ -1947,7 +1947,9 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
     if (theBuilt == 0)
         return;
     long theClass = theManager->GetFishingBoatClass();
-    EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, false);
+    // fixed: the boats it has are counted (by class; the coast fishing's first version passed inByClass false, which
+    // walks no units, so the wanted count never capped it: one more boat every 30 s, 13-47 a game; AI_RESEARCH 8.56)
+    EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, true);
     theManager->mUnitManager->GatherUnits(theCount);
     if (theRush) {
         // the experiment "boatrush" (the owner: "I spam boats ASAP at stone"): every boat short of the wanted count is

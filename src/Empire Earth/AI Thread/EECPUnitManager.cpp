@@ -639,7 +639,9 @@ void EECPUnitManager::AddAllUnits()
 void EECPUnitManager::RequestFishingBoats(long inCount)
 {
     long theClass = this->mManager->GetFishingBoatClass();
-    EECPUGatherSpecialUnitsCount theGatherer(this->mPlayer, theClass, 0, false);
+    // fixed: the original passes inByClass false, which walks no units: only a boat requested or being made stopped
+    // another request, never the boats the player had (AI_RESEARCH 8.56)
+    EECPUGatherSpecialUnitsCount theGatherer(this->mPlayer, theClass, 0, true);
     this->GatherUnits(theGatherer);
     if (theGatherer.mUnits + theGatherer.mRequested == 0)
         this->RequestUnits(theClass, inCount, 0, 0);

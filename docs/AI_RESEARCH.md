@@ -3692,6 +3692,61 @@ fishing boats: 427 against the C++'s 123. Determinism: seeds 2 and 5, 60 minutes
 Next: the port's boats lost to warships (its naval guard against the C++'s), then the woodcutters lost after
 60 minutes.
 
+### 8.56 The fishing boats counted, the boats that fled, the woodcutters the port deletes (2026-11-11, EE-SIM)
+
+**The boat count (C++ and Lua).** §8.55 found the coast-fishing cap was never applied. EECPRMRequestBoats (our coast
+fishing, 2026-11-07) and the original's RequestFishingBoats (0x49487b, the island rule) both build
+EECPUGatherSpecialUnitsCount with inByClass false. That flag walks no units, so mUnits stays 0. The 8/16 cap
+(kCoastBoats, kCoastBoatsLater) never applied, and the island rule's "unless the player already has one" never saw
+its boats either. Both now count by class, and the port counts the same way. The C++ classic, balanced, against
+the port (32 seeds; b0 before, b1 after):
+
+| | before | after |
+|---|---|---|
+| C++ boat requests a game (mean, max) | 23.5, 55 | 14.0, 25 |
+| C++ fish gatherers at 40 / 70 min | 3.7 / 14.2 | 3.7 / 10.4 |
+| C++ food income at 40 / 70 min (a minute) | 135 / 160 | 135 / 145 |
+| C++ food stock at 40 / 70 min | 244 / 625 | 244 / 680 |
+| C++ citizens at 60 / 89 min | 79 / 117 | 77 / 103 |
+| C++ Copper / Bronze | 21 / 4 | 21 / 5 |
+| wins: C++ - Lua, close | 15-10, 7 | 15-13, 4 |
+| Lua boats at 40 / 70 min | 2.1 / 11.1 | 2.1 / 8.1 |
+
+Nothing changes before 40 minutes, and the epochs and the C++'s wins stay where they were. Later the C++ has about
+12% fewer citizens and 9% less food income. The cap that binds is the forage patches' 16. A cap of 32 would match
+the old boats in practice: 14.5 at 70 minutes against the old 14.7 (16 gives 11.0, 24 gives 13.4). This changes the
+opponent of every bench against the C++ classic; benches from before need a new baseline.
+
+The owner chose the 32-boat cap (kCoastBoatsLater, the forage patches' cap; kCoastBoats stays 8), in the C++ and
+in the port, to keep the improved classic's strength. The bench (c32, 32 seeds) does not bring the boats all the
+way back: the C++'s fish gatherers at 70 minutes are 11.3 (16: 10.4, uncounted: 14.2), with 15.5 boat requests a
+game (max 32). The cap now binds in one seed only. The limit is the wanted count itself: two boats a fish within
+30 tiles of the town (kCoastBoatsPerFish), which the uncounted cap had ignored. The rest of the bench: C++ food
+income at 70 minutes 135 a minute, citizens at 89 minutes 102, Copper 21, wins C++ 14 - Lua 13, 5 close. The
+remaining gap is in the per-fish count, not the cap. (The rules document's comment on forage_patches still says
+"16 boats"; changing it would mean a new db release.)
+
+**The boats that fled.** 186 of the port's 230 lost boats died idle. The engine's naval flight (EECPRMNavalFlee)
+calls AddIdleGatherer on the C++'s own lists, which are empty for a Lua seat, so a fled boat stayed on the script's
+food list. It sat idle at the far dock and was never sent to fish again. The port now moves a boat that is off its
+fish back to its idle list. AssignIdleBoats takes every boat of that list, as the classic does. Boats lost: 170
+against the C++'s 153 (from 230 against 113). Balanced 32 seeds: 14-14, 4 close.
+
+**The woodcutters lost after 60 minutes.** 422 of the port's 1310 citizens lost after 60 minutes have no killer
+(the C++'s: 801 in all). They die exactly 30 s apart, near the town, with no enemy near. These are the port's own
+KillUnitsForMilitary: 407 citizens were deleted for the surplus over ceil(pop limit x 0.45) = 180. Wood scores
+highest, so the woodcutters go first. The port trains past 180 because its wanted citizens rise to 199-278:
+GetWantedCitizens' floor, the gather capacity up to max_citizen_share. The C++'s stays at 180 in every trace line
+after 60 minutes. The port's capacity counts every centre as active (24 of 24 in seed 13) and its mineral sites
+stay at 7/10/10. The C++'s centres' sites run down (3/0/2/4/4). Without the deletions the late losses are 903
+against 801.
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2, identical apart from the timing lines. 0 script errors. The
+builds link 0/0 (EE-SIM and the test profile), and the eedata check passes.
+
+Next: the port's centres' activity and sites against the C++'s (GetGatherCapacity), so its wanted citizens stay at
+the C++'s and it stops training citizens it then deletes.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

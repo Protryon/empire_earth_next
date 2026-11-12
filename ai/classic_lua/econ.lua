@@ -63,7 +63,7 @@ local function food_outside(view, memory)
 end
 
 -- the coast's boats wanted (EECPRMCoastBoatsWanted): from the Stone Age, 2 a fish within 30 tiles of the town, 8 at
--- most (16 with the forage patches)
+-- most (32 with the forage patches)
 function M.coast_boats_wanted(view, memory)
     return R.memo("coast_boats", function()
         return M.coast_boats_wanted_now(view, memory)
@@ -87,7 +87,7 @@ function M.coast_boats_wanted_now(view, memory)
             n = n + 1
         end
     end
-    local max = p.forage_patches and 16 or 8
+    local max = p.forage_patches and 32 or 8
     n = n * 2
     return n < max and n or max
 end
@@ -160,7 +160,7 @@ local function request_boats(view, memory)
     local boat = T.fishing_boat_class(view.epoch)
     if wanted == 0 then
         -- RequestFishingBoats(1): unless one exists or is requested
-        if #ai.units{type = boat} == 0 and not U().is_requested(memory, boat) then
+        if #ai.units{type = boat} == 0 and not U().is_requested(memory, boat) and not U().in_production(view, boat) then
             U().request(view, memory, boat, 1)
         end
         return
@@ -170,11 +170,9 @@ local function request_boats(view, memory)
         B().queue(view, memory, C.dock, false, true)
         return
     end
-    -- (the count of EECPRMRequestBoats: EECPUGatherSpecialUnitsCount built with inByClass false walks no units, so
-    -- the classic counts the boats requested or being made, never the boats it has: one more boat every 30 s while
-    -- the food lacks gatherers and fewer than 8 boats stand idle; the C++ made 13-47 a game by 70 minutes)
+    -- (EECPRMRequestBoats' count: the boats it has, requested or being made; fixed in the C++ too, AI_RESEARCH 8.56)
     local um = U().state(memory)
-    if (um.waiting[boat] or 0) == 0 and not U().in_production(view, boat) then
+    if (um.waiting[boat] or 0) == 0 and not U().in_production(view, boat) and #ai.units{type = boat} < wanted then
         U().request(view, memory, boat, 1)
     end
 end
@@ -757,6 +755,12 @@ local function assign_gatherers(view, memory)
             if kind ~= nil and kind ~= key then
                 table.remove(list, k)
                 R.add_gatherer(rm, u.id, kind)
+            elseif u ~= nil and u.category == "boat" and key ~= "idle" and u.action ~= "gather" then
+                -- a boat off its fish (the engine's naval flight: EECPRMNavalFlee gives the classic's own lists
+                -- AddIdleGatherer, the script's lists are the port's): back to the idle list, where AssignIdleBoats
+                -- sends it to fish again
+                table.remove(list, k)
+                R.add_gatherer(rm, u.id, "idle")
             end
         end
     end
@@ -765,7 +769,7 @@ local function assign_gatherers(view, memory)
             local u = records[id]
             if u ~= nil and u.inside == nil then
                 if u.category == "boat" then
-                    if key == "idle" and u.action == "idle" then
+                    if key == "idle" then   -- (the classic: every boat of the idle list, whatever it does)
                         boats[#boats + 1] = u
                     end
                 elseif u.action == "idle" or u.action == "explore" or (u.action == "gather" and u.waiting) then
